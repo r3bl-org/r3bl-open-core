@@ -52,6 +52,12 @@ use crate::{command, ok};
 ///     assert!(install_package(package_name).await.is_err());
 /// }
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The `dpkg-query` command is not available (not on a Debian-based system)
+/// - The command fails to execute
 pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result<bool> {
     let output = command!(
         program => "dpkg-query",
@@ -63,6 +69,13 @@ pub async fn check_if_package_is_installed(package_name: &str) -> miette::Result
     ok!(output.status.success())
 }
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The `apt` command is not available (not on a Debian-based system)
+/// - The user does not have sudo privileges
+/// - The package installation fails
+/// - Network issues prevent downloading the package
 pub async fn install_package(package_name: &str) -> miette::Result<()> {
     let command = command!(
         program => "sudo",

@@ -153,6 +153,13 @@ pub fn file_exists(file: impl AsRef<Path>) -> bool {
 /// Checks whether the directory exist. If there are issues with permissions for
 /// directory access or invalid directory it will return an error. Use
 /// [`directory_exists`] if you want to ignore these errors.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The directory does not exist
+/// - The directory name is invalid
+/// - I/O errors occur while accessing the directory
 pub fn try_directory_exists(directory_path: impl AsRef<Path>) -> FsOpResult<bool> {
     match fs::metadata(directory_path) {
         Ok(metadata) => {
@@ -175,6 +182,13 @@ pub fn try_directory_exists(directory_path: impl AsRef<Path>) -> FsOpResult<bool
 /// Checks whether the file exist. If there are issues with permissions for file access
 /// or invalid file it will return an error. Use [`file_exists`] if you want to ignore
 /// these errors.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The file does not exist
+/// - The file name is invalid
+/// - I/O errors occur while accessing the file
 pub fn try_file_exists(file_path: impl AsRef<Path>) -> FsOpResult<bool> {
     match fs::metadata(file_path) {
         // The file_path might be found in the file system, but it might be a
@@ -198,6 +212,12 @@ pub fn try_file_exists(file_path: impl AsRef<Path>) -> FsOpResult<bool> {
 ///
 /// - `bash` equivalent: `$(pwd)`
 /// - Eg: `PathBuf("/home/user/some/path")`
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The current directory has been deleted
+/// - I/O errors occur while accessing the current directory
 pub fn try_pwd() -> FsOpResult<PathBuf> {
     match env::current_dir() {
         Ok(pwd) => FsOpResult::Ok(pwd),
@@ -218,6 +238,14 @@ pub fn path_as_string(path: &Path) -> String { path.display().to_string() }
 /// Writes the given content to the file named `file_name` in the specified `folder`.
 /// - If the parent directory does not exist, returns an error.
 /// - If the file cannot be written due to permissions or invalid name, returns an error.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The parent directory does not exist
+/// - Insufficient permissions to write the file
+/// - The file name is invalid
+/// - I/O errors occur during file creation or writing
 pub fn try_write_file(
     folder: impl AsRef<Path>,
     file_name: impl AsRef<str>,
@@ -583,6 +611,7 @@ mod tests {
     ///
     /// This function is called by `test_all_fs_path_functions_in_isolated_process()` to
     /// run the tests in an isolated process.
+    #[allow(clippy::missing_errors_doc)]
     fn run_all_fs_path_functions_sequentially_impl() {
         // Run each test in its own function with with_saved_pwd! to ensure the
         // current working directory is restored after each test.

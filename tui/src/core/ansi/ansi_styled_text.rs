@@ -1035,6 +1035,7 @@ mod tests {
 
     #[serial]
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_formatted_string_creation_ansi256() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Ansi256);
         let eg_1 = ASText {
@@ -1070,6 +1071,7 @@ mod tests {
 
     #[serial]
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_formatted_string_creation_truecolor() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Truecolor);
         let eg_1 = ASText {
@@ -1105,6 +1107,7 @@ mod tests {
 
     #[serial]
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_formatted_string_creation_grayscale() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Grayscale);
         let eg_1 = ASText {

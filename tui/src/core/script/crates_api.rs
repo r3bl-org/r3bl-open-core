@@ -29,6 +29,13 @@ mod urls {
     pub const CRATE_INFO: &str = "https://crates.io/api/v1/crates/{crate_name}";
 }
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The HTTP client cannot be created
+/// - The network request fails
+/// - The crates.io API returns an error status
+/// - The response JSON is malformed or missing expected fields
 pub async fn try_get_latest_release_version_from_crates_io(
     crate_name: &str,
 ) -> miette::Result<String> {

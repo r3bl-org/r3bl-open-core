@@ -85,11 +85,13 @@ impl StdoutMock {
 
 impl Write for StdoutMock {
     #[allow(clippy::unwrap_in_result)] /* unwrap is ok to use here, since it is for lock. */
+    #[allow(clippy::missing_errors_doc)]
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
         self.buffer.lock().unwrap().extend_from_slice(buf);
         Ok(buf.len())
     }
 
+    #[allow(clippy::missing_errors_doc)]
     fn flush(&mut self) -> Result<()> { Ok(()) }
 }
 

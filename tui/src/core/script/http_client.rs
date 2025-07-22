@@ -21,6 +21,11 @@ mod constants {
     pub const USER_AGENT: &str = "scripting.rs/1.0";
 }
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The HTTP client builder fails to build
+/// - TLS backend initialization fails
 pub fn create_client_with_user_agent(
     user_agent: Option<&str>,
 ) -> miette::Result<reqwest::Client> {

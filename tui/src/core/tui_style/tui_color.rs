@@ -360,6 +360,9 @@ mod rgb_value_impl_block {
             }
         }
 
+        /// # Errors
+        ///
+        /// Returns an error if the input string is not a valid hex color format.
         pub fn try_from_hex_color(input: &str) -> CommonResult<RgbValue> {
             match parse_hex_color(input) {
                 Ok((_, color)) => Ok(color),
@@ -383,6 +386,9 @@ mod rgb_value_impl_block {
             }
         }
 
+        /// # Errors
+        ///
+        /// Returns an error if the TuiColor is an index-based color that cannot be converted to RGB.
         pub fn try_from_tui_color(color: TuiColor) -> CommonResult<Self> {
             match color {
                 // RGB values.

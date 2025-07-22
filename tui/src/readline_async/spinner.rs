@@ -196,6 +196,12 @@ impl Spinner {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The spinner task cannot be spawned
+    /// - The communication channels fail
     pub async fn try_start_task(&mut self) -> miette::Result<()> {
         // Tell readline that spinner is active & register the spinner shutdown sender.
         if let Some(shared_writer) = self.maybe_shared_writer.as_ref() {

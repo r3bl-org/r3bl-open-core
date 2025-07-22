@@ -88,6 +88,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_keypress() -> Result<(), ()> {
         throws!({
             // "x"

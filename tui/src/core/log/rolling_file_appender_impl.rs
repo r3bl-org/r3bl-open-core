@@ -20,6 +20,13 @@ use std::path::PathBuf;
 /// Note that if you wrap this up in a non blocking writer, it doesn't work. Here's an
 /// example of this:
 /// `tracing_appender::non_blocking(try_create_rolling_file_appender("foo")?)`
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The path has no parent directory
+/// - The path has no file name
+/// - Insufficient permissions to access the file or directory
 pub fn try_create(
     path_str: &str,
 ) -> miette::Result<tracing_appender::rolling::RollingFileAppender> {

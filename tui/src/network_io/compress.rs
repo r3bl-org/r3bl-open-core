@@ -22,6 +22,12 @@ use miette::IntoDiagnostic;
 use crate::{Buffer, BufferAtom};
 
 /// Compress the payload using the [`flate2`] crate.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The compression algorithm fails
+/// - Writing to the encoder fails due to I/O errors
 pub fn compress(data: &[BufferAtom]) -> miette::Result<Buffer> {
     let uncompressed_size = data.len();
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
@@ -35,6 +41,13 @@ pub fn compress(data: &[BufferAtom]) -> miette::Result<Buffer> {
 }
 
 /// Decompress the payload using the [`flate2`] crate.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The data is not in valid gzip format
+/// - The decompression algorithm fails
+/// - Reading from the decoder fails due to I/O errors
 pub fn decompress(data: &[BufferAtom]) -> miette::Result<Buffer> {
     let compressed_size = data.len();
     let mut decoder = GzDecoder::new(data);

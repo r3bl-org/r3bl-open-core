@@ -28,6 +28,13 @@ use nom::{bytes::complete::{tag, take_while_m_n},
 use super::RgbValue;
 
 /// Parse function that generate an [`RgbValue`] struct from a valid hex color string.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The input doesn't start with '#'
+/// - The hex digits are invalid or not exactly 6 digits (RRGGBB)
+/// - The hex values cannot be parsed as valid u8 integers
 pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
     let (input, _) = tag("#")(input)?;
     let (input, (red, green, blue)) =
@@ -38,10 +45,12 @@ pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
 mod hex_primary {
     use super::{map_res, take_while_m_n, IResult, ParseIntError, Parser};
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn parse(input: &str) -> IResult<&str, u8> {
         map_res(take_while_m_n(2, 2, is_hex_digit), from_hex).parse(input)
     }
 
+    #[allow(clippy::missing_errors_doc)]
     fn from_hex(input: &str) -> Result<u8, ParseIntError> {
         u8::from_str_radix(input, 16)
     }

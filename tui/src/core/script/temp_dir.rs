@@ -40,6 +40,13 @@ impl TempDir {
 ///
 /// You might want to use the [`crate::try_create_temp_dir_and_cd`!] macro instead,
 /// which creates a subdirectory inside the temp dir and changes to that subdirectory.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The temp directory cannot be created due to insufficient permissions
+/// - The file system is full
+/// - I/O errors occur during directory creation
 pub fn try_create_temp_dir() -> miette::Result<TempDir> {
     let root = std::env::temp_dir();
     let new_temp_dir = root.join(generate_friendly_random_id().as_str());
@@ -171,6 +178,7 @@ mod tests_temp_dir {
     use crate::{fg_lizard_green, ok};
 
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_macro_try_create_temp_dir_and_cd() -> miette::Result<()> {
         // Create a temp dir and a sub dir inside it, then change to that sub dir.
         {

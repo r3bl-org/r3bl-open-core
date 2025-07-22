@@ -167,6 +167,12 @@ impl TracingConfig {
     /// This function will return a [`tracing::dispatcher::DefaultGuard`]. You should drop
     /// this guard when you're done with the tracing system. This will reset the tracing
     /// system to its previous state for that thread.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file writer cannot be created (invalid path, permissions)
+    /// - The tracing layer cannot be initialized
     pub fn install_thread_local(self) -> miette::Result<dispatcher::DefaultGuard> {
         try_create_layers(&self)
             .map(|layers| tracing_subscriber::registry().with(layers).set_default())
@@ -174,6 +180,13 @@ impl TracingConfig {
 
     /// Global scope is used in production, for an app that needs to log to a file or
     /// stdout, etc. Once set, this can't be unset or changed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file writer cannot be created (invalid path, permissions)
+    /// - The tracing layer cannot be initialized
+    /// - A global subscriber has already been set
     pub fn install_global(self) -> miette::Result<()> {
         try_create_layers(&self)
             .map(|layers| tracing_subscriber::registry().with(layers).init())

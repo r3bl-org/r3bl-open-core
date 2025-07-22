@@ -261,6 +261,13 @@ pub mod read_from_file {
     /// of workloads that their code is used in) to determine what `const` size the
     /// `Array` should be. If it is greater than this, it will spill to the heap, and it
     /// is too small, then some memory will be wasted on the stack.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be opened (doesn't exist, permissions)
+    /// - I/O errors occur while reading the file
+    /// - The file content is not valid UTF-8
     pub fn try_read_file_path_into_inline_string<A: Array<Item = u8>>(
         acc: &mut SmallString<A>,
         arg_path: impl Into<PathBuf>,
@@ -294,6 +301,11 @@ pub mod write_to_file {
 
     use crate::CommonResult;
 
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be created (invalid path, permissions)
+    /// - Writing to the file fails
     pub fn try_write_str_to_file(path: &PathBuf, contents: &str) -> CommonResult<()> {
         let mut file = File::create(path).into_diagnostic()?;
         file.write_all(contents.as_bytes()).into_diagnostic()?;
@@ -310,6 +322,7 @@ mod tests_write_to_file {
     use crate::{into_existing::write_to_file::try_write_str_to_file, try_create_temp_dir};
 
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_try_write_file_contents_success() -> miette::Result<()> {
         // 1. Create a temporary directory.
         let temp_dir = try_create_temp_dir().expect("Failed to create temp dir");

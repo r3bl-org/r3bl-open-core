@@ -69,6 +69,9 @@ impl TuiStylesheet {
     #[must_use]
     pub fn new() -> Self { Self::default() }
 
+    /// # Errors
+    ///
+    /// Returns an error if the style id is not defined.
     pub fn add_style(&mut self, style: TuiStyle) -> CommonResult<()> {
         throws!({
             if style.id.is_none() {
@@ -80,6 +83,9 @@ impl TuiStylesheet {
         });
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if any of the styles have undefined ids.
     pub fn add_styles(&mut self, styles: InlineVec<TuiStyle>) -> CommonResult<()> {
         throws!({
             for style in styles {
@@ -190,14 +196,19 @@ macro_rules! tui_stylesheet {
 /// [`TryAdd`] trait is implemented for both [`TuiStyle`] and [`Vec<Style>`]. Then the
 /// [`tui_stylesheet`!] macro can "pseudo overload" them.
 pub trait TryAdd<OtherType = Self> {
+    /// # Errors
+    ///
+    /// Returns an error if the operation fails (e.g., invalid style data).
     fn try_add(&mut self, other: OtherType) -> CommonResult<()>;
 }
 
 impl TryAdd<TuiStyle> for TuiStylesheet {
+    #[allow(clippy::missing_errors_doc)]
     fn try_add(&mut self, other: TuiStyle) -> CommonResult<()> { self.add_style(other) }
 }
 
 impl TryAdd<InlineVec<TuiStyle>> for TuiStylesheet {
+    #[allow(clippy::missing_errors_doc)]
     fn try_add(&mut self, other: InlineVec<TuiStyle>) -> CommonResult<()> {
         self.add_styles(other)
     }

@@ -40,6 +40,12 @@ pub fn get_terminal_width() -> ColWidth {
 }
 
 /// Get the terminal size.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The terminal size cannot be determined
+/// - The terminal is not available or not a TTY
 pub fn get_size() -> miette::Result<Size> {
     let (columns, rows) = crossterm::terminal::size().into_diagnostic()?;
     Ok(width(columns) + height(rows))

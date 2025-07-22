@@ -49,6 +49,12 @@ pub type DynLayer<S> = dyn Layer<S> + Send + Sync + 'static;
 /// For example, once you have the layers, you can run the following:
 /// `try_create_layers(..).map(|layers|
 /// tracing_subscriber::registry().with(layers).init());`
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The display layer cannot be created
+/// - The file layer cannot be created
 pub fn try_create_layers(
     tracing_config: &TracingConfig,
 ) -> miette::Result<Option<Vec<Box<DynLayer<tracing_subscriber::Registry>>>>> {
@@ -92,6 +98,12 @@ pub fn try_create_layers(
 ///
 /// This is useful for composition of layers. There's more info in the docs
 /// [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers).
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The shared writer cannot be created or locked
+/// - The writer configuration is invalid
 pub fn try_create_display_layer<S>(
     level_filter: LevelFilter,
     writer_config: WriterConfig,
@@ -136,6 +148,12 @@ where
 ///
 /// This is useful for composition of layers. There's more info in the docs
 /// [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/index.html#runtime-configuration-with-layers).
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The file appender cannot be created (invalid path, permissions)
+/// - The file path is invalid
 pub fn try_create_file_layer<S>(
     level_filter: LevelFilter,
     writer_config: WriterConfig,

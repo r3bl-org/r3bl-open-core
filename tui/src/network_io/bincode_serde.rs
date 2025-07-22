@@ -31,6 +31,12 @@ use crate::{Buffer, BufferAtom};
 /// # Arguments
 ///
 /// * `data` - The data to serialize.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The data cannot be serialized to bincode format
+/// - The serialization exceeds size limits
 pub fn try_serialize<T: Serialize>(data: &T) -> miette::Result<Buffer> {
     let buffer = bincode::serde::encode_to_vec(data, get_config()).into_diagnostic()?;
     Ok(buffer)
@@ -43,6 +49,13 @@ pub fn try_serialize<T: Serialize>(data: &T) -> miette::Result<Buffer> {
 ///
 /// * `buffer` - The buffer to deserialize.
 /// * `T` - The type to deserialize to. Must implement the [Deserialize] trait.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The buffer contains invalid bincode data
+/// - The data cannot be deserialized into type T
+/// - The buffer is corrupted or incomplete
 pub fn try_deserialize<T: for<'de> Deserialize<'de>>(
     buffer: &[BufferAtom],
 ) -> miette::Result<T> {
@@ -80,6 +93,7 @@ mod tests_bincode_serde {
     }
 
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_bincode_serde() -> miette::Result<()> {
         let value = TestPayload {
             id: 12.0,

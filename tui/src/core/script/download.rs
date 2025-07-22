@@ -21,6 +21,14 @@ use miette::IntoDiagnostic;
 
 use crate::{http_client::create_client_with_user_agent, ok};
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The HTTP client cannot be created
+/// - The network request fails
+/// - The server returns an error status
+/// - The destination file cannot be created (permissions, invalid path)
+/// - Writing to the file fails
 pub async fn try_download_file_overwrite_existing(
     source_url: &str,
     destination_file: impl AsRef<Path>,

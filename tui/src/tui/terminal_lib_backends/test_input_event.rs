@@ -23,6 +23,7 @@ mod tests {
                 try_convert_key_modifiers, InputEvent, Key, ModifierKeysMask};
 
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_convert_key_event_into_input_event() -> Result<(), ()> {
         throws!({
             // Crossterm KeyEvents.
@@ -52,6 +53,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::missing_errors_doc)]
     fn test_input_event_matches_correctly() -> Result<(), ()> {
         throws!({
             let x = InputEvent::Keyboard(key_press! { @char 'x' });

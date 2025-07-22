@@ -38,6 +38,12 @@ impl InputDevice {
 }
 
 impl InputDevice {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The input event stream has been closed
+    /// - An I/O error occurs while reading input
+    /// - The terminal is not available
     pub async fn next(&mut self) -> miette::Result<crossterm::event::Event> {
         match self.resource.next().fuse().await {
             Some(it) => it.into_diagnostic(),

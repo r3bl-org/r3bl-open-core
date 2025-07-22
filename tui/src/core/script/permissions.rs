@@ -21,11 +21,21 @@ use miette::IntoDiagnostic;
 
 /// This is noop on Windows because Windows does not use the same permission model as
 /// Unix-like systems. It is determined by file extension and ACLs (Access Control Lists).
+///
+/// # Errors
+///
+/// This function never returns an error on Windows.
 #[cfg(target_os = "windows")]
 pub fn set_permission(_file: impl AsRef<Path>, _mode: u32) -> miette::Result<()> {
     Ok(())
 }
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The file does not exist
+/// - Insufficient permissions to change the file mode
+/// - I/O error occurs while setting permissions
 #[cfg(not(target_os = "windows"))]
 pub fn set_permission(file: impl AsRef<Path>, mode: u32) -> miette::Result<()> {
     use std::{fs::Permissions, os::unix::fs::PermissionsExt};
@@ -36,6 +46,14 @@ pub fn set_permission(file: impl AsRef<Path>, mode: u32) -> miette::Result<()> {
 /// - `bash` equivalent: `chmod +x file`
 /// - Eg: `set_file_executable("some_file.sh")`
 /// - The `file` must exist and be a file (not a directory).
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The file does not exist
+/// - The path points to a directory instead of a file
+/// - Insufficient permissions to change the file mode
+/// - I/O error occurs while setting permissions
 pub fn try_set_file_executable(file: impl AsRef<Path>) -> miette::Result<()> {
     let file = file.as_ref();
     let metadata = fs::metadata(file).into_diagnostic()?;

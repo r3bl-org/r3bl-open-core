@@ -29,6 +29,13 @@ mod urls {
         "https://api.github.com/repos/{org}/{repo}/releases/latest";
 }
 
+/// # Errors
+///
+/// Returns an error if:
+/// - The HTTP client cannot be created
+/// - The network request fails
+/// - The GitHub API returns an error status
+/// - The response JSON is malformed or missing the tag_name field
 pub async fn try_get_latest_release_tag_from_github(
     org: &str,
     repo: &str,

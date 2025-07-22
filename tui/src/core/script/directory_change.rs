@@ -48,6 +48,14 @@ macro_rules! with_saved_pwd {
 /// test`. `cargo test` runs all the tests in a single process. This means that when one
 /// test changes the current working directory, it affects all other tests that run after
 /// it.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The directory does not exist
+/// - Insufficient permissions to access the directory
+/// - The directory name is invalid
+/// - I/O errors occur while changing the directory
 pub fn try_cd(new_dir: impl AsRef<Path>) -> FsOpResult<()> {
     match env::set_current_dir(new_dir.as_ref()) {
         Ok(()) => ok!(),

@@ -69,10 +69,16 @@ pub fn gen_path_env_vars(path_value: &str) -> EnvVars {
     vec![(EnvKeys::Path.to_string(), path_value.to_string())]
 }
 
+/// # Errors
+///
+/// Returns an error if the environment variable is not set.
 pub fn try_get(key: EnvKeys) -> miette::Result<String> {
     env::var(key.to_string()).into_diagnostic()
 }
 
+/// # Errors
+///
+/// Returns an error if the PATH environment variable is not set.
 pub fn try_get_path_prefixed(
     prefix_path: impl AsRef<Path>,
 ) -> miette::Result<InlineString> {

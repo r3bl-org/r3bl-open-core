@@ -42,6 +42,14 @@ pub enum MkdirOptions {
 ///
 /// If any permissions issues occur or the directory can't be created due to
 /// inconsistent [`MkdirOptions`] then an error is returned.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Insufficient permissions to create the directory
+/// - The directory already exists (when using `CreateIntermediateDirectoriesOnlyIfNotExists`)
+/// - The path name is invalid
+/// - I/O errors occur during directory creation
 pub fn try_mkdir(new_path: impl AsRef<Path>, options: MkdirOptions) -> FsOpResult<()> {
     let new_path = new_path.as_ref();
 
@@ -82,6 +90,7 @@ pub fn try_mkdir(new_path: impl AsRef<Path>, options: MkdirOptions) -> FsOpResul
     create_dir_all(new_path)
 }
 
+#[allow(clippy::missing_errors_doc)]
 fn handle_err(err: std::io::Error) -> FsOpResult<()> {
     match err.kind() {
         ErrorKind::PermissionDenied | ErrorKind::ReadOnlyFilesystem => {
@@ -95,6 +104,7 @@ fn handle_err(err: std::io::Error) -> FsOpResult<()> {
     }
 }
 
+#[allow(clippy::missing_errors_doc)]
 fn create_dir_all(new_path: &Path) -> FsOpResult<()> {
     match fs::create_dir_all(new_path) {
         Ok(()) => ok!(),

@@ -158,17 +158,32 @@ macro_rules! command {
 }
 
 pub trait Run {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The command program does not exist or cannot be executed
+    /// - The command fails with a non-zero exit status
+    /// - I/O errors occur during command execution
     fn run(
         &mut self,
     ) -> impl std::future::Future<Output = miette::Result<Vec<u8>>> + Send;
+    
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The command program does not exist or cannot be executed
+    /// - The command fails with a non-zero exit status
+    /// - I/O errors occur during command execution
     fn run_interactive(
         &mut self,
     ) -> impl std::future::Future<Output = miette::Result<Vec<u8>>> + Send;
 }
 
 impl Run for TokioCommand {
+    #[allow(clippy::missing_errors_doc)]
     async fn run(&mut self) -> miette::Result<Vec<u8>> { run(self).await }
 
+    #[allow(clippy::missing_errors_doc)]
     async fn run_interactive(&mut self) -> miette::Result<Vec<u8>> {
         run_interactive(self).await
     }
@@ -195,6 +210,13 @@ macro_rules! bail_command_ran_and_failed {
 /// `stdin`, `stdout`, `stderr` from the parent (aka current) process.
 ///
 /// See the tests for examples of how to use this.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The command program does not exist or cannot be executed
+/// - The command fails with a non-zero exit status
+/// - I/O errors occur during command execution
 pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
     // Try to run command (might be unable to run it if the program is invalid).
     let output = command
@@ -230,6 +252,13 @@ pub async fn run(command: &mut Command) -> miette::Result<Vec<u8>> {
 ///     args => "-c", "read -p 'Enter your input: ' input"
 /// );
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The command program does not exist or cannot be executed
+/// - The command fails with a non-zero exit status
+/// - I/O errors occur during command execution
 pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
     // Try to run command (might be unable to run it if the program is invalid).
     let output = command
@@ -267,6 +296,13 @@ pub async fn run_interactive(command: &mut Command) -> miette::Result<Vec<u8>> {
 ///     args => "-c", "read -p 'Enter your input: ' input"
 /// );
 /// ```
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Either command program does not exist or cannot be executed
+/// - Either command fails with a non-zero exit status
+/// - I/O errors occur during command execution or piping
 pub async fn pipe(
     command_one: &mut Command,
     command_two: &mut Command,

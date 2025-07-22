@@ -1086,6 +1086,7 @@ mod tests_style_us_span_lines_from {
         use super::*;
 
         #[test]
+        #[allow(clippy::missing_errors_doc)]
         fn test_block_metadata_tags() -> Result<(), ()> {
             throws!({
                 let tags = MdElement::Tags(list!["tag1", "tag2", "tag3"]);

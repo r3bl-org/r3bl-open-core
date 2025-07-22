@@ -116,6 +116,10 @@ impl Display for CommonError {
 
 impl CommonError {
     /// Both [`CommonError::error_type`] and [`CommonError::error_message`] available.
+    ///
+    /// # Errors
+    ///
+    /// Always returns an error with the specified error type and message.
     #[allow(clippy::all)]
     pub fn new_error_result<T>(err_type: CommonErrorType, msg: &str) -> CommonResult<T> {
         Err(miette::miette!(CommonError {
