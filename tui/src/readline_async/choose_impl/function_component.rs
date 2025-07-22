@@ -40,8 +40,14 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
 
     fn calculate_items_viewport_height(&self, state: &mut S) -> ChUnit;
 
+    /// # Errors
+    ///
+    /// Returns an error if the rendering operation fails.
     fn render(&mut self, state: &mut S) -> miette::Result<()>;
 
+    /// # Errors
+    ///
+    /// Returns an error if the viewport allocation fails.
     fn allocate_viewport_height_space(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
             let viewport_height =
@@ -62,6 +68,9 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
         });
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if clearing the viewport fails.
     fn clear_viewport_for_resize(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
             DEVELOPMENT_MODE.then(|| {
@@ -106,6 +115,9 @@ pub trait FunctionComponent<S: CalculateResizeHint> {
         });
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if clearing the viewport fails.
     fn clear_viewport(&mut self, state: &mut S) -> miette::Result<()> {
         throws!({
             let viewport_height =

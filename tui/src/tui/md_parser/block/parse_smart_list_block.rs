@@ -32,6 +32,10 @@ use crate::{list,
             MdLineFragment, SmartListIRStr, SmartListLine, SmartListLineStr};
 
 /// Public API for parsing a smart list block in markdown.
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't contain a valid smart list block.
 pub fn parse_smart_list_block(
     input: &str,
 ) -> IResult<&str, (Lines<'_>, BulletKind, usize)> {
@@ -350,6 +354,10 @@ mod tests_parse_block_smart_list {
 /// │  ⎩indent: 4                │  ⎩indent: 4                  │
 /// ╰────────────────────────────┴──────────────────────────────╯
 /// ```
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't contain a valid smart list.
 #[rustfmt::skip]
 pub fn parse_smart_list(
     input: &str
@@ -663,6 +671,9 @@ mod tests_parse_smart_list {
     }
 }
 
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't contain valid smart list content lines.
 #[rustfmt::skip]
 pub fn parse_smart_list_content_lines<'a>(
     input: &'a str,

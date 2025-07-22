@@ -59,6 +59,10 @@ where
     /// - Clipping, scrolling, overdrawing:
     ///   - Each implementation of this trait is solely responsible of taking care of
     ///     these behaviors
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the rendering operation fails.
     fn render(
         &mut self,
         global_data: &mut GlobalData<S, AS>,
@@ -82,6 +86,10 @@ where
     /// 3. Finally an [`EventPropagation`] is returned to let the caller know whether the
     ///    `input_event` was consumed or not & whether it should re-render (outside of a
     ///    redux store state change).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the event handling operation fails.
     fn handle_event(
         &mut self,
         global_data: &mut GlobalData<S, AS>,
@@ -95,6 +103,9 @@ where
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
+    /// # Errors
+    ///
+    /// Returns an error if the surface rendering operation fails.
     fn render_in_surface(
         &mut self,
         surface: &mut Surface,

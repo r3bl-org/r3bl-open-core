@@ -361,6 +361,9 @@ impl LineState {
         ok!()
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn update_prompt(
         &mut self,
         prompt: &str,
@@ -377,6 +380,9 @@ impl LineState {
         ok!()
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn exit(&mut self, term: &mut dyn Write) -> Result<(), ReadlineError> {
         self.line.clear();
         self.clear(term)?;
@@ -387,6 +393,9 @@ impl LineState {
         ok!()
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn render_new_line_from_beginning_and_flush(
         &mut self,
         term: &mut dyn Write,
@@ -405,11 +414,14 @@ impl LineState {
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails or if the event cannot be processed.
     pub fn apply_event_and_render(
         &mut self,
-        event: Event,
+        event: &Event,
         term: &mut dyn Write,
-        safe_history: SafeHistory,
+        safe_history: &SafeHistory,
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
         use apply_event_and_render_helper::{handle_control_key, handle_regular_key,
                                             handle_resize};
@@ -421,15 +433,15 @@ impl LineState {
                 modifiers: KeyModifiers::CONTROL,
                 kind: KeyEventKind::Press,
                 ..
-            }) => handle_control_key(self, code, term, safe_history),
+            }) => handle_control_key(self, *code, term, safe_history),
             // Other Modifiers (None, Shift, Control+Alt)
             Event::Key(KeyEvent {
                 code,
                 modifiers: _,
                 kind: KeyEventKind::Press,
                 ..
-            }) => handle_regular_key(self, code, term, safe_history),
-            Event::Resize(x, y) => handle_resize(self, x, y, term),
+            }) => handle_regular_key(self, *code, term, safe_history),
+            Event::Resize(x, y) => handle_resize(self, *x, *y, term),
             _ => Ok(None),
         }
     }
@@ -445,7 +457,7 @@ mod apply_event_and_render_helper {
         line_state: &mut LineState,
         code: KeyCode,
         term: &mut dyn Write,
-        _safe_history: SafeHistory,
+        _safe_history: &SafeHistory,
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
         match code {
             KeyCode::Char('d') => handle_ctrl_d(line_state, term),
@@ -468,7 +480,7 @@ mod apply_event_and_render_helper {
         line_state: &mut LineState,
         code: KeyCode,
         term: &mut dyn Write,
-        safe_history: SafeHistory,
+        safe_history: &SafeHistory,
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
         early_return_if_paused!(line_state @None);
 
@@ -803,7 +815,7 @@ mod apply_event_and_render_helper {
     fn handle_up(
         line_state: &mut LineState,
         term: &mut dyn Write,
-        safe_history: SafeHistory,
+        safe_history: &SafeHistory,
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
         if let Some(line) = safe_history.lock().unwrap().search_next() {
             line_state.line.clear();
@@ -819,7 +831,7 @@ mod apply_event_and_render_helper {
     fn handle_down(
         line_state: &mut LineState,
         term: &mut dyn Write,
-        safe_history: SafeHistory,
+        safe_history: &SafeHistory,
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
         if let Some(line) = safe_history.lock().unwrap().search_previous() {
             line_state.line.clear();
@@ -885,9 +897,9 @@ mod tests {
         let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
 
         let it = line.apply_event_and_render(
-            event,
+            &event,
             &mut *safe_output_terminal.lock().unwrap(),
-            safe_history,
+            &safe_history,
         );
 
         assert!(matches!(it, Ok(None)));
@@ -910,9 +922,9 @@ mod tests {
         let event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
 
         let it = line.apply_event_and_render(
-            event,
+            &event,
             &mut *safe_output_terminal.lock().unwrap(),
-            safe_history,
+            &safe_history,
         );
 
         assert!(matches!(it, Ok(None)));
@@ -935,9 +947,9 @@ mod tests {
         let event = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
 
         let it = line.apply_event_and_render(
-            event,
+            &event,
             &mut *safe_output_terminal.lock().unwrap(),
-            safe_history,
+            &safe_history,
         );
 
         assert!(matches!(it, Ok(None)));

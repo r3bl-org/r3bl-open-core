@@ -43,6 +43,10 @@ use crate::{List, MdDocument, MdElement,
 ///    [`mod@parse_fenced_code_block`] handle this.
 /// 6. line (which contains a [`crate::MdLineFragments`]). The parsers in
 ///    [`mod@crate::fragment`] handle this.
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't contain valid markdown.
 #[rustfmt::skip]
 pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>> {
     let (input, output) = many0(

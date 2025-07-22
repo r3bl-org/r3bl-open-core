@@ -52,6 +52,10 @@ pub trait App {
     ///
     /// More than likely a bunch of other [`crate::Component::handle_event`]s will perform
     /// the actual event handling.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the input event handling fails.
     fn app_handle_input_event(
         &mut self,
         input_event: InputEvent,
@@ -66,6 +70,10 @@ pub trait App {
     ///
     /// More than likely a bunch of other [`crate::Component::handle_event`]s will perform
     /// the actual event handling.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signal handling fails.
     fn app_handle_signal(
         &mut self,
         signal: &Self::AS,
@@ -80,6 +88,10 @@ pub trait App {
     ///
     /// More than likely a bunch of other [`crate::Component::render`]s will perform the
     /// actual rendering.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the rendering operation fails.
     fn app_render(
         &mut self,
         global_data: &mut GlobalData<Self::S, Self::AS>,

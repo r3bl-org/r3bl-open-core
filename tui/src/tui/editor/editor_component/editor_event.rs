@@ -371,7 +371,7 @@ impl EditorEvent {
             // For multi-line operations, use the batched insert to avoid multiple validations
             engine_internal_api::insert_str_batch_at_caret(
                 EditorArgsMut { engine, buffer },
-                lines,
+                &lines,
             );
         } else {
             // Single line - insert directly

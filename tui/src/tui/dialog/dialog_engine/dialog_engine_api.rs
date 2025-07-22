@@ -42,6 +42,9 @@ pub enum DialogEngineApplyResponse {
 pub struct DialogEngineApi;
 
 impl DialogEngineApi {
+    /// # Errors
+    ///
+    /// Returns an error if the rendering operation fails.
     pub fn render_engine<S, AS>(
         args: DialogEngineArgs<'_, S, AS>,
     ) -> CommonResult<RenderPipeline>
@@ -157,6 +160,10 @@ impl DialogEngineApi {
     /// - [`DialogEngineApplyResponse::UpdateEditorBuffer`] => the editor buffer was
     ///   updated.
     /// - [`DialogEngineApplyResponse::Noop`] => otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the event handling fails.
     pub fn apply_event<S, AS>(
         mut_state: &mut S,
         self_id: FlexBoxId,
@@ -169,7 +176,7 @@ impl DialogEngineApi {
     {
         // Was a dialog choice made?
         if let Some(choice) = internal_impl::try_handle_dialog_choice(
-            input_event.clone(),
+            &input_event,
             mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
         ) {
@@ -180,7 +187,7 @@ impl DialogEngineApi {
         // Was up / down pressed to select autocomplete results & vert scroll the results
         // panel?
         if let EventPropagation::ConsumedRender = internal_impl::try_handle_up_down(
-            input_event.clone(),
+            &input_event,
             mut_state.get_mut_dialog_buffer(self_id),
             dialog_engine,
         ) {
@@ -878,14 +885,14 @@ mod internal_impl {
     }
 
     pub fn try_handle_dialog_choice(
-        input_event: InputEvent,
+        input_event: &InputEvent,
         maybe_dialog_buffer: Option<&mut DialogBuffer>,
         dialog_engine: &mut DialogEngine,
     ) -> Option<DialogChoice> {
         // It is safe to unwrap the dialog buffer here (since it will have Some value).
         let dialog_buffer = { maybe_dialog_buffer? };
 
-        match DialogEvent::from(input_event) {
+        match DialogEvent::from(&input_event) {
             // Handle Enter.
             DialogEvent::EnterPressed => match dialog_engine.dialog_options.mode {
                 DialogEngineMode::ModalSimple => {
@@ -916,7 +923,7 @@ mod internal_impl {
     }
 
     pub fn try_handle_up_down(
-        input_event: InputEvent,
+        input_event: &InputEvent,
         maybe_dialog_buffer: Option<&mut DialogBuffer>,
         dialog_engine: &mut DialogEngine,
     ) -> EventPropagation {

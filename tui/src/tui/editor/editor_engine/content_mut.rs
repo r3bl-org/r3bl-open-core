@@ -74,7 +74,7 @@ pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
 /// # Arguments
 /// * `args` - Contains mutable references to the editor buffer and engine
 /// * `lines` - Vector of string slices to insert, with newlines added between them
-pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
+pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
     let EditorArgsMut { buffer, engine } = args;
 
     if lines.is_empty() {
@@ -595,7 +595,7 @@ pub fn delete_selected(
         buffer,
         engine,
         lines_to_remove,
-        lines_to_replace,
+        &lines_to_replace,
     );
 
     // Restore caret position and clear selection
@@ -696,7 +696,7 @@ mod delete_selected_helper {
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
         mut lines_to_remove: InlineVec<RowIndex>,
-        lines_to_replace: HashMap<RowIndex, InlineString>,
+        lines_to_replace: &HashMap<RowIndex, InlineString>,
     ) {
         // When buffer_mut goes out of scope, it will be dropped &
         // validation performed.
@@ -1355,7 +1355,7 @@ mod tests {
         let lines = vec!["line1", "line2", "line3"];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
-            lines,
+            &lines,
         );
 
         assert_eq2!(buffer.get_lines().len(), 3);
@@ -1375,7 +1375,7 @@ mod tests {
         let lines = vec!["line1", "", "line3"];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
-            lines,
+            &lines,
         );
 
         assert_eq2!(buffer.get_lines().len(), 3);
@@ -1401,7 +1401,7 @@ mod tests {
         let lines = vec!["NEW1", "NEW2"];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
-            lines,
+            &lines,
         );
 
         // The batch insert behavior when inserting in the middle of a line:
@@ -1433,7 +1433,7 @@ mod tests {
         // Method 1: Batch insert
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine1, buffer: &mut buffer1 },
-            lines.clone(),
+            &lines,
         );
 
         // Method 2: Individual inserts
@@ -1471,7 +1471,7 @@ mod tests {
         let lines: Vec<&str> = vec![];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
-            lines,
+            &lines,
         );
 
         // Buffer should remain unchanged with one empty line
@@ -1491,7 +1491,7 @@ mod tests {
 
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut { engine: &mut engine, buffer: &mut buffer },
-            lines_refs,
+            &lines_refs,
         );
 
         assert_eq2!(buffer.get_lines().len(), 100);

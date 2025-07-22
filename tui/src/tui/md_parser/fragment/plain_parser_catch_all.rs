@@ -82,6 +82,10 @@ use crate::{fg_blue, fg_magenta, fg_red,
 /// This will panic if the lock is poisoned, which can happen if a thread
 /// panics while holding the lock. To avoid panics, ensure that the code that
 /// locks the mutex does not panic while holding the lock.
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't contain valid plain text.
 pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str> {
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!("\n{} plain parser, input: {:?}", fg_magenta("██"), input);

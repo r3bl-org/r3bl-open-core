@@ -52,6 +52,10 @@ pub fn count_delim_occurrences_until_eol<'i>(
 
 /// See: [`parse_fragment_plain_text_no_new_li`
 /// `ne1()`].
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't start with the delimiter or contains a newline.
 #[rustfmt::skip]
 pub fn take_starts_with_delim_no_new_line<'i>(
     input: &'i str,

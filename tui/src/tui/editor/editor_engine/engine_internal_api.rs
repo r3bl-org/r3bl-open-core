@@ -111,7 +111,7 @@ pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
 /// * `args` - Mutable references to the editor engine and buffer
 /// * `lines` - Vector of string slices to insert, with newlines automatically added
 ///   between them
-pub fn insert_str_batch_at_caret(args: EditorArgsMut<'_>, lines: Vec<&str>) {
+pub fn insert_str_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
     content_mut::insert_lines_batch_at_caret(args, lines);
 }
 

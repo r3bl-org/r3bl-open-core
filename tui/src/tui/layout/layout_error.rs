@@ -56,6 +56,10 @@ impl Display for LayoutError {
 /// Implement constructor that is compatible w/ [`CommonResult<T>`].
 impl LayoutError {
     /// Only [`LayoutError::error_type`] available, and no [`LayoutError::error_message`].
+    ///
+    /// # Errors
+    ///
+    /// Always returns an error with the given error type.
     pub fn new_error_result_with_only_type<T>(
         err_type: LayoutErrorType,
     ) -> CommonResult<T> {
@@ -66,6 +70,10 @@ impl LayoutError {
     }
 
     /// Both [`LayoutError::error_type`] and [`LayoutError::error_message`] available.
+    ///
+    /// # Errors
+    ///
+    /// Always returns an error with the given error type and message.
     pub fn new_error_result<T>(
         err_type: LayoutErrorType,
         msg: String,

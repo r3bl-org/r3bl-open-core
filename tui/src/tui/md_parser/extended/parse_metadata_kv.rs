@@ -24,6 +24,10 @@ use crate::{md_parser::constants::{COLON, NEW_LINE, SPACE},
 /// - There may or may not be a newline at the end. If there is, it is consumed.
 /// - Can't nest the `tag_name` within the `output`. So there can only be one `tag_name`
 ///   in the `output`.
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't match the expected format.
 pub fn parse_unique_kv_opt_eol<'a>(
     tag_name: &'a str,
     input: &'a str,

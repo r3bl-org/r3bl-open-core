@@ -59,6 +59,10 @@ use crate::{fg_green, fg_red, inline_string, parse_fragment_plain_text_no_new_li
 ///
 /// To see this in action, set the [`crate::DEBUG_MD_PARSER_STDOUT`] to true, and run all
 /// the tests in this file.
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input cannot be parsed as inline fragments.
 #[rustfmt::skip]
 pub fn parse_inline_fragments_until_eol_or_eoi(
     input: &str,

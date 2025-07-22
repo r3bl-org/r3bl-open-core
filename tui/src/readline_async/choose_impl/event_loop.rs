@@ -42,6 +42,9 @@ pub enum EventLoopResult {
     Select,
 }
 
+/// # Errors
+///
+/// Returns an error if the event loop encounters a terminal I/O error.
 pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,
@@ -78,6 +81,9 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
     Ok(return_this)
 }
 
+/// # Errors
+///
+/// Returns an error if the event loop encounters a terminal I/O error.
 pub fn enter_event_loop_sync<S: CalculateResizeHint>(
     state: &mut S,
     function_component: &mut impl FunctionComponent<S>,

@@ -392,7 +392,7 @@ pub mod manage_shared_writer_output {
                 let term = lock_output_device_as_mut!(output_device);
                 let line_state = self_safe_line_state.lock().unwrap();
                 // We don't care about the result of this operation.
-                flush_internal(self_safe_is_paused_buffer, is_paused, line_state, term)
+                flush_internal(&self_safe_is_paused_buffer, is_paused, line_state, term)
                     .ok();
             }
 
@@ -420,7 +420,7 @@ pub mod manage_shared_writer_output {
                     ));
                 }
                 // We don't care about the result of this operation.
-                flush_internal(self_safe_is_paused_buffer, new_value, line_state, term)
+                flush_internal(&self_safe_is_paused_buffer, new_value, line_state, term)
                     .ok();
             }
             LineStateControlSignal::SpinnerActive(spinner_shutdown_sender) => {
@@ -445,8 +445,12 @@ pub mod manage_shared_writer_output {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the terminal fails.
     pub fn flush_internal(
-        self_safe_is_paused_buffer: SafePauseBuffer,
+        self_safe_is_paused_buffer: &SafePauseBuffer,
         is_paused: LineStateLiveness,
         mut line_state: std::sync::MutexGuard<'_, LineState>,
         term: &mut SendRawTerminal,
@@ -507,6 +511,10 @@ impl Readline {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if terminal operations fail.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     #[allow(clippy::needless_pass_by_value)]
     pub fn try_new(
@@ -610,6 +618,10 @@ impl Readline {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if updating the prompt fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn update_prompt(
         &mut self,
@@ -630,6 +642,10 @@ impl Readline {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if clearing the screen fails.
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn clear(&mut self) -> CommonResultWithError<(), ReadlineError> {
         let term = lock_output_device_as_mut!(self.output_device);
@@ -693,6 +709,10 @@ impl Readline {
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if reading input fails.
     pub async fn readline(
         &mut self,
     ) -> CommonResultWithError<ReadlineEvent, ReadlineError> {
@@ -709,10 +729,10 @@ impl Readline {
                 result_crossterm_event = self.input_device.next() => {
                     match readline_internal::apply_event_to_line_state_and_render(
                         result_crossterm_event,
-                        self.safe_line_state.clone(),
+                        &self.safe_line_state,
                         lock_output_device_as_mut!(self.output_device),
-                        self.safe_history.clone(),
-                        self.safe_spinner_is_active.clone(),
+                        &self.safe_history,
+                        &self.safe_spinner_is_active,
                     ) {
                         ControlFlowExtended::ReturnOk(ok_value) => {
                             return Ok(ok_value);
@@ -755,10 +775,10 @@ pub mod readline_internal {
     /// locks the mutex does not panic while holding the lock.
     pub fn apply_event_to_line_state_and_render(
         result_crossterm_event: miette::Result<crossterm::event::Event>,
-        self_line_state: SafeLineState,
+        self_line_state: &SafeLineState,
         term: &mut dyn Write,
-        self_safe_history: SafeHistory,
-        self_safe_is_spinner_active: Arc<StdMutex<Option<broadcast::Sender<()>>>>,
+        self_safe_history: &SafeHistory,
+        self_safe_is_spinner_active: &Arc<StdMutex<Option<broadcast::Sender<()>>>>,
     ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
         match result_crossterm_event {
             Ok(crossterm_event) => {
@@ -778,9 +798,9 @@ pub mod readline_internal {
 
                 // Regular readline event handling.
                 let result_maybe_readline_event = line_state.apply_event_and_render(
-                    crossterm_event,
+                    &crossterm_event,
                     term,
-                    self_safe_history,
+                    &self_safe_history,
                 );
 
                 match result_maybe_readline_event {
@@ -879,10 +899,10 @@ mod test_readline {
         };
         let control_flow = readline_internal::apply_event_to_line_state_and_render(
             Ok(event.clone()),
-            readline.safe_line_state.clone(),
+            &readline.safe_line_state,
             lock_output_device_as_mut!(output_device),
-            safe_history.clone(),
-            safe_is_spinner_active.clone(),
+            &safe_history,
+            &safe_is_spinner_active,
         );
 
         assert!(matches!(control_flow, ControlFlowExtended::Continue));
@@ -1077,7 +1097,7 @@ mod test_pause_and_resume_support {
 
         // Call the `flush_internal` function
         let result = flush_internal(
-            safe_is_paused_buffer.clone(),
+            &safe_is_paused_buffer,
             LineStateLiveness::Paused,
             line_state,
             &mut stdout_mock,
@@ -1110,7 +1130,7 @@ mod test_pause_and_resume_support {
 
         // Call the `flush_internal` function
         let result = flush_internal(
-            safe_is_paused_buffer.clone(),
+            &safe_is_paused_buffer,
             LineStateLiveness::NotPaused,
             line_state,
             &mut stdout_mock,

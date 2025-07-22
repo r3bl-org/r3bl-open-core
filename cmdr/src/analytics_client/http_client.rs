@@ -20,6 +20,9 @@ use reqwest::{Client, Response};
 
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
+/// # Errors
+///
+/// Returns an error if the HTTP GET request fails or returns a non-success status.
 pub async fn make_get_request(
     url: &str,
 ) -> core::result::Result<Response, reqwest::Error> {
@@ -45,6 +48,9 @@ pub async fn make_get_request(
     }
 }
 
+/// # Errors
+///
+/// Returns an error if the HTTP POST request fails or returns a non-success status.
 pub async fn make_post_request(
     url: &str,
     data: &serde_json::Value,

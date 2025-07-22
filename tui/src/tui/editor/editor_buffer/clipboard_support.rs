@@ -25,10 +25,16 @@ pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 /// Abstraction for the clipboard service for dependency injection. This trait is
 /// implemented by both a test clipboard service and a system clipboard service.
 pub trait ClipboardService {
+    /// # Errors
+    ///
+    /// Returns an error if the clipboard operation fails.
     fn try_to_put_content_into_clipboard(
         &mut self,
         content: String,
     ) -> ClipboardResult<()>;
+    /// # Errors
+    ///
+    /// Returns an error if the clipboard operation fails.
     fn try_to_get_content_from_clipboard(&mut self) -> ClipboardResult<String>;
 }
 

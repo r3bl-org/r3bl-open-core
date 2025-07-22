@@ -409,10 +409,14 @@ mod pixel_char_line_impl {
                 helpers::peek_does_next_item_continues_range(values, index),
                 helpers::does_current_range_exist(&acc_current_range),
             ) {
-                // Start new current range.
+                // Start new current range OR the next value continues the current range.
                 (
                     helpers::Peek::NextItemContinuesRange,
                     helpers::CurrentRange::DoesNotExist,
+                )
+                | (
+                    helpers::Peek::NextItemContinuesRange,
+                    helpers::CurrentRange::Exists,
                 ) => {
                     acc_current_range.push(*value);
                 }
@@ -426,13 +430,6 @@ mod pixel_char_line_impl {
                         write!(f, ", ")?;
                     }
                     write!(f, "{value}")?;
-                }
-                // The next value continues the current range.
-                (
-                    helpers::Peek::NextItemContinuesRange,
-                    helpers::CurrentRange::Exists,
-                ) => {
-                    acc_current_range.push(*value);
                 }
                 // The next value does not continue the current range & the current range
                 // exists.

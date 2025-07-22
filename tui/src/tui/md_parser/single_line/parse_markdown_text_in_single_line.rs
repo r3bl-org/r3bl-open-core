@@ -35,6 +35,9 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     Ok((input, it))
 }
 
+/// # Errors
+///
+/// Returns a nom parsing error if the input cannot be parsed as markdown text.
 pub fn parse_block_markdown_text_with_or_without_new_line(
     input: &str,
 ) -> IResult<&str, MdLineFragments<'_>> {
@@ -49,6 +52,9 @@ mod inner {
                 CheckboxParsePolicy, IResult, List, MdLineFragments, Parser, NEW_LINE};
 
     /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] terminated by EOL.
+    /// # Errors
+    ///
+    /// Returns a nom parsing error if the input cannot be parsed as markdown text with newline.
     #[rustfmt::skip]
     pub fn parse_block_markdown_text_with_new_line(
         input: &str,

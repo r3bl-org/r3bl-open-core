@@ -560,21 +560,16 @@ mod multiline_select_helper {
             // DirectionIsTheSame: Previous selection with Shift+Down, then
             // Shift+Down. DirectionHasChanged: No selection ->
             // Shift+Left/Right -> Shift+Down.
+            // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up,
+            // Shift+Down.
             (
                 /* previous_caret */ RowLocationInSelectionList::Contained,
                 /* current_caret */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Down,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
-            ) => continue_selection_helper::continue_select_down(
-                prev,
-                curr,
-                buffer,
-                caret_vertical_movement_direction,
-            ),
-            // Position caret below empty line, Shift+Up, Shift+Up, Shift+Up,
-            // Shift+Down.
-            (
+            )
+            | (
                 /* previous_caret */ RowLocationInSelectionList::Overflow,
                 /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Down,
@@ -587,21 +582,16 @@ mod multiline_select_helper {
             ),
             // DirectionIsTheSame: Previous selection with Shift+Up, then Shift+Up.
             // DirectionHasChanged: // No selection -> Shift+Left/Right -> Shift+Up.
+            // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down,
+            // Shift+Up.
             (
                 /* previous_caret */ RowLocationInSelectionList::Contained,
                 /* current_caret */ RowLocationInSelectionList::Overflow,
                 CaretMovementDirection::Up,
                 DirectionChangeResult::DirectionIsTheSame
                 | DirectionChangeResult::DirectionHasChanged,
-            ) => continue_selection_helper::continue_select_up(
-                prev,
-                curr,
-                buffer,
-                caret_vertical_movement_direction,
-            ),
-            // Position caret above empty line, Shift+Down, Shift+Down, Shift+Down,
-            // Shift+Up.
-            (
+            )
+            | (
                 /* previous_caret */ RowLocationInSelectionList::Overflow,
                 /* current_caret */ RowLocationInSelectionList::Contained,
                 CaretMovementDirection::Up,

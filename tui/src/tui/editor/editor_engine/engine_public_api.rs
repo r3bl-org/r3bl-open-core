@@ -50,7 +50,7 @@ fn triggers_undo_redo(editor_event: &EditorEvent) -> bool {
     )
 }
 
-fn input_event_matches_navigation_keys(input_event: InputEvent) -> bool {
+fn input_event_matches_navigation_keys(input_event: &InputEvent) -> bool {
     input_event.matches_any_of_these_keypresses(&[
         KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Up),
@@ -82,6 +82,10 @@ fn input_event_matches_navigation_keys(input_event: InputEvent) -> bool {
 /// Event based interface for the editor. This converts the [`InputEvent`] into an
 /// [`EditorEvent`] and then executes it. Returns a new [`EditorBuffer`] if the operation
 /// was applied otherwise returns [None].
+///
+/// # Errors
+///
+/// Returns an error if the event processing fails.
 pub fn apply_event(
     buffer: &mut EditorBuffer,
     engine: &mut EditorEngine,
@@ -93,7 +97,7 @@ pub fn apply_event(
     // If in ReadOnly mode, filter out all input events that are not navigation keys, by
     // doing early return. It is not possible to modify the buffer in ReadOnly mode.
     if let EditMode::ReadOnly = editor_config.edit_mode
-        && !input_event_matches_navigation_keys(input_event.clone()) {
+        && !input_event_matches_navigation_keys(&input_event) {
             return Ok(EditorEngineApplyEventResult::NotApplied);
         }
 
@@ -122,6 +126,9 @@ pub fn apply_event(
     }
 }
 
+/// # Errors
+///
+/// Returns an error if the rendering operation fails.
 pub fn render_engine(
     engine: &mut EditorEngine,
     buffer: &mut EditorBuffer,
