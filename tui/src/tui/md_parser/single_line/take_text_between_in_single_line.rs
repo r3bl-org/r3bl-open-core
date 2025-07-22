@@ -24,6 +24,12 @@ use crate::{fg_green, fg_red, md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_ST
 
 /// Takes the text between the start and end delimiters. Will error out if this text
 /// contains a new line.
+/// 
+/// # Errors
+/// 
+/// Returns a nom parsing error if:
+/// - The start or end delimiter is not found
+/// - The text between delimiters contains a newline character
 pub fn take_text_between_delims_err_on_new_line<'input>(
     input: &'input str,
     start_delim: &'input str,

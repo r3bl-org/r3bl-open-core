@@ -109,6 +109,12 @@ impl HasFocus {
 impl HasFocus {
     /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored
     /// with [`reset_modal_id`](HasFocus::reset_modal_id).
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if:
+    /// - No non-modal id is currently set (modal id requires a base id)
+    /// - A modal id is already set (cannot nest modal ids)
     pub fn try_set_modal_id(&mut self, id: FlexBoxId) -> CommonResult<()> {
         throws!({
             // Must have a non modal id already set.

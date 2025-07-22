@@ -410,14 +410,8 @@ mod pixel_char_line_impl {
                 helpers::does_current_range_exist(&acc_current_range),
             ) {
                 // Start new current range OR the next value continues the current range.
-                (
-                    helpers::Peek::NextItemContinuesRange,
-                    helpers::CurrentRange::DoesNotExist,
-                )
-                | (
-                    helpers::Peek::NextItemContinuesRange,
-                    helpers::CurrentRange::Exists,
-                ) => {
+                (helpers::Peek::NextItemContinuesRange,
+                helpers::CurrentRange::DoesNotExist | helpers::CurrentRange::Exists) => {
                     acc_current_range.push(*value);
                 }
                 // The next value does not continue the current range & the current range

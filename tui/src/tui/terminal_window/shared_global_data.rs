@@ -89,6 +89,10 @@ where
     AS: Debug + Default + Clone + Sync + Send,
 {
     /// Create a new instance of [`GlobalData`] with the given parameters.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if the initial window size update fails.
     pub fn try_to_create_instance(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
         state: S,

@@ -155,6 +155,7 @@ where
     AS: Debug + Default + Clone + Sync + Send + 'static,
 {
     /// Initialize the event loop state with all required components.
+    #[allow(clippy::needless_pass_by_value)]
     fn initialize(
         state: S,
         initial_size: Size,

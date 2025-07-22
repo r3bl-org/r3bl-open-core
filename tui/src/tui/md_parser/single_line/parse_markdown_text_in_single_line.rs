@@ -21,6 +21,10 @@ use crate::{md_parser::constants::NEW_LINE, md_parser_types::CheckboxParsePolicy
             parse_inline_fragments_until_eol_or_eoi, List, MdLineFragments};
 
 /// Parse a markdown text [`crate::FragmentsInOneLine`] in the input (no EOL required).
+/// 
+/// # Errors
+/// 
+/// Returns a nom parsing error if the input cannot be parsed as markdown text fragments.
 #[rustfmt::skip]
 pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     input: &str,

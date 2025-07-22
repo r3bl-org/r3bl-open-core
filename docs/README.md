@@ -7,6 +7,7 @@
     - [Contributing Guides](#contributing-guides)
     - [Technical Documentation](#technical-documentation)
     - [Plans](#plans)
+    - [Completed Plans](#completed-plans)
     - [Video Documentation](#video-documentation)
   - [Creating and Managing Documentation](#creating-and-managing-documentation)
     - [Documentation Updates](#documentation-updates)
@@ -46,11 +47,17 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 
 - [`parser_strategy_analysis.md`](parser_strategy_analysis.md) - Analysis of parser implementation
   strategies
+- [`parser_conformance.md`](parser_conformance.md) - Parser conformance testing documentation
+- [`CLAUDE.md`](CLAUDE.md) - Claude AI integration documentation
 
 ### Plans
 
 - [`task_tui_perf_optimize.md`](task_tui_perf_optimize.md) - TUI performance optimization guidelines
-- [`ng_parser_archive.md`](ng_parser_archive.md) - Archived parser documentation
+- [`task_remove_crossterm.md`](task_remove_crossterm.md) - Task documentation for removing crossterm dependency
+
+### Completed Plans
+
+- [`ng_parser_archive.md`](ng_parser_archive.md) - Complete documentation of the NG Parser and Simple Parser archival process, including performance analysis, migration status, and lessons learned from experimental parser development
 
 ### Video Documentation
 

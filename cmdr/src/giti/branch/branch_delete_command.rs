@@ -29,6 +29,13 @@ use crate::{AnalyticsAction, common,
             report_analytics};
 
 /// The main function for `giti branch delete` command.
+/// 
+/// # Errors
+/// 
+/// Returns an error if:
+/// - Git operations fail
+/// - User interaction fails
+/// - Branch deletion fails (protected branch, not found, etc.)
 pub async fn handle_branch_delete_command(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandRunResult<CommandRunDetails>> {

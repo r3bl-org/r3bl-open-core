@@ -28,6 +28,10 @@ use crate::{md_parser::constants::{self, NEW_LINE},
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [`HeadingLevel`] and
 /// [`crate::FragmentsInOneLine`].
+/// 
+/// # Errors
+/// 
+/// Returns a nom parsing error if the input does not match a valid heading pattern.
 #[rustfmt::skip]
 pub fn parse_heading_in_single_line(input: &str) -> IResult<&str, HeadingData<'_>> {
     let (remainder, output) = parse(input)?;

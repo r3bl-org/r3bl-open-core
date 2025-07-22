@@ -39,6 +39,7 @@ fn fmt_two_col(col_1: &str, col_2: &str) -> String {
 /// The last line is passed in as a parameter to allow for customization. This is useful
 /// when the list is long and the instructions are at the top.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn prefix_multi_select_instruction_header(
     last_lines: InlineVec<InlineVec<ASText>>,
 ) -> InlineVec<InlineVec<AnsiStyledText>> {
@@ -69,6 +70,7 @@ pub fn prefix_multi_select_instruction_header(
 /// the list. This is easily converted into a
 /// [`r3bl_tui::choose_impl::Header::MultiLine`].
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn prefix_single_select_instruction_header(
     last_lines: InlineVec<InlineVec<ASText>>,
 ) -> InlineVec<InlineVec<ASText>> {

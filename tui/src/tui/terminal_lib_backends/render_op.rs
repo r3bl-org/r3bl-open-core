@@ -373,5 +373,10 @@ pub trait Flush {
 }
 
 pub trait DebugFormatRenderOp {
+    /// Formats the `RenderOp` for debug output.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns a formatting error if writing to the formatter fails.
     fn fmt_debug(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
 }

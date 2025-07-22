@@ -20,6 +20,13 @@ use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext, ReadlineEve
 use crate::giti::{BranchNewDetails, CommandRunDetails, git, local_branch_ops, ui_str};
 
 /// The main function for `giti branch new` command.
+/// 
+/// # Errors
+/// 
+/// Returns an error if:
+/// - Git operations fail
+/// - User input fails
+/// - Branch creation fails (branch already exists, invalid name, etc.)
 pub async fn handle_branch_new_command(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandRunResult<CommandRunDetails>> {

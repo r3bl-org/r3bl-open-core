@@ -43,6 +43,7 @@ impl Display for ConfigPaths {
 
 /// This is where the config file is stored.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn get_id_file_path(path: PathBuf) -> PathBuf {
     path.join(format!("{}", ConfigPaths::ProxyMachineIdFile))
 }
@@ -64,6 +65,13 @@ pub fn exists() -> bool {
     }
 }
 
+/// Creates the configuration folder for the application.
+/// 
+/// # Errors
+/// 
+/// Returns an error if:
+/// - The config folder path cannot be determined
+/// - Directory creation fails due to permissions or I/O issues
 pub fn create() -> CommonResult<PathBuf> {
     if let Some(config_folder_path) = try_get_config_folder_path() {
         let result_create_dir_all = fs::create_dir_all(&config_folder_path);

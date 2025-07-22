@@ -20,6 +20,11 @@ use r3bl_tui::{CommonResult, GlobalData, InputDevice, InputEvent, ModifierKeysMa
 
 use crate::edi::{AppMain, constructor};
 
+/// Runs the editor application with an optional file to open.
+/// 
+/// # Errors
+/// 
+/// Returns an error if the terminal window fails to initialize or run.
 pub async fn run_app(maybe_file_path: Option<&str>) -> CommonResult<()> {
     // Create a new state from the file path.
     let state = constructor::new(maybe_file_path);

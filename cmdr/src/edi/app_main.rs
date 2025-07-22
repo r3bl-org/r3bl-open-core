@@ -315,6 +315,7 @@ mod modal_dialog_ask_for_filename_to_save_file {
                 inline_string, modal_dialog_ask_for_filename_to_save_file, stylesheet};
     use crate::edi::file_utils;
 
+    #[allow(clippy::needless_pass_by_value)]
     pub fn initialize(
         state: &mut State,
         id: FlexBoxId,
@@ -584,6 +585,7 @@ mod populate_component_registry {
     ) {
         let id = FlexBoxId::from(Id::ComponentEditor);
         let boxed_editor_component = {
+            #[allow(clippy::needless_pass_by_value)]
             fn on_buffer_change(
                 my_id: FlexBoxId,
                 main_thread_channel_sender: Sender<

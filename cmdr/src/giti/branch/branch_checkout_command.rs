@@ -24,6 +24,13 @@ use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, RepoStatus,
             prefix_single_select_instruction_header};
 
 /// The main function for `giti branch checkout` command.
+/// 
+/// # Errors
+/// 
+/// Returns an error if:
+/// - Git operations fail (not a git repository, permission issues, etc.)
+/// - User interaction fails (terminal I/O issues)
+/// - Branch checkout fails (conflicts, invalid branch name, etc.)
 pub async fn handle_branch_checkout_command(
     maybe_branch_name: Option<String>,
 ) -> CommonResult<CommandRunResult<CommandRunDetails>> {

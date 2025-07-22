@@ -593,6 +593,7 @@ mod syn_hi_syntect_path {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn render_line_with_syntect(
         syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
         editor_buffer: &EditorBuffer,
@@ -602,7 +603,7 @@ mod syn_hi_syntect_path {
         let scr_ofs = editor_buffer.get_scr_ofs();
         let line =
             convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
-                syntect_highlighted_line,
+                &syntect_highlighted_line,
             );
         let styled_texts = line.clip(scr_ofs, max_display_col_count);
         render_tui_styled_texts_into(&styled_texts, render_ops);

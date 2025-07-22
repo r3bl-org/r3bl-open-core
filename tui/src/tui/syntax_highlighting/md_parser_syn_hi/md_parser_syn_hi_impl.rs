@@ -86,6 +86,10 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
 /// This will panic if the lock is poisoned, which can happen if a thread
 /// panics while holding the lock. To avoid panics, ensure that the code that
 /// locks the mutex does not panic while holding the lock.
+/// 
+/// # Errors
+/// 
+/// Returns an error if the markdown parsing fails.
 pub fn try_parse_and_highlight(
     editor_text_lines: &[GCString],
     maybe_current_box_computed_style: Option<TuiStyle>,
@@ -418,7 +422,7 @@ mod from_block_codeblock_helper {
 
                     let line_converted_to_tui: List<StyleUSSpan> =
                                 convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
-                                    syntect_highlighted_line,
+                                    &syntect_highlighted_line,
                                 );
 
                     acc_line_output += line_converted_to_tui;
@@ -507,6 +511,7 @@ mod from_block_codeblock_helper {
     }
 }
 
+#[derive(Copy, Clone)]
 enum HyperlinkType {
     Image,
     Link,

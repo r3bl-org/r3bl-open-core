@@ -892,7 +892,7 @@ mod internal_impl {
         // It is safe to unwrap the dialog buffer here (since it will have Some value).
         let dialog_buffer = { maybe_dialog_buffer? };
 
-        match DialogEvent::from(&input_event) {
+        match DialogEvent::from(input_event) {
             // Handle Enter.
             DialogEvent::EnterPressed => match dialog_engine.dialog_options.mode {
                 DialogEngineMode::ModalSimple => {

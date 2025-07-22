@@ -25,6 +25,7 @@ impl DefaultInputEventHandler {
     /// This function does **not** consume the `input_event` argument. [`InputEvent`]
     /// implements [Copy] (no need to pass references into this function).
     #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn no_consume(
         input_event: InputEvent,
         exit_keys: &[InputEvent],

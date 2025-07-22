@@ -800,7 +800,7 @@ pub mod readline_internal {
                 let result_maybe_readline_event = line_state.apply_event_and_render(
                     &crossterm_event,
                     term,
-                    &self_safe_history,
+                    self_safe_history,
                 );
 
                 match result_maybe_readline_event {

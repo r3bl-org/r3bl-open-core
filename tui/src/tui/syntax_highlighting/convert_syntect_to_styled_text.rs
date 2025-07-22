@@ -84,7 +84,7 @@ pub fn convert_color_from_syntect_to_tui(st_color: SyntectColor) -> TuiColor {
 
 #[must_use]
 pub fn convert_highlighted_line_from_syntect_to_tui(
-    syntect_highlighted_line: SyntectStyleStrSpanLine<'_>,
+    syntect_highlighted_line: &SyntectStyleStrSpanLine<'_>,
 ) -> StyleUSSpanLine {
     fn convert(vec_styled_str: &SyntectStyleStrSpanLine<'_>) -> StyleUSSpanLine {
         let mut it: StyleUSSpanLine = List::default();
@@ -97,7 +97,7 @@ pub fn convert_highlighted_line_from_syntect_to_tui(
         it
     }
 
-    let mut it = convert(&syntect_highlighted_line);
+    let mut it = convert(syntect_highlighted_line);
 
     // Remove the background color from each style in the theme.
     for span in it.iter_mut() {
