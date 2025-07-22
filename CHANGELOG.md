@@ -468,6 +468,7 @@ includes extensive code quality improvements and Windows compatibility fixes. Is
   - Addressed Rust 2024 if-let-else rescope changes
   - Resolved extensive clippy warnings and pedantic lints
   - Fixed Unicode handling in `find_substring()` optimization
+  - Added language name mapping for syntax highlighting to support both language names (e.g., "rust") and file extensions (e.g., "rs") in markdown code blocks
 
 - Performance:
   - 13.6% CPU reduction through optimized grapheme segmentation and dialog border colorization

@@ -49,11 +49,63 @@ pub type SyntectStyleStrSpan<'a> = (SyntectStyle, &'a str);
 /// A line of text is made up of multiple [`SyntectStyleStrSpan`]s.
 pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 
+/// Maps common language names to their file extensions for syntax highlighting.
+/// This allows markdown code blocks to use either language names (e.g., "rust")
+/// or file extensions (e.g., "rs").
+///
+/// TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile are not supported by `syntect`.
+/// In order to add these languages we need to add custom `.sublime-syntax` files later
+/// for better support of TypeScript, TOML, etc., `syntect` makes that easy:
+///  ```no_run
+///  // Example of loading additional syntaxes
+///  let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+///  builder.add_from_folder("path/to/extra/syntaxes", true)?;
+///  let syntax_set = builder.build();
+///  ```
+fn map_language_to_extension(lang: &str) -> &str {
+    match lang {
+        // Direct mappings
+        "python" => "py",
+        "golang" | "go" => "go",
+        "csharp" | "c#" => "cs",
+        "cpp" | "c++" => "cpp",
+        "objective-c" | "objc" => "m",
+        "yaml" | "yml" => "yaml",
+        "json" => "json",
+        "html" => "html",
+        "xml" => "xml",
+        "markdown" | "md" => "md",
+        "ruby" | "rb" => "rb",
+        "r" => "r",
+        "sql" => "sql",
+        "makefile" => "makefile",
+
+        // Languages that fall back to JavaScript
+        "javascript" | "typescript" | "ts" => "js",
+
+        // Languages that fall back to CSS
+        "css" | "scss" | "sass" => "css",
+
+        // Languages that fall back to Java
+        "java" | "kotlin" | "kt" => "java",
+
+        // Languages that fall back to Rust
+        "rust" | "toml" | "swift" => "rs",
+
+        // Languages that fall back to shell
+        "shell" | "bash" | "sh" | "dockerfile" => "sh",
+
+        // Default: assume it's already a file extension
+        _ => lang,
+    }
+}
+
 pub fn try_get_syntax_ref<'a>(
     syntax_set: &'a SyntaxSet,
     file_extension: &'a str,
 ) -> Option<&'a syntect::parsing::SyntaxReference> {
-    syntax_set.find_syntax_by_extension(file_extension)
+    let mapped_extension = map_language_to_extension(file_extension);
+    syntax_set.find_syntax_by_extension(mapped_extension)
 }
 
 #[must_use]
@@ -528,6 +580,146 @@ mod tests_convert_style_and_color {
             color_fg: tui_color!(0, 0, 0).into(),
             color_bg: tui_color!(0, 0, 0).into(),
             ..TuiStyle::default()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_language_mapping {
+    use super::*;
+    use crate::get_cached_syntax_set;
+
+    #[test]
+    fn test_map_language_to_extension() {
+        // Test Rust mapping
+        assert_eq!(map_language_to_extension("rust"), "rs");
+        assert_eq!(map_language_to_extension("rs"), "rs");
+
+        // Test JavaScript mapping
+        assert_eq!(map_language_to_extension("javascript"), "js");
+        assert_eq!(map_language_to_extension("js"), "js");
+
+        // Test TypeScript mapping (falls back to JS)
+        assert_eq!(map_language_to_extension("typescript"), "js");
+        assert_eq!(map_language_to_extension("ts"), "js");
+
+        // Test Python mapping
+        assert_eq!(map_language_to_extension("python"), "py");
+        assert_eq!(map_language_to_extension("py"), "py");
+
+        // Test Go mapping
+        assert_eq!(map_language_to_extension("golang"), "go");
+        assert_eq!(map_language_to_extension("go"), "go");
+
+        // Test shell/bash mapping
+        assert_eq!(map_language_to_extension("shell"), "sh");
+        assert_eq!(map_language_to_extension("bash"), "sh");
+        assert_eq!(map_language_to_extension("sh"), "sh");
+
+        // Test C# mapping
+        assert_eq!(map_language_to_extension("csharp"), "cs");
+        assert_eq!(map_language_to_extension("c#"), "cs");
+        assert_eq!(map_language_to_extension("cs"), "cs");
+
+        // Test fallback mappings
+        assert_eq!(map_language_to_extension("toml"), "rs"); // Falls back to Rust
+        assert_eq!(map_language_to_extension("scss"), "css"); // Falls back to CSS
+        assert_eq!(map_language_to_extension("sass"), "css"); // Falls back to CSS
+        assert_eq!(map_language_to_extension("kotlin"), "java"); // Falls back to Java
+        assert_eq!(map_language_to_extension("swift"), "rs"); // Falls back to Rust
+        assert_eq!(map_language_to_extension("dockerfile"), "sh"); // Falls back to shell
+
+        // Test unknown language (should return as-is)
+        assert_eq!(map_language_to_extension("unknown"), "unknown");
+        assert_eq!(map_language_to_extension("xyz"), "xyz");
+    }
+
+    #[test]
+    fn test_try_get_syntax_ref_with_language_names() {
+        let syntax_set = get_cached_syntax_set();
+
+        // Test that both "rust" and "rs" resolve to the same syntax
+        let rust_syntax = try_get_syntax_ref(syntax_set, "rust");
+        let rs_syntax = try_get_syntax_ref(syntax_set, "rs");
+
+        assert!(rust_syntax.is_some());
+        assert!(rs_syntax.is_some());
+        assert_eq!(rust_syntax.unwrap().name, rs_syntax.unwrap().name);
+
+        // Test other common language mappings
+        assert!(try_get_syntax_ref(syntax_set, "javascript").is_some());
+        assert!(try_get_syntax_ref(syntax_set, "python").is_some());
+        assert!(try_get_syntax_ref(syntax_set, "golang").is_some());
+
+        // Test that unknown languages return None
+        assert!(try_get_syntax_ref(syntax_set, "unknown_language").is_none());
+    }
+
+    #[test]
+    fn test_available_syntaxes_and_mappings() {
+        let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
+
+        println!("Available syntaxes and their extensions:");
+        for syntax in syntax_set.syntaxes().iter() {
+            println!(
+                "Syntax: {} -> Extensions: {:?}",
+                syntax.name, syntax.file_extensions
+            );
+        }
+
+        // Test our mappings
+        let test_mappings = [
+            ("rust", "rs"),
+            ("javascript", "js"),
+            ("ts", "js"),         // Falls back to JS
+            ("typescript", "js"), // Falls back to JS
+            ("python", "py"),
+            ("golang", "go"),
+            ("go", "go"),
+            ("csharp", "cs"),
+            ("c#", "cs"),
+            ("cpp", "cpp"),
+            ("c++", "cpp"),
+            ("objective-c", "m"),
+            ("objc", "m"),
+            ("shell", "sh"),
+            ("bash", "sh"),
+            ("sh", "sh"),
+            ("yaml", "yaml"),
+            ("yml", "yaml"),
+            ("toml", "rs"), // Falls back to Rust
+            ("json", "json"),
+            ("html", "html"),
+            ("css", "css"),
+            ("scss", "css"), // Falls back to CSS
+            ("sass", "css"), // Falls back to CSS
+            ("xml", "xml"),
+            ("markdown", "md"),
+            ("md", "md"),
+            ("ruby", "rb"),
+            ("rb", "rb"),
+            ("java", "java"),
+            ("kotlin", "java"), // Falls back to Java
+            ("kt", "java"),     // Falls back to Java
+            ("swift", "rs"),    // Falls back to Rust
+            ("r", "r"),
+            ("sql", "sql"),
+            ("dockerfile", "sh"), // Falls back to shell
+            ("makefile", "makefile"),
+        ];
+
+        println!("\nTesting our mappings:");
+        for (lang, expected_ext) in test_mappings.iter() {
+            let mapped_ext = map_language_to_extension(lang);
+            assert_eq!(mapped_ext, *expected_ext, "Mapping failed for {}", lang);
+
+            let syntax_ref = syntax_set.find_syntax_by_extension(expected_ext);
+            println!(
+                "{} -> {} : {}",
+                lang,
+                expected_ext,
+                if syntax_ref.is_some() { "✓" } else { "✗" }
+            );
         }
     }
 }

@@ -18,6 +18,8 @@
 - [x] rebase `fix-md-parser` on to `main`. push it to remote `origin`. fixes:
       <https://github.com/r3bl-org/r3bl-open-core/issues/397>. link to this PR:
       <https://github.com/r3bl-org/r3bl-open-core/pull/430>
+- [x] fix "`rust`" parsing in syn hi code (should support both "rust" and "rs"), and other extensions
+      like "`ts`", etc.
 - [ ] make a release using the [`release-guide.md`](docs/release-guide.md) document as a guide
 
 # remove crossterm
@@ -77,6 +79,20 @@
   - Consider caching wrapped text or optimizing unicode word breaking
   ```
 
+# consider replacing syntect
+
+- [ ] TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile are not supported. Other crate options
+      are: `synoptic`, `inkjet`, `tree-sitter-highlight`, `shiki`. Or just adding our own `.sublime-syntax`
+      to fix the gaps with `syntect`. If you decide to add custom `.sublime-syntax` files later for
+      better support of TypeScript, TOML, etc., `syntect` makes that easy:
+
+  ```rust
+  // Example of loading additional syntaxes
+  let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+  builder.add_from_folder("path/to/extra/syntaxes", true)?;
+  let syntax_set = builder.build();
+  ```
+
 # enable mouse support
 
 - [ ] figure out how to interpret mouse events into something that is usable for the apps.
@@ -92,7 +108,6 @@
 
 # markdown parser enhancements
 
-- [ ] fix "`rust`" parsing in syn hi code (should support both "rust" and "rs")
 - [ ] support both `"**"` and `"*"` for bold, and `"_"` and `"__"` for italic (deviate from the
       markdown spec)
 - [ ] add blockquote support
