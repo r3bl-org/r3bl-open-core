@@ -8,22 +8,8 @@
     - [Global config (2025-03-24)](#global-config-2025-03-24)
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
-  - [`r3bl-cmdr`](#r3bl-cmdr)
-    - [r3bl_cmdr_next](#r3bl_cmdr_next)
-    - [v0.0.19 (2025-05-10)](#v0019-2025-05-10)
-    - [v0.0.18 (2025-05-10)](#v0018-2025-05-10)
-    - [v0.0.17 (2025-05-10)](#v0017-2025-05-10)
-    - [v0.0.16 (2024-09-13)](#v0016-2024-09-13)
-    - [v0.0.15 (2024-09-12)](#v0015-2024-09-12)
-    - [v0.0.14 (2024-06-29)](#v0014-2024-06-29)
-    - [v0.0.13 (2024-05-20)](#v0013-2024-05-20)
-    - [v0.0.12 (2024-05-12)](#v0012-2024-05-12)
-    - [v0.0.11 (2024-01-14)](#v0011-2024-01-14)
-    - [v0.0.10 (2024-01-02)](#v0010-2024-01-02)
-    - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
-    - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
   - [`r3bl_tui`](#r3bl_tui)
-    - [r3bl_tui_next](#r3bl_tui_next)
+    - [v0.7.2 (2025-07-23)](#v072-2025-07-23)
     - [v0.7.1 (2025-05-10)](#v071-2025-05-10)
     - [v0.7.0 (2025-05-10)](#v070-2025-05-10)
     - [v0.6.0 (2024-10-21)](#v060-2024-10-21)
@@ -46,6 +32,20 @@
     - [v0.3.3 (2023-04-20)](#v033-2023-04-20)
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
+  - [`r3bl-cmdr`](#r3bl-cmdr)
+    - [r3bl_cmdr_next](#r3bl_cmdr_next)
+    - [v0.0.19 (2025-05-10)](#v0019-2025-05-10)
+    - [v0.0.18 (2025-05-10)](#v0018-2025-05-10)
+    - [v0.0.17 (2025-05-10)](#v0017-2025-05-10)
+    - [v0.0.16 (2024-09-13)](#v0016-2024-09-13)
+    - [v0.0.15 (2024-09-12)](#v0015-2024-09-12)
+    - [v0.0.14 (2024-06-29)](#v0014-2024-06-29)
+    - [v0.0.13 (2024-05-20)](#v0013-2024-05-20)
+    - [v0.0.12 (2024-05-12)](#v0012-2024-05-12)
+    - [v0.0.11 (2024-01-14)](#v0011-2024-01-14)
+    - [v0.0.10 (2024-01-02)](#v0010-2024-01-02)
+    - [v0.0.9 (2023-12-31)](#v009-2023-12-31)
+    - [v0.0.8 (2023-12-22)](#v008-2023-12-22)
   - [`r3bl_analytics_schema`](#r3bl_analytics_schema)
     - [v0.0.3 (2025-05-10)](#v003-2025-05-10)
     - [v0.0.2 (2024-09-12)](#v002-2024-09-12)
@@ -261,176 +261,9 @@ following:
 
 <!-- Active crates section -->
 
-## `r3bl-cmdr`
-
-### r3bl_cmdr_next
-
-Minor release focusing on code quality improvements and documentation. Issue:
-<https://github.com/r3bl-org/r3bl-open-core/issues/397>. PR:
-<https://github.com/r3bl-org/r3bl-open-core/pull/430>.
-
-- Fixed:
-  - Clippy warnings about missing error documentation across the crate
-  - Improved error handling documentation consistency
-
-### v0.0.19 (2025-05-10)
-
-Cleaning up more `let_chains` that were left after [v0.0.18](#v0018-2025-05-10) was made.
-
-### v0.0.18 (2025-05-10)
-
-Minor change to remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from lib.rs so
-that the crates can easily be installed using `cargo install r3bl-cmdr` instead of
-`cargo +nightly install r3bl-cmdr`.
-
-### v0.0.17 (2025-05-10)
-
-This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking change for
-almost every crate in the repo. This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360)
-contains all the changes.
-
-This release also contains changes that are part of optimizing memory allocation to increase
-performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
-refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is now used
-throughout the codebase. No new functionality is added in this release.
-
-- Added:
-  - New `memory_allocator.rs` module that allow `jemalloc` to be loaded instead of the system
-    default allocator. `jemalloc` is optimized for multi-threaded use cases where lots of small
-    objects are created and deleted, which is a great fit for this crate. Use this in all the binary
-    targets.
-  - Add support for the binaries in the crate to upgrade themselves when a new version is detected.
-  - Implement a new way for the binaries to detect when a new release of the crate is available so
-    they can prompt the user that they can manually update or automatically update (above).
-
-- Removed:
-  - Drop the dependency on `r3bl_ansi_color`.
-
-- Updated:
-  - Use the latest Rust 2024 edition.
-  - This release just uses the latest deps from `r3bl-open-core` repo, since so many crates have
-    been reorganized and renamed. The functionality has not changed at all, just the imports.
-
-- Changed:
-  - Modernize the codebase so that it uses the latest code from `r3bl_tui`. The functionality is
-    largely the same, however, almost every single line is rewritten, especially for `giti`.
-  - Clean up all the styling and UI strings in the apps, so they are all in one place. This will
-    make it easy to internationalize in the future, and make it possible to make changes easily and
-    reduce maintenance burdens.
-
-### v0.0.16 (2024-09-13)
-
-- Updated:
-  - Minor fix to documentation in `lib.rs` and `README.md` to use GIF instead of MP4 files for the
-    `edi` and `giti` videos. The MP4 files were not showing on docs.rs, crates.io, or github.com.
-
-### v0.0.15 (2024-09-12)
-
-- Updated:
-  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
-  - Improve docs in `lib.rs` and `README.md`.
-  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.15`. This is kept in sync w/ the deployed backend
-    `r3bl-base`.
-
-### v0.0.14 (2024-06-29)
-
-The most significant change in this release is the use of the latest release of the Markdown parser
-from `r3bl_tui`, which improves the editing experience of writing each individual line of Markdown
-text. Common edge cases that were not handled before are now handled correctly. And these are cases
-that come up quite frequently when editing Markdown in a text editor.
-
-- Fixed:
-  - Use the latest release of the `r3bl_tui` crate version `0.5.6` which fixes a lot of common bugs
-    with the Markdown parser. This are critical bug fixes that are needed for the `edi` binary
-    target, to make it a stable and usable Markdown editor for daily use.
-
-- Changed:
-  - Use the latest release of the `r3bl_tui` crate version `0.5.5`.
-  - Clean up `main_event_loop` and get rid of needless `'static` in `AS` trait bound.
-  - Fix cargo clippy doc warnings.
-  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.14`. This is kept in sync w/ the deployed backend
-    `r3bl-base`.
-
-- Updated:
-  - Dependencies for `syntect`, `strum`, `strum-macros`, `reedline`, `serial_test` bumped to their
-    latest versions.
-
-### v0.0.13 (2024-05-20)
-
-- Changed:
-  - `Cargo.toml` now points to the correct documentation link on docs.rs.
-  - `README.md` now has the correct URL for the hero image (that will load on crates.io and not just
-    github.com).
-  - `lib.rs` has the same URL for the hero image as `README.md`.
-  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.13`. This is kept in sync w/ the deployed backend
-    `r3bl-base`.
-
-### v0.0.12 (2024-05-12)
-
-- Changed:
-  - Use the latest deps of all the `r3bl_*` crates to fix breaking build when
-    `cargo install r3bl-cmdr` is run. Not sure how long this has been broken. Moving forwards, this
-    will be checked using a VM on every release. Update `release-guide.md` instructions with this
-    info. - `r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }` -
-    `r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }` -
-    `r3bl_rs_utils_macro = { path = "../macro", version = "0.9.9" }` -
-    `r3bl_tui = { path = "../tui", version = "0.5.3" }` -
-    `r3bl_tuify = { path = "../tuify", version = "0.1.26" }`
-  - Update the `UPDATE_IF_NOT_THIS_VERSION` to `0.0.12`. This is kept in sync w/ the deployed
-    backend `r3bl-base`.
-
-### v0.0.11 (2024-01-14)
-
-- Added:
-  - `edi`, `giti`: Add checks to see if binary needs to be upgraded. - Search for
-    `UPDATE_IF_NOT_THIS_VERSION` in `r3bl-open-core` repo (in `cmdr` folder), and in `r3bl-base`
-    repo. `UPDATE_IF_NOT_THIS_VERSION` is set to `0.0.11` for this release. - If upgrade is needed,
-    then display a message to the user asking them to run `cargo install r3bl-cmdr` again.
-  - `giti` add feature: `giti branch checkout`
-  - `giti` add feature: `giti branch new`
-  - Add `reedline` version `0.28.0` dependency in `Cargo.toml`.
-
-### v0.0.10 (2024-01-02)
-
-- Fixed:
-  - Refactor & clean up the analytics client code.
-
-- Updated:
-  - Use the latest `r3bl_rs_utils_core` version `0.9.11`.
-
-### v0.0.9 (2023-12-31)
-
-- Added:
-  - Anonymized analytics reporting to prioritize feature development for `edi` and `giti`.
-
-- Changed:
-  - Replace the `run` command with `examples` in the `run` nushell script. To run an example you use
-    `nu run examples`. and provide instructions on the `run` script at the top level folder of this
-    monorepo. Update `lib.rs` and `README.md` to reflect this change. The behavior of the `run`
-    nushell script is more uniform across all crates in this repo.
-
-### v0.0.8 (2023-12-22)
-
-- Changed:
-  - Rename `run.nu` to `run` and update `README.md` and `lib.rs` to reflect this change. This is a
-    more ergonomic command to use, when using it directly eg: `./run build` (macOS, Linux), or
-    `nu run build` (Windows).
-
-- Added:
-  - Add binary target `giti`. This is an interactive git client that is tuified. It is a
-    productivity tool for git workflows, and is meant as a replacement for directly using `git`.
-    This also serves as a real world example of using the `r3bl_tuify` crate.
-    - View all the `giti branch` subcommands (e.g. `delete`, `checkout`, `new`, etc.) and select one
-      subcommand using the `select_from_list()` when `giti branch` runs.
-    - Delete one or more branches using `select_from_list()` when `giti branch delete` command runs.
-  - Add binary target `edi`. This is a powerful TUI Markdown editor. You can use it to create new MD
-    files, or edit any type of text file. It supports syntax highlighting for most file formats
-    (though `.toml` and `.todo` are missing).
-  - Add binary target `rc` aka `r3bl-cmdr`.
-
 ## `r3bl_tui`
 
-### r3bl_tui_next
+### v0.7.2 (2025-07-23)
 
 Major performance optimization release with significant architectural improvements to the TUI
 engine. The markdown parser has been completely overhauled for massive performance gains, and the
@@ -468,7 +301,8 @@ includes extensive code quality improvements and Windows compatibility fixes. Is
   - Addressed Rust 2024 if-let-else rescope changes
   - Resolved extensive clippy warnings and pedantic lints
   - Fixed Unicode handling in `find_substring()` optimization
-  - Added language name mapping for syntax highlighting to support both language names (e.g., "rust") and file extensions (e.g., "rs") in markdown code blocks
+  - Added language name mapping for syntax highlighting to support both language names (e.g.,
+    "rust") and file extensions (e.g., "rs") in markdown code blocks
 
 - Performance:
   - 13.6% CPU reduction through optimized grapheme segmentation and dialog border colorization
@@ -965,6 +799,173 @@ handle many more corner cases.
 - Changed:
   - The first demo example (`ex_app_no_layout`) now has support for animation. It automatically
     increments the state every second and the gradient color wheel is updated accordingly.
+
+## `r3bl-cmdr`
+
+### r3bl_cmdr_next
+
+Minor release focusing on code quality improvements and documentation. Issue:
+<https://github.com/r3bl-org/r3bl-open-core/issues/397>. PR:
+<https://github.com/r3bl-org/r3bl-open-core/pull/430>.
+
+- Fixed:
+  - Clippy warnings about missing error documentation across the crate
+  - Improved error handling documentation consistency
+
+### v0.0.19 (2025-05-10)
+
+Cleaning up more `let_chains` that were left after [v0.0.18](#v0018-2025-05-10) was made.
+
+### v0.0.18 (2025-05-10)
+
+Minor change to remove `#![feature(let_chains)]` and `#![feature(trivial_bounds)]` from lib.rs so
+that the crates can easily be installed using `cargo install r3bl-cmdr` instead of
+`cargo +nightly install r3bl-cmdr`.
+
+### v0.0.17 (2025-05-10)
+
+This is part of a total reorganization of the `r3bl-open-core` repo. This is a breaking change for
+almost every crate in the repo. This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360)
+contains all the changes.
+
+This release also contains changes that are part of optimizing memory allocation to increase
+performance, and ensure that performance is stable over time. `ch_unit.rs` is also heavily
+refactored and the entire codebase updated so that a the more ergonomic `ChUnit` API is now used
+throughout the codebase. No new functionality is added in this release.
+
+- Added:
+  - New `memory_allocator.rs` module that allow `jemalloc` to be loaded instead of the system
+    default allocator. `jemalloc` is optimized for multi-threaded use cases where lots of small
+    objects are created and deleted, which is a great fit for this crate. Use this in all the binary
+    targets.
+  - Add support for the binaries in the crate to upgrade themselves when a new version is detected.
+  - Implement a new way for the binaries to detect when a new release of the crate is available so
+    they can prompt the user that they can manually update or automatically update (above).
+
+- Removed:
+  - Drop the dependency on `r3bl_ansi_color`.
+
+- Updated:
+  - Use the latest Rust 2024 edition.
+  - This release just uses the latest deps from `r3bl-open-core` repo, since so many crates have
+    been reorganized and renamed. The functionality has not changed at all, just the imports.
+
+- Changed:
+  - Modernize the codebase so that it uses the latest code from `r3bl_tui`. The functionality is
+    largely the same, however, almost every single line is rewritten, especially for `giti`.
+  - Clean up all the styling and UI strings in the apps, so they are all in one place. This will
+    make it easy to internationalize in the future, and make it possible to make changes easily and
+    reduce maintenance burdens.
+
+### v0.0.16 (2024-09-13)
+
+- Updated:
+  - Minor fix to documentation in `lib.rs` and `README.md` to use GIF instead of MP4 files for the
+    `edi` and `giti` videos. The MP4 files were not showing on docs.rs, crates.io, or github.com.
+
+### v0.0.15 (2024-09-12)
+
+- Updated:
+  - Upgrade all deps to their latest versions in `Cargo.toml` and `Cargo.lock`.
+  - Improve docs in `lib.rs` and `README.md`.
+  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.15`. This is kept in sync w/ the deployed backend
+    `r3bl-base`.
+
+### v0.0.14 (2024-06-29)
+
+The most significant change in this release is the use of the latest release of the Markdown parser
+from `r3bl_tui`, which improves the editing experience of writing each individual line of Markdown
+text. Common edge cases that were not handled before are now handled correctly. And these are cases
+that come up quite frequently when editing Markdown in a text editor.
+
+- Fixed:
+  - Use the latest release of the `r3bl_tui` crate version `0.5.6` which fixes a lot of common bugs
+    with the Markdown parser. This are critical bug fixes that are needed for the `edi` binary
+    target, to make it a stable and usable Markdown editor for daily use.
+
+- Changed:
+  - Use the latest release of the `r3bl_tui` crate version `0.5.5`.
+  - Clean up `main_event_loop` and get rid of needless `'static` in `AS` trait bound.
+  - Fix cargo clippy doc warnings.
+  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.14`. This is kept in sync w/ the deployed backend
+    `r3bl-base`.
+
+- Updated:
+  - Dependencies for `syntect`, `strum`, `strum-macros`, `reedline`, `serial_test` bumped to their
+    latest versions.
+
+### v0.0.13 (2024-05-20)
+
+- Changed:
+  - `Cargo.toml` now points to the correct documentation link on docs.rs.
+  - `README.md` now has the correct URL for the hero image (that will load on crates.io and not just
+    github.com).
+  - `lib.rs` has the same URL for the hero image as `README.md`.
+  - Update `UPDATE_IF_NOT_THIS_VERSION` to `0.0.13`. This is kept in sync w/ the deployed backend
+    `r3bl-base`.
+
+### v0.0.12 (2024-05-12)
+
+- Changed:
+  - Use the latest deps of all the `r3bl_*` crates to fix breaking build when
+    `cargo install r3bl-cmdr` is run. Not sure how long this has been broken. Moving forwards, this
+    will be checked using a VM on every release. Update `release-guide.md` instructions with this
+    info. - `r3bl_ansi_color = { path = "../ansi_color", version = "0.6.9" }` -
+    `r3bl_rs_utils_core = { path = "../core", version = "0.9.13" }` -
+    `r3bl_rs_utils_macro = { path = "../macro", version = "0.9.9" }` -
+    `r3bl_tui = { path = "../tui", version = "0.5.3" }` -
+    `r3bl_tuify = { path = "../tuify", version = "0.1.26" }`
+  - Update the `UPDATE_IF_NOT_THIS_VERSION` to `0.0.12`. This is kept in sync w/ the deployed
+    backend `r3bl-base`.
+
+### v0.0.11 (2024-01-14)
+
+- Added:
+  - `edi`, `giti`: Add checks to see if binary needs to be upgraded. - Search for
+    `UPDATE_IF_NOT_THIS_VERSION` in `r3bl-open-core` repo (in `cmdr` folder), and in `r3bl-base`
+    repo. `UPDATE_IF_NOT_THIS_VERSION` is set to `0.0.11` for this release. - If upgrade is needed,
+    then display a message to the user asking them to run `cargo install r3bl-cmdr` again.
+  - `giti` add feature: `giti branch checkout`
+  - `giti` add feature: `giti branch new`
+  - Add `reedline` version `0.28.0` dependency in `Cargo.toml`.
+
+### v0.0.10 (2024-01-02)
+
+- Fixed:
+  - Refactor & clean up the analytics client code.
+
+- Updated:
+  - Use the latest `r3bl_rs_utils_core` version `0.9.11`.
+
+### v0.0.9 (2023-12-31)
+
+- Added:
+  - Anonymized analytics reporting to prioritize feature development for `edi` and `giti`.
+
+- Changed:
+  - Replace the `run` command with `examples` in the `run` nushell script. To run an example you use
+    `nu run examples`. and provide instructions on the `run` script at the top level folder of this
+    monorepo. Update `lib.rs` and `README.md` to reflect this change. The behavior of the `run`
+    nushell script is more uniform across all crates in this repo.
+
+### v0.0.8 (2023-12-22)
+
+- Changed:
+  - Rename `run.nu` to `run` and update `README.md` and `lib.rs` to reflect this change. This is a
+    more ergonomic command to use, when using it directly eg: `./run build` (macOS, Linux), or
+    `nu run build` (Windows).
+
+- Added:
+  - Add binary target `giti`. This is an interactive git client that is tuified. It is a
+    productivity tool for git workflows, and is meant as a replacement for directly using `git`.
+    This also serves as a real world example of using the `r3bl_tuify` crate.
+    - View all the `giti branch` subcommands (e.g. `delete`, `checkout`, `new`, etc.) and select one
+      subcommand using the `select_from_list()` when `giti branch` runs.
+    - Delete one or more branches using `select_from_list()` when `giti branch delete` command runs.
+  - Add binary target `edi`. This is a powerful TUI Markdown editor. You can use it to create new MD
+    files, or edit any type of text file. It supports syntax highlighting for most file formats
+    (though `.toml` and `.todo` are missing).
+  - Add binary target `rc` aka `r3bl-cmdr`.
 
 ## `r3bl_analytics_schema`
 

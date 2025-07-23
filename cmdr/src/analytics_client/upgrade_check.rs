@@ -32,10 +32,9 @@ use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header}
 
 static UPGRADE_REQUIRED: AtomicBool = AtomicBool::new(false);
 
-/// To trigger an update message to be displayed to the user here are the details:
-///
-/// - The value of `GET_LATEST_VERSION_ENDPOINT` needs to be different,
-/// - from the value of `UPDATE_IF_NOT_THIS_VERSION` in the `r3bl_base` repo.
+/// Checks if a newer version of the crate is available on crates.io.
+/// If a newer version is found, sets the UPGRADE_REQUIRED flag which will
+/// prompt the user to upgrade when they exit the application.
 pub fn start_task_to_check_if_upgrade_is_needed() {
     tokio::spawn(async move {
         let version_self = get_self_version();

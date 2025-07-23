@@ -1,6 +1,6 @@
 [package]
 name = "r3bl_tui"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2024"
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
 resolver = "3"
@@ -158,4 +158,3 @@ test-case = "3.3.1"
 [features]
 default = ["emacs"]
 emacs = []
-

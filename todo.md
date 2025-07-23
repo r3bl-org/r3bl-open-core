@@ -27,7 +27,7 @@
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
       `r3bl_open_core` codebase.
 
-# editor content storage enhancements
+# editor content storage enhancements: https://github.com/r3bl-org/r3bl-open-core/issues/387
 
 - [ ] Change `EditorContent::lines: VecEditorContentLines` to a different data structure that is
       still an array of lines, which doesn't need to be materialized into `String` and can be

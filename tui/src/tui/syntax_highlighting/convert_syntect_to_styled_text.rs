@@ -56,12 +56,16 @@ pub type SyntectStyleStrSpanLine<'a> = Vec<SyntectStyleStrSpan<'a>>;
 /// TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile are not supported by `syntect`.
 /// In order to add these languages we need to add custom `.sublime-syntax` files later
 /// for better support of TypeScript, TOML, etc., `syntect` makes that easy:
-///  ```no_run
-///  // Example of loading additional syntaxes
-///  let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
-///  builder.add_from_folder("path/to/extra/syntaxes", true)?;
-///  let syntax_set = builder.build();
-///  ```
+/// ```no_run
+/// # use syntect::parsing::SyntaxSet;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// // Example of loading additional syntaxes
+/// let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+/// builder.add_from_folder("path/to/extra/syntaxes", true)?;
+/// let syntax_set = builder.build();
+/// # Ok(())
+/// # }
+/// ```
 fn map_language_to_extension(lang: &str) -> &str {
     match lang {
         // Direct mappings

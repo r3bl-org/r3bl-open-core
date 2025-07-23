@@ -371,6 +371,14 @@ app built using this TUI engine.
 
 ## Layout, rendering, and event handling
 
+The current render pipeline flow is:
+1. Input Event → State generation → `App` renders to `RenderOps`
+2. `RenderOps` → Rendered to `OffscreenBuffer` (`PixelChar` grid)
+3. `OffscreenBuffer` → Diffed with previous buffer → Generate diff chunks
+4. Diff chunks → Converted back to `RenderOps` for painting
+5. `RenderOps` execution → Each op routed through crossterm backend
+6. Crossterm → Converts to ANSI escape sequences → Queued to stdout → Flushed
+
 ```
 ╭───────────────────────────────────────────────╮
 │                                               │
