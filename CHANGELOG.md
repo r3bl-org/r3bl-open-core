@@ -33,7 +33,7 @@
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
   - [`r3bl-cmdr`](#r3bl-cmdr)
-    - [r3bl_cmdr_next](#r3bl_cmdr_next)
+    - [v0.0.20 (2025-07-23)](#v0020-2025-07-23)
     - [v0.0.19 (2025-05-10)](#v0019-2025-05-10)
     - [v0.0.18 (2025-05-10)](#v0018-2025-05-10)
     - [v0.0.17 (2025-05-10)](#v0017-2025-05-10)
@@ -802,15 +802,19 @@ handle many more corner cases.
 
 ## `r3bl-cmdr`
 
-### r3bl_cmdr_next
+### v0.0.20 (2025-07-23)
 
-Minor release focusing on code quality improvements and documentation. Issue:
+Minor release focusing on `edi` bug fixes, code quality improvements and documentation. Issue:
 <https://github.com/r3bl-org/r3bl-open-core/issues/397>. PR:
 <https://github.com/r3bl-org/r3bl-open-core/pull/430>.
 
 - Fixed:
   - Clippy warnings about missing error documentation across the crate
   - Improved error handling documentation consistency
+  - Fixed paste bug in `edi` where pasting was extremely slow, and many other long
+    standing bugs
+  - Huge performance improvements for `edi` making it super responsive, and much faster
+    than before; see the PR for details
 
 ### v0.0.19 (2025-05-10)
 

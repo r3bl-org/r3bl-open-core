@@ -33,7 +33,7 @@ use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header}
 static UPGRADE_REQUIRED: AtomicBool = AtomicBool::new(false);
 
 /// Checks if a newer version of the crate is available on crates.io.
-/// If a newer version is found, sets the UPGRADE_REQUIRED flag which will
+/// If a newer version is found, sets the `UPGRADE_REQUIRED` flag which will
 /// prompt the user to upgrade when they exit the application.
 pub fn start_task_to_check_if_upgrade_is_needed() {
     tokio::spawn(async move {

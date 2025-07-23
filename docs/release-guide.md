@@ -15,9 +15,27 @@
 ## Full workflow
 
 ```sh
+cd analytics_schema
+# 1. Update version in Cargo.toml (for self) and this file
+# 2. Update CHANGELOG.md (don't forget to update TOC)
+# 3. Run "Dependi: Update All dependencies to the latest version" in vscode
+#    w/ the Cargo.toml file open. Don't use `cargo-edit`
+#    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
+cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo readme > README.md
+cargo publish --dry-run --allow-dirty
+git add -A
+git commit -S -m "v0.0.3-analytics_schema"
+git tag -a v0.0.3-analytics_schema -m "v0.0.3-analytics_schema"
+cargo publish
+git push ; git push --tags # Push tags & commits
+cd ..
+
 cd tui
-# 1. Update version in Cargo.toml and this file
-# 2. Update CHANGELOG.md
+# 1. Update version in Cargo.toml (for self, optionally for dep: `r3bl_analytics_schema`)
+#    and this file
+# 2. Update CHANGELOG.md (don't forget to update TOC)
 # 3. Run "Dependi: Update All dependencies to the latest version" in vscode
 #    w/ the Cargo.toml file open. Don't use `cargo-edit`
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
@@ -33,8 +51,9 @@ git push ; git push --tags # Push tags & commits
 cd ..
 
 cd cmdr
-# 1. Update version in Cargo.toml and this file
-# 2. Update CHANGELOG.md
+# 1. Update version in Cargo.toml (for self, optionally for deps: `r3bl_tui`, `r3bl_analytics_schema`)
+#    and this file
+# 2. Update CHANGELOG.md (don't forget to update TOC)
 # 3. Run "Dependi: Update All dependencies to the latest version" in vscode
 #    w/ the Cargo.toml file open. Don't use `cargo-edit`
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
@@ -43,28 +62,11 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.0.19-cmdr"
-git tag -a v0.0.19-cmdr -m "v0.0.19-cmdr"
+git commit -S -m "v0.0.20-cmdr"
+git tag -a v0.0.20-cmdr -m "v0.0.20-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 # You can do this using `cd cmdr && nu run.nu build-release-in-docker`
-git push ; git push --tags # Push tags & commits
-cd ..
-
-cd analytics_schema
-# 1. Update version in Cargo.toml and this file
-# 2. Update CHANGELOG.md
-# 3. Run "Dependi: Update All dependencies to the latest version" in vscode
-#    w/ the Cargo.toml file open. Don't use `cargo-edit`
-#    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
-cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
-cargo readme > README.md
-cargo publish --dry-run --allow-dirty
-git add -A
-git commit -S -m "v0.0.3-analytics_schema"
-git tag -a v0.0.3-analytics_schema -m "v0.0.3-analytics_schema"
-cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 

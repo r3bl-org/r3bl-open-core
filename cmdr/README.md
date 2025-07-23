@@ -13,8 +13,8 @@
 - [Changelog](#changelog)
 - [Learn how these crates are built, provide
   feedback](#learn-how-these-crates-are-built-provide-feedback)
-- [Run giti binary target](#run-giti-binary-target)
-- [Run edi binary target](#run-edi-binary-target)
+- [Run `giti` binary target](#run-giti-binary-target)
+- [Run `edi` binary target](#run-edi-binary-target)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
   - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
@@ -219,7 +219,7 @@ To run from source:
 | `nu run.nu clippy`     | Run clippy                                                                                                           |
 | `nu run.nu log`        | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
 | `nu run.nu docs`       | Build docs                                                                                                           |
-| `nu run.nu serve-docs` | Serve docs over VSCode Remote SSH session                                                                            |
+| `nu run.nu serve-docs` | Serve docs over `VSCode` Remote SSH session                                                                            |
 | `nu run.nu rustfmt`    | Run rustfmt                                                                                                          |
 
 The following commands will watch for changes in the source folder and re-run:
