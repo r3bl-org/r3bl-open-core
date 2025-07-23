@@ -70,9 +70,13 @@ cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
 
-# Finally, push the git commit and tag to the remote repo
+# Push the git commit and tag to the remote repo
 git tag -l --sort=-creatordate # Check the tags
 git push ; git push --tags
+
+# Finally, make a GitHub release for each tag that you have created
+# and copy the release notes from the CHANGELOG.md file.
+# <https://github.com/r3bl-org/r3bl-open-core/releases/new>
 ```
 
 ## Overview of the release process

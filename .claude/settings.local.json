@@ -47,7 +47,6 @@
       "Bash(cp:*)"
     ],
     "deny": [],
-    "defaultMode": "plan",
-    "disableBypassPermissionsMode": "disable"
+    "defaultMode": "plan"
   }
 }

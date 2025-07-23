@@ -1,3 +1,5 @@
+<!-- Oldest tasks are on top, most recently completed tasks on the bottom -->
+
 # tuify
 
 - [x] enhance `run examples` by presenting user with list to select from
@@ -548,3 +550,29 @@
 - [x] archive the NG parser and the simple parser, to the `r3bl-open-core-archive` repo as a new
       crate called `md_parser_ng`. keep the legacy parser as the main one. use the
       `docs/ng_parser_archive.md` as the planning and progress tracking document for this task.
+
+# clean up and release: https://github.com/r3bl-org/r3bl-open-core/issues/397
+
+- [x] fix all the lints after the extraction & archival of the `md_parser_ng`
+- [x] create parser conformance snapshot test, and make sure they pass
+      [docs/parser_conformance.md](docs/parser_conformance.md)
+- [x] review the flamegraph.svg and cargo bench results to ensure no regressions
+      [docs/task_tui_perf_optimize.md](docs/task_tui_perf_optimize.md)
+- [x] complete the performance work started in
+      [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
+- [x] fix windows bug: https://github.com/r3bl-org/r3bl-open-core/issues/433
+- [x] refactor `md_parser` with consistent naming and module organization
+- [x] add missing tests to `editor` module
+- [x] fix copy/paste bugs in `editor` module (support bracketed paste mode too)
+- [x] there are test failures in doctests that try to use terminal I/O (which fails in test
+      environment). can you identify and mark them to be "```no_run"
+- [x] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
+- [x] update changelog
+- [x] rebase `fix-md-parser` on to `main`. push it to remote `origin`. fixes:
+      <https://github.com/r3bl-org/r3bl-open-core/issues/397>. link to this PR:
+      <https://github.com/r3bl-org/r3bl-open-core/pull/430>
+- [x] fix "`rust`" parsing in syn hi code (should support both "rust" and "rs"), and other
+      extensions like "`ts`", etc.
+- [x] make a release using the [`release-guide.md`](docs/release-guide.md) document as a guide -
+      <https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.0.20-cmdr> -
+      <https://github.com/r3bl-org/r3bl-open-core/releases/tag/v0.7.2-tui>

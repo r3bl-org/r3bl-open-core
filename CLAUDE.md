@@ -7,6 +7,7 @@ This project uses a two-file task tracking system to maintain project state and 
 ### 1. todo.md - Active Work File
 
 - **Check this file at the start of each session** to understand current project state
+- The most recent changes are always at the top
 - Update task checkboxes `[x]` immediately when completing tasks
 - Keep partially completed sections here (with mixed `[x]` and `[ ]` items)
 - Add newly discovered tasks to appropriate sections
@@ -15,15 +16,17 @@ This project uses a two-file task tracking system to maintain project state and 
 ### 2. done.md - Archive File
 
 - Contains completed feature sets and milestones
+- The most recent changes are always at the bottom
 - Move **entire sections** here only when ALL subtasks are complete
-- When moving sections always put the latest changes at the top of the file, so the latest
-  change is always at the top, and the previous changes are below it for historical reference
+- When moving sections always put the latest changes at the top of the file, so the latest change is
+  always at the top, and the previous changes are below it for historical reference
 - Include the section header and all its subtasks when moving
 - This serves as the project's historical record
 
 ### When to Move Tasks from todo.md to done.md
 
-- Only move complete sections where ALL subtasks show `[x]`
+- Only move complete sections where ALL subtasks show `[x]`. Move the entire completed section to
+  the bottom of done.md
 - Never move individual tasks - preserve context by keeping related tasks together
 - Example: The "fix md parser" section should only move after all 200+ subtasks are complete
 

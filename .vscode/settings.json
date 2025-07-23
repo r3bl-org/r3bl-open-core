@@ -81,6 +81,7 @@
     "fract",
     "frontmatter",
     "fxhashmap",
+    "gapbuffer",
     "gcstring",
     "gethostname",
     "Giti",

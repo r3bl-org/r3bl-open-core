@@ -1,97 +1,33 @@
-# clean up and release: https://github.com/r3bl-org/r3bl-open-core/issues/397
+<!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 
-- [x] fix all the lints after the extraction & archival of the `md_parser_ng`
-- [x] create parser conformance snapshot test, and make sure they pass
-      [docs/parser_conformance.md](docs/parser_conformance.md)
-- [x] review the flamegraph.svg and cargo bench results to ensure no regressions
-      [docs/task_tui_perf_optimize.md](docs/task_tui_perf_optimize.md)
-- [x] complete the performance work started in
-      [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
-- [x] fix windows bug: https://github.com/r3bl-org/r3bl-open-core/issues/433
-- [x] refactor `md_parser` with consistent naming and module organization
-- [x] add missing tests to `editor` module
-- [x] fix copy/paste bugs in `editor` module (support bracketed paste mode too)
-- [x] there are test failures in doctests that try to use terminal I/O (which fails in test
-      environment). can you identify and mark them to be "```no_run"
-- [x] fix all the pedantic lints using claude (and don't allow them anymore in Cargo.toml)
-- [x] update changelog
-- [x] rebase `fix-md-parser` on to `main`. push it to remote `origin`. fixes:
-      <https://github.com/r3bl-org/r3bl-open-core/issues/397>. link to this PR:
-      <https://github.com/r3bl-org/r3bl-open-core/pull/430>
-- [x] fix "`rust`" parsing in syn hi code (should support both "rust" and "rs"), and other extensions
-      like "`ts`", etc.
-- [ ] make a release using the [`release-guide.md`](docs/release-guide.md) document as a guide
+# editor content storage enhancements: https://github.com/r3bl-org/r3bl-open-core/issues/387
+
+- [ ] use [`task_gap_buffer`](docs/task_gap_buffer.md) to implement a gap buffer for the editor
+      content storage. This will improve performance and memory usage when editing large files.
 
 # remove crossterm
 
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
       `r3bl_open_core` codebase.
 
-# editor content storage enhancements: https://github.com/r3bl-org/r3bl-open-core/issues/387
+# consider replacing syntect
 
-- [ ] Change `EditorContent::lines: VecEditorContentLines` to a different data structure that is
-      still an array of lines, which doesn't need to be materialized into `String` and can be
-      accessed as `&str`, but works with a modified legacy parser which knows how to handle a
-      different kind of `EOL`. This data structure represents a line as a char array of some default
-      size (eg: 256 chars) and is preallocated. The `\n` char followed by a char that can't be typed
-      in the editor (eg: `\0`) is used to represent the end of line. This will require changes to
-      the editor component as well as the parser. Effectively, this is a gap buffer implementation.
-      Once a line is allocated, the only time it will be reallocated / resized is when the line is
-      too long (eg: more than 256 chars), or a line is deleted. Reallocation is cheap (relatively
-      speaking) because to copy 100K bytes it takes a few thousand nanoseconds. And this
-      reallocation will only happen rarely. This means that to syntax highlight these `lines` it is
-      zero-copy! This won't make that big of a difference except in cases where the documents are
-      very large (> 1MB). This comes from the work done in the `md_parser_ng` crate which is archive
-      that showed that a `&str` parser is the fastest. So instead of bringing the mountain to
-      Muhammad, we will bring Muhammad to the mountain. The mountain is the `&str` parser, and
-      Muhammad is the editor component. Here's some code:
-
-  ```rust
-  // Assume the line is 256 chars long.
-  let empty_line = ['\0', '\0', '\0', ..., '\0']  // 256 '\0' chars
-  let line_with_content = ['H', 'e', 'l', 'l', 'o', '\n', '\0', '\0', ..., '\0']
-  use nom::{bytes::complete::take_while, character::complete::char, combinator::recognize,
-        sequence::tuple, IResult, Parser};
-
-  // The parser will consume the entire pattern and you can extract the actual content
-  // by finding the position of \n in the matched slice.
-  fn parse_editor_line(input: &str) -> IResult<&str, &str> {
-        recognize((
-        (
-              take_while(|c| c != '\n' && c != '\0'),  // Line content
-              char('\n'),                              // Required newline
-              take_while(|c| c == '\0')                // Zero or more null padding
-        )
-        )).parse(input)
-  }
-  ```
+- [ ] use [`task_syntect_improve`](docs/task_syntect_improve.md) to add support for TypeScript,
+      TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom `.sublime-syntax` files
+      to syntect.
 
 # rewrite textwrap
 
-- [ ] consider rewriting `textwrap` crate for better unicode performance. this could be used in
-      `edi` as well, for wrap & TOC create/update on save. More info in
-      [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
-  ```
-  **Text Wrapping Operations** (45M samples - HIGHEST PRIORITY):
-  - `textwrap::wrap_single_line`: 18.8M samples
-  - `find_words_unicode_break_properties`: 25.9M samples
-  - Heavy overhead in log formatting paths
-  - Consider caching wrapped text or optimizing unicode word breaking
-  ```
+- [ ] use [`task_textwrap_rewrite`](docs/task_textwrap_rewrite.md) to rewrite `textwrap` crate for
+      better unicode performance. this could be used in `edi` as well, for wrap & TOC create/update
+      on save.
 
-# consider replacing syntect
+# add prettier
 
-- [ ] TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile are not supported. Other crate options
-      are: `synoptic`, `inkjet`, `tree-sitter-highlight`, `shiki`. Or just adding our own `.sublime-syntax`
-      to fix the gaps with `syntect`. If you decide to add custom `.sublime-syntax` files later for
-      better support of TypeScript, TOML, etc., `syntect` makes that easy:
-
-  ```rust
-  // Example of loading additional syntaxes
-  let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
-  builder.add_from_folder("path/to/extra/syntaxes", true)?;
-  let syntax_set = builder.build();
-  ```
+- [ ] implement prettier-like functionality and "run on save" support performs text wrapping and
+      markdown formatting, using `dprint-plugin-markdown` crate. this is different than the textwrap
+      functionality, since this only runs on save, just before the editor contents are written to
+      disk; it does not have the same high performance runtime requirements as textwrap.
 
 # enable mouse support
 
@@ -100,9 +36,9 @@
 # edi feature
 
 - [ ] add telemetry HUD to bottom of `edi` (FPS, memory usage, etc)
-- [ ] add feature that shows editor status to the terminal window title bar (eg: "edi - [filename] -
-      [status]") using
-      [OSC sequences](<https://en.wikipedia.org/wiki/ANSI_escape_code#OSC_(Operating_System_Command)_sequences>)
+- [ ] add feature that shows editor status to the terminal window title bar (eg: " edi -
+      [filename] - [status]") using
+      [OSC sequences](https://en.wikipedia.org/wiki/ANSI_escape_code#Operating_System_Command_sequences)
 - [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
       process into edi itself
 
@@ -127,12 +63,14 @@
 - [ ] add basic features to editor component (find, replace, etc)
 - [ ] add support for `rustfmt` and `prettier` like reformatting of the code in the editor component
 
-# modernize `choose` and `giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
+# modernize `choose` and
+
+`giti` codebase: https://github.com/r3bl-org/r3bl-open-core/issues/427
 
 - [ ] use `InlineString` & `InlineVec` in `giti` codebase (for sake of consistency)
 - [ ] fix clap args using `color_print::cstr` instead of directly embedding ansi escape sequences in
       the clap macro attributes `clap_config.rs`. see `rust_scratch/tcp-api-server` for examples
-- [ ] make sure that analytics calls are made consistent throughout the giti codebase (currently
+- [ ] make sure that analytics calls are made consistent throughout the giti codebase ( currently
       they do nothing but this will get things ready for the new `r3bl_base` that will be self
       hosted in our homelab); currently `delete.rs` has analytics calls
 - [ ] rewrite `giti` code to use the newtypes, like width, height, etc. and introduce newtypes, etc
@@ -145,13 +83,6 @@
       case for most code in `r3bl_open_core` repo
 - [ ] add fps counter row to bottom of `edi`, just like in the `tui/examples/demo/*` add an
       FPS/telemetry display to bottom of `edi`
-
-# make release of `r3bl-cmdr` and `r3bl_tui`
-
-- [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed):
-      https://github.com/r3bl-org/r3bl-open-core/issues/426
-- [ ] release `r3bl_tui`, `r3bl_cmdr`: https://github.com/r3bl-org/r3bl-open-core/issues/429
-- [ ] close this: https://github.com/r3bl-org/r3bl-open-core/issues/391
 
 # create sub-issues for `giti`: https://github.com/r3bl-org/r3bl-open-core/issues/423
 
@@ -167,3 +98,23 @@
 # test `giti` user flow
 
 - [ ] devise an approach to do this
+
+# incorporate TLS and tcp-api-server work into the codebase
+
+# build and deploy r3bl-base backend (in homelab) for telemetry and analytics
+
+# make release of `r3bl-cmdr` and `r3bl_tui` v1
+
+- [ ] remove all the language about early access release / preview (update r3bl.com website as well)
+- [ ] make sure `cmdr` docker file works (with `pkg-config` and `libssl-dev` removed):
+      https://github.com/r3bl-org/r3bl-open-core/issues/426
+- [ ] make sure this works on macOS (via cargo install)
+- [ ] make sure this works on windows (via cargo install)
+
+# add animation api: https://github.com/r3bl-org/r3bl-open-core/issues/174
+
+# create robust atomic file based user configuration settings: https://github.com/nazmulidris/rust-scratch/issues/114
+
+# brainstorm UX and impl of multi-user editing on LAN without any configuration (mDNS, etc)
+
+# brainstorm the UX and impl of the r3bl-runner concept (jupyter-like notebooks for md)
