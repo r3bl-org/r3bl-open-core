@@ -97,6 +97,12 @@ impl LineBuffer {
         self.lines.get_mut(line_index)
     }
 
+    /// Swap two lines in the buffer metadata
+    /// This only swaps the LineInfo entries, not the actual buffer content
+    pub fn swap_lines(&mut self, i: usize, j: usize) {
+        self.lines.swap(i, j);
+    }
+
     /// Add a new line to the buffer
     /// Returns the index of the newly added line
     pub fn add_line(&mut self) -> usize {

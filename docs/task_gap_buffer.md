@@ -156,14 +156,14 @@ toolchain, and is already configured to support cargo bench.
 
 #### 2.1 Grapheme-Safe Insert Operations
 
-- [ ] Implement `insert_at_grapheme()` method
-- [ ] Implement `insert_text_at_byte_pos()` helper
-- [ ] Add byte position validation
-- [ ] Implement content shifting logic
-- [ ] Update newline marker position after insert
-- [ ] Handle empty line insertion
-- [ ] Add tests for various Unicode insertions
-- [ ] Make a commit with this progress
+- [x] Implement `insert_at_grapheme()` method
+- [x] Implement `insert_text_at_byte_pos()` helper
+- [x] Add byte position validation
+- [x] Implement content shifting logic
+- [x] Update newline marker position after insert
+- [x] Handle empty line insertion
+- [x] Add tests for various Unicode insertions
+- [x] Make a commit with this progress
 
 #### 2.2 Grapheme-Safe Delete Operations
 
