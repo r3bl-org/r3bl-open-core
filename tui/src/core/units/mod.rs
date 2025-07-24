@@ -17,6 +17,7 @@
 
 // Attach.
 pub mod bounds_check;
+pub mod byte_index;
 pub mod ch_unit;
 pub mod index;
 pub mod length;
@@ -24,6 +25,7 @@ pub mod unit_check_overflows; // Don't re-export.
 
 // Re-export.
 pub use bounds_check::*;
+pub use byte_index::*;
 pub use ch_unit::*;
 pub use index::*;
 pub use length::*;

@@ -720,7 +720,7 @@ mod convert {
         /// Find the grapheme cluster segment (index) that is at the `byte_index` of the
         /// underlying string.
         fn add(self, byte_index: ByteIndex) -> Self::Output {
-            let byte_index = *byte_index;
+            let byte_index = byte_index.as_usize();
             for seg in &self.segments {
                 let start = usize(seg.start_byte_index);
                 let end = usize(seg.end_byte_index);
