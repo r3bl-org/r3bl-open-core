@@ -44,7 +44,8 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(rm:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(rustup toolchain:*)"
     ],
     "deny": [],
     "defaultMode": "plan"

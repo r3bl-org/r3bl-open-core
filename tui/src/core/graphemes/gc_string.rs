@@ -14,16 +14,15 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
 use std::{fmt::Debug,
           ops::{Add, Deref, DerefMut}};
 
 use smallvec::SmallVec;
-use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::{ByteIndex, ChUnit, ColIndex, ColWidth, InlineString, InlineVecStr, Seg,
-            SegIndex, SegWidth, ch, col, join, pad_fmt, seg_index, seg_width, usize,
+use crate::{ByteIndex, ChUnit, ColIndex, ColWidth, GetMemSize, InlineString,
+            InlineVecStr, Seg, SegIndex, SegWidth, build_segments_for_str,
+            calculate_display_width, ch, join, pad_fmt, seg_index, seg_width, usize,
             width};
 
 /// `GCString` represents a [String] as a sequence of grapheme cluster segments, and *not*
@@ -216,7 +215,7 @@ use crate::{ByteIndex, ChUnit, ColIndex, ColWidth, InlineString, InlineVecStr, S
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct GCString {
     pub string: InlineString,
-    pub segments: sizing::SegmentArray,
+    pub segments: gc_string_sizing::SegmentArray,
     pub display_width: ColWidth,
     pub bytes_size: ChUnit,
 }
@@ -281,108 +280,16 @@ mod iterator {
     }
 }
 
-#[cfg(test)]
-mod tests_iterator {
-    use super::*;
-
-    #[test]
-    fn test_iterator() {
-        let gc_string = GCString::new("Hello, 世界🥞👨‍👩‍👧‍👦🙏🏽");
-        let mut iter = gc_string.iter();
-
-        assert_eq!(iter.next(), Some("H"));
-        assert_eq!(iter.next(), Some("e"));
-        assert_eq!(iter.next(), Some("l"));
-        assert_eq!(iter.next(), Some("l"));
-        assert_eq!(iter.next(), Some("o"));
-        assert_eq!(iter.next(), Some(","));
-        assert_eq!(iter.next(), Some(" "));
-        assert_eq!(iter.next(), Some("世"));
-        assert_eq!(iter.next(), Some("界"));
-        assert_eq!(iter.next(), Some("🥞"));
-        assert_eq!(iter.next(), Some("👨‍👩‍👧‍👦"));
-        assert_eq!(iter.next(), Some("🙏🏽"));
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn test_into_iterator_implementation() {
-        let gc_string = GCString::new("Hello, 世界🥞");
-
-        // Test that we can use the GCString directly in a for loop (this is why
-        // IntoIterator is needed!)
-        let mut collected = Vec::new();
-        for segment in &gc_string {
-            collected.push(segment.to_string());
-        }
-
-        assert_eq!(collected.len(), 10);
-        assert_eq!(collected[0], "H");
-        assert_eq!(collected[1], "e");
-        assert_eq!(collected[6], " ");
-        assert_eq!(collected[7], "世");
-        assert_eq!(collected[8], "界");
-        assert_eq!(collected[9], "🥞");
-
-        // Test using for loop with explicit into_iter() call
-        let mut explicit_collected = Vec::new();
-        for segment in &gc_string {
-            explicit_collected.push(segment.to_string());
-        }
-        assert_eq!(collected, explicit_collected);
-
-        // Test using for loop to find specific graphemes
-        let mut found_emoji = false;
-        for segment in &gc_string {
-            if segment == "🥞" {
-                found_emoji = true;
-                break;
-            }
-        }
-        assert!(found_emoji);
-
-        // Test using for loop with enumerate to get indices
-        for (index, segment) in (&gc_string).into_iter().enumerate() {
-            match index {
-                0 => assert_eq!(segment, "H"),
-                1 => assert_eq!(segment, "e"),
-                7 => assert_eq!(segment, "世"),
-                8 => assert_eq!(segment, "界"),
-                9 => assert_eq!(segment, "🥞"),
-                _ => {} // Other segments are valid too
-            }
-        }
-
-        // Test using for loop to count specific types of characters
-        let mut ascii_count = 0;
-        let mut unicode_count = 0;
-        for segment in &gc_string {
-            if segment.is_ascii() {
-                ascii_count += 1;
-            } else {
-                unicode_count += 1;
-            }
-        }
-        assert_eq!(ascii_count, 7); // "H", "e", "l", "l", "o", ",", " "
-        assert_eq!(unicode_count, 3); // "世", "界", "🥞"
-
-        // Compare with manual iter() usage (without for loop)
-        let iter_results: Vec<_> = gc_string.iter().map(ToString::to_string).collect();
-        assert_eq!(iter_results, collected);
-    }
-}
-
 pub fn grapheme_string(arg_from: impl Into<GCString>) -> GCString { arg_from.into() }
 
 /// Static sizing information for the `GCString` struct. This is used to calculate
 /// the stack size of the struct (before it is [`smallvec::SmallVec::spilled`] to the
 /// heap, if it becomes necessary).
-mod sizing {
-    use super::{ColWidth, GCString, Seg, SmallVec};
-    use crate::GetMemSize;
+pub mod gc_string_sizing {
+    use super::{ColWidth, GCString, GetMemSize, Seg, SmallVec};
 
     pub type SegmentArray = SmallVec<[Seg; VEC_SEGMENT_SIZE]>;
-    const VEC_SEGMENT_SIZE: usize = 28;
+    pub const VEC_SEGMENT_SIZE: usize = 28;
 
     impl GetMemSize for GCString {
         fn get_mem_size(&self) -> usize {
@@ -396,16 +303,16 @@ mod sizing {
 
 /// Fundamental methods for working with grapheme strings.
 mod basic {
-    use super::{ChUnit, ColWidth, Deref, DerefMut, GCString, Seg, SegIndex, SegWidth,
-                UnicodeSegmentation, UnicodeWidthChar, UnicodeWidthStr, ch, col,
-                seg_width, sizing, width};
+    use super::{ColWidth, Deref, DerefMut, GCString, Seg, SegIndex, SegWidth,
+                UnicodeWidthChar, UnicodeWidthStr, build_segments_for_str,
+                calculate_display_width, ch, gc_string_sizing, seg_width, width};
 
     impl AsRef<str> for GCString {
         fn as_ref(&self) -> &str { &self.string }
     }
 
     impl Deref for GCString {
-        type Target = sizing::SegmentArray;
+        type Target = gc_string_sizing::SegmentArray;
 
         fn deref(&self) -> &Self::Target { &self.segments }
     }
@@ -431,67 +338,16 @@ mod basic {
         pub fn new(arg_str: impl AsRef<str>) -> GCString {
             let str = arg_str.as_ref();
 
-            // ASCII fast path: avoid expensive grapheme segmentation
-            if str.is_ascii() {
-                let len = str.len();
-                let mut segments = sizing::SegmentArray::with_capacity(len);
-
-                // For ASCII, each char is exactly 1 byte and 1 display width
-                for (i, _c) in str.chars().enumerate() {
-                    segments.push(Seg {
-                        start_byte_index: ch(i),
-                        end_byte_index: ch(i + 1),
-                        display_width: width(1),
-                        seg_index: i.into(),
-                        bytes_size: 1,
-                        start_display_col_index: col(ch(i)),
-                    });
-                }
-
-                return GCString {
-                    string: str.into(),
-                    segments,
-                    display_width: width(len),
-                    bytes_size: ch(len),
-                };
-            }
-
-            // Unicode path: use grapheme segmentation
-            let mut total_byte_offset: ChUnit = ch(0);
-            // This is used both for the width and display col index.
-            let mut unicode_width_offset_acc: ChUnit = ch(0);
-
-            // Actually create the grapheme cluster segments using
-            // unicode_segmentation::UnicodeSegmentation.
-            let iter = str.grapheme_indices(true).enumerate();
-
-            let size = iter.clone().count();
-            let mut unicode_string_segments = sizing::SegmentArray::with_capacity(size);
-
-            for (grapheme_cluster_index, (byte_offset, grapheme_cluster_str)) in iter {
-                let display_width = GCString::width(grapheme_cluster_str);
-                unicode_string_segments.push(Seg {
-                    start_byte_index: ch(byte_offset),
-                    end_byte_index: ch(byte_offset) + ch(grapheme_cluster_str.len()),
-                    display_width,
-                    seg_index: grapheme_cluster_index.into(),
-                    bytes_size: grapheme_cluster_str.len(),
-                    start_display_col_index: col(unicode_width_offset_acc), // Used as ColIndex here.
-                });
-                unicode_width_offset_acc += *display_width;
-                total_byte_offset = ch(byte_offset);
-            }
+            // Use the extracted segment building function
+            let segments = build_segments_for_str(str);
+            let display_width = calculate_display_width(&segments);
+            let bytes_size = ch(str.len());
 
             GCString {
                 string: str.into(),
-                segments: unicode_string_segments,
-                display_width: width(unicode_width_offset_acc), /* Used as WidthColCount here. */
-                bytes_size: if total_byte_offset > ch(0) {
-                    /* size = byte_offset (index) + 1 */
-                    total_byte_offset + 1
-                } else {
-                    total_byte_offset
-                },
+                segments,
+                display_width,
+                bytes_size,
             }
         }
 
@@ -1537,7 +1393,7 @@ mod tests {
     use std::str;
 
     use super::*;
-    use crate::{byte_index, gc_string::wide_segments::ContainsWideSegments};
+    use crate::{byte_index, col, gc_string::wide_segments::ContainsWideSegments};
 
     /// Helper function to create a [`SegString`] for testing. Keeps the width of the
     /// lines of code in each test to a minimum (for easier readability).
@@ -2400,6 +2256,97 @@ mod tests {
         assert_eq!(gs.len(), seg_width(1));
         assert_eq!(gs.display_width, width(1));
         assert!(!gs.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod tests_iterator {
+    use super::*;
+
+    #[test]
+    fn test_iterator() {
+        let gc_string = GCString::new("Hello, 世界🥞👨‍👩‍👧‍👦🙏🏽");
+        let mut iter = gc_string.iter();
+
+        assert_eq!(iter.next(), Some("H"));
+        assert_eq!(iter.next(), Some("e"));
+        assert_eq!(iter.next(), Some("l"));
+        assert_eq!(iter.next(), Some("l"));
+        assert_eq!(iter.next(), Some("o"));
+        assert_eq!(iter.next(), Some(","));
+        assert_eq!(iter.next(), Some(" "));
+        assert_eq!(iter.next(), Some("世"));
+        assert_eq!(iter.next(), Some("界"));
+        assert_eq!(iter.next(), Some("🥞"));
+        assert_eq!(iter.next(), Some("👨‍👩‍👧‍👦"));
+        assert_eq!(iter.next(), Some("🙏🏽"));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_into_iterator_implementation() {
+        let gc_string = GCString::new("Hello, 世界🥞");
+
+        // Test that we can use the GCString directly in a for loop (this is why
+        // IntoIterator is needed!)
+        let mut collected = Vec::new();
+        for segment in &gc_string {
+            collected.push(segment.to_string());
+        }
+
+        assert_eq!(collected.len(), 10);
+        assert_eq!(collected[0], "H");
+        assert_eq!(collected[1], "e");
+        assert_eq!(collected[6], " ");
+        assert_eq!(collected[7], "世");
+        assert_eq!(collected[8], "界");
+        assert_eq!(collected[9], "🥞");
+
+        // Test using for loop with explicit into_iter() call
+        let mut explicit_collected = Vec::new();
+        for segment in &gc_string {
+            explicit_collected.push(segment.to_string());
+        }
+        assert_eq!(collected, explicit_collected);
+
+        // Test using for loop to find specific graphemes
+        let mut found_emoji = false;
+        for segment in &gc_string {
+            if segment == "🥞" {
+                found_emoji = true;
+                break;
+            }
+        }
+        assert!(found_emoji);
+
+        // Test using for loop with enumerate to get indices
+        for (index, segment) in (&gc_string).into_iter().enumerate() {
+            match index {
+                0 => assert_eq!(segment, "H"),
+                1 => assert_eq!(segment, "e"),
+                7 => assert_eq!(segment, "世"),
+                8 => assert_eq!(segment, "界"),
+                9 => assert_eq!(segment, "🥞"),
+                _ => {} // Other segments are valid too
+            }
+        }
+
+        // Test using for loop to count specific types of characters
+        let mut ascii_count = 0;
+        let mut unicode_count = 0;
+        for segment in &gc_string {
+            if segment.is_ascii() {
+                ascii_count += 1;
+            } else {
+                unicode_count += 1;
+            }
+        }
+        assert_eq!(ascii_count, 7); // "H", "e", "l", "l", "o", ",", " "
+        assert_eq!(unicode_count, 3); // "世", "界", "🥞"
+
+        // Compare with manual iter() usage (without for loop)
+        let iter_results: Vec<_> = gc_string.iter().map(ToString::to_string).collect();
+        assert_eq!(iter_results, collected);
     }
 }
 

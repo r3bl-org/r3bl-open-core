@@ -19,8 +19,8 @@ use std::fmt::Debug;
 
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{get_cached_syntax_set, get_cached_theme, DocumentStorage, PartialFlexBox,
-            Size, StyleUSSpanLines};
+use crate::{DocumentStorage, PartialFlexBox, Size, StyleUSSpanLines,
+            get_cached_syntax_set, get_cached_theme};
 
 /// Do not create this struct directly. Please use [`new()`](EditorEngine::new) instead.
 ///
@@ -48,8 +48,8 @@ pub struct EditorEngine {
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
     pub theme: &'static Theme,
     /// This is an **optional** field that is used to somewhat speed up the legacy
-    /// Markdown parser [`crate::parse_markdown()`]. It is lazily created if the legacy parser is
-    /// used, and it is re-used every time the document is re-parsed.
+    /// Markdown parser [`crate::parse_markdown()`]. It is lazily created if the legacy
+    /// parser is used, and it is re-used every time the document is re-parsed.
     ///
     /// ## Only used with the legacy Markdown parser
     ///
@@ -57,8 +57,8 @@ pub struct EditorEngine {
     /// CRLF added, so that it can be parsed by the Markdown parser in order to apply
     /// syntax highlighting using [`crate::try_parse_and_highlight()`].
     /// [`crate::EditorContent`] stores the document as a
-    /// [`crate::sizing::VecEditorContentLines`] which has all the CRLF removed. This
-    /// cache is used to add the CRLF back in.
+    /// [`crate::editor_buffer::sizing::VecEditorContentLines`] which has all the CRLF
+    /// removed. This cache is used to add the CRLF back in.
     ///
     /// The actual Markdown parser that needs this cache is here
     /// [`crate::parse_markdown()`].
@@ -98,7 +98,8 @@ impl EditorEngine {
         }
     }
 
-    #[must_use] pub fn viewport(&self) -> Size { self.current_box.style_adjusted_bounds_size }
+    #[must_use]
+    pub fn viewport(&self) -> Size { self.current_box.style_adjusted_bounds_size }
 
     pub fn set_ast_cache(&mut self, ast_cache: StyleUSSpanLines) {
         self.ast_cache = Some(ast_cache);
@@ -106,9 +107,11 @@ impl EditorEngine {
 
     pub fn clear_ast_cache(&mut self) { self.ast_cache = None }
 
-    #[must_use] pub fn get_ast_cache(&self) -> Option<&StyleUSSpanLines> { self.ast_cache.as_ref() }
+    #[must_use]
+    pub fn get_ast_cache(&self) -> Option<&StyleUSSpanLines> { self.ast_cache.as_ref() }
 
-    #[must_use] pub fn ast_cache_is_empty(&self) -> bool { self.ast_cache.is_none() }
+    #[must_use]
+    pub fn ast_cache_is_empty(&self) -> bool { self.ast_cache.is_none() }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -160,11 +163,14 @@ mod tests {
         // Test default construction
         let engine = EditorEngine::default();
         assert_eq2!(engine.config_options.multiline_mode, LineMode::MultiLine);
-        assert_eq2!(engine.config_options.syntax_highlight, SyntaxHighlightMode::Enable);
+        assert_eq2!(
+            engine.config_options.syntax_highlight,
+            SyntaxHighlightMode::Enable
+        );
         assert_eq2!(engine.config_options.edit_mode, EditMode::ReadWrite);
         assert!(engine.parser_byte_cache.is_none());
         assert!(engine.ast_cache.is_none());
-        
+
         // Test custom configuration
         let custom_config = EditorEngineConfig {
             multiline_mode: LineMode::SingleLine,
@@ -178,10 +184,10 @@ mod tests {
     #[test]
     fn test_viewport() {
         let mut engine = EditorEngine::default();
-        
+
         // Default viewport should be empty
         assert_eq2!(engine.viewport(), Size::default());
-        
+
         // Set a custom viewport
         engine.current_box.style_adjusted_bounds_size = width(100) + height(50);
         assert_eq2!(engine.viewport(), width(100) + height(50));
@@ -190,19 +196,19 @@ mod tests {
     #[test]
     fn test_ast_cache_operations() {
         use crate::List;
-        
+
         let mut engine = EditorEngine::default();
-        
+
         // Initially cache should be empty
         assert!(engine.ast_cache_is_empty());
         assert!(engine.get_ast_cache().is_none());
-        
+
         // Set cache - create empty StyleUSSpanLines for testing
         let test_ast: StyleUSSpanLines = List::new();
         engine.set_ast_cache(test_ast.clone());
         assert!(!engine.ast_cache_is_empty());
         assert_eq2!(engine.get_ast_cache(), Some(&test_ast));
-        
+
         // Clear cache
         engine.clear_ast_cache();
         assert!(engine.ast_cache_is_empty());
@@ -223,12 +229,12 @@ mod tests {
         assert_eq2!(EditMode::ReadOnly, EditMode::ReadOnly);
         assert_eq2!(EditMode::ReadWrite, EditMode::ReadWrite);
         assert!(EditMode::ReadOnly != EditMode::ReadWrite);
-        
+
         // Test LineMode variants
         assert_eq2!(LineMode::SingleLine, LineMode::SingleLine);
         assert_eq2!(LineMode::MultiLine, LineMode::MultiLine);
         assert!(LineMode::SingleLine != LineMode::MultiLine);
-        
+
         // Test SyntaxHighlightMode variants
         assert_eq2!(SyntaxHighlightMode::Enable, SyntaxHighlightMode::Enable);
         assert_eq2!(SyntaxHighlightMode::Disable, SyntaxHighlightMode::Disable);
@@ -238,14 +244,14 @@ mod tests {
     #[test]
     fn test_parser_byte_cache() {
         let mut engine = EditorEngine::default();
-        
+
         // Initially cache should be None
         assert!(engine.parser_byte_cache.is_none());
-        
+
         // Set parser byte cache
         engine.parser_byte_cache = Some(DocumentStorage::new());
         assert!(engine.parser_byte_cache.is_some());
-        
+
         // Add some data to cache
         if let Some(ref mut cache) = engine.parser_byte_cache {
             cache.push_str("test content");
@@ -258,7 +264,7 @@ mod tests {
         // Create two engines and verify they share the same syntax_set and theme
         let engine1 = EditorEngine::default();
         let engine2 = EditorEngine::default();
-        
+
         // Since these are static references, they should point to the same memory
         assert!(std::ptr::eq(engine1.syntax_set, engine2.syntax_set));
         assert!(std::ptr::eq(engine1.theme, engine2.theme));

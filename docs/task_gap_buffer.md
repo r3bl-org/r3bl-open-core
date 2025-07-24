@@ -77,19 +77,28 @@
 
 ## Detailed task tracking
 
+For benchmarks don't use `criterion`. Use `cargo bench`, and add bench tests are regular tests in
+the file with the code under test, and mark them with `#[bench]`. This project uses nightly rust
+toolchain, and is already configured to support cargo bench.
+
 ### Phase 1: Core Infrastructure
 
 #### 1.1 Extract GCString Segment Logic
 
 - [x] Update documentation to articulate why three types of index are needed: display, col, and
       segment
-- [ ] Create new module `tui/src/core/graphemes/segment_builder.rs`
-- [ ] Add module declaration in `tui/src/core/graphemes/mod.rs`
-- [ ] Extract `build_segments_for_str()` function from GCString
-- [ ] Extract ASCII fast path logic into `build_ascii_segments()`
-- [ ] Extract `calculate_display_width()` function
-- [ ] Add unit tests for segment building with various Unicode inputs
-- [ ] Add benchmarks comparing ASCII vs Unicode segment building
+- [x] Create new module `tui/src/core/graphemes/segment_builder.rs`
+- [x] Add module declaration in `tui/src/core/graphemes/mod.rs`
+- [x] Extract `build_segments_for_str()` function from GCString
+- [x] Extract ASCII fast path logic into `build_ascii_segments()`
+- [x] Extract `calculate_display_width()` function
+- [x] Add unit tests for segment building with various Unicode inputs
+- [x] Add benchmarks comparing ASCII vs Unicode segment building
+  - ASCII short (13 chars): ~54ns
+  - ASCII long (240 chars): ~287ns  
+  - Unicode with emojis: ~592ns
+  - Unicode mixed (accents, CJK): ~666ns
+  - Unicode complex (skin tones): ~812ns
 - [ ] Make a commit with this progress
 
 #### 1.2 Create LineBuffer Core Structure
@@ -298,13 +307,13 @@
 
 #### 6.1 Micro Benchmarks
 
-- [ ] Create benchmark suite using `cargo bench`. Add these as plain tests with `#[bench]` attribute
+- [x] Create benchmark suite using `cargo bench`. Add these as plain tests with `#[bench]` attribute
       and co-locate them in the file with the source code under test.
 - [ ] Benchmark single character insertion (ASCII vs Unicode)
 - [ ] Benchmark string insertion (various sizes)
 - [ ] Benchmark line deletion operations
 - [ ] Benchmark cursor movement operations
-- [ ] Benchmark segment building for different text types
+- [x] Benchmark segment building for different text types
 - [ ] Compare LineBuffer vs VecEditorContentLines performance
 - [ ] Benchmark memory allocation patterns
 - [ ] Make a commit with this progress
