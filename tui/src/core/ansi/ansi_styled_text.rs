@@ -1891,7 +1891,8 @@ mod bench_tests {
         b.iter(|| {
             let mut result = String::new();
             for ast in &texts {
-                result.push_str(&format!("{ast}"));
+                use std::fmt::Write;
+                write!(result, "{ast}").unwrap();
             }
             result
         });

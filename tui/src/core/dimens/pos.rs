@@ -18,7 +18,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
-use crate::{ch, ColIndex, ColWidth, RowHeight, RowIndex, Size};
+use crate::{ColIndex, ColWidth, RowHeight, RowIndex, Size, ch};
 
 // Type aliases for better code readability.
 
@@ -168,7 +168,7 @@ mod convert {
 
 mod ops {
     use super::{Add, AddAssign, ColWidth, Mul, Pos, RowHeight, Size, Sub, SubAssign};
-    use crate::{col, row, ChUnit};
+    use crate::{ChUnit, col, row};
 
     // Dim is equivalent to (ColWidthCount, RowHeightCount).
     impl Mul<Size> for Pos {
@@ -349,7 +349,7 @@ mod ops {
 }
 
 mod api {
-    use super::{ch, ColIndex, ColWidth, Pos, RowHeight, RowIndex};
+    use super::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, ch};
 
     // Reset API.
     impl Pos {
@@ -484,6 +484,7 @@ mod tests {
     use super::*;
     use crate::{col, height, row, width};
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_api() {
         // Constructor.

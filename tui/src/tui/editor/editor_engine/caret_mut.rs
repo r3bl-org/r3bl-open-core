@@ -15,13 +15,14 @@
  *   limitations under the License.
  */
 
-use super::{scroll_editor_content, SelectMode};
-use crate::{caret_locate::{self, locate_col, CaretColLocationInLine,
-                           CaretRowLocationInBuffer},
+use super::{SelectMode, scroll_editor_content};
+use crate::{CaretDirection, EditorArgsMut, EditorBuffer, EditorEngine, SegString,
+            caret_locate::{self, CaretColLocationInLine, CaretRowLocationInBuffer,
+                           locate_col},
             caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
             multiline_disabled_check_early_return, row,
             wide_segments::ContainsWideSegments,
-            width, CaretDirection, EditorArgsMut, EditorBuffer, EditorEngine, SegString};
+            width};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
@@ -333,8 +334,8 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
 }
 
 mod right_helper {
-    use super::{scroll_editor_content, width, ContainsWideSegments, EditorBuffer,
-                EditorEngine, SegString};
+    use super::{ContainsWideSegments, EditorBuffer, EditorEngine, SegString,
+                scroll_editor_content, width};
 
     /// 1. Check for wide unicode character to the right of the caret.
     /// 2. [`validate::apply_change`] checks for wide unicode character at the start of
@@ -507,7 +508,7 @@ pub fn left(
 }
 
 mod left_helper {
-    use super::{caret_mut, scroll_editor_content, EditorBuffer, EditorEngine, SelectMode};
+    use super::{EditorBuffer, EditorEngine, SelectMode, caret_mut, scroll_editor_content};
 
     pub fn left_at_start(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
         if buffer.prev_line_above_caret().is_some() {
@@ -564,13 +565,12 @@ mod left_helper {
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_eq2, caret_raw, caret_scr_adj, col,
+    use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
+                GCStringExt, assert_eq2, caret_raw, caret_scr_adj, col,
                 editor::editor_test_fixtures::{assert, mock_real_objects_for_editor},
                 editor_engine::engine_internal_api,
                 height, row,
-                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection, EditorBuffer, EditorEvent,
-                GCStringExt, DEFAULT_SYN_HI_FILE_EXT};
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard};
 
     #[test]
     fn editor_validate_caret_pos_on_up() {
@@ -782,6 +782,7 @@ mod tests {
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(2)));
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn editor_move_caret_left_right() {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);

@@ -24,10 +24,10 @@
 
 use std::cmp::Ordering;
 
-use super::{caret_mut, SelectMode};
-use crate::{caret_scroll_index, ch, col, height, row, width, BoundsCheck, BoundsStatus,
-            CaretDirection, CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer,
-            RowHeight, RowIndex, ScrOfs};
+use super::{SelectMode, caret_mut};
+use crate::{BoundsCheck, BoundsStatus, CaretDirection, CaretRaw, ColIndex, ColWidth,
+            EditorArgsMut, EditorBuffer, RowHeight, RowIndex, ScrOfs,
+            caret_scroll_index, ch, col, height, row, width};
 
 /// # Scrolling not active
 ///
@@ -439,11 +439,12 @@ pub fn inc_caret_row(
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_eq2, caret_raw, caret_scr_adj, col, height, row, scr_ofs, width,
-                editor::editor_test_fixtures::mock_real_objects_for_editor,
+    use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
+                GCString, GCStringExt, assert_eq2, caret_raw, caret_scr_adj, col,
+                editor::editor_test_fixtures::mock_real_objects_for_editor, height, row,
+                scr_ofs,
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection, EditorBuffer, EditorEvent, GCString, GCStringExt,
-                DEFAULT_SYN_HI_FILE_EXT};
+                width};
 
     #[test]
     fn editor_scroll_vertical() {
@@ -545,6 +546,7 @@ mod tests {
     /// 🙏🏽 = U+1F64F + U+1F3FD
     /// 1. <https://unicodeplus.com/U+1F64F>
     /// 2. <https://unicodeplus.com/U+1F3FD>
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn editor_scroll_right_horizontal_long_line_with_jumbo_emoji() {
         // Setup.

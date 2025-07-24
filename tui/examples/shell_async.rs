@@ -95,14 +95,14 @@
 use std::io::Write;
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{fg_guards_red, fg_lizard_green, fg_slate_gray, inline_string, ok,
+use r3bl_tui::{SharedWriter, fg_guards_red, fg_lizard_green, fg_slate_gray,
+               inline_string, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent,
                                 ReadlineEvent::{Eof, Interrupted, Line, Resized}},
-               set_mimalloc_in_main, SharedWriter};
+               set_mimalloc_in_main};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
             join,
-            sync::broadcast,
-            task::JoinHandle};
+            sync::broadcast};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
@@ -130,14 +130,16 @@ async fn main() -> miette::Result<()> {
     // Create 2 tasks, join on them:
     // 1. monitor the output from the child process.
     // 2. monitor the input from the user (and relay it to the child process).
-    let _unused: (JoinHandle<_>, _) = join!(
-        // New green thread.
-        monitor_child_output::spawn(
-            stdout,
-            stderr,
-            shared_writer.clone(),
-            shutdown_sender.clone()
-        ),
+    let monitor_handle = monitor_child_output::spawn(
+        stdout,
+        stderr,
+        shared_writer.clone(),
+        shutdown_sender.clone()
+    );
+    
+    let _unused = join!(
+        // Wait for the monitor task
+        monitor_handle,
         // Current thread.
         monitor_user_input_and_send_to_child::start_event_loop(
             stdin,
@@ -151,8 +153,8 @@ async fn main() -> miette::Result<()> {
 }
 
 pub mod monitor_user_input_and_send_to_child {
-    use super::{broadcast, AsyncWriteExt, Eof, Interrupted, Line, ReadlineAsyncContext,
-                ReadlineEvent, Resized};
+    use super::{AsyncWriteExt, Eof, Interrupted, Line, ReadlineAsyncContext,
+                ReadlineEvent, Resized, broadcast};
 
     /// Determine the control flow of the program based on the [`ReadlineEvent`] received
     /// from user input.
@@ -227,10 +229,10 @@ pub mod monitor_user_input_and_send_to_child {
 }
 
 pub mod monitor_child_output {
-    use super::{broadcast, fg_guards_red, fg_lizard_green, AsyncBufReadExt,
-                SharedWriter, Write};
+    use super::{AsyncBufReadExt, SharedWriter, Write, broadcast, fg_guards_red,
+                fg_lizard_green};
 
-    pub async fn spawn(
+    #[must_use] pub fn spawn(
         stdout: tokio::process::ChildStdout,
         stderr: tokio::process::ChildStderr,
         mut shared_writer: SharedWriter,
@@ -287,7 +289,7 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use super::{fg_slate_gray, inline_string, ok, ReadlineAsyncContext, SharedWriter};
+    use super::{ReadlineAsyncContext, SharedWriter, fg_slate_gray, inline_string, ok};
 
     #[allow(missing_debug_implementations)]
     pub struct TerminalAsyncHandle {
@@ -295,6 +297,11 @@ pub mod terminal_async_constructor {
         pub shared_writer: SharedWriter,
     }
 
+    /// Creates a new terminal handle for a given process ID.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if the terminal operations fail.
     pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
             let prompt_str = inline_string!("┤{pid}├");
@@ -317,7 +324,7 @@ pub mod terminal_async_constructor {
 }
 
 pub mod child_process_constructor {
-    use super::{ok, IntoDiagnostic};
+    use super::{IntoDiagnostic, ok};
 
     #[derive(Debug)]
     pub struct ChildProcessHandle {
@@ -328,6 +335,14 @@ pub mod child_process_constructor {
         pub child: tokio::process::Child,
     }
 
+    /// Creates a new child process handle for the given program.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if:
+    /// - The process spawn fails
+    /// - The stdin/stdout/stderr cannot be accessed
+    /// - The process ID cannot be retrieved
     pub fn new(program: &str) -> miette::Result<ChildProcessHandle> {
         let mut child: tokio::process::Child = tokio::process::Command::new(program)
             .stdin(std::process::Stdio::piped())
@@ -356,11 +371,11 @@ pub mod child_process_constructor {
             .ok_or_else(|| miette::miette!("Failed to get PID of child process"))?;
 
         ok!(ChildProcessHandle {
-            pid,
-            child,
             stdin,
             stdout,
             stderr,
+            pid,
+            child,
         })
     }
 }

@@ -116,8 +116,8 @@ mod tests {
             Ok(Err(err)) => {
                 panic!("Error: {err:?}");
             }
-            Err(_) => {
-                panic!("Timeout");
+            Err(e) => {
+                panic!("Timeout: {e:?}");
             }
         }
     }

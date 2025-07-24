@@ -26,8 +26,8 @@ use crate::GCString;
 /// [`GCString`].
 ///
 /// Once converted to a [`GCString`], the text can be manipulated using the three
-/// index types: [`ByteIndex`](super::ByteIndex), [`SegIndex`](super::SegIndex),
-/// and [`ColIndex`](super::ColIndex) for proper Unicode handling.
+/// index types: [`ByteIndex`](crate::ByteIndex), [`SegIndex`](crate::SegIndex),
+/// and [`ColIndex`](crate::ColIndex) for proper Unicode handling.
 pub trait GCStringExt {
     fn grapheme_string(&self) -> GCString;
 }

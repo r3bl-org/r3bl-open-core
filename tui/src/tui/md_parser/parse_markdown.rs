@@ -126,7 +126,7 @@ mod tests_integration_block_smart_lists {
         md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
+                let rhs = (*test_str).to_string();
                 assert_eq2!(lhs, rhs);
             },
         );
@@ -166,7 +166,7 @@ mod tests_integration_block_smart_lists {
         md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
+                let rhs = (*test_str).to_string();
                 assert_eq2!(lhs, rhs);
             },
         );
@@ -221,7 +221,7 @@ mod tests_integration_block_smart_lists {
         md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
+                let rhs = (*test_str).to_string();
                 assert_eq2!(lhs, rhs);
             },
         );
@@ -264,7 +264,7 @@ mod tests_integration_block_smart_lists {
         md_doc.inner.iter().zip(expected_output.iter()).for_each(
             |(element, test_str)| {
                 let lhs = element.pretty_print_debug();
-                let rhs = test_str.to_string();
+                let rhs = (*test_str).to_string();
                 assert_eq2!(lhs, rhs);
             },
         );
@@ -349,6 +349,7 @@ mod tests_parse_markdown {
         );
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_parse_markdown_valid() {
         let input = vec![
@@ -389,7 +390,7 @@ mod tests_parse_markdown {
 
         let (remainder, list_block) = parse_markdown(&input).unwrap();
 
-        let vec_block = &[
+        let vec_block = vec![
             MdElement::Title("Something"),
             MdElement::Tags(list!["tag1", "tag2", "tag3"]),
             MdElement::Heading(HeadingData {

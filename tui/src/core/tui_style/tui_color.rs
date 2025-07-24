@@ -18,10 +18,10 @@
 use core::fmt::Debug;
 
 use super::parse_hex_color;
-use crate::{color_utils,
+use crate::{ANSI_COLOR_PALETTE, ASTColor, LossyConvertToByte, TransformColor,
+            color_utils,
             common::{CommonError, CommonErrorType, CommonResult},
-            convert_rgb_into_ansi256, ASTColor, LossyConvertToByte, TransformColor,
-            ANSI_COLOR_PALETTE};
+            convert_rgb_into_ansi256};
 
 /// Creates a [`TuiColor`] instance using various convenient syntaxes.
 ///
@@ -337,9 +337,9 @@ pub struct RgbValue {
 }
 
 mod rgb_value_impl_block {
-    use super::{convert_rgb_into_ansi256, parse_hex_color, ANSIBasicColor, AnsiValue,
-                CommonError, CommonErrorType, CommonResult, LossyConvertToByte,
-                RgbValue, TransformColor, TuiColor};
+    use super::{ANSIBasicColor, AnsiValue, CommonError, CommonErrorType, CommonResult,
+                LossyConvertToByte, RgbValue, TransformColor, TuiColor,
+                convert_rgb_into_ansi256, parse_hex_color};
 
     impl From<(u8, u8, u8)> for RgbValue {
         fn from((red, green, blue): (u8, u8, u8)) -> Self {
@@ -388,7 +388,8 @@ mod rgb_value_impl_block {
 
         /// # Errors
         ///
-        /// Returns an error if the `TuiColor` is an index-based color that cannot be converted to RGB.
+        /// Returns an error if the `TuiColor` is an index-based color that cannot be
+        /// converted to RGB.
         pub fn try_from_tui_color(color: TuiColor) -> CommonResult<Self> {
             match color {
                 // RGB values.
@@ -505,8 +506,8 @@ pub struct AnsiValue {
 }
 
 mod ansi_value_impl_block {
-    use super::{color_utils, convert_rgb_into_ansi256, AnsiValue, RgbValue,
-                TransformColor, ANSI_COLOR_PALETTE};
+    use super::{ANSI_COLOR_PALETTE, AnsiValue, RgbValue, TransformColor, color_utils,
+                convert_rgb_into_ansi256};
 
     impl From<u8> for AnsiValue {
         fn from(index: u8) -> Self { Self { index } }
@@ -770,6 +771,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_from_color_macro() {
         let black = tui_color!(black);

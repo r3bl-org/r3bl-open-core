@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{col, ColIndex, GCString};
+use crate::{ColIndex, GCString, col};
 
 #[derive(Debug)]
 pub enum CharacterMatchResult {
@@ -58,11 +58,12 @@ impl<'a> PatternMatcherStateMachine<'a> {
         // Skip the first "N" characters (these are display cols, so use the unicode
         // width).
         if let Some(scroll_offset_col_index) = self.maybe_scr_ofs_col_index
-            && scroll_offset_col_index != col(0) {
-                self.maybe_scr_ofs_col_index =
-                    (scroll_offset_col_index - character_to_test_width).into();
-                return CharacterMatchResult::Skip;
-            }
+            && scroll_offset_col_index != col(0)
+        {
+            self.maybe_scr_ofs_col_index =
+                (scroll_offset_col_index - character_to_test_width).into();
+            return CharacterMatchResult::Skip;
+        }
 
         // Check for early returns.
         if self.is_finished {
@@ -82,10 +83,11 @@ impl<'a> PatternMatcherStateMachine<'a> {
         } else {
             // Does this match the first character of the pattern?
             if let Some(first_pattern_char) = self.pattern.chars().next()
-                && character_to_test == first_pattern_char {
-                    self.current_index = 1;
-                    return CharacterMatchResult::ResetAndKeep;
-                }
+                && character_to_test == first_pattern_char
+            {
+                self.current_index = 1;
+                return CharacterMatchResult::ResetAndKeep;
+            }
 
             // Normal reset.
             self.current_index = 0;
@@ -149,12 +151,10 @@ mod tests {
 
         for (index, character) in my_line.chars().enumerate() {
             match pattern_matcher.match_next(character) {
-                CharacterMatchResult::Skip => {
-                    continue;
-                }
+                CharacterMatchResult::Skip => { /* continue */ }
                 CharacterMatchResult::Keep => {
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Reset => {
                     result.clear();
@@ -162,7 +162,7 @@ mod tests {
                 CharacterMatchResult::ResetAndKeep => {
                     result.clear();
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Finished => {
                     final_index = index;
@@ -198,12 +198,10 @@ mod tests {
         for (index, character) in my_line.chars().enumerate() {
             final_index = index;
             match pattern_matcher.match_next(character) {
-                CharacterMatchResult::Skip => {
-                    continue;
-                }
+                CharacterMatchResult::Skip => { /* continue */ }
                 CharacterMatchResult::Keep => {
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Reset => {
                     result.clear();
@@ -211,7 +209,7 @@ mod tests {
                 CharacterMatchResult::ResetAndKeep => {
                     result.clear();
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Finished => {
                     break;
@@ -245,12 +243,10 @@ mod tests {
         for (index, character) in my_line.chars().enumerate() {
             final_index = index;
             match pattern_matcher.match_next(character) {
-                CharacterMatchResult::Skip => {
-                    continue;
-                }
+                CharacterMatchResult::Skip => { /* continue */ }
                 CharacterMatchResult::Keep => {
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Reset => {
                     result.clear();
@@ -258,7 +254,7 @@ mod tests {
                 CharacterMatchResult::ResetAndKeep => {
                     result.clear();
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Finished => {
                     break;
@@ -282,20 +278,18 @@ mod tests {
 
         for (index, character) in my_line.chars().enumerate() {
             match pattern_matcher.match_next(character) {
-                CharacterMatchResult::Skip => {
-                    continue;
-                }
+                CharacterMatchResult::Skip => { /* continue */ }
                 CharacterMatchResult::Reset => {
                     result.clear();
                 }
                 CharacterMatchResult::ResetAndKeep => {
                     result.clear();
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Keep => {
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Finished => {
                     final_index = index;
@@ -321,20 +315,18 @@ mod tests {
         for (index, character) in my_line.chars().enumerate() {
             final_index = index;
             match pattern_matcher.match_next(character) {
-                CharacterMatchResult::Skip => {
-                    continue;
-                }
+                CharacterMatchResult::Skip => { /* continue */ }
                 CharacterMatchResult::Reset => {
                     result.clear();
                 }
                 CharacterMatchResult::ResetAndKeep => {
                     result.clear();
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Keep => {
                     result.push(character);
-                    continue;
+                    /* continue */
                 }
                 CharacterMatchResult::Finished => {
                     break;

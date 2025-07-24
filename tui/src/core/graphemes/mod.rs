@@ -188,7 +188,7 @@
 //! mismatch between how text is stored in memory, how it's logically organized, and
 //! how it's displayed on screen.
 //!
-//! ## 1. ByteIndex - Memory Position
+//! ## 1. `ByteIndex` - Memory Position
 //!
 //! [`ByteIndex`] represents the raw byte offset in a UTF-8 encoded string. This is
 //! crucial for:
@@ -199,7 +199,7 @@
 //! Example: In the string "H😀!", 'H' starts at byte 0, '😀' starts at byte 1,
 //! and '!' starts at byte 5 (since '😀' takes 4 bytes).
 //!
-//! ## 2. SegIndex - Logical Position (Grapheme Clusters)
+//! ## 2. `SegIndex` - Logical Position (Grapheme Clusters)
 //!
 //! [`SegIndex`] represents the index of a grapheme cluster (user-perceived character).
 //! This is essential for:
@@ -207,11 +207,11 @@
 //! - Text editing operations (insert/delete should work on whole characters)
 //! - Logical text manipulation
 //!
-//! Example: In "H😀!", there are 3 segments: seg[0]='H', seg[1]='😀', seg[2]='!'
+//! Example: In "H😀!", there are 3 segments: seg\[0\]='H', seg\[1\]='😀', seg\[2\]='!'
 //!
-//! ## 3. ColIndex - Display Position
+//! ## 3. `ColIndex` - Display Position
 //!
-//! [`ColIndex`] represents the column position on the terminal screen. This is
+//! [`ColIndex`](crate::ColIndex) represents the column position on the terminal screen. This is
 //! necessary because:
 //! - Some characters are wider than others (emojis typically take 2 columns)
 //! - Terminal rendering requires knowing exact column positions
@@ -244,7 +244,7 @@
 //! - `&GCString + SegIndex → Option<ColIndex>`: Find the display column of a segment
 //!
 //! These conversions can return `None` when indices are out of bounds or fall between
-//! characters. For example, a ByteIndex in the middle of a multi-byte character would
+//! characters. For example, a `ByteIndex` in the middle of a multi-byte character would
 //! return `None`.
 
 // Attach sources.

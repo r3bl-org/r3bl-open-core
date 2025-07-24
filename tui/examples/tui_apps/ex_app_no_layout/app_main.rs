@@ -14,15 +14,15 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{ch, col, defaults::get_default_gradient_stops, glyphs, inline_string,
-               new_style, render_ops, render_pipeline, render_tui_styled_texts_into,
-               row, send_signal, tui_styled_text, width, Animator, Ansi256GradientIndex,
-               App, BoxedSafeApp, ColorChangeSpeed, ColorWheel, ColorWheelConfig,
-               ColorWheelSpeed, ComponentRegistryMap, EventPropagation, GlobalData,
-               GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
-               InputEvent, Key, KeyPress, LolcatBuilder, RenderOp, RenderPipeline,
-               SpecialKey, TerminalWindowMainThreadSignal, TextColorizationPolicy,
-               ZOrder};
+use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
+               ColorWheel, ColorWheelConfig, ColorWheelSpeed, ComponentRegistryMap,
+               EventPropagation, GlobalData, GradientGenerationPolicy,
+               GradientLengthKind, HasFocus, InlineVec, InputEvent, Key, KeyPress,
+               LolcatBuilder, RenderOp, RenderPipeline, SpecialKey,
+               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
+               defaults::get_default_gradient_stops, glyphs, inline_string, new_style,
+               render_ops, render_pipeline, render_tui_styled_texts_into, row,
+               send_signal, tui_styled_text, width};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
@@ -55,7 +55,7 @@ mod constructor {
 }
 
 mod animator_task {
-    use super::{send_signal, AppSignal, Duration, Sender, TerminalWindowMainThreadSignal};
+    use super::{AppSignal, Duration, Sender, TerminalWindowMainThreadSignal, send_signal};
 
     pub fn start_animator_task(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AppSignal>>,
@@ -104,18 +104,18 @@ mod animator_task {
 }
 
 mod app_main_impl_trait_app {
-    use r3bl_tui::{throws_with_return, Colorize, CommonResult, GCStringExt};
+    use r3bl_tui::{Colorize, CommonResult, GCStringExt, throws_with_return};
 
-    use super::{animator_task::start_animator_task, ch, col, get_default_gradient_stops,
-                glyphs, hud, inline_string, render_ops, render_pipeline,
-                render_tui_styled_texts_into, row, send_signal, smallvec, status_bar,
-                width, Ansi256GradientIndex, App, AppData, AppMain, AppSignal,
+    use super::{Ansi256GradientIndex, App, AppData, AppMain, AppSignal,
                 ColorChangeSpeed, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-                ComponentRegistryMap, EventPropagation, GlobalData,
-                GradientGenerationPolicy, GradientLengthKind, HasFocus, InputEvent, Key,
-                KeyPress, LolcatBuilder, RenderOp, RenderPipeline, SpecialKey, State,
-                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
-                ENABLE_TRACE_EXAMPLES};
+                ComponentRegistryMap, ENABLE_TRACE_EXAMPLES, EventPropagation,
+                GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
+                InputEvent, Key, KeyPress, LolcatBuilder, RenderOp, RenderPipeline,
+                SpecialKey, State, TerminalWindowMainThreadSignal,
+                TextColorizationPolicy, ZOrder, animator_task::start_animator_task, ch,
+                col, get_default_gradient_stops, glyphs, hud, inline_string, render_ops,
+                render_pipeline, render_tui_styled_texts_into, row, send_signal,
+                smallvec, status_bar, width};
 
     impl App for AppMain {
         type S = State;
@@ -346,6 +346,7 @@ mod app_main_impl_trait_app {
             });
         }
 
+        #[allow(clippy::too_many_lines)]
         fn app_render(
             &mut self,
             global_data: &mut GlobalData<State, AppSignal>,
@@ -509,10 +510,10 @@ mod app_main_impl_trait_app {
 }
 
 mod hud {
-    use r3bl_tui::{col, row, tui_color, tui_styled_texts, Size, SPACER_GLYPH};
+    use r3bl_tui::{SPACER_GLYPH, Size, col, row, tui_color, tui_styled_texts};
 
-    use super::{new_style, render_ops, render_tui_styled_texts_into, tui_styled_text,
-                RenderOp, RenderPipeline, ZOrder};
+    use super::{RenderOp, RenderPipeline, ZOrder, new_style, render_ops,
+                render_tui_styled_texts_into, tui_styled_text};
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -544,10 +545,10 @@ mod hud {
 }
 
 mod status_bar {
-    use r3bl_tui::{col, tui_color, tui_styled_texts, Size, SPACER_GLYPH};
+    use r3bl_tui::{SPACER_GLYPH, Size, col, tui_color, tui_styled_texts};
 
-    use super::{new_style, render_ops, render_tui_styled_texts_into, tui_styled_text,
-                RenderOp, RenderPipeline, ZOrder};
+    use super::{RenderOp, RenderPipeline, ZOrder, new_style, render_ops,
+                render_tui_styled_texts_into, tui_styled_text};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

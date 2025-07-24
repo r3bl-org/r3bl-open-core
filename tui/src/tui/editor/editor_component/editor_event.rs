@@ -35,8 +35,9 @@ pub enum EditorEvent {
     /// Inserts a string directly into the editor buffer.
     ///
     /// This event is used in two scenarios:
-    /// 1. **Bracketed paste**: When text is pasted via terminal (right-click, middle-click, etc.),
-    ///    the terminal provides the text directly through [`InputEvent::BracketedPaste`].
+    /// 1. **Bracketed paste**: When text is pasted via terminal (right-click,
+    ///    middle-click, etc.), the terminal provides the text directly through
+    ///    [`InputEvent::BracketedPaste`].
     /// 2. **Programmatic insertion**: When code needs to insert multi-line text.
     ///
     /// For clipboard paste via Ctrl+V, see [`EditorEvent::Paste`].
@@ -319,12 +320,13 @@ impl EditorEvent {
         );
     }
 
-    /// Inserts text into the editor, normalizing line endings and handling multi-line content.
+    /// Inserts text into the editor, normalizing line endings and handling multi-line
+    /// content.
     ///
     /// # Text Sources
     /// The `text` parameter can come from various sources:
-    /// - **Bracketed Paste** (Ctrl+Shift+V, right-click, middle-click): Terminal sends raw
-    ///   text directly via [`InputEvent::BracketedPaste`]
+    /// - **Bracketed Paste** (Ctrl+Shift+V, right-click, middle-click): Terminal sends
+    ///   raw text directly via [`InputEvent::BracketedPaste`]
     /// - **Clipboard Paste** (Ctrl+V): Text read from system clipboard via
     ///   [`ClipboardService`]
     /// - **Programmatic insertion**: Text inserted by code (e.g., autocomplete, snippets)
@@ -338,8 +340,8 @@ impl EditorEvent {
     ///
     /// Additionally, different terminal emulators may preserve or transform these line
     /// endings differently when handling bracketed paste. Some terminals on Windows might
-    /// send `\r` instead of `\n`, while others preserve the original format. This function
-    /// ensures consistent behavior regardless of the source.
+    /// send `\r` instead of `\n`, while others preserve the original format. This
+    /// function ensures consistent behavior regardless of the source.
     ///
     /// # Processing Steps
     /// 1. All line endings (`\r\n`, `\n`, `\r`) are normalized to `\n`
@@ -347,7 +349,8 @@ impl EditorEvent {
     /// 3. Lines are inserted individually with explicit newline characters between them
     ///
     /// This approach is required because the editor's internal APIs need lines to be
-    /// inserted separately for proper rendering, cursor positioning, and undo/redo tracking.
+    /// inserted separately for proper rendering, cursor positioning, and undo/redo
+    /// tracking.
     ///
     /// # Arguments
     /// * `engine` - The editor engine for cursor and viewport management
@@ -362,13 +365,14 @@ impl EditorEvent {
     ) {
         // Normalize line endings: handle \r\n, \n, and \r as line separators
         let normalized_text = text
-            .replace("\r\n", "\n")  // Windows CRLF -> LF
-            .replace('\r', "\n");   // Old Mac CR -> LF
+            .replace("\r\n", "\n") // Windows CRLF -> LF
+            .replace('\r', "\n"); // Old Mac CR -> LF
 
         if normalized_text.contains(NEW_LINE_CHAR) {
             let lines: Vec<&str> = normalized_text.split(NEW_LINE_CHAR).collect();
 
-            // For multi-line operations, use the batched insert to avoid multiple validations
+            // For multi-line operations, use the batched insert to avoid multiple
+            // validations
             engine_internal_api::insert_str_batch_at_caret(
                 EditorArgsMut { engine, buffer },
                 &lines,
@@ -536,7 +540,9 @@ impl EditorEvent {
 
             EditorEvent::InsertString(chunk) => {
                 Self::delete_text_if_selected(engine, buffer);
-                Self::insert_text_with_normalized_line_endings(engine, buffer, &chunk, false);
+                Self::insert_text_with_normalized_line_endings(
+                    engine, buffer, &chunk, false,
+                );
             }
 
             EditorEvent::Paste => {
@@ -586,12 +592,12 @@ impl EditorEvent {
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_eq2, caret_scr_adj, col,
+    use crate::{CaretDirection, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
+                EditorEngine, EditorEngineConfig, EditorEvent, GCStringExt, LineMode,
+                SelectionAction, assert_eq2, caret_scr_adj, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, row,
-                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection, CaretScrAdj, EditorBuffer, EditorEngine, EditorEngineConfig,
-                EditorEvent, GCStringExt, LineMode, SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
+                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard};
 
     #[test]
     fn test_multiline_true() {
@@ -687,17 +693,19 @@ mod tests {
         assert_eq2!(maybe_line_str.unwrap(), &"abcaba".grapheme_string());
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_text_selection() {
-        use crate::{InlineVec, RowIndex, SelectionRange};
         use smallvec::smallvec;
-        
+
+        use crate::{InlineVec, RowIndex, SelectionRange};
+
         type SelectionList = InlineVec<(RowIndex, SelectionRange)>;
-        
+
         fn csa(col_index: usize, row_index: usize) -> CaretScrAdj {
             caret_scr_adj(col(col_index) + row(row_index))
         }
-        
+
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 

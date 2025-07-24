@@ -27,17 +27,17 @@
 //! To see this in action, set the [`crate::DEBUG_MD_PARSER_STDOUT`] to true, and run all
 //! the tests in this file.
 
-use nom::{branch::alt, combinator::map, IResult, Parser};
+use nom::{IResult, Parser, branch::alt, combinator::map};
 
-use crate::{fg_green, fg_red, inline_string, parse_fragment_plain_text_no_new_line,
+use crate::{CheckboxParsePolicy, DEBUG_MD_PARSER, MdLineFragment, fg_green, fg_red,
+            inline_string, parse_fragment_plain_text_no_new_line,
             parse_fragment_starts_with_backtick_err_on_new_line,
             parse_fragment_starts_with_checkbox_checkbox_into_bool,
             parse_fragment_starts_with_checkbox_into_str,
             parse_fragment_starts_with_left_image_err_on_new_line,
             parse_fragment_starts_with_left_link_err_on_new_line,
             parse_fragment_starts_with_star_err_on_new_line,
-            parse_fragment_starts_with_underscore_err_on_new_line, CheckboxParsePolicy,
-            MdLineFragment, DEBUG_MD_PARSER};
+            parse_fragment_starts_with_underscore_err_on_new_line};
 
 // XMARK: Parser for a single line of markdown
 
@@ -122,11 +122,11 @@ pub fn parse_inline_fragments_until_eol_or_eoi(
 
 #[cfg(test)]
 mod tests_parse_fragment {
-    use nom::{error::{Error, ErrorKind},
-              Err as NomErr};
+    use nom::{Err as NomErr,
+              error::{Error, ErrorKind}};
 
     use super::*;
-    use crate::{assert_eq2, HyperlinkData};
+    use crate::{HyperlinkData, assert_eq2};
 
     #[test]
     fn test_parse_plain_text_no_new_line1() {
@@ -476,6 +476,7 @@ mod tests_parse_fragment {
         );
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_parse_fragment_markdown_inline() {
         assert_eq2!(

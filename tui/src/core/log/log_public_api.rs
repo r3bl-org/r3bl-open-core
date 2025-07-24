@@ -19,7 +19,7 @@ use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
 
 use tracing::dispatcher;
 
-use crate::{ok, DisplayPreference, TracingConfig, WriterConfig};
+use crate::{DisplayPreference, TracingConfig, WriterConfig, ok};
 
 // XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config
 // options.
@@ -178,6 +178,7 @@ pub mod tracing_config_options {
     mod tests_add_writer_configs {
         use crate::SharedWriter;
 
+        #[allow(clippy::too_many_lines)]
         #[test]
         fn test_add_writer_configs() {
             use super::*;

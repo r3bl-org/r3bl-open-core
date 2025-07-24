@@ -658,7 +658,7 @@ mod tests {
 
     // Tests [local_branch_ops::LocalBranchInfo] methods including `exists_locally()`,
     // `mark_branch_current()`, and `trim_current_prefix_from_branch()`.
-    async fn test_local_branch_info_methods() -> miette::Result<()> {
+    fn test_local_branch_info_methods() -> miette::Result<()> {
         with_saved_pwd!({
             // Test exists_locally method.
             let branch_info = local_branch_ops::LocalBranchInfo {
@@ -756,7 +756,7 @@ mod tests {
         test_try_create_and_switch_to_branch().await?;
         test_try_delete_branches().await?;
         test_try_get_local_branches().await?;
-        test_local_branch_info_methods().await?;
+        test_local_branch_info_methods()?;
         test_try_execute_git_command_to_get_branches().await?;
 
         ok!()

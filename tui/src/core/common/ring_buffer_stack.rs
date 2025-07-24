@@ -22,7 +22,7 @@
 use std::fmt::Debug;
 
 use super::RingBuffer;
-use crate::{len, Index, Length};
+use crate::{Index, Length, len};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RingBufferStack<T, const N: usize> {
@@ -456,7 +456,7 @@ mod tests {
 
         // Test using for loop with explicit into_iter() call
         let mut explicit_collected = Vec::new();
-        for item in (&ring_buffer).into_iter() {
+        for item in &ring_buffer {
             explicit_collected.push(item.clone());
         }
         assert_eq!(collected, explicit_collected);

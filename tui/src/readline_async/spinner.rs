@@ -425,14 +425,10 @@ mod tests {
                     Ok(signal) => {
                         acc.push(signal);
                     }
-                    Err(error) => match error {
-                        tokio::sync::mpsc::error::TryRecvError::Empty => {
-                            break;
-                        }
-                        tokio::sync::mpsc::error::TryRecvError::Disconnected => {
-                            break;
-                        }
-                    },
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty | 
+                         tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                        break;
+                    }
                 }
             }
             acc
@@ -502,14 +498,10 @@ mod tests {
                     Ok(signal) => {
                         acc.push(signal);
                     }
-                    Err(error) => match error {
-                        tokio::sync::mpsc::error::TryRecvError::Empty => {
-                            break;
-                        }
-                        tokio::sync::mpsc::error::TryRecvError::Disconnected => {
-                            break;
-                        }
-                    },
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty | 
+                         tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                        break;
+                    }
                 }
             }
             acc

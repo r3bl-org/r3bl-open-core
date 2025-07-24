@@ -502,6 +502,7 @@ mod tests {
     use super::*;
     use crate::{assert_eq2, col, height, new_style, render_pipeline, row, tui_color};
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = width(10) + height(2);
@@ -627,6 +628,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     #[test]
     fn test_print_plain_text_render_path_new_buffer_for_each_paint() {
         let window_size = width(10) + height(2);

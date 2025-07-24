@@ -475,10 +475,10 @@ mod tests_convert_style_and_color {
 
     #[test]
     fn test_stylesheet_find_styles_by_ids() {
-        fn assertions_for_find_styles_by_ids(result: &Option<InlineVec<TuiStyle>>) {
-            assert_eq2!(result.as_ref().unwrap().len(), 2);
-            assert_eq2!(result.as_ref().unwrap()[0].id, tui_style_attrib::id(1));
-            assert_eq2!(result.as_ref().unwrap()[1].id, tui_style_attrib::id(2));
+        fn assertions_for_find_styles_by_ids(result: Option<&InlineVec<TuiStyle>>) {
+            assert_eq2!(result.unwrap().len(), 2);
+            assert_eq2!(result.unwrap()[0].id, tui_style_attrib::id(1));
+            assert_eq2!(result.unwrap()[1].id, tui_style_attrib::id(2));
         }
 
         let mut stylesheet = TuiStylesheet::new();
@@ -494,11 +494,11 @@ mod tests_convert_style_and_color {
         assert_eq2!(stylesheet.styles.len(), 2);
 
         // Contains.
-        assertions_for_find_styles_by_ids(&stylesheet.find_styles_by_ids(&[1, 2]));
-        assertions_for_find_styles_by_ids(&get_tui_styles!(
+        assertions_for_find_styles_by_ids(stylesheet.find_styles_by_ids(&[1, 2]).as_ref());
+        assertions_for_find_styles_by_ids(get_tui_styles!(
             @from: &stylesheet,
             [1, 2]
-        ));
+        ).as_ref());
         // Does not contain.
         assert_eq2!(stylesheet.find_styles_by_ids(&[3, 4]), None);
         assert_eq2!(get_tui_styles!(@from: stylesheet, [3, 4]), None);
@@ -664,7 +664,7 @@ mod tests_language_mapping {
         let syntax_set = syntect::parsing::SyntaxSet::load_defaults_newlines();
 
         println!("Available syntaxes and their extensions:");
-        for syntax in syntax_set.syntaxes().iter() {
+        for syntax in syntax_set.syntaxes() {
             println!(
                 "Syntax: {} -> Extensions: {:?}",
                 syntax.name, syntax.file_extensions
@@ -713,9 +713,9 @@ mod tests_language_mapping {
         ];
 
         println!("\nTesting our mappings:");
-        for (lang, expected_ext) in test_mappings.iter() {
+        for (lang, expected_ext) in &test_mappings {
             let mapped_ext = map_language_to_extension(lang);
-            assert_eq!(mapped_ext, *expected_ext, "Mapping failed for {}", lang);
+            assert_eq!(mapped_ext, *expected_ext, "Mapping failed for {lang}");
 
             let syntax_ref = syntax_set.find_syntax_by_extension(expected_ext);
             println!(

@@ -21,7 +21,7 @@
 use std::fmt::Debug;
 
 use super::RingBuffer;
-use crate::{len, Index, Length};
+use crate::{Index, Length, len};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RingBufferHeap<T, const N: usize> {
@@ -84,7 +84,7 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
         }
         self.head = (self.head + 1) % N;
         self.count = std::cmp::min(self.count + 1, N); // Make sure count doesn't exceed
-                                                       // capacity
+        // capacity
     }
 
     /// Remove from tail (ie, remove the oldest item).
@@ -470,7 +470,7 @@ mod tests {
 
         // Test using for loop with explicit into_iter() call
         let mut explicit_collected = Vec::new();
-        for item in (&ring_buffer).into_iter() {
+        for item in &ring_buffer {
             explicit_collected.push(item.clone());
         }
         assert_eq!(collected, explicit_collected);

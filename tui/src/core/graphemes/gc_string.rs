@@ -22,9 +22,9 @@ use smallvec::SmallVec;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::{ch, col, join, pad_fmt, seg_index, seg_width, usize, width, ByteIndex,
-            ChUnit, ColIndex, ColWidth, InlineString, InlineVecStr, Seg, SegIndex,
-            SegWidth};
+use crate::{ByteIndex, ChUnit, ColIndex, ColWidth, InlineString, InlineVecStr, Seg,
+            SegIndex, SegWidth, ch, col, join, pad_fmt, seg_index, seg_width, usize,
+            width};
 
 /// `GCString` represents a [String] as a sequence of grapheme cluster segments, and *not*
 /// just scalar values or single code points, like `🙏`. This is to provide support for
@@ -326,7 +326,7 @@ mod tests_iterator {
 
         // Test using for loop with explicit into_iter() call
         let mut explicit_collected = Vec::new();
-        for segment in (&gc_string).into_iter() {
+        for segment in &gc_string {
             explicit_collected.push(segment.to_string());
         }
         assert_eq!(collected, explicit_collected);
@@ -396,9 +396,9 @@ mod sizing {
 
 /// Fundamental methods for working with grapheme strings.
 mod basic {
-    use super::{ch, col, seg_width, sizing, width, ChUnit, ColWidth, Deref, DerefMut,
-                GCString, Seg, SegIndex, SegWidth, UnicodeSegmentation,
-                UnicodeWidthChar, UnicodeWidthStr};
+    use super::{ChUnit, ColWidth, Deref, DerefMut, GCString, Seg, SegIndex, SegWidth,
+                UnicodeSegmentation, UnicodeWidthChar, UnicodeWidthStr, ch, col,
+                seg_width, sizing, width};
 
     impl AsRef<str> for GCString {
         fn as_ref(&self) -> &str { &self.string }
@@ -561,7 +561,7 @@ mod basic {
 /// Methods to make it easy to work with getting owned string (from slices) at a given
 /// display col index.
 pub mod at_display_col_index {
-    use super::{ch, seg_index, ColIndex, GCString, Seg, SegString};
+    use super::{ColIndex, GCString, Seg, SegString, ch, seg_index};
 
     impl GCString {
         /// If the given `display_col_index` falls in the middle of a grapheme cluster,
@@ -790,7 +790,7 @@ pub struct SegString {
 }
 
 mod seg_string_result_impl {
-    use super::{grapheme_string, Debug, GCString, Seg, SegString};
+    use super::{Debug, GCString, Seg, SegString, grapheme_string};
 
     /// Easily convert a [Seg] and a [`GCString`] into a [`SegString`].
     impl From<(Seg, &GCString)> for SegString {
@@ -826,25 +826,24 @@ mod seg_string_result_impl {
 ///
 /// These conversion operators are the heart of Unicode text handling in the editor:
 ///
-/// 1. **ByteIndex → SegIndex**: When we have a byte position (e.g., from a file offset
-///    or string slice operation), we need to find which grapheme cluster it belongs to.
-///    This is crucial for ensuring we never split a multi-byte character.
+/// 1. **`ByteIndex` → `SegIndex`**: When we have a byte position (e.g., from a file
+///    offset or string slice operation), we need to find which grapheme cluster it
+///    belongs to. This is crucial for ensuring we never split a multi-byte character.
 ///
-/// 2. **ColIndex → SegIndex**: When the user clicks at a screen position or we need to
-///    render at a specific column, we must find which grapheme cluster is at that
+/// 2. **`ColIndex` → `SegIndex`**: When the user clicks at a screen position or we need
+///    to render at a specific column, we must find which grapheme cluster is at that
 ///    display position. This handles wide characters correctly.
 ///
-/// 3. **SegIndex → ColIndex**: When we have a logical character position and need to
-///    know where it appears on screen. This is used for cursor positioning and
-///    rendering.
+/// 3. **`SegIndex` → `ColIndex`**: When we have a logical character position and need to
+///    know where it appears on screen. This is used for cursor positioning and rendering.
 ///
 /// # Examples
 ///
 /// ```text
 /// String: "a😀b"
-/// 
+///
 /// ByteIndex 0 → SegIndex 0 (start of 'a')
-/// ByteIndex 1 → SegIndex 1 (start of '😀') 
+/// ByteIndex 1 → SegIndex 1 (start of '😀')
 /// ByteIndex 2 → None (middle of '😀' - invalid!)
 /// ByteIndex 5 → SegIndex 2 (start of 'b')
 ///
@@ -854,7 +853,7 @@ mod seg_string_result_impl {
 /// ColIndex 3 → SegIndex 2 ('b' at column 3)
 /// ```
 mod convert {
-    use super::{seg_index, usize, Add, ByteIndex, ColIndex, GCString, SegIndex};
+    use super::{Add, ByteIndex, ColIndex, GCString, SegIndex, seg_index, usize};
 
     /// Convert a `byte_index` to a `seg_index`.
     ///
@@ -917,7 +916,7 @@ mod convert {
 
 /// Methods for easily detecting wide segments in the grapheme string.
 pub mod wide_segments {
-    use super::{width, Debug, GCString};
+    use super::{Debug, GCString, width};
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum ContainsWideSegments {
@@ -942,7 +941,7 @@ pub mod wide_segments {
 /// Methods for easily truncating grapheme cluster segments (at the end) for common TUI
 /// use cases.
 pub mod trunc_end {
-    use super::{ch, usize, ColWidth, GCString};
+    use super::{ColWidth, GCString, ch, usize};
 
     impl GCString {
         /// Returns a string slice from `self.string` w/ the segments removed from the end
@@ -1049,7 +1048,7 @@ pub mod trunc_end {
 /// Methods for easily truncating grapheme cluster segments (from the start) for common
 /// TUI use cases.
 pub mod trunc_start {
-    use super::{ch, ColWidth, GCString};
+    use super::{ColWidth, GCString, ch};
 
     impl GCString {
         /// Removes segments from the start of the string so that `col_count` (width) is
@@ -1102,7 +1101,7 @@ pub mod trunc_start {
 
 /// Methods for easily padding grapheme cluster segments for common TUI use cases.
 mod pad {
-    use super::{pad_fmt, width, ColWidth, GCString, InlineString};
+    use super::{ColWidth, GCString, InlineString, pad_fmt, width};
 
     impl GCString {
         /// Returns a new [`InlineString`] that is the result of padding `self.string` to
@@ -1224,7 +1223,7 @@ mod pad {
 
 /// Methods for easily clipping grapheme cluster segments for common TUI use cases.
 mod clip {
-    use super::{ch, ColIndex, ColWidth, GCString};
+    use super::{ColIndex, ColWidth, GCString, ch};
 
     impl GCString {
         /// Clip the content starting from `arg_start_at_col_index` and take as many
@@ -1313,8 +1312,8 @@ mod clip {
 
 /// Methods for easily modifying grapheme cluster segments for common TUI use cases.
 mod mutate {
-    use super::{ch, join, seg_width, usize, width, ColIndex, ColWidth, GCString,
-                InlineString, InlineVecStr};
+    use super::{ColIndex, ColWidth, GCString, InlineString, InlineVecStr, ch, join,
+                seg_width, usize, width};
 
     impl GCString {
         /// Inserts the given `chunk` in the correct position of the `string`, and returns
@@ -2423,7 +2422,8 @@ mod bench {
     /// Benchmark: Creating `GCString` from longer ASCII text
     #[bench]
     fn bench_gc_string_new_ascii_long(b: &mut Bencher) {
-        let text = "The quick brown fox jumps over the lazy dog. Lorem ipsum dolor sit amet.";
+        let text =
+            "The quick brown fox jumps over the lazy dog. Lorem ipsum dolor sit amet.";
         b.iter(|| {
             let _gs = GCString::new(text);
         });

@@ -86,9 +86,9 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
 /// This will panic if the lock is poisoned, which can happen if a thread
 /// panics while holding the lock. To avoid panics, ensure that the code that
 /// locks the mutex does not panic while holding the lock.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if the markdown parsing fails.
 pub fn try_parse_and_highlight(
     editor_text_lines: &[GCString],
@@ -868,6 +868,7 @@ mod tests_style_us_span_lines_from {
             // Everything else is the same as the link() test below.
         }
 
+        #[allow(clippy::too_many_lines)]
         #[test]
         fn test_link() {
             let fragment = MdLineFragment::Link(HyperlinkData {

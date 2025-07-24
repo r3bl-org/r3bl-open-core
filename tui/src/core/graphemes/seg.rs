@@ -18,13 +18,13 @@
 use std::fmt::Debug;
 
 use super::SegIndex;
-use crate::{usize, ChUnit, ColIndex, ColWidth};
+use crate::{ChUnit, ColIndex, ColWidth, usize};
 
 /// `Seg` represents a grapheme cluster segment within a [`super::GCString`].
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text
 /// handling. Each `Seg` contains all the information needed to convert between
-/// [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
+/// [`ByteIndex`](crate::ByteIndex), [`SegIndex`], and [`ColIndex`].
 ///
 /// A Unicode "grapheme" is a user-perceived character.
 /// - For `UTF-8` encoded text, a grapheme can be a single byte or up to 4 bytes.
@@ -65,16 +65,16 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 ///
 /// ## Fields and Their Relationship to Index Types
 ///
-/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`] range for this
-///   segment. These are used when converting from ByteIndex to SegIndex.
+/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`](crate::ByteIndex) range for this
+///   segment. These are used when converting from `ByteIndex` to `SegIndex`.
 /// - `seg_index`: The [`SegIndex`] of this segment. This is its position in the logical
 ///   sequence of grapheme clusters.
 /// - `start_display_col_index`: The [`ColIndex`] where this segment begins on screen.
-///   Combined with `display_width`, this defines the ColIndex range.
+///   Combined with `display_width`, this defines the `ColIndex` range.
 /// - `display_width`: The number of terminal columns this segment occupies (as
 ///   [`ColWidth`]).
-/// - `bytes_size`: The size in bytes (for convenience, equals end_byte_index -
-///   start_byte_index).
+/// - `bytes_size`: The size in bytes (for convenience, equals `end_byte_index` -
+///   `start_byte_index`).
 ///
 /// ## Purpose
 ///
@@ -188,7 +188,7 @@ impl Seg {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ch, col, seg_index, width, GCStringExt};
+    use crate::{GCStringExt, ch, col, seg_index, width};
 
     #[test]
     fn test_single_grapheme_cluster() {
@@ -229,6 +229,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unicode_not_nfc)] // Intentionally testing decomposed form
     fn test_combining_grapheme_cluster() {
         let grapheme_string = "á".grapheme_string(); // 'a' + combining acute accent
         if let Some(segment) = grapheme_string.segments.first() {
