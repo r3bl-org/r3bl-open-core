@@ -248,7 +248,6 @@
 //! return `None`.
 
 // Attach sources.
-pub mod byte_index;
 pub mod gc_string;
 pub mod gc_string_ext;
 pub mod seg;
@@ -256,7 +255,6 @@ pub mod seg_index;
 pub mod segment_builder;
 
 // Re-export.
-pub use byte_index::*;
 pub use gc_string::*;
 pub use gc_string_ext::*;
 pub use seg::*;

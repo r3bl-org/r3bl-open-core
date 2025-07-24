@@ -124,13 +124,33 @@ toolchain, and is already configured to support cargo bench.
 
 #### 1.4 Zero-Copy Access Methods
 
-- [ ] Implement `as_str()` -> `&str` for entire buffer
-- [ ] Implement `as_bytes()` -> `&[u8]` for raw access
-- [ ] Implement `get_line_content()` -> `&str` for single line
-- [ ] Implement `get_line_slice()` for range of lines
-- [ ] Add UTF-8 validation in debug builds
-- [ ] Add tests for zero-copy access
-- [ ] Make a commit with this progress
+- [x] Implement `as_str()` -> `&str` for entire buffer
+  - Uses `unsafe` for zero-copy guarantee with comprehensive safety documentation
+  - Debug builds validate UTF-8 before conversion
+- [x] Implement `as_bytes()` -> `&[u8]` for raw access
+  - Direct access to underlying buffer
+- [x] Implement `get_line_content()` -> `&str` for single line
+  - Returns content without null padding or newline
+- [x] Implement `get_line_slice()` for range of lines
+  - Returns lines including null padding
+- [x] Add UTF-8 validation in debug builds
+  - Panics on invalid UTF-8 in debug mode
+- [x] Add tests for zero-copy access
+  - Including tests for invalid UTF-8 handling
+- [x] Additional methods for parser support:
+  - `get_line_with_newline()` - Get line including newline character
+  - `find_line_containing_byte()` - Map byte offset to line number
+  - `get_line_raw()` - Get raw line bytes for debugging
+  - `is_valid_utf8()` - Check buffer UTF-8 validity
+- [x] Created separate `zero_copy_access.rs` module
+- [x] Made buffer field public for direct access when needed
+- [x] Make a commit with this progress
+
+#### 1.5 Use newtype and dynamic line sizing
+
+- [x] Instead of `usize`, use specific types like `ByteIndex`, `Length`, `SegIndex`, and `ColIndex`
+- [x] Implement dynamic line resizing, start with `INITIAL_LINE_SIZE`, extend by `LINE_PAGE_SIZE`
+- [x] Move `ByteIndex` from `graphemes` to `units` mod, since it is generic (not domain specific)
 
 ### Phase 2: Text Operations
 

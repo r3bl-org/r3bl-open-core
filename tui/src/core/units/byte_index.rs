@@ -20,9 +20,13 @@ use std::ops::{Deref, DerefMut};
 use crate::ChUnit;
 
 /// Represents a byte index inside of the underlying [`crate::InlineString`] of
-/// [`super::GCString`].
+/// [`crate::GCString`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteIndex(pub usize);
+
+impl ByteIndex {
+    pub fn as_usize(&self) -> usize { self.0 }
+}
 
 pub fn byte_index(arg_byte_index: impl Into<ByteIndex>) -> ByteIndex {
     arg_byte_index.into()

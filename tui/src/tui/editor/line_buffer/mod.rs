@@ -30,7 +30,9 @@
 //! - Metadata caching for performance
 
 // Attach.
-mod line_buffer_impl;
+mod line_buffer_struct;
+mod zero_copy_access;
 
 // Re-export.
-pub use line_buffer_impl::*;
+pub use line_buffer_struct::*;
+pub use zero_copy_access::*;
