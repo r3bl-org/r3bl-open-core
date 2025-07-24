@@ -15,7 +15,55 @@
  *   limitations under the License.
  */
 
-use crate::{ColWidth, gc_string_sizing::SegmentArray, ByteIndex, byte_index, Length, len, RowIndex};
+//! Buffer storage implementation for the `LineBuffer` data structure.
+//!
+//! This module contains the core storage mechanisms for the dynamically-sized line buffer
+//! system. Each line starts with 256 bytes of capacity and can grow in 256-byte
+//! increments as needed to accommodate larger content.
+//!
+//! # Storage Architecture
+//!
+//! ## Line Layout
+//! Each line follows this storage pattern:
+//! ```text
+//! [content bytes][newline (\n)][null padding (\0)...]
+//! ```
+//!
+//! ## Dynamic Growth
+//! - **Initial capacity**: 256 bytes (`INITIAL_LINE_SIZE`)
+//! - **Growth increment**: 256 bytes (`LINE_PAGE_SIZE`)
+//! - **Growth trigger**: When content + newline exceeds current capacity
+//! - **Buffer management**: Subsequent lines are shifted to accommodate growth
+//!
+//! ## Null-Padding Invariant
+//! **CRITICAL**: All unused capacity MUST be filled with null bytes (`\0`). This ensures:
+//! - Memory safety and security (no information leakage)
+//! - Predictable buffer state for zero-copy operations
+//! - Safe string slice creation without bounds checking
+//!
+//! All operations in this module maintain this invariant through careful initialization
+//! and cleanup of buffer memory.
+//!
+//! # Null-Padding Invariant
+//!
+//! **CRITICAL**: This module maintains a strict invariant that all unused capacity
+//! in each line buffer MUST be filled with null bytes (`\0`). This invariant is
+//! essential for:
+//!
+//! - **Security**: Prevents information leakage from uninitialized memory
+//! - **Correctness**: Ensures predictable buffer state for zero-copy operations
+//! - **Performance**: Enables safe slice operations without bounds checking
+//!
+//! All operations in this module MUST maintain this invariant by:
+//! 1. Initializing new memory with `\0` (see `add_line`, `extend_line_capacity`)
+//! 2. Clearing gaps left by content shifts (see `remove_line`)
+//! 3. Padding unused capacity after modifications
+//!
+//! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
+//! or undefined behavior in zero-copy access operations.
+
+use crate::{ByteIndex, ColWidth, Length, RowIndex, byte_index,
+            gc_string_sizing::SegmentArray, len};
 
 /// Initial size of each line in bytes
 pub const INITIAL_LINE_SIZE: usize = 256;
@@ -25,13 +73,13 @@ pub const LINE_PAGE_SIZE: usize = 256;
 
 /// Line buffer data structure for storing editor content
 #[derive(Debug, Clone)]
-pub struct LineBuffer {
+pub struct ZeroCopyGapBuffer {
     /// Contiguous buffer storing all lines
-    /// Each line starts at INITIAL_LINE_SIZE bytes and can grow
+    /// Each line starts at `INITIAL_LINE_SIZE` bytes and can grow
     pub buffer: Vec<u8>,
 
     /// Metadata for each line (grapheme clusters, display width, etc.)
-    lines: Vec<LineInfo>,
+    lines: Vec<GapBufferLineInfo>,
 
     /// Number of lines currently in the buffer
     line_count: usize,
@@ -39,7 +87,7 @@ pub struct LineBuffer {
 
 /// Metadata for a single line in the buffer
 #[derive(Debug, Clone)]
-pub struct LineInfo {
+pub struct GapBufferLineInfo {
     /// Where this line starts in the buffer
     pub buffer_offset: ByteIndex,
 
@@ -49,7 +97,7 @@ pub struct LineInfo {
     /// Allocated capacity for this line
     pub capacity: Length,
 
-    /// GCString's segment array for this line
+    /// `GCString`'s segment array for this line
     pub segments: SegmentArray,
 
     /// Display width of the line
@@ -59,8 +107,8 @@ pub struct LineInfo {
     pub grapheme_count: usize,
 }
 
-impl LineBuffer {
-    /// Create a new empty LineBuffer
+impl ZeroCopyGapBuffer {
+    /// Create a new empty `LineBuffer`
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -70,7 +118,7 @@ impl LineBuffer {
         }
     }
 
-    /// Create a new LineBuffer with pre-allocated capacity
+    /// Create a new `LineBuffer` with pre-allocated capacity
     #[must_use]
     pub fn with_capacity(line_capacity: usize) -> Self {
         Self {
@@ -82,32 +130,31 @@ impl LineBuffer {
 
     /// Get the number of lines in the buffer
     #[must_use]
-    pub fn line_count(&self) -> usize {
-        self.line_count
-    }
+    pub fn line_count(&self) -> usize { self.line_count }
 
     /// Get line metadata by index
     #[must_use]
-    pub fn get_line_info(&self, line_index: usize) -> Option<&LineInfo> {
+    pub fn get_line_info(&self, line_index: usize) -> Option<&GapBufferLineInfo> {
         self.lines.get(line_index)
     }
 
     /// Get mutable line metadata by index
-    pub fn get_line_info_mut(&mut self, line_index: usize) -> Option<&mut LineInfo> {
+    pub fn get_line_info_mut(
+        &mut self,
+        line_index: usize,
+    ) -> Option<&mut GapBufferLineInfo> {
         self.lines.get_mut(line_index)
     }
 
     /// Swap two lines in the buffer metadata
-    /// This only swaps the LineInfo entries, not the actual buffer content
-    pub fn swap_lines(&mut self, i: usize, j: usize) {
-        self.lines.swap(i, j);
-    }
+    /// This only swaps the `LineInfo` entries, not the actual buffer content
+    pub fn swap_lines(&mut self, i: usize, j: usize) { self.lines.swap(i, j); }
 
     /// Add a new line to the buffer
     /// Returns the index of the newly added line
     pub fn add_line(&mut self) -> usize {
         let line_index = self.line_count;
-        
+
         // Calculate where this line starts in the buffer
         let buffer_offset = if line_index == 0 {
             byte_index(0)
@@ -117,13 +164,14 @@ impl LineBuffer {
         };
 
         // Extend buffer by INITIAL_LINE_SIZE bytes, all initialized to '\0'
-        self.buffer.resize(self.buffer.len() + INITIAL_LINE_SIZE, b'\0');
+        self.buffer
+            .resize(self.buffer.len() + INITIAL_LINE_SIZE, b'\0');
 
         // Add the newline character at the start (empty line)
         self.buffer[*buffer_offset] = b'\n';
 
         // Create line metadata
-        self.lines.push(LineInfo {
+        self.lines.push(GapBufferLineInfo {
             buffer_offset,
             content_len: len(0),
             capacity: len(INITIAL_LINE_SIZE),
@@ -153,7 +201,7 @@ impl LineBuffer {
         // Shift buffer contents
         let shift_start = removed_start + removed_size;
         let buffer_len = self.buffer.len();
-        
+
         // Move all subsequent bytes up
         for i in shift_start..buffer_len {
             self.buffer[i - removed_size] = self.buffer[i];
@@ -161,7 +209,7 @@ impl LineBuffer {
 
         // Truncate the buffer
         self.buffer.truncate(buffer_len - removed_size);
-        
+
         // Update buffer offsets for remaining lines
         for line in self.lines.iter_mut().skip(line_index) {
             line.buffer_offset = byte_index(*line.buffer_offset - removed_size);
@@ -179,16 +227,18 @@ impl LineBuffer {
     }
 
     /// Check if a line can accommodate additional bytes without reallocation
+    #[must_use]
     pub fn can_insert(&self, line_index: RowIndex, additional_bytes: usize) -> bool {
         if let Some(line_info) = self.get_line_info(line_index.as_usize()) {
             // Need space for content + newline
-            line_info.content_len.as_usize() + additional_bytes + 1 <= line_info.capacity.as_usize()
+            line_info.content_len.as_usize() + additional_bytes
+                < line_info.capacity.as_usize()
         } else {
             false
         }
     }
 
-    /// Extend the capacity of a line by LINE_PAGE_SIZE
+    /// Extend the capacity of a line by `LINE_PAGE_SIZE`
     pub fn extend_line_capacity(&mut self, line_index: RowIndex) {
         if line_index.as_usize() >= self.line_count {
             return;
@@ -226,13 +276,11 @@ impl LineBuffer {
     }
 }
 
-impl Default for LineBuffer {
-    fn default() -> Self {
-        Self::new()
-    }
+impl Default for ZeroCopyGapBuffer {
+    fn default() -> Self { Self::new() }
 }
 
-impl std::fmt::Display for LineBuffer {
+impl std::fmt::Display for ZeroCopyGapBuffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -250,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_new_line_buffer() {
-        let buffer = LineBuffer::new();
+        let buffer = ZeroCopyGapBuffer::new();
         assert_eq!(buffer.line_count(), 0);
         assert!(buffer.buffer.is_empty());
         assert!(buffer.lines.is_empty());
@@ -258,25 +306,25 @@ mod tests {
 
     #[test]
     fn test_add_line_with_dynamic_sizing() {
-        let mut buffer = LineBuffer::new();
-        
+        let mut buffer = ZeroCopyGapBuffer::new();
+
         // Add first line
         let idx1 = buffer.add_line();
         assert_eq!(idx1, 0);
         assert_eq!(buffer.line_count(), 1);
         assert_eq!(buffer.buffer.len(), INITIAL_LINE_SIZE);
-        
+
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(*line_info.buffer_offset, 0);
         assert_eq!(line_info.capacity, len(INITIAL_LINE_SIZE));
         assert_eq!(line_info.content_len, len(0));
-        
+
         // Add second line
         let idx2 = buffer.add_line();
         assert_eq!(idx2, 1);
         assert_eq!(buffer.line_count(), 2);
         assert_eq!(buffer.buffer.len(), 2 * INITIAL_LINE_SIZE);
-        
+
         let line_info = buffer.get_line_info(1).unwrap();
         assert_eq!(*line_info.buffer_offset, INITIAL_LINE_SIZE);
         assert_eq!(line_info.capacity, len(INITIAL_LINE_SIZE));
@@ -284,15 +332,15 @@ mod tests {
 
     #[test]
     fn test_extend_line_capacity() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         let original_capacity = buffer.get_line_info(0).unwrap().capacity;
         assert_eq!(original_capacity, len(INITIAL_LINE_SIZE));
-        
+
         // Extend the line
         buffer.extend_line_capacity(row(0));
-        
+
         let new_capacity = buffer.get_line_info(0).unwrap().capacity;
         assert_eq!(new_capacity, len(INITIAL_LINE_SIZE + LINE_PAGE_SIZE));
         assert_eq!(buffer.buffer.len(), INITIAL_LINE_SIZE + LINE_PAGE_SIZE);
@@ -300,39 +348,89 @@ mod tests {
 
     #[test]
     fn test_can_insert() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Should be able to insert up to capacity - 1 (for newline)
         assert!(buffer.can_insert(row(0), INITIAL_LINE_SIZE - 1));
         assert!(!buffer.can_insert(row(0), INITIAL_LINE_SIZE));
-        
+
         // Out of bounds
         assert!(!buffer.can_insert(row(1), 10));
     }
 
     #[test]
     fn test_remove_line_with_dynamic_sizing() {
-        let mut buffer = LineBuffer::new();
-        
+        let mut buffer = ZeroCopyGapBuffer::new();
+
         // Add three lines
         buffer.add_line();
         buffer.add_line();
         buffer.add_line();
-        
+
         // Extend the middle line
         buffer.extend_line_capacity(row(1));
-        
+
         let line1_offset_before = *buffer.get_line_info(2).unwrap().buffer_offset;
-        
+
         // Remove the extended middle line
         assert!(buffer.remove_line(1));
         assert_eq!(buffer.line_count(), 2);
-        
+
         // Check that the third line's offset was updated correctly
         let line1_offset_after = *buffer.get_line_info(1).unwrap().buffer_offset;
         assert_eq!(line1_offset_after, INITIAL_LINE_SIZE);
         // The extended line had size INITIAL_LINE_SIZE + LINE_PAGE_SIZE = 512
-        assert_eq!(line1_offset_before - line1_offset_after, INITIAL_LINE_SIZE + LINE_PAGE_SIZE);
+        assert_eq!(
+            line1_offset_before - line1_offset_after,
+            INITIAL_LINE_SIZE + LINE_PAGE_SIZE
+        );
+    }
+
+    #[test]
+    fn test_null_padding_after_line_creation() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        let line_info = buffer.get_line_info(0).unwrap();
+        let buffer_start = *line_info.buffer_offset;
+        let capacity = line_info.capacity.as_usize();
+
+        // Check that newline is at position 0
+        assert_eq!(buffer.buffer[buffer_start], b'\n');
+
+        // Check that the rest of the line capacity is null-padded
+        for i in (buffer_start + 1)..(buffer_start + capacity) {
+            assert_eq!(
+                buffer.buffer[i], b'\0',
+                "Buffer position {} should be null-padded but found: {:?}",
+                i, buffer.buffer[i]
+            );
+        }
+    }
+
+    #[test]
+    fn test_null_padding_after_capacity_extension() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        // Extend the line capacity
+        buffer.extend_line_capacity(row(0));
+
+        let line_info = buffer.get_line_info(0).unwrap();
+        let buffer_start = *line_info.buffer_offset;
+        let capacity = line_info.capacity.as_usize();
+
+        // Check that newline is still at position 0
+        assert_eq!(buffer.buffer[buffer_start], b'\n');
+
+        // Check that the entire extended capacity is null-padded
+        for i in (buffer_start + 1)..(buffer_start + capacity) {
+            assert_eq!(
+                buffer.buffer[i], b'\0',
+                "Extended buffer position {} should be null-padded but found: {:?}",
+                i, buffer.buffer[i]
+            );
+        }
     }
 }

@@ -25,7 +25,7 @@ use crate::ChUnit;
 pub struct ByteIndex(pub usize);
 
 impl ByteIndex {
-    pub fn as_usize(&self) -> usize { self.0 }
+    #[must_use] pub fn as_usize(&self) -> usize { self.0 }
 }
 
 pub fn byte_index(arg_byte_index: impl Into<ByteIndex>) -> ByteIndex {

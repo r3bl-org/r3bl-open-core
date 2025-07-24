@@ -607,11 +607,12 @@ pub mod access_and_mutate {
         #[must_use]
         pub fn get_scr_ofs(&self) -> ScrOfs { self.content.scr_ofs }
 
-        /// Even though this struct is mutable by `editor_ops.rs`, this method is provided
-        /// to mark when mutable access is made to this struct.
+        /// Even though this struct is mutable by `editor_ops_insert`, this method is
+        /// provided to mark when mutable access is made to this struct.
         ///
         /// This makes it easy to determine what code mutates this struct, since it is
-        /// necessary to validate things after mutation quite a bit in `editor_ops.rs`.
+        /// necessary to validate things after mutation quite a bit in
+        /// `editor_ops_insert`.
         ///
         /// [`crate::EditorBufferMut`] implements the [Drop] trait, which ensures that any
         /// validation changes are applied after making changes to the [`EditorBuffer`].

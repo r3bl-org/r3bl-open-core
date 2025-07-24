@@ -190,7 +190,7 @@
 //!
 //! ## 1. `ByteIndex` - Memory Position
 //!
-//! [`ByteIndex`] represents the raw byte offset in a UTF-8 encoded string. This is
+//! [`ByteIndex`](crate::ByteIndex) represents the raw byte offset in a UTF-8 encoded string. This is
 //! crucial for:
 //! - String slicing operations (Rust strings must be sliced at valid UTF-8 boundaries)
 //! - Memory access and manipulation
