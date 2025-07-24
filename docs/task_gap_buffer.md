@@ -95,22 +95,22 @@ toolchain, and is already configured to support cargo bench.
 - [x] Add unit tests for segment building with various Unicode inputs
 - [x] Add benchmarks comparing ASCII vs Unicode segment building
   - ASCII short (13 chars): ~54ns
-  - ASCII long (240 chars): ~287ns  
+  - ASCII long (240 chars): ~287ns
   - Unicode with emojis: ~592ns
   - Unicode mixed (accents, CJK): ~666ns
   - Unicode complex (skin tones): ~812ns
-- [ ] Make a commit with this progress
+- [x] Make a commit with this progress
 
 #### 1.2 Create LineBuffer Core Structure
 
-- [ ] Create new module `tui/src/tui/editor/line_buffer/mod.rs`
-- [ ] Define `LineBuffer` struct with basic fields
-- [ ] Define `LineInfo` struct for metadata
-- [ ] Implement `LineBuffer::new()` constructor
-- [ ] Implement `LineBuffer::with_capacity()` for pre-allocation
-- [ ] Add `const LINE_SIZE: usize = 256`
-- [ ] Add debug/display traits for LineBuffer
-- [ ] Make a commit with this progress
+- [x] Create new module `tui/src/tui/editor/line_buffer/mod.rs`
+- [x] Define `LineBuffer` struct with basic fields
+- [x] Define `LineInfo` struct for metadata
+- [x] Implement `LineBuffer::new()` constructor
+- [x] Implement `LineBuffer::with_capacity()` for pre-allocation
+- [x] Add `const LINE_SIZE: usize = 256`
+- [x] Add debug/display traits for LineBuffer
+- [x] Make a commit with this progress
 
 #### 1.3 Basic Buffer Operations
 
