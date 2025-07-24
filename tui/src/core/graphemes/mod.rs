@@ -180,6 +180,72 @@
 //! - The choices that were made in the design of the [`GCString`] struct for performance
 //!   to minimize memory latency (for access and allocation). The results might surprise
 //!   you, as intuition around performance is often not reliable.
+//!
+//! # The Three Types of Indices
+//!
+//! When working with Unicode text in a terminal-based editor, we need three distinct
+//! types of indices to handle text correctly. This is because there's a fundamental
+//! mismatch between how text is stored in memory, how it's logically organized, and
+//! how it's displayed on screen.
+//!
+//! ## 1. ByteIndex - Memory Position
+//!
+//! [`ByteIndex`] represents the raw byte offset in a UTF-8 encoded string. This is
+//! crucial for:
+//! - String slicing operations (Rust strings must be sliced at valid UTF-8 boundaries)
+//! - Memory access and manipulation
+//! - Efficient storage and retrieval
+//!
+//! Example: In the string "H😀!", 'H' starts at byte 0, '😀' starts at byte 1,
+//! and '!' starts at byte 5 (since '😀' takes 4 bytes).
+//!
+//! ## 2. SegIndex - Logical Position (Grapheme Clusters)
+//!
+//! [`SegIndex`] represents the index of a grapheme cluster (user-perceived character).
+//! This is essential for:
+//! - Cursor movement (users expect to move by visible characters)
+//! - Text editing operations (insert/delete should work on whole characters)
+//! - Logical text manipulation
+//!
+//! Example: In "H😀!", there are 3 segments: seg[0]='H', seg[1]='😀', seg[2]='!'
+//!
+//! ## 3. ColIndex - Display Position
+//!
+//! [`ColIndex`] represents the column position on the terminal screen. This is
+//! necessary because:
+//! - Some characters are wider than others (emojis typically take 2 columns)
+//! - Terminal rendering requires knowing exact column positions
+//! - Cursor positioning and selection highlighting need visual coordinates
+//!
+//! Example: In "H😀!", 'H' is at col 0, '😀' spans cols 1-2, '!' is at col 3
+//!
+//! ## Visual Example
+//!
+//! ```text
+//! String: "H😀!"
+//!
+//! ByteIndex: 0 1 2 3 4 5
+//! Content:  [H][😀----][!]
+//!
+//! SegIndex:  0    1     2
+//! Segments: [H] [😀]  [!]
+//!
+//! ColIndex:  0  1  2   3
+//! Display:  [H][😀--] [!]
+//! ```
+//!
+//! ## Conversion Between Index Types
+//!
+//! The [`GCString`] struct provides conversion operators to translate between these
+//! index types:
+//!
+//! - `&GCString + ByteIndex → Option<SegIndex>`: Find which segment contains a byte
+//! - `&GCString + ColIndex → Option<SegIndex>`: Find which segment is at a display column
+//! - `&GCString + SegIndex → Option<ColIndex>`: Find the display column of a segment
+//!
+//! These conversions can return `None` when indices are out of bounds or fall between
+//! characters. For example, a ByteIndex in the middle of a multi-byte character would
+//! return `None`.
 
 // Attach sources.
 pub mod byte_index;

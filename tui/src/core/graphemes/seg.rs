@@ -22,6 +22,10 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 
 /// `Seg` represents a grapheme cluster segment within a [`super::GCString`].
 ///
+/// This struct is the bridge between the three types of indices used in Unicode text
+/// handling. Each `Seg` contains all the information needed to convert between
+/// [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
+///
 /// A Unicode "grapheme" is a user-perceived character.
 /// - For `UTF-8` encoded text, a grapheme can be a single byte or up to 4 bytes.
 /// - A "grapheme cluster" can be multiple graphemes or code points or Unicode scalar
@@ -59,20 +63,18 @@ use crate::{usize, ChUnit, ColIndex, ColWidth};
 /// indices within the original string, its display width, its logical index within the
 /// [`super::GCString`], its byte size, and its starting display column index.
 ///
-/// ## Fields
+/// ## Fields and Their Relationship to Index Types
 ///
-/// - `start_byte_index`: The starting byte index of the grapheme cluster within the
-///   original string.
-/// - `end_byte_index`: The ending byte index of the grapheme cluster within the original
-///   string.
-/// - `display_width`: The display width of the grapheme cluster, as calculated by
-///   [`unicode_width::UnicodeWidthChar`].
-/// - `seg_index`: The index of this grapheme cluster within the
-///   [`super::GCString::segments`] vector.
-/// - `bytes_size`: The number of bytes this grapheme cluster occupies in the original
-///   string.
-/// - `start_display_col_index`: The display column index at which this grapheme cluster
-///   starts in the original string.
+/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`] range for this
+///   segment. These are used when converting from ByteIndex to SegIndex.
+/// - `seg_index`: The [`SegIndex`] of this segment. This is its position in the logical
+///   sequence of grapheme clusters.
+/// - `start_display_col_index`: The [`ColIndex`] where this segment begins on screen.
+///   Combined with `display_width`, this defines the ColIndex range.
+/// - `display_width`: The number of terminal columns this segment occupies (as
+///   [`ColWidth`]).
+/// - `bytes_size`: The size in bytes (for convenience, equals end_byte_index -
+///   start_byte_index).
 ///
 /// ## Purpose
 ///

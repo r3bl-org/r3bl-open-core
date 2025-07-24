@@ -821,6 +821,38 @@ mod seg_string_result_impl {
 /// - [`GCString`] + [`ByteIndex`] = [Option]<[`SegIndex`]>
 /// - [`GCString`] + [`ColIndex`] = [Option]<[`SegIndex`]>
 /// - [`GCString`] + [`SegIndex`] = [Option]<[`ColIndex`]>
+///
+/// # Why These Conversions Are Essential
+///
+/// These conversion operators are the heart of Unicode text handling in the editor:
+///
+/// 1. **ByteIndex → SegIndex**: When we have a byte position (e.g., from a file offset
+///    or string slice operation), we need to find which grapheme cluster it belongs to.
+///    This is crucial for ensuring we never split a multi-byte character.
+///
+/// 2. **ColIndex → SegIndex**: When the user clicks at a screen position or we need to
+///    render at a specific column, we must find which grapheme cluster is at that
+///    display position. This handles wide characters correctly.
+///
+/// 3. **SegIndex → ColIndex**: When we have a logical character position and need to
+///    know where it appears on screen. This is used for cursor positioning and
+///    rendering.
+///
+/// # Examples
+///
+/// ```text
+/// String: "a😀b"
+/// 
+/// ByteIndex 0 → SegIndex 0 (start of 'a')
+/// ByteIndex 1 → SegIndex 1 (start of '😀') 
+/// ByteIndex 2 → None (middle of '😀' - invalid!)
+/// ByteIndex 5 → SegIndex 2 (start of 'b')
+///
+/// ColIndex 0 → SegIndex 0 ('a' at column 0)
+/// ColIndex 1 → SegIndex 1 ('😀' starts at column 1)
+/// ColIndex 2 → SegIndex 1 ('😀' spans columns 1-2)
+/// ColIndex 3 → SegIndex 2 ('b' at column 3)
+/// ```
 mod convert {
     use super::{seg_index, usize, Add, ByteIndex, ColIndex, GCString, SegIndex};
 

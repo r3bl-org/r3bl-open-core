@@ -24,6 +24,10 @@ use crate::GCString;
 
 /// `GCStringExt` trait that allows converting lots of different types into
 /// [`GCString`].
+///
+/// Once converted to a [`GCString`], the text can be manipulated using the three
+/// index types: [`ByteIndex`](super::ByteIndex), [`SegIndex`](super::SegIndex),
+/// and [`ColIndex`](super::ColIndex) for proper Unicode handling.
 pub trait GCStringExt {
     fn grapheme_string(&self) -> GCString;
 }

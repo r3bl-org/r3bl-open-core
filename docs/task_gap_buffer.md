@@ -81,6 +81,8 @@
 
 #### 1.1 Extract GCString Segment Logic
 
+- [x] Update documentation to articulate why three types of index are needed: display, col, and
+      segment
 - [ ] Create new module `tui/src/core/graphemes/segment_builder.rs`
 - [ ] Add module declaration in `tui/src/core/graphemes/mod.rs`
 - [ ] Extract `build_segments_for_str()` function from GCString
@@ -397,6 +399,12 @@ parsing. Currently, the `EditorContent::lines: VecEditorContentLines` data struc
 - Editor stores lines in `VecEditorContentLines` (array of `GCString`)
 - Markdown parser needs `&str` input (nom parser constraint)
 - Current solution serializes the entire data structure to `String` - this is inefficient
+
+### Invariant
+
+- `parse_markdown` works with `&str` and this can not be changed! We must work around this
+  invariant, which is why we are implementing this gap buffer in the first place, so the nature of
+  the backing store for the lines of (unicode) text makes it trivial to access it as a `&str`
 
 ### Proposed Solution
 
