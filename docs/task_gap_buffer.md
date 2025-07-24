@@ -3,16 +3,18 @@
 
 - [Gap Buffer Implementation for Editor Content Storage](#gap-buffer-implementation-for-editor-content-storage)
   - [Detailed task tracking](#detailed-task-tracking)
-    - [Phase 1: Core Infrastructure](#phase-1-core-infrastructure)
-      - [1.1 Extract GCString Segment Logic](#11-extract-gcstring-segment-logic)
-      - [1.2 Create LineBuffer Core Structure](#12-create-linebuffer-core-structure)
-      - [1.3 Basic Buffer Operations](#13-basic-buffer-operations)
-      - [1.4 Zero-Copy Access Methods](#14-zero-copy-access-methods)
+    - [Phase 1: Core Infrastructure ✅](#phase-1-core-infrastructure-)
+      - [1.1 Extract GCString Segment Logic ✅](#11-extract-gcstring-segment-logic-)
+      - [1.2 Create ZeroCopyGapBuffer Core Structure ✅](#12-create-zerocogapbuffer-core-structure-)
+      - [1.3 Basic Buffer Operations ✅](#13-basic-buffer-operations-)
+      - [1.4 Zero-Copy Access Methods ✅](#14-zero-copy-access-methods-)
+      - [1.5 Use newtype and dynamic line sizing ✅](#15-use-newtype-and-dynamic-line-sizing-)
     - [Phase 2: Text Operations](#phase-2-text-operations)
-      - [2.1 Grapheme-Safe Insert Operations](#21-grapheme-safe-insert-operations)
-      - [2.2 Grapheme-Safe Delete Operations](#22-grapheme-safe-delete-operations)
+      - [2.1 Grapheme-Safe Insert Operations ✅](#21-grapheme-safe-insert-operations-)
+      - [2.2 Grapheme-Safe Delete Operations ✅](#22-grapheme-safe-delete-operations-)
       - [2.3 Line Overflow Handling](#23-line-overflow-handling)
       - [2.4 Segment Rebuilding](#24-segment-rebuilding)
+      - [2.5 Validation and benchmarking](#25-validation-and-benchmarking)
     - [Phase 3: Parser Integration](#phase-3-parser-integration)
       - [3.1 Parser Modifications for Padding](#31-parser-modifications-for-padding)
       - [3.2 Main Parser Entry Point](#32-main-parser-entry-point)
@@ -40,6 +42,7 @@
   - [Overview](#overview)
   - [Summary of the Goal](#summary-of-the-goal)
     - [Core Problem](#core-problem)
+    - [Invariant](#invariant)
     - [Proposed Solution](#proposed-solution)
     - [Benefits](#benefits)
     - [Required Changes](#required-changes)
@@ -59,7 +62,7 @@
   - [Parser Modifications](#parser-modifications)
     - [EOL handling with newline followed by many null chars](#eol-handling-with-newline-followed-by-many-null-chars)
   - [Implementation Plan](#implementation-plan)
-    - [Phase 1: Core Infrastructure](#phase-1-core-infrastructure-1)
+    - [Phase 1: Core Infrastructure](#phase-1-core-infrastructure)
     - [Phase 2: Text Operations](#phase-2-text-operations-1)
     - [Phase 3: Parser Integration](#phase-3-parser-integration-1)
     - [Phase 4: Editor Integration](#phase-4-editor-integration-1)
@@ -81,9 +84,9 @@ For benchmarks don't use `criterion`. Use `cargo bench`, and add bench tests are
 the file with the code under test, and mark them with `#[bench]`. This project uses nightly rust
 toolchain, and is already configured to support cargo bench.
 
-### Phase 1: Core Infrastructure
+### Phase 1: Core Infrastructure ✅
 
-#### 1.1 Extract GCString Segment Logic
+#### 1.1 Extract GCString Segment Logic ✅
 
 - [x] Update documentation to articulate why three types of index are needed: display, col, and
       segment
@@ -101,18 +104,18 @@ toolchain, and is already configured to support cargo bench.
   - Unicode complex (skin tones): ~812ns
 - [x] Make a commit with this progress
 
-#### 1.2 Create LineBuffer Core Structure
+#### 1.2 Create ZeroCopyGapBuffer Core Structure ✅
 
-- [x] Create new module `tui/src/tui/editor/line_buffer/mod.rs`
-- [x] Define `LineBuffer` struct with basic fields
-- [x] Define `LineInfo` struct for metadata
-- [x] Implement `LineBuffer::new()` constructor
-- [x] Implement `LineBuffer::with_capacity()` for pre-allocation
+- [x] Create new module `tui/src/tui/editor/zero_copy_gap_buffer/mod.rs`
+- [x] Define `ZeroCopyGapBuffer` struct with basic fields
+- [x] Define `GapBufferLineInfo` struct for metadata
+- [x] Implement `ZeroCopyGapBuffer::new()` constructor
+- [x] Implement `ZeroCopyGapBuffer::with_capacity()` for pre-allocation
 - [x] Add `const LINE_SIZE: usize = 256`
-- [x] Add debug/display traits for LineBuffer
+- [x] Add debug/display traits for ZeroCopyGapBuffer
 - [x] Make a commit with this progress
 
-#### 1.3 Basic Buffer Operations
+#### 1.3 Basic Buffer Operations ✅
 
 - [x] Implement `add_line()` method
 - [x] Implement `remove_line()` method
@@ -122,7 +125,7 @@ toolchain, and is already configured to support cargo bench.
 - [x] Add unit tests for basic operations
 - [x] Make a commit with this progress
 
-#### 1.4 Zero-Copy Access Methods
+#### 1.4 Zero-Copy Access Methods ✅
 
 - [x] Implement `as_str()` -> `&str` for entire buffer
   - Uses `unsafe` for zero-copy guarantee with comprehensive safety documentation
@@ -146,7 +149,7 @@ toolchain, and is already configured to support cargo bench.
 - [x] Made buffer field public for direct access when needed
 - [x] Make a commit with this progress
 
-#### 1.5 Use newtype and dynamic line sizing
+#### 1.5 Use newtype and dynamic line sizing ✅
 
 - [x] Instead of `usize`, use specific types like `ByteIndex`, `Length`, `SegIndex`, and `ColIndex`
 - [x] Implement dynamic line resizing, start with `INITIAL_LINE_SIZE`, extend by `LINE_PAGE_SIZE`
@@ -154,7 +157,7 @@ toolchain, and is already configured to support cargo bench.
 
 ### Phase 2: Text Operations
 
-#### 2.1 Grapheme-Safe Insert Operations
+#### 2.1 Grapheme-Safe Insert Operations ✅
 
 - [x] Implement `insert_at_grapheme()` method
 - [x] Implement `insert_text_at_byte_pos()` helper
@@ -165,36 +168,39 @@ toolchain, and is already configured to support cargo bench.
 - [x] Add tests for various Unicode insertions
 - [x] Make a commit with this progress
 
-#### 2.2 Grapheme-Safe Delete Operations
+#### 2.2 Grapheme-Safe Delete Operations ✅
 
-- [ ] Implement `delete_at_grapheme()` method
-- [ ] Implement `delete_range()` for multiple graphemes
-- [ ] Add content shifting for deletions
-- [ ] Restore `\0` padding after delete
-- [ ] Update line metadata after delete
-- [ ] Handle edge cases (delete at line start/end)
-- [ ] Add tests for Unicode-aware deletions
-- [ ] Make a commit with this progress
+- [x] Implement `delete_at_grapheme()` method in `text_deletion.rs`
+- [x] Implement `delete_range()` for multiple graphemes
+- [x] Add content shifting for deletions
+- [x] Restore `\0` padding after delete
+- [x] Update line metadata after delete
+- [x] Handle edge cases (delete at line start/end)
+- [x] Add tests for Unicode-aware deletions
+- [x] Ensure that `\0` padding is correctly supported by all the code in this module
+- [x] Make sure that all docs in module are up to date with the latest changes added here
+- [x] Make a commit with this progress
 
-#### 2.3 Line Overflow Handling
+#### 2.3 Segment Rebuilding
 
-- [ ] Implement `handle_line_overflow()` method
-- [ ] Design overflow strategy (panic vs reallocation)
-- [ ] Add `can_insert()` method to check space
-- [ ] Implement line splitting for overflow
-- [ ] Add configuration for max line size
-- [ ] Create tests for overflow scenarios
-- [ ] Document overflow behavior
-- [ ] Make a commit with this progress
-
-#### 2.4 Segment Rebuilding
-
-- [ ] Implement `rebuild_line_segments()` method
+- [ ] Implement `rebuild_line_segments()` method in `segment_construction.rs`
 - [ ] Integrate with segment_builder module
-- [ ] Update all LineInfo fields after rebuild
+- [ ] Update all GapBufferLineInfo fields after rebuild
 - [ ] Add lazy rebuilding flag option
 - [ ] Implement batch segment rebuilding
 - [ ] Add performance tests for rebuilding
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
+- [ ] Make a commit with this progress
+
+#### 2.4 Validation and benchmarking
+
+- [ ] Make sure that all the tests check for the "Null-Padding Invariant" in each file in
+      `zero_copy_gap_buffer` mod
+- [ ] Make sure all the docs are up to date with the implementations in `zero_copy_gap_buffer` mod
+- [ ] Add benchmarking tests in each of the files in this `zero_copy_gap_buffer` mod to record a baseline of
+      performance for CRUD operations. Add bench tests as regular tests in the files that contain
+      the source under test using `#[bench]` attribute that can be run with `cargo bench`
+- [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Make a commit with this progress
 
 ### Phase 3: Parser Integration
@@ -206,6 +212,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Extract content without padding
 - [ ] Add tests for various padding scenarios
 - [ ] Handle edge cases (no newline, all nulls)
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 3.2 Main Parser Entry Point
@@ -215,6 +222,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Add compatibility layer for migration
 - [ ] Test with real markdown documents
 - [ ] Benchmark parsing performance
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 3.3 Individual Parser Updates
@@ -225,16 +233,19 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Update `parse_fenced_code_block`
 - [ ] Update metadata parsers
 - [ ] Test each parser with padded input
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 3.4 Syntax Highlighting Integration
 
 - [ ] Update `try_parse_and_highlight` function
 - [ ] Remove ParserByteCache usage
-- [ ] Use LineBuffer's zero-copy access
+- [ ] Use ZeroCopyGapBuffer's zero-copy access
 - [ ] Update highlight span calculations
 - [ ] Test syntax highlighting accuracy
 - [ ] Benchmark highlighting performance
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
+- [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Make a commit with this progress
 
 ### Phase 4: Editor Integration
@@ -243,10 +254,11 @@ toolchain, and is already configured to support cargo bench.
 
 - [ ] Create type alias migration strategy
 - [ ] Update EditorContent struct definition
-- [ ] Migrate from SmallVec to LineBuffer
+- [ ] Migrate from SmallVec to ZeroCopyGapBuffer
 - [ ] Update all EditorContent methods
 - [ ] Fix compilation errors
 - [ ] Run existing editor tests
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 4.2 Update Editor Operations
@@ -258,6 +270,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Update `join_lines` operation
 - [ ] Update clipboard operations (copy/paste)
 - [ ] Update undo/redo to work with new structure
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 4.3 Cursor Movement Updates
@@ -269,16 +282,19 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Update home/end key handling
 - [ ] Cache cursor segment position
 - [ ] Test cursor movement with Unicode
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 4.4 File I/O Updates
 
-- [ ] Update file loading to populate LineBuffer
-- [ ] Update file saving from LineBuffer
+- [ ] Update file loading to populate ZeroCopyGapBuffer
+- [ ] Update file saving from ZeroCopyGapBuffer
 - [ ] Handle line ending conversions
 - [ ] Preserve file encoding
 - [ ] Test with various file formats
 - [ ] Add progress reporting for large files
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
+- [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Make a commit with this progress
 
 ### Phase 5: Optimization
@@ -291,6 +307,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Add growth strategy configuration
 - [ ] Profile memory usage patterns
 - [ ] Document memory guarantees
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 5.2 Performance Optimization
@@ -301,6 +318,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Add SIMD optimizations for padding ops
 - [ ] Cache line length calculations
 - [ ] Profile and optimize hot paths
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 5.3 Advanced Features
@@ -311,6 +329,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Add incremental parsing support
 - [ ] Implement parallel segment building
 - [ ] Add memory-mapped file support
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 5.4 Tooling and Debugging
@@ -321,6 +340,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Create buffer integrity checker
 - [ ] Add statistics collection
 - [ ] Document performance characteristics
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
+- [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool-
 - [ ] Make a commit with this progress
 
 ### Phase 6: Benchmarking and Profiling
@@ -334,8 +355,9 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Benchmark line deletion operations
 - [ ] Benchmark cursor movement operations
 - [x] Benchmark segment building for different text types
-- [ ] Compare LineBuffer vs VecEditorContentLines performance
+- [ ] Compare ZeroCopyGapBuffer vs VecEditorContentLines performance
 - [ ] Benchmark memory allocation patterns
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 6.2 Macro Benchmarks
@@ -347,6 +369,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Benchmark memory usage for large documents
 - [ ] Benchmark scrolling performance
 - [ ] Create automated performance regression tests
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 6.3 Flamegraph Profiling
@@ -360,6 +383,7 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Generate perf-folded format using `run_example_with_flamegraph_profiling_perf_fold`
 - [ ] Create before/after flamegraphs for comparison
 - [ ] Compare flamegraph.svg sizes and total sample counts
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 6.4 Performance Analysis
@@ -371,18 +395,21 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Profile lock contention (if any)
 - [ ] Create performance dashboard
 - [ ] Set performance budgets/targets
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
+- [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Make a commit with this progress
 
 ### Testing and Documentation
 
 #### 7.1 Unit Testing
 
-- [ ] Test each LineBuffer method
+- [ ] Test each ZeroCopyGapBuffer method
 - [ ] Test Unicode edge cases
 - [ ] Test buffer overflow scenarios
 - [ ] Test parser with various inputs
 - [ ] Test editor operations
 - [ ] Add property-based tests
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 7.2 Integration Testing
@@ -393,17 +420,20 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Test memory usage patterns
 - [ ] Test with stress scenarios
 - [ ] Add regression test suite
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
 #### 7.3 Documentation
 
-- [ ] Document LineBuffer API
+- [ ] Document ZeroCopyGapBuffer API
 - [ ] Document migration guide
 - [ ] Document performance characteristics
 - [ ] Add code examples
 - [ ] Update editor architecture docs
 - [ ] Create troubleshooting guide
 - [ ] Document benchmark results
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
+- [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Make a commit with this progress
 
 ## Overview
@@ -493,13 +523,13 @@ time the markdown parser runs, which happens on every keystroke for syntax highl
 ### Core Data Structure
 
 ```rust
-pub struct LineBuffer {
+pub struct ZeroCopyGapBuffer {
     // Contiguous buffer storing all lines
     // Each line is exactly LINE_SIZE bytes
     buffer: Vec<u8>,
 
     // Metadata for each line (grapheme clusters, display width, etc.)
-    lines: Vec<LineInfo>,
+    lines: Vec<GapBufferLineInfo>,
 
     // Number of lines currently in the buffer
     line_count: usize,
@@ -508,7 +538,7 @@ pub struct LineBuffer {
     line_size: usize, // e.g., 256
 }
 
-pub struct LineInfo {
+pub struct GapBufferLineInfo {
     // Where this line starts in the buffer
     buffer_offset: usize,
 
@@ -539,7 +569,7 @@ pub struct LineInfo {
 ### 1. Buffer Operations
 
 ```rust
-impl LineBuffer {
+impl ZeroCopyGapBuffer {
     const LINE_SIZE: usize = 256;
 
     pub fn new() -> Self {
@@ -563,7 +593,7 @@ impl LineBuffer {
         self.buffer[buffer_offset] = b'\n';
 
         // Create line metadata
-        self.lines.push(LineInfo {
+        self.lines.push(GapBufferLineInfo {
             buffer_offset,
             content_len: 0,
             segments: SegmentArray::new(),
@@ -585,7 +615,7 @@ impl LineBuffer {
 ### 2. Unicode-Safe Text Manipulation
 
 ```rust
-impl LineBuffer {
+impl ZeroCopyGapBuffer {
     // Insert text at a grapheme cluster boundary
     pub fn insert_at_grapheme(&mut self, line_index: usize, seg_index: SegIndex, text: &str) {
         let line_info = &self.lines[line_index];
@@ -656,7 +686,7 @@ impl LineBuffer {
 ### 3. Efficient Cursor Movement
 
 ```rust
-impl LineBuffer {
+impl ZeroCopyGapBuffer {
     // Move cursor by grapheme clusters without scanning
     pub fn move_cursor_right(&self, line_index: usize, current_seg: SegIndex) -> Option<SegIndex> {
         let line_info = &self.lines[line_index];
@@ -838,8 +868,8 @@ pub fn parse_markdown_with_padding(input: &str) -> IResult<&str, MdDocument<'_>>
 ### Phase 1: Core Infrastructure
 
 1. Create `segment_builder.rs` module with extracted GCString logic
-2. Implement basic `LineBuffer` struct with buffer management
-3. Add `LineInfo` struct for metadata tracking
+2. Implement basic `ZeroCopyGapBuffer` struct with buffer management
+3. Add `GapBufferLineInfo` struct for metadata tracking
 4. Implement zero-copy `as_str()` method
 
 ### Phase 2: Text Operations
@@ -857,7 +887,7 @@ pub fn parse_markdown_with_padding(input: &str) -> IResult<&str, MdDocument<'_>>
 
 ### Phase 4: Editor Integration
 
-1. Replace `VecEditorContentLines` with `LineBuffer`
+1. Replace `VecEditorContentLines` with `ZeroCopyGapBuffer`
 2. Update editor operations to use new API
 3. Update cursor movement to use cached segments
 4. Performance testing and optimization

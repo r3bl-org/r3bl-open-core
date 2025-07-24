@@ -15,22 +15,61 @@
  *   limitations under the License.
  */
 
-//! Editor operations for [`LineBuffer`].
+//! Text insertion operations for [`LineBuffer`].
 //!
-//! This module provides grapheme-safe operations specifically designed for:
-//! - The editor component to perform CRUD operations on text
-//! - The markdown parser to access content as &str with zero-copy
+//! This module implements grapheme-safe text insertion operations that maintain
+//! the null-padding invariant and Unicode correctness while handling dynamic
+//! line growth automatically.
 //!
-//! All operations respect Unicode grapheme cluster boundaries and maintain
-//! UTF-8 validity. Operations include insertion, deletion, and line manipulation.
+//! # Key Features
+//!
+//! - **Grapheme-aware**: Respects Unicode grapheme cluster boundaries
+//! - **UTF-8 safe**: Maintains UTF-8 validity throughout all operations
+//! - **Dynamic growth**: Automatically extends line capacity when needed
+//! - **Null-padding**: Preserves null-padding in unused capacity
+//! - **Zero-copy ready**: Maintains buffer state for efficient parsing
+//!
+//! # Growth Behavior
+//!
+//! When text insertion would exceed current line capacity:
+//! 1. Calculate required capacity (content + newline + padding)
+//! 2. Extend line by one or more 256-byte pages (`LINE_PAGE_SIZE`)
+//! 3. Shift subsequent lines in buffer to make room
+//! 4. Initialize new capacity with null bytes
+//! 5. Perform the insertion maintaining UTF-8 boundaries
+//!
+//! # Operations
+//!
+//! - `insert_at_grapheme()`: Insert text at a specific grapheme position
+//! - `insert_empty_line()`: Create new empty lines with proper initialization
+//! - Internal helpers for byte-level manipulation and capacity management
+//!
+//! # Null-Padding Invariant
+//!
+//! **CRITICAL**: All insertion operations in this module MUST maintain the invariant
+//! that unused capacity in each line buffer is filled with null bytes (`\0`). This
+//! is essential for:
+//!
+//! - **Security**: Prevents information leakage from uninitialized memory
+//! - **Correctness**: Ensures predictable buffer state for zero-copy operations
+//! - **Performance**: Enables safe slice operations without bounds checking
+//!
+//! When inserting content, this module ensures:
+//! 1. Content is shifted right to make room for new text
+//! 2. The gap created by shifting is cleared with `\0` bytes (lines 170-173)
+//! 3. After insertion, any remaining unused capacity is null-padded (lines 189-196)
+//! 4. When extending line capacity, new memory is initialized with `\0`
+//!
+//! The null-padding logic is especially critical in `insert_text_at_byte_pos` where
+//! content shifting and capacity extension occur.
 
 use miette::{Result, miette};
 
-use super::{LINE_PAGE_SIZE, LineBuffer};
+use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 use crate::{ByteIndex, RowIndex, SegIndex, byte_index, len,
             segment_builder::{build_segments_for_str, calculate_display_width}};
 
-impl LineBuffer {
+impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line
     ///
     /// This method inserts the given text at the specified grapheme cluster position,
@@ -128,7 +167,7 @@ impl LineBuffer {
 
         if required_capacity > line_info.capacity.as_usize() {
             // Extend the line capacity
-            super::LineBuffer::extend_line_capacity(self, line_index);
+            super::ZeroCopyGapBuffer::extend_line_capacity(self, line_index);
 
             // Re-check after extension (might need multiple extensions for large text)
             let line_info = self.get_line_info(line_idx).ok_or_else(|| {
@@ -139,7 +178,7 @@ impl LineBuffer {
                 let pages_needed = (required_capacity - line_info.capacity.as_usize())
                     .div_ceil(LINE_PAGE_SIZE);
                 for _ in 0..pages_needed {
-                    super::LineBuffer::extend_line_capacity(self, line_index);
+                    super::ZeroCopyGapBuffer::extend_line_capacity(self, line_index);
                 }
             }
         }
@@ -162,6 +201,11 @@ impl LineBuffer {
             for i in (0..=move_len).rev() {
                 self.buffer[move_to + i] = self.buffer[move_from + i];
             }
+
+            // Clear the gap left behind by the move
+            for i in move_from..move_from + text_len {
+                self.buffer[i] = b'\0';
+            }
         } else {
             // Inserting at end, just move the newline
             self.buffer[insert_pos + text_len] = b'\n';
@@ -175,6 +219,16 @@ impl LineBuffer {
             miette!("Line {} not found when updating metadata", line_idx)
         })?;
         line_info_mut.content_len = len(new_content_len);
+
+        // Ensure remainder of line capacity is null-padded
+        let line_end = buffer_start + new_content_len + 1; // +1 for newline
+        let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
+        if line_end < capacity_end {
+            // Fill unused capacity with null bytes
+            for i in line_end..capacity_end {
+                self.buffer[i] = b'\0';
+            }
+        }
 
         Ok(())
     }
@@ -267,7 +321,7 @@ mod tests {
 
     #[test]
     fn test_insert_at_beginning() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Insert text at the beginning
@@ -291,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_insert_at_end() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // First insert some text
@@ -315,7 +369,7 @@ mod tests {
 
     #[test]
     fn test_insert_in_middle() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Insert initial text
@@ -334,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_insert_unicode() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Insert emoji
@@ -363,7 +417,7 @@ mod tests {
 
     #[test]
     fn test_insert_causes_line_extension() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Create a string that will require line extension
@@ -387,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_insert_empty_line() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer.add_line();
 
@@ -420,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_insert_invalid_line_index() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
 
         let result = buffer.insert_at_grapheme(row(0), seg_index(0), "Hello");
         assert!(result.is_err());
@@ -436,7 +490,7 @@ mod tests {
 
     #[test]
     fn test_insert_compound_grapheme_clusters() -> Result<()> {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Insert text with compound grapheme clusters
@@ -452,6 +506,118 @@ mod tests {
             .ok_or_else(|| miette!("Failed to get line info"))?;
         // The family emoji is 1 grapheme cluster despite being multiple code points
         assert_eq!(line_info.grapheme_count, 8); // 1 + space + 6 letters
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_null_padding_maintained_after_insertion() -> Result<()> {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        // Insert some text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello")?;
+
+        let line_info = buffer
+            .get_line_info(0)
+            .ok_or_else(|| miette!("Failed to get line info"))?;
+        let buffer_start = *line_info.buffer_offset;
+        let content_len = line_info.content_len.as_usize();
+        let capacity = line_info.capacity.as_usize();
+
+        // Verify content and newline
+        assert_eq!(
+            &buffer.buffer[buffer_start..buffer_start + content_len],
+            b"Hello"
+        );
+        assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
+
+        // Verify unused capacity is null-padded
+        let unused_start = buffer_start + content_len + 1; // after content + newline
+        for i in unused_start..(buffer_start + capacity) {
+            assert_eq!(
+                buffer.buffer[i], b'\0',
+                "Unused buffer position {} should be null-padded after insertion but found: {:?}",
+                i, buffer.buffer[i]
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_null_padding_after_middle_insertion() -> Result<()> {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        // Insert initial text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Heo")?;
+
+        // Insert in the middle (this will shift existing content)
+        buffer.insert_at_grapheme(row(0), seg_index(2), "ll")?;
+
+        let line_info = buffer
+            .get_line_info(0)
+            .ok_or_else(|| miette!("Failed to get line info"))?;
+        let buffer_start = *line_info.buffer_offset;
+        let content_len = line_info.content_len.as_usize();
+        let capacity = line_info.capacity.as_usize();
+
+        // Verify final content
+        assert_eq!(
+            &buffer.buffer[buffer_start..buffer_start + content_len],
+            b"Hello"
+        );
+        assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
+
+        // Verify unused capacity is still null-padded after content shifting
+        let unused_start = buffer_start + content_len + 1;
+        for i in unused_start..(buffer_start + capacity) {
+            assert_eq!(
+                buffer.buffer[i], b'\0',
+                "Unused buffer position {} should be null-padded after middle insertion but found: {:?}",
+                i, buffer.buffer[i]
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_null_padding_after_line_extension() -> Result<()> {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        // Create text that will cause line extension
+        let long_text = "A".repeat(300);
+        buffer.insert_at_grapheme(row(0), seg_index(0), &long_text)?;
+
+        let line_info = buffer
+            .get_line_info(0)
+            .ok_or_else(|| miette!("Failed to get line info"))?;
+        let buffer_start = *line_info.buffer_offset;
+        let content_len = line_info.content_len.as_usize();
+        let capacity = line_info.capacity.as_usize();
+
+        // Verify the line was extended
+        assert!(capacity > crate::INITIAL_LINE_SIZE);
+
+        // Verify content and newline
+        assert_eq!(
+            &buffer.buffer[buffer_start..buffer_start + content_len],
+            long_text.as_bytes()
+        );
+        assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
+
+        // Verify unused capacity in extended line is null-padded
+        let unused_start = buffer_start + content_len + 1;
+        for i in unused_start..(buffer_start + capacity) {
+            assert_eq!(
+                buffer.buffer[i], b'\0',
+                "Extended unused buffer position {} should be null-padded but found: {:?}",
+                i, buffer.buffer[i]
+            );
+        }
 
         Ok(())
     }

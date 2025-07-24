@@ -15,18 +15,39 @@
  *   limitations under the License.
  */
 
-//! Zero-copy access methods for LineBuffer.
+//! Zero-copy access methods for `LineBuffer`.
 //!
 //! This module provides methods to access the buffer contents as `&str` or `&[u8]`
 //! without any copying or allocation. This is crucial for performance when passing
 //! content to the markdown parser.
+//!
+//! # Null-Padding Invariant
+//!
+//! **CRITICAL**: This module relies on the null-padding invariant maintained by
+//! other `LineBuffer` modules. All unused capacity in each line MUST be filled with
+//! null bytes (`\0`). This invariant enables:
+//!
+//! - **Safe zero-copy access**: We can create string slices without worrying about
+//!   uninitialized memory
+//! - **Predictable parsing**: The markdown parser can safely process content knowing that
+//!   unused capacity contains only null bytes
+//! - **Debug-mode validation**: We can verify UTF-8 validity without encountering random
+//!   uninitialized bytes
+//!
+//! The null-padding invariant is essential for the safety of our `unsafe` operations:
+//! - `from_utf8_unchecked` calls assume the buffer contains valid UTF-8
+//! - The null bytes in unused capacity are valid UTF-8 (ASCII 0)
+//! - This prevents undefined behavior when creating string slices
+//!
+//! All access methods in this module depend on this invariant being maintained by
+//! the storage, insertion, and deletion operations.
 
 use std::ops::Range;
 
-use super::LineBuffer;
+use super::ZeroCopyGapBuffer;
 use crate::{ByteIndex, RowIndex, row};
 
-impl LineBuffer {
+impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice
     ///
     /// This method provides zero-copy access to the buffer contents as a `&str`. It uses
@@ -89,6 +110,10 @@ impl LineBuffer {
     /// debug builds validate UTF-8, and bounds are checked before slice creation.
     ///
     /// Returns None if the line index is out of bounds
+    ///
+    /// # Panics
+    ///
+    /// In debug builds, panics if the line contains invalid UTF-8
     #[must_use]
     pub fn get_line_content(&self, line_index: RowIndex) -> Option<&str> {
         let line_info = self.get_line_info(line_index.as_usize())?;
@@ -119,6 +144,10 @@ impl LineBuffer {
     /// with the same safety guarantees as `as_str()`.
     ///
     /// Returns None if the range is out of bounds
+    ///
+    /// # Panics
+    ///
+    /// In debug builds, panics if the line slice contains invalid UTF-8
     #[must_use]
     pub fn get_line_slice(&self, line_range: Range<RowIndex>) -> Option<&str> {
         // Check bounds
@@ -186,6 +215,10 @@ impl LineBuffer {
     /// and without trailing newlines.
     ///
     /// Returns None if the line index is out of bounds
+    ///
+    /// # Panics
+    ///
+    /// In debug builds, panics if the line with newline contains invalid UTF-8
     #[must_use]
     pub fn get_line_with_newline(&self, line_index: RowIndex) -> Option<&str> {
         let line_info = self.get_line_info(line_index.as_usize())?;
@@ -246,17 +279,17 @@ impl LineBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{byte_index, tui::editor::line_buffer::INITIAL_LINE_SIZE};
+    use crate::{byte_index, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
 
     #[test]
     fn test_as_str_empty() {
-        let buffer = LineBuffer::new();
+        let buffer = ZeroCopyGapBuffer::new();
         assert_eq!(buffer.as_str(), "");
     }
 
     #[test]
     fn test_as_str_with_lines() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer.add_line();
 
@@ -267,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         let bytes = buffer.as_bytes();
@@ -278,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_get_line_content_empty() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         let content = buffer.get_line_content(row(0)).unwrap();
@@ -287,14 +320,14 @@ mod tests {
 
     #[test]
     fn test_get_line_content_out_of_bounds() {
-        let buffer = LineBuffer::new();
+        let buffer = ZeroCopyGapBuffer::new();
         assert!(buffer.get_line_content(row(0)).is_none());
         assert!(buffer.get_line_content(row(10)).is_none());
     }
 
     #[test]
     fn test_get_line_slice() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         for _ in 0..5 {
             buffer.add_line();
         }
@@ -314,7 +347,7 @@ mod tests {
 
     #[test]
     fn test_get_line_slice_out_of_bounds() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer.add_line();
 
@@ -324,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_get_line_raw() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         let raw = buffer.get_line_raw(row(0)).unwrap();
@@ -335,10 +368,10 @@ mod tests {
 
     #[test]
     fn test_is_valid_utf8() {
-        let buffer = LineBuffer::new();
+        let buffer = ZeroCopyGapBuffer::new();
         assert!(buffer.is_valid_utf8());
 
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         assert!(buffer.is_valid_utf8());
     }
@@ -347,7 +380,7 @@ mod tests {
     #[cfg(debug_assertions)]
     #[should_panic(expected = "LineBuffer contains invalid UTF-8")]
     fn test_invalid_utf8_panic() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Get the line info first
@@ -375,7 +408,7 @@ mod tests {
     #[cfg(debug_assertions)]
     #[should_panic(expected = "Line 0 contains invalid UTF-8")]
     fn test_get_line_content_invalid_utf8() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Get the line info first
@@ -398,7 +431,7 @@ mod tests {
 
     #[test]
     fn test_get_line_with_newline() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         // Empty line should just have newline
@@ -411,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_find_line_containing_byte() {
-        let mut buffer = LineBuffer::new();
+        let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer.add_line();
         buffer.add_line();
