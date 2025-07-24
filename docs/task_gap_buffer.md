@@ -114,13 +114,13 @@ toolchain, and is already configured to support cargo bench.
 
 #### 1.3 Basic Buffer Operations
 
-- [ ] Implement `add_line()` method
-- [ ] Implement `remove_line()` method
-- [ ] Implement `get_line_count()` method
-- [ ] Implement `clear()` method to reset buffer
-- [ ] Add bounds checking for line operations
-- [ ] Add unit tests for basic operations
-- [ ] Make a commit with this progress
+- [x] Implement `add_line()` method
+- [x] Implement `remove_line()` method
+- [x] Implement `get_line_count()` method
+- [x] Implement `clear()` method to reset buffer
+- [x] Add bounds checking for line operations
+- [x] Add unit tests for basic operations
+- [x] Make a commit with this progress
 
 #### 1.4 Zero-Copy Access Methods
 
