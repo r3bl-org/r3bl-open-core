@@ -5,16 +5,15 @@
   - [Detailed task tracking](#detailed-task-tracking)
     - [Phase 1: Core Infrastructure ✅](#phase-1-core-infrastructure-)
       - [1.1 Extract GCString Segment Logic ✅](#11-extract-gcstring-segment-logic-)
-      - [1.2 Create ZeroCopyGapBuffer Core Structure ✅](#12-create-zerocogapbuffer-core-structure-)
+      - [1.2 Create ZeroCopyGapBuffer Core Structure ✅](#12-create-zerocopygapbuffer-core-structure-)
       - [1.3 Basic Buffer Operations ✅](#13-basic-buffer-operations-)
       - [1.4 Zero-Copy Access Methods ✅](#14-zero-copy-access-methods-)
       - [1.5 Use newtype and dynamic line sizing ✅](#15-use-newtype-and-dynamic-line-sizing-)
     - [Phase 2: Text Operations](#phase-2-text-operations)
       - [2.1 Grapheme-Safe Insert Operations ✅](#21-grapheme-safe-insert-operations-)
       - [2.2 Grapheme-Safe Delete Operations ✅](#22-grapheme-safe-delete-operations-)
-      - [2.3 Line Overflow Handling](#23-line-overflow-handling)
-      - [2.4 Segment Rebuilding](#24-segment-rebuilding)
-      - [2.5 Validation and benchmarking](#25-validation-and-benchmarking)
+      - [2.3 Segment Rebuilding ✅](#23-segment-rebuilding-)
+      - [2.4 Validation and benchmarking](#24-validation-and-benchmarking)
     - [Phase 3: Parser Integration](#phase-3-parser-integration)
       - [3.1 Parser Modifications for Padding](#31-parser-modifications-for-padding)
       - [3.2 Main Parser Entry Point](#32-main-parser-entry-point)
@@ -165,6 +164,7 @@ toolchain, and is already configured to support cargo bench.
 - [x] Implement content shifting logic
 - [x] Update newline marker position after insert
 - [x] Handle empty line insertion
+- [x] Ensure that `\0` (null) padding preservation
 - [x] Add tests for various Unicode insertions
 - [x] Make a commit with this progress
 
@@ -177,31 +177,56 @@ toolchain, and is already configured to support cargo bench.
 - [x] Update line metadata after delete
 - [x] Handle edge cases (delete at line start/end)
 - [x] Add tests for Unicode-aware deletions
-- [x] Ensure that `\0` padding is correctly supported by all the code in this module
+- [x] Ensure that `\0` (null) padding preservation
 - [x] Make sure that all docs in module are up to date with the latest changes added here
 - [x] Make a commit with this progress
 
-#### 2.3 Segment Rebuilding
+#### 2.3 Segment Rebuilding ✅
 
-- [ ] Implement `rebuild_line_segments()` method in `segment_construction.rs`
-- [ ] Integrate with segment_builder module
-- [ ] Update all GapBufferLineInfo fields after rebuild
-- [ ] Add lazy rebuilding flag option
-- [ ] Implement batch segment rebuilding
-- [ ] Add performance tests for rebuilding
-- [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [x] Create `segment_construction.rs` file in `zero_copy_gap_buffer` module
+- [x] Implement `rebuild_line_segments()` method in `segment_construction.rs`
+  - Get line content as UTF-8 string (validate UTF-8 in debug mode)
+  - Use `build_segments_for_str` from segment_builder module
+  - Calculate display width with `calculate_display_width`
+  - Update all GapBufferLineInfo fields (segments, display_width, grapheme_count)
+- [x] Implement batch segment rebuilding with `rebuild_line_segments_batch()`
+  - Iterate through multiple lines and rebuild segments
+  - Useful for bulk operations like file loading or large pastes
+- [x] Integrate with segment_builder module from `core::graphemes`
+- [x] Consolidate duplicate implementations from text_insertion.rs and text_deletion.rs
+  - Replace both implementations with calls to the new centralized version
+- [x] Add content boundary correctness tests
+  - Ensure we only read content up to `content_len` (not into null padding)
+  - Test that segment calculations exclude null bytes
+  - Verify correct metadata updates (segments, display_width, grapheme_count)
+- [x] Add UTF-8 safety architecture with debug-mode validation
+  - Uses `unsafe { from_utf8_unchecked() }` for performance in release builds
+  - Debug mode validates UTF-8 with clear panic messages
+  - Architectural contract ensures only valid UTF-8 enters the buffer
+- [x] Add unit tests for single line and batch rebuilding
+  - Test with various Unicode content (ASCII, emoji, combining characters)
+  - Verify off-by-one errors don't occur in content extraction
+- [x] Add performance benchmarks using `#[bench]` attribute
+  - Establish baseline performance for segment rebuilding operations
+- [x] Make sure that all docs in module are up to date with the latest changes added here
+  - Added comprehensive documentation about UTF-8 safety architecture
+  - Updated use case descriptions for both single-line and batch operations
+- [x] Make a commit with this progress
 
 #### 2.4 Validation and benchmarking
 
 - [ ] Make sure that all the tests check for the "Null-Padding Invariant" in each file in
       `zero_copy_gap_buffer` mod
 - [ ] Make sure all the docs are up to date with the implementations in `zero_copy_gap_buffer` mod
-- [ ] Add benchmarking tests in each of the files in this `zero_copy_gap_buffer` mod to record a baseline of
-      performance for CRUD operations. Add bench tests as regular tests in the files that contain
-      the source under test using `#[bench]` attribute that can be run with `cargo bench`
+- [ ] Add benchmarking tests in each of the files in this `zero_copy_gap_buffer` mod to record a
+      baseline of performance for CRUD operations. Add bench tests as regular tests in the files
+      that contain the source under test using `#[bench]` attribute that can be run with
+      `cargo bench`
+- [ ] Document the results from running all the benchmarks in the `zero_copy_gap_buffer/mod.rs`
+      module level rustdoc comments
 - [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 ### Phase 3: Parser Integration
 
@@ -213,7 +238,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Add tests for various padding scenarios
 - [ ] Handle edge cases (no newline, all nulls)
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 3.2 Main Parser Entry Point
 
@@ -223,7 +249,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Test with real markdown documents
 - [ ] Benchmark parsing performance
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 3.3 Individual Parser Updates
 
@@ -234,7 +261,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Update metadata parsers
 - [ ] Test each parser with padded input
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 3.4 Syntax Highlighting Integration
 
@@ -246,7 +274,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Benchmark highlighting performance
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 ### Phase 4: Editor Integration
 
@@ -259,7 +288,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Fix compilation errors
 - [ ] Run existing editor tests
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 4.2 Update Editor Operations
 
@@ -271,7 +301,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Update clipboard operations (copy/paste)
 - [ ] Update undo/redo to work with new structure
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 4.3 Cursor Movement Updates
 
@@ -283,7 +314,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Cache cursor segment position
 - [ ] Test cursor movement with Unicode
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 4.4 File I/O Updates
 
@@ -295,7 +327,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Add progress reporting for large files
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 ### Phase 5: Optimization
 
@@ -308,7 +341,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Profile memory usage patterns
 - [ ] Document memory guarantees
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 5.2 Performance Optimization
 
@@ -319,7 +353,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Cache line length calculations
 - [ ] Profile and optimize hot paths
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 5.3 Advanced Features
 
@@ -330,7 +365,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Implement parallel segment building
 - [ ] Add memory-mapped file support
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 #### 5.4 Tooling and Debugging
 
@@ -342,7 +378,8 @@ toolchain, and is already configured to support cargo bench.
 - [ ] Document performance characteristics
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool-
-- [ ] Make a commit with this progress
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
 
 ### Phase 6: Benchmarking and Profiling
 

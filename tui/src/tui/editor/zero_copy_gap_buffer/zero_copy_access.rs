@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! Zero-copy access methods for `LineBuffer`.
+//! Zero-copy access methods for [`ZeroCopyGapBuffer`].
 //!
 //! This module provides methods to access the buffer contents as `&str` or `&[u8]`
 //! without any copying or allocation. This is crucial for performance when passing
@@ -24,8 +24,8 @@
 //! # Null-Padding Invariant
 //!
 //! **CRITICAL**: This module relies on the null-padding invariant maintained by
-//! other `LineBuffer` modules. All unused capacity in each line MUST be filled with
-//! null bytes (`\0`). This invariant enables:
+//! other [`ZeroCopyGapBuffer`] modules. All unused capacity in each line MUST be filled
+//! with null bytes (`\0`). This invariant enables:
 //!
 //! - **Safe zero-copy access**: We can create string slices without worrying about
 //!   uninitialized memory
@@ -35,14 +35,69 @@
 //!   uninitialized bytes
 //!
 //! The null-padding invariant is essential for the safety of our `unsafe` operations:
-//! - `from_utf8_unchecked` calls assume the buffer contains valid UTF-8
+//! - [`from_utf8_unchecked`] calls assume the buffer contains valid UTF-8
 //! - The null bytes in unused capacity are valid UTF-8 (ASCII 0)
 //! - This prevents undefined behavior when creating string slices
 //!
 //! All access methods in this module depend on this invariant being maintained by
 //! the storage, insertion, and deletion operations.
+//!
+//! # UTF-8 Safety in Zero-Copy Access
+//!
+//! This module implements the **performance-optimized read path** of our UTF-8 safety
+//! architecture:
+//!
+//! ## Why `unsafe { `[`from_utf8_unchecked()`]` }` is Safe Here
+//!
+//! This module can safely use `unsafe` operations because:
+//!
+//! 1. **Controlled input**: All public insert and mutate operations use `&str`, ensuring
+//!    only valid UTF-8 content is added to the buffer
+//! 2. **Metadata reconstruction**: Only reading existing buffer content for analysis
+//! 3. **Content boundary respect**: Only processes content up to `content_len` (validated
+//!    region)
+//! 4. **Bounds checking**: All buffer access is bounds checked before creating slices
+//! 5. **Performance critical**: Called after every edit operation, needs maximum speed
+//! 6. **Test coverage**: Comprehensive tests verify UTF-8 handling, including
+//!    intentionally invalid UTF-8 scenarios that panic in debug mode
+//!
+//! Why unsafe is used instead of [`from_utf8_lossy()`]:
+//! - [`from_utf8_lossy()`] returns `Cow<str>`, which may allocate a new `String` if
+//!   invalid UTF-8 is encountered, breaking our zero-copy guarantee
+//! - [`from_utf8_unchecked()`] returns `&str` directly without allocation, preserving
+//!   zero-copy semantics essential for performance-critical operations
+//!
+//! ## Performance Critical Path
+//!
+//! Zero-copy access is **performance-critical** for:
+//! - **Markdown parsing**: Requires `&str` without allocation for large documents
+//! - **Text rendering**: Frequent line content access during display updates
+//! - **Search operations**: String pattern matching across buffer content
+//! - **Export operations**: Writing buffer contents to files or clipboard
+//!
+//! Using [`from_utf8_lossy()`] would break zero-copy guarantees by potentially allocating
+//! `String` instances, defeating the purpose of this buffer design.
+//!
+//! ## Debug-Mode Validation
+//!
+//! In debug builds, we **validate UTF-8 before unsafe operations**:
+//! - Catches any invariant violations during development
+//! - Provides clear panic messages for debugging
+//! - Zero overhead in production builds (assertions compiled out)
+//!
+//! ## Zero-Copy Guarantee
+//!
+//! This module maintains **true zero-copy access**:
+//! - Returns `&str` slices directly into buffer memory
+//! - No allocations, no copying, no UTF-8 validation overhead
+//! - Enables efficient integration with parsers and external libraries
+//!
+//! The safety of this approach depends on the **architectural contract** that
+//! UTF-8 validation occurs once at input boundaries, making subsequent unsafe
+//! operations safe and performant.
 
-use std::ops::Range;
+use std::{ops::Range,
+          str::{from_utf8, from_utf8_unchecked}};
 
 use super::ZeroCopyGapBuffer;
 use crate::{ByteIndex, RowIndex, row};
@@ -51,29 +106,9 @@ impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice
     ///
     /// This method provides zero-copy access to the buffer contents as a `&str`. It uses
-    /// `unsafe` code with `from_utf8_unchecked()` instead of `from_utf8_lossy()` to
-    /// preserve the zero-copy guarantee that is crucial for performance when passing
-    /// content to the markdown parser.
-    ///
-    /// # Why unsafe is used instead of `from_utf8_lossy()`
-    ///
-    /// - `from_utf8_lossy()` returns `Cow<str>`, which may allocate a new `String` if
-    ///   invalid UTF-8 is encountered, breaking our zero-copy guarantee
-    /// - `from_utf8_unchecked()` returns `&str` directly without allocation, preserving
-    ///   zero-copy semantics essential for performance-critical operations
-    ///
-    /// # Why unsafe is safe here
-    ///
-    /// The unsafe usage is justified because:
-    /// 1. **UTF-8 invariants**: The `LineBuffer` implementation maintains UTF-8 validity
-    ///    throughout all buffer operations
-    /// 2. **Debug validation**: In debug builds, we explicitly validate UTF-8 before the
-    ///    unsafe conversion, catching any violations during development
-    /// 3. **Bounds checking**: All buffer access is bounds-checked before creating slices
-    /// 4. **Controlled input**: The buffer only accepts UTF-8 input through its public
-    ///    API
-    /// 5. **Test coverage**: Comprehensive tests verify UTF-8 handling, including
-    ///    intentionally invalid UTF-8 scenarios that panic in debug mode
+    /// `unsafe` code with [`from_utf8_unchecked()`] instead of
+    /// [`String::from_utf8_lossy()`] to preserve the zero-copy guarantee that is
+    /// crucial for performance when passing content to the markdown parser.
     ///
     /// # Panics
     /// Panics if the buffer contains invalid UTF-8 (should not happen in normal
@@ -83,17 +118,17 @@ impl ZeroCopyGapBuffer {
         // In debug builds, validate UTF-8
         #[cfg(debug_assertions)]
         {
-            if let Err(e) = std::str::from_utf8(&self.buffer) {
+            if let Err(e) = from_utf8(&self.buffer) {
                 panic!(
-                    "LineBuffer contains invalid UTF-8 at byte {}: {}",
+                    "ZeroCopyGapBuffer contains invalid UTF-8 at byte {}: {}",
                     e.valid_up_to(),
                     e
                 );
             }
         }
 
-        // SAFETY: We maintain UTF-8 invariants throughout all operations
-        unsafe { std::str::from_utf8_unchecked(&self.buffer) }
+        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
+        unsafe { from_utf8_unchecked(&self.buffer) }
     }
 
     /// Get the entire buffer as a byte slice
@@ -102,9 +137,9 @@ impl ZeroCopyGapBuffer {
 
     /// Get the content of a single line as a string slice
     ///
-    /// This method provides zero-copy access to individual line content. Like `as_str()`,
-    /// it uses `unsafe` code to preserve zero-copy semantics instead of
-    /// `from_utf8_lossy()`.
+    /// This method provides zero-copy access to individual line content. Like
+    /// [`Self::as_str()`], it uses `unsafe` code to preserve zero-copy semantics
+    /// instead of [`String::from_utf8_lossy()`].
     ///
     /// The same safety guarantees apply: UTF-8 invariants are maintained by the buffer,
     /// debug builds validate UTF-8, and bounds are checked before slice creation.
@@ -117,13 +152,11 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn get_line_content(&self, line_index: RowIndex) -> Option<&str> {
         let line_info = self.get_line_info(line_index.as_usize())?;
-        let start = *line_info.buffer_offset;
-        let end = start + line_info.content_len.as_usize();
 
         // In debug builds, validate UTF-8
         #[cfg(debug_assertions)]
         {
-            if let Err(e) = std::str::from_utf8(&self.buffer[start..end]) {
+            if let Err(e) = from_utf8(&self.buffer[line_info.content_range()]) {
                 panic!(
                     "Line {} contains invalid UTF-8 at byte {}: {}",
                     line_index.as_usize(),
@@ -132,9 +165,8 @@ impl ZeroCopyGapBuffer {
                 );
             }
         }
-
-        // SAFETY: We maintain UTF-8 invariants and bounds are checked
-        Some(unsafe { std::str::from_utf8_unchecked(&self.buffer[start..end]) })
+        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
+        Some(unsafe { from_utf8_unchecked(&self.buffer[line_info.content_range()]) })
     }
 
     /// Get a slice of lines as a string
@@ -186,10 +218,8 @@ impl ZeroCopyGapBuffer {
             }
         }
 
-        // SAFETY: We maintain UTF-8 invariants and bounds are checked
-        Some(unsafe {
-            std::str::from_utf8_unchecked(&self.buffer[start_offset..end_offset])
-        })
+        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
+        Some(unsafe { from_utf8_unchecked(&self.buffer[start_offset..end_offset]) })
     }
 
     /// Get the raw content of a line including null padding
@@ -222,21 +252,22 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn get_line_with_newline(&self, line_index: RowIndex) -> Option<&str> {
         let line_info = self.get_line_info(line_index.as_usize())?;
-        let start = *line_info.buffer_offset;
+        let content_range = line_info.content_range();
         // Include the newline if there's content
         let end = if line_info.content_len.as_usize() > 0 {
-            start + line_info.content_len.as_usize() + 1 // +1 for newline
+            content_range.end + 1 // +1 for newline
         } else {
-            start + 1 // Just the newline for empty lines
+            content_range.start + 1 // Just the newline for empty lines
         };
 
         // Ensure we don't go past the line boundary
-        let end = end.min(start + line_info.capacity.as_usize());
+        let end = end.min(content_range.start + line_info.capacity.as_usize());
+        let range = content_range.start..end;
 
         // In debug builds, validate UTF-8
         #[cfg(debug_assertions)]
         {
-            if let Err(e) = std::str::from_utf8(&self.buffer[start..end]) {
+            if let Err(e) = std::str::from_utf8(&self.buffer[range.clone()]) {
                 panic!(
                     "Line {} with newline contains invalid UTF-8 at byte {}: {}",
                     line_index.as_usize(),
@@ -246,8 +277,8 @@ impl ZeroCopyGapBuffer {
             }
         }
 
-        // SAFETY: We maintain UTF-8 invariants and bounds are checked
-        Some(unsafe { std::str::from_utf8_unchecked(&self.buffer[start..end]) })
+        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
+        Some(unsafe { from_utf8_unchecked(&self.buffer[range]) })
     }
 
     /// Find which line contains the given byte offset in the full buffer
@@ -378,7 +409,7 @@ mod tests {
 
     #[test]
     #[cfg(debug_assertions)]
-    #[should_panic(expected = "LineBuffer contains invalid UTF-8")]
+    #[should_panic(expected = "ZeroCopyGapBuffer contains invalid UTF-8")]
     fn test_invalid_utf8_panic() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();

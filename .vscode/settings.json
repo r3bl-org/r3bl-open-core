@@ -187,6 +187,7 @@
     "rsplit",
     "runtimes",
     "rustc",
+    "rustdoc",
     "rustflags",
     "rustfmt",
     "rustls",

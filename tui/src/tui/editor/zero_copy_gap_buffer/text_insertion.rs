@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! Text insertion operations for [`LineBuffer`].
+//! Text insertion operations for [`ZeroCopyGapBuffer`].
 //!
 //! This module implements grapheme-safe text insertion operations that maintain
 //! the null-padding invariant and Unicode correctness while handling dynamic
@@ -40,8 +40,8 @@
 //!
 //! # Operations
 //!
-//! - `insert_at_grapheme()`: Insert text at a specific grapheme position
-//! - `insert_empty_line()`: Create new empty lines with proper initialization
+//! - [`insert_at_grapheme()`][ZeroCopyGapBuffer::insert_at_grapheme]: Insert text at a specific grapheme position
+//! - [`insert_empty_line()`][ZeroCopyGapBuffer::insert_empty_line]: Create new empty lines with proper initialization
 //! - Internal helpers for byte-level manipulation and capacity management
 //!
 //! # Null-Padding Invariant
@@ -56,18 +56,56 @@
 //!
 //! When inserting content, this module ensures:
 //! 1. Content is shifted right to make room for new text
-//! 2. The gap created by shifting is cleared with `\0` bytes (lines 170-173)
-//! 3. After insertion, any remaining unused capacity is null-padded (lines 189-196)
+//! 2. The gap created by shifting is cleared with `\0` bytes
+//! 3. After insertion, any remaining unused capacity is null-padded
 //! 4. When extending line capacity, new memory is initialized with `\0`
 //!
-//! The null-padding logic is especially critical in `insert_text_at_byte_pos` where
+//! The null-padding logic is especially critical in [`insert_text_at_byte_pos`][ZeroCopyGapBuffer::insert_text_at_byte_pos] where
 //! content shifting and capacity extension occur.
+//!
+//! # UTF-8 Safety in Insertion Operations
+//!
+//! This module implements the **input validation boundary** of our UTF-8 safety
+//! architecture:
+//!
+//! ## API-Level Validation
+//!
+//! UTF-8 safety is **guaranteed by Rust's type system** at the API boundary:
+//!
+//! - **[`insert_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_at_grapheme]**: The `&str` parameter ensures valid UTF-8
+//! - **Type system enforcement**: Impossible to pass invalid UTF-8 through safe Rust APIs
+//! - **No runtime validation needed**: UTF-8 validity guaranteed by caller's type
+//!   constraints
+//!
+//! ## Grapheme-Safe Positioning
+//!
+//! Insertion respects **Unicode grapheme cluster boundaries**:
+//! - Uses pre-computed segment metadata to find valid insertion points
+//! - Never splits multi-byte UTF-8 sequences or grapheme clusters
+//! - Maintains proper Unicode text editing semantics
+//!
+//! ## Buffer Integrity During Insertion
+//!
+//! Content insertion preserves UTF-8 validity through:
+//! 1. **Boundary-aware shifting**: Moves complete UTF-8 sequences during content shifting
+//! 2. **Null-padding maintenance**: Fills unused capacity with valid UTF-8 null bytes
+//! 3. **Capacity extension**: New memory immediately initialized with valid UTF-8 (`\0`)
+//!
+//! ## Why This is the Validation Point
+//!
+//! This module is where **all UTF-8 validation occurs** because:
+//! - **Single entry point**: All content enters the buffer through these methods
+//! - **Type-safe APIs**: `&str` parameters guarantee UTF-8 validity
+//! - **Performance optimization**: Validate once at input, trust thereafter
+//! - **Zero-copy enabling**: Subsequent operations can use `unsafe` for performance
+//!
+//! After insertion, all other modules can safely use [`from_utf8_unchecked()`] because
+//! they operate on content that was validated at this boundary.
 
 use miette::{Result, miette};
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{ByteIndex, RowIndex, SegIndex, byte_index, len,
-            segment_builder::{build_segments_for_str, calculate_display_width}};
+use crate::{ByteIndex, RowIndex, SegIndex, byte_index, len};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line
@@ -233,50 +271,8 @@ impl ZeroCopyGapBuffer {
         Ok(())
     }
 
-    /// Rebuild the grapheme segments for a line after modification
-    ///
-    /// This method recalculates all segment information including grapheme boundaries,
-    /// display widths, and grapheme count. It should be called after any text
-    /// modification.
-    ///
-    /// # Errors
-    /// Returns an error if:
-    /// - The line index is out of bounds
-    /// - The line content contains invalid UTF-8
-    fn rebuild_line_segments(&mut self, line_index: RowIndex) -> Result<()> {
-        let line_idx = line_index.as_usize();
-
-        // Get the line content as a string
-        let line_info = self
-            .get_line_info(line_idx)
-            .ok_or_else(|| miette!("Line index {} out of bounds", line_idx))?;
-
-        let buffer_start = line_info.buffer_offset.as_usize();
-        let content_len = line_info.content_len.as_usize();
-        let content_slice = &self.buffer[buffer_start..buffer_start + content_len];
-
-        // Convert to string for segment building
-        let content_str = std::str::from_utf8(content_slice)
-            .map_err(|e| miette!("Invalid UTF-8 in line {}: {}", line_idx, e))?;
-
-        // Build new segments
-        let segments = build_segments_for_str(content_str);
-
-        // Calculate display width and grapheme count
-        let display_width = calculate_display_width(&segments);
-
-        let grapheme_count = segments.len();
-
-        // Update line info
-        let line_info = self.get_line_info_mut(line_idx).ok_or_else(|| {
-            miette!("Line {} not found when updating segments", line_idx)
-        })?;
-        line_info.segments = segments;
-        line_info.display_width = display_width;
-        line_info.grapheme_count = grapheme_count;
-
-        Ok(())
-    }
+    // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in segment_construction.rs
+    // and is accessible directly on [`ZeroCopyGapBuffer`]
 
     /// Insert a new empty line at the specified position
     ///

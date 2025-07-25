@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! Buffer storage implementation for the `LineBuffer` data structure.
+//! Buffer storage implementation for the [`ZeroCopyGapBuffer`] data structure.
 //!
 //! This module contains the core storage mechanisms for the dynamically-sized line buffer
 //! system. Each line starts with 256 bytes of capacity and can grow in 256-byte
@@ -36,15 +36,6 @@
 //! - **Buffer management**: Subsequent lines are shifted to accommodate growth
 //!
 //! ## Null-Padding Invariant
-//! **CRITICAL**: All unused capacity MUST be filled with null bytes (`\0`). This ensures:
-//! - Memory safety and security (no information leakage)
-//! - Predictable buffer state for zero-copy operations
-//! - Safe string slice creation without bounds checking
-//!
-//! All operations in this module maintain this invariant through careful initialization
-//! and cleanup of buffer memory.
-//!
-//! # Null-Padding Invariant
 //!
 //! **CRITICAL**: This module maintains a strict invariant that all unused capacity
 //! in each line buffer MUST be filled with null bytes (`\0`). This invariant is
@@ -55,8 +46,8 @@
 //! - **Performance**: Enables safe slice operations without bounds checking
 //!
 //! All operations in this module MUST maintain this invariant by:
-//! 1. Initializing new memory with `\0` (see `add_line`, `extend_line_capacity`)
-//! 2. Clearing gaps left by content shifts (see `remove_line`)
+//! 1. Initializing new memory with `\0` (see [`add_line`][ZeroCopyGapBuffer::add_line], [`extend_line_capacity`][ZeroCopyGapBuffer::extend_line_capacity])
+//! 2. Clearing gaps left by content shifts (see [`remove_line`][ZeroCopyGapBuffer::remove_line])
 //! 3. Padding unused capacity after modifications
 //!
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
@@ -71,7 +62,7 @@ pub const INITIAL_LINE_SIZE: usize = 256;
 /// Page size for extending lines (bytes added when line overflows)
 pub const LINE_PAGE_SIZE: usize = 256;
 
-/// Line buffer data structure for storing editor content
+/// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone)]
 pub struct ZeroCopyGapBuffer {
     /// Contiguous buffer storing all lines
@@ -97,7 +88,7 @@ pub struct GapBufferLineInfo {
     /// Allocated capacity for this line
     pub capacity: Length,
 
-    /// `GCString`'s segment array for this line
+    /// Segment array for this line (grapheme cluster information)
     pub segments: SegmentArray,
 
     /// Display width of the line
@@ -107,8 +98,38 @@ pub struct GapBufferLineInfo {
     pub grapheme_count: usize,
 }
 
+impl GapBufferLineInfo {
+    /// Get the buffer range for this line's content (excluding null padding)
+    ///
+    /// Returns a range that can be used to slice the buffer to get only the
+    /// actual content bytes, not including the null padding that fills the
+    /// remaining capacity.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use r3bl_tui::ZeroCopyGapBuffer;
+    /// 
+    /// let mut buffer = ZeroCopyGapBuffer::new();
+    /// buffer.add_line();
+    ///
+    /// // Get the line info and content range
+    /// let line_info = buffer.get_line_info(0).unwrap();
+    /// let content_range = line_info.content_range();
+    ///
+    /// // For a newly created line, content should be empty (only newline is stored separately)
+    /// assert_eq!(content_range.len(), 0);
+    /// ```
+    #[must_use]
+    pub fn content_range(&self) -> std::ops::Range<usize> {
+        let start = self.buffer_offset.as_usize();
+        let end = start + self.content_len.as_usize();
+        start..end
+    }
+}
+
 impl ZeroCopyGapBuffer {
-    /// Create a new empty `LineBuffer`
+    /// Create a new empty [`ZeroCopyGapBuffer`]
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -118,7 +139,7 @@ impl ZeroCopyGapBuffer {
         }
     }
 
-    /// Create a new `LineBuffer` with pre-allocated capacity
+    /// Create a new [`ZeroCopyGapBuffer`] with pre-allocated capacity
     #[must_use]
     pub fn with_capacity(line_capacity: usize) -> Self {
         Self {
@@ -147,7 +168,7 @@ impl ZeroCopyGapBuffer {
     }
 
     /// Swap two lines in the buffer metadata
-    /// This only swaps the `LineInfo` entries, not the actual buffer content
+    /// This only swaps the [`GapBufferLineInfo`] entries, not the actual buffer content
     pub fn swap_lines(&mut self, i: usize, j: usize) { self.lines.swap(i, j); }
 
     /// Add a new line to the buffer
@@ -284,7 +305,7 @@ impl std::fmt::Display for ZeroCopyGapBuffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "LineBuffer {{ lines: {}, buffer_size: {} bytes }}",
+            "ZeroCopyGapBuffer {{ lines: {}, buffer_size: {} bytes }}",
             self.line_count,
             self.buffer.len()
         )
