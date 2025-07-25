@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-//! Text deletion operations for [`LineBuffer`].
+//! Text deletion operations for [`ZeroCopyGapBuffer`].
 //!
 //! This module implements grapheme-safe text deletion operations that maintain
 //! the null-padding invariant and Unicode correctness. Unlike insertion operations,
@@ -53,8 +53,10 @@
 //!
 //! # Operations
 //!
-//! - `delete_at_grapheme()`: Delete single grapheme cluster
-//! - `delete_range()`: Delete range of grapheme clusters
+//! - [`delete_at_grapheme()`][ZeroCopyGapBuffer::delete_at_grapheme]: Delete single
+//!   grapheme cluster
+//! - [`delete_range()`][ZeroCopyGapBuffer::delete_range]: Delete range of grapheme
+//!   clusters
 //! - Internal helpers for byte-level manipulation and cleanup
 //!
 //! # Null-Padding Invariant
@@ -73,7 +75,40 @@
 //! 3. The newline character is properly repositioned
 //! 4. All unused capacity remains null-padded
 //!
-//! See `delete_bytes_at_range` (lines 226-231) for the core null-padding logic.
+//! See [`delete_bytes_at_range`][ZeroCopyGapBuffer::delete_bytes_at_range] for the core
+//! null-padding logic.
+//!
+//! # UTF-8 Safety in Deletion Operations
+//!
+//! This module maintains UTF-8 validity during deletion through **boundary-aware
+//! operations**:
+//!
+//! ## Grapheme-Level Safety
+//!
+//! - **[`delete_at_grapheme()`][ZeroCopyGapBuffer::delete_at_grapheme]**: Only deletes
+//!   complete grapheme clusters, never splits UTF-8 sequences
+//! - **[`delete_range()`][ZeroCopyGapBuffer::delete_range]**: Operates on grapheme
+//!   boundaries, ensuring no mid-character cuts
+//! - **Segment-based indexing**: Uses pre-computed grapheme boundaries from segment
+//!   metadata
+//!
+//! ## Byte-Level Safety
+//!
+//! The low-level [`delete_bytes_at_range()`][ZeroCopyGapBuffer::delete_bytes_at_range]
+//! operates on **pre-validated byte boundaries**:
+//! - Callers ensure byte positions align with UTF-8 character boundaries
+//! - Content shifting preserves UTF-8 validity by moving complete byte sequences
+//! - No new UTF-8 validation needed since we're only removing existing valid content
+//!
+//! ## Why No UTF-8 Validation During Deletion
+//!
+//! Deletion operations **don't require UTF-8 validation** because:
+//! 1. **We only remove existing valid UTF-8** (can't create invalid sequences)
+//! 2. **Grapheme boundaries are pre-computed** (segment metadata ensures valid positions)
+//! 3. **Byte shifting preserves encoding** (complete UTF-8 sequences moved intact)
+//! 4. **Null padding is valid UTF-8** (`\0` is ASCII, thus valid UTF-8)
+//!
+//! This allows deletion operations to be **extremely fast** with no validation overhead.
 
 use miette::{Result, miette};
 
@@ -127,7 +162,7 @@ impl ZeroCopyGapBuffer {
         self.delete_bytes_at_range(line_index, delete_start.into(), delete_end.into())?;
 
         // Rebuild segments for this line
-        self.rebuild_line_segments_for_delete(line_index)?;
+        self.rebuild_line_segments(line_index)?;
 
         Ok(())
     }
@@ -199,7 +234,7 @@ impl ZeroCopyGapBuffer {
         self.delete_bytes_at_range(line_index, delete_start.into(), delete_end.into())?;
 
         // Rebuild segments for this line
-        self.rebuild_line_segments_for_delete(line_index)?;
+        self.rebuild_line_segments(line_index)?;
 
         Ok(())
     }
@@ -286,43 +321,8 @@ impl ZeroCopyGapBuffer {
         Ok(())
     }
 
-    /// Rebuild line segments after delete (wrapper for private method)
-    fn rebuild_line_segments_for_delete(&mut self, line_index: RowIndex) -> Result<()> {
-        use crate::segment_builder::{build_segments_for_str, calculate_display_width};
-
-        let line_idx = line_index.as_usize();
-
-        // Get the line content as a string
-        let line_info = self
-            .get_line_info(line_idx)
-            .ok_or_else(|| miette!("Line index {} out of bounds", line_idx))?;
-
-        let buffer_start = line_info.buffer_offset.as_usize();
-        let content_len = line_info.content_len.as_usize();
-        let content_slice = &self.buffer[buffer_start..buffer_start + content_len];
-
-        // Convert to string for segment building
-        let content_str = std::str::from_utf8(content_slice)
-            .map_err(|e| miette!("Invalid UTF-8 in line {}: {}", line_idx, e))?;
-
-        // Build new segments
-        let segments = build_segments_for_str(content_str);
-
-        // Calculate display width and grapheme count
-        let display_width = calculate_display_width(&segments);
-
-        let grapheme_count = segments.len();
-
-        // Update line info
-        let line_info = self.get_line_info_mut(line_idx).ok_or_else(|| {
-            miette!("Line {} not found when updating segments", line_idx)
-        })?;
-        line_info.segments = segments;
-        line_info.display_width = display_width;
-        line_info.grapheme_count = grapheme_count;
-
-        Ok(())
-    }
+    // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in
+    // segment_construction.rs and is accessible directly on [`ZeroCopyGapBuffer`]
 }
 
 #[cfg(test)]
