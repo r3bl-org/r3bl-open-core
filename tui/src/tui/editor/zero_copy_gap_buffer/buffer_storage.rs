@@ -46,8 +46,10 @@
 //! - **Performance**: Enables safe slice operations without bounds checking
 //!
 //! All operations in this module MUST maintain this invariant by:
-//! 1. Initializing new memory with `\0` (see [`add_line`][ZeroCopyGapBuffer::add_line], [`extend_line_capacity`][ZeroCopyGapBuffer::extend_line_capacity])
-//! 2. Clearing gaps left by content shifts (see [`remove_line`][ZeroCopyGapBuffer::remove_line])
+//! 1. Initializing new memory with `\0` (see [`add_line`][ZeroCopyGapBuffer::add_line],
+//!    [`extend_line_capacity`][ZeroCopyGapBuffer::extend_line_capacity])
+//! 2. Clearing gaps left by content shifts (see
+//!    [`remove_line`][ZeroCopyGapBuffer::remove_line])
 //! 3. Padding unused capacity after modifications
 //!
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
@@ -109,7 +111,7 @@ impl GapBufferLineInfo {
     ///
     /// ```rust
     /// use r3bl_tui::ZeroCopyGapBuffer;
-    /// 
+    ///
     /// let mut buffer = ZeroCopyGapBuffer::new();
     /// buffer.add_line();
     ///
@@ -453,5 +455,81 @@ mod tests {
                 i, buffer.buffer[i]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use std::hint::black_box;
+
+    use test::Bencher;
+
+    use super::*;
+    use crate::row;
+
+    extern crate test;
+
+    #[bench]
+    fn bench_add_line(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+
+        b.iter(|| {
+            let idx = buffer.add_line();
+            black_box(idx);
+            // Reset for next iteration
+            buffer.clear();
+        });
+    }
+
+    #[bench]
+    fn bench_add_100_lines(b: &mut Bencher) {
+        b.iter(|| {
+            let mut buffer = ZeroCopyGapBuffer::new();
+            for _ in 0..100 {
+                buffer.add_line();
+            }
+            black_box(buffer.line_count());
+        });
+    }
+
+    #[bench]
+    fn bench_remove_line_middle(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+
+        b.iter(|| {
+            // Add 10 lines
+            for _ in 0..10 {
+                buffer.add_line();
+            }
+            // Remove middle line
+            buffer.remove_line(5);
+            black_box(buffer.line_count());
+            // Reset for next iteration
+            buffer.clear();
+        });
+    }
+
+    #[bench]
+    fn bench_extend_line_capacity(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+
+        b.iter(|| {
+            buffer.add_line();
+            buffer.extend_line_capacity(row(0));
+            black_box(buffer.get_line_info(0).unwrap().capacity);
+            // Reset for next iteration
+            buffer.clear();
+        });
+    }
+
+    #[bench]
+    fn bench_can_insert_check(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        b.iter(|| {
+            let can_insert = buffer.can_insert(row(0), black_box(100));
+            black_box(can_insert);
+        });
     }
 }

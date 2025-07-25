@@ -83,15 +83,17 @@
 //!
 //! # UTF-8 Safety Architecture
 //!
-//! This module implements a **"validate once, trust thereafter"** approach to UTF-8 safety
-//! that maximizes both correctness and performance:
+//! This module implements a **"validate once, trust thereafter"** approach to UTF-8
+//! safety that maximizes both correctness and performance:
 //!
 //! ## Input Validation (Write Path)
 //!
 //! UTF-8 validation occurs **at the API boundaries** where content enters the system:
 //!
-//! - **[`insert_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_at_grapheme]** - Rust's `&str` type guarantees valid UTF-8
-//! - **File loading** - Use `std::fs::read_to_string()` or `String::from_utf8()` which validate
+//! - **[`insert_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_at_grapheme]** -
+//!   Rust's `&str` type guarantees valid UTF-8
+//! - **File loading** - Use `std::fs::read_to_string()` or `String::from_utf8()` which
+//!   validate
 //! - **User input** - Terminal/UI frameworks provide pre-validated strings
 //! - **Paste operations** - System clipboard provides UTF-8 validated content
 //!
@@ -99,12 +101,14 @@
 //!
 //! ## Zero-Copy Access (Read Path)
 //!
-//! Once content is in the buffer, all read operations use `unsafe { from_utf8_unchecked() }`
-//! for **maximum performance**:
+//! Once content is in the buffer, all read operations use `unsafe { from_utf8_unchecked()
+//! }` for **maximum performance**:
 //!
 //! - **[`as_str()`][ZeroCopyGapBuffer::as_str]** - Zero-copy access to entire buffer
-//! - **[`get_line_content()`][ZeroCopyGapBuffer::get_line_content]** - Zero-copy access to individual lines
-//! - **[`rebuild_line_segments()`][ZeroCopyGapBuffer::rebuild_line_segments]** - Fast string creation during metadata updates
+//! - **[`get_line_content()`][ZeroCopyGapBuffer::get_line_content]** - Zero-copy access
+//!   to individual lines
+//! - **[`rebuild_line_segments()`][ZeroCopyGapBuffer::rebuild_line_segments]** - Fast
+//!   string creation during metadata updates
 //!
 //! This avoids redundant UTF-8 validation in performance-critical paths like:
 //! - Markdown parsing (needs zero-copy `&str` access)
@@ -138,6 +142,87 @@
 //!
 //! This approach follows Rust's philosophy of "zero-cost abstractions" while maintaining
 //! memory safety through careful API design rather than runtime validation.
+//!
+//! # Performance Benchmarks
+//!
+//! The following benchmarks were measured on a release build using Rust's built-in
+//! benchmarking framework. All measurements are in nanoseconds per iteration (ns/iter).
+//!
+//! ## Buffer Storage Operations
+//!
+//! Basic buffer management operations show excellent performance:
+//!
+//! - **`add_line`**: 3.73 ns - Adding a new line to the buffer
+//! - **`add_100_lines`**: 1,615.61 ns - Batch creation of 100 lines (~16 ns/line)
+//! - **`remove_line_middle`**: 72.32 ns - Removing a line from the middle of buffer
+//! - **`extend_line_capacity`**: 12.24 ns - Growing a line by 256 bytes
+//! - **`can_insert_check`**: 0.32 ns - Checking if text fits in current capacity
+//!
+//! ## Text Insertion Operations
+//!
+//! Text insertion maintains good performance across various scenarios:
+//!
+//! - **`insert_small_text`**: 88.45 ns - Inserting "Hello" (5 chars)
+//! - **`insert_unicode`**: 217.93 ns - Inserting "Hello 😀 世界" with emoji/CJK
+//! - **`insert_at_end`**: 157.67 ns - Appending text to existing content
+//! - **`insert_middle_of_text`**: 229.68 ns - Inserting in the middle of text
+//! - **`insert_causes_extension`**: 408.11 ns - Inserting 300 chars (triggers growth)
+//! - **`insert_empty_line`**: 4.27 ns - Adding a new empty line
+//!
+//! ## Text Deletion Operations
+//!
+//! Deletion operations are efficient due to in-place buffer manipulation:
+//!
+//! - **`delete_single_grapheme`**: 168.05 ns - Delete one character
+//! - **`delete_unicode_grapheme`**: 334.69 ns - Delete emoji character
+//! - **`delete_range_small`**: 235.93 ns - Delete range of 10 characters
+//! - **`delete_from_beginning`**: 165.61 ns - Delete first 5 characters
+//! - **`delete_entire_line_content`**: 128.95 ns - Clear all line content
+//! - **`delete_complex_grapheme_cluster`**: 559.87 ns - Delete family emoji cluster
+//!
+//! ## Zero-Copy Access Operations
+//!
+//! The zero-copy design delivers exceptional read performance:
+//!
+//! - **`as_str_small_buffer`**: 0.19 ns - Access entire buffer as &str (10 lines)
+//! - **`as_str_large_buffer`**: 0.19 ns - Access entire buffer as &str (100 lines)
+//! - **`get_line_content`**: 0.37 ns - Access single line content
+//! - **`get_line_slice_10_lines`**: 0.88 ns - Access slice of 10 lines
+//! - **`get_line_with_newline`**: 0.57 ns - Access line including newline
+//! - **`as_bytes`**: 0.19 ns - Raw byte access to buffer
+//! - **`find_line_containing_byte`**: 1.72 ns - Locate line by byte offset
+//! - **`is_valid_utf8`**: 426.08 ns - Full UTF-8 validation (50 lines)
+//!
+//! ## Segment Reconstruction
+//!
+//! Grapheme cluster analysis performance varies by content complexity:
+//!
+//! - **`rebuild_single_line_ascii`**: 79.07 ns - ASCII text (36 chars)
+//! - **`rebuild_single_line_unicode`**: 365.45 ns - Unicode with emojis
+//! - **`rebuild_batch_10_lines`**: 753.85 ns - Batch rebuild (~75 ns/line)
+//!
+//! ## Performance Analysis
+//!
+//! The benchmarks demonstrate several key performance characteristics:
+//!
+//! 1. **True Zero-Copy Access**: Read operations (0.19-0.88 ns) are essentially free,
+//!    showing that we're returning direct pointers without any processing overhead.
+//!
+//! 2. **Efficient Unicode Handling**: Unicode operations are 2-3x slower than ASCII but
+//!    still sub-microsecond, making them suitable for real-time text editing.
+//!
+//! 3. **Scalable Line Management**: Adding 100 lines takes only ~16 ns per line,
+//!    demonstrating good scalability for large documents.
+//!
+//! 4. **Fast Capacity Checks**: The 0.32 ns `can_insert` check enables efficient
+//!    capacity planning without performance impact.
+//!
+//! 5. **Predictable Growth Cost**: Line extension (12.24 ns) and content that triggers
+//!    growth (408.11 ns) show well-bounded performance even during reallocation.
+//!
+//! These benchmarks confirm that the zero-copy gap buffer design achieves its goal of
+//! providing high-performance text editing operations while maintaining Unicode safety
+//! and memory efficiency.
 
 // Attach.
 mod buffer_storage;

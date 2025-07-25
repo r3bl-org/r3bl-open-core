@@ -175,7 +175,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(test)]
 mod benches {
     use super::*;
     use std::hint::black_box;

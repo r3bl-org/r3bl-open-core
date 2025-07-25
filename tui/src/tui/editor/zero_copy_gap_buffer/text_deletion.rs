@@ -538,3 +538,164 @@ mod tests {
         assert_eq!(line_info.grapheme_count, 2);
     }
 }
+
+#[cfg(test)]
+mod benches {
+    use std::hint::black_box;
+
+    use test::Bencher;
+
+    use super::*;
+    use crate::{row, seg_index};
+
+    extern crate test;
+
+    #[bench]
+    fn bench_delete_single_grapheme(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        let test_text = "Hello World";
+
+        b.iter(|| {
+            // Setup: insert text
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .unwrap();
+
+            // Benchmark: delete a character
+            buffer
+                .delete_at_grapheme(row(0), black_box(seg_index(5)))
+                .unwrap();
+
+            // Cleanup: clear rest of content
+            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(count))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_delete_range_small(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        let test_text = "Hello Beautiful World";
+
+        b.iter(|| {
+            // Setup
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .unwrap();
+
+            // Benchmark: delete "Beautiful " (indices 6-16)
+            buffer
+                .delete_range(row(0), black_box(seg_index(6)), black_box(seg_index(16)))
+                .unwrap();
+
+            // Cleanup
+            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(count))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_delete_unicode_grapheme(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        let test_text = "Hello 😀 World";
+
+        b.iter(|| {
+            // Setup
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .unwrap();
+
+            // Benchmark: delete the emoji
+            buffer
+                .delete_at_grapheme(row(0), black_box(seg_index(6)))
+                .unwrap();
+
+            // Cleanup
+            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(count))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_delete_from_beginning(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        let test_text = "Hello World";
+
+        b.iter(|| {
+            // Setup
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .unwrap();
+
+            // Benchmark: delete first 5 chars
+            buffer
+                .delete_range(row(0), black_box(seg_index(0)), black_box(seg_index(5)))
+                .unwrap();
+
+            // Cleanup
+            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(count))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_delete_entire_line_content(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        let test_text = "This is a test line with some content";
+
+        b.iter(|| {
+            // Setup
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .unwrap();
+            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+
+            // Benchmark: delete all content
+            buffer
+                .delete_range(
+                    row(0),
+                    black_box(seg_index(0)),
+                    black_box(seg_index(count)),
+                )
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_delete_complex_grapheme_cluster(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        let test_text = "Family: 👨‍👩‍👧‍👦 is here";
+
+        b.iter(|| {
+            // Setup
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .unwrap();
+
+            // Benchmark: delete the complex family emoji
+            buffer
+                .delete_at_grapheme(row(0), black_box(seg_index(8)))
+                .unwrap();
+
+            // Cleanup
+            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(count))
+                .unwrap();
+        });
+    }
+}
