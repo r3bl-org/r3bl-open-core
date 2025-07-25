@@ -49,6 +49,12 @@ This project uses a two-file task tracking system to maintain project state and 
 
 ## Additional Project Guidelines
 
+### MCP servers
+
+- Use `rust-analyzer` MCP server tool to efficiently work with analyzing and refactoring Rust source
+  files
+- Use `context7` MCP server tool to look up documentation on Rust crates
+
 ### Code Quality
 
 - Run typecheck, test, and lint commands after completing tasks:

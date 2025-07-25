@@ -54,26 +54,36 @@ def main [...args: string] {
 def build-release-in-docker [] {
     cd docker
 
+    print "Checking for running containers..."
     # Stop all running containers (if any).
-    let running_containers = (docker ps -aq)
-    $running_containers | each { |it|
-        if not ($it | is-empty) {
-            docker stop $it
-            docker system prune -af
+    let running_containers = (^docker ps -aq | lines | where $it != "")
+    if ($running_containers | length) > 0 {
+        print $"Stopping ($running_containers | length) running containers..."
+        $running_containers | each { |container_id|
+            print $"Stopping container: ($container_id)"
+            ^docker stop $container_id
         }
+        print "Pruning system..."
+        ^docker system prune -af
     }
 
+    print "Checking for existing images..."
     # Clear all existing images.
-    let images = (docker image ls -q)
-    $images | each { |it|
-        if not ($it | is-empty) {
-            docker it rm -f $it
+    let images = (^docker image ls -q | lines | where $it != "")
+    if ($images | length) > 0 {
+        print $"Removing ($images | length) existing images..."
+        $images | each { |image_id|
+            print $"Removing image: ($image_id)"
+            ^docker image rm -f $image_id
         }
     }
 
     # Build and run the new docker image.
-    docker build -t r3bl-cmdr-install .
-    docker run r3bl-cmdr-install
+    print "Building Docker image..."
+    ^docker build -t r3bl-cmdr-install .
+
+    print "Running Docker container..."
+    ^docker run r3bl-cmdr-install
 
     cd ..
 }
