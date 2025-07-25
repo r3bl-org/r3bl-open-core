@@ -514,3 +514,136 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod benches {
+    use std::hint::black_box;
+
+    use test::Bencher;
+
+    use super::*;
+    use crate::{byte_index, seg_index};
+
+    extern crate test;
+
+    #[bench]
+    fn bench_as_str_small_buffer(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        for _ in 0..10 {
+            buffer.add_line();
+        }
+
+        b.iter(|| {
+            let s = buffer.as_str();
+            black_box(s.len());
+        });
+    }
+
+    #[bench]
+    fn bench_as_str_large_buffer(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        for i in 0..100 {
+            buffer.add_line();
+            buffer
+                .insert_at_grapheme(
+                    row(i),
+                    seg_index(0),
+                    "This is a test line with some content",
+                )
+                .unwrap();
+        }
+
+        b.iter(|| {
+            let s = buffer.as_str();
+            black_box(s.len());
+        });
+    }
+
+    #[bench]
+    fn bench_get_line_content(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello World")
+            .unwrap();
+
+        b.iter(|| {
+            let content = buffer.get_line_content(black_box(row(0))).unwrap();
+            black_box(content.len());
+        });
+    }
+
+    #[bench]
+    fn bench_get_line_slice_10_lines(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        for i in 0..20 {
+            buffer.add_line();
+            buffer
+                .insert_at_grapheme(row(i), seg_index(0), &format!("Line {i}"))
+                .unwrap();
+        }
+
+        b.iter(|| {
+            let slice = buffer
+                .get_line_slice(black_box(row(5))..black_box(row(15)))
+                .unwrap();
+            black_box(slice.len());
+        });
+    }
+
+    #[bench]
+    fn bench_get_line_with_newline(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Test line")
+            .unwrap();
+
+        b.iter(|| {
+            let content = buffer.get_line_with_newline(black_box(row(0))).unwrap();
+            black_box(content.len());
+        });
+    }
+
+    #[bench]
+    fn bench_find_line_containing_byte(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        for _ in 0..100 {
+            buffer.add_line();
+        }
+
+        b.iter(|| {
+            let line = buffer.find_line_containing_byte(black_box(byte_index(1000)));
+            black_box(line);
+        });
+    }
+
+    #[bench]
+    fn bench_is_valid_utf8(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        for i in 0..50 {
+            buffer.add_line();
+            buffer
+                .insert_at_grapheme(row(i), seg_index(0), "Hello 😀 World")
+                .unwrap();
+        }
+
+        b.iter(|| {
+            let valid = buffer.is_valid_utf8();
+            black_box(valid);
+        });
+    }
+
+    #[bench]
+    fn bench_as_bytes(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        for _ in 0..10 {
+            buffer.add_line();
+        }
+
+        b.iter(|| {
+            let bytes = buffer.as_bytes();
+            black_box(bytes.len());
+        });
+    }
+}

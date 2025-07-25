@@ -40,8 +40,10 @@
 //!
 //! # Operations
 //!
-//! - [`insert_at_grapheme()`][ZeroCopyGapBuffer::insert_at_grapheme]: Insert text at a specific grapheme position
-//! - [`insert_empty_line()`][ZeroCopyGapBuffer::insert_empty_line]: Create new empty lines with proper initialization
+//! - [`insert_at_grapheme()`][ZeroCopyGapBuffer::insert_at_grapheme]: Insert text at a
+//!   specific grapheme position
+//! - [`insert_empty_line()`][ZeroCopyGapBuffer::insert_empty_line]: Create new empty
+//!   lines with proper initialization
 //! - Internal helpers for byte-level manipulation and capacity management
 //!
 //! # Null-Padding Invariant
@@ -60,7 +62,8 @@
 //! 3. After insertion, any remaining unused capacity is null-padded
 //! 4. When extending line capacity, new memory is initialized with `\0`
 //!
-//! The null-padding logic is especially critical in [`insert_text_at_byte_pos`][ZeroCopyGapBuffer::insert_text_at_byte_pos] where
+//! The null-padding logic is especially critical in
+//! [`insert_text_at_byte_pos`][ZeroCopyGapBuffer::insert_text_at_byte_pos] where
 //! content shifting and capacity extension occur.
 //!
 //! # UTF-8 Safety in Insertion Operations
@@ -72,7 +75,8 @@
 //!
 //! UTF-8 safety is **guaranteed by Rust's type system** at the API boundary:
 //!
-//! - **[`insert_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_at_grapheme]**: The `&str` parameter ensures valid UTF-8
+//! - **[`insert_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_at_grapheme]**: The
+//!   `&str` parameter ensures valid UTF-8
 //! - **Type system enforcement**: Impossible to pass invalid UTF-8 through safe Rust APIs
 //! - **No runtime validation needed**: UTF-8 validity guaranteed by caller's type
 //!   constraints
@@ -271,8 +275,8 @@ impl ZeroCopyGapBuffer {
         Ok(())
     }
 
-    // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in segment_construction.rs
-    // and is accessible directly on [`ZeroCopyGapBuffer`]
+    // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in
+    // segment_construction.rs and is accessible directly on [`ZeroCopyGapBuffer`]
 
     /// Insert a new empty line at the specified position
     ///
@@ -616,5 +620,118 @@ mod tests {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod benches {
+    use std::hint::black_box;
+
+    use test::Bencher;
+
+    use super::*;
+    use crate::{row, seg_index};
+
+    extern crate test;
+
+    #[bench]
+    fn bench_insert_small_text(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        b.iter(|| {
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), black_box("Hello"))
+                .unwrap();
+            // Clear content for next iteration
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(5))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_insert_at_end(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Initial text")
+            .unwrap();
+
+        b.iter(|| {
+            let end_idx = buffer.get_line_info(0).unwrap().grapheme_count;
+            buffer
+                .insert_at_grapheme(row(0), seg_index(end_idx), black_box(" more"))
+                .unwrap();
+            // Clear added content
+            buffer
+                .delete_range(row(0), seg_index(end_idx), seg_index(end_idx + 5))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_insert_unicode(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        b.iter(|| {
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), black_box("Hello 😀 世界"))
+                .unwrap();
+            // Clear content
+            let count = buffer.get_line_info(0).unwrap().grapheme_count;
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(count))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_insert_causes_extension(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        let long_text = "A".repeat(300);
+
+        b.iter(|| {
+            buffer
+                .insert_at_grapheme(row(0), seg_index(0), black_box(&long_text))
+                .unwrap();
+            // Clear content
+            buffer
+                .delete_range(row(0), seg_index(0), seg_index(300))
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_insert_empty_line(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+
+        b.iter(|| {
+            buffer.insert_empty_line(row(0)).unwrap();
+            // Remove for next iteration
+            buffer.remove_line(0);
+        });
+    }
+
+    #[bench]
+    fn bench_insert_middle_of_text(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello World")
+            .unwrap();
+
+        b.iter(|| {
+            // Insert in middle (after "Hello ")
+            buffer
+                .insert_at_grapheme(row(0), seg_index(6), black_box("Beautiful "))
+                .unwrap();
+            // Remove inserted text
+            buffer
+                .delete_range(row(0), seg_index(6), seg_index(16))
+                .unwrap();
+        });
     }
 }
