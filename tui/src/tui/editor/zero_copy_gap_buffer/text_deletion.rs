@@ -112,7 +112,7 @@
 
 use miette::{Result, miette};
 
-use super::ZeroCopyGapBuffer;
+use super::buffer_storage::ZeroCopyGapBuffer;
 use crate::{ByteIndex, RowIndex, SegIndex, ch, len};
 
 impl ZeroCopyGapBuffer {
