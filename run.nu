@@ -204,6 +204,45 @@ def install-cargo-tools [] {
     cargo install cargo-nextest
     cargo install flamegraph
     cargo install inferno
+
+    # install rust-analyzer
+    rustup component add rust-analyzer
+
+    # install docker
+    sudo apt install -y docker.io docker-compose
+
+    # install claude code
+    curl -fsSL https://claude.ai/install.sh | sh
+
+    # install go & mcp-language-server using it
+    sudo apt install golang-go
+    go install github.com/isaacphi/mcp-language-server@latest # ~/go/bin/mcp-language-server
+
+    echo 'The following commands will add the following to your ~/.claude.json file:
+    "mcpServers": {
+        "rust-analyzer": {
+          "type": "stdio",
+          "command": "/home/nazmul/go/bin/mcp-language-server",
+          "args": [
+            "--workspace",
+            "/home/nazmul/github/r3bl-open-core",
+            "--lsp",
+            "rust-analyzer"
+          ],
+          "cwd": "/home/nazmul/github/r3bl-open-core"
+        },
+        "context7": {
+            "type": "http",
+            "url": "https://mcp.context7.com/mcp"
+        }
+    },'
+
+    # Note: the following commands will modify the ~/.claude.json file
+    # Use this command to monitor the rust-analyzer language server process:
+    # `watch -n 1 'ps aux | grep -E "(mcp-language-server|rust-analyzer)"'`
+    claude mcp add-json "rust-analyzer" '{"type":"stdio","command":"/home/nazmul/go/bin/mcp-language-server","args":["--workspace","/home/nazmul/github/r3bl-open-core","--lsp","rust-analyzer"],"cwd":"/home/nazmul/github/r3bl-open-core"}'
+    claude mcp add-json "context7" '{"type":"http","url":"https://mcp.context7.com/mcp"}'
+
     # cargo-watch is no longer maintained (as of Oct 2024). Move away from this to bacon.
     # cargo install cargo-watch
 }

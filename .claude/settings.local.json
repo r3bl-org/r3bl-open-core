@@ -45,7 +45,9 @@
       "Bash(mv:*)",
       "Bash(rm:*)",
       "Bash(cp:*)",
-      "Bash(rustup toolchain:*)"
+      "Bash(rustup toolchain:*)",
+      "Bash",
+      "Edit"
     ],
     "deny": [],
     "defaultMode": "plan"
