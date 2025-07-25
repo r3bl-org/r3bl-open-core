@@ -112,7 +112,8 @@ use std::str::{from_utf8, from_utf8_unchecked};
 
 use miette::{Result, miette};
 
-use crate::{RowIndex, ZeroCopyGapBuffer,
+use super::buffer_storage::ZeroCopyGapBuffer;
+use crate::{RowIndex, SegIndex,
             segment_builder::{build_segments_for_str, calculate_display_width}};
 
 impl ZeroCopyGapBuffer {
@@ -263,6 +264,109 @@ impl ZeroCopyGapBuffer {
         }
         Ok(())
     }
+
+    /// Optimized segment rebuilding for end-of-line append operations.
+    ///
+    /// This method provides a fast path for the common case of appending text at the
+    /// end of a line (like normal typing). Instead of rebuilding all segments from
+    /// scratch, it:
+    ///
+    /// 1. Parses only the newly appended text
+    /// 2. Adjusts the new segments' offsets based on existing content
+    /// 3. Appends them to the existing segment array
+    ///
+    /// # When This Optimization Applies
+    ///
+    /// This optimization is used when:
+    /// - Text is inserted at the end of the line (`seg_index` >= segment count)
+    /// - The line had content before the append (not an empty line)
+    /// - We have the appended text available
+    ///
+    /// # Performance Benefits
+    ///
+    /// For typical typing scenarios:
+    /// - Typing "Hello" one char at a time: ~5x faster (parse 1 char vs 5 chars)
+    /// - Appending to a 100-char line: ~100x faster (parse 1 char vs 100 chars)
+    ///
+    /// # Arguments
+    ///
+    /// * `line_index` - The index of the line that was modified
+    /// * `append_position` - The segment index where text was appended
+    /// * `appended_text` - The text that was appended to the line
+    ///
+    /// # Returns
+    ///
+    /// `Ok(true)` if the optimization was applied, `Ok(false)` if it wasn't applicable
+    /// and a full rebuild is needed, or an error if something went wrong.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the line index is out of bounds.
+    pub fn rebuild_line_segments_append_optimized(
+        &mut self,
+        line_index: RowIndex,
+        append_position: SegIndex,
+        appended_text: &str,
+    ) -> Result<bool> {
+        let line_idx = line_index.as_usize();
+        
+        // Get line info and extract needed values
+        let (existing_byte_len, existing_grapheme_count, existing_display_width) = {
+            let line_info = self
+                .get_line_info(line_idx)
+                .ok_or_else(|| miette!("Line index {} out of bounds", line_idx))?;
+            
+            // Check if this is actually an append at the end
+            if append_position.as_usize() < line_info.segments.len() {
+                // Not an append at end, need full rebuild
+                return Ok(false);
+            }
+            
+            // If the line was empty, we need a full rebuild to establish initial state
+            if line_info.segments.is_empty() {
+                return Ok(false);
+            }
+            
+            // Get the offset where the new text was appended
+            let append_offset = line_info.content_len.as_usize() - appended_text.len();
+            
+            // Extract values we need before mutable borrow
+            (append_offset, line_info.grapheme_count, line_info.display_width)
+        };
+        
+        // Build segments only for the appended text
+        let mut new_segments = build_segments_for_str(appended_text);
+        
+        // Adjust all the offsets in the new segments
+        for seg in &mut new_segments {
+            seg.start_byte_index = crate::ch(seg.start_byte_index.as_usize() + existing_byte_len);
+            seg.end_byte_index = crate::ch(seg.end_byte_index.as_usize() + existing_byte_len);
+            seg.seg_index = crate::seg_index(seg.seg_index.as_usize() + existing_grapheme_count);
+            seg.start_display_col_index = crate::col(
+                seg.start_display_col_index.as_usize() + existing_display_width.as_usize()
+            );
+        }
+        
+        // Calculate the new display width for the appended text
+        let new_display_width = calculate_display_width(&new_segments);
+        let new_segment_count = new_segments.len();
+        
+        // Get mutable line info and append the new segments
+        let line_info = self.get_line_info_mut(line_idx).ok_or_else(|| {
+            miette!("Line {} not found when updating segments", line_idx)
+        })?;
+        
+        // Append new segments to existing ones
+        line_info.segments.extend(new_segments);
+        
+        // Update totals
+        line_info.display_width = crate::width(
+            line_info.display_width.as_usize() + new_display_width.as_usize()
+        );
+        line_info.grapheme_count += new_segment_count;
+        
+        Ok(true)
+    }
 }
 
 #[cfg(test)]
@@ -402,6 +506,76 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_append_optimization() -> Result<()> {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        // Insert initial text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello")?;
+        let _initial_segments = buffer.get_line_info(0).unwrap().segments.clone();
+        
+        // First, actually append the text to simulate real usage
+        buffer.insert_at_grapheme(row(0), seg_index(5), " World")?;
+        
+        // Now test the optimization method directly with the same append
+        // Reset to just "Hello" first
+        buffer.clear();
+        buffer.add_line();
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello")?;
+        
+        // Manually update content_len to simulate the text has been appended
+        {
+            let line_info = buffer.get_line_info_mut(0).unwrap();
+            line_info.content_len = crate::len(11); // "Hello World" length
+        }
+        
+        // Now test the optimization
+        let optimized = buffer.rebuild_line_segments_append_optimized(
+            row(0), 
+            seg_index(5), 
+            " World"
+        )?;
+        
+        assert!(optimized);
+        
+        // Verify the segments are correct
+        let line_info = buffer.get_line_info(0).unwrap();
+        assert_eq!(line_info.segments.len(), 11); // "Hello World"
+        assert_eq!(line_info.grapheme_count, 11);
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_append_optimization_not_applicable() -> Result<()> {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        // Test on empty line - should not optimize
+        let optimized = buffer.rebuild_line_segments_append_optimized(
+            row(0), 
+            seg_index(0), 
+            "Hello"
+        )?;
+        
+        assert!(!optimized); // Should return false
+
+        // Insert some text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello")?;
+        
+        // Test inserting in middle - should not optimize
+        let optimized = buffer.rebuild_line_segments_append_optimized(
+            row(0), 
+            seg_index(2), 
+            "XX"
+        )?;
+        
+        assert!(!optimized); // Should return false
+        
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -466,6 +640,86 @@ mod benches {
             buffer
                 .rebuild_line_segments_batch(black_box(&indices))
                 .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_append_optimization_single_char(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Start with a line that has some content
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello World! This is a test line")
+            .unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        let end_pos = seg_index(line_info.grapheme_count);
+        
+        b.iter(|| {
+            buffer
+                .rebuild_line_segments_append_optimized(
+                    black_box(row(0)),
+                    black_box(end_pos),
+                    black_box("x")
+                )
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_full_rebuild_after_append_single_char(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Start with the same line content
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello World! This is a test linex")
+            .unwrap();
+        
+        b.iter(|| {
+            buffer.rebuild_line_segments(black_box(row(0))).unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_append_optimization_word(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Start with a longer line
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), 
+                "This is a much longer line with more content to test the optimization benefits")
+            .unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        let end_pos = seg_index(line_info.grapheme_count);
+        
+        b.iter(|| {
+            buffer
+                .rebuild_line_segments_append_optimized(
+                    black_box(row(0)),
+                    black_box(end_pos),
+                    black_box(" word")
+                )
+                .unwrap();
+        });
+    }
+
+    #[bench]
+    fn bench_full_rebuild_after_append_word(b: &mut Bencher) {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Same content plus the word
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), 
+                "This is a much longer line with more content to test the optimization benefits word")
+            .unwrap();
+        
+        b.iter(|| {
+            buffer.rebuild_line_segments(black_box(row(0))).unwrap();
         });
     }
 }

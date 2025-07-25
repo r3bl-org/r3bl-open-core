@@ -55,7 +55,7 @@
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
 //! or undefined behavior in zero-copy access operations.
 
-use crate::{ByteIndex, ColWidth, Length, RowIndex, byte_index,
+use crate::{ByteIndex, ColWidth, Length, RowIndex, SegIndex, byte_index,
             gc_string_sizing::SegmentArray, len};
 
 /// Initial size of each line in bytes
@@ -63,6 +63,16 @@ pub const INITIAL_LINE_SIZE: usize = 256;
 
 /// Page size for extending lines (bytes added when line overflows)
 pub const LINE_PAGE_SIZE: usize = 256;
+
+/// Segment rebuild strategy based on the type of text modification
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SegmentRebuildStrategy {
+    /// Full rebuild required - parse entire line content
+    Full,
+    /// Optimized append - only parse appended text and adjust offsets
+    AppendOptimized,
+    // Future: could add more strategies like PrependOptimized, SingleCharOptimized, etc.
+}
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone)]
@@ -127,6 +137,96 @@ impl GapBufferLineInfo {
         let start = self.buffer_offset.as_usize();
         let end = start + self.content_len.as_usize();
         start..end
+    }
+    
+    /// Get the byte position for a given segment index
+    ///
+    /// This method converts a grapheme cluster index (segment index) to its
+    /// corresponding byte position in the line buffer. It handles three cases:
+    /// - Beginning of line (`seg_index` = 0) → returns 0
+    /// - End of line (`seg_index` >= `segments.len()`) → returns `content_len`
+    /// - Middle of line → returns the `start_byte_index` of the segment
+    ///
+    /// # Arguments
+    /// * `seg_index` - The grapheme cluster index to convert
+    ///
+    /// # Returns
+    /// The byte position where the grapheme at `seg_index` starts
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use r3bl_tui::{ZeroCopyGapBuffer, seg_index, row};
+    ///
+    /// let mut buffer = ZeroCopyGapBuffer::new();
+    /// buffer.add_line();
+    /// buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
+    ///
+    /// let line_info = buffer.get_line_info(0).unwrap();
+    /// 
+    /// // Beginning of line
+    /// assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
+    /// 
+    /// // End of line
+    /// assert_eq!(line_info.get_byte_pos(seg_index(5)).as_usize(), 5);
+    /// ```
+    #[must_use]
+    pub fn get_byte_pos(&self, seg_index: SegIndex) -> ByteIndex {
+        if seg_index.as_usize() == 0 {
+            // Insert at beginning
+            byte_index(0)
+        } else if seg_index.as_usize() >= self.segments.len() {
+            // Insert at end
+            byte_index(self.content_len.as_usize())
+        } else {
+            // Insert in middle - find the start of the target segment
+            let segment = &self.segments[seg_index.as_usize()];
+            byte_index(segment.start_byte_index.as_usize())
+        }
+    }
+    
+    /// Determine the optimal segment rebuild strategy for a text modification
+    ///
+    /// This method analyzes the modification position and line state to determine
+    /// whether we can use an optimized rebuild strategy or need a full rebuild.
+    ///
+    /// # Arguments
+    ///
+    /// * `modification_position` - The segment index where text is being inserted
+    ///
+    /// # Returns
+    ///
+    /// The recommended [`SegmentRebuildStrategy`] based on the current line state
+    /// and modification position.
+    ///
+    /// # Strategy Selection Logic
+    ///
+    /// - **`AppendOptimized`**: When inserting at the end of a non-empty line
+    /// - **Full**: For all other cases (empty line, middle insertion, etc.)
+    ///
+    /// # Future Extensions
+    ///
+    /// This method can be extended to detect more optimization opportunities:
+    /// - Single character insertions (could use specialized handling)
+    /// - ASCII-only content (faster segment building)
+    /// - Prepend operations (inserting at beginning)
+    /// - Small deletions (might not need full rebuild)
+    #[must_use]
+    pub fn determine_segment_rebuild_strategy(
+        &self,
+        modification_position: SegIndex,
+    ) -> SegmentRebuildStrategy {
+        // Check if this is an append at the end
+        let is_end_append = modification_position.as_usize() >= self.segments.len();
+        
+        // Check if the line has existing content
+        let has_content = !self.segments.is_empty();
+        
+        // Determine the strategy
+        match (is_end_append, has_content) {
+            (true, true) => SegmentRebuildStrategy::AppendOptimized,
+            _ => SegmentRebuildStrategy::Full,
+        }
     }
 }
 
@@ -317,7 +417,7 @@ impl std::fmt::Display for ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::row;
+    use crate::{row, seg_index};
 
     #[test]
     fn test_new_line_buffer() {
@@ -455,6 +555,67 @@ mod tests {
                 i, buffer.buffer[i]
             );
         }
+    }
+
+    #[test]
+    fn test_get_byte_pos_beginning() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Insert some text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // Test beginning position
+        assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
+    }
+
+    #[test]
+    fn test_get_byte_pos_end() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Insert some text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // Test end position (past last segment)
+        assert_eq!(line_info.get_byte_pos(seg_index(5)).as_usize(), 5);
+        assert_eq!(line_info.get_byte_pos(seg_index(10)).as_usize(), 5);
+    }
+
+    #[test]
+    fn test_get_byte_pos_middle() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Insert text with multi-byte characters
+        buffer.insert_at_grapheme(row(0), seg_index(0), "H😀llo").unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // Test various positions
+        assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0); // Before 'H'
+        assert_eq!(line_info.get_byte_pos(seg_index(1)).as_usize(), 1); // Before '😀'
+        assert_eq!(line_info.get_byte_pos(seg_index(2)).as_usize(), 5); // Before 'l' (emoji is 4 bytes)
+        assert_eq!(line_info.get_byte_pos(seg_index(3)).as_usize(), 6); // Before second 'l'
+        assert_eq!(line_info.get_byte_pos(seg_index(4)).as_usize(), 7); // Before 'o'
+        assert_eq!(line_info.get_byte_pos(seg_index(5)).as_usize(), 8); // End of string
+    }
+
+    #[test]
+    fn test_get_byte_pos_empty_line() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // For empty line, any position should return 0
+        assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_pos(seg_index(1)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_pos(seg_index(100)).as_usize(), 0);
     }
 }
 

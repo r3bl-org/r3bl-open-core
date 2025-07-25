@@ -99,7 +99,7 @@
 use std::{ops::Range,
           str::{from_utf8, from_utf8_unchecked}};
 
-use super::ZeroCopyGapBuffer;
+use super::buffer_storage::ZeroCopyGapBuffer;
 use crate::{ByteIndex, RowIndex, row};
 
 impl ZeroCopyGapBuffer {
