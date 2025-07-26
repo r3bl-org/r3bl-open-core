@@ -172,6 +172,9 @@ pub mod constants {
     pub const EXCLAMATION: &str = "!";
 
     pub const TAB_CHAR: char = '\t';
+    pub const NULL_CHAR: char = '\0';
+    pub const NULL_STR: &str = "\0";
+    pub const NEWLINE_OR_NULL: &str = "\n\0";
 }
 
 #[derive(Debug, PartialEq, Clone)]
