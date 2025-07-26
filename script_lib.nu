@@ -19,7 +19,7 @@ def get_cargo_projects [] {
 def run_example [options: list<string>, release: bool, no_log: bool] {
     let selection = $options | input list --fuzzy 'Select an example to run: '
 
-    if $selection == "" {
+    if ($selection == "") or ($selection == null) {
         print "No example selected.";
     } else {
         let release_flag = if $release { "--release" } else { "" }
@@ -49,7 +49,7 @@ def get_example_binaries [] {
 def run_example_with_flamegraph_profiling_svg [options: list<string>] {
     let selection = $options | input list --fuzzy 'Select an example to run: '
 
-    if $selection == "" {
+    if ($selection == "") or ($selection == null) {
         print "No example selected.";
     } else {
         print $'(ansi cyan)Running example with options: (ansi green)($options)(ansi cyan), selection: (ansi green)($selection)(ansi reset)'
@@ -135,7 +135,7 @@ def run_example_with_flamegraph_profiling_svg [options: list<string>] {
 def run_example_with_flamegraph_profiling_perf_fold [options: list<string>] {
     let selection = $options | input list --fuzzy 'Select an example to run: '
 
-    if $selection == "" {
+    if ($selection == "") or ($selection == null) {
         print "No example selected.";
     } else {
         print $'(ansi cyan)Running example to generate collapsed stacks: (ansi green)($selection)(ansi reset)'

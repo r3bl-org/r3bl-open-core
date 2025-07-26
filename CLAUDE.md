@@ -52,12 +52,19 @@ This project uses a two-file task tracking system to maintain project state and 
 ### MCP servers
 
 - Use `rust-analyzer` MCP server tool to efficiently work with analyzing and refactoring Rust source
-  files
+  files. You have access to these `rust-analyzer` tools:
+  - `mcp__rust-analyzer__definition` - Find symbol definitions
+  - `mcp__rust-analyzer__diagnostics` - Get diagnostics for files
+  - `mcp__rust-analyzer__edit_file` - Apply text edits
+  - `mcp__rust-analyzer__hover` - Get type/documentation info
+  - `mcp__rust-analyzer__references` - Find symbol usages
+  - `mcp__rust-analyzer__rename_symbol` - Rename symbols
 - Use `context7` MCP server tool to look up documentation on Rust crates
 
 ### Code Quality
 
 - Run typecheck, test, and lint commands after completing tasks:
+
   - Fast compiler typecheck command is `cargo check`
   - Detailed lint check is `cargo clippy --all-targets`, and to fix them use
     `cargo clippy --fix --allow-dirty`

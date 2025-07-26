@@ -13,17 +13,22 @@
       - [2.1 Grapheme-Safe Insert Operations ✅](#21-grapheme-safe-insert-operations-)
       - [2.2 Grapheme-Safe Delete Operations ✅](#22-grapheme-safe-delete-operations-)
       - [2.3 Segment Rebuilding ✅](#23-segment-rebuilding-)
-      - [2.4 Validation and benchmarking](#24-validation-and-benchmarking)
+      - [2.4 Validation and benchmarking ✅](#24-validation-and-benchmarking-)
+      - [2.5 Optimize Segment Rebuild for common editor use case ✅](#25-optimize-segment-rebuild-for-common-editor-use-case-)
     - [Phase 3: Parser Integration](#phase-3-parser-integration)
+      - [Core Architectural Anchor](#core-architectural-anchor)
       - [3.1 Parser Modifications for Padding](#31-parser-modifications-for-padding)
       - [3.2 Main Parser Entry Point](#32-main-parser-entry-point)
       - [3.3 Individual Parser Updates](#33-individual-parser-updates)
       - [3.4 Syntax Highlighting Integration](#34-syntax-highlighting-integration)
     - [Phase 4: Editor Integration](#phase-4-editor-integration)
-      - [4.1 Replace VecEditorContentLines](#41-replace-veceditorcontentlines)
-      - [4.2 Update Editor Operations](#42-update-editor-operations)
-      - [4.3 Cursor Movement Updates](#43-cursor-movement-updates)
-      - [4.4 File I/O Updates](#44-file-io-updates)
+      - [Core Architectural Anchor](#core-architectural-anchor-1)
+      - [4.1 EditorLinesStorage Trait](#41-editorlinesstorage-trait)
+        - [Implementation Tasks](#implementation-tasks)
+      - [4.2 Migrate EditorContent to use EditorLinesStorage](#42-migrate-editorcontent-to-use-editorlinesstorage)
+      - [4.3 Update Editor Operations to EditorLinesStorage API](#43-update-editor-operations-to-editorlinesstorage-api)
+      - [4.4 Cursor Movement Updates Using GapBufferLineInfo](#44-cursor-movement-updates-using-gapbufferlineinfo)
+      - [4.5 File I/O Updates Through EditorLinesStorage](#45-file-io-updates-through-editorlinesstorage)
     - [Phase 5: Optimization](#phase-5-optimization)
       - [5.1 Memory Optimization](#51-memory-optimization)
       - [5.2 Performance Optimization](#52-performance-optimization)
@@ -228,7 +233,7 @@ toolchain, and is already configured to support cargo bench.
 - [x] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-#### 2.5 Optimize Segment Rebuild for common editor use case
+#### 2.5 Optimize Segment Rebuild for common editor use case ✅
 
 - [x] Make end of line optimization for `segment_construction.rs` to speed up common use case in
       editor of typing characters at the end of the line
@@ -240,48 +245,55 @@ toolchain, and is already configured to support cargo bench.
 
 ### Phase 3: Parser Integration
 
+#### Core Architectural Anchor
+
+**The parser remains anchored on `&str` input.** We will retain the existing
+`pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>>` function signature and return
+types. We will use `ZeroCopyGapBuffer::as_str()` to get a `&str` reference to pass to this function.
+The only modification needed is for the parser to handle `\0` (null) characters that appear in the
+input string as padding.
+
 #### 3.1 Parser Modifications for Padding
 
-- [ ] Create `parse_editor_line()` nom parser
-- [ ] Handle `\n` followed by `\0` padding
-- [ ] Extract content without padding
+- [ ] Create `parse_editor_line()` nom parser to handle lines with `\n` followed by `\0` padding
+- [ ] Extract content without padding (everything before `\n`)
 - [ ] Add tests for various padding scenarios
-- [ ] Handle edge cases (no newline, all nulls)
+- [ ] Handle edge cases (no newline, all nulls, lines of different lengths)
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
 #### 3.2 Main Parser Entry Point
 
-- [ ] Create `parse_markdown_with_padding()` function
-- [ ] Integrate with existing parse_markdown
-- [ ] Add compatibility layer for migration
-- [ ] Test with real markdown documents
-- [ ] Benchmark parsing performance
+- [ ] Modify existing `parse_markdown(input: &str)` to handle null-padded input
+- [ ] The parser will receive `&str` from `ZeroCopyGapBuffer::as_str()` directly
+- [ ] Ensure parser correctly handles `\0` characters in the input string
+- [ ] Test with real markdown documents containing null padding
+- [ ] Benchmark parsing performance with null-padded vs clean input
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
 #### 3.3 Individual Parser Updates
 
-- [ ] Update `parse_heading_in_single_line`
-- [ ] Update `parse_block_markdown_text`
-- [ ] Update `parse_smart_list_block`
-- [ ] Update `parse_fenced_code_block`
-- [ ] Update metadata parsers
-- [ ] Test each parser with padded input
+- [ ] Update `parse_heading_in_single_line` to stop at `\0` characters
+- [ ] Update `parse_block_markdown_text` to stop at `\0` characters
+- [ ] Update `parse_smart_list_block` to stop at `\0` characters
+- [ ] Update `parse_fenced_code_block` to stop at `\0` characters
+- [ ] Update metadata parsers to stop at `\0` characters
+- [ ] Test each parser with null-padded input strings
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
 #### 3.4 Syntax Highlighting Integration
 
-- [ ] Update `try_parse_and_highlight` function
-- [ ] Remove ParserByteCache usage
-- [ ] Use ZeroCopyGapBuffer's zero-copy access
-- [ ] Update highlight span calculations
-- [ ] Test syntax highlighting accuracy
-- [ ] Benchmark highlighting performance
+- [ ] Update `try_parse_and_highlight` function to receive `&str` directly
+- [ ] Remove ParserByteCache usage (no longer needed with zero-copy)
+- [ ] Pass `ZeroCopyGapBuffer::as_str()` directly to `parse_markdown()`
+- [ ] Update highlight span calculations to account for null padding
+- [ ] Test syntax highlighting accuracy with null-padded content
+- [ ] Benchmark highlighting performance: measure zero-copy performance gains
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
@@ -289,60 +301,93 @@ toolchain, and is already configured to support cargo bench.
 
 ### Phase 4: Editor Integration
 
-#### 4.1 Introduce trait for editor content lines storage
+#### Core Architectural Anchor
 
-- [ ] Extract a trait based on the usage patterns of the current editor component and
-      VecEditorContentLines to pave a path to migrate away from VecEditorContentLines and use
-      ZeroCopyGapBuffer
-- [ ] Implement this trait for VecEditorContentLines
-- [ ] Implement this trait for ZeroCopyGapBuffer
+**We are anchoring on the ZeroCopyGapBuffer architecture as the desired future state.** The structs
+in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer` and
+`GapBufferLineInfo`) represent the target architecture that everything else will adapt to.
 
-#### 4.2 Replace VecEditorContentLines with ZeroCopyGapBuffer
+- **ZeroCopyGapBuffer is the future** - all new code targets this architecture
+- **GapBufferLineInfo is the standard** line metadata format
+- **VecEditorContentLines/GCString are legacy** - will be adapted temporarily then deprecated
+- **Zero-copy access** is the performance goal
 
-- [ ] Create type alias migration strategy
-- [ ] Update EditorContent struct definition
-- [ ] Migrate from SmallVec to ZeroCopyGapBuffer
-- [ ] Update all EditorContent methods
-- [ ] Fix compilation errors
-- [ ] Run existing editor tests
+#### 4.1 EditorLinesStorage Trait
+
+##### Implementation Tasks
+
+- [ ] Define `EditorLinesStorage` trait based on ZeroCopyGapBuffer's API:
+  ```rust
+  trait EditorLinesStorage {
+      // Methods that mirror ZeroCopyGapBuffer's API
+      fn get_line_info(&self, index: usize) -> Option<&GapBufferLineInfo>;
+      fn get_line_content(&self, index: usize) -> Option<&str>;
+      fn line_count(&self) -> usize;
+      fn as_str(&self) -> &str; // Zero-copy full buffer access
+      // ... other methods from ZeroCopyGapBuffer
+  }
+  ```
+- [ ] Implement EditorLinesStorage for ZeroCopyGapBuffer (native implementation - "NG storage")
+- [ ] Create VecEditorContentLinesAdapter that implements EditorLinesStorage (legacy adapter)
+  - Converts GCString data to GapBufferLineInfo format on-the-fly
+  - Marked as "legacy storage" for eventual deprecation
+- [ ] Add feature flag/config: `--storage-engine [ng|legacy]`
+  - Default to legacy initially for safety
+  - Gradually transition to ng as default
+  - Eventually remove legacy code entirely
+- [ ] Update all editor code to use EditorLinesStorage trait instead of concrete types
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-#### 4.3 Update Editor Operations
+#### 4.2 Migrate EditorContent to use EditorLinesStorage
 
-- [ ] Update `insert_char` operation
-- [ ] Update `delete_char` operation
-- [ ] Update `insert_string` operation
-- [ ] Update `split_line` operation
-- [ ] Update `join_lines` operation
-- [ ] Update clipboard operations (copy/paste)
-- [ ] Update undo/redo to work with new structure
+- [ ] Update EditorContent struct to use `Box<dyn EditorLinesStorage>` instead of
+      VecEditorContentLines
+- [ ] Create factory functions for creating legacy vs NG storage based on config
+- [ ] Update all EditorContent methods to work through the trait interface
+- [ ] Ensure all existing tests pass with legacy adapter
+- [ ] Add new tests that exercise both storage engines
+- [ ] Fix compilation errors throughout the codebase
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-#### 4.4 Cursor Movement Updates
+#### 4.3 Update Editor Operations to EditorLinesStorage API
 
-- [ ] Update `move_cursor_left` to use segments
-- [ ] Update `move_cursor_right` to use segments
-- [ ] Update `move_cursor_up/down` for line nav
-- [ ] Update word-based movement
-- [ ] Update home/end key handling
-- [ ] Cache cursor segment position
-- [ ] Test cursor movement with Unicode
+- [ ] Update `insert_char` operation to use trait methods
+- [ ] Update `delete_char` operation to use trait methods
+- [ ] Update `insert_string` operation to use trait methods
+- [ ] Update `split_line` operation to work with line metadata
+- [ ] Update `join_lines` operation to work with line metadata
+- [ ] Update clipboard operations to use `get_line_content()`
+- [ ] Update undo/redo to clone storage state through trait
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-#### 4.5 File I/O Updates
+#### 4.4 Cursor Movement Updates Using GapBufferLineInfo
 
-- [ ] Update file loading to populate ZeroCopyGapBuffer
-- [ ] Update file saving from ZeroCopyGapBuffer
-- [ ] Handle line ending conversions
-- [ ] Preserve file encoding
-- [ ] Test with various file formats
+- [ ] Update `move_cursor_left` to use GapBufferLineInfo segments
+- [ ] Update `move_cursor_right` to use GapBufferLineInfo segments
+- [ ] Update `move_cursor_up/down` for line navigation
+- [ ] Update word-based movement using segment information
+- [ ] Update home/end key handling with display_width from GapBufferLineInfo
+- [ ] Cache cursor segment position in editor state
+- [ ] Test cursor movement with Unicode through both storage engines
+- [ ] Make sure that all docs in module are up to date with the latest changes added here
+- [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
+
+#### 4.5 File I/O Updates Through EditorLinesStorage
+
+- [ ] Update file loading to populate storage through trait interface
+- [ ] Update file saving to read from storage through trait interface
+- [ ] Handle line ending conversions in storage-agnostic way
+- [ ] Preserve file encoding metadata
+- [ ] Test with various file formats on both storage engines
 - [ ] Add progress reporting for large files
+- [ ] Performance comparison between legacy and NG storage
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
@@ -549,17 +594,14 @@ changing the parser's `&str` requirement.
 ### Existing Implementation
 
 1. **EditorContent struct** (`tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
-
    - Contains `lines: VecEditorContentLines` field
    - Manages caret position, scroll offset, and file metadata
 
 2. **VecEditorContentLines type** (`tui/src/tui/editor/editor_buffer/sizing.rs`):
-
    - Defined as: `SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>`
    - Stack-allocated vector holding up to 32 lines before heap allocation
 
 3. **GCString type** (`tui/src/core/graphemes/gc_string.rs`):
-
    - Contains `InlineString` (SmallString with 16-byte inline storage)
    - Stores grapheme cluster metadata in `SegmentArray`
    - Implements `AsRef<str>` for string conversion
@@ -777,7 +819,6 @@ impl ZeroCopyGapBuffer {
 ### Current GCString Analysis
 
 1. **What's Reusable**:
-
    - `Seg` struct (already decoupled, contains only indices)
    - Width calculation functions (static methods)
    - Segmentation algorithm logic
