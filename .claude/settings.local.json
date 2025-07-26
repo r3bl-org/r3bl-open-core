@@ -47,7 +47,13 @@
       "Bash(cp:*)",
       "Bash(rustup toolchain:*)",
       "Bash",
-      "Edit"
+      "Edit",
+      "mcp__rust-analyzer__definition",
+      "mcp__rust-analyzer__diagnostics",
+      "mcp__rust-analyzer__edit_file",
+      "mcp__rust-analyzer__hover",
+      "mcp__rust-analyzer__references",
+      "mcp__rust-analyzer__rename_symbol"
     ],
     "deny": [],
     "defaultMode": "plan"
