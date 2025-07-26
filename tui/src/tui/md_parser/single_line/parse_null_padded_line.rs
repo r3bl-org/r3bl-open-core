@@ -24,7 +24,7 @@ use nom::{
 use crate::md_parser::constants::{NEW_LINE, NULL_CHAR, NEWLINE_OR_NULL};
 
 /// Helper function that creates a predicate for matching a specific character.
-/// This is the opposite of nom's is_not() - it matches only the specified char.
+/// This is the opposite of nom's `is_not()` - it matches only the specified char.
 /// 
 /// # Example
 /// ```
@@ -35,7 +35,7 @@ pub fn is(target: char) -> impl Fn(char) -> bool {
 }
 
 /// Helper function that creates a predicate for matching any of the specified characters.
-/// This is useful for take_till and take_while when checking multiple characters.
+/// This is useful for `take_till` and `take_while` when checking multiple characters.
 /// 
 /// # Example
 /// ```
@@ -47,7 +47,7 @@ pub fn is_any_of(targets: &'static [char]) -> impl Fn(char) -> bool {
 
 /// Parse a line that ends with '\n' followed by optional '\0' padding.
 /// 
-/// Assumes input comes from ZeroCopyGapBuffer with its invariants:
+/// Assumes input comes from `ZeroCopyGapBuffer` with its invariants:
 /// - Non-null chars are content
 /// - Lines end with \n followed by optional \0 padding
 /// - If no \n found and we run out of input = EOI
@@ -56,6 +56,11 @@ pub fn is_any_of(targets: &'static [char]) -> impl Fn(char) -> bool {
 /// - "hello\n\0\0\0world" -> ("world", "hello")
 /// - "hello" -> ("", "hello")
 /// - "hello\n\0\0\0" -> ("", "hello")
+///
+/// # Errors
+/// 
+/// Returns a nom error if the parser fails to match any of the expected patterns.
+/// This should not happen with valid `ZeroCopyGapBuffer` input.
 #[rustfmt::skip]
 pub fn parse_null_padded_line(input: &str) -> IResult<&str, &str> {
     use nom::branch::alt;

@@ -273,26 +273,56 @@ zero-copy access. The parser handles `\0` (null) characters that appear as line 
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [x] Make a commit with this progress
 
-#### 3.3 Individual Parser Updates
+#### 3.3 Individual Parser Updates ✅
 
 - [x] Update `parse_heading_in_single_line` to use `is_any_of()` for null handling
-- [ ] Update `parse_block_markdown_text` to use `is_not(NEWLINE_OR_NULL)`
-- [x] Update `parse_smart_list_block` to handle null padding
+  - Modified `parse_anychar_in_heading_no_new_line` to handle null chars
+  - Added `NULL_STR` to terminator tags in heading parser
+  - Added comprehensive test `test_parse_header_with_null_padding`
+- [x] Update `plain_parser_catch_all` to use `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])` 
+  - Refactored to use idiomatic `is_any_of()` helper function
+  - Updated `get_sp_char_set_3()` to include `NULL_STR`
+  - Added test `test_parse_plain_text_with_null_padding`
 - [x] Update `parse_fenced_code_block` to use `is_not(NEWLINE_OR_NULL)`
-- [x] Update `plain_parser_catch_all` to use `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])`
+  - Changed language tag parsing to stop at null chars
+  - Added test `test_parse_codeblock_with_null_padding`
+- [x] Update `parse_smart_list_block` to handle null padding
+  - Updated content parsing to use `is_not(NEWLINE_OR_NULL)`
+  - Added test `test_parse_smart_list_with_null_padding`
 - [x] Test each parser with null-padded input strings
-- [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [x] Make a commit with this progress
 
-#### 3.4 VecEditorContentLines Adapter
+#### 3.4 VecEditorContentLines Adapter ✅
 
-- [ ] Create `vec_to_gap_buffer_adapter.rs` with `convert_vec_lines_to_gap_buffer()` function
-- [ ] Add module declarations and exports
-- [ ] Add tests for the adapter function
-- [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [x] Create `vec_to_gap_buffer_adapter.rs` with `convert_vec_lines_to_gap_buffer()` function
+  - Created adapter module in `tui/src/tui/md_parser/vec_to_gap_buffer_adapter.rs`
+  - Implemented conversion function that:
+    - Takes `&[GCString]` as input
+    - Creates a new `ZeroCopyGapBuffer`
+    - Adds lines and inserts text using `insert_at_grapheme` API
+    - Returns properly formatted buffer with null padding
+- [x] Add module declarations and exports
+  - Added to `md_parser/mod.rs`
+  - Re-exported from main parser module
+- [x] Add tests for the adapter function
+  - `test_convert_empty_lines` - verifies empty input handling
+  - `test_convert_single_line` - checks single line conversion
+  - `test_convert_multiple_lines` - tests multi-line content
+  - `test_convert_with_unicode` - validates Unicode preservation
+  - `test_convert_code_block` - ensures complex markdown structures work
+- [x] Fixed API usage issues:
+  - Discovered `insert_text_at_byte_pos` is private
+  - Updated to use public `insert_at_grapheme` API with `SegIndex::from(0)`
+  - Fixed type conversions for `RowIndex`
 
 #### 3.5 Syntax Highlighting Integration
+
+**ByteIndex to SegIndex conversion implemented**: 
+- Forward conversion: `GapBufferLineInfo::get_byte_pos(SegIndex) -> ByteIndex` 
+- Reverse conversion: `GapBufferLineInfo::get_seg_index(ByteIndex) -> SegIndex` ✅
+  - Handles edge cases: beginning (byte 0), end (past content_len), and middle positions
+  - Correctly handles multi-byte Unicode characters (returns segment containing the byte)
+  - Comprehensive tests including round-trip conversion verification
 
 - [ ] Import adapter and update `try_parse_and_highlight` to use `ZeroCopyGapBuffer`
 - [ ] Remove ParserByteCache usage (no longer needed with zero-copy)
