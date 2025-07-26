@@ -23,7 +23,7 @@ use nom::{branch::alt,
           sequence::{preceded, terminated},
           IResult, Parser};
 
-use crate::{md_parser::constants::{self, NEW_LINE},
+use crate::{md_parser::constants::{self, NEW_LINE, NULL_STR},
             HeadingData, HeadingLevel};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [`HeadingLevel`] and
@@ -59,6 +59,7 @@ fn parse_anychar_in_heading_no_new_line(input: &str) -> IResult<&str, &str> {
                 not( /* error out if starts w/ special chars */
                     alt((
                         tag(NEW_LINE),
+                        tag(NULL_STR),
                     ))
                 ),
                 /* output - keep char */
@@ -201,6 +202,33 @@ mod tests {
             parse_heading_in_single_line("# test"),
             Ok((
                 "",
+                HeadingData {
+                    level: 1.into(),
+                    text: "test",
+                }
+            ))
+        );
+    }
+
+    #[test]
+    fn test_parse_header_with_null_padding() {
+        // Heading with null padding after newline
+        assert_eq2!(
+            parse_heading_in_single_line("# test\n\0\0\0"),
+            Ok((
+                "\0\0\0",
+                HeadingData {
+                    level: 1.into(),
+                    text: "test",
+                }
+            ))
+        );
+
+        // Heading without newline but with null after
+        assert_eq2!(
+            parse_heading_in_single_line("# test\0\0\0"),
+            Ok((
+                "\0\0\0",
                 HeadingData {
                     level: 1.into(),
                     text: "test",
