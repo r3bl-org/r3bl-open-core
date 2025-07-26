@@ -21,7 +21,7 @@ use nom::{branch::alt,
           sequence::{preceded, terminated},
           IResult, Parser};
 
-use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE},
+use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE, NEWLINE_OR_NULL},
             CodeBlockLine, CodeBlockLineContent, CodeBlockLines, List};
 
 /// Sample inputs:
@@ -66,7 +66,7 @@ fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str
                 /* prefix - discarded */ tag(CODE_BLOCK_START_PARTIAL),
                 /* output */
                 terminated(
-                    /* match */ is_not(NEW_LINE),
+                    /* match */ is_not(NEWLINE_OR_NULL),
                     /* ends with (discarded) */ tag(NEW_LINE),
                 ),
             ),
@@ -348,5 +348,34 @@ mod tests {
             code_block_lines,
             convert_into_code_block_lines(lang, &code_lines.into())
         );
+    }
+
+    #[test]
+    fn test_parse_codeblock_with_null_padding() {
+        // Code block followed by null padding
+        {
+            let lang = "python";
+            let code_lines = vec!["import foo", "bar()"];
+            let input = "```python\nimport foo\nbar()\n```\n\0\0\0";
+            let (remainder, code_block_lines) = parse_fenced_code_block(input).unwrap();
+            assert_eq2!(remainder, "\0\0\0");
+            assert_eq2!(
+                code_block_lines,
+                convert_into_code_block_lines(Some(lang), &code_lines.into())
+            );
+        }
+
+        // Code block with null padding and more content after
+        {
+            let lang = "bash";
+            let code_lines = vec!["pip install foobar"];
+            let input = "```bash\npip install foobar\n```\0\0\0\nNext line";
+            let (remainder, code_block_lines) = parse_fenced_code_block(input).unwrap();
+            assert_eq2!(remainder, "\0\0\0\nNext line");
+            assert_eq2!(
+                code_block_lines,
+                convert_into_code_block_lines(Some(lang), &code_lines.into())
+            );
+        }
     }
 }

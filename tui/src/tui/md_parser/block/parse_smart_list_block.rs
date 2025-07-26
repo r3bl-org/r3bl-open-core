@@ -25,7 +25,7 @@ use smallvec::smallvec;
 
 use crate::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line;
 use crate::{list,
-            md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
+            md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE, NEWLINE_OR_NULL,
                                    ORDERED_LIST_PARTIAL_PREFIX, SPACE, SPACE_CHAR,
                                    UNCHECKED, UNORDERED_LIST_PREFIX},
             tiny_inline_string, BulletKind, CheckboxParsePolicy, InlineVec, Lines, List,
@@ -706,7 +706,7 @@ pub fn parse_smart_list_content_lines<'a>(
                     tag(indent_padding),
                     // Match the rest of the line.
                     /* output */ alt((
-                        is_not(NEW_LINE),
+                        is_not(NEWLINE_OR_NULL),
                         recognize(many1(anychar)),
                     )),
                 ),
@@ -1033,6 +1033,32 @@ mod tests_parse_smart_list_content_lines {
         assert_eq2!(lines[0], SmartListLineStr::new(4, "- ", "first line"));
         assert_eq2!(lines[1], SmartListLineStr::new(4, "- ", "second line"));
         assert_eq2!(lines[2], SmartListLineStr::new(4, "- ", "third line"));
+    }
+
+    #[test]
+    fn test_parse_smart_list_with_null_padding() {
+        use crate::assert_eq2;
+        
+        // Simple test with null padding right after list
+        {
+            let input = "- item\n\0\0\0rest";
+            let (remainder, smart_list_ir) = parse_smart_list(input).unwrap();
+            assert_eq2!(remainder, "\0\0\0rest");
+            assert_eq2!(smart_list_ir.content_lines.len(), 1);
+            assert_eq2!(smart_list_ir.bullet_kind, BulletKind::Unordered);
+        }
+
+        // Test content line parsing with null padding
+        {
+            let input = "first line\n\0\0\0";
+            let indent = 0;
+            let bullet = "- ";
+            let (remainder, lines) = 
+                parse_smart_list_content_lines(input, indent, bullet).unwrap();
+            assert_eq2!(remainder, "\0\0\0");
+            assert_eq2!(lines.len(), 1);
+            assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
+        }
     }
 }
 

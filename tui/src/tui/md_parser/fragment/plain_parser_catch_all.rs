@@ -40,9 +40,9 @@ use nom::{branch::alt,
           sequence::preceded,
           IResult, Parser};
 
-use crate::{fg_blue, fg_magenta, fg_red,
+use crate::{fg_blue, fg_magenta, fg_red, is_any_of,
             md_parser::constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
-                                   NEW_LINE_CHAR, STAR, UNDERSCORE},
+                                   NEW_LINE_CHAR, NULL_CHAR, NULL_STR, STAR, UNDERSCORE},
             specialized_parser_delim_matchers, DEBUG_MD_PARSER_STDOUT};
 
 // XMARK: Lowest priority parser for "plain text" Markdown fragment
@@ -109,8 +109,8 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
             .map(tag::<&str, &str, nom::error::Error<&str>>)
             .collect::<Vec<_>>();
         let tag_tuple = {
-            assert_eq!(tag_vec.len(), 6);
-            tuple6(&tag_vec)
+            assert_eq!(tag_vec.len(), 7);
+            tuple7(&tag_vec)
         };
 
         let it = recognize(
@@ -173,9 +173,9 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
     }
 
     // # Edge case -> Normal case:
-    // Take till the first new line, as [MdLineFragment::Plain], since the specialized
+    // Take till the first new line or null char, as [MdLineFragment::Plain], since the specialized
     // parsers did not match the input.
-    let it = take_till1(|it: char| it == NEW_LINE_CHAR)(input);
+    let it = take_till1(is_any_of(&[NEW_LINE_CHAR, NULL_CHAR]))(input);
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
             "{} edge case -> normal case :: {:?}",
@@ -223,10 +223,10 @@ fn get_sp_char_set_2<'a>() -> [&'a str; 5] {
 /// special character, and split there. This returns the chunk until the first special
 /// character as [`crate::MdLineFragment::Plain`], and the remainder of the input gets a
 /// chance to be parsed by the specialized parsers.
-fn get_sp_char_set_3<'a>() -> [&'a str; 6] {
+fn get_sp_char_set_3<'a>() -> [&'a str; 7] {
     get_sp_char_set_2()
         .iter()
-        .chain([NEW_LINE].iter())
+        .chain([NEW_LINE, NULL_STR].iter())
         .copied()
         .collect::<Vec<_>>()
         .try_into()
@@ -242,6 +242,43 @@ fn check_input_starts_with<'a>(input: &'a str, char_set: &[&'a str]) -> Option<&
 
 #[allow(dead_code)]
 fn tuple5<T>(a: &[T]) -> (&T, &T, &T, &T, &T) { (&a[0], &a[1], &a[2], &a[3], &a[4]) }
+#[allow(dead_code)]
 fn tuple6<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T) {
     (&a[0], &a[1], &a[2], &a[3], &a[4], &a[5])
+}
+fn tuple7<T>(a: &[T]) -> (&T, &T, &T, &T, &T, &T, &T) {
+    (&a[0], &a[1], &a[2], &a[3], &a[4], &a[5], &a[6])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_eq2;
+
+    #[test]
+    fn test_parse_plain_text_with_null_padding() {
+        // Plain text followed by null padding
+        {
+            let input = "hello\0\0\0world";
+            let (remainder, content) = parse_fragment_plain_text_no_new_line(input).unwrap();
+            assert_eq2!(content, "hello");
+            assert_eq2!(remainder, "\0\0\0world");
+        }
+
+        // Plain text with newline and null padding
+        {
+            let input = "hello\n\0\0\0world";
+            let (remainder, content) = parse_fragment_plain_text_no_new_line(input).unwrap();
+            assert_eq2!(content, "hello");
+            assert_eq2!(remainder, "\n\0\0\0world");
+        }
+
+        // Plain text with null in middle
+        {
+            let input = "hello world\0\0\0";
+            let (remainder, content) = parse_fragment_plain_text_no_new_line(input).unwrap();
+            assert_eq2!(content, "hello world");
+            assert_eq2!(remainder, "\0\0\0");
+        }
+    }
 }

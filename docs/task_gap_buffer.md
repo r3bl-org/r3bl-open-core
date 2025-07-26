@@ -263,22 +263,24 @@ zero-copy access. The parser handles `\0` (null) characters that appear as line 
 
 #### 3.2 Main Parser Entry Point
 
-- [ ] Change `parse_markdown` signature to take `&ZeroCopyGapBuffer` parameter
-- [ ] Rename existing function to `parse_markdown_str` for internal use
-- [ ] Update module exports and documentation
+- [x] Change `parse_markdown` signature to take `&ZeroCopyGapBuffer` parameter
+- [x] Rename existing function to `parse_markdown_str` for internal use
+- [x] Update module exports and documentation
+- [x] Update all test files to use `parse_markdown_str`
+- [x] Update syntax highlighting to use `parse_markdown_str`
 - [ ] Test with real markdown documents containing null padding
 - [ ] Benchmark parsing performance with null-padded vs clean input
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
-- [ ] Make a commit with this progress
+- [x] Make a commit with this progress
 
 #### 3.3 Individual Parser Updates
 
-- [ ] Update `parse_heading_in_single_line` to use `is_any_of()` for null handling
+- [x] Update `parse_heading_in_single_line` to use `is_any_of()` for null handling
 - [ ] Update `parse_block_markdown_text` to use `is_not(NEWLINE_OR_NULL)`
-- [ ] Update `parse_smart_list_block` to handle null padding
-- [ ] Update `parse_fenced_code_block` to use `is_not(NEWLINE_OR_NULL)`
-- [ ] Update `plain_parser_catch_all` to use `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])`
-- [ ] Test each parser with null-padded input strings
+- [x] Update `parse_smart_list_block` to handle null padding
+- [x] Update `parse_fenced_code_block` to use `is_not(NEWLINE_OR_NULL)`
+- [x] Update `plain_parser_catch_all` to use `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])`
+- [x] Test each parser with null-padded input strings
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Make a commit with this progress
 
