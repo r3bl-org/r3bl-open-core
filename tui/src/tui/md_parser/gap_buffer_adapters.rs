@@ -15,10 +15,14 @@
  *   limitations under the License.
  */
 
-//! This module provides an adapter to convert `VecEditorContentLines` to `ZeroCopyGapBuffer`
+//! This module provides adapters to convert various input formats to `ZeroCopyGapBuffer`
 //! for compatibility with the new parser that requires `ZeroCopyGapBuffer` input.
 //!
 //! This is an interim solution until the editor is fully migrated to use `ZeroCopyGapBuffer`.
+//!
+//! The module provides the following adapters:
+//! - `convert_vec_lines_to_gap_buffer()` - Converts `&[GCString]` to `ZeroCopyGapBuffer`
+//! - `convert_str_to_gap_buffer()` - Converts `&str` to `ZeroCopyGapBuffer`
 
 use crate::{ZeroCopyGapBuffer, GCString, SegIndex};
 
@@ -54,6 +58,58 @@ pub fn convert_vec_lines_to_gap_buffer(lines: &[GCString]) -> ZeroCopyGapBuffer 
         }
     }
 
+    buffer
+}
+
+/// Convert a string slice into a `ZeroCopyGapBuffer`.
+///
+/// This function takes a string (typically from include_str! or test data) and converts it
+/// into a `ZeroCopyGapBuffer` that can be passed to the new `parse_markdown` function.
+///
+/// The string is split by newlines and each line is added to the buffer with proper null padding.
+///
+/// # Arguments
+/// * `text` - A string slice containing the text to convert
+///
+/// # Returns
+/// A `ZeroCopyGapBuffer` containing the converted content with proper null padding
+#[must_use]
+pub fn convert_str_to_gap_buffer(text: &str) -> ZeroCopyGapBuffer {
+    let mut buffer = ZeroCopyGapBuffer::new();
+    
+    // Handle empty string case
+    if text.is_empty() {
+        return buffer;
+    }
+    
+    // Split by newlines, preserving empty lines
+    let lines: Vec<&str> = text.split('\n').collect();
+    
+    // If the text ends with a newline, split will create an empty string at the end
+    // We should process all lines in that case
+    let num_lines_to_process = if text.ends_with('\n') {
+        lines.len() - 1  // Skip the last empty element from split
+    } else {
+        lines.len()      // Process all lines
+    };
+    
+    for i in 0..num_lines_to_process {
+        // Add a new line to the buffer
+        let line_index = buffer.add_line();
+        
+        // Get the line text
+        let line_text = lines[i];
+        
+        // Insert the text content if not empty
+        if !line_text.is_empty() {
+            let _unused = buffer.insert_at_grapheme(
+                line_index.into(),
+                SegIndex::from(0),
+                line_text
+            );
+        }
+    }
+    
     buffer
 }
 
@@ -136,5 +192,72 @@ mod tests {
         assert_eq2!(buffer.get_line_content(RowIndex::from(2)), Some("    println!(\"Hello\");"));
         assert_eq2!(buffer.get_line_content(RowIndex::from(3)), Some("}"));
         assert_eq2!(buffer.get_line_content(RowIndex::from(4)), Some("```"));
+    }
+    
+    #[test]
+    fn test_convert_str_empty() {
+        let text = "";
+        let buffer = convert_str_to_gap_buffer(text);
+        
+        assert_eq2!(buffer.line_count(), 0);
+        assert_eq2!(buffer.as_str(), "");
+    }
+    
+    #[test]
+    fn test_convert_str_single_line_no_newline() {
+        let text = "Hello, world!";
+        let buffer = convert_str_to_gap_buffer(text);
+        
+        assert_eq2!(buffer.line_count(), 1);
+        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("Hello, world!"));
+    }
+    
+    #[test]
+    fn test_convert_str_single_line_with_newline() {
+        let text = "Hello, world!\n";
+        let buffer = convert_str_to_gap_buffer(text);
+        
+        assert_eq2!(buffer.line_count(), 1);
+        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("Hello, world!"));
+    }
+    
+    #[test]
+    fn test_convert_str_multiple_lines() {
+        let text = "# Heading\n\nParagraph text\nAnother line";
+        let buffer = convert_str_to_gap_buffer(text);
+        
+        assert_eq2!(buffer.line_count(), 4);
+        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("# Heading"));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(1)), Some(""));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(2)), Some("Paragraph text"));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(3)), Some("Another line"));
+    }
+    
+    #[test]
+    fn test_convert_str_markdown_document() {
+        let text = "# Title\n\n## Section 1\n\nSome content here.\n\n- Item 1\n- Item 2\n\n```rust\nfn main() {}\n```";
+        let buffer = convert_str_to_gap_buffer(text);
+        
+        assert_eq2!(buffer.line_count(), 12);
+        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("# Title"));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(2)), Some("## Section 1"));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(4)), Some("Some content here."));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(6)), Some("- Item 1"));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(10)), Some("fn main() {}"));
+        
+        // Verify null padding is present
+        let full_str = buffer.as_str();
+        assert!(full_str.contains('\0'));
+    }
+    
+    #[test]
+    fn test_convert_str_empty_lines_at_end() {
+        let text = "Line 1\nLine 2\n\n";
+        let buffer = convert_str_to_gap_buffer(text);
+        
+        assert_eq2!(buffer.line_count(), 3);
+        assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("Line 1"));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(1)), Some("Line 2"));
+        assert_eq2!(buffer.get_line_content(RowIndex::from(2)), Some(""));
     }
 }
