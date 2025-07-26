@@ -466,7 +466,6 @@ mod syn_hi_r3bl_path {
                     editor_buffer.get_lines(),
                     editor_engine.current_box.get_computed_style(),
                     Some((editor_engine.syntax_set, editor_engine.theme)),
-                    &mut editor_engine.parser_byte_cache,
                 )?;
                 editor_engine.set_ast_cache(ast_cache);
             }

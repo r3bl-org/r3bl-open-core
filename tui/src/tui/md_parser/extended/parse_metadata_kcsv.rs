@@ -19,9 +19,18 @@ use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult,
           Parser};
 
 use crate::{list,
-            md_parser::constants::{COLON, COMMA, NEW_LINE, SPACE},
+            md_parser::constants::{COLON, COMMA, NEW_LINE, NULL_CHAR, SPACE},
+            parse_null_padded_line::is,
             take_text_in_single_line, InlineVec, List};
 
+/// Parse comma-separated value metadata pairs.
+/// 
+/// # Null Padding Invariant
+/// 
+/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
+/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser handles null padding by consuming
+/// both newline and null characters at the end of the line.
+///
 /// - Sample parse input: `@tags: tag1, tag2, tag3`, `@tags: tag1, tag2, tag3\n`, or
 ///   `@authors: me, myself, i`, `@authors: me, myself, i\n`.
 /// - There may or may not be a newline at the end. If there is, it is consumed.
@@ -39,9 +48,11 @@ pub fn parse_csv_opt_eol<'a>(
     )
     .parse(input)?;
 
-    // If there is a newline, consume it since there may or may not be a newline at
-    // the end.
-    let (remainder, _) = opt(tag(NEW_LINE)).parse(remainder)?;
+    // If there is a newline, consume it along with any null padding that follows
+    // to handle the ZeroCopyGapBuffer null padding invariant
+    let (remainder, _) = opt(
+        (tag(NEW_LINE), nom::bytes::complete::take_while(is(NULL_CHAR)))
+    ).parse(remainder)?;
 
     // Special case: Early return when just a `@tags: ` or `@tags: \n` is found.
     if tags_text.is_empty() {

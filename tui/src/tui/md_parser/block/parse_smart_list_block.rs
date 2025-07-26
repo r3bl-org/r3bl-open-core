@@ -14,24 +14,32 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use nom::{branch::alt,
-          bytes::complete::{is_not, tag},
+use nom::{IResult, Parser,
+          branch::alt,
+          bytes::complete::{is_not, tag, take_while},
           character::complete::{anychar, digit1, space0},
           combinator::{map, opt, recognize, verify},
           multi::{many0, many1},
-          sequence::{preceded, terminated},
-          IResult, Parser};
+          sequence::{preceded, terminated}};
 use smallvec::smallvec;
 
-use crate::parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line;
-use crate::{list,
-            md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE, NEWLINE_OR_NULL,
+use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, List, MdLineFragment,
+            SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces, list,
+            md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
+                                   NEWLINE_OR_NULL, NULL_CHAR,
                                    ORDERED_LIST_PARTIAL_PREFIX, SPACE, SPACE_CHAR,
                                    UNCHECKED, UNORDERED_LIST_PREFIX},
-            tiny_inline_string, BulletKind, CheckboxParsePolicy, InlineVec, Lines, List,
-            MdLineFragment, SmartListIRStr, SmartListLine, SmartListLineStr};
+            parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
+            parse_null_padded_line::is,
+            tiny_inline_string};
 
 /// Public API for parsing a smart list block in markdown.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses
+/// `NEWLINE_OR_NULL` constant and handles null padding in list item content parsing.
 ///
 /// # Errors
 ///
@@ -73,8 +81,8 @@ pub fn parse_smart_list_block(
 }
 
 mod parse_block_smart_list_helper {
-    use super::{list, tiny_inline_string, BulletKind, CheckboxParsePolicy, List,
-                MdLineFragment, CHECKED, SPACE, UNCHECKED};
+    use super::{BulletKind, CHECKED, CheckboxParsePolicy, List, MdLineFragment, SPACE,
+                UNCHECKED, list, tiny_inline_string};
 
     // Helper function to determine checkbox parsing policy.
     pub fn determine_checkbox_policy(content: &str) -> CheckboxParsePolicy {
@@ -435,7 +443,7 @@ mod tests_bullet_kinds {
 #[cfg(test)]
 mod tests_parse_smart_list {
     use super::*;
-    use crate::{assert_eq2, SmartListIR};
+    use crate::{SmartListIR, assert_eq2};
 
     #[test]
     fn test_invalid_ul_list() {
@@ -680,8 +688,7 @@ pub fn parse_smart_list_content_lines<'a>(
     indent: usize,
     bullet: &'a str,
 ) -> IResult</* remainder */ &'a str, /* lines */ InlineVec<SmartListLineStr<'a>>> {
-    let indent_padding = SPACE.repeat(indent);
-    let indent_padding = indent_padding.as_str();
+    let indent_padding = get_spaces(indent);
 
     // Early return if there are no more lines after the first one.
     let Some(first_line_end) = input.find(NEW_LINE) else {
@@ -694,7 +701,8 @@ pub fn parse_smart_list_content_lines<'a>(
 
     // Keep the first line. There may be more than 1 line.
     let first = &input[..first_line_end];
-    let input = &input[first_line_end+1..];
+    // Skip the newline and any null padding that follows using idiomatic nom
+    let (input, _) = (tag(NEW_LINE), take_while(is(NULL_CHAR))).parse(&input[first_line_end..])?;
 
     // Match the rest of the lines.
     let (remainder, rest) = many0(
@@ -727,7 +735,7 @@ pub fn parse_smart_list_content_lines<'a>(
                     verify_rest::list_contents_does_not_start_with_list_prefix(it)
                 }
             ),
-            opt(tag(NEW_LINE)),
+            opt((tag(NEW_LINE), take_while(is(NULL_CHAR)))),
         )
     ).parse(input)?;
 
@@ -1038,12 +1046,12 @@ mod tests_parse_smart_list_content_lines {
     #[test]
     fn test_parse_smart_list_with_null_padding() {
         use crate::assert_eq2;
-        
+
         // Simple test with null padding right after list
         {
             let input = "- item\n\0\0\0rest";
             let (remainder, smart_list_ir) = parse_smart_list(input).unwrap();
-            assert_eq2!(remainder, "\0\0\0rest");
+            assert_eq2!(remainder, "rest");
             assert_eq2!(smart_list_ir.content_lines.len(), 1);
             assert_eq2!(smart_list_ir.bullet_kind, BulletKind::Unordered);
         }
@@ -1053,9 +1061,9 @@ mod tests_parse_smart_list_content_lines {
             let input = "first line\n\0\0\0";
             let indent = 0;
             let bullet = "- ";
-            let (remainder, lines) = 
+            let (remainder, lines) =
                 parse_smart_list_content_lines(input, indent, bullet).unwrap();
-            assert_eq2!(remainder, "\0\0\0");
+            assert_eq2!(remainder, "");
             assert_eq2!(lines.len(), 1);
             assert_eq2!(lines[0], SmartListLineStr::new(0, "- ", "first line"));
         }
@@ -1063,8 +1071,8 @@ mod tests_parse_smart_list_content_lines {
 }
 
 mod verify_rest {
-    use super::{alt, digit1, recognize, tag, terminated, IResult, Parser,
-                ORDERED_LIST_PARTIAL_PREFIX, SPACE_CHAR, UNORDERED_LIST_PREFIX};
+    use super::{IResult, ORDERED_LIST_PARTIAL_PREFIX, Parser, SPACE_CHAR,
+                UNORDERED_LIST_PREFIX, alt, digit1, recognize, tag, terminated};
 
     /// Return true if:
     /// - No ul items (at any indent).

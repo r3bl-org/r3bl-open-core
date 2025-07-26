@@ -241,4 +241,3 @@ pub use fragment::*;
 pub use md_parser_types::*;
 pub use parse_markdown::*;
 pub use single_line::*;
-pub use gap_buffer_adapters::*;

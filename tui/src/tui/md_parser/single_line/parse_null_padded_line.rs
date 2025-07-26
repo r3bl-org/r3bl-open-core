@@ -28,7 +28,15 @@ use crate::md_parser::constants::{NEW_LINE, NULL_CHAR, NEWLINE_OR_NULL};
 /// 
 /// # Example
 /// ```
-/// take_while(is('a'))  // Takes all 'a' characters
+/// use nom::{bytes::complete::take_while, IResult};
+/// use r3bl_tui::is;
+/// 
+/// fn parser(input: &str) -> IResult<&str, &str> {
+///     take_while(is('a'))(input)  // Takes all 'a' characters
+/// }
+/// 
+/// let result = parser("aaabbb");
+/// assert_eq!(result, Ok(("bbb", "aaa")));
 /// ```
 pub fn is(target: char) -> impl Fn(char) -> bool {
     move |c| c == target
@@ -39,7 +47,15 @@ pub fn is(target: char) -> impl Fn(char) -> bool {
 /// 
 /// # Example
 /// ```
-/// take_till1(is_any_of(&['\n', '\0']))  // Takes until newline or null
+/// use nom::{bytes::complete::take_till1, IResult};
+/// use r3bl_tui::is_any_of;
+/// 
+/// fn parser(input: &str) -> IResult<&str, &str> {
+///     take_till1(is_any_of(&['\n', '\0']))(input)  // Takes until newline or null
+/// }
+/// 
+/// let result = parser("hello\nworld");
+/// assert_eq!(result, Ok(("\nworld", "hello")));
 /// ```
 pub fn is_any_of(targets: &'static [char]) -> impl Fn(char) -> bool {
     move |c| targets.contains(&c)

@@ -15,12 +15,14 @@
  *   limitations under the License.
  */
 
-use nom::{IResult, Parser, branch::alt, combinator::map, multi::many0};
+use nom::{IResult, Parser, branch::alt, bytes::complete::take_while, combinator::map,
+          multi::many0};
 
 use crate::{List, MdDocument, MdElement, ZeroCopyGapBuffer,
-            md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
+            md_parser::constants::{AUTHORS, DATE, NULL_CHAR, TAGS, TITLE},
             parse_block_markdown_text_with_or_without_new_line, parse_csv_opt_eol,
             parse_fenced_code_block, parse_heading_in_single_line,
+            parse_null_padded_line::is,
             parse_smart_list_block, parse_unique_kv_opt_eol};
 
 // XMARK: Main Markdown parser entry point
@@ -29,40 +31,26 @@ use crate::{List, MdDocument, MdElement, ZeroCopyGapBuffer,
 /// This ensures that only properly formatted null-padded content from `ZeroCopyGapBuffer`
 /// can be parsed, preventing misuse with arbitrary strings.
 ///
-/// # Errors
+/// # Null Padding Invariant
 ///
-/// Returns a nom parsing error if the input doesn't contain valid markdown.
-pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>> {
-    let str_input = input.as_str();
-    parse_markdown_str(str_input)
-}
-
-/// Internal parser implementation that takes a string slice and returns parsed Markdown.
+/// This parser expects input from `ZeroCopyGapBuffer` which enforces a "null padding invariant":
+/// - Each line ends with `\n` followed by zero or more `\0` (null) characters
+/// - This is different from legacy behavior where lines only ended with `\n`
+/// - All sub-parsers are designed to handle this null padding correctly
 ///
-/// This is the main parser entry point, aka, the root parser. It takes a string slice and
-/// if it can be parsed, returns a [`MdDocument`] that represents the parsed Markdown.
+/// # Implementation Details
 ///
-/// 1. [`crate::MdLineFragments`] roughly corresponds to a line of parsed text.
-/// 2. [`MdDocument`] contains all the blocks that are parsed from a Markdown string slice.
-///
-/// Each item in this [`MdDocument`] corresponds to a block of Markdown [`MdElement`], which can
-/// be one of the following variants:
-/// 1. Metadata title. The parsers in [`crate::parse_metadata_kv`] file handle this.
-/// 2. Metadata tags. The parsers in [`crate::parse_metadata_kcsv`] file handle this.
-/// 3. Heading (which contains a [`crate::HeadingLevel`] & [`crate::MdLineFragments`]).
-/// 4. Smart ordered & unordered list (which itself contains a [Vec] of
-///    [`crate::MdLineFragments`]. The parsers in [`mod@parse_smart_list_block`] function
-///    handle this.
-/// 5. Code block (which contains string slices of the language & code). The parsers in
-///    [`mod@parse_fenced_code_block`] handle this.
-/// 6. line (which contains a [`crate::MdLineFragments`]). The parsers in
-///    [`mod@crate::fragment`] handle this.
+/// To handle the null padding invariant from `ZeroCopyGapBuffer`, all sub-parsers have been
+/// made aware that EOL is now `\n` followed by zero or more `\0` characters. This preserves
+/// the zero-copy nature of the parser.
 ///
 /// # Errors
 ///
 /// Returns a nom parsing error if the input doesn't contain valid markdown.
 #[rustfmt::skip]
-pub fn parse_markdown_str(input: &str) -> IResult<&str, MdDocument<'_>> {
+pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>> {
+    let str_input = input.as_str();
+
     let (input, output) = many0(
         // NOTE: The ordering of the parsers below matters.
         alt((
@@ -75,28 +63,55 @@ pub fn parse_markdown_str(input: &str) -> IResult<&str, MdDocument<'_>> {
             map(parse_fenced_code_block,                            MdElement::CodeBlock),
             map(parse_block_markdown_text_with_or_without_new_line, MdElement::Text),
         )),
-    ).parse(input)?;
+    ).parse(str_input)?;
+
+    // Handle any trailing null bytes at the end of the document
+    let (input, _) = take_while(is(NULL_CHAR)).parse(input)?;
 
     let it = List::from(output);
     Ok((input, it))
 }
 
-// key: TAGS, value: CSV parser.
+/// Parse tags metadata with CSV format.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying
+/// `parse_csv_opt_eol` handles null padding.
 fn parse_tags_list(input: &str) -> IResult<&str, List<&str>> {
     parse_csv_opt_eol(TAGS, input)
 }
 
-// key: AUTHORS, value: CSV parser.
+/// Parse authors metadata with CSV format.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying
+/// `parse_csv_opt_eol` handles null padding.
 fn parse_authors_list(input: &str) -> IResult<&str, List<&str>> {
     parse_csv_opt_eol(AUTHORS, input)
 }
 
-// key: TITLE, value: KV parser.
+/// Parse title metadata with key-value format.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying
+/// `parse_unique_kv_opt_eol` handles null padding.
 fn parse_title_value(input: &str) -> IResult<&str, &str> {
     parse_unique_kv_opt_eol(TITLE, input)
 }
 
-// key: DATE, value: KV parser.
+/// Parse date metadata with key-value format.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying
+/// `parse_unique_kv_opt_eol` handles null padding.
 fn parse_date_value(input: &str) -> IResult<&str, &str> {
     parse_unique_kv_opt_eol(DATE, input)
 }
@@ -104,8 +119,8 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_integration_block_smart_lists {
-    use super::parse_markdown_str;
-    use crate::{MdDocument, PrettyPrintDebug, assert_eq2};
+    use super::*;
+    use crate::{PrettyPrintDebug, assert_eq2};
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
@@ -130,7 +145,8 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown_str(input.as_str());
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let result = parse_markdown(&gap_buffer);
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -170,7 +186,8 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown_str(input.as_str());
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let result = parse_markdown(&gap_buffer);
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -225,7 +242,8 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown_str(input.as_str());
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let result = parse_markdown(&gap_buffer);
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -268,7 +286,8 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown_str(input.as_str());
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let result = parse_markdown(&gap_buffer);
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -295,7 +314,8 @@ mod tests_parse_markdown {
     #[test]
     fn test_no_line() {
         let input = "Something";
-        let (remainder, blocks) = parse_markdown_str(input).unwrap();
+        let gap_buffer = ZeroCopyGapBuffer::from(input);
+        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
         println!("remainder: {remainder:?}");
         println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
@@ -308,7 +328,8 @@ mod tests_parse_markdown {
     #[test]
     fn test_one_line() {
         let input = "Something\n";
-        let (remainder, blocks) = parse_markdown_str(input).unwrap();
+        let gap_buffer = ZeroCopyGapBuffer::from(input);
+        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
         println!("remainder: {remainder:?}");
         println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
@@ -321,7 +342,8 @@ mod tests_parse_markdown {
     #[test]
     fn test_parse_markdown_with_invalid_text_in_heading() {
         let input = ["# LINE 1", "", "##% LINE 2 FOO_BAR:", ""].join("\n");
-        let (remainder, blocks) = parse_markdown_str(&input).unwrap();
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
         println!("\nremainder:\n{remainder:?}");
         println!("\nblocks:\n{blocks:#?}");
         assert_eq2!(remainder, "");
@@ -350,7 +372,8 @@ mod tests_parse_markdown {
     #[test]
     fn test_parse_markdown_single_line_plain_text() {
         let input = ["_this should not be italic", ""].join("\n");
-        let (remainder, blocks) = parse_markdown_str(&input).unwrap();
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
         println!("\nremainder:\n{remainder:?}");
         println!("\nblocks:\n{blocks:?}");
         assert_eq2!(remainder, "");
@@ -403,7 +426,8 @@ mod tests_parse_markdown {
         ]
         .join("\n");
 
-        let (remainder, list_block) = parse_markdown_str(&input).unwrap();
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let (remainder, list_block) = parse_markdown(&gap_buffer).unwrap();
 
         let vec_block = vec![
             MdElement::Title("Something"),
@@ -614,7 +638,8 @@ mod tests_parse_markdown {
         ]
         .join("\n");
 
-        let (remainder, blocks) = parse_markdown_str(&input).unwrap();
+        let gap_buffer = ZeroCopyGapBuffer::from(input.as_str());
+        let (remainder, blocks) = parse_markdown(&gap_buffer).unwrap();
 
         // println!("🍎input: '{}'", input);
         // println!("🍎remainder: {:?}", remainder);

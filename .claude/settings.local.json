@@ -54,7 +54,11 @@
       "mcp__rust-analyzer__hover",
       "mcp__rust-analyzer__references",
       "mcp__rust-analyzer__rename_symbol",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "mcp__ide__getDefinition",
+      "mcp__ide__getReferences",
+      "mcp__ide__getHover",
+      "mcp__ide__editFile"
     ],
     "deny": [],
     "defaultMode": "plan"
