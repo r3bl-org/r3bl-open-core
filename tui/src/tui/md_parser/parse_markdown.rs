@@ -25,8 +25,8 @@ use crate::{List, MdDocument, MdElement, ZeroCopyGapBuffer,
 
 // XMARK: Main Markdown parser entry point
 
-/// Type-safe parser entry point that enforces ZeroCopyGapBuffer usage at compile time.
-/// This ensures that only properly formatted null-padded content from ZeroCopyGapBuffer
+/// Type-safe parser entry point that enforces `ZeroCopyGapBuffer` usage at compile time.
+/// This ensures that only properly formatted null-padded content from `ZeroCopyGapBuffer`
 /// can be parsed, preventing misuse with arbitrary strings.
 ///
 /// # Errors

@@ -223,6 +223,7 @@ pub mod fragment;
 pub mod md_parser_types;
 pub mod parse_markdown;
 pub mod single_line;
+pub mod vec_to_gap_buffer_adapter;
 
 // Test modules
 #[cfg(test)]
@@ -240,3 +241,4 @@ pub use fragment::*;
 pub use md_parser_types::*;
 pub use parse_markdown::*;
 pub use single_line::*;
+pub use vec_to_gap_buffer_adapter::*;

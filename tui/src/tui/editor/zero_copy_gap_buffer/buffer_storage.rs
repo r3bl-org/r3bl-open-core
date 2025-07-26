@@ -185,6 +185,76 @@ impl GapBufferLineInfo {
         }
     }
     
+    /// Get the segment index for a given byte position
+    ///
+    /// This method converts a byte position to its corresponding grapheme cluster
+    /// index (segment index). It handles three cases:
+    /// - Beginning of line (`byte_pos` = 0) → returns SegIndex(0)
+    /// - End of line (`byte_pos` >= `content_len`) → returns SegIndex(segments.len())
+    /// - Middle of line → returns the `seg_index` of the segment containing the byte
+    ///
+    /// # Arguments
+    /// * `byte_pos` - The byte position to convert
+    ///
+    /// # Returns
+    /// The segment index where the byte position falls
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use r3bl_tui::{ZeroCopyGapBuffer, byte_index, seg_index, row};
+    /// 
+    /// let mut buffer = ZeroCopyGapBuffer::new();
+    /// let line_idx = buffer.add_line();
+    /// buffer.insert_at_grapheme(row(line_idx), seg_index(0), "H😀llo").unwrap();
+    /// 
+    /// let line_info = buffer.get_line_info(line_idx).unwrap();
+    /// 
+    /// // Beginning of line
+    /// assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
+    /// 
+    /// // Middle of emoji (byte 3 is in the middle of the 4-byte emoji)
+    /// assert_eq!(line_info.get_seg_index(byte_index(3)), seg_index(1));
+    /// 
+    /// // After emoji
+    /// assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(2));
+    /// 
+    /// // End of line
+    /// assert_eq!(line_info.get_seg_index(byte_index(8)), seg_index(5));
+    /// ```
+    #[must_use]
+    pub fn get_seg_index(&self, byte_pos: ByteIndex) -> SegIndex {
+        // Handle edge cases
+        if byte_pos.as_usize() == 0 {
+            return crate::seg_index(0);
+        }
+        
+        if byte_pos.as_usize() >= self.content_len.as_usize() {
+            return crate::seg_index(self.segments.len());
+        }
+        
+        // Binary search through segments to find the one containing byte_pos
+        // We could optimize this with binary search, but linear is fine for now
+        // since lines typically have few segments
+        for segment in &self.segments {
+            if byte_pos.as_usize() >= segment.start_byte_index.as_usize() 
+                && byte_pos.as_usize() < segment.end_byte_index.as_usize() {
+                return segment.seg_index;
+            }
+        }
+        
+        // If we get here, byte_pos is between segments (shouldn't happen with valid UTF-8)
+        // Return the segment after the position
+        for segment in &self.segments {
+            if byte_pos.as_usize() < segment.start_byte_index.as_usize() {
+                return segment.seg_index;
+            }
+        }
+        
+        // Fallback to end of line
+        crate::seg_index(self.segments.len())
+    }
+    
     /// Determine the optimal segment rebuild strategy for a text modification
     ///
     /// This method analyzes the modification position and line state to determine
@@ -616,6 +686,90 @@ mod tests {
         assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
         assert_eq!(line_info.get_byte_pos(seg_index(1)).as_usize(), 0);
         assert_eq!(line_info.get_byte_pos(seg_index(100)).as_usize(), 0);
+    }
+
+    #[test]
+    fn test_get_seg_index_beginning() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Insert some text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // Test beginning position
+        assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
+    }
+
+    #[test]
+    fn test_get_seg_index_end() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Insert some text
+        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // Test end position (at or past content length)
+        assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(5));
+        assert_eq!(line_info.get_seg_index(byte_index(10)), seg_index(5));
+    }
+
+    #[test]
+    fn test_get_seg_index_middle() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Insert text with emoji: "H😀llo"
+        buffer.insert_at_grapheme(row(0), seg_index(0), "H😀llo").unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // Test various byte positions
+        assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0)); // Start of 'H'
+        assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(1)); // Start of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(2)), seg_index(1)); // Middle of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(3)), seg_index(1)); // Middle of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(4)), seg_index(1)); // End of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(2)); // Start of 'l'
+        assert_eq!(line_info.get_seg_index(byte_index(6)), seg_index(3)); // Start of second 'l'
+        assert_eq!(line_info.get_seg_index(byte_index(7)), seg_index(4)); // Start of 'o'
+        assert_eq!(line_info.get_seg_index(byte_index(8)), seg_index(5)); // End of string
+    }
+
+    #[test]
+    fn test_get_seg_index_empty_line() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // For empty line, any position should return 0
+        assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
+        assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(0));
+        assert_eq!(line_info.get_seg_index(byte_index(100)), seg_index(0));
+    }
+
+    #[test]
+    fn test_get_seg_index_get_byte_pos_round_trip() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+        
+        // Insert text with various Unicode: "a👨‍👩‍👧‍👦b世界c"
+        buffer.insert_at_grapheme(row(0), seg_index(0), "a👨‍👩‍👧‍👦b世界c").unwrap();
+        
+        let line_info = buffer.get_line_info(0).unwrap();
+        
+        // Test round-trip conversion for each segment
+        for i in 0..line_info.segments.len() {
+            let seg_idx = seg_index(i);
+            let byte_pos = line_info.get_byte_pos(seg_idx);
+            let seg_idx_back = line_info.get_seg_index(byte_pos);
+            assert_eq!(seg_idx, seg_idx_back, 
+                "Round-trip failed for segment {}: byte_pos={}", i, byte_pos.as_usize());
+        }
     }
 }
 
