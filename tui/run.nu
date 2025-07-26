@@ -154,24 +154,26 @@ def print-help [command: string] {
         print $'Usage: (ansi magenta_bold)run(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
         print $'(ansi green_bold)<command>(ansi reset) can be:'
         print $'    (ansi green)build(ansi reset)'
-        print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)clean(ansi reset)'
-        print $'    (ansi green)doc(ansi reset)'
+        print $'    (ansi green)log(ansi reset)'
         print $'    (ansi green)examples(ansi reset)'
         print $'    (ansi green)examples-release(ansi reset)'
         print $'    (ansi green)examples-release-no-log(ansi reset)'
         print $'    (ansi green)examples-with-flamegraph-profiling-detailed-svg(ansi reset), (ansi blue)Generate SVG flamegraph. For more info, watch: https://youtu.be/Sy26IMkOEiM(ansi reset)'
-        print $'    (ansi green)examples-with-flamegraph-profiling-detailed-perf-fold(ansi reset), (ansi blue)Generate collapsed stacks format (smaller file)(ansi reset)'
+        print $'    (ansi green)examples-with-flamegraph-profiling-detailed-perf-fold(ansi reset), (ansi blue)Generate collapsed stacks format, smaller file format(ansi reset)'
         # print $'    (ansi green)run-with-crash-reporting(ansi reset)'
         print $'    (ansi green)test(ansi reset)'
         print $'    (ansi green)bench(ansi reset)'
         print $'    (ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
         print $'    (ansi green)watch-all-tests(ansi reset)'
         print $'    (ansi green)watch-macro-expand-one-test(ansi reset) (ansi blue_bold)<test-name>(ansi reset)'
-        print $'    (ansi green)serve-doc(ansi reset)'
+        print $'    (ansi green)doc(ansi reset)'
+        print $'    (ansi green)check(ansi reset)'
+        print $'    (ansi green)check-watch(ansi reset)'
         print $'    (ansi green)clippy(ansi reset)'
         print $'    (ansi green)clippy-watch(ansi reset)'
         print $'    (ansi green)rustfmt(ansi reset)'
+        print $'    (ansi green)serve-doc(ansi reset)'
         print $'    (ansi green)help(ansi reset)'
     } else if $command == "watch-one-test" {
         print $'(ansi green)watch-one-test(ansi reset) (ansi blue_bold)<folder-name> (ansi blue_bold)<test-name>(ansi reset)'
@@ -273,6 +275,10 @@ def log [] {
         rm log.txt
     }
     touch log.txt
-    tail -f -s 5 log.txt
+    try {
+        tail -f -s 5 log.txt
+    } catch {
+        # Silently handle Ctrl+C interruption
+    }
     cd ..
 }
