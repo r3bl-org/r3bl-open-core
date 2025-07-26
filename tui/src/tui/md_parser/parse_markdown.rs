@@ -17,7 +17,7 @@
 
 use nom::{IResult, Parser, branch::alt, combinator::map, multi::many0};
 
-use crate::{List, MdDocument, MdElement,
+use crate::{List, MdDocument, MdElement, ZeroCopyGapBuffer,
             md_parser::constants::{AUTHORS, DATE, TAGS, TITLE},
             parse_block_markdown_text_with_or_without_new_line, parse_csv_opt_eol,
             parse_fenced_code_block, parse_heading_in_single_line,
@@ -25,6 +25,20 @@ use crate::{List, MdDocument, MdElement,
 
 // XMARK: Main Markdown parser entry point
 
+/// Type-safe parser entry point that enforces ZeroCopyGapBuffer usage at compile time.
+/// This ensures that only properly formatted null-padded content from ZeroCopyGapBuffer
+/// can be parsed, preventing misuse with arbitrary strings.
+///
+/// # Errors
+///
+/// Returns a nom parsing error if the input doesn't contain valid markdown.
+pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>> {
+    let str_input = input.as_str();
+    parse_markdown_str(str_input)
+}
+
+/// Internal parser implementation that takes a string slice and returns parsed Markdown.
+///
 /// This is the main parser entry point, aka, the root parser. It takes a string slice and
 /// if it can be parsed, returns a [`MdDocument`] that represents the parsed Markdown.
 ///
@@ -48,7 +62,7 @@ use crate::{List, MdDocument, MdElement,
 ///
 /// Returns a nom parsing error if the input doesn't contain valid markdown.
 #[rustfmt::skip]
-pub fn parse_markdown(input: &str) -> IResult<&str, MdDocument<'_>> {
+pub fn parse_markdown_str(input: &str) -> IResult<&str, MdDocument<'_>> {
     let (input, output) = many0(
         // NOTE: The ordering of the parsers below matters.
         alt((
@@ -90,7 +104,8 @@ fn parse_date_value(input: &str) -> IResult<&str, &str> {
 /// Tests things that are final output (and not at the IR level).
 #[cfg(test)]
 mod tests_integration_block_smart_lists {
-    use crate::{MdDocument, PrettyPrintDebug, assert_eq2, parse_markdown};
+    use super::parse_markdown_str;
+    use crate::{MdDocument, PrettyPrintDebug, assert_eq2};
 
     #[test]
     fn test_parse_valid_md_ol_with_indent() {
@@ -115,7 +130,7 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
+        let result = parse_markdown_str(input.as_str());
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -155,7 +170,7 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
+        let result = parse_markdown_str(input.as_str());
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -210,7 +225,7 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
+        let result = parse_markdown_str(input.as_str());
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -253,7 +268,7 @@ mod tests_integration_block_smart_lists {
             "end",
         ];
 
-        let result = parse_markdown(input.as_str());
+        let result = parse_markdown_str(input.as_str());
         let remainder = result.as_ref().unwrap().0;
         let md_doc: MdDocument<'_> = result.unwrap().1;
 
@@ -280,7 +295,7 @@ mod tests_parse_markdown {
     #[test]
     fn test_no_line() {
         let input = "Something";
-        let (remainder, blocks) = parse_markdown(input).unwrap();
+        let (remainder, blocks) = parse_markdown_str(input).unwrap();
         println!("remainder: {remainder:?}");
         println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
@@ -293,7 +308,7 @@ mod tests_parse_markdown {
     #[test]
     fn test_one_line() {
         let input = "Something\n";
-        let (remainder, blocks) = parse_markdown(input).unwrap();
+        let (remainder, blocks) = parse_markdown_str(input).unwrap();
         println!("remainder: {remainder:?}");
         println!("blocks: {blocks:?}");
         assert_eq2!(remainder, "");
@@ -306,7 +321,7 @@ mod tests_parse_markdown {
     #[test]
     fn test_parse_markdown_with_invalid_text_in_heading() {
         let input = ["# LINE 1", "", "##% LINE 2 FOO_BAR:", ""].join("\n");
-        let (remainder, blocks) = parse_markdown(&input).unwrap();
+        let (remainder, blocks) = parse_markdown_str(&input).unwrap();
         println!("\nremainder:\n{remainder:?}");
         println!("\nblocks:\n{blocks:#?}");
         assert_eq2!(remainder, "");
@@ -335,7 +350,7 @@ mod tests_parse_markdown {
     #[test]
     fn test_parse_markdown_single_line_plain_text() {
         let input = ["_this should not be italic", ""].join("\n");
-        let (remainder, blocks) = parse_markdown(&input).unwrap();
+        let (remainder, blocks) = parse_markdown_str(&input).unwrap();
         println!("\nremainder:\n{remainder:?}");
         println!("\nblocks:\n{blocks:?}");
         assert_eq2!(remainder, "");
@@ -388,7 +403,7 @@ mod tests_parse_markdown {
         ]
         .join("\n");
 
-        let (remainder, list_block) = parse_markdown(&input).unwrap();
+        let (remainder, list_block) = parse_markdown_str(&input).unwrap();
 
         let vec_block = vec![
             MdElement::Title("Something"),
@@ -599,7 +614,7 @@ mod tests_parse_markdown {
         ]
         .join("\n");
 
-        let (remainder, blocks) = parse_markdown(&input).unwrap();
+        let (remainder, blocks) = parse_markdown_str(&input).unwrap();
 
         // println!("🍎input: '{}'", input);
         // println!("🍎remainder: {:?}", remainder);

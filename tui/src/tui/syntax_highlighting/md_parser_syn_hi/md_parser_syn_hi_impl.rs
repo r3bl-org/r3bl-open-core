@@ -35,7 +35,7 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
-            get_list_bullet_style, join, new_style, parse_markdown, try_get_syntax_ref,
+            get_list_bullet_style, join, new_style, parse_markdown_str, try_get_syntax_ref,
             tui::{constants::CODE_BLOCK_START_PARTIAL,
                   md_parser::constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
                                          LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
@@ -113,7 +113,7 @@ pub fn try_parse_and_highlight(
         acc.push(NEW_LINE_CHAR);
     }
 
-    let result_md_ast = parse_markdown(acc);
+    let result_md_ast = parse_markdown_str(acc);
 
     // Try and parse `editor_text_to_string` into a `Document`.
     match result_md_ast {
@@ -1221,7 +1221,7 @@ mod tests_style_us_span_lines_from {
                     color_bg: {tui_color!(red)}
                 );
                 let (remainder, doc) =
-                    parse_markdown("100. Foo\n200. Bar\n").into_diagnostic()?;
+                    parse_markdown_str("100. Foo\n200. Bar\n").into_diagnostic()?;
                 assert_eq2!(remainder, "");
 
                 let ol_block_1 = &doc[0];
@@ -1268,7 +1268,7 @@ mod tests_style_us_span_lines_from {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
-                let (_, doc) = parse_markdown("- Foo\n- Bar\n").into_diagnostic()?;
+                let (_, doc) = parse_markdown_str("- Foo\n- Bar\n").into_diagnostic()?;
                 println!("{}", fg_cyan(format!("{doc:#?}")));
 
                 // First smart list.
