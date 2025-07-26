@@ -47,19 +47,21 @@ This project uses a two-file task tracking system to maintain project state and 
 - Active work stays visible with full context
 - Easy to track what's been accomplished vs what remains
 
-## Additional Project Guidelines
+## Rust Code Guidelines
 
 ### MCP servers
 
-- Use `rust-analyzer` MCP server tool to efficiently work with analyzing and refactoring Rust source
-  files. You have access to these `rust-analyzer` tools:
+- When analyzing or refactoring Rust source files use `rust-analyzer` MCP server tool. You have
+  access to these `rust-analyzer` tools:
   - `mcp__rust-analyzer__definition` - Find symbol definitions
   - `mcp__rust-analyzer__diagnostics` - Get diagnostics for files
   - `mcp__rust-analyzer__edit_file` - Apply text edits
   - `mcp__rust-analyzer__hover` - Get type/documentation info
   - `mcp__rust-analyzer__references` - Find symbol usages
   - `mcp__rust-analyzer__rename_symbol` - Rename symbols
-- Use `context7` MCP server tool to look up documentation on Rust crates
+- Use `context7` MCP server tool to look up documentation on Rust crates and other APIs and
+  libraries in various programming languages. This tool provides access to the latest documentation
+  and API references in an LLM friendly format.
 
 ### Code Quality
 
