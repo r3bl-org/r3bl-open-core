@@ -29,7 +29,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        md_parser::conformance_test_data::*, parse_markdown, MdDocument, MdElement,
+        md_parser::conformance_test_data::*, parse_markdown_str, MdDocument, MdElement,
         MdLineFragment, HeadingData, HyperlinkData, CodeBlockLineContent,
     };
     #[allow(unused_imports)]
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_small_empty_string() {
-        let (remainder, doc) = parse_markdown(EMPTY_STRING).unwrap();
+        let (remainder, doc) = parse_markdown_str(EMPTY_STRING).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 0);
     }
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn test_small_only_newlines() {
         // ONLY_NEWLINES = "\n\n\n"
-        let (remainder, doc) = parse_markdown(ONLY_NEWLINES).unwrap();
+        let (remainder, doc) = parse_markdown_str(ONLY_NEWLINES).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 3);
         // Each newline becomes an empty Text element
@@ -152,7 +152,7 @@ mod tests {
     #[test]
     fn test_small_single_line_no_newline() {
         // SINGLE_LINE_NO_NEWLINE = "Hello World"
-        let (remainder, doc) = parse_markdown(SINGLE_LINE_NO_NEWLINE).unwrap();
+        let (remainder, doc) = parse_markdown_str(SINGLE_LINE_NO_NEWLINE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[MdLineFragment::Plain("Hello World")]);
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_small_single_line_with_newline() {
         // SINGLE_LINE_WITH_NEWLINE = "Hello World\n"
-        let (remainder, doc) = parse_markdown(SINGLE_LINE_WITH_NEWLINE).unwrap();
+        let (remainder, doc) = parse_markdown_str(SINGLE_LINE_WITH_NEWLINE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[MdLineFragment::Plain("Hello World")]);
@@ -170,7 +170,7 @@ mod tests {
     #[test]
     fn test_small_simple_inline_code() {
         // SIMPLE_INLINE_CODE = "first\n`second`"
-        let (remainder, doc) = parse_markdown(SIMPLE_INLINE_CODE).unwrap();
+        let (remainder, doc) = parse_markdown_str(SIMPLE_INLINE_CODE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 2);
         assert_text_element(&doc[0], &[MdLineFragment::Plain("first")]);
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn test_small_inline_code_variations() {
         // INLINE_CODE_VARIATIONS contains multiple inline code examples
-        let (remainder, doc) = parse_markdown(INLINE_CODE_VARIATIONS).unwrap();
+        let (remainder, doc) = parse_markdown_str(INLINE_CODE_VARIATIONS).unwrap();
         assert_eq!(remainder, "");
         // This test data has multiple lines with inline code
         assert!(!doc.is_empty());
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn test_small_inline_code_with_unicode() {
         // INLINE_CODE_WITH_UNICODE = "`code 🎯`"
-        let (remainder, doc) = parse_markdown(INLINE_CODE_WITH_UNICODE).unwrap();
+        let (remainder, doc) = parse_markdown_str(INLINE_CODE_WITH_UNICODE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[MdLineFragment::InlineCode("code 🎯")]);
@@ -208,7 +208,7 @@ mod tests {
     #[test]
     fn test_small_bold_text() {
         // BOLD_TEXT = "This is *bold* text"
-        let (remainder, doc) = parse_markdown(BOLD_TEXT).unwrap();
+        let (remainder, doc) = parse_markdown_str(BOLD_TEXT).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn test_small_italic_text() {
         // ITALIC_TEXT = "This is _italic_ text"
-        let (remainder, doc) = parse_markdown(ITALIC_TEXT).unwrap();
+        let (remainder, doc) = parse_markdown_str(ITALIC_TEXT).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn test_small_mixed_formatting() {
         // MIXED_FORMATTING contains mixed bold, italic, and inline code
-        let (remainder, doc) = parse_markdown(MIXED_FORMATTING).unwrap();
+        let (remainder, doc) = parse_markdown_str(MIXED_FORMATTING).unwrap();
         assert_eq!(remainder, "");
         assert!(!doc.is_empty());
         // Verify mixed formatting elements exist
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn test_small_links() {
         // LINKS = "Check out [Rust](https://rust-lang.org) website"
-        let (remainder, doc) = parse_markdown(LINKS).unwrap();
+        let (remainder, doc) = parse_markdown_str(LINKS).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[
@@ -268,7 +268,7 @@ mod tests {
     #[test]
     fn test_small_images() {
         // IMAGES = "![Alt text](https://example.com/image.png)"
-        let (remainder, doc) = parse_markdown(IMAGES).unwrap();
+        let (remainder, doc) = parse_markdown_str(IMAGES).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_text_element(&doc[0], &[
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_small_metadata_title() {
         // METADATA_TITLE = "@title: My Document Title"
-        let (remainder, doc) = parse_markdown(METADATA_TITLE).unwrap();
+        let (remainder, doc) = parse_markdown_str(METADATA_TITLE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_title_element(&doc[0], "My Document Title");
@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn test_small_metadata_tags() {
         // METADATA_TAGS = "@tags: rust, programming, tutorial"
-        let (remainder, doc) = parse_markdown(METADATA_TAGS).unwrap();
+        let (remainder, doc) = parse_markdown_str(METADATA_TAGS).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_tags_element(&doc[0], &["rust", "programming", "tutorial"]);
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn test_small_metadata_authors() {
         // METADATA_AUTHORS = "@authors: John Doe, Jane Smith"
-        let (remainder, doc) = parse_markdown(METADATA_AUTHORS).unwrap();
+        let (remainder, doc) = parse_markdown_str(METADATA_AUTHORS).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_authors_element(&doc[0], &["John Doe", "Jane Smith"]);
@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn test_small_metadata_date() {
         // METADATA_DATE = "@date: 2025-01-01"
-        let (remainder, doc) = parse_markdown(METADATA_DATE).unwrap();
+        let (remainder, doc) = parse_markdown_str(METADATA_DATE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_date_element(&doc[0], "2025-01-01");
@@ -318,7 +318,7 @@ mod tests {
     #[test]
     fn test_small_special_characters() {
         // SPECIAL_CHARACTERS contains special characters like !@#$%^&*()_+-=[]{}|;':",./<>?
-        let (remainder, doc) = parse_markdown(SPECIAL_CHARACTERS).unwrap();
+        let (remainder, doc) = parse_markdown_str(SPECIAL_CHARACTERS).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         // Special characters should be preserved as plain text
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn test_small_unicode_content() {
         // UNICODE_CONTENT contains text with emojis
-        let (remainder, doc) = parse_markdown(UNICODE_CONTENT).unwrap();
+        let (remainder, doc) = parse_markdown_str(UNICODE_CONTENT).unwrap();
         assert_eq!(remainder, "");
         assert!(!doc.is_empty());
         // Unicode should be preserved in the parsed content
@@ -361,7 +361,7 @@ mod tests {
     #[test]
     fn test_small_emoji_h1_simple() {
         // EMOJI_H1_SIMPLE = "# Heading with emoji 😀"
-        let (remainder, doc) = parse_markdown(EMOJI_H1_SIMPLE).unwrap();
+        let (remainder, doc) = parse_markdown_str(EMOJI_H1_SIMPLE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_heading_element(&doc[0], 1, "Heading with emoji 😀");
@@ -370,7 +370,7 @@ mod tests {
     #[test]
     fn test_small_emoji_h2_simple() {
         // EMOJI_H2_SIMPLE = "## Subheading with emoji 😀"
-        let (remainder, doc) = parse_markdown(EMOJI_H2_SIMPLE).unwrap();
+        let (remainder, doc) = parse_markdown_str(EMOJI_H2_SIMPLE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_heading_element(&doc[0], 2, "Subheading with emoji 😀");
@@ -379,7 +379,7 @@ mod tests {
     #[test]
     fn test_small_emoji_multiple() {
         // EMOJI_MULTIPLE = "# Multiple emojis 😀🚀📝"
-        let (remainder, doc) = parse_markdown(EMOJI_MULTIPLE).unwrap();
+        let (remainder, doc) = parse_markdown_str(EMOJI_MULTIPLE).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
         assert_heading_element(&doc[0], 1, "Multiple emojis 😀🚀📝");
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn test_small_real_world_content() {
         // SMALL_REAL_WORLD_CONTENT is a complete document with metadata, headings, lists, code blocks
-        let (remainder, doc) = parse_markdown(SMALL_REAL_WORLD_CONTENT).unwrap();
+        let (remainder, doc) = parse_markdown_str(SMALL_REAL_WORLD_CONTENT).unwrap();
         assert_eq!(remainder, "");
 
         // Should have multiple elements including metadata, headings, text, lists, and code blocks
@@ -411,7 +411,7 @@ mod tests {
     #[test]
     fn test_small_ex_editor_content() {
         // EX_EDITOR_CONTENT is a complex document with various markdown features
-        let (remainder, doc) = parse_markdown(EX_EDITOR_CONTENT).unwrap();
+        let (remainder, doc) = parse_markdown_str(EX_EDITOR_CONTENT).unwrap();
         assert_eq!(remainder, "");
 
         // Should be a complex document
@@ -458,7 +458,7 @@ mod tests {
     #[test]
     fn test_medium_multiple_lines() {
         // MULTIPLE_LINES contains multiple lines of text
-        let (remainder, doc) = parse_markdown(MULTIPLE_LINES).unwrap();
+        let (remainder, doc) = parse_markdown_str(MULTIPLE_LINES).unwrap();
         assert_eq!(remainder, "");
         // Should have multiple text elements
         assert!(doc.len() > 1, "Expected multiple lines");
@@ -470,7 +470,7 @@ mod tests {
     #[test]
     fn test_medium_heading_basic() {
         // HEADING_BASIC = "# Main Heading\nSome content"
-        let (remainder, doc) = parse_markdown(HEADING_BASIC).unwrap();
+        let (remainder, doc) = parse_markdown_str(HEADING_BASIC).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 2);
         assert_heading_element(&doc[0], 1, "Main Heading");
@@ -479,7 +479,7 @@ mod tests {
 
     #[test]
     fn test_medium_multiple_headings() {
-        let (remainder, doc) = parse_markdown(MULTIPLE_HEADINGS).unwrap();
+        let (remainder, doc) = parse_markdown_str(MULTIPLE_HEADINGS).unwrap();
         assert_eq!(remainder, "");
         // Should have multiple headings
         let heading_count = doc.iter().filter(|e| matches!(e, MdElement::Heading(_))).count();
@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn test_medium_all_heading_levels() {
         // ALL_HEADING_LEVELS contains headings from H1 to H6
-        let (remainder, doc) = parse_markdown(ALL_HEADING_LEVELS).unwrap();
+        let (remainder, doc) = parse_markdown_str(ALL_HEADING_LEVELS).unwrap();
         assert_eq!(remainder, "");
 
         // Should have at least 6 headings
@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_medium_unordered_list_simple() {
-        let (remainder, doc) = parse_markdown(UNORDERED_LIST_SIMPLE).unwrap();
+        let (remainder, doc) = parse_markdown_str(UNORDERED_LIST_SIMPLE).unwrap();
         assert_eq!(remainder, "");
         // Should have unordered list items
         let has_unordered_list = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Unordered, _))));
@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn test_medium_ordered_list_simple() {
-        let (remainder, doc) = parse_markdown(ORDERED_LIST_SIMPLE).unwrap();
+        let (remainder, doc) = parse_markdown_str(ORDERED_LIST_SIMPLE).unwrap();
         assert_eq!(remainder, "");
         // Should have ordered list items
         let has_ordered_list = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
@@ -525,7 +525,7 @@ mod tests {
 
     #[test]
     fn test_medium_nested_unordered_list() {
-        let (remainder, doc) = parse_markdown(NESTED_UNORDERED_LIST).unwrap();
+        let (remainder, doc) = parse_markdown_str(NESTED_UNORDERED_LIST).unwrap();
         assert_eq!(remainder, "");
         // Should have nested lists (indent > 0)
         let has_nested = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, _, indent)) if *indent > 0));
@@ -534,7 +534,7 @@ mod tests {
 
     #[test]
     fn test_medium_nested_ordered_list() {
-        let (remainder, doc) = parse_markdown(NESTED_ORDERED_LIST).unwrap();
+        let (remainder, doc) = parse_markdown_str(NESTED_ORDERED_LIST).unwrap();
         assert_eq!(remainder, "");
         // Should have nested ordered lists
         let has_nested_ordered = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), indent)) if *indent > 0));
@@ -544,7 +544,7 @@ mod tests {
     #[test]
     fn test_medium_checkboxes() {
         // CHECKBOXES contains checked and unchecked checkboxes in lists
-        let (remainder, doc) = parse_markdown(CHECKBOXES).unwrap();
+        let (remainder, doc) = parse_markdown_str(CHECKBOXES).unwrap();
         assert_eq!(remainder, "");
 
         // Find lists with checkboxes
@@ -571,7 +571,7 @@ mod tests {
 
     #[test]
     fn test_medium_mixed_list_types() {
-        let (remainder, doc) = parse_markdown(MIXED_LIST_TYPES).unwrap();
+        let (remainder, doc) = parse_markdown_str(MIXED_LIST_TYPES).unwrap();
         assert_eq!(remainder, "");
         // Should have both ordered and unordered lists
         let has_ordered = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
@@ -581,7 +581,7 @@ mod tests {
 
     #[test]
     fn test_medium_code_block_bash() {
-        let (remainder, doc) = parse_markdown(CODE_BLOCK_BASH).unwrap();
+        let (remainder, doc) = parse_markdown_str(CODE_BLOCK_BASH).unwrap();
         assert_eq!(remainder, "");
         // Should have bash code block
         let has_bash_code = doc.iter().any(|e| {
@@ -593,7 +593,7 @@ mod tests {
     #[test]
     fn test_medium_code_block_rust() {
         // CODE_BLOCK_RUST contains a Rust code block
-        let (remainder, doc) = parse_markdown(CODE_BLOCK_RUST).unwrap();
+        let (remainder, doc) = parse_markdown_str(CODE_BLOCK_RUST).unwrap();
         assert_eq!(remainder, "");
 
         // Find the code block
@@ -621,7 +621,7 @@ mod tests {
 
     #[test]
     fn test_medium_code_block_no_language() {
-        let (remainder, doc) = parse_markdown(CODE_BLOCK_NO_LANGUAGE).unwrap();
+        let (remainder, doc) = parse_markdown_str(CODE_BLOCK_NO_LANGUAGE).unwrap();
         assert_eq!(remainder, "");
         // Should have code block without language
         let has_plain_code = doc.iter().any(|e| {
@@ -632,7 +632,7 @@ mod tests {
 
     #[test]
     fn test_medium_empty_code_block() {
-        let (remainder, doc) = parse_markdown(EMPTY_CODE_BLOCK).unwrap();
+        let (remainder, doc) = parse_markdown_str(EMPTY_CODE_BLOCK).unwrap();
         assert_eq!(remainder, "");
         // Should have empty code block (just start and end tags)
         let has_empty_code = doc.iter().any(|e| {
@@ -643,7 +643,7 @@ mod tests {
 
     #[test]
     fn test_medium_formatting_edge_cases() {
-        let (remainder, doc) = parse_markdown(FORMATTING_EDGE_CASES).unwrap();
+        let (remainder, doc) = parse_markdown_str(FORMATTING_EDGE_CASES).unwrap();
         assert_eq!(remainder, "");
         // Should handle edge cases gracefully
         assert!(!doc.is_empty(), "Document should not be empty");
@@ -651,7 +651,7 @@ mod tests {
 
     #[test]
     fn test_medium_nested_formatting() {
-        let (remainder, doc) = parse_markdown(NESTED_FORMATTING).unwrap();
+        let (remainder, doc) = parse_markdown_str(NESTED_FORMATTING).unwrap();
         assert_eq!(remainder, "");
         // Should handle nested formatting
         let has_formatting = doc.iter().any(|e| {
@@ -664,7 +664,7 @@ mod tests {
 
     #[test]
     fn test_medium_edge_case_empty_lines() {
-        let (remainder, doc) = parse_markdown(EDGE_CASE_EMPTY_LINES).unwrap();
+        let (remainder, doc) = parse_markdown_str(EDGE_CASE_EMPTY_LINES).unwrap();
         assert_eq!(remainder, "");
         // Should handle empty lines correctly
         assert!(!doc.is_empty(), "Document should parse empty lines");
@@ -672,7 +672,7 @@ mod tests {
 
     #[test]
     fn test_medium_edge_case_whitespace_lines() {
-        let (remainder, doc) = parse_markdown(EDGE_CASE_WHITESPACE_LINES).unwrap();
+        let (remainder, doc) = parse_markdown_str(EDGE_CASE_WHITESPACE_LINES).unwrap();
         assert_eq!(remainder, "");
         // Should handle whitespace lines correctly
         assert!(!doc.is_empty(), "Document should parse whitespace lines");
@@ -680,7 +680,7 @@ mod tests {
 
     #[test]
     fn test_medium_edge_case_trailing_spaces() {
-        let (remainder, doc) = parse_markdown(EDGE_CASE_TRAILING_SPACES).unwrap();
+        let (remainder, doc) = parse_markdown_str(EDGE_CASE_TRAILING_SPACES).unwrap();
         assert_eq!(remainder, "");
         // Should handle trailing spaces correctly
         assert!(!doc.is_empty(), "Document should parse with trailing spaces");
@@ -688,7 +688,7 @@ mod tests {
 
     #[test]
     fn test_medium_emoji_start_middle_end() {
-        let (remainder, doc) = parse_markdown(EMOJI_START_MIDDLE_END).unwrap();
+        let (remainder, doc) = parse_markdown_str(EMOJI_START_MIDDLE_END).unwrap();
         assert_eq!(remainder, "");
         // Should handle emojis in various positions
         let has_emoji_content = doc.iter().any(|e| {
@@ -708,7 +708,7 @@ mod tests {
 
     #[test]
     fn test_medium_blog_post_document() {
-        let (remainder, doc) = parse_markdown(BLOG_POST_DOCUMENT).unwrap();
+        let (remainder, doc) = parse_markdown_str(BLOG_POST_DOCUMENT).unwrap();
         assert_eq!(remainder, "");
         // Blog post should have various elements
         assert!(doc.len() > 5, "Blog post should have multiple elements");
@@ -723,7 +723,7 @@ mod tests {
 
     #[test]
     fn test_large_complex_nested_document() {
-        let (remainder, doc) = parse_markdown(COMPLEX_NESTED_DOCUMENT).unwrap();
+        let (remainder, doc) = parse_markdown_str(COMPLEX_NESTED_DOCUMENT).unwrap();
         assert_eq!(remainder, "");
         // Complex document should have many varied elements
         assert!(doc.len() > 10, "Complex document should have many elements");
@@ -739,7 +739,7 @@ mod tests {
 
     #[test]
     fn test_large_tutorial_document() {
-        let (remainder, doc) = parse_markdown(TUTORIAL_DOCUMENT).unwrap();
+        let (remainder, doc) = parse_markdown_str(TUTORIAL_DOCUMENT).unwrap();
         assert_eq!(remainder, "");
         // Tutorial should have structured content
         assert!(doc.len() > 10, "Tutorial should have substantial content");
@@ -754,14 +754,14 @@ mod tests {
 
     #[test]
     fn test_invalid_malformed_syntax() {
-        let (remainder, doc) = parse_markdown(MALFORMED_SYNTAX).unwrap();
+        let (remainder, doc) = parse_markdown_str(MALFORMED_SYNTAX).unwrap();
         // Malformed syntax should still parse something
         assert!(remainder.is_empty() || !doc.is_empty(), "Parser should handle malformed syntax gracefully");
     }
 
     #[test]
     fn test_invalid_unclosed_formatting() {
-        let (remainder, doc) = parse_markdown(UNCLOSED_FORMATTING).unwrap();
+        let (remainder, doc) = parse_markdown_str(UNCLOSED_FORMATTING).unwrap();
         // Unclosed formatting should still parse
         assert!(remainder.is_empty() || !doc.is_empty(), "Parser should handle unclosed formatting gracefully");
     }
@@ -772,7 +772,7 @@ mod tests {
 
     #[test]
     fn test_jumbo_real_world_editor() {
-        let (remainder, doc) = parse_markdown(REAL_WORLD_EDITOR_CONTENT).unwrap();
+        let (remainder, doc) = parse_markdown_str(REAL_WORLD_EDITOR_CONTENT).unwrap();
         assert_eq!(remainder, "");
         // Real world content should be substantial and varied
         assert!(doc.len() > 20, "Real world document should be large");
