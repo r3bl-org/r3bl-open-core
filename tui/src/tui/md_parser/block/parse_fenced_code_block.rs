@@ -15,16 +15,27 @@
  *   limitations under the License.
  */
 
-use nom::{branch::alt,
-          bytes::complete::{is_not, tag, take_until},
-          combinator::{map, opt},
-          sequence::{preceded, terminated},
-          IResult, Parser};
+use nom::{IResult, Parser,
+          branch::alt,
+          bytes::complete::{is_not, tag, take_until, take_while},
+          combinator::{eof, map},
+          multi::many0,
+          sequence::{preceded, terminated}};
 
-use crate::{md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE, NEWLINE_OR_NULL},
-            CodeBlockLine, CodeBlockLineContent, CodeBlockLines, List};
+use crate::{CodeBlockLine, CodeBlockLineContent, CodeBlockLines, List,
+            md_parser::constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE,
+                                   NEWLINE_OR_NULL, NULL_CHAR},
+            parse_null_padded_line::{is, trim_optional_leading_newline_and_nulls}};
 
-/// Sample inputs:
+/// Parse fenced code blocks with language tags and content.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
+/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses `NEWLINE_OR_NULL` constant to
+/// handle both `\n` and `\0` as line terminators.
+///
+/// # Sample inputs:
 ///
 /// | Scenario                  | Sample input                                               |
 /// |---------------------------|------------------------------------------------------------|
@@ -46,9 +57,9 @@ pub fn parse_fenced_code_block(input: &str) -> IResult<&str, List<CodeBlockLine<
     )
         .parse(input)?;
 
-    // Normal case: if there is a newline, consume it since there may or may not be a newline at the
-    // end.
-    let (remainder, _) = opt(tag(NEW_LINE)).parse(remainder)?;
+    // Normal case: if there is a newline, consume it along with any null padding
+    // to handle the ZeroCopyGapBuffer null padding invariant
+    let remainder = trim_optional_leading_newline_and_nulls(remainder);
 
     let acc = split_by_new_line(code);
 
@@ -67,14 +78,19 @@ fn parse_code_block_lang_including_eol(input: &str) -> IResult<&str, Option<&str
                 /* output */
                 terminated(
                     /* match */ is_not(NEWLINE_OR_NULL),
-                    /* ends with (discarded) */ tag(NEW_LINE),
+                    /* ends with (discarded) */
+                    (tag(NEW_LINE), /* zero or more */ take_while(is(NULL_CHAR))),
                 ),
             ),
             Some,
         ),
         // Or - Fail to parse language, use unknown language instead.
         map(
-            (tag(CODE_BLOCK_START_PARTIAL), tag(NEW_LINE)),
+            (
+                tag(CODE_BLOCK_START_PARTIAL),
+                tag(NEW_LINE),
+                /* zero or more */ take_while(is(NULL_CHAR))
+            ),
             |_| None,
         ),
     )).parse(input)
@@ -92,8 +108,8 @@ fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, 
     Ok((remainder, output))
 }
 
-/// Split a string by newline. The idea is that a line is some text followed by a newline.
-/// An empty line is just a newline character.
+/// Split a string by newline using nom parsers. The idea is that a line is some text
+/// followed by a newline. An empty line is just a newline character.
 ///
 /// # Examples:
 /// | input          | output               |
@@ -105,12 +121,54 @@ fn parse_code_block_body_including_code_block_end(input: &str) -> IResult<&str, 
 /// | "\nfoo\nbar\n" | `["", "foo", "bar"]` |
 #[must_use]
 pub fn split_by_new_line(input: &str) -> Vec<&str> {
-    let mut acc: Vec<&str> = input.split('\n').collect();
-    if let Some(last_item) = acc.last()
-        && last_item.is_empty() {
-            acc.pop();
-        }
-    acc
+    // Define a parser that can handle three different line patterns.
+    // This parser will be called repeatedly by many0() to consume the entire input.
+    let parser = alt((
+        // CASE 1: Regular line with content followed by newline
+        // Example: "hello world\n" -> "hello world"
+        // This handles the most common case where a line has text content
+        terminated(
+            // First part: capture all characters that are NOT newline or null
+            // is_not(NEWLINE_OR_NULL) matches any sequence of chars except '\n' and '\0'
+            map(is_not(NEWLINE_OR_NULL), |s: &str| s),
+            // Second part: consume (but don't capture) the line ending
+            // This handles both the newline character and any null padding that follows
+            (
+                tag(NEW_LINE),
+                /* zero or more */ take_while(is(NULL_CHAR)),
+            ),
+        ),
+        // CASE 2: Empty line (just a newline character, possibly with null padding)
+        // Example: "\n" -> ""
+        // This is needed because is_not() in CASE 1 would fail on empty content
+        map(
+            // Match a newline followed by any number of null chars
+            (
+                tag(NEW_LINE),
+                /* zero or more */ take_while(is(NULL_CHAR)),
+            ),
+            // Transform the matched pattern into an empty string
+            |_| "",
+        ),
+        // CASE 3: Last line without trailing newline (at end of file)
+        // Example: "last line" (at EOF) -> "last line"
+        // This handles the edge case where the file doesn't end with a newline
+        terminated(
+            // Match any characters except newline/null
+            is_not(NEWLINE_OR_NULL),
+            // But only if we're at the end of the input
+            eof,
+        ),
+    ));
+
+    // Apply the parser repeatedly using many0() to collect all lines
+    // many0() will keep applying the parser until it fails, collecting results in a Vec
+    let result: IResult<&str, Vec<&str>> = many0(parser).parse(input);
+
+    match result {
+        Ok((_, lines)) => lines,
+        Err(_) => Vec::new(), // Return empty vec if parsing fails
+    }
 }
 
 /// Convert language and lines into `CodeBlockLines` structure.
@@ -120,13 +178,13 @@ fn convert_into_code_block_lines<'a>(
     lines: &List<&'a str>,
 ) -> CodeBlockLines<'a> {
     let mut result = List::new();
-    
+
     // Add start tag
     result.push(CodeBlockLine {
         language,
         content: CodeBlockLineContent::StartTag,
     });
-    
+
     // Add text lines
     for line in lines.iter() {
         result.push(CodeBlockLine {
@@ -134,13 +192,13 @@ fn convert_into_code_block_lines<'a>(
             content: CodeBlockLineContent::Text(line),
         });
     }
-    
+
     // Add end tag
     result.push(CodeBlockLine {
         language,
         content: CodeBlockLineContent::EndTag,
     });
-    
+
     result
 }
 
@@ -358,7 +416,7 @@ mod tests {
             let code_lines = vec!["import foo", "bar()"];
             let input = "```python\nimport foo\nbar()\n```\n\0\0\0";
             let (remainder, code_block_lines) = parse_fenced_code_block(input).unwrap();
-            assert_eq2!(remainder, "\0\0\0");
+            assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
                 convert_into_code_block_lines(Some(lang), &code_lines.into())

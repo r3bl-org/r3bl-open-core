@@ -15,15 +15,22 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::tag, multi::many0, sequence::terminated, IResult, Parser};
+use nom::{bytes::complete::{tag, take_while}, multi::many0, sequence::terminated, IResult, Parser};
 
-use crate::{md_parser::constants::NEW_LINE, md_parser_types::CheckboxParsePolicy,
+use crate::{md_parser::constants::{NEW_LINE, NULL_CHAR}, md_parser_types::CheckboxParsePolicy,
+            parse_null_padded_line::is,
             parse_inline_fragments_until_eol_or_eoi, List, MdLineFragments};
 
 /// Parse a markdown text [`crate::FragmentsInOneLine`] in the input (no EOL required).
-/// 
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
+/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser handles null padding by terminating
+/// fragment parsing at both `\n` and `\0` characters.
+///
 /// # Errors
-/// 
+///
 /// Returns a nom parsing error if the input cannot be parsed as markdown text fragments.
 #[rustfmt::skip]
 pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
@@ -31,7 +38,7 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     checkbox_policy: CheckboxParsePolicy,
 ) -> IResult<&str, MdLineFragments<'_>> {
     let (input, output) = many0(
-        |it| parse_inline_fragments_until_eol_or_eoi(it, checkbox_policy)   
+        |it| parse_inline_fragments_until_eol_or_eoi(it, checkbox_policy)
     ).parse(input)?;
 
     let it = List::from(output);
@@ -39,6 +46,13 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
     Ok((input, it))
 }
 
+/// Parse markdown text blocks with or without new lines.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
+/// as provided by `ZeroCopyGapBuffer::as_str()`. It handles both regular newlines and null-padded lines.
+///
 /// # Errors
 ///
 /// Returns a nom parsing error if the input cannot be parsed as markdown text.
@@ -52,8 +66,8 @@ pub fn parse_block_markdown_text_with_or_without_new_line(
     }
 }
 mod inner {
-    use super::{many0, parse_inline_fragments_until_eol_or_eoi, tag, terminated,
-                CheckboxParsePolicy, IResult, List, MdLineFragments, Parser, NEW_LINE};
+    use super::{many0, parse_inline_fragments_until_eol_or_eoi, tag, terminated, take_while,
+                CheckboxParsePolicy, IResult, List, MdLineFragments, Parser, NEW_LINE, NULL_CHAR, is};
 
     /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] terminated by EOL.
     /// # Errors
@@ -70,7 +84,7 @@ mod inner {
                     |it| parse_inline_fragments_until_eol_or_eoi( it, CheckboxParsePolicy::IgnoreCheckbox)
                 ),
                 /* ends with (discarded) */
-                tag(NEW_LINE),
+                (tag(NEW_LINE), /* zero or more */ take_while(is(NULL_CHAR))),
             ).parse(input)?;
 
         let it = List::from(output);

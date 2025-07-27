@@ -452,13 +452,13 @@ mod helpers {
                 cached.clone()
             } else {
                 let colorized =
-                    ColorWheel::lolcat_into_string(&line_1_text, style).to_string();
+                    ColorWheel::lolcat_into_string(&line_1_text, style);
                 cache_guard.insert(cache_key, colorized.clone());
                 colorized
             }
         } else {
             // Cache lock failed, compute without caching
-            ColorWheel::lolcat_into_string(&line_1_text, style).to_string()
+            ColorWheel::lolcat_into_string(&line_1_text, style)
         };
 
         writeln!(f, "{line_1_text_fmt}")?;

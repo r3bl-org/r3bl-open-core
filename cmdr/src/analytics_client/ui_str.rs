@@ -154,12 +154,12 @@ pub mod upgrade_check {
             )
         );
 
-        ColorWheel::default().colorize_into_string(
+        InlineString::from(ColorWheel::default().colorize_into_string(
             &plain_text_exit_msg,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
             TextColorizationPolicy::ColorEachCharacter(None),
             None,
-        )
+        ))
     }
 }
 
@@ -192,6 +192,6 @@ pub mod goodbye_greetings {
 
         let combined = inline_string!("{goodbye_msg}\n{star_us_msg}");
 
-        ColorWheel::lolcat_into_string(&combined, None)
+        InlineString::from(ColorWheel::lolcat_into_string(&combined, None))
     }
 }

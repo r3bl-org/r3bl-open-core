@@ -15,6 +15,72 @@
  *   limitations under the License.
  */
 
+//! # Performance considerations: `write!` vs `push_str()` vs `WriteToBuf`
+//!
+//! When working with string formatting in Rust, it's important to understand the performance
+//! implications of different approaches:
+//!
+//! ## Performance hierarchy (fastest to slowest)
+//!
+//! ### 1. Direct `push_str()` - The absolute fastest
+//! 
+//! Use `push_str()` when you have a `&str` that doesn't require formatting. This is the
+//! lightweight path that directly appends the string without any overhead:
+//! 
+//! ```rust
+//! # use r3bl_tui::InlineString;
+//! # let mut acc = InlineString::new();
+//! acc.push_str("Hello, world!");  // Direct append, no formatting overhead
+//! ```
+//!
+//! ### 2. `WriteToBuf` trait - Fast batched writing
+//!
+//! For complex types that need to build strings from multiple parts, use the
+//! [`WriteToBuf`](crate::WriteToBuf) trait (see [`write_to_buf.rs`](../common/write_to_buf.rs)).
+//! This approach:
+//! - Batches all string building into a single buffer
+//! - Makes only one call to the formatter when implementing `Display`
+//! - Allows mixing `push_str()` for literals with `write!` only when needed
+//!
+//! Even with `WriteToBuf`, using `write!` still incurs `FormatArgs` overhead, but the
+//! batching minimizes the overall impact.
+//!
+//! ### 3. Direct `write!` - Slowest due to formatting overhead
+//! 
+//! Use `write!` only when you need formatting capabilities like:
+//! - Display formatting: `write!(acc, "{}", value)`
+//! - Debug formatting: `write!(acc, "{:?}", value)`
+//! - Custom formatting: `write!(acc, "Value: {:.2}", 3.14159)`
+//! 
+//! ```rust
+//! # use std::fmt::Write;
+//! # use r3bl_tui::InlineString;
+//! # let mut acc = InlineString::new();
+//! # let value = 42;
+//! write!(acc, "The answer is: {}", value).ok();  // Formatting required
+//! ```
+//!
+//! ## Performance cost of `write!`
+//! 
+//! The `write!` macro uses `FormatArgs` internally, which is the heavy code path that:
+//! - Parses the format string at compile time
+//! - Allocates temporary storage for formatting operations
+//! - Invokes the formatting trait implementations
+//! - Goes through the formatter's state machine (checking alignment, padding, etc.)
+//! 
+//! This overhead is unnecessary when you're simply appending a string literal or `&str`
+//! that doesn't need formatting.
+//!
+//! ## Best practices
+//! 
+//! 1. **Always prefer `push_str()`** for string literals and `&str` values
+//! 2. **Use `WriteToBuf`** when implementing `Display` for complex types
+//! 3. **Only use `write!`** when you actually need formatting capabilities
+//! 4. **Mix approaches**: In `WriteToBuf` implementations, use `push_str()` for literals
+//!    and `write!` only for values that need formatting
+//! 5. For repeated patterns, consider using the optimized macros in this module
+//!    like `pad_fmt!` which avoid formatting overhead
+
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 
 /// A macro to pad a [`crate::InlineString`] (which is allocated elsewhere) with a
@@ -37,15 +103,18 @@
 /// pad_fmt!(fmt: acc, pad_str: "-", repeat_count: 5);
 /// assert_eq!(acc, "-----");
 ///
-/// use std::fmt::{Debug, Result, Formatter};
+/// use std::fmt::{Debug, Result, Formatter, Write};
 /// struct Foo;
 /// impl Debug for Foo {
 ///     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+///         // Note: pad_fmt! requires push_str method, so we use a String buffer
+///         let mut buffer = String::new();
 ///         pad_fmt!(
-///             fmt: f,
+///             fmt: buffer,
 ///             pad_str: "X",
 ///             repeat_count: 3
 ///         );
+///         write!(f, "{}", buffer)?;
 ///         Ok(())
 ///     }
 /// }
@@ -60,9 +129,7 @@ macro_rules! pad_fmt {
     ) => {{
         #[allow(clippy::reversed_empty_ranges)]
         for _ in 0..$repeat_count {
-            use std::fmt::Write;
-            // We don't care about the result of this operation.
-            write!($acc, "{}", $pad_str).ok();
+            $acc.push_str($pad_str);
         }
     }};
 }
@@ -244,7 +311,7 @@ pub mod read_from_file {
     use smallstr::SmallString;
     use smallvec::Array;
 
-    use crate::{ok, DEFAULT_READ_BUFFER_SIZE};
+    use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
 
     // XMARK: Clever Rust, use of `A` to allow any size `Array` to be passed in.
 
@@ -372,9 +439,9 @@ mod tests_write_to_file {
 mod tests_read_from_file {
     use std::{fs::File, io::Write};
 
-    use crate::{into_existing::read_from_file::try_read_file_path_into_inline_string,
-                try_create_temp_dir, DocumentStorage, InlineString,
-                DEFAULT_DOCUMENT_SIZE};
+    use crate::{DEFAULT_DOCUMENT_SIZE, DocumentStorage, InlineString,
+                into_existing::read_from_file::try_read_file_path_into_inline_string,
+                try_create_temp_dir};
 
     #[test]
     fn test_read_tiny_file_into_inline_string() {

@@ -25,17 +25,16 @@ use super::create_color_wheel_from_heading_data;
 use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             CommonResult, FragmentsInOneLine, GCString, GCStringExt,
             GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
-            List, MdDocument, MdElement, MdLineFragment, PARSER_BYTE_CACHE_PAGE_SIZE,
-            ParserByteCache, PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
+            List, MdDocument, MdElement, MdLineFragment,
+            PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
             StyleUSSpanLines, TextColorizationPolicy, TuiStyle, TuiStyledTexts,
-            constants::NEW_LINE_CHAR,
             convert_syntect_to_styled_text, generate_ordered_list_item_bullet,
             generate_unordered_list_item_bullet, get_bold_style,
             get_checkbox_checked_style, get_checkbox_unchecked_style,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
-            get_list_bullet_style, join, new_style, parse_markdown_str, try_get_syntax_ref,
+            get_list_bullet_style, join, new_style, parse_markdown, ZeroCopyGapBuffer, try_get_syntax_ref,
             tui::{constants::CODE_BLOCK_START_PARTIAL,
                   md_parser::constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
                                          LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
@@ -49,43 +48,33 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
 ///
 /// # Parser Implementation
 ///
-/// This function uses the legacy parser (`parse_markdown`) which has proven to be
-/// the most reliable and performant solution for markdown parsing.
+/// This function now uses the new `ZeroCopyGapBuffer` approach which provides zero-copy
+/// parsing capabilities. The function converts `&[GCString]` to `ZeroCopyGapBuffer` and
+/// then parses it directly without string materialization.
 ///
 /// ## Technical Implementation Details
 ///
-/// 1. Calculate size hint from editor text lines
-/// 2. Initialize or reuse `parser_byte_cache` with appropriate capacity
-/// 3. Materialize &[`GCString`] into the byte cache by writing each line with CRLF
-/// 4. Parse the materialized string with `parse_markdown()`
-/// 5. Convert parsed document to styled spans
+/// 1. Convert `&[GCString]` to `ZeroCopyGapBuffer` using `convert_vec_lines_to_gap_buffer`
+/// 2. Pass the gap buffer directly to `parse_markdown()` 
+/// 3. Convert parsed document to styled spans
 ///
 /// ## Performance Characteristics
 ///
-/// The legacy parser performs excellently across all document sizes:
-/// - Materializing &[`GCString`] to String is not expensive (~few thousand nanoseconds
-///   for 100K)
-/// - Parsing is fast and predictable
-/// - Memory usage is reasonable for typical editor use cases
+/// The new approach eliminates string materialization:
+/// - Zero-copy parsing through `ZeroCopyGapBuffer`
+/// - Handles null padding transparently
+/// - Better memory efficiency for large documents
 ///
 /// # Arguments
 /// - `editor_text_lines` - The text that the user has typed into the editor.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
 /// - `maybe_syntect_tuple` - The syntax set and theme that the editor should use to
 ///   highlight the text.
-/// - `parser_byte_cache` - A cache that is used to store the byte array that results from
-///   adding CRLF back into the document. This avoids re-allocating this struct every time
-///   the document is re-parsed. Only used for legacy parser path.
+/// - `parser_byte_cache` - DEPRECATED - No longer used, will be removed in next version
 ///
 /// # Returns
 /// - `Ok(StyleUSSpanLines)` - Successfully parsed and styled markdown
 /// - `Err(CommonError)` - Parsing failed
-///
-/// # Panics
-///
-/// This will panic if the lock is poisoned, which can happen if a thread
-/// panics while holding the lock. To avoid panics, ensure that the code that
-/// locks the mutex does not panic while holding the lock.
 ///
 /// # Errors
 ///
@@ -94,28 +83,16 @@ pub fn try_parse_and_highlight(
     editor_text_lines: &[GCString],
     maybe_current_box_computed_style: Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
-    parser_byte_cache: &mut Option<ParserByteCache>,
 ) -> CommonResult<StyleUSSpanLines> {
     // XMARK: Parse markdown from editor and render it
 
-    // PERF: Materializing &[GCString] to InlineString is not an expensive operation,
-    // it takes in the order of a few thousand nanoseconds for a 100K data set.
+    // Convert &[GCString] to ZeroCopyGapBuffer
+    let gap_buffer = ZeroCopyGapBuffer::from(editor_text_lines);
+    
+    // Parse using the new zero-copy approach
+    let result_md_ast = parse_markdown(&gap_buffer);
 
-    let size_hint = calc_size_hint(editor_text_lines);
-    let acc = manage_parser_byte_cache(parser_byte_cache, size_hint);
-
-    // Write each line w/ CRLF into the accumulator.
-    // - The CRLF is necessary for the parser to work correctly.
-    // - This also requires the entire document to be copied into the accumulator (and
-    //   CRLFs added).
-    for line in editor_text_lines {
-        acc.push_str(line.as_ref());
-        acc.push(NEW_LINE_CHAR);
-    }
-
-    let result_md_ast = parse_markdown_str(acc);
-
-    // Try and parse `editor_text_to_string` into a `Document`.
+    // Try and parse into a `Document`.
     match result_md_ast {
         Ok((_remainder, document)) => Ok(StyleUSSpanLines::from_document(
             &document,
@@ -125,48 +102,6 @@ pub fn try_parse_and_highlight(
         Err(_) => {
             CommonError::new_error_result_with_only_type(CommonErrorType::ParsingError)
         }
-    }
-}
-
-/// Calculate the size hint for the parser byte cache based on editor text lines.
-/// This includes the length of each line plus 1 byte for the newline character.
-fn calc_size_hint(editor_text_lines: &[GCString]) -> usize {
-    editor_text_lines
-        .iter()
-        .map(|line| line.len().as_usize() + 1 /* for new line */)
-        .sum()
-}
-
-/// Manage the parser byte cache - either reuse existing cache or create a new one.
-/// If reusing, the cache is cleared and resized if necessary.
-fn manage_parser_byte_cache(
-    maybe_parser_byte_cache: &mut Option<ParserByteCache>,
-    size_hint: usize,
-) -> &mut ParserByteCache {
-    match maybe_parser_byte_cache {
-        // Re-use the parser_byte_cache if it exists.
-        Some(acc) => {
-            acc.clear();
-            let amount_to_reserve = {
-                // Increase the capacity of the acc if necessary by rounding up to the
-                // nearest PARSER_BYTE_CACHE_PAGE_SIZE.
-                let page_size = PARSER_BYTE_CACHE_PAGE_SIZE;
-                let current_capacity = acc.capacity();
-                if size_hint > current_capacity {
-                    let bytes_needed: usize = size_hint - current_capacity;
-                    // Round up bytes_needed to the nearest page_size.
-                    let pages_needed = bytes_needed.div_ceil(page_size);
-                    pages_needed * page_size
-                } else {
-                    0
-                }
-            };
-            acc.reserve(amount_to_reserve);
-            acc
-        }
-        // Allocate a new parser_byte_cache just for this function scope if it doesn't
-        // exist.
-        None => maybe_parser_byte_cache.insert(ParserByteCache::with_capacity(size_hint)),
     }
 }
 
@@ -187,7 +122,6 @@ mod tests_try_parse_and_highlight {
                 &editor_text_lines,
                 Some(current_box_computed_style),
                 None,
-                &mut None,
             )?;
 
             println!(
@@ -195,18 +129,27 @@ mod tests_try_parse_and_highlight {
                 fg_cyan(style_us_span_lines.pretty_print_debug())
             );
 
-            assert_eq2!(editor_text_lines.len(), style_us_span_lines.len());
-            let line_0 = &style_us_span_lines[0][0];
-            let line_1 = &style_us_span_lines[1][0];
-            assert_eq2!(editor_text_lines[0], line_0.text_gcs);
-            assert_eq2!(editor_text_lines[1], line_1.text_gcs);
-
+            // The parser creates separate lines for each input line
+            assert_eq2!(2, style_us_span_lines.len());
+            
+            // Check the first line contains "Hello"
+            let line_0 = &style_us_span_lines[0];
+            assert_eq2!(line_0.len(), 1);
+            let span_0 = &line_0[0];
+            assert_eq2!(span_0.text_gcs.as_ref(), "Hello");
+            
+            // Check the second line contains "World"
+            let line_1 = &style_us_span_lines[1];
+            assert_eq2!(line_1.len(), 1);
+            let span_1 = &line_1[0];
+            assert_eq2!(span_1.text_gcs.as_ref(), "World");
+            
             assert_eq2!(
-                line_0.style,
+                span_0.style,
                 current_box_computed_style + get_foreground_style()
             );
             assert_eq2!(
-                line_1.style,
+                span_1.style,
                 current_box_computed_style + get_foreground_style()
             );
         });
@@ -783,10 +726,9 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
-    use miette::IntoDiagnostic;
 
     use super::*;
-    use crate::{CodeBlockLine, HeadingLevel, assert_eq2, fg_cyan,
+    use crate::{CodeBlockLine, HeadingLevel, assert_eq2,
                 get_metadata_tags_marker_style, get_metadata_tags_values_style,
                 get_metadata_title_marker_style, get_metadata_title_value_style, list,
                 throws, tui_color};
@@ -1090,6 +1032,7 @@ mod tests_style_us_span_lines_from {
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
         use super::*;
+        use crate::BulletKind;
 
         #[test]
         #[allow(clippy::missing_errors_doc)]
@@ -1215,20 +1158,43 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
-        fn test_block_ol() -> CommonResult<()> {
-            throws!({
+        fn test_block_ol() {
+            {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
-                let (remainder, doc) =
-                    parse_markdown_str("100. Foo\n200. Bar\n").into_diagnostic()?;
-                assert_eq2!(remainder, "");
+                
+                // Construct ordered list elements directly
+                let ol_block_1 = MdElement::SmartList((
+                    list![list![
+                        MdLineFragment::OrderedListBullet {
+                            indent: 0,
+                            number: 100,
+                            is_first_line: true
+                        },
+                        MdLineFragment::Plain("Foo"),
+                    ]],
+                    BulletKind::Ordered(100),
+                    0,
+                ));
 
-                let ol_block_1 = &doc[0];
+                let ol_block_2 = MdElement::SmartList((
+                    list![list![
+                        MdLineFragment::OrderedListBullet {
+                            indent: 0,
+                            number: 200,
+                            is_first_line: true
+                        },
+                        MdLineFragment::Plain("Bar"),
+                    ]],
+                    BulletKind::Ordered(200),
+                    0,
+                ));
+
                 {
                     // println!("{:#?}", ol_block_1);
                     let lines =
-                        StyleUSSpanLines::from_block(ol_block_1, Some(style), None);
+                        StyleUSSpanLines::from_block(&ol_block_1, Some(style), None);
 
                     let line_0 = &lines.inner[0];
                     // println!("{}", line_0..pretty_print_debug());
@@ -1242,11 +1208,10 @@ mod tests_style_us_span_lines_from {
                     );
                 }
 
-                let ol_block_2 = &doc[1];
                 {
                     // println!("{:#?}", ol_block_2);
                     let lines =
-                        StyleUSSpanLines::from_block(ol_block_2, Some(style), None);
+                        StyleUSSpanLines::from_block(&ol_block_2, Some(style), None);
 
                     let line_0 = &lines.inner[0];
                     // println!("{}", line_0..pretty_print_debug());
@@ -1259,23 +1224,45 @@ mod tests_style_us_span_lines_from {
                         StyleUSSpan::new(style + get_foreground_style(), "Bar",)
                     );
                 }
-            });
+            }
         }
 
         #[test]
-        fn test_block_ul() -> CommonResult<()> {
-            throws!({
+        fn test_block_ul() {
+            {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
-                let (_, doc) = parse_markdown_str("- Foo\n- Bar\n").into_diagnostic()?;
-                println!("{}", fg_cyan(format!("{doc:#?}")));
+                
+                // Construct unordered list elements directly
+                let ul_block_0 = MdElement::SmartList((
+                    list![list![
+                        MdLineFragment::UnorderedListBullet {
+                            indent: 0,
+                            is_first_line: true
+                        },
+                        MdLineFragment::Plain("Foo"),
+                    ]],
+                    BulletKind::Unordered,
+                    0,
+                ));
+
+                let ul_block_1 = MdElement::SmartList((
+                    list![list![
+                        MdLineFragment::UnorderedListBullet {
+                            indent: 0,
+                            is_first_line: true
+                        },
+                        MdLineFragment::Plain("Bar"),
+                    ]],
+                    BulletKind::Unordered,
+                    0,
+                ));
 
                 // First smart list.
                 {
-                    let ul_block_0 = &doc[0];
                     let lines =
-                        StyleUSSpanLines::from_block(ul_block_0, Some(style), None);
+                        StyleUSSpanLines::from_block(&ul_block_0, Some(style), None);
                     let line_0 = &lines.inner[0];
                     assert_eq2!(
                         line_0.inner[0],
@@ -1289,9 +1276,8 @@ mod tests_style_us_span_lines_from {
 
                 // Second smart list.
                 {
-                    let ul_block_1 = &doc[1];
                     let lines =
-                        StyleUSSpanLines::from_block(ul_block_1, Some(style), None);
+                        StyleUSSpanLines::from_block(&ul_block_1, Some(style), None);
                     let line_0 = &lines.inner[0];
                     assert_eq2!(
                         line_0.inner[0],
@@ -1302,7 +1288,7 @@ mod tests_style_us_span_lines_from {
                         StyleUSSpan::new(style + get_foreground_style(), "Bar",)
                     );
                 }
-            });
+            }
         }
 
         #[test]

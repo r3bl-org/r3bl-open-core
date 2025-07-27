@@ -16,21 +16,28 @@
  */
 
 use nom::{branch::alt,
-          bytes::complete::{tag, take_while1},
+          bytes::complete::{tag, take_while, take_while1},
           character::complete::anychar,
           combinator::{map, not, opt, recognize},
           multi::many1,
           sequence::{preceded, terminated},
           IResult, Parser};
 
-use crate::{md_parser::constants::{self, NEW_LINE, NULL_STR},
+use crate::{md_parser::constants::{self, NEW_LINE, NULL_CHAR, NULL_STR},
+            parse_null_padded_line::is,
             HeadingData, HeadingLevel};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [`HeadingLevel`] and
 /// [`crate::FragmentsInOneLine`].
-/// 
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
+/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser handles null padding by recognizing
+/// `\0` characters as line terminators alongside `\n`.
+///
 /// # Errors
-/// 
+///
 /// Returns a nom parsing error if the input does not match a valid heading pattern.
 #[rustfmt::skip]
 pub fn parse_heading_in_single_line(input: &str) -> IResult<&str, HeadingData<'_>> {
@@ -40,10 +47,12 @@ pub fn parse_heading_in_single_line(input: &str) -> IResult<&str, HeadingData<'_
 
 #[rustfmt::skip]
 fn parse(input: &str) -> IResult<&str, HeadingData<'_>> {
-    let (input, (level, text, _)) = (
+    let (input, (level, text, _discarded)) = (
         parse_heading_tag,
         parse_anychar_in_heading_no_new_line,
-        opt(tag(NEW_LINE)),
+        opt(
+            (tag(NEW_LINE), /* zero or more */ take_while(is(NULL_CHAR)))
+        ),
     )
         .parse(input)?;
     Ok((input, HeadingData { level, text }))
@@ -216,7 +225,7 @@ mod tests {
         assert_eq2!(
             parse_heading_in_single_line("# test\n\0\0\0"),
             Ok((
-                "\0\0\0",
+                "",
                 HeadingData {
                     level: 1.into(),
                     text: "test",

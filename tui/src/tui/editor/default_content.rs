@@ -43,13 +43,14 @@
 /// # Usage
 ///
 /// ```no_run
-/// use r3bl_tui::{EX_EDITOR_CONTENT, parse_markdown};
+/// use r3bl_tui::{EX_EDITOR_CONTENT, parse_markdown, ZeroCopyGapBuffer};
 ///
 /// // Split content into lines for editor buffer initialization
 /// let lines: Vec<&str> = EX_EDITOR_CONTENT.lines().collect();
 ///
-/// // Use directly for parser testing
-/// let parsed = parse_markdown(EX_EDITOR_CONTENT);
+/// // Use for parser testing - convert to ZeroCopyGapBuffer first
+/// let gap_buffer = ZeroCopyGapBuffer::from(EX_EDITOR_CONTENT);
+/// let parsed = parse_markdown(&gap_buffer);
 /// ```
 pub const EX_EDITOR_CONTENT: &str =
     include_str!("../md_parser/conformance_test_data/real_world_files/ex_editor.md");

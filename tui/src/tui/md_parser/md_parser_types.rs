@@ -131,6 +131,7 @@ pub mod constants {
     pub const COMMA: &str = ",";
     pub const COMMA_CHAR: char = ',';
     pub const QUOTE: &str = "\"";
+    pub const HEADING: &str = "#";
     pub const HEADING_CHAR: char = '#';
     pub const SPACE: &str = " ";
     pub const SPACE_CHAR: char = ' ';
@@ -139,6 +140,7 @@ pub mod constants {
 
     /// Only for output to terminal.
     pub const LIST_SPACE_DISPLAY: &str = "─";
+    pub const LIST_SPACE_DISPLAY_CHAR: char = '─';
 
     /// Only for output to terminal.
     pub const LIST_SPACE_END_DISPLAY_FIRST_LINE: &str = "┤"; // "┼" or "|" or "┤"

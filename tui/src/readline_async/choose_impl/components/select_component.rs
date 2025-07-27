@@ -20,11 +20,12 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
                 terminal::{Clear, ClearType}};
 use miette::IntoDiagnostic;
 
-use crate::{ast, ch, choose_apply_style, col, fg_blue, get_terminal_width,
-            inline_string, lock_output_device_as_mut, pad_fmt, queue_commands, usize,
-            width, AnsiStyledText, ChUnit, CommonResult, FunctionComponent, GCStringExt,
-            Header, HowToChoose, InlineString, InlineVec, OutputDevice, State,
-            StyleSheet, TuiStyle, DEVELOPMENT_MODE};
+use crate::{AnsiStyledText, ChUnit, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
+            GCStringExt, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
+            State, StyleSheet, TuiStyle, ast, ch, choose_apply_style, col,
+            core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
+            inline_string, lock_output_device_as_mut, queue_commands, usize,
+            width};
 
 #[allow(missing_debug_implementations)]
 pub struct SelectComponent {
@@ -100,16 +101,17 @@ impl FunctionComponent<State> for SelectComponent {
 }
 
 mod render_helper {
-    use super::{ast, ch, choose_apply_style, clip_string_to_width_with_ellipsis, col,
-                fg_blue, get_terminal_width, inline_string, pad_fmt, queue_commands,
-                usize, width, AnsiStyledText, ChUnit, Clear, ClearType, CommonResult,
-                FunctionComponent, GCStringExt, Header, HowToChoose, InlineString,
-                InlineVec, MoveToColumn, MoveToNextLine, MoveToPreviousLine,
-                OutputDevice, Print, ResetColor, SelectComponent, SetBackgroundColor,
-                SetForegroundColor, State, StyleSheet, TuiStyle, DEVELOPMENT_MODE,
-                IS_FOCUSED, IS_NOT_FOCUSED, MULTI_SELECT_IS_NOT_SELECTED,
-                MULTI_SELECT_IS_SELECTED, SINGLE_SELECT_IS_NOT_SELECTED,
-                SINGLE_SELECT_IS_SELECTED};
+
+    use super::{AnsiStyledText, ChUnit, Clear, ClearType, CommonResult,
+                DEVELOPMENT_MODE, FunctionComponent, GCStringExt, Header, HowToChoose,
+                IS_FOCUSED, IS_NOT_FOCUSED, InlineString, InlineVec,
+                MULTI_SELECT_IS_NOT_SELECTED, MULTI_SELECT_IS_SELECTED, MoveToColumn,
+                MoveToNextLine, MoveToPreviousLine, OutputDevice, Print, ResetColor,
+                SINGLE_SELECT_IS_NOT_SELECTED, SINGLE_SELECT_IS_SELECTED,
+                SelectComponent, SetBackgroundColor, SetForegroundColor, State,
+                StyleSheet, TuiStyle, ast, ch, choose_apply_style,
+                clip_string_to_width_with_ellipsis, col, fg_blue, get_spaces,
+                get_terminal_width, inline_string, queue_commands, usize, width};
 
     pub struct RenderContext {
         pub header_viewport_height: ChUnit,
@@ -203,7 +205,7 @@ mod render_helper {
         start_display_col_offset: usize,
     ) -> CommonResult<()> {
         let mut header_text =
-            format!("{}{}", " ".repeat(start_display_col_offset), header_text);
+            format!("{}{}", &get_spaces(start_display_col_offset), header_text);
 
         header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
 
@@ -304,11 +306,7 @@ mod render_helper {
                         let num_of_spaces: ChUnit = available_space_col_count + ch(3);
 
                         let mut span_with_spaces = span_text.to_owned();
-                        pad_fmt!(
-                            fmt: span_with_spaces,
-                            pad_str: " ",
-                            repeat_count: num_of_spaces.as_usize()
-                        );
+                        span_with_spaces.push_str(&get_spaces(num_of_spaces.as_usize()));
 
                         header_line_modified.push(span_with_spaces);
                     } else {
@@ -485,29 +483,29 @@ mod render_helper {
         selection_mode: HowToChoose,
         start_display_col_offset: usize,
     ) -> String {
-        let padding_left = " ".repeat(start_display_col_offset);
+        let padding_left = get_spaces(start_display_col_offset);
 
         match selection_mode {
             HowToChoose::Single => {
                 if let Focus::Yes = row_context.focused {
-                    format!("{padding_left} {SINGLE_SELECT_IS_SELECTED} ")
+                    format!("{} {SINGLE_SELECT_IS_SELECTED} ", &padding_left)
                 } else {
-                    format!("{padding_left} {SINGLE_SELECT_IS_NOT_SELECTED} ")
+                    format!("{} {SINGLE_SELECT_IS_NOT_SELECTED} ", &padding_left)
                 }
             }
             HowToChoose::Multiple => match (row_context.focused, row_context.selected) {
                 (Focus::Yes, Select::Yes) => {
-                    format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
+                    format!("{} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ", &padding_left)
                 }
                 (Focus::Yes, Select::No) => {
-                    format!("{padding_left} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ")
+                    format!("{} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ", &padding_left)
                 }
                 (Focus::No, Select::Yes) => {
-                    format!("{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} ")
+                    format!("{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} ", &padding_left)
                 }
                 (Focus::No, Select::No) => {
                     format!(
-                        "{padding_left} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} "
+                        "{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ", &padding_left
                     )
                 }
             },
@@ -526,9 +524,9 @@ mod render_helper {
             clip_string_to_width_with_ellipsis(data_item, viewport_width);
         let data_item_display_width: ChUnit = *data_item.grapheme_string().display_width;
         let padding_right = if data_item_display_width < viewport_width {
-            " ".repeat(usize(viewport_width - data_item_display_width))
+            get_spaces(usize(viewport_width - data_item_display_width))
         } else {
-            String::new()
+            get_spaces(0)
         };
 
         queue_commands! {
@@ -616,8 +614,8 @@ mod tests {
     use serial_test::serial;
 
     use super::*;
-    use crate::{global_color_support::{clear_override, set_override},
-                ColorSupport, ItemsOwned, OutputDeviceExt};
+    use crate::{ColorSupport, ItemsOwned, OutputDeviceExt,
+                global_color_support::{clear_override, set_override}};
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {

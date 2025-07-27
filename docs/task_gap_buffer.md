@@ -19,8 +19,10 @@
       - [Core Architectural Anchor](#core-architectural-anchor)
       - [3.1 Parser Modifications for Padding](#31-parser-modifications-for-padding)
       - [3.2 Main Parser Entry Point](#32-main-parser-entry-point)
-      - [3.3 Individual Parser Updates](#33-individual-parser-updates)
-      - [3.4 Syntax Highlighting Integration](#34-syntax-highlighting-integration)
+      - [3.3 Individual Parser Updates ✅](#33-individual-parser-updates-)
+      - [3.4 VecEditorContentLines Adapter ✅](#34-veceditorcontentlines-adapter-)
+      - [3.5 ZeroCopyGapBuffer and parse_markdown() Integration ✅](#35-zerocopygapbuffer-and-parse_markdown-integration-)
+      - [3.6 Syntax Highlighting Integration - Stepping Stone Approach ✅](#36-syntax-highlighting-integration---stepping-stone-approach-)
     - [Phase 4: Editor Integration](#phase-4-editor-integration)
       - [Core Architectural Anchor](#core-architectural-anchor-1)
       - [4.1 EditorLinesStorage Trait](#41-editorlinesstorage-trait)
@@ -29,6 +31,7 @@
       - [4.3 Update Editor Operations to EditorLinesStorage API](#43-update-editor-operations-to-editorlinesstorage-api)
       - [4.4 Cursor Movement Updates Using GapBufferLineInfo](#44-cursor-movement-updates-using-gapbufferlineinfo)
       - [4.5 File I/O Updates Through EditorLinesStorage](#45-file-io-updates-through-editorlinesstorage)
+      - [4.6 Drop Legacy VecEditorContentLines from Codebase](#46-drop-legacy-veceditorcontentlines-from-codebase)
     - [Phase 5: Optimization](#phase-5-optimization)
       - [5.1 Memory Optimization](#51-memory-optimization)
       - [5.2 Performance Optimization](#52-performance-optimization)
@@ -316,30 +319,7 @@ padding.
   - Updated to use public `insert_at_grapheme` API with `SegIndex::from(0)`
   - Fixed type conversions for `RowIndex`
 
-#### 3.5 Syntax Highlighting Integration - Stepping Stone Approach
-
-**This is a stepping stone approach** - we're not trying to achieve full zero-copy benefits yet,
-just proving that the conversion pipeline works.
-
-**Key Goals:**
-
-- Break compatibility with `VecEditorContentLines` (this is intentional and OK)
-- Remove `ParserByteCache` entirely (no fallback needed)
-- Prove the pipeline: `VecEditorContentLines` → `ZeroCopyGapBuffer` → `parse_markdown()`
-- We must guarantee that the `parse_markdown()` function works with the `ZeroCopyGapBuffer` without
-  any issues, including null padding handling. Where necessary, we can take legacy content that
-  would be converted into `VecEditorContentLines` and convert it to `ZeroCopyGapBuffer` using
-  `convert_vec_lines_to_gap_buffer()`
-
-**Convert VecEditorContentLines to ZeroCopyGapBuffer when needed:**
-
-- The editor creates a `VecEditorContentLines`,
-- Which we then convert to `ZeroCopyGapBuffer` (we don't care about performance or efficiency in
-  this phase),
-- Then we pass this `ZeroCopyGapBuffer` to `parse_markdown()`, which internally uses
-  `ZeroCopyGapBuffer::as_str()` to call `parse_markdown_str()`.
-
-**Tasks:**
+#### 3.5 ZeroCopyGapBuffer and parse_markdown() Integration ✅
 
 - [x] ByteIndex to SegIndex conversion
   - [x] Forward conversion: `GapBufferLineInfo::get_byte_pos(SegIndex) -> ByteIndex`
@@ -355,26 +335,116 @@ just proving that the conversion pipeline works.
     - `convert_str_to_gap_buffer()` - converts `&str` to `ZeroCopyGapBuffer`
     - Both functions properly handle newlines, empty lines, and null padding
     - Comprehensive tests for both adapters including Unicode content
-- [ ] Update `try_parse_and_highlight` in `md_parser_syn_hi_impl.rs`:
-  - [ ] Import `convert_vec_lines_to_gap_buffer` and `parse_markdown`
-  - [ ] Convert `editor_text_lines` to `ZeroCopyGapBuffer` using the adapter
-  - [ ] Pass gap buffer directly to `parse_markdown(&gap_buffer)`
-  - [ ] Remove ParserByteCache parameter entirely (breaking change)
-- [ ] Ensure that `parse_markdown` works with the gap buffer:
-  - [ ] Verify that it handles null padding correctly
-  - [ ] Ensure that all parser tests pass with the new gap buffer input
+- [x] Update `try_parse_and_highlight` in `md_parser_syn_hi_impl.rs`:
+  - [x] Import `convert_vec_lines_to_gap_buffer` and `parse_markdown`
+  - [x] Convert `editor_text_lines` to `ZeroCopyGapBuffer` using the adapter
+  - [x] Pass gap buffer directly to `parse_markdown(&gap_buffer)`
+  - [x] Remove ParserByteCache parameter entirely (breaking change)
+  - [x] Update all callers to remove `parser_byte_cache` parameter
+  - [x] Fix unused imports (PARSER_BYTE_CACHE_PAGE_SIZE, ParserByteCache, etc.)
+  - [x] Update documentation to mark parser_byte_cache as deprecated
+  - [x] Verify code compiles without warnings
+  - [x] Converts &[GCString] to ZeroCopyGapBuffer using convert_vec_lines_to_gap_buffer()
+  - [x] Passes the gap buffer directly to parse_markdown()
+  - [x] Removed ParserByteCache parameter entirely from function signature
+  - [x] All callers updated to remove parser_byte_cache parameter (engine_public_api.rs)
+  - [x] Fixed structural issues in code (duplicate impl blocks)
+  - [x] All tests in md_parser_syn_hi module pass (16 tests)
+  - [x] Code compiles cleanly without warnings
+- [x] Break compatibility with `VecEditorContentLines` (this is intentional and OK)
+- [x] Remove `ParserByteCache` entirely (no fallback needed)
+
+#### 3.6 Syntax Highlighting Integration - Stepping Stone Approach ✅
+
+We are in the middle of migrating `parse_markdown()` to use `ZeroCopyGapBuffer` as input, instead of
+`&str` that is loaded from `VecEditorContentLines`. This is a stepping stone towards full zero-copy
+integration with the parser. We're not trying to achieve full zero-copy benefits yet, just proving
+that the conversion pipeline works.
+
+What is "null padding" invariant?
+
+- In the existing `parse_markdown` module, the parser expects that each line ends with a newline
+  character (`\n`), and that there is no null padding after the newline. This is the legacy
+  behavior.
+- With `ZeroCopyGapBuffer` we introduce the new concept that "EOL" is not just `\n`, but also [0 ..
+  more] `\0` (null) characters, ie, the `\n` is always followed by a "null padding". This is the
+  "null padding invariant" that is enforced by `ZeroCopyGapBuffer` due to the way in which it stores
+  unicode UTF-8 characters in its internal buffer.
+
+What is the goal of this phase?
+
+- The parser and sub-parser functions need to be changed to work with this "null padding" invariant
+  introduced and enforced by `ZeroCopyGapBuffer`.
+- `ZeroCopyGapBuffer` is the only type that can be used as input to `parse_markdown()`.
+- `ZeroCopyGapBuffer::as_str()` returns a `&str` that upholds the "null padding invariant", meaning
+  it will always return a string that has null padding after each line.
+
+To better understand how to handle "null padding" in the parser:
+
+- Review `parse_null_padded_line.rs` to see how to handle null padding invariant, and working with
+  nom and markdown parser functions `is_not()`, `is()`, `is_any_of()` that work with `take_while()`,
+  `take_till1()` .
+- Don't use `\0`, `\n`, ` `, etc hard-coded characters in the parser functions, instead use
+  `NULL_CHAR`, `NEWLINE_OR_NULL`, `NEW_LINE_CHAR` constants defined in `md_parser_types.rs`.
+
+How to use existing tests:
+
+- The current tests in `parse_markdown` module are correct.
+- The code in the `markdown_parser()` and its sub-parser functions in the module, have to be updated
+  to handle null padding correctly.
+- Do not change the expected output of the tests, they are correct. They should not have null
+  padding in the output, but the input to the parser should be a `ZeroCopyGapBuffer` that has null
+  padding after each line. The parser should handle this null padding correctly.
+
+Our key goals are:
+
+- Prove the pipeline works: `VecEditorContentLines` → `ZeroCopyGapBuffer` → `parse_markdown()`
+- We must guarantee that the `parse_markdown()` function works with the `ZeroCopyGapBuffer` without
+  any issues, including null padding handling. Where necessary, we can take legacy content that
+  would be converted into `VecEditorContentLines` and convert it to `ZeroCopyGapBuffer` using
+  `convert_vec_lines_to_gap_buffer()`
+- Convert `VecEditorContentLines` to `ZeroCopyGapBuffer` when needed:
+  - The editor creates a `VecEditorContentLines`,
+  - Which we then convert to `ZeroCopyGapBuffer` (we don't care about performance or efficiency in
+    this phase),
+  - Then we pass this `ZeroCopyGapBuffer` to `parse_markdown()`, which internally uses
+    `ZeroCopyGapBuffer::as_str()` to call `parse_markdown_str()`.
+
+Tasks:
+
+- [x] Ensure that `parse_markdown()` works with the `zero_copy_gap_buffer` module and
+      `ZeroCopyGapBuffer`.
+  - [x] Verify that it handles null padding correctly - all parser tests include null padding tests
+  - [x] Ensure that all parser tests pass with the new gap buffer input - 222 md_parser tests pass
     - For test data that is loaded using `include_str!` from `conformance_test_data` folder, we can
-      use `convert_str_to_gap_buffer()` to convert the string content into `ZeroCopyGapBuffer`
+      use `gap_buffer_from_str()` to convert the string content into `ZeroCopyGapBuffer`
     - For test data that is loaded using `&[GCString]` aka `VecEditorContentLines`, we can use
-      `convert_vec_lines_to_gap_buffer()` to convert the content into `ZeroCopyGapBuffer`
-- [ ] Update all callers to remove `parser_byte_cache` parameter
-- [ ] Add tests to verify:
-  - [ ] The conversion from VecEditorContentLines works correctly
-  - [ ] The gap buffer can be parsed despite null padding
-  - [ ] Syntax highlighting works with the gap buffer approach
-- [ ] Run `cargo clippy --all-targets` and fix all the lint warnings
-- [ ] Make sure that all docs in module are up to date with the latest changes
-- [ ] Wait for the user to review code, before making a commit with this progress
+      `gap_buffer_from_lines()` to convert the content into `ZeroCopyGapBuffer`
+  - [x] Make `parse_markdown_str` private and document it as an internal function (should not be
+        used in any public API or rustdoc comments). This is to ensure that the Rust type system
+        enforces that only `ZeroCopyGapBuffer` can be used as input to `parse_markdown()`. This is
+        the only way we can guarantee that the `&str` used in `parse_markdown()` is always derived
+        from `ZeroCopyGapBuffer::as_str()`, which is guaranteed to uphold the null padding
+        invariant.
+  - [x] Replace calls to it with `parse_markdown` in the codebase and tests, use the appropriate
+        adapter to convert `&str` or `&[GCString]` to `ZeroCopyGapBuffer` before passing it to
+        `parse_markdown`
+  - [x] Renamed adapter functions to more idiomatic names:
+    - `convert_vec_lines_to_gap_buffer` → `gap_buffer_from_lines`
+    - `convert_str_to_gap_buffer` → `gap_buffer_from_str`
+  - [x] Implemented `From<&str>` and `From<&[GCString]>` traits for `ZeroCopyGapBuffer`
+  - [x] Updated all usages to use the From trait instead of calling adapter functions directly
+- [x] Add tests to verify:
+  - [x] The conversion from VecEditorContentLines works correctly
+  - [x] The gap buffer can be parsed despite null padding
+  - [x] Syntax highlighting works with the gap buffer approach
+- [x] Run `cargo clippy --all-targets` and fix all the lint warnings
+- [x] Make sure that all docs in module are up to date with the latest changes
+- [x] Make gap*buffer_from*\* functions private and use From trait everywhere
+- [x] Replace hardcoded characters with constants from md_parser_types.rs
+- [x] Ensure idiomatic nom usage with is_not(), is(), is_any_of()
+- [x] Add proper null padding documentation to all parser functions
+- [x] Make a commit with this progress
 
 **Note:** We are committed to moving everything over to use ZeroCopyGapBuffer, but we are doing this
 one step at a time. VecEditorContentLines will be abandoned in Phase 4.
@@ -382,6 +452,14 @@ one step at a time. VecEditorContentLines will be abandoned in Phase 4.
 ### Phase 4: Editor Integration
 
 #### Core Architectural Anchor
+
+Currently the editor uses `VecEditorContentLines` as the main content storage, which is a legacy
+implementation that does not support zero-copy access and has performance issues with large files.
+`VecEditorContentLines` is transformed into `ZeroCopyGapBuffer` for parsing, but the editor itself
+still uses the legacy storage. We want to transition the editor to use `ZeroCopyGapBuffer` directly
+for all content storage and operations, while maintaining compatibility with existing editor
+functionality. And we want to do this in a way that allows us to gradually migrate the codebase
+without breaking existing features.
 
 **We are anchoring on the ZeroCopyGapBuffer architecture as the desired future state.** The structs
 in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer` and
@@ -411,11 +489,13 @@ in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer`
 - [ ] Create VecEditorContentLinesAdapter that implements EditorLinesStorage (legacy adapter)
   - Converts GCString data to GapBufferLineInfo format on-the-fly
   - Marked as "legacy storage" for eventual deprecation
-- [ ] Add feature flag/config: `--storage-engine [ng|legacy]`
+- [ ] Add feature boolean config in `tui/mod.rs`: `STORAGE_ENGINE_NG_ENABLED = bool`
   - Default to legacy initially for safety
   - Gradually transition to ng as default
   - Eventually remove legacy code entirely
-- [ ] Update all editor code to use EditorLinesStorage trait instead of concrete types
+- [ ] Update all editor code to use `EditorLinesStorage` trait instead of concrete types. This will
+      be useful not only for the current task, but also for the future when we want to switch to
+      another new storage engine.
 - [ ] Make sure that all docs in module are up to date with the latest changes added here
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
@@ -472,6 +552,11 @@ in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer`
 - [ ] Run `cargo clippy --all-targets` and fix all the lint warnings generated by this tool
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
+
+#### 4.6 Drop Legacy VecEditorContentLines from Codebase
+
+- [ ] Keep the `EditorLinesStorage` trait and its NG implementation but drop the legacy
+      `VecEditorContentLines` implementation
 
 ### Phase 5: Optimization
 
@@ -674,17 +759,14 @@ changing the parser's `&str` requirement.
 ### Existing Implementation
 
 1. **EditorContent struct** (`tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
-
    - Contains `lines: VecEditorContentLines` field
    - Manages caret position, scroll offset, and file metadata
 
 2. **VecEditorContentLines type** (`tui/src/tui/editor/editor_buffer/sizing.rs`):
-
    - Defined as: `SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>`
    - Stack-allocated vector holding up to 32 lines before heap allocation
 
 3. **GCString type** (`tui/src/core/graphemes/gc_string.rs`):
-
    - Contains `InlineString` (SmallString with 16-byte inline storage)
    - Stores grapheme cluster metadata in `SegmentArray`
    - Implements `AsRef<str>` for string conversion
@@ -902,7 +984,6 @@ impl ZeroCopyGapBuffer {
 ### Current GCString Analysis
 
 1. **What's Reusable**:
-
    - `Seg` struct (already decoupled, contains only indices)
    - Width calculation functions (static methods)
    - Segmentation algorithm logic

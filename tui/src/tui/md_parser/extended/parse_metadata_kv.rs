@@ -15,11 +15,20 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::tag, combinator::opt, sequence::preceded, IResult, Parser};
+use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
 
-use crate::{md_parser::constants::{COLON, NEW_LINE, SPACE},
+use crate::{md_parser::constants::{COLON, SPACE},
+            parse_null_padded_line::trim_optional_leading_newline_and_nulls,
             take_text_in_single_line, tiny_inline_string};
 
+/// Parse key-value metadata pairs.
+///
+/// # Null Padding Invariant
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
+/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser handles null padding by consuming
+/// both newline and null characters at the end of the line.
+///
 /// - Sample parse input: `@title: Something` or `@date: Else`.
 /// - There may or may not be a newline at the end. If there is, it is consumed.
 /// - Can't nest the `tag_name` within the `output`. So there can only be one `tag_name`
@@ -28,6 +37,7 @@ use crate::{md_parser::constants::{COLON, NEW_LINE, SPACE},
 /// # Errors
 ///
 /// Returns a nom parsing error if the input doesn't match the expected format.
+#[rustfmt::skip]
 pub fn parse_unique_kv_opt_eol<'a>(
     tag_name: &'a str,
     input: &'a str,
@@ -49,9 +59,9 @@ pub fn parse_unique_kv_opt_eol<'a>(
         )));
     }
 
-    // If there is a newline, consume it since there may or may not be a newline at the
-    // end.
-    let (remainder, _) = opt(tag(NEW_LINE)).parse(remainder)?;
+    // If there is a newline, consume it along with any null padding that follows
+    // to handle the ZeroCopyGapBuffer null padding invariant
+    let remainder = trim_optional_leading_newline_and_nulls(remainder);
 
     // Special case: Early return when something like `@title: ` or `@title: \n` is found.
     if title_text.is_empty() {

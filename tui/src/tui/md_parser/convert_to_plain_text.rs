@@ -18,17 +18,16 @@
 //! This module is responsible for converting all the [`MdLineFragment`] into plain text
 //! w/out any formatting.
 
-use std::fmt::Write;
-
-use crate::{convert_to_string_slice, inline_string, join, join_fmt, join_with_index,
-            md_parser::constants::{BACK_TICK, CHECKED, HEADING_CHAR, LEFT_BRACKET,
-                                   LEFT_IMAGE, LEFT_PARENTHESIS, LIST_SPACE_DISPLAY,
+use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement,
+            MdLineFragment, PrettyPrintDebug, convert_to_string_slice, get_hashes,
+            get_horiz_lines, get_spaces, inline_string, join, join_fmt, join_with_index,
+            md_parser::constants::{BACK_TICK, CHECKED, LEFT_BRACKET, LEFT_IMAGE,
+                                   LEFT_PARENTHESIS, LIST_SPACE_DISPLAY,
                                    LIST_SPACE_END_DISPLAY_FIRST_LINE,
                                    LIST_SPACE_END_DISPLAY_REST_LINE, NEW_LINE, PERIOD,
                                    RIGHT_BRACKET, RIGHT_IMAGE, RIGHT_PARENTHESIS,
                                    SPACE, STAR, UNCHECKED, UNDERSCORE},
-            pad_fmt, usize_to_u8_array, HeadingLevel, HyperlinkData, InlineString, List,
-            MdDocument, MdElement, MdLineFragment, PrettyPrintDebug};
+            usize_to_u8_array};
 
 impl PrettyPrintDebug for MdDocument<'_> {
     fn pretty_print_debug(&self) -> InlineString {
@@ -94,8 +93,7 @@ impl PrettyPrintDebug for MdElement<'_> {
             }
             MdElement::SmartList((list_lines, _bullet_kind, _indent)) => {
                 let mut acc = InlineString::new();
-                // We don't care about the result of this operation.
-                write!(acc, "[  ").ok();
+                acc.push_str("[  ");
                 join_fmt!(
                     fmt: acc,
                     from: list_lines,
@@ -103,8 +101,7 @@ impl PrettyPrintDebug for MdElement<'_> {
                     delim: " → ",
                     format: "┊{}┊", fragments_in_one_line.pretty_print_debug()
                 );
-                // We don't care about the result of this operation.
-                write!(acc, "  ]").ok();
+                acc.push_str("  ]");
                 acc
             }
         }
@@ -115,13 +112,8 @@ impl PrettyPrintDebug for HeadingLevel {
     fn pretty_print_debug(&self) -> InlineString {
         let mut acc = InlineString::new();
         let num_of_hashes = self.level;
-        pad_fmt!(
-            fmt: acc,
-            pad_str: HEADING_CHAR,
-            repeat_count: num_of_hashes
-        );
-        // We don't care about the result of this operation.
-        write!(acc, "{SPACE}").ok();
+        acc.push_str(&get_hashes(num_of_hashes));
+        acc.push_str(SPACE);
         acc
     }
 }
@@ -175,34 +167,23 @@ pub fn generate_ordered_list_item_bullet(
     let mut acc = InlineString::new();
 
     if *is_first_line {
-        pad_fmt!(
-            fmt: acc,
-            pad_str: SPACE,
-            repeat_count: *indent
-        );
-        // We don't care about the result of this operation.
-        write!(acc, "{number}{PERIOD}{LIST_SPACE_END_DISPLAY_REST_LINE}").ok();
+        acc.push_str(&get_spaces(*indent));
+        acc.push_str(&number.to_string());
+        acc.push_str(PERIOD);
+        acc.push_str(LIST_SPACE_END_DISPLAY_REST_LINE);
     } else {
         // Padding for indent.
-        pad_fmt!(
-            fmt: acc,
-            pad_str: SPACE,
-            repeat_count: *indent
-        );
+        acc.push_str(&get_spaces(*indent));
 
         // Padding for number.
         let number_ray = usize_to_u8_array(*number);
         let number_str = convert_to_string_slice(&number_ray);
         let number_str_len = number_str.len();
-        pad_fmt!(
-            fmt: acc,
-            pad_str: SPACE,
-            repeat_count: number_str_len
-        );
+        acc.push_str(&get_spaces(number_str_len));
 
         // Write the reset rest of the line.
-        // We don't care about the result of this operation.
-        write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}").ok();
+        acc.push_str(SPACE);
+        acc.push_str(LIST_SPACE_END_DISPLAY_REST_LINE);
     }
 
     acc
@@ -216,25 +197,13 @@ pub fn generate_unordered_list_item_bullet(
     let mut acc = InlineString::new();
 
     if *is_first_line {
-        pad_fmt!(
-            fmt: acc,
-            pad_str: LIST_SPACE_DISPLAY,
-            repeat_count: *indent
-        );
-
-        // We don't care about the result of this operation.
-        write!(
-            acc,
-            "{LIST_SPACE_DISPLAY}{LIST_SPACE_END_DISPLAY_FIRST_LINE}",
-        ).ok();
+        acc.push_str(&get_horiz_lines(*indent));
+        acc.push_str(LIST_SPACE_DISPLAY);
+        acc.push_str(LIST_SPACE_END_DISPLAY_FIRST_LINE);
     } else {
-        pad_fmt!(
-            fmt: acc,
-            pad_str: SPACE,
-            repeat_count: *indent
-        );
-        // We don't care about the result of this operation.
-        write!(acc, "{SPACE}{LIST_SPACE_END_DISPLAY_REST_LINE}").ok();
+        acc.push_str(&get_spaces(*indent));
+        acc.push_str(SPACE);
+        acc.push_str(LIST_SPACE_END_DISPLAY_REST_LINE);
     }
 
     acc

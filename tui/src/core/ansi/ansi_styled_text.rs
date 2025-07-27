@@ -202,9 +202,7 @@ pub mod ansi_styled_text_impl {
                     maybe_style: _,
                 } = pixel_char
                 {
-                    use std::fmt::Write;
-                    // We don't care about the result of this operation.
-                    write!(acc, "{display_char}").ok();
+                    acc.push(*display_char);
                 }
             }
 
@@ -893,7 +891,7 @@ mod display_trait_impl {
             self.write_to_buf(&mut acc)?;
 
             // Single write to formatter.
-            f.write_str(&acc)
+            self.write_buf_to_fmt(&acc, f)
         }
     }
 }

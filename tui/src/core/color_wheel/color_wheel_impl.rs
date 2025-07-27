@@ -105,7 +105,6 @@
 //! The optimization successfully eliminated the hash operation bottleneck, making
 //! `ColorWheel` operations negligible in the overall performance profile.
 use std::{collections::hash_map::DefaultHasher,
-          fmt::Write,
           hash::{Hash, Hasher},
           sync::LazyLock};
 
@@ -121,9 +120,9 @@ use super::{config::{ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
             helpers,
             lolcat::{Lolcat, LolcatBuilder},
             types::Seed};
-use crate::{ChUnit, GCString, GCStringExt, GradientGenerationPolicy, InlineString,
+use crate::{ChUnit, GCString, GCStringExt, GradientGenerationPolicy,
             RgbValue, TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText,
-            TuiStyledTexts, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
+            TuiStyledTexts, WriteToBuf, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
             tui_styled_text, u8, usize};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
@@ -644,7 +643,7 @@ impl ColorWheel {
     pub fn lolcat_into_string(
         text: &str,
         maybe_default_style: Option<TuiStyle>,
-    ) -> InlineString {
+    ) -> String {
         let mut color_wheel = ColorWheel::default();
         let string_gcs = text.grapheme_string();
 
@@ -658,18 +657,18 @@ impl ColorWheel {
             TextColorizationPolicy::ColorEachCharacter(None),
         );
 
-        // Convert styled texts to inline string
-        let mut acc = InlineString::new();
+        // Convert styled texts to string using WriteToBuf for better performance
+        let mut buffer = String::new();
         for TuiStyledText { mut style, text } in styled_texts.inner {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
             let ansi_styled_text = ast(text, style);
-            // We don't care about the result of this operation.
-            write!(acc, "{ansi_styled_text}").ok();
+            // Use WriteToBuf trait for better performance
+            let _ = ansi_styled_text.write_to_buf(&mut buffer);
         }
-
-        acc
+        
+        buffer
     }
 
     /// See [`ColorWheel::lolcat_into_string`] for an easy to use version of this
@@ -680,7 +679,7 @@ impl ColorWheel {
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
         maybe_default_style: Option<TuiStyle>,
-    ) -> InlineString {
+    ) -> String {
         let string_gcs = string.grapheme_string();
         let spans_in_line = self.colorize_into_styled_texts(
             &string_gcs,
@@ -688,18 +687,18 @@ impl ColorWheel {
             text_colorization_policy,
         );
 
-        let mut acc = InlineString::new();
+        let mut buffer = String::new();
 
         for TuiStyledText { mut style, text } in spans_in_line.inner {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
             let ansi_styled_text = ast(text, style);
-            // We don't care about the result of this operation.
-            write!(acc, "{ansi_styled_text}").ok();
+            // Use WriteToBuf trait for better performance
+            let _ = ansi_styled_text.write_to_buf(&mut buffer);
         }
 
-        acc
+        buffer
     }
 
     /// This method gives you fine grained control over the color wheel. It returns a

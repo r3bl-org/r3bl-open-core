@@ -83,6 +83,12 @@ use crate::{fg_blue, fg_magenta, fg_red, is_any_of,
 /// panics while holding the lock. To avoid panics, ensure that the code that
 /// locks the mutex does not panic while holding the lock.
 ///
+/// # Null Padding Invariant
+/// 
+/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
+/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])`
+/// to handle both newline and null characters as line terminators.
+///
 /// # Errors
 ///
 /// Returns a nom parsing error if the input doesn't contain valid plain text.
