@@ -22,27 +22,26 @@ use smallvec::{Array, SmallVec};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use super::iterator::GCStringIterator;
-use crate::{ChUnit, ColIndex, ColWidth, GCString, GetMemSize, InlineString,
-            Seg, SegIndex, SegWidth, build_segments_for_str,
-            calculate_display_width, ch, gc_string_common::GCStringData,
-            gc_string_owned, seg_width, width};
+use crate::{ChUnit, ColIndex, ColWidth, GCString, GetMemSize, InlineString, Seg,
+            SegIndex, SegWidth, build_segments_for_str, calculate_display_width, ch,
+            gc_string_common::GCStringData, gc_string_owned, seg_width, width};
 
 /// `GCStringOwned` represents a [String] as a sequence of grapheme cluster segments.
-/// 
+///
 /// This struct owns its string data and provides efficient access to grapheme clusters
-/// through pre-computed segment metadata. See the [module documentation](crate::graphemes)
-/// for comprehensive information about Unicode handling, grapheme clusters, and the three
-/// types of indices used in this system.
+/// through pre-computed segment metadata. See the [module
+/// documentation](crate::graphemes) for comprehensive information about Unicode handling,
+/// grapheme clusters, and the three types of indices used in this system.
 ///
 /// # Key Design Notes
 ///
 /// - **Ownership**: This struct owns its string data for performance reasons. Testing
 ///   showed that non-owning variants with external references were significantly slower
 ///   due to memory access latency.
-/// - **Iterators**: Provides both `iter()` for `&str` segments and `seg_iter()` for 
+/// - **Iterators**: Provides both `iter()` for `&str` segments and `seg_iter()` for
 ///   detailed [`Seg`] metadata.
-/// - **Deref**: Derefs to `SegmentArray` - note that `len()` returns grapheme count,
-///   not display width.
+/// - **Deref**: Derefs to `SegmentArray` - note that `len()` returns grapheme count, not
+///   display width.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct GCStringOwned {
     pub string: InlineString,
@@ -87,7 +86,7 @@ mod iterator {
         /// you care about the internal details, use the [`Self::seg_iter()`]
         /// method that returns an iterator over the [`Self::segments`].
         #[must_use]
-        pub fn iter(&self) -> GCStringIterator<'_> { GCStringIterator::new(self) }
+        pub fn iter(&self) -> GCStringIterator<'_, Self> { GCStringIterator::new(self) }
 
         /// Returns the segment at the given index.
         #[must_use]
@@ -366,7 +365,6 @@ mod basic {
         }
     }
 }
-
 
 /// Methods for easily detecting wide segments in the grapheme string.
 pub mod wide_segments {

@@ -20,8 +20,8 @@ use std::fmt::Debug;
 use super::{gc_string_owned::wide_segments::ContainsWideSegments,
             segment_builder::{build_segments_for_str, calculate_display_width}};
 use crate::{ChUnit, ColIndex, ColWidth, GCString, Seg, SegIndex, SegWidth,
-            gc_string_owned_sizing::SegmentArray,
-            gc_string_common::{self, GCStringData}};
+            gc_string_common::{self, GCStringData},
+            gc_string_owned_sizing::SegmentArray};
 
 /// Borrowed version of `GCStringOwned` that doesn't own the string data
 /// but owns its segment metadata. Used for efficient operations with
@@ -146,6 +146,13 @@ impl<'a> GCStringRef<'a> {
             bytes_size,
         }
     }
+
+    /// Returns an iterator over the grapheme segments in the `GCStringRef` as a
+    /// sequence of `&str`. This provides the same interface as `GCStringOwned::iter()`.
+    #[must_use]
+    pub fn iter(&self) -> super::iterator::GCStringIterator<'_, Self> {
+        super::iterator::GCStringIterator::new(self)
+    }
 }
 
 // ╭─────────────────────────────────────────────────────────────────────────────╮
@@ -179,7 +186,9 @@ impl<'a> GCString for GCStringRef<'a> {
 
     fn is_empty(&self) -> bool { gc_string_common::gc_is_empty(self) }
 
-    fn get_max_seg_index(&self) -> SegIndex { gc_string_common::gc_get_max_seg_index(self) }
+    fn get_max_seg_index(&self) -> SegIndex {
+        gc_string_common::gc_get_max_seg_index(self)
+    }
 
     fn get(&self, seg_index: impl Into<SegIndex>) -> Option<Seg> {
         gc_string_common::gc_get(self, seg_index)
@@ -248,7 +257,10 @@ impl<'a> GCString for GCStringRef<'a> {
             let slice = &self.string[start_byte..];
 
             let gc_ref = GCStringRef::new(slice);
-            let width = gc_string_common::calculate_width_from_col(self, seg.start_display_col_index);
+            let width = gc_string_common::calculate_width_from_col(
+                self,
+                seg.start_display_col_index,
+            );
 
             return Some(SegStringRef {
                 string: gc_ref,
@@ -266,7 +278,9 @@ impl<'a> GCString for GCStringRef<'a> {
     ) -> Option<Self::StringResult> {
         let target_col = arg_col_index.into();
 
-        if let Some(end_byte) = gc_string_common::find_end_byte_left_of_col(self, target_col) {
+        if let Some(end_byte) =
+            gc_string_common::find_end_byte_left_of_col(self, target_col)
+        {
             let slice = &self.string[..end_byte];
             let gc_ref = GCStringRef::new(slice);
             let width = gc_string_common::calculate_width_up_to_col(self, target_col);
@@ -356,7 +370,10 @@ mod tests {
 
         // Should have same number of segments
         assert_eq!(gc_ref.len(), gc_owned.len());
-        assert_eq!(GCString::display_width(&gc_ref), GCString::display_width(&gc_owned));
+        assert_eq!(
+            GCString::display_width(&gc_ref),
+            GCString::display_width(&gc_owned)
+        );
 
         // Each segment should match
         for i in 0..gc_ref.len().as_usize() {

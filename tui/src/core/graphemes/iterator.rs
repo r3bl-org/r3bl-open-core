@@ -15,25 +15,28 @@
  *   limitations under the License.
  */
 
-//! Iterator implementation for `GCStringOwned` type.
+//! Iterator implementation for types implementing grapheme string traits.
 //!
-//! This module provides iterator functionality for the `GCStringOwned` struct, allowing
-//! users to iterate over grapheme cluster segments as string slices. The iterator handles
-//! the complexity of grapheme cluster boundaries and provides a clean interface for
-//! traversing Unicode text.
+//! This module provides iterator functionality for any type that implements the
+//! grapheme string data access trait, allowing users to iterate over grapheme
+//! cluster segments as string slices. The iterator handles the complexity of
+//! grapheme cluster boundaries and provides a clean interface for traversing
+//! Unicode text.
 
-use super::GCStringOwned;
+use super::{GCStringOwned, GCStringRef, gc_string_common::GCStringData};
 
+/// Generic iterator for any type that implements `GCStringData` trait.
+/// This allows both `GCStringOwned` and `GCStringRef` to use the same iterator.
 #[derive(Debug)]
-pub struct GCStringIterator<'a> {
-    gc_string: &'a GCStringOwned,
+pub struct GCStringIterator<'a, T: GCStringData> {
+    gc_string: &'a T,
     index: usize,
 }
 
-impl<'a> GCStringIterator<'a> {
-    /// Creates a new iterator for the given `GCStringOwned`.
+impl<'a, T: GCStringData> GCStringIterator<'a, T> {
+    /// Creates a new iterator for any type implementing `GCStringData`.
     #[must_use]
-    pub fn new(gc_string: &'a GCStringOwned) -> Self {
+    pub fn new(gc_string: &'a T) -> Self {
         Self {
             gc_string,
             index: 0,
@@ -41,16 +44,19 @@ impl<'a> GCStringIterator<'a> {
     }
 }
 
-impl<'a> Iterator for GCStringIterator<'a> {
+impl<'a, T: GCStringData> Iterator for GCStringIterator<'a, T> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.gc_string.get_segment(self.index) {
-            Some(segment) => {
-                self.index += 1;
-                Some(segment)
-            }
-            None => None, // Stop iteration when `get_segment` returns `None`.
+        if let Some(seg) = self.gc_string.get_segment(self.index) {
+            self.index += 1;
+            // Use the segment to extract the string slice from the underlying data
+            let start = seg.start_byte_index.as_usize();
+            let end = seg.end_byte_index.as_usize();
+            let string_data = self.gc_string.string_data();
+            Some(&string_data[start..end])
+        } else {
+            None
         }
     }
 }
@@ -59,7 +65,16 @@ impl<'a> Iterator for GCStringIterator<'a> {
 /// directly.
 impl<'a> IntoIterator for &'a GCStringOwned {
     type Item = &'a str;
-    type IntoIter = GCStringIterator<'a>;
+    type IntoIter = GCStringIterator<'a, GCStringOwned>;
+
+    fn into_iter(self) -> Self::IntoIter { GCStringIterator::new(self) }
+}
+
+/// This implementation allows [`GCStringRef`] to be used in a for loop
+/// directly, just like `GCStringOwned`.
+impl<'a> IntoIterator for &'a GCStringRef<'a> {
+    type Item = &'a str;
+    type IntoIter = GCStringIterator<'a, GCStringRef<'a>>;
 
     fn into_iter(self) -> Self::IntoIter { GCStringIterator::new(self) }
 }
@@ -152,5 +167,70 @@ mod tests {
         // Compare with manual iter() usage (without for loop)
         let iter_results: Vec<_> = gc_string.iter().map(ToString::to_string).collect();
         assert_eq!(iter_results, collected);
+    }
+
+    #[test]
+    fn test_gcstring_ref_iterator_compatibility() {
+        let gc_ref = GCStringRef::new("Hello, 世界🥞👨‍👩‍👧‍👦🙏🏽");
+        let gc_owned = GCStringOwned::new("Hello, 世界🥞👨‍👩‍👧‍👦🙏🏽");
+
+        // Both should produce the same iteration results
+        let ref_results: Vec<_> = (&gc_ref).into_iter().collect();
+        let owned_results: Vec<_> = (&gc_owned).into_iter().collect();
+
+        assert_eq!(ref_results, owned_results);
+        assert_eq!(ref_results.len(), 12);
+        assert_eq!(ref_results[0], "H");
+        assert_eq!(ref_results[7], "世");
+        assert_eq!(ref_results[8], "界");
+        assert_eq!(ref_results[9], "🥞");
+        assert_eq!(ref_results[10], "👨‍👩‍👧‍👦");
+        assert_eq!(ref_results[11], "🙏🏽");
+
+        // Test using for loops with both types
+        let mut ref_collected = Vec::new();
+        for segment in &gc_ref {
+            ref_collected.push(segment.to_string());
+        }
+
+        let mut owned_collected = Vec::new();
+        for segment in &gc_owned {
+            owned_collected.push(segment.to_string());
+        }
+
+        assert_eq!(ref_collected, owned_collected);
+    }
+
+    #[test]
+    fn test_generic_iterator_with_both_types() {
+        let text = "Hello, 🙏🏽 World!";
+
+        let gc_owned = GCStringOwned::new(text);
+        let gc_ref = GCStringRef::new(text);
+
+        // Both can use .iter() method
+        let owned_segments: Vec<_> = gc_owned.iter().collect();
+        let ref_segments: Vec<_> = gc_ref.iter().collect();
+
+        // Both can be used in for loops
+        let mut owned_for_loop: Vec<_> = Vec::new();
+        for segment in &gc_owned {
+            owned_for_loop.push(segment);
+        }
+
+        let mut ref_for_loop: Vec<_> = Vec::new();
+        for segment in &gc_ref {
+            ref_for_loop.push(segment);
+        }
+
+        // All methods should produce identical results
+        assert_eq!(owned_segments, ref_segments);
+        assert_eq!(owned_segments, owned_for_loop);
+        assert_eq!(owned_segments, ref_for_loop);
+
+        // Verify some specific segments
+        assert_eq!(owned_segments[0], "H");
+        assert_eq!(owned_segments[7], "🙏🏽");
+        assert_eq!(owned_segments[9], "W");
     }
 }
