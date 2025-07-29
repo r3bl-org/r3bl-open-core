@@ -275,6 +275,7 @@
 
 // Attach.
 mod buffer_storage;
+mod editor_lines_storage_impl;
 mod segment_construction;
 mod text_deletion;
 mod text_insertion;
@@ -282,5 +283,5 @@ mod zero_copy_access;
 
 // Re-export.
 pub use buffer_storage::*;
-// Note: zero_copy_access, text_insertion, text_deletion and segment_construction
-// extend [`ZeroCopyGapBuffer`] impl, no separate exports needed
+// Note: zero_copy_access, text_insertion, text_deletion, segment_construction
+// and editor_lines_storage_impl extend [`ZeroCopyGapBuffer`] impl, no separate exports needed

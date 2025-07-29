@@ -30,10 +30,10 @@
 //! The underlying adapter functions `gap_buffer_from_lines()` and `gap_buffer_from_str()`
 //! are private implementation details and should not be used directly.
 
-use crate::{GCString, SegIndex, ZeroCopyGapBuffer, 
+use crate::{GCString, SegIndex, ZeroCopyGapBuffer,
             md_parser::constants::NEW_LINE_CHAR};
 #[cfg(test)]
-use crate::md_parser::constants::NULL_CHAR;
+use crate::{len, md_parser::constants::NULL_CHAR};
 
 /// Convert a slice of [`GCString`] lines into a [`ZeroCopyGapBuffer`].
 ///
@@ -160,7 +160,7 @@ mod tests {
         let lines: Vec<GCString> = vec![];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), 0);
+        assert_eq2!(buffer.line_count(), len(0));
         assert_eq2!(buffer.as_str(), "");
     }
 
@@ -169,7 +169,7 @@ mod tests {
         let lines = vec![GCString::from("Hello, world!")];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), 1);
+        assert_eq2!(buffer.line_count(), len(1));
         assert_eq2!(
             buffer.get_line_content(RowIndex::from(0)),
             Some("Hello, world!")
@@ -191,7 +191,7 @@ mod tests {
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), 4);
+        assert_eq2!(buffer.line_count(), len(4));
         assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("# Title"));
         assert_eq2!(buffer.get_line_content(RowIndex::from(1)), Some(""));
         assert_eq2!(
@@ -213,7 +213,7 @@ mod tests {
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), 3);
+        assert_eq2!(buffer.line_count(), len(3));
         assert_eq2!(
             buffer.get_line_content(RowIndex::from(0)),
             Some("Hello 👋 世界")
@@ -236,7 +236,7 @@ mod tests {
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
-        assert_eq2!(buffer.line_count(), 5);
+        assert_eq2!(buffer.line_count(), len(5));
         assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("```rust"));
         assert_eq2!(
             buffer.get_line_content(RowIndex::from(1)),
@@ -255,7 +255,7 @@ mod tests {
         let text = "";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), 0);
+        assert_eq2!(buffer.line_count(), len(0));
         assert_eq2!(buffer.as_str(), "");
     }
 
@@ -264,7 +264,7 @@ mod tests {
         let text = "Hello, world!";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), 1);
+        assert_eq2!(buffer.line_count(), len(1));
         assert_eq2!(
             buffer.get_line_content(RowIndex::from(0)),
             Some("Hello, world!")
@@ -276,7 +276,7 @@ mod tests {
         let text = "Hello, world!\n";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), 1);
+        assert_eq2!(buffer.line_count(), len(1));
         assert_eq2!(
             buffer.get_line_content(RowIndex::from(0)),
             Some("Hello, world!")
@@ -288,7 +288,7 @@ mod tests {
         let text = "# Heading\n\nParagraph text\nAnother line";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), 4);
+        assert_eq2!(buffer.line_count(), len(4));
         assert_eq2!(
             buffer.get_line_content(RowIndex::from(0)),
             Some("# Heading")
@@ -309,7 +309,7 @@ mod tests {
         let text = "# Title\n\n## Section 1\n\nSome content here.\n\n- Item 1\n- Item 2\n\n```rust\nfn main() {}\n```";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), 12);
+        assert_eq2!(buffer.line_count(), len(12));
         assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("# Title"));
         assert_eq2!(
             buffer.get_line_content(RowIndex::from(2)),
@@ -335,7 +335,7 @@ mod tests {
         let text = "Line 1\nLine 2\n\n";
         let buffer = gap_buffer_from_str(text);
 
-        assert_eq2!(buffer.line_count(), 3);
+        assert_eq2!(buffer.line_count(), len(3));
         assert_eq2!(buffer.get_line_content(RowIndex::from(0)), Some("Line 1"));
         assert_eq2!(buffer.get_line_content(RowIndex::from(1)), Some("Line 2"));
         assert_eq2!(buffer.get_line_content(RowIndex::from(2)), Some(""));

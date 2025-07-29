@@ -347,7 +347,7 @@ mod tests {
         assert_eq!(content, "HelloWorld");
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, 10);
+        assert_eq!(line_info.grapheme_count, len(10));
     }
 
     #[test]
@@ -369,7 +369,7 @@ mod tests {
         assert_eq!(content, "Hello !");
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, 7);
+        assert_eq!(line_info.grapheme_count, len(7));
     }
 
     #[test]
@@ -421,7 +421,7 @@ mod tests {
         assert_eq!(content, "Hello  World");
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, 12); // Space still there
+        assert_eq!(line_info.grapheme_count, len(12)); // Space still there
     }
 
     #[test]
@@ -441,7 +441,7 @@ mod tests {
         assert_eq!(content, " Family");
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, 7); // Space + 6 letters
+        assert_eq!(line_info.grapheme_count, len(7)); // Space + 6 letters
     }
 
     #[test]
@@ -462,7 +462,7 @@ mod tests {
         assert_eq!(content, "");
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, 0);
+        assert_eq!(line_info.grapheme_count, len(0));
         assert_eq!(line_info.content_len, len(0));
     }
 
@@ -535,7 +535,7 @@ mod tests {
         assert_eq!(content, "ac");
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.grapheme_count, 2);
+        assert_eq!(line_info.grapheme_count, len(2));
     }
 }
 
@@ -570,7 +570,7 @@ mod benches {
             // Cleanup: clear rest of content
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count))
+                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
                 .unwrap();
         });
     }
@@ -595,7 +595,7 @@ mod benches {
             // Cleanup
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count))
+                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
                 .unwrap();
         });
     }
@@ -620,7 +620,7 @@ mod benches {
             // Cleanup
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count))
+                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
                 .unwrap();
         });
     }
@@ -645,7 +645,7 @@ mod benches {
             // Cleanup
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count))
+                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
                 .unwrap();
         });
     }
@@ -668,7 +668,7 @@ mod benches {
                 .delete_range(
                     row(0),
                     black_box(seg_index(0)),
-                    black_box(seg_index(count)),
+                    black_box(seg_index(count.as_usize())),
                 )
                 .unwrap();
         });
@@ -694,7 +694,7 @@ mod benches {
             // Cleanup
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count))
+                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
                 .unwrap();
         });
     }

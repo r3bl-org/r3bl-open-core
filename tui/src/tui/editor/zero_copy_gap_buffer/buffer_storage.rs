@@ -85,7 +85,7 @@ pub struct ZeroCopyGapBuffer {
     lines: Vec<GapBufferLineInfo>,
 
     /// Number of lines currently in the buffer
-    line_count: usize,
+    line_count: Length,
 }
 
 /// Metadata for a single line in the buffer
@@ -107,7 +107,7 @@ pub struct GapBufferLineInfo {
     pub display_width: ColWidth,
 
     /// Number of grapheme clusters
-    pub grapheme_count: usize,
+    pub grapheme_count: Length,
 }
 
 impl GapBufferLineInfo {
@@ -307,7 +307,7 @@ impl ZeroCopyGapBuffer {
         Self {
             buffer: Vec::new(),
             lines: Vec::new(),
-            line_count: 0,
+            line_count: len(0),
         }
     }
 
@@ -317,13 +317,13 @@ impl ZeroCopyGapBuffer {
         Self {
             buffer: Vec::with_capacity(line_capacity * INITIAL_LINE_SIZE),
             lines: Vec::with_capacity(line_capacity),
-            line_count: 0,
+            line_count: len(0),
         }
     }
 
     /// Get the number of lines in the buffer
     #[must_use]
-    pub fn line_count(&self) -> usize { self.line_count }
+    pub fn line_count(&self) -> Length { self.line_count }
 
     /// Get line metadata by index
     #[must_use]
@@ -346,7 +346,7 @@ impl ZeroCopyGapBuffer {
     /// Add a new line to the buffer
     /// Returns the index of the newly added line
     pub fn add_line(&mut self) -> usize {
-        let line_index = self.line_count;
+        let line_index = self.line_count.as_usize();
 
         // Calculate where this line starts in the buffer
         let buffer_offset = if line_index == 0 {
@@ -370,17 +370,17 @@ impl ZeroCopyGapBuffer {
             capacity: len(INITIAL_LINE_SIZE),
             segments: SegmentArray::new(),
             display_width: crate::width(0),
-            grapheme_count: 0,
+            grapheme_count: len(0),
         });
 
-        self.line_count += 1;
+        self.line_count += len(1);
         line_index
     }
 
     /// Remove a line from the buffer
     /// Returns true if the line was removed, false if index was out of bounds
     pub fn remove_line(&mut self, line_index: usize) -> bool {
-        if line_index >= self.line_count {
+        if line_index >= self.line_count.as_usize() {
             return false;
         }
 
@@ -408,7 +408,7 @@ impl ZeroCopyGapBuffer {
             line.buffer_offset = byte_index(*line.buffer_offset - removed_size);
         }
 
-        self.line_count -= 1;
+        self.line_count -= len(1);
         true
     }
 
@@ -416,7 +416,7 @@ impl ZeroCopyGapBuffer {
     pub fn clear(&mut self) {
         self.buffer.clear();
         self.lines.clear();
-        self.line_count = 0;
+        self.line_count = len(0);
     }
 
     /// Check if a line can accommodate additional bytes without reallocation
@@ -433,7 +433,7 @@ impl ZeroCopyGapBuffer {
 
     /// Extend the capacity of a line by `LINE_PAGE_SIZE`
     pub fn extend_line_capacity(&mut self, line_index: RowIndex) {
-        if line_index.as_usize() >= self.line_count {
+        if line_index.as_usize() >= self.line_count.as_usize() {
             return;
         }
 
@@ -478,7 +478,7 @@ impl std::fmt::Display for ZeroCopyGapBuffer {
         write!(
             f,
             "ZeroCopyGapBuffer {{ lines: {}, buffer_size: {} bytes }}",
-            self.line_count,
+            self.line_count.as_usize(),
             self.buffer.len()
         )
     }
@@ -492,7 +492,7 @@ mod tests {
     #[test]
     fn test_new_line_buffer() {
         let buffer = ZeroCopyGapBuffer::new();
-        assert_eq!(buffer.line_count(), 0);
+        assert_eq!(buffer.line_count(), len(0));
         assert!(buffer.buffer.is_empty());
         assert!(buffer.lines.is_empty());
     }
@@ -504,7 +504,7 @@ mod tests {
         // Add first line
         let idx1 = buffer.add_line();
         assert_eq!(idx1, 0);
-        assert_eq!(buffer.line_count(), 1);
+        assert_eq!(buffer.line_count(), len(1));
         assert_eq!(buffer.buffer.len(), INITIAL_LINE_SIZE);
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -515,7 +515,7 @@ mod tests {
         // Add second line
         let idx2 = buffer.add_line();
         assert_eq!(idx2, 1);
-        assert_eq!(buffer.line_count(), 2);
+        assert_eq!(buffer.line_count(), len(2));
         assert_eq!(buffer.buffer.len(), 2 * INITIAL_LINE_SIZE);
 
         let line_info = buffer.get_line_info(1).unwrap();
@@ -568,7 +568,7 @@ mod tests {
 
         // Remove the extended middle line
         assert!(buffer.remove_line(1));
-        assert_eq!(buffer.line_count(), 2);
+        assert_eq!(buffer.line_count(), len(2));
 
         // Check that the third line's offset was updated correctly
         let line1_offset_after = *buffer.get_line_info(1).unwrap().buffer_offset;

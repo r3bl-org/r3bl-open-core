@@ -183,8 +183,8 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn get_line_slice(&self, line_range: Range<RowIndex>) -> Option<&str> {
         // Check bounds
-        if line_range.start.as_usize() >= self.line_count()
-            || line_range.end.as_usize() > self.line_count()
+        if line_range.start.as_usize() >= self.line_count().as_usize()
+            || line_range.end.as_usize() > self.line_count().as_usize()
         {
             return None;
         }
@@ -198,7 +198,7 @@ impl ZeroCopyGapBuffer {
         let start_offset = *start_info.buffer_offset;
 
         // Calculate end offset
-        let end_offset = if line_range.end.as_usize() < self.line_count() {
+        let end_offset = if line_range.end.as_usize() < self.line_count().as_usize() {
             let end_info = self.get_line_info(line_range.end.as_usize())?;
             *end_info.buffer_offset
         } else {
@@ -294,7 +294,7 @@ impl ZeroCopyGapBuffer {
         }
 
         // Find the line by searching through line info
-        for line_index in 0..self.line_count() {
+        for line_index in 0..self.line_count().as_usize() {
             let line_info = self.get_line_info(line_index)?;
             let line_start = *line_info.buffer_offset;
             let line_end = line_start + line_info.capacity.as_usize();

@@ -113,7 +113,7 @@ use std::str::{from_utf8, from_utf8_unchecked};
 use miette::{Result, miette};
 
 use super::buffer_storage::ZeroCopyGapBuffer;
-use crate::{RowIndex, SegIndex,
+use crate::{RowIndex, SegIndex, len,
             segment_builder::{build_segments_for_str, calculate_display_width}};
 
 impl ZeroCopyGapBuffer {
@@ -195,7 +195,7 @@ impl ZeroCopyGapBuffer {
 
         // Calculate metadata from segments
         let display_width = calculate_display_width(&segments);
-        let grapheme_count = segments.len();
+        let grapheme_count = len(segments.len());
 
         // Update line info with new metadata
         let line_info = self.get_line_info_mut(line_idx).ok_or_else(|| {
@@ -341,7 +341,7 @@ impl ZeroCopyGapBuffer {
         for seg in &mut new_segments {
             seg.start_byte_index = crate::ch(seg.start_byte_index.as_usize() + existing_byte_len);
             seg.end_byte_index = crate::ch(seg.end_byte_index.as_usize() + existing_byte_len);
-            seg.seg_index = crate::seg_index(seg.seg_index.as_usize() + existing_grapheme_count);
+            seg.seg_index = crate::seg_index(seg.seg_index.as_usize() + existing_grapheme_count.as_usize());
             seg.start_display_col_index = crate::col(
                 seg.start_display_col_index.as_usize() + existing_display_width.as_usize()
             );
@@ -363,7 +363,7 @@ impl ZeroCopyGapBuffer {
         line_info.display_width = crate::width(
             line_info.display_width.as_usize() + new_display_width.as_usize()
         );
-        line_info.grapheme_count += new_segment_count;
+        line_info.grapheme_count += len(new_segment_count);
         
         Ok(true)
     }
@@ -384,7 +384,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 0);
-        assert_eq!(line_info.grapheme_count, 0);
+        assert_eq!(line_info.grapheme_count, len(0));
         assert_eq!(line_info.display_width, width(0));
 
         Ok(())
@@ -400,7 +400,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 5);
-        assert_eq!(line_info.grapheme_count, 5);
+        assert_eq!(line_info.grapheme_count, len(5));
         assert_eq!(line_info.display_width, width(5));
 
         Ok(())
@@ -416,7 +416,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 6); // "H" "i" " " "👋" " " "😀"
-        assert_eq!(line_info.grapheme_count, 6);
+        assert_eq!(line_info.grapheme_count, len(6));
         assert_eq!(line_info.display_width, width(8)); // 1+1+1+2+1+2
 
         Ok(())
@@ -440,7 +440,7 @@ mod tests {
         for i in 0..3 {
             let line_info = buffer.get_line_info(i).unwrap();
             assert_eq!(line_info.segments.len(), 6); // "Line X" = 6 chars
-            assert_eq!(line_info.grapheme_count, 6);
+            assert_eq!(line_info.grapheme_count, len(6));
             assert_eq!(line_info.display_width, width(6));
         }
 
@@ -472,7 +472,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 4); // Only "Test"
-        assert_eq!(line_info.grapheme_count, 4);
+        assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));
 
         Ok(())
@@ -501,7 +501,7 @@ mod tests {
         // Segments should be rebuilt automatically by delete, but let's verify
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 4); // "Hllo" (after deleting 'e')
-        assert_eq!(line_info.grapheme_count, 4);
+        assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));
 
         Ok(())
@@ -543,7 +543,7 @@ mod tests {
         // Verify the segments are correct
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 11); // "Hello World"
-        assert_eq!(line_info.grapheme_count, 11);
+        assert_eq!(line_info.grapheme_count, len(11));
         
         Ok(())
     }
@@ -654,7 +654,7 @@ mod benches {
             .unwrap();
         
         let line_info = buffer.get_line_info(0).unwrap();
-        let end_pos = seg_index(line_info.grapheme_count);
+        let end_pos = seg_index(line_info.grapheme_count.as_usize());
         
         b.iter(|| {
             buffer
@@ -694,7 +694,7 @@ mod benches {
             .unwrap();
         
         let line_info = buffer.get_line_info(0).unwrap();
-        let end_pos = seg_index(line_info.grapheme_count);
+        let end_pos = seg_index(line_info.grapheme_count.as_usize());
         
         b.iter(|| {
             buffer

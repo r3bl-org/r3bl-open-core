@@ -472,20 +472,119 @@ in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer`
 
 #### 4.1 EditorLinesStorage Trait
 
-##### Implementation Tasks
+- [x] Clean up zero_copy_gap_buffer.rs so that it does not use ambiguous types like `usize`
 
-- [ ] Define `EditorLinesStorage` trait based on ZeroCopyGapBuffer's API:
+  - Use specific types like `ByteIndex`, `ColWidth`, `Length`, etc in GapBufferLineInfo and
+    ZeroCopyGapBuffer
+
+- [x] Define `EditorLinesStorage` trait based on ZeroCopyGapBuffer's API:
+
   ```rust
   trait EditorLinesStorage {
-      // Methods that mirror ZeroCopyGapBuffer's API
-      fn get_line_info(&self, index: usize) -> Option<&GapBufferLineInfo>;
-      fn get_line_content(&self, index: usize) -> Option<&str>;
-      fn line_count(&self) -> usize;
-      fn as_str(&self) -> &str; // Zero-copy full buffer access
-      // ... other methods from ZeroCopyGapBuffer
+      // Line access methods (zero-copy for ZeroCopyGapBuffer)
+      fn get_line_content(&self, row_index: RowIndex) -> Option<&str>;
+      fn get_line_info(&self, row_index: RowIndex) -> Option<&GapBufferLineInfo>;
+      fn line_count(&self) -> Length;
+      fn is_empty(&self) -> bool;
+      fn as_str(&self) -> &str; // Full buffer as string (zero-copy)
+
+      // Line metadata access
+      fn get_line_display_width(&self, row_index: RowIndex) -> Option<ColWidth>;
+      fn get_line_grapheme_count(&self, row_index: RowIndex) -> Option<Length>;
+      fn get_line_byte_length(&self, row_index: RowIndex) -> Option<Length>;
+
+      // Mutation methods
+      fn push_line(&mut self, content: &str);
+      fn insert_line(&mut self, row_index: RowIndex, content: &str);
+      fn remove_line(&mut self, row_index: RowIndex) -> Option<String>;
+      fn clear(&mut self);
+      fn set_line(&mut self, row_index: RowIndex, content: &str) -> bool;
+
+      // Grapheme-based operations
+      fn insert_at_grapheme(
+          &mut self,
+          row_index: RowIndex,
+          seg_index: SegIndex,
+          text: &str
+      ) -> bool;
+
+      fn delete_at_grapheme(
+          &mut self,
+          row_index: RowIndex,
+          seg_index: SegIndex,
+          count: Length
+      ) -> bool;
+
+      // Column-based operations (for cursor movement)
+      fn insert_at_col(
+          &mut self,
+          row_index: RowIndex,
+          col_index: ColIndex,
+          text: &str
+      ) -> Option<ColWidth>; // Returns display width of inserted text
+
+      fn delete_at_col(
+          &mut self,
+          row_index: RowIndex,
+          col_index: ColIndex,
+          count: Length
+      ) -> bool;
+
+      // Utility methods
+      fn split_line_at_col(
+          &mut self,
+          row_index: RowIndex,
+          col_index: ColIndex
+      ) -> Option<String>;
+
+      fn join_lines(&mut self, first_row_index: RowIndex) -> bool;
+
+      // Byte position conversions (for parser integration)
+      fn get_byte_offset_for_row(&self, row_index: RowIndex) -> Option<ByteIndex>;
+      fn find_row_containing_byte(&self, byte_index: ByteIndex) -> Option<RowIndex>;
+
+      // Iterator support (for compatibility)
+      fn iter_lines(&self) -> Box<dyn Iterator<Item = &str> + '_>;
+
+      // Total size information
+      fn total_bytes(&self) -> ByteIndex;
+      fn max_row_index(&self) -> RowIndex;
   }
   ```
-- [ ] Implement EditorLinesStorage for ZeroCopyGapBuffer (native implementation - "NG storage")
+
+  - Try not to use usize for arguments and return types
+    - Here are some types that should be used instead of usize: ByteIndex, ColWidth, Length,
+      RowIndex, SegIndex
+    - Here are some functions that make it easy to create these types: byte_index, len
+  - ZeroCopyGapBuffer uses different types for 3 different indices instead of just usize:
+  - `RowIndex` for line access
+  - `ColIndex` for column access
+  - `ByteIndex` for byte access
+  - Use specific index types and not usize
+    - eg, in the line access methods: `fn get_line_content(&self, index: usize) -> Option<&str>;`
+    - the index type should be RowIndex, not usize
+  - The same applies to line metadata access methods, utility methods, etc.
+  - Don't use usize in return types
+    - eg in: `fn line_count(&self) -> usize;`
+    - use Length instead of usize
+  - In methods be clear about the index type
+    - eg in: `fn insert_line(&mut self, index: usize, content: &str);`
+    - is the index a RowIndex or a SegIndex or ByteIndex?
+
+- [x] Implement EditorLinesStorage for ZeroCopyGapBuffer (native implementation - "NG storage")
+
+  - Study in great detail how the existing VecEditorContentLines is used by the editor component
+    (engine and buffer) to figure out what methods are needed for this trait. This our benchmark or
+    baseline or target for existing functionality
+  - ZeroCopyGapBuffer will be used to implement this trait, so if there is methods that are not
+    implemented in ZeroCopyGapBuffer, they will need to be added there first
+  - Ensure that all methods retain the zero-copy and efficiency provided by ZeroCopyGapBuffer
+
+- [x] Ask the user to deeply review this code, when they have made their changes, then make a commit
+      with this progress
+
+#### 4.2 Implement VecEditorContentLines Adapter which implements EditorLinesStorage
+
 - [ ] Create VecEditorContentLinesAdapter that implements EditorLinesStorage (legacy adapter)
   - Converts GCString data to GapBufferLineInfo format on-the-fly
   - Marked as "legacy storage" for eventual deprecation
@@ -759,14 +858,17 @@ changing the parser's `&str` requirement.
 ### Existing Implementation
 
 1. **EditorContent struct** (`tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
+
    - Contains `lines: VecEditorContentLines` field
    - Manages caret position, scroll offset, and file metadata
 
 2. **VecEditorContentLines type** (`tui/src/tui/editor/editor_buffer/sizing.rs`):
+
    - Defined as: `SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>`
    - Stack-allocated vector holding up to 32 lines before heap allocation
 
 3. **GCString type** (`tui/src/core/graphemes/gc_string.rs`):
+
    - Contains `InlineString` (SmallString with 16-byte inline storage)
    - Stores grapheme cluster metadata in `SegmentArray`
    - Implements `AsRef<str>` for string conversion
@@ -984,6 +1086,7 @@ impl ZeroCopyGapBuffer {
 ### Current GCString Analysis
 
 1. **What's Reusable**:
+
    - `Seg` struct (already decoupled, contains only indices)
    - Width calculation functions (static methods)
    - Segmentation algorithm logic

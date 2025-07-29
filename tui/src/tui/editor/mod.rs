@@ -20,6 +20,7 @@ pub mod default_content;
 pub mod editor_buffer;
 pub mod editor_component;
 pub mod editor_engine;
+pub mod editor_lines_storage;
 pub mod zero_copy_gap_buffer;
 
 // Re-export.
@@ -27,6 +28,7 @@ pub use default_content::*;
 pub use editor_buffer::*;
 pub use editor_component::*;
 pub use editor_engine::*;
+pub use editor_lines_storage::*;
 pub use zero_copy_gap_buffer::*;
 
 // Tests.

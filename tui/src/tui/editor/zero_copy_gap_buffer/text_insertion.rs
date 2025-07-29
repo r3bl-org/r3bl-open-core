@@ -320,11 +320,11 @@ impl ZeroCopyGapBuffer {
     pub fn insert_empty_line(&mut self, line_index: RowIndex) -> Result<()> {
         let line_idx = line_index.as_usize();
 
-        if line_idx > self.line_count() {
+        if line_idx > self.line_count().as_usize() {
             return Err(miette!(
                 "Cannot insert line at index {}, only {} lines exist",
                 line_idx,
-                self.line_count()
+                self.line_count().as_usize()
             ));
         }
 
@@ -370,7 +370,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, 5);
+        assert_eq!(line_info.grapheme_count, len(5));
         assert_eq!(line_info.content_len, len(5));
 
         Ok(())
@@ -395,7 +395,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, 11);
+        assert_eq!(line_info.grapheme_count, len(11));
 
         Ok(())
     }
@@ -435,7 +435,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, 7); // "Hello " = 6 + emoji = 1
+        assert_eq!(line_info.grapheme_count, len(7)); // "Hello " = 6 + emoji = 1
 
         // Insert more text after emoji
         buffer.insert_at_grapheme(row(0), seg_index(7), " World")?;
@@ -466,7 +466,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        assert_eq!(line_info.grapheme_count, 300);
+        assert_eq!(line_info.grapheme_count, len(300));
         assert!(line_info.capacity.as_usize() >= 301); // 300 + newline
 
         Ok(())
@@ -485,7 +485,7 @@ mod tests {
         // Insert empty line in middle
         buffer.insert_empty_line(row(1))?;
 
-        assert_eq!(buffer.line_count(), 3);
+        assert_eq!(buffer.line_count(), len(3));
 
         let content = buffer
             .get_line_content(row(0))
@@ -538,7 +538,7 @@ mod tests {
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
         // The family emoji is 1 grapheme cluster despite being multiple code points
-        assert_eq!(line_info.grapheme_count, 8); // 1 + space + 6 letters
+        assert_eq!(line_info.grapheme_count, len(8)); // 1 + space + 6 letters
 
         Ok(())
     }
@@ -694,11 +694,11 @@ mod benches {
         b.iter(|| {
             let end_idx = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .insert_at_grapheme(row(0), seg_index(end_idx), black_box(" more"))
+                .insert_at_grapheme(row(0), seg_index(end_idx.as_usize()), black_box(" more"))
                 .unwrap();
             // Clear added content
             buffer
-                .delete_range(row(0), seg_index(end_idx), seg_index(end_idx + 5))
+                .delete_range(row(0), seg_index(end_idx.as_usize()), seg_index(end_idx.as_usize() + 5))
                 .unwrap();
         });
     }
@@ -715,7 +715,7 @@ mod benches {
             // Clear content
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .delete_range(row(0), seg_index(0), seg_index(count))
+                .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
                 .unwrap();
         });
     }
@@ -784,12 +784,12 @@ mod benches {
             
             // Append a single character (most common case when typing)
             buffer
-                .insert_at_grapheme(row(0), seg_index(end_idx), black_box("x"))
+                .insert_at_grapheme(row(0), seg_index(end_idx.as_usize()), black_box("x"))
                 .unwrap();
                 
             // Delete it to reset for next iteration
             buffer
-                .delete_at_grapheme(row(0), seg_index(end_idx))
+                .delete_at_grapheme(row(0), seg_index(end_idx.as_usize()))
                 .unwrap();
         });
     }
