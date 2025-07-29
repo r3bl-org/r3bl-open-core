@@ -18,13 +18,13 @@
 //! Segment building utilities for grapheme clusters.
 //!
 //! This module provides functions to build segments from string slices, extracting
-//! the core logic from [`GCString`](crate::GCString) for reuse in other components
-//! like the gap buffer implementation.
+//! the core logic from [`GCStringOwned`](crate::GCStringOwned) for reuse in other
+//! components like the gap buffer implementation.
 
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-use crate::{ColIndex, ColWidth, Seg, ch, col, gc_string::gc_string_sizing::SegmentArray,
+use crate::{ColIndex, ColWidth, Seg, ch, col, gc_string_owned_sizing::SegmentArray,
             seg_index, width};
 
 /// Build grapheme cluster segments for any string slice.
@@ -177,9 +177,11 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use super::*;
     use std::hint::black_box;
+
     use test::Bencher;
+
+    use super::*;
 
     extern crate test;
 

@@ -16,7 +16,7 @@
  */
 
 use super::{SelectMode, scroll_editor_content};
-use crate::{CaretDirection, EditorArgsMut, EditorBuffer, EditorEngine, SegString,
+use crate::{CaretDirection, EditorArgsMut, EditorBuffer, EditorEngine, SegStringOwned,
             caret_locate::{self, CaretColLocationInLine, CaretRowLocationInBuffer,
                            locate_col},
             caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
@@ -334,7 +334,7 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
 }
 
 mod right_helper {
-    use super::{ContainsWideSegments, EditorBuffer, EditorEngine, SegString,
+    use super::{ContainsWideSegments, EditorBuffer, EditorEngine, SegStringOwned,
                 scroll_editor_content, width};
 
     /// 1. Check for wide unicode character to the right of the caret.
@@ -344,7 +344,7 @@ mod right_helper {
         buffer: &mut EditorBuffer,
         engine: &mut EditorEngine,
     ) -> Option<()> {
-        let SegString {
+        let SegStringOwned {
             width: unicode_width_at_caret,
             ..
         } = buffer.string_at_caret()?;
@@ -566,7 +566,7 @@ mod left_helper {
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                GCStringExt, assert_eq2, caret_raw, caret_scr_adj, col,
+                GCStringOwned, assert_eq2, caret_raw, caret_scr_adj, col,
                 editor::editor_test_fixtures::{assert, mock_real_objects_for_editor},
                 editor_engine::engine_internal_api,
                 height, row,
@@ -833,7 +833,7 @@ mod tests {
         );
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
-            &"1a".grapheme_string()
+            &GCStringOwned::from("1a")
         );
         assert::str_is_at_caret(&buffer, "a");
 
@@ -880,7 +880,7 @@ mod tests {
         assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
-            &"12a".grapheme_string()
+            &GCStringOwned::from("12a")
         );
 
         // Move caret right. It should do nothing.

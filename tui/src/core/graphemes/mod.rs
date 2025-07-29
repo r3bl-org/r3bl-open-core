@@ -172,14 +172,14 @@
 //!     to save the cursor at this point, then print the 2nd part of the string, then call
 //!     `RestorePosition` to restore the cursor to where it "should" be.
 //!
-//! Please take a look at [`crate::graphemes::GCString`] for the following
+//! Please take a look at [`crate::graphemes::GCStringOwned`] for the following
 //! items:
 //! - Methods in [`mod@crate::graphemes::gc_string`] for more details on how the
 //!   conversion between "display" (or `display_col_index`), ie, [`crate::ColIndex`] and
 //!   "logical" or "segment", ie, [`SegIndex`] is done.
-//! - The choices that were made in the design of the [`GCString`] struct for performance
-//!   to minimize memory latency (for access and allocation). The results might surprise
-//!   you, as intuition around performance is often not reliable.
+//! - The choices that were made in the design of the [`GCStringOwned`] struct for
+//!   performance to minimize memory latency (for access and allocation). The results
+//!   might surprise you, as intuition around performance is often not reliable.
 //!
 //! # The Three Types of Indices
 //!
@@ -190,8 +190,8 @@
 //!
 //! ## 1. `ByteIndex` - Memory Position
 //!
-//! [`ByteIndex`](crate::ByteIndex) represents the raw byte offset in a UTF-8 encoded string. This is
-//! crucial for:
+//! [`ByteIndex`](crate::ByteIndex) represents the raw byte offset in a UTF-8 encoded
+//! string. This is crucial for:
 //! - String slicing operations (Rust strings must be sliced at valid UTF-8 boundaries)
 //! - Memory access and manipulation
 //! - Efficient storage and retrieval
@@ -211,8 +211,8 @@
 //!
 //! ## 3. `ColIndex` - Display Position
 //!
-//! [`ColIndex`](crate::ColIndex) represents the column position on the terminal screen. This is
-//! necessary because:
+//! [`ColIndex`](crate::ColIndex) represents the column position on the terminal screen.
+//! This is necessary because:
 //! - Some characters are wider than others (emojis typically take 2 columns)
 //! - Terminal rendering requires knowing exact column positions
 //! - Cursor positioning and selection highlighting need visual coordinates
@@ -236,12 +236,13 @@
 //!
 //! ## Conversion Between Index Types
 //!
-//! The [`GCString`] struct provides conversion operators to translate between these
+//! The [`GCStringOwned`] struct provides conversion operators to translate between these
 //! index types:
 //!
-//! - `&GCString + ByteIndex → Option<SegIndex>`: Find which segment contains a byte
-//! - `&GCString + ColIndex → Option<SegIndex>`: Find which segment is at a display column
-//! - `&GCString + SegIndex → Option<ColIndex>`: Find the display column of a segment
+//! - `&GCStringOwned + ByteIndex → Option<SegIndex>`: Find which segment contains a byte
+//! - `&GCStringOwned + ColIndex → Option<SegIndex>`: Find which segment is at a display
+//!   column
+//! - `&GCStringOwned + SegIndex → Option<ColIndex>`: Find the display column of a segment
 //!
 //! These conversions can return `None` when indices are out of bounds or fall between
 //! characters. For example, a `ByteIndex` in the middle of a multi-byte character would
@@ -249,14 +250,21 @@
 
 // Attach sources.
 pub mod gc_string;
-pub mod gc_string_ext;
+pub mod gc_string_owned;
+pub mod gc_string_ref;
+pub mod iterator;
 pub mod seg;
 pub mod seg_index;
 pub mod segment_builder;
 
 // Re-export.
 pub use gc_string::*;
-pub use gc_string_ext::*;
+pub use gc_string_owned::*;
+pub use gc_string_ref::*;
+pub use iterator::*;
 pub use seg::*;
 pub use seg_index::*;
 pub use segment_builder::*;
+
+// Tests.
+pub mod trait_impl_compat_test;

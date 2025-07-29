@@ -20,7 +20,7 @@ use std::fmt::{Display, Formatter, Result};
 use smallvec::{SmallVec, smallvec};
 use strum_macros::EnumCount;
 
-use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, GCString, InlineString,
+use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, GCStringOwned, InlineString,
             InlineVec, PixelChar, SgrCode, TuiStyle, WriteToBuf, inline_string,
             tui_color,
             tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
@@ -156,7 +156,7 @@ macro_rules! ast_lines {
 }
 
 pub mod ansi_styled_text_impl {
-    use super::{ASText, AnsiStyledText, ColIndex, ColWidth, GCString, InlineString,
+    use super::{ASText, AnsiStyledText, ColIndex, ColWidth, GCStringOwned, InlineString,
                 InlineVec, PixelChar, TuiStyle, inline_string};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -243,7 +243,7 @@ pub mod ansi_styled_text_impl {
             let pixel_chars = {
                 let mut acc: InlineVec<PixelChar> =
                     InlineVec::with_capacity(self.text.len());
-                let gc_string = GCString::from(&self.text);
+                let gc_string = GCStringOwned::from(&self.text);
                 for item in &gc_string {
                     // Convert the grapheme cluster to a single char
                     // For multi-char graphemes, use the first char or fallback to

@@ -21,10 +21,10 @@ pub mod mock_real_objects_for_editor {
 
     use tokio::sync::mpsc;
 
-    use crate::{col, core::test_fixtures::StdoutMock, height, row,
-                telemetry::telemetry_sizing::TelemetryReportLineStorage, width,
-                DefaultSize, EditorEngine, FlexBox, GlobalData, OffscreenBufferPool,
-                OutputDevice, OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper};
+    use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, OffscreenBufferPool,
+                OutputDevice, OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper, col,
+                core::test_fixtures::StdoutMock, height, row,
+                telemetry::telemetry_sizing::TelemetryReportLineStorage, width};
 
     #[must_use]
     pub fn make_global_data<S, AS>(
@@ -85,8 +85,8 @@ pub mod mock_real_objects_for_editor {
 
 #[cfg(test)]
 pub mod assert {
-    use crate::{assert_eq2, editor_engine::engine_internal_api, EditorBuffer,
-                GCStringExt, SegString};
+    use crate::{EditorBuffer, GCStringOwned, SegStringOwned, assert_eq2,
+                editor_engine::engine_internal_api};
 
     pub fn none_is_at_caret(buffer: &EditorBuffer) {
         assert_eq2!(buffer.string_at_caret(), None);
@@ -98,7 +98,7 @@ pub mod assert {
     /// does not match the expected string.
     pub fn str_is_at_caret(buffer: &EditorBuffer, expected: &str) {
         match buffer.string_at_caret() {
-            Some(SegString { string, .. }) => {
+            Some(SegStringOwned { string, .. }) => {
                 assert_eq2!(&string.string, expected);
             }
             None => panic!("Expected string at caret, but got None."),
@@ -112,7 +112,7 @@ pub mod assert {
     pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(editor_buffer).unwrap(),
-            &expected.grapheme_string()
+            &GCStringOwned::from(expected)
         );
     }
 }

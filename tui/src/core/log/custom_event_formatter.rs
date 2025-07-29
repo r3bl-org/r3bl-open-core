@@ -167,7 +167,7 @@ use tracing::{Event, Subscriber,
 use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
 
-use crate::{ColWidth, ColorWheel, GCString, InlineString, OrderedMap, RgbValue,
+use crate::{ColWidth, ColorWheel, GCStringOwned, InlineString, OrderedMap, RgbValue,
             TuiColor, TuiStyle, ast, fg_color, get_terminal_width, glyphs,
             inline_string, new_style, remove_escaped_quotes, truncate_from_right,
             tui_color, tui_style_attrib, usize, width};
@@ -278,7 +278,7 @@ mod heading_cache {
 mod helpers {
     use super::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT, ColWidth, ColorWheel,
                 DEBUG_FG_COLOR, DEBUG_SIGIL, ERROR_FG_COLOR, ERROR_SIGIL, Event,
-                FieldContentParams, FormatFields, GCString, HEADING_BG_COLOR,
+                FieldContentParams, FormatFields, GCStringOwned, HEADING_BG_COLOR,
                 INFO_FG_COLOR, INFO_SIGIL, InlineString, LEVEL_SUFFIX, Local,
                 LookupSpan, Subscriber, TRACE_FG_COLOR, TRACE_SIGIL, TuiColor,
                 WARN_FG_COLOR, WARN_SIGIL, ast, fmt, helpers, inline_string, new_style,
@@ -387,7 +387,7 @@ mod helpers {
         S: Subscriber + for<'a> LookupSpan<'a>,
         N: for<'a> FormatFields<'a> + 'static,
     {
-        let spacer_display_width = GCString::width(spacer);
+        let spacer_display_width = GCStringOwned::width(spacer);
         let mut line_width_used = width(0);
 
         // Timestamp width
@@ -397,17 +397,17 @@ mod helpers {
             ts = timestamp.format("%I:%M%P"),
             sp = spacer
         );
-        line_width_used += GCString::width(&timestamp_str);
+        line_width_used += GCStringOwned::width(&timestamp_str);
 
         // Span context width
         if let Some(scope) = ctx.lookup_current() {
             let scope_str = inline_string!("[{}] ", scope.name());
-            line_width_used += GCString::width(&scope_str);
+            line_width_used += GCStringOwned::width(&scope_str);
         }
 
         // Level width
         let (level_str, _) = helpers::get_level_info(event, spacer);
-        let level_str_display_width = GCString::width(&level_str);
+        let level_str_display_width = GCStringOwned::width(&level_str);
         line_width_used += spacer_display_width;
         line_width_used += level_str_display_width;
 
@@ -426,7 +426,7 @@ mod helpers {
             spacer,
         }: FieldContentParams<'_>,
     ) -> fmt::Result {
-        let spacer_display_width = GCString::width(spacer);
+        let spacer_display_width = GCStringOwned::width(spacer);
 
         // Write heading line
         let heading = remove_escaped_quotes(heading);

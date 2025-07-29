@@ -292,7 +292,7 @@ mod tests_editor_history_struct {
 mod tests_history_functions {
     use smallvec::smallvec;
 
-    use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer, GCStringExt,
+    use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer,
                 Length, RingBuffer};
 
     #[test]
@@ -311,7 +311,7 @@ mod tests_history_functions {
     #[test]
     fn test_push_with_contents() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".grapheme_string()];
+        buffer.content.lines = smallvec!["abc".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
@@ -320,22 +320,22 @@ mod tests_history_functions {
         assert_eq2!(history_stack.get(0).unwrap().lines.len(), 1);
         assert_eq2!(
             history_stack.get(0).unwrap().lines[0],
-            "abc".grapheme_string()
+            "abc".into()
         );
     }
 
     #[test]
     fn test_push_and_drop_future_redos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".grapheme_string()];
+        buffer.content.lines = smallvec!["abc".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".grapheme_string()];
+        buffer.content.lines = smallvec!["def".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
 
-        buffer.content.lines = smallvec!["ghi".grapheme_string()];
+        buffer.content.lines = smallvec!["ghi".into()];
         buffer.add();
 
         // 3 pushes, so the current index should be 2.
@@ -350,7 +350,7 @@ mod tests_history_functions {
         assert_eq!(buffer.history.versions.len(), Length::from(3));
 
         // Push new content. Should drop future redos (2 versions should be removed).
-        buffer.content.lines = smallvec!["xyz".grapheme_string()];
+        buffer.content.lines = smallvec!["xyz".into()];
         buffer.add();
         assert_eq!(buffer.history.current_index, 1.into());
         assert_eq!(buffer.history.versions.len(), Length::from(2));
@@ -364,11 +364,11 @@ mod tests_history_functions {
             match index {
                 0 => {
                     assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "abc".grapheme_string());
+                    assert_eq2!(content.lines[0], "abc".into());
                 }
                 1 => {
                     assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "xyz".grapheme_string());
+                    assert_eq2!(content.lines[0], "xyz".into());
                 }
                 _ => unreachable!(),
             }
@@ -378,7 +378,7 @@ mod tests_history_functions {
     #[test]
     fn test_single_undo() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".grapheme_string()];
+        buffer.content.lines = smallvec!["abc".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
@@ -390,16 +390,16 @@ mod tests_history_functions {
     #[test]
     fn test_many_undo() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".grapheme_string()];
+        buffer.content.lines = smallvec!["abc".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".grapheme_string()];
+        buffer.content.lines = smallvec!["def".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
         let copy_of_editor_content = buffer.content.clone();
 
-        buffer.content.lines = smallvec!["ghi".grapheme_string()];
+        buffer.content.lines = smallvec!["ghi".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 2.into());
 
@@ -415,15 +415,15 @@ mod tests_history_functions {
             match index {
                 0 => {
                     assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "abc".grapheme_string());
+                    assert_eq2!(content.lines[0], "abc".into());
                 }
                 1 => {
                     assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "def".grapheme_string());
+                    assert_eq2!(content.lines[0], "def".into());
                 }
                 2 => {
                     assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "ghi".grapheme_string());
+                    assert_eq2!(content.lines[0], "ghi".into());
                 }
                 _ => unreachable!(),
             }
@@ -433,11 +433,11 @@ mod tests_history_functions {
     #[test]
     fn test_multiple_undos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".grapheme_string()];
+        buffer.content.lines = smallvec!["abc".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".grapheme_string()];
+        buffer.content.lines = smallvec!["def".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
 
@@ -452,11 +452,11 @@ mod tests_history_functions {
     #[test]
     fn test_undo_and_multiple_redos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".grapheme_string()];
+        buffer.content.lines = smallvec!["abc".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".grapheme_string()];
+        buffer.content.lines = smallvec!["def".into()];
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
         let snapshot_content = buffer.content.clone();
@@ -482,11 +482,11 @@ mod tests_history_functions {
             match index {
                 0 => {
                     assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "abc".grapheme_string());
+                    assert_eq2!(content.lines[0], "abc".into());
                 }
                 1 => {
                     assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "def".grapheme_string());
+                    assert_eq2!(content.lines[0], "def".into());
                 }
                 _ => unreachable!(),
             }

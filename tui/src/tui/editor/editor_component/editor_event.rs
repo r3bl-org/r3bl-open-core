@@ -593,7 +593,7 @@ impl EditorEvent {
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
-                EditorEngine, EditorEngineConfig, EditorEvent, GCStringExt, LineMode,
+                EditorEngine, EditorEngineConfig, EditorEvent, GCStringOwned, LineMode,
                 SelectionAction, assert_eq2, caret_scr_adj, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, row,
@@ -690,7 +690,7 @@ mod tests {
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
         let maybe_line_str = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(maybe_line_str.unwrap(), &"abcaba".grapheme_string());
+        assert_eq2!(maybe_line_str.unwrap(), &GCStringOwned::from("abcaba"));
     }
 
     #[allow(clippy::too_many_lines)]

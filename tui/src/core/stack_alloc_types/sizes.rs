@@ -44,21 +44,21 @@ pub type InlineString = SmallString<[u8; DEFAULT_STRING_STORAGE_SIZE]>;
 /// Replacement for [`std::borrow::Cow`] that uses [`InlineString`] if it is owned.
 /// And `&str` if it is borrowed.
 #[derive(Clone, Debug, PartialEq)]
-pub enum InlineStringCow<'a> {
+pub enum CowInlineString<'a> {
     Borrowed(&'a str),
     Owned(InlineString),
 }
 
-impl<'a> InlineStringCow<'a> {
+impl<'a> CowInlineString<'a> {
     #[must_use]
-    pub fn new_empty_borrowed() -> Self { InlineStringCow::Borrowed("") }
+    pub fn new_empty_borrowed() -> Self { CowInlineString::Borrowed("") }
     #[must_use]
-    pub fn new_borrowed(arg: &'a str) -> Self { InlineStringCow::Borrowed(arg) }
+    pub fn new_borrowed(arg: &'a str) -> Self { CowInlineString::Borrowed(arg) }
     #[must_use]
-    pub fn new_owned(arg: InlineString) -> Self { InlineStringCow::Owned(arg) }
+    pub fn new_owned(arg: InlineString) -> Self { CowInlineString::Owned(arg) }
 }
 
-impl AsRef<str> for InlineStringCow<'_> {
+impl AsRef<str> for CowInlineString<'_> {
     fn as_ref(&self) -> &str {
         match self {
             Self::Borrowed(s) => s,
@@ -67,7 +67,7 @@ impl AsRef<str> for InlineStringCow<'_> {
     }
 }
 
-impl Display for InlineStringCow<'_> {
+impl Display for CowInlineString<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Borrowed(as_ref_str) => write!(f, "{as_ref_str}"),

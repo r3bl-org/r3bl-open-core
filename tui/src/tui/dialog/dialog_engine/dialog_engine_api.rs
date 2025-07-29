@@ -17,17 +17,17 @@
 
 use std::{borrow::Cow, fmt::Debug};
 
-use crate::{ch, col, editor_engine::engine_public_api,
-            height, inline_string, pc, render_ops, render_pipeline,
+use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer,
+            DialogChoice, DialogEngine, DialogEngineArgs, DialogEngineConfigOptions,
+            DialogEngineMode, DialogEvent, EditorEngineApplyEventResult,
+            EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
+            GradientGenerationPolicy, HasDialogBuffers, InlineString, InputEvent, Key,
+            MinSize, PartialFlexBox, Pos, RenderOp, RenderOps, RenderPipeline, Size,
+            SpecialKey, SurfaceBounds, SystemClipboard, TextColorizationPolicy,
+            TuiStyle, ZOrder, ch, col, editor_engine::engine_public_api, height,
+            inline_string, pc, render_ops, render_pipeline,
             render_tui_styled_texts_into, row, terminal_lib_backends::KeyPress,
-            throws_with_return, tui_style_attrib, u16, usize, width, ColorWheel, CommonError, CommonErrorType,
-            CommonResult, DialogBuffer, DialogChoice, DialogEngine, DialogEngineArgs,
-            DialogEngineConfigOptions, DialogEngineMode, DialogEvent,
-            EditorEngineApplyEventResult, EventPropagation, FlexBox, FlexBoxId,
-            GCStringExt, GlobalData, GradientGenerationPolicy, HasDialogBuffers,
-            InlineString, InputEvent, Key, MinSize, PartialFlexBox, Pos, RenderOp,
-            RenderOps, RenderPipeline, Size, SpecialKey, SurfaceBounds, SystemClipboard,
-            TextColorizationPolicy, TuiStyle, ZOrder};
+            throws_with_return, tui_style_attrib, u16, usize, width};
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
@@ -235,16 +235,16 @@ pub enum DisplayConstants {
 }
 
 mod internal_impl {
-    use super::{ch, col, engine_public_api, height, inline_string, pc, render_ops,
-                render_tui_styled_texts_into, row, throws_with_return, tui_style_attrib,
-                u16, usize, width, ColorWheel, CommonError,
-                CommonErrorType, CommonResult, Cow, Debug, DialogBuffer, DialogChoice,
-                DialogEngine, DialogEngineArgs, DialogEngineConfigOptions,
-                DialogEngineMode, DialogEvent, DisplayConstants, EventPropagation,
-                FlexBox, FlexBoxId, GCStringExt, GlobalData, GradientGenerationPolicy,
-                HasDialogBuffers, InlineString, InputEvent, Key, KeyPress, MinSize,
-                PartialFlexBox, Pos, RenderOp, RenderOps, RenderPipeline, Size,
-                SpecialKey, SurfaceBounds, TextColorizationPolicy, TuiStyle, ZOrder};
+    use super::{ColorWheel, CommonError, CommonErrorType, CommonResult, Cow, Debug,
+                DialogBuffer, DialogChoice, DialogEngine, DialogEngineArgs,
+                DialogEngineConfigOptions, DialogEngineMode, DialogEvent,
+                DisplayConstants, EventPropagation, FlexBox, FlexBoxId, GCStringOwned,
+                GlobalData, GradientGenerationPolicy, HasDialogBuffers, InlineString,
+                InputEvent, Key, KeyPress, MinSize, PartialFlexBox, Pos, RenderOp,
+                RenderOps, RenderPipeline, Size, SpecialKey, SurfaceBounds,
+                TextColorizationPolicy, TuiStyle, ZOrder, ch, col, engine_public_api,
+                height, inline_string, pc, render_ops, render_tui_styled_texts_into,
+                row, throws_with_return, tui_style_attrib, u16, usize, width};
 
     /// Return the [`FlexBox`] for the dialog to be rendered in.
     ///
@@ -421,7 +421,7 @@ mod internal_impl {
                         &format!(
                             "Dialog buffer does not exist for component id:{self_id:?}"
                         ),
-                    )
+                    );
                 }
             }
         };
@@ -486,23 +486,24 @@ mod internal_impl {
 
         if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id)
             && let Some(results) = dialog_buffer.maybe_results.as_ref()
-                && !results.is_empty() {
-                    render_results_panel_inner::paint_results(
-                        &mut it,
-                        origin_pos,
-                        bounds_size,
-                        results,
-                        dialog_engine,
-                    );
-                }
+            && !results.is_empty()
+        {
+            render_results_panel_inner::paint_results(
+                &mut it,
+                origin_pos,
+                bounds_size,
+                results,
+                dialog_engine,
+            );
+        }
 
         it
     }
 
     mod render_results_panel_inner {
-        use super::{col, height, inline_string, row, tui_style_attrib, width, Cow,
-                    DialogEngine, DisplayConstants, GCStringExt, InlineString, Pos,
-                    RenderOp, RenderOps, Size, TuiStyle};
+        use super::{Cow, DialogEngine, DisplayConstants, GCStringOwned, InlineString,
+                    Pos, RenderOp, RenderOps, Size, TuiStyle, col, height,
+                    inline_string, row, tui_style_attrib, width};
 
         pub fn paint_results(
             ops: &mut RenderOps,
@@ -532,7 +533,7 @@ mod internal_impl {
                 rel_insertion_pos.add_row(height(1));
 
                 let text = item.as_str();
-                let text_gcs = text.grapheme_string();
+                let text_gcs = GCStringOwned::from(text);
                 let text_display_width = text_gcs.display_width;
 
                 let max_display_col_count = bounds_size.col_width - width(2);
@@ -625,7 +626,7 @@ mod internal_impl {
             col_index + row_index
         };
 
-        let title_gcs = title.grapheme_string();
+        let title_gcs = GCStringOwned::from(title);
         let title_content_clipped =
             title_gcs.trunc_end_to_fit(bounds_size.col_width - width(2));
 
@@ -656,16 +657,17 @@ mod internal_impl {
     ) {
         // If lolcat is enabled, then colorize the text.
         if let Some(style) = maybe_style
-            && style.lolcat.is_some() {
-                let text_gcs = text.grapheme_string();
-                let texts = color_wheel.colorize_into_styled_texts(
-                    &text_gcs,
-                    GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
-                    TextColorizationPolicy::ColorEachCharacter(maybe_style.copied()),
-                );
-                render_tui_styled_texts_into(&texts, ops);
-                return;
-            }
+            && style.lolcat.is_some()
+        {
+            let text_gcs = GCStringOwned::from(text);
+            let texts = color_wheel.colorize_into_styled_texts(
+                &text_gcs,
+                GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,
+                TextColorizationPolicy::ColorEachCharacter(maybe_style.copied()),
+            );
+            render_tui_styled_texts_into(&texts, ops);
+            return;
+        }
 
         // Otherwise, just paint the text as-is.
         ops.push(RenderOp::PaintTextWithAttributes(
@@ -701,9 +703,9 @@ mod internal_impl {
     }
 
     mod render_border_helper {
-        use super::{col, lolcat_from_style, row, u16,
-                    ColorWheel, DialogEngine, DialogEngineMode,
-                    DisplayConstants, Pos, RenderOp, RenderOps, Size, TuiStyle};
+        use super::{ColorWheel, DialogEngine, DialogEngineMode, DisplayConstants, Pos,
+                    RenderOp, RenderOps, Size, TuiStyle, col, lolcat_from_style, row,
+                    u16};
         use crate::border_cache;
 
         /// Renders all border lines for the dialog
@@ -810,7 +812,8 @@ mod internal_impl {
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
-            let text_content = border_cache::get_middle_border_line(bounds_size.col_width);
+            let text_content =
+                border_cache::get_middle_border_line(bounds_size.col_width);
 
             lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
         }
@@ -822,11 +825,11 @@ mod internal_impl {
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
         ) {
-            let text_content = border_cache::get_bottom_border_line(bounds_size.col_width);
+            let text_content =
+                border_cache::get_bottom_border_line(bounds_size.col_width);
 
             lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
         }
-
 
         /// Renders the separator line for autocomplete mode
         pub fn render_autocomplete_separator(
@@ -905,9 +908,10 @@ mod internal_impl {
                 DialogEngineMode::ModalAutocomplete => {
                     let selected_index = usize(*dialog_engine.selected_row_index);
                     if let Some(results) = &dialog_buffer.maybe_results
-                        && let Some(selected_result) = results.get(selected_index) {
-                            return Some(DialogChoice::Yes(selected_result.clone()));
-                        }
+                        && let Some(selected_result) = results.get(selected_index)
+                    {
+                        return Some(DialogChoice::Yes(selected_result.clone()));
+                    }
                     return Some(DialogChoice::No);
                 }
             },
@@ -981,9 +985,8 @@ mod internal_impl {
 #[cfg(test)]
 mod test_dialog_engine_api_render_engine {
     use super::*;
-    use crate::{assert_eq2,
-                test_dialog::mock_real_objects_for_dialog::{self, make_global_data},
-                HasFocus};
+    use crate::{HasFocus, assert_eq2,
+                test_dialog::mock_real_objects_for_dialog::{self, make_global_data}};
 
     #[test]
     fn render_engine_with_no_dialog_buffer_in_state() {
@@ -1031,7 +1034,7 @@ mod test_dialog_engine_api_render_engine {
 #[cfg(test)]
 mod test_dialog_api_make_flex_box_for_dialog {
     use super::*;
-    use crate::{assert_eq2, Surface};
+    use crate::{Surface, assert_eq2};
 
     /// More info on `is` and downcasting:
     /// - <https://stackoverflow.com/questions/71409337/rust-how-to-match-against-any>
@@ -1195,13 +1198,15 @@ mod test_dialog_engine_api_apply_event {
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Esc));
-        let response = dbg!(DialogEngineApi::apply_event::<_, ()>(
-            state,
-            self_id,
-            dialog_engine,
-            input_event,
-        )
-        .unwrap());
+        let response = dbg!(
+            DialogEngineApi::apply_event::<_, ()>(
+                state,
+                self_id,
+                dialog_engine,
+                input_event,
+            )
+            .unwrap()
+        );
         assert!(matches!(
             response,
             DialogEngineApplyResponse::DialogChoice(DialogChoice::No)
@@ -1214,11 +1219,15 @@ mod test_dialog_engine_api_apply_event {
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(key_press!(@special SpecialKey::Enter));
-        let response = dbg!(DialogEngineApi::apply_event::<
-            mock_real_objects_for_dialog::State,
-            (),
-        >(state, self_id, dialog_engine, input_event)
-        .unwrap());
+        let response = dbg!(
+            DialogEngineApi::apply_event::<mock_real_objects_for_dialog::State, ()>(
+                state,
+                self_id,
+                dialog_engine,
+                input_event
+            )
+            .unwrap()
+        );
         if let DialogEngineApplyResponse::DialogChoice(DialogChoice::Yes(value)) =
             &response
         {
@@ -1236,11 +1245,15 @@ mod test_dialog_engine_api_apply_event {
         let dialog_engine = &mut mock_real_objects_for_dialog::make_dialog_engine();
         let state = &mut mock_real_objects_for_dialog::create_state();
         let input_event = InputEvent::Keyboard(key_press!(@char 'a'));
-        let response = dbg!(DialogEngineApi::apply_event::<
-            mock_real_objects_for_dialog::State,
-            (),
-        >(state, self_id, dialog_engine, input_event)
-        .unwrap());
+        let response = dbg!(
+            DialogEngineApi::apply_event::<mock_real_objects_for_dialog::State, ()>(
+                state,
+                self_id,
+                dialog_engine,
+                input_event
+            )
+            .unwrap()
+        );
         if let DialogEngineApplyResponse::UpdateEditorBuffer = &response {
             let editor_content = state
                 .get_mut_dialog_buffer(self_id)

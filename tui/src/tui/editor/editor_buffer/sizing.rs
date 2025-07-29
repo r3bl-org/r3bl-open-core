@@ -18,10 +18,10 @@
 use smallvec::SmallVec;
 
 use super::{cur_index::CurIndex, history::EditorHistory, EditorContent};
-use crate::{get_mem_size, CaretRaw, GCString, GetMemSize, InlineString, RingBufferHeap,
+use crate::{get_mem_size, CaretRaw, GCStringOwned, GetMemSize, InlineString, RingBufferHeap,
             ScrOfs, TinyInlineString};
 
-pub type VecEditorContentLines = SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>;
+pub type VecEditorContentLines = SmallVec<[GCStringOwned; DEFAULT_EDITOR_LINES_SIZE]>;
 const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
 
 /// The version history is stored on the heap, as a ring buffer.

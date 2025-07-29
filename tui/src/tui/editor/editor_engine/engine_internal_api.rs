@@ -20,7 +20,7 @@
 //! API.
 
 use super::{DeleteSelectionWith, SelectMode, caret_mut, content_mut};
-use crate::{EditorArgsMut, EditorBuffer, EditorEngine, GCString, clipboard_support,
+use crate::{EditorArgsMut, EditorBuffer, EditorEngine, GCStringOwned, clipboard_support,
             clipboard_support::ClipboardService};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
@@ -70,7 +70,7 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 pub fn clear_selection(buffer: &mut EditorBuffer) { buffer.clear_selection(); }
 
 #[must_use]
-pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<&GCString> {
+pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<&GCStringOwned> {
     buffer.line_at_caret_scr_adj()
 }
 
@@ -144,7 +144,7 @@ pub fn copy_editor_selection_to_clipboard(
 
 #[cfg(test)]
 mod tests {
-    use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer, GCStringExt,
+    use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer, GCStringOwned,
                 SelectMode, assert_eq2, caret_raw, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, row,
@@ -272,8 +272,8 @@ mod tests {
 
         // Should have "hello" on first line and "second line" on second
         assert_eq2!(buffer.get_lines().len(), 2);
-        assert_eq2!(buffer.get_lines()[0], "hello".grapheme_string());
-        assert_eq2!(buffer.get_lines()[1], "second line".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("hello"));
+        assert_eq2!(buffer.get_lines()[1], GCStringOwned::from("second line"));
     }
 
     #[test]
@@ -323,7 +323,7 @@ mod tests {
 
         // Test at first line
         let line = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(line.unwrap(), &"first line".grapheme_string());
+        assert_eq2!(line.unwrap(), &GCStringOwned::from("first line"));
 
         // Move to second line
         let buffer_mut = buffer.get_mut(engine.viewport());
@@ -331,7 +331,7 @@ mod tests {
         drop(buffer_mut);
 
         let line = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(line.unwrap(), &"second line".grapheme_string());
+        assert_eq2!(line.unwrap(), &GCStringOwned::from("second line"));
     }
 
     #[test]

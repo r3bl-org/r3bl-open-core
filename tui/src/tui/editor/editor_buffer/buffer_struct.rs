@@ -20,10 +20,10 @@ use smallvec::smallvec;
 
 use super::{SelectionList, history::EditorHistory, render_cache::RenderCache, sizing};
 use crate::{CachedMemorySize, CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PASTE,
-            DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, GCString, GCStringExt, InlineString,
-            MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegString,
-            Size, TinyInlineString, caret_locate, format_as_kilobytes_with_commas,
-            glyphs, height, inline_string, ok, row,
+            DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, GCStringOwned,
+            InlineString, MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs,
+            SegStringOwned, Size, TinyInlineString, caret_locate,
+            format_as_kilobytes_with_commas, glyphs, height, inline_string, ok, row,
             validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
             width, with_mut};
 
@@ -88,7 +88,7 @@ use crate::{CachedMemorySize, CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PA
 /// This is the "display" col index (grapheme-cluster-based) and not "logical" col index
 /// (byte-based) position (both are defined in [`crate::graphemes`]).
 ///
-/// > Please review [crate::graphemes::GCString], specifically the
+/// > Please review [`crate::graphemes::GCStringOwned`], specifically the
 /// > methods in [mod@crate::graphemes::gc_string] for more details on how
 /// > the conversion between "display" and "logical" indices is done.
 /// >
@@ -208,7 +208,7 @@ pub struct EditorContent {
 }
 
 mod construct {
-    use super::{DEBUG_TUI_MOD, EditorBuffer, EditorContent, GCStringExt, glyphs,
+    use super::{DEBUG_TUI_MOD, EditorBuffer, EditorContent, glyphs,
                 inline_string, smallvec};
 
     impl EditorBuffer {
@@ -221,7 +221,7 @@ mod construct {
         ) -> Self {
             let it = Self {
                 content: EditorContent {
-                    lines: { smallvec!["".grapheme_string()] },
+                    lines: { smallvec!["".into()] },
                     maybe_file_extension: maybe_file_extension.map(Into::into),
                     maybe_file_path: maybe_file_path.map(Into::into),
                     ..Default::default()
@@ -376,7 +376,7 @@ pub mod content_display_width {
 
 /// Relating to content around the caret.
 pub mod content_near_caret {
-    use super::{EditorBuffer, GCString, SegString, caret_locate, row, width};
+    use super::{EditorBuffer, GCStringOwned, SegStringOwned, caret_locate, row, width};
 
     impl EditorBuffer {
         #[must_use]
@@ -385,7 +385,7 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn line_at_caret_scr_adj(&self) -> Option<&GCString> {
+        pub fn line_at_caret_scr_adj(&self) -> Option<&GCStringOwned> {
             if self.is_empty() {
                 return None;
             }
@@ -395,7 +395,7 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn string_at_end_of_line_at_caret_scr_adj(&self) -> Option<SegString> {
+        pub fn string_at_end_of_line_at_caret_scr_adj(&self) -> Option<SegStringOwned> {
             if self.is_empty() {
                 return None;
             }
@@ -410,7 +410,7 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn string_to_right_of_caret(&self) -> Option<SegString> {
+        pub fn string_to_right_of_caret(&self) -> Option<SegStringOwned> {
             if self.is_empty() {
                 return None;
             }
@@ -424,7 +424,7 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn string_to_left_of_caret(&self) -> Option<SegString> {
+        pub fn string_to_left_of_caret(&self) -> Option<SegStringOwned> {
             if self.is_empty() {
                 return None;
             }
@@ -438,7 +438,7 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn prev_line_above_caret(&self) -> Option<&GCString> {
+        pub fn prev_line_above_caret(&self) -> Option<&GCStringOwned> {
             if self.is_empty() {
                 return None;
             }
@@ -453,7 +453,7 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn string_at_caret(&self) -> Option<SegString> {
+        pub fn string_at_caret(&self) -> Option<SegStringOwned> {
             if self.is_empty() {
                 return None;
             }
@@ -464,7 +464,7 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn next_line_below_caret_to_string(&self) -> Option<&GCString> {
+        pub fn next_line_below_caret_to_string(&self) -> Option<&GCStringOwned> {
             if self.is_empty() {
                 return None;
             }
@@ -478,9 +478,9 @@ pub mod content_near_caret {
 
 pub mod access_and_mutate {
     use super::{CaretRaw, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
-                EditorBufferMutNoDrop, EditorBufferMutWithDrop, GCString, GCStringExt,
-                InlineString, RowHeight, RowIndex, ScrOfs, SelectionList, Size, height,
-                sizing, with_mut};
+                EditorBufferMutNoDrop, EditorBufferMutWithDrop,
+                GCStringOwned, InlineString, RowHeight, RowIndex, ScrOfs, SelectionList,
+                Size, height, sizing, with_mut};
 
     impl EditorBuffer {
         #[must_use]
@@ -508,7 +508,7 @@ pub mod access_and_mutate {
         pub fn is_empty(&self) -> bool { self.content.lines.is_empty() }
 
         #[must_use]
-        pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&GCString> {
+        pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&GCStringOwned> {
             self.content.lines.get(row_index.as_usize())
         }
 
@@ -577,7 +577,7 @@ pub mod access_and_mutate {
 
             // Populate lines with the new data.
             for line in arg_lines {
-                self.content.lines.push(line.as_ref().grapheme_string());
+                self.content.lines.push(line.as_ref().into());
             }
 
             // Reset caret.
@@ -842,7 +842,7 @@ mod test_memory_cache_invalidation {
             buffer_mut
                 .inner
                 .lines
-                .push("More content with lots of text".grapheme_string());
+                .push("More content with lots of text".into());
         }
         // When buffer_mut goes out of scope, Drop should invalidate the cache.
 
@@ -866,7 +866,7 @@ mod test_memory_cache_invalidation {
             buffer_mut_no_drop
                 .inner
                 .lines
-                .push("Even more content".grapheme_string());
+                .push("Even more content".into());
         }
         // Cache should still have old value since we used no_drop variant.
         let cached_memory = buffer
@@ -1061,24 +1061,24 @@ mod test_memory_cache_invalidation {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.lines.clear();
-            buffer_mut.inner.lines.push("changed".grapheme_string());
+            buffer_mut.inner.lines.push("changed".into());
         }
         buffer.add(); // Add changed state to history
 
         // Now history should have 2 versions
         assert_eq2!(buffer.history.versions.len(), 2.into());
-        assert_eq2!(buffer.get_lines()[0], "changed".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("changed"));
 
         // Undo should go back to "initial"
         buffer.undo();
-        assert_eq2!(buffer.get_lines()[0], "initial".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("initial"));
 
         // Redo should go forward to "changed"
         buffer.redo();
-        assert_eq2!(buffer.get_lines()[0], "changed".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("changed"));
 
         // Another undo
         buffer.undo();
-        assert_eq2!(buffer.get_lines()[0], "initial".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("initial"));
     }
 }

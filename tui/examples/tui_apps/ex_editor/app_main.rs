@@ -19,9 +19,9 @@ use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
                ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, DialogChoice,
                DialogComponent, DialogEngineConfigOptions, DialogEngineMode, EditMode,
                EditorBuffer, EditorComponent, EditorEngineConfig, EventPropagation,
-               FlexBox, FlexBoxId, GCStringExt, GlobalData, HasEditorBuffers, HasFocus,
-               InlineString, InputEvent, ItemsOwned, Key, KeyPress, LayoutDirection,
-               LayoutManagement, LineMode, ModifierKeysMask,
+               FlexBox, FlexBoxId, GCStringOwned, GlobalData, HasEditorBuffers,
+               HasFocus, InlineString, InputEvent, ItemsOwned, Key, KeyPress,
+               LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
                PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
                Size, Surface, SurfaceProps, SurfaceRender, SyntaxHighlightMode,
                TerminalWindowMainThreadSignal, TuiStylesheet, ZOrder, box_end,
@@ -205,7 +205,7 @@ mod app_main_impl_app_trait {
 mod modal_dialogs {
     use super::{AppSignal, CommonError, CommonResult, ComponentRegistry,
                 ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, EditorBuffer,
-                FlexBoxId, GCStringExt, HasEditorBuffers, HasFocus, Id, InlineString,
+                FlexBoxId, GCStringOwned, HasEditorBuffers, HasFocus, Id, InlineString,
                 InputEvent, ItemsOwned, Key, KeyPress, ModifierKeysMask, State, col, ok,
                 throws, width};
 
@@ -369,7 +369,7 @@ mod modal_dialogs {
             let start_display_col_index = col(0);
             let max_display_col_count = width(100);
 
-            let text_gcs = text.grapheme_string();
+            let text_gcs = GCStringOwned::from(&text);
 
             let content = {
                 if text_gcs.display_width > max_display_col_count {

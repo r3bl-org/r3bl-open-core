@@ -37,7 +37,7 @@
 //! // When content is modified:
 //! {
 //!     let mut buffer_mut = buffer.get_mut(viewport);
-//!     buffer_mut.inner.lines.push("new line".grapheme_string());
+//!     buffer_mut.inner.lines.push(GCStringOwned::from("new line"));
 //! } // Drop called here, cache is invalidated automatically
 //! ```
 //!
@@ -322,7 +322,7 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_eq2, col, height, row, width, EditorBuffer, EditorEngine, EditorEngineConfig, GCStringExt};
+    use crate::{assert_eq2, col, height, row, width, EditorBuffer, EditorEngine, EditorEngineConfig, GCStringOwned};
 
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {
@@ -428,7 +428,7 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.lines.clear();
-            buffer_mut.inner.lines.push("New content with more text".grapheme_string());
+            buffer_mut.inner.lines.push(GCStringOwned::from("New content with more text"));
         }
         // Drop should invalidate and recalculate cache
 

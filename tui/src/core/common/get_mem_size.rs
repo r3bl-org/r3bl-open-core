@@ -25,7 +25,7 @@ pub trait GetMemSize {
 
 /// Calculates the total memory size of a slice of items that implement [`GetMemSize`].
 /// This is useful when you need to calculate the total memory size of a collection of
-/// items (eg [Vec] or [`smallvec::SmallVec`] of [`crate::GCString`]).
+/// items (eg [Vec] or [`smallvec::SmallVec`] of [`crate::GCStringOwned`]).
 #[must_use]
 pub fn slice_size<T: GetMemSize>(slice: &[T]) -> usize {
     slice.iter().map(GetMemSize::get_mem_size).sum::<usize>()

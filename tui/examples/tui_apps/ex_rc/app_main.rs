@@ -18,24 +18,24 @@
 use std::fmt::Debug;
 
 use chrono::{DateTime, Local};
-use r3bl_tui::{box_end, box_start, col, glyphs, height, inline_string, new_style,
-               render_component_in_current_box, render_ops,
-               render_tui_styled_texts_into, req_size_pc, row, send_signal, surface,
-               throws, throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
-               tui_stylesheet, Animator, Ansi256GradientIndex, App, BoxedSafeApp,
-               ColorChangeSpeed, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-               Colorize, CommonResult, ComponentRegistry, ComponentRegistryMap,
-               EditMode, EditorComponent, EditorEngineConfig, EventPropagation,
-               FlexBoxId, GCStringExt, GlobalData, GradientGenerationPolicy, HasFocus,
+use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
+               ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
+               ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD, EditMode,
+               EditorComponent, EditorEngineConfig, EventPropagation, FlexBoxId,
+               GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus,
                InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement,
                LolcatBuilder, ModifierKeysMask, PerformPositioningAndSizing, RenderOp,
-               RenderPipeline, Size, Surface, SurfaceProps, SurfaceRender,
+               RenderPipeline, SPACER_GLYPH, Size, Surface, SurfaceProps, SurfaceRender,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,
-               TuiStylesheet, ZOrder, DEBUG_TUI_MOD, SPACER_GLYPH};
+               TuiStylesheet, ZOrder, box_end, box_start, col, glyphs, height,
+               inline_string, new_style, render_component_in_current_box, render_ops,
+               render_tui_styled_texts_into, req_size_pc, row, send_signal, surface,
+               throws, throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
+               tui_stylesheet};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
-use super::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
+use super::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
 use crate::ex_rc::app_main::animator_task::start_animator_task;
 
 /// Constants for the ids.
@@ -71,7 +71,7 @@ pub struct AppData {
 }
 
 mod animator_task {
-    use super::{send_signal, Debug, Duration, Sender, TerminalWindowMainThreadSignal};
+    use super::{Debug, Duration, Sender, TerminalWindowMainThreadSignal, send_signal};
 
     /// Note the [Sender] is used to send a signal to the animator to kill it when
     /// [Animator::stop](Animator::stop) is used.
@@ -126,8 +126,8 @@ mod animator_task {
 }
 
 mod constructor {
-    use super::{Animator, AppData, AppMain, AppSignal, BoxedSafeApp, ColorWheel, State,
-                DEBUG_TUI_MOD};
+    use super::{Animator, AppData, AppMain, AppSignal, BoxedSafeApp, ColorWheel,
+                DEBUG_TUI_MOD, State};
 
     impl Default for AppMain {
         fn default() -> Self {
@@ -154,15 +154,15 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::{col, height, hud, perform_layout, populate_component_registry, row,
+    use super::{Ansi256GradientIndex, App, AppData, AppMain, AppSignal,
+                ColorChangeSpeed, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
+                Colorize, CommonResult, ComponentRegistry, ComponentRegistryMap,
+                EventPropagation, GlobalData, HasFocus, InputEvent, Key, KeyPress,
+                LayoutManagement, LolcatBuilder, ModifierKeysMask, RenderPipeline,
+                State, SurfaceProps, SurfaceRender, TerminalWindowMainThreadSignal, col,
+                height, hud, perform_layout, populate_component_registry, row,
                 send_signal, smallvec, start_animator_task, state_mutator, status_bar,
-                stylesheet, surface, throws_with_return, Ansi256GradientIndex, App,
-                AppData, AppMain, AppSignal, ColorChangeSpeed, ColorWheel,
-                ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
-                ComponentRegistry, ComponentRegistryMap, EventPropagation, GlobalData,
-                HasFocus, InputEvent, Key, KeyPress, LayoutManagement, LolcatBuilder,
-                ModifierKeysMask, RenderPipeline, State, SurfaceProps, SurfaceRender,
-                TerminalWindowMainThreadSignal};
+                stylesheet, surface, throws_with_return};
 
     impl App for AppMain {
         type S = State;
@@ -343,10 +343,10 @@ mod app_main_impl_app_trait {
 }
 
 mod perform_layout {
-    use super::{box_end, box_start, render_component_in_current_box, req_size_pc,
-                throws, AppMain, AppSignal, CommonResult, ComponentRegistryMap,
-                FlexBoxId, GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
-                PerformPositioningAndSizing, State, Surface, SurfaceRender};
+    use super::{AppMain, AppSignal, CommonResult, ComponentRegistryMap, FlexBoxId,
+                GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
+                PerformPositioningAndSizing, State, Surface, SurfaceRender, box_end,
+                box_start, render_component_in_current_box, req_size_pc, throws};
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -386,10 +386,10 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use super::{glyphs, inline_string, send_signal, AppSignal, ComponentRegistry,
-                ComponentRegistryMap, EditMode, EditorComponent, EditorEngineConfig,
-                FlexBoxId, HasFocus, Id, Sender, State, TerminalWindowMainThreadSignal,
-                DEBUG_TUI_MOD};
+    use super::{AppSignal, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
+                EditMode, EditorComponent, EditorEngineConfig, FlexBoxId, HasFocus, Id,
+                Sender, State, TerminalWindowMainThreadSignal, glyphs, inline_string,
+                send_signal};
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -448,8 +448,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::{new_style, throws_with_return, tui_stylesheet, CommonResult, Id,
-                TuiStylesheet};
+    use super::{CommonResult, Id, TuiStylesheet, new_style, throws_with_return,
+                tui_stylesheet};
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -467,9 +467,9 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::{col, new_style, render_ops, render_tui_styled_texts_into, row,
-                tui_color, tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline,
-                Size, ZOrder, SPACER_GLYPH};
+    use super::{RenderOp, RenderPipeline, SPACER_GLYPH, Size, ZOrder, col, new_style,
+                render_ops, render_tui_styled_texts_into, row, tui_color,
+                tui_styled_text, tui_styled_texts};
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -501,11 +501,11 @@ mod hud {
 }
 
 mod status_bar {
-    use super::{col, inline_string, new_style, render_ops, render_tui_styled_texts_into,
-                tui_color, tui_styled_text, AppMain, DateTime, GCStringExt,
-                GradientGenerationPolicy, Local, RenderOp, RenderPipeline, Size, State,
-                TextColorizationPolicy, TuiStyledTexts, ZOrder, FILE_CONTENT_ARRAY,
-                SPACER_GLYPH};
+    use super::{AppMain, DateTime, FILE_CONTENT_ARRAY, GCStringOwned,
+                GradientGenerationPolicy, Local, RenderOp, RenderPipeline, SPACER_GLYPH,
+                Size, State, TextColorizationPolicy, TuiStyledTexts, ZOrder, col,
+                inline_string, new_style, render_ops, render_tui_styled_texts_into,
+                tui_color, tui_styled_text};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(
@@ -520,7 +520,7 @@ mod status_bar {
         let lolcat_st = {
             let now: DateTime<Local> = Local::now();
             let time_string = inline_string!(" 🦜 {} ", now.format("%H:%M:%S"));
-            let time_string_gcs = time_string.grapheme_string();
+            let time_string_gcs = GCStringOwned::from(time_string);
             let style = new_style!(color_fg: {tui_color!(black)});
             app.data.lolcat_bg.colorize_into_styled_texts(
                 &time_string_gcs,

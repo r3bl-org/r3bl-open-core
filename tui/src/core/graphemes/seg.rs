@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use super::SegIndex;
 use crate::{ChUnit, ColIndex, ColWidth, usize};
 
-/// `Seg` represents a grapheme cluster segment within a [`super::GCString`].
+/// `Seg` represents a grapheme cluster segment within a [`super::GCStringOwned`].
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text
 /// handling. Each `Seg` contains all the information needed to convert between
@@ -55,13 +55,13 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 /// # Performance, memory latency, access, allocation
 ///
 /// 1. This struct does not allocate anything and is [Copy].
-/// 2. The [`super::GCString`] owns the memory, and this struct is a "view" into parts of
+/// 2. The [`super::GCStringOwned`] owns the memory, and this struct is a "view" into parts of
 ///    it, where each part is a grapheme cluster, and each of them is represented by this
 ///    struct.
 ///
 /// This struct provides information about a single grapheme cluster, including its byte
 /// indices within the original string, its display width, its logical index within the
-/// [`super::GCString`], its byte size, and its starting display column index.
+/// [`super::GCStringOwned`], its byte size, and its starting display column index.
 ///
 /// ## Fields and Their Relationship to Index Types
 ///
@@ -79,7 +79,7 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 /// ## Purpose
 ///
 /// The `Seg` struct is used to efficiently represent and manipulate grapheme clusters
-/// within a [`super::GCString`]. It allows for easy access to the underlying string
+/// within a [`super::GCStringOwned`]. It allows for easy access to the underlying string
 /// slice, as well as information about its display width and position.
 ///
 /// # UTF-8 is variable length encoding
@@ -110,14 +110,14 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///
 /// ## Usage
 ///
-/// This struct is primarily used internally by the [`super::GCString`] struct. However,
+/// This struct is primarily used internally by the [`super::GCStringOwned`] struct. However,
 /// it can also be used directly to access information about individual grapheme clusters.
 ///
 /// ## Example
 ///
 /// ```
-/// use r3bl_tui::{GCString, GCStringExt, ch, col, width, seg_index};
-/// let u_str = "📦🙏🏽".grapheme_string();
+/// use r3bl_tui::{GCStringOwned, ch, col, width, seg_index};
+/// let u_str: GCStringOwned = "📦🙏🏽".into();
 /// if let Some(segment) = u_str.segments.first() {
 ///     assert_eq!(segment.start_byte_index, ch(0));
 ///     assert_eq!(segment.end_byte_index, ch(4));
@@ -130,11 +130,11 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the
-    /// [`super::GCString`] that this grapheme cluster represents.
+    /// [`super::GCStringOwned`] that this grapheme cluster represents.
     pub start_byte_index: ChUnit,
 
     /// The end index (bytes), in the string slice, used to generate the
-    /// [`super::GCString`] that this grapheme cluster represents.
+    /// [`super::GCStringOwned`] that this grapheme cluster represents.
     pub end_byte_index: ChUnit,
 
     /// Display width of the grapheme cluster calculated using
@@ -142,7 +142,7 @@ pub struct Seg {
     /// not be the same as the byte size [`Self::bytes_size`].
     pub display_width: ColWidth,
 
-    /// The index of this entry in the [`super::GCString::segments`].
+    /// The index of this entry in the [`super::GCStringOwned::segments`].
     pub seg_index: SegIndex,
 
     /// The number of bytes this grapheme cluster occupies in the original string slice.
@@ -177,7 +177,7 @@ impl Debug for Seg {
 
 impl Seg {
     /// Get the string slice for the grapheme cluster segment. The `string` parameter is
-    /// any type that can be converted into a `&str`, such as [`super::GCString`].
+    /// any type that can be converted into a `&str`, such as [`super::GCStringOwned`].
     pub fn get_str<'a>(&self, arg_str: &'a (impl AsRef<str> + ?Sized)) -> &'a str {
         let str = arg_str.as_ref();
         let start_index = usize(self.start_byte_index);
@@ -188,11 +188,11 @@ impl Seg {
 
 #[cfg(test)]
 mod tests {
-    use crate::{GCStringExt, ch, col, seg_index, width};
+    use crate::{GCStringOwned, ch, col, seg_index, width};
 
     #[test]
     fn test_single_grapheme_cluster() {
-        let grapheme_string = "📦".grapheme_string();
+        let grapheme_string: GCStringOwned = "📦".into();
         if let Some(segment) = grapheme_string.segments.first() {
             assert_eq!(segment.start_byte_index, ch(0));
             assert_eq!(segment.end_byte_index, ch(4));
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_multiple_grapheme_clusters() {
-        let grapheme_string = "📦🙏🏽".grapheme_string();
+        let grapheme_string: GCStringOwned = "📦🙏🏽".into();
         assert_eq!(grapheme_string.segments.len(), 2);
 
         let segment1 = &grapheme_string.segments[0];
@@ -231,7 +231,7 @@ mod tests {
     #[test]
     #[allow(clippy::unicode_not_nfc)] // Intentionally testing decomposed form
     fn test_combining_grapheme_cluster() {
-        let grapheme_string = "á".grapheme_string(); // 'a' + combining acute accent
+        let grapheme_string: GCStringOwned = "á".into(); // 'a' + combining acute accent
         if let Some(segment) = grapheme_string.segments.first() {
             assert_eq!(segment.start_byte_index, ch(0));
             assert_eq!(segment.end_byte_index, ch(3));
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_seg_str() {
-        let grapheme_string = "📦🙏🏽".grapheme_string();
+        let grapheme_string: GCStringOwned = "📦🙏🏽".into();
         if let Some(segment) = grapheme_string.segments.first() {
             assert_eq!(segment.get_str(&grapheme_string), "📦");
         }

@@ -22,17 +22,17 @@ use tokio::sync::mpsc;
 
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
             MainEventLoopFuture};
-use crate::{ch, col, glyphs, height, inline_string, lock_output_device_as_mut,
-            new_style, ok, render_pipeline, row,
-            telemetry::{telemetry_default_constants, Telemetry},
-            telemetry_record, width, Ansi256GradientIndex, ColorWheel, ColorWheelConfig,
-            ColorWheelSpeed, CommonResult, ComponentRegistryMap, DefaultSize,
-            DefaultTiming, Flush, FlushKind, GCStringExt, GlobalData,
+use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
+            CommonResult, ComponentRegistryMap, DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY,
+            DefaultSize, DefaultTiming, Flush, FlushKind, GCStringOwned, GlobalData,
             GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt, InputEvent,
             LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice, RawMode,
             RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
-            TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
-            DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY};
+            TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
+            glyphs, height, inline_string, lock_output_device_as_mut, new_style, ok,
+            render_pipeline, row,
+            telemetry::{Telemetry, telemetry_default_constants},
+            telemetry_record, width};
 
 // XMARK: Box::pin a future that is larger than 16KB.
 
@@ -121,8 +121,6 @@ where
             output_device.clone(),
             &mut app,
         )?;
-
-        
 
         run_main_event_loop(
             event_loop_state,
@@ -788,10 +786,10 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
         MinSize::Col as u8,
         MinSize::Row as u8
     );
-    let msg_gcs = msg.grapheme_string();
+    let msg_gcs = GCStringOwned::from(msg);
     let trunc_msg = msg_gcs.trunc_end_to_fit(window_size);
 
-    let trunc_msg_gcs = trunc_msg.grapheme_string();
+    let trunc_msg_gcs = GCStringOwned::from(trunc_msg);
     let trunc_msg_width = trunc_msg_gcs.display_width;
 
     let row_pos = row({
@@ -842,18 +840,18 @@ mod tests {
     use test_fixture_app::AppMainTest;
     use test_fixture_state::{AppSignal, State};
 
-    use crate::{assert_eq2, ch, col, defaults::get_default_gradient_stops, height,
-                inline_string, is_fully_uninteractive_terminal, key_press,
-                main_event_loop_impl, new_style, ok, render_ops, render_pipeline,
-                render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,
-                tui_styled_text, width, App, ColorWheel, ColorWheelConfig,
-                ColorWheelSpeed, CommonResult, ComponentRegistryMap,
-                CrosstermEventResult, EventPropagation, GlobalData,
-                GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
-                InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress,
+    use crate::{App, ColorWheel, ColorWheelConfig, ColorWheelSpeed, CommonResult,
+                ComponentRegistryMap, CrosstermEventResult, EventPropagation,
+                GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
+                InlineVec, InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress,
                 OutputDevice, OutputDeviceExt, PixelChar, RenderOp, RenderPipeline,
                 SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, TuiStyle, ZOrder};
+                TextColorizationPolicy, TuiStyle, ZOrder, assert_eq2, ch, col,
+                defaults::get_default_gradient_stops, height, inline_string,
+                is_fully_uninteractive_terminal, key_press, main_event_loop_impl,
+                new_style, ok, render_ops, render_pipeline,
+                render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,
+                tui_styled_text, width};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -919,9 +917,11 @@ mod tests {
         // console_log!(stdout_mock.get_copy_of_buffer_as_string_strip_ansi());
 
         assert_eq!(global_data.state.counter, 2);
-        assert!(stdout_mock
-            .get_copy_of_buffer_as_string_strip_ansi()
-            .contains("State{counter:2}"));
+        assert!(
+            stdout_mock
+                .get_copy_of_buffer_as_string_strip_ansi()
+                .contains("State{counter:2}")
+        );
 
         // println!(
         //     "global_data.offscreen_buffer: {:?}",
@@ -1048,7 +1048,7 @@ mod tests {
 
     mod test_fixture_app_main_impl_trait_app {
         use super::*;
-        use crate::{row, throws_with_return, GCStringExt, Pos};
+        use crate::{Pos, row, throws_with_return};
 
         impl App for AppMainTest {
             type S = State;
@@ -1105,7 +1105,7 @@ mod tests {
                             b = len
                         );
 
-                        let string_gcs = string.grapheme_string();
+                        let string_gcs = string.into();
 
                         render_ops!(
                             @render_styled_texts_into acc_render_op
@@ -1249,7 +1249,7 @@ mod tests {
 
     mod text_fixture_status_bar {
         use super::*;
-        use crate::{tui_styled_texts, Size};
+        use crate::{Size, tui_styled_texts};
 
         /// Shows helpful messages at the bottom row of the screen.
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {

@@ -19,7 +19,7 @@ use std::{cmp::{self},
           fmt::Debug};
 
 use crate::{caret_scr_adj, row, width, CaretScrAdj, ChUnitPrimitiveType, ColIndex,
-            ColWidth, GCString, ScrOfs};
+            ColWidth, GCStringOwned, ScrOfs};
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with
@@ -116,9 +116,9 @@ impl SelectionRange {
     }
 
     /// Uses `SelectionRange` to calculate width and simply calls
-    /// [`crate::GCString::clip()`].
+    /// [`crate::GCStringOwned::clip()`].
     #[must_use]
-    pub fn clip_to_range<'a>(&self, us: &'a GCString) -> &'a str {
+    pub fn clip_to_range<'a>(&self, us: &'a GCStringOwned) -> &'a str {
         let (start_display_col_index, end_display_col_index) = self.as_tuple();
         let max_display_width_col_count =
             width(*(end_display_col_index - start_display_col_index));

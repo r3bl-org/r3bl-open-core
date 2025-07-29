@@ -16,7 +16,7 @@
  */
 use super::{OffscreenBuffer, RenderOp, RenderPipeline, sanitize_and_save_abs_pos};
 use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
-            GCString, GCStringExt, PixelChar, PixelCharLine, Pos, RenderOpsLocalData,
+            GCStringOwned, PixelChar, PixelCharLine, Pos, RenderOpsLocalData,
             Size, TuiStyle, ZOrder, ch,
             glyphs::{self, SPACER_GLYPH},
             inline_string, usize, width};
@@ -294,7 +294,7 @@ pub fn print_text_with_attributes(
 }
 
 mod print_text_with_attributes_helper {
-    use super::{ColWidth, GCString, GCStringExt, OffscreenBuffer, PixelChar,
+    use super::{ColWidth, GCStringOwned, OffscreenBuffer, PixelChar,
                 PixelCharLine, SPACER_GLYPH, TuiStyle, ch, usize, width};
 
     /// Clips the input string based on max display column count and window bounds.
@@ -304,15 +304,15 @@ mod print_text_with_attributes_helper {
     ///
     /// This function can be a significant performance bottleneck in the rendering
     /// pipeline, as it is called for every text rendering operation. The optimization
-    /// implemented here uses a fast-path approach to minimize `GCString` allocations:
+    /// implemented here uses a fast-path approach to minimize `GCStringOwned` allocations:
     ///
-    /// - **Fast path**: Uses `GCString::width()` to check string width without creating a
-    ///   `GCString` instance
-    /// - **Early return**: When text fits within bounds, creates `GCString` only once
-    /// - **Slow path**: Only creates `GCString` for truncation when absolutely necessary
+    /// - **Fast path**: Uses `GCStringOwned::width()` to check string width without creating a
+    ///   `GCStringOwned` instance
+    /// - **Early return**: When text fits within bounds, creates `GCStringOwned` only once
+    /// - **Slow path**: Only creates `GCStringOwned` for truncation when absolutely necessary
     ///
     /// This optimization addresses the performance bottleneck identified in flamegraph
-    /// analysis, where `GCString` creation in the rendering pipeline was consuming 8.61%
+    /// analysis, where `GCStringOwned` creation in the rendering pipeline was consuming 8.61%
     /// of total execution time. See `/docs/tui_perf_optimize.md` for detailed performance
     /// analysis and optimization results.
     ///
@@ -332,9 +332,9 @@ mod print_text_with_attributes_helper {
         display_col_index: usize,
         maybe_max_display_col_count: Option<ColWidth>,
         window_max_display_col_count: ColWidth,
-    ) -> GCString {
-        // Fast path: calculate string width without creating GCString.
-        let string_width = GCString::width(string);
+    ) -> GCStringOwned {
+        // Fast path: calculate string width without creating GCStringOwned.
+        let string_width = GCStringOwned::width(string);
 
         // Calculate the effective max width considering parameter and window constraints.
         let param_max = maybe_max_display_col_count
@@ -342,15 +342,15 @@ mod print_text_with_attributes_helper {
         let window_max = *window_max_display_col_count - ch(display_col_index);
         let effective_max = param_max.min(window_max);
 
-        // If the string already fits, create and return GCString only once.
+        // If the string already fits, create and return GCStringOwned only once.
         if *string_width <= effective_max {
-            return string.grapheme_string();
+            return string.into();
         }
 
-        // Slow path: create GCString for truncation only when necessary.
-        let string_gcs = string.grapheme_string();
+        // Slow path: create GCStringOwned for truncation only when necessary.
+        let string_gcs = GCStringOwned::from(string);
         let truncated_str = string_gcs.trunc_end_to_fit(width(effective_max));
-        truncated_str.grapheme_string()
+        truncated_str.into()
     }
 
     /// Composes the final style by merging provided style with buffer colors.
@@ -381,7 +381,7 @@ mod print_text_with_attributes_helper {
     /// Processes and renders individual character segments to the line buffer.
     /// Returns the updated insertion column index and total inserted display width.
     pub fn process_character_segments(
-        text_gcs: &crate::GCString,
+        text_gcs: &crate::GCStringOwned,
         maybe_style: Option<TuiStyle>,
         line_copy: &mut PixelCharLine,
         mut insertion_col_index: usize,
@@ -1176,9 +1176,9 @@ mod bench_tests {
             display_col_index: usize,
             maybe_max_display_col_count: Option<ColWidth>,
             window_max_display_col_count: ColWidth,
-        ) -> GCString {
+        ) -> GCStringOwned {
             // ✂️Clip `arg_text_ref` (if needed) and make `text`.
-            let string_gcs = string.grapheme_string();
+            let string_gcs: GCStringOwned = string.into();
             let clip_1_str =
                 if let Some(max_display_col_count) = maybe_max_display_col_count {
                     let adj_max = *max_display_col_count - ch(display_col_index);
@@ -1186,7 +1186,7 @@ mod bench_tests {
                 } else {
                     string
                 };
-            let clip_1_gcs = clip_1_str.grapheme_string();
+            let clip_1_gcs: GCStringOwned = clip_1_str.into();
 
             // ✂️Clip `text` (if needed) to the max display col count of the window.
             let text_fits_in_window = *clip_1_gcs.display_width
@@ -1198,7 +1198,7 @@ mod bench_tests {
                 clip_1_gcs.trunc_end_to_fit(width(adj_max))
             };
 
-            clip_2_str.grapheme_string()
+            clip_2_str.into()
         }
 
         #[bench]

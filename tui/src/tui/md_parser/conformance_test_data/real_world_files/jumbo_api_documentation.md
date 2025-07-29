@@ -65,10 +65,10 @@ r3bl_tui = { version = "0.7.1", features = ["async", "crossterm"] }
 The cornerstone of our zero-allocation approach:
 
 ```rust
-use r3bl_tui::{AsStrSlice, GCString};
+use r3bl_tui::{AsStrSlice, GCStringOwned};
 
 // Convert editor lines to virtual array
-let lines: Vec<GCString> = vec![
+let lines: Vec<GCStringOwned> = vec![
     "# Heading".into(),
     "Content here".into(),
     "More content".into(),
@@ -338,11 +338,11 @@ The virtual array abstraction for zero-copy operations.
 ```rust
 impl AsStrSlice {
     /// Create from array of lines
-    pub fn from(lines: &[GCString]) -> Self;
+    pub fn from(lines: &[GCStringOwned]) -> Self;
 
     /// Create with character limit
     pub fn with_limit(
-        lines: &[GCString],
+        lines: &[GCStringOwned],
         start_line: LineIndex,
         start_col: ColIndex,
         max_chars: Option<CharsCount>

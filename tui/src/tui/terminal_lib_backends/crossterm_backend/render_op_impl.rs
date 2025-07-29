@@ -24,7 +24,7 @@ use crossterm::{cursor::{Hide, MoveTo, Show},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 use smallvec::smallvec;
 
-use crate::{Flush, GCString, InlineVec, LockedOutputDevice, PaintRenderOp, Pos,
+use crate::{Flush, GCStringOwned, InlineVec, LockedOutputDevice, PaintRenderOp, Pos,
             RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle,
             crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
             disable_raw_mode_now, enable_raw_mode_now, flush_now, queue_render_op,
@@ -339,7 +339,7 @@ mod impl_self {
 }
 
 mod perform_paint {
-    use super::{Attribute, Cow, GCString, InlineVec, LockedOutputDevice, Print,
+    use super::{Attribute, Cow, GCStringOwned, InlineVec, LockedOutputDevice, Print,
                 RenderOpsLocalData, SetAttribute, Size, TuiStyle, queue_render_op,
                 sanitize_and_save_abs_pos, smallvec};
 
@@ -427,7 +427,7 @@ mod perform_paint {
         // Update cursor position after paint.
         let cursor_pos_copy = {
             let mut copy = local_data.cursor_pos;
-            let text_display_width = GCString::width(text);
+            let text_display_width = GCStringOwned::width(text);
             *copy.col_index += *text_display_width;
             copy
         };

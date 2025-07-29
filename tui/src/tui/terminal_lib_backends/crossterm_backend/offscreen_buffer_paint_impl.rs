@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 use crate::{ch, col, diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH, render_ops,
-            row, ColIndex, Flush, FlushKind, GCString, InlineString, LockedOutputDevice,
+            row, ColIndex, Flush, FlushKind, GCStringOwned, InlineString, LockedOutputDevice,
             OffscreenBuffer, OffscreenBufferPaint, PixelChar, RenderOp, RenderOps,
             RowIndex, Size, TuiStyle, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE};
 
@@ -221,7 +221,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 }
 
 mod render_helper {
-    use super::{col, render_helper, render_ops, row, ColIndex, GCString, InlineString,
+    use super::{col, render_helper, render_ops, row, ColIndex, GCStringOwned, InlineString,
                 RenderOp, RenderOps, RowIndex, TuiStyle};
 
     #[derive(Debug, Clone)]
@@ -301,7 +301,7 @@ mod render_helper {
             ));
 
         // Update `display_col_index_for_line`.
-        let display_width = GCString::width(&context.buffer_plain_text);
+        let display_width = GCStringOwned::width(&context.buffer_plain_text);
         *context.display_col_index_for_line += *display_width;
 
         // Clear the buffer!

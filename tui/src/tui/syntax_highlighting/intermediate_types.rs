@@ -25,7 +25,7 @@
 //!
 //! In both cases:
 //! 1. The source document comes from a [`crate::editor`] component, which is a [Vec] of
-//!    [`GCString`] (Unicode strings).
+//!    [`GCStringOwned`] (Unicode strings).
 //! 2. This intermediate type is [clipped](StyleUSSpanLine::clip) to the visible area of
 //!    the editor component (based on scroll state in the viewport). And finally that is
 //!    converted to a [`crate::TuiStyledTexts`].
@@ -35,7 +35,7 @@ use crate::{get_foreground_dim_style, get_metadata_tags_marker_style,
             get_metadata_title_value_style,
             md_parser::constants::{COLON, COMMA, SPACE},
             tiny_inline_string, tui_styled_text, width, CharacterMatchResult, ColIndex,
-            ColWidth, GCString, GCStringExt, InlineString, List,
+            ColWidth, GCStringOwned, InlineString, List,
             PatternMatcherStateMachine, ScrOfs, TuiStyle, TuiStyledTexts};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
@@ -43,14 +43,14 @@ use crate::{get_foreground_dim_style, get_metadata_tags_marker_style,
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct StyleUSSpan {
     pub style: TuiStyle,
-    pub text_gcs: GCString,
+    pub text_gcs: GCStringOwned,
 }
 
 impl Default for StyleUSSpan {
     fn default() -> Self {
         Self {
             style: TuiStyle::default(),
-            text_gcs: "".grapheme_string(),
+            text_gcs: "".into(),
         }
     }
 }
@@ -145,7 +145,7 @@ impl StyleUSSpanLine {
     }
 
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line
-    /// is represented as a [List] of ([`TuiStyle`], [`GCString`])'s.
+    /// is represented as a [List] of ([`TuiStyle`], [`GCStringOwned`])'s.
     #[must_use]
     pub fn clip(
         &self,
@@ -231,7 +231,7 @@ impl StyleUSSpanLine {
         max_display_col_count: ColWidth,
     ) -> InlineString {
         let line = self.get_plain_text();
-        let line_gcs = line.grapheme_string();
+        let line_gcs: GCStringOwned = line.into();
         let str = line_gcs.clip(scroll_offset_col_index, max_display_col_count);
         InlineString::from(str)
     }
@@ -332,10 +332,10 @@ mod tests_clip_styled_texts {
         // Equivalent no highlight version.
         {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
-            let text_gcs = text.grapheme_string();
+            let text_gcs: GCStringOwned = text.into();
 
             let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
-            let trunc_1_gcs = trunc_1_str.grapheme_string();
+            let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
             let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
@@ -389,10 +389,10 @@ mod tests_clip_styled_texts {
         // Equivalent no highlight version.
         {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
-            let text_gcs = text.grapheme_string();
+            let text_gcs: GCStringOwned = text.into();
 
             let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
-            let trunc_1_gcs = trunc_1_str.grapheme_string();
+            let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
             let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
@@ -447,10 +447,10 @@ mod tests_clip_styled_texts {
         // Equivalent no highlight version.
         {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
-            let text_gcs = text.grapheme_string();
+            let text_gcs: GCStringOwned = text.into();
 
             let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
-            let trunc_1_gcs = trunc_1_str.grapheme_string();
+            let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
             let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
@@ -505,10 +505,10 @@ mod tests_clip_styled_texts {
         // Expected no highlight version.
         {
             let text = TuiStyledTexts::from(fixtures::get_list()).to_plain_text();
-            let text_gcs = text.grapheme_string();
+            let text_gcs: GCStringOwned = text.into();
 
             let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
-            let trunc_1_gcs = trunc_1_str.grapheme_string();
+            let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
             let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
@@ -565,10 +565,10 @@ mod tests_clip_styled_texts {
         // Expected no highlight version.
         {
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
-            let text_gcs = text.grapheme_string();
+            let text_gcs: GCStringOwned = text.into();
 
             let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
-            let trunc_1_gcs = trunc_1_str.grapheme_string();
+            let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
             let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);
@@ -624,10 +624,10 @@ mod tests_clip_styled_texts {
         // Expected no highlight version.
         {
             let text = TuiStyledTexts::from(get_list_alt()).to_plain_text();
-            let text_gcs = text.grapheme_string();
+            let text_gcs: GCStringOwned = text.into();
 
             let trunc_1_str = text_gcs.trunc_start_by(width(*scroll_offset_col_index));
-            let trunc_1_gcs = trunc_1_str.grapheme_string();
+            let trunc_1_gcs: GCStringOwned = trunc_1_str.into();
 
             let trunc_2_str = trunc_1_gcs.trunc_end_to_fit(width(*max_display_col_count));
             assert_eq2!(trunc_2_str, expected_clipped_string);

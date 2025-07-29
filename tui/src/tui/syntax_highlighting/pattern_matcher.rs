@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{ColIndex, GCString, col};
+use crate::{ColIndex, GCStringOwned, col};
 
 #[derive(Debug)]
 pub enum CharacterMatchResult {
@@ -53,7 +53,7 @@ impl<'a> PatternMatcherStateMachine<'a> {
     pub fn get_current_index(&self) -> usize { self.current_index }
 
     pub fn match_next(&mut self, character_to_test: char) -> CharacterMatchResult {
-        let character_to_test_width = GCString::width_char(character_to_test);
+        let character_to_test_width = GCStringOwned::width_char(character_to_test);
 
         // Skip the first "N" characters (these are display cols, so use the unicode
         // width).
@@ -130,17 +130,17 @@ mod tests {
                 "index[{a}]: '{b}' -> width: {c:?}",
                 a = index,
                 b = character,
-                c = GCString::width_char(character),
+                c = GCStringOwned::width_char(character),
             );
         }
 
-        let scroll_offset_col_index = *(GCString::width_char('😃')
-            + GCString::width_char('m')
-            + GCString::width_char('o')
-            + GCString::width_char('n')
-            + GCString::width_char('k')
-            + GCString::width_char('e')
-            + GCString::width_char('y'));
+        let scroll_offset_col_index = *(GCStringOwned::width_char('😃')
+            + GCStringOwned::width_char('m')
+            + GCStringOwned::width_char('o')
+            + GCStringOwned::width_char('n')
+            + GCStringOwned::width_char('k')
+            + GCStringOwned::width_char('e')
+            + GCStringOwned::width_char('y'));
         assert_eq2!(scroll_offset_col_index, ch(8));
 
         let mut pattern_matcher = PatternMatcherStateMachine::new(

@@ -17,7 +17,7 @@
 
 use std::fmt::Write;
 
-use crate::{ColWidth, GCString, GCStringExt, InlineString, InlineStringCow,
+use crate::{ColWidth, CowInlineString, GCStringOwned, InlineString,
             glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
 
 /// Tests whether the given text contains an ANSI escape sequence.
@@ -42,13 +42,13 @@ pub fn remove_escaped_quotes(s: &str) -> String {
 }
 
 /// Take into account the fact that there maybe emoji in the string.
-/// Returns a `InlineStringCow` to avoid allocation when possible.
+/// Returns a `CowInlineString` to avoid allocation when possible.
 #[must_use]
 pub fn truncate_from_right(
     string: &str,
     arg_width: impl Into<ColWidth>,
     pad: bool,
-) -> InlineStringCow<'_> {
+) -> CowInlineString<'_> {
     let display_width = arg_width.into();
     let display_width_usize = display_width.as_usize();
 
@@ -62,7 +62,7 @@ pub fn truncate_from_right(
             display_width_usize,
             pad,
         ) {
-            return InlineStringCow::Borrowed(string);
+            return CowInlineString::Borrowed(string);
         }
 
         // Handle truncation.
@@ -83,7 +83,7 @@ pub fn truncate_from_right(
     }
 
     // Unicode path - use existing grapheme segmentation.
-    let string_gcs = string.grapheme_string();
+    let string_gcs: GCStringOwned = string.into();
     let string_display_width = string_gcs.display_width;
 
     // No processing needed.
@@ -92,7 +92,7 @@ pub fn truncate_from_right(
         display_width,
         pad,
     ) {
-        return InlineStringCow::Borrowed(string);
+        return CowInlineString::Borrowed(string);
     }
 
     // Handle truncation.
@@ -101,11 +101,11 @@ pub fn truncate_from_right(
     }
     // Handle padding.
     else if pad && string_display_width < display_width {
-        InlineStringCow::Owned(string_gcs.pad_end_to_fit(SPACER_GLYPH, display_width))
+        CowInlineString::Owned(string_gcs.pad_end_to_fit(SPACER_GLYPH, display_width))
     }
     // No post processing needed.
     else {
-        InlineStringCow::Borrowed(string)
+        CowInlineString::Borrowed(string)
     }
 }
 
@@ -114,7 +114,7 @@ pub fn truncate_from_left(
     string: &str,
     arg_width: impl Into<ColWidth>,
     pad: bool,
-) -> InlineStringCow<'_> {
+) -> CowInlineString<'_> {
     let display_width = arg_width.into();
     let display_width_usize = display_width.as_usize();
 
@@ -128,7 +128,7 @@ pub fn truncate_from_left(
             display_width_usize,
             pad,
         ) {
-            return InlineStringCow::Borrowed(string);
+            return CowInlineString::Borrowed(string);
         }
 
         // Handle truncation.
@@ -149,7 +149,7 @@ pub fn truncate_from_left(
     }
 
     // Unicode path - use existing grapheme segmentation.
-    let string_gcs = string.grapheme_string();
+    let string_gcs: GCStringOwned = string.into();
     let string_display_width = string_gcs.display_width;
 
     // No processing needed.
@@ -158,7 +158,7 @@ pub fn truncate_from_left(
         display_width,
         pad,
     ) {
-        return InlineStringCow::Borrowed(string);
+        return CowInlineString::Borrowed(string);
     }
 
     // Handle truncation.
@@ -167,17 +167,17 @@ pub fn truncate_from_left(
     }
     // Handle padding.
     else if pad && string_display_width < display_width {
-        InlineStringCow::Owned(string_gcs.pad_start_to_fit(SPACER_GLYPH, display_width))
+        CowInlineString::Owned(string_gcs.pad_start_to_fit(SPACER_GLYPH, display_width))
     }
     // No post processing needed.
     else {
-        InlineStringCow::Borrowed(string)
+        CowInlineString::Borrowed(string)
     }
 }
 
 /// Helper module for truncation functionality both left and right.
 mod truncate_helper {
-    use super::{ColWidth, ELLIPSIS_GLYPH, GCString, InlineString, InlineStringCow};
+    use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned, InlineString};
 
     /// Check if no processing is needed for ASCII strings
     pub fn should_skip_processing_ascii(
@@ -200,25 +200,25 @@ mod truncate_helper {
 
     /// Get the display width of the ellipsis glyph
     pub fn get_ellipsis_display_width() -> usize {
-        GCString::width(ELLIPSIS_GLYPH).as_usize()
+        GCStringOwned::width(ELLIPSIS_GLYPH).as_usize()
     }
 
     /// Handle case where display width is insufficient for ellipsis
-    pub fn handle_insufficient_width_for_ellipsis() -> InlineStringCow<'static> {
-        InlineStringCow::Owned(InlineString::new())
+    pub fn handle_insufficient_width_for_ellipsis() -> CowInlineString<'static> {
+        CowInlineString::Owned(InlineString::new())
     }
 }
 
 /// Helper module for left truncation functionality.
 mod truncate_from_right_helper {
-    use super::{ColWidth, ELLIPSIS_GLYPH, GCString, GCStringExt, InlineString,
-                InlineStringCow, SPACER_GLYPH, Write, truncate_helper};
+    use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned,
+                InlineString, SPACER_GLYPH, Write, truncate_helper};
 
     /// Handle ASCII truncation from the right
     pub fn handle_ascii_truncation(
         string: &str,
         display_width_usize: usize,
-    ) -> InlineStringCow<'_> {
+    ) -> CowInlineString<'_> {
         let ellipsis_display_width = truncate_helper::get_ellipsis_display_width();
         let string_len = string.len();
 
@@ -233,30 +233,30 @@ mod truncate_from_right_helper {
         let mut acc = InlineString::with_capacity(keep_chars + ELLIPSIS_GLYPH.len());
         acc.push_str(&string[..keep_chars]);
         acc.push_str(ELLIPSIS_GLYPH);
-        InlineStringCow::Owned(acc)
+        CowInlineString::Owned(acc)
     }
 
     /// Handle ASCII padding from the right
     pub fn handle_ascii_padding(
         string: &str,
         display_width_usize: usize,
-    ) -> InlineStringCow<'_> {
+    ) -> CowInlineString<'_> {
         let string_len = string.len();
         let mut acc = InlineString::with_capacity(display_width_usize);
         acc.push_str(string);
         for _ in 0..(display_width_usize - string_len) {
             acc.push_str(SPACER_GLYPH);
         }
-        InlineStringCow::Owned(acc)
+        CowInlineString::Owned(acc)
     }
 
     /// Handle Unicode truncation from the right
     pub fn handle_unicode_truncation(
-        string_gcs: &GCString,
+        string_gcs: &GCStringOwned,
         display_width: ColWidth,
-    ) -> InlineStringCow<'static> {
+    ) -> CowInlineString<'static> {
         let postfix = ELLIPSIS_GLYPH;
-        let postfix_gcs = postfix.grapheme_string();
+        let postfix_gcs: GCStringOwned = postfix.into();
         let postfix_display_width = postfix_gcs.display_width;
         let string_display_width = string_gcs.display_width;
         let truncate_cols_from_right = string_display_width - display_width;
@@ -265,20 +265,20 @@ mod truncate_from_right_helper {
 
         let mut acc = InlineString::new();
         write!(acc, "{}{}", truncated_text, postfix_gcs.string).ok();
-        InlineStringCow::Owned(acc)
+        CowInlineString::Owned(acc)
     }
 }
 
 /// Helper module for right truncation functionality.
 mod truncate_from_left_helper {
-    use super::{ColWidth, ELLIPSIS_GLYPH, GCString, GCStringExt, InlineString,
-                InlineStringCow, SPACER_GLYPH, Write, truncate_helper};
+    use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned,
+                InlineString, SPACER_GLYPH, Write, truncate_helper};
 
     /// Handle ASCII truncation from the left
     pub fn handle_ascii_truncation(
         string: &str,
         display_width_usize: usize,
-    ) -> InlineStringCow<'_> {
+    ) -> CowInlineString<'_> {
         let ellipsis_display_width = truncate_helper::get_ellipsis_display_width();
         let string_len = string.len();
 
@@ -294,30 +294,30 @@ mod truncate_from_left_helper {
             InlineString::with_capacity(ELLIPSIS_GLYPH.len() + (string_len - skip_chars));
         acc.push_str(ELLIPSIS_GLYPH);
         acc.push_str(&string[skip_chars..]);
-        InlineStringCow::Owned(acc)
+        CowInlineString::Owned(acc)
     }
 
     /// Handle ASCII padding from the left
     pub fn handle_ascii_padding(
         string: &str,
         display_width_usize: usize,
-    ) -> InlineStringCow<'_> {
+    ) -> CowInlineString<'_> {
         let string_len = string.len();
         let mut acc = InlineString::with_capacity(display_width_usize);
         for _ in 0..(display_width_usize - string_len) {
             acc.push_str(SPACER_GLYPH);
         }
         acc.push_str(string);
-        InlineStringCow::Owned(acc)
+        CowInlineString::Owned(acc)
     }
 
     /// Handle Unicode truncation from the left
     pub fn handle_unicode_truncation(
-        string_gcs: &GCString,
+        string_gcs: &GCStringOwned,
         display_width: ColWidth,
-    ) -> InlineStringCow<'static> {
+    ) -> CowInlineString<'static> {
         let prefix = ELLIPSIS_GLYPH;
-        let prefix_gcs = prefix.grapheme_string();
+        let prefix_gcs: GCStringOwned = prefix.into();
         let prefix_display_width = prefix_gcs.display_width;
         let string_display_width = string_gcs.display_width;
         let truncate_cols_from_left = string_display_width - display_width;
@@ -326,7 +326,7 @@ mod truncate_from_left_helper {
 
         let mut acc = InlineString::new();
         write!(acc, "{}{}", prefix_gcs.string, truncated_text).ok();
-        InlineStringCow::Owned(acc)
+        CowInlineString::Owned(acc)
     }
 }
 
@@ -391,7 +391,7 @@ mod tests {
 
         // Test that no allocation occurs when no processing needed.
         let result = truncate_from_right(short_string, width, false);
-        assert!(matches!(result, InlineStringCow::Borrowed(_)));
+        assert!(matches!(result, CowInlineString::Borrowed(_)));
 
         // Test Unicode truncation.
         let unicode_string = "Hello, 世界!";
@@ -426,7 +426,7 @@ mod tests {
 
         // Test that no allocation occurs when no processing needed.
         let result = truncate_from_left(short_string, width, false);
-        assert!(matches!(result, InlineStringCow::Borrowed(_)));
+        assert!(matches!(result, CowInlineString::Borrowed(_)));
 
         // Test Unicode truncation.
         let unicode_string = "Hello, 世界!";
@@ -502,10 +502,10 @@ mod bench_tests {
         let result = truncate_from_right(text, display_width, false);
 
         match result {
-            InlineStringCow::Borrowed(_) => {
+            CowInlineString::Borrowed(_) => {
                 // Good, zero-copy optimization is working
             }
-            InlineStringCow::Owned(_) => {
+            CowInlineString::Owned(_) => {
                 panic!("Expected borrowed reference for zero-copy optimization");
             }
         }

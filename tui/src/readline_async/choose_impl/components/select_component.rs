@@ -21,11 +21,10 @@ use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
 use miette::IntoDiagnostic;
 
 use crate::{AnsiStyledText, ChUnit, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
-            GCStringExt, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
+            GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
             State, StyleSheet, TuiStyle, ast, ch, choose_apply_style, col,
             core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
-            inline_string, lock_output_device_as_mut, queue_commands, usize,
-            width};
+            inline_string, lock_output_device_as_mut, queue_commands, usize, width};
 
 #[allow(missing_debug_implementations)]
 pub struct SelectComponent {
@@ -101,9 +100,8 @@ impl FunctionComponent<State> for SelectComponent {
 }
 
 mod render_helper {
-
     use super::{AnsiStyledText, ChUnit, Clear, ClearType, CommonResult,
-                DEVELOPMENT_MODE, FunctionComponent, GCStringExt, Header, HowToChoose,
+                DEVELOPMENT_MODE, FunctionComponent, GCStringOwned, Header, HowToChoose,
                 IS_FOCUSED, IS_NOT_FOCUSED, InlineString, InlineVec,
                 MULTI_SELECT_IS_NOT_SELECTED, MULTI_SELECT_IS_SELECTED, MoveToColumn,
                 MoveToNextLine, MoveToPreviousLine, OutputDevice, Print, ResetColor,
@@ -278,7 +276,7 @@ mod render_helper {
 
             'inner: for span_in_header_line in header_line {
                 let span_text = &span_in_header_line.text;
-                let span_text_gcs = span_text.grapheme_string();
+                let span_text_gcs = GCStringOwned::from(span_text);
                 let span_us_display_width = *span_text_gcs.display_width;
 
                 // If this span exceeds available space, clip it and stop
@@ -498,14 +496,21 @@ mod render_helper {
                     format!("{} {IS_FOCUSED} {MULTI_SELECT_IS_SELECTED} ", &padding_left)
                 }
                 (Focus::Yes, Select::No) => {
-                    format!("{} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ", &padding_left)
+                    format!(
+                        "{} {IS_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ",
+                        &padding_left
+                    )
                 }
                 (Focus::No, Select::Yes) => {
-                    format!("{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} ", &padding_left)
+                    format!(
+                        "{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_SELECTED} ",
+                        &padding_left
+                    )
                 }
                 (Focus::No, Select::No) => {
                     format!(
-                        "{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ", &padding_left
+                        "{} {IS_NOT_FOCUSED} {MULTI_SELECT_IS_NOT_SELECTED} ",
+                        &padding_left
                     )
                 }
             },
@@ -522,7 +527,8 @@ mod render_helper {
         let data_item = format!("{row_prefix}{}", row_context.data_item);
         let data_item: String =
             clip_string_to_width_with_ellipsis(data_item, viewport_width);
-        let data_item_display_width: ChUnit = *data_item.grapheme_string().display_width;
+        let data_item_gcs = GCStringOwned::from(&data_item);
+        let data_item_display_width: ChUnit = *data_item_gcs.display_width;
         let padding_right = if data_item_display_width < viewport_width {
             get_spaces(usize(viewport_width - data_item_display_width))
         } else {
@@ -595,7 +601,7 @@ fn clip_string_to_width_with_ellipsis(
     header_text: String,
     viewport_width: ChUnit,
 ) -> String {
-    let header_text_gcs = header_text.grapheme_string();
+    let header_text_gcs = GCStringOwned::from(&header_text);
     let header_text_display_width = header_text_gcs.display_width;
     let available_space_col_count: ChUnit = viewport_width;
     if *header_text_display_width > available_space_col_count {

@@ -27,7 +27,7 @@
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
-use crate::{ByteIndex, ColIndex, ColWidth, EditorLinesStorage, GCString, Length, 
+use crate::{ByteIndex, ColIndex, ColWidth, EditorLinesStorage, GCStringOwned, Length, 
             RowIndex, SegIndex, ZeroCopyGapBuffer, byte_index, row, seg_index, width};
 
 impl EditorLinesStorage for ZeroCopyGapBuffer {
@@ -261,14 +261,14 @@ impl EditorLinesStorage for ZeroCopyGapBuffer {
     
     // Conversion methods
     
-    fn to_gc_string_vec(&self) -> Vec<GCString> {
+    fn to_gc_string_vec(&self) -> Vec<GCStringOwned> {
         (0..self.line_count().as_usize())
             .filter_map(|i| self.get_line_content(row(i)))
             .map(Into::into)
             .collect()
     }
     
-    fn from_gc_string_vec(lines: Vec<GCString>) -> Self {
+    fn from_gc_string_vec(lines: Vec<GCStringOwned>) -> Self {
         let mut buffer = Self::new();
         for line in lines {
             buffer.push_line(line.as_ref());

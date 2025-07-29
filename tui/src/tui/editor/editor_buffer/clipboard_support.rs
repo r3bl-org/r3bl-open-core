@@ -77,11 +77,11 @@ pub fn copy_to_clipboard(
 #[cfg(test)]
 mod tests {
     use smallvec::smallvec;
-    use crate::{assert_eq2, 
+    use crate::{assert_eq2,
                 editor::{editor_test_fixtures::mock_real_objects_for_editor,
                          sizing::VecEditorContentLines},
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
-                CaretDirection, EditorBuffer, EditorEvent, GCStringExt,
+                CaretDirection, EditorBuffer, EditorEvent,
                 SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
@@ -173,8 +173,8 @@ mod tests {
             );
 
             let new_lines: VecEditorContentLines = smallvec![
-                "abc copied text r3bl xyz".grapheme_string(),
-                "pqr rust uvw".grapheme_string()
+                "abc copied text r3bl xyz".into(),
+                "pqr rust uvw".into()
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -194,9 +194,9 @@ mod tests {
             );
 
             let new_lines: VecEditorContentLines = smallvec![
-                "abc copied text old line".grapheme_string(),
-                "new line r3bl xyz".grapheme_string(),
-                "pqr rust uvw".grapheme_string()
+                "abc copied text old line".into(),
+                "new line r3bl xyz".into(),
+                "pqr rust uvw".into()
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -238,7 +238,7 @@ mod tests {
             assert_eq2!(content, "abc r3bl xyz".to_string()); // copied to clipboard
 
             let new_lines: VecEditorContentLines = smallvec![
-                "pqr rust uvw".grapheme_string(), // First line 'abc r3bl xyz' is cut
+                "pqr rust uvw".into(), // First line 'abc r3bl xyz' is cut
             ];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
@@ -282,7 +282,7 @@ mod tests {
             /* cspell:disable-next-line */
             assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
             let new_lines: VecEditorContentLines =
-                smallvec!["abc ".grapheme_string(), "rust uvw".grapheme_string()];
+                smallvec!["abc ".into(), "rust uvw".into()];
             assert_eq2!(buffer.get_lines(), &new_lines);
         }
     }

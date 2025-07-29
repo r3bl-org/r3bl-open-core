@@ -30,7 +30,7 @@
 //! The underlying adapter functions `gap_buffer_from_lines()` and `gap_buffer_from_str()`
 //! are private implementation details and should not be used directly.
 
-use crate::{GCString, SegIndex, ZeroCopyGapBuffer,
+use crate::{GCStringOwned, SegIndex, ZeroCopyGapBuffer,
             md_parser::constants::NEW_LINE_CHAR};
 #[cfg(test)]
 use crate::{len, md_parser::constants::NULL_CHAR};
@@ -46,7 +46,7 @@ use crate::{len, md_parser::constants::NULL_CHAR};
 /// # Returns
 /// A `ZeroCopyGapBuffer` containing the converted content with proper null padding
 #[must_use]
-fn gap_buffer_from_lines(lines: &[GCString]) -> ZeroCopyGapBuffer {
+fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
     let mut buffer = ZeroCopyGapBuffer::new();
 
     for line in lines {
@@ -135,7 +135,7 @@ impl From<&str> for ZeroCopyGapBuffer {
     fn from(text: &str) -> Self { gap_buffer_from_str(text) }
 }
 
-impl From<&[GCString]> for ZeroCopyGapBuffer {
+impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
     /// Convert a slice of `GCString` lines into a `ZeroCopyGapBuffer`.
     ///
     /// This is a more idiomatic Rust way to convert editor lines into a gap buffer,
@@ -147,7 +147,7 @@ impl From<&[GCString]> for ZeroCopyGapBuffer {
     /// let buffer: ZeroCopyGapBuffer = (&lines[..]).into();
     /// let result = parse_markdown(&buffer);
     /// ```
-    fn from(lines: &[GCString]) -> Self { gap_buffer_from_lines(lines) }
+    fn from(lines: &[GCStringOwned]) -> Self { gap_buffer_from_lines(lines) }
 }
 
 #[cfg(test)]
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_convert_empty_lines() {
-        let lines: Vec<GCString> = vec![];
+        let lines: Vec<GCStringOwned> = vec![];
         let buffer = gap_buffer_from_lines(&lines);
 
         assert_eq2!(buffer.line_count(), len(0));
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_convert_single_line() {
-        let lines = vec![GCString::from("Hello, world!")];
+        let lines = vec![GCStringOwned::from("Hello, world!")];
         let buffer = gap_buffer_from_lines(&lines);
 
         assert_eq2!(buffer.line_count(), len(1));
@@ -184,10 +184,10 @@ mod tests {
     #[test]
     fn test_convert_multiple_lines() {
         let lines = vec![
-            GCString::from("# Title"),
-            GCString::from(""),
-            GCString::from("Some content"),
-            GCString::from("- List item"),
+            GCStringOwned::from("# Title"),
+            GCStringOwned::from(""),
+            GCStringOwned::from("Some content"),
+            GCStringOwned::from("- List item"),
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
@@ -207,9 +207,9 @@ mod tests {
     #[test]
     fn test_convert_with_unicode() {
         let lines = vec![
-            GCString::from("Hello 👋 世界"),
-            GCString::from("Émojis: 🦀💻🎉"),
-            GCString::from("Café ☕"),
+            GCStringOwned::from("Hello 👋 世界"),
+            GCStringOwned::from("Émojis: 🦀💻🎉"),
+            GCStringOwned::from("Café ☕"),
         ];
         let buffer = gap_buffer_from_lines(&lines);
 
@@ -228,11 +228,11 @@ mod tests {
     #[test]
     fn test_convert_code_block() {
         let lines = vec![
-            GCString::from("```rust"),
-            GCString::from("fn main() {"),
-            GCString::from("    println!(\"Hello\");"),
-            GCString::from("}"),
-            GCString::from("```"),
+            GCStringOwned::from("```rust"),
+            GCStringOwned::from("fn main() {"),
+            GCStringOwned::from("    println!(\"Hello\");"),
+            GCStringOwned::from("}"),
+            GCStringOwned::from("```"),
         ];
         let buffer = gap_buffer_from_lines(&lines);
 

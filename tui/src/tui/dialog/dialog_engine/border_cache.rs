@@ -15,12 +15,12 @@
  *   limitations under the License.
  */
 
-//! Cache for dialog border strings to avoid repeated allocation and `GCString` creation.
+//! Cache for dialog border strings to avoid repeated allocation and `GCStringOwned` creation.
 //!
 //! ## Performance Impact
 //!
 //! The flamegraph analysis shows 53M samples in `render_border_lines` → `lolcat_from_style`
-//! → `GCString::new` for dialog borders. This cache eliminates the repeated string allocation
+//! → `GCStringOwned::new` for dialog borders. This cache eliminates the repeated string allocation
 //! and unicode segmentation overhead by caching pre-built border strings for common sizes.
 
 use std::{hash::{Hash, Hasher}, sync::LazyLock};

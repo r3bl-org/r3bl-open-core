@@ -15,14 +15,15 @@
  *   limitations under the License.
  */
 use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
-               ColorWheel, ColorWheelConfig, ColorWheelSpeed, ComponentRegistryMap,
-               EventPropagation, GlobalData, GradientGenerationPolicy,
-               GradientLengthKind, HasFocus, InlineVec, InputEvent, Key, KeyPress,
-               LolcatBuilder, RenderOp, RenderPipeline, SpecialKey,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-               defaults::get_default_gradient_stops, glyphs, inline_string, new_style,
-               render_ops, render_pipeline, render_tui_styled_texts_into, row,
-               send_signal, tui_styled_text, width};
+               ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
+               ComponentRegistryMap, EventPropagation, GCStringOwned, GlobalData,
+               GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
+               InputEvent, Key, KeyPress, LolcatBuilder, RenderOp, RenderPipeline,
+               SpecialKey, TerminalWindowMainThreadSignal, TextColorizationPolicy,
+               ZOrder, ch, col, defaults::get_default_gradient_stops, glyphs,
+               inline_string, new_style, render_ops, render_pipeline,
+               render_tui_styled_texts_into, row, send_signal, throws_with_return,
+               tui_styled_text, width};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
@@ -104,18 +105,17 @@ mod animator_task {
 }
 
 mod app_main_impl_trait_app {
-    use r3bl_tui::{Colorize, CommonResult, GCStringExt, throws_with_return};
-
     use super::{Ansi256GradientIndex, App, AppData, AppMain, AppSignal,
                 ColorChangeSpeed, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-                ComponentRegistryMap, ENABLE_TRACE_EXAMPLES, EventPropagation,
-                GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
-                InputEvent, Key, KeyPress, LolcatBuilder, RenderOp, RenderPipeline,
-                SpecialKey, State, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, ZOrder, animator_task::start_animator_task, ch,
-                col, get_default_gradient_stops, glyphs, hud, inline_string, render_ops,
-                render_pipeline, render_tui_styled_texts_into, row, send_signal,
-                smallvec, status_bar, width};
+                Colorize, CommonResult, ComponentRegistryMap, ENABLE_TRACE_EXAMPLES,
+                EventPropagation, GCStringOwned, GlobalData, GradientGenerationPolicy,
+                GradientLengthKind, HasFocus, InputEvent, Key, KeyPress, LolcatBuilder,
+                RenderOp, RenderPipeline, SpecialKey, State,
+                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
+                animator_task::start_animator_task, ch, col, get_default_gradient_stops,
+                glyphs, hud, inline_string, render_ops, render_pipeline,
+                render_tui_styled_texts_into, row, send_signal, smallvec, status_bar,
+                throws_with_return, width};
 
     impl App for AppMain {
         type S = State;
@@ -399,7 +399,7 @@ mod app_main_impl_trait_app {
                             )
                         };
 
-                        let text_gcs = text.grapheme_string();
+                        let text_gcs = text.into();
 
                         acc_render_ops +=
                             RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
@@ -430,7 +430,7 @@ mod app_main_impl_trait_app {
                             )
                         };
 
-                        let text_gcs = text.grapheme_string();
+                        let text_gcs = text.into();
 
                         let texts = data.color_wheel_rgb.colorize_into_styled_texts(
                             &text_gcs,
@@ -451,7 +451,7 @@ mod app_main_impl_trait_app {
                             inline_string!("{state_string}, gradient: [index: _, len: _]")
                         };
 
-                        let text_gcs = text.grapheme_string();
+                        let text_gcs = GCStringOwned::from(text);
 
                         let texts = data.lolcat_fg.colorize_into_styled_texts(
                             &text_gcs,
@@ -472,7 +472,7 @@ mod app_main_impl_trait_app {
                             inline_string!("{state_string}, gradient: [index: _, len: _]")
                         };
 
-                        let text_gcs = text.grapheme_string();
+                        let text_gcs = GCStringOwned::from(text);
 
                         let texts = data.lolcat_bg.colorize_into_styled_texts(
                             &text_gcs,

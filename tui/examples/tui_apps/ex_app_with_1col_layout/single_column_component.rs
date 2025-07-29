@@ -18,7 +18,7 @@ use r3bl_tui::{ch, col, glyphs, inline_string, render_ops, render_pipeline, row,
                send_signal, throws_with_return, Ansi256GradientIndex,
                BoxedSafeComponent, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
                CommonResult, Component, EventPropagation, FlexBox, FlexBoxId,
-               GCStringExt, GlobalData, GradientGenerationPolicy, HasFocus, InputEvent,
+               GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus, InputEvent,
                Key, KeyPress, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
                DEBUG_TUI_MOD};
@@ -64,7 +64,7 @@ mod constructor {
 mod single_column_component_impl_component_trait {
     use super::{ch, col, glyphs, inline_string, render_ops, render_pipeline, row,
                 send_signal, throws_with_return, AppSignal, CommonResult, Component,
-                EventPropagation, FlexBox, FlexBoxId, GCStringExt, GlobalData,
+                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                 GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, RenderOp,
                 RenderPipeline, SingleColumnComponent, SingleColumnComponentData,
                 SpecialKey, State, SurfaceBounds, TerminalWindowMainThreadSignal,
@@ -171,7 +171,7 @@ mod single_column_component_impl_component_trait {
 
                 // Line 1.
                 {
-                    let line_1_gcs = line_1.grapheme_string();
+                    let line_1_gcs = GCStringOwned::from(line_1);
                     let line_1_trunc = line_1_gcs.trunc_end_to_fit(box_bounds_size);
 
                     render_ops! {
@@ -189,9 +189,9 @@ mod single_column_component_impl_component_trait {
 
                 // Line 2.
                 {
-                    let line_2_gcs = line_2.grapheme_string();
+                    let line_2_gcs = GCStringOwned::from(line_2);
                     let line_2_trunc_str = line_2_gcs.trunc_end_to_fit(box_bounds_size);
-                    let line_2_trunc_gcs = line_2_trunc_str.grapheme_string();
+                    let line_2_trunc_gcs = GCStringOwned::from(line_2_trunc_str);
                     content_cursor_pos
                         .add_row_with_bounds(ch(1), box_bounds_size.row_height);
 

@@ -44,7 +44,7 @@
 //! - **At start/middle**: Shifts all subsequent buffer content down to make room
 //! - **At end**: No shifting needed, just appends to buffer
 //!
-//! ### Line Deletion  
+//! ### Line Deletion
 //! - **At start/middle**: Shifts all subsequent buffer content up to fill the gap
 //! - **At end**: No shifting needed, just truncates the buffer
 //!
@@ -74,7 +74,7 @@
 //! or undefined behavior in zero-copy access operations.
 
 use crate::{ByteIndex, ColWidth, Length, RowIndex, SegIndex, byte_index,
-            gc_string_sizing::SegmentArray, len};
+            gc_string_owned_sizing::SegmentArray, len};
 
 /// Initial size of each line in bytes
 pub const INITIAL_LINE_SIZE: usize = 256;
@@ -89,7 +89,8 @@ pub enum SegmentRebuildStrategy {
     Full,
     /// Optimized append - only parse appended text and adjust offsets
     AppendOptimized,
-    // Future: could add more strategies like PrependOptimized, SingleCharOptimized, etc.
+    // Future: could add more strategies like PrependOptimized, SingleCharOptimized,
+    // etc.
 }
 
 /// Zero-copy gap buffer data structure for storing editor content
@@ -156,7 +157,7 @@ impl GapBufferLineInfo {
         let end = start + self.content_len.as_usize();
         start..end
     }
-    
+
     /// Get the byte position for a given segment index
     ///
     /// This method converts a grapheme cluster index (segment index) to its
@@ -181,10 +182,10 @@ impl GapBufferLineInfo {
     /// buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
     ///
     /// let line_info = buffer.get_line_info(0).unwrap();
-    /// 
+    ///
     /// // Beginning of line
     /// assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
-    /// 
+    ///
     /// // End of line
     /// assert_eq!(line_info.get_byte_pos(seg_index(5)).as_usize(), 5);
     /// ```
@@ -202,7 +203,7 @@ impl GapBufferLineInfo {
             byte_index(segment.start_byte_index.as_usize())
         }
     }
-    
+
     /// Get the segment index for a given byte position
     ///
     /// This method converts a byte position to its corresponding grapheme cluster
@@ -221,22 +222,22 @@ impl GapBufferLineInfo {
     ///
     /// ```rust
     /// use r3bl_tui::{ZeroCopyGapBuffer, byte_index, seg_index, row};
-    /// 
+    ///
     /// let mut buffer = ZeroCopyGapBuffer::new();
     /// let line_idx = buffer.add_line();
     /// buffer.insert_at_grapheme(row(line_idx), seg_index(0), "H😀llo").unwrap();
-    /// 
+    ///
     /// let line_info = buffer.get_line_info(line_idx).unwrap();
-    /// 
+    ///
     /// // Beginning of line
     /// assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
-    /// 
+    ///
     /// // Middle of emoji (byte 3 is in the middle of the 4-byte emoji)
     /// assert_eq!(line_info.get_seg_index(byte_index(3)), seg_index(1));
-    /// 
+    ///
     /// // After emoji
     /// assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(2));
-    /// 
+    ///
     /// // End of line
     /// assert_eq!(line_info.get_seg_index(byte_index(8)), seg_index(5));
     /// ```
@@ -246,33 +247,34 @@ impl GapBufferLineInfo {
         if byte_pos.as_usize() == 0 {
             return crate::seg_index(0);
         }
-        
+
         if byte_pos.as_usize() >= self.content_len.as_usize() {
             return crate::seg_index(self.segments.len());
         }
-        
+
         // Binary search through segments to find the one containing byte_pos
         // We could optimize this with binary search, but linear is fine for now
         // since lines typically have few segments
         for segment in &self.segments {
-            if byte_pos.as_usize() >= segment.start_byte_index.as_usize() 
-                && byte_pos.as_usize() < segment.end_byte_index.as_usize() {
+            if byte_pos.as_usize() >= segment.start_byte_index.as_usize()
+                && byte_pos.as_usize() < segment.end_byte_index.as_usize()
+            {
                 return segment.seg_index;
             }
         }
-        
-        // If we get here, byte_pos is between segments (shouldn't happen with valid UTF-8)
-        // Return the segment after the position
+
+        // If we get here, byte_pos is between segments (shouldn't happen with valid
+        // UTF-8) Return the segment after the position
         for segment in &self.segments {
             if byte_pos.as_usize() < segment.start_byte_index.as_usize() {
                 return segment.seg_index;
             }
         }
-        
+
         // Fallback to end of line
         crate::seg_index(self.segments.len())
     }
-    
+
     /// Determine the optimal segment rebuild strategy for a text modification
     ///
     /// This method analyzes the modification position and line state to determine
@@ -306,10 +308,10 @@ impl GapBufferLineInfo {
     ) -> SegmentRebuildStrategy {
         // Check if this is an append at the end
         let is_end_append = modification_position.as_usize() >= self.segments.len();
-        
+
         // Check if the line has existing content
         let has_content = !self.segments.is_empty();
-        
+
         // Determine the strategy
         match (is_end_append, has_content) {
             (true, true) => SegmentRebuildStrategy::AppendOptimized,
@@ -360,9 +362,9 @@ impl ZeroCopyGapBuffer {
     /// Swap two lines in the buffer metadata
     /// This only swaps the [`GapBufferLineInfo`] entries, not the actual buffer content
     pub fn swap_lines(&mut self, i: usize, j: usize) { self.lines.swap(i, j); }
-    
+
     /// Insert a new empty line at the specified position with proper buffer shifting
-    /// 
+    ///
     /// This method properly maintains the invariant that lines are ordered by their
     /// buffer offsets by actually shifting buffer content.
     ///
@@ -388,7 +390,7 @@ impl ZeroCopyGapBuffer {
             self.add_line();
             return;
         }
-        
+
         // Calculate where the new line should be inserted in the buffer
         let insert_offset = if line_idx == 0 {
             byte_index(0)
@@ -396,28 +398,29 @@ impl ZeroCopyGapBuffer {
             let prev_line = &self.lines[line_idx - 1];
             byte_index(*prev_line.buffer_offset + prev_line.capacity.as_usize())
         };
-        
+
         // Extend buffer by INITIAL_LINE_SIZE bytes
         let old_buffer_len = self.buffer.len();
-        self.buffer.resize(old_buffer_len + INITIAL_LINE_SIZE, b'\0');
-        
+        self.buffer
+            .resize(old_buffer_len + INITIAL_LINE_SIZE, b'\0');
+
         // Shift all subsequent buffer content down
         let shift_start = *insert_offset;
         let shift_amount = INITIAL_LINE_SIZE;
-        
+
         // Move content from back to front to avoid overwriting
         for i in (shift_start..old_buffer_len).rev() {
             self.buffer[i + shift_amount] = self.buffer[i];
         }
-        
+
         // Clear the newly created space
         for i in shift_start..shift_start + INITIAL_LINE_SIZE {
             self.buffer[i] = b'\0';
         }
-        
+
         // Add newline character for the empty line
         self.buffer[shift_start] = b'\n';
-        
+
         // Create line metadata for the new line
         let new_line_info = GapBufferLineInfo {
             buffer_offset: insert_offset,
@@ -427,22 +430,21 @@ impl ZeroCopyGapBuffer {
             display_width: crate::width(0),
             grapheme_count: len(0),
         };
-        
+
         // Insert the new line metadata at the correct position
         self.lines.insert(line_idx, new_line_info);
-        
+
         // Update buffer offsets for all subsequent lines
         for i in (line_idx + 1)..self.lines.len() {
-            self.lines[i].buffer_offset = byte_index(
-                *self.lines[i].buffer_offset + shift_amount
-            );
+            self.lines[i].buffer_offset =
+                byte_index(*self.lines[i].buffer_offset + shift_amount);
         }
-        
+
         self.line_count += len(1);
     }
 
     /// Add a new line to the buffer (always appends at the end)
-    /// 
+    ///
     /// Returns the index of the newly added line.
     ///
     /// # Buffer Behavior
@@ -493,14 +495,14 @@ impl ZeroCopyGapBuffer {
     }
 
     /// Remove a line from the buffer
-    /// 
+    ///
     /// Returns true if the line was removed, false if index was out of bounds.
     ///
     /// # Buffer Shifting Behavior
     ///
     /// - **Deletion at end**: No shifting needed, just truncates the buffer
-    /// - **Deletion at start/middle**: Shifts all subsequent buffer content up by
-    ///   the removed line's capacity to fill the gap
+    /// - **Deletion at start/middle**: Shifts all subsequent buffer content up by the
+    ///   removed line's capacity to fill the gap
     ///
     /// # Example
     ///
@@ -767,12 +769,14 @@ mod tests {
     fn test_get_byte_pos_beginning() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Insert some text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
-        
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .unwrap();
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // Test beginning position
         assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
     }
@@ -781,12 +785,14 @@ mod tests {
     fn test_get_byte_pos_end() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Insert some text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
-        
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .unwrap();
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // Test end position (past last segment)
         assert_eq!(line_info.get_byte_pos(seg_index(5)).as_usize(), 5);
         assert_eq!(line_info.get_byte_pos(seg_index(10)).as_usize(), 5);
@@ -796,12 +802,14 @@ mod tests {
     fn test_get_byte_pos_middle() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Insert text with multi-byte characters
-        buffer.insert_at_grapheme(row(0), seg_index(0), "H😀llo").unwrap();
-        
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "H😀llo")
+            .unwrap();
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // Test various positions
         assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0); // Before 'H'
         assert_eq!(line_info.get_byte_pos(seg_index(1)).as_usize(), 1); // Before '😀'
@@ -815,9 +823,9 @@ mod tests {
     fn test_get_byte_pos_empty_line() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // For empty line, any position should return 0
         assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
         assert_eq!(line_info.get_byte_pos(seg_index(1)).as_usize(), 0);
@@ -828,12 +836,14 @@ mod tests {
     fn test_get_seg_index_beginning() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Insert some text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
-        
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .unwrap();
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // Test beginning position
         assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
     }
@@ -842,12 +852,14 @@ mod tests {
     fn test_get_seg_index_end() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Insert some text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
-        
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .unwrap();
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // Test end position (at or past content length)
         assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(5));
         assert_eq!(line_info.get_seg_index(byte_index(10)), seg_index(5));
@@ -857,12 +869,14 @@ mod tests {
     fn test_get_seg_index_middle() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Insert text with emoji: "H😀llo"
-        buffer.insert_at_grapheme(row(0), seg_index(0), "H😀llo").unwrap();
-        
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "H😀llo")
+            .unwrap();
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // Test various byte positions
         assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0)); // Start of 'H'
         assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(1)); // Start of '😀'
@@ -879,9 +893,9 @@ mod tests {
     fn test_get_seg_index_empty_line() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // For empty line, any position should return 0
         assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
         assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(0));
@@ -892,98 +906,141 @@ mod tests {
     fn test_get_seg_index_get_byte_pos_round_trip() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Insert text with various Unicode: "a👨‍👩‍👧‍👦b世界c"
-        buffer.insert_at_grapheme(row(0), seg_index(0), "a👨‍👩‍👧‍👦b世界c").unwrap();
-        
+        buffer
+            .insert_at_grapheme(row(0), seg_index(0), "a👨‍👩‍👧‍👦b世界c")
+            .unwrap();
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // Test round-trip conversion for each segment
         for i in 0..line_info.segments.len() {
             let seg_idx = seg_index(i);
             let byte_pos = line_info.get_byte_pos(seg_idx);
             let seg_idx_back = line_info.get_seg_index(byte_pos);
-            assert_eq!(seg_idx, seg_idx_back, 
-                "Round-trip failed for segment {}: byte_pos={}", i, byte_pos.as_usize());
+            assert_eq!(
+                seg_idx,
+                seg_idx_back,
+                "Round-trip failed for segment {}: byte_pos={}",
+                i,
+                byte_pos.as_usize()
+            );
         }
     }
 
     #[test]
     fn test_insert_line_shifting_behavior() {
         let mut buffer = ZeroCopyGapBuffer::new();
-        
+
         // Add three lines
         buffer.add_line();
         buffer.add_line();
         buffer.add_line();
-        
+
         // Record original offsets
         let line0_offset = *buffer.get_line_info(0).unwrap().buffer_offset;
         let line1_offset = *buffer.get_line_info(1).unwrap().buffer_offset;
         let line2_offset = *buffer.get_line_info(2).unwrap().buffer_offset;
-        
+
         assert_eq!(line0_offset, 0);
         assert_eq!(line1_offset, INITIAL_LINE_SIZE);
         assert_eq!(line2_offset, 2 * INITIAL_LINE_SIZE);
-        
+
         // Test insertion at beginning (should shift all lines)
         buffer.insert_line_with_buffer_shift(0);
-        
+
         // Check that all lines were shifted
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
-        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(3).unwrap().buffer_offset, 3 * INITIAL_LINE_SIZE);
-        
+        assert_eq!(
+            *buffer.get_line_info(1).unwrap().buffer_offset,
+            INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(2).unwrap().buffer_offset,
+            2 * INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(3).unwrap().buffer_offset,
+            3 * INITIAL_LINE_SIZE
+        );
+
         // Test insertion in middle (should shift lines 2 and 3)
         buffer.insert_line_with_buffer_shift(2);
-        
+
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
-        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(3).unwrap().buffer_offset, 3 * INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(4).unwrap().buffer_offset, 4 * INITIAL_LINE_SIZE);
-        
+        assert_eq!(
+            *buffer.get_line_info(1).unwrap().buffer_offset,
+            INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(2).unwrap().buffer_offset,
+            2 * INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(3).unwrap().buffer_offset,
+            3 * INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(4).unwrap().buffer_offset,
+            4 * INITIAL_LINE_SIZE
+        );
+
         // Test insertion at end (no shifting)
         let buffer_len_before = buffer.buffer.len();
         buffer.insert_line_with_buffer_shift(5);
         let buffer_len_after = buffer.buffer.len();
-        
+
         // Only one line was added at the end
         assert_eq!(buffer_len_after - buffer_len_before, INITIAL_LINE_SIZE);
     }
 
-    #[test] 
+    #[test]
     fn test_remove_line_shifting_behavior() {
         let mut buffer = ZeroCopyGapBuffer::new();
-        
+
         // Add five lines
         for _ in 0..5 {
             buffer.add_line();
         }
-        
+
         // Test deletion at beginning (should shift all subsequent lines up)
         assert!(buffer.remove_line(0));
-        
+
         // Check that all lines were shifted up
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
-        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(3).unwrap().buffer_offset, 3 * INITIAL_LINE_SIZE);
-        
+        assert_eq!(
+            *buffer.get_line_info(1).unwrap().buffer_offset,
+            INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(2).unwrap().buffer_offset,
+            2 * INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(3).unwrap().buffer_offset,
+            3 * INITIAL_LINE_SIZE
+        );
+
         // Test deletion in middle (should shift lines 2 and 3 up)
         assert!(buffer.remove_line(1));
-        
+
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
-        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
-        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
-        
+        assert_eq!(
+            *buffer.get_line_info(1).unwrap().buffer_offset,
+            INITIAL_LINE_SIZE
+        );
+        assert_eq!(
+            *buffer.get_line_info(2).unwrap().buffer_offset,
+            2 * INITIAL_LINE_SIZE
+        );
+
         // Test deletion at end (no shifting)
         let last_idx = buffer.line_count.as_usize() - 1;
         let buffer_len_before = buffer.buffer.len();
         assert!(buffer.remove_line(last_idx));
         let buffer_len_after = buffer.buffer.len();
-        
+
         // Buffer was truncated by one line
         assert_eq!(buffer_len_before - buffer_len_after, INITIAL_LINE_SIZE);
     }

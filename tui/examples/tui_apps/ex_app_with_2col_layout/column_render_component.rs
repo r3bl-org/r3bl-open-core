@@ -14,14 +14,14 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{ch, col, glyphs, inline_string, render_ops, render_pipeline, row,
-               send_signal, throws_with_return, Ansi256GradientIndex,
-               BoxedSafeComponent, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-               CommonResult, Component, EventPropagation, FlexBox, FlexBoxId,
-               GCStringExt, GlobalData, GradientGenerationPolicy, HasFocus, InputEvent,
-               Key, KeyPress, Pos, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
-               DEBUG_TUI_MOD};
+use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
+               ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
+               EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
+               GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, Pos,
+               RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
+               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
+               glyphs, inline_string, render_ops, render_pipeline, row, send_signal,
+               throws_with_return};
 use smallvec::smallvec;
 
 use super::{AppSignal, State};
@@ -38,9 +38,9 @@ pub struct ColumnComponentData {
 }
 
 mod constructor {
-    use super::{smallvec, Ansi256GradientIndex, AppSignal, BoxedSafeComponent,
-                ColorWheel, ColorWheelConfig, ColorWheelSpeed, ColumnComponent,
-                ColumnComponentData, FlexBoxId, State};
+    use super::{Ansi256GradientIndex, AppSignal, BoxedSafeComponent, ColorWheel,
+                ColorWheelConfig, ColorWheelSpeed, ColumnComponent, ColumnComponentData,
+                FlexBoxId, State, smallvec};
 
     impl ColumnComponent {
         pub fn new_boxed(id: FlexBoxId) -> BoxedSafeComponent<State, AppSignal> {
@@ -62,13 +62,13 @@ mod constructor {
 }
 
 mod column_render_component_impl_component_trait {
-    use super::{ch, col, glyphs, inline_string, render_ops, render_pipeline, row,
-                send_signal, throws_with_return, AppSignal, ColumnComponent,
-                ColumnComponentData, CommonResult, Component, EventPropagation, FlexBox,
-                FlexBoxId, GCStringExt, GlobalData, GradientGenerationPolicy, HasFocus,
+    use super::{AppSignal, ColumnComponent, ColumnComponentData, CommonResult,
+                Component, DEBUG_TUI_MOD, EventPropagation, FlexBox, FlexBoxId,
+                GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus,
                 InputEvent, Key, KeyPress, Pos, RenderOp, RenderPipeline, SpecialKey,
                 State, SurfaceBounds, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, ZOrder, DEBUG_TUI_MOD};
+                TextColorizationPolicy, ZOrder, ch, col, glyphs, inline_string,
+                render_ops, render_pipeline, row, send_signal, throws_with_return};
 
     impl Component<State, AppSignal> for ColumnComponent {
         fn reset(&mut self) {}
@@ -177,13 +177,13 @@ mod column_render_component_impl_component_trait {
 
                 let mut render_ops = render_ops!();
 
-                let line_1_gcs = line_1.grapheme_string();
+                let line_1_gcs = GCStringOwned::from(line_1);
                 let line_1_trunc_str = line_1_gcs.trunc_end_to_fit(box_bounds_size);
-                let line_1_trunc_gcs = line_1_trunc_str.grapheme_string();
+                let line_1_trunc_gcs = GCStringOwned::from(line_1_trunc_str);
 
-                let line_2_gcs = line_2.grapheme_string();
+                let line_2_gcs = GCStringOwned::from(line_2);
                 let line_2_trunc_str = line_2_gcs.trunc_end_to_fit(box_bounds_size);
-                let line_2_trunc_gcs = line_2_trunc_str.grapheme_string();
+                let line_2_trunc_gcs = GCStringOwned::from(line_2_trunc_str);
 
                 // Line 1.
                 {

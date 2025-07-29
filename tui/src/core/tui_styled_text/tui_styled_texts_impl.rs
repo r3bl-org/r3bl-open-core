@@ -19,7 +19,7 @@ use std::{fmt::Debug,
           ops::{AddAssign, Index}};
 
 use super::{sizing::VecTuiStyledText, TuiStyledText};
-use crate::{join_with_index_fmt, ok, ConvertToPlainText, GCString, InlineString};
+use crate::{join_with_index_fmt, ok, ConvertToPlainText, GCStringOwned, InlineString};
 
 /// Macro to make building [`TuiStyledTexts`] easy.
 ///
@@ -88,7 +88,7 @@ mod impl_ops {
 }
 
 mod impl_display {
-    use super::{ConvertToPlainText, GCString, InlineString, TuiStyledTexts};
+    use super::{ConvertToPlainText, GCStringOwned, InlineString, TuiStyledTexts};
     use crate::{join, ColWidth};
 
     impl ConvertToPlainText for TuiStyledTexts {
@@ -107,7 +107,7 @@ mod impl_display {
         pub fn display_width(&self) -> ColWidth {
             let plain_text = self.to_plain_text();
 
-            GCString::width(plain_text.as_str())
+            GCStringOwned::width(plain_text.as_str())
         }
     }
 }

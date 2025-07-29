@@ -440,7 +440,7 @@ pub fn inc_caret_row(
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                GCString, GCStringExt, assert_eq2, caret_raw, caret_scr_adj, col,
+                GCStringOwned, assert_eq2, caret_raw, caret_scr_adj, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor, height, row,
                 scr_ofs,
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
@@ -558,14 +558,14 @@ mod tests {
             mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
 
         let long_line = "# Did he take those two new droids with him? They hit accelerator.🙏🏽😀░ We will deal with your Rebel friends. Commence primary ignition.🙏🏽😀░";
-        let long_line_gcs = long_line.grapheme_string();
+        let long_line_gcs = GCStringOwned::from(long_line);
         buffer.init_with([long_line]);
 
         // Setup assertions.
         {
-            assert_eq2!(width(2), GCString::width("🙏🏽"));
+            assert_eq2!(width(2), GCStringOwned::width("🙏🏽"));
             assert_eq2!(buffer.len(), height(1));
-            assert_eq2!(buffer.get_lines()[0], long_line.grapheme_string());
+            assert_eq2!(buffer.get_lines()[0], GCStringOwned::from(long_line));
             let us = &buffer.get_lines()[0];
             assert_eq2!(us, &long_line_gcs);
             assert_eq2!(buffer.get_caret_raw(), caret_raw(col(0) + row(0)));

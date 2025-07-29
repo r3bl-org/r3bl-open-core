@@ -32,7 +32,7 @@ use std::{borrow::Cow,
 
 use super::{helpers,
             types::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta}};
-use crate::{GCString, GCStringExt, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
+use crate::{GCString, GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
 
 /// Please use the [`LolcatBuilder`] to create this struct (lots of documentation is
 /// provided here). Please do not use this struct directly.
@@ -67,10 +67,11 @@ impl Lolcat {
     /// (it will always colorize to truecolor regardless of terminal limitations). Use
     /// [`crate::ColorWheel`] if you want to respect
     /// [`crate::global_color_support::detect`].
-    pub fn colorize_to_styled_texts(&mut self, us: &GCString) -> TuiStyledTexts {
+    pub fn colorize_to_styled_texts<T: GCString>(&mut self, us: &T) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 
-        for seg_str in us {
+        for seg in us.iter() {
+            let seg_str = seg.get_str(us.as_str());
             let new_color = helpers::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = helpers::calc_fg_color(new_color);
 
@@ -130,7 +131,7 @@ pub enum Colorize {
 ///   .build();
 ///
 /// let string = "Hello, world!";
-/// let string_gcs = string.grapheme_string();
+/// let string_gcs: GCStringOwned = string.into();
 /// let lolcat_mut = &mut lolcat;
 /// let st = lolcat_mut.colorize_to_styled_texts(&string_gcs);
 /// lolcat.next_color();
@@ -226,13 +227,13 @@ pub fn colorize_to_styled_texts(
     arg_str: impl AsRef<str>,
 ) -> TuiStyledTexts {
     let str = arg_str.as_ref();
-    let string_gcs = str.grapheme_string();
+    let string_gcs: GCStringOwned = str.into();
     lolcat.colorize_to_styled_texts(&string_gcs)
 }
 
 #[must_use]
 pub fn lolcat_each_char_in_unicode_string(
-    us: &GCString,
+    us: &GCStringOwned,
     lolcat: Option<&mut Lolcat>,
 ) -> TuiStyledTexts {
     let mut saved_orig_speed = None;

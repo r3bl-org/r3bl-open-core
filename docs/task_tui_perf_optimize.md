@@ -1203,7 +1203,7 @@ Based on the latest flamegraph analysis after all recent optimizations:
 **Technical Details**:
 
 - Added ASCII fast path that bypasses expensive Unicode grapheme segmentation
-- Changed return type from `InlineString` to `InlineStringCow<'_>` to enable zero-copy returns
+- Changed return type from `InlineString` to `CowInlineString<'_>` to enable zero-copy returns
 - For ASCII strings that don't need modification, returns borrowed reference (zero allocations)
 - For ASCII strings needing truncation/padding, uses simple byte indexing instead of grapheme
   segmentation

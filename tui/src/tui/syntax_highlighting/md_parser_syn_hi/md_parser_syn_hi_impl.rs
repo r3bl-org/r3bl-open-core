@@ -23,7 +23,7 @@ use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
 use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
-            CommonResult, FragmentsInOneLine, GCString, GCStringExt,
+            CommonResult, FragmentsInOneLine, GCStringOwned,
             GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
             List, MdDocument, MdElement, MdLineFragment,
             PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
@@ -43,18 +43,18 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
                                          UNCHECKED_OUTPUT, UNDERSCORE}}};
 
 /// This is the main function that the [`crate::editor`] uses to display markdown to the
-/// user. It converts from a &[`GCString`] (which comes from the [`crate::editor`]) into a
+/// user. It converts from a &[`GCStringOwned`] (which comes from the [`crate::editor`]) into a
 /// [`StyleUSSpanLines`] (which the [`crate::editor`] will clip & render).
 ///
 /// # Parser Implementation
 ///
 /// This function now uses the new `ZeroCopyGapBuffer` approach which provides zero-copy
-/// parsing capabilities. The function converts `&[GCString]` to `ZeroCopyGapBuffer` and
+/// parsing capabilities. The function converts `&[GCStringOwned]` to `ZeroCopyGapBuffer` and
 /// then parses it directly without string materialization.
 ///
 /// ## Technical Implementation Details
 ///
-/// 1. Convert `&[GCString]` to `ZeroCopyGapBuffer` using `convert_vec_lines_to_gap_buffer`
+/// 1. Convert `&[GCStringOwned]` to `ZeroCopyGapBuffer` using `convert_vec_lines_to_gap_buffer`
 /// 2. Pass the gap buffer directly to `parse_markdown()` 
 /// 3. Convert parsed document to styled spans
 ///
@@ -80,13 +80,13 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
 ///
 /// Returns an error if the markdown parsing fails.
 pub fn try_parse_and_highlight(
-    editor_text_lines: &[GCString],
+    editor_text_lines: &[GCStringOwned],
     maybe_current_box_computed_style: Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
     // XMARK: Parse markdown from editor and render it
 
-    // Convert &[GCString] to ZeroCopyGapBuffer
+    // Convert &[GCStringOwned] to ZeroCopyGapBuffer
     let gap_buffer = ZeroCopyGapBuffer::from(editor_text_lines);
     
     // Parse using the new zero-copy approach
@@ -113,7 +113,7 @@ mod tests_try_parse_and_highlight {
     #[test]
     fn from_vec_gcs() -> CommonResult<()> {
         throws!({
-            let editor_text_lines = ["Hello", "World"].map(GCString::new);
+            let editor_text_lines = ["Hello", "World"].map(GCStringOwned::new);
             let current_box_computed_style = new_style!(
                 color_bg: {tui_color!(red)}
             );
@@ -693,7 +693,7 @@ impl StyleUSSpanLine {
 
         let heading_text_span: StyleUSSpanLine = {
             let heading_text = heading_data.text;
-            let heading_text_gcs = heading_text.grapheme_string();
+            let heading_text_gcs = heading_text.into();
             let styled_texts = color_wheel.colorize_into_styled_texts(
                 &heading_text_gcs,
                 GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,

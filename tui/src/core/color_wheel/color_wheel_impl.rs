@@ -120,7 +120,7 @@ use super::{config::{ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
             helpers,
             lolcat::{Lolcat, LolcatBuilder},
             types::Seed};
-use crate::{ChUnit, GCString, GCStringExt, GradientGenerationPolicy,
+use crate::{ChUnit, GCStringOwned, GradientGenerationPolicy,
             RgbValue, TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText,
             TuiStyledTexts, WriteToBuf, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
             tui_styled_text, u8, usize};
@@ -645,7 +645,7 @@ impl ColorWheel {
         maybe_default_style: Option<TuiStyle>,
     ) -> String {
         let mut color_wheel = ColorWheel::default();
-        let string_gcs = text.grapheme_string();
+        let string_gcs: GCStringOwned = text.into();
 
         // Get cached styled texts using the generalized cache.
         // Since we use ReuseExistingGradientAndResetIndex here, the result
@@ -680,7 +680,7 @@ impl ColorWheel {
         text_colorization_policy: TextColorizationPolicy,
         maybe_default_style: Option<TuiStyle>,
     ) -> String {
-        let string_gcs = string.grapheme_string();
+        let string_gcs: GCStringOwned = string.into();
         let spans_in_line = self.colorize_into_styled_texts(
             &string_gcs,
             gradient_generation_policy,
@@ -732,7 +732,7 @@ impl ColorWheel {
     ///   output)
     pub fn colorize_into_styled_texts(
         &mut self,
-        us: &GCString,
+        us: &GCStringOwned,
         gradient_generation_policy: GradientGenerationPolicy,
         text_colorization_policy: TextColorizationPolicy,
     ) -> TuiStyledTexts {
@@ -782,7 +782,7 @@ impl ColorWheel {
     fn generate_styled_texts(
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
-        us: &GCString,
+        us: &GCStringOwned,
     ) -> TuiStyledTexts {
         if ColorWheelConfig::config_contains_bg_lolcat(&self.configs) {
             self.generate_styled_texts_for_lolcat_bg(text_colorization_policy, us)
@@ -795,7 +795,7 @@ impl ColorWheel {
     fn generate_styled_texts_for_lolcat_bg(
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
-        us: &GCString,
+        us: &GCStringOwned,
     ) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
         let maybe_style =
@@ -815,7 +815,7 @@ impl ColorWheel {
     fn generate_styled_texts_regular(
         &mut self,
         text_colorization_policy: TextColorizationPolicy,
-        us: &GCString,
+        us: &GCStringOwned,
     ) -> TuiStyledTexts {
         match text_colorization_policy {
             TextColorizationPolicy::ColorEachCharacter(maybe_style) => {
@@ -831,7 +831,7 @@ impl ColorWheel {
     fn colorize_each_character(
         &mut self,
         maybe_style: Option<TuiStyle>,
-        us: &GCString,
+        us: &GCStringOwned,
     ) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
         for next_seg_str in us {
@@ -847,7 +847,7 @@ impl ColorWheel {
     fn colorize_each_word(
         &mut self,
         maybe_style: Option<TuiStyle>,
-        us: &GCString,
+        us: &GCStringOwned,
     ) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
         // More info on peekable: https://stackoverflow.com/a/67872822/2085356
@@ -907,7 +907,7 @@ impl ColorWheel {
 
     fn generate_gradient(
         &mut self,
-        us: &GCString,
+        us: &GCStringOwned,
         gradient_generation_policy: GradientGenerationPolicy,
     ) {
         match gradient_generation_policy {
@@ -1427,7 +1427,7 @@ mod tests_color_wheel_rgb {
         global_color_support::set_override(ColorSupport::Truecolor);
 
         let string = "HELLO WORLD";
-        let string_gcs = string.grapheme_string();
+        let string_gcs: GCStringOwned = string.into();
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
             &string_gcs,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
@@ -1482,7 +1482,7 @@ mod tests_color_wheel_rgb {
         };
 
         let string = "HELLO";
-        let string_gcs = string.grapheme_string();
+        let string_gcs: GCStringOwned = string.into();
         let styled_texts = color_wheel_rgb.colorize_into_styled_texts(
             &string_gcs,
             GradientGenerationPolicy::RegenerateGradientAndIndexBasedOnTextLength,
@@ -1644,7 +1644,7 @@ mod bench {
     fn bench_dialog_border_top(b: &mut Bencher) {
         let mut color_wheel = ColorWheel::default();
         let border_text = "┌─────────────────────────────────────────┐";
-        let border_gcs = border_text.grapheme_string();
+        let border_gcs: GCStringOwned = border_text.into();
 
         b.iter(|| {
             let _result = color_wheel.colorize_into_styled_texts(
@@ -1660,7 +1660,7 @@ mod bench {
     fn bench_dialog_border_side(b: &mut Bencher) {
         let mut color_wheel = ColorWheel::default();
         let border_text = "│                                         │";
-        let border_gcs = border_text.grapheme_string();
+        let border_gcs: GCStringOwned = border_text.into();
 
         b.iter(|| {
             let _result = color_wheel.colorize_into_styled_texts(
@@ -1679,9 +1679,9 @@ mod bench {
         let side_border = "│                                         │";
         let bottom_border = "└─────────────────────────────────────────┘";
 
-        let top_gcs = top_border.grapheme_string();
-        let side_gcs = side_border.grapheme_string();
-        let bottom_gcs = bottom_border.grapheme_string();
+        let top_gcs: GCStringOwned = top_border.into();
+        let side_gcs: GCStringOwned = side_border.into();
+        let bottom_gcs: GCStringOwned = bottom_border.into();
 
         b.iter(|| {
             // Simulate rendering a complete dialog border
@@ -1713,7 +1713,7 @@ mod bench {
     fn bench_colorize_into_styled_texts_reset_policy(b: &mut Bencher) {
         let mut color_wheel = ColorWheel::default();
         let text = "Test string for caching";
-        let text_gcs = text.grapheme_string();
+        let text_gcs: GCStringOwned = text.into();
 
         b.iter(|| {
             let _result = color_wheel.colorize_into_styled_texts(
@@ -1729,7 +1729,7 @@ mod bench {
     fn bench_colorize_into_styled_texts_maintain_policy(b: &mut Bencher) {
         let mut color_wheel = ColorWheel::default();
         let text = "Test string for no caching";
-        let text_gcs = text.grapheme_string();
+        let text_gcs: GCStringOwned = text.into();
 
         b.iter(|| {
             let _result = color_wheel.colorize_into_styled_texts(
@@ -1948,7 +1948,7 @@ mod bench {
             // Simulate multiple dialog renders
             for _ in 0..10 {
                 for pattern in &border_patterns {
-                    let gcs = pattern.grapheme_string();
+                    let gcs: GCStringOwned = pattern.into();
                     let _result = color_wheel.colorize_into_styled_texts(
                         &gcs,
                         GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,

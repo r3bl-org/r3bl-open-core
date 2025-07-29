@@ -20,7 +20,13 @@
 //! API.
 use syntect::easy::HighlightLines;
 
-use crate::{caret_scr_adj, caret_scroll_index,
+use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
+            EditorEvent, FlexBox, GCStringOwned, HasFocus, InputEvent, Key,
+            PrettyPrintDebug, RenderArgs, RenderOp, RenderOps, RenderPipeline,
+            RowHeight, RowIndex, ScrollOffsetColLocationInRange, SegStringOwned,
+            SelectionRange, Size, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
+            ZOrder, caret_scr_adj, caret_scroll_index,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
             height, inline_string, new_style,
@@ -28,13 +34,7 @@ use crate::{caret_scr_adj, caret_scroll_index,
             render_ops, render_pipeline, render_tui_styled_texts_into, row,
             terminal_lib_backends::KeyPress,
             throws, throws_with_return, try_get_syntax_ref, try_parse_and_highlight,
-            tui_color, usize, ColWidth, CommonResult, EditMode, EditorBuffer,
-            EditorEngine, EditorEvent, FlexBox, GCString, GCStringExt, HasFocus,
-            InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp, RenderOps,
-            RenderPipeline, RowHeight, RowIndex, ScrollOffsetColLocationInRange,
-            SegString, SelectionRange, Size, SpecialKey, StyleUSSpanLines,
-            SyntaxHighlightMode, ZOrder, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR};
+            tui_color, usize};
 
 fn triggers_undo_redo(editor_event: &EditorEvent) -> bool {
     matches!(
@@ -97,9 +97,10 @@ pub fn apply_event(
     // If in ReadOnly mode, filter out all input events that are not navigation keys, by
     // doing early return. It is not possible to modify the buffer in ReadOnly mode.
     if let EditMode::ReadOnly = editor_config.edit_mode
-        && !input_event_matches_navigation_keys(&input_event) {
-            return Ok(EditorEngineApplyEventResult::NotApplied);
-        }
+        && !input_event_matches_navigation_keys(&input_event)
+    {
+        return Ok(EditorEngineApplyEventResult::NotApplied);
+    }
 
     if let Ok(editor_event) = EditorEvent::try_from(input_event) {
         // The following events trigger undo / redo. Add the initial state to the history
@@ -327,10 +328,10 @@ pub fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
 
     if has_focus.does_id_have_focus(engine.current_box.id) {
         let str_at_caret = match buffer.string_at_caret() {
-            Some(SegString {
+            Some(SegStringOwned {
                 string: seg_text, ..
             }) => seg_text,
-            None => DEFAULT_CURSOR_CHAR.grapheme_string(),
+            None => DEFAULT_CURSOR_CHAR.into(),
         };
 
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -411,10 +412,10 @@ pub enum EditorEngineApplyEventResult {
 }
 
 mod syn_hi_r3bl_path {
-    use super::{caret_scroll_index, col, inline_string, render_tui_styled_texts_into,
-                row, throws, try_parse_and_highlight, usize, ColWidth, CommonResult,
-                EditorBuffer, EditorEngine, PrettyPrintDebug, RenderOp, RenderOps,
-                RowHeight, StyleUSSpanLines, DEBUG_TUI_SYN_HI};
+    use super::{ColWidth, CommonResult, DEBUG_TUI_SYN_HI, EditorBuffer, EditorEngine,
+                PrettyPrintDebug, RenderOp, RenderOps, RowHeight, StyleUSSpanLines,
+                caret_scroll_index, col, inline_string, render_tui_styled_texts_into,
+                row, throws, try_parse_and_highlight, usize};
 
     /// Try convert [Vec] of [US] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using
@@ -515,10 +516,10 @@ mod syn_hi_r3bl_path {
 }
 
 mod syn_hi_syntect_path {
-    use super::{caret_scroll_index, col, convert_syntect_to_styled_text, no_syn_hi_path,
-                render_tui_styled_texts_into, row, try_get_syntax_ref, usize, ColWidth,
-                EditorBuffer, EditorEngine, GCString, HighlightLines, RenderOp,
-                RenderOps, RowHeight, RowIndex};
+    use super::{ColWidth, EditorBuffer, EditorEngine, GCStringOwned, HighlightLines,
+                RenderOp, RenderOps, RowHeight, RowIndex, caret_scroll_index, col,
+                convert_syntect_to_styled_text, no_syn_hi_path,
+                render_tui_styled_texts_into, row, try_get_syntax_ref, usize};
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -559,7 +560,7 @@ mod syn_hi_syntect_path {
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line: &GCString,
+        line: &GCStringOwned,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -617,7 +618,7 @@ mod syn_hi_syntect_path {
     fn try_get_syntect_highlighted_line<'a>(
         editor_engine: &'a mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line: &'a GCString,
+        line: &'a GCStringOwned,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
         let file_ext = editor_buffer.get_maybe_file_extension()?;
         let syntax_ref = try_get_syntax_ref(editor_engine.syntax_set, file_ext)?;
@@ -630,9 +631,9 @@ mod syn_hi_syntect_path {
 }
 
 mod no_syn_hi_path {
-    use super::{caret_scroll_index, col, no_syn_hi_path, row, usize, ColWidth,
-                EditorBuffer, EditorEngine, GCString, RenderOp, RenderOps, RowHeight,
-                RowIndex};
+    use super::{ColWidth, EditorBuffer, EditorEngine, GCStringOwned, RenderOp,
+                RenderOps, RowHeight, RowIndex, caret_scroll_index, col, no_syn_hi_path,
+                row, usize};
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -673,7 +674,7 @@ mod no_syn_hi_path {
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line: &GCString,
+        line: &GCStringOwned,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -692,7 +693,7 @@ mod no_syn_hi_path {
 
     /// This is used as a fallback by other render paths.
     pub fn render_line_no_syntax_highlight(
-        line_gcs: &GCString,
+        line_gcs: &GCStringOwned,
         editor_buffer: &EditorBuffer,
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,

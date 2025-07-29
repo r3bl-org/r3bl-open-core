@@ -21,7 +21,7 @@ use super::{scroll_editor_content, DeleteSelectionWith};
 use crate::{caret_locate::{locate_col, CaretColLocationInLine},
             caret_scroll_index, col, empty_check_early_return, inline_string,
             multiline_disabled_check_early_return, row, validate_buffer_mut, CaretScrAdj, ColIndex,
-            EditorArgsMut, EditorBuffer, EditorEngine, GCString, GCStringExt,
+            EditorArgsMut, EditorBuffer, EditorEngine, GCStringOwned,
             InlineString, InlineVec, RowIndex, SelectionRange, Width};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
@@ -97,7 +97,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
             let (new_line_content, chunk_display_width) =
                 existing_line.insert_chunk_at_col(current_caret_scr_adj.col_index, line_content);
 
-            buffer_mut.inner.lines[row_index.as_usize()] = new_line_content.grapheme_string();
+            buffer_mut.inner.lines[row_index.as_usize()] = new_line_content.into();
 
             // Update caret position
             let new_line_display_width = buffer_mut.inner.lines[row_index.as_usize()].display_width;
@@ -112,11 +112,11 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
             // Create new line
             fill_in_missing_lines_up_to_row_impl(&mut buffer_mut, row_index);
             if buffer_mut.inner.lines.get(row_index.as_usize()).is_some() {
-                buffer_mut.inner.lines[row_index.as_usize()] = line_content.grapheme_string();
+                buffer_mut.inner.lines[row_index.as_usize()] = line_content.into();
 
                 // Update caret position
                 let line_display_width = buffer_mut.inner.lines[row_index.as_usize()].display_width;
-                let col_amt = GCString::width(line_content);
+                let col_amt = GCStringOwned::width(line_content);
                 scroll_editor_content::inc_caret_col_by(
                     buffer_mut.inner.caret_raw,
                     buffer_mut.inner.scr_ofs,
@@ -144,12 +144,12 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                         buffer_mut.inner.scr_ofs,
                     );
 
-                    buffer_mut.inner.lines.insert(new_row_index.as_usize(), "".grapheme_string());
+                    buffer_mut.inner.lines.insert(new_row_index.as_usize(), "".into());
                 }
                 CaretColLocationInLine::AtStart => {
                     // Insert new line at start
                     let cur_row_index = (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
-                    buffer_mut.inner.lines.insert(cur_row_index.as_usize(), "".grapheme_string());
+                    buffer_mut.inner.lines.insert(cur_row_index.as_usize(), "".into());
 
                     scroll_editor_content::inc_caret_row(
                         buffer_mut.inner.caret_raw,
@@ -165,8 +165,8 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                     if let Some(line) = buffer_mut.inner.lines.get(row_index).cloned() {
                         let col_index = caret_scr_adj.col_index;
                         if let Some((left_string, right_string)) = line.split_at_display_col(col_index) {
-                            buffer_mut.inner.lines[row_index] = left_string.grapheme_string();
-                            buffer_mut.inner.lines.insert(row_index + 1, right_string.grapheme_string());
+                            buffer_mut.inner.lines[row_index] = left_string.into();
+                            buffer_mut.inner.lines.insert(row_index + 1, right_string.into());
 
                             scroll_editor_content::inc_caret_row(
                                 buffer_mut.inner.caret_raw,
@@ -216,7 +216,7 @@ fn fill_in_missing_lines_up_to_row_impl(buffer_mut: &mut validate_buffer_mut::Ed
     if buffer_mut.inner.lines.get(max_row_index).is_none() {
         for row_idx in 0..=max_row_index {
             if buffer_mut.inner.lines.get(row_idx).is_none() {
-                buffer_mut.inner.lines.push("".grapheme_string());
+                buffer_mut.inner.lines.push("".into());
             }
         }
     }
@@ -232,7 +232,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
-            buffer_mut.inner.lines.push("".grapheme_string());
+            buffer_mut.inner.lines.push("".into());
         }
         return;
     }
@@ -257,7 +257,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
 }
 
 mod insert_new_line_at_caret_helper {
-    use super::{scroll_editor_content, EditorArgsMut, GCString, GCStringExt};
+    use super::{scroll_editor_content, EditorArgsMut, GCStringOwned};
 
     // Handle inserting a new line at the end of the current line.
     pub fn insert_new_line_at_end_of_current_line(args: EditorArgsMut<'_>) {
@@ -282,7 +282,7 @@ mod insert_new_line_at_caret_helper {
             buffer_mut
                 .inner
                 .lines
-                .insert(new_row_index.as_usize(), "".grapheme_string());
+                .insert(new_row_index.as_usize(), "".into());
         }
     }
 
@@ -299,7 +299,7 @@ mod insert_new_line_at_caret_helper {
             buffer_mut
                 .inner
                 .lines
-                .insert(cur_row_index.as_usize(), "".grapheme_string());
+                .insert(cur_row_index.as_usize(), "".into());
         }
 
         // When buffer_mut goes out of scope, it will be dropped &
@@ -330,15 +330,15 @@ mod insert_new_line_at_caret_helper {
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
 
-                    let _unused: GCString = std::mem::replace(
+                    let _unused: GCStringOwned = std::mem::replace(
                         &mut buffer_mut.inner.lines[row_index],
-                        left_string.grapheme_string(),
+                        left_string.into(),
                     );
 
                     buffer_mut
                         .inner
                         .lines
-                        .insert(row_index + 1, right_string.grapheme_string());
+                        .insert(row_index + 1, right_string.into());
 
                     scroll_editor_content::inc_caret_row(
                         buffer_mut.inner.caret_raw,
@@ -370,7 +370,7 @@ pub fn delete_at_caret(
 }
 
 mod delete_at_caret_helper {
-    use super::{inline_string, EditorBuffer, EditorEngine, GCString, GCStringExt};
+    use super::{inline_string, EditorBuffer, EditorEngine, GCStringOwned};
 
     /// ```text
     /// R ┌──────────┐
@@ -395,9 +395,9 @@ mod delete_at_caret_helper {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
-            let _unused: GCString = std::mem::replace(
+            let _unused: GCStringOwned = std::mem::replace(
                 &mut buffer_mut.inner.lines[row_index.as_usize()],
-                new_line_content.grapheme_string(),
+                new_line_content.into(),
             );
         }
 
@@ -427,9 +427,9 @@ mod delete_at_caret_helper {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
-            let _unused: GCString = std::mem::replace(
+            let _unused: GCStringOwned = std::mem::replace(
                 &mut buffer_mut.inner.lines[row_index.as_usize()],
-                new_line_content.grapheme_string(),
+                new_line_content.into(),
             );
             buffer_mut.inner.lines.remove(row_index.as_usize() + 1);
         }
@@ -462,7 +462,7 @@ pub fn backspace_at_caret(
 
 mod backspace_at_caret_helper {
     use super::{caret_scroll_index, inline_string, row, scroll_editor_content, ColIndex,
-                EditorBuffer, EditorEngine, GCString, GCStringExt};
+                EditorBuffer, EditorEngine, GCStringOwned};
 
     /// ```text
     /// R ┌──────────┐
@@ -486,9 +486,9 @@ mod backspace_at_caret_helper {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let cur_row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
-            let _unused: GCString = std::mem::replace(
+            let _unused: GCStringOwned = std::mem::replace(
                 &mut buffer_mut.inner.lines[cur_row_index.as_usize()],
-                new_line_content.grapheme_string(),
+                new_line_content.into(),
             );
 
             let new_line_content_display_width =
@@ -542,9 +542,9 @@ mod backspace_at_caret_helper {
             let cur_row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
 
-            let _unused: GCString = std::mem::replace(
+            let _unused: GCStringOwned = std::mem::replace(
                 &mut buffer_mut.inner.lines[prev_row_index.as_usize()],
-                new_line_content.grapheme_string(),
+                new_line_content.into(),
             );
 
             let new_line_content_display_width =
@@ -611,7 +611,7 @@ pub fn delete_selected(
 
 mod delete_selected_helper {
     use super::{caret_scroll_index, col, ColIndex, DeleteSelectionWith, EditorBuffer,
-                EditorEngine, GCString, GCStringExt, HashMap, InlineString, InlineVec,
+                EditorEngine, GCStringOwned, HashMap, InlineString, InlineVec,
                 RowIndex, SelectionRange, Width};
 
     pub fn analyze_selections(
@@ -667,7 +667,7 @@ mod delete_selected_helper {
     }
 
     fn prepare_partial_line_replacement(
-        lines: &[GCString],
+        lines: &[GCStringOwned],
         selected_row_index: RowIndex,
         selection_range: SelectionRange,
         end_col_index: ColIndex,
@@ -707,9 +707,9 @@ mod delete_selected_helper {
             // invalidated)
             for row_index in lines_to_replace.keys() {
                 let new_line_content = lines_to_replace[row_index].clone();
-                let _unused: GCString = std::mem::replace(
+                let _unused: GCStringOwned = std::mem::replace(
                     &mut buffer_mut.inner.lines[row_index.as_usize()],
-                    new_line_content.grapheme_string(),
+                    new_line_content.into(),
                 );
             }
 
@@ -767,9 +767,9 @@ fn insert_into_existing_line(
         let buffer_mut = buffer.get_mut(engine.viewport());
 
         // Replace existing line w/ new line.
-        let _unused: GCString = std::mem::replace(
+        let _unused: GCStringOwned = std::mem::replace(
             &mut buffer_mut.inner.lines[row_index.as_usize()],
-            new_line_content.grapheme_string(),
+            new_line_content.into(),
         );
 
         let new_line_content_display_width =
@@ -802,7 +802,7 @@ fn fill_in_missing_lines_up_to_row(args: EditorArgsMut<'_>, row_index: RowIndex)
                 // performed.
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
-                    buffer_mut.inner.lines.push("".grapheme_string());
+                    buffer_mut.inner.lines.push("".into());
                 }
             }
         }
@@ -825,15 +825,15 @@ fn insert_chunk_into_new_line(
         let buffer_mut = buffer.get_mut(engine.viewport());
 
         // Actually add the character to the correct line.
-        let new_content = chunk.grapheme_string();
-        let _unused: GCString = std::mem::replace(
+        let new_content = chunk.into();
+        let _unused: GCStringOwned = std::mem::replace(
             &mut buffer_mut.inner.lines[row_index_scr_adj],
             new_content,
         );
 
         let line_content = &buffer_mut.inner.lines[row_index_scr_adj];
         let line_content_display_width = line_content.display_width;
-        let col_amt = GCString::width(chunk);
+        let col_amt = GCStringOwned::width(chunk);
 
         // Update caret position.
         scroll_editor_content::inc_caret_col_by(
@@ -859,7 +859,7 @@ mod tests {
                 row,
                 system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
                 width, CaretDirection, EditorArgsMut, EditorBuffer, EditorEvent,
-                GCString, GCStringExt, DEFAULT_SYN_HI_FILE_EXT};
+                GCStringOwned, DEFAULT_SYN_HI_FILE_EXT};
 
     #[test]
     fn editor_delete() {
@@ -1177,7 +1177,7 @@ mod tests {
         assert::none_is_at_caret(&buffer);
         assert_eq2!(
             engine_internal_api::line_at_caret_to_string(&buffer,).unwrap(),
-            &"ab".grapheme_string()
+&"ab".into()
         );
 
         // Move caret left, insert new line (at middle of line).
@@ -1243,7 +1243,7 @@ mod tests {
             vec![EditorEvent::InsertChar('a')],
             &mut TestClipboard::default(),
         );
-        let expected: VecEditorContentLines = smallvec!["a".grapheme_string()];
+        let expected: VecEditorContentLines = smallvec!["a".into()];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
 
@@ -1265,7 +1265,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
         let expected: VecEditorContentLines =
-            smallvec!["a".grapheme_string(), "b".grapheme_string()];
+            smallvec!["a".into(), "b".into()];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
 
@@ -1289,10 +1289,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
         let expected: VecEditorContentLines = smallvec![
-            "a".grapheme_string(),
-            "b".grapheme_string(),
-            "".grapheme_string(),
-            "😀".grapheme_string()
+            "a".into(),
+            "b".into(),
+            "".into(),
+            "😀".into()
         ];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(3)));
@@ -1313,10 +1313,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
         let expected: VecEditorContentLines = smallvec![
-            "a".grapheme_string(),
-            "b".grapheme_string(),
-            "".grapheme_string(),
-            "😀d".grapheme_string()
+            "a".into(),
+            "b".into(),
+            "".into(),
+            "😀d".into()
         ];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(3)));
@@ -1336,12 +1336,12 @@ mod tests {
             vec![EditorEvent::InsertString("🙏🏽".into())],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(width(2), GCString::width("🙏🏽"));
+        assert_eq2!(width(2), GCStringOwned::width("🙏🏽"));
         let expected: VecEditorContentLines = smallvec![
-            "a".grapheme_string(),
-            "b".grapheme_string(),
-            "".grapheme_string(),
-            "😀d🙏🏽".grapheme_string()
+            "a".into(),
+            "b".into(),
+            "".into(),
+            "😀d🙏🏽".into()
         ];
         assert_eq2!(*buffer.get_lines(), expected);
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(3)));
@@ -1359,9 +1359,9 @@ mod tests {
         );
 
         assert_eq2!(buffer.get_lines().len(), 3);
-        assert_eq2!(buffer.get_lines()[0], "line1".grapheme_string());
-        assert_eq2!(buffer.get_lines()[1], "line2".grapheme_string());
-        assert_eq2!(buffer.get_lines()[2], "line3".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], "line1".into());
+        assert_eq2!(buffer.get_lines()[1], "line2".into());
+        assert_eq2!(buffer.get_lines()[2], "line3".into());
 
         // Caret should be at the end of the last line
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(2)));
@@ -1379,9 +1379,9 @@ mod tests {
         );
 
         assert_eq2!(buffer.get_lines().len(), 3);
-        assert_eq2!(buffer.get_lines()[0], "line1".grapheme_string());
-        assert_eq2!(buffer.get_lines()[1], "".grapheme_string());
-        assert_eq2!(buffer.get_lines()[2], "line3".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], "line1".into());
+        assert_eq2!(buffer.get_lines()[1], "".into());
+        assert_eq2!(buffer.get_lines()[2], "line3".into());
     }
 
     #[test]
@@ -1412,10 +1412,10 @@ mod tests {
         // First, let's check what we actually have
         let lines = buffer.get_lines();
         if !lines.is_empty() {
-            assert_eq2!(lines[0], "existingNEW1".grapheme_string());
+            assert_eq2!(lines[0], "existingNEW1".into());
         }
         if lines.len() >= 2 {
-            assert_eq2!(lines[1], "NEW2 content".grapheme_string());
+            assert_eq2!(lines[1], "NEW2 content".into());
         }
     }
 
@@ -1476,7 +1476,7 @@ mod tests {
 
         // Buffer should remain unchanged with one empty line
         assert_eq2!(buffer.get_lines().len(), 1);
-        assert_eq2!(buffer.get_lines()[0], "".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], "".into());
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
     }
 
@@ -1495,8 +1495,8 @@ mod tests {
         );
 
         assert_eq2!(buffer.get_lines().len(), 100);
-        assert_eq2!(buffer.get_lines()[0], "Line number 0".grapheme_string());
-        assert_eq2!(buffer.get_lines()[99], "Line number 99".grapheme_string());
+        assert_eq2!(buffer.get_lines()[0], "Line number 0".into());
+        assert_eq2!(buffer.get_lines()[99], "Line number 99".into());
 
         // Caret should be at the end of the last line
         let last_line_len = "Line number 99".len();

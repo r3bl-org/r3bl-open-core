@@ -19,15 +19,16 @@ use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelCo
                ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
                DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfigOptions,
                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
-               EventPropagation, FlexBox, FlexBoxId, GlobalData, HasEditorBuffers,
-               HasFocus, InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement,
-               LineMode, ModifierKeysMask, PerformPositioningAndSizing, RenderOp,
-               RenderPipeline, Surface, SurfaceProps, SurfaceRender,
-               SyntaxHighlightMode, TerminalWindowMainThreadSignal, ZOrder, box_end,
-               box_start, col, fg_green, fg_magenta, fg_red, glyphs, height,
-               inline_string, new_style, render_component_in_current_box,
+               EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
+               GradientGenerationPolicy, HasEditorBuffers, HasFocus, InputEvent, Key,
+               KeyPress, LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
+               SurfaceProps, SurfaceRender, SyntaxHighlightMode,
+               TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,
+               ZOrder, box_end, box_start, col, fg_green, fg_magenta, fg_red, glyphs,
+               height, inline_string, new_style, render_component_in_current_box,
                render_component_in_given_box, render_ops, render_tui_styled_texts_into,
-               req_size_pc, row, surface, tui_color, tui_stylesheet};
+               req_size_pc, row, surface, tui_color, tui_styled_text, tui_stylesheet};
 use smallvec::smallvec;
 use tokio::sync::mpsc::Sender;
 
@@ -658,12 +659,11 @@ mod stylesheet {
 }
 
 mod status_bar {
-    use r3bl_tui::{GCStringExt, GradientGenerationPolicy, Size, TextColorizationPolicy,
-                   TuiStyledTexts, col, new_style, tui_styled_text};
-
     use super::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-                RenderOp, RenderPipeline, ZOrder, render_ops,
-                render_tui_styled_texts_into, smallvec, tui_color};
+                GCStringOwned, GradientGenerationPolicy, RenderOp, RenderPipeline, Size,
+                TextColorizationPolicy, TuiStyledTexts, ZOrder, col, new_style,
+                render_ops, render_tui_styled_texts_into, smallvec, tui_color,
+                tui_styled_text};
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {
@@ -683,7 +683,7 @@ mod status_bar {
             ),
         ]);
 
-        let app_text_gcs = app_text.grapheme_string();
+        let app_text_gcs = GCStringOwned::from(app_text);
         let app_text_styled_texts = color_wheel.colorize_into_styled_texts(
             &app_text_gcs,
             GradientGenerationPolicy::ReuseExistingGradientAndResetIndex,

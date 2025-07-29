@@ -29,7 +29,7 @@
 //! - **Performance**: Support optimized operations like batch insertions
 //! - **Clean abstraction**: Provide a unified interface for all editor operations
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCString, Length, RowIndex, SegIndex};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length, RowIndex, SegIndex};
 
 /// Trait for abstracting editor line storage operations.
 ///
@@ -180,12 +180,12 @@ pub trait EditorLinesStorage: Clone + Default {
 
     // Conversion methods
 
-    /// Convert the entire storage to a vector of `GCString`s.
+    /// Convert the entire storage to a vector of `GCStringOwned`s.
     /// This is useful for interoperability with other components that
-    /// still work with `GCString` representations.
-    fn to_gc_string_vec(&self) -> Vec<GCString>;
+    /// still work with `GCStringOwned` representations.
+    fn to_gc_string_vec(&self) -> Vec<GCStringOwned>;
 
-    /// Create a new storage from a vector of `GCString`s.
-    /// This enables easy initialization from existing `GCString` data.
-    fn from_gc_string_vec(lines: Vec<GCString>) -> Self;
+    /// Create a new storage from a vector of `GCStringOwned`s.
+    /// This enables easy initialization from existing `GCStringOwned` data.
+    fn from_gc_string_vec(lines: Vec<GCStringOwned>) -> Self;
 }

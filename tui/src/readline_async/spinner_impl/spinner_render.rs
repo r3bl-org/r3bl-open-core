@@ -18,13 +18,12 @@ use std::ops::Not;
 
 use crossterm::style::{self, Stylize};
 
-use crate::{contains_ansi_escape_sequence,
+use crate::{contains_ansi_escape_sequence,GCStringOwned,
             convert_from_tui_color_to_crossterm_color,
             inline_string,
             spinner_render::style::style,
             width,
             ColWidth,
-            GCStringExt,
             InlineString,
             SpinnerColor,
             SpinnerStyle,
@@ -46,7 +45,7 @@ pub fn render_tick(
             let output_symbol = get_next_tick_glyph(style, count);
             let output_symbol = apply_color(&output_symbol, &mut style.color);
 
-            let text = message.grapheme_string();
+            let text = GCStringOwned::from(message);
             let text_trunc = text.trunc_end_to_fit(
                 display_width - width(3), /* 1 for symbol, 1 for space, 1 empty for
                                            * last display col */
@@ -60,7 +59,7 @@ pub fn render_tick(
             let output_symbol = get_next_tick_glyph(style, count);
             let output_symbol = apply_color(&output_symbol, &mut style.color);
 
-            let text = message.grapheme_string();
+            let text = GCStringOwned::from(message);
             let text_trunc = text.trunc_end_to_fit(
                 display_width - width(3), /* 1 for symbol, 1 for space, 1 empty for
                                            * last display col */
@@ -78,7 +77,7 @@ pub fn render_final_tick(
     final_message: &str,
     display_width: ColWidth,
 ) -> InlineString {
-    let text = final_message.grapheme_string();
+    let text = GCStringOwned::from(final_message);
     let text_trunc = text.trunc_end_to_fit(display_width);
     match style.template {
         SpinnerTemplate::Braille | SpinnerTemplate::Block => text_trunc.into(),
