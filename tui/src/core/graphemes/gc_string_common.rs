@@ -15,22 +15,23 @@
  *   limitations under the License.
  */
 
-//! Common implementations for `GCString` trait methods.
+//! Common implementations for [`crate::GCString`] trait methods.
 //!
-//! This module provides shared functionality that can be used by both `GCStringOwned`
-//! and `GCStringRef` implementations, reducing code duplication and ensuring consistent
-//! behavior across different grapheme string types.
+//! This module provides shared functionality that can be used by both
+//! [`crate::GCStringOwned`] and [`crate::GCStringRef`] implementations, reducing code
+//! duplication and ensuring consistent behavior across different grapheme string types.
 //!
 //! The functions in this module operate on any type that provides access to the
-//! necessary string data and segment information through the `GCStringData` trait.
+//! necessary string data and segment information through the [`crate::GCStringData`]
+//! trait.
 
 use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth, ch,
             gc_string_owned::wide_segments::ContainsWideSegments, seg_width, width};
 
-/// Trait for accessing the underlying data needed for `GCString` operations.
+/// Trait for accessing the underlying data needed for [`crate::GCString`] operations.
 ///
-/// This abstraction allows the same logic to work with both `GCStringOwned` and
-/// `GCStringRef` without duplicating the implementation details.
+/// This abstraction allows the same logic to work with both [`crate::GCStringOwned`] and
+/// [`crate::GCStringRef`] without duplicating the implementation details.
 pub trait GCStringData {
     /// Returns a reference to the underlying string.
     fn string_data(&self) -> &str;

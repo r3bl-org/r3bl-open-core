@@ -589,12 +589,32 @@ conversion when needed.
 
 **Analysis of Current GCString Usage:**
 
-`GCString` is heavily used throughout the editor for:
+Based on comprehensive codebase analysis, `GCString` (now `GCStringOwned`) has two distinct usage
+patterns:
 
-- Segment-based string operations (`get_string_at()`, `get_string_at_end()`, etc.)
-- Display width calculations
-- Grapheme cluster navigation
-- Cursor movement and text selection
+1. **Editor-specific operations** (candidates for deprecation):
+
+   - `mutate` module: `insert_chunk_at_col()`, `delete_char_at_col()`, `split_at_display_col()` -
+     Only used in editor content mutation
+   - `at_display_col_index` module: `check_is_in_middle_of_grapheme()` - Only used for cursor
+     validation in editor
+
+2. **General TUI operations** (keep permanently):
+   - `pad` module: Used by general TUI string formatting utilities
+   - `clip` module: Widely used across 9 files for viewport management in dialogs, components, ANSI
+     rendering
+   - `convert` module: Used in terminal rendering pipeline
+   - `trunc_start`/`trunc_end` modules: Mixed usage - syntax highlighting (can migrate) + string
+     helpers (keep)
+
+**Migration Strategy:** The `GCStringRef` implementation and `gc_string_common.rs` module provide
+the perfect bridge:
+
+- **ZeroCopyGapBuffer** can create `GCStringRef` instances for compatibility with existing
+  non-editor code
+- **Editor-specific modules** will be deprecated and their functionality moved to
+  ZeroCopyGapBuffer/GapBufferLineInfo
+- **General TUI modules** will be moved to a separate file to clearly separate concerns
 
 **Key Insight:** `GapBufferLineInfo` already contains most of what `GCString` provides:
 
@@ -744,23 +764,44 @@ pub struct EditorHistory<T: EditorLinesStorage> {
     string-like type that does NOT own the string data, but can still be used with graphemes.
   - This will be useful in cases in the editor code which uses ZeroCopyGapBuffer and
     GapBufferLineInfo, which can be converted to GCStringRef (cheaply)
-- [ ] make sure that the usages of the GCString trait are consistent. you might see some places use
-      `dyn GCString` and some places use `impl GCString`. i like the `impl GCString` syntax more, so
-      use this if possible
+- [x] Create `gc_string_common.rs` module to share implementation between `GCStringRef` and
+      `GCStringOwned`
+  - Implement `GCStringData` trait for data access abstraction
+  - Share common functionality to eliminate code duplication
+  - Ensure both implementations produce identical results
+- [x] Refactor both `GCStringRef` and `GCStringOwned` to use shared common functions
+  - Fix all clippy warnings and ensure clean compilation
+  - Verify compatibility with comprehensive test suite
+- [x] Move non-editor usage modules from `gc_string_owned.rs` to separate file
+      `gc_string_owned_non_editor_impl.rs`:
+  - `pad` module (used by general TUI string formatting)
+  - `clip` module (widely used across TUI components)
+  - `convert` module (used in terminal rendering pipeline)
+  - `trunc_start`/`trunc_end` modules (general string utilities)
+- [x] Add Unicode correctness functionality to `GapBufferLineInfo`:
+  - `at_display_col_index` module (`check_is_in_middle_of_grapheme`) -> built into GapBufferLineInfo
+    for Unicode correctness
+- [x] Move remaining editor-specific modules from `gc_string_owned.rs` to separate file `gc_string_owned_editor_impl.rs`:
+  - `mutate` module (`insert_chunk_at_col`, `delete_char_at_col`, `split_at_display_col`) -> candidates for `ZeroCopyGapBuffer` methods
+  - Remaining `at_display_col_index` methods (`get_string_at`, `get_string_at_right_of`, etc.) -> candidates for `GapBufferLineInfo` methods
+  - Clear separation of editor-specific code for Phase 4.3 migration
+- [ ] make sure that the usages of the `GCString` trait are consistent. you might see some places
+      use `dyn GCString` and some places use `impl GCString`. i like the `impl GCString` syntax
+      more, so use this if possible
 - [ ] Think deeply about the following ideas and review with the user before proceeding:
-  - for code that uses ZeroCopyGapBuffer, like the new editor code, i think we should eliminate the
-    use of GCString in favor of GapBufferLineInfo
-  - there might still be code that is not editor related (like lolcat) that still uses GCString; in
-    these cases it makes sense to still keep GCString around and use it, since this is not editor
-    related code, which probably does not have ZeroCopyGapBuffer.
-  - also i have renamed GCString -> GCStringOwned, and have added a new trait called GCString, which
-    GCStringOwned implements. i have also added a GCStringRef struct which implements this GCString
-    trait as well. this will provide more flexibility in whether we are making a GCString that owns
-    its inner string or not.
-  - so ZeroCopyGapBuffer + GapBufferLineInfo can use GCStringRef (which works for referenced
-    strings) instead of using GCStringOwned, in case there is a need to use code that expects
-    GCString (eg colorwheel code that is used in the syntax highlighting heading formatting code in
-    the editor component)
+  - for code that uses `ZeroCopyGapBuffer`, like the new editor code, i think we should eliminate
+    the use of `GCString` trait in favor of `GapBufferLineInfo`
+  - there might still be code that is not editor related (like lolcat) that still uses `GCString`;
+    in these cases it makes sense to still keep `GCString` around and use it, since this is not
+    editor related code, which probably does not have `ZeroCopyGapBuffer`.
+  - also i have renamed `GCString` -> `GCStringOwned`, and have added a new trait called `GCString`,
+    which GCStringOwned implements. i have also added a `GCStringRef` struct which implements this
+    `GCString` trait as well. this will provide more flexibility in whether we are making a
+    `GCString` that owns its inner string or not.
+  - so `ZeroCopyGapBuffer` + `GapBufferLineInfo` can use `GCStringRef` (which works for referenced
+    strings) instead of using `GCStringOwned`, in case there is a need to use code that expects
+    `GCString` (eg `color_wheel` code that is used in the syntax highlighting heading formatting
+    code in the editor component)
 - [ ] Add `get_line_with_info()` method to `EditorLinesStorage` trait
 - [ ] Implement `get_line_with_info()` for `ZeroCopyGapBuffer`
 - [ ] Add `GCString`-compatible methods to `GapBufferLineInfo`
@@ -792,11 +833,13 @@ pub struct EditorHistory<T: EditorLinesStorage> {
 
 #### 4.3 Drop Legacy types from codebase
 
-- [ ] Drop `VecEditorContentLines` implementation
+- [ ] Drop `VecEditorContentLines` (which is a `&[GCString]`)
 - [ ] Check whether `GCString` type can be dropped and replace with `ZeroCopyGapBuffer` and
       `GapBufferLineInfo` instead. This might not be possible due to some existing code, not related
-      to the editor, that does not use `ZeroCopyGapBuffer` that relies on`GCString` for
-      segment-based operations.
+      to the editor, that does not use `ZeroCopyGapBuffer` that relies on `GCString` for
+      segment-based operations. There might be opportunities to drop lots of code from the
+      `GCStringOwned`, `GCStringRef` now that we have migrated the editor to use `ZeroCopyGapBuffer`
+      and `GapBufferLineInfo` directly.
 
 ### Phase 5: Optimization
 

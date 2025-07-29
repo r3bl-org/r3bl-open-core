@@ -78,35 +78,11 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///
 /// ## Purpose
 ///
-/// The `Seg` struct is used to efficiently represent and manipulate grapheme clusters
-/// within a [`super::GCStringOwned`]. It allows for easy access to the underlying string
-/// slice, as well as information about its display width and position.
-///
-/// # UTF-8 is variable length encoding
-///
-/// Rust uses `UTF-8` to represent text in [String]. `UTF-8` is a variable width encoding,
-/// so each character can take up a different number of bytes, between 1 and 4, and 1 byte
-/// is 8 bits; this is why we use [Vec] of [u8] to represent a [String].
-///
-/// For example, the character `H` takes up 1 byte. `UTF-8` is also backward compatible
-/// with `ASCII`, meaning that the first 128 characters (the ASCII characters) are
-/// represented using the same single byte as in ASCII. So the character `H` is
-/// represented by the same byte value in `UTF-8` as it is in `ASCII`. This is why `UTF-8`
-/// is so popular, as it allows for the representation of all the characters in the
-/// Unicode standard, while still being able to represent `ASCII` characters in the same
-/// way.
-///
-/// A grapheme cluster is a user-perceived character. Grapheme clusters can take up many
-/// more bytes, e.g., 4 bytes or 2 or 3, etc. Here are some examples:
-/// - `😃` takes up 4 bytes.
-/// - `📦` also takes up 4 bytes.
-/// - `🙏🏽` takes up 4 bytes, but it is a compound grapheme cluster.
-/// - `H` takes up only 1 byte.
-///
-/// Videos:
-///
-/// - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?si=xPDIhITDro7Pa_gq)
-/// - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA?si=D9sTt_G7_mBJFLmc)
+/// The `Seg` struct efficiently represents and manipulates grapheme clusters within a 
+/// [`super::GCStringOwned`]. It provides access to the underlying string slice along 
+/// with display width and position information. See the [module documentation](crate::graphemes)
+/// for comprehensive information about UTF-8 encoding, grapheme clusters, and the three
+/// types of indices used in this system.
 ///
 /// ## Usage
 ///

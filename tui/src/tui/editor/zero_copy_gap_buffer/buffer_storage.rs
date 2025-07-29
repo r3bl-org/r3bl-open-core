@@ -73,7 +73,7 @@
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
 //! or undefined behavior in zero-copy access operations.
 
-use crate::{ByteIndex, ColWidth, Length, RowIndex, SegIndex, byte_index,
+use crate::{ByteIndex, ColIndex, ColWidth, Length, RowIndex, Seg, SegIndex, byte_index,
             gc_string_owned_sizing::SegmentArray, len};
 
 /// Initial size of each line in bytes
@@ -317,6 +317,61 @@ impl GapBufferLineInfo {
             (true, true) => SegmentRebuildStrategy::AppendOptimized,
             _ => SegmentRebuildStrategy::Full,
         }
+    }
+
+    /// Check if the given display column index falls in the middle of a grapheme cluster.
+    ///
+    /// This method ensures Unicode correctness by detecting when a cursor position
+    /// would split a grapheme cluster (which is not allowed). It returns the segment
+    /// that would be split if the column index is in the middle of a grapheme.
+    ///
+    /// This replaces the editor-specific `at_display_col_index` module functionality
+    /// from `GCStringOwned` and integrates Unicode correctness directly into the
+    /// gap buffer line metadata.
+    ///
+    /// # Arguments
+    /// * `col_index` - The display column index to check
+    ///
+    /// # Returns
+    /// * `Some(Seg)` if the column index falls in the middle of a grapheme cluster
+    /// * `None` if the column index is at a valid cursor position (start of a grapheme)
+    ///
+    /// # Example
+    /// ```rust
+    /// use r3bl_tui::*;
+    /// 
+    /// // For a line with "Hi📦" where 📦 is 2 columns wide:
+    /// // Valid positions: 0 (before H), 1 (before i), 2 (before 📦), 4 (after 📦)
+    /// // Invalid position: 3 (middle of 📦)
+    /// 
+    /// let line_info = /* ... get line info ... */;
+    /// 
+    /// assert!(line_info.check_is_in_middle_of_grapheme(col(0)).is_none()); // Valid
+    /// assert!(line_info.check_is_in_middle_of_grapheme(col(1)).is_none()); // Valid
+    /// assert!(line_info.check_is_in_middle_of_grapheme(col(2)).is_none()); // Valid
+    /// assert!(line_info.check_is_in_middle_of_grapheme(col(3)).is_some()); // Invalid!
+    /// assert!(line_info.check_is_in_middle_of_grapheme(col(4)).is_none()); // Valid
+    /// ```
+    #[must_use]
+    pub fn check_is_in_middle_of_grapheme(&self, col_index: ColIndex) -> Option<Seg> {
+        // Find the segment that contains or would contain this column index
+        for seg in &self.segments {
+            let seg_start = seg.start_display_col_index;
+            let seg_end = seg_start + seg.display_width;
+            
+            // Check if the column index falls within this segment
+            if col_index >= seg_start && col_index < seg_end {
+                // If it's not at the start of the segment, it's in the middle
+                if col_index != seg_start {
+                    return Some(*seg);
+                }
+                // If it is at the start, this is a valid cursor position
+                return None;
+            }
+        }
+        
+        // Column index is beyond all segments (end of line) - valid position
+        None
     }
 }
 

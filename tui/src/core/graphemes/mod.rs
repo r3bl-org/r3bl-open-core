@@ -252,6 +252,8 @@
 pub mod gc_string;
 pub mod gc_string_common;
 pub mod gc_string_owned;
+pub mod gc_string_owned_editor_impl;
+pub mod gc_string_owned_non_editor_impl;
 pub mod gc_string_ref;
 pub mod iterator;
 pub mod seg;
@@ -262,6 +264,8 @@ pub mod segment_builder;
 pub use gc_string::*;
 pub use gc_string_common::*;
 pub use gc_string_owned::*;
+pub use gc_string_owned_editor_impl::*;
+pub use gc_string_owned_non_editor_impl::*;
 pub use gc_string_ref::*;
 pub use iterator::*;
 pub use seg::*;
