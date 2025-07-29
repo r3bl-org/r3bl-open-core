@@ -202,6 +202,13 @@ impl ZeroCopyGapBuffer {
     /// This is a lower-level helper that performs the actual buffer manipulation.
     /// It handles capacity checking, content shifting, and buffer extension if needed.
     ///
+    /// # Content Shifting Behavior
+    ///
+    /// - **Insertion at end**: Just appends text and moves the newline character
+    /// - **Insertion at start/middle**: Shifts existing content to the right to make room
+    ///
+    /// The method ensures null padding is maintained after the newline character.
+    ///
     /// # Safety
     /// The caller must ensure that `byte_pos` is at a valid UTF-8 boundary.
     ///
@@ -308,12 +315,10 @@ impl ZeroCopyGapBuffer {
         Ok(())
     }
 
-    // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in
-    // segment_construction.rs and is accessible directly on [`ZeroCopyGapBuffer`]
-
     /// Insert a new empty line at the specified position
     ///
-    /// This shifts all subsequent lines down and inserts a new empty line.
+    /// This method properly maintains the invariant that lines are ordered by their
+    /// buffer offsets by using the existing `insert_line_with_buffer_shift` method.
     ///
     /// # Errors
     /// Returns an error if the line index exceeds the current line count
@@ -328,20 +333,8 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Add a new line at the end first
-        let new_line_idx = self.add_line();
-
-        // If we're inserting before the end, we need to shift lines
-        if line_idx < new_line_idx {
-            // Move lines down to make space
-            for i in (line_idx..new_line_idx).rev() {
-                // Swap line metadata
-                self.swap_lines(i, i + 1);
-            }
-
-            // The actual buffer content doesn't need to be moved since
-            // each line tracks its own offset
-        }
+        // Use the internal method that properly shifts buffer content
+        self.insert_line_with_buffer_shift(line_idx);
 
         Ok(())
     }
@@ -773,20 +766,20 @@ mod benches {
         // This tests the real-world scenario with our optimization
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
-        
+
         // Start with a realistic line
         buffer
             .insert_at_grapheme(row(0), seg_index(0), "This is a typical line of text")
             .unwrap();
-        
+
         b.iter(|| {
             let end_idx = buffer.get_line_info(0).unwrap().grapheme_count;
-            
+
             // Append a single character (most common case when typing)
             buffer
                 .insert_at_grapheme(row(0), seg_index(end_idx.as_usize()), black_box("x"))
                 .unwrap();
-                
+
             // Delete it to reset for next iteration
             buffer
                 .delete_at_grapheme(row(0), seg_index(end_idx.as_usize()))

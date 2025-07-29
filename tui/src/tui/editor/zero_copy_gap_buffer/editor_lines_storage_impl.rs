@@ -366,11 +366,6 @@ mod tests {
         assert_eq!(storage.line_count(), len(1));
         assert_eq!(storage.get_line_content(row(0)), Some("Modified line"));
         
-        // TODO: Fix ZeroCopyGapBuffer.remove_line underflow bug when removing lines with offset 0
-        // The following test case is commented out due to a bug in the implementation:
-        // When inserting an empty line at position 0 and then removing it, the buffer
-        // offset calculation causes an underflow because the original line has offset 0.
-        /*
         // Test insert_line at beginning
         assert!(storage.insert_line(row(0)));
         assert_eq!(storage.line_count(), len(2));
@@ -381,7 +376,6 @@ mod tests {
         assert!(<ZeroCopyGapBuffer as EditorLinesStorage>::remove_line(&mut storage, row(0)));
         assert_eq!(storage.line_count(), len(1));
         assert_eq!(storage.get_line_content(row(0)), Some("Modified line"));
-        */
     }
     
     #[test]

@@ -17,9 +17,9 @@
 
 //! `EditorLinesStorage` trait provides an abstraction layer for editor line storage.
 //!
-//! This trait serves as a bridge between the legacy `VecEditorContentLines`
-//! (`SmallVec`<GCString>) and the new `ZeroCopyGapBuffer` implementation. It enables gradual
-//! migration while maintaining compatibility with existing editor code.
+//! This trait defines the interface that editor components use to interact with line
+//! storage. It is designed to support the `ZeroCopyGapBuffer` implementation while
+//! maintaining a clean, unified API for all editor operations.
 //!
 //! # Design Goals
 //!
@@ -27,24 +27,15 @@
 //! - **Type safety**: Use specific index types (`RowIndex`, `ColIndex`, etc.) instead of
 //!   usize
 //! - **Performance**: Support optimized operations like batch insertions
-//! - **Compatibility**: Allow both legacy and new storage engines to coexist
-//!
-//! # Migration Strategy
-//!
-//! 1. Define this trait with all required operations
-//! 2. Implement for `ZeroCopyGapBuffer` (native implementation)
-//! 3. Create adapter for `VecEditorContentLines` (legacy support)
-//! 4. Update editor code to use trait instead of concrete types
-//! 5. Gradually switch from legacy to new storage engine
-//! 6. Eventually remove legacy implementation
+//! - **Clean abstraction**: Provide a unified interface for all editor operations
 
 use crate::{ByteIndex, ColIndex, ColWidth, GCString, Length, RowIndex, SegIndex};
 
 /// Trait for abstracting editor line storage operations.
 ///
-/// This trait provides a unified interface for different storage backends,
-/// enabling the editor to work with both the legacy `VecEditorContentLines`
-/// and the new `ZeroCopyGapBuffer` implementation.
+/// This trait provides a unified interface for storage operations,
+/// designed specifically for the `ZeroCopyGapBuffer` implementation
+/// and future storage backends that follow similar principles.
 ///
 /// # Trait Bounds
 ///
@@ -62,8 +53,7 @@ use crate::{ByteIndex, ColIndex, ColWidth, GCString, Length, RowIndex, SegIndex}
 /// - Enabling creation through trait objects
 ///
 /// While these bounds introduce some overhead (cloning isn't zero-cost), they enable
-/// essential editor functionality and maintain compatibility during the migration
-/// from legacy to zero-copy storage implementations.
+/// essential editor functionality that is required for rich text editing experiences.
 pub trait EditorLinesStorage: Clone + Default {
     // Line access methods
 
@@ -188,13 +178,14 @@ pub trait EditorLinesStorage: Clone + Default {
         }
     }
 
-    // Conversion methods (for compatibility during migration)
+    // Conversion methods
 
     /// Convert the entire storage to a vector of `GCString`s.
-    /// This is primarily for compatibility with legacy code.
+    /// This is useful for interoperability with other components that
+    /// still work with `GCString` representations.
     fn to_gc_string_vec(&self) -> Vec<GCString>;
 
     /// Create a new storage from a vector of `GCString`s.
-    /// This is primarily for compatibility with legacy code.
+    /// This enables easy initialization from existing `GCString` data.
     fn from_gc_string_vec(lines: Vec<GCString>) -> Self;
 }

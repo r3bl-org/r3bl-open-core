@@ -244,6 +244,14 @@ impl ZeroCopyGapBuffer {
     /// This is a lower-level helper that performs the actual buffer manipulation.
     /// It handles content shifting and null padding restoration.
     ///
+    /// # Content Shifting Behavior
+    ///
+    /// - **Deletion at end**: No shifting needed, just restore null padding
+    /// - **Deletion at start/middle**: Shifts remaining content left to fill the gap
+    ///
+    /// After deletion, the freed space is filled with null bytes to maintain
+    /// the null-padding invariant.
+    ///
     /// # Safety
     /// The caller must ensure that byte positions are at valid UTF-8 boundaries.
     ///

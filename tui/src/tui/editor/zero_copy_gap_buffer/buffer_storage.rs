@@ -35,6 +35,24 @@
 //! - **Growth trigger**: When content + newline exceeds current capacity
 //! - **Buffer management**: Subsequent lines are shifted to accommodate growth
 //!
+//! ## Buffer Shifting Behavior
+//!
+//! The buffer maintains lines in contiguous memory, requiring shifts when lines are
+//! inserted or deleted in the middle:
+//!
+//! ### Line Insertion
+//! - **At start/middle**: Shifts all subsequent buffer content down to make room
+//! - **At end**: No shifting needed, just appends to buffer
+//!
+//! ### Line Deletion  
+//! - **At start/middle**: Shifts all subsequent buffer content up to fill the gap
+//! - **At end**: No shifting needed, just truncates the buffer
+//!
+//! This design ensures:
+//! - Lines remain contiguous for zero-copy access
+//! - Buffer offsets are always valid and in order
+//! - No fragmentation or gaps in the buffer
+//!
 //! ## Null-Padding Invariant
 //!
 //! **CRITICAL**: This module maintains a strict invariant that all unused capacity
@@ -342,9 +360,106 @@ impl ZeroCopyGapBuffer {
     /// Swap two lines in the buffer metadata
     /// This only swaps the [`GapBufferLineInfo`] entries, not the actual buffer content
     pub fn swap_lines(&mut self, i: usize, j: usize) { self.lines.swap(i, j); }
+    
+    /// Insert a new empty line at the specified position with proper buffer shifting
+    /// 
+    /// This method properly maintains the invariant that lines are ordered by their
+    /// buffer offsets by actually shifting buffer content.
+    ///
+    /// # Buffer Shifting Behavior
+    ///
+    /// - **Insertion at end**: No shifting needed, just appends a new line to the buffer
+    /// - **Insertion at start/middle**: Shifts all subsequent buffer content down by
+    ///   `INITIAL_LINE_SIZE` bytes to make room for the new line
+    ///
+    /// # Example
+    ///
+    /// ```text
+    /// Before insertion at position 1:
+    /// [Line 0: 256 bytes][Line 1: 256 bytes][Line 2: 256 bytes]
+    ///
+    /// After insertion at position 1:
+    /// [Line 0: 256 bytes][New Line: 256 bytes][Line 1: 256 bytes][Line 2: 256 bytes]
+    ///                     ↑ All content shifted →
+    /// ```
+    pub fn insert_line_with_buffer_shift(&mut self, line_idx: usize) {
+        // If inserting at the end, just add a new line
+        if line_idx == self.line_count.as_usize() {
+            self.add_line();
+            return;
+        }
+        
+        // Calculate where the new line should be inserted in the buffer
+        let insert_offset = if line_idx == 0 {
+            byte_index(0)
+        } else {
+            let prev_line = &self.lines[line_idx - 1];
+            byte_index(*prev_line.buffer_offset + prev_line.capacity.as_usize())
+        };
+        
+        // Extend buffer by INITIAL_LINE_SIZE bytes
+        let old_buffer_len = self.buffer.len();
+        self.buffer.resize(old_buffer_len + INITIAL_LINE_SIZE, b'\0');
+        
+        // Shift all subsequent buffer content down
+        let shift_start = *insert_offset;
+        let shift_amount = INITIAL_LINE_SIZE;
+        
+        // Move content from back to front to avoid overwriting
+        for i in (shift_start..old_buffer_len).rev() {
+            self.buffer[i + shift_amount] = self.buffer[i];
+        }
+        
+        // Clear the newly created space
+        for i in shift_start..shift_start + INITIAL_LINE_SIZE {
+            self.buffer[i] = b'\0';
+        }
+        
+        // Add newline character for the empty line
+        self.buffer[shift_start] = b'\n';
+        
+        // Create line metadata for the new line
+        let new_line_info = GapBufferLineInfo {
+            buffer_offset: insert_offset,
+            content_len: len(0),
+            capacity: len(INITIAL_LINE_SIZE),
+            segments: SegmentArray::new(),
+            display_width: crate::width(0),
+            grapheme_count: len(0),
+        };
+        
+        // Insert the new line metadata at the correct position
+        self.lines.insert(line_idx, new_line_info);
+        
+        // Update buffer offsets for all subsequent lines
+        for i in (line_idx + 1)..self.lines.len() {
+            self.lines[i].buffer_offset = byte_index(
+                *self.lines[i].buffer_offset + shift_amount
+            );
+        }
+        
+        self.line_count += len(1);
+    }
 
-    /// Add a new line to the buffer
-    /// Returns the index of the newly added line
+    /// Add a new line to the buffer (always appends at the end)
+    /// 
+    /// Returns the index of the newly added line.
+    ///
+    /// # Buffer Behavior
+    ///
+    /// This method always appends at the end of the buffer, so no shifting is required.
+    /// The new line is allocated `INITIAL_LINE_SIZE` bytes, all initialized to `\0`
+    /// except for the first byte which contains the newline character `\n`.
+    ///
+    /// # Example
+    ///
+    /// ```text
+    /// Before:
+    /// [Line 0: 256 bytes][Line 1: 256 bytes]
+    ///
+    /// After add_line():
+    /// [Line 0: 256 bytes][Line 1: 256 bytes][New Line 2: 256 bytes]
+    /// ```
     pub fn add_line(&mut self) -> usize {
         let line_index = self.line_count.as_usize();
 
@@ -378,7 +493,28 @@ impl ZeroCopyGapBuffer {
     }
 
     /// Remove a line from the buffer
-    /// Returns true if the line was removed, false if index was out of bounds
+    /// 
+    /// Returns true if the line was removed, false if index was out of bounds.
+    ///
+    /// # Buffer Shifting Behavior
+    ///
+    /// - **Deletion at end**: No shifting needed, just truncates the buffer
+    /// - **Deletion at start/middle**: Shifts all subsequent buffer content up by
+    ///   the removed line's capacity to fill the gap
+    ///
+    /// # Example
+    ///
+    /// ```text
+    /// Before deletion at position 1:
+    /// [Line 0: 256 bytes][Line 1: 256 bytes][Line 2: 256 bytes][Line 3: 256 bytes]
+    ///
+    /// After deletion at position 1:
+    /// [Line 0: 256 bytes][Line 2: 256 bytes][Line 3: 256 bytes]
+    ///                     ← All content shifted
+    /// ```
+    ///
+    /// All buffer offsets for subsequent lines are updated to maintain the invariant
+    /// that lines are ordered by their buffer offsets.
     pub fn remove_line(&mut self, line_index: usize) -> bool {
         if line_index >= self.line_count.as_usize() {
             return false;
@@ -770,6 +906,86 @@ mod tests {
             assert_eq!(seg_idx, seg_idx_back, 
                 "Round-trip failed for segment {}: byte_pos={}", i, byte_pos.as_usize());
         }
+    }
+
+    #[test]
+    fn test_insert_line_shifting_behavior() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        
+        // Add three lines
+        buffer.add_line();
+        buffer.add_line();
+        buffer.add_line();
+        
+        // Record original offsets
+        let line0_offset = *buffer.get_line_info(0).unwrap().buffer_offset;
+        let line1_offset = *buffer.get_line_info(1).unwrap().buffer_offset;
+        let line2_offset = *buffer.get_line_info(2).unwrap().buffer_offset;
+        
+        assert_eq!(line0_offset, 0);
+        assert_eq!(line1_offset, INITIAL_LINE_SIZE);
+        assert_eq!(line2_offset, 2 * INITIAL_LINE_SIZE);
+        
+        // Test insertion at beginning (should shift all lines)
+        buffer.insert_line_with_buffer_shift(0);
+        
+        // Check that all lines were shifted
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
+        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(3).unwrap().buffer_offset, 3 * INITIAL_LINE_SIZE);
+        
+        // Test insertion in middle (should shift lines 2 and 3)
+        buffer.insert_line_with_buffer_shift(2);
+        
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
+        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(3).unwrap().buffer_offset, 3 * INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(4).unwrap().buffer_offset, 4 * INITIAL_LINE_SIZE);
+        
+        // Test insertion at end (no shifting)
+        let buffer_len_before = buffer.buffer.len();
+        buffer.insert_line_with_buffer_shift(5);
+        let buffer_len_after = buffer.buffer.len();
+        
+        // Only one line was added at the end
+        assert_eq!(buffer_len_after - buffer_len_before, INITIAL_LINE_SIZE);
+    }
+
+    #[test] 
+    fn test_remove_line_shifting_behavior() {
+        let mut buffer = ZeroCopyGapBuffer::new();
+        
+        // Add five lines
+        for _ in 0..5 {
+            buffer.add_line();
+        }
+        
+        // Test deletion at beginning (should shift all subsequent lines up)
+        assert!(buffer.remove_line(0));
+        
+        // Check that all lines were shifted up
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
+        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(3).unwrap().buffer_offset, 3 * INITIAL_LINE_SIZE);
+        
+        // Test deletion in middle (should shift lines 2 and 3 up)
+        assert!(buffer.remove_line(1));
+        
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
+        assert_eq!(*buffer.get_line_info(1).unwrap().buffer_offset, INITIAL_LINE_SIZE);
+        assert_eq!(*buffer.get_line_info(2).unwrap().buffer_offset, 2 * INITIAL_LINE_SIZE);
+        
+        // Test deletion at end (no shifting)
+        let last_idx = buffer.line_count.as_usize() - 1;
+        let buffer_len_before = buffer.buffer.len();
+        assert!(buffer.remove_line(last_idx));
+        let buffer_len_after = buffer.buffer.len();
+        
+        // Buffer was truncated by one line
+        assert_eq!(buffer_len_before - buffer_len_after, INITIAL_LINE_SIZE);
     }
 }
 
