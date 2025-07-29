@@ -785,7 +785,7 @@ pub struct EditorHistory<T: EditorLinesStorage> {
   - `mutate` module (`insert_chunk_at_col`, `delete_char_at_col`, `split_at_display_col`) -> candidates for `ZeroCopyGapBuffer` methods
   - Remaining `at_display_col_index` methods (`get_string_at`, `get_string_at_right_of`, etc.) -> candidates for `GapBufferLineInfo` methods
   - Clear separation of editor-specific code for Phase 4.3 migration
-- [ ] make sure that the usages of the `GCString` trait are consistent. you might see some places
+- [x] make sure that the usages of the `GCString` trait are consistent. you might see some places
       use `dyn GCString` and some places use `impl GCString`. i like the `impl GCString` syntax
       more, so use this if possible
 - [ ] Think deeply about the following ideas and review with the user before proceeding:

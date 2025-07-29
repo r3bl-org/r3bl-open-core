@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use super::SegIndex;
 use crate::{ChUnit, ColIndex, ColWidth, usize};
 
-/// `Seg` represents a grapheme cluster segment within a [`super::GCStringOwned`].
+/// `Seg` represents a grapheme cluster segment within a [`crate::GCStringOwned`].
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text
 /// handling. Each `Seg` contains all the information needed to convert between
@@ -55,13 +55,13 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 /// # Performance, memory latency, access, allocation
 ///
 /// 1. This struct does not allocate anything and is [Copy].
-/// 2. The [`super::GCStringOwned`] owns the memory, and this struct is a "view" into parts of
+/// 2. The [`crate::GCStringOwned`] owns the memory, and this struct is a "view" into parts of
 ///    it, where each part is a grapheme cluster, and each of them is represented by this
 ///    struct.
 ///
 /// This struct provides information about a single grapheme cluster, including its byte
 /// indices within the original string, its display width, its logical index within the
-/// [`super::GCStringOwned`], its byte size, and its starting display column index.
+/// [`crate::GCStringOwned`], its byte size, and its starting display column index.
 ///
 /// ## Fields and Their Relationship to Index Types
 ///
@@ -79,14 +79,14 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 /// ## Purpose
 ///
 /// The `Seg` struct efficiently represents and manipulates grapheme clusters within a 
-/// [`super::GCStringOwned`]. It provides access to the underlying string slice along 
+/// [`crate::GCStringOwned`]. It provides access to the underlying string slice along 
 /// with display width and position information. See the [module documentation](crate::graphemes)
 /// for comprehensive information about UTF-8 encoding, grapheme clusters, and the three
 /// types of indices used in this system.
 ///
 /// ## Usage
 ///
-/// This struct is primarily used internally by the [`super::GCStringOwned`] struct. However,
+/// This struct is primarily used internally by the [`crate::GCStringOwned`] struct. However,
 /// it can also be used directly to access information about individual grapheme clusters.
 ///
 /// ## Example
@@ -106,11 +106,11 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the
-    /// [`super::GCStringOwned`] that this grapheme cluster represents.
+    /// [`crate::GCStringOwned`] that this grapheme cluster represents.
     pub start_byte_index: ChUnit,
 
     /// The end index (bytes), in the string slice, used to generate the
-    /// [`super::GCStringOwned`] that this grapheme cluster represents.
+    /// [`crate::GCStringOwned`] that this grapheme cluster represents.
     pub end_byte_index: ChUnit,
 
     /// Display width of the grapheme cluster calculated using
@@ -118,7 +118,7 @@ pub struct Seg {
     /// not be the same as the byte size [`Self::bytes_size`].
     pub display_width: ColWidth,
 
-    /// The index of this entry in the [`super::GCStringOwned::segments`].
+    /// The index of this entry in the [`crate::GCStringOwned::segments`].
     pub seg_index: SegIndex,
 
     /// The number of bytes this grapheme cluster occupies in the original string slice.
@@ -153,7 +153,7 @@ impl Debug for Seg {
 
 impl Seg {
     /// Get the string slice for the grapheme cluster segment. The `string` parameter is
-    /// any type that can be converted into a `&str`, such as [`super::GCStringOwned`].
+    /// any type that can be converted into a `&str`, such as [`crate::GCStringOwned`].
     pub fn get_str<'a>(&self, arg_str: &'a (impl AsRef<str> + ?Sized)) -> &'a str {
         let str = arg_str.as_ref();
         let start_index = usize(self.start_byte_index);

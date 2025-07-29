@@ -23,7 +23,7 @@
 //! grapheme cluster boundaries and provides a clean interface for traversing
 //! Unicode text.
 
-use super::{GCStringOwned, GCStringRef, gc_string_common::GCStringData};
+use super::super::{owned::GCStringOwned, borrowed::GCStringRef, common::GCStringData};
 
 /// Generic iterator for any type that implements `GCStringData` trait.
 /// This allows both `GCStringOwned` and `GCStringRef` to use the same iterator.

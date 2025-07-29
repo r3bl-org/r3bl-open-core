@@ -16,8 +16,8 @@
  */
 use std::fmt::Debug;
 
-use super::gc_string_owned::wide_segments::ContainsWideSegments;
-use crate::{ChUnit, ColIndex, ColWidth, GCStringOwned, Seg, SegIndex, SegWidth};
+use super::owned::{gc_string_owned::wide_segments::ContainsWideSegments, GCStringOwned};
+use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth};
 
 pub fn gc_string_owned(arg_from: impl Into<GCStringOwned>) -> GCStringOwned {
     arg_from.into()

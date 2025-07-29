@@ -17,11 +17,14 @@
 
 use std::fmt::Debug;
 
-use super::{gc_string_owned::wide_segments::ContainsWideSegments,
-            segment_builder::{build_segments_for_str, calculate_display_width}};
-use crate::{ChUnit, ColIndex, ColWidth, GCString, Seg, SegIndex, SegWidth,
-            gc_string_common::{self, GCStringData},
+use super::super::{
+    owned::gc_string_owned::wide_segments::ContainsWideSegments,
+    common::{self as gc_string_common, GCStringData},
+    gc_string_trait::GCString
+};
+use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth,
             gc_string_owned_sizing::SegmentArray};
+use crate::graphemes::seg::{build_segments_for_str, calculate_display_width};
 
 /// Borrowed version of `GCStringOwned` that doesn't own the string data
 /// but owns its segment metadata. Used for efficient operations with
@@ -150,8 +153,8 @@ impl<'a> GCStringRef<'a> {
     /// Returns an iterator over the grapheme segments in the `GCStringRef` as a
     /// sequence of `&str`. This provides the same interface as `GCStringOwned::iter()`.
     #[must_use]
-    pub fn iter(&self) -> super::iterator::GCStringIterator<'_, Self> {
-        super::iterator::GCStringIterator::new(self)
+    pub fn iter(&self) -> super::super::iterator::GCStringIterator<'_, Self> {
+        super::super::iterator::GCStringIterator::new(self)
     }
 }
 
@@ -350,7 +353,8 @@ impl<'a> From<(Seg, &'a GCStringRef<'a>)> for SegStringRef<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{GCStringOwned, col, seg_width};
+    use crate::{col, seg_width};
+    use crate::graphemes::gc_string::owned::GCStringOwned;
 
     #[test]
     fn test_basic_construction() {

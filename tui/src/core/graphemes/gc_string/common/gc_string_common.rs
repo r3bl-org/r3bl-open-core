@@ -25,8 +25,8 @@
 //! necessary string data and segment information through the [`crate::GCStringData`]
 //! trait.
 
-use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth, ch,
-            gc_string_owned::wide_segments::ContainsWideSegments, seg_width, width};
+use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth, ch, seg_width, width};
+use super::super::owned::gc_string_owned::wide_segments::ContainsWideSegments;
 
 /// Trait for accessing the underlying data needed for [`crate::GCString`] operations.
 ///
@@ -251,7 +251,8 @@ pub fn calculate_width_up_to_col<T: GCStringData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{GCStringOwned, col};
+    use crate::col;
+    use crate::graphemes::gc_string::owned::GCStringOwned;
 
     // The GCStringData implementation for GCStringOwned is in gc_string_owned.rs
 

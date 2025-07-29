@@ -21,10 +21,10 @@ use smallstr::SmallString;
 use smallvec::{Array, SmallVec};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use super::iterator::GCStringIterator;
-use crate::{ChUnit, ColIndex, ColWidth, GCString, GetMemSize, InlineString, Seg,
-            SegIndex, SegWidth, build_segments_for_str, calculate_display_width, ch,
-            gc_string_common::GCStringData, gc_string_owned, seg_width, width};
+use super::super::{iterator::GCStringIterator, common::GCStringData, gc_string_trait::GCString};
+use crate::{ChUnit, ColIndex, ColWidth, GetMemSize, InlineString, Seg,
+            SegIndex, SegWidth, ch, seg_width, width};
+use crate::graphemes::seg::{build_segments_for_str, calculate_display_width};
 
 /// `GCStringOwned` represents a [String] as a sequence of grapheme cluster segments.
 ///
@@ -118,7 +118,8 @@ pub struct SegStringOwned {
 }
 
 mod seg_string_result_impl {
-    use super::{Debug, GCStringOwned, Seg, SegStringOwned, gc_string_owned};
+    use super::{Debug, GCStringOwned, Seg, SegStringOwned};
+    use crate::graphemes::gc_string::gc_string_trait::gc_string_owned;
 
     /// Easily convert a [Seg] and a [`GCStringOwned`] into a [`SegStringOwned`].
     impl From<(Seg, &GCStringOwned)> for SegStringOwned {
@@ -395,7 +396,8 @@ mod tests {
     use std::str;
 
     use super::*;
-    use crate::{byte_index, col, seg_index, wide_segments::ContainsWideSegments};
+    use crate::{byte_index, col, seg_index, wide_segments::ContainsWideSegments,
+               graphemes::gc_string::gc_string_trait::gc_string_owned};
 
     /// Helper function to create a [`SegString`] for testing. Keeps the width of the
     /// lines of code in each test to a minimum (for easier readability).
