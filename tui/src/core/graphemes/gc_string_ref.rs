@@ -19,8 +19,9 @@ use std::fmt::Debug;
 
 use super::{gc_string_owned::wide_segments::ContainsWideSegments,
             segment_builder::{build_segments_for_str, calculate_display_width}};
-use crate::{ChUnit, ColIndex, ColWidth, GCString, Seg, SegIndex, SegWidth, ch,
-            gc_string_owned_sizing::SegmentArray, seg_width, width};
+use crate::{ChUnit, ColIndex, ColWidth, GCString, Seg, SegIndex, SegWidth,
+            gc_string_owned_sizing::SegmentArray,
+            gc_string_common::{self, GCStringData}};
 
 /// Borrowed version of `GCStringOwned` that doesn't own the string data
 /// but owns its segment metadata. Used for efficient operations with
@@ -148,21 +149,40 @@ impl<'a> GCStringRef<'a> {
 }
 
 // ╭─────────────────────────────────────────────────────────────────────────────╮
+// │                            GCStringData Trait Impl                          │
+// ╰─────────────────────────────────────────────────────────────────────────────╯
+
+impl GCStringData for GCStringRef<'_> {
+    fn string_data(&self) -> &str { self.string }
+
+    fn segments_iter(&self) -> impl DoubleEndedIterator<Item = &Seg> {
+        self.segments.iter()
+    }
+
+    fn display_width(&self) -> ColWidth { self.display_width }
+
+    fn bytes_size(&self) -> ChUnit { self.bytes_size }
+
+    fn segments_len(&self) -> usize { self.segments.len() }
+
+    fn get_segment(&self, index: usize) -> Option<&Seg> { self.segments.get(index) }
+}
+
+// ╭─────────────────────────────────────────────────────────────────────────────╮
 // │                            GCString Trait Impl                              │
 // ╰─────────────────────────────────────────────────────────────────────────────╯
 
 impl<'a> GCString for GCStringRef<'a> {
     type StringResult = SegStringRef<'a>;
 
-    fn len(&self) -> SegWidth { self.segments.len().into() }
+    fn len(&self) -> SegWidth { gc_string_common::gc_len(self) }
 
-    fn is_empty(&self) -> bool { self.len() == seg_width(0) }
+    fn is_empty(&self) -> bool { gc_string_common::gc_is_empty(self) }
 
-    fn get_max_seg_index(&self) -> SegIndex { self.len().convert_to_seg_index() }
+    fn get_max_seg_index(&self) -> SegIndex { gc_string_common::gc_get_max_seg_index(self) }
 
     fn get(&self, seg_index: impl Into<SegIndex>) -> Option<Seg> {
-        let index = seg_index.into().as_usize();
-        self.segments.get(index).copied()
+        gc_string_common::gc_get(self, seg_index)
     }
 
     fn seg_iter(&self) -> Box<dyn Iterator<Item = &Seg> + '_> {
@@ -173,72 +193,26 @@ impl<'a> GCString for GCStringRef<'a> {
         Box::new(self.segments.iter().copied())
     }
 
-    fn as_str(&self) -> &str { self.string }
+    fn as_str(&self) -> &str { gc_string_common::gc_as_str(self) }
 
-    fn display_width(&self) -> ColWidth { self.display_width }
+    fn display_width(&self) -> ColWidth { gc_string_common::gc_display_width(self) }
 
-    fn bytes_size(&self) -> ChUnit { self.bytes_size }
+    fn bytes_size(&self) -> ChUnit { gc_string_common::gc_bytes_size(self) }
 
     fn contains_wide_segments(&self) -> ContainsWideSegments {
-        if self.segments.iter().any(|seg| seg.display_width > width(1)) {
-            ContainsWideSegments::Yes
-        } else {
-            ContainsWideSegments::No
-        }
+        gc_string_common::gc_contains_wide_segments(self)
     }
 
     fn trunc_end_to_fit(&self, arg_col_width: impl Into<ColWidth>) -> &str {
-        let mut avail_cols: ColWidth = arg_col_width.into();
-        let mut string_end_byte_index = 0;
-
-        for seg in self.seg_iter() {
-            let seg_display_width = seg.display_width;
-            if avail_cols < seg_display_width {
-                break;
-            }
-            string_end_byte_index += seg.bytes_size;
-            avail_cols -= seg_display_width;
-        }
-
-        &self.string[..string_end_byte_index]
+        gc_string_common::gc_trunc_end_to_fit(self, arg_col_width)
     }
 
     fn trunc_end_by(&self, arg_col_width: impl Into<ColWidth>) -> &str {
-        let mut countdown_col_count: ColWidth = arg_col_width.into();
-        let mut string_end_byte_index = ch(0);
-
-        let rev_iter = self.segments.iter().rev();
-
-        for seg in rev_iter {
-            let seg_display_width = seg.display_width;
-            string_end_byte_index = seg.start_byte_index;
-            countdown_col_count -= seg_display_width;
-            if *countdown_col_count == ch(0) {
-                // We are done skipping.
-                break;
-            }
-        }
-
-        &self.string[..string_end_byte_index.as_usize()]
+        gc_string_common::gc_trunc_end_by(self, arg_col_width)
     }
 
     fn trunc_start_by(&self, arg_col_width: impl Into<ColWidth>) -> &str {
-        let mut skip_col_count: ColWidth = arg_col_width.into();
-        let mut string_start_byte_index = 0;
-
-        for segment in self.seg_iter() {
-            let seg_display_width = segment.display_width;
-            if *skip_col_count == ch(0) {
-                // We are done skipping.
-                break;
-            }
-
-            // Skip segment.unicode_width.
-            skip_col_count -= seg_display_width;
-            string_start_byte_index += segment.bytes_size;
-        }
-
-        &self.string[string_start_byte_index..]
+        gc_string_common::gc_trunc_start_by(self, arg_col_width)
     }
 
     fn get_string_at(
@@ -247,22 +221,17 @@ impl<'a> GCString for GCStringRef<'a> {
     ) -> Option<Self::StringResult> {
         let target_col = arg_col_index.into();
 
-        for seg in &self.segments {
-            let seg_start = seg.start_display_col_index;
-            let seg_end = seg_start + seg.display_width;
+        if let Some(seg) = gc_string_common::find_segment_at_col(self, target_col) {
+            let start_byte = seg.start_byte_index.as_usize();
+            let end_byte = seg.end_byte_index.as_usize();
+            let slice = &self.string[start_byte..end_byte];
 
-            if target_col >= seg_start && target_col < seg_end {
-                let start_byte = seg.start_byte_index.as_usize();
-                let end_byte = seg.end_byte_index.as_usize();
-                let slice = &self.string[start_byte..end_byte];
-
-                let gc_ref = GCStringRef::new(slice);
-                return Some(SegStringRef {
-                    string: gc_ref,
-                    width: seg.display_width,
-                    start_at: seg.start_display_col_index,
-                });
-            }
+            let gc_ref = GCStringRef::new(slice);
+            return Some(SegStringRef {
+                string: gc_ref,
+                width: seg.display_width,
+                start_at: seg.start_display_col_index,
+            });
         }
 
         None
@@ -274,21 +243,18 @@ impl<'a> GCString for GCStringRef<'a> {
     ) -> Option<Self::StringResult> {
         let target_col = arg_col_index.into();
 
-        for seg in &self.segments {
-            let seg_start = seg.start_display_col_index;
-            if seg_start > target_col {
-                let start_byte = seg.start_byte_index.as_usize();
-                let slice = &self.string[start_byte..];
+        if let Some(seg) = gc_string_common::find_segment_right_of_col(self, target_col) {
+            let start_byte = seg.start_byte_index.as_usize();
+            let slice = &self.string[start_byte..];
 
-                let gc_ref = GCStringRef::new(slice);
-                let width = self.display_width - ColWidth::from(seg_start.as_u16());
+            let gc_ref = GCStringRef::new(slice);
+            let width = gc_string_common::calculate_width_from_col(self, seg.start_display_col_index);
 
-                return Some(SegStringRef {
-                    string: gc_ref,
-                    width,
-                    start_at: seg_start,
-                });
-            }
+            return Some(SegStringRef {
+                string: gc_ref,
+                width,
+                start_at: seg.start_display_col_index,
+            });
         }
 
         None
@@ -299,21 +265,11 @@ impl<'a> GCString for GCStringRef<'a> {
         arg_col_index: impl Into<ColIndex>,
     ) -> Option<Self::StringResult> {
         let target_col = arg_col_index.into();
-        let mut end_byte = 0;
-        let mut width = ColWidth::from(0);
 
-        for seg in &self.segments {
-            let seg_start = seg.start_display_col_index;
-            if seg_start >= target_col {
-                break;
-            }
-            end_byte = seg.end_byte_index.as_usize();
-            width = ColWidth::from(seg_start.as_u16()) + seg.display_width;
-        }
-
-        if end_byte > 0 {
+        if let Some(end_byte) = gc_string_common::find_end_byte_left_of_col(self, target_col) {
             let slice = &self.string[..end_byte];
             let gc_ref = GCStringRef::new(slice);
+            let width = gc_string_common::calculate_width_up_to_col(self, target_col);
 
             Some(SegStringRef {
                 string: gc_ref,
@@ -326,7 +282,7 @@ impl<'a> GCString for GCStringRef<'a> {
     }
 
     fn get_string_at_end(&self) -> Option<Self::StringResult> {
-        if let Some(last_seg) = self.segments.last() {
+        if let Some(last_seg) = gc_string_common::get_last_segment(self) {
             let start_byte = last_seg.start_byte_index.as_usize();
             let end_byte = last_seg.end_byte_index.as_usize();
             let slice = &self.string[start_byte..end_byte];
@@ -380,7 +336,7 @@ impl<'a> From<(Seg, &'a GCStringRef<'a>)> for SegStringRef<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{GCStringOwned, col};
+    use crate::{GCStringOwned, col, seg_width};
 
     #[test]
     fn test_basic_construction() {
@@ -389,7 +345,7 @@ mod tests {
 
         assert_eq!(gc_ref.as_str(), text);
         assert!(!gc_ref.is_empty());
-        assert_eq!(gc_ref.bytes_size(), ChUnit::from(text.len()));
+        assert_eq!(GCString::bytes_size(&gc_ref), ChUnit::from(text.len()));
     }
 
     #[test]
@@ -400,7 +356,7 @@ mod tests {
 
         // Should have same number of segments
         assert_eq!(gc_ref.len(), gc_owned.len());
-        assert_eq!(gc_ref.display_width(), gc_owned.display_width());
+        assert_eq!(GCString::display_width(&gc_ref), GCString::display_width(&gc_owned));
 
         // Each segment should match
         for i in 0..gc_ref.len().as_usize() {
@@ -460,7 +416,7 @@ mod tests {
 
         assert!(gc_ref.is_empty());
         assert_eq!(gc_ref.len(), seg_width(0));
-        assert_eq!(gc_ref.display_width(), ColWidth::from(0));
+        assert_eq!(GCString::display_width(&gc_ref), ColWidth::from(0));
         assert_eq!(gc_ref.get_string_at_end(), None);
     }
 

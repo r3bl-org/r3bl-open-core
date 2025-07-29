@@ -15,14 +15,17 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug, ops::Add};
+use std::{borrow::Cow, fmt::Debug, ops::Add};
 
-use smallvec::SmallVec;
+use smallstr::SmallString;
+use smallvec::{Array, SmallVec};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use super::iterator::GCStringIterator;
-use crate::{ByteIndex, ChUnit, ColIndex, ColWidth, GetMemSize, InlineString,
-            InlineVecStr, Seg, SegIndex, ch, join, pad_fmt, seg_index, seg_width, usize,
-            width};
+use crate::{ByteIndex, ChUnit, ColIndex, ColWidth, GCString, GetMemSize, InlineString,
+            InlineVecStr, Seg, SegIndex, SegWidth, build_segments_for_str,
+            calculate_display_width, ch, gc_string_common::GCStringData,
+            gc_string_owned, join, pad_fmt, seg_index, seg_width, usize, width};
 
 /// `GCStringOwned` represents a [String] as a sequence of grapheme cluster segments, and
 /// *not* just scalar values or single code points, like `🙏`. This is to provide support
@@ -289,10 +292,7 @@ pub struct SegStringOwned {
 }
 
 mod seg_string_result_impl {
-    use std::fmt::Debug;
-
-    use super::{GCStringOwned, SegStringOwned};
-    use crate::{Seg, gc_string_owned};
+    use super::{Debug, GCStringOwned, Seg, SegStringOwned, gc_string_owned};
 
     /// Easily convert a [Seg] and a [`GCStringOwned`] into a [`SegStringOwned`].
     impl From<(Seg, &GCStringOwned)> for SegStringOwned {
@@ -318,15 +318,10 @@ mod seg_string_result_impl {
 }
 
 mod basic {
-    use std::borrow::Cow;
-
-    use smallstr::SmallString;
-    use smallvec::Array;
-    use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-
-    use super::{GCStringOwned, SegStringOwned, gc_string_owned_sizing};
-    use crate::{ChUnit, ColIndex, ColWidth, GCString, Seg, SegIndex, SegWidth,
-                build_segments_for_str, calculate_display_width, ch, seg_width,
+    use super::{Array, ChUnit, ColIndex, ColWidth, Cow, GCString, GCStringData,
+                GCStringOwned, Seg, SegIndex, SegStringOwned, SegWidth, SmallString,
+                UnicodeWidthChar, UnicodeWidthStr, build_segments_for_str,
+                calculate_display_width, ch, gc_string_owned_sizing, seg_width,
                 wide_segments::ContainsWideSegments, width};
 
     impl AsRef<str> for GCStringOwned {
@@ -371,20 +366,36 @@ mod basic {
         fn from(value: &String) -> Self { GCStringOwned::new(value) }
     }
 
+    impl GCStringData for GCStringOwned {
+        fn string_data(&self) -> &str { &self.string }
+
+        fn segments_iter(&self) -> impl DoubleEndedIterator<Item = &Seg> {
+            self.segments.iter()
+        }
+
+        fn display_width(&self) -> ColWidth { self.display_width }
+
+        fn bytes_size(&self) -> ChUnit { self.bytes_size }
+
+        fn segments_len(&self) -> usize { self.segments.len() }
+
+        fn get_segment(&self, index: usize) -> Option<&Seg> { self.segments.get(index) }
+    }
+
     impl GCString for GCStringOwned {
         type StringResult = SegStringOwned;
 
-        fn len(&self) -> SegWidth { self.segments.len().into() }
+        fn len(&self) -> SegWidth { crate::gc_string_common::gc_len(self) }
 
-        fn is_empty(&self) -> bool { self.len() == seg_width(0) }
+        fn is_empty(&self) -> bool { crate::gc_string_common::gc_is_empty(self) }
 
-        fn get_max_seg_index(&self) -> SegIndex { self.len().convert_to_seg_index() }
-
-        fn get(&self, seg_index: impl Into<SegIndex>) -> Option<Seg> {
-            let seg_index: SegIndex = seg_index.into();
-            self.segments.get(usize::from(*seg_index)).copied()
+        fn get_max_seg_index(&self) -> SegIndex {
+            crate::gc_string_common::gc_get_max_seg_index(self)
         }
 
+        fn get(&self, seg_index: impl Into<SegIndex>) -> Option<Seg> {
+            crate::gc_string_common::gc_get(self, seg_index)
+        }
         fn seg_iter(&self) -> Box<dyn Iterator<Item = &Seg> + '_> {
             Box::new(self.segments.iter())
         }
@@ -393,26 +404,28 @@ mod basic {
             Box::new(self.segments.iter().copied())
         }
 
-        fn as_str(&self) -> &str { &self.string }
+        fn as_str(&self) -> &str { crate::gc_string_common::gc_as_str(self) }
 
-        fn display_width(&self) -> ColWidth { self.display_width }
+        fn display_width(&self) -> ColWidth {
+            crate::gc_string_common::gc_display_width(self)
+        }
 
-        fn bytes_size(&self) -> ChUnit { self.bytes_size }
+        fn bytes_size(&self) -> ChUnit { crate::gc_string_common::gc_bytes_size(self) }
 
         fn contains_wide_segments(&self) -> ContainsWideSegments {
-            self.contains_wide_segments()
+            crate::gc_string_common::gc_contains_wide_segments(self)
         }
 
         fn trunc_end_to_fit(&self, col_width: impl Into<ColWidth>) -> &str {
-            self.trunc_end_to_fit(col_width)
+            crate::gc_string_common::gc_trunc_end_to_fit(self, col_width)
         }
 
         fn trunc_end_by(&self, col_width: impl Into<ColWidth>) -> &str {
-            self.trunc_end_by(col_width)
+            crate::gc_string_common::gc_trunc_end_by(self, col_width)
         }
 
         fn trunc_start_by(&self, col_width: impl Into<ColWidth>) -> &str {
-            self.trunc_start_by(col_width)
+            crate::gc_string_common::gc_trunc_start_by(self, col_width)
         }
 
         fn get_string_at(
@@ -530,8 +543,7 @@ mod basic {
 /// Methods to make it easy to work with getting owned string (from slices) at a given
 /// display col index.
 pub mod at_display_col_index {
-    use super::{ColIndex, GCStringOwned, Seg, SegStringOwned};
-    use crate::{ch, seg_index};
+    use super::{ColIndex, GCStringOwned, Seg, SegStringOwned, ch, seg_index};
 
     impl GCStringOwned {
         /// If the given `display_col_index` falls in the middle of a grapheme cluster,
@@ -1462,7 +1474,7 @@ mod tests {
     use std::str;
 
     use super::*;
-    use crate::{byte_index, col, gc_string_owned, wide_segments::ContainsWideSegments};
+    use crate::{byte_index, col, wide_segments::ContainsWideSegments};
 
     /// Helper function to create a [`SegString`] for testing. Keeps the width of the
     /// lines of code in each test to a minimum (for easier readability).
