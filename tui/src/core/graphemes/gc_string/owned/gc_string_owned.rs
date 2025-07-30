@@ -21,17 +21,17 @@ use smallstr::SmallString;
 use smallvec::{Array, SmallVec};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use super::super::{iterator::GCStringIterator, common::GCStringData, gc_string_trait::GCString};
-use crate::{ChUnit, ColIndex, ColWidth, GetMemSize, InlineString, Seg,
-            SegIndex, SegWidth, ch, seg_width, width};
-use crate::graphemes::seg::{build_segments_for_str, calculate_display_width};
+use super::super::{common::GCStringData, gc_string_trait::GCString,
+                   iterator::GCStringIterator};
+use crate::{ChUnit, ColIndex, ColWidth, GetMemSize, InlineString, Seg, SegIndex,
+            SegWidth, ch,
+            graphemes::unicode_segment::{build_segments_for_str, calculate_display_width},
+            seg_width, width};
 
 /// `GCStringOwned` represents a [String] as a sequence of grapheme cluster segments.
 ///
 /// This struct owns its string data and provides efficient access to grapheme clusters
-/// through pre-computed segment metadata. See the [module
-/// documentation](crate::graphemes) for comprehensive information about Unicode handling,
-/// grapheme clusters, and the three types of indices used in this system.
+/// through pre-computed segment metadata.
 ///
 /// # Key Design Notes
 ///
@@ -42,6 +42,10 @@ use crate::graphemes::seg::{build_segments_for_str, calculate_display_width};
 ///   detailed [`Seg`] metadata.
 /// - **Deref**: Derefs to `SegmentArray` - note that `len()` returns grapheme count, not
 ///   display width.
+///
+/// See the [module docs](crate::graphemes) for
+/// comprehensive information about Unicode handling, grapheme clusters, and the three
+/// types of indices used in this system.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct GCStringOwned {
     pub string: InlineString,
@@ -396,8 +400,8 @@ mod tests {
     use std::str;
 
     use super::*;
-    use crate::{byte_index, col, seg_index, wide_segments::ContainsWideSegments,
-               graphemes::gc_string::gc_string_trait::gc_string_owned};
+    use crate::{byte_index, col, graphemes::gc_string::gc_string_trait::gc_string_owned,
+                seg_index, wide_segments::ContainsWideSegments};
 
     /// Helper function to create a [`SegString`] for testing. Keeps the width of the
     /// lines of code in each test to a minimum (for easier readability).

@@ -29,7 +29,7 @@
 //! - **Performance**: Support optimized operations like batch insertions
 //! - **Clean abstraction**: Provide a unified interface for all editor operations
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length, RowIndex, SegIndex};
+use crate::{ByteIndex, ColIndex, ColWidth, GapBufferLineInfo, GCStringOwned, Length, RowIndex, SegIndex};
 
 /// Trait for abstracting editor line storage operations.
 ///
@@ -60,6 +60,19 @@ pub trait EditorLinesStorage: Clone + Default {
     /// Get the content of a line as a string slice.
     /// Returns None if the line index is out of bounds.
     fn get_line_content(&self, row_index: RowIndex) -> Option<&str>;
+
+    /// Get both line content and metadata in one call for efficiency.
+    /// This is the preferred method for editor operations that need both
+    /// content and grapheme segment information.
+    /// 
+    /// Returns a tuple of (content, `line_info`) where:
+    /// - content: The line content as a string slice (zero-copy)
+    /// - `line_info`: Metadata including segments, display width, etc.
+    /// 
+    /// This method enables the hybrid usage pattern where editor code can:
+    /// 1. Work directly with (&str, &`GapBufferLineInfo`) for zero-copy operations
+    /// 2. Create `GCStringRef` when interfacing with non-editor code
+    fn get_line_with_info(&self, row_index: RowIndex) -> Option<(&str, &GapBufferLineInfo)>;
 
     /// Get the number of lines in the storage.
     fn line_count(&self) -> Length;

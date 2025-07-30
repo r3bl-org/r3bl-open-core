@@ -17,5 +17,5 @@
 
 //! Iterator implementations for `GCString` types.
 
-pub mod iterator;
-pub use iterator::*;
+pub mod gc_string_iter;
+pub use gc_string_iter::*;

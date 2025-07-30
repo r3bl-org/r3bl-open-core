@@ -27,7 +27,7 @@
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
-use crate::{ByteIndex, ColIndex, ColWidth, EditorLinesStorage, GCStringOwned, Length, 
+use crate::{ByteIndex, ColIndex, ColWidth, EditorLinesStorage, GapBufferLineInfo, GCStringOwned, Length, 
             RowIndex, SegIndex, ZeroCopyGapBuffer, byte_index, row, seg_index, width};
 
 impl EditorLinesStorage for ZeroCopyGapBuffer {
@@ -35,6 +35,12 @@ impl EditorLinesStorage for ZeroCopyGapBuffer {
     
     fn get_line_content(&self, row_index: RowIndex) -> Option<&str> {
         self.get_line_content(row_index)
+    }
+
+    fn get_line_with_info(&self, row_index: RowIndex) -> Option<(&str, &GapBufferLineInfo)> {
+        let content = self.get_line_content(row_index)?;
+        let line_info = self.get_line_info(row_index.as_usize())?;
+        Some((content, line_info))
     }
     
     fn line_count(&self) -> Length {
@@ -313,7 +319,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, len};
+    use crate::{col, len, GCString};
 
     #[test]
     fn test_basic_line_operations() {
@@ -478,5 +484,26 @@ mod tests {
         assert_eq!(new_storage.line_count(), len(2));
         assert_eq!(new_storage.get_line_content(row(0)), Some("Line 1"));
         assert_eq!(new_storage.get_line_content(row(1)), Some("Line 2"));
+    }
+
+    #[test]
+    fn test_get_line_with_info() {
+        let mut storage = ZeroCopyGapBuffer::new();
+        storage.push_line("Hello 👋 World");
+        
+        // Test get_line_with_info method
+        let (content, info) = storage.get_line_with_info(row(0)).unwrap();
+        assert_eq!(content, "Hello 👋 World");
+        assert!(info.grapheme_count.as_usize() > 0);
+        assert!(info.display_width.as_usize() > 0);
+        
+        // Test GCString-compatible methods
+        let seg_string = info.get_string_at(content, col(6)).unwrap();
+        assert_eq!(seg_string.string.as_ref(), "👋");
+        
+        // Test to_gc_string_ref for interface compatibility
+        let gc_ref = info.to_gc_string_ref(content);
+        assert_eq!(gc_ref.as_str(), "Hello 👋 World");
+        assert_eq!(gc_ref.display_width(), info.display_width);
     }
 }

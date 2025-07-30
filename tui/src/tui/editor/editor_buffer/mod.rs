@@ -26,7 +26,7 @@ pub mod selection_list;
 pub mod selection_range;
 pub mod selection_support;
 pub mod sizing; // Not re-exported.
-pub mod system_clipboard_service_provider;
+pub mod clipboard_service;
 
 // Re-export.
 pub use buffer_struct::*;
@@ -35,4 +35,4 @@ pub use clipboard_support::*;
 pub use selection_list::*;
 pub use selection_range::*;
 pub use selection_support::*;
-pub use system_clipboard_service_provider::*;
+pub use clipboard_service::*;

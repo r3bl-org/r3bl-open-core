@@ -80,7 +80,7 @@ mod tests {
     use crate::{assert_eq2,
                 editor::{editor_test_fixtures::mock_real_objects_for_editor,
                          sizing::VecEditorContentLines},
-                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
+                clipboard_service::clipboard_test_fixtures::TestClipboard,
                 CaretDirection, EditorBuffer, EditorEvent,
                 SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
 

@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-//! Non-editor implementation modules for `GCStringOwned`.
+//! Non-editor implementation modules for [`GCStringOwned`].
 //!
-//! This module contains `GCStringOwned` functionality that is used by the general
+//! This module contains [`GCStringOwned`] functionality that is used by the general
 //! TUI system (not editor-specific operations). These modules provide text formatting,
 //! clipping, conversion, and truncation utilities used across various TUI components.
 //!
@@ -28,7 +28,7 @@
 //! - `trunc_start`/`trunc_end`: Text truncation utilities
 //!
 //! These are kept separate from editor-specific operations to maintain clear
-//! separation of concerns during the `ZeroCopyGapBuffer` migration.
+//! separation of concerns during the [`crate::ZeroCopyGapBuffer`] migration.
 
 use std::ops::Add;
 

@@ -857,7 +857,7 @@ mod tests {
                          sizing::VecEditorContentLines},
                 editor_engine::engine_internal_api,
                 row,
-                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
+                clipboard_service::clipboard_test_fixtures::TestClipboard,
                 width, CaretDirection, EditorArgsMut, EditorBuffer, EditorEvent,
                 GCStringOwned, DEFAULT_SYN_HI_FILE_EXT};
 

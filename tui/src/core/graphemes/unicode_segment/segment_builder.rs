@@ -20,6 +20,10 @@
 //! This module provides functions to build segments from string slices, extracting
 //! the core logic from [`GCStringOwned`](crate::GCStringOwned) for reuse in other
 //! components like the gap buffer implementation.
+//!
+//! See the [module docs](crate::graphemes) for
+//! comprehensive information about Unicode handling, grapheme clusters, and the three
+//! types of indices used in this system.
 
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;

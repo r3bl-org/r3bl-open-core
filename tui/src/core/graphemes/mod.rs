@@ -250,8 +250,8 @@
 
 // Attach sources.
 pub mod gc_string;
-pub mod seg;
+pub mod unicode_segment;
 
 // Re-export.
 pub use gc_string::*;
-pub use seg::*;
+pub use unicode_segment::*;

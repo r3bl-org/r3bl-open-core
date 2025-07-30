@@ -597,7 +597,7 @@ mod tests {
                 SelectionAction, assert_eq2, caret_scr_adj, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, row,
-                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard};
+                clipboard_service::clipboard_test_fixtures::TestClipboard};
 
     #[test]
     fn test_multiline_true() {

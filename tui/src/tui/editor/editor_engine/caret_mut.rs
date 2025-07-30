@@ -570,7 +570,7 @@ mod tests {
                 editor::editor_test_fixtures::{assert, mock_real_objects_for_editor},
                 editor_engine::engine_internal_api,
                 height, row,
-                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard};
+                clipboard_service::clipboard_test_fixtures::TestClipboard};
 
     #[test]
     fn editor_validate_caret_pos_on_up() {

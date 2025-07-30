@@ -15,23 +15,33 @@
  *   limitations under the License.
  */
 
-//! Common implementations for [`crate::GCString`] trait methods.
-//!
-//! This module provides shared functionality that can be used by both
-//! [`crate::GCStringOwned`] and [`crate::GCStringRef`] implementations, reducing code
-//! duplication and ensuring consistent behavior across different grapheme string types.
-//!
-//! The functions in this module operate on any type that provides access to the
-//! necessary string data and segment information through the [`crate::GCStringData`]
-//! trait.
-
-use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth, ch, seg_width, width};
 use super::super::owned::gc_string_owned::wide_segments::ContainsWideSegments;
+use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth, ch, seg_width, width};
 
 /// Trait for accessing the underlying data needed for [`crate::GCString`] operations.
 ///
 /// This abstraction allows the same logic to work with both [`crate::GCStringOwned`] and
-/// [`crate::GCStringRef`] without duplicating the implementation details.
+/// [`crate::GCStringRef`] without duplicating the implementation details; it does not
+/// care about ownership model. This trait
+/// has no connection with [`crate::GCString`] trait, which very much cares about the
+/// ownership model, and is the public API.
+///
+/// This module provides shared functionality that can be used by both
+/// [`crate::GCStringOwned`] and [`crate::GCStringRef`] implementations, reducing code
+/// duplication and ensuring consistent behavior across different grapheme string types.
+/// See [`crate::gc_string`] for more details on this two trait design.
+///
+/// The functions in this module operate on any type that provides access to the
+/// necessary string data and segment information through the [`crate::GCStringData`]
+/// trait.
+///
+/// ## Key benefits
+///
+/// - Implementation-agnostic - doesn't care about ownership model
+/// - Low-level data access - just getters for raw data
+/// - No business logic - pure data retrieval
+/// - Enables code reuse - allows shared algorithms in this module
+///   [`crate::gc_string::common`]
 pub trait GCStringData {
     /// Returns a reference to the underlying string.
     fn string_data(&self) -> &str;
@@ -251,8 +261,7 @@ pub fn calculate_width_up_to_col<T: GCStringData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::col;
-    use crate::graphemes::gc_string::owned::GCStringOwned;
+    use crate::{col, graphemes::gc_string::owned::GCStringOwned};
 
     // The GCStringData implementation for GCStringOwned is in gc_string_owned.rs
 

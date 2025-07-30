@@ -443,7 +443,7 @@ mod tests {
                 GCStringOwned, assert_eq2, caret_raw, caret_scr_adj, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor, height, row,
                 scr_ofs,
-                system_clipboard_service_provider::clipboard_test_fixtures::TestClipboard,
+                clipboard_service::clipboard_test_fixtures::TestClipboard,
                 width};
 
     #[test]

@@ -19,6 +19,10 @@
 //!
 //! This module contains the core types for representing grapheme cluster segments
 //! and utilities for building and manipulating them.
+//!
+//! See the [module docs](crate::graphemes) for
+//! comprehensive information about Unicode handling, grapheme clusters, and the three
+//! types of indices used in this system.
 
 pub mod seg;
 pub mod seg_index;

@@ -16,7 +16,7 @@
  */
 use std::fmt::Debug;
 
-use super::owned::{gc_string_owned::wide_segments::ContainsWideSegments, GCStringOwned};
+use super::owned::{GCStringOwned, gc_string_owned::wide_segments::ContainsWideSegments};
 use crate::{ChUnit, ColIndex, ColWidth, Seg, SegIndex, SegWidth};
 
 pub fn gc_string_owned(arg_from: impl Into<GCStringOwned>) -> GCStringOwned {
@@ -30,12 +30,27 @@ pub fn gc_string_owned(arg_from: impl Into<GCStringOwned>) -> GCStringOwned {
 /// This trait can be implemented by various string types (owned, borrowed, etc.) to
 /// provide a unified interface for grapheme cluster operations throughout the codebase.
 ///
+/// This trait cares about the ownership model of the string data, allowing
+/// implementations to define how they handle string data, whether owned or borrowed.
+/// The other trait [`super::GCStringData`] is a low-level data access trait that does not
+/// care about ownership and is used for shared data access logic (for types that
+/// implement `GCString` trait). See [`crate::gc_string`] for more details on this two
+/// trait design.
+///
+/// ## Key Benefits
+///
+/// - High-level operations - business logic methods
+/// - Associated types - [`GCString::StringResult`] allows owned vs borrowed return types
+/// - Type safety - ensures [`GCStringOwned`] returns [`super::SegStringOwned`],
+///   [`super::GCStringRef`] returns [`super::SegStringRef`]
+/// - Consumer-facing - what external code uses
+///
 /// ## Associated Type Benefits
 ///
-/// The `StringResult` associated type allows each implementation to return its
-/// appropriate string result type:
-/// - `GCStringOwned` returns `SegStringOwned` (owns the string data)
-/// - Future `GCStringRef` can return `SegStringRef` (borrows the string data)
+/// The [`GCString::StringResult`] associated type allows each implementation to return
+/// its appropriate string result type:
+/// - [`super::GCStringOwned`] returns [`super::SegStringOwned`] (owns the string data)
+/// - [`super::GCStringRef`] can return [`super::SegStringRef`] (borrows the string data)
 /// - Custom implementations can define their own result types
 ///
 /// This design maintains type safety while allowing the trait to work with both owned
@@ -58,6 +73,10 @@ pub fn gc_string_owned(arg_from: impl Into<GCStringOwned>) -> GCStringOwned {
 /// // let borrowed = GCStringRef::new("Hello, world!");
 /// // let result_ref = process_string(&borrowed); // Returns Option<SegStringRef>
 /// ```
+///
+/// See the [module docs](crate::graphemes) for
+/// comprehensive information about Unicode handling, grapheme clusters, and the three
+/// types of indices used in this system.
 pub trait GCString {
     /// Associated type for the string result type this implementation returns.
     /// This allows each implementation to define its own return type for string slicing

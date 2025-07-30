@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-//! Editor-specific implementation modules for `GCStringOwned`.
+//! Editor-specific implementation modules for [`GCStringOwned`].
 //!
-//! This module contains `GCStringOwned` functionality that is used exclusively by
+//! This module contains [`GCStringOwned`] functionality that is used exclusively by
 //! editor operations. These modules provide text mutation, cursor validation, and
 //! string slicing operations used specifically for text editing workflows.
 //!
@@ -33,10 +33,10 @@
 //! - `at_display_col_index`: Cursor position validation and string slicing by column
 //!
 //! These are kept separate from general TUI operations to clearly identify code
-//! that needs to be migrated during the `ZeroCopyGapBuffer` transition.
+//! that needs to be migrated during the [`crate::ZeroCopyGapBuffer`] transition.
 
 use super::{GCStringOwned, SegStringOwned};
-use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, join, seg_index, 
+use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, join, seg_index,
             seg_width, usize, width};
 
 /// Methods to make it easy to work with getting owned string (from slices) at a given

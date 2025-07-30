@@ -55,9 +55,9 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 /// # Performance, memory latency, access, allocation
 ///
 /// 1. This struct does not allocate anything and is [Copy].
-/// 2. The [`crate::GCStringOwned`] owns the memory, and this struct is a "view" into parts of
-///    it, where each part is a grapheme cluster, and each of them is represented by this
-///    struct.
+/// 2. The [`crate::GCStringOwned`] owns the memory, and this struct is a "view" into
+///    parts of it, where each part is a grapheme cluster, and each of them is represented
+///    by this struct.
 ///
 /// This struct provides information about a single grapheme cluster, including its byte
 /// indices within the original string, its display width, its logical index within the
@@ -65,8 +65,9 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///
 /// ## Fields and Their Relationship to Index Types
 ///
-/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`](crate::ByteIndex) range for this
-///   segment. These are used when converting from `ByteIndex` to `SegIndex`.
+/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`](crate::ByteIndex)
+///   range for this segment. These are used when converting from `ByteIndex` to
+///   `SegIndex`.
 /// - `seg_index`: The [`SegIndex`] of this segment. This is its position in the logical
 ///   sequence of grapheme clusters.
 /// - `start_display_col_index`: The [`ColIndex`] where this segment begins on screen.
@@ -78,16 +79,17 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///
 /// ## Purpose
 ///
-/// The `Seg` struct efficiently represents and manipulates grapheme clusters within a 
-/// [`crate::GCStringOwned`]. It provides access to the underlying string slice along 
-/// with display width and position information. See the [module documentation](crate::graphemes)
-/// for comprehensive information about UTF-8 encoding, grapheme clusters, and the three
-/// types of indices used in this system.
+/// The `Seg` struct efficiently represents and manipulates grapheme clusters within a
+/// [`crate::GCStringOwned`]. It provides access to the underlying string slice along
+/// with display width and position information. See the [module
+/// documentation](crate::graphemes) for comprehensive information about UTF-8 encoding,
+/// grapheme clusters, and the three types of indices used in this system.
 ///
 /// ## Usage
 ///
-/// This struct is primarily used internally by the [`crate::GCStringOwned`] struct. However,
-/// it can also be used directly to access information about individual grapheme clusters.
+/// This struct is primarily used internally by the [`crate::GCStringOwned`] struct.
+/// However, it can also be used directly to access information about individual grapheme
+/// clusters.
 ///
 /// ## Example
 ///
@@ -103,6 +105,10 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///     assert_eq!(segment.start_display_col_index, col(0));
 /// }
 /// ```
+///
+/// See the [module docs](crate::graphemes) for
+/// comprehensive information about Unicode handling, grapheme clusters, and the three
+/// types of indices used in this system.
 #[derive(Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the

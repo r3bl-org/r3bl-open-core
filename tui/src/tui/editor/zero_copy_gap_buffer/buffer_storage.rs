@@ -73,8 +73,8 @@
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
 //! or undefined behavior in zero-copy access operations.
 
-use crate::{ByteIndex, ColIndex, ColWidth, Length, RowIndex, Seg, SegIndex, byte_index,
-            gc_string_owned_sizing::SegmentArray, len};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GCStringRef, Length, RowIndex, Seg, SegIndex, 
+            SegStringOwned, byte_index, gc_string_owned_sizing::SegmentArray, len};
 
 /// Initial size of each line in bytes
 pub const INITIAL_LINE_SIZE: usize = 256;
@@ -372,6 +372,146 @@ impl GapBufferLineInfo {
         
         // Column index is beyond all segments (end of line) - valid position
         None
+    }
+
+    /// Get a string slice at the given column index.
+    /// This method provides GCString-compatible behavior for editor operations.
+    /// 
+    /// # Arguments
+    /// * `content` - The line content as a string slice
+    /// * `col_index` - The display column index to get string at
+    /// 
+    /// # Returns
+    /// A `SegStringOwned` representing the grapheme cluster at the specified column,
+    /// or `None` if the column is out of bounds.
+    /// 
+    /// # Usage Pattern
+    /// ```rust
+    /// let (content, info) = buffer.lines.get_line_with_info(row_index)?;
+    /// let seg_string = info.get_string_at(content, col_index)?;
+    /// ```
+    #[must_use]
+    pub fn get_string_at(&self, content: &str, col_index: ColIndex) -> Option<SegStringOwned> {
+        // Find the segment at the given column index
+        let target_col = col_index.as_usize();
+        
+        for segment in &self.segments {
+            let seg_start_col = segment.start_display_col_index.as_usize();
+            let seg_width = segment.display_width.as_usize();
+            
+            if target_col >= seg_start_col && target_col < seg_start_col + seg_width {
+                // Extract the segment's string content
+                let start_byte = segment.start_byte_index.as_usize();
+                let end_byte = segment.end_byte_index.as_usize();
+                let seg_content = &content[start_byte..end_byte];
+                
+                return Some(SegStringOwned {
+                    string: GCStringOwned::from(seg_content),
+                    width: segment.display_width,
+                    start_at: segment.start_display_col_index,
+                });
+            }
+        }
+        
+        None
+    }
+
+    /// Get a string slice to the right of the given column index.
+    /// This method provides GCString-compatible behavior for editor operations.
+    #[must_use]
+    pub fn get_string_at_right_of(&self, content: &str, col_index: ColIndex) -> Option<SegStringOwned> {
+        // Find the segment after the given column index
+        let target_col = col_index.as_usize();
+        
+        for segment in &self.segments {
+            let seg_start_col = segment.start_display_col_index.as_usize();
+            
+            if seg_start_col > target_col {
+                // This is the first segment to the right
+                let start_byte = segment.start_byte_index.as_usize();
+                let end_byte = segment.end_byte_index.as_usize();
+                let seg_content = &content[start_byte..end_byte];
+                
+                return Some(SegStringOwned {
+                    string: GCStringOwned::from(seg_content),
+                    width: segment.display_width,
+                    start_at: segment.start_display_col_index,
+                });
+            }
+        }
+        
+        None
+    }
+
+    /// Get a string slice to the left of the given column index.
+    /// This method provides GCString-compatible behavior for editor operations.
+    #[must_use]
+    pub fn get_string_at_left_of(&self, content: &str, col_index: ColIndex) -> Option<SegStringOwned> {
+        // Find the segment before the given column index
+        let target_col = col_index.as_usize();
+        let mut last_valid_segment: Option<&Seg> = None;
+        
+        for segment in &self.segments {
+            let seg_start_col = segment.start_display_col_index.as_usize();
+            let seg_width = segment.display_width.as_usize();
+            
+            if seg_start_col + seg_width <= target_col {
+                last_valid_segment = Some(segment);
+            } else {
+                break;
+            }
+        }
+        
+        if let Some(segment) = last_valid_segment {
+            let start_byte = segment.start_byte_index.as_usize();
+            let end_byte = segment.end_byte_index.as_usize();
+            let seg_content = &content[start_byte..end_byte];
+            
+            Some(SegStringOwned {
+                string: GCStringOwned::from(seg_content),
+                width: segment.display_width,
+                start_at: segment.start_display_col_index,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Get the string at the end (last segment).
+    /// This method provides GCString-compatible behavior for editor operations.
+    #[must_use]
+    pub fn get_string_at_end(&self, content: &str) -> Option<SegStringOwned> {
+        let last_segment = self.segments.last()?;
+        
+        let start_byte = last_segment.start_byte_index.as_usize();
+        let end_byte = last_segment.end_byte_index.as_usize();
+        let seg_content = &content[start_byte..end_byte];
+        
+        Some(SegStringOwned {
+            string: GCStringOwned::from(seg_content),
+            width: last_segment.display_width,
+            start_at: last_segment.start_display_col_index,
+        })
+    }
+
+    /// Create a `GCStringRef` from the line content for compatibility.
+    /// This is used when interfacing with non-editor code that expects a `GCString` trait object.
+    /// 
+    /// # Arguments
+    /// * `content` - The line content as a string slice
+    /// 
+    /// # Returns
+    /// A `GCStringRef` that borrows the content and metadata without copying.
+    /// 
+    /// # Usage Pattern (for interface boundaries)
+    /// ```rust
+    /// let (content, info) = buffer.lines.get_line_with_info(row_index)?;
+    /// let gc_string_ref = info.to_gc_string_ref(content);
+    /// let styled_texts = color_wheel.colorize_into_styled_texts(&gc_string_ref, ...);
+    /// ```
+    #[must_use]
+    pub fn to_gc_string_ref<'a>(&'a self, content: &'a str) -> GCStringRef<'a> {
+        GCStringRef::from_gap_buffer_line(content, self)
     }
 }
 
