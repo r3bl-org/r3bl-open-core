@@ -15,15 +15,11 @@
  *   limitations under the License.
  */
 
-use smallvec::SmallVec;
 
 use super::{EditorBuffer, EditorContent, cur_index::CurIndex, history::EditorHistory};
-use crate::{CachedMemorySize, CaretRaw, GCStringOwned, GetMemSize,
+use crate::{CachedMemorySize, CaretRaw, GetMemSize,
             InlineString, MemoizedMemorySize, MemorySize, RingBufferHeap, ScrOfs,
             TinyInlineString, get_mem_size};
-
-pub type VecEditorContentLines = SmallVec<[GCStringOwned; DEFAULT_EDITOR_LINES_SIZE]>;
-const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
 
 /// The version history is stored on the heap, as a ring buffer.
 pub type HistoryBuffer = RingBufferHeap<EditorContent, MAX_UNDO_REDO_SIZE>;

@@ -76,13 +76,11 @@ pub fn copy_to_clipboard(
 
 #[cfg(test)]
 mod tests {
-    use smallvec::smallvec;
 
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
                 SelectionAction, assert_eq2,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
-                editor::{editor_test_fixtures::mock_real_objects_for_editor,
-                         sizing::VecEditorContentLines}};
+                editor::editor_test_fixtures::mock_real_objects_for_editor};
 
     #[test]
     fn test_copy() {
@@ -172,9 +170,8 @@ mod tests {
                 &mut test_clipboard,
             );
 
-            let new_lines: VecEditorContentLines =
-                smallvec!["abc copied text r3bl xyz".into(), "pqr rust uvw".into()];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
+            let new_lines = vec!["abc copied text r3bl xyz", "pqr rust uvw"];
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
         }
 
         // Multi-line Pasting
@@ -191,12 +188,12 @@ mod tests {
                 &mut test_clipboard,
             );
 
-            let new_lines: VecEditorContentLines = smallvec![
-                "abc copied text old line".into(),
-                "new line r3bl xyz".into(),
-                "pqr rust uvw".into()
+            let new_lines = vec![
+                "abc copied text old line",
+                "new line r3bl xyz",
+                "pqr rust uvw"
             ];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
         }
     }
 
@@ -235,10 +232,10 @@ mod tests {
             let content = test_clipboard.content.clone();
             assert_eq2!(content, "abc r3bl xyz".to_string()); // copied to clipboard
 
-            let new_lines: VecEditorContentLines = smallvec![
-                "pqr rust uvw".into(), // First line 'abc r3bl xyz' is cut
+            let new_lines = vec![
+                "pqr rust uvw", // First line 'abc r3bl xyz' is cut
             ];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
         }
 
         // Multi-line Cutting
@@ -279,9 +276,8 @@ mod tests {
             let content = test_clipboard.content;
             /* cspell:disable-next-line */
             assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
-            let new_lines: VecEditorContentLines =
-                smallvec!["abc ".into(), "rust uvw".into()];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
+            let new_lines = vec!["abc ", "rust uvw"];
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
         }
     }
 }

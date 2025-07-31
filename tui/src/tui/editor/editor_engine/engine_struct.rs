@@ -19,7 +19,7 @@ use std::fmt::Debug;
 
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{DocumentStorage, PartialFlexBox, Size, StyleUSSpanLines,
+use crate::{PartialFlexBox, Size, StyleUSSpanLines,
             get_cached_syntax_set, get_cached_theme};
 
 /// Do not create this struct directly. Please use [`new()`](EditorEngine::new) instead.
@@ -47,37 +47,8 @@ pub struct EditorEngine {
     pub syntax_set: &'static SyntaxSet,
     /// Syntax highlighting support. This is a very heavy object to create, re-use it.
     pub theme: &'static Theme,
-    /// This is an **optional** field that is used to somewhat speed up the legacy
-    /// Markdown parser [`crate::parse_markdown()`]. It is lazily created if the legacy
-    /// parser is used, and it is re-used every time the document is re-parsed.
-    ///
-    /// ## Only used with the legacy Markdown parser
-    ///
-    /// This is a byte cache that is used to write the entire editor content into, with
-    /// CRLF added, so that it can be parsed by the Markdown parser in order to apply
-    /// syntax highlighting using [`crate::try_parse_and_highlight()`].
-    /// [`crate::EditorContent`] stores the document as a
-    /// [`crate::editor_buffer::sizing::VecEditorContentLines`] which has all the CRLF
-    /// removed. This cache is used to add the CRLF back in.
-    ///
-    /// The actual Markdown parser that needs this cache is here
-    /// [`crate::parse_markdown()`].
-    ///
-    /// The reason to have this as a field in this struct, is to avoid re-allocating this
-    /// cache every time we need to parse the document. This cache is re-used every time
-    /// the document is re-parsed (which happens every time a change is made to the
-    /// document).
-    pub parser_byte_cache: Option<ParserByteCache>,
     pub ast_cache: Option<StyleUSSpanLines>,
 }
-
-/// You can swap this out with [String] if you want to exclusively heap allocate.
-pub type ParserByteCache = DocumentStorage;
-
-/// This is the page size amount by which to grow the
-/// [`crate::EditorEngine::parser_byte_cache`] so that it is done efficiently and not by 1
-/// or 2 bytes at time.
-pub const PARSER_BYTE_CACHE_PAGE_SIZE: usize = 1024;
 
 impl Default for EditorEngine {
     fn default() -> Self { EditorEngine::new(EditorEngineConfig::default()) }
@@ -93,7 +64,6 @@ impl EditorEngine {
             config_options,
             syntax_set: get_cached_syntax_set(),
             theme: get_cached_theme(),
-            parser_byte_cache: None,
             ast_cache: None,
         }
     }
@@ -169,7 +139,6 @@ mod tests {
             SyntaxHighlightMode::Enable
         );
         assert_eq2!(engine.config_options.edit_mode, EditMode::ReadWrite);
-        assert!(engine.parser_byte_cache.is_none());
         assert!(engine.ast_cache.is_none());
 
         // Test custom configuration
@@ -240,24 +209,6 @@ mod tests {
         assert_eq2!(SyntaxHighlightMode::Enable, SyntaxHighlightMode::Enable);
         assert_eq2!(SyntaxHighlightMode::Disable, SyntaxHighlightMode::Disable);
         assert!(SyntaxHighlightMode::Enable != SyntaxHighlightMode::Disable);
-    }
-
-    #[test]
-    fn test_parser_byte_cache() {
-        let mut engine = EditorEngine::default();
-
-        // Initially cache should be None
-        assert!(engine.parser_byte_cache.is_none());
-
-        // Set parser byte cache
-        engine.parser_byte_cache = Some(DocumentStorage::new());
-        assert!(engine.parser_byte_cache.is_some());
-
-        // Add some data to cache
-        if let Some(ref mut cache) = engine.parser_byte_cache {
-            cache.push_str("test content");
-            assert_eq2!(cache.as_str(), "test content");
-        }
     }
 
     #[test]

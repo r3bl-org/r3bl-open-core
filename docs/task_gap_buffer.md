@@ -33,10 +33,11 @@
         - [4.2.6 Migration Tasks](#426-migration-tasks)
       - [4.3 Drop Legacy types from codebase](#43-drop-legacy-types-from-codebase)
     - [Phase 5: Optimization](#phase-5-optimization)
-      - [5.1 Memory Optimization](#51-memory-optimization)
-      - [5.2 Performance Optimization](#52-performance-optimization)
-      - [5.3 Advanced Features](#53-advanced-features)
-      - [5.4 Tooling and Debugging](#54-tooling-and-debugging)
+      - [5.1 Benchmark current implementation](#51-benchmark-current-implementation)
+      - [5.2 Memory Optimization](#52-memory-optimization)
+      - [5.3 Performance Optimization](#53-performance-optimization)
+      - [5.4 Advanced Features](#54-advanced-features)
+      - [5.5 Tooling and Debugging](#55-tooling-and-debugging)
     - [Phase 6: Benchmarking and Profiling](#phase-6-benchmarking-and-profiling)
       - [6.1 Micro Benchmarks](#61-micro-benchmarks)
       - [6.2 Macro Benchmarks](#62-macro-benchmarks)
@@ -695,47 +696,46 @@ methods
     - `cargo nextest run` - ensure all tests pass
 
 - [ ] Post-Migration Validation
-
   - [x] Manual testing validation: run editor with real content to ensure functionality works
     - [x] Undo/redo is not working (undo/redo does not update the UI even though the editor content
           bounds are updated correctly)
     - [x] Add tests to editor_engine/engine_public_api.rs which is has no tests (major test coverage
           blind spot)!
-  - [ ] Remove old type definitions and deprecated code
+  - [x] Remove old type definitions and deprecated code
     - Remove `VecEditorContentLines` from `sizing.rs`
     - Clean up any remaining legacy type usage
-  - [ ] Drop `VecEditorContentLines` (which is a `&[GCString]`)
-  - [ ] Test all major editor operations work correctly
+  - [x] Investigate `tui/src/tui/editor/editor_buffer/clipboard_support.rs` to see how it uses
+        `GCStringOwned`, it should not use `GCStringOwned` anymore, the `clip_to_range()` method
+        should be dropped and replaced with `clip_to_range_str()` method.
+  - [x] Replace all the uses of `(&str, &GapBufferLineInfo)` in existing function arguments, with
+        `LineWithInfo` type alias, for better ergonomics
+  - [x] Rename `buffer_storage.rs` to `gap_buffer_core.rs`
+  - [ ] There might be opportunities to drop lots of code from the `GCStringOwned`, `GCStringRef`
+        now that we have migrated the editor to use `ZeroCopyGapBuffer` and `GapBufferLineInfo`
+        directly.
+  - [ ] Check whether `GCString` type can be dropped and replace with `ZeroCopyGapBuffer` and
+        `GapBufferLineInfo` instead. This might not be possible due to some existing code, not
+        related to the editor, that does not use `ZeroCopyGapBuffer` that relies on `GCString` for
+        segment-based operations.
+  - [ ] In all Rust files in the codebase that have nested modules, that have complex multi-line
+        import statements (`use super::{...}`) replace the complex import statement with
+        `#[allow(clippy::wildcard_imports)] use super::*;`
+  - [ ] Test all major editor operations work correctly in `edi`
     - Text insertion, deletion, cursor movement
     - Undo/redo functionality
     - Selection operations
     - File loading and saving
-  - [ ] Performance spot check: ensure no significant regression
-  - [ ] Memory usage verification: ensure memory characteristics are reasonable
   - [ ] Ask the user to deeply review this code, when they have made their changes, then make a
         commit with this progress
 
-#### 4.3 Drop Legacy types from codebase
-
-- [x] Investigate `tui/src/tui/editor/editor_buffer/clipboard_support.rs` to see how it uses
-      `GCStringOwned`, it should not use `GCStringOwned` anymore, the `clip_to_range()` method
-      should be dropped and replaced with `clip_to_range_str()` method.
-- [x] Replace all the uses of `(&str, &GapBufferLineInfo)` in existing function arguments, with
-      `LineWithInfo` type alias, for better ergonomics
-- [x] Rename `buffer_storage.rs` to `gap_buffer_core.rs`
-- [ ] There might be opportunities to drop lots of code from the `GCStringOwned`, `GCStringRef` now
-      that we have migrated the editor to use `ZeroCopyGapBuffer` and `GapBufferLineInfo` directly.
-- [ ] Check whether `GCString` type can be dropped and replace with `ZeroCopyGapBuffer` and
-      `GapBufferLineInfo` instead. This might not be possible due to some existing code, not related
-      to the editor, that does not use `ZeroCopyGapBuffer` that relies on `GCString` for
-      segment-based operations.
-- [ ] In all Rust files in the codebase that have nested modules, that have complex multi-line
-      import statements (`use super::{...}`) replace the complex import statement with
-      `#[allow(clippy::wildcard_imports)] use super::*;`
-
 ### Phase 5: Optimization
 
-#### 5.1 Memory Optimization
+#### 5.1 Benchmark current implementation
+
+- [ ] Performance spot check: ensure no significant regression
+- [ ] Memory usage verification: ensure memory characteristics are reasonable
+
+#### 5.2 Memory Optimization
 
 - [ ] Implement line pooling for deletions
 - [ ] Add memory usage tracking
@@ -747,7 +747,7 @@ methods
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-#### 5.2 Performance Optimization
+#### 5.3 Performance Optimization
 
 - [ ] Add segment caching strategy
 - [ ] Implement lazy segment rebuilding
@@ -759,7 +759,7 @@ methods
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-#### 5.3 Advanced Features
+#### 5.4 Advanced Features
 
 - [ ] Implement line chaining for >256 chars
 - [ ] Add configurable line size
@@ -771,7 +771,7 @@ methods
 - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-#### 5.4 Tooling and Debugging
+#### 5.5 Tooling and Debugging
 
 - [ ] Add buffer visualization tool
 - [ ] Create memory layout debugger

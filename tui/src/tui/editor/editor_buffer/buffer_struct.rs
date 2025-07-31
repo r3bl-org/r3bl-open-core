@@ -31,11 +31,7 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD
 /// [`new_empty`](EditorBuffer::new_empty) instead.
 ///
 /// As of 2025, `EditorBuffer` uses [`ZeroCopyGapBuffer`] directly as a concrete type
-/// rather than using the following:
-/// ```ignore
-/// pub type VecEditorContentLines = SmallVec<[GCStringOwned; DEFAULT_EDITOR_LINES_SIZE]>;
-/// const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
-/// ```
+/// for efficient content storage with zero-copy access.
 ///
 /// 1. This struct is stored in the app's state.
 /// 2. And it is paired w/ [`crate::EditorEngine`] at runtime; which is responsible for

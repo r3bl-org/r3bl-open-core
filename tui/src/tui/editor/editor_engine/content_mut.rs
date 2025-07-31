@@ -898,14 +898,12 @@ fn insert_chunk_into_new_line(
 
 #[cfg(test)]
 mod tests {
-    use smallvec::smallvec;
 
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorArgsMut, EditorBuffer,
                 EditorEvent, GCStringOwned, assert_eq2, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
                 col,
-                editor::{editor_test_fixtures::{assert, mock_real_objects_for_editor},
-                         sizing::VecEditorContentLines},
+                editor::editor_test_fixtures::{assert, mock_real_objects_for_editor},
                 editor_engine::engine_internal_api,
                 row, width};
 
@@ -1291,8 +1289,8 @@ mod tests {
             vec![EditorEvent::InsertChar('a')],
             &mut TestClipboard::default(),
         );
-        let expected: VecEditorContentLines = smallvec!["a".into()];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().collect::<Vec<_>>());
+        let expected = vec!["a"];
+        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
 
         // Move caret to col: FlexBoxId::from(0), row: 1. Insert "b".
@@ -1312,8 +1310,8 @@ mod tests {
             vec![EditorEvent::InsertChar('b')],
             &mut TestClipboard::default(),
         );
-        let expected: VecEditorContentLines = smallvec!["a".into(), "b".into()];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().collect::<Vec<_>>());
+        let expected = vec!["a", "b"];
+        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
 
         // Move caret to col: FlexBoxId::from(0), row: 3. Insert "😀" (unicode width = 2).
@@ -1335,9 +1333,8 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        let expected: VecEditorContentLines =
-            smallvec!["a".into(), "b".into(), "".into(), "😀".into()];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().collect::<Vec<_>>());
+        let expected = vec!["a", "b", "", "😀"];
+        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(3)));
 
         // Insert "d".
@@ -1355,9 +1352,8 @@ mod tests {
             vec![EditorEvent::InsertChar('d')],
             &mut TestClipboard::default(),
         );
-        let expected: VecEditorContentLines =
-            smallvec!["a".into(), "b".into(), "".into(), "😀d".into()];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().collect::<Vec<_>>());
+        let expected = vec!["a", "b", "", "😀d"];
+        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(3)));
 
         // Insert "🙏🏽" (unicode width = 2).
@@ -1376,9 +1372,8 @@ mod tests {
             &mut TestClipboard::default(),
         );
         assert_eq2!(width(2), GCStringOwned::width("🙏🏽"));
-        let expected: VecEditorContentLines =
-            smallvec!["a".into(), "b".into(), "".into(), "😀d🙏🏽".into()];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().collect::<Vec<_>>());
+        let expected = vec!["a", "b", "", "😀d🙏🏽"];
+        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(3)));
     }
 
