@@ -21,12 +21,12 @@
 use syntect::easy::HighlightLines;
 
 use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode,
-            EditorBuffer, EditorEngine, EditorEvent, FlexBox, HasFocus, InputEvent, Key, LineWithInfo, PrettyPrintDebug, RenderArgs,
-            RenderOp, RenderOps, RenderPipeline, RowHeight, RowIndex,
-            ScrollOffsetColLocationInRange, SegStringOwned, SelectionRange, Size,
-            SpecialKey, StyleUSSpanLines, SyntaxHighlightMode, ZOrder, caret_scr_adj,
-            caret_scroll_index,
+            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
+            EditorEvent, FlexBox, HasFocus, InputEvent, Key, LineWithInfo,
+            PrettyPrintDebug, RenderArgs, RenderOp, RenderOps, RenderPipeline,
+            RowHeight, RowIndex, ScrollOffsetColLocationInRange, SegStringOwned,
+            SelectionRange, Size, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
+            ZOrder, caret_scr_adj, caret_scroll_index,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
             height, inline_string, new_style,
@@ -716,5 +716,219 @@ mod no_syn_hi_path {
         ));
 
         render_ops.push(RenderOp::ResetColor);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CaretDirection, EditorEngineConfig, KeyState, List, ModifierKeysMask,
+                clipboard_service::clipboard_test_fixtures::TestClipboard};
+
+    #[test]
+    fn test_undo_redo_clears_ast_cache() {
+        let mut engine = EditorEngine::default();
+        let mut buffer = EditorBuffer::default();
+        let mut clipboard = TestClipboard::default();
+
+        // Add some content to create initial state
+        buffer.content.lines.push_line("Hello World");
+
+        // Populate the AST cache
+        let test_ast: StyleUSSpanLines = List::new();
+        engine.set_ast_cache(test_ast);
+        assert!(!engine.ast_cache_is_empty());
+
+        // Apply undo event
+        let undo_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('z'),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::NotPressed,
+            },
+        });
+
+        let result =
+            apply_event(&mut buffer, &mut engine, undo_event, &mut clipboard).unwrap();
+        assert!(matches!(result, EditorEngineApplyEventResult::Applied));
+
+        // Verify AST cache was cleared (after our fix)
+        assert!(engine.ast_cache_is_empty());
+
+        // Set cache again and test redo
+        let test_ast2: StyleUSSpanLines = List::new();
+        engine.set_ast_cache(test_ast2);
+        assert!(!engine.ast_cache_is_empty());
+
+        // Apply redo event
+        let redo_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('y'),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::NotPressed,
+            },
+        });
+
+        let result =
+            apply_event(&mut buffer, &mut engine, redo_event, &mut clipboard).unwrap();
+        assert!(matches!(result, EditorEngineApplyEventResult::Applied));
+
+        // Verify AST cache was cleared
+        assert!(engine.ast_cache_is_empty());
+    }
+
+    #[test]
+    fn test_content_modifying_events_clear_ast_cache() {
+        let mut engine = EditorEngine::default();
+        let mut buffer = EditorBuffer::default();
+        let mut clipboard = TestClipboard::default();
+
+        // Test InsertChar event
+        {
+            let test_ast: StyleUSSpanLines = List::new();
+            engine.set_ast_cache(test_ast);
+            assert!(!engine.ast_cache_is_empty());
+
+            let insert_event = InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::Character('a'),
+            });
+
+            let result =
+                apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard)
+                    .unwrap();
+            assert!(matches!(result, EditorEngineApplyEventResult::Applied));
+            assert!(engine.ast_cache_is_empty());
+        }
+
+        // Test Delete event
+        {
+            let test_ast: StyleUSSpanLines = List::new();
+            engine.set_ast_cache(test_ast);
+            assert!(!engine.ast_cache_is_empty());
+
+            let delete_event = InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Delete),
+            });
+
+            let result =
+                apply_event(&mut buffer, &mut engine, delete_event, &mut clipboard)
+                    .unwrap();
+            assert!(matches!(result, EditorEngineApplyEventResult::Applied));
+            assert!(engine.ast_cache_is_empty());
+        }
+
+        // Test Backspace event
+        {
+            buffer.content.lines.push_line("test");
+            buffer.content.lines.set_line(row(0), "test");
+            buffer.content.caret_raw.col_index = col(4); // Position at end
+
+            let test_ast: StyleUSSpanLines = List::new();
+            engine.set_ast_cache(test_ast);
+            assert!(!engine.ast_cache_is_empty());
+
+            let backspace_event = InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Backspace),
+            });
+
+            let result =
+                apply_event(&mut buffer, &mut engine, backspace_event, &mut clipboard)
+                    .unwrap();
+            assert!(matches!(result, EditorEngineApplyEventResult::Applied));
+            assert!(engine.ast_cache_is_empty());
+        }
+    }
+
+    #[test]
+    fn test_navigation_events_do_not_clear_ast_cache() {
+        let mut engine = EditorEngine::default();
+        let mut buffer = EditorBuffer::default();
+        let mut clipboard = TestClipboard::default();
+
+        buffer.content.lines.push_line("Hello");
+        buffer.content.lines.push_line("World");
+
+        // Set AST cache
+        let test_ast: StyleUSSpanLines = List::new();
+        engine.set_ast_cache(test_ast);
+        assert!(!engine.ast_cache_is_empty());
+
+        // Test arrow key navigation
+        let nav_events = vec![
+            InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Up),
+            }),
+            InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Down),
+            }),
+            InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Left),
+            }),
+            InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::SpecialKey(SpecialKey::Right),
+            }),
+        ];
+
+        for event in nav_events {
+            let result =
+                apply_event(&mut buffer, &mut engine, event, &mut clipboard).unwrap();
+            assert!(matches!(result, EditorEngineApplyEventResult::Applied));
+            // Navigation should NOT clear the AST cache
+            assert!(!engine.ast_cache_is_empty());
+        }
+    }
+
+    #[test]
+    fn test_readonly_mode_filters_non_navigation_events() {
+        let mut engine = EditorEngine::new(EditorEngineConfig {
+            edit_mode: EditMode::ReadOnly,
+            ..Default::default()
+        });
+        let mut buffer = EditorBuffer::default();
+        let mut clipboard = TestClipboard::default();
+
+        // Try to insert a character in readonly mode
+        let insert_event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::Character('a'),
+        });
+
+        let result =
+            apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard).unwrap();
+        assert!(matches!(result, EditorEngineApplyEventResult::NotApplied));
+
+        // Navigation should still work
+        let nav_event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Right),
+        });
+
+        let result =
+            apply_event(&mut buffer, &mut engine, nav_event, &mut clipboard).unwrap();
+        assert!(matches!(result, EditorEngineApplyEventResult::Applied));
+    }
+
+    #[test]
+    fn test_triggers_undo_redo_function() {
+        // Events that should trigger undo/redo
+        assert!(triggers_undo_redo(&EditorEvent::InsertChar('a')));
+        assert!(triggers_undo_redo(&EditorEvent::InsertString(
+            "test".to_string()
+        )));
+        assert!(triggers_undo_redo(&EditorEvent::InsertNewLine));
+        assert!(triggers_undo_redo(&EditorEvent::Delete));
+        assert!(triggers_undo_redo(&EditorEvent::Backspace));
+        assert!(triggers_undo_redo(&EditorEvent::Copy));
+        assert!(triggers_undo_redo(&EditorEvent::Paste));
+        assert!(triggers_undo_redo(&EditorEvent::Cut));
+
+        // Events that should NOT trigger undo/redo
+        assert!(!triggers_undo_redo(&EditorEvent::Undo));
+        assert!(!triggers_undo_redo(&EditorEvent::Redo));
+        assert!(!triggers_undo_redo(&EditorEvent::MoveCaret(
+            CaretDirection::Up
+        )));
+        assert!(!triggers_undo_redo(&EditorEvent::Home));
+        assert!(!triggers_undo_redo(&EditorEvent::End));
     }
 }

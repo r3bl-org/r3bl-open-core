@@ -696,7 +696,11 @@ methods
 
 - [ ] Post-Migration Validation
 
-  - [ ] Manual testing validation: run editor with real content to ensure functionality works
+  - [x] Manual testing validation: run editor with real content to ensure functionality works
+    - [x] Undo/redo is not working (undo/redo does not update the UI even though the editor content
+          bounds are updated correctly)
+    - [x] Add tests to editor_engine/engine_public_api.rs which is has no tests (major test coverage
+          blind spot)!
   - [ ] Remove old type definitions and deprecated code
     - Remove `VecEditorContentLines` from `sizing.rs`
     - Clean up any remaining legacy type usage
@@ -850,6 +854,8 @@ methods
 
 #### 7.2 Integration Testing
 
+- [ ] Add tests in engine_public_api.rs for render_engine() (which is a fair amount of work) but
+      valuable to have (there are current no tests for this function)
 - [ ] Test full editor workflow
 - [ ] Test with real markdown files
 - [ ] Test performance vs old implementation

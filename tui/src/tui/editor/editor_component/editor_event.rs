@@ -410,10 +410,12 @@ impl EditorEvent {
     ) {
         match event {
             EditorEvent::Undo => {
+                engine.clear_ast_cache();
                 buffer.undo();
             }
 
             EditorEvent::Redo => {
+                engine.clear_ast_cache();
                 buffer.redo();
             }
 
