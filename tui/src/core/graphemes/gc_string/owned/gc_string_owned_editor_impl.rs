@@ -26,7 +26,7 @@
 //! These modules are **candidates for deprecation** as part of the `ZeroCopyGapBuffer`
 //! migration (Phase 4.3). Their functionality should be migrated to:
 //! - `ZeroCopyGapBuffer` methods for text mutation operations
-//! - `GapBufferLineInfo` methods for cursor validation and string slicing
+//! - `LineMetadata` methods for cursor validation and string slicing
 //!
 //! The modules here are:
 //! - `mutate`: Text insertion, deletion, and line splitting operations
@@ -44,7 +44,7 @@ use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, join, seg_i
 ///
 /// **Migration Notice**: This module is a candidate for deprecation during the
 /// `ZeroCopyGapBuffer` migration (Phase 4.3). Its functionality should be migrated to
-/// `GapBufferLineInfo` methods for cursor validation and string slicing.
+/// `LineMetadata` methods for cursor validation and string slicing.
 pub mod at_display_col_index {
     use super::{ColIndex, GCStringOwned, Seg, SegStringOwned, ch, seg_index};
 

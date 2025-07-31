@@ -47,23 +47,6 @@
 //!   lines with proper initialization
 //! - Internal helpers for byte-level manipulation and capacity management
 //!
-//! # Append Optimization
-//!
-//! The [`insert_at_grapheme()`][ZeroCopyGapBuffer::insert_at_grapheme] method includes
-//! intelligent optimization for end-of-line append operations (the most common case when
-//! typing). The optimization:
-//!
-//! 1. **Detects append scenarios** using a state machine pattern
-//! 2. **Chooses optimal strategy** via [`determine_segment_rebuild_strategy()`]
-//! 3. **Applies fast path** when appending to non-empty lines
-//!
-//! This optimization provides 50-90x performance improvement for segment rebuilding:
-//! - **Regular insertion**: Full line re-parsing (100-300 ns)
-//! - **Optimized append**: Only parse new text (1-3 ns)
-//!
-//! The state machine approach allows easy extension with additional optimization
-//! strategies in the future.
-//!
 //! # Null-Padding Invariant
 //!
 //! **CRITICAL**: All insertion operations in this module MUST maintain the invariant
@@ -126,8 +109,8 @@
 
 use miette::{Result, miette};
 
-use super::buffer_storage::{LINE_PAGE_SIZE, ZeroCopyGapBuffer, SegmentRebuildStrategy};
 use crate::{ByteIndex, RowIndex, SegIndex, len};
+use super::super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line
@@ -149,7 +132,7 @@ impl ZeroCopyGapBuffer {
     /// - The line index is out of bounds
     /// - Text insertion fails due to capacity or encoding issues
     /// - Segment rebuilding fails
-    pub fn insert_at_grapheme(
+    pub fn insert_text_at_grapheme(
         &mut self,
         line_index: RowIndex,
         seg_index: SegIndex,
@@ -157,42 +140,18 @@ impl ZeroCopyGapBuffer {
     ) -> Result<()> {
         // Validate line index and get the byte position
         let byte_pos = {
-            let line_info = self.get_line_info(line_index.as_usize()).ok_or_else(|| {
-                miette!("Line index {} out of bounds", line_index.as_usize())
-            })?;
+            let line_info =
+                self.get_line_info(line_index.as_usize()).ok_or_else(|| {
+                    miette!("Line index {} out of bounds", line_index.as_usize())
+                })?;
             line_info.get_byte_pos(seg_index)
         };
 
         // Perform the actual insertion
         self.insert_text_at_byte_pos(line_index, byte_pos, text)?;
 
-        // Determine the optimal rebuild strategy
-        let rebuild_strategy = {
-            let line_info = self.get_line_info(line_index.as_usize()).ok_or_else(|| {
-                miette!("Line index {} out of bounds", line_index.as_usize())
-            })?;
-            line_info.determine_segment_rebuild_strategy(seg_index)
-        };
-
-        // Apply the appropriate rebuild strategy
-        match rebuild_strategy {
-            SegmentRebuildStrategy::AppendOptimized => {
-                // Try the optimized append path
-                match self.rebuild_line_segments_append_optimized(line_index, seg_index, text) {
-                    Ok(true) => {
-                        // Optimization was successfully applied
-                    }
-                    Ok(false) | Err(_) => {
-                        // Optimization wasn't applicable or failed, fall back to full rebuild
-                        self.rebuild_line_segments(line_index)?;
-                    }
-                }
-            }
-            SegmentRebuildStrategy::Full => {
-                // Do a full rebuild
-                self.rebuild_line_segments(line_index)?;
-            }
-        }
+        // Rebuild line segments after insertion
+        self.rebuild_line_segments(line_index)?;
 
         Ok(())
     }
@@ -351,7 +310,7 @@ mod tests {
         buffer.add_line();
 
         // Insert text at the beginning
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
         // Verify the content
         let content = buffer
@@ -375,10 +334,10 @@ mod tests {
         buffer.add_line();
 
         // First insert some text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
         // Then insert at the end
-        buffer.insert_at_grapheme(row(0), seg_index(5), " World")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(5), " World")?;
 
         let content = buffer
             .get_line_content(row(0))
@@ -399,10 +358,10 @@ mod tests {
         buffer.add_line();
 
         // Insert initial text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Heo")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Heo")?;
 
         // Insert in the middle
-        buffer.insert_at_grapheme(row(0), seg_index(2), "ll")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(2), "ll")?;
 
         let content = buffer
             .get_line_content(row(0))
@@ -418,7 +377,7 @@ mod tests {
         buffer.add_line();
 
         // Insert emoji
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello 😀")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello 😀")?;
 
         let content = buffer
             .get_line_content(row(0))
@@ -431,7 +390,7 @@ mod tests {
         assert_eq!(line_info.grapheme_count, len(7)); // "Hello " = 6 + emoji = 1
 
         // Insert more text after emoji
-        buffer.insert_at_grapheme(row(0), seg_index(7), " World")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(7), " World")?;
 
         let content = buffer
             .get_line_content(row(0))
@@ -449,7 +408,7 @@ mod tests {
         // Create a string that will require line extension
         let long_text = "A".repeat(300);
 
-        buffer.insert_at_grapheme(row(0), seg_index(0), &long_text)?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), &long_text)?;
 
         let content = buffer
             .get_line_content(row(0))
@@ -472,8 +431,8 @@ mod tests {
         buffer.add_line();
 
         // Add content to lines
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Line 1")?;
-        buffer.insert_at_grapheme(row(1), seg_index(0), "Line 2")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Line 1")?;
+        buffer.insert_text_at_grapheme(row(1), seg_index(0), "Line 2")?;
 
         // Insert empty line in middle
         buffer.insert_empty_line(row(1))?;
@@ -502,7 +461,7 @@ mod tests {
     fn test_insert_invalid_line_index() -> Result<()> {
         let mut buffer = ZeroCopyGapBuffer::new();
 
-        let result = buffer.insert_at_grapheme(row(0), seg_index(0), "Hello");
+        let result = buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello");
         assert!(result.is_err());
 
         let err_msg = result
@@ -520,7 +479,7 @@ mod tests {
         buffer.add_line();
 
         // Insert text with compound grapheme clusters
-        buffer.insert_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")?;
 
         let content = buffer
             .get_line_content(row(0))
@@ -542,7 +501,7 @@ mod tests {
         buffer.add_line();
 
         // Insert some text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Hello")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
         let line_info = buffer
             .get_line_info(0)
@@ -577,10 +536,10 @@ mod tests {
         buffer.add_line();
 
         // Insert initial text
-        buffer.insert_at_grapheme(row(0), seg_index(0), "Heo")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), "Heo")?;
 
         // Insert in the middle (this will shift existing content)
-        buffer.insert_at_grapheme(row(0), seg_index(2), "ll")?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(2), "ll")?;
 
         let line_info = buffer
             .get_line_info(0)
@@ -616,7 +575,7 @@ mod tests {
 
         // Create text that will cause line extension
         let long_text = "A".repeat(300);
-        buffer.insert_at_grapheme(row(0), seg_index(0), &long_text)?;
+        buffer.insert_text_at_grapheme(row(0), seg_index(0), &long_text)?;
 
         let line_info = buffer
             .get_line_info(0)
@@ -667,7 +626,7 @@ mod benches {
 
         b.iter(|| {
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), black_box("Hello"))
+                .insert_text_at_grapheme(row(0), seg_index(0), black_box("Hello"))
                 .unwrap();
             // Clear content for next iteration
             buffer
@@ -681,17 +640,25 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Initial text")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Initial text")
             .unwrap();
 
         b.iter(|| {
             let end_idx = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
-                .insert_at_grapheme(row(0), seg_index(end_idx.as_usize()), black_box(" more"))
+                .insert_text_at_grapheme(
+                    row(0),
+                    seg_index(end_idx.as_usize()),
+                    black_box(" more"),
+                )
                 .unwrap();
             // Clear added content
             buffer
-                .delete_range(row(0), seg_index(end_idx.as_usize()), seg_index(end_idx.as_usize() + 5))
+                .delete_range(
+                    row(0),
+                    seg_index(end_idx.as_usize()),
+                    seg_index(end_idx.as_usize() + 5),
+                )
                 .unwrap();
         });
     }
@@ -703,7 +670,7 @@ mod benches {
 
         b.iter(|| {
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), black_box("Hello 😀 世界"))
+                .insert_text_at_grapheme(row(0), seg_index(0), black_box("Hello 😀 世界"))
                 .unwrap();
             // Clear content
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
@@ -721,7 +688,7 @@ mod benches {
 
         b.iter(|| {
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), black_box(&long_text))
+                .insert_text_at_grapheme(row(0), seg_index(0), black_box(&long_text))
                 .unwrap();
             // Clear content
             buffer
@@ -737,7 +704,7 @@ mod benches {
         b.iter(|| {
             buffer.insert_empty_line(row(0)).unwrap();
             // Remove for next iteration
-            buffer.remove_line(0);
+            buffer.remove_line(row(0));
         });
     }
 
@@ -746,13 +713,13 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello World")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
             .unwrap();
 
         b.iter(|| {
             // Insert in middle (after "Hello ")
             buffer
-                .insert_at_grapheme(row(0), seg_index(6), black_box("Beautiful "))
+                .insert_text_at_grapheme(row(0), seg_index(6), black_box("Beautiful "))
                 .unwrap();
             // Remove inserted text
             buffer
@@ -769,7 +736,11 @@ mod benches {
 
         // Start with a realistic line
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "This is a typical line of text")
+            .insert_text_at_grapheme(
+                row(0),
+                seg_index(0),
+                "This is a typical line of text",
+            )
             .unwrap();
 
         b.iter(|| {
@@ -777,12 +748,16 @@ mod benches {
 
             // Append a single character (most common case when typing)
             buffer
-                .insert_at_grapheme(row(0), seg_index(end_idx.as_usize()), black_box("x"))
+                .insert_text_at_grapheme(
+                    row(0),
+                    seg_index(end_idx.as_usize()),
+                    black_box("x"),
+                )
                 .unwrap();
 
             // Delete it to reset for next iteration
             buffer
-                .delete_at_grapheme(row(0), seg_index(end_idx.as_usize()))
+                .delete_grapheme_at(row(0), seg_index(end_idx.as_usize()))
                 .unwrap();
         });
     }

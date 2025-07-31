@@ -73,8 +73,9 @@
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
 //! or undefined behavior in zero-copy access operations.
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GCStringRef, Length, RowIndex, Seg, SegIndex, 
-            SegStringOwned, byte_index, gc_string_owned_sizing::SegmentArray, len};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GCStringRef, Length,
+            RowIndex, Seg, SegIndex, SegStringOwned, byte_index,
+            gc_string_owned_sizing::SegmentArray, len};
 
 /// Initial size of each line in bytes
 pub const INITIAL_LINE_SIZE: usize = 256;
@@ -82,34 +83,37 @@ pub const INITIAL_LINE_SIZE: usize = 256;
 /// Page size for extending lines (bytes added when line overflows)
 pub const LINE_PAGE_SIZE: usize = 256;
 
-/// Segment rebuild strategy based on the type of text modification
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SegmentRebuildStrategy {
-    /// Full rebuild required - parse entire line content
-    Full,
-    /// Optimized append - only parse appended text and adjust offsets
-    AppendOptimized,
-    // Future: could add more strategies like PrependOptimized, SingleCharOptimized,
-    // etc.
-}
+/// Type alias for a line content string slice paired with its metadata.
+///
+/// This represents the return type of `get_line_with_info()` and is used throughout
+/// the editor for zero-copy operations that need both the line content and its
+/// grapheme cluster information.
+///
+/// # Usage
+/// ```rust
+/// let line_with_info: LineWithInfo = buffer.get_line_with_info(row_index)?;
+/// let (content, info) = line_with_info; // Can still destructure
+/// ```
+pub type LineWithInfo<'a> = (&'a str, &'a LineMetadata);
+
 
 /// Zero-copy gap buffer data structure for storing editor content
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ZeroCopyGapBuffer {
     /// Contiguous buffer storing all lines
     /// Each line starts at `INITIAL_LINE_SIZE` bytes and can grow
     pub buffer: Vec<u8>,
 
     /// Metadata for each line (grapheme clusters, display width, etc.)
-    lines: Vec<GapBufferLineInfo>,
+    lines: Vec<LineMetadata>,
 
     /// Number of lines currently in the buffer
     line_count: Length,
 }
 
 /// Metadata for a single line in the buffer
-#[derive(Debug, Clone)]
-pub struct GapBufferLineInfo {
+#[derive(Debug, Clone, PartialEq)]
+pub struct LineMetadata {
     /// Where this line starts in the buffer
     pub buffer_offset: ByteIndex,
 
@@ -129,7 +133,7 @@ pub struct GapBufferLineInfo {
     pub grapheme_count: Length,
 }
 
-impl GapBufferLineInfo {
+impl LineMetadata {
     /// Get the buffer range for this line's content (excluding null padding)
     ///
     /// Returns a range that can be used to slice the buffer to get only the
@@ -275,49 +279,6 @@ impl GapBufferLineInfo {
         crate::seg_index(self.segments.len())
     }
 
-    /// Determine the optimal segment rebuild strategy for a text modification
-    ///
-    /// This method analyzes the modification position and line state to determine
-    /// whether we can use an optimized rebuild strategy or need a full rebuild.
-    ///
-    /// # Arguments
-    ///
-    /// * `modification_position` - The segment index where text is being inserted
-    ///
-    /// # Returns
-    ///
-    /// The recommended [`SegmentRebuildStrategy`] based on the current line state
-    /// and modification position.
-    ///
-    /// # Strategy Selection Logic
-    ///
-    /// - **`AppendOptimized`**: When inserting at the end of a non-empty line
-    /// - **Full**: For all other cases (empty line, middle insertion, etc.)
-    ///
-    /// # Future Extensions
-    ///
-    /// This method can be extended to detect more optimization opportunities:
-    /// - Single character insertions (could use specialized handling)
-    /// - ASCII-only content (faster segment building)
-    /// - Prepend operations (inserting at beginning)
-    /// - Small deletions (might not need full rebuild)
-    #[must_use]
-    pub fn determine_segment_rebuild_strategy(
-        &self,
-        modification_position: SegIndex,
-    ) -> SegmentRebuildStrategy {
-        // Check if this is an append at the end
-        let is_end_append = modification_position.as_usize() >= self.segments.len();
-
-        // Check if the line has existing content
-        let has_content = !self.segments.is_empty();
-
-        // Determine the strategy
-        match (is_end_append, has_content) {
-            (true, true) => SegmentRebuildStrategy::AppendOptimized,
-            _ => SegmentRebuildStrategy::Full,
-        }
-    }
 
     /// Check if the given display column index falls in the middle of a grapheme cluster.
     ///
@@ -339,13 +300,13 @@ impl GapBufferLineInfo {
     /// # Example
     /// ```rust
     /// use r3bl_tui::*;
-    /// 
+    ///
     /// // For a line with "Hi📦" where 📦 is 2 columns wide:
     /// // Valid positions: 0 (before H), 1 (before i), 2 (before 📦), 4 (after 📦)
     /// // Invalid position: 3 (middle of 📦)
-    /// 
+    ///
     /// let line_info = /* ... get line info ... */;
-    /// 
+    ///
     /// assert!(line_info.check_is_in_middle_of_grapheme(col(0)).is_none()); // Valid
     /// assert!(line_info.check_is_in_middle_of_grapheme(col(1)).is_none()); // Valid
     /// assert!(line_info.check_is_in_middle_of_grapheme(col(2)).is_none()); // Valid
@@ -358,7 +319,7 @@ impl GapBufferLineInfo {
         for seg in &self.segments {
             let seg_start = seg.start_display_col_index;
             let seg_end = seg_start + seg.display_width;
-            
+
             // Check if the column index falls within this segment
             if col_index >= seg_start && col_index < seg_end {
                 // If it's not at the start of the segment, it's in the middle
@@ -369,42 +330,46 @@ impl GapBufferLineInfo {
                 return None;
             }
         }
-        
+
         // Column index is beyond all segments (end of line) - valid position
         None
     }
 
     /// Get a string slice at the given column index.
     /// This method provides GCString-compatible behavior for editor operations.
-    /// 
+    ///
     /// # Arguments
     /// * `content` - The line content as a string slice
     /// * `col_index` - The display column index to get string at
-    /// 
+    ///
     /// # Returns
     /// A `SegStringOwned` representing the grapheme cluster at the specified column,
     /// or `None` if the column is out of bounds.
-    /// 
+    ///
     /// # Usage Pattern
     /// ```rust
     /// let (content, info) = buffer.lines.get_line_with_info(row_index)?;
     /// let seg_string = info.get_string_at(content, col_index)?;
     /// ```
     #[must_use]
-    pub fn get_string_at(&self, content: &str, col_index: ColIndex) -> Option<SegStringOwned> {
+    pub fn get_string_at(
+        &self,
+        content: &str,
+        col_index: ColIndex,
+    ) -> Option<SegStringOwned> {
         // Find the segment at the given column index
         let target_col = col_index.as_usize();
-        
+
         for segment in &self.segments {
             let seg_start_col = segment.start_display_col_index.as_usize();
             let seg_width = segment.display_width.as_usize();
-            
+
             if target_col >= seg_start_col && target_col < seg_start_col + seg_width {
                 // Extract the segment's string content
                 let start_byte = segment.start_byte_index.as_usize();
                 let end_byte = segment.end_byte_index.as_usize();
                 let seg_content = &content[start_byte..end_byte];
-                
+
                 return Some(SegStringOwned {
                     string: GCStringOwned::from(seg_content),
                     width: segment.display_width,
@@ -412,26 +377,30 @@ impl GapBufferLineInfo {
                 });
             }
         }
-        
+
         None
     }
 
     /// Get a string slice to the right of the given column index.
     /// This method provides GCString-compatible behavior for editor operations.
     #[must_use]
-    pub fn get_string_at_right_of(&self, content: &str, col_index: ColIndex) -> Option<SegStringOwned> {
+    pub fn get_string_at_right_of(
+        &self,
+        content: &str,
+        col_index: ColIndex,
+    ) -> Option<SegStringOwned> {
         // Find the segment after the given column index
         let target_col = col_index.as_usize();
-        
+
         for segment in &self.segments {
             let seg_start_col = segment.start_display_col_index.as_usize();
-            
+
             if seg_start_col > target_col {
                 // This is the first segment to the right
                 let start_byte = segment.start_byte_index.as_usize();
                 let end_byte = segment.end_byte_index.as_usize();
                 let seg_content = &content[start_byte..end_byte];
-                
+
                 return Some(SegStringOwned {
                     string: GCStringOwned::from(seg_content),
                     width: segment.display_width,
@@ -439,34 +408,39 @@ impl GapBufferLineInfo {
                 });
             }
         }
-        
+
         None
     }
 
     /// Get a string slice to the left of the given column index.
     /// This method provides GCString-compatible behavior for editor operations.
     #[must_use]
-    pub fn get_string_at_left_of(&self, content: &str, col_index: ColIndex) -> Option<SegStringOwned> {
+    pub fn get_string_at_left_of(
+        &self,
+        content: &str,
+        col_index: ColIndex,
+    ) -> Option<SegStringOwned> {
         // Find the segment before the given column index
         let target_col = col_index.as_usize();
         let mut last_valid_segment: Option<&Seg> = None;
-        
+
         for segment in &self.segments {
             let seg_start_col = segment.start_display_col_index.as_usize();
             let seg_width = segment.display_width.as_usize();
-            
-            if seg_start_col + seg_width <= target_col {
+            let seg_end_col = seg_start_col + seg_width;
+
+            if seg_end_col <= target_col {
                 last_valid_segment = Some(segment);
             } else {
                 break;
             }
         }
-        
+
         if let Some(segment) = last_valid_segment {
             let start_byte = segment.start_byte_index.as_usize();
             let end_byte = segment.end_byte_index.as_usize();
             let seg_content = &content[start_byte..end_byte];
-            
+
             Some(SegStringOwned {
                 string: GCStringOwned::from(seg_content),
                 width: segment.display_width,
@@ -482,11 +456,11 @@ impl GapBufferLineInfo {
     #[must_use]
     pub fn get_string_at_end(&self, content: &str) -> Option<SegStringOwned> {
         let last_segment = self.segments.last()?;
-        
+
         let start_byte = last_segment.start_byte_index.as_usize();
         let end_byte = last_segment.end_byte_index.as_usize();
         let seg_content = &content[start_byte..end_byte];
-        
+
         Some(SegStringOwned {
             string: GCStringOwned::from(seg_content),
             width: last_segment.display_width,
@@ -495,14 +469,15 @@ impl GapBufferLineInfo {
     }
 
     /// Create a `GCStringRef` from the line content for compatibility.
-    /// This is used when interfacing with non-editor code that expects a `GCString` trait object.
-    /// 
+    /// This is used when interfacing with non-editor code that expects a `GCString` trait
+    /// object.
+    ///
     /// # Arguments
     /// * `content` - The line content as a string slice
-    /// 
+    ///
     /// # Returns
     /// A `GCStringRef` that borrows the content and metadata without copying.
-    /// 
+    ///
     /// # Usage Pattern (for interface boundaries)
     /// ```rust
     /// let (content, info) = buffer.lines.get_line_with_info(row_index)?;
@@ -512,6 +487,176 @@ impl GapBufferLineInfo {
     #[must_use]
     pub fn to_gc_string_ref<'a>(&'a self, content: &'a str) -> GCStringRef<'a> {
         GCStringRef::from_gap_buffer_line(content, self)
+    }
+
+    // Convenience methods that work with LineWithInfo for common operations
+
+    /// Get the string at a specific column index from a `LineWithInfo`.
+    ///
+    /// This is a convenience method for the common pattern of getting string data
+    /// right after calling `get_line_with_info()`.
+    ///
+    /// # Example
+    /// ```rust
+    /// let line_with_info = buffer.get_line_with_info(row_index)?;
+    /// let seg_string = LineMetadata::get_string_at_from_line(line_with_info, col_index)?;
+    /// ```
+    #[must_use]
+    pub fn get_string_at_from_line(
+        line_with_info: LineWithInfo<'_>,
+        col_index: ColIndex,
+    ) -> Option<SegStringOwned> {
+        let (content, line_info) = line_with_info;
+        line_info.get_string_at(content, col_index)
+    }
+
+    /// Get the string to the right of a specific column index from a `LineWithInfo`.
+    ///
+    /// # Example
+    /// ```rust
+    /// let line_with_info = buffer.get_line_with_info(row_index)?;
+    /// let seg_string = LineMetadata::get_string_at_right_of_from_line(line_with_info, col_index)?;
+    /// ```
+    #[must_use]
+    pub fn get_string_at_right_of_from_line(
+        line_with_info: LineWithInfo<'_>,
+        col_index: ColIndex,
+    ) -> Option<SegStringOwned> {
+        let (content, line_info) = line_with_info;
+        line_info.get_string_at_right_of(content, col_index)
+    }
+
+    /// Get the string to the left of a specific column index from a `LineWithInfo`.
+    ///
+    /// # Example
+    /// ```rust
+    /// let line_with_info = buffer.get_line_with_info(row_index)?;
+    /// let seg_string = LineMetadata::get_string_at_left_of_from_line(line_with_info, col_index)?;
+    /// ```
+    #[must_use]
+    pub fn get_string_at_left_of_from_line(
+        line_with_info: LineWithInfo<'_>,
+        col_index: ColIndex,
+    ) -> Option<SegStringOwned> {
+        let (content, line_info) = line_with_info;
+        line_info.get_string_at_left_of(content, col_index)
+    }
+
+    /// Get the string at the end of the line from a `LineWithInfo`.
+    ///
+    /// # Example
+    /// ```rust
+    /// let line_with_info = buffer.get_line_with_info(row_index)?;
+    /// let seg_string = LineMetadata::get_string_at_end_from_line(line_with_info)?;
+    /// ```
+    #[must_use]
+    pub fn get_string_at_end_from_line(
+        line_with_info: LineWithInfo<'_>,
+    ) -> Option<SegStringOwned> {
+        let (content, line_info) = line_with_info;
+        line_info.get_string_at_end(content)
+    }
+
+    /// Clip the line content to a specific display column range.
+    ///
+    /// This method extracts a substring from the line content based on display column
+    /// indices, properly handling Unicode grapheme clusters and multi-width characters.
+    /// This is the zero-copy equivalent of `GCStringOwned::clip()`.
+    ///
+    /// # Arguments
+    /// * `content` - The line content as a string slice
+    /// * `start_col_index` - The starting display column (0-based)
+    /// * `max_col_width` - The maximum display width to include
+    ///
+    /// # Returns
+    /// A string slice containing the clipped content, or empty string if the range is
+    /// invalid
+    ///
+    /// # Unicode Safety
+    /// This method properly handles:
+    /// - Multi-byte UTF-8 characters
+    /// - Emoji and other wide characters
+    /// - Complex grapheme clusters (e.g., family emoji with zero-width joiners)
+    /// - Characters with display width different from byte length
+    ///
+    /// # Example
+    /// ```text
+    /// Content: "Hi📦XelLo🙏🏽Bye"
+    /// Columns:  0123456789AB  (A=10, B=11)
+    ///
+    /// clip_to_range(content, col(2), width(4)) → "📦Xe"
+    /// clip_to_range(content, col(6), width(3)) → "Lo🙏🏽" (note: 🙏🏽 has width 2)
+    /// ```
+    #[must_use]
+    pub fn clip_to_range<'a>(
+        &'a self,
+        content: &'a str,
+        start_col_index: ColIndex,
+        max_col_width: ColWidth,
+    ) -> &'a str {
+        use crate::ch;
+
+        if self.segments.is_empty() || content.is_empty() {
+            return "";
+        }
+
+        // Find the starting byte index by skipping display columns
+        let string_start_byte_index = {
+            let mut byte_index = 0;
+            let mut skip_col_count = start_col_index;
+
+            for seg in &self.segments {
+                let seg_display_width = seg.display_width;
+
+                // If we've skipped enough columns, stop here
+                if *skip_col_count == ch(0) {
+                    break;
+                }
+
+                // Skip this segment's width
+                skip_col_count -= seg_display_width;
+                byte_index += seg.bytes_size.as_usize();
+            }
+            byte_index
+        };
+
+        // Find the ending byte index by consuming available column width
+        let string_end_byte_index = {
+            let mut byte_index = 0;
+            let mut avail_col_count = max_col_width;
+            let mut skip_col_count = start_col_index;
+
+            for seg in &self.segments {
+                let seg_display_width = seg.display_width;
+
+                // Are we still skipping columns to reach the start?
+                if *skip_col_count == ch(0) {
+                    // We're in the content area - check if we have room for this segment
+                    if avail_col_count < seg_display_width {
+                        // This segment would exceed our width limit
+                        break;
+                    }
+                    byte_index += seg.bytes_size.as_usize();
+                    avail_col_count -= seg_display_width;
+                } else {
+                    // Still skipping to reach start position
+                    skip_col_count -= seg_display_width;
+                    byte_index += seg.bytes_size.as_usize();
+                }
+            }
+            byte_index
+        };
+
+        // Ensure we don't go out of bounds
+        let content_len = content.len();
+        let start = string_start_byte_index.min(content_len);
+        let end = string_end_byte_index.min(content_len);
+
+        if start <= end {
+            &content[start..end]
+        } else {
+            ""
+        }
     }
 }
 
@@ -542,7 +687,7 @@ impl ZeroCopyGapBuffer {
 
     /// Get line metadata by index
     #[must_use]
-    pub fn get_line_info(&self, line_index: usize) -> Option<&GapBufferLineInfo> {
+    pub fn get_line_info(&self, line_index: usize) -> Option<&LineMetadata> {
         self.lines.get(line_index)
     }
 
@@ -550,12 +695,12 @@ impl ZeroCopyGapBuffer {
     pub fn get_line_info_mut(
         &mut self,
         line_index: usize,
-    ) -> Option<&mut GapBufferLineInfo> {
+    ) -> Option<&mut LineMetadata> {
         self.lines.get_mut(line_index)
     }
 
     /// Swap two lines in the buffer metadata
-    /// This only swaps the [`GapBufferLineInfo`] entries, not the actual buffer content
+    /// This only swaps the [`LineMetadata`] entries, not the actual buffer content
     pub fn swap_lines(&mut self, i: usize, j: usize) { self.lines.swap(i, j); }
 
     /// Insert a new empty line at the specified position with proper buffer shifting
@@ -617,7 +762,7 @@ impl ZeroCopyGapBuffer {
         self.buffer[shift_start] = b'\n';
 
         // Create line metadata for the new line
-        let new_line_info = GapBufferLineInfo {
+        let new_line_info = LineMetadata {
             buffer_offset: insert_offset,
             content_len: len(0),
             capacity: len(INITIAL_LINE_SIZE),
@@ -676,7 +821,7 @@ impl ZeroCopyGapBuffer {
         self.buffer[*buffer_offset] = b'\n';
 
         // Create line metadata
-        self.lines.push(GapBufferLineInfo {
+        self.lines.push(LineMetadata {
             buffer_offset,
             content_len: len(0),
             capacity: len(INITIAL_LINE_SIZE),
@@ -712,17 +857,17 @@ impl ZeroCopyGapBuffer {
     ///
     /// All buffer offsets for subsequent lines are updated to maintain the invariant
     /// that lines are ordered by their buffer offsets.
-    pub fn remove_line(&mut self, line_index: usize) -> bool {
-        if line_index >= self.line_count.as_usize() {
+    pub fn remove_line(&mut self, line_index: RowIndex) -> bool {
+        if line_index.as_usize() >= self.line_count.as_usize() {
             return false;
         }
 
-        let removed_line = &self.lines[line_index];
+        let removed_line = &self.lines[line_index.as_usize()];
         let removed_start = *removed_line.buffer_offset;
         let removed_size = removed_line.capacity.as_usize();
 
         // Remove from metadata
-        self.lines.remove(line_index);
+        self.lines.remove(line_index.as_usize());
 
         // Shift buffer contents
         let shift_start = removed_start + removed_size;
@@ -737,7 +882,7 @@ impl ZeroCopyGapBuffer {
         self.buffer.truncate(buffer_len - removed_size);
 
         // Update buffer offsets for remaining lines
-        for line in self.lines.iter_mut().skip(line_index) {
+        for line in self.lines.iter_mut().skip(line_index.as_usize()) {
             line.buffer_offset = byte_index(*line.buffer_offset - removed_size);
         }
 
@@ -814,6 +959,20 @@ impl std::fmt::Display for ZeroCopyGapBuffer {
             self.line_count.as_usize(),
             self.buffer.len()
         )
+    }
+}
+
+impl crate::GetMemSize for ZeroCopyGapBuffer {
+    fn get_mem_size(&self) -> usize {
+        let buffer_size = self.buffer.len() * std::mem::size_of::<u8>();
+        let lines_size = self.lines.len() * std::mem::size_of::<LineMetadata>();
+        let line_metadata_size: usize = self
+            .lines
+            .iter()
+            .map(|line| line.segments.len() * std::mem::size_of::<crate::Seg>())
+            .sum();
+
+        buffer_size + lines_size + line_metadata_size + std::mem::size_of::<Length>()
     }
 }
 
@@ -900,7 +1059,7 @@ mod tests {
         let line1_offset_before = *buffer.get_line_info(2).unwrap().buffer_offset;
 
         // Remove the extended middle line
-        assert!(buffer.remove_line(1));
+        assert!(buffer.remove_line(row(1)));
         assert_eq!(buffer.line_count(), len(2));
 
         // Check that the third line's offset was updated correctly
@@ -967,7 +1126,7 @@ mod tests {
 
         // Insert some text
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -983,7 +1142,7 @@ mod tests {
 
         // Insert some text
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -1000,7 +1159,7 @@ mod tests {
 
         // Insert text with multi-byte characters
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "H😀llo")
+            .insert_text_at_grapheme(row(0), seg_index(0), "H😀llo")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -1034,7 +1193,7 @@ mod tests {
 
         // Insert some text
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -1050,7 +1209,7 @@ mod tests {
 
         // Insert some text
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -1067,7 +1226,7 @@ mod tests {
 
         // Insert text with emoji: "H😀llo"
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "H😀llo")
+            .insert_text_at_grapheme(row(0), seg_index(0), "H😀llo")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -1104,7 +1263,7 @@ mod tests {
 
         // Insert text with various Unicode: "a👨‍👩‍👧‍👦b世界c"
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "a👨‍👩‍👧‍👦b世界c")
+            .insert_text_at_grapheme(row(0), seg_index(0), "a👨‍👩‍👧‍👦b世界c")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -1200,7 +1359,7 @@ mod tests {
         }
 
         // Test deletion at beginning (should shift all subsequent lines up)
-        assert!(buffer.remove_line(0));
+        assert!(buffer.remove_line(row(0)));
 
         // Check that all lines were shifted up
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
@@ -1218,7 +1377,7 @@ mod tests {
         );
 
         // Test deletion in middle (should shift lines 2 and 3 up)
-        assert!(buffer.remove_line(1));
+        assert!(buffer.remove_line(row(1)));
 
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
         assert_eq!(
@@ -1233,11 +1392,71 @@ mod tests {
         // Test deletion at end (no shifting)
         let last_idx = buffer.line_count.as_usize() - 1;
         let buffer_len_before = buffer.buffer.len();
-        assert!(buffer.remove_line(last_idx));
+        assert!(buffer.remove_line(row(last_idx)));
         let buffer_len_after = buffer.buffer.len();
 
         // Buffer was truncated by one line
         assert_eq!(buffer_len_before - buffer_len_after, INITIAL_LINE_SIZE);
+    }
+
+    #[test]
+    fn test_gap_buffer_line_info_clip_to_range() {
+        use crate::{col, row, seg_index, width};
+
+        let mut buffer = ZeroCopyGapBuffer::new();
+        buffer.add_line();
+
+        // Insert Unicode-rich content: "Hi📦XelLo🙏🏽Bye"
+        // Display layout:
+        // H(1) i(1) 📦(2) X(1) e(1) l(1) L(1) o(1) 🙏🏽(2) B(1) y(1) e(1) = 14 total width
+        // Columns: 0    1   23     4    5   6   7   8   9A      B    C   D
+        // (A=10,B=11,C=12,D=13)
+        buffer
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hi📦XelLo🙏🏽Bye")
+            .unwrap();
+
+        let line_with_info = buffer.get_line_with_info(row(0)).unwrap();
+        let (content, line_info) = line_with_info;
+
+        // Test: Clip from start
+        let result = line_info.clip_to_range(content, col(0), width(2));
+        assert_eq!(result, "Hi");
+
+        // Test: Clip emoji (starts at col 2, has width 2)
+        let result = line_info.clip_to_range(content, col(2), width(2));
+        assert_eq!(result, "📦");
+
+        // Test: Clip across emoji boundary
+        let result = line_info.clip_to_range(content, col(2), width(4));
+        assert_eq!(result, "📦Xe");
+
+        // Test: Clip multi-width emoji 🙏🏽 (starts at col 9, has width 2)
+        let result = line_info.clip_to_range(content, col(9), width(2));
+        assert_eq!(result, "🙏🏽");
+
+        // Test: Clip including multi-width emoji
+        let result = line_info.clip_to_range(content, col(6), width(5));
+        assert_eq!(result, "lLo🙏🏽");
+
+        // Test: Clip from middle to end
+        let result = line_info.clip_to_range(content, col(11), width(10));
+        assert_eq!(result, "Bye");
+
+        // Test: Empty clip (beyond content)
+        let result = line_info.clip_to_range(content, col(20), width(5));
+        assert_eq!(result, "");
+
+        // Test: Zero width
+        let result = line_info.clip_to_range(content, col(5), width(0));
+        assert_eq!(result, "");
+
+        // Test: Empty line
+        let mut empty_buffer = ZeroCopyGapBuffer::new();
+        empty_buffer.add_line();
+        let empty_line_with_info = empty_buffer.get_line_with_info(row(0)).unwrap();
+        let (empty_content, empty_line_info) = empty_line_with_info;
+        let result = empty_line_info.clip_to_range(empty_content, col(0), width(5));
+        assert_eq!(result, "");
     }
 }
 
@@ -1285,7 +1504,7 @@ mod benches {
                 buffer.add_line();
             }
             // Remove middle line
-            buffer.remove_line(5);
+            buffer.remove_line(row(5));
             black_box(buffer.line_count());
             // Reset for next iteration
             buffer.clear();

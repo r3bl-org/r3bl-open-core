@@ -17,8 +17,8 @@
 
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use crate::{ch, fmt_option, ChUnit, EditorBuffer, InlineString, ItemsOwned,
-            DEFAULT_SYN_HI_FILE_EXT};
+use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
+            InlineString, ItemsOwned, ch, fmt_option};
 
 /// Please do not construct this struct directly and use
 /// [`new_empty`](DialogBuffer::new_empty) instead.
@@ -55,7 +55,8 @@ impl DialogBuffer {
 }
 
 mod impl_debug {
-    use super::{fmt_option, Debug, DialogBuffer, Formatter, Result};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Debug for DialogBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -79,7 +80,8 @@ mod impl_debug {
 
 /// Efficient Display implementation for telemetry logging.
 mod impl_display {
-    use super::{DialogBuffer, Display, Formatter, Result};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Display for DialogBuffer {
         /// This must be a fast implementation, so we avoid deep traversal of the

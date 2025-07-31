@@ -20,7 +20,7 @@ use std::fmt::Debug;
 use super::super::{common::{self as gc_string_common, GCStringData},
                    gc_string_trait::GCString,
                    owned::gc_string_owned::wide_segments::ContainsWideSegments};
-use crate::{ChUnit, ColIndex, ColWidth, GapBufferLineInfo, Seg, SegIndex, SegWidth,
+use crate::{ChUnit, ColIndex, ColWidth, LineMetadata, Seg, SegIndex, SegWidth,
             gc_string_owned_sizing::SegmentArray,
             graphemes::unicode_segment::{build_segments_for_str, calculate_display_width}};
 
@@ -29,7 +29,7 @@ use crate::{ChUnit, ColIndex, ColWidth, GapBufferLineInfo, Seg, SegIndex, SegWid
 /// borrowed string content while maintaining grapheme cluster information.
 ///
 /// This type is particularly useful when working with `ZeroCopyGapBuffer`
-/// and `GapBufferLineInfo`, where the string data is borrowed from the
+/// and `LineMetadata`, where the string data is borrowed from the
 /// buffer but we need to maintain segment information for grapheme operations.
 ///
 /// # Ownership Model
@@ -106,17 +106,17 @@ impl<'a> GCStringRef<'a> {
         }
     }
 
-    /// Create `GCStringRef` from `GapBufferLineInfo`, reusing existing segments.
+    /// Create `GCStringRef` from `LineMetadata`, reusing existing segments.
     ///
     /// This is the most efficient constructor when working with `ZeroCopyGapBuffer`
-    /// as it reuses the pre-computed segment information from `GapBufferLineInfo`.
+    /// as it reuses the pre-computed segment information from `LineMetadata`.
     ///
     /// # Arguments
     ///
     /// * `content` - Borrowed string content from the gap buffer
     /// * `info` - Line metadata containing pre-computed segments
     #[must_use]
-    pub fn from_gap_buffer_line(content: &'a str, info: &GapBufferLineInfo) -> Self {
+    pub fn from_gap_buffer_line(content: &'a str, info: &LineMetadata) -> Self {
         Self {
             string: content,
             segments: info.segments.clone(), // Efficient SmallVec clone
@@ -319,8 +319,8 @@ impl<'a> From<&'a str> for GCStringRef<'a> {
     fn from(string: &'a str) -> Self { Self::new(string) }
 }
 
-impl<'a> From<(&'a str, &GapBufferLineInfo)> for GCStringRef<'a> {
-    fn from((content, info): (&'a str, &GapBufferLineInfo)) -> Self {
+impl<'a> From<(&'a str, &LineMetadata)> for GCStringRef<'a> {
+    fn from((content, info): (&'a str, &LineMetadata)) -> Self {
         Self::from_gap_buffer_line(content, info)
     }
 }
@@ -450,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_from_gap_buffer_line_info() {
-        use crate::{EditorLinesStorage, GCString, ZeroCopyGapBuffer};
+        use crate::{GCString, ZeroCopyGapBuffer};
 
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.push_line("Hello 👋 World");
@@ -459,7 +459,7 @@ mod tests {
         let content = buffer.get_line_content(crate::RowIndex::from(0)).unwrap();
         let info = buffer.get_line_info(0).unwrap();
 
-        // Test From<(&str, &GapBufferLineInfo)> trait
+        // Test From<(&str, &LineMetadata)> trait
         let gc_ref: GCStringRef = (content, info).into();
         assert_eq!(gc_ref.as_str(), "Hello 👋 World");
         assert!(GCString::display_width(&gc_ref).as_usize() > 0);

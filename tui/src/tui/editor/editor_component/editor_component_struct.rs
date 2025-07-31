@@ -19,12 +19,12 @@ use std::fmt::Debug;
 
 use tokio::sync::mpsc::Sender;
 
-use crate::{editor_engine::engine_public_api, throws_with_return, BoxedSafeComponent,
-            CommonResult, Component, EditorBuffer, EditorEngine,
-            EditorEngineApplyEventResult, EditorEngineConfig, EventPropagation, FlexBox,
-            FlexBoxId, GlobalData, HasEditorBuffers, HasFocus, InputEvent,
-            RenderPipeline, SurfaceBounds, SystemClipboard,
-            TerminalWindowMainThreadSignal, DEFAULT_SYN_HI_FILE_EXT};
+use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT,
+            EditorBuffer, EditorEngine, EditorEngineApplyEventResult,
+            EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
+            HasEditorBuffers, HasFocus, InputEvent, RenderPipeline, SurfaceBounds,
+            SystemClipboard, TerminalWindowMainThreadSignal,
+            editor_engine::engine_public_api, ok};
 
 #[derive(Debug)]
 /// This is a shim which allows the reusable [`EditorEngine`] to be used in the context of
@@ -56,11 +56,12 @@ pub type OnEditorBufferChangeFn<A> =
     fn(FlexBoxId, Sender<TerminalWindowMainThreadSignal<A>>);
 
 pub mod editor_component_impl_component_trait {
-    use super::{engine_public_api, throws_with_return, CommonResult, Component, Debug,
-                EditorBuffer, EditorComponent, EditorComponentData,
+    use super::{CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT, Debug, EditorBuffer,
+                EditorComponent, EditorComponentData,
                 EditorEngineApplyEventResult, EventPropagation, FlexBox, FlexBoxId,
                 GlobalData, HasEditorBuffers, HasFocus, InputEvent, RenderPipeline,
-                SurfaceBounds, SystemClipboard, DEFAULT_SYN_HI_FILE_EXT};
+                SurfaceBounds, SystemClipboard, engine_public_api,
+                ok};
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,
@@ -71,7 +72,10 @@ pub mod editor_component_impl_component_trait {
     {
         // Add an empty editor buffer if it doesn't exist.
         if !mut_state.contains_editor_buffer(self_id) {
-            let it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+            let it = EditorBuffer::new_empty(
+                Some(DEFAULT_SYN_HI_FILE_EXT),
+                None,
+            );
             mut_state.insert_editor_buffer(self_id, it);
         }
         // Safe to call unwrap here, since we are guaranteed to have an editor buffer.
@@ -135,50 +139,48 @@ pub mod editor_component_impl_component_trait {
             input_event: InputEvent,
             _: &mut HasFocus,
         ) -> CommonResult<EventPropagation> {
-            throws_with_return!({
-                let GlobalData { state, .. } = global_data;
+            let GlobalData { state, .. } = global_data;
 
-                let EditorComponentData {
-                    editor_engine,
-                    id,
-                    on_editor_buffer_change_handler,
-                    ..
-                } = &mut self.data;
+            let EditorComponentData {
+                editor_engine,
+                id,
+                on_editor_buffer_change_handler,
+                ..
+            } = &mut self.data;
 
-                let self_id = *id;
+            let self_id = *id;
 
-                let mut_editor_buffer: &mut EditorBuffer =
-                    get_existing_mut_editor_buffer_from_state_or_create_new_one(
-                        state, self_id,
-                    );
+            let mut_editor_buffer: &mut EditorBuffer =
+                get_existing_mut_editor_buffer_from_state_or_create_new_one(
+                    state, self_id,
+                );
 
-                // XMARK: Editor component processes input event here
-                // Try to apply the `input_event` to `editor_engine` to decide whether to
-                // fire action.
-                let result = engine_public_api::apply_event(
-                    mut_editor_buffer,
-                    editor_engine,
-                    input_event,
-                    &mut SystemClipboard,
-                )?;
+            // XMARK: Editor component processes input event here
+            // Try to apply the `input_event` to `editor_engine` to decide whether to
+            // fire action.
+            let result = engine_public_api::apply_event(
+                mut_editor_buffer,
+                editor_engine,
+                input_event,
+                &mut SystemClipboard,
+            )?;
 
-                match result {
-                    EditorEngineApplyEventResult::Applied => {
-                        if let Some(on_change_handler) = on_editor_buffer_change_handler {
-                            on_change_handler(
-                                self_id,
-                                global_data.main_thread_channel_sender.clone(),
-                            );
-                        }
-                        EventPropagation::Consumed
+            ok!(match result {
+                EditorEngineApplyEventResult::Applied => {
+                    if let Some(on_change_handler) = on_editor_buffer_change_handler {
+                        on_change_handler(
+                            self_id,
+                            global_data.main_thread_channel_sender.clone(),
+                        );
                     }
-                    EditorEngineApplyEventResult::NotApplied => {
-                        // Optional: handle any `input_event` not consumed by
-                        // `editor_engine`.
-                        EventPropagation::Propagate
-                    }
+                    EventPropagation::Consumed
                 }
-            });
+                EditorEngineApplyEventResult::NotApplied => {
+                    // Optional: handle any `input_event` not consumed by
+                    // `editor_engine`.
+                    EventPropagation::Propagate
+                }
+            })
         }
     }
 }

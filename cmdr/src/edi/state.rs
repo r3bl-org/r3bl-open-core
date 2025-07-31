@@ -35,7 +35,7 @@ pub struct State {
 
 #[cfg(test)]
 mod state_tests {
-    use r3bl_tui::{FlexBoxId, InlineVec, friendly_random_id};
+    use r3bl_tui::{FlexBoxId, InlineVec, friendly_random_id, len};
 
     use super::{constructor, file_utils};
     use crate::edi::Id;
@@ -132,7 +132,7 @@ mod state_tests {
                 .content
                 .lines
                 .len(),
-            2
+            len(2)
         );
         assert_eq!(
             state
@@ -141,8 +141,8 @@ mod state_tests {
                 .unwrap()
                 .content
                 .lines
-                .iter()
-                .map(|it| it.string.as_str())
+                .iter_lines()
+                .map(|(line_str, _metadata)| line_str)
                 .collect::<InlineVec<&str>>()
                 .join("\n"),
             content

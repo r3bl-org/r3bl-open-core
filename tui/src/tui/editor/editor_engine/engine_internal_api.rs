@@ -20,22 +20,34 @@
 //! API.
 
 use super::{DeleteSelectionWith, SelectMode, caret_mut, content_mut};
-use crate::{EditorArgsMut, EditorBuffer, EditorEngine, GCStringOwned, clipboard_support,
-            clipboard_support::ClipboardService};
+use crate::{EditorArgsMut, EditorBuffer, EditorEngine,
+            LineWithInfo, clipboard_support, clipboard_support::ClipboardService};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     caret_mut::up(buffer, engine, sel_mod);
 }
 
-pub fn left(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
+pub fn left(
+    buffer: &mut EditorBuffer,
+    engine: &mut EditorEngine,
+    sel_mod: SelectMode,
+) {
     caret_mut::left(buffer, engine, sel_mod);
 }
 
-pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
+pub fn right(
+    buffer: &mut EditorBuffer,
+    engine: &mut EditorEngine,
+    sel_mod: SelectMode,
+) {
     caret_mut::right(buffer, engine, sel_mod);
 }
 
-pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
+pub fn down(
+    buffer: &mut EditorBuffer,
+    engine: &mut EditorEngine,
+    sel_mod: SelectMode,
+) {
     caret_mut::down(buffer, engine, sel_mod);
 }
 
@@ -55,11 +67,19 @@ pub fn page_down(
     caret_mut::page_down(buffer, engine, sel_mod);
 }
 
-pub fn home(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
+pub fn home(
+    buffer: &mut EditorBuffer,
+    engine: &mut EditorEngine,
+    sel_mod: SelectMode,
+) {
     caret_mut::to_start_of_line(buffer, engine, sel_mod);
 }
 
-pub fn end(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
+pub fn end(
+    buffer: &mut EditorBuffer,
+    engine: &mut EditorEngine,
+    sel_mod: SelectMode,
+) {
     caret_mut::to_end_of_line(buffer, engine, sel_mod);
 }
 
@@ -70,7 +90,7 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 pub fn clear_selection(buffer: &mut EditorBuffer) { buffer.clear_selection(); }
 
 #[must_use]
-pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<&GCStringOwned> {
+pub fn line_at_caret_to_string(buffer: &EditorBuffer) -> Option<LineWithInfo<'_>> {
     buffer.line_at_caret_scr_adj()
 }
 
@@ -144,11 +164,10 @@ pub fn copy_editor_selection_to_clipboard(
 
 #[cfg(test)]
 mod tests {
-    use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer, GCStringOwned,
-                SelectMode, assert_eq2, caret_raw, col,
+    use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer, SelectMode, assert_eq2, caret_raw, len,
+                clipboard_service::clipboard_test_fixtures::TestClipboard, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
-                editor_engine::engine_internal_api, row,
-                clipboard_service::clipboard_test_fixtures::TestClipboard};
+                editor_engine::engine_internal_api, row};
 
     #[test]
     fn test_select_all() {
@@ -219,7 +238,7 @@ mod tests {
         );
 
         // Should have no lines left after deleting all
-        assert_eq2!(buffer.get_lines().len(), 0);
+        assert_eq2!(buffer.get_lines().len(), len(0));
     }
 
     #[test]
@@ -271,9 +290,15 @@ mod tests {
         );
 
         // Should have "hello" on first line and "second line" on second
-        assert_eq2!(buffer.get_lines().len(), 2);
-        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("hello"));
-        assert_eq2!(buffer.get_lines()[1], GCStringOwned::from("second line"));
+        assert_eq2!(buffer.get_lines().len(), len(2));
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "hello"
+        );
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(1)).unwrap(),
+            "second line"
+        );
     }
 
     #[test]
@@ -323,7 +348,7 @@ mod tests {
 
         // Test at first line
         let line = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(line.unwrap(), &GCStringOwned::from("first line"));
+        assert_eq2!(line.unwrap().0, "first line");
 
         // Move to second line
         let buffer_mut = buffer.get_mut(engine.viewport());
@@ -331,7 +356,7 @@ mod tests {
         drop(buffer_mut);
 
         let line = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(line.unwrap(), &GCStringOwned::from("second line"));
+        assert_eq2!(line.unwrap().0, "second line");
     }
 
     #[test]

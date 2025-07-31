@@ -122,7 +122,7 @@ pub fn gc_trunc_end_to_fit<T: GCStringData>(
         if avail_cols < seg_display_width {
             break;
         }
-        string_end_byte_index += seg.bytes_size;
+        string_end_byte_index += seg.bytes_size.as_usize();
         avail_cols -= seg_display_width;
     }
 
@@ -169,7 +169,7 @@ pub fn gc_trunc_start_by<T: GCStringData>(
 
         // Skip segment.unicode_width.
         skip_col_count -= seg_display_width;
-        string_start_byte_index += segment.bytes_size;
+        string_start_byte_index += segment.bytes_size.as_usize();
     }
 
     &data.string_data()[string_start_byte_index..]

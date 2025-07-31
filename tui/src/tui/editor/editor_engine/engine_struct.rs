@@ -122,7 +122,8 @@ pub struct EditorEngineConfig {
 }
 
 mod editor_engine_config_options_impl {
-    use super::{EditMode, EditorEngineConfig, LineMode, SyntaxHighlightMode};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Default for EditorEngineConfig {
         fn default() -> Self {

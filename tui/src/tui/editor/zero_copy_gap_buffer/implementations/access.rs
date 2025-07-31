@@ -15,11 +15,31 @@
  *   limitations under the License.
  */
 
-//! Zero-copy access methods for [`ZeroCopyGapBuffer`].
+//! Buffer utility methods for [`ZeroCopyGapBuffer`].
 //!
-//! This module provides methods to access the buffer contents as `&str` or `&[u8]`
-//! without any copying or allocation. This is crucial for performance when passing
-//! content to the markdown parser.
+//! This module provides specialized utility methods for buffer-level operations
+//! that complement the line-based operations provided by `ZeroCopyGapBuffer`.
+//!
+//! # Architectural Separation
+//!
+//! This module follows a clear separation of concerns:
+//! - **Line-based operations** → Use `ZeroCopyGapBuffer` inherent methods
+//! - **Buffer-wide utilities** → Use methods in this module
+//!
+//! ## Buffer Utilities (This Module)
+//! - Whole-buffer access (`as_str()`, `as_bytes()`)  
+//! - Multi-line ranges (`get_line_slice()`)
+//! - Raw/debug access (`get_line_raw()`, `is_valid_utf8()`)
+//! - Special content access (`get_line_with_newline()`)
+//!
+//! ## Line Operations (`ZeroCopyGapBuffer` Methods)
+//! - Single line access (`get_line_content()`, `get_line_with_info()`)
+//! - Line metadata (`get_line_display_width()`, `line_count()`)
+//! - Line mutations (`insert_at_grapheme()`, `delete_at_grapheme()`)
+//! - Content management (`push_line()`, `set_line()`, `remove_line()`)
+//!
+//! This separation provides a clean interface where buffer utilities handle
+//! specialized access patterns while inherent methods handle standard editor operations.
 //!
 //! # Null-Padding Invariant
 //!
@@ -99,8 +119,8 @@
 use std::{ops::Range,
           str::{from_utf8, from_utf8_unchecked}};
 
-use super::buffer_storage::ZeroCopyGapBuffer;
-use crate::{ByteIndex, RowIndex, row};
+use super::super::ZeroCopyGapBuffer;
+use crate::RowIndex;
 
 impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice
@@ -135,39 +155,6 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] { &self.buffer }
 
-    /// Get the content of a single line as a string slice
-    ///
-    /// This method provides zero-copy access to individual line content. Like
-    /// [`Self::as_str()`], it uses `unsafe` code to preserve zero-copy semantics
-    /// instead of [`String::from_utf8_lossy()`].
-    ///
-    /// The same safety guarantees apply: UTF-8 invariants are maintained by the buffer,
-    /// debug builds validate UTF-8, and bounds are checked before slice creation.
-    ///
-    /// Returns None if the line index is out of bounds
-    ///
-    /// # Panics
-    ///
-    /// In debug builds, panics if the line contains invalid UTF-8
-    #[must_use]
-    pub fn get_line_content(&self, line_index: RowIndex) -> Option<&str> {
-        let line_info = self.get_line_info(line_index.as_usize())?;
-
-        // In debug builds, validate UTF-8
-        #[cfg(debug_assertions)]
-        {
-            if let Err(e) = from_utf8(&self.buffer[line_info.content_range()]) {
-                panic!(
-                    "Line {} contains invalid UTF-8 at byte {}: {}",
-                    line_index.as_usize(),
-                    e.valid_up_to(),
-                    e
-                );
-            }
-        }
-        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
-        Some(unsafe { from_utf8_unchecked(&self.buffer[line_info.content_range()]) })
-    }
 
     /// Get a slice of lines as a string
     ///
@@ -281,36 +268,24 @@ impl ZeroCopyGapBuffer {
         Some(unsafe { from_utf8_unchecked(&self.buffer[range]) })
     }
 
-    /// Find which line contains the given byte offset in the full buffer
+    /// Convenience method to get only the line content as a string slice.
     ///
-    /// This is useful for error reporting when you have a byte position from
-    /// the parser and need to know which line it corresponds to.
+    /// This is a helper that calls [`ZeroCopyGapBuffer::get_line_with_info()`] and extracts just the content.
+    /// Use this when you only need the string and don't need the metadata.
     ///
-    /// Returns None if the byte offset is out of bounds
+    /// This method provides convenient access to line content without metadata.
     #[must_use]
-    pub fn find_line_containing_byte(&self, byte_offset: ByteIndex) -> Option<RowIndex> {
-        if byte_offset.as_usize() >= self.buffer.len() {
-            return None;
-        }
-
-        // Find the line by searching through line info
-        for line_index in 0..self.line_count().as_usize() {
-            let line_info = self.get_line_info(line_index)?;
-            let line_start = *line_info.buffer_offset;
-            let line_end = line_start + line_info.capacity.as_usize();
-            if *byte_offset >= line_start && *byte_offset < line_end {
-                return Some(row(line_index));
-            }
-        }
-
-        None
+    pub fn get_line_content(&self, row_index: RowIndex) -> Option<&str> {
+        self.get_line_with_info(row_index)
+            .map(|(content, _info)| content)
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{byte_index, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
+    use crate::{row, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
 
     #[test]
     fn test_as_str_empty() {
@@ -473,46 +448,6 @@ mod tests {
         assert!(buffer.get_line_with_newline(row(1)).is_none());
     }
 
-    #[test]
-    fn test_find_line_containing_byte() {
-        let mut buffer = ZeroCopyGapBuffer::new();
-        buffer.add_line();
-        buffer.add_line();
-        buffer.add_line();
-
-        // First line
-        assert_eq!(
-            buffer.find_line_containing_byte(byte_index(0)),
-            Some(row(0))
-        );
-        assert_eq!(
-            buffer.find_line_containing_byte(byte_index(INITIAL_LINE_SIZE - 1)),
-            Some(row(0))
-        );
-
-        // Second line
-        assert_eq!(
-            buffer.find_line_containing_byte(byte_index(INITIAL_LINE_SIZE)),
-            Some(row(1))
-        );
-        assert_eq!(
-            buffer.find_line_containing_byte(byte_index(INITIAL_LINE_SIZE + 100)),
-            Some(row(1))
-        );
-
-        // Third line
-        assert_eq!(
-            buffer.find_line_containing_byte(byte_index(2 * INITIAL_LINE_SIZE)),
-            Some(row(2))
-        );
-
-        // Out of bounds
-        assert!(
-            buffer
-                .find_line_containing_byte(byte_index(3 * INITIAL_LINE_SIZE))
-                .is_none()
-        );
-    }
 }
 
 #[cfg(test)]
@@ -522,7 +457,7 @@ mod benches {
     use test::Bencher;
 
     use super::*;
-    use crate::{byte_index, seg_index};
+    use crate::{row, seg_index};
 
     extern crate test;
 
@@ -545,7 +480,7 @@ mod benches {
         for i in 0..100 {
             buffer.add_line();
             buffer
-                .insert_at_grapheme(
+                .insert_text_at_grapheme(
                     row(i),
                     seg_index(0),
                     "This is a test line with some content",
@@ -564,7 +499,7 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello World")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
             .unwrap();
 
         b.iter(|| {
@@ -579,7 +514,7 @@ mod benches {
         for i in 0..20 {
             buffer.add_line();
             buffer
-                .insert_at_grapheme(row(i), seg_index(0), &format!("Line {i}"))
+                .insert_text_at_grapheme(row(i), seg_index(0), &format!("Line {i}"))
                 .unwrap();
         }
 
@@ -596,7 +531,7 @@ mod benches {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Test line")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Test line")
             .unwrap();
 
         b.iter(|| {
@@ -605,18 +540,6 @@ mod benches {
         });
     }
 
-    #[bench]
-    fn bench_find_line_containing_byte(b: &mut Bencher) {
-        let mut buffer = ZeroCopyGapBuffer::new();
-        for _ in 0..100 {
-            buffer.add_line();
-        }
-
-        b.iter(|| {
-            let line = buffer.find_line_containing_byte(black_box(byte_index(1000)));
-            black_box(line);
-        });
-    }
 
     #[bench]
     fn bench_is_valid_utf8(b: &mut Bencher) {
@@ -624,7 +547,7 @@ mod benches {
         for i in 0..50 {
             buffer.add_line();
             buffer
-                .insert_at_grapheme(row(i), seg_index(0), "Hello 😀 World")
+                .insert_text_at_grapheme(row(i), seg_index(0), "Hello 😀 World")
                 .unwrap();
         }
 

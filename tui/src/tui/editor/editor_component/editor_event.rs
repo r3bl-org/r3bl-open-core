@@ -17,12 +17,12 @@
 
 use std::fmt::Debug;
 
-use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut, EditorEngine,
-            InputEvent, Key, KeyState, ModifierKeysMask, SelectMode, Size, SpecialKey,
-            clipboard_support::ClipboardService, editor_buffer::EditorBuffer,
-            editor_engine::engine_internal_api, fg_green, inline_string,
-            md_parser::constants::NEW_LINE_CHAR, terminal_lib_backends::KeyPress,
-            validate_scroll_on_resize};
+use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut,
+            EditorBuffer, EditorEngine, InputEvent, Key, KeyState, ModifierKeysMask,
+            SelectMode, Size, SpecialKey,
+            clipboard_support::ClipboardService, editor_engine::engine_internal_api,
+            fg_green, inline_string, md_parser::constants::NEW_LINE_CHAR,
+            terminal_lib_backends::KeyPress, validate_scroll_on_resize};
 
 /// Events that can be applied to the [`EditorEngine`] to modify an [`EditorBuffer`].
 ///
@@ -593,16 +593,19 @@ impl EditorEvent {
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
-                EditorEngine, EditorEngineConfig, EditorEvent, GCStringOwned, LineMode,
-                SelectionAction, assert_eq2, caret_scr_adj, col,
+                EditorEngine, EditorEngineConfig, EditorEvent, LineMode,
+                SelectionAction, assert_eq2, caret_scr_adj,
+                clipboard_service::clipboard_test_fixtures::TestClipboard, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor,
-                editor_engine::engine_internal_api, row,
-                clipboard_service::clipboard_test_fixtures::TestClipboard};
+                editor_engine::engine_internal_api, row};
 
     #[test]
     fn test_multiline_true() {
         // multiline true.
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer = EditorBuffer::new_empty(
+            Some(DEFAULT_SYN_HI_FILE_EXT),
+            None,
+        );
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::MultiLine,
@@ -649,7 +652,10 @@ mod tests {
     #[test]
     fn test_multiline_false() {
         // multiline false.
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer = EditorBuffer::new_empty(
+            Some(DEFAULT_SYN_HI_FILE_EXT),
+            None,
+        );
         let mut engine: EditorEngine = EditorEngine {
             config_options: EditorEngineConfig {
                 multiline_mode: LineMode::SingleLine,
@@ -690,7 +696,7 @@ mod tests {
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
         let maybe_line_str = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(maybe_line_str.unwrap(), &GCStringOwned::from("abcaba"));
+        assert_eq2!(maybe_line_str.unwrap().0, "abcaba");
     }
 
     #[allow(clippy::too_many_lines)]
@@ -706,7 +712,10 @@ mod tests {
             caret_scr_adj(col(col_index) + row(row_index))
         }
 
-        let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let mut buffer = EditorBuffer::new_empty(
+            Some(DEFAULT_SYN_HI_FILE_EXT),
+            None,
+        );
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Buffer has two lines.

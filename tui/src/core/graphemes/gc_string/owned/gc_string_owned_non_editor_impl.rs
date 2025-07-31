@@ -188,7 +188,7 @@ pub mod trunc_end {
                 if avail_cols < seg_display_width {
                     break;
                 }
-                string_end_byte_index += seg.bytes_size;
+                string_end_byte_index += seg.bytes_size.as_usize();
                 avail_cols -= seg_display_width;
             }
 
@@ -289,7 +289,7 @@ pub mod trunc_start {
 
                 // Skip segment.unicode_width.
                 skip_col_count -= seg_display_width;
-                string_start_byte_index += segment.bytes_size;
+                string_start_byte_index += segment.bytes_size.as_usize();
             }
 
             &self.string[string_start_byte_index..]
@@ -476,7 +476,7 @@ mod clip {
 
                     // Skip segment.unicode_width.
                     skip_col_count -= seg_display_width;
-                    it += seg.bytes_size;
+                    it += seg.bytes_size.as_usize();
                 }
                 it
             };
@@ -492,12 +492,12 @@ mod clip {
                         if avail_col_count < seg_display_width {
                             break;
                         }
-                        it += seg.bytes_size;
+                        it += seg.bytes_size.as_usize();
                         avail_col_count -= seg_display_width;
                     } else {
                         // Skip segment.unicode_width.
                         skip_col_count -= seg_display_width;
-                        it += seg.bytes_size;
+                        it += seg.bytes_size.as_usize();
                     }
                 }
                 it

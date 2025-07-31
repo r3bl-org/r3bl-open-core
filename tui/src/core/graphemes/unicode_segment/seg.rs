@@ -18,7 +18,7 @@
 use std::fmt::Debug;
 
 use super::SegIndex;
-use crate::{ChUnit, ColIndex, ColWidth, usize};
+use crate::{ChUnit, ColIndex, ColWidth, Length, usize};
 
 /// `Seg` represents a grapheme cluster segment within a [`crate::GCStringOwned`].
 ///
@@ -101,7 +101,7 @@ use crate::{ChUnit, ColIndex, ColWidth, usize};
 ///     assert_eq!(segment.end_byte_index, ch(4));
 ///     assert_eq!(segment.display_width, width(2));
 ///     assert_eq!(segment.seg_index, seg_index(0));
-///     assert_eq!(segment.bytes_size, 4);
+///     assert_eq!(segment.bytes_size.as_usize(), 4);
 ///     assert_eq!(segment.start_display_col_index, col(0));
 /// }
 /// ```
@@ -130,7 +130,7 @@ pub struct Seg {
     /// The number of bytes this grapheme cluster occupies in the original string slice.
     /// The display width, aka [`Self::display_width`], may not be the same as the byte
     /// size.
-    pub bytes_size: usize,
+    pub bytes_size: Length,
 
     /// Display col index [`ColIndex`] (in the original string slice) at which this
     /// grapheme cluster starts. The "offset" in the name means that this is relative
@@ -150,7 +150,7 @@ impl Debug for Seg {
             s_i = **self.seg_index,
             b_b = *self.start_byte_index,
             b_e = *self.end_byte_index,
-            b_s = self.bytes_size,
+            b_s = self.bytes_size.as_usize(),
             d_i = **self.start_display_col_index,
             d_w = **self.display_width,
         )
@@ -180,7 +180,7 @@ mod tests {
             assert_eq!(segment.end_byte_index, ch(4));
             assert_eq!(segment.display_width, width(2));
             assert_eq!(segment.seg_index, seg_index(0));
-            assert_eq!(segment.bytes_size, 4);
+            assert_eq!(segment.bytes_size.as_usize(), 4);
             assert_eq!(segment.start_display_col_index, col(0));
             assert_eq!(segment.get_str(&grapheme_string), "📦");
         }
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(segment1.end_byte_index, ch(4));
         assert_eq!(segment1.display_width, width(2));
         assert_eq!(segment1.seg_index, seg_index(0));
-        assert_eq!(segment1.bytes_size, 4);
+        assert_eq!(segment1.bytes_size.as_usize(), 4);
         assert_eq!(segment1.start_display_col_index, col(0));
         assert_eq!(segment1.get_str(&grapheme_string), "📦");
 
@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(segment2.end_byte_index, ch(12));
         assert_eq!(segment2.display_width, width(2));
         assert_eq!(segment2.seg_index, seg_index(1));
-        assert_eq!(segment2.bytes_size, 8);
+        assert_eq!(segment2.bytes_size.as_usize(), 8);
         assert_eq!(segment2.start_display_col_index, col(2));
         assert_eq!(segment2.get_str(&grapheme_string), "🙏🏽");
     }
@@ -219,7 +219,7 @@ mod tests {
             assert_eq!(segment.end_byte_index, ch(3));
             assert_eq!(segment.display_width, width(1));
             assert_eq!(segment.seg_index, seg_index(0));
-            assert_eq!(segment.bytes_size, 3);
+            assert_eq!(segment.bytes_size.as_usize(), 3);
             assert_eq!(segment.start_display_col_index, col(0));
             assert_eq!(segment.get_str(&grapheme_string), "á");
         }

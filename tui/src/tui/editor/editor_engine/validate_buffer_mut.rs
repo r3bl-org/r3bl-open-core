@@ -22,14 +22,14 @@
 //! The [newtype pattern](https://doc.rust-lang.org/rust-by-example/generics/new_types.html) is used
 //! here to wrap the underlying [`EditorBufferMut`] struct, so that it be used in one of
 //! two distinct use cases:
-//! 1. Once [`EditorBuffer::get_mut()`] is called, the buffer is mutated and then the
+//! 1. Once [`crate::EditorBuffer::get_mut()`] is called, the buffer is mutated and then the
 //!    validation checks are run. This is done by using [`EditorBufferMutWithDrop`].
 //! 2. If you don't want the buffer to be mutated, then you can use
-//!    [`EditorBufferMutNoDrop`] by calling [`EditorBuffer::get_mut_no_drop()`].
+//!    [`EditorBufferMutNoDrop`] by calling [`crate::EditorBuffer::get_mut_no_drop()`].
 //!
 //! # Memory Cache Invalidation
 //!
-//! When buffer content is modified through [`EditorBuffer::get_mut()`], the memory size
+//! When buffer content is modified through [`crate::EditorBuffer::get_mut()`], the memory size
 //! cache is automatically invalidated to ensure accurate telemetry reporting. This
 //! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`]:
 //!
@@ -37,7 +37,7 @@
 //! // When content is modified:
 //! {
 //!     let mut buffer_mut = buffer.get_mut(viewport);
-//!     buffer_mut.inner.lines.push(GCStringOwned::from("new line"));
+//!     buffer_mut.inner.lines.push_line("new line");
 //! } // Drop called here, cache is invalidated automatically
 //! ```
 //!
@@ -45,12 +45,13 @@
 //! for operations that don't modify content (e.g., viewport resizing).
 
 use super::scroll_editor_content;
-use crate::{col, editor::sizing::VecEditorContentLines, usize, width, CaretRaw,
-            ColWidth, EditorBuffer, MemoizedMemorySize, ScrOfs, SelectionList, Size};
+use crate::{CaretRaw, ColWidth, MemoizedMemorySize, ScrOfs,
+            SelectionList, Size, ZeroCopyGapBuffer, col, width};
 
+/// Mutable access to editor buffer fields using concrete `ZeroCopyGapBuffer` storage.
 #[derive(Debug)]
 pub struct EditorBufferMut<'a> {
-    pub lines: &'a mut VecEditorContentLines,
+    pub lines: &'a mut ZeroCopyGapBuffer,
     pub caret_raw: &'a mut CaretRaw,
     pub scr_ofs: &'a mut ScrOfs,
     pub sel_list: &'a mut SelectionList,
@@ -67,23 +68,26 @@ pub struct EditorBufferMut<'a> {
 }
 
 mod editor_buffer_mut_impl_block {
-    use super::{CaretRaw, ColWidth, EditorBuffer, EditorBufferMut, MemoizedMemorySize,
-                ScrOfs, SelectionList, Size, VecEditorContentLines};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBufferMut<'_> {
         /// Returns the display width of the line at the caret (at it's scroll adjusted
         /// row index).
         #[must_use]
         pub fn get_line_display_width_at_caret_scr_adj_row_index(&self) -> ColWidth {
-            EditorBuffer::impl_get_line_display_width_at_caret_scr_adj(
-                *self.caret_raw,
-                *self.scr_ofs,
-                self.lines,
-            )
+            let caret_scr_adj = *self.caret_raw + *self.scr_ofs;
+            let row_index = caret_scr_adj.row_index;
+            if let Some(line_display_width) = self.lines.get_line_display_width(row_index)
+            {
+                line_display_width
+            } else {
+                width(0)
+            }
         }
 
         pub fn new<'a>(
-            lines: &'a mut VecEditorContentLines,
+            lines: &'a mut ZeroCopyGapBuffer,
             caret_raw: &'a mut CaretRaw,
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
@@ -108,12 +112,12 @@ pub struct EditorBufferMutNoDrop<'a> {
 }
 
 mod editor_buffer_mut_no_drop_impl_block {
-    use super::{CaretRaw, EditorBufferMut, EditorBufferMutNoDrop, MemoizedMemorySize,
-                ScrOfs, SelectionList, Size, VecEditorContentLines};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBufferMutNoDrop<'_> {
         pub fn new<'a>(
-            lines: &'a mut VecEditorContentLines,
+            lines: &'a mut ZeroCopyGapBuffer,
             caret_raw: &'a mut CaretRaw,
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
@@ -151,13 +155,12 @@ pub struct EditorBufferMutWithDrop<'a> {
 }
 
 mod editor_buffer_mut_with_drop_impl_block {
-    use super::{perform_validation_checks_after_mutation, CaretRaw, EditorBufferMut,
-                EditorBufferMutWithDrop, MemoizedMemorySize, ScrOfs, SelectionList,
-                Size, VecEditorContentLines};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBufferMutWithDrop<'_> {
         pub fn new<'a>(
-            lines: &'a mut VecEditorContentLines,
+            lines: &'a mut ZeroCopyGapBuffer,
             caret_raw: &'a mut CaretRaw,
             scr_ofs: &'a mut ScrOfs,
             sel_list: &'a mut SelectionList,
@@ -183,8 +186,9 @@ mod editor_buffer_mut_with_drop_impl_block {
         /// 1. **Memory Cache Invalidation**: Invalidates the memory size cache to ensure
         ///    accurate telemetry reporting after buffer modifications. This is crucial
         ///    because the [`main_event_loop`](crate::TerminalWindow::main_event_loop)
-        ///    logs state information after EVERY render cycle using the [`std::fmt::Display`]
-        ///    trait, which relies on cached memory size calculations.
+        ///    logs state information after EVERY render cycle using the
+        ///    [`std::fmt::Display`] trait, which relies on cached memory size
+        ///    calculations.
         ///
         /// 2. **Unicode Validation**: Runs validation checks to ensure that the buffer is
         ///    in a valid state. Due to the nature of `UTF-8` and its variable width
@@ -204,7 +208,7 @@ mod editor_buffer_mut_with_drop_impl_block {
 }
 
 /// In addition to mutating the buffer, this function runs the following validations on
-/// the [`EditorBuffer`]'s:
+/// the [`crate::EditorBuffer`]'s:
 /// 1. `caret`:
 ///    - the caret is in not in the middle of a unicode segment character.
 ///    - if it is then it moves the caret.
@@ -263,21 +267,24 @@ pub fn is_scroll_offset_in_middle_of_grapheme_cluster(
     let scroll_adjusted_caret =
         *editor_buffer_mut.inner.caret_raw + *editor_buffer_mut.inner.scr_ofs;
 
-    let line_at_caret = editor_buffer_mut
-        .inner
-        .lines
-        .get(usize(*scroll_adjusted_caret.row_index))?;
-
     let display_width_of_str_at_caret = {
-        let str_at_caret = line_at_caret.get_string_at(scroll_adjusted_caret.col_index);
+        let str_at_caret = editor_buffer_mut.inner.lines.get_string_at_col(
+            scroll_adjusted_caret.row_index,
+            scroll_adjusted_caret.col_index,
+        );
         match str_at_caret {
             None => width(0),
             Some(string_at_caret) => string_at_caret.width,
         }
     };
 
-    if let Some(segment) = line_at_caret
-        .check_is_in_middle_of_grapheme(editor_buffer_mut.inner.scr_ofs.col_index)
+    if let Some(segment) = editor_buffer_mut
+        .inner
+        .lines
+        .check_is_in_middle_of_grapheme(
+            scroll_adjusted_caret.row_index,
+            editor_buffer_mut.inner.scr_ofs.col_index,
+        )
     {
         let diff = segment.display_width - display_width_of_str_at_caret;
         return Some(diff);
@@ -304,17 +311,25 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
         *editor_buffer_mut.inner.caret_raw + *editor_buffer_mut.inner.scr_ofs;
     let row_index = caret_scr_adj.row_index;
     let col_index = caret_scr_adj.col_index;
-    let line = editor_buffer_mut.inner.lines.get(row_index.as_usize())?;
 
     // Caret is in the middle of a grapheme cluster, so jump it.
-    let seg = line.check_is_in_middle_of_grapheme(col_index)?;
+    let seg = editor_buffer_mut
+        .inner
+        .lines
+        .check_is_in_middle_of_grapheme(row_index, col_index)?;
+
+    let line_display_width = editor_buffer_mut
+        .inner
+        .lines
+        .get_line_display_width(row_index)
+        .unwrap_or(width(0));
 
     scroll_editor_content::set_caret_col_to(
         seg.start_display_col_index + seg.display_width,
         editor_buffer_mut.inner.caret_raw,
         editor_buffer_mut.inner.scr_ofs,
         editor_buffer_mut.inner.vp.col_width,
-        line.display_width,
+        line_display_width,
     );
 
     None
@@ -322,7 +337,8 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_eq2, col, height, row, width, EditorBuffer, EditorEngine, EditorEngineConfig, GCStringOwned};
+    use crate::{EditorBuffer, EditorEngine, EditorEngineConfig,
+                assert_eq2, col, height, row, width};
 
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {
@@ -375,8 +391,16 @@ mod tests {
         // The validation may or may not adjust the caret position
         let adjusted_col = buffer.get_caret_raw().col_index;
         // Just verify the caret is not in an invalid position (middle of emoji)
-        // The caret could stay at col(7) if the implementation doesn't detect it as invalid
-        assert!(adjusted_col.as_usize() <= buffer.get_lines()[0].display_width.as_usize());
+        // The caret could stay at col(7) if the implementation doesn't detect it as
+        // invalid
+        assert!(
+            adjusted_col.as_usize()
+                <= buffer
+                    .get_lines()
+                    .get_line_display_width(row(0))
+                    .unwrap()
+                    .as_usize()
+        );
 
         // Test 2: Caret at a valid position
         {
@@ -387,7 +411,14 @@ mod tests {
 
         // The validation might adjust the position slightly
         let final_col = buffer.get_caret_raw().col_index;
-        assert!(final_col.as_usize() <= buffer.get_lines()[0].display_width.as_usize());
+        assert!(
+            final_col.as_usize()
+                <= buffer
+                    .get_lines()
+                    .get_line_display_width(row(0))
+                    .unwrap()
+                    .as_usize()
+        );
     }
 
     #[test]
@@ -428,7 +459,10 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.lines.clear();
-            buffer_mut.inner.lines.push(GCStringOwned::from("New content with more text"));
+            buffer_mut
+                .inner
+                .lines
+                .push_line("New content with more text");
         }
         // Drop should invalidate and recalculate cache
 
@@ -476,8 +510,8 @@ mod tests {
         buffer.init_with(vec![
             "Normal text",
             "Text with 👨‍👩‍👧‍👦 family", // Zero-width joiners
-            "Flags 🇺🇸🇬🇧", // Regional indicators
-            "Math 𝕳𝖊𝖑𝖑𝖔", // Mathematical alphanumeric symbols
+            "Flags 🇺🇸🇬🇧",          // Regional indicators
+            "Math 𝕳𝖊𝖑𝖑𝖔",          // Mathematical alphanumeric symbols
         ]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
 
@@ -492,7 +526,14 @@ mod tests {
         // Caret position after validation - the exact behavior depends on implementation
         let adjusted_col = buffer.get_caret_raw().col_index;
         // Just verify it's a valid position within the line
-        assert!(adjusted_col.as_usize() <= buffer.get_lines()[1].display_width.as_usize());
+        assert!(
+            adjusted_col.as_usize()
+                <= buffer
+                    .get_lines()
+                    .get_line_display_width(row(1))
+                    .unwrap()
+                    .as_usize()
+        );
     }
 
     #[test]
@@ -524,7 +565,9 @@ mod tests {
     #[test]
     fn test_validation_with_scroll_offset_and_viewport() {
         let mut buffer = EditorBuffer::new_empty(None, None);
-        buffer.init_with(vec!["Very long line with many characters that exceeds viewport width"]);
+        buffer.init_with(vec![
+            "Very long line with many characters that exceeds viewport width",
+        ]);
         let mut engine = EditorEngine::new(EditorEngineConfig::default());
         engine.current_box.style_adjusted_bounds_size = width(20) + height(5); // Small viewport
 
@@ -539,7 +582,8 @@ mod tests {
         let adjusted_caret = buffer.get_caret_raw();
         // The validation adjusts based on line content, not just viewport
         // Verify it's within the line bounds
-        let line_display_width = buffer.get_lines()[0].display_width;
+        let line_display_width =
+            buffer.get_lines().get_line_display_width(row(0)).unwrap();
         assert!(*adjusted_caret.col_index <= *line_display_width);
     }
 }

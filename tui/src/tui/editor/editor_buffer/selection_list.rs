@@ -17,18 +17,19 @@
 use std::fmt::Debug;
 
 use sizing::VecRowIndex;
-use smallvec::{smallvec, SmallVec};
+use smallvec::{SmallVec, smallvec};
 
-use crate::{caret_scr_adj, fg_color,
+use crate::{CaretMovementDirection, CaretScrAdj, DeleteSelectionWith,
+            EditorBuffer, GetMemSize, InlineString, InlineVec,
+            ItemsOwned, RowIndex, SelectionRange, caret_scr_adj,
+            fg_color,
             glyphs::{CUT_GLYPH, DIRECTION_GLYPH, ELLIPSIS_GLYPH, TIRE_MARKS_GLYPH,
                      VERT_LINE_DASHED_GLYPH},
-            inline_string, join, tui_color, usize, CaretMovementDirection, CaretScrAdj,
-            DeleteSelectionWith, EditorBuffer, GetMemSize, InlineString, InlineVec,
-            ItemsOwned, RowIndex, SelectionRange};
+            inline_string, join, tui_color};
 
 mod sizing {
-    use super::{CaretMovementDirection, GetMemSize, RowIndex, SelectionList,
-                SelectionListItem, SmallVec};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
     pub(crate) type VecRowIndex = SmallVec<[RowIndex; ROW_INDEX_SIZE]>;
 
     const ROW_INDEX_SIZE: usize = 32;
@@ -146,10 +147,11 @@ impl SelectionList {
 
         for row_index in ordered_row_indices {
             if let Some(sel_range) = self.get(row_index)
-                && let Some(line_gcs) = lines.get(usize(row_index)) {
-                    let sel_text = sel_range.clip_to_range(line_gcs);
-                    acc.push((row_index, sel_text));
-                }
+                && let Some(line_with_info) = lines.get_line_with_info(row_index)
+            {
+                let sel_text = sel_range.clip_to_range_str(line_with_info);
+                acc.push((row_index, sel_text));
+            }
         }
 
         acc
@@ -212,9 +214,10 @@ impl SelectionList {
         current_direction: CaretMovementDirection,
     ) -> DirectionChangeResult {
         if let Some(previous_direction) = self.maybe_previous_direction
-            && previous_direction != current_direction {
-                return DirectionChangeResult::DirectionHasChanged;
-            }
+            && previous_direction != current_direction
+        {
+            return DirectionChangeResult::DirectionHasChanged;
+        }
         DirectionChangeResult::DirectionIsTheSame
     }
 
@@ -275,9 +278,8 @@ pub enum RowLocationInSelectionList {
 
 // Formatter for Debug and Display.
 mod impl_debug_format {
-    use super::{fg_color, inline_string, join, smallvec, tui_color, Debug, InlineString,
-                InlineVec, ItemsOwned, SelectionList, CUT_GLYPH, DIRECTION_GLYPH,
-                ELLIPSIS_GLYPH, TIRE_MARKS_GLYPH, VERT_LINE_DASHED_GLYPH};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     const PAD_LEFT: &str = "      ";
     const EMPTY_STR: &str = "--empty--";

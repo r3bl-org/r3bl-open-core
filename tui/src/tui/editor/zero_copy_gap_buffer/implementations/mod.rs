@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022-2025 R3BL LLC
+ *   Copyright (c) 2025 R3BL LLC
  *   All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +15,12 @@
  *   limitations under the License.
  */
 
-// Attach.
-pub mod default_content;
-pub mod editor_buffer;
-pub mod editor_component;
-pub mod editor_engine;
-pub mod zero_copy_gap_buffer;
+// Implementation modules - these extend ZeroCopyGapBuffer with specialized capabilities
+mod access;
+mod basic;
+mod delete;
+mod insert;
+mod segment_builder;
 
-// Re-export.
-pub use default_content::*;
-pub use editor_buffer::*;
-pub use editor_component::*;
-pub use editor_engine::*;
-pub use zero_copy_gap_buffer::*;
-
-// Tests.
-pub mod editor_test_fixtures;
+// Note: These modules extend ZeroCopyGapBuffer through `impl` blocks
+// They are not re-exported as they provide specialized, not universal, capabilities

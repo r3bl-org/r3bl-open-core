@@ -17,8 +17,7 @@
 
 use std::error::Error;
 
-use super::EditorBuffer;
-use crate::{DEBUG_TUI_COPY_PASTE, InlineVecStr, usize};
+use crate::{DEBUG_TUI_COPY_PASTE, EditorBuffer, InlineVecStr};
 
 pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 
@@ -54,9 +53,10 @@ pub fn copy_to_clipboard(
     // Iterate through the sorted row indices, and copy the selected text.
     for row_index in row_indices {
         if let Some(sel_range) = sel_list.get(row_index)
-            && let Some(line) = lines.get(usize(*row_index))
+            && let Some(line_with_info) = lines.get_line_with_info(row_index)
         {
-            let sel_text = sel_range.clip_to_range(line);
+            // Use the new zero-copy clip_to_range_str method
+            let sel_text = sel_range.clip_to_range_str(line_with_info);
             vec_str.push(sel_text);
         }
     }
@@ -77,12 +77,12 @@ pub fn copy_to_clipboard(
 #[cfg(test)]
 mod tests {
     use smallvec::smallvec;
-    use crate::{assert_eq2,
-                editor::{editor_test_fixtures::mock_real_objects_for_editor,
-                         sizing::VecEditorContentLines},
+
+    use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
+                SelectionAction, assert_eq2,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
-                CaretDirection, EditorBuffer, EditorEvent,
-                SelectionAction, DEFAULT_SYN_HI_FILE_EXT};
+                editor::{editor_test_fixtures::mock_real_objects_for_editor,
+                         sizing::VecEditorContentLines}};
 
     #[test]
     fn test_copy() {
@@ -172,11 +172,9 @@ mod tests {
                 &mut test_clipboard,
             );
 
-            let new_lines: VecEditorContentLines = smallvec![
-                "abc copied text r3bl xyz".into(),
-                "pqr rust uvw".into()
-            ];
-            assert_eq2!(buffer.get_lines(), &new_lines);
+            let new_lines: VecEditorContentLines =
+                smallvec!["abc copied text r3bl xyz".into(), "pqr rust uvw".into()];
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
         }
 
         // Multi-line Pasting
@@ -198,7 +196,7 @@ mod tests {
                 "new line r3bl xyz".into(),
                 "pqr rust uvw".into()
             ];
-            assert_eq2!(buffer.get_lines(), &new_lines);
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
         }
     }
 
@@ -240,7 +238,7 @@ mod tests {
             let new_lines: VecEditorContentLines = smallvec![
                 "pqr rust uvw".into(), // First line 'abc r3bl xyz' is cut
             ];
-            assert_eq2!(buffer.get_lines(), &new_lines);
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
         }
 
         // Multi-line Cutting
@@ -283,7 +281,7 @@ mod tests {
             assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
             let new_lines: VecEditorContentLines =
                 smallvec!["abc ".into(), "rust uvw".into()];
-            assert_eq2!(buffer.get_lines(), &new_lines);
+            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().collect::<Vec<_>>());
         }
     }
 }

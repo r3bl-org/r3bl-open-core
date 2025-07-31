@@ -23,7 +23,7 @@ use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
 use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
-            CommonResult, FragmentsInOneLine, GCStringOwned,
+            CommonResult, FragmentsInOneLine,
             GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
             List, MdDocument, MdElement, MdLineFragment,
             PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
@@ -43,34 +43,33 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
                                          UNCHECKED_OUTPUT, UNDERSCORE}}};
 
 /// This is the main function that the [`crate::editor`] uses to display markdown to the
-/// user. It converts from a &[`GCStringOwned`] (which comes from the [`crate::editor`]) into a
+/// user. It takes a direct reference to [`ZeroCopyGapBuffer`] and converts it into a
 /// [`StyleUSSpanLines`] (which the [`crate::editor`] will clip & render).
 ///
 /// # Parser Implementation
 ///
-/// This function now uses the new `ZeroCopyGapBuffer` approach which provides zero-copy
-/// parsing capabilities. The function converts `&[GCStringOwned]` to `ZeroCopyGapBuffer` and
-/// then parses it directly without string materialization.
+/// This function uses the clean zero-copy approach by working directly with the
+/// `ZeroCopyGapBuffer` without any intermediate conversions.
 ///
 /// ## Technical Implementation Details
 ///
-/// 1. Convert `&[GCStringOwned]` to `ZeroCopyGapBuffer` using `convert_vec_lines_to_gap_buffer`
-/// 2. Pass the gap buffer directly to `parse_markdown()` 
+/// 1. Take direct reference to `ZeroCopyGapBuffer` from editor
+/// 2. Pass it directly to `parse_markdown()` 
 /// 3. Convert parsed document to styled spans
 ///
 /// ## Performance Characteristics
 ///
-/// The new approach eliminates string materialization:
-/// - Zero-copy parsing through `ZeroCopyGapBuffer`
+/// True zero-copy parsing:
+/// - No wasteful conversions between data types
+/// - Direct access to gap buffer data
 /// - Handles null padding transparently
-/// - Better memory efficiency for large documents
+/// - Optimal memory efficiency for large documents
 ///
 /// # Arguments
-/// - `editor_text_lines` - The text that the user has typed into the editor.
+/// - `gap_buffer` - Direct reference to the editor's zero-copy gap buffer.
 /// - `current_box_computed_style` - The computed style of the box that the editor is in.
 /// - `maybe_syntect_tuple` - The syntax set and theme that the editor should use to
 ///   highlight the text.
-/// - `parser_byte_cache` - DEPRECATED - No longer used, will be removed in next version
 ///
 /// # Returns
 /// - `Ok(StyleUSSpanLines)` - Successfully parsed and styled markdown
@@ -80,17 +79,14 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
 ///
 /// Returns an error if the markdown parsing fails.
 pub fn try_parse_and_highlight(
-    editor_text_lines: &[GCStringOwned],
+    gap_buffer: &ZeroCopyGapBuffer,
     maybe_current_box_computed_style: Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
     // XMARK: Parse markdown from editor and render it
-
-    // Convert &[GCStringOwned] to ZeroCopyGapBuffer
-    let gap_buffer = ZeroCopyGapBuffer::from(editor_text_lines);
     
-    // Parse using the new zero-copy approach
-    let result_md_ast = parse_markdown(&gap_buffer);
+    // Parse using the zero-copy approach - no conversions needed!
+    let result_md_ast = parse_markdown(gap_buffer);
 
     // Try and parse into a `Document`.
     match result_md_ast {
@@ -111,15 +107,20 @@ mod tests_try_parse_and_highlight {
     use crate::{assert_eq2, fg_cyan, throws, tui_color};
 
     #[test]
-    fn from_vec_gcs() -> CommonResult<()> {
+    fn from_gap_buffer() -> CommonResult<()> {
         throws!({
-            let editor_text_lines = ["Hello", "World"].map(GCStringOwned::new);
+            let gap_buffer = {
+                let mut buffer = ZeroCopyGapBuffer::new();
+                buffer.push_line("Hello");
+                buffer.push_line("World");
+                buffer
+            };
             let current_box_computed_style = new_style!(
                 color_bg: {tui_color!(red)}
             );
 
             let style_us_span_lines = try_parse_and_highlight(
-                &editor_text_lines,
+                &gap_buffer,
                 Some(current_box_computed_style),
                 None,
             )?;

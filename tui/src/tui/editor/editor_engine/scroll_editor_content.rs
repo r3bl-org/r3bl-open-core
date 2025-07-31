@@ -558,16 +558,19 @@ mod tests {
             mock_real_objects_for_editor::make_editor_engine_with_bounds(window_size);
 
         let long_line = "# Did he take those two new droids with him? They hit accelerator.🙏🏽😀░ We will deal with your Rebel friends. Commence primary ignition.🙏🏽😀░";
-        let long_line_gcs = GCStringOwned::from(long_line);
+        let _long_line_gcs = GCStringOwned::from(long_line);
         buffer.init_with([long_line]);
 
         // Setup assertions.
         {
             assert_eq2!(width(2), GCStringOwned::width("🙏🏽"));
             assert_eq2!(buffer.len(), height(1));
-            assert_eq2!(buffer.get_lines()[0], GCStringOwned::from(long_line));
-            let us = &buffer.get_lines()[0];
-            assert_eq2!(us, &long_line_gcs);
+            assert_eq2!(
+                buffer.get_lines().get_line_content(row(0)).unwrap(),
+                long_line
+            );
+            let us = buffer.get_lines().get_line_content(row(0)).unwrap();
+            assert_eq2!(us, long_line);
             assert_eq2!(buffer.get_caret_raw(), caret_raw(col(0) + row(0)));
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
             assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(0) + row(0)));
@@ -588,9 +591,8 @@ mod tests {
             assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(4) + row(0)));
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(66) + row(0)));
             // Right of viewport.
-            let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_caret_scr_adj().col_index;
-            let result = line.get_string_at(display_col_index);
+            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "🙏🏽");
 
             // Press right 1 more time. The caret should correctly jump the width of "😀"
@@ -603,9 +605,8 @@ mod tests {
             );
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(68) + row(0)));
             // Right of viewport.
-            let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_caret_scr_adj().col_index;
-            let result = line.get_string_at(display_col_index);
+            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "😀");
         }
 
@@ -624,9 +625,8 @@ mod tests {
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(128) + row(0)));
             assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(64) + row(0)));
             // Start of viewport.
-            let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at(display_col_index);
+            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "r");
         }
 
@@ -645,9 +645,8 @@ mod tests {
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(129) + row(0)));
             assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(65) + row(0)));
             // Start of viewport.
-            let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at(display_col_index);
+            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, ".");
         }
 
@@ -664,9 +663,8 @@ mod tests {
                 );
             }
             // Start of viewport.
-            let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at(display_col_index);
+            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "😀");
         }
 
@@ -679,9 +677,8 @@ mod tests {
                 &mut TestClipboard::default(),
             );
             // Start of viewport.
-            let line = &buffer.get_lines()[0];
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = line.get_string_at(display_col_index);
+            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "░");
         }
     }

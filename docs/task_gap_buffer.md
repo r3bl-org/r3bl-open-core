@@ -475,79 +475,6 @@ in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer`
 
 - [x] Define `EditorLinesStorage` trait based on ZeroCopyGapBuffer's API:
 
-  ```rust
-  trait EditorLinesStorage {
-      // Line access methods (zero-copy for ZeroCopyGapBuffer)
-      fn get_line_content(&self, row_index: RowIndex) -> Option<&str>;
-      fn get_line_info(&self, row_index: RowIndex) -> Option<&GapBufferLineInfo>;
-      fn line_count(&self) -> Length;
-      fn is_empty(&self) -> bool;
-      fn as_str(&self) -> &str; // Full buffer as string (zero-copy)
-
-      // Line metadata access
-      fn get_line_display_width(&self, row_index: RowIndex) -> Option<ColWidth>;
-      fn get_line_grapheme_count(&self, row_index: RowIndex) -> Option<Length>;
-      fn get_line_byte_length(&self, row_index: RowIndex) -> Option<Length>;
-
-      // Mutation methods
-      fn push_line(&mut self, content: &str);
-      fn insert_line(&mut self, row_index: RowIndex, content: &str);
-      fn remove_line(&mut self, row_index: RowIndex) -> Option<String>;
-      fn clear(&mut self);
-      fn set_line(&mut self, row_index: RowIndex, content: &str) -> bool;
-
-      // Grapheme-based operations
-      fn insert_at_grapheme(
-          &mut self,
-          row_index: RowIndex,
-          seg_index: SegIndex,
-          text: &str
-      ) -> bool;
-
-      fn delete_at_grapheme(
-          &mut self,
-          row_index: RowIndex,
-          seg_index: SegIndex,
-          count: Length
-      ) -> bool;
-
-      // Column-based operations (for cursor movement)
-      fn insert_at_col(
-          &mut self,
-          row_index: RowIndex,
-          col_index: ColIndex,
-          text: &str
-      ) -> Option<ColWidth>; // Returns display width of inserted text
-
-      fn delete_at_col(
-          &mut self,
-          row_index: RowIndex,
-          col_index: ColIndex,
-          count: Length
-      ) -> bool;
-
-      // Utility methods
-      fn split_line_at_col(
-          &mut self,
-          row_index: RowIndex,
-          col_index: ColIndex
-      ) -> Option<String>;
-
-      fn join_lines(&mut self, first_row_index: RowIndex) -> bool;
-
-      // Byte position conversions (for parser integration)
-      fn get_byte_offset_for_row(&self, row_index: RowIndex) -> Option<ByteIndex>;
-      fn find_row_containing_byte(&self, byte_index: ByteIndex) -> Option<RowIndex>;
-
-      // Iterator support (for compatibility)
-      fn iter_lines(&self) -> Box<dyn Iterator<Item = &str> + '_>;
-
-      // Total size information
-      fn total_bytes(&self) -> ByteIndex;
-      fn max_row_index(&self) -> RowIndex;
-  }
-  ```
-
   - Try not to use usize for arguments and return types
     - Here are some types that should be used instead of usize: ByteIndex, ColWidth, Length,
       RowIndex, SegIndex
@@ -630,100 +557,16 @@ The only missing piece is the actual string data, which we get from `&str` throu
 We'll implement three complementary approaches to maximize flexibility and enable gradual migration:
 
 **1. Direct Usage (Preferred for New Code)** Work directly with `(&str, &GapBufferLineInfo)` without
-creating GCString:
+creating GCString
 
-```rust
-// Instead of:
-let line = buffer.line_at_caret_scr_adj()?;
-let seg_string = line.get_string_at(col_index)?;
-
-// Use:
-let (content, info) = buffer.lines.get_line_with_info(row_index)?;
-let seg_string = info.get_string_at(content, col_index)?;
-```
-
-**2. Enhanced EditorLinesStorage Trait** Add method to get both content and metadata in one call:
-
-```rust
-pub trait EditorLinesStorage {
-    // ... existing methods ...
-
-    /// Get both line content and metadata in one call for efficiency
-    fn get_line_with_info(&self, row_index: RowIndex) -> Option<(&str, &GapBufferLineInfo)>;
-}
-```
+**2. Enhanced EditorLinesStorage Trait** Add method to get both content and metadata in one call
 
 **3. GapBufferLineInfo Methods and Conversions** Extend `GapBufferLineInfo` with GCString-compatible
-methods:
-
-```rust
-impl GapBufferLineInfo {
-    // Replicate GCString methods but take &str parameter
-    pub fn get_string_at(&self, content: &str, col_index: ColIndex) -> Option<SegString>;
-    pub fn get_string_at_end(&self, content: &str) -> Option<SegString>;
-    pub fn get_string_at_right_of(&self, content: &str, col_index: ColIndex) -> Option<SegString>;
-    pub fn get_string_at_left_of(&self, content: &str, col_index: ColIndex) -> Option<SegString>;
-
-    // Fast conversion when GCString is absolutely needed
-    pub fn to_gc_string(&self, content: &str) -> GCString {
-        GCString {
-            string: content.into(),
-            segments: self.segments.clone(),  // SmallVec clone is efficient
-            display_width: self.display_width,
-            bytes_size: ChUnit::from(self.content_len.as_usize()),
-        }
-    }
-}
-
-// Also provide From trait for convenience
-impl From<(&str, &GapBufferLineInfo)> for GCString {
-    fn from((content, info): (&str, &GapBufferLineInfo)) -> Self {
-        info.to_gc_string(content)
-    }
-}
-```
+methods
 
 ##### 4.2.3 Core Structure Changes
 
-**Make EditorContent Generic:**
-
-```rust
-// From:
-pub struct EditorContent {
-    pub lines: sizing::VecEditorContentLines,
-    pub caret_raw: CaretRaw,
-    pub scr_ofs: ScrOfs,
-    pub maybe_file_extension: Option<TinyInlineString>,
-    pub maybe_file_path: Option<InlineString>,
-    pub sel_list: SelectionList,
-}
-
-// To:
-pub struct EditorContent<T: EditorLinesStorage> {
-    pub lines: T,
-    pub caret_raw: CaretRaw,
-    pub scr_ofs: ScrOfs,
-    pub maybe_file_extension: Option<TinyInlineString>,
-    pub maybe_file_path: Option<InlineString>,
-    pub sel_list: SelectionList,
-}
-```
-
-**Update EditorBuffer and EditorHistory:**
-
-```rust
-pub struct EditorBuffer<T: EditorLinesStorage> {
-    pub content: EditorContent<T>,
-    pub history: EditorHistory<T>,
-    pub render_cache: RenderCache,
-    pub memory_size_calc_cache: MemoizedMemorySize,
-}
-
-pub struct EditorHistory<T: EditorLinesStorage> {
-    pub versions: RingBufferHeap<EditorContent<T>, MAX_UNDO_REDO_SIZE>,
-    pub current_index: CurIndex,
-}
-```
+**Make EditorContent Generic:** **Update EditorBuffer and EditorHistory:**
 
 ##### 4.2.4 Migration of Direct Line Access Patterns
 
@@ -756,7 +599,7 @@ pub struct EditorHistory<T: EditorLinesStorage> {
 
 - [x] Refactor `gc_string.rs` in preparation for moving to `ZeroCopyGapBuffer` and
       `GapBufferLineInfo`
-  - Rename `GCString` to `GCStringOwned`  
+  - Rename `GCString` to `GCStringOwned`
   - Add a new trait `GCString` with associated type
   - Move `GCStringOwned` into its own file `gc_string_owned.rs`
 - [x] Create new `GCStringRef` type that implements the `GCString` trait in `gc_string_ref.rs`
@@ -808,7 +651,7 @@ pub struct EditorHistory<T: EditorLinesStorage> {
   - **Analysis Complete**: Decided on hybrid strategy that enables:
     - Direct usage: `let (content, info) = buffer.lines.get_line_with_info(row_index)?;`
     - Interface compatibility: `let gc_ref = info.to_gc_string_ref(content);`
-    - Zero-copy performance for editor operations  
+    - Zero-copy performance for editor operations
     - Backward compatibility with non-editor code (lolcat, color_wheel)
 - [x] Add `get_line_with_info()` method to `EditorLinesStorage` trait
   - Added method to return `Option<(&str, &GapBufferLineInfo)>` for efficient dual access
@@ -839,113 +682,52 @@ pub struct EditorHistory<T: EditorLinesStorage> {
 - [x] Ask the user to deeply review this code, when they have made their changes, then make a commit
       with this progress
 
-**Direct Migration to ZeroCopyGapBuffer (No VecEditorContentLinesWrapper)**
+- [x] Direct Migration to ZeroCopyGapBuffer (No VecEditorContentLinesWrapper)
 
-- [ ] **Phase 1: Core Generic Structure Changes** 
-  - [ ] Update `EditorContent` to be generic: `EditorContent<T: EditorLinesStorage>`
-    - Change `pub lines: sizing::VecEditorContentLines` to `pub lines: T`
-    - Add `<T: EditorLinesStorage>` constraint to struct definition
-    - Update all `impl` blocks to propagate generic parameter
-  - [ ] Update `EditorBuffer` to propagate the generic type
-    - Change to `EditorBuffer<T: EditorLinesStorage>`
-    - Update `pub content: EditorContent<T>`
-    - Propagate generic through all method signatures and `impl` blocks
-  - [ ] Update `EditorHistory` to handle generic `EditorContent`
-    - Change to `EditorHistory<T: EditorLinesStorage>`  
-    - Update `pub versions: RingBufferHeap<EditorContent<T>, MAX_UNDO_REDO_SIZE>`
-    - Update all methods to handle generic `EditorContent<T>`
-  - [ ] Update `sizing.rs` type definitions
-    - Keep `VecEditorContentLines` for now but mark as deprecated
-    - Update `GetMemSize` implementations to be generic
-  - [ ] Run `cargo check` to ensure all generic propagation compiles correctly
+  - [x] Remove the trait `EditorLinesStorage`
+  - [x] Remove generics from EditorContent and EditorBuffer, they only use ZeroCopyGapBuffer
+  - [x] Remove optimization from `segment_builder.rs` which was causing tests to fail due to bugs;
+        favor correctness over performance
+  - [x] Run comprehensive checks
+    - `cargo check` - ensure compilation
+    - `cargo clippy --all-targets` - fix all lint warnings
+    - `cargo doc --no-deps` - fix documentation warnings
+    - `cargo nextest run` - ensure all tests pass
 
-- [ ] **Phase 2: EditorBufferMut Abstraction Layer**
-  - [ ] Make `EditorBufferMut` generic: `EditorBufferMut<'a, T: EditorLinesStorage>`
-    - Change `pub lines: &'a mut VecEditorContentLines` to `pub lines: &'a mut T`
-    - Update constructor methods to accept generic `&'a mut T`
-  - [ ] Update `EditorBufferMutWithDrop` and `EditorBufferMutNoDrop` to be generic
-    - Propagate generic parameter: `EditorBufferMutWithDrop<'a, T: EditorLinesStorage>`
-    - Update `Drop` implementation for generic case
-  - [ ] Update `get_mut()` and `get_mut_no_drop()` method signatures in `EditorBuffer<T>`
-    - Return types become `EditorBufferMutWithDrop<'_, T>` and `EditorBufferMutNoDrop<'_, T>`
-  - [ ] Create trait-based access methods on `EditorContent<T>`
-    - `get_line_content(&self, row: RowIndex) -> Option<&str>`
-    - `get_line_with_info(&self, row: RowIndex) -> Option<(&str, &GapBufferLineInfo)>`
-    - `insert_line(&mut self, row: RowIndex) -> bool`
-    - All other `EditorLinesStorage` trait methods as convenience wrappers
-  - [ ] Run `cargo check` to ensure all mutable access patterns compile
+- [ ] Post-Migration Validation
 
-- [ ] **Phase 3: Update Validation System**
-  - [ ] Update `validate_buffer_mut.rs` to use trait methods instead of direct field access
-    - Replace `editor_buffer_mut.inner.lines.get(usize)` with trait method calls
-    - Update `is_scroll_offset_in_middle_of_grapheme_cluster()` to use `get_line_with_info()`
-    - Update `adjust_caret_col_if_not_in_middle_of_grapheme_cluster()` to use trait methods
-    - Replace all `GCStringOwned` method calls with `GapBufferLineInfo` equivalents
-  - [ ] Update `perform_validation_checks_after_mutation()` to work with generic types
-  - [ ] Run `cargo check` and ensure all validation functions compile with generic types
-
-- [ ] **Phase 4: Engine Content Mutation Updates**
-  - [ ] Update `content_mut.rs` to use trait methods
-    - Replace `buffer.lines.get(index)` with `buffer.lines.get_line_content(row(index))`
-    - Replace `buffer.lines.len()` with `buffer.lines.line_count().as_usize()`
-    - Replace `buffer.lines.insert(idx, gcstring)` with trait method calls
-    - Update `insert_chunk_at_caret()` and `insert_lines_batch_at_caret()` functions
-  - [ ] Update `engine_public_api.rs` to use trait methods
-    - Replace all direct `.lines` field access with trait method calls
-    - Update event handling functions to work with generic storage
-  - [ ] Update other editor engine files that access `.lines` directly
-    - `selection_support.rs`, `offscreen_buffer.rs`, etc.
-  - [ ] Run `cargo check` to ensure all engine mutations compile
-
-- [ ] **Phase 5: Update Constructor and Default Implementations**
-  - [ ] Update `EditorBuffer::new_empty()` to use `ZeroCopyGapBuffer` as default
-    - Change from `smallvec!["".into()]` to `ZeroCopyGapBuffer::default()`
-    - Ensure `Default` implementation works correctly
-  - [ ] Update `init_with()` method to work with generic storage
-    - Use trait methods instead of direct field access for clearing/populating lines
-  - [ ] Update all test code to work with generic types
-    - Add type annotations where needed: `EditorBuffer<ZeroCopyGapBuffer>`
-    - Update test helper functions to work with new types
-  - [ ] Run full test suite: `cargo nextest run`
-
-- [ ] **Phase 6: Final Integration and Cleanup**
-  - [ ] Update display methods to use trait methods
-    - `get_as_string_with_separator()` method in `buffer_struct.rs:533-549`
-    - `Display` implementation using `self.content.lines.len()` → `line_count()`
-    - `Debug` implementation updates
-  - [ ] Update remaining direct field access patterns
-    - Search codebase for remaining `.lines.` direct access
-    - Replace with appropriate trait method calls
+  - [ ] Manual testing validation: run editor with real content to ensure functionality works
   - [ ] Remove old type definitions and deprecated code
     - Remove `VecEditorContentLines` from `sizing.rs`
     - Clean up any remaining legacy type usage
-  - [ ] Run comprehensive checks
-    - `cargo check` - ensure compilation
-    - `cargo clippy --all-targets` - fix all lint warnings  
-    - `cargo doc --no-deps` - fix documentation warnings
-    - `cargo nextest run` - ensure all tests pass
-  - [ ] Final validation: run editor with real content to ensure functionality works
-
-- [ ] **Post-Migration Validation**
+  - [ ] Drop `VecEditorContentLines` (which is a `&[GCString]`)
   - [ ] Test all major editor operations work correctly
     - Text insertion, deletion, cursor movement
     - Undo/redo functionality
-    - Selection operations  
+    - Selection operations
     - File loading and saving
   - [ ] Performance spot check: ensure no significant regression
   - [ ] Memory usage verification: ensure memory characteristics are reasonable
-  - [ ] Ask the user to deeply review this code, when they have made their changes, then make a commit
-        with this progress
+  - [ ] Ask the user to deeply review this code, when they have made their changes, then make a
+        commit with this progress
 
 #### 4.3 Drop Legacy types from codebase
 
-- [ ] Drop `VecEditorContentLines` (which is a `&[GCString]`)
+- [x] Investigate `tui/src/tui/editor/editor_buffer/clipboard_support.rs` to see how it uses
+      `GCStringOwned`, it should not use `GCStringOwned` anymore, the `clip_to_range()` method
+      should be dropped and replaced with `clip_to_range_str()` method.
+- [x] Replace all the uses of `(&str, &GapBufferLineInfo)` in existing function arguments, with
+      `LineWithInfo` type alias, for better ergonomics
+- [x] Rename `buffer_storage.rs` to `gap_buffer_core.rs`
+- [ ] There might be opportunities to drop lots of code from the `GCStringOwned`, `GCStringRef` now
+      that we have migrated the editor to use `ZeroCopyGapBuffer` and `GapBufferLineInfo` directly.
 - [ ] Check whether `GCString` type can be dropped and replace with `ZeroCopyGapBuffer` and
       `GapBufferLineInfo` instead. This might not be possible due to some existing code, not related
       to the editor, that does not use `ZeroCopyGapBuffer` that relies on `GCString` for
-      segment-based operations. There might be opportunities to drop lots of code from the
-      `GCStringOwned`, `GCStringRef` now that we have migrated the editor to use `ZeroCopyGapBuffer`
-      and `GapBufferLineInfo` directly.
+      segment-based operations.
+- [ ] In all Rust files in the codebase that have nested modules, that have complex multi-line
+      import statements (`use super::{...}`) replace the complex import statement with
+      `#[allow(clippy::wildcard_imports)] use super::*;`
 
 ### Phase 5: Optimization
 

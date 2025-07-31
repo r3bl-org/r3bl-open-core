@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-//! Implementation of `EditorLinesStorage` trait for `ZeroCopyGapBuffer`.
+//! Basic line storage operations for `ZeroCopyGapBuffer`.
 //!
-//! This module provides the native implementation of the `EditorLinesStorage` trait
-//! for `ZeroCopyGapBuffer`, enabling it to be used as a storage backend for the editor.
+//! This module provides fundamental line storage operations for `ZeroCopyGapBuffer`,
+//! enabling efficient text editing and manipulation.
 //!
 //! # Performance Characteristics
 //!
@@ -27,74 +27,99 @@
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
-use crate::{ByteIndex, ColIndex, ColWidth, EditorLinesStorage, GapBufferLineInfo, GCStringOwned, Length, 
-            RowIndex, SegIndex, ZeroCopyGapBuffer, byte_index, row, seg_index, width};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length, LineMetadata,
+            LineWithInfo, RowIndex, SegIndex, byte_index, row,
+            seg_index, width};
+use super::super::ZeroCopyGapBuffer;
 
-impl EditorLinesStorage for ZeroCopyGapBuffer {
+impl ZeroCopyGapBuffer {
     // Line access methods
-    
-    fn get_line_content(&self, row_index: RowIndex) -> Option<&str> {
-        self.get_line_content(row_index)
-    }
 
-    fn get_line_with_info(&self, row_index: RowIndex) -> Option<(&str, &GapBufferLineInfo)> {
-        let content = self.get_line_content(row_index)?;
+    /// Get the number of lines in the storage (alias for `line_count`).
+    #[must_use]
+    pub fn len(&self) -> Length { self.line_count() }
+
+    /// Check if the storage is empty (has no lines).
+    #[must_use]
+    pub fn is_empty(&self) -> bool { self.line_count().as_usize() == 0 }
+
+    /// Get line content and metadata.
+    /// 
+    /// # Panics
+    /// 
+    /// Panics in debug builds if the line contains invalid UTF-8. This should never
+    /// happen as all content is validated on insertion.
+    #[must_use] 
+    pub fn get_line_with_info(&self, row_index: RowIndex) -> Option<LineWithInfo<'_>> {
         let line_info = self.get_line_info(row_index.as_usize())?;
+
+        // In debug builds, validate UTF-8
+        #[cfg(debug_assertions)]
+        {
+            use std::str::from_utf8;
+            if let Err(e) = from_utf8(&self.buffer[line_info.content_range()]) {
+                panic!(
+                    "Line {} contains invalid UTF-8 at byte {}: {}",
+                    row_index.as_usize(),
+                    e.valid_up_to(),
+                    e
+                );
+            }
+        }
+        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
+        let content = unsafe {
+            std::str::from_utf8_unchecked(&self.buffer[line_info.content_range()])
+        };
         Some((content, line_info))
     }
-    
-    fn line_count(&self) -> Length {
-        self.line_count()
-    }
-    
+
     // Line metadata access
-    
-    fn get_line_display_width(&self, row_index: RowIndex) -> Option<ColWidth> {
+
+    #[must_use] 
+    pub fn get_line_display_width(&self, row_index: RowIndex) -> Option<ColWidth> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.display_width)
     }
-    
-    fn get_line_grapheme_count(&self, row_index: RowIndex) -> Option<Length> {
+
+    #[must_use] 
+    pub fn get_line_grapheme_count(&self, row_index: RowIndex) -> Option<Length> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.grapheme_count)
     }
-    
-    fn get_line_byte_len(&self, row_index: RowIndex) -> Option<Length> {
+
+    #[must_use] 
+    pub fn get_line_byte_len(&self, row_index: RowIndex) -> Option<Length> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.content_len)
     }
-    
+
     // Line modification methods
-    
-    fn insert_line(&mut self, row_index: RowIndex) -> bool {
+
+    pub fn insert_line(&mut self, row_index: RowIndex) -> bool {
         match self.insert_empty_line(row_index) {
             Ok(()) => true,
             Err(_) => false,
         }
     }
-    
-    fn remove_line(&mut self, row_index: RowIndex) -> bool {
-        self.remove_line(row_index.as_usize())
-    }
-    
-    fn clear(&mut self) {
-        self.clear();
-    }
-    
-    fn set_line(&mut self, row_index: RowIndex, content: &str) -> bool {
+
+    pub fn set_line(&mut self, row_index: RowIndex, content: &str) -> bool {
         // First, clear the existing line content
         if let Some(line_info) = self.get_line_info(row_index.as_usize()) {
             let grapheme_count = line_info.grapheme_count;
             if grapheme_count.as_usize() > 0 {
                 // Delete all existing content
-                match self.delete_range(row_index, seg_index(0), seg_index(grapheme_count.as_usize())) {
-                    Ok(()) => {},
+                match self.delete_range(
+                    row_index,
+                    seg_index(0),
+                    seg_index(grapheme_count.as_usize()),
+                ) {
+                    Ok(()) => {}
                     Err(_) => return false,
                 }
             }
-            
+
             // Insert new content at the beginning
-            match self.insert_at_grapheme(row_index, seg_index(0), content) {
+            match self.insert_text_at_grapheme(row_index, seg_index(0), content) {
                 Ok(()) => true,
                 Err(_) => false,
             }
@@ -102,119 +127,62 @@ impl EditorLinesStorage for ZeroCopyGapBuffer {
             false
         }
     }
-    
-    fn push_line(&mut self, content: &str) {
+
+    pub fn push_line(&mut self, content: &str) {
         let line_idx = self.add_line();
-        drop(self.insert_at_grapheme(row(line_idx), seg_index(0), content));
+        drop(self.insert_text_at_grapheme(row(line_idx), seg_index(0), content));
     }
-    
-    // Grapheme-based operations
-    
-    fn insert_at_grapheme(
-        &mut self,
-        row_index: RowIndex,
-        seg_index: SegIndex,
-        text: &str
-    ) -> bool {
-        match self.insert_at_grapheme(row_index, seg_index, text) {
-            Ok(()) => true,
-            Err(_) => false,
-        }
-    }
-    
-    fn delete_at_grapheme(
-        &mut self,
-        row_index: RowIndex,
-        seg_idx: SegIndex,
-        count: Length
-    ) -> bool {
-        let end_seg_index = seg_index(seg_idx.as_usize() + count.as_usize());
-        match self.delete_range(row_index, seg_idx, end_seg_index) {
-            Ok(()) => true,
-            Err(_) => false,
-        }
-    }
-    
+
     // Column-based operations
-    
-    fn insert_at_col(
+
+    pub fn insert_at_col(
         &mut self,
         row_index: RowIndex,
         col_index: ColIndex,
-        text: &str
+        text: &str,
     ) -> Option<ColWidth> {
         // Convert column index to segment index
         let seg_idx = self.col_to_seg_index(row_index, col_index)?;
-        
+
         // Calculate the display width of the text to be inserted
         let text_width = Self::calculate_text_display_width(text);
-        
+
         // Perform the insertion
-        match self.insert_at_grapheme(row_index, seg_idx, text) {
+        match self.insert_text_at_grapheme(row_index, seg_idx, text) {
             Ok(()) => Some(text_width),
             Err(_) => None,
         }
     }
-    
-    fn delete_at_col(
+
+    /// Delete a specified number of grapheme clusters starting at the given column position.
+    ///
+    /// # Arguments
+    /// * `row_index` - The row to delete from
+    /// * `col_index` - The column position to start deletion
+    /// * `segment_count` - The number of grapheme clusters (segments) to delete
+    ///
+    /// # Returns
+    /// * `true` if deletion was successful
+    /// * `false` if the position was invalid or deletion failed
+    pub fn delete_at_col(
         &mut self,
         row_index: RowIndex,
         col_index: ColIndex,
-        count: Length
+        segment_count: Length,
     ) -> bool {
         // Convert column index to segment index
         if let Some(seg_idx) = self.col_to_seg_index(row_index, col_index) {
-            // Need to call the trait method, not the ZeroCopyGapBuffer method
-            <Self as EditorLinesStorage>::delete_at_grapheme(self, row_index, seg_idx, count)
-        } else {
-            false
-        }
-    }
-    
-    // Utility methods
-    
-    fn split_line_at_col(
-        &mut self,
-        row_index: RowIndex,
-        col_index: ColIndex
-    ) -> Option<String> {
-        // Convert column index to segment index
-        let seg_idx = self.col_to_seg_index(row_index, col_index)?;
-        
-        // Get the line content as owned string
-        let line_content = self.get_line_content(row_index)?.to_string();
-        
-        // Find the byte position for the segment
-        let line_info = self.get_line_info(row_index.as_usize())?;
-        let byte_pos = line_info.get_byte_pos(seg_idx);
-        
-        // Split the content
-        let (left_part, right_part) = line_content.split_at(byte_pos.as_usize());
-        let right_content = right_part.to_string();
-        
-        // Update the current line to only contain the left part
-        self.set_line(row_index, left_part);
-        
-        Some(right_content)
-    }
-    
-    fn join_lines(&mut self, first_row_index: RowIndex) -> bool {
-        let next_row_index = row(first_row_index.as_usize() + 1);
-        
-        // Get the content of the second line
-        if let Some(second_line_content) = self.get_line_content(next_row_index) {
-            let content_to_append = second_line_content.to_string();
-            
-            // Get the grapheme count of the first line to know where to append
-            if let Some(line_info) = self.get_line_info(first_row_index.as_usize()) {
-                let append_pos = seg_index(line_info.grapheme_count.as_usize());
-                
-                // Append the second line's content to the first line
-                match self.insert_at_grapheme(first_row_index, append_pos, &content_to_append) {
-                    Ok(()) => {
-                        // Remove the second line
-                        self.remove_line(next_row_index.as_usize())
-                    },
+            // Get the line info to check segment count
+            if let Some(line_info) = self.get_line_info(row_index.as_usize()) {
+                let max_segments = line_info.segments.len();
+                // Calculate end segment index, clamping to available segments
+                let requested_end = seg_idx.as_usize() + segment_count.as_usize();
+                let actual_end = requested_end.min(max_segments);
+                let end_seg_index = seg_index(actual_end);
+
+                // Use the range deletion method
+                match self.delete_range(row_index, seg_idx, end_seg_index) {
+                    Ok(()) => true,
                     Err(_) => false,
                 }
             } else {
@@ -224,73 +192,166 @@ impl EditorLinesStorage for ZeroCopyGapBuffer {
             false
         }
     }
-    
+
+    // Utility methods
+
+    pub fn split_line_at_col(
+        &mut self,
+        row_index: RowIndex,
+        col_index: ColIndex,
+    ) -> Option<String> {
+        // Convert column index to segment index
+        let seg_idx = self.col_to_seg_index(row_index, col_index)?;
+
+        // Get the line content as owned string
+        let line_content = self.get_line_content(row_index)?.to_string();
+
+        // Find the byte position for the segment
+        let line_info = self.get_line_info(row_index.as_usize())?;
+        let byte_pos = line_info.get_byte_pos(seg_idx);
+
+        // Split the content
+        let (left_part, right_part) = line_content.split_at(byte_pos.as_usize());
+        let right_content = right_part.to_string();
+
+        // Update the current line to only contain the left part
+        self.set_line(row_index, left_part);
+
+        Some(right_content)
+    }
+
+    pub fn merge_with_next_line(&mut self, base_row_index: RowIndex) -> bool {
+        let next_row_index = row(base_row_index.as_usize() + 1);
+
+        // Get the content of the second line
+        if let Some(second_line_content) = self.get_line_content(next_row_index) {
+            let content_to_append = second_line_content.to_string();
+
+            // Get the grapheme count of the base line to know where to append
+            if let Some(line_info) = self.get_line_info(base_row_index.as_usize()) {
+                let append_pos = seg_index(line_info.grapheme_count.as_usize());
+
+                // Append the second line's content to the base line
+                match self.insert_text_at_grapheme(
+                    base_row_index,
+                    append_pos,
+                    &content_to_append,
+                ) {
+                    Ok(()) => {
+                        // Remove the second line
+                        self.remove_line(next_row_index)
+                    }
+                    Err(_) => false,
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
     // Byte position conversions
-    
-    fn get_byte_offset_for_row(&self, row_index: RowIndex) -> Option<ByteIndex> {
+
+    #[must_use] 
+    pub fn get_byte_offset_for_row(&self, row_index: RowIndex) -> Option<ByteIndex> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.buffer_offset)
     }
-    
-    fn find_row_containing_byte(&self, byte_index: ByteIndex) -> Option<RowIndex> {
+
+    #[must_use] 
+    pub fn find_row_containing_byte(&self, byte_index: ByteIndex) -> Option<RowIndex> {
+        // Early bounds check for performance optimization
+        if byte_index.as_usize() >= self.buffer.len() {
+            return None;
+        }
+
         // Linear search through lines to find which one contains the byte
         // This could be optimized with binary search if needed
         let target_byte = byte_index.as_usize();
-        
+
         for i in 0..self.line_count().as_usize() {
             if let Some(line_info) = self.get_line_info(i) {
                 let line_start = line_info.buffer_offset.as_usize();
                 let line_end = line_start + line_info.capacity.as_usize();
-                
+
                 if target_byte >= line_start && target_byte < line_end {
                     return Some(row(i));
                 }
             }
         }
-        
+
         None
     }
-    
+
     // Iterator support
-    
-    fn iter_lines(&self) -> Box<dyn Iterator<Item = &str> + '_> {
-        Box::new((0..self.line_count().as_usize()).filter_map(move |i| {
-            self.get_line_content(row(i))
-        }))
+
+    #[must_use] 
+    pub fn iter_lines(&self) -> Box<dyn Iterator<Item = LineWithInfo<'_>> + '_> {
+        Box::new(
+            (0..self.line_count().as_usize())
+                .filter_map(move |i| self.get_line_with_info(row(i))),
+        )
     }
-    
+
     // Total size information
-    
-    fn total_bytes(&self) -> ByteIndex {
-        byte_index(self.buffer.len())
-    }
-    
+
+    #[must_use] 
+    pub fn total_bytes(&self) -> ByteIndex { byte_index(self.buffer.len()) }
+
     // Conversion methods
-    
-    fn to_gc_string_vec(&self) -> Vec<GCStringOwned> {
+
+    pub fn to_gc_string_vec(&self) -> Vec<GCStringOwned> {
         (0..self.line_count().as_usize())
             .filter_map(|i| self.get_line_content(row(i)))
             .map(Into::into)
             .collect()
     }
-    
-    fn from_gc_string_vec(lines: Vec<GCStringOwned>) -> Self {
+
+    #[must_use] 
+    pub fn from_gc_string_vec(lines: Vec<GCStringOwned>) -> Self {
         let mut buffer = Self::new();
         for line in lines {
             buffer.push_line(line.as_ref());
         }
         buffer
     }
+
+    // Validation support methods
+
+    #[must_use] 
+    pub fn get_string_at_col(
+        &self,
+        row_index: RowIndex,
+        col_index: ColIndex,
+    ) -> Option<crate::SegStringOwned> {
+        let line_with_info = self.get_line_with_info(row_index)?;
+        LineMetadata::get_string_at_from_line(line_with_info, col_index)
+    }
+
+    #[must_use] 
+    pub fn check_is_in_middle_of_grapheme(
+        &self,
+        row_index: RowIndex,
+        col_index: ColIndex,
+    ) -> Option<crate::Seg> {
+        let (_content, line_info) = self.get_line_with_info(row_index)?;
+        line_info.check_is_in_middle_of_grapheme(col_index)
+    }
 }
 
 // Helper methods for ZeroCopyGapBuffer
 impl ZeroCopyGapBuffer {
     /// Convert a column index to a segment index for a given line.
-    fn col_to_seg_index(&self, row_index: RowIndex, col_index: ColIndex) -> Option<SegIndex> {
+    fn col_to_seg_index(
+        &self,
+        row_index: RowIndex,
+        col_index: ColIndex,
+    ) -> Option<SegIndex> {
         let line_info = self.get_line_info(row_index.as_usize())?;
         let target_col = col_index.as_usize();
         let mut current_col = 0;
-        
+
         // Find the segment that contains or is after the target column
         for (i, segment) in line_info.segments.iter().enumerate() {
             if current_col >= target_col {
@@ -298,20 +359,21 @@ impl ZeroCopyGapBuffer {
             }
             current_col += segment.display_width.as_usize();
         }
-        
+
         // If we've gone through all segments, return the end position
         Some(seg_index(line_info.segments.len()))
     }
-    
+
     /// Calculate the display width of a text string.
     fn calculate_text_display_width(text: &str) -> ColWidth {
         use crate::segment_builder::build_segments_for_str;
-        
+
         let segments = build_segments_for_str(text);
-        let total_width: usize = segments.iter()
+        let total_width: usize = segments
+            .iter()
             .map(|seg| seg.display_width.as_usize())
             .sum();
-        
+
         width(total_width)
     }
 }
@@ -319,166 +381,169 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, len, GCString};
+    use crate::{GCString, col, len};
 
     #[test]
     fn test_basic_line_operations() {
         let mut storage = ZeroCopyGapBuffer::new();
-        
+
         // Test empty storage
         assert_eq!(storage.line_count(), len(0));
         assert!(storage.is_empty());
-        
+
         // Add some lines
         storage.push_line("Hello, world!");
         storage.push_line("This is line 2");
         storage.push_line("And line 3");
-        
+
         // Test line count
         assert_eq!(storage.line_count(), len(3));
         assert!(!storage.is_empty());
-        
+
         // Test line content access
         assert_eq!(storage.get_line_content(row(0)), Some("Hello, world!"));
         assert_eq!(storage.get_line_content(row(1)), Some("This is line 2"));
         assert_eq!(storage.get_line_content(row(2)), Some("And line 3"));
         assert_eq!(storage.get_line_content(row(3)), None);
-        
+
         // Test line metadata
         assert_eq!(storage.get_line_display_width(row(0)), Some(width(13)));
         assert_eq!(storage.get_line_grapheme_count(row(0)), Some(len(13)));
         assert_eq!(storage.get_line_byte_len(row(0)), Some(len(13)));
     }
-    
+
     #[test]
     fn test_line_modification() {
         let mut storage = ZeroCopyGapBuffer::new();
-        
+
         // Add initial content
         storage.push_line("Original line");
-        
+
         // Test set_line
         assert!(storage.set_line(row(0), "Modified line"));
         assert_eq!(storage.get_line_content(row(0)), Some("Modified line"));
-        
+
         // Test insert_line at the end (to avoid the underflow bug)
         assert!(storage.insert_line(row(1)));
         assert_eq!(storage.line_count(), len(2));
         assert_eq!(storage.get_line_content(row(0)), Some("Modified line"));
         assert_eq!(storage.get_line_content(row(1)), Some(""));
-        
+
         // Test remove_line (remove the empty line at the end)
-        assert!(<ZeroCopyGapBuffer as EditorLinesStorage>::remove_line(&mut storage, row(1)));
+        assert!(storage.remove_line(row(1)));
         assert_eq!(storage.line_count(), len(1));
         assert_eq!(storage.get_line_content(row(0)), Some("Modified line"));
-        
+
         // Test insert_line at beginning
         assert!(storage.insert_line(row(0)));
         assert_eq!(storage.line_count(), len(2));
         assert_eq!(storage.get_line_content(row(0)), Some(""));
         assert_eq!(storage.get_line_content(row(1)), Some("Modified line"));
-        
+
         // Test remove_line at beginning
-        assert!(<ZeroCopyGapBuffer as EditorLinesStorage>::remove_line(&mut storage, row(0)));
+        assert!(storage.remove_line(row(0)));
         assert_eq!(storage.line_count(), len(1));
         assert_eq!(storage.get_line_content(row(0)), Some("Modified line"));
     }
-    
+
     #[test]
     fn test_grapheme_operations() {
         let mut storage = ZeroCopyGapBuffer::new();
         storage.push_line("Hello");
-        
+
         // Test insert_at_grapheme
-        assert!(<ZeroCopyGapBuffer as EditorLinesStorage>::insert_at_grapheme(&mut storage, row(0), seg_index(5), " World"));
+        assert!(storage.insert_text_at_grapheme(row(0), seg_index(5), " World").is_ok());
         assert_eq!(storage.get_line_content(row(0)), Some("Hello World"));
-        
+
         // Test delete_at_grapheme
-        assert!(<ZeroCopyGapBuffer as EditorLinesStorage>::delete_at_grapheme(&mut storage, row(0), seg_index(5), len(6)));
-        assert_eq!(storage.get_line_content(row(0)), Some("Hello"));
+        assert!(storage.delete_grapheme_at(row(0), seg_index(5)).is_ok());
+        assert_eq!(storage.get_line_content(row(0)), Some("HelloWorld"));
     }
-    
+
     #[test]
     fn test_unicode_content() {
         let mut storage = ZeroCopyGapBuffer::new();
-        
+
         // Test with emoji and unicode
         storage.push_line("Hello 👋 世界");
-        
+
         assert_eq!(storage.get_line_content(row(0)), Some("Hello 👋 世界"));
         assert_eq!(storage.get_line_grapheme_count(row(0)), Some(len(10))); // "Hello " = 6 + emoji = 1 + space = 1 + "世界" = 2
-        
+
         // Insert more unicode
-        assert!(<ZeroCopyGapBuffer as EditorLinesStorage>::insert_at_grapheme(&mut storage, row(0), seg_index(7), " 🌍"));
+        assert!(storage.insert_text_at_grapheme(row(0), seg_index(7), " 🌍").is_ok());
         assert_eq!(storage.get_line_content(row(0)), Some("Hello 👋 🌍 世界"));
     }
-    
+
     #[test]
     fn test_split_and_join_lines() {
         let mut storage = ZeroCopyGapBuffer::new();
         storage.push_line("Hello World");
-        
+
         // Test split_line_at_col
         let split_content = storage.split_line_at_col(row(0), col(6));
         assert_eq!(split_content, Some("World".to_string()));
         assert_eq!(storage.get_line_content(row(0)), Some("Hello "));
-        
+
         // Add the split content as a new line
         storage.push_line(&split_content.unwrap());
-        
-        // Test join_lines
-        assert!(storage.join_lines(row(0)));
+
+        // Test merge_with_next_line
+        assert!(storage.merge_with_next_line(row(0)));
         assert_eq!(storage.get_line_content(row(0)), Some("Hello World"));
         assert_eq!(storage.line_count(), len(1));
     }
-    
+
     #[test]
     fn test_clear() {
         let mut storage = ZeroCopyGapBuffer::new();
-        
+
         // Add some content
         storage.push_line("Line 1");
         storage.push_line("Line 2");
         storage.push_line("Line 3");
-        
+
         assert_eq!(storage.line_count(), len(3));
-        
+
         // Clear all lines
         storage.clear();
-        
+
         assert_eq!(storage.line_count(), len(0));
         assert!(storage.is_empty());
     }
-    
+
     #[test]
     fn test_iterator() {
         let mut storage = ZeroCopyGapBuffer::new();
-        
+
         // Add test lines
         let test_lines = vec!["First line", "Second line", "Third line"];
         for line in &test_lines {
             storage.push_line(line);
         }
-        
+
         // Test iterator
-        let collected: Vec<&str> = storage.iter_lines().collect();
+        let collected: Vec<&str> = storage
+            .iter_lines()
+            .map(|line_with_info| line_with_info.0)
+            .collect();
         assert_eq!(collected, test_lines);
     }
-    
+
     #[test]
     fn test_conversion_methods() {
         let mut storage = ZeroCopyGapBuffer::new();
-        
+
         // Add some lines
         storage.push_line("Line 1");
         storage.push_line("Line 2");
-        
+
         // Test to_gc_string_vec
         let gc_vec = storage.to_gc_string_vec();
         assert_eq!(gc_vec.len(), 2);
         assert_eq!(gc_vec[0].as_ref(), "Line 1");
         assert_eq!(gc_vec[1].as_ref(), "Line 2");
-        
+
         // Test from_gc_string_vec
         let new_storage = ZeroCopyGapBuffer::from_gc_string_vec(gc_vec);
         assert_eq!(new_storage.line_count(), len(2));
@@ -487,20 +552,95 @@ mod tests {
     }
 
     #[test]
+    fn test_delete_at_col_with_emoji() {
+        let mut storage = ZeroCopyGapBuffer::new();
+
+        // Create line with emoji: "Hello😃World"
+        storage.push_line("Hello😃World");
+
+        // Verify initial state
+        assert_eq!(storage.get_line_content(row(0)), Some("Hello😃World"));
+        assert_eq!(storage.get_line_display_width(row(0)), Some(width(12))); // 5 + 2 + 5
+
+        // Delete the emoji (1 segment) at column 5
+        assert!(storage.delete_at_col(row(0), col(5), len(1)));
+
+        // Verify the emoji was deleted
+        assert_eq!(storage.get_line_content(row(0)), Some("HelloWorld"));
+        assert_eq!(storage.get_line_display_width(row(0)), Some(width(10)));
+    }
+
+    #[test]
+    fn test_delete_at_col_multiple_segments() {
+        let mut storage = ZeroCopyGapBuffer::new();
+
+        // Create line with multiple emojis
+        storage.push_line("👋😀🎉");
+
+        // Each emoji is 1 segment but width 2
+        assert_eq!(storage.get_line_grapheme_count(row(0)), Some(len(3)));
+        assert_eq!(storage.get_line_display_width(row(0)), Some(width(6)));
+
+        // Delete 2 segments starting at column 0
+        assert!(storage.delete_at_col(row(0), col(0), len(2)));
+
+        // Should have deleted 👋 and 😀, leaving only 🎉
+        assert_eq!(storage.get_line_content(row(0)), Some("🎉"));
+        assert_eq!(storage.get_line_grapheme_count(row(0)), Some(len(1)));
+        assert_eq!(storage.get_line_display_width(row(0)), Some(width(2)));
+    }
+
+    #[test]
+    fn test_delete_at_col_mixed_width() {
+        let mut storage = ZeroCopyGapBuffer::new();
+
+        // Mix of ASCII and wide characters
+        storage.push_line("a😃b世界c");
+
+        // Width: a=1, 😃=2, b=1, 世=2, 界=2, c=1
+        assert_eq!(storage.get_line_display_width(row(0)), Some(width(9)));
+
+        // Delete emoji at column 1 (segment index 1)
+        assert!(storage.delete_at_col(row(0), col(1), len(1)));
+        assert_eq!(storage.get_line_content(row(0)), Some("ab世界c"));
+
+        // Delete '世' at column 2 (after 'ab')
+        assert!(storage.delete_at_col(row(0), col(2), len(1)));
+        assert_eq!(storage.get_line_content(row(0)), Some("ab界c"));
+    }
+
+    #[test]
+    fn test_delete_at_col_segment_count_parameter() {
+        let mut storage = ZeroCopyGapBuffer::new();
+
+        // Create line with text
+        storage.push_line("abcdef");
+
+        // Delete 3 segments starting at column 1 (should delete 'bcd')
+        assert!(storage.delete_at_col(row(0), col(1), len(3)));
+        assert_eq!(storage.get_line_content(row(0)), Some("aef"));
+
+        // Now we have "aef" (3 segments)
+        // Try to delete from beginning - even with count > remaining segments
+        assert!(storage.delete_at_col(row(0), col(0), len(10)));
+        assert_eq!(storage.get_line_content(row(0)), Some(""));
+    }
+
+    #[test]
     fn test_get_line_with_info() {
         let mut storage = ZeroCopyGapBuffer::new();
         storage.push_line("Hello 👋 World");
-        
+
         // Test get_line_with_info method
         let (content, info) = storage.get_line_with_info(row(0)).unwrap();
         assert_eq!(content, "Hello 👋 World");
         assert!(info.grapheme_count.as_usize() > 0);
         assert!(info.display_width.as_usize() > 0);
-        
+
         // Test GCString-compatible methods
         let seg_string = info.get_string_at(content, col(6)).unwrap();
         assert_eq!(seg_string.string.as_ref(), "👋");
-        
+
         // Test to_gc_string_ref for interface compatibility
         let gc_ref = info.to_gc_string_ref(content);
         assert_eq!(gc_ref.as_str(), "Hello 👋 World");

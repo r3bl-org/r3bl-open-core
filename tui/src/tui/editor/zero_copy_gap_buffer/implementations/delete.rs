@@ -112,8 +112,8 @@
 
 use miette::{Result, miette};
 
-use super::buffer_storage::ZeroCopyGapBuffer;
 use crate::{ByteIndex, RowIndex, SegIndex, ch, len};
+use super::super::ZeroCopyGapBuffer;
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -134,7 +134,7 @@ impl ZeroCopyGapBuffer {
     /// - The line index is out of bounds
     /// - The segment index is out of bounds
     /// - Segment rebuilding fails
-    pub fn delete_at_grapheme(
+    pub fn delete_grapheme_at(
         &mut self,
         line_index: RowIndex,
         seg_index: SegIndex,
@@ -330,7 +330,8 @@ impl ZeroCopyGapBuffer {
     }
 
     // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in
-    // segment_construction.rs and is accessible directly on [`ZeroCopyGapBuffer`]
+    // implementations::segment_builder and is accessible directly on
+    // [`ZeroCopyGapBuffer`]
 }
 
 #[cfg(test)]
@@ -345,11 +346,11 @@ mod tests {
 
         // Insert initial text
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello World")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
             .unwrap();
 
         // Delete the space (index 5)
-        buffer.delete_at_grapheme(row(0), seg_index(5)).unwrap();
+        buffer.delete_grapheme_at(row(0), seg_index(5)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
         assert_eq!(content, "HelloWorld");
@@ -365,7 +366,7 @@ mod tests {
 
         // Insert initial text
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello World!")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello World!")
             .unwrap();
 
         // Delete "World" (indices 6-11)
@@ -386,11 +387,11 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         // Delete first character
-        buffer.delete_at_grapheme(row(0), seg_index(0)).unwrap();
+        buffer.delete_grapheme_at(row(0), seg_index(0)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
         assert_eq!(content, "ello");
@@ -402,11 +403,11 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         // Delete last character
-        buffer.delete_at_grapheme(row(0), seg_index(4)).unwrap();
+        buffer.delete_grapheme_at(row(0), seg_index(4)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
         assert_eq!(content, "Hell");
@@ -419,11 +420,11 @@ mod tests {
 
         // Insert text with emoji
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello 😀 World")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello 😀 World")
             .unwrap();
 
         // Delete the emoji (index 6)
-        buffer.delete_at_grapheme(row(0), seg_index(6)).unwrap();
+        buffer.delete_grapheme_at(row(0), seg_index(6)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
         assert_eq!(content, "Hello  World");
@@ -439,11 +440,11 @@ mod tests {
 
         // Insert text with compound grapheme cluster
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")
+            .insert_text_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")
             .unwrap();
 
         // Delete the family emoji (1 grapheme cluster)
-        buffer.delete_at_grapheme(row(0), seg_index(0)).unwrap();
+        buffer.delete_grapheme_at(row(0), seg_index(0)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
         assert_eq!(content, " Family");
@@ -458,7 +459,7 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         // Delete all characters
@@ -480,16 +481,16 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         // Try to delete beyond the end
-        let result = buffer.delete_at_grapheme(row(0), seg_index(10));
+        let result = buffer.delete_grapheme_at(row(0), seg_index(10));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("out of bounds"));
 
         // Try to delete from invalid line
-        let result = buffer.delete_at_grapheme(row(5), seg_index(0));
+        let result = buffer.delete_grapheme_at(row(5), seg_index(0));
         assert!(result.is_err());
 
         // Try invalid range (start >= end)
@@ -504,9 +505,9 @@ mod tests {
         buffer.add_line();
 
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "Hello")
+            .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
-        buffer.delete_at_grapheme(row(0), seg_index(2)).unwrap(); // Delete 'l'
+        buffer.delete_grapheme_at(row(0), seg_index(2)).unwrap(); // Delete 'l'
 
         // Check that the buffer is properly null-padded
         let line_info = buffer.get_line_info(0).unwrap();
@@ -531,7 +532,7 @@ mod tests {
 
         // Insert text with mixed Unicode
         buffer
-            .insert_at_grapheme(row(0), seg_index(0), "a😀b🌍c")
+            .insert_text_at_grapheme(row(0), seg_index(0), "a😀b🌍c")
             .unwrap();
 
         // Delete range including emojis (indices 1-4, which is "😀b🌍")
@@ -567,12 +568,12 @@ mod benches {
         b.iter(|| {
             // Setup: insert text
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
             // Benchmark: delete a character
             buffer
-                .delete_at_grapheme(row(0), black_box(seg_index(5)))
+                .delete_grapheme_at(row(0), black_box(seg_index(5)))
                 .unwrap();
 
             // Cleanup: clear rest of content
@@ -592,7 +593,7 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
             // Benchmark: delete "Beautiful " (indices 6-16)
@@ -617,12 +618,12 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
             // Benchmark: delete the emoji
             buffer
-                .delete_at_grapheme(row(0), black_box(seg_index(6)))
+                .delete_grapheme_at(row(0), black_box(seg_index(6)))
                 .unwrap();
 
             // Cleanup
@@ -642,7 +643,7 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
             // Benchmark: delete first 5 chars
@@ -667,7 +668,7 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
 
@@ -691,12 +692,12 @@ mod benches {
         b.iter(|| {
             // Setup
             buffer
-                .insert_at_grapheme(row(0), seg_index(0), test_text)
+                .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
             // Benchmark: delete the complex family emoji
             buffer
-                .delete_at_grapheme(row(0), black_box(seg_index(8)))
+                .delete_grapheme_at(row(0), black_box(seg_index(8)))
                 .unwrap();
 
             // Cleanup

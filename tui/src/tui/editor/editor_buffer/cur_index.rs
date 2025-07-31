@@ -143,7 +143,8 @@ impl CurIndex {
 }
 
 mod ops {
-    use super::{CurIndex, Deref, DerefMut, Index};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for CurIndex {
         type Target = Option<Index>;
@@ -157,7 +158,8 @@ mod ops {
 }
 
 mod convert {
-    use super::{CurIndex, Index};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<usize> for CurIndex {
         fn from(val: usize) -> Self { CurIndex(Some(Index(val.into()))) }

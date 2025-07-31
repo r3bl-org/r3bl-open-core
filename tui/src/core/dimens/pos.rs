@@ -107,7 +107,8 @@ pub struct Pos {
 pub fn pos(arg_pos: impl Into<Pos>) -> Pos { arg_pos.into() }
 
 mod constructor {
-    use super::{Add, ColIndex, Pos, RowIndex};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Pos {
         pub fn new(arg_pos: impl Into<Pos>) -> Self { arg_pos.into() }
@@ -155,7 +156,8 @@ mod constructor {
 }
 
 mod convert {
-    use super::{ColIndex, Pos, RowIndex};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<Pos> for RowIndex {
         fn from(pos: Pos) -> Self { pos.row_index }
@@ -167,7 +169,8 @@ mod convert {
 }
 
 mod ops {
-    use super::{Add, AddAssign, ColWidth, Mul, Pos, RowHeight, Size, Sub, SubAssign};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
     use crate::{ChUnit, col, row};
 
     // Dim is equivalent to (ColWidthCount, RowHeightCount).
@@ -349,7 +352,8 @@ mod ops {
 }
 
 mod api {
-    use super::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, ch};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     // Reset API.
     impl Pos {
@@ -463,7 +467,8 @@ mod api {
 }
 
 mod debug {
-    use super::{Debug, Formatter, Pos, Result};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Debug for Pos {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

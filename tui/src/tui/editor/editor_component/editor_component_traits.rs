@@ -25,6 +25,8 @@ use crate::{EditorBuffer, FlexBoxId};
 /// [`EditorBuffer`]s w/ key of [`FlexBoxId`].
 pub trait HasEditorBuffers {
     fn get_mut_editor_buffer(&mut self, id: FlexBoxId) -> Option<&mut EditorBuffer>;
+
     fn insert_editor_buffer(&mut self, id: FlexBoxId, buffer: EditorBuffer);
+
     fn contains_editor_buffer(&self, id: FlexBoxId) -> bool;
 }

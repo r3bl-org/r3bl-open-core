@@ -29,7 +29,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{ColIndex, ColWidth, Seg, ch, col, gc_string_owned_sizing::SegmentArray,
-            seg_index, width};
+            len, seg_index, width};
 
 /// Build grapheme cluster segments for any string slice.
 ///
@@ -56,19 +56,19 @@ pub fn build_segments_for_str(input: &str) -> SegmentArray {
     let mut display_col = 0;
 
     for (seg_idx, grapheme) in input.graphemes(true).enumerate() {
-        let bytes_size = grapheme.len();
+        let bytes_size = len(grapheme.len());
         let display_width = UnicodeWidthStr::width(grapheme);
 
         segments.push(Seg {
             start_byte_index: ch(byte_offset),
-            end_byte_index: ch(byte_offset + bytes_size),
+            end_byte_index: ch(byte_offset + bytes_size.as_usize()),
             display_width: width(display_width),
             seg_index: seg_index(seg_idx),
             bytes_size,
             start_display_col_index: col(display_col),
         });
 
-        byte_offset += bytes_size;
+        byte_offset += bytes_size.as_usize();
         display_col += display_width;
     }
 
@@ -88,7 +88,7 @@ fn build_ascii_segments(input: &str) -> SegmentArray {
             end_byte_index: ch(i + 1),
             display_width: width(1),
             seg_index: seg_index(i),
-            bytes_size: 1,
+            bytes_size: len(1),
             start_display_col_index: col(i),
         });
     }
@@ -168,7 +168,7 @@ mod tests {
         assert_eq2!(calculate_display_width(&segments), width(2));
 
         let seg = &segments[0];
-        assert_eq2!(seg.bytes_size, 8); // 4 bytes for 🙏 + 4 bytes for 🏽
+        assert_eq2!(seg.bytes_size.as_usize(), 8); // 4 bytes for 🙏 + 4 bytes for 🏽
         assert_eq2!(seg.display_width, width(2));
     }
 

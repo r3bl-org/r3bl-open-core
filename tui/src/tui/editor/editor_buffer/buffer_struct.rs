@@ -16,19 +16,26 @@
  */
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use smallvec::smallvec;
+use super::{SelectionList, history::EditorHistory, render_cache::RenderCache};
+use crate::{CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+            DEFAULT_SYN_HI_FILE_EXT, EditorBufferMutWithDrop, GetMemSize, InlineString,
+            LineMetadata, LineWithInfo, MemoizedMemorySize, MemorySize, RowHeight,
+            RowIndex, ScrOfs, SegStringOwned, Size, TinyInlineString, ZeroCopyGapBuffer,
+            caret_locate, format_as_kilobytes_with_commas, glyphs, height, inline_string,
+            ok, row, validate_buffer_mut::EditorBufferMutNoDrop, width, with_mut};
 
-use super::{SelectionList, history::EditorHistory, render_cache::RenderCache, sizing};
-use crate::{CachedMemorySize, CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PASTE,
-            DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, GCStringOwned,
-            InlineString, MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs,
-            SegStringOwned, Size, TinyInlineString, caret_locate,
-            format_as_kilobytes_with_commas, glyphs, height, inline_string, ok, row,
-            validate_buffer_mut::{EditorBufferMutNoDrop, EditorBufferMutWithDrop},
-            width, with_mut};
-
-/// Stores the data for a single editor buffer. Please do not construct this struct
-/// directly and use [`new_empty`](EditorBuffer::new_empty) instead.
+/// Stores the data for a single editor buffer using [`ZeroCopyGapBuffer`] for efficient
+/// text storage.
+///
+/// Please do not construct this struct directly and use
+/// [`new_empty`](EditorBuffer::new_empty) instead.
+///
+/// As of 2025, `EditorBuffer` uses [`ZeroCopyGapBuffer`] directly as a concrete type
+/// rather than using the following:
+/// ```ignore
+/// pub type VecEditorContentLines = SmallVec<[GCStringOwned; DEFAULT_EDITOR_LINES_SIZE]>;
+/// const DEFAULT_EDITOR_LINES_SIZE: usize = 32;
+/// ```
 ///
 /// 1. This struct is stored in the app's state.
 /// 2. And it is paired w/ [`crate::EditorEngine`] at runtime; which is responsible for
@@ -192,9 +199,11 @@ pub struct EditorBuffer {
     pub memory_size_calc_cache: MemoizedMemorySize,
 }
 
+/// Contains the core text content and editing state using `ZeroCopyGapBuffer` for
+/// storage.
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorContent {
-    pub lines: sizing::VecEditorContentLines,
+    pub lines: ZeroCopyGapBuffer,
     /// The caret is stored as a "raw" [`EditorContent::caret_raw`].
     /// - This is the col and row index that is relative to the viewport.
     /// - In order to get the "scroll adjusted" caret position, use
@@ -208,8 +217,8 @@ pub struct EditorContent {
 }
 
 mod construct {
-    use super::{DEBUG_TUI_MOD, EditorBuffer, EditorContent, glyphs,
-                inline_string, smallvec};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBuffer {
         /// Marker method to make it easy to search for where an empty instance is
@@ -219,9 +228,12 @@ mod construct {
             maybe_file_extension: Option<&str>,
             maybe_file_path: Option<&str>,
         ) -> Self {
+            let mut lines = ZeroCopyGapBuffer::default();
+            lines.push_line("");
+
             let it = Self {
                 content: EditorContent {
-                    lines: { smallvec!["".into()] },
+                    lines,
                     maybe_file_extension: maybe_file_extension.map(Into::into),
                     maybe_file_path: maybe_file_path.map(Into::into),
                     ..Default::default()
@@ -244,7 +256,8 @@ mod construct {
 }
 
 pub mod versions {
-    use super::{DEBUG_TUI_COPY_PASTE, EditorBuffer};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBuffer {
         pub fn add(&mut self) {
@@ -310,39 +323,27 @@ pub mod versions {
 
 /// Relating to line display width at caret row or given row index (scroll adjusted).
 pub mod content_display_width {
-    use super::{CaretRaw, ColWidth, EditorBuffer, RowIndex, ScrOfs, height, sizing,
-                width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBuffer {
         #[must_use]
         pub fn get_max_row_index(&self) -> RowIndex {
             // Subtract 1 from the height to get the last row index.
-            height(self.get_lines().len()).convert_to_row_index()
+            height(self.get_lines().len().as_usize()).convert_to_row_index()
         }
 
         /// Get line display with at caret's scroll adjusted row index.
         #[must_use]
         pub fn get_line_display_width_at_caret_scr_adj(&self) -> ColWidth {
-            Self::impl_get_line_display_width_at_caret_scr_adj(
-                self.get_caret_raw(),
-                self.get_scr_ofs(),
-                self.get_lines(),
-            )
-        }
-
-        /// Get line display with at caret's scroll adjusted row index. Use this when you
-        /// don't have access to this struct. Eg: in [`crate::EditorBufferMut`].
-        #[must_use]
-        pub fn impl_get_line_display_width_at_caret_scr_adj(
-            caret_raw: CaretRaw,
-            scr_ofs: ScrOfs,
-            lines: &sizing::VecEditorContentLines,
-        ) -> ColWidth {
-            let caret_scr_adj = caret_raw + scr_ofs;
+            let caret_scr_adj = self.get_caret_raw() + self.get_scr_ofs();
             let row_index = caret_scr_adj.row_index;
-            let maybe_line_gcs = lines.get(row_index.as_usize());
-            if let Some(line_gcs) = maybe_line_gcs {
-                line_gcs.display_width
+
+            // Use the concrete method directly for display width
+            if let Some(display_width) =
+                self.get_lines().get_line_display_width(row_index)
+            {
+                display_width
             } else {
                 width(0)
             }
@@ -354,19 +355,11 @@ pub mod content_display_width {
             &self,
             row_index: RowIndex,
         ) -> ColWidth {
-            Self::impl_get_line_display_width_at_row_index(row_index, self.get_lines())
-        }
-
-        /// Get line display with at given scroll adjusted row index. Use this when you
-        /// don't have access to this struct.
-        #[must_use]
-        pub fn impl_get_line_display_width_at_row_index(
-            row_index: RowIndex,
-            lines: &sizing::VecEditorContentLines,
-        ) -> ColWidth {
-            let maybe_line_gcs = lines.get(row_index.as_usize());
-            if let Some(line_gcs) = maybe_line_gcs {
-                line_gcs.display_width
+            // Use the concrete method directly for display width
+            if let Some(display_width) =
+                self.get_lines().get_line_display_width(row_index)
+            {
+                display_width
             } else {
                 width(0)
             }
@@ -376,7 +369,8 @@ pub mod content_display_width {
 
 /// Relating to content around the caret.
 pub mod content_near_caret {
-    use super::{EditorBuffer, GCStringOwned, SegStringOwned, caret_locate, row, width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBuffer {
         #[must_use]
@@ -385,13 +379,14 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn line_at_caret_scr_adj(&self) -> Option<&GCStringOwned> {
+        pub fn line_at_caret_scr_adj(&self) -> Option<LineWithInfo<'_>> {
             if self.is_empty() {
                 return None;
             }
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
-            let line = self.get_lines().get(row_index_scr_adj.as_usize())?;
-            Some(line)
+
+            // Return the native LineWithInfo - let callers adapt if needed
+            self.content.lines.get_line_with_info(row_index_scr_adj)
         }
 
         #[must_use]
@@ -399,12 +394,18 @@ pub mod content_near_caret {
             if self.is_empty() {
                 return None;
             }
-            let line = self.line_at_caret_scr_adj()?;
+
+            let row_index_scr_adj = self.get_caret_scr_adj().row_index;
+
             if let caret_locate::CaretColLocationInLine::AtEnd =
                 caret_locate::locate_col(self)
             {
-                let maybe_last_seg_string = line.get_string_at_end();
-                return maybe_last_seg_string;
+                // Use the efficient LineWithInfo approach directly
+                if let Some(line_with_info) =
+                    self.content.lines.get_line_with_info(row_index_scr_adj)
+                {
+                    return LineMetadata::get_string_at_end_from_line(line_with_info);
+                }
             }
             None
         }
@@ -414,12 +415,26 @@ pub mod content_near_caret {
             if self.is_empty() {
                 return None;
             }
-            let line = self.line_at_caret_scr_adj()?;
-            match caret_locate::locate_col(self) {
-                // Caret is at end of line, past the last character.
-                caret_locate::CaretColLocationInLine::AtEnd => line.get_string_at_end(),
-                // Caret is not at end of line.
-                _ => line.get_string_at_right_of(self.get_caret_scr_adj().col_index),
+
+            let row_index_scr_adj = self.get_caret_scr_adj().row_index;
+            let col_index_scr_adj = self.get_caret_scr_adj().col_index;
+
+            if let Some(line_with_info) =
+                self.content.lines.get_line_with_info(row_index_scr_adj)
+            {
+                match caret_locate::locate_col(self) {
+                    // Caret is at end of line, past the last character.
+                    caret_locate::CaretColLocationInLine::AtEnd => {
+                        LineMetadata::get_string_at_end_from_line(line_with_info)
+                    }
+                    // Caret is not at end of line.
+                    _ => LineMetadata::get_string_at_right_of_from_line(
+                        line_with_info,
+                        col_index_scr_adj,
+                    ),
+                }
+            } else {
+                None
             }
         }
 
@@ -428,17 +443,31 @@ pub mod content_near_caret {
             if self.is_empty() {
                 return None;
             }
-            let line = self.line_at_caret_scr_adj()?;
-            match caret_locate::locate_col(self) {
-                // Caret is at end of line, past the last character.
-                caret_locate::CaretColLocationInLine::AtEnd => line.get_string_at_end(),
-                // Caret is not at end of line.
-                _ => line.get_string_at_left_of(self.get_caret_scr_adj().col_index),
+
+            let row_index_scr_adj = self.get_caret_scr_adj().row_index;
+            let col_index_scr_adj = self.get_caret_scr_adj().col_index;
+
+            if let Some(line_with_info) =
+                self.content.lines.get_line_with_info(row_index_scr_adj)
+            {
+                match caret_locate::locate_col(self) {
+                    // Caret is at end of line, past the last character.
+                    caret_locate::CaretColLocationInLine::AtEnd => {
+                        LineMetadata::get_string_at_end_from_line(line_with_info)
+                    }
+                    // Caret is not at end of line.
+                    _ => LineMetadata::get_string_at_left_of_from_line(
+                        line_with_info,
+                        col_index_scr_adj,
+                    ),
+                }
+            } else {
+                None
             }
         }
 
         #[must_use]
-        pub fn prev_line_above_caret(&self) -> Option<&GCStringOwned> {
+        pub fn prev_line_above_caret(&self) -> Option<&str> {
             if self.is_empty() {
                 return None;
             }
@@ -446,10 +475,9 @@ pub mod content_near_caret {
             if row_index_scr_adj == row(0) {
                 return None;
             }
-            let line = self
-                .get_lines()
-                .get((row_index_scr_adj - row(1)).as_usize())?;
-            Some(line)
+            let prev_row_index = row_index_scr_adj - row(1);
+            // Use the concrete method that delegates to get_line_with_info
+            self.get_lines().get_line_content(prev_row_index)
         }
 
         #[must_use]
@@ -457,30 +485,35 @@ pub mod content_near_caret {
             if self.is_empty() {
                 return None;
             }
-            let line = self.line_at_caret_scr_adj()?;
-            let caret_str_adj_col_index = self.get_caret_scr_adj().col_index;
-            let seg_string = line.get_string_at(caret_str_adj_col_index)?;
-            Some(seg_string)
+
+            let row_index_scr_adj = self.get_caret_scr_adj().row_index;
+            let col_index_scr_adj = self.get_caret_scr_adj().col_index;
+
+            if let Some(line_with_info) =
+                self.content.lines.get_line_with_info(row_index_scr_adj)
+            {
+                LineMetadata::get_string_at_from_line(line_with_info, col_index_scr_adj)
+            } else {
+                None
+            }
         }
 
         #[must_use]
-        pub fn next_line_below_caret_to_string(&self) -> Option<&GCStringOwned> {
+        pub fn next_line_below_caret_to_string(&self) -> Option<&str> {
             if self.is_empty() {
                 return None;
             }
             let caret_scr_adj_row_index = self.get_caret_scr_adj().row_index;
             let next_line_row_index = caret_scr_adj_row_index + row(1);
-            let line = self.get_lines().get(next_line_row_index.as_usize())?;
-            Some(line)
+            // Use the concrete method that delegates to get_line_with_info
+            self.get_lines().get_line_content(next_line_row_index)
         }
     }
 }
 
 pub mod access_and_mutate {
-    use super::{CaretRaw, CaretScrAdj, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
-                EditorBufferMutNoDrop, EditorBufferMutWithDrop,
-                GCStringOwned, InlineString, RowHeight, RowIndex, ScrOfs, SelectionList,
-                Size, height, sizing, with_mut};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl EditorBuffer {
         #[must_use]
@@ -508,15 +541,16 @@ pub mod access_and_mutate {
         pub fn is_empty(&self) -> bool { self.content.lines.is_empty() }
 
         #[must_use]
-        pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&GCStringOwned> {
-            self.content.lines.get(row_index.as_usize())
+        pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&str> {
+            // Use the concrete method that delegates to get_line_with_info
+            self.content.lines.get_line_content(row_index)
         }
 
         #[must_use]
-        pub fn len(&self) -> RowHeight { height(self.content.lines.len()) }
+        pub fn len(&self) -> RowHeight { height(self.content.lines.len().as_usize()) }
 
         #[must_use]
-        pub fn get_lines(&self) -> &sizing::VecEditorContentLines { &self.content.lines }
+        pub fn get_lines(&self) -> &ZeroCopyGapBuffer { &self.content.lines }
 
         #[must_use]
         pub fn get_as_string_with_comma_instead_of_newlines(&self) -> InlineString {
@@ -535,14 +569,13 @@ pub mod access_and_mutate {
                 InlineString::new(),
                 as acc,
                 run {
-                    let lines = &self.content.lines;
-                    for (index, line) in lines.iter().enumerate() {
+                    for (index, line_with_info) in self.content.lines.iter_lines().enumerate() {
                         // Add separator if it's not the first line.
                         if index > 0 {
                             acc.push_str(separator);
                         }
                         // Append the current line to the accumulator.
-                        acc.push_str(&line.string);
+                        acc.push_str(line_with_info.0); // Extract the &str from LineWithInfo
                     }
                 }
             )
@@ -577,7 +610,7 @@ pub mod access_and_mutate {
 
             // Populate lines with the new data.
             for line in arg_lines {
-                self.content.lines.push(line.as_ref().into());
+                self.content.lines.push_line(line.as_ref());
             }
 
             // Reset caret.
@@ -663,56 +696,10 @@ pub mod access_and_mutate {
     }
 }
 
-/// Memory size caching for performance optimization.
-mod memory_size_calc_cache {
-    use super::{CachedMemorySize, EditorBuffer, MemorySize};
-    use crate::{GetMemSize, MemoizedMemorySize};
-
-    impl GetMemSize for EditorBuffer {
-        fn get_mem_size(&self) -> usize {
-            self.content.get_mem_size() + self.history.get_mem_size()
-        }
-    }
-
-    impl CachedMemorySize for EditorBuffer {
-        fn memory_size_cache(&self) -> &MemoizedMemorySize {
-            &self.memory_size_calc_cache
-        }
-
-        fn memory_size_cache_mut(&mut self) -> &mut MemoizedMemorySize {
-            &mut self.memory_size_calc_cache
-        }
-    }
-
-    impl EditorBuffer {
-        /// Invalidates and immediately recalculates the memory size cache.
-        /// Call this when buffer content changes to ensure the cache is always valid.
-        pub fn invalidate_memory_size_calc_cache(&mut self) {
-            self.invalidate_memory_size_cache();
-            self.update_memory_size_cache(); // Immediately recalculate
-        }
-
-        /// Updates cache if dirty or not present.
-        /// The closure is only called if recalculation is needed.
-        pub fn upsert_memory_size_calc_cache(&mut self) {
-            self.update_memory_size_cache();
-        }
-
-        /// Gets the cached memory size value, recalculating if necessary.
-        /// This is used by external code to access buffer memory size efficiently.
-        /// The expensive memory calculation is only performed if the cache is invalid or
-        /// empty. Returns a `MemorySize` that displays "?" if the cache is not
-        /// available.
-        #[must_use]
-        pub fn get_memory_size_calc_cached(&mut self) -> MemorySize {
-            self.get_cached_memory_size()
-        }
-    }
-}
-
 /// Efficient Display implementation for telemetry logging.
 mod display_impl {
-    use super::{Display, EditorBuffer, Formatter, MemorySize, Result, ok};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Display for EditorBuffer {
         /// This must be a fast implementation, so we avoid deep traversal of the
@@ -730,7 +717,7 @@ mod display_impl {
                 .unwrap_or_else(MemorySize::unknown);
 
             // Format basic info.
-            let line_count = self.content.lines.len();
+            let line_count = self.content.lines.len().as_usize();
             let has_selection = self.has_selection();
 
             // Get active line/column info.
@@ -772,8 +759,8 @@ mod display_impl {
 }
 
 mod debug_impl {
-    use super::{Debug, EditorBuffer, EditorContent, Formatter, Result,
-                format_as_kilobytes_with_commas};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Debug for EditorBuffer {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -791,18 +778,17 @@ mod debug_impl {
 
     impl Debug for EditorContent {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use crate::GetMemSize;
             let mem_size = self.get_mem_size();
             let mem_size_fmt = format_as_kilobytes_with_commas(mem_size);
 
             write! {
                 f,
                 "EditorContent [
-    - lines: {lines}, size: {size}
+    - lines: {lines:?}, size: {size}
     - selection_map: {map}
     - ext: {ext:?}, path:{path:?}, caret: {caret:?}, scroll_offset: {scroll:?}
     ]",
-                lines = self.lines.len(),
+                lines = self.lines.len().as_usize(),
                 size = mem_size_fmt,
                 ext = self.maybe_file_extension,
                 caret = self.caret_raw,
@@ -817,12 +803,11 @@ mod debug_impl {
 #[cfg(test)]
 mod test_memory_cache_invalidation {
     use super::*;
-    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2,
-                caret_scr_adj, col};
+    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2, caret_scr_adj, col, len};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {
-        let mut buffer = EditorBuffer::new_empty(Some("md"), None);
+        let mut buffer: EditorBuffer = EditorBuffer::new_empty(Some("md"), None);
         let engine = EditorEngine::default();
 
         // Set initial content and cache the memory size.
@@ -842,7 +827,7 @@ mod test_memory_cache_invalidation {
             buffer_mut
                 .inner
                 .lines
-                .push("More content with lots of text".into());
+                .push_line("More content with lots of text");
         }
         // When buffer_mut goes out of scope, Drop should invalidate the cache.
 
@@ -866,7 +851,7 @@ mod test_memory_cache_invalidation {
             buffer_mut_no_drop
                 .inner
                 .lines
-                .push("Even more content".into());
+                .push_line("Even more content");
         }
         // Cache should still have old value since we used no_drop variant.
         let cached_memory = buffer
@@ -893,14 +878,15 @@ mod test_memory_cache_invalidation {
 
     #[test]
     fn test_editor_empty_state() {
-        let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
-        assert_eq2!(buffer.get_lines().len(), 1);
+        let buffer: EditorBuffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        assert_eq2!(buffer.get_lines().len(), len(1));
         assert!(!buffer.is_empty());
     }
 
     #[test]
     fn test_is_empty_and_len() {
-        let mut buffer = EditorBuffer::new_empty(None, None);
+        let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
 
         // New buffer has one empty line, so it's not considered empty
         assert!(!buffer.is_empty());
@@ -920,13 +906,14 @@ mod test_memory_cache_invalidation {
     #[test]
     fn test_file_extension_functions() {
         // Test with no extension
-        let buffer = EditorBuffer::new_empty(None, None);
+        let buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         assert!(!buffer.has_file_extension());
         assert!(!buffer.is_file_extension_default());
         assert_eq2!(buffer.get_maybe_file_extension(), None);
 
         // Test with default extension
-        let buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
+        let buffer: EditorBuffer =
+            EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         assert!(buffer.has_file_extension());
         assert!(buffer.is_file_extension_default());
         assert_eq2!(
@@ -935,7 +922,7 @@ mod test_memory_cache_invalidation {
         );
 
         // Test with custom extension
-        let buffer = EditorBuffer::new_empty(Some("rs"), None);
+        let buffer: EditorBuffer = EditorBuffer::new_empty(Some("rs"), None);
         assert!(buffer.has_file_extension());
         assert!(!buffer.is_file_extension_default());
         assert_eq2!(buffer.get_maybe_file_extension(), Some("rs"));
@@ -943,7 +930,7 @@ mod test_memory_cache_invalidation {
 
     #[test]
     fn test_memory_cache_functions() {
-        let mut buffer = EditorBuffer::new_empty(None, None);
+        let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
 
         // Initially, cache should be empty (dirty)
         assert!(buffer.memory_size_calc_cache.get_cached().is_none());
@@ -981,7 +968,7 @@ mod test_memory_cache_invalidation {
 
     #[test]
     fn test_get_mut_invalidates_cache() {
-        let mut buffer = EditorBuffer::new_empty(None, None);
+        let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
         // Populate the cache
@@ -999,7 +986,7 @@ mod test_memory_cache_invalidation {
 
     #[test]
     fn test_get_mut_no_drop_preserves_cache() {
-        let mut buffer = EditorBuffer::new_empty(None, None);
+        let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
         // Populate the cache
@@ -1017,7 +1004,7 @@ mod test_memory_cache_invalidation {
 
     #[test]
     fn test_clear_selection() {
-        let mut buffer = EditorBuffer::new_empty(None, None);
+        let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
         // Add some content and create a selection
@@ -1050,7 +1037,7 @@ mod test_memory_cache_invalidation {
 
     #[test]
     fn test_history_functions() {
-        let mut buffer = EditorBuffer::new_empty(None, None);
+        let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
         // Initialize with some content
@@ -1061,24 +1048,36 @@ mod test_memory_cache_invalidation {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.lines.clear();
-            buffer_mut.inner.lines.push("changed".into());
+            buffer_mut.inner.lines.push_line("changed");
         }
         buffer.add(); // Add changed state to history
 
         // Now history should have 2 versions
         assert_eq2!(buffer.history.versions.len(), 2.into());
-        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("changed"));
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "changed"
+        );
 
         // Undo should go back to "initial"
         buffer.undo();
-        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("initial"));
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "initial"
+        );
 
         // Redo should go forward to "changed"
         buffer.redo();
-        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("changed"));
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "changed"
+        );
 
         // Another undo
         buffer.undo();
-        assert_eq2!(buffer.get_lines()[0], GCStringOwned::from("initial"));
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "initial"
+        );
     }
 }

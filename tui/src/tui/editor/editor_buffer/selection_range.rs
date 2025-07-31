@@ -18,15 +18,14 @@
 use std::{cmp::{self},
           fmt::Debug};
 
-use crate::{caret_scr_adj, row, width, CaretScrAdj, ChUnitPrimitiveType, ColIndex,
-            ColWidth, GCStringOwned, ScrOfs};
+use crate::{caret_scr_adj, row, width, CaretScrAdj, ChUnitPrimitiveType, ColIndex, ColWidth, LineWithInfo, ScrOfs};
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with
 /// [`ChUnitPrimitiveType::MAX`].
 ///
 /// The range is not inclusive of the item at the end index, which means that when you
-/// call [`crate::SelectionRange::clip_to_range()`] the item at the end index will not be
+/// call [`SelectionRange::clip_to_range_str()`] the item at the end index will not be
 /// part of the result (this is shown in the example below). The indices are all display
 /// column indices, not logical ones.
 ///
@@ -40,7 +39,7 @@ use crate::{caret_scr_adj, row, width, CaretScrAdj, ChUnitPrimitiveType, ColInde
 /// ```
 ///
 /// - `"▓▓"` = `"😃"`
-/// - [`crate::SelectionRange::clip_to_range()`] : "e😃"
+/// - [`SelectionRange::clip_to_range_str()`] : "e😃"
 ///
 /// This range can't be instantiated directly via the struct, you have to use the tuple
 /// conversion. Even though the struct holds two [`CaretScrAdj`] values, it does not use
@@ -79,7 +78,8 @@ pub enum ScrollOffsetColLocationInRange {
 /// The only way to construct a [`SelectionRange`] is by converting a tuple of
 /// [`CaretScrAdj`] values into a [`SelectionRange`].
 mod convert {
-    use super::{caret_scr_adj, row, CaretScrAdj, ChUnitPrimitiveType, SelectionRange};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<(CaretScrAdj, CaretScrAdj)> for SelectionRange {
         /// The [`crate::RowIndex`] fields of each tuple value are not used. They are just
@@ -101,7 +101,7 @@ impl SelectionRange {
 
     /// Due to the nature of selection ranges, the index values are actually display
     /// widths. And sometimes it is useful to type cast them as a width, e.g.: when using
-    /// with [`crate::SelectionRange::clip_to_range()`].
+    /// with [`SelectionRange::clip_to_range_str()`].
     #[must_use]
     pub fn get_start_display_col_index_as_width(&self) -> ColWidth {
         width(*self.start.col_index)
@@ -115,14 +115,39 @@ impl SelectionRange {
         (self.start.col_index, self.end.col_index)
     }
 
-    /// Uses `SelectionRange` to calculate width and simply calls
-    /// [`crate::GCStringOwned::clip()`].
+    /// Clip a line to this selection range using [`crate::LineMetadata`] for
+    /// Unicode-safe clipping.
+    ///
+    /// This method extracts a substring from the line content based on this selection's
+    /// display column range, properly handling Unicode grapheme clusters and multi-width
+    /// characters. It delegates to [`crate::LineMetadata::clip_to_range()`] for
+    /// the actual Unicode-safe clipping.
+    ///
+    /// # Arguments
+    /// * `line_with_info` - Line content and metadata from `get_line_with_info()`
+    ///
+    /// # Returns
+    /// A string slice containing the selected text
+    ///
+    /// # Example
+    /// ```rust
+    /// use r3bl_tui::{SelectionRange, col};
+    ///
+    /// let selection = SelectionRange::new(col(2), col(6));
+    /// let line_with_info = buffer.get_line_with_info(row_index)?;
+    /// let selected_text = selection.clip_to_range_str(line_with_info);
+    /// ```
     #[must_use]
-    pub fn clip_to_range<'a>(&self, us: &'a GCStringOwned) -> &'a str {
+    pub fn clip_to_range_str<'a>(&self, line_with_info: LineWithInfo<'a>) -> &'a str {
+        let (content, line_info) = line_with_info;
         let (start_display_col_index, end_display_col_index) = self.as_tuple();
         let max_display_width_col_count =
             width(*(end_display_col_index - start_display_col_index));
-        us.clip(start_display_col_index, max_display_width_col_count)
+        line_info.clip_to_range(
+            content,
+            start_display_col_index,
+            max_display_width_col_count,
+        )
     }
 }
 
@@ -202,7 +227,7 @@ impl SelectionRange {
     ///   │  ⎩4 = end_display_col_index
     ///   ⎩1 = start_display_col_index
     /// ```
-    /// - [`crate::SelectionRange::clip_to_range()`] : "ell"
+    /// - [`SelectionRange::clip_to_range_str()`] : "ell"
     #[must_use]
     pub fn locate_column(&self, caret: CaretScrAdj) -> CaretLocationInRange {
         if caret.col_index < self.start.col_index {
@@ -296,7 +321,8 @@ impl SelectionRange {
 }
 
 mod range_impl_debug_format {
-    use super::{Debug, SelectionRange};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Debug for SelectionRange {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

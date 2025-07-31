@@ -23,6 +23,36 @@
 //! Unlike a traditional gap buffer, this implementation maintains separate buffers for
 //! each line rather than a single gap in a monolithic buffer.
 //!
+//! # Module Architecture
+//!
+//! This module provides a concrete `ZeroCopyGapBuffer` implementation with specialized
+//! methods organized into focused modules:
+//!
+//! ## Core Implementation
+//! - `gap_buffer_core` - Core gap buffer implementation and fundamental operations
+//!
+//! ## Implementation Extensions (`implementations` module)
+//! Specialized method implementations that extend `ZeroCopyGapBuffer`:
+//! - `implementations::basic` - Fundamental line operations (insert, delete, access)
+//! - `implementations::access` - Zero-copy buffer access utilities  
+//! - `implementations::insert` - Text insertion algorithms
+//! - `implementations::delete` - Text deletion algorithms
+//! - `implementations::segment_builder` - Grapheme segment reconstruction
+//!
+//! ## Simple Direct Usage
+//!
+//! `ZeroCopyGapBuffer` is used directly as a concrete type:
+//!
+//! ```rust
+//! let mut buffer = ZeroCopyGapBuffer::new();
+//! buffer.push_line("Hello World");
+//! let content = buffer.get_line_content(row(0));
+//! ```
+//!
+//! All operations are available as inherent methods on `ZeroCopyGapBuffer` - no trait
+//! indirection is needed. This provides better performance and simpler APIs compared to
+//! generic trait-based approaches.
+//!
 //! # Key Features
 //!
 //! - Dynamic line buffers starting at 256 bytes, growing as needed
@@ -90,7 +120,7 @@
 //!
 //! UTF-8 validation occurs **at the API boundaries** where content enters the system:
 //!
-//! - **[`insert_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_at_grapheme]** -
+//! - **[`insert_text_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]** -
 //!   Rust's `&str` type guarantees valid UTF-8
 //! - **File loading** - Use `std::fs::read_to_string()` or `String::from_utf8()` which
 //!   validate
@@ -219,15 +249,16 @@
 //! 3. **Scalable Line Management**: Adding 100 lines takes only ~16 ns per line,
 //!    demonstrating good scalability for large documents.
 //!
-//! 4. **Fast Capacity Checks**: The 0.32 ns `can_insert` check enables efficient
-//!    capacity planning without performance impact.
+//! 4. **Fast Capacity Checks**: The 0.32 ns `can_insert` check enables efficient capacity
+//!    planning without performance impact.
 //!
 //! 5. **Predictable Growth Cost**: Line extension (12.24 ns) and content that triggers
 //!    growth (408.11 ns) show well-bounded performance even during reallocation.
 //!
 //! 6. **Massive Append Optimization Gains**: The end-of-line append optimization shows
 //!    50-90x performance improvement over full segment rebuilding:
-//!    - Single character append: 1.48 ns (optimized) vs 100.48 ns (full rebuild) - **68x faster**
+//!    - Single character append: 1.48 ns (optimized) vs 100.48 ns (full rebuild) - **68x
+//!      faster**
 //!    - Word append: 2.91 ns (optimized) vs 273.74 ns (full rebuild) - **94x faster**
 //!
 //! These benchmarks confirm that the zero-copy gap buffer design achieves its goal of
@@ -236,52 +267,29 @@
 //!
 //! # Optimization Strategies
 //!
-//! ## End-of-Line Append Optimization
+//! ## Segment Rebuilding
 //!
-//! The buffer implements an intelligent optimization for the common case of appending
-//! text at the end of a line (typical when typing). This optimization uses a state
-//! machine pattern to determine the optimal segment rebuild strategy:
+//! After any text modification (insertion or deletion), the buffer rebuilds the 
+//! grapheme cluster segments for the affected line. This ensures that:
 //!
-//! ### Strategy Selection
+//! - Display width calculations remain accurate
+//! - Unicode grapheme boundaries are properly tracked
+//! - Cursor movement respects grapheme clusters
 //!
-//! The [`determine_segment_rebuild_strategy()`][crate::GapBufferLineInfo::determine_segment_rebuild_strategy]
-//! method analyzes the modification context and returns one of:
-//!
-//! - **`SegmentRebuildStrategy::AppendOptimized`** - Used when inserting at the end of a
-//!   non-empty line. Only parses the newly appended text and adjusts offsets.
-//! - **`SegmentRebuildStrategy::Full`** - Used for all other cases (empty line, middle
-//!   insertion, etc.). Rebuilds all segments from scratch.
-//!
-//! ### Performance Impact
-//!
-//! For typical typing scenarios where users append characters at the end of lines:
-//! - **Without optimization**: Must re-parse the entire line content
-//! - **With optimization**: Only parses the new characters
-//!
-//! This results in 50-90x performance improvement for segment rebuilding, which is
-//! called after every text modification. The optimization is particularly effective
-//! for longer lines where re-parsing becomes expensive.
-//!
-//! ### Implementation Details
-//!
-//! The optimization is implemented in:
-//! - [`rebuild_line_segments_append_optimized()`][ZeroCopyGapBuffer::rebuild_line_segments_append_optimized]
-//!   - Builds segments only for appended text
-//!   - Adjusts byte offsets, display columns, and segment indices
-//!   - Appends new segments to existing array
-//!
-//! The state machine pattern makes it easy to extend with additional optimization
-//! strategies in the future (e.g., `PrependOptimized`, `SingleCharOptimized`).
+//! The rebuild operation parses the line content using the Unicode segmentation
+//! library to identify grapheme cluster boundaries and calculate display widths.
+//! While this adds some overhead to each edit operation, it ensures correctness
+//! for all Unicode text, including emojis, combining characters, and complex scripts.
 
-// Attach.
-mod buffer_storage;
-mod editor_lines_storage_impl;
-mod segment_construction;
-mod text_deletion;
-mod text_insertion;
-mod zero_copy_access;
+// Core implementation modules  
+mod gap_buffer_core;
 
-// Re-export.
-pub use buffer_storage::*;
-// Note: zero_copy_access, text_insertion, text_deletion, segment_construction
-// and editor_lines_storage_impl extend [`ZeroCopyGapBuffer`] impl, no separate exports needed
+// Specialized algorithms and optimizations
+mod implementations;
+
+// Re-export core types and constants
+pub use gap_buffer_core::*;
+
+// Note: implementation modules extend [`ZeroCopyGapBuffer`] through inherent method
+// implementations. They are not re-exported as they provide specialized capabilities
+// accessible directly on ZeroCopyGapBuffer instances.

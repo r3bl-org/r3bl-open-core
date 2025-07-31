@@ -29,12 +29,12 @@
 
 use std::ops::{Deref, DerefMut};
 
-use super::EditorBuffer;
-use crate::{engine_public_api, EditorEngine, HasFocus, RenderArgs, RenderOps, ScrOfs,
-            Size};
+use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOps, ScrOfs,
+            Size, engine_public_api};
 
 pub(in crate::tui::editor::editor_buffer) mod key {
-    use super::{ScrOfs, Size};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Cache key is combination of `scroll_offset` and `window_size`.
     #[derive(Clone, Debug, PartialEq)]
@@ -57,7 +57,8 @@ pub use key::*;
 // Allow code below to all the symbols in this mod.
 
 pub(in crate::tui::editor::editor_buffer) mod cache_entry {
-    use super::{key::Key, RenderOps};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Cache entry is a combination of a single key and single value.
     #[derive(Clone, Debug, PartialEq)]
@@ -88,9 +89,8 @@ pub struct RenderCache {
 }
 
 mod render_cache_impl_block {
-    use super::{cache_entry, engine_public_api, CacheEntry, Deref, DerefMut,
-                EditorBuffer, EditorEngine, HasFocus, Key, RenderArgs, RenderCache,
-                RenderOps, Size, UseRenderCache};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for RenderCache {
         type Target = Option<cache_entry::CacheEntry>;
@@ -139,10 +139,10 @@ mod render_cache_impl_block {
             if matches!(use_cache, UseRenderCache::Yes)
                 && let Some(cached_output) =
                     buffer.render_cache.get((buffer.get_scr_ofs(), window_size))
-                {
-                    *render_ops = cached_output.clone();
-                    return;
-                }
+            {
+                *render_ops = cached_output.clone();
+                return;
+            }
 
             // Cached disabled, or miss due to:
             // - Content has been modified.
@@ -173,7 +173,7 @@ mod render_cache_impl_block {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, col, height, render_ops, row, scr_ofs, width, RenderOp};
+    use crate::{RenderOp, assert_eq2, col, height, render_ops, row, scr_ofs, width};
 
     /// Fake `render_ops` to be used in the tests.
     fn get_render_ops_og() -> RenderOps {
@@ -470,10 +470,12 @@ mod tests {
                 &mut get_render_ops_og(),
                 UseRenderCache::Yes,
             );
-            assert!(buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og()))
-                .is_some());
+            assert!(
+                buffer
+                    .render_cache
+                    .get((buffer.get_scr_ofs(), get_window_size_og()))
+                    .is_some()
+            );
             buffer
                 .render_cache
                 .get((buffer.get_scr_ofs(), get_window_size_og()))
@@ -492,10 +494,12 @@ mod tests {
                 &mut get_render_ops_og(),
                 UseRenderCache::Yes,
             );
-            assert!(buffer
-                .render_cache
-                .get((buffer.get_scr_ofs(), get_window_size_og()))
-                .is_some());
+            assert!(
+                buffer
+                    .render_cache
+                    .get((buffer.get_scr_ofs(), get_window_size_og()))
+                    .is_some()
+            );
             buffer
                 .render_cache
                 .get((buffer.get_scr_ofs(), get_window_size_og()))

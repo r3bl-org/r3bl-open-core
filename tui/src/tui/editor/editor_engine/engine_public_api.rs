@@ -21,12 +21,12 @@
 use syntect::easy::HighlightLines;
 
 use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
-            EditorEvent, FlexBox, GCStringOwned, HasFocus, InputEvent, Key,
-            PrettyPrintDebug, RenderArgs, RenderOp, RenderOps, RenderPipeline,
-            RowHeight, RowIndex, ScrollOffsetColLocationInRange, SegStringOwned,
-            SelectionRange, Size, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
-            ZOrder, caret_scr_adj, caret_scroll_index,
+            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode,
+            EditorBuffer, EditorEngine, EditorEvent, FlexBox, HasFocus, InputEvent, Key, LineWithInfo, PrettyPrintDebug, RenderArgs,
+            RenderOp, RenderOps, RenderPipeline, RowHeight, RowIndex,
+            ScrollOffsetColLocationInRange, SegStringOwned, SelectionRange, Size,
+            SpecialKey, StyleUSSpanLines, SyntaxHighlightMode, ZOrder, caret_scr_adj,
+            caret_scroll_index,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
             height, inline_string, new_style,
@@ -257,18 +257,18 @@ pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps)
 
         let scroll_offset = editor_buffer.get_scr_ofs();
 
-        if let Some(line_gcs) = lines.get(usize(row_index)) {
+        if let Some(line_with_info) = lines.get_line_with_info(row_index) {
             // Take the scroll_offset into account when "slicing" the selection.
             let selection_holder = match sel_range.locate_scroll_offset_col(scroll_offset)
             {
                 ScrollOffsetColLocationInRange::Underflow => {
-                    (*sel_range).clip_to_range(line_gcs)
+                    (*sel_range).clip_to_range_str(line_with_info)
                 }
                 ScrollOffsetColLocationInRange::Overflow => {
                     let start = caret_scr_adj(scroll_offset.col_index + row_index);
                     let end = caret_scr_adj(sel_range.end() + row_index);
                     let scr_ofs_clipped_sel_range: SelectionRange = (start, end).into();
-                    scr_ofs_clipped_sel_range.clip_to_range(line_gcs)
+                    scr_ofs_clipped_sel_range.clip_to_range_str(line_with_info)
                 }
             };
 
@@ -412,10 +412,8 @@ pub enum EditorEngineApplyEventResult {
 }
 
 mod syn_hi_r3bl_path {
-    use super::{ColWidth, CommonResult, DEBUG_TUI_SYN_HI, EditorBuffer, EditorEngine,
-                PrettyPrintDebug, RenderOp, RenderOps, RowHeight, StyleUSSpanLines,
-                caret_scroll_index, col, inline_string, render_tui_styled_texts_into,
-                row, throws, try_parse_and_highlight, usize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Try convert [Vec] of [US] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using
@@ -480,7 +478,7 @@ mod syn_hi_r3bl_path {
                 tracing::debug!(
                     message = %inline_string!(
                         "🎯🎯🎯 editor_buffer.lines({a}) vs md_document.lines.len({b})",
-                        a = editor_buffer.get_lines().len(),
+                        a = editor_buffer.get_lines().len().as_usize(),
                         b = lines.len(),
                     ),
                     buffer_as_string = %editor_buffer.get_as_string_with_comma_instead_of_newlines(),
@@ -489,6 +487,7 @@ mod syn_hi_r3bl_path {
             });
 
             for (row_index, line) in lines
+                .inner
                 .iter()
                 .skip(usize(editor_buffer.get_scr_ofs().row_index))
                 .enumerate()
@@ -516,10 +515,8 @@ mod syn_hi_r3bl_path {
 }
 
 mod syn_hi_syntect_path {
-    use super::{ColWidth, EditorBuffer, EditorEngine, GCStringOwned, HighlightLines,
-                RenderOp, RenderOps, RowHeight, RowIndex, caret_scroll_index, col,
-                convert_syntect_to_styled_text, no_syn_hi_path,
-                render_tui_styled_texts_into, row, try_get_syntax_ref, usize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -530,9 +527,9 @@ mod syn_hi_syntect_path {
     ) {
         // Paint each line in the buffer (skipping the scroll_offset.row_index).
         // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
-        for (row_index, line) in editor_buffer
+        for (row_index, line_with_info) in editor_buffer
             .get_lines()
-            .iter()
+            .iter_lines()
             .skip(usize(editor_buffer.get_scr_ofs().row_index))
             .enumerate()
         {
@@ -549,7 +546,7 @@ mod syn_hi_syntect_path {
                 row_index,
                 editor_engine,
                 editor_buffer,
-                line,
+                line_with_info,
                 max_display_col_count,
             );
         }
@@ -560,7 +557,7 @@ mod syn_hi_syntect_path {
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line: &GCStringOwned,
+        line_with_info: LineWithInfo<'_>,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -568,6 +565,7 @@ mod syn_hi_syntect_path {
             col(0) + row_index,
         ));
 
+        let line = line_with_info.0; // Extract the &str from LineWithInfo
         let it = try_get_syntect_highlighted_line(editor_engine, editor_buffer, line);
 
         match it {
@@ -583,7 +581,7 @@ mod syn_hi_syntect_path {
             // Otherwise, fallback.
             None => {
                 no_syn_hi_path::render_line_no_syntax_highlight(
-                    line,
+                    line_with_info,
                     editor_buffer,
                     max_display_col_count,
                     render_ops,
@@ -618,22 +616,21 @@ mod syn_hi_syntect_path {
     fn try_get_syntect_highlighted_line<'a>(
         editor_engine: &'a mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line: &'a GCStringOwned,
+        line: &'a str,
     ) -> Option<Vec<(syntect::highlighting::Style, &'a str)>> {
         let file_ext = editor_buffer.get_maybe_file_extension()?;
         let syntax_ref = try_get_syntax_ref(editor_engine.syntax_set, file_ext)?;
         let theme = &editor_engine.theme;
         let mut highlighter = HighlightLines::new(syntax_ref, theme);
         highlighter
-            .highlight_line(&line.string, editor_engine.syntax_set)
+            .highlight_line(line, editor_engine.syntax_set)
             .ok()
     }
 }
 
 mod no_syn_hi_path {
-    use super::{ColWidth, EditorBuffer, EditorEngine, GCStringOwned, RenderOp,
-                RenderOps, RowHeight, RowIndex, caret_scroll_index, col, no_syn_hi_path,
-                row, usize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn render_content(
         editor_buffer: &EditorBuffer,
@@ -644,9 +641,9 @@ mod no_syn_hi_path {
     ) {
         // Paint each line in the buffer (skipping the scroll_offset.row_index).
         // https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
-        for (row_index, line) in editor_buffer
+        for (row_index, line_with_info) in editor_buffer
             .get_lines()
-            .iter()
+            .iter_lines()
             .skip(usize(editor_buffer.get_scr_ofs().row_index))
             .enumerate()
         {
@@ -663,7 +660,7 @@ mod no_syn_hi_path {
                 row_index,
                 editor_engine,
                 editor_buffer,
-                line,
+                line_with_info,
                 max_display_col_count,
             );
         }
@@ -674,7 +671,7 @@ mod no_syn_hi_path {
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line: &GCStringOwned,
+        line_with_info: LineWithInfo<'_>,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -683,7 +680,7 @@ mod no_syn_hi_path {
         ));
 
         no_syn_hi_path::render_line_no_syntax_highlight(
-            line,
+            line_with_info,
             editor_buffer,
             max_display_col_count,
             render_ops,
@@ -693,7 +690,7 @@ mod no_syn_hi_path {
 
     /// This is used as a fallback by other render paths.
     pub fn render_line_no_syntax_highlight(
-        line_gcs: &GCStringOwned,
+        line_with_info: LineWithInfo<'_>,
         editor_buffer: &EditorBuffer,
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,
@@ -702,7 +699,12 @@ mod no_syn_hi_path {
         let scroll_offset_col_index = editor_buffer.get_scr_ofs().col_index;
 
         // Clip the content [scroll_offset.col_index .. max cols].
-        let line_trunc = line_gcs.clip(scroll_offset_col_index, max_display_col_count);
+        // Use the pre-computed segment data from LineWithInfo for efficient clipping
+        let line_trunc = line_with_info.1.clip_to_range(
+            line_with_info.0,
+            scroll_offset_col_index,
+            max_display_col_count,
+        );
 
         render_ops.push(RenderOp::ApplyColors(
             editor_engine.current_box.get_computed_style(),

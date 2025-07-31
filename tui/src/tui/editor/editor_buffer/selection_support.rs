@@ -16,13 +16,10 @@
  */
 
 use std::cmp::{self, Ordering};
+    use crate::{ColIndex, RowIndex};
 
-use super::{EditorBuffer, selection_list::RowLocationInSelectionList};
-use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
-            ChUnitPrimitiveType, DEBUG_TUI_COPY_PASTE, DirectionChangeResult,
-            SelectionRange, Size, caret_scr_adj, caret_scroll_index, col, dim, fg_blue,
-            fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow, height, inline_string,
-            row, underline, usize, width};
+use super::selection_list::RowLocationInSelectionList;
+use crate::{caret_scr_adj, caret_scroll_index, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow, height, inline_string, row, underline, width, CaretLocationInRange, CaretMovementDirection, CaretScrAdj, ChUnitPrimitiveType, DirectionChangeResult, EditorBuffer, SelectionRange, Size, DEBUG_TUI_COPY_PASTE};
 
 /// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
 /// viewport to be passed in (from the [`crate::EditorEngine`]). However, in this module,
@@ -279,13 +276,14 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
         }
         Greater => {
             if let Some(range) = buffer_mut.inner.sel_list.get(row_index) {
-                if let Some(line_gcs) = buffer_mut.inner.lines.get(usize(row_index)) {
+                if let Some(line_with_info) = buffer_mut.inner.lines.get_line_with_info(row_index) {
                     let start = caret_scr_adj(range.start() + row_index);
                     let end = {
                         // For selection, go one col index past the end of the line,
                         // since selection range is not inclusive of the end index.
+                        let (_content, line_info) = line_with_info;
                         let end_col_index = caret_scroll_index::col_index_for_width(
-                            line_gcs.display_width,
+                            line_info.display_width,
                         );
                         caret_scr_adj(end_col_index + row_index)
                     };
@@ -311,10 +309,8 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
 
 /// Single-line selection helpers.
 mod single_line_select_helper {
-    use super::{CaretScrAdj, DEBUG_TUI_COPY_PASTE, EditorBuffer, SelectionRange,
-                caret_scr_adj, cmp, dim, dummy_viewport, fg_green, inline_string,
-                underline, width};
-    use crate::{ColIndex, RowIndex};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Create a new range when one doesn't exist.
     pub fn create_new_range(
@@ -487,11 +483,8 @@ mod single_line_select_helper {
 
 // Multi-line selection helpers.
 mod multiline_select_helper {
-    use super::{CaretMovementDirection, CaretScrAdj, DEBUG_TUI_COPY_PASTE,
-                DirectionChangeResult, EditorBuffer, RowLocationInSelectionList,
-                SelectionRange, caret_scr_adj, caret_scroll_index, cmp, col,
-                dummy_viewport, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
-                fg_yellow, inline_string};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
 
@@ -646,10 +639,8 @@ mod multiline_select_helper {
 
     /// Module containing helper functions for handling two lines.
     mod handle_two_lines_helper {
-        use super::{CaretMovementDirection, CaretScrAdj, DEBUG_TUI_COPY_PASTE,
-                    DirectionChangeResult, EditorBuffer, RowLocationInSelectionList,
-                    SelectionRange, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
-                    fg_yellow, inline_string};
+        #[allow(clippy::wildcard_imports)]
+        use super::*;
 
         /// Validate preconditions for [`super::handle_two_lines`].
         pub fn validate_preconditions(
@@ -726,8 +717,8 @@ mod multiline_select_helper {
 
     /// Module containing functions for starting a selection.
     mod start_selection_helper {
-        use super::{CaretMovementDirection, CaretScrAdj, EditorBuffer, caret_scr_adj,
-                    caret_scroll_index, col, dummy_viewport};
+        #[allow(clippy::wildcard_imports)]
+        use super::*;
 
         /// No existing selection, up, no direction change:
         /// - Add first row selection range.
@@ -813,8 +804,8 @@ mod multiline_select_helper {
 
     /// Module containing functions for continuing a selection.
     mod continue_selection_helper {
-        use super::{CaretMovementDirection, CaretScrAdj, EditorBuffer, SelectionRange,
-                    caret_scr_adj, caret_scroll_index, col, dummy_viewport};
+        #[allow(clippy::wildcard_imports)]
+        use super::*;
 
         /// Pre-existing selection, down, no direction change:
         /// - Add last row selection range.
@@ -958,8 +949,8 @@ mod multiline_select_helper {
 
     /// Module containing functions for handling direction changes in selection.
     mod direction_change_helper {
-        use super::{CaretMovementDirection, CaretScrAdj, EditorBuffer, caret_scr_adj,
-                    cmp, dummy_viewport};
+        #[allow(clippy::wildcard_imports)]
+        use super::*;
 
         /// Pre-existing selection, up, direction change:
         /// - Drop the last row selection range.

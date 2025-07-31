@@ -17,7 +17,8 @@
 
 use std::fmt::Debug;
 
-use crate::{DialogEngine, EditorBuffer, EditorEngine, FlexBoxId, GlobalData, HasFocus};
+use crate::{DialogEngine, EditorBuffer, EditorEngine, FlexBoxId,
+            GlobalData, HasFocus};
 
 #[derive(Debug)]
 pub struct RenderArgs<'a> {

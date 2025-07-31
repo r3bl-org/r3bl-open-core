@@ -59,11 +59,13 @@ use crate::{format_as_kilobytes_with_commas, idx, Length, RingBuffer};
 ///   editor events will trigger a new state to be added to the history buffer. See
 ///   [`crate::editor_engine::engine_public_api::apply_event()`] to see which events
 ///   actually get added to the editor history buffer.
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, PartialEq)]
+#[derive(Default)]
 pub struct EditorHistory {
     pub versions: super::sizing::HistoryBuffer,
     pub current_index: CurIndex,
 }
+
 
 impl EditorHistory {
     #[must_use]
@@ -169,10 +171,10 @@ impl EditorHistory {
 mod impl_debug_format {
     use super::{format_as_kilobytes_with_commas, Debug, EditorHistory, Formatter,
                 Result, RingBuffer};
+    use crate::GetMemSize;
 
     impl Debug for EditorHistory {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            use crate::GetMemSize;
             let self_mem_size = self.get_mem_size();
             let size_fmt = format_as_kilobytes_with_commas(self_mem_size);
 
@@ -290,10 +292,10 @@ mod tests_editor_history_struct {
 
 #[cfg(test)]
 mod tests_history_functions {
-    use smallvec::smallvec;
+    
 
     use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer,
-                Length, RingBuffer};
+                Length, RingBuffer, ZeroCopyGapBuffer, len, row};
 
     #[test]
     fn test_push_default() {
@@ -311,31 +313,31 @@ mod tests_history_functions {
     #[test]
     fn test_push_with_contents() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["abc".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
         let history_stack = buffer.history.versions;
         assert_eq2!(history_stack.len(), Length::from(1));
-        assert_eq2!(history_stack.get(0).unwrap().lines.len(), 1);
+        assert_eq2!(history_stack.get(0).unwrap().lines.len(), len(1));
         assert_eq2!(
-            history_stack.get(0).unwrap().lines[0],
-            "abc".into()
+            history_stack.get(0).unwrap().lines.get_line_content(row(0)).unwrap(),
+            "abc"
         );
     }
 
     #[test]
     fn test_push_and_drop_future_redos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["abc".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["def".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
 
-        buffer.content.lines = smallvec!["ghi".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["ghi".into()]);
         buffer.add();
 
         // 3 pushes, so the current index should be 2.
@@ -350,7 +352,7 @@ mod tests_history_functions {
         assert_eq!(buffer.history.versions.len(), Length::from(3));
 
         // Push new content. Should drop future redos (2 versions should be removed).
-        buffer.content.lines = smallvec!["xyz".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["xyz".into()]);
         buffer.add();
         assert_eq!(buffer.history.current_index, 1.into());
         assert_eq!(buffer.history.versions.len(), Length::from(2));
@@ -363,12 +365,12 @@ mod tests_history_functions {
         for (index, content) in history_stack.iter().enumerate() {
             match index {
                 0 => {
-                    assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "abc".into());
+                    assert_eq2!(content.lines.len(), len(1));
+                    assert_eq2!(content.lines.get_line_content(row(0)).unwrap(), "abc");
                 }
                 1 => {
-                    assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "xyz".into());
+                    assert_eq2!(content.lines.len(), len(1));
+                    assert_eq2!(content.lines.get_line_content(row(0)).unwrap(), "xyz");
                 }
                 _ => unreachable!(),
             }
@@ -378,7 +380,7 @@ mod tests_history_functions {
     #[test]
     fn test_single_undo() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["abc".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
@@ -390,16 +392,16 @@ mod tests_history_functions {
     #[test]
     fn test_many_undo() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["abc".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["def".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
         let copy_of_editor_content = buffer.content.clone();
 
-        buffer.content.lines = smallvec!["ghi".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["ghi".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 2.into());
 
@@ -414,16 +416,16 @@ mod tests_history_functions {
         for (index, content) in history_stack.iter().enumerate() {
             match index {
                 0 => {
-                    assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "abc".into());
+                    assert_eq2!(content.lines.len(), len(1));
+                    assert_eq2!(content.lines.get_line_content(row(0)).unwrap(), "abc");
                 }
                 1 => {
-                    assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "def".into());
+                    assert_eq2!(content.lines.len(), len(1));
+                    assert_eq2!(content.lines.get_line_content(row(0)).unwrap(), "def");
                 }
                 2 => {
-                    assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "ghi".into());
+                    assert_eq2!(content.lines.len(), len(1));
+                    assert_eq2!(content.lines.get_line_content(row(0)).unwrap(), "ghi");
                 }
                 _ => unreachable!(),
             }
@@ -433,11 +435,11 @@ mod tests_history_functions {
     #[test]
     fn test_multiple_undos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["abc".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["def".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
 
@@ -452,11 +454,11 @@ mod tests_history_functions {
     #[test]
     fn test_undo_and_multiple_redos() {
         let mut buffer = EditorBuffer::default();
-        buffer.content.lines = smallvec!["abc".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["abc".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 0.into());
 
-        buffer.content.lines = smallvec!["def".into()];
+        buffer.content.lines = ZeroCopyGapBuffer::from_gc_string_vec(vec!["def".into()]);
         buffer.add();
         assert_eq2!(buffer.history.current_index, 1.into());
         let snapshot_content = buffer.content.clone();
@@ -481,12 +483,12 @@ mod tests_history_functions {
         for (index, content) in history_stack.iter().enumerate() {
             match index {
                 0 => {
-                    assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "abc".into());
+                    assert_eq2!(content.lines.len(), len(1));
+                    assert_eq2!(content.lines.get_line_content(row(0)).unwrap(), "abc");
                 }
                 1 => {
-                    assert_eq2!(content.lines.len(), 1);
-                    assert_eq2!(content.lines[0], "def".into());
+                    assert_eq2!(content.lines.len(), len(1));
+                    assert_eq2!(content.lines.get_line_content(row(0)).unwrap(), "def");
                 }
                 _ => unreachable!(),
             }

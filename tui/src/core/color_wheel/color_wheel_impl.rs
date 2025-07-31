@@ -129,7 +129,8 @@ use crate::{ChUnit, GCStringOwned, GradientGenerationPolicy,
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
 /// the heap.
 pub(in crate::core) mod sizing {
-    use super::{ColorWheelConfig, SmallVec};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub type VecConfigs = SmallVec<[ColorWheelConfig; MAX_CONFIGS]>;
     const MAX_CONFIGS: usize = 2;
@@ -137,8 +138,8 @@ pub(in crate::core) mod sizing {
 
 /// Cache for `ColorWheel` colorization to avoid repeated computation.
 mod color_wheel_cache {
-    use super::{DefaultHasher, GradientGenerationPolicy, Hash, Hasher, LazyLock,
-                TextColorizationPolicy, TuiStyle, TuiStyledTexts, VecConfigs};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     const CACHE_SIZE: usize = 1000;
 
@@ -171,7 +172,8 @@ mod color_wheel_cache {
     /// To work around this, we convert f64 to bits for hashing, which gives us
     /// deterministic hashing at the cost of treating -0.0 and 0.0 as different.
     pub(super) mod hashing_helpers {
-        use super::{Hash, Hasher};
+        #[allow(clippy::wildcard_imports)]
+        use super::*;
 
         /// Hash a single `ColorWheelConfig` into the hasher.
         pub(super) fn hash_color_wheel_config<H: Hasher>(
@@ -667,7 +669,7 @@ impl ColorWheel {
             // Use WriteToBuf trait for better performance
             let _ = ansi_styled_text.write_to_buf(&mut buffer);
         }
-        
+
         buffer
     }
 
@@ -959,7 +961,8 @@ impl ColorWheel {
 }
 
 mod generate_styled_texts_helper {
-    use super::{TuiColor, TuiStyle};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     // Inner function.
     pub fn gen_style_fg_color_for(
@@ -992,8 +995,8 @@ mod generate_styled_texts_helper {
 
 /// Helper module for color wheel index management and navigation.
 mod color_wheel_navigation {
-    use super::{ChUnit, ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
-                TuiColor, VecSteps, ch, usize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Determine if the color wheel index should be updated based on speed settings.
     pub fn should_update_index(
@@ -1062,7 +1065,8 @@ mod color_wheel_navigation {
 
 /// Helper module for lolcat-specific operations.
 mod lolcat_helper {
-    use super::{ChUnit, Lolcat, Seed, TuiColor, ch, helpers, tui_color};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Handle lolcat color generation and seed advancement.
     pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
@@ -1097,9 +1101,8 @@ mod lolcat_helper {
 
 /// Helper module for gradient generation operations.
 mod gradient_generation_helper {
-    use super::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, Defaults,
-                GradientKind, GradientLengthKind, LolcatBuilder, VecSteps, ch,
-                get_gradient_array_for, tui_color};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Determine the number of steps for gradient generation.
     pub fn determine_steps(
@@ -1150,7 +1153,8 @@ mod gradient_generation_helper {
 
 /// Helper module for lolcat background functionality.
 mod lolcat_bg_helper {
-    use super::{RgbValue, TextColorizationPolicy, TuiColor, TuiStyle};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Extract the style from the text colorization policy for lolcat background mode.
     pub fn extract_style_from_policy(
