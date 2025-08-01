@@ -841,7 +841,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
         assert_eq2!(
-            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().0,
+            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().content(),
             "1a"
         );
         assert::str_is_at_caret(&buffer, "a");
@@ -888,7 +888,7 @@ mod tests {
         );
         assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
-            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().0,
+            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().content(),
             "12a"
         );
 

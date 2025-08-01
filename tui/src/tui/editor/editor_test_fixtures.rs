@@ -110,7 +110,7 @@ pub mod assert {
     /// does not match the expected string.
     pub fn line_at_caret(editor_buffer: &EditorBuffer, expected: &str) {
         assert_eq2!(
-            engine_internal_api::line_at_caret_to_string(editor_buffer).unwrap().0,
+            engine_internal_api::line_at_caret_to_string(editor_buffer).unwrap().content(),
             expected
         );
     }

@@ -18,7 +18,8 @@
 use std::{cmp::{self},
           fmt::Debug};
 
-use crate::{caret_scr_adj, row, width, CaretScrAdj, ChUnitPrimitiveType, ColIndex, ColWidth, LineWithInfo, ScrOfs};
+use crate::{CaretScrAdj, ChUnitPrimitiveType, ColIndex, ColWidth, GapBufferLine, ScrOfs,
+            caret_scr_adj, row, width};
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with
@@ -131,15 +132,21 @@ impl SelectionRange {
     ///
     /// # Example
     /// ```rust
-    /// use r3bl_tui::{SelectionRange, col};
+    /// use r3bl_tui::{SelectionRange, caret_scr_adj, col, row, ZeroCopyGapBuffer};
     ///
-    /// let selection = SelectionRange::new(col(2), col(6));
-    /// let line_with_info = buffer.get_line_with_info(row_index)?;
-    /// let selected_text = selection.clip_to_range_str(line_with_info);
+    /// # let mut buffer = ZeroCopyGapBuffer::new();
+    /// # buffer.add_line();
+    /// let selection = SelectionRange::new(
+    ///     caret_scr_adj(col(2) + row(0)),
+    ///     caret_scr_adj(col(6) + row(0))
+    /// );
+    /// let line = buffer.get_line_with_info(row(0)).unwrap();
+    /// let selected_text = selection.clip_to_range_str(line);
     /// ```
     #[must_use]
-    pub fn clip_to_range_str<'a>(&self, line_with_info: LineWithInfo<'a>) -> &'a str {
-        let (content, line_info) = line_with_info;
+    pub fn clip_to_range_str<'a>(&self, line: GapBufferLine<'a>) -> &'a str {
+        let content = line.content();
+        let line_info = line.info();
         let (start_display_col_index, end_display_col_index) = self.as_tuple();
         let max_display_width_col_count =
             width(*(end_display_col_index - start_display_col_index));

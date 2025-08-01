@@ -710,6 +710,7 @@ methods
   - [x] Replace all the uses of `(&str, &GapBufferLineInfo)` in existing function arguments, with
         `LineWithInfo` type alias, for better ergonomics
   - [x] Rename `buffer_storage.rs` to `gap_buffer_core.rs`
+  - [x] Convert LineWithInfo type alias to GapBufferLine struct
   - [ ] There might be opportunities to drop lots of code from the `GCStringOwned`, `GCStringRef`
         now that we have migrated the editor to use `ZeroCopyGapBuffer` and `GapBufferLineInfo`
         directly.

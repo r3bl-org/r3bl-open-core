@@ -22,7 +22,8 @@ use super::super::{common::{self as gc_string_common, GCStringData},
                    owned::gc_string_owned::wide_segments::ContainsWideSegments};
 use crate::{ChUnit, ColIndex, ColWidth, LineMetadata, Seg, SegIndex, SegWidth,
             gc_string_owned_sizing::SegmentArray,
-            graphemes::unicode_segment::{build_segments_for_str, calculate_display_width}};
+            graphemes::unicode_segment::{build_segments_for_str,
+                                         calculate_display_width}};
 
 /// Borrowed version of `GCStringOwned` that doesn't own the string data
 /// but owns its segment metadata. Used for efficient operations with
@@ -46,8 +47,11 @@ use crate::{ChUnit, ColIndex, ColWidth, LineMetadata, Seg, SegIndex, SegWidth,
 /// let gc_ref = GCStringRef::new("Hello 🙏🏽 World");
 ///
 /// // From ZeroCopyGapBuffer (reuses pre-computed segments)
-/// let (content, info) = buffer.get_line_with_info(row_index)?;
-/// let gc_ref = GCStringRef::from_gap_buffer_line(content, info);
+/// # use r3bl_tui::{ZeroCopyGapBuffer, row};
+/// # let mut buffer = ZeroCopyGapBuffer::new();
+/// # buffer.add_line();
+/// let line = buffer.get_line_with_info(row(0)).unwrap();
+/// let gc_ref = GCStringRef::from_gap_buffer_line(line.content(), line.info());
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GCStringRef<'a> {
@@ -319,9 +323,9 @@ impl<'a> From<&'a str> for GCStringRef<'a> {
     fn from(string: &'a str) -> Self { Self::new(string) }
 }
 
-impl<'a> From<(&'a str, &LineMetadata)> for GCStringRef<'a> {
-    fn from((content, info): (&'a str, &LineMetadata)) -> Self {
-        Self::from_gap_buffer_line(content, info)
+impl<'a> From<crate::GapBufferLine<'a>> for GCStringRef<'a> {
+    fn from(line: crate::GapBufferLine<'a>) -> Self {
+        Self::from_gap_buffer_line(line.content(), line.info())
     }
 }
 
@@ -460,7 +464,7 @@ mod tests {
         let info = buffer.get_line_info(0).unwrap();
 
         // Test From<(&str, &LineMetadata)> trait
-        let gc_ref: GCStringRef = (content, info).into();
+        let gc_ref: GCStringRef = crate::GapBufferLine::new(content, info).into();
         assert_eq!(gc_ref.as_str(), "Hello 👋 World");
         assert!(GCString::display_width(&gc_ref).as_usize() > 0);
 

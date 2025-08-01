@@ -83,18 +83,47 @@ pub const INITIAL_LINE_SIZE: usize = 256;
 /// Page size for extending lines (bytes added when line overflows)
 pub const LINE_PAGE_SIZE: usize = 256;
 
-/// Type alias for a line content string slice paired with its metadata.
+/// A line from the gap buffer containing both content and metadata.
 ///
-/// This represents the return type of `get_line_with_info()` and is used throughout
-/// the editor for zero-copy operations that need both the line content and its
-/// grapheme cluster information.
+/// This struct provides ergonomic access to line content and its associated
+/// metadata for zero-copy operations.
 ///
 /// # Usage
 /// ```rust
-/// let line_with_info: LineWithInfo = buffer.get_line_with_info(row_index)?;
-/// let (content, info) = line_with_info; // Can still destructure
+/// # use r3bl_tui::{ZeroCopyGapBuffer, row, col};
+/// # let mut buffer = ZeroCopyGapBuffer::new();
+/// # buffer.add_line();
+/// let line = buffer.get_line_with_info(row(0)).unwrap();
+/// let content = line.content();
+/// let metadata = line.info();
+/// let width = line.info().display_width;
+/// let seg_string = line.info().get_string_at(line.content(), col(0));
 /// ```
-pub type LineWithInfo<'a> = (&'a str, &'a LineMetadata);
+#[derive(Debug, Clone, Copy)]
+pub struct GapBufferLine<'a> {
+    content: &'a str,
+    info: &'a LineMetadata,
+}
+
+impl<'a> GapBufferLine<'a> {
+    /// Create a new `GapBufferLine`.
+    #[must_use]
+    pub fn new(content: &'a str, info: &'a LineMetadata) -> Self {
+        Self { content, info }
+    }
+
+    /// Get the line content as a string slice.
+    #[must_use]
+    pub fn content(&self) -> &'a str {
+        self.content
+    }
+
+    /// Get the line metadata.
+    #[must_use]
+    pub fn info(&self) -> &'a LineMetadata {
+        self.info
+    }
+}
 
 
 /// Zero-copy gap buffer data structure for storing editor content
@@ -183,7 +212,7 @@ impl LineMetadata {
     ///
     /// let mut buffer = ZeroCopyGapBuffer::new();
     /// buffer.add_line();
-    /// buffer.insert_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
+    /// buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello").unwrap();
     ///
     /// let line_info = buffer.get_line_info(0).unwrap();
     ///
@@ -229,7 +258,7 @@ impl LineMetadata {
     ///
     /// let mut buffer = ZeroCopyGapBuffer::new();
     /// let line_idx = buffer.add_line();
-    /// buffer.insert_at_grapheme(row(line_idx), seg_index(0), "H😀llo").unwrap();
+    /// buffer.insert_text_at_grapheme(row(line_idx), seg_index(0), "H😀llo").unwrap();
     ///
     /// let line_info = buffer.get_line_info(line_idx).unwrap();
     ///
@@ -305,7 +334,11 @@ impl LineMetadata {
     /// // Valid positions: 0 (before H), 1 (before i), 2 (before 📦), 4 (after 📦)
     /// // Invalid position: 3 (middle of 📦)
     ///
-    /// let line_info = /* ... get line info ... */;
+    /// # let mut buffer = ZeroCopyGapBuffer::new();
+    /// # buffer.add_line();
+    /// # buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hi📦").unwrap();
+    /// # let line = buffer.get_line_with_info(row(0)).unwrap();
+    /// # let line_info = line.info();
     ///
     /// assert!(line_info.check_is_in_middle_of_grapheme(col(0)).is_none()); // Valid
     /// assert!(line_info.check_is_in_middle_of_grapheme(col(1)).is_none()); // Valid
@@ -348,8 +381,11 @@ impl LineMetadata {
     ///
     /// # Usage Pattern
     /// ```rust
-    /// let (content, info) = buffer.lines.get_line_with_info(row_index)?;
-    /// let seg_string = info.get_string_at(content, col_index)?;
+    /// # use r3bl_tui::{ZeroCopyGapBuffer, row, col};
+    /// # let mut buffer = ZeroCopyGapBuffer::new();
+    /// # buffer.add_line();
+    /// let line = buffer.get_line_with_info(row(0)).unwrap();
+    /// let seg_string = line.info().get_string_at(line.content(), col(0));
     /// ```
     #[must_use]
     pub fn get_string_at(
@@ -480,82 +516,18 @@ impl LineMetadata {
     ///
     /// # Usage Pattern (for interface boundaries)
     /// ```rust
-    /// let (content, info) = buffer.lines.get_line_with_info(row_index)?;
-    /// let gc_string_ref = info.to_gc_string_ref(content);
-    /// let styled_texts = color_wheel.colorize_into_styled_texts(&gc_string_ref, ...);
+    /// # use r3bl_tui::{ZeroCopyGapBuffer, row};
+    /// # let mut buffer = ZeroCopyGapBuffer::new();
+    /// # buffer.add_line();
+    /// let line = buffer.get_line_with_info(row(0)).unwrap();
+    /// let gc_string_ref = line.info().to_gc_string_ref(line.content());
+    /// // let styled_texts = color_wheel.colorize_into_styled_texts(&gc_string_ref, theme);
     /// ```
     #[must_use]
     pub fn to_gc_string_ref<'a>(&'a self, content: &'a str) -> GCStringRef<'a> {
         GCStringRef::from_gap_buffer_line(content, self)
     }
 
-    // Convenience methods that work with LineWithInfo for common operations
-
-    /// Get the string at a specific column index from a `LineWithInfo`.
-    ///
-    /// This is a convenience method for the common pattern of getting string data
-    /// right after calling `get_line_with_info()`.
-    ///
-    /// # Example
-    /// ```rust
-    /// let line_with_info = buffer.get_line_with_info(row_index)?;
-    /// let seg_string = LineMetadata::get_string_at_from_line(line_with_info, col_index)?;
-    /// ```
-    #[must_use]
-    pub fn get_string_at_from_line(
-        line_with_info: LineWithInfo<'_>,
-        col_index: ColIndex,
-    ) -> Option<SegStringOwned> {
-        let (content, line_info) = line_with_info;
-        line_info.get_string_at(content, col_index)
-    }
-
-    /// Get the string to the right of a specific column index from a `LineWithInfo`.
-    ///
-    /// # Example
-    /// ```rust
-    /// let line_with_info = buffer.get_line_with_info(row_index)?;
-    /// let seg_string = LineMetadata::get_string_at_right_of_from_line(line_with_info, col_index)?;
-    /// ```
-    #[must_use]
-    pub fn get_string_at_right_of_from_line(
-        line_with_info: LineWithInfo<'_>,
-        col_index: ColIndex,
-    ) -> Option<SegStringOwned> {
-        let (content, line_info) = line_with_info;
-        line_info.get_string_at_right_of(content, col_index)
-    }
-
-    /// Get the string to the left of a specific column index from a `LineWithInfo`.
-    ///
-    /// # Example
-    /// ```rust
-    /// let line_with_info = buffer.get_line_with_info(row_index)?;
-    /// let seg_string = LineMetadata::get_string_at_left_of_from_line(line_with_info, col_index)?;
-    /// ```
-    #[must_use]
-    pub fn get_string_at_left_of_from_line(
-        line_with_info: LineWithInfo<'_>,
-        col_index: ColIndex,
-    ) -> Option<SegStringOwned> {
-        let (content, line_info) = line_with_info;
-        line_info.get_string_at_left_of(content, col_index)
-    }
-
-    /// Get the string at the end of the line from a `LineWithInfo`.
-    ///
-    /// # Example
-    /// ```rust
-    /// let line_with_info = buffer.get_line_with_info(row_index)?;
-    /// let seg_string = LineMetadata::get_string_at_end_from_line(line_with_info)?;
-    /// ```
-    #[must_use]
-    pub fn get_string_at_end_from_line(
-        line_with_info: LineWithInfo<'_>,
-    ) -> Option<SegStringOwned> {
-        let (content, line_info) = line_with_info;
-        line_info.get_string_at_end(content)
-    }
 
     /// Clip the line content to a specific display column range.
     ///
@@ -1415,8 +1387,9 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hi📦XelLo🙏🏽Bye")
             .unwrap();
 
-        let line_with_info = buffer.get_line_with_info(row(0)).unwrap();
-        let (content, line_info) = line_with_info;
+        let line = buffer.get_line_with_info(row(0)).unwrap();
+        let content = line.content();
+        let line_info = line.info();
 
         // Test: Clip from start
         let result = line_info.clip_to_range(content, col(0), width(2));
@@ -1453,9 +1426,8 @@ mod tests {
         // Test: Empty line
         let mut empty_buffer = ZeroCopyGapBuffer::new();
         empty_buffer.add_line();
-        let empty_line_with_info = empty_buffer.get_line_with_info(row(0)).unwrap();
-        let (empty_content, empty_line_info) = empty_line_with_info;
-        let result = empty_line_info.clip_to_range(empty_content, col(0), width(5));
+        let empty_line = empty_buffer.get_line_with_info(row(0)).unwrap();
+        let result = empty_line.info().clip_to_range(empty_line.content(), col(0), width(5));
         assert_eq!(result, "");
     }
 }

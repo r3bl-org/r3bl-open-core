@@ -281,7 +281,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
                     let end = {
                         // For selection, go one col index past the end of the line,
                         // since selection range is not inclusive of the end index.
-                        let (_content, line_info) = line_with_info;
+                        let line_info = line_with_info.info();
                         let end_col_index = caret_scroll_index::col_index_for_width(
                             line_info.display_width,
                         );

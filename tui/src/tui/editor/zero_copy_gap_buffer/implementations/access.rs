@@ -27,7 +27,7 @@
 //! - **Buffer-wide utilities** → Use methods in this module
 //!
 //! ## Buffer Utilities (This Module)
-//! - Whole-buffer access (`as_str()`, `as_bytes()`)  
+//! - Whole-buffer access (`as_str()`, `as_bytes()`)
 //! - Multi-line ranges (`get_line_slice()`)
 //! - Raw/debug access (`get_line_raw()`, `is_valid_utf8()`)
 //! - Special content access (`get_line_with_newline()`)
@@ -277,7 +277,7 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn get_line_content(&self, row_index: RowIndex) -> Option<&str> {
         self.get_line_with_info(row_index)
-            .map(|(content, _info)| content)
+            .map(|line| line.content())
     }
 
 }

@@ -698,7 +698,7 @@ mod tests {
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
         let maybe_line_str = engine_internal_api::line_at_caret_to_string(&buffer);
-        assert_eq2!(maybe_line_str.unwrap().0, "abcaba");
+        assert_eq2!(maybe_line_str.unwrap().content(), "abcaba");
     }
 
     #[allow(clippy::too_many_lines)]

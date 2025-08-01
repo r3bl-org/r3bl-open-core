@@ -1222,7 +1222,7 @@ mod tests {
 
         assert::none_is_at_caret(&buffer);
         assert_eq2!(
-            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().0,
+            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().content(),
             "ab"
         );
 

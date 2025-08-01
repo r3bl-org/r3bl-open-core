@@ -22,7 +22,7 @@ use syntect::easy::HighlightLines;
 
 use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
             DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
-            EditorEvent, FlexBox, HasFocus, InputEvent, Key, LineWithInfo,
+            EditorEvent, FlexBox, HasFocus, InputEvent, Key, GapBufferLine,
             PrettyPrintDebug, RenderArgs, RenderOp, RenderOps, RenderPipeline,
             RowHeight, RowIndex, ScrollOffsetColLocationInRange, SegStringOwned,
             SelectionRange, Size, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
@@ -557,7 +557,7 @@ mod syn_hi_syntect_path {
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line_with_info: LineWithInfo<'_>,
+        line: GapBufferLine<'_>,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -565,8 +565,8 @@ mod syn_hi_syntect_path {
             col(0) + row_index,
         ));
 
-        let line = line_with_info.0; // Extract the &str from LineWithInfo
-        let it = try_get_syntect_highlighted_line(editor_engine, editor_buffer, line);
+        let line_content = line.content();
+        let it = try_get_syntect_highlighted_line(editor_engine, editor_buffer, line_content);
 
         match it {
             // If enabled, and we have a SyntaxReference then try and highlight the line.
@@ -581,7 +581,7 @@ mod syn_hi_syntect_path {
             // Otherwise, fallback.
             None => {
                 no_syn_hi_path::render_line_no_syntax_highlight(
-                    line_with_info,
+                    line,
                     editor_buffer,
                     max_display_col_count,
                     render_ops,
@@ -671,7 +671,7 @@ mod no_syn_hi_path {
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
-        line_with_info: LineWithInfo<'_>,
+        line: GapBufferLine<'_>,
         max_display_col_count: ColWidth,
     ) {
         render_ops.push(RenderOp::MoveCursorPositionRelTo(
@@ -680,7 +680,7 @@ mod no_syn_hi_path {
         ));
 
         no_syn_hi_path::render_line_no_syntax_highlight(
-            line_with_info,
+            line,
             editor_buffer,
             max_display_col_count,
             render_ops,
@@ -690,7 +690,7 @@ mod no_syn_hi_path {
 
     /// This is used as a fallback by other render paths.
     pub fn render_line_no_syntax_highlight(
-        line_with_info: LineWithInfo<'_>,
+        line: GapBufferLine<'_>,
         editor_buffer: &EditorBuffer,
         max_display_col_count: ColWidth,
         render_ops: &mut RenderOps,
@@ -699,9 +699,9 @@ mod no_syn_hi_path {
         let scroll_offset_col_index = editor_buffer.get_scr_ofs().col_index;
 
         // Clip the content [scroll_offset.col_index .. max cols].
-        // Use the pre-computed segment data from LineWithInfo for efficient clipping
-        let line_trunc = line_with_info.1.clip_to_range(
-            line_with_info.0,
+        // Use the pre-computed segment data from GapBufferLine for efficient clipping
+        let line_trunc = line.info().clip_to_range(
+            line.content(),
             scroll_offset_col_index,
             max_display_col_count,
         );

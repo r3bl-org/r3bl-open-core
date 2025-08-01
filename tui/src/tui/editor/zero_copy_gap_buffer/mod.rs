@@ -34,7 +34,7 @@
 //! ## Implementation Extensions (`implementations` module)
 //! Specialized method implementations that extend `ZeroCopyGapBuffer`:
 //! - `implementations::basic` - Fundamental line operations (insert, delete, access)
-//! - `implementations::access` - Zero-copy buffer access utilities  
+//! - `implementations::access` - Zero-copy buffer access utilities
 //! - `implementations::insert` - Text insertion algorithms
 //! - `implementations::delete` - Text deletion algorithms
 //! - `implementations::segment_builder` - Grapheme segment reconstruction
@@ -44,6 +44,7 @@
 //! `ZeroCopyGapBuffer` is used directly as a concrete type:
 //!
 //! ```rust
+//! use r3bl_tui::{ZeroCopyGapBuffer, row};
 //! let mut buffer = ZeroCopyGapBuffer::new();
 //! buffer.push_line("Hello World");
 //! let content = buffer.get_line_content(row(0));
@@ -120,8 +121,9 @@
 //!
 //! UTF-8 validation occurs **at the API boundaries** where content enters the system:
 //!
-//! - **[`insert_text_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]** -
-//!   Rust's `&str` type guarantees valid UTF-8
+//! - **[`insert_text_at_grapheme(text:
+//!   &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]** - Rust's `&str` type
+//!   guarantees valid UTF-8
 //! - **File loading** - Use `std::fs::read_to_string()` or `String::from_utf8()` which
 //!   validate
 //! - **User input** - Terminal/UI frameworks provide pre-validated strings
@@ -269,7 +271,7 @@
 //!
 //! ## Segment Rebuilding
 //!
-//! After any text modification (insertion or deletion), the buffer rebuilds the 
+//! After any text modification (insertion or deletion), the buffer rebuilds the
 //! grapheme cluster segments for the affected line. This ensures that:
 //!
 //! - Display width calculations remain accurate
@@ -281,7 +283,7 @@
 //! While this adds some overhead to each edit operation, it ensures correctness
 //! for all Unicode text, including emojis, combining characters, and complex scripts.
 
-// Core implementation modules  
+// Core implementation modules
 mod gap_buffer_core;
 
 // Specialized algorithms and optimizations

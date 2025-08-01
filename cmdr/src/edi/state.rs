@@ -142,7 +142,7 @@ mod state_tests {
                 .content
                 .lines
                 .iter_lines()
-                .map(|(line_str, _metadata)| line_str)
+                .map(|line| line.content())
                 .collect::<InlineVec<&str>>()
                 .join("\n"),
             content

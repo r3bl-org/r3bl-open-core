@@ -27,8 +27,8 @@
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length, LineMetadata,
-            LineWithInfo, RowIndex, SegIndex, byte_index, row,
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length,
+            GapBufferLine, RowIndex, SegIndex, byte_index, row,
             seg_index, width};
 use super::super::ZeroCopyGapBuffer;
 
@@ -44,13 +44,13 @@ impl ZeroCopyGapBuffer {
     pub fn is_empty(&self) -> bool { self.line_count().as_usize() == 0 }
 
     /// Get line content and metadata.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics in debug builds if the line contains invalid UTF-8. This should never
     /// happen as all content is validated on insertion.
-    #[must_use] 
-    pub fn get_line_with_info(&self, row_index: RowIndex) -> Option<LineWithInfo<'_>> {
+    #[must_use]
+    pub fn get_line_with_info(&self, row_index: RowIndex) -> Option<GapBufferLine<'_>> {
         let line_info = self.get_line_info(row_index.as_usize())?;
 
         // In debug builds, validate UTF-8
@@ -70,24 +70,22 @@ impl ZeroCopyGapBuffer {
         let content = unsafe {
             std::str::from_utf8_unchecked(&self.buffer[line_info.content_range()])
         };
-        Some((content, line_info))
-    }
+        Some(GapBufferLine::new(content, line_info))
+    }    // Line metadata access
 
-    // Line metadata access
-
-    #[must_use] 
+    #[must_use]
     pub fn get_line_display_width(&self, row_index: RowIndex) -> Option<ColWidth> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.display_width)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_line_grapheme_count(&self, row_index: RowIndex) -> Option<Length> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.grapheme_count)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get_line_byte_len(&self, row_index: RowIndex) -> Option<Length> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.content_len)
@@ -253,13 +251,13 @@ impl ZeroCopyGapBuffer {
 
     // Byte position conversions
 
-    #[must_use] 
+    #[must_use]
     pub fn get_byte_offset_for_row(&self, row_index: RowIndex) -> Option<ByteIndex> {
         self.get_line_info(row_index.as_usize())
             .map(|info| info.buffer_offset)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn find_row_containing_byte(&self, byte_index: ByteIndex) -> Option<RowIndex> {
         // Early bounds check for performance optimization
         if byte_index.as_usize() >= self.buffer.len() {
@@ -286,17 +284,15 @@ impl ZeroCopyGapBuffer {
 
     // Iterator support
 
-    #[must_use] 
-    pub fn iter_lines(&self) -> Box<dyn Iterator<Item = LineWithInfo<'_>> + '_> {
+    #[must_use]
+    pub fn iter_lines(&self) -> Box<dyn Iterator<Item = GapBufferLine<'_>> + '_> {
         Box::new(
             (0..self.line_count().as_usize())
                 .filter_map(move |i| self.get_line_with_info(row(i))),
         )
-    }
+    }    // Total size information
 
-    // Total size information
-
-    #[must_use] 
+    #[must_use]
     pub fn total_bytes(&self) -> ByteIndex { byte_index(self.buffer.len()) }
 
     // Conversion methods
@@ -308,7 +304,7 @@ impl ZeroCopyGapBuffer {
             .collect()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn from_gc_string_vec(lines: Vec<GCStringOwned>) -> Self {
         let mut buffer = Self::new();
         for line in lines {
@@ -319,24 +315,24 @@ impl ZeroCopyGapBuffer {
 
     // Validation support methods
 
-    #[must_use] 
+    #[must_use]
     pub fn get_string_at_col(
         &self,
         row_index: RowIndex,
         col_index: ColIndex,
     ) -> Option<crate::SegStringOwned> {
         let line_with_info = self.get_line_with_info(row_index)?;
-        LineMetadata::get_string_at_from_line(line_with_info, col_index)
+        line_with_info.info().get_string_at(line_with_info.content(), col_index)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn check_is_in_middle_of_grapheme(
         &self,
         row_index: RowIndex,
         col_index: ColIndex,
     ) -> Option<crate::Seg> {
-        let (_content, line_info) = self.get_line_with_info(row_index)?;
-        line_info.check_is_in_middle_of_grapheme(col_index)
+        let line_with_info = self.get_line_with_info(row_index)?;
+        line_with_info.info().check_is_in_middle_of_grapheme(col_index)
     }
 }
 
@@ -525,7 +521,7 @@ mod tests {
         // Test iterator
         let collected: Vec<&str> = storage
             .iter_lines()
-            .map(|line_with_info| line_with_info.0)
+            .map(|line| line.content())
             .collect();
         assert_eq!(collected, test_lines);
     }
@@ -632,18 +628,18 @@ mod tests {
         storage.push_line("Hello 👋 World");
 
         // Test get_line_with_info method
-        let (content, info) = storage.get_line_with_info(row(0)).unwrap();
-        assert_eq!(content, "Hello 👋 World");
-        assert!(info.grapheme_count.as_usize() > 0);
-        assert!(info.display_width.as_usize() > 0);
+        let line = storage.get_line_with_info(row(0)).unwrap();
+        assert_eq!(line.content(), "Hello 👋 World");
+        assert!(line.info().grapheme_count.as_usize() > 0);
+        assert!(line.info().display_width.as_usize() > 0);
 
         // Test GCString-compatible methods
-        let seg_string = info.get_string_at(content, col(6)).unwrap();
+        let seg_string = line.info().get_string_at(line.content(), col(6)).unwrap();
         assert_eq!(seg_string.string.as_ref(), "👋");
 
         // Test to_gc_string_ref for interface compatibility
-        let gc_ref = info.to_gc_string_ref(content);
+        let gc_ref = line.info().to_gc_string_ref(line.content());
         assert_eq!(gc_ref.as_str(), "Hello 👋 World");
-        assert_eq!(gc_ref.display_width(), info.display_width);
+        assert_eq!(gc_ref.display_width(), line.info().display_width);
     }
 }

@@ -18,11 +18,11 @@ use std::fmt::{Debug, Display, Formatter, Result};
 
 use super::{SelectionList, history::EditorHistory, render_cache::RenderCache};
 use crate::{CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEFAULT_SYN_HI_FILE_EXT, EditorBufferMutWithDrop, GetMemSize, InlineString,
-            LineMetadata, LineWithInfo, MemoizedMemorySize, MemorySize, RowHeight,
-            RowIndex, ScrOfs, SegStringOwned, Size, TinyInlineString, ZeroCopyGapBuffer,
-            caret_locate, format_as_kilobytes_with_commas, glyphs, height, inline_string,
-            ok, row, validate_buffer_mut::EditorBufferMutNoDrop, width, with_mut};
+            DEFAULT_SYN_HI_FILE_EXT, EditorBufferMutWithDrop, GapBufferLine, GetMemSize,
+            InlineString, MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs,
+            SegStringOwned, Size, TinyInlineString, ZeroCopyGapBuffer, caret_locate,
+            format_as_kilobytes_with_commas, glyphs, height, inline_string, ok, row,
+            validate_buffer_mut::EditorBufferMutNoDrop, width, with_mut};
 
 /// Stores the data for a single editor buffer using [`ZeroCopyGapBuffer`] for efficient
 /// text storage.
@@ -375,13 +375,13 @@ pub mod content_near_caret {
         }
 
         #[must_use]
-        pub fn line_at_caret_scr_adj(&self) -> Option<LineWithInfo<'_>> {
+        pub fn line_at_caret_scr_adj(&self) -> Option<GapBufferLine<'_>> {
             if self.is_empty() {
                 return None;
             }
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
 
-            // Return the native LineWithInfo - let callers adapt if needed
+            // Return the native GapBufferLine - let callers adapt if needed
             self.content.lines.get_line_with_info(row_index_scr_adj)
         }
 
@@ -396,11 +396,13 @@ pub mod content_near_caret {
             if let caret_locate::CaretColLocationInLine::AtEnd =
                 caret_locate::locate_col(self)
             {
-                // Use the efficient LineWithInfo approach directly
+                // Use the efficient GapBufferLine approach directly
                 if let Some(line_with_info) =
                     self.content.lines.get_line_with_info(row_index_scr_adj)
                 {
-                    return LineMetadata::get_string_at_end_from_line(line_with_info);
+                    return line_with_info
+                        .info()
+                        .get_string_at_end(line_with_info.content());
                 }
             }
             None
@@ -420,12 +422,12 @@ pub mod content_near_caret {
             {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    caret_locate::CaretColLocationInLine::AtEnd => {
-                        LineMetadata::get_string_at_end_from_line(line_with_info)
-                    }
+                    caret_locate::CaretColLocationInLine::AtEnd => line_with_info
+                        .info()
+                        .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.
-                    _ => LineMetadata::get_string_at_right_of_from_line(
-                        line_with_info,
+                    _ => line_with_info.info().get_string_at_right_of(
+                        line_with_info.content(),
                         col_index_scr_adj,
                     ),
                 }
@@ -448,12 +450,12 @@ pub mod content_near_caret {
             {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    caret_locate::CaretColLocationInLine::AtEnd => {
-                        LineMetadata::get_string_at_end_from_line(line_with_info)
-                    }
+                    caret_locate::CaretColLocationInLine::AtEnd => line_with_info
+                        .info()
+                        .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.
-                    _ => LineMetadata::get_string_at_left_of_from_line(
-                        line_with_info,
+                    _ => line_with_info.info().get_string_at_left_of(
+                        line_with_info.content(),
                         col_index_scr_adj,
                     ),
                 }
@@ -488,7 +490,9 @@ pub mod content_near_caret {
             if let Some(line_with_info) =
                 self.content.lines.get_line_with_info(row_index_scr_adj)
             {
-                LineMetadata::get_string_at_from_line(line_with_info, col_index_scr_adj)
+                line_with_info
+                    .info()
+                    .get_string_at(line_with_info.content(), col_index_scr_adj)
             } else {
                 None
             }
@@ -571,7 +575,7 @@ pub mod access_and_mutate {
                             acc.push_str(separator);
                         }
                         // Append the current line to the accumulator.
-                        acc.push_str(line_with_info.0); // Extract the &str from LineWithInfo
+                        acc.push_str(line_with_info.content());
                     }
                 }
             )
@@ -799,7 +803,8 @@ mod debug_impl {
 #[cfg(test)]
 mod test_memory_cache_invalidation {
     use super::*;
-    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2, caret_scr_adj, col, len};
+    use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2,
+                caret_scr_adj, col, len};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {
