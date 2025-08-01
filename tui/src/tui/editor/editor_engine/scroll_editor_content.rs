@@ -563,7 +563,7 @@ mod tests {
 
         // Setup assertions.
         {
-            assert_eq2!(width(2), GCStringOwned::width("🙏🏽"));
+            assert_eq2!(width(2), GCStringOwned::from("🙏🏽").width());
             assert_eq2!(buffer.len(), height(1));
             assert_eq2!(
                 buffer.get_lines().get_line_content(row(0)).unwrap(),

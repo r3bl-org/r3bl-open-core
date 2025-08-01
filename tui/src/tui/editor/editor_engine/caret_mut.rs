@@ -21,7 +21,7 @@ use crate::{CaretDirection, EditorArgsMut, EditorBuffer, EditorEngine,
                            locate_col},
             caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
             multiline_disabled_check_early_return, row,
-            wide_segments::ContainsWideSegments,
+            ContainsWideSegments,
             width};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {

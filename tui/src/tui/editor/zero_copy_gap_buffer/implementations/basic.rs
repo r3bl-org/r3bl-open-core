@@ -377,7 +377,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{GCString, col, len};
+    use crate::{col, len};
 
     #[test]
     fn test_basic_line_operations() {
@@ -637,9 +637,5 @@ mod tests {
         let seg_string = line.info().get_string_at(line.content(), col(6)).unwrap();
         assert_eq!(seg_string.string.as_ref(), "👋");
 
-        // Test to_gc_string_ref for interface compatibility
-        let gc_ref = line.info().to_gc_string_ref(line.content());
-        assert_eq!(gc_ref.as_str(), "Hello 👋 World");
-        assert_eq!(gc_ref.display_width(), line.info().display_width);
     }
 }

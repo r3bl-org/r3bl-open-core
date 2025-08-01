@@ -200,7 +200,7 @@ mod truncate_helper {
 
     /// Get the display width of the ellipsis glyph
     pub fn get_ellipsis_display_width() -> usize {
-        GCStringOwned::width(ELLIPSIS_GLYPH).as_usize()
+        GCStringOwned::from(ELLIPSIS_GLYPH).width().as_usize()
     }
 
     /// Handle case where display width is insufficient for ellipsis

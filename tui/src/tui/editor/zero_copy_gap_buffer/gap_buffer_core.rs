@@ -73,9 +73,10 @@
 //! Violation of this invariant may lead to buffer corruption, security vulnerabilities,
 //! or undefined behavior in zero-copy access operations.
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GCStringRef, Length,
-            RowIndex, Seg, SegIndex, SegStringOwned, byte_index,
-            gc_string_owned_sizing::SegmentArray, len};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length,
+            RowIndex, Seg, SegIndex, SegStringOwned, SegmentArray, byte_index, len};
+
+// SegmentArray is defined in gc_string_owned.rs to avoid ambiguous re-exports
 
 /// Initial size of each line in bytes
 pub const INITIAL_LINE_SIZE: usize = 256;
@@ -124,7 +125,6 @@ impl<'a> GapBufferLine<'a> {
         self.info
     }
 }
-
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -504,29 +504,6 @@ impl LineMetadata {
         })
     }
 
-    /// Create a `GCStringRef` from the line content for compatibility.
-    /// This is used when interfacing with non-editor code that expects a `GCString` trait
-    /// object.
-    ///
-    /// # Arguments
-    /// * `content` - The line content as a string slice
-    ///
-    /// # Returns
-    /// A `GCStringRef` that borrows the content and metadata without copying.
-    ///
-    /// # Usage Pattern (for interface boundaries)
-    /// ```rust
-    /// # use r3bl_tui::{ZeroCopyGapBuffer, row};
-    /// # let mut buffer = ZeroCopyGapBuffer::new();
-    /// # buffer.add_line();
-    /// let line = buffer.get_line_with_info(row(0)).unwrap();
-    /// let gc_string_ref = line.info().to_gc_string_ref(line.content());
-    /// // let styled_texts = color_wheel.colorize_into_styled_texts(&gc_string_ref, theme);
-    /// ```
-    #[must_use]
-    pub fn to_gc_string_ref<'a>(&'a self, content: &'a str) -> GCStringRef<'a> {
-        GCStringRef::from_gap_buffer_line(content, self)
-    }
 
 
     /// Clip the line content to a specific display column range.

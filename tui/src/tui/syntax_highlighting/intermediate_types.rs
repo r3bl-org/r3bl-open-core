@@ -172,7 +172,8 @@ impl StyleUSSpanLine {
 
             let mut clipped_text_fragment = InlineString::new();
 
-            for seg_str in text_gcs {
+            for seg in text_gcs {
+                let seg_str = seg.get_str(text_gcs);
                 for character in seg_str.chars() {
                     match matcher.match_next(character) {
                         CharacterMatchResult::Keep => {

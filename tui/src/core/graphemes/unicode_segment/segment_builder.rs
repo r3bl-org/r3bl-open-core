@@ -28,8 +28,9 @@
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-use crate::{ColIndex, ColWidth, Seg, ch, col, gc_string_owned_sizing::SegmentArray,
-            len, seg_index, width};
+use crate::{ColIndex, ColWidth, Seg, SegmentArray, ch, col, len, seg_index, width};
+
+// SegmentArray is defined in gc_string_owned.rs to avoid ambiguous re-exports
 
 /// Build grapheme cluster segments for any string slice.
 ///

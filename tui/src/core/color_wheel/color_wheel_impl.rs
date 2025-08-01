@@ -804,7 +804,8 @@ impl ColorWheel {
             lolcat_bg_helper::extract_style_from_policy(text_colorization_policy);
 
         // Loop: Colorize each (next) character w/ (next) color.
-        for next_seg_str in us {
+        for next_seg in us {
+            let next_seg_str = next_seg.get_str(us);
             let styled_text =
                 self.create_lolcat_bg_styled_text(maybe_style, next_seg_str);
             acc += styled_text;
@@ -836,7 +837,8 @@ impl ColorWheel {
         us: &GCStringOwned,
     ) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
-        for next_seg_str in us {
+        for next_seg in us {
+            let next_seg_str = next_seg.get_str(us);
             acc += tui_styled_text!(
                 @style: generate_styled_texts_helper::gen_style_fg_color_for(maybe_style, self.next_color()),
                 @text: next_seg_str,

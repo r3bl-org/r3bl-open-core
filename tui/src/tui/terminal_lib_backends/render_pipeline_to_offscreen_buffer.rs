@@ -334,7 +334,7 @@ mod print_text_with_attributes_helper {
         window_max_display_col_count: ColWidth,
     ) -> GCStringOwned {
         // Fast path: calculate string width without creating GCStringOwned.
-        let string_width = GCStringOwned::width(string);
+        let string_width = GCStringOwned::from(string).width();
 
         // Calculate the effective max width considering parameter and window constraints.
         let param_max = maybe_max_display_col_count

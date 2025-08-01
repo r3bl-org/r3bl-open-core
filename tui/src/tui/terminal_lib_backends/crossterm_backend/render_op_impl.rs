@@ -427,7 +427,7 @@ mod perform_paint {
         // Update cursor position after paint.
         let cursor_pos_copy = {
             let mut copy = local_data.cursor_pos;
-            let text_display_width = GCStringOwned::width(text);
+            let text_display_width = GCStringOwned::from(text.as_ref()).width();
             *copy.col_index += *text_display_width;
             copy
         };

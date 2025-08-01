@@ -72,7 +72,7 @@ impl StringLength {
     pub fn calculate(&self, input: &str, memoized_len_map: &mut MemoizedLenMap) -> u16 {
         match self {
             // Do not memoize (slower to do this).
-            StringLength::Unicode => u16(*GCStringOwned::width(input)),
+            StringLength::Unicode => u16(*GCStringOwned::from(input).width()),
 
             // Memoize (faster to do this).
             StringLength::StripAnsi => match memoized_len_map.entry(input.to_string()) {
@@ -80,7 +80,7 @@ impl StringLength {
                 Entry::Vacant(entry) => {
                     let stripped_input = strip_ansi::strip_ansi(input);
                     let stripped_input: &str = stripped_input.as_ref();
-                    let length = u16(*GCStringOwned::width(stripped_input));
+                    let length = u16(*GCStringOwned::from(stripped_input).width());
                     entry.insert(length);
                     length
                 }

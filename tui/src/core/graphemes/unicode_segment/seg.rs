@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use super::SegIndex;
 use crate::{ChUnit, ColIndex, ColWidth, Length, usize};
@@ -154,6 +154,12 @@ impl Debug for Seg {
             d_i = **self.start_display_col_index,
             d_w = **self.display_width,
         )
+    }
+}
+
+impl Display for Seg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "Seg[{}]", **self.seg_index)
     }
 }
 

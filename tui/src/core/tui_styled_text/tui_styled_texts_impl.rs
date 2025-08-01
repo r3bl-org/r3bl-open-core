@@ -107,7 +107,7 @@ mod impl_display {
         pub fn display_width(&self) -> ColWidth {
             let plain_text = self.to_plain_text();
 
-            GCStringOwned::width(plain_text.as_str())
+            GCStringOwned::from(plain_text.as_str()).width()
         }
     }
 }

@@ -711,14 +711,17 @@ methods
         `LineWithInfo` type alias, for better ergonomics
   - [x] Rename `buffer_storage.rs` to `gap_buffer_core.rs`
   - [x] Convert LineWithInfo type alias to GapBufferLine struct
-  - [ ] There might be opportunities to drop lots of code from the `GCStringOwned`, `GCStringRef`
-        now that we have migrated the editor to use `ZeroCopyGapBuffer` and `GapBufferLineInfo`
-        directly.
-  - [ ] Check whether `GCString` type can be dropped and replace with `ZeroCopyGapBuffer` and
-        `GapBufferLineInfo` instead. This might not be possible due to some existing code, not
-        related to the editor, that does not use `ZeroCopyGapBuffer` that relies on `GCString` for
-        segment-based operations.
-  - [ ] In all Rust files in the codebase that have nested modules, that have complex multi-line
+  - [x] Check whether `GCString`, `GCStringData`, `GCStringOwned`, `GCStringRef` can be
+        dropped now editor has fully transitioned to `ZeroCopyGapBuffer` and
+        `GapBufferLineInfo`
+    - [x] Drop `GCStringRef` struct
+    - [x] Drop `GCString` and `GCStringData` traits
+  - [ ] Check whether `GCStringOwned` type can be dropped. This might not be possible due
+        to existing non-editor code, that does not use `ZeroCopyGapBuffer` that relies on
+        `GCStringOwned` for segment-based operations. Should the redundant editor impl
+        code be kept?
+  - [ ] In all Rust files in the codebase that have nested modules, that have complex
+  - multi-line
         import statements (`use super::{...}`) replace the complex import statement with
         `#[allow(clippy::wildcard_imports)] use super::*;`
   - [ ] Test all major editor operations work correctly in `edi`

@@ -249,7 +249,7 @@ pub mod at_display_col_index {
         #[must_use]
         pub fn get_string_at_end(&self) -> Option<SegStringOwned> {
             let seg = self.last()?;
-            Some((*seg, self).into())
+            Some((seg, self).into())
         }
     }
 }
@@ -323,7 +323,7 @@ pub mod mutate {
             // the character.
             (
                 join!(from: vec, each: item, delim: "", format: "{item}"),
-                GCStringOwned::width(chunk),
+                GCStringOwned::new(chunk).width(),
             )
         }
 

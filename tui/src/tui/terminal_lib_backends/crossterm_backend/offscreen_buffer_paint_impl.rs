@@ -301,7 +301,7 @@ mod render_helper {
             ));
 
         // Update `display_col_index_for_line`.
-        let display_width = GCStringOwned::width(&context.buffer_plain_text);
+        let display_width = GCStringOwned::from(&context.buffer_plain_text).width();
         *context.display_col_index_for_line += *display_width;
 
         // Clear the buffer!

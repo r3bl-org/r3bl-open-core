@@ -32,7 +32,7 @@ use std::{borrow::Cow,
 
 use super::{helpers,
             types::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta}};
-use crate::{GCString, GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
+use crate::{GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
 
 /// Please use the [`LolcatBuilder`] to create this struct (lots of documentation is
 /// provided here). Please do not use this struct directly.
@@ -67,7 +67,7 @@ impl Lolcat {
     /// (it will always colorize to truecolor regardless of terminal limitations). Use
     /// [`crate::ColorWheel`] if you want to respect
     /// [`crate::global_color_support::detect`].
-    pub fn colorize_to_styled_texts<T: GCString>(&mut self, us: &T) -> TuiStyledTexts {
+    pub fn colorize_to_styled_texts(&mut self, us: &GCStringOwned) -> TuiStyledTexts {
         let mut acc = TuiStyledTexts::default();
 
         for seg in us.iter() {

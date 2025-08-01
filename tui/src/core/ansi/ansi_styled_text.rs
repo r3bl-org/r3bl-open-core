@@ -248,7 +248,8 @@ pub mod ansi_styled_text_impl {
                     // Convert the grapheme cluster to a single char
                     // For multi-char graphemes, use the first char or fallback to
                     // replacement char
-                    let display_char = item.chars().next().unwrap_or('�');
+                    let segment_str = item.get_str(&gc_string);
+                    let display_char = segment_str.chars().next().unwrap_or('�');
                     let pixel_char = PixelChar::PlainText {
                         display_char,
                         maybe_style: maybe_tui_style,

@@ -1371,7 +1371,7 @@ mod tests {
             vec![EditorEvent::InsertString("🙏🏽".into())],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(width(2), GCStringOwned::width("🙏🏽"));
+        assert_eq2!(width(2), GCStringOwned::from("🙏🏽").width());
         let expected = vec!["a", "b", "", "😀d🙏🏽"];
         assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(3)));
