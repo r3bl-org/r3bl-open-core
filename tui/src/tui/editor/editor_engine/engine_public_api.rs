@@ -257,7 +257,7 @@ pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps)
 
         let scroll_offset = editor_buffer.get_scr_ofs();
 
-        if let Some(line_with_info) = lines.get_line_with_info(row_index) {
+        if let Some(line_with_info) = lines.get_line(row_index) {
             // Take the scroll_offset into account when "slicing" the selection.
             let selection_holder = match sel_range.locate_scroll_offset_col(scroll_offset)
             {

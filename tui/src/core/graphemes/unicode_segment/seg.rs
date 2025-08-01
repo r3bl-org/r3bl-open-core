@@ -20,6 +20,9 @@ use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use super::SegIndex;
 use crate::{ChUnit, ColIndex, ColWidth, Length, usize};
 
+/// A vector-like container for grapheme segments.
+pub type SegmentArray = Vec<Seg>;
+
 /// `Seg` represents a grapheme cluster segment within a [`crate::GCStringOwned`].
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text

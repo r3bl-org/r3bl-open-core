@@ -27,10 +27,9 @@
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length,
-            GapBufferLine, RowIndex, SegIndex, byte_index, row,
-            seg_index, width};
 use super::super::ZeroCopyGapBuffer;
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GapBufferLine, Length,
+            RowIndex, SegIndex, byte_index, row, seg_index, width};
 
 impl ZeroCopyGapBuffer {
     // Line access methods
@@ -45,12 +44,16 @@ impl ZeroCopyGapBuffer {
 
     /// Get line content and metadata.
     ///
+    /// This is the primary API for accessing lines from the buffer. It returns a
+    /// [`GapBufferLine`] that provides unified access to both the line content and
+    /// its metadata (segments, display width, etc.).
+    ///
     /// # Panics
     ///
     /// Panics in debug builds if the line contains invalid UTF-8. This should never
     /// happen as all content is validated on insertion.
     #[must_use]
-    pub fn get_line_with_info(&self, row_index: RowIndex) -> Option<GapBufferLine<'_>> {
+    pub fn get_line(&self, row_index: RowIndex) -> Option<GapBufferLine<'_>> {
         let line_info = self.get_line_info(row_index.as_usize())?;
 
         // In debug builds, validate UTF-8
@@ -71,7 +74,7 @@ impl ZeroCopyGapBuffer {
             std::str::from_utf8_unchecked(&self.buffer[line_info.content_range()])
         };
         Some(GapBufferLine::new(content, line_info))
-    }    // Line metadata access
+    } // Line metadata access
 
     #[must_use]
     pub fn get_line_display_width(&self, row_index: RowIndex) -> Option<ColWidth> {
@@ -152,7 +155,8 @@ impl ZeroCopyGapBuffer {
         }
     }
 
-    /// Delete a specified number of grapheme clusters starting at the given column position.
+    /// Delete a specified number of grapheme clusters starting at the given column
+    /// position.
     ///
     /// # Arguments
     /// * `row_index` - The row to delete from
@@ -287,10 +291,9 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn iter_lines(&self) -> Box<dyn Iterator<Item = GapBufferLine<'_>> + '_> {
         Box::new(
-            (0..self.line_count().as_usize())
-                .filter_map(move |i| self.get_line_with_info(row(i))),
+            (0..self.line_count().as_usize()).filter_map(move |i| self.get_line(row(i))),
         )
-    }    // Total size information
+    } // Total size information
 
     #[must_use]
     pub fn total_bytes(&self) -> ByteIndex { byte_index(self.buffer.len()) }
@@ -321,8 +324,8 @@ impl ZeroCopyGapBuffer {
         row_index: RowIndex,
         col_index: ColIndex,
     ) -> Option<crate::SegStringOwned> {
-        let line_with_info = self.get_line_with_info(row_index)?;
-        line_with_info.info().get_string_at(line_with_info.content(), col_index)
+        let line = self.get_line(row_index)?;
+        line.get_string_at(col_index)
     }
 
     #[must_use]
@@ -331,8 +334,8 @@ impl ZeroCopyGapBuffer {
         row_index: RowIndex,
         col_index: ColIndex,
     ) -> Option<crate::Seg> {
-        let line_with_info = self.get_line_with_info(row_index)?;
-        line_with_info.info().check_is_in_middle_of_grapheme(col_index)
+        let line = self.get_line(row_index)?;
+        line.check_is_in_middle_of_grapheme(col_index)
     }
 }
 
@@ -448,7 +451,11 @@ mod tests {
         storage.push_line("Hello");
 
         // Test insert_at_grapheme
-        assert!(storage.insert_text_at_grapheme(row(0), seg_index(5), " World").is_ok());
+        assert!(
+            storage
+                .insert_text_at_grapheme(row(0), seg_index(5), " World")
+                .is_ok()
+        );
         assert_eq!(storage.get_line_content(row(0)), Some("Hello World"));
 
         // Test delete_at_grapheme
@@ -467,7 +474,11 @@ mod tests {
         assert_eq!(storage.get_line_grapheme_count(row(0)), Some(len(10))); // "Hello " = 6 + emoji = 1 + space = 1 + "世界" = 2
 
         // Insert more unicode
-        assert!(storage.insert_text_at_grapheme(row(0), seg_index(7), " 🌍").is_ok());
+        assert!(
+            storage
+                .insert_text_at_grapheme(row(0), seg_index(7), " 🌍")
+                .is_ok()
+        );
         assert_eq!(storage.get_line_content(row(0)), Some("Hello 👋 🌍 世界"));
     }
 
@@ -519,10 +530,8 @@ mod tests {
         }
 
         // Test iterator
-        let collected: Vec<&str> = storage
-            .iter_lines()
-            .map(|line| line.content())
-            .collect();
+        let collected: Vec<&str> =
+            storage.iter_lines().map(|line| line.content()).collect();
         assert_eq!(collected, test_lines);
     }
 
@@ -627,8 +636,8 @@ mod tests {
         let mut storage = ZeroCopyGapBuffer::new();
         storage.push_line("Hello 👋 World");
 
-        // Test get_line_with_info method
-        let line = storage.get_line_with_info(row(0)).unwrap();
+        // Test get_line method
+        let line = storage.get_line(row(0)).unwrap();
         assert_eq!(line.content(), "Hello 👋 World");
         assert!(line.info().grapheme_count.as_usize() > 0);
         assert!(line.info().display_width.as_usize() > 0);
@@ -636,6 +645,5 @@ mod tests {
         // Test GCString-compatible methods
         let seg_string = line.info().get_string_at(line.content(), col(6)).unwrap();
         assert_eq!(seg_string.string.as_ref(), "👋");
-
     }
 }

@@ -223,7 +223,6 @@ pub mod fragment;
 pub mod md_parser_types;
 pub mod parse_markdown;
 pub mod single_line;
-pub mod gap_buffer_adapters;
 
 // Test modules
 #[cfg(test)]

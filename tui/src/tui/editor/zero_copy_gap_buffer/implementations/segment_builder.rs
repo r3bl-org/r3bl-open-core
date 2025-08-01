@@ -52,9 +52,9 @@
 //! ## When Segment Rebuilding Occurs
 //!
 //! Segment rebuilding is called **after content modifications**:
-//! - After [`insert_at_grapheme()`][ZeroCopyGapBuffer::insert_at_grapheme] - content
+//! - After [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme] - content
 //!   already validated at insertion
-//! - After [`delete_at_grapheme()`][ZeroCopyGapBuffer::delete_at_grapheme] - removing
+//! - After [`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at] - removing
 //!   valid UTF-8 can't create invalid sequences
 //! - After bulk operations - operating on previously validated content
 //!

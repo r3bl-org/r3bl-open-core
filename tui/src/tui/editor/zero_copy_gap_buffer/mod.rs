@@ -29,7 +29,7 @@
 //! methods organized into focused modules:
 //!
 //! ## Core Implementation
-//! - `gap_buffer_core` - Core gap buffer implementation and fundamental operations
+//! - `core` - Core gap buffer implementation and fundamental operations
 //!
 //! ## Implementation Extensions (`implementations` module)
 //! Specialized method implementations that extend `ZeroCopyGapBuffer`:
@@ -284,13 +284,16 @@
 //! for all Unicode text, including emojis, combining characters, and complex scripts.
 
 // Core implementation modules
-mod gap_buffer_core;
+mod core;
 
 // Specialized algorithms and optimizations
 mod implementations;
 
+// Adapters for converting to ZeroCopyGapBuffer
+mod adapters;
+
 // Re-export core types and constants
-pub use gap_buffer_core::*;
+pub use core::*;
 
 // Note: implementation modules extend [`ZeroCopyGapBuffer`] through inherent method
 // implementations. They are not re-exported as they provide specialized capabilities

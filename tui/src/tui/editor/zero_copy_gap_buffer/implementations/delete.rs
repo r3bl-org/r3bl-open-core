@@ -53,7 +53,7 @@
 //!
 //! # Operations
 //!
-//! - [`delete_at_grapheme()`][ZeroCopyGapBuffer::delete_at_grapheme]: Delete single
+//! - [`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at]: Delete single
 //!   grapheme cluster
 //! - [`delete_range()`][ZeroCopyGapBuffer::delete_range]: Delete range of grapheme
 //!   clusters
@@ -85,7 +85,7 @@
 //!
 //! ## Grapheme-Level Safety
 //!
-//! - **[`delete_at_grapheme()`][ZeroCopyGapBuffer::delete_at_grapheme]**: Only deletes
+//! - **[`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at]**: Only deletes
 //!   complete grapheme clusters, never splits UTF-8 sequences
 //! - **[`delete_range()`][ZeroCopyGapBuffer::delete_range]**: Operates on grapheme
 //!   boundaries, ensuring no mid-character cuts
@@ -259,7 +259,7 @@ impl ZeroCopyGapBuffer {
     /// Returns an error if:
     /// - The line index is out of bounds
     /// - The byte positions exceed the content length
-    fn delete_bytes_at_range(
+    pub fn delete_bytes_at_range(
         &mut self,
         line_index: RowIndex,
         start_byte: ByteIndex,

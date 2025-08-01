@@ -125,7 +125,7 @@ impl SelectionRange {
     /// the actual Unicode-safe clipping.
     ///
     /// # Arguments
-    /// * `line_with_info` - Line content and metadata from `get_line_with_info()`
+    /// * `line_with_info` - Line content and metadata from `get_line()`
     ///
     /// # Returns
     /// A string slice containing the selected text
@@ -140,7 +140,7 @@ impl SelectionRange {
     ///     caret_scr_adj(col(2) + row(0)),
     ///     caret_scr_adj(col(6) + row(0))
     /// );
-    /// let line = buffer.get_line_with_info(row(0)).unwrap();
+    /// let line = buffer.get_line(row(0)).unwrap();
     /// let selected_text = selection.clip_to_range_str(line);
     /// ```
     #[must_use]

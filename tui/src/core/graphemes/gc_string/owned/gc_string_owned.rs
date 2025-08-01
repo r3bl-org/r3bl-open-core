@@ -19,7 +19,7 @@
 
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use crate::{ChUnit, ColIndex, ColWidth, InlineString, Seg, SegIndex, SegWidth,
+use crate::{ChUnit, ColIndex, ColWidth, InlineString, Seg, SegIndex, SegWidth, SegmentArray,
             graphemes::unicode_segment::{build_segments_for_str, calculate_display_width}};
 
 /// Wide segments detection result.
@@ -28,9 +28,6 @@ pub enum ContainsWideSegments {
     Yes,
     No,
 }
-
-/// A vector-like container for grapheme segments.
-pub type SegmentArray = Vec<Seg>;
 
 /// Convenience constructor for `GCStringOwned`.
 pub fn gc_string_owned(arg_from: impl Into<GCStringOwned>) -> GCStringOwned {

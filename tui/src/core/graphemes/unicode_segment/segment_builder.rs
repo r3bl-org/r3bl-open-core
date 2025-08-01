@@ -30,8 +30,6 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{ColIndex, ColWidth, Seg, SegmentArray, ch, col, len, seg_index, width};
 
-// SegmentArray is defined in gc_string_owned.rs to avoid ambiguous re-exports
-
 /// Build grapheme cluster segments for any string slice.
 ///
 /// This function analyzes a UTF-8 string and creates a segment for each grapheme

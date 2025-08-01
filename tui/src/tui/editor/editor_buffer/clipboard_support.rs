@@ -53,7 +53,7 @@ pub fn copy_to_clipboard(
     // Iterate through the sorted row indices, and copy the selected text.
     for row_index in row_indices {
         if let Some(sel_range) = sel_list.get(row_index)
-            && let Some(line_with_info) = lines.get_line_with_info(row_index)
+            && let Some(line_with_info) = lines.get_line(row_index)
         {
             // Use the new zero-copy clip_to_range_str method
             let sel_text = sel_range.clip_to_range_str(line_with_info);

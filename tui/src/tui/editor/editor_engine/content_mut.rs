@@ -705,7 +705,7 @@ mod delete_selected_helper {
         end_col_index: ColIndex,
         line_width: Width,
     ) -> Option<InlineString> {
-        let line_with_info = lines.get_line_with_info(selected_row_index)?;
+        let line_with_info = lines.get_line(selected_row_index)?;
 
         // Create selection ranges for the parts we want to keep
         let keep_before_selection_range = SelectionRange::new(

@@ -382,7 +382,7 @@ pub mod content_near_caret {
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
 
             // Return the native GapBufferLine - let callers adapt if needed
-            self.content.lines.get_line_with_info(row_index_scr_adj)
+            self.content.lines.get_line(row_index_scr_adj)
         }
 
         #[must_use]
@@ -398,7 +398,7 @@ pub mod content_near_caret {
             {
                 // Use the efficient GapBufferLine approach directly
                 if let Some(line_with_info) =
-                    self.content.lines.get_line_with_info(row_index_scr_adj)
+                    self.content.lines.get_line(row_index_scr_adj)
                 {
                     return line_with_info
                         .info()
@@ -418,7 +418,7 @@ pub mod content_near_caret {
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
             if let Some(line_with_info) =
-                self.content.lines.get_line_with_info(row_index_scr_adj)
+                self.content.lines.get_line(row_index_scr_adj)
             {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
@@ -446,7 +446,7 @@ pub mod content_near_caret {
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
             if let Some(line_with_info) =
-                self.content.lines.get_line_with_info(row_index_scr_adj)
+                self.content.lines.get_line(row_index_scr_adj)
             {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
@@ -474,7 +474,7 @@ pub mod content_near_caret {
                 return None;
             }
             let prev_row_index = row_index_scr_adj - row(1);
-            // Use the concrete method that delegates to get_line_with_info
+            // Use the concrete method that delegates to get_line
             self.get_lines().get_line_content(prev_row_index)
         }
 
@@ -488,7 +488,7 @@ pub mod content_near_caret {
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
             if let Some(line_with_info) =
-                self.content.lines.get_line_with_info(row_index_scr_adj)
+                self.content.lines.get_line(row_index_scr_adj)
             {
                 line_with_info
                     .info()
@@ -505,7 +505,7 @@ pub mod content_near_caret {
             }
             let caret_scr_adj_row_index = self.get_caret_scr_adj().row_index;
             let next_line_row_index = caret_scr_adj_row_index + row(1);
-            // Use the concrete method that delegates to get_line_with_info
+            // Use the concrete method that delegates to get_line
             self.get_lines().get_line_content(next_line_row_index)
         }
     }
@@ -542,7 +542,7 @@ pub mod access_and_mutate {
 
         #[must_use]
         pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&str> {
-            // Use the concrete method that delegates to get_line_with_info
+            // Use the concrete method that delegates to get_line
             self.content.lines.get_line_content(row_index)
         }
 

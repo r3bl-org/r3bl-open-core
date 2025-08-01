@@ -33,7 +33,7 @@
 //! - Special content access (`get_line_with_newline()`)
 //!
 //! ## Line Operations (`ZeroCopyGapBuffer` Methods)
-//! - Single line access (`get_line_content()`, `get_line_with_info()`)
+//! - Single line access (`get_line_content()`, `get_line()`)
 //! - Line metadata (`get_line_display_width()`, `line_count()`)
 //! - Line mutations (`insert_at_grapheme()`, `delete_at_grapheme()`)
 //! - Content management (`push_line()`, `set_line()`, `remove_line()`)
@@ -270,13 +270,13 @@ impl ZeroCopyGapBuffer {
 
     /// Convenience method to get only the line content as a string slice.
     ///
-    /// This is a helper that calls [`ZeroCopyGapBuffer::get_line_with_info()`] and extracts just the content.
+    /// This is a helper that calls [`ZeroCopyGapBuffer::get_line()`] and extracts just the content.
     /// Use this when you only need the string and don't need the metadata.
     ///
     /// This method provides convenient access to line content without metadata.
     #[must_use]
     pub fn get_line_content(&self, row_index: RowIndex) -> Option<&str> {
-        self.get_line_with_info(row_index)
+        self.get_line(row_index)
             .map(|line| line.content())
     }
 

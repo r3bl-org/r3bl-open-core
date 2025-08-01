@@ -276,7 +276,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
         }
         Greater => {
             if let Some(range) = buffer_mut.inner.sel_list.get(row_index) {
-                if let Some(line_with_info) = buffer_mut.inner.lines.get_line_with_info(row_index) {
+                if let Some(line_with_info) = buffer_mut.inner.lines.get_line(row_index) {
                     let start = caret_scr_adj(range.start() + row_index);
                     let end = {
                         // For selection, go one col index past the end of the line,

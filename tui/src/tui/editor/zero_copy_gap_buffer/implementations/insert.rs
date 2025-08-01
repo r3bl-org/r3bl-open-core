@@ -41,7 +41,7 @@
 //!
 //! # Operations
 //!
-//! - [`insert_at_grapheme()`][ZeroCopyGapBuffer::insert_at_grapheme]: Insert text at a
+//! - [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme]: Insert text at a
 //!   specific grapheme position with automatic optimization detection
 //! - [`insert_empty_line()`][ZeroCopyGapBuffer::insert_empty_line]: Create new empty
 //!   lines with proper initialization
@@ -76,7 +76,7 @@
 //!
 //! UTF-8 safety is **guaranteed by Rust's type system** at the API boundary:
 //!
-//! - **[`insert_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_at_grapheme]**: The
+//! - **[`insert_text_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]**: The
 //!   `&str` parameter ensures valid UTF-8
 //! - **Type system enforcement**: Impossible to pass invalid UTF-8 through safe Rust APIs
 //! - **No runtime validation needed**: UTF-8 validity guaranteed by caller's type
@@ -175,7 +175,7 @@ impl ZeroCopyGapBuffer {
     /// Returns an error if:
     /// - The line index is out of bounds
     /// - The byte position exceeds the content length
-    fn insert_text_at_byte_pos(
+    pub fn insert_text_at_byte_pos(
         &mut self,
         line_index: RowIndex,
         byte_pos: ByteIndex,

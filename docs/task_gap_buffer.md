@@ -716,6 +716,7 @@ methods
         `GapBufferLineInfo`
     - [x] Drop `GCStringRef` struct
     - [x] Drop `GCString` and `GCStringData` traits
+  - [x] Refactor `gap_buffer_core.rs` into many files in the `core` module to manage complexity
   - [ ] Check whether `GCStringOwned` type can be dropped. This might not be possible due
         to existing non-editor code, that does not use `ZeroCopyGapBuffer` that relies on
         `GCStringOwned` for segment-based operations. Should the redundant editor impl
