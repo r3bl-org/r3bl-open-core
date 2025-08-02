@@ -4,6 +4,9 @@
 
 - [ ] use [`task_gap_buffer`](docs/task_gap_buffer.md) to implement a gap buffer for the editor
       content storage. This will improve performance and memory usage when editing large files.
+- [ ] use [`task_unified_grapheme_trait`](docs/task_unified_grapheme_trait.md) to implement a
+      unified grapheme trait that works with both `ASText` and `TuiStyledText`, allowing for better
+      text manipulation and rendering.
 
 # unify rendering paths
 

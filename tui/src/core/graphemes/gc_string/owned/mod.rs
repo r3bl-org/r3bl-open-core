@@ -22,4 +22,5 @@ pub mod gc_string_owned_editor_impl;
 pub mod gc_string_owned_non_editor_impl;
 
 pub use gc_string_owned::*;
-// Editor and non-editor implementations are included via gc_string_owned.rs
+pub use gc_string_owned_editor_impl::*;
+pub use gc_string_owned_non_editor_impl::*;

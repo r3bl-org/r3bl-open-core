@@ -30,8 +30,7 @@ use std::{fmt::{Display, Formatter},
 
 use rand::random;
 
-// Re-export from lolcat module for compatibility
-pub use super::lolcat::Colorize;
+use super::lolcat::Colorize;
 
 // ================================================================================================
 // Basic types

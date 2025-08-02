@@ -19,8 +19,10 @@
 
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
-use crate::{ChUnit, ColIndex, ColWidth, InlineString, Seg, SegIndex, SegWidth, SegmentArray,
-            graphemes::unicode_segment::{build_segments_for_str, calculate_display_width}};
+use crate::{ChUnit, ColIndex, ColWidth, InlineString, Seg, SegIndex, SegWidth,
+            SegmentArray,
+            graphemes::unicode_segment::{build_segments_for_str,
+                                         calculate_display_width}};
 
 /// Wide segments detection result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,15 +31,16 @@ pub enum ContainsWideSegments {
     No,
 }
 
-/// Convenience constructor for `GCStringOwned`.
-pub fn gc_string_owned(arg_from: impl Into<GCStringOwned>) -> GCStringOwned {
-    arg_from.into()
+/// The equivalent of a document in the editor, containing multiple lines of
+/// [`GCStringOwned`]. This is a very simplistic version of [`crate::ZeroCopyGapBuffer`].
+pub struct GCStringOwnedDoc {
+    pub lines: Vec<GCStringOwned>,
 }
 
 /// Owned version of a Unicode grapheme cluster string with pre-computed segment metadata.
-/// 
-/// This type owns both the string data and the grapheme cluster metadata, making it suitable
-/// for cases where the string needs to be stored or passed around independently.
+///
+/// This type owns both the string data and the grapheme cluster metadata, making it
+/// suitable for cases where the string needs to be stored or passed around independently.
 #[derive(Clone, PartialEq, Eq)]
 pub struct GCStringOwned {
     /// The underlying string data (owned).
@@ -63,54 +66,38 @@ impl Display for GCStringOwned {
 }
 
 impl AsRef<str> for GCStringOwned {
-    fn as_ref(&self) -> &str {
-        self.string.as_str()
-    }
+    fn as_ref(&self) -> &str { self.string.as_str() }
 }
 
 impl From<&str> for GCStringOwned {
-    fn from(value: &str) -> Self {
-        Self::new(value)
-    }
+    fn from(value: &str) -> Self { Self::new(value) }
 }
 
 impl From<String> for GCStringOwned {
-    fn from(value: String) -> Self {
-        Self::new(value)
-    }
+    fn from(value: String) -> Self { Self::new(value) }
 }
 
 impl From<InlineString> for GCStringOwned {
-    fn from(value: InlineString) -> Self {
-        Self::new(value.as_str())
-    }
+    fn from(value: InlineString) -> Self { Self::new(value.as_str()) }
 }
 
 impl<'a> IntoIterator for &'a GCStringOwned {
     type Item = Seg;
     type IntoIter = std::iter::Copied<std::slice::Iter<'a, Seg>>;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.segments.iter().copied()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.segments.iter().copied() }
 }
 
 impl From<&InlineString> for GCStringOwned {
-    fn from(value: &InlineString) -> Self {
-        Self::new(value.as_str())
-    }
+    fn from(value: &InlineString) -> Self { Self::new(value.as_str()) }
 }
 
 impl From<&'_ &str> for GCStringOwned {
-    fn from(value: &'_ &str) -> Self {
-        Self::new(*value)
-    }
+    fn from(value: &'_ &str) -> Self { Self::new(*value) }
 }
 
 impl From<&String> for GCStringOwned {
-    fn from(value: &String) -> Self {
-        Self::new(value.as_str())
-    }
+    fn from(value: &String) -> Self { Self::new(value.as_str()) }
 }
 
 impl GCStringOwned {
@@ -131,33 +118,23 @@ impl GCStringOwned {
 
     /// Get the string as a string slice.
     #[must_use]
-    pub fn as_str(&self) -> &str {
-        self.string.as_str()
-    }
+    pub fn as_str(&self) -> &str { self.string.as_str() }
 
     /// Get the display width of the string.
     #[must_use]
-    pub fn display_width(&self) -> ColWidth {
-        self.display_width
-    }
+    pub fn display_width(&self) -> ColWidth { self.display_width }
 
     /// Get the byte size of the string.
     #[must_use]
-    pub fn bytes_size(&self) -> ChUnit {
-        self.bytes_size
-    }
+    pub fn bytes_size(&self) -> ChUnit { self.bytes_size }
 
     /// Get the number of grapheme clusters.
     #[must_use]
-    pub fn len(&self) -> SegWidth {
-        SegWidth::from(self.segments.len())
-    }
+    pub fn len(&self) -> SegWidth { SegWidth::from(self.segments.len()) }
 
     /// Check if the string is empty.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.segments.is_empty()
-    }
+    pub fn is_empty(&self) -> bool { self.segments.is_empty() }
 
     /// Get a segment by index.
     pub fn get(&self, seg_index: impl Into<SegIndex>) -> Option<Seg> {
@@ -176,9 +153,7 @@ impl GCStringOwned {
     }
 
     /// Iterate over segments.
-    pub fn iter(&self) -> impl Iterator<Item = Seg> + '_ {
-        self.segments.iter().copied()
-    }
+    pub fn iter(&self) -> impl Iterator<Item = Seg> + '_ { self.segments.iter().copied() }
 
     /// Get display width of a single character (utility method).
     #[must_use]
@@ -190,7 +165,11 @@ impl GCStringOwned {
     /// Check if this string contains wide segments (characters wider than 1 column).
     #[must_use]
     pub fn contains_wide_segments(&self) -> ContainsWideSegments {
-        if self.segments.iter().any(|seg| seg.display_width > crate::width(1)) {
+        if self
+            .segments
+            .iter()
+            .any(|seg| seg.display_width > crate::width(1))
+        {
             ContainsWideSegments::Yes
         } else {
             ContainsWideSegments::No
@@ -204,15 +183,11 @@ impl GCStringOwned {
 
     /// Get the display width of the string (alias for `display_width()`).
     #[must_use]
-    pub fn width(&self) -> ColWidth {
-        self.display_width
-    }
+    pub fn width(&self) -> ColWidth { self.display_width }
 
     /// Get the last segment.
     #[must_use]
-    pub fn last(&self) -> Option<Seg> {
-        self.segments.last().copied()
-    }
+    pub fn last(&self) -> Option<Seg> { self.segments.last().copied() }
 }
 
 /// Result type for string operations.
@@ -236,7 +211,3 @@ impl From<(Seg, &GCStringOwned)> for SegStringOwned {
         }
     }
 }
-
-// Include existing submodules
-pub use super::gc_string_owned_non_editor_impl::*;
-pub use super::gc_string_owned_editor_impl::*;
