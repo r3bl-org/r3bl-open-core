@@ -5,6 +5,12 @@
 - [ ] use [`task_gap_buffer`](docs/task_gap_buffer.md) to implement a gap buffer for the editor
       content storage. This will improve performance and memory usage when editing large files.
 
+# unify rendering paths
+
+- [ ] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
+      `ASText` and `TuiStyledText` into a single, optimized rendering pipeline that works for both
+      use cases while preparing for the future removal of crossterm dependency.
+
 # remove crossterm
 
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
