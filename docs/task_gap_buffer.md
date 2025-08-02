@@ -469,10 +469,12 @@ in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer`
 #### ✅ 4.1 EditorLinesStorage Trait
 
 - [x] Clean up zero_copy_gap_buffer.rs so that it does not use ambiguous types like `usize`
+
   - Use specific types like `ByteIndex`, `ColWidth`, `Length`, etc in GapBufferLineInfo and
     ZeroCopyGapBuffer
 
 - [x] Define `EditorLinesStorage` trait based on ZeroCopyGapBuffer's API:
+
   - Try not to use usize for arguments and return types
     - Here are some types that should be used instead of usize: ByteIndex, ColWidth, Length,
       RowIndex, SegIndex
@@ -493,6 +495,7 @@ in `/tui/src/tui/editor/zero_copy_gap_buffer/` (particularly `ZeroCopyGapBuffer`
     - is the index a RowIndex or a SegIndex or ByteIndex?
 
 - [x] Implement EditorLinesStorage for ZeroCopyGapBuffer (native implementation - "NG storage")
+
   - Study in great detail how the existing VecEditorContentLines is used by the editor component
     (engine and buffer) to figure out what methods are needed for this trait. This our benchmark or
     baseline or target for existing functionality
@@ -517,6 +520,7 @@ Based on comprehensive codebase analysis, `GCString` (now `GCStringOwned`) has t
 patterns:
 
 1. **Editor-specific operations** (candidates for deprecation):
+
    - `mutate` module: `insert_chunk_at_col()`, `delete_char_at_col()`, `split_at_display_col()` -
      Only used in editor content mutation
    - `at_display_col_index` module: `check_is_in_middle_of_grapheme()` - Only used for cursor
@@ -679,6 +683,7 @@ methods
       with this progress
 
 - [x] Direct Migration to ZeroCopyGapBuffer (No VecEditorContentLinesWrapper)
+
   - [x] Remove the trait `EditorLinesStorage`
   - [x] Remove generics from EditorContent and EditorBuffer, they only use ZeroCopyGapBuffer
   - [x] Remove optimization from `segment_builder.rs` which was causing tests to fail due to bugs;
@@ -710,9 +715,12 @@ methods
     - [x] Drop `GCStringRef` struct
     - [x] Drop `GCString` and `GCStringData` traits
   - [x] Refactor `gap_buffer_core.rs` into many files in the `core` module to manage complexity
-  - [ ] Create unified grapheme trait for `Vec<GCStringOwned>` and `ZeroCopyGapBuffer`; plan in
-        [task_unified_grapheme_trait.md](task_unified_grapheme_trait.md)
-  - [ ] Ask the user to deeply review this code, when they have made their changes, then make a
+  - [x] Create unified grapheme trait for `Vec<GCStringOwned>` and `ZeroCopyGapBuffer`; plan in
+        [done/task_unified_grapheme_trait.md](done/task_unified_grapheme_trait.md)
+  - [x] Evaluate the need to use the new unified grapheme traits `GraphemeString` and `GraphemeDoc`
+        in the editor codebase, but only with `ZeroCopyGapBuffer`. Currently there is no value in
+        doing this, it's more for future-proofing the codebase.
+  - [x] Ask the user to deeply review this code, when they have made their changes, then make a
         commit with this progress
   - [ ] In all Rust files in the codebase that have nested modules, that have complex multi-line
         import statements (`use super::{...}`) replace the complex import statement with
@@ -933,14 +941,17 @@ changing the parser's `&str` requirement.
 ### Existing Implementation
 
 1. **EditorContent struct** (`tui/src/tui/editor/editor_buffer/buffer_struct.rs`):
+
    - Contains `lines: VecEditorContentLines` field
    - Manages caret position, scroll offset, and file metadata
 
 2. **VecEditorContentLines type** (`tui/src/tui/editor/editor_buffer/sizing.rs`):
+
    - Defined as: `SmallVec<[GCString; DEFAULT_EDITOR_LINES_SIZE]>`
    - Stack-allocated vector holding up to 32 lines before heap allocation
 
 3. **GCString type** (`tui/src/core/graphemes/gc_string.rs`):
+
    - Contains `InlineString` (SmallString with 16-byte inline storage)
    - Stores grapheme cluster metadata in `SegmentArray`
    - Implements `AsRef<str>` for string conversion
@@ -1158,6 +1169,7 @@ impl ZeroCopyGapBuffer {
 ### Current GCString Analysis
 
 1. **What's Reusable**:
+
    - `Seg` struct (already decoupled, contains only indices)
    - Width calculation functions (static methods)
    - Segmentation algorithm logic

@@ -4,9 +4,6 @@
 
 - [ ] use [`task_gap_buffer`](docs/task_gap_buffer.md) to implement a gap buffer for the editor
       content storage. This will improve performance and memory usage when editing large files.
-- [ ] use [`task_unified_grapheme_trait`](docs/task_unified_grapheme_trait.md) to implement a
-      unified grapheme trait that works with both `ASText` and `TuiStyledText`, allowing for better
-      text manipulation and rendering.
 
 # unify rendering paths
 
@@ -18,6 +15,13 @@
 
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
       `r3bl_open_core` codebase.
+
+# cache AST in editor to implement jump to link (intra doc link)
+
+- [ ] to implement `Ctrl+b` in the editor, so that jumping to hyperlinks can be implement
+      it might be a good idea to save the abstract syntax tree of the parsed markdown
+      data structure MdDocument in memory, along with a way to find the element under
+      a given (row, col) index
 
 # consider replacing syntect
 

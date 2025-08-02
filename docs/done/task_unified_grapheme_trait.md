@@ -28,6 +28,7 @@
     - [Phase 4: Remove deprecated code](#phase-4-remove-deprecated-code)
   - [Usage Examples](#usage-examples)
     - [Zero-copy segment access](#zero-copy-segment-access)
+    - [Working with associated types for string operations](#working-with-associated-types-for-string-operations)
     - [Working with documents](#working-with-documents)
     - [Mutation with associated types](#mutation-with-associated-types)
     - [When ownership is needed](#when-ownership-is-needed)
@@ -103,9 +104,9 @@ impl<'a> SegContent<'a> {
 pub trait GraphemeString {
     // Associated type for iterator
     type SegmentIterator<'a>: Iterator<Item = Seg> + 'a where Self: 'a;
-    
+
     // Associated type for string slice operations
-    // This allows GCStringOwned to return CowInlineString while 
+    // This allows GCStringOwned to return CowInlineString while
     // ZeroCopyGapBuffer returns &str
     type StringSlice<'a>: AsRef<str> + Display where Self: 'a;
 
@@ -244,31 +245,12 @@ impl<T: GraphemeString + ?Sized> GraphemeStringOwnedExt for T {}
 
 ## Error Handling
 
+Error handling is implementation-specific. Most implementations use `miette::Result` with contextual error messages created using the `miette!` macro. This provides flexibility for each implementation to define appropriate error handling strategies without imposing a rigid error type hierarchy.
+
+Example:
 ```rust
-use miette::Diagnostic;
-use thiserror::Error;
-
-// Error type for grapheme operations
-#[derive(Debug, Clone, PartialEq, Eq, Error, Diagnostic)]
-pub enum GraphemeError {
-    #[error("Invalid row index: {0}")]
-    InvalidRow(RowIndex),
-
-    #[error("Invalid column index: {0}")]
-    InvalidColumn(ColIndex),
-
-    #[error("Cursor position falls in middle of grapheme cluster at column {0}")]
-    InMiddleOfGrapheme(ColIndex),
-
-    #[error("Index out of bounds")]
-    OutOfBounds,
-
-    #[error("Insufficient capacity in buffer")]
-    InsufficientCapacity,
-
-    #[error("Invalid UTF-8 sequence")]
-    Utf8Error,
-}
+let line = self.lines.get_mut(row.as_usize())
+    .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
 ```
 
 ## Implementation Strategy
@@ -283,7 +265,7 @@ from `GCStringOwned` as the canonical algorithms, then adapt them for other type
 ```rust
 impl GraphemeString for GCStringOwned {
     type SegmentIterator<'a> = std::iter::Copied<std::slice::Iter<'a, Seg>>;
-    
+
     // GCStringOwned can return CowInlineString for string operations
     type StringSlice<'a> = CowInlineString<'a>;
 
@@ -422,7 +404,7 @@ impl GraphemeStringMut for GCStringOwned {
 // GapBufferLine implements GraphemeString by adapting GCStringOwned algorithms
 impl<'a> GraphemeString for GapBufferLine<'a> {
     type SegmentIterator<'b> = std::iter::Copied<std::slice::Iter<'b, Seg>> where Self: 'b;
-    
+
     // ZeroCopyGapBuffer uses &str for zero-copy string operations
     type StringSlice<'b> = &'b str where Self: 'b;
 
@@ -724,7 +706,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
         text: &str
     ) -> miette::Result<Self::DocMutResult> {
         let line = self.lines.get_mut(row.as_usize())
-            .ok_or(GraphemeError::InvalidRow(row))?;
+            .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
 
         // Convert segment index to column index
         let col_index = if seg_index.as_usize() == 0 {
@@ -740,7 +722,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             *line = new_line;
             Ok(())
         } else {
-            Err(GraphemeError::InvalidColumn(col_index).into())
+            Err(miette!("Invalid column index: {:?}", col_index))
         }
     }
 
@@ -751,13 +733,13 @@ impl GraphemeDocMut for GCStringOwnedDoc {
         end_seg: SegIndex
     ) -> miette::Result<Self::DocMutResult> {
         let line = self.lines.get_mut(row.as_usize())
-            .ok_or(GraphemeError::InvalidRow(row))?;
+            .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
 
         // Convert segment indices to column indices
         let start_col = if let Some(seg) = line.get(start_seg) {
             seg.start_display_col_index
         } else {
-            return Err(GraphemeError::InvalidColumn(col(start_seg.as_usize())).into());
+            return Err(miette!("Invalid column index: {:?}", col(start_seg.as_usize())));
         };
 
         let end_col = if let Some(seg) = line.get(end_seg) {
@@ -777,7 +759,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             *line = before;
             Ok(())
         } else {
-            Err(GraphemeError::InvalidColumn(start_col).into())
+            Err(miette!("Invalid column index: {:?}", start_col))
         }
     }
 
@@ -786,7 +768,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             self.lines.insert(row.as_usize(), GCStringOwned::new(""));
             Ok(())
         } else {
-            Err(GraphemeError::InvalidRow(row).into())
+            Err(miette!("Invalid row index: {:?}", row))
         }
     }
 
@@ -801,13 +783,13 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             }
             Ok(())
         } else {
-            Err(GraphemeError::InvalidRow(row).into())
+            Err(miette!("Invalid row index: {:?}", row))
         }
     }
 
     fn split_line(&mut self, row: RowIndex, col: ColIndex) -> miette::Result<Self::DocMutResult> {
         let line = self.lines.get_mut(row.as_usize())
-            .ok_or(GraphemeError::InvalidRow(row))?;
+            .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
 
         if let Some(before) = line.trunc_at_display_col_index(col) {
             if let Some(after) = line.slice_from_display_col_index(col) {
@@ -821,7 +803,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
                 Ok(())
             }
         } else {
-            Err(GraphemeError::InvalidColumn(col).into())
+            Err(miette!("Invalid column index: {:?}", col))
         }
     }
 }
@@ -1030,8 +1012,7 @@ tui/src/core/graphemes/
 │   ├── core_types.rs                         # NEW - SegContent struct
 │   ├── single_line.rs                        # NEW - GraphemeString, GraphemeStringMut
 │   ├── multi_line.rs                         # NEW - GraphemeDoc, GraphemeDocMut
-│   ├── extensions.rs                         # NEW - GraphemeStringOwnedExt
-│   └── error.rs                              # NEW - GraphemeError enum
+│   └── extensions.rs                         # NEW - GraphemeStringOwnedExt
 └── gc_string/
     └── document/                             # NEW - Document types
         ├── mod.rs                            # NEW - Module exports
@@ -1077,7 +1058,6 @@ tui/src/core/graphemes/
 
 5. **Phase 5 - Extensions and Polish:**
    - Add GraphemeStringOwnedExt extension trait
-   - Implement GraphemeError enum
    - Add comprehensive tests
 
 6. **Phase 6 - Migration Support:**

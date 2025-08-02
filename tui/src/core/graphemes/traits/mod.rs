@@ -1,0 +1,64 @@
+/*
+ *   Copyright (c) 2024 R3BL LLC
+ *   All rights reserved.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+//! Unified trait system for grapheme-aware string and document operations.
+//!
+//! This module provides traits that enable consistent handling of grapheme clusters
+//! across different string and document implementations in this codebase. These traits
+//! serve as a common interface for working with Unicode text in a grapheme-cluster-aware
+//! manner.
+//!
+//! ## Purpose
+//!
+//! The unifying traits in this module are designed to provide:
+//!
+//! - **Future extensibility**: If additional document storage types are added beyond
+//!   [`crate::ZeroCopyGapBuffer`] and [`crate::GCStringOwnedDoc`], they can implement
+//!   these traits for seamless integration.
+//!
+//! - **Generic document operations**: New code can work with document-like structures
+//!   generically through the [`GraphemeDoc`] and [`GraphemeDocMut`] traits, without being
+//!   tied to specific implementations.
+//!
+//! - **Cross-implementation interoperability**: Enables potential interoperability
+//!   between [`crate::ZeroCopyGapBuffer`] and [`Vec<GCStringOwned>`] if needed, allowing
+//!   code to work with either storage format.
+//!
+//! ## Core Traits
+//!
+//! - [`GraphemeString`]: Single-line grapheme-aware string operations.
+//! - [`GraphemeDoc`]: Multi-line document read operations.
+//! - [`GraphemeDocMut`]: Multi-line document mutation operations.
+//!
+//! ## Implementation Status
+//!
+//! Currently, the editor codebase primarily uses [`crate::ZeroCopyGapBuffer`] as a
+//! concrete type for performance and type safety reasons. These traits provide an
+//! abstraction layer for future flexibility without requiring immediate migration of
+//! existing code.
+
+// Attach
+pub mod grapheme_doc;
+pub mod grapheme_string;
+pub mod grapheme_string_owned_ext;
+pub mod seg_content;
+
+// Re-export
+pub use grapheme_doc::*;
+pub use grapheme_string::*;
+pub use grapheme_string_owned_ext::*;
+pub use seg_content::*;

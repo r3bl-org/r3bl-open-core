@@ -20,7 +20,7 @@
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use crate::{ChUnit, ColIndex, ColWidth, InlineString, Seg, SegIndex, SegWidth,
-            SegmentArray,
+            SegmentArray, GraphemeString, GraphemeStringMut, SegContent, CowInlineString,
             graphemes::unicode_segment::{build_segments_for_str,
                                          calculate_display_width}};
 
@@ -29,12 +29,6 @@ use crate::{ChUnit, ColIndex, ColWidth, InlineString, Seg, SegIndex, SegWidth,
 pub enum ContainsWideSegments {
     Yes,
     No,
-}
-
-/// The equivalent of a document in the editor, containing multiple lines of
-/// [`GCStringOwned`]. This is a very simplistic version of [`crate::ZeroCopyGapBuffer`].
-pub struct GCStringOwnedDoc {
-    pub lines: Vec<GCStringOwned>,
 }
 
 /// Owned version of a Unicode grapheme cluster string with pre-computed segment metadata.
@@ -132,6 +126,11 @@ impl GCStringOwned {
     #[must_use]
     pub fn len(&self) -> SegWidth { SegWidth::from(self.segments.len()) }
 
+    /// Get the number of grapheme cluster segments.
+    /// This is the preferred method for semantic clarity.
+    #[must_use]
+    pub fn segment_count(&self) -> SegWidth { SegWidth::from(self.segments.len()) }
+
     /// Check if the string is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool { self.segments.is_empty() }
@@ -199,6 +198,161 @@ pub struct SegStringOwned {
     pub width: ColWidth,
     /// The display col index at which this grapheme cluster starts.
     pub start_at: ColIndex,
+}
+
+// GraphemeString trait implementation for GCStringOwned
+impl GraphemeString for GCStringOwned {
+    type SegmentIterator<'a> = std::iter::Copied<std::slice::Iter<'a, Seg>>;
+    type StringSlice<'a> = CowInlineString<'a>;
+
+    fn as_str(&self) -> &str { 
+        self.as_str() 
+    }
+
+    fn segments(&self) -> &[Seg] { 
+        &self.segments 
+    }
+
+    fn display_width(&self) -> ColWidth { 
+        self.display_width 
+    }
+
+    fn segment_count(&self) -> SegWidth { 
+        self.segment_count() 
+    }
+
+    fn byte_size(&self) -> ChUnit { 
+        self.bytes_size 
+    }
+
+    fn get_seg(&self, index: SegIndex) -> Option<Seg> {
+        self.get(index)
+    }
+
+    fn check_is_in_middle_of_grapheme(&self, col: ColIndex) -> Option<Seg> {
+        self.check_is_in_middle_of_grapheme(col)
+    }
+
+    fn get_seg_at(&self, col: ColIndex) -> Option<SegContent<'_>> {
+        self.get_string_at(col).and_then(|seg_string| {
+            self.segments.iter().find(|seg| {
+                seg.start_display_col_index == seg_string.start_at
+            }).map(|seg| SegContent {
+                content: seg.get_str(self),
+                seg: *seg,
+            })
+        })
+    }
+
+    fn get_seg_right_of(&self, col: ColIndex) -> Option<SegContent<'_>> {
+        self.get_string_at_right_of(col).and_then(|seg_string| {
+            self.segments.iter().find(|seg| {
+                seg.start_display_col_index == seg_string.start_at
+            }).map(|seg| SegContent {
+                content: seg.get_str(self),
+                seg: *seg,
+            })
+        })
+    }
+
+    fn get_seg_left_of(&self, col: ColIndex) -> Option<SegContent<'_>> {
+        self.get_string_at_left_of(col).and_then(|seg_string| {
+            self.segments.iter().find(|seg| {
+                seg.start_display_col_index == seg_string.start_at
+            }).map(|seg| SegContent {
+                content: seg.get_str(self),
+                seg: *seg,
+            })
+        })
+    }
+
+    fn get_seg_at_end(&self) -> Option<SegContent<'_>> {
+        self.last().map(|seg| SegContent {
+            content: seg.get_str(self),
+            seg,
+        })
+    }
+
+    fn clip(&self, start_col: ColIndex, width: ColWidth) -> Self::StringSlice<'_> {
+        CowInlineString::Borrowed(self.clip(start_col, width))
+    }
+
+    fn trunc_end_to_fit(&self, width: ColWidth) -> Self::StringSlice<'_> {
+        CowInlineString::Borrowed(self.trunc_end_to_fit(width))
+    }
+
+    fn trunc_end_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
+        CowInlineString::Borrowed(self.trunc_end_by(width))
+    }
+
+    fn trunc_start_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
+        CowInlineString::Borrowed(self.trunc_start_by(width))
+    }
+
+    fn segments_iter(&self) -> Self::SegmentIterator<'_> {
+        self.segments.iter().copied()
+    }
+
+    fn is_empty(&self) -> bool { 
+        self.is_empty() 
+    }
+
+    fn last(&self) -> Option<Seg> { 
+        self.last() 
+    }
+
+    fn contains_wide_segments(&self) -> ContainsWideSegments {
+        self.contains_wide_segments()
+    }
+}
+
+// GraphemeStringMut trait implementation for GCStringOwned
+impl GraphemeStringMut for GCStringOwned {
+    type MutResult = GCStringOwned;  // Returns new instances (immutable paradigm)
+
+    fn insert_text(&mut self, col: ColIndex, text: &str) -> Option<Self::MutResult> {
+        // Create a new string with text inserted at the column
+        let (new_string, _width) = self.insert_chunk_at_col(col, text);
+        Some(GCStringOwned::new(new_string))
+    }
+
+    fn delete_range(&mut self, start: ColIndex, end: ColIndex) -> Option<Self::MutResult> {
+        // Split at start position
+        if let Some((left, _)) = self.split_at_display_col(start) {
+            let left_string = GCStringOwned::new(left);
+            
+            // Split at end position to get the part after
+            if let Some((_, right)) = self.split_at_display_col(end) {
+                // Combine left and right parts
+                let combined = format!("{}{}", left_string.as_str(), right);
+                Some(GCStringOwned::new(combined))
+            } else {
+                // Nothing after end, just return the left part
+                Some(left_string)
+            }
+        } else {
+            None
+        }
+    }
+
+    fn replace_range(&mut self, start: ColIndex, end: ColIndex, text: &str) -> Option<Self::MutResult> {
+        // First delete the range
+        self.delete_range(start, end)
+            .and_then(|deleted| {
+                // Then insert the new text at the start position
+                let mut temp = deleted;
+                temp.insert_text(start, text)
+            })
+    }
+
+    fn truncate(&mut self, col: ColIndex) -> Option<Self::MutResult> {
+        // Split at the column and return the left part
+        if let Some((left, _)) = self.split_at_display_col(col) {
+            Some(GCStringOwned::new(left))
+        } else {
+            None
+        }
+    }
 }
 
 impl From<(Seg, &GCStringOwned)> for SegStringOwned {

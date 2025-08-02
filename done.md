@@ -555,7 +555,7 @@
 
 - [x] fix all the lints after the extraction & archival of the `md_parser_ng`
 - [x] create parser conformance snapshot test, and make sure they pass
-      [docs/parser_conformance.md](docs/parser_conformance.md)
+      [docs/parser_conformance.md](docs/done/task_parser_conformance.md)
 - [x] review the flamegraph.svg and cargo bench results to ensure no regressions
       [docs/task_tui_perf_optimize.md](docs/task_tui_perf_optimize.md)
 - [x] complete the performance work started in

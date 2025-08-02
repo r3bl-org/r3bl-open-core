@@ -15,19 +15,8 @@
  *   limitations under the License.
  */
 
-//! [`GCStringOwned`] implementation for Unicode grapheme cluster handling.
-//!
-//! This module contains the [`GCStringOwned`] type that provides Unicode-safe string
-//! operations with grapheme cluster support. It's used throughout the TUI system
-//! for text formatting, clipping, and rendering operations.
-//!
-//! See the [module docs](crate::graphemes) for comprehensive information about Unicode
-//! handling, grapheme clusters, and the three types of indices used in this system.
+//! Document types for `GCString`.
 
-// Submodules
-pub mod owned;
-pub mod document;
+mod gc_string_owned_doc;
 
-// Re-exports
-pub use owned::*;
-pub use document::*;
+pub use gc_string_owned_doc::GCStringOwnedDoc;

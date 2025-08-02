@@ -5,7 +5,7 @@
   - [Contents](#contents)
     - [Release Guide](#release-guide)
     - [Contributing Guides](#contributing-guides)
-    - [Technical Documentation](#technical-documentation)
+    - [Technical Documentation and Design Docs](#technical-documentation-and-design-docs)
     - [Plans](#plans)
     - [Completed Plans](#completed-plans)
     - [Video Documentation](#video-documentation)
@@ -43,24 +43,34 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 - [`PULL_REQUEST.md`](contributing_guides/PULL_REQUEST.md) - Pull request submission guidelines
 - [`STYLE_GUIDE.md`](contributing_guides/STYLE_GUIDE.md) - Code style and formatting guidelines
 
-### Technical Documentation
+### Technical Documentation and Design Docs
 
-- [`parser_strategy_analysis.md`](parser_strategy_analysis.md) - Analysis of parser implementation
-  strategies
-- [`parser_conformance.md`](parser_conformance.md) - Parser conformance testing documentation
 - [`CLAUDE.md`](CLAUDE.md) - Claude AI integration documentation
+- [`dd_parser_strategy_analysis.md`](dd_parser_strategy_analysis.md) - Analysis of parser
+  implementation strategies
+- [`dd_parser_conformance.md`](dd_parser_conformance.md) - Parser conformance testing documentation
 
 ### Plans
 
-- [`task_tui_perf_optimize.md`](task_tui_perf_optimize.md) - TUI performance optimization guidelines
+- [`task_gap_buffer.md`](task_gap_buffer.md) - Gap buffer implementation for editor content storage
 - [`task_remove_crossterm.md`](task_remove_crossterm.md) - Task documentation for removing crossterm
   dependency
+- [`task_syntect_improve.md`](task_syntect_improve.md) - Syntect improvement plan for adding missing
+  language support
+- [`task_textwrap_rewrite.md`](task_textwrap_rewrite.md) - Task to rewrite textwrap in TUI codebase
+- [`task_tui_perf_optimize.md`](task_tui_perf_optimize.md) - TUI performance optimization guidelines
+- [`task_unify_rendering.md`](task_unify_rendering.md) - Task to unify ASText and TuiStyledText
+  rendering paths
 
 ### Completed Plans
 
-- [`ng_parser_archive.md`](ng_parser_archive.md) - Complete documentation of the NG Parser and
-  Simple Parser archival process, including performance analysis, migration status, and lessons
-  learned from experimental parser development
+The [`done`](done) folder contains:
+
+- [`task_ng_parser_archive.md`](done/task_ng_parser_archive.md) - Complete documentation of the NG
+  Parser and Simple Parser archival process, including performance analysis, migration status, and
+  lessons learned from experimental parser development
+- [`task_unified_grapheme_trait.md`](done/task_unified_grapheme_trait.md) - Universal grapheme-aware
+  trait design documentation for both single-line and multi-line text structures
 
 ### Video Documentation
 

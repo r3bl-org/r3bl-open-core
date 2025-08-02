@@ -20,8 +20,11 @@
 //! This module contains the main [`ZeroCopyGapBuffer`] implementation with its
 //! core buffer management operations including line creation, deletion, and capacity management.
 
-use super::{LineMetadata, INITIAL_LINE_SIZE, LINE_PAGE_SIZE};
-use crate::{Length, RowIndex, SegmentArray, byte_index, len};
+use std::borrow::Cow;
+
+use super::{LineMetadata, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, GapBufferLine};
+use crate::{Length, RowIndex, SegmentArray, byte_index, len, GraphemeDoc, GraphemeDocMut,
+            SegIndex, ColIndex, row};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -350,10 +353,162 @@ impl crate::GetMemSize for ZeroCopyGapBuffer {
     }
 }
 
+impl GraphemeDoc for ZeroCopyGapBuffer {
+    /// Line type with lifetime tied to the buffer.
+    ///
+    /// The lifetime `'a` represents references to data within the `ZeroCopyGapBuffer`.
+    /// The constraint `Self: 'a` ensures that the returned `GapBufferLine<'a>` cannot
+    /// outlive the buffer it borrows from.
+    type Line<'a> = GapBufferLine<'a>;
+
+    /// Iterator type with lifetime tied to the buffer.
+    ///
+    /// The lifetime `'a` represents references to data within the `ZeroCopyGapBuffer`.
+    /// The constraint `Self: 'a` ensures that the iterator cannot outlive the buffer
+    /// it borrows from.
+    type LineIterator<'a> = ZeroCopyLineIterator<'a>;
+
+    fn line_count(&self) -> Length {
+        self.line_count()
+    }
+
+    fn get_line(&self, row: RowIndex) -> Option<Self::Line<'_>> {
+        self.get_line(row)
+    }
+
+    fn total_bytes(&self) -> usize {
+        self.buffer.len()
+    }
+
+    fn iter_lines(&self) -> Self::LineIterator<'_> {
+        ZeroCopyLineIterator {
+            buffer: self,
+            current: 0,
+        }
+    }
+
+    fn as_str(&self) -> Cow<'_, str> {
+        Cow::Borrowed(self.as_str())
+    }
+
+    fn as_bytes(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(self.as_bytes())
+    }
+}
+
+/// Iterator over lines in a `ZeroCopyGapBuffer`
+#[derive(Debug)]
+pub struct ZeroCopyLineIterator<'a> {
+    buffer: &'a ZeroCopyGapBuffer,
+    current: usize,
+}
+
+impl<'a> Iterator for ZeroCopyLineIterator<'a> {
+    type Item = GapBufferLine<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current < self.buffer.line_count().as_usize() {
+            let line = self.buffer.get_line(row(self.current));
+            self.current += 1;
+            line
+        } else {
+            None
+        }
+    }
+}
+
+impl GraphemeDocMut for ZeroCopyGapBuffer {
+    type DocMutResult = ();
+
+    fn add_line(&mut self) -> usize {
+        self.add_line()
+    }
+
+    fn remove_line(&mut self, row: RowIndex) -> bool {
+        self.remove_line(row)
+    }
+
+    fn insert_line_with_buffer_shift(&mut self, line_idx: usize) {
+        self.insert_line_with_buffer_shift(line_idx);
+    }
+
+    fn clear(&mut self) {
+        self.clear();
+    }
+
+    fn insert_text_at_grapheme(
+        &mut self,
+        row: RowIndex,
+        seg_index: SegIndex,
+        text: &str
+    ) -> miette::Result<Self::DocMutResult> {
+        self.insert_text_at_grapheme(row, seg_index, text)
+            .map_err(|e| miette::miette!("{}", e))
+    }
+
+    fn delete_range_at_grapheme(
+        &mut self,
+        row: RowIndex,
+        start_seg: SegIndex,
+        end_seg: SegIndex
+    ) -> miette::Result<Self::DocMutResult> {
+        self.delete_range(row, start_seg, end_seg)
+            .map_err(|e| miette::miette!("{}", e))
+    }
+
+    fn insert_empty_line(&mut self, row: RowIndex) -> miette::Result<Self::DocMutResult> {
+        self.insert_empty_line(row)
+            .map_err(|e| miette::miette!("{}", e))
+    }
+
+    fn merge_lines(&mut self, row: RowIndex) -> miette::Result<Self::DocMutResult> {
+        // Since ZeroCopyGapBuffer doesn't have a built-in merge_lines method,
+        // we'll implement it by copying content from the next line to current line
+        // and then removing the next line
+        if row.as_usize() + 1 >= self.line_count().as_usize() {
+            return Err(miette::miette!("Cannot merge: no line after row {}", row.as_usize()));
+        }
+
+        // Get content from the next line
+        let next_line_content = self.get_line(crate::row(row.as_usize() + 1))
+            .map(|line| line.content().to_string())
+            .ok_or_else(|| miette::miette!("Failed to get next line content"))?;
+
+        // Append to current line
+        let current_line = self.get_line(row)
+            .ok_or_else(|| miette::miette!("Failed to get current line"))?;
+        let end_seg_count = current_line.segment_count();
+
+        // Insert the next line's content at the end of current line
+        self.insert_text_at_grapheme(row, end_seg_count.into(), &next_line_content)
+            .map_err(|e| miette::miette!("{}", e))?;
+
+        // Remove the next line
+        self.remove_line(crate::row(row.as_usize() + 1));
+
+        Ok(())
+    }
+
+    fn split_line(&mut self, row: RowIndex, col: ColIndex) -> miette::Result<Self::DocMutResult> {
+        // Use the existing split_line_at_col method
+        let right_content = self.split_line_at_col(row, col)
+            .ok_or_else(|| miette::miette!("Failed to split line at column {}", col.as_usize()))?;
+
+        // Insert a new line after the current one
+        self.insert_empty_line(crate::row(row.as_usize() + 1))
+            .map_err(|e| miette::miette!("{}", e))?;
+
+        // Insert the right content into the new line
+        self.insert_text_at_grapheme(crate::row(row.as_usize() + 1), SegIndex::from(0), &right_content)
+            .map_err(|e| miette::miette!("{}", e))?;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::row;
 
     #[test]
     fn test_new_line_buffer() {
@@ -617,7 +772,6 @@ mod benches {
     use test::Bencher;
 
     use super::*;
-    use crate::row;
 
     extern crate test;
 

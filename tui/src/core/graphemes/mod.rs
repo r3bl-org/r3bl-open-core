@@ -251,7 +251,9 @@
 // Attach sources.
 pub mod gc_string;
 pub mod unicode_segment;
+pub mod traits;
 
 // Re-export.
 pub use gc_string::*;
 pub use unicode_segment::*;
+pub use traits::*;
