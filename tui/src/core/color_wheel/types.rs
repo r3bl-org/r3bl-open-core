@@ -40,7 +40,8 @@ use super::lolcat::Colorize;
 pub struct Seed(pub f64);
 
 mod seed {
-    use super::{AddAssign, Deref, DerefMut, Seed, SeedDelta};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for Seed {
         type Target = f64;

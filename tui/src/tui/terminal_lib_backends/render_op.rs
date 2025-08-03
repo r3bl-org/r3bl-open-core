@@ -164,9 +164,8 @@ pub struct RenderOpsLocalData {
 }
 
 pub mod render_ops_impl {
-    use super::{ok, AddAssign, Debug, Deref, DerefMut, InlineVec, LockedOutputDevice,
-                PaintRenderOp, RenderOp, RenderOpImplCrossterm, RenderOps,
-                RenderOpsLocalData, Size, TerminalLibBackend, TERMINAL_LIB_BACKEND};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl RenderOps {
         pub fn execute_all(
@@ -313,8 +312,8 @@ pub enum RenderOp {
 }
 
 mod render_op_impl {
-    use super::{CrosstermDebugFormatRenderOp, Debug, DebugFormatRenderOp, Formatter,
-                RenderOp, Result, TerminalLibBackend, TERMINAL_LIB_BACKEND};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Default for RenderOp {
         fn default() -> Self { Self::Noop }
@@ -336,8 +335,8 @@ mod render_op_impl {
 }
 
 mod render_op_impl_trait_flush {
-    use super::{Flush, LockedOutputDevice, RenderOp, RenderOpImplCrossterm,
-                TerminalLibBackend, TERMINAL_LIB_BACKEND};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Flush for RenderOp {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {

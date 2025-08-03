@@ -156,8 +156,8 @@ macro_rules! ast_lines {
 }
 
 pub mod ansi_styled_text_impl {
-    use super::{ASText, AnsiStyledText, ColIndex, ColWidth, GCStringOwned, InlineString,
-                InlineVec, PixelChar, TuiStyle, inline_string};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct ASTextConvertOptions {
@@ -717,8 +717,8 @@ pub enum ASTStyle {
 }
 
 mod convert_vec_ast_style_to_tui_style {
-    use super::{ASTStyle, ASTextStyles, Bold, Dim, Hidden, Italic, Reverse,
-                Strikethrough, TuiStyle, Underline};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<ASTextStyles> for TuiStyle {
         fn from(styles: ASTextStyles) -> Self {

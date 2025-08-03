@@ -102,14 +102,8 @@ mod app_main_constructor {
 mod app_main_impl_app_trait {
     use r3bl_tui::{CommonError, CommonResult, send_signal, throws_with_return};
 
-    use super::{App, AppMain, AppSignal, ComponentRegistry, ComponentRegistryMap,
-                DEBUG_TUI_MOD, EventPropagation, FlexBoxId, GlobalData, HasFocus, Id,
-                InputEvent, Key, KeyPress, LayoutManagement, ModifierKeysMask,
-                RenderPipeline, State, SurfaceProps, SurfaceRender,
-                TerminalWindowMainThreadSignal, col, fg_green, fg_red, height,
-                inline_string, modal_dialog_ask_for_filename_to_save_file,
-                perform_layout, populate_component_registry, row, status_bar,
-                stylesheet, surface};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
     use crate::edi::file_utils;
 
     impl App for AppMain {
@@ -308,12 +302,8 @@ mod app_main_impl_app_trait {
 mod modal_dialog_ask_for_filename_to_save_file {
     use r3bl_tui::{CommonResult, InlineString, get_tui_style, send_signal, throws};
 
-    use super::{AppSignal, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
-                DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfigOptions,
-                DialogEngineMode, EditMode, EditorEngineConfig, FlexBoxId,
-                HasEditorBuffers, HasFocus, Id, LineMode, Sender, State,
-                SyntaxHighlightMode, TerminalWindowMainThreadSignal, fg_magenta,
-                inline_string, modal_dialog_ask_for_filename_to_save_file, stylesheet};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
     use crate::edi::file_utils;
 
     #[allow(clippy::needless_pass_by_value)]
@@ -493,11 +483,8 @@ mod modal_dialog_ask_for_filename_to_save_file {
 mod perform_layout {
     use r3bl_tui::{CommonResult, throws};
 
-    use super::{AppMain, AppSignal, ComponentRegistryMap, FlexBox, FlexBoxId,
-                GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
-                PerformPositioningAndSizing, State, Surface, SurfaceRender, box_end,
-                box_start, render_component_in_current_box,
-                render_component_in_given_box, req_size_pc};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -553,10 +540,8 @@ mod perform_layout {
 mod populate_component_registry {
     use r3bl_tui::send_signal;
 
-    use super::{AppSignal, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
-                EditorComponent, EditorEngineConfig, FlexBoxId, HasFocus, Id, Sender,
-                State, TerminalWindowMainThreadSignal, glyphs, inline_string,
-                modal_dialog_ask_for_filename_to_save_file};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -659,11 +644,8 @@ mod stylesheet {
 }
 
 mod status_bar {
-    use super::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-                GCStringOwned, GradientGenerationPolicy, RenderOp, RenderPipeline, Size,
-                TextColorizationPolicy, TuiStyledTexts, ZOrder, col, new_style,
-                render_ops, render_tui_styled_texts_into, smallvec, tui_color,
-                tui_styled_text};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

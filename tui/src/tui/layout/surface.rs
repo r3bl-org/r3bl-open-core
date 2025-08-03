@@ -15,11 +15,10 @@
  *   limitations under the License.
  */
 
-use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutManagement,
-            PerformPositioningAndSizing, SurfaceProps};
-use crate::{height, throws, unwrap_or_err, width, CommonResult, InlineVec, LayoutError,
-            LayoutErrorType, Pos, RenderPipeline, ReqSizePc, Size, TuiStyle,
-            TuiStylesheet};
+use super::{FlexBox, FlexBoxProps, LayoutDirection, LayoutError, LayoutErrorType,
+            LayoutManagement, PerformPositioningAndSizing, SurfaceProps};
+use crate::{CommonResult, InlineVec, Pos, RenderPipeline, ReqSizePc, Size, TuiStyle,
+            TuiStylesheet, height, throws, unwrap_or_err, width};
 
 /// Represents a rectangular area of the terminal screen, and not necessarily the full
 /// terminal screen.
@@ -337,10 +336,11 @@ fn adjust_with_style(
     let mut style_adjusted_bounds_size = bounds_size;
 
     if let Some(style) = maybe_computed_style
-        && let Some(padding) = style.padding {
-            style_adjusted_origin_pos += padding;
-            style_adjusted_bounds_size -= padding * 2;
-        }
+        && let Some(padding) = style.padding
+    {
+        style_adjusted_origin_pos += padding;
+        style_adjusted_bounds_size -= padding * 2;
+    }
 
     (style_adjusted_origin_pos, style_adjusted_bounds_size)
 }

@@ -59,8 +59,8 @@ mod details {
 }
 
 mod command_execute {
-    use super::{CommandRunDetails, CommandRunResult, CommonResult, RepoStatus, details,
-                git, try_is_working_directory_clean, ui_str};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub async fn checkout_branch_if_not_current(
         branch_name: &str,
@@ -145,10 +145,8 @@ mod command_execute {
 }
 
 mod user_interaction {
-    use super::{CommandRunDetails, CommandRunResult, CommonResult, DefaultIoDevices,
-                HowToChoose, StyleSheet, ast, ast_line, choose, command_execute,
-                details, git, height, inline_vec,
-                prefix_single_select_instruction_header, ui_str};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub async fn handle_branch_selection()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {

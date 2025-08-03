@@ -71,7 +71,8 @@ pub struct AppData {
 }
 
 mod animator_task {
-    use super::{Debug, Duration, Sender, TerminalWindowMainThreadSignal, send_signal};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Note the [Sender] is used to send a signal to the animator to kill it when
     /// [Animator::stop](Animator::stop) is used.
@@ -126,8 +127,8 @@ mod animator_task {
 }
 
 mod constructor {
-    use super::{Animator, AppData, AppMain, AppSignal, BoxedSafeApp, ColorWheel,
-                DEBUG_TUI_MOD, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Default for AppMain {
         fn default() -> Self {
@@ -154,15 +155,8 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::{Ansi256GradientIndex, App, AppData, AppMain, AppSignal,
-                ColorChangeSpeed, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-                Colorize, CommonResult, ComponentRegistry, ComponentRegistryMap,
-                EventPropagation, GlobalData, HasFocus, InputEvent, Key, KeyPress,
-                LayoutManagement, LolcatBuilder, ModifierKeysMask, RenderPipeline,
-                State, SurfaceProps, SurfaceRender, TerminalWindowMainThreadSignal, col,
-                height, hud, perform_layout, populate_component_registry, row,
-                send_signal, smallvec, start_animator_task, state_mutator, status_bar,
-                stylesheet, surface, throws_with_return};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl App for AppMain {
         type S = State;
@@ -343,10 +337,8 @@ mod app_main_impl_app_trait {
 }
 
 mod perform_layout {
-    use super::{AppMain, AppSignal, CommonResult, ComponentRegistryMap, FlexBoxId,
-                GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
-                PerformPositioningAndSizing, State, Surface, SurfaceRender, box_end,
-                box_start, render_component_in_current_box, req_size_pc, throws};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -386,10 +378,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use super::{AppSignal, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
-                EditMode, EditorComponent, EditorEngineConfig, FlexBoxId, HasFocus, Id,
-                Sender, State, TerminalWindowMainThreadSignal, glyphs, inline_string,
-                send_signal};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -448,8 +438,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::{CommonResult, Id, TuiStylesheet, new_style, throws_with_return,
-                tui_stylesheet};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -467,9 +457,8 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::{RenderOp, RenderPipeline, SPACER_GLYPH, Size, ZOrder, col, new_style,
-                render_ops, render_tui_styled_texts_into, row, tui_color,
-                tui_styled_text, tui_styled_texts};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -501,11 +490,8 @@ mod hud {
 }
 
 mod status_bar {
-    use super::{AppMain, DateTime, FILE_CONTENT_ARRAY, GCStringOwned,
-                GradientGenerationPolicy, Local, RenderOp, RenderPipeline, SPACER_GLYPH,
-                Size, State, TextColorizationPolicy, TuiStyledTexts, ZOrder, col,
-                inline_string, new_style, render_ops, render_tui_styled_texts_into,
-                tui_color, tui_styled_text};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(

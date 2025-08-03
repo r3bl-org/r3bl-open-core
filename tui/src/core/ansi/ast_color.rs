@@ -41,8 +41,8 @@ pub enum ASTColor {
 }
 
 mod ast_color_impl_block {
-    use super::{convert_rgb_into_ansi256, ASTColor, AnsiValue, RgbValue, TransformColor,
-                ANSI_COLOR_PALETTE};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Default for ASTColor {
         fn default() -> Self { ASTColor::Rgb((0, 0, 0).into()) }

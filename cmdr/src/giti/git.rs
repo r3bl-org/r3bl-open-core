@@ -129,8 +129,8 @@ pub async fn try_delete_branches(branches: &ItemsOwned) -> ResultAndCommand<()> 
 
 /// This is a wrapper over `git branch` functionality.
 pub mod local_branch_ops {
-    use super::{CURRENT_BRANCH_PREFIX, InlineString, ItemsOwned, ResultAndCommand, Run,
-                command, try_get_current_branch_name};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Information about local git branches:
     /// - The currently checked out branch.

@@ -67,6 +67,11 @@ pub mod color_utils {
 
 #[must_use]
 pub fn convert_rgb_into_ansi256(rgb_color: RgbValue) -> AnsiValue {
+    use ansi_constants::{ANSI_COLOR_PALETTE, ANSI256_FROM_GRAY};
+    use cube_mapping::{CubeMappingResult,
+                       calculate_cube_mapping_for_rgb_color, calculate_luminance,
+                       calculate_relative_diff_between_colors};
+
     let luminance_approximation: usize = calculate_luminance(rgb_color).into();
     let gray_ansi256_index: u8 = ANSI256_FROM_GRAY[luminance_approximation];
 
@@ -263,11 +268,6 @@ mod cube_mapping {
     }
 }
 
-pub use cube_mapping::{calculate_cube_index_blue, calculate_cube_index_green,
-                       calculate_cube_index_red, calculate_cube_mapping_for_rgb_color,
-                       calculate_luminance, calculate_relative_diff_between_colors,
-                       find_closest, CubeMappingResult};
-
 mod convert_between_rgb_and_u32 {
     use super::{LossyConvertToByte, RgbValue};
 
@@ -367,7 +367,6 @@ pub mod ansi_constants {
         0xa8a8a8, 0xb2b2b2, 0xbcbcbc, 0xc6c6c6, 0xd0d0d0, 0xdadada, 0xe4e4e4, 0xeeeeee,
     ];
 }
-pub use ansi_constants::{ANSI256_FROM_GRAY, ANSI_COLOR_PALETTE};
 
 #[cfg(test)]
 mod tests {

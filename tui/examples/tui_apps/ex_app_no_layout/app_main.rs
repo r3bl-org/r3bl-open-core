@@ -19,16 +19,18 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                ComponentRegistryMap, EventPropagation, GCStringOwned, GlobalData,
                GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
                InputEvent, Key, KeyPress, LolcatBuilder, RenderOp, RenderPipeline,
-               SpecialKey, TerminalWindowMainThreadSignal, TextColorizationPolicy,
-               ZOrder, ch, col, defaults::get_default_gradient_stops, glyphs,
-               inline_string, new_style, render_ops, render_pipeline,
-               render_tui_styled_texts_into, row, send_signal, throws_with_return,
-               tui_styled_text, width};
+               SPACER_GLYPH, Size, SpecialKey, TerminalWindowMainThreadSignal,
+               TextColorizationPolicy, ZOrder, ch, col,
+               defaults::get_default_gradient_stops, glyphs, inline_string, new_style,
+               render_ops, render_pipeline, render_tui_styled_texts_into, row,
+               send_signal, throws_with_return, tui_color, tui_styled_text,
+               tui_styled_texts, width};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
 use super::{AppSignal, State};
-use crate::ENABLE_TRACE_EXAMPLES;
+use crate::{ENABLE_TRACE_EXAMPLES,
+            ex_app_no_layout::app_main::animator_task::start_animator_task};
 
 #[derive(Default)]
 pub struct AppMain {
@@ -45,7 +47,8 @@ pub struct AppData {
 }
 
 mod constructor {
-    use super::{AppMain, AppSignal, BoxedSafeApp, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl AppMain {
         pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
@@ -56,7 +59,8 @@ mod constructor {
 }
 
 mod animator_task {
-    use super::{AppSignal, Duration, Sender, TerminalWindowMainThreadSignal, send_signal};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn start_animator_task(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AppSignal>>,
@@ -105,17 +109,8 @@ mod animator_task {
 }
 
 mod app_main_impl_trait_app {
-    use super::{Ansi256GradientIndex, App, AppData, AppMain, AppSignal,
-                ColorChangeSpeed, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-                Colorize, CommonResult, ComponentRegistryMap, ENABLE_TRACE_EXAMPLES,
-                EventPropagation, GCStringOwned, GlobalData, GradientGenerationPolicy,
-                GradientLengthKind, HasFocus, InputEvent, Key, KeyPress, LolcatBuilder,
-                RenderOp, RenderPipeline, SpecialKey, State,
-                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
-                animator_task::start_animator_task, ch, col, get_default_gradient_stops,
-                glyphs, hud, inline_string, render_ops, render_pipeline,
-                render_tui_styled_texts_into, row, send_signal, smallvec, status_bar,
-                throws_with_return, width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl App for AppMain {
         type S = State;
@@ -510,10 +505,8 @@ mod app_main_impl_trait_app {
 }
 
 mod hud {
-    use r3bl_tui::{SPACER_GLYPH, Size, col, row, tui_color, tui_styled_texts};
-
-    use super::{RenderOp, RenderPipeline, ZOrder, new_style, render_ops,
-                render_tui_styled_texts_into, tui_styled_text};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -545,10 +538,8 @@ mod hud {
 }
 
 mod status_bar {
-    use r3bl_tui::{SPACER_GLYPH, Size, col, tui_color, tui_styled_texts};
-
-    use super::{RenderOp, RenderPipeline, ZOrder, new_style, render_ops,
-                render_tui_styled_texts_into, tui_styled_text};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

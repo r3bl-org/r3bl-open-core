@@ -295,10 +295,8 @@ pub enum SpecialKey {
 /// Docs:
 ///  - [Crossterm KeyCode::Char](https://docs.rs/crossterm/latest/crossterm/event/enum.KeyCode.html#variant.Char)
 pub mod convert_key_event {
-    use super::{try_convert_key_modifiers, Enhanced, FunctionKey, Key, KeyCode,
-                KeyEvent, KeyModifiers, KeyPress, MediaKey, MediaKeyCode,
-                ModifierKeyCode, ModifierKeyEnum, ModifierKeysMask, SpecialKey,
-                SpecialKeyExt, KeyEventKind};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl TryFrom<KeyEvent> for KeyPress {
         type Error = ();

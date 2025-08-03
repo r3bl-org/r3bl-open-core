@@ -49,8 +49,8 @@ pub struct State {
 }
 
 mod constructor {
-    use super::{DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FlexBoxId, HashMap, Id, State,
-                constructor, get_default_editor_content};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Default for State {
         fn default() -> Self { constructor::get_initial_state() }

@@ -199,9 +199,8 @@ pub mod constructor {
 }
 
 pub mod file_utils {
-    use super::{AnalyticsAction, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
-                DocumentStorage, InlineString, OsStr, Path, TinyInlineString, fg_green,
-                fg_red, inline_string, into_existing, report_analytics};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn get_file_extension(maybe_file_path: Option<&str>) -> TinyInlineString {
         if let Some(file_path) = maybe_file_path {

@@ -145,11 +145,8 @@ mod details {
 }
 
 mod user_interaction {
-    use super::{ASText, CommonResult, DefaultIoDevices, HowToChoose, InlineString,
-                InlineVec, ItemsOwned, StyleSheet, ast, ast_line, choose, common,
-                height, inline_vec, parse_user_choice,
-                prefix_multi_select_instruction_header,
-                prefix_single_select_instruction_header, smallvec, ui_str};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub async fn select_branches_to_delete(
         branch_options: ItemsOwned,
@@ -260,8 +257,8 @@ mod user_interaction {
 }
 
 mod command_execute {
-    use super::{CommandRunDetails, CommandRunResult, CommonResult, ItemsOwned, details,
-                git, ui_str};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub async fn delete_selected_branches(
         branches: &ItemsOwned,

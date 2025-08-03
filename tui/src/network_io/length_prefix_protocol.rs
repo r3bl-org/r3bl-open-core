@@ -50,8 +50,8 @@ pub mod protocol_constants {
 ///    make sure they are valid.
 /// 2. It then **writes** the magic number back to the client (for it to validate).
 pub mod handshake {
-    use super::{ok, protocol_constants, timeout, AsyncRead, AsyncReadExt, AsyncWrite,
-                AsyncWriteExt, IntoDiagnostic};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Client side handshake.
     ///
@@ -202,9 +202,8 @@ mod tests_handshake {
 }
 
 pub mod byte_io {
-    use super::{bincode_serde, compress, protocol_constants, AsyncRead, AsyncReadExt,
-                AsyncWrite, AsyncWriteExt, BufReader, BufWriter, Deserialize,
-                IntoDiagnostic, LengthPrefixType, Serialize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Write the payload to the client. Use the length-prefix, binary payload, protocol.
     /// - The trait bounds on this function are so that this function can be tested w/ a

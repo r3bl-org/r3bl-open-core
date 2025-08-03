@@ -19,8 +19,7 @@ use sizing::VecSteps;
 use smallstr::SmallString;
 use smallvec::SmallVec;
 
-use super::{lolcat::{Lolcat, LolcatBuilder},
-            types::Seed};
+use super::{Lolcat, LolcatBuilder, Seed};
 use crate::{ColorSupport, TuiColor, global_color_support};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some

@@ -85,12 +85,8 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::{App, AppMain, AppSignal, CommonResult, ComponentRegistry,
-                ComponentRegistryMap, EventPropagation, GlobalData, HasFocus,
-                InputEvent, LayoutManagement, RenderPipeline, State, SurfaceProps,
-                SurfaceRender, col, height, hud, modal_dialogs, perform_layout,
-                populate_component_registry, row, status_bar, stylesheet, surface,
-                throws_with_return};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl App for AppMain {
         type S = State;
@@ -203,11 +199,8 @@ mod app_main_impl_app_trait {
 }
 
 mod modal_dialogs {
-    use super::{AppSignal, CommonError, CommonResult, ComponentRegistry,
-                ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, EditorBuffer,
-                FlexBoxId, GCStringOwned, HasEditorBuffers, HasFocus, Id, InlineString,
-                InputEvent, ItemsOwned, Key, KeyPress, ModifierKeysMask, State, col, ok,
-                throws, width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     // This runs on every keystroke, so it should be fast.
     pub fn dialog_component_update_content(state: &mut State, id: FlexBoxId) {
@@ -467,11 +460,8 @@ mod modal_dialogs {
 }
 
 mod perform_layout {
-    use super::{AppMain, AppSignal, CommonResult, ComponentRegistryMap, FlexBox,
-                FlexBoxId, GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
-                PerformPositioningAndSizing, State, Surface, SurfaceRender, box_end,
-                box_start, render_component_in_current_box,
-                render_component_in_given_box, req_size_pc, throws};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -536,12 +526,8 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use super::{AppSignal, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
-                DialogChoice, DialogComponent, DialogEngineConfigOptions,
-                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
-                FlexBoxId, HasFocus, Id, LineMode, Sender, State, SyntaxHighlightMode,
-                TerminalWindowMainThreadSignal, get_tui_style, glyphs, inline_string,
-                modal_dialogs, send_signal, stylesheet};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -601,8 +587,8 @@ mod populate_component_registry {
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
         mod handler_fn {
-            use super::{AppSignal, DialogChoice, FlexBoxId, Id, Sender, State,
-                        TerminalWindowMainThreadSignal, modal_dialogs};
+            #[allow(clippy::wildcard_imports)]
+            use super::*;
             pub fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
                 state: &mut State,
@@ -688,8 +674,8 @@ mod populate_component_registry {
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
     ) {
         mod handler_fn {
-            use super::{AppSignal, DialogChoice, FlexBoxId, Id, Sender, State,
-                        TerminalWindowMainThreadSignal, modal_dialogs};
+            #[allow(clippy::wildcard_imports)]
+            use super::*;
 
             pub fn on_dialog_press_handler(
                 dialog_choice: DialogChoice,
@@ -772,8 +758,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::{CommonResult, Id, TuiStylesheet, new_style, throws_with_return,
-                tui_color, tui_stylesheet};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -815,9 +801,8 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::{RenderOp, RenderPipeline, SPACER_GLYPH, Size, ZOrder, col, new_style,
-                render_ops, render_tui_styled_texts_into, row, tui_color,
-                tui_styled_text, tui_styled_texts};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -849,9 +834,8 @@ mod hud {
 }
 
 mod status_bar {
-    use super::{RenderOp, RenderPipeline, SPACER_GLYPH, Size, ZOrder, col, new_style,
-                render_ops, render_tui_styled_texts_into, tui_color, tui_styled_text,
-                tui_styled_texts};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

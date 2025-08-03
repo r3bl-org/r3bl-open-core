@@ -81,8 +81,8 @@ pub fn parse_smart_list_block(
 }
 
 mod parse_block_smart_list_helper {
-    use super::{BulletKind, CHECKED, CheckboxParsePolicy, List, MdLineFragment, SPACE,
-                UNCHECKED, list, tiny_inline_string};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     // Helper function to determine checkbox parsing policy.
     pub fn determine_checkbox_policy(content: &str) -> CheckboxParsePolicy {
@@ -1135,8 +1135,8 @@ mod tests_parse_smart_list_content_lines {
 }
 
 mod verify_rest {
-    use super::{IResult, ORDERED_LIST_PARTIAL_PREFIX, Parser, SPACE_CHAR,
-                UNORDERED_LIST_PREFIX, alt, digit1, recognize, tag, terminated};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Return true if:
     /// - No ul items (at any indent).

@@ -77,8 +77,8 @@ use std::{env,
 /// - `COLOR_SUPPORT_GLOBAL`: Explicit override values (highest priority)
 /// - `COLOR_SUPPORT_CACHED`: Memoized detection results (performance optimization)
 pub mod global_color_support {
-    use super::{examine_env_vars_to_determine_color_support, AtomicI8, ColorSupport,
-                Ordering, Stream};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Global override for color support detection.
     ///

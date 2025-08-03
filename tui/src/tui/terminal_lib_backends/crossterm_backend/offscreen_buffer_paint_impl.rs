@@ -221,8 +221,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 }
 
 mod render_helper {
-    use super::{col, render_helper, render_ops, row, ColIndex, GCStringOwned, InlineString,
-                RenderOp, RenderOps, RowIndex, TuiStyle};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[derive(Debug, Clone)]
     pub struct Context {

@@ -36,9 +36,8 @@ use crate::{Flush, GCStringOwned, InlineVec, LockedOutputDevice, PaintRenderOp, 
 pub struct RenderOpImplCrossterm;
 
 mod impl_trait_paint_render_op {
-    use super::{Clear, ClearType, LockedOutputDevice, PaintRenderOp, RenderOp,
-                RenderOpImplCrossterm, RenderOpsLocalData, ResetColor, Size,
-                queue_render_op};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl PaintRenderOp for RenderOpImplCrossterm {
         fn paint(
@@ -126,8 +125,8 @@ mod impl_trait_paint_render_op {
 }
 
 pub mod impl_trait_flush {
-    use super::{Clear, ClearType, Flush, LockedOutputDevice, RenderOpImplCrossterm,
-                ResetColor, flush_now};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Flush for RenderOpImplCrossterm {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
@@ -146,14 +145,8 @@ pub mod impl_trait_flush {
 }
 
 mod impl_self {
-    use super::{Clear, ClearType, Cow, DisableBracketedPaste, DisableMouseCapture,
-                EnableBracketedPaste, EnableMouseCapture, EnterAlternateScreen, Hide,
-                LeaveAlternateScreen, LockedOutputDevice, MoveTo, Pos,
-                RenderOpImplCrossterm, RenderOpsLocalData, SetBackgroundColor,
-                SetForegroundColor, Show, Size, TuiColor, TuiStyle,
-                convert_from_tui_color_to_crossterm_color, disable_raw_mode_now,
-                enable_raw_mode_now, flush_now, perform_paint, queue_render_op,
-                sanitize_and_save_abs_pos};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl RenderOpImplCrossterm {
         pub fn move_cursor_position_rel_to(
@@ -339,9 +332,8 @@ mod impl_self {
 }
 
 mod perform_paint {
-    use super::{Attribute, Cow, GCStringOwned, InlineVec, LockedOutputDevice, Print,
-                RenderOpsLocalData, SetAttribute, Size, TuiStyle, queue_render_op,
-                sanitize_and_save_abs_pos, smallvec};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[derive(Debug)]
     pub struct PaintArgs<'a> {

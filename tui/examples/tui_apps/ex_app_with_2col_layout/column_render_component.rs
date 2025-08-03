@@ -38,9 +38,8 @@ pub struct ColumnComponentData {
 }
 
 mod constructor {
-    use super::{Ansi256GradientIndex, AppSignal, BoxedSafeComponent, ColorWheel,
-                ColorWheelConfig, ColorWheelSpeed, ColumnComponent, ColumnComponentData,
-                FlexBoxId, State, smallvec};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl ColumnComponent {
         pub fn new_boxed(id: FlexBoxId) -> BoxedSafeComponent<State, AppSignal> {
@@ -62,13 +61,8 @@ mod constructor {
 }
 
 mod column_render_component_impl_component_trait {
-    use super::{AppSignal, ColumnComponent, ColumnComponentData, CommonResult,
-                Component, DEBUG_TUI_MOD, EventPropagation, FlexBox, FlexBoxId,
-                GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus,
-                InputEvent, Key, KeyPress, Pos, RenderOp, RenderPipeline, SpecialKey,
-                State, SurfaceBounds, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, ZOrder, ch, col, glyphs, inline_string,
-                render_ops, render_pipeline, row, send_signal, throws_with_return};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Component<State, AppSignal> for ColumnComponent {
         fn reset(&mut self) {}

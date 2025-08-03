@@ -52,8 +52,8 @@
 //! ## When Segment Rebuilding Occurs
 //!
 //! Segment rebuilding is called **after content modifications**:
-//! - After [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme] - content
-//!   already validated at insertion
+//! - After [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme] -
+//!   content already validated at insertion
 //! - After [`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at] - removing
 //!   valid UTF-8 can't create invalid sequences
 //! - After bulk operations - operating on previously validated content
@@ -98,13 +98,13 @@
 //!
 //! This module sits in the **"trust zone"** of our UTF-8 architecture:
 //! - **Input modules** ([`implementations::insert`]) validate UTF-8 at boundaries
-//! - **This module** trusts validated content and optimizes for performance  
+//! - **This module** trusts validated content and optimizes for performance
 //! - **Access modules** ([`implementations::access`]) provide zero-copy string access
 //!
 //! The safety depends on the **architectural contract** that content entering
 //! the buffer is UTF-8 validated, making subsequent operations safe.
 
-use std::str::{from_utf8, from_utf8_unchecked};
+use std::str::from_utf8_unchecked;
 
 use miette::{Result, miette};
 
@@ -131,8 +131,8 @@ impl ZeroCopyGapBuffer {
     /// - **After in-line operations** - Like find/replace within a single line
     ///
     /// Currently used by:
-    /// - [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme] - after
-    ///   inserting text
+    /// - [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme] -
+    ///   after inserting text
     /// - [`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at] - after deleting
     ///   text
     /// - [`delete_range()`][ZeroCopyGapBuffer::delete_range] - after deleting multiple
@@ -172,6 +172,7 @@ impl ZeroCopyGapBuffer {
         let content_str = {
             #[cfg(debug_assertions)]
             {
+                use std::str::from_utf8;
                 if let Err(e) = from_utf8(content_slice) {
                     panic!(
                         "Line {} contains invalid UTF-8 at byte {}: {}",
@@ -260,7 +261,6 @@ impl ZeroCopyGapBuffer {
         }
         Ok(())
     }
-
 }
 
 #[cfg(test)]
@@ -394,13 +394,13 @@ mod tests {
 
         // Segments should be rebuilt automatically by delete, but let's verify
         let line_info = buffer.get_line_info(0).unwrap();
+        /* cspell:disable-next-line */
         assert_eq!(line_info.segments.len(), 4); // "Hllo" (after deleting 'e')
         assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));
 
         Ok(())
     }
-
 
     #[test]
     fn test_emoji_append_segment_positioning() -> Result<()> {
@@ -411,23 +411,26 @@ mod tests {
 
         // Insert all at once to show correct behavior
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "abcab😃")?;
-        
+
         // Check the segments are positioned correctly
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 6);
-        
+
         // The emoji should be at column 5
         let emoji_seg = &line_info.segments[5];
-        assert_eq!(emoji_seg.start_display_col_index, col(5), 
-            "Emoji should start at column 5");
+        assert_eq!(
+            emoji_seg.start_display_col_index,
+            col(5),
+            "Emoji should start at column 5"
+        );
         assert_eq!(emoji_seg.display_width, width(2));
-        
+
         // Total display width should be 7 (5 for "abcab" + 2 for emoji)
         assert_eq!(line_info.display_width, width(7));
-        
+
         Ok(())
     }
-    
+
     #[test]
     fn test_emoji_append_incremental_would_show_bug() -> Result<()> {
         // This test shows what happens with incremental insertion
@@ -437,25 +440,25 @@ mod tests {
 
         // First insert "abcab"
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "abcab")?;
-        
+
         // Then append emoji separately
         buffer.insert_text_at_grapheme(row(0), seg_index(5), "😃")?;
-        
+
         let line_info = buffer.get_line_info(0).unwrap();
-        
+
         // The segments are positioned correctly
         let emoji_seg = &line_info.segments[5];
         assert_eq!(emoji_seg.start_display_col_index, col(5));
-        
-        // NOTE: Due to how the append optimization works, the display_width 
+
+        // NOTE: Due to how the append optimization works, the display_width
         // may be incorrect in some code paths. The important thing is that
         // segments are positioned correctly for backspace to work.
         // In the editor, this gets corrected by subsequent operations.
-        
+
         // For now, we just verify segments are correct, which is what matters
         // for the backspace operation
         assert_eq!(line_info.segments.len(), 6);
-        
+
         Ok(())
     }
 
@@ -470,20 +473,20 @@ mod tests {
         buffer.insert_text_at_grapheme(row(0), seg_index(1), "b")?;
         buffer.insert_text_at_grapheme(row(0), seg_index(2), "😃")?;
         buffer.insert_text_at_grapheme(row(0), seg_index(3), "c")?;
-        
+
         // Verify final segment positions
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 4);
-        
+
         // Check each segment's position
         assert_eq!(line_info.segments[0].start_display_col_index, col(0)); // 'a'
         assert_eq!(line_info.segments[1].start_display_col_index, col(1)); // 'b'
         assert_eq!(line_info.segments[2].start_display_col_index, col(2)); // '😃'
         assert_eq!(line_info.segments[3].start_display_col_index, col(4)); // 'c' (after emoji width 2)
-        
+
         // Total width should be 5 (1 + 1 + 2 + 1)
         assert_eq!(line_info.display_width, width(5));
-        
+
         Ok(())
     }
 }
@@ -552,5 +555,4 @@ mod benches {
                 .unwrap();
         });
     }
-
 }

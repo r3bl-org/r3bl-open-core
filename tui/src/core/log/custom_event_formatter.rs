@@ -276,14 +276,8 @@ mod heading_cache {
 }
 
 mod helpers {
-    use super::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT, ColWidth, ColorWheel,
-                DEBUG_FG_COLOR, DEBUG_SIGIL, ERROR_FG_COLOR, ERROR_SIGIL, Event,
-                FieldContentParams, FormatFields, GCStringOwned, HEADING_BG_COLOR,
-                INFO_FG_COLOR, INFO_SIGIL, InlineString, LEVEL_SUFFIX, Local,
-                LookupSpan, Subscriber, TRACE_FG_COLOR, TRACE_SIGIL, TuiColor,
-                WARN_FG_COLOR, WARN_SIGIL, ast, fmt, helpers, inline_string, new_style,
-                remove_escaped_quotes, truncate_from_right, tui_style_attrib, width,
-                wrap};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Write formatted timestamp to the writer.
     pub fn write_timestamp(

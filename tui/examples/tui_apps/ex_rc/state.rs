@@ -45,8 +45,8 @@ pub struct State {
 }
 
 pub mod state_mutator {
-    use super::{AppSignal, ComponentRegistryMap, EditorBuffer, FlexBoxId, HashMap, Id,
-                State, DEFAULT_SYN_HI_FILE_EXT, FILE_CONTENT_ARRAY};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn reset_editor_engine_ast_cache(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,

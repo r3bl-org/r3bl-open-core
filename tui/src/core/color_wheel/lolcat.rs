@@ -30,8 +30,7 @@
 use std::{borrow::Cow,
           fmt::{Debug, Formatter, Result}};
 
-use super::{helpers,
-            types::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta}};
+use super::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta, helpers};
 use crate::{GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
 
 /// Please use the [`LolcatBuilder`] to create this struct (lots of documentation is

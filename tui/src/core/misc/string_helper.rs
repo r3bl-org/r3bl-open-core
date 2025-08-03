@@ -211,8 +211,8 @@ mod truncate_helper {
 
 /// Helper module for left truncation functionality.
 mod truncate_from_right_helper {
-    use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned,
-                InlineString, SPACER_GLYPH, Write, truncate_helper};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Handle ASCII truncation from the right
     pub fn handle_ascii_truncation(
@@ -271,8 +271,8 @@ mod truncate_from_right_helper {
 
 /// Helper module for right truncation functionality.
 mod truncate_from_left_helper {
-    use super::{ColWidth, CowInlineString, ELLIPSIS_GLYPH, GCStringOwned,
-                InlineString, SPACER_GLYPH, Write, truncate_helper};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Handle ASCII truncation from the left
     pub fn handle_ascii_truncation(

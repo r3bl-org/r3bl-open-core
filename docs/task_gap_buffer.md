@@ -694,7 +694,7 @@ methods
     - `cargo doc --no-deps` - fix documentation warnings
     - `cargo nextest run` - ensure all tests pass
 
-- [ ] Post-Migration Validation
+- [x] Post-Migration Validation
   - [x] Manual testing validation: run editor with real content to ensure functionality works
     - [x] Undo/redo is not working (undo/redo does not update the UI even though the editor content
           bounds are updated correctly)
@@ -722,15 +722,15 @@ methods
         doing this, it's more for future-proofing the codebase.
   - [x] Ask the user to deeply review this code, when they have made their changes, then make a
         commit with this progress
-  - [ ] In all Rust files in the codebase that have nested modules, that have complex multi-line
+  - [x] In all Rust files in the codebase that have nested modules, that have complex multi-line
         import statements (`use super::{...}`) replace the complex import statement with
         `#[allow(clippy::wildcard_imports)] use super::*;`
-  - [ ] Test all major editor operations work correctly in `edi`
+  - [x] Test all major editor operations work correctly in `edi`
     - Text insertion, deletion, cursor movement
     - Undo/redo functionality
     - Selection operations
     - File loading and saving
-  - [ ] Ask the user to deeply review this code, when they have made their changes, then make a
+  - [x] Ask the user to deeply review this code, when they have made their changes, then make a
         commit with this progress
 
 ### Phase 5: Optimization

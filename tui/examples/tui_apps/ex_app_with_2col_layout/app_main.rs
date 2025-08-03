@@ -55,7 +55,8 @@ pub struct AppMain {
 }
 
 mod constructor {
-    use super::{AppMain, AppSignal, BoxedSafeApp, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl AppMain {
         pub fn new_boxed() -> BoxedSafeApp<State, AppSignal> {
@@ -66,11 +67,8 @@ mod constructor {
 }
 
 mod app_main_impl_app_trait {
-    use super::{col, handle_focus, height, hud, perform_layout, row, status_bar,
-                stylesheet, surface, throws_with_return, App, AppMain, AppSignal,
-                CommonResult, ComponentRegistry, ComponentRegistryMap, Continuation,
-                EventPropagation, GlobalData, HasFocus, InputEvent, LayoutManagement,
-                RenderPipeline, State, SurfaceProps, SurfaceRender};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl App for AppMain {
         type S = State;
@@ -196,10 +194,8 @@ mod app_main_impl_app_trait {
 }
 
 mod perform_layout {
-    use super::{box_end, box_start, render_component_in_current_box, req_size_pc,
-                throws, AppMain, AppSignal, CommonResult, ComponentRegistryMap,
-                FlexBoxId, GlobalData, HasFocus, Id, LayoutDirection, LayoutManagement,
-                PerformPositioningAndSizing, State, Surface, SurfaceRender};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub struct ContainerSurfaceRenderer<'a> {
         pub _app: &'a mut AppMain,
@@ -273,8 +269,8 @@ mod perform_layout {
 }
 
 mod handle_focus {
-    use super::{glyphs, inline_string, Continuation, FlexBoxId, HasFocus, Id,
-                InputEvent, Key, KeyPress, SpecialKey};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn handle_focus_switch(
         input_event: InputEvent,
@@ -331,8 +327,8 @@ mod handle_focus {
 }
 
 mod populate_component_registry {
-    use super::{AppMain, AppSignal, ColumnComponent, ComponentRegistry,
-                ComponentRegistryMap, ContainsResult, FlexBoxId, HasFocus, Id, State};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl AppMain {
         pub fn init_component_registry(
@@ -366,8 +362,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use super::{new_style, throws_with_return, tui_color, tui_stylesheet, CommonResult,
-                Id, TuiStylesheet};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({
@@ -392,9 +388,8 @@ mod stylesheet {
 }
 
 mod hud {
-    use super::{col, new_style, render_ops, render_tui_styled_texts_into, row,
-                tui_color, tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline,
-                Size, ZOrder, SPACER_GLYPH};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn create_hud(pipeline: &mut RenderPipeline, size: Size, hud_report_str: &str) {
         let color_bg = tui_color!(hex "#fdb6fd");
@@ -426,9 +421,8 @@ mod hud {
 }
 
 mod status_bar {
-    use super::{col, new_style, render_ops, render_tui_styled_texts_into, tui_color,
-                tui_styled_text, tui_styled_texts, RenderOp, RenderPipeline, Size,
-                ZOrder, SPACER_GLYPH};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

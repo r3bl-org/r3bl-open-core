@@ -116,8 +116,7 @@
 //! UTF-8 validation occurs once at input boundaries, making subsequent unsafe
 //! operations safe and performant.
 
-use std::{ops::Range,
-          str::{from_utf8, from_utf8_unchecked}};
+use std::{ops::Range, str::from_utf8_unchecked};
 
 use super::super::ZeroCopyGapBuffer;
 use crate::RowIndex;
@@ -138,6 +137,7 @@ impl ZeroCopyGapBuffer {
         // In debug builds, validate UTF-8
         #[cfg(debug_assertions)]
         {
+            use std::str::from_utf8;
             if let Err(e) = from_utf8(&self.buffer) {
                 panic!(
                     "ZeroCopyGapBuffer contains invalid UTF-8 at byte {}: {}",
@@ -154,7 +154,6 @@ impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a byte slice
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] { &self.buffer }
-
 
     /// Get a slice of lines as a string
     ///
@@ -270,16 +269,15 @@ impl ZeroCopyGapBuffer {
 
     /// Convenience method to get only the line content as a string slice.
     ///
-    /// This is a helper that calls [`ZeroCopyGapBuffer::get_line()`] and extracts just the content.
-    /// Use this when you only need the string and don't need the metadata.
+    /// This is a helper that calls [`ZeroCopyGapBuffer::get_line()`] and extracts just
+    /// the content. Use this when you only need the string and don't need the
+    /// metadata.
     ///
     /// This method provides convenient access to line content without metadata.
     #[must_use]
     pub fn get_line_content(&self, row_index: RowIndex) -> Option<&str> {
-        self.get_line(row_index)
-            .map(|line| line.content())
+        self.get_line(row_index).map(|line| line.content())
     }
-
 }
 
 #[cfg(test)]
@@ -447,7 +445,6 @@ mod tests {
         // Out of bounds
         assert!(buffer.get_line_with_newline(row(1)).is_none());
     }
-
 }
 
 #[cfg(test)]
@@ -539,7 +536,6 @@ mod benches {
             black_box(content.len());
         });
     }
-
 
     #[bench]
     fn bench_is_valid_utf8(b: &mut Bencher) {

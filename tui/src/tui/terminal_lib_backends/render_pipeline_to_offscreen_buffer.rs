@@ -294,8 +294,8 @@ pub fn print_text_with_attributes(
 }
 
 mod print_text_with_attributes_helper {
-    use super::{ColWidth, GCStringOwned, OffscreenBuffer, PixelChar,
-                PixelCharLine, SPACER_GLYPH, TuiStyle, ch, usize, width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Clips the input string based on max display column count and window bounds.
     /// Returns the final clipped string as a grapheme cluster string.

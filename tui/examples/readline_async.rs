@@ -257,9 +257,8 @@ mod task_2 {
 }
 
 mod process_input_event {
-    use super::{Command, ControlFlow, Duration, FromStr, IntoDiagnostic, Readline,
-                SharedWriter, State, Write, file_walker, get_info_message,
-                long_running_task, spawn};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub fn process(
         user_input: String,
@@ -357,8 +356,8 @@ mod process_input_event {
 }
 
 mod long_running_task {
-    use super::{Duration, OutputDevice, Readline, SharedWriter, Spinner, SpinnerStyle,
-                Write, interval, spawn};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     // Spawn a task that uses the shared writer to print to stdout, and pauses the spinner
     // at the start, and resumes it when it ends.
@@ -435,8 +434,8 @@ mod long_running_task {
 }
 
 pub mod file_walker {
-    use super::{Duration, InlineVec, IntoDiagnostic, PathBuf, SendRawTerminal,
-                SharedWriter, fs, miette, path, sleep, smallvec};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub const FOLDER_DELIM: &str = std::path::MAIN_SEPARATOR_STR;
     pub const SPACE_CHAR: &str = " ";

@@ -153,8 +153,8 @@ async fn main() -> miette::Result<()> {
 }
 
 pub mod monitor_user_input_and_send_to_child {
-    use super::{AsyncWriteExt, Eof, Interrupted, Line, ReadlineAsyncContext,
-                ReadlineEvent, Resized, broadcast};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Determine the control flow of the program based on the [`ReadlineEvent`] received
     /// from user input.
@@ -229,8 +229,8 @@ pub mod monitor_user_input_and_send_to_child {
 }
 
 pub mod monitor_child_output {
-    use super::{AsyncBufReadExt, SharedWriter, Write, broadcast, fg_guards_red,
-                fg_lizard_green};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[must_use] pub fn spawn(
         stdout: tokio::process::ChildStdout,

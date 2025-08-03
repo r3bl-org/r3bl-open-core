@@ -18,7 +18,8 @@
 use core::fmt::Debug;
 
 use super::parse_hex_color;
-use crate::{ANSI_COLOR_PALETTE, ASTColor, LossyConvertToByte, TransformColor,
+use crate::{ASTColor, LossyConvertToByte, TransformColor,
+            ansi_constants::ANSI_COLOR_PALETTE,
             color_utils,
             common::{CommonError, CommonErrorType, CommonResult},
             convert_rgb_into_ansi256};

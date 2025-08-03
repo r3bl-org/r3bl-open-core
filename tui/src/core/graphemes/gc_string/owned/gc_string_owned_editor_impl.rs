@@ -260,8 +260,8 @@ pub mod at_display_col_index {
 /// `ZeroCopyGapBuffer` migration (Phase 4.3). Its functionality should be migrated to
 /// `ZeroCopyGapBuffer` methods for text mutation operations.
 pub mod mutate {
-    use super::{ColIndex, ColWidth, GCStringOwned, InlineString, InlineVecStr, ch, join,
-                seg_width, usize, width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl GCStringOwned {
         /// Inserts the given `chunk` in the correct position of the `string`, and returns

@@ -66,8 +66,8 @@ pub fn parse_block_markdown_text_with_or_without_new_line(
     }
 }
 mod inner {
-    use super::{many0, parse_inline_fragments_until_eol_or_eoi, tag, terminated, take_while,
-                CheckboxParsePolicy, IResult, List, MdLineFragments, Parser, NEW_LINE, NULL_CHAR, is};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Parse a single line of markdown text [`crate::FragmentsInOneLine`] terminated by EOL.
     /// # Errors

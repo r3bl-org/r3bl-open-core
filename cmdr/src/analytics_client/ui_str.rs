@@ -24,8 +24,8 @@ use super::upgrade_check::{get_self_bin_name, get_self_crate_name};
 use crate::{common::fmt, get_self_bin_emoji};
 
 pub mod upgrade_install {
-    use super::{Display, Error, ExitStatus, InlineString, fmt, get_self_crate_name,
-                inline_string};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Ran `cargo install ...` and this process exited with zero `request_shutdown` code.
     #[must_use]
@@ -123,9 +123,8 @@ pub mod upgrade_install {
 }
 
 pub mod upgrade_check {
-    use super::{ColorWheel, GradientGenerationPolicy, InlineString,
-                TextColorizationPolicy, get_self_bin_name, get_self_crate_name, glyphs,
-                inline_string};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[must_use]
     pub fn yes_msg_raw() -> &'static str { "Yes, upgrade now" }
@@ -164,8 +163,8 @@ pub mod upgrade_check {
 }
 
 pub mod goodbye_greetings {
-    use super::{ColorWheel, InlineString, get_self_bin_emoji, get_self_bin_name,
-                inline_string, var};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[must_use]
     pub fn thanks_msg() -> InlineString {

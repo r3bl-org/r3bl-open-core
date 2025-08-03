@@ -111,18 +111,16 @@ use std::{collections::hash_map::DefaultHasher,
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 
-use super::{config::{ColorWheelConfig, ColorWheelDirection, ColorWheelSpeed,
-                     GradientKind, GradientLengthKind,
-                     defaults::{Defaults, get_default_gradient_stops},
+use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
+            ColorWheelSpeed, GradientKind, GradientLengthKind, Lolcat, LolcatBuilder,
+            Seed,
+            config::{defaults::{Defaults, get_default_gradient_stops},
                      sizing::VecSteps},
-            gradients::{Ansi256GradientIndex, generate_random_truecolor_gradient,
-                        generate_truecolor_gradient, get_gradient_array_for},
-            helpers,
-            lolcat::{Lolcat, LolcatBuilder},
-            types::Seed};
-use crate::{ChUnit, GCStringOwned, GradientGenerationPolicy,
-            RgbValue, TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText,
-            TuiStyledTexts, WriteToBuf, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
+            generate_random_truecolor_gradient, generate_truecolor_gradient,
+            get_gradient_array_for, helpers};
+use crate::{ChUnit, GCStringOwned, GradientGenerationPolicy, RgbValue,
+            TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts,
+            WriteToBuf, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
             tui_styled_text, u8, usize};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
@@ -177,26 +175,26 @@ mod color_wheel_cache {
 
         /// Hash a single `ColorWheelConfig` into the hasher.
         pub(super) fn hash_color_wheel_config<H: Hasher>(
-            config: &crate::ColorWheelConfig,
+            config: &ColorWheelConfig,
             hasher: &mut H,
         ) {
             match config {
-                crate::ColorWheelConfig::Rgb(color_stops, wheel_speed, gradient_steps) => {
+                ColorWheelConfig::Rgb(color_stops, wheel_speed, gradient_steps) => {
                     0u8.hash(hasher); // discriminant
                     color_stops.hash(hasher);
                     wheel_speed.hash(hasher);
                     gradient_steps.hash(hasher);
                 }
-                crate::ColorWheelConfig::RgbRandom(speed) => {
+                ColorWheelConfig::RgbRandom(speed) => {
                     1u8.hash(hasher); // discriminant
                     speed.hash(hasher);
                 }
-                crate::ColorWheelConfig::Ansi256(index, speed) => {
+                ColorWheelConfig::Ansi256(index, speed) => {
                     2u8.hash(hasher); // discriminant
                     index.hash(hasher);
                     speed.hash(hasher);
                 }
-                crate::ColorWheelConfig::Lolcat(builder) => {
+                ColorWheelConfig::Lolcat(builder) => {
                     3u8.hash(hasher); // discriminant
                     hash_lolcat_builder(builder, hasher);
                 }

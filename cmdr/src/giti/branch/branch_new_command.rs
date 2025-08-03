@@ -53,8 +53,8 @@ mod details {
 }
 
 mod command_execute {
-    use super::{CommandRunDetails, CommandRunResult, CommonResult, details, git,
-                local_branch_ops, ui_str};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub async fn create_new_branch(
         branch_name: String,
@@ -94,8 +94,8 @@ mod command_execute {
 }
 
 mod user_interaction {
-    use super::{CommandRunDetails, CommandRunResult, CommonResult, ReadlineAsyncContext,
-                ReadlineEvent, command_execute, details, ui_str};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     pub async fn prompt_for_branch_name()
     -> CommonResult<CommandRunResult<CommandRunDetails>> {

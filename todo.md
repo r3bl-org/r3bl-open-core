@@ -16,12 +16,9 @@
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
       `r3bl_open_core` codebase.
 
-# cache AST in editor to implement jump to link (intra doc link)
+# refactor or rewrite the UI layout, sizing, and styling code
 
-- [ ] to implement `Ctrl+b` in the editor, so that jumping to hyperlinks can be implement
-      it might be a good idea to save the abstract syntax tree of the parsed markdown
-      data structure MdDocument in memory, along with a way to find the element under
-      a given (row, col) index
+- [ ] the code should be easier to use, do an audit and figure out what needs to be done
 
 # consider replacing syntect
 
@@ -35,6 +32,17 @@
       better unicode performance. this could be used in `edi` as well, for wrap & TOC create/update
       on save.
 
+# markdown parser enhancements
+
+- [ ] support both `"**"` and `"*"` for bold, and `"_"` and `"__"` for italic (deviate from the
+      markdown spec)
+- [ ] add blockquote support
+  - [ ] impl parser support for blockquote
+  - [ ] impl syntax highlighting support for blockquote
+- [ ] markdown table support
+  - [ ] impl parser support for table
+  - [ ] impl syntax highlighting support for table
+
 # add prettier
 
 - [ ] implement prettier-like functionality and "run on save" support performs text wrapping and
@@ -46,25 +54,21 @@
 
 - [ ] figure out how to interpret mouse events into something that is usable for the apps.
 
-# edi feature
+# edi features
 
+- [ ] cache AST in editor to implement jump to link (intra doc link) and jump to heading
+      (intra doc link) functionality
+- [ ] to implement `Ctrl+b` in the editor, so that jumping to hyperlinks can be implement
+      it might be a good idea to save the abstract syntax tree of the parsed markdown
+      data structure MdDocument in memory, along with a way to find the element under
+      a given (row, col) index
 - [ ] add telemetry HUD to bottom of `edi` (FPS, memory usage, etc)
 - [ ] add feature that shows editor status to the terminal window title bar (eg: " edi -
       [filename] - [status]") using
       [OSC sequences](https://en.wikipedia.org/wiki/ANSI_escape_code#Operating_System_Command_sequences)
 - [ ] add a new feature to edi: `cat file.txt | edi` should open the piped output of the first
       process into edi itself
-
-# markdown parser enhancements
-
-- [ ] support both `"**"` and `"*"` for bold, and `"_"` and `"__"` for italic (deviate from the
-      markdown spec)
-- [ ] add blockquote support
-  - [ ] impl parser support for blockquote
-  - [ ] impl syntax highlighting support for blockquote
-- [ ] markdown table support
-  - [ ] impl parser support for table
-  - [ ] impl syntax highlighting support for table
+- [ ] show table of contents with type ahead complete on `ctrl+y`
 
 # giti feature
 
