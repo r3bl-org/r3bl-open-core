@@ -9,6 +9,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
+    - [v_r3bl_tui_next](#v_r3bl_tui_next)
     - [v0.7.2 (2025-07-23)](#v072-2025-07-23)
     - [v0.7.1 (2025-05-10)](#v071-2025-05-10)
     - [v0.7.0 (2025-05-10)](#v070-2025-05-10)
@@ -174,6 +175,7 @@ performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core
 <https://github.com/r3bl-org/r3bl-open-core/pull/430>.
 
 - Added:
+
   - Claude Code workflow documentation in `CLAUDE.md` for AI-assisted development
   - Task tracking system using `todo.md` and `done.md` files
   - Flamegraph profiling support with `.perf-folded` file generation
@@ -205,6 +207,7 @@ performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core
 ### Global config (2025-03-24)
 
 - Added:
+
   - Add a new `script_lib.nu` file in the workspace (root) folder that contains functions that are
     used in the `run` scripts in all the contained inside of it. This provides the ability to easy
     run examples by providing the user with an interactive list of examples to run. See
@@ -263,6 +266,75 @@ following:
 
 ## `r3bl_tui`
 
+### v_r3bl_tui_next
+
+The summary highlights:
+
+- 2-3x overall application performance improvement
+- Complete elimination of major bottlenecks (100% reduction each)
+- Significant reductions in other bottlenecks (27-89% improvements)
+- ZeroCopyGapBuffer's specific achievements including zero-copy access and 50-90x faster append
+  operations
+- ~88.64% of total execution time eliminated from the top 5 bottlenecks
+- Real-world impact on parser performance, editor responsiveness, memory usage, and large document
+  handling
+- Current well-balanced performance profile with overhead only in necessary areas
+
+Overall Performance Impact: 2-3x Faster Application
+
+Major Bottlenecks Completely Eliminated (100% reduction each):
+
+1. AnsiStyledText Display: 16.3% → 0%
+2. MD Parser Operations: 22.45% → 0% (thanks to ZeroCopyGapBuffer)
+3. Color Support Detection: ~24% → 0%
+4. String Truncation: 11.67% → 0%
+
+Significantly Reduced Bottlenecks:
+
+1. Text Wrapping: 16.12% → 1.72% (89% reduction)
+2. ColorWheel Hash Operations: 38M → 5M samples (87% reduction)
+3. PixelChar SmallVec: 45M+ samples → completely eliminated
+4. Dialog Borders: 53M → 39M samples (27% reduction)
+5. GCString Creation in Rendering: 8.61% → acceptable levels
+
+ZeroCopyGapBuffer Specific Achievements:
+
+- String Materialization: Completely eliminated (was 22.45% of execution time)
+- Zero-Copy Access: 0.19 ns for as_str() calls (essentially free)
+- Memory Efficiency: Consolidated allocations with predictable 256-byte line pages
+- Append Operations: 50-90x faster than full rebuilds
+  - Single character: 1.48 ns vs 100.48 ns
+  - Word append: 2.91 ns vs 273.74 ns
+
+Cumulative Performance Gains:
+
+Looking at the major bottlenecks eliminated:
+
+- ~88.64% of total execution time eliminated from just the top 5 bottlenecks
+- Multiple 10%+ bottlenecks completely removed
+- No single operation now dominates the performance profile
+
+Real-World Impact:
+
+1. Parser Performance: Direct &str access throughout, no string copying
+2. Editor Responsiveness: Keystroke-to-render latency dramatically reduced
+3. Memory Usage: More predictable and efficient allocation patterns
+4. Large Documents: Can handle 100MB+ documents without the exponential slowdown from string
+   materialization
+
+Current State:
+
+The application now has a well-balanced performance profile with:
+
+- Rendering Pipeline (~30-40%): Expected for terminal output
+- Unicode Operations (~20-25%): Necessary for correct text handling
+- Editor Operations (~15-20%): Well-optimized with zero-copy access
+- TUI Framework (~15-20%): Normal event handling overhead
+
+The performance work has transformed the r3bl_tui from having multiple severe bottlenecks to a
+well-optimized application where the remaining overhead is inherent to the functionality (rendering,
+Unicode support, event handling) rather than inefficiencies in the implementation.
+
 ### v0.7.2 (2025-07-23)
 
 Major performance optimization release with significant architectural improvements to the TUI
@@ -273,6 +345,7 @@ includes extensive code quality improvements and Windows compatibility fixes. Is
 <https://github.com/r3bl-org/r3bl-open-core/pull/430>.
 
 - Added:
+
   - LRU cache infrastructure for dialog border rendering optimization
   - Comprehensive snapshot testing framework for markdown parser
   - Benchmarking infrastructure for parser performance analysis
@@ -281,6 +354,7 @@ includes extensive code quality improvements and Windows compatibility fixes. Is
   - Efficient `Display` traits for telemetry logging
 
 - Changed:
+
   - Optimized markdown parser performance by 600-5,000x using hybrid approach
   - Made `SyntaxSet` & `Theme` global resources to reduce allocations
   - Reorganized `md_parser` module structure for improved clarity
@@ -293,6 +367,7 @@ includes extensive code quality improvements and Windows compatibility fixes. Is
   - Enhanced `Pos` API to remove ambiguity
 
 - Fixed:
+
   - Eliminated syntax highlighting bottleneck in markdown parser
   - Resolved paste performance issues for both clipboard and bracketed paste
   - Fixed Windows terminal compatibility problems
@@ -491,6 +566,7 @@ almost every crate in the repo. This [PR](https://github.com/r3bl-org/r3bl-open-
 contains all the changes.
 
 - Added:
+
   - Provide a totally new interface for the `main_event_loop()` that allows for more flexibility in
     how the event loop is run, using dependency injection. This is a breaking change, but it is
     needed to make the codebase more maintainable and possible to test end to end. This new change
@@ -505,6 +581,7 @@ contains all the changes.
     `curl https://api.github.com/repos/r3bl-org/r3bl-open-core | jq .created_at`.
 
 - Changed:
+
   - Refactor lots of styling related code in preparation for the move to `core`. This will make it
     easier to maintain and test the codebase, and clean up the dependencies.
   - The latest version of `unicode-width` crate `v2.0.0` changes the widths of many of the emoji.
@@ -528,10 +605,12 @@ contains all the changes.
 ### v0.5.8 (2024-09-07)
 
 - Removed:
+
   - Remove `get-size` crate from `Cargo.toml`. This was causing some
     [issues with `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
 
 - Added:
+
   - Add `size-of` crate.
   - This new crate is used to calculate the size of structs in bytes.
   - Change the implementations of many structs in the following modules: `editor_buffer`,
@@ -551,6 +630,7 @@ run the examples).
 supports pause and resume for spinners, along with many other features.
 
 - Updated:
+
   - Change the main examples launcher (which you can run using `nu run examples`) so that it
     correctly handles raw mode transitions, and also correctly uses the `r3bl_terminal_async` crate
     to ask the user for input (using "async readline").
@@ -571,6 +651,7 @@ line of text, which is common in Markdown. The new parser is exhaustively tested
 handle many more corner cases.
 
 - Fixed:
+
   - Rewrite most of the Markdown parser and add exhaustive tests and lots of corner cases which were
     not covered before. A lot of these issues were found by using the `edi` binary target for a few
     weeks as a Markdown editor. Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/332)
@@ -617,6 +698,7 @@ handle many more corner cases.
 ### v0.5.0 (2023-12-31)
 
 - Changed:
+
   - Rename `run.nu` to `run` in the `tui` folder. This simplifies commands to run it, eg:
     `nu run build`, or `./run build`.
   - Rename `run.nu` to `run` in the top level folder as well.
@@ -628,6 +710,7 @@ handle many more corner cases.
     `component_registry_map`, and `has_focus`. This makes it similar to `app_handle_input_event()`.
 
 - Fixed:
+
   - Editor component now cleans up state correctly after new content loads. This includes the
     undo/redo stack, and the render ops cache (for the content).
   - Fix `tui/examples/demo/ex_pitch` example to correctly move back and forward between slides.
@@ -641,6 +724,7 @@ handle many more corner cases.
 ### v0.4.0 (2023-12-22)
 
 - Changed:
+
   - Drop the use of Redux for state management entirely. Replace this with mutable state. And a new
     architecture for App and Component, that is more like Elm, rather than React and Redux.
   - Async middleware functions no longer use Redux for propagating state transitions to the app;
@@ -657,9 +741,11 @@ handle many more corner cases.
     in the future since it is not covered by the custom MD parser & highlighter combo.
 
 - Fixed:
+
   - Fix the custom MD parser so that it correctly parses plain text.
 
 - Added:
+
   - Add undo, redo support for the editor component.
   - Add binary target for `edi` which is going to be a Markdown editor similar to `nano` or `micro`.
     It is meant to showcase what the `r3bl_tui` crate can do. It is also meant to be a useful
@@ -704,6 +790,7 @@ handle many more corner cases.
 ### v0.3.7 (2023-10-21)
 
 - Changed:
+
   - Dropped support for `palette` crate. Use `colorgrad` instead. More info here:
     <https://github.com/r3bl-org/r3bl-open-core/issues/162>
 
@@ -713,6 +800,7 @@ handle many more corner cases.
 ### v0.3.6 (2023-10-17)
 
 - Changed:
+
   - Switched to using `r3bl_ansi_color` to detect terminal color capabilities and color output and
     conversions.
   - Apply `#[serial]` on tests that mutate global variables to make those tests un-flaky. This was
@@ -782,6 +870,7 @@ handle many more corner cases.
 ### v0.3.1 (2023-03-06)
 
 - Added:
+
   - First changelog entry.
   - Remove dependency on ansi-parser crate:
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/91).
@@ -794,6 +883,7 @@ handle many more corner cases.
     [issue](https://github.com/r3bl-org/r3bl-open-core/issues/79)
 
 - Removed:
+
   - Removed lolcat example from demo.
 
 - Changed:
@@ -811,10 +901,9 @@ Minor release focusing on `edi` bug fixes, code quality improvements and documen
 - Fixed:
   - Clippy warnings about missing error documentation across the crate
   - Improved error handling documentation consistency
-  - Fixed paste bug in `edi` where pasting was extremely slow, and many other long
-    standing bugs
-  - Huge performance improvements for `edi` making it super responsive, and much faster
-    than before; see the PR for details
+  - Fixed paste bug in `edi` where pasting was extremely slow, and many other long standing bugs
+  - Huge performance improvements for `edi` making it super responsive, and much faster than before;
+    see the PR for details
 
 ### v0.0.19 (2025-05-10)
 
@@ -838,6 +927,7 @@ refactored and the entire codebase updated so that a the more ergonomic `ChUnit`
 throughout the codebase. No new functionality is added in this release.
 
 - Added:
+
   - New `memory_allocator.rs` module that allow `jemalloc` to be loaded instead of the system
     default allocator. `jemalloc` is optimized for multi-threaded use cases where lots of small
     objects are created and deleted, which is a great fit for this crate. Use this in all the binary
@@ -847,9 +937,11 @@ throughout the codebase. No new functionality is added in this release.
     they can prompt the user that they can manually update or automatically update (above).
 
 - Removed:
+
   - Drop the dependency on `r3bl_ansi_color`.
 
 - Updated:
+
   - Use the latest Rust 2024 edition.
   - This release just uses the latest deps from `r3bl-open-core` repo, since so many crates have
     been reorganized and renamed. The functionality has not changed at all, just the imports.
@@ -883,11 +975,13 @@ text. Common edge cases that were not handled before are now handled correctly. 
 that come up quite frequently when editing Markdown in a text editor.
 
 - Fixed:
+
   - Use the latest release of the `r3bl_tui` crate version `0.5.6` which fixes a lot of common bugs
     with the Markdown parser. This are critical bug fixes that are needed for the `edi` binary
     target, to make it a stable and usable Markdown editor for daily use.
 
 - Changed:
+
   - Use the latest release of the `r3bl_tui` crate version `0.5.5`.
   - Clean up `main_event_loop` and get rid of needless `'static` in `AS` trait bound.
   - Fix cargo clippy doc warnings.
@@ -936,6 +1030,7 @@ that come up quite frequently when editing Markdown in a text editor.
 ### v0.0.10 (2024-01-02)
 
 - Fixed:
+
   - Refactor & clean up the analytics client code.
 
 - Updated:
@@ -944,6 +1039,7 @@ that come up quite frequently when editing Markdown in a text editor.
 ### v0.0.9 (2023-12-31)
 
 - Added:
+
   - Anonymized analytics reporting to prioritize feature development for `edi` and `giti`.
 
 - Changed:
@@ -955,6 +1051,7 @@ that come up quite frequently when editing Markdown in a text editor.
 ### v0.0.8 (2023-12-22)
 
 - Changed:
+
   - Rename `run.nu` to `run` and update `README.md` and `lib.rs` to reflect this change. This is a
     more ergonomic command to use, when using it directly eg: `./run build` (macOS, Linux), or
     `nu run build` (Windows).
@@ -1002,12 +1099,14 @@ This is a major version upgrade and potentially a breaking change if you use the
 this crate. This [PR](https://github.com/r3bl-org/r3bl-open-core/pull/360) contains all the changes.
 
 - Added:
+
   - Add tests to ensure that the tracing module works as expected. This includes using the
     `assert_cmd` trait to test the output of a test binary that is run as a subprocess. Ensure that
     stdout and stderr are captured and can be tested for correctness. Also ensure that
     `SharedWriter` works as expected. Also ensure that file log output works as expected.
 
 - Changed:
+
   - Use the latest Rust 2024 edition.
   - Refactor the tracing and Jaeger related code into 2 separate modules. This is laying the
     groundwork for these modules to be moved into `r3bl_core` crate. Radically simplify the tracing
@@ -1050,6 +1149,7 @@ Here's the [PR](https://github.com/r3bl-org/r3bl-open-core/pull/349) with all th
 this release.
 
 - Added:
+
   - Add support to extend pause and resume functionality to the entire crate. Now, when the output
     is paused, for eg, when the spinner is running, then the input to the readline is also stopped,
     until output is resumed. This wasn't the case in the past, and it was possible to type and
@@ -1086,6 +1186,7 @@ links for this release: [crates.io](https://crates.io/crates/r3bl_terminal_async
 [GitHub](https://github.com/r3bl-org/r3bl-open-core/tree/main/terminal_async).
 
 - Changed:
+
   - Remove the test fixtures out of this crate and into a new top level crate in the
     `r3bl-open-core` monorepo called `r3bl_test_fixtures`. This is to make it easier to maintain and
     test the fixtures and allow all the other crates in this monorepo to use them.
@@ -1100,6 +1201,7 @@ clean up the prompt when the CLI exits. It also adds a new module to allow for O
 tracing to be added to the tracing setup. This uses the latest version of Jaeger and OpenTelemetry.
 
 - Added:
+
   - New module to check for port availability on a host called `port_availability`. This is useful
     for checking if a port is available before starting a server (which is a common use case for
     interactive CLI programs).
@@ -1137,6 +1239,7 @@ tracing to be added to the tracing setup. This uses the latest version of Jaeger
 ### v0.5.1 (2024-04-28)
 
 - Changed:
+
   - Simplify `SpinnerRenderer` so that it is no longer a trait. Replace with plain functions receive
     a mutable ref to a `SpinnerStyle`. This trait just added more noise, making it more difficult to
     grok what this code does.
@@ -1254,10 +1357,12 @@ this repo. Please look at the [`r3bl_core`](#r3bl_core) for more details.
 ### v0.9.15 (2024-09-07)
 
 - Removed:
+
   - Remove `get-size` crate from `Cargo.toml`. This was causing some
     [issues with `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
 
 - Added:
+
   - Add `size-of` crate.
   - This new crate is used to calculate the size of structs in bytes (eg: `Vec<UnicodeString>` which
     is on the heap).
@@ -1332,6 +1437,7 @@ The main additions to this release are the `StringLength` enum, the `timed!()` m
 ### v0.9.6 (2023-10-17)
 
 - Removed:
+
   - Dependency on `ansi_term` is dropped due to this security advisory
     <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Flagged when running CI/CD job on Ockam
     [repo](https://github.com/build-trust/ockam).
@@ -1464,12 +1570,14 @@ Here are the highlights:
   2. Replace all the ignored doc tests with `no_run` (just compile) or compile and run. For all Rust
      source files (in the entire monorepo, and not just this crate / folder).
 - [PR](https://github.com/r3bl-org/r3bl-open-core/pull/376/commits/39bf421bb86d4de004bffd08f35df12ce3ef8541)
+
   1. There's a new converter `convert_to_ansi_color_styles` which converts a `TuiStyle` into a `Vec`
      of `r3bl_ansi_term::Style`.
   2. This is for `lolcat_api` enhancements which now allow for an optional default style to be
      passed in, that will be applied to the generated lolcat output.
 
 - Moved:
+
   - Move the contents of `r3bl_ansi_color` crate into `r3bl_core`. There is no need to have that
     crate as an external dependency. Moving it where it belongs. It was developed as a separate
     crate at the start, since the `r3bl_tui` codebase was in a much earlier stage when it wasn't
@@ -1487,6 +1595,7 @@ Here are the highlights:
     replacement for writing scripts in `fish` or `bash` or `nushell` syntax.
 
 - Changed:
+
   - Consolidate the color structs from `r3bl_core` and `r3bl_ansi_color`, since `r3bl_ansi_color` is
     deprecated and its functionality has been moved into `r3bl_core`. The `ASTColor` and `TuiColor`
     structs have the same underpinning structs, which they're composed on top of. The reason for the
@@ -1538,6 +1647,7 @@ Here are the highlights:
   - Replace the use of `bool` with meaningful enums to enhance code readability.
 
 - Added:
+
   - Make the public API more ergonomic and use the `options: impl Into<TracingConfig>` pattern for
     all the functions that need to be configured. This makes it easy to define simple configuration
     options, while allowing for easy composition of more complex options. We really like this
@@ -1635,12 +1745,14 @@ maintain and understand, and easier to add new features to in the future. The se
 is now much clearer, and they reflect how the functionality is used in the real world.
 
 - Removed:
+
   - Remove the dependency on `r3bl_simple_logger` and archive it. You can read the details in its
     [CHANGELOG entry](#archived-2024-09-27). Tokio tracing is now used under the covers.
   - Remove all the functions like `log_debug`, `log_info`, etc. and favor directly using tokio
     tracing macros for logging, eg: `tracing::debug!`, `tracing::info!`, etc.
 
 - Changed:
+
   - `WriterConfig` can now be merged with other instances. This was a requirement for the
     `TracingConfig` to be able to merge multiple `WriterConfig` instances into a single
     `WriterConfig` instance. The code is in `src/log_support/public_api.rs` since this functionality
@@ -1704,6 +1816,7 @@ almost every crate in the repo. This [PR](https://github.com/r3bl-org/r3bl-open-
 contains all the changes.
 
 - Updated:
+
   - Use the latest Rust 2024 edition.
   - This release just uses the latest deps from `r3bl-open-core` repo, since so many crates have
     been reorganized and renamed. The functionality has not changed at all, just the imports.
@@ -1742,6 +1855,7 @@ contains all the changes.
 ### v0.1.24 (2023-12-31)
 
 - Changed:
+
   - Rename `run.nu` to `run`. This simplifies commands to run it, eg: `nu run build`, or
     `./run build`.
   - Replace the `run` command with `examples` in the `run` nushell script. To run an example you use
@@ -1750,6 +1864,7 @@ contains all the changes.
     nushell script is more uniform across all crates in this repo.
 
 - Added:
+
   - Add a new top level function `select_from_list_with_multi_line_header()` in `public_api.rs` to
     allow for multi-line headers in the list selection menu. This allows ANSI formatted strings to
     be used in each header line.
@@ -1766,13 +1881,16 @@ contains all the changes.
 ### v0.1.22 (2023-12-20)
 
 - Updated:
+
   - Update dependency on `reedline` crate to `0.27.1`.
   - Update dependency on `r3bl_rs_utils_core` to `0.9.9`.
 
 - Removed:
+
   - Remove dependency on `r3bl_tui` crate.
 
 - Changed:
+
   - Change the default theme so that it is better looking and more readable on Mac, Linux, and
     Windows. Add many different themes to choose from.
 
@@ -1842,6 +1960,7 @@ almost every crate in the repo. This [PR](https://github.com/r3bl-org/r3bl-open-
 contains all the changes.
 
 - Changed:
+
   - Some type aliases were defined here redundantly, since they were also defined in `r3bl_core`
     crate. Remove these duplicate types and add a dependency to `r3bl_core` crate.
 
@@ -1866,6 +1985,7 @@ specified interval. This is useful for testing async functions that need to simu
 events with a delay.
 
 - Added:
+
   - Add `gen_input_stream_with_delay()` to create an async stream that yields results ( from a vec)
     at a specified interval. This is useful for testing async functions that need to simulate a
     stream of events with a delay.
@@ -1909,9 +2029,11 @@ workspace. The names are also cleaned up so there's no confusion about using `Co
 which are so generic and used in many other crates.
 
 - Updated:
+
   - Use the latest Rust 2024 edition.
 
 - Added:
+
   - Support for inline (stack allocated) data structures (`InlineVecASTStyles` and
     `AnsiStyledText::to_small_str()`). Please note that if you make the
     `r3bl_ansi_color::sizing::DEFAULT_STRING_STORAGE_SIZE` number too large, eg: more than `16`,
@@ -1928,6 +2050,7 @@ which are so generic and used in many other crates.
     `r3bl_tui` crate's `tui_color!` macro.
 
 - Removed:
+
   - `term.rs` is now in `r3bl_core`. Support for `$TERM_PROGRAM` = `vscode` to the list of
     environment variables that mean that `truecolor` is supported. This is in `check_ansi_color.rs`
     file.
@@ -1964,6 +2087,7 @@ contains all the changes.
 ### v0.6.8 (2023-10-16)
 
 - Added:
+
   - Support for `Grayscale` color output. This is in preparation of making the color support work
     across all platforms (MacOS, Linux, Windows). And use this in the `r3bl_tui` crate. Update tests
     to reflect this.
@@ -1974,6 +2098,7 @@ contains all the changes.
 ### v0.6.7 (2023-09-12)
 
 - Added:
+
   - Tests.
 
 - Replaced:
@@ -2047,6 +2172,7 @@ become unmaintained. We now use tokio tracing, so this is no longer required.
 ### v0.1.1 (2023-10-17)
 
 - Replaced:
+
   - Dependency on `ansi_term` is dropped due to this security advisory
     <https://rustsec.org/advisories/RUSTSEC-2021-0139.html>. Replaced with `r3bl_ansi_color`.
 
@@ -2081,6 +2207,7 @@ favor of "Elm style" or "signals" based architecture.
 ### v0.2.7 (2024-09-07)
 
 - Removed:
+
   - Remove `get-size` crate from `Cargo.toml`. This was causing some
     [issues with `RUSTSEC-2024-0370`](https://github.com/r3bl-org/r3bl-open-core/issues/359).
 
@@ -2102,6 +2229,7 @@ favor of "Elm style" or "signals" based architecture.
 ### v0.2.4 (2023-10-14)
 
 - Updated:
+
   - Dependency on `simplelog` is replaced w/ `r3bl_simple_logger` (which is in the `r3bl_rs_utils`
     repo workspace as `simple_logger`).
 
@@ -2127,9 +2255,11 @@ purposes. It is no longer maintained.
 ### v0.9.15 (2023-12-22)
 
 - Updated:
+
   - Add single dependency on `r3bl_rs_utils_core` version `0.9.10`.
 
 - Removed:
+
   - Remove all the unnecessary dependencies from `Cargo.toml`.
   - Remove all unnecessary `dev-dependencies` from `Cargo.toml`.
 

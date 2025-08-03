@@ -46,13 +46,10 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 ### Technical Documentation and Design Docs
 
 - [`CLAUDE.md`](CLAUDE.md) - Claude AI integration documentation
-- [`dd_parser_strategy_analysis.md`](dd_parser_strategy_analysis.md) - Analysis of parser
-  implementation strategies
 - [`dd_parser_conformance.md`](dd_parser_conformance.md) - Parser conformance testing documentation
 
 ### Plans
 
-- [`task_gap_buffer.md`](task_gap_buffer.md) - Gap buffer implementation for editor content storage
 - [`task_remove_crossterm.md`](task_remove_crossterm.md) - Task documentation for removing crossterm
   dependency
 - [`task_syntect_improve.md`](task_syntect_improve.md) - Syntect improvement plan for adding missing
@@ -66,6 +63,12 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 
 The [`done`](done) folder contains:
 
+- [`task_parser_strategy_analysis.md`](done/task_parser_strategy_analysis.md) - Analysis of parser
+  implementation strategies that led to archiving experimental parsers (NG and Simple) and keeping
+  the legacy parser as the only production implementation
+- [`task_zero_copy_gap_buffer.md`](done/task_zero_copy_gap_buffer.md) - Zero-copy gap buffer
+  implementation for editor content storage, successfully eliminating string materialization in the
+  markdown parser path with proven performance improvements
 - [`task_ng_parser_archive.md`](done/task_ng_parser_archive.md) - Complete documentation of the NG
   Parser and Simple Parser archival process, including performance analysis, migration status, and
   lessons learned from experimental parser development

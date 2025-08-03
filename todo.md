@@ -1,10 +1,5 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 
-# editor content storage enhancements: https://github.com/r3bl-org/r3bl-open-core/issues/387
-
-- [ ] use [`task_gap_buffer`](docs/task_gap_buffer.md) to implement a gap buffer for the editor
-      content storage. This will improve performance and memory usage when editing large files.
-
 # unify rendering paths
 
 - [ ] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
@@ -56,12 +51,11 @@
 
 # edi features
 
-- [ ] cache AST in editor to implement jump to link (intra doc link) and jump to heading
-      (intra doc link) functionality
-- [ ] to implement `Ctrl+b` in the editor, so that jumping to hyperlinks can be implement
-      it might be a good idea to save the abstract syntax tree of the parsed markdown
-      data structure MdDocument in memory, along with a way to find the element under
-      a given (row, col) index
+- [ ] cache AST in editor to implement jump to link (intra doc link) and jump to heading (intra doc
+      link) functionality
+- [ ] to implement `Ctrl+b` in the editor, so that jumping to hyperlinks can be implement it might
+      be a good idea to save the abstract syntax tree of the parsed markdown data structure
+      MdDocument in memory, along with a way to find the element under a given (row, col) index
 - [ ] add telemetry HUD to bottom of `edi` (FPS, memory usage, etc)
 - [ ] add feature that shows editor status to the terminal window title bar (eg: " edi -
       [filename] - [status]") using

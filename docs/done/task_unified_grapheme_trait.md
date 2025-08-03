@@ -245,9 +245,12 @@ impl<T: GraphemeString + ?Sized> GraphemeStringOwnedExt for T {}
 
 ## Error Handling
 
-Error handling is implementation-specific. Most implementations use `miette::Result` with contextual error messages created using the `miette!` macro. This provides flexibility for each implementation to define appropriate error handling strategies without imposing a rigid error type hierarchy.
+Error handling is implementation-specific. Most implementations use `miette::Result` with contextual
+error messages created using the `miette!` macro. This provides flexibility for each implementation
+to define appropriate error handling strategies without imposing a rigid error type hierarchy.
 
 Example:
+
 ```rust
 let line = self.lines.get_mut(row.as_usize())
     .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
