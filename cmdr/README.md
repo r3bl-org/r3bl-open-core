@@ -157,8 +157,8 @@ To run from binary:
 
 To run from source:
 - Clone the `r3bl-open-core` repo.
-- Go to the `cmdr` folder in your terminal.
-- Run `nu run.nu install` to install `giti` locally to `~/.cargo/bin`.
+- Run `./bootstrap.sh` to install all required tools (Linux/macOS).
+- Run `nu run.nu install-cmdr` to install `giti` locally to `~/.cargo/bin`.
 - Run `giti` from anywhere on your system.
 - Try `giti --help` to see the available commands.
 - To delete one or more branches in your repo run `giti branch delete`.
@@ -185,8 +185,8 @@ To run from binary:
 
 To run from source:
 - Clone the `r3bl-open-core` repo.
-- Go to the `cmdr` folder in your terminal.
-- Run `nu run.nu install` to install `edi` locally to `~/.cargo/bin`.
+- Run `./bootstrap.sh` to install all required tools (Linux/macOS).
+- Run `nu run.nu install-cmdr` to install `edi` locally to `~/.cargo/bin`.
 - Run `edi` from anywhere on your system.
 - Try `edi --help` to see the available commands.
 - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
@@ -197,49 +197,50 @@ To run from source:
 
 ### Prerequisites
 
-🌠 In order for these to work you have to install the Rust toolchain, `nu`,
-`cargo-watch`, `bat`, and `flamegraph` on your system. Here are the instructions:
+🌠 The easiest way to get started is to use the bootstrap script:
 
+```bash
+./bootstrap.sh
+```
+
+This script automatically installs:
+- Rust toolchain via rustup
+- Nushell shell
+- File watchers (inotifywait/fswatch)
+- All required cargo development tools
+
+For manual installation:
 1. Install the Rust toolchain using `rustup` by following the instructions [here](https://rustup.rs/).
-1. Install `cargo-watch` using `cargo install cargo-watch`.
-1. Install `flamegraph` using `cargo install flamegraph`.
-1. Install `bat` using `cargo install bat`.
-1. Install [`nu`](https://crates.io/crates/nu) shell on your system using `cargo
-   install nu`. It is available for Linux, macOS, and Windows.
+2. Install [`nu`](https://crates.io/crates/nu) shell: `cargo install nu`
+3. Install development tools: `nu run.nu install-cargo-tools`
 
-### Nushell scripts to build, run, test etc.
+### Binary Development Commands
 
-| Command             | Description                                                                                                          |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `nu run.nu help`       | See all the commands you can pass to the `run.nu` script                                                                |
-| `nu run.nu install`    | Install `giti`, `edi`, `rc` to `~/.cargo/bin`                                                                        |
-| `nu run.nu build`      | Build                                                                                                                |
-| `nu run.nu clean`      | Clean                                                                                                                |
-| `nu run.nu test`       | Run tests                                                                                                            |
-| `nu run.nu clippy`     | Run clippy                                                                                                           |
-| `nu run.nu log`        | View the log output. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this. |
-| `nu run.nu docs`       | Build docs                                                                                                           |
-| `nu run.nu serve-docs` | Serve docs over `VSCode` Remote SSH session                                                                            |
-| `nu run.nu rustfmt`    | Run rustfmt                                                                                                          |
+For cmdr binary development, use these commands from the repository root:
 
-The following commands will watch for changes in the source folder and re-run:
+#### Building and Installing Binaries
+| Command                        | Description                                     |
+| ------------------------------ | ----------------------------------------------- |
+| `nu run.nu install-cmdr`       | Install cmdr binaries to ~/.cargo/bin           |
+| `nu run.nu run-binaries`       | Interactively run edi, giti, or rc              |
+| `nu run.nu docker-build`       | Build release binaries in Docker                |
+| `nu run.nu log`                | Monitor log files with smart detection          |
 
-| Command                                             | Description                        |
-| --------------------------------------------------- | ---------------------------------- |
-| `nu run.nu watch-all-tests`                            | Watch all test                     |
-| `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
-| `nu run.nu watch-clippy`                               | Watch clippy                       |
-| `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+#### Testing and Development
+| Command                        | Description                                     |
+| ------------------------------ | ----------------------------------------------- |
+| `nu run.nu test`               | Run all tests                                   |
+| `nu run.nu clippy`             | Run clippy with fixes                           |
+| `nu run.nu watch-all-tests`    | Watch files, run all tests                      |
+| `nu run.nu watch-clippy`       | Watch files, run clippy                         |
 
-There's also a `run.nu` script at the **top level folder** of the repo. It is intended
-to be used in a CI/CD environment w/ all the required arguments supplied or in
-interactive mode, where the user will be prompted for input.
+For complete development setup and all available commands, see the
+[repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
-| Command                      | Description                                                                                                                                                                                                                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `nu run.nu all`                 | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD                                                                                                                                                                                  |
-| `nu run.nu build-full`          | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
-| `nu run.nu install-cargo-tools` | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go)                                                                                         |
-| `nu run.nu check-licenses`      | Use `cargo-deny` to audit all licenses used in the Rust workspace                                                                                                                                                                                      |
+#### Binary Development Features
+- **Interactive binary selection**: Choose which binary to run with fuzzy search
+- **Smart log monitoring**: Automatically detects and manages log files from binaries
+- **Docker builds**: Build release binaries in isolated Docker environment
+- **Cross-platform file watching**: Uses inotifywait (Linux) or fswatch (macOS)
 
 License: Apache-2.0
