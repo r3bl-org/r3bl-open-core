@@ -1,13 +1,5 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 
-# clean up run.nu, update CHANGELOG.md, README.md and make release
-
-- [x] plan in [`docs/done/task_refactor_nu.md`](docs/done/task_refactor_nu.md) to consolidate and
-      rewrite the `run.nu` file to make it more readable and maintainable
-- [ ] update `CHANGELOG.md` with the latest changes
-- [ ] update `README.md` with the latest changes
-- [ ] make a release of `r3bl_tui` and `r3bl-cmdr` crates
-
 # unify rendering paths
 
 - [ ] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of

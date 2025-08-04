@@ -10,7 +10,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
-    - [v_r3bl_tui_next](#v_r3bl_tui_next)
+    - [v0.7.3 (2025-08-04)](#v073-2025-08-04)
     - [v0.7.2 (2025-07-23)](#v072-2025-07-23)
     - [v0.7.1 (2025-05-10)](#v071-2025-05-10)
     - [v0.7.0 (2025-05-10)](#v070-2025-05-10)
@@ -35,7 +35,7 @@
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
   - [`r3bl-cmdr`](#r3bl-cmdr)
-    - [v_r3bl-cmdr_next](#v_r3bl-cmdr_next)
+    - [v0.0.21 (2025-08-04)](#v0021-2025-08-04)
     - [v0.0.20 (2025-07-23)](#v0020-2025-07-23)
     - [v0.0.19 (2025-05-10)](#v0019-2025-05-10)
     - [v0.0.18 (2025-05-10)](#v0018-2025-05-10)
@@ -292,97 +292,35 @@ following:
 
 ## `r3bl_tui`
 
-### v_r3bl_tui_next
+### v0.7.3 (2025-08-04)
 
-This release represents a major performance and architecture overhaul focused on eliminating
-memory-intensive operations and achieving zero-copy performance:
+Major performance optimization release with complete architectural overhaul of the gap buffer
+implementation. Eliminated memory-intensive `SmallVec<GCStringOwned>` operations that were
+materializing to `String` on every render in the main event loop, achieving zero-copy performance
+through the new `ZeroCopyGapBuffer` implementation.
 
-**Key Achievement:** Eliminated `SmallVec<GCStringOwned>` which was extremely memory intensive,
-especially due to materializing it into a `String` on every render in the main event loop. The new
-`ZeroCopyGapBuffer` implementation makes this zero cost.
+- Added:
 
-**Added:**
+  - Comprehensive documentation for three index types: `ByteIndex`, `SegIndex`, `ColIndex`
+  - New hierarchical organization of the graphemes module
+  - Common iterator extraction for graphemes processing
+  - `GCString` segment logic extracted into `segment_builder.rs`
 
-- Comprehensive documentation for three index types: `ByteIndex`, `SegIndex`, `ColIndex`
-- New hierarchical organization of the graphemes module
-- Common iterator extraction for graphemes processing
-- GCString segment logic extracted into `segment_builder.rs`
+- Changed:
 
-**Changed:**
+  - Complete rewrite of gap buffer implementation (in 5 phases) for zero-copy operations
+  - Refactored `GCString` into trait-based design with separate owned and reference implementations
+  - Restructured entire graphemes folder into hierarchical organization
+  - Full migration to `ZeroCopyGapBuffer` architecture
 
-- **Major Gap Buffer Refactor (Phases 1-5):** Complete rewrite of gap buffer implementation for
-  zero-copy operations
-- **GCString Architecture Overhaul:** Refactored into trait-based design with separate owned and
-  reference implementations
-- **Graphemes Module Reorganization:** Restructured entire graphemes folder into hierarchical
-  structure
-- **ZeroCopyGapBuffer Migration:** Full transition to zero-copy gap buffer implementation
+- Performance improvements:
 
-**Performance Impact:**
-
-- **2-3x overall application performance improvement**
-- **Complete elimination of major bottlenecks (100% reduction each)**
-- **Significant reductions in other bottlenecks (27-89% improvements)**
-- **ZeroCopyGapBuffer achievements:** Zero-copy access and 50-90x faster append operations
-- **~88.64% of total execution time eliminated** from the top 5 bottlenecks
-- **Real-world impact:** Enhanced parser performance, editor responsiveness, memory usage, and large
-  document handling
-- Current well-balanced performance profile with overhead only in necessary areas
-
-Overall Performance Impact: 2-3x Faster Application
-
-Major Bottlenecks Completely Eliminated (100% reduction each):
-
-1. AnsiStyledText Display: 16.3% → 0%
-2. MD Parser Operations: 22.45% → 0% (thanks to ZeroCopyGapBuffer)
-3. Color Support Detection: ~24% → 0%
-4. String Truncation: 11.67% → 0%
-
-Significantly Reduced Bottlenecks:
-
-1. Text Wrapping: 16.12% → 1.72% (89% reduction)
-2. ColorWheel Hash Operations: 38M → 5M samples (87% reduction)
-3. PixelChar SmallVec: 45M+ samples → completely eliminated
-4. Dialog Borders: 53M → 39M samples (27% reduction)
-5. GCString Creation in Rendering: 8.61% → acceptable levels
-
-ZeroCopyGapBuffer Specific Achievements:
-
-- String Materialization: Completely eliminated (was 22.45% of execution time)
-- Zero-Copy Access: 0.19 ns for as_str() calls (essentially free)
-- Memory Efficiency: Consolidated allocations with predictable 256-byte line pages
-- Append Operations: 50-90x faster than full rebuilds
-  - Single character: 1.48 ns vs 100.48 ns
-  - Word append: 2.91 ns vs 273.74 ns
-
-Cumulative Performance Gains:
-
-Looking at the major bottlenecks eliminated:
-
-- ~88.64% of total execution time eliminated from just the top 5 bottlenecks
-- Multiple 10%+ bottlenecks completely removed
-- No single operation now dominates the performance profile
-
-Real-World Impact:
-
-1. Parser Performance: Direct &str access throughout, no string copying
-2. Editor Responsiveness: Keystroke-to-render latency dramatically reduced
-3. Memory Usage: More predictable and efficient allocation patterns
-4. Large Documents: Can handle 100MB+ documents without the exponential slowdown from string
-   materialization
-
-Current State:
-
-The application now has a well-balanced performance profile with:
-
-- Rendering Pipeline (~30-40%): Expected for terminal output
-- Unicode Operations (~20-25%): Necessary for correct text handling
-- Editor Operations (~15-20%): Well-optimized with zero-copy access
-- TUI Framework (~15-20%): Normal event handling overhead
-
-The performance work has transformed the r3bl_tui from having multiple severe bottlenecks to a
-well-optimized application where the remaining overhead is inherent to the functionality (rendering,
-Unicode support, event handling) rather than inefficiencies in the implementation.
+  - 2-3x overall application performance improvement
+  - Complete elimination of major bottlenecks (100% reduction each)
+  - 27-89% reduction in other bottlenecks
+  - 50-90x faster append operations with zero-copy access
+  - ~88.64% of total execution time eliminated from top 5 bottlenecks
+  - Enhanced parser performance, editor responsiveness, and memory usage
 
 ### v0.7.2 (2025-07-23)
 
@@ -941,19 +879,19 @@ handle many more corner cases.
 
 ## `r3bl-cmdr`
 
-### v_r3bl-cmdr_next
+### v0.0.21 (2025-08-04)
 
-**Performance Impact:** This release benefits from the major infrastructure improvements implemented
-across the codebase, particularly the zero-copy gap buffer architecture:
+Performance optimization release benefiting from major infrastructure improvements across the
+codebase, particularly the zero-copy gap buffer architecture. While there are no new features in
+this release, the underlying performance gains significantly improve the overall user experience.
 
-- **2-3x overall application performance improvement**
-- **Complete elimination of major bottlenecks (100% reduction each)**
-- **Significant reductions in other bottlenecks (27-89% improvements)**
-- **ZeroCopyGapBuffer benefits:** Zero-copy access and 50-90x faster append operations
-- **~88.64% of total execution time eliminated** from the top 5 bottlenecks
-- **Real-world impact:** Enhanced parser performance, editor responsiveness, memory usage, and large
-  document handling
-- Current well-balanced performance profile with overhead only in necessary areas
+- Performance improvements:
+  - 2-3x overall application performance improvement
+  - Complete elimination of major bottlenecks (100% reduction each)
+  - 27-89% reduction in other bottlenecks
+  - 50-90x faster append operations with zero-copy access
+  - ~88.64% of total execution time eliminated from top 5 bottlenecks
+  - Enhanced parser performance, editor responsiveness, memory usage, and large document handling
 
 ### v0.0.20 (2025-07-23)
 
