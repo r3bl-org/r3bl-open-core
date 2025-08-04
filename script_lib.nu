@@ -1,6 +1,98 @@
 # This file contains utility functions that shared between all the `run` scripts
 # in various sub folders in this workspace.
 
+# Cross-platform file watcher
+def watch-files [command: string, dir: string = "."] {
+    let watcher = if ($env.OS? == "Darwin") { "fswatch" } else { "inotifywait" }
+    
+    if (which $watcher | is-empty) {
+        error make { msg: $"Install ($watcher) first. Run ./bootstrap.sh to set up." }
+    }
+    
+    loop {
+        print $'Watching ($dir) for changes...'
+        
+        let watch_result = try {
+            if ($env.OS? == "Darwin") {
+                ^fswatch -r --exclude "target|.git" -1 $dir | complete
+            } else {
+                ^inotifywait -r -e modify,create,delete,move --exclude "target|.git" $dir
+            }
+        } catch {
+            # User pressed Ctrl+C, exit gracefully
+            return
+        }
+        
+        print $'Running: ($command)'
+        bash -c $command
+    }
+}
+
+# Helper to install tools conditionally
+def install_if_missing [tool: string, cmd: string] {
+    if (which $tool | is-empty) { 
+        print $'Installing ($tool)...'; bash -c $cmd 
+    } else { 
+        print $'✓ ($tool) installed' 
+    }
+}
+
+# Detect system package manager
+def get_package_manager [] {
+    if ($env.OS? == "Darwin") { 
+        "brew install" 
+    } else {
+        ["apt-get" "dnf" "pacman"] | each {|pm|
+            if (which $pm | is-not-empty) {
+                match $pm { 
+                    "apt-get" => "sudo apt install -y", 
+                    "dnf" => "sudo dnf install -y", 
+                    _ => $"sudo ($pm) -S --noconfirm" 
+                }
+            }
+        } | where $it != null | first
+    }
+}
+
+# Run a command in a specific directory and return to original directory
+def run_in_directory [dir: string, closure: closure] {
+    let original_dir = $env.PWD
+    cd $dir
+    try {
+        let result = do $closure
+        cd $original_dir
+        $result
+    } catch {|e|
+        cd $original_dir
+        error make $e
+    }
+}
+
+# Docker utilities
+def docker_stop_all_containers [] {
+    let running_containers = (^docker ps -aq | lines | where $it != "")
+    if ($running_containers | length) > 0 {
+        print $"Stopping ($running_containers | length) running containers..."
+        $running_containers | each { |container_id|
+            print $"Stopping container: ($container_id)"
+            ^docker stop $container_id
+        }
+        print "Pruning system..."
+        ^docker system prune -af
+    }
+}
+
+def docker_remove_all_images [] {
+    let images = (^docker image ls -q | lines | where $it != "")
+    if ($images | length) > 0 {
+        print $"Removing ($images | length) existing images..."
+        $images | each { |image_id|
+            print $"Removing image: ($image_id)"
+            ^docker image rm -f $image_id
+        }
+    }
+}
+
 def get_cargo_projects [] {
     let sub_folders_with_cargo_toml = (
         ls | where type == "dir" | each { |folder|
@@ -17,7 +109,12 @@ def get_cargo_projects [] {
 }
 
 def run_example [options: list<string>, release: bool, no_log: bool] {
-    let selection = $options | input list --fuzzy 'Select an example to run: '
+    let selection = try {
+        $options | input list --fuzzy 'Select an example to run: '
+    } catch {
+        # User pressed Ctrl+C, exit gracefully without error
+        return
+    }
 
     if ($selection == "") or ($selection == null) {
         print "No example selected.";

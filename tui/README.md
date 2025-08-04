@@ -976,7 +976,7 @@ streaming and used less CPU and memory.
 ## Grapheme support
 
 Unicode is supported (to an extent). There are some caveats. The
-[`crate::GCString`] struct has lots of great information on this graphemes and
+[`crate::GCStringOwned`] struct has lots of great information on this graphemes and
 what is supported and what is not.
 
 ## Lolcat support
@@ -993,7 +993,7 @@ let mut lolcat = LolcatBuilder::new()
   .build();
 
 let content = "Hello, world!";
-let content_gcs = GCString::new(content);
+let content_gcs = GCStringOwned::new(content);
 let lolcat_mut = &mut lolcat;
 let st = lolcat_mut.colorize_to_styled_texts(&content_gcs);
 lolcat.next_color();

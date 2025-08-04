@@ -15,10 +15,6 @@
  *   limitations under the License.
  */
 
-//! # Why R3BL?
-//!
-//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
-//!
 //! # Table of contents
 //!
 //! <!-- TOC -->
@@ -30,6 +26,10 @@
 //!   feedback](#learn-how-these-crates-are-built-provide-feedback)
 //!
 //! <!-- /TOC -->
+//!
+//! # Why R3BL?
+//!
+//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!

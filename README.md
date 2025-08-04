@@ -274,17 +274,52 @@ To learn how we built this crate, please take a look at the following resources.
 - If you like consuming written content, here's our developer [site](https://developerlife.com/).
 - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 
-## Build the workspace and run tests
+## Quick Start
 
-There's a [`nushell`](https://www.nushell.sh/) script that you can use to run the build and release
-pipeline for this workspace, and more (local only operations).
+### Automated Setup (Recommended)
 
-To get a list of these, you can review the `nushell` script in the root of this repo
-[`run.nu`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.nu). To get an idea of the
-commands that you can run, try running the following command:
+For Linux and macOS users, use the bootstrap script to automatically install all required tools:
 
 ```sh
+# Clone the repository
+git clone https://github.com/r3bl-org/r3bl-open-core.git
+cd r3bl-open-core
+
+# Run the bootstrap script
+./bootstrap.sh
+```
+
+The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script will:
+- Install Rust toolchain (rustup)
+- Install Nushell shell
+- Install file watchers (inotifywait on Linux, fswatch on macOS)
+- Install all required cargo development tools
+- Detect your package manager automatically
+
+### Manual Setup
+
+If you prefer manual installation or are on Windows:
+
+```sh
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install Nushell
 cargo install nu
+
+# Install development tools
+nu run.nu install-cargo-tools
+```
+
+## Build the workspace and run tests
+
+There's a unified [`nushell`](https://www.nushell.sh/) script that you can use to run the build and release
+pipeline for this workspace, and more (local only operations).
+
+To get a list of available commands, you can review the `nushell` script in the root of this repo
+[`run.nu`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.nu). To see all available commands:
+
+```sh
 nu run.nu
 ```
 
@@ -292,47 +327,67 @@ You should see output that looks like this:
 
 ```text
 Usage: run <command> [args]
-<command> can be:
-    all
-    all-cicd
-    build
-    build-full
-    clean
-    install-cargo-tools
-    test
-    watch-all-tests
-    docs
-    check
-    check-watch
-    clippy
-    clippy-watch
-    rustfmt
-    upgrade-deps
-    serve-docs
-    audit-deps
-    unmaintained
-    ramdisk-create
-    ramdisk-delete
-    build-server
-    help
+
+Workspace-wide commands:
+    all                  Run all major checks
+    build                Build entire workspace
+    build-full           Full build with clean and update
+    clean                Clean entire workspace
+    test                 Test entire workspace
+    check                Check all workspaces
+    clippy               Run clippy on all workspaces
+    clippy-pedantic      Run clippy with pedantic lints
+    docs                 Generate docs for all
+    serve-docs           Serve documentation
+    rustfmt              Format all code
+    install-cargo-tools  Install development tools
+    upgrade-deps         Upgrade dependencies
+    audit-deps           Security audit
+    unmaintained         Check for unmaintained deps
+    build-server         Remote build server - uses rsync
+
+Watch commands:
+    watch-all-tests      Watch files, run all tests
+    watch-one-test [pattern]  Watch files, run specific test
+    watch-clippy         Watch files, run clippy
+    watch-check          Watch files, run cargo check
+
+TUI-specific commands:
+    run-examples [--release] [--no-log]  Run TUI examples
+    run-examples-flamegraph-svg  Generate SVG flamegraph
+    run-examples-flamegraph-fold Generate perf-folded format
+    bench                Run benchmarks
+
+cmdr-specific commands:
+    run-binaries         Run edi, giti, or rc
+    install-cmdr         Install cmdr binaries
+    docker-build         Build release in Docker
+
+Other commands:
+    log                  Monitor log.txt in cmdr or tui directory
+    help                 Show this help
 ```
 
-For example:
+### Key Commands
 
-- The `nu run.nu all-cicd` command will run the build and release pipeline for this workspace.
-- However, you can run the `nu run.nu all` command to run the above command and more: install all
-  the necessary tooling required for the script to work.
+- `nu run.nu all` - Run all major checks (build, test, clippy, docs, audit, format)
+- `nu run.nu build` - Build the entire workspace
+- `nu run.nu test` - Run all tests across the workspace
+- `nu run.nu watch-all-tests` - Watch for file changes and run tests automatically
+- `nu run.nu run-examples` - Run TUI examples interactively
+- `nu run.nu run-binaries` - Run cmdr binaries (edi, giti, rc) interactively
 
-Each crate that's contained in this workspace may also have its own `nushell` script that is also
-named `run.nu`. This is a convention that is used in this workspace.
+### Unified Script Architecture
 
-- You can run the `run.nu` script in each of the crates to get a list of commands that are specific
-  to that crate.
-- For e.g., this is how you can run all the `tui` examples:
-  ```sh
-  cd tui
-  nu run.nu examples
-  ```
+The root-level `run.nu` script consolidates functionality that was previously scattered across multiple workspace-specific scripts. This unified approach provides:
+
+- **Workspace-wide commands** that operate on the entire project
+- **TUI-specific commands** for running examples and benchmarks
+- **cmdr-specific commands** for binary management
+- **Cross-platform file watching** using inotifywait (Linux) or fswatch (macOS)
+- **Smart log monitoring** that detects and manages log files from different workspaces
+
+All commands work from the root directory, eliminating the need to navigate between subdirectories.
 
 ## Star History
 

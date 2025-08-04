@@ -1,5 +1,16 @@
 # r3bl_analytics_schema
 
+## Table of contents
+
+<!-- TOC -->
+
+- [Why R3BL?](#why-r3bl)
+- [Introduction](#introduction)
+- [Changelog](#changelog)
+- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+
+<!-- /TOC -->
+
 ## Why R3BL?
 
 <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">
@@ -40,69 +51,60 @@ style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
 style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
 style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 
-We are working on building command line apps in Rust which have rich text user
-interfaces (TUI). We want to lean into the terminal as a place of productivity, and
-build all kinds of awesome apps for it.
+We are working on building command line apps in Rust which have rich text user interfaces (TUI). We
+want to lean into the terminal as a place of productivity, and build all kinds of awesome apps for
+it.
 
-1. 🔮 Instead of just building one app, we are building a library to enable any kind
-   of rich TUI development w/ a twist: taking concepts that work really well for the
-   frontend mobile and web development world and re-imagining them for TUI & Rust.
+1. 🔮 Instead of just building one app, we are building a library to enable any kind of rich TUI
+   development w/ a twist: taking concepts that work really well for the frontend mobile and web
+   development world and re-imagining them for TUI & Rust.
 
-   - Taking inspiration from things like [React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
-     [Elm](https://guide.elm-lang.org/architecture/), [iced-rs](https://docs.rs/iced/latest/iced/),
-     [Jetpack Compose](https://developer.android.com/compose), [JSX](https://ui.dev/imperative-vs-declarative-programming),
-     [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can be
-     run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
+   - Taking inspiration from things like [React](https://react.dev/),
+     [SolidJS](https://www.solidjs.com/), [Elm](https://guide.elm-lang.org/architecture/),
+     [iced-rs](https://docs.rs/iced/latest/iced/),
+     [Jetpack Compose](https://developer.android.com/compose),
+     [JSX](https://ui.dev/imperative-vs-declarative-programming),
+     [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can be run in
+     parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
    - Even the thread running the main event loop doesn't block since it is async.
-   - Using proc macros to create DSLs to implement something inspired by [CSS](https://www.w3.org/TR/CSS/#css)
-     & [JSX](https://ui.dev/imperative-vs-declarative-programming).
+   - Using proc macros to create DSLs to implement something inspired by
+     [CSS](https://www.w3.org/TR/CSS/#css) &
+     [JSX](https://ui.dev/imperative-vs-declarative-programming).
 
 2. 🌎 We are building apps to enhance developer productivity & workflows.
 
-   - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
-     single terminal window). Rather it is to build a set of integrated "apps" (or
-     "tasks") that run in the same process that renders to one terminal window.
-   - Inside of this terminal window, we can implement things like "app" switching,
-     routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
-     apps (which are tightly integrated) that are running in the same process, in the
-     same window. So you can imagine that all these "app"s have shared application
-     state. Each "app" may also have its own local application state.
-   - Here are some examples of the types of "app"s we plan to build (for which this
-     infrastructure acts as the open source engine):
+   - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a single terminal
+     window). Rather it is to build a set of integrated "apps" (or "tasks") that run in the same
+     process that renders to one terminal window.
+   - Inside of this terminal window, we can implement things like "app" switching, routing, tiling
+     layout, stacking layout, etc. so that we can manage a lot of TUI apps (which are tightly
+     integrated) that are running in the same process, in the same window. So you can imagine that
+     all these "app"s have shared application state. Each "app" may also have its own local
+     application state.
+   - Here are some examples of the types of "app"s we plan to build (for which this infrastructure
+     acts as the open source engine):
      1. Multi user text editors w/ syntax highlighting.
      2. Integrations w/ github issues.
      3. Integrations w/ calendar, email, contacts APIs.
 
-All the crates in the `r3bl-open-core`
-[repo](https://github.com/r3bl-org/r3bl-open-core/) provide lots of useful
-functionality to help you build TUI (text user interface) apps, along w/ general
+All the crates in the `r3bl-open-core` [repo](https://github.com/r3bl-org/r3bl-open-core/) provide
+lots of useful functionality to help you build TUI (text user interface) apps, along w/ general
 niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
-
-## Table of contents
-
-<!-- TOC -->
-
-- [Introduction](#introduction)
-- [Changelog](#changelog)
-- [Learn how these crates are built, provide
-  feedback](#learn-how-these-crates-are-built-provide-feedback)
-
-<!-- /TOC -->
 
 ## Introduction
 
-This crate is a shared dependency of a few crates in the R3BL ecosystem. It describes
-data structures that are used to represent analytics data. These data structures are
-created with anonymity in mind, and purposefully avoid including any personally
-identifiable information (PII). Instead of adding privacy after the fact, these data
-structures don't really allow for PII to be included in the first place. The intention
-and philosophy behind these data structures is to be privacy-first, and provide a way
-for R3BL to understand which products need more care and attention first, to be able
-to deliver the best user experience to end users. And all the infrastructure supports
-opt-out of this anonymized telemetry data collection.
+This crate is a shared dependency of a few crates in the R3BL ecosystem. It describes data
+structures that are used to represent analytics data. These data structures are created with
+anonymity in mind, and purposefully avoid including any personally identifiable information (PII).
+Instead of adding privacy after the fact, these data structures don't really allow for PII to be
+included in the first place. The intention and philosophy behind these data structures is to be
+privacy-first, and provide a way for R3BL to understand which products need more care and attention
+first, to be able to deliver the best user experience to end users. And all the infrastructure
+supports opt-out of this anonymized telemetry data collection.
 
-Here are some other crates for which this crate is a dependency (run `rg
-"r3bl_analytics_schema" -g "Cargo.toml"` to get a list):
+Here are some other crates for which this crate is a dependency (run
+`rg "r3bl_analytics_schema" -g "Cargo.toml"` to get a list):
+
 1. [`r3bl-cmdr`](https://crates.io/crates/r3bl_cmdr) crate.
 1. The analytics backend for R3BL which is closed source.
 
@@ -115,8 +117,10 @@ to see how the library has evolved over time.
 ## Learn how these crates are built, provide feedback
 
 To learn how we built this crate, please take a look at the following resources.
-- If you like consuming video content, here's our [YT channel](https://www.youtube.com/@developerlifecom).
-  Please consider [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
+
+- If you like consuming video content, here's our
+  [YT channel](https://www.youtube.com/@developerlifecom). Please consider
+  [subscribing](https://www.youtube.com/channel/CHANNEL_ID?sub_confirmation=1).
 - If you like consuming written content, here's our developer [site](https://developerlife.com/).
 - If you have questions, please join our [discord server](https://discord.gg/8M2ePAevaM).
 

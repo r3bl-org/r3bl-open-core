@@ -218,8 +218,8 @@ Unicode support, event handling) rather than inefficiencies in the implementatio
 
 The ZeroCopyGapBuffer implementation has **successfully achieved its primary performance goal**:
 eliminating string materialization in the markdown parser path. Flamegraph analysis confirms that
-the `&[GCString] → String` conversion overhead identified in `done/task_parser_strategy_analysis.md` has
-been completely removed, with no performance regressions detected.
+the `&[GCString] → String` conversion overhead identified in `done/task_parser_strategy_analysis.md`
+has been completely removed, with no performance regressions detected.
 
 > You can find the details of this work in
 > [task_zero_copy_gap_buffer.md](done/task_zero_copy_gap_buffer.md).
@@ -277,8 +277,8 @@ The flamegraph shows a well-balanced profile with no single dominant bottleneck:
 
 ## Validation Against Historical Concerns
 
-From `done/task_parser_strategy_analysis.md`, the primary concern was memory copy overhead at different
-document sizes:
+From `done/task_parser_strategy_analysis.md`, the primary concern was memory copy overhead at
+different document sizes:
 
 | Document Size | Copy Time (est.) | Status with ZeroCopyGapBuffer     |
 | ------------- | ---------------- | --------------------------------- |

@@ -74,6 +74,9 @@ The [`done`](done) folder contains:
   lessons learned from experimental parser development
 - [`task_unified_grapheme_trait.md`](done/task_unified_grapheme_trait.md) - Universal grapheme-aware
   trait design documentation for both single-line and multi-line text structures
+- [`task_refactor_nu.md`](done/task_refactor_nu.md) - Comprehensive consolidation of three separate
+  run.nu files into a unified development script, including bootstrap.sh creation, cross-platform
+  file watching implementation, and audience-specific documentation refactoring
 
 ### Video Documentation
 

@@ -36,28 +36,44 @@ def main [...args: string] {
 
     match $command {
         "all" => {all}
-        "all-cicd" => {all-cicd}
         "build" => {build}
         "build-full" => {build-full}
         "clean" => {clean}
         "install-cargo-tools" => {install-cargo-tools}
         "test" => {test}
         "watch-all-tests" => {watch-all-tests}
+        "watch-one-test" => {
+            if ($args | length) > 1 {
+                watch-one-test ($args | get 1)
+            } else {
+                print $'Error: watch-one-test requires a test pattern'
+                print $'Usage: nu run.nu watch-one-test <pattern>'
+            }
+        }
+        "watch-clippy" => {watch-clippy}
+        "watch-check" => {watch-check}
         "docs" => {docs}
         "check" => {check}
-        "check-watch" => {check-watch}
         "clippy" => {clippy}
         "clippy-pedantic" => {clippy-pedantic}
-        "clippy-watch" => {clippy-watch}
         "rustfmt" => {rustfmt}
         "upgrade-deps" => {upgrade-deps}
         "serve-docs" => {serve-docs}
         "audit-deps" => {audit-deps}
         "unmaintained" => {unmaintained}
         "help" => {print-help all}
-        "ramdisk-create" => {ramdisk-create}
-        "ramdisk-delete" => {ramdisk-delete}
         "build-server" => {build-server}
+        # TUI-specific commands
+        "run-examples" => {run-examples ...$args}
+        "run-examples-flamegraph-svg" => {run-examples-flamegraph-svg}
+        "run-examples-flamegraph-fold" => {run-examples-flamegraph-fold}
+        "bench" => {bench}
+        # cmdr-specific commands
+        "run-binaries" => {run-binaries}
+        "install-cmdr" => {install-cmdr}
+        "docker-build" => {docker-build}
+        # Unified commands
+        "log" => {log}
         _ => {print $'Unknown command: (ansi red_bold)($command)(ansi reset)'}
     }
 }
@@ -69,30 +85,45 @@ def main [...args: string] {
 def print-help [command: string] {
     if $command == "all" {
         print $'Usage: (ansi magenta_bold)run(ansi reset) (ansi green_bold)<command>(ansi reset) (ansi blue_bold)[args](ansi reset)'
-        print $'(ansi green_bold)<command>(ansi reset) can be:'
-        print $'    (ansi green)all(ansi reset)'
-        print $'    (ansi green)all-cicd(ansi reset)'
-        print $'    (ansi green)build(ansi reset)'
-        print $'    (ansi green)build-full(ansi reset)'
-        print $'    (ansi green)clean(ansi reset)'
-        print $'    (ansi green)install-cargo-tools(ansi reset)'
-        print $'    (ansi green)test(ansi reset)'
-        print $'    (ansi green)watch-all-tests(ansi reset)'
-        print $'    (ansi green)docs(ansi reset)'
-        print $'    (ansi green)check(ansi reset)'
-        print $'    (ansi green)check-watch(ansi reset)'
-        print $'    (ansi green)clippy(ansi reset)'
-        print $'    (ansi green)clippy-pedantic(ansi reset)'
-        print $'    (ansi green)clippy-watch(ansi reset)'
-        print $'    (ansi green)rustfmt(ansi reset)'
-        print $'    (ansi green)upgrade-deps(ansi reset)'
-        print $'    (ansi green)serve-docs(ansi reset)'
-        print $'    (ansi green)audit-deps(ansi reset)'
-        print $'    (ansi green)unmaintained(ansi reset)'
-        print $'    (ansi green)ramdisk-create(ansi reset)'
-        print $'    (ansi green)ramdisk-delete(ansi reset)'
-        print $'    (ansi green)build-server(ansi reset)'
-        print $'    (ansi green)help(ansi reset)'
+        print $''
+        print $'(ansi cyan_bold)Workspace-wide commands:(ansi reset)'
+        print $'    (ansi green)all(ansi reset)                  Run all major checks'
+        print $'    (ansi green)build(ansi reset)                Build entire workspace'
+        print $'    (ansi green)build-full(ansi reset)           Full build with clean and update'
+        print $'    (ansi green)clean(ansi reset)                Clean entire workspace'
+        print $'    (ansi green)test(ansi reset)                 Test entire workspace'
+        print $'    (ansi green)check(ansi reset)                Check all workspaces'
+        print $'    (ansi green)clippy(ansi reset)               Run clippy on all workspaces'
+        print $'    (ansi green)clippy-pedantic(ansi reset)      Run clippy with pedantic lints'
+        print $'    (ansi green)docs(ansi reset)                 Generate docs for all'
+        print $'    (ansi green)serve-docs(ansi reset)           Serve documentation'
+        print $'    (ansi green)rustfmt(ansi reset)              Format all code'
+        print $'    (ansi green)install-cargo-tools(ansi reset)  Install development tools'
+        print $'    (ansi green)upgrade-deps(ansi reset)         Upgrade dependencies'
+        print $'    (ansi green)audit-deps(ansi reset)           Security audit'
+        print $'    (ansi green)unmaintained(ansi reset)         Check for unmaintained deps'
+        print $'    (ansi green)build-server(ansi reset)         Remote build server - uses rsync'
+        print $''
+        print $'(ansi cyan_bold)Watch commands:(ansi reset)'
+        print $'    (ansi green)watch-all-tests(ansi reset)      Watch files, run all tests'
+        print $'    (ansi green)watch-one-test(ansi reset) (ansi blue)[pattern](ansi reset)  Watch files, run specific test'
+        print $'    (ansi green)watch-clippy(ansi reset)         Watch files, run clippy'
+        print $'    (ansi green)watch-check(ansi reset)          Watch files, run cargo check'
+        print $''
+        print $'(ansi cyan_bold)TUI-specific commands:(ansi reset)'
+        print $'    (ansi green)run-examples(ansi reset) (ansi blue)[--release] [--no-log](ansi reset)  Run TUI examples'
+        print $'    (ansi green)run-examples-flamegraph-svg(ansi reset)  Generate SVG flamegraph'
+        print $'    (ansi green)run-examples-flamegraph-fold(ansi reset) Generate perf-folded format'
+        print $'    (ansi green)bench(ansi reset)                Run benchmarks'
+        print $''
+        print $'(ansi cyan_bold)cmdr-specific commands:(ansi reset)'
+        print $'    (ansi green)run-binaries(ansi reset)         Run edi, giti, or rc'
+        print $'    (ansi green)install-cmdr(ansi reset)         Install cmdr binaries'
+        print $'    (ansi green)docker-build(ansi reset)         Build release in Docker'
+        print $''
+        print $'(ansi cyan_bold)Other commands:(ansi reset)'
+        print $'    (ansi green)log(ansi reset)                  Monitor log.txt in cmdr or tui directory'
+        print $'    (ansi green)help(ansi reset)                 Show this help'
     } else {
         print $'Unknown command: (ansi red_bold)($command)(ansi reset)'
     }
@@ -116,7 +147,7 @@ def build-server [] {
         let msg_1 = $'(ansi yellow)($orig_path)(ansi reset)'
         let msg_2 = $'(ansi blue)($dest_path)(ansi reset)'
         print $"($prefix)from:($tab)($msg_1)($crlf)($hanging_prefix)to:($tab)($msg_2)"
-        rsync -q -avz --delete --exclude 'target/' $orig_path $dest_path
+        ^rsync -q -avz --delete --exclude 'target/' $orig_path $dest_path
 
         print $'(ansi cyan_underline)Rsync complete(ansi reset)'
     }
@@ -139,121 +170,84 @@ def build-server [] {
 
         print $'(ansi cyan)❪◕‿◕❫ (ansi reset)(ansi green)Please run bacon on build server: (ansi reset)(ansi yellow_underline)bacon nextest -W(ansi reset), (ansi yellow_underline)bacon doc -W(ansi reset), (ansi yellow_underline)bacon clippy -W(ansi reset)'
 
-        # Execute the inotifywait command.
-        ^$inotify_command ...$inotify_args
+        # Execute the inotifywait command with proper Ctrl+C handling
+        let watch_result = try {
+            ^$inotify_command ...$inotify_args
+        } catch {
+            # User pressed Ctrl+C, exit gracefully
+            return
+        }
 
         # Run rsync
         run_rsync
     }
 }
 
-def watch-all-tests [] {
-    cargo watch -x 'test --workspace --quiet --color always -- --test-threads 4' -c -q --delay 2
-    # cargo watch -x 'test --workspace' -c -q --delay 2
-    # cargo watch --exec check --exec 'test --quiet --color always -- --test-threads 4' --clear --quiet --delay 2
-}
+# Watch commands - using watch-files from script_lib.nu
+def watch-all-tests [] { watch-files "cargo test --workspace --quiet -- --test-threads 4" }
+def watch-one-test [pattern: string] { watch-files $"cargo test ($pattern) -- --nocapture --test-threads=1" }
+def watch-clippy [] { watch-files "cargo clippy --workspace --all-targets --all-features" }
+def watch-check [] { watch-files "cargo check --workspace" }
 
-# https://thelinuxcode.com/create-ramdisk-linux/
-#
-# Create a RAM disk at ./target using tmpfs (8GB, noatime, nodiratime).
-# - Checks if already mounted using `findmnt -t tmpfs target`.
-# - If not mounted, removes any existing target/ dir, creates it, and mounts tmpfs.
-def ramdisk-create [] {
-    if (findmnt -t tmpfs target | is-empty) {
-        print $'(ansi green_bold)Ramdisk is not mounted. Creating ramdisk...(ansi reset)'
-    } else {
-        print $'(ansi blue_bold)Ramdisk is already mounted.(ansi reset)'
-        return
-    }
 
-    rm -rf target/
-    sudo mkdir -p target/
-    sudo mount -t tmpfs -o size=8g,noatime,nodiratime tmpfs target/
-}
-
-# https://thelinuxcode.com/create-ramdisk-linux/
-#
-# Delete the RAM disk at ./target if mounted.
-# - Checks if mounted using `findmnt -t tmpfs target`.
-# - If mounted, unmounts and removes the directory.
-def ramdisk-delete [] {
-    if (findmnt -t tmpfs target | is-empty) {
-        print $'(ansi blue_bold)Ramdisk is not mounted. Nothing to do...(ansi reset)'
-        return
-    } else {
-        print $'(ansi green_bold)Ramdisk is mounted. Deleting it...(ansi reset)'
-    }
-
-    sudo umount target/
-    sudo rmdir target/
-}
-
-# Install useful cargo tools for workspace development and CI/CD.
+# Install useful cargo tools for workspace development. You must
+# first run `bootstrap.sh` to install Rust, Cargo, and Nushell before
+# you can run this.
 # - Some tools may already be installed; this will update them if so.
 # - Note: cargo-watch is no longer maintained (as of Oct 2024).
+
 def install-cargo-tools [] {
-    cargo install bacon
-    cargo install cargo-workspaces
-    cargo install cargo-cache
-    cargo install cargo-outdated
-    cargo install cargo-update
-    cargo install cargo-deny
-    cargo install cargo-unmaintained
-    cargo install cargo-expand
-    cargo install cargo-readme
-    cargo install cargo-nextest
-    cargo install flamegraph
-    cargo install inferno
+    # Cargo tools
+    [bacon cargo-workspaces cargo-cache cargo-outdated cargo-update cargo-deny
+     cargo-unmaintained cargo-expand cargo-readme cargo-nextest flamegraph inferno]
+    | each {|tool| install_if_missing $tool $"cargo install ($tool)"}
 
-    # install rust-analyzer
-    rustup component add rust-analyzer
+    # Rust components
+    if (rustup component list --installed | str contains "rust-analyzer" | not $in) {
+        print 'Installing rust-analyzer...'; rustup component add rust-analyzer
+    } else { print '✓ rust-analyzer installed' }
 
-    # install docker
-    sudo apt install -y docker.io docker-compose
+    # System tools (detect package manager)
+    # cspell:disable
+    let pkg_mgr = get_package_manager
+    # cspell:enable
 
-    # install claude code
-    curl -fsSL https://claude.ai/install.sh | sh
+    if ($pkg_mgr != null) {
+        install_if_missing "docker" $"($pkg_mgr) docker.io docker-compose"
+        install_if_missing "go" $"($pkg_mgr) golang-go"
+    }
 
-    # install go & mcp-language-server using it
-    sudo apt install golang-go
-    go install github.com/isaacphi/mcp-language-server@latest # ~/go/bin/mcp-language-server
-
-    echo 'The following commands will add the following to your ~/.claude.json file:
-    "mcpServers": {
-        "rust-analyzer": {
-          "type": "stdio",
-          "command": "/home/nazmul/go/bin/mcp-language-server",
-          "args": [
-            "--workspace",
-            "/home/nazmul/github/r3bl-open-core",
-            "--lsp",
-            "rust-analyzer"
-          ],
-          "cwd": "/home/nazmul/github/r3bl-open-core"
-        },
-        "context7": {
-            "type": "http",
-            "url": "https://mcp.context7.com/mcp"
+    # Optional tools
+    install_if_missing "claude" "curl -fsSL https://claude.ai/install.sh | sh"
+    if (which go | is-not-empty) {
+        let mcp_path = $"($env.HOME)/go/bin/mcp-language-server"
+        # cspell:disable
+        if not ($mcp_path | path exists) {
+            print 'Installing mcp-language-server...'
+            go install github.com/isaacphi/mcp-language-server@latest
+        } else {
+            print '✓ mcp-language-server installed'
         }
-    },'
+        # cspell:enable
+    }
 
-    # Note: the following commands will modify the ~/.claude.json file
-    # Use this command to monitor the rust-analyzer language server process:
-    # `watch -n 1 'ps aux | grep -E "(mcp-language-server|rust-analyzer)"'`
-    claude mcp add-json "rust-analyzer" '{"type":"stdio","command":"/home/nazmul/go/bin/mcp-language-server","args":["--workspace","/home/nazmul/github/r3bl-open-core","--lsp","rust-analyzer"],"cwd":"/home/nazmul/github/r3bl-open-core"}'
-    claude mcp add-json "context7" '{"type":"http","url":"https://mcp.context7.com/mcp"}'
-
-    # cargo-watch is no longer maintained (as of Oct 2024). Move away from this to bacon.
-    # cargo install cargo-watch
+    # Configure claude if available
+    if (which claude | is-not-empty) {
+        try {
+            print 'Configuring claude MCP servers...'
+            let workspace = $env.PWD
+            let mcp_cmd = $"($env.HOME)/go/bin/mcp-language-server"
+            claude mcp add-json "rust-analyzer" $'{"type":"stdio","command":"($mcp_cmd)","args":["--workspace","($workspace)","--lsp","rust-analyzer"],"cwd":"($workspace)"}'
+            claude mcp add-json "context7" '{"type":"http","url":"https://mcp.context7.com/mcp"}'
+        }
+    }
 }
 
 # Run all major checks and tasks for the workspace.
 # - Installs some cargo tools, builds, tests, runs clippy, docs, audits, and formats.
 def all [] {
     # Installs and runs all major checks and tools for the workspace.
-    cargo install cargo-deny
-    cargo install cargo-unmaintained
-    cargo install cargo-readme
+    install-cargo-tools
     build
     test
     clippy
@@ -261,24 +255,6 @@ def all [] {
     audit-deps
     unmaintained
     rustfmt
-}
-
-# Runs everything that all does, except for cargo-unmaintained and cargo-deny.
-def all-cicd [] {
-    # Runs all major checks and tools for CI/CD, except for cargo-unmaintained and cargo-deny.
-    cargo install cargo-readme
-    build
-    test
-    clippy
-    docs
-
-    cargo install cargo-deny
-    audit-deps
-
-    rustfmt
-
-    # unmaintained
-    # cargo install cargo-unmaintained
 }
 
 # https://github.com/trailofbits/cargo-unmaintained
@@ -316,9 +292,7 @@ def check [] {
     cargo check --workspace
 }
 
-def check-watch [] {
-    cargo watch -x 'check --workspace'
-}
+# Replaced by watch-check command above
 
 # Check the `tui/src/lib.rs` and `cmdr/src/lib.rs` to make sure that the same
 # "lints" that are fixed here also generate warnings when Clippy runs.
@@ -385,11 +359,7 @@ def clippy-pedantic [] {
     bat ~/Downloads/clippy-fix-pedantic.rs --paging=always --color=always
 }
 
-def clippy-watch [] {
-    cargo fix --allow-dirty --allow-staged
-    cargo fmt --all
-    cargo watch -x 'clippy --fix --allow-dirty --allow-staged' -c -q
-}
+# Replaced by watch-clippy command above
 
 def docs [] {
     for folder in $workspace_folders {
@@ -432,4 +402,164 @@ def rustfmt [] {
 # To allow exceptions, please edit the `deny.toml` file.
 def audit-deps [] {
     cargo deny check licenses advisories
+}
+
+# TUI-specific commands
+
+def run-examples [...args: string] {
+    let original_dir = $env.PWD
+    cd tui
+
+    let example_binaries: list<string> = get_example_binaries
+
+    let release = ($args | any {|arg| $arg == "--release"})
+    let no_log = ($args | any {|arg| $arg == "--no-log"})
+
+    run_example $example_binaries $release $no_log
+    cd $original_dir
+}
+
+def run-examples-flamegraph-svg [] {
+    let original_dir = $env.PWD
+    cd tui
+
+    let example_binaries: list<string> = get_example_binaries
+    run_example_with_flamegraph_profiling_svg $example_binaries
+
+    cd $original_dir
+}
+
+def run-examples-flamegraph-fold [] {
+    let original_dir = $env.PWD
+    cd tui
+
+    let example_binaries: list<string> = get_example_binaries
+    run_example_with_flamegraph_profiling_perf_fold $example_binaries
+
+    cd $original_dir
+}
+
+def bench [] {
+    let original_dir = $env.PWD
+    cd tui
+
+    print $'Running benchmarks and saving to (ansi blue_bold)~/Downloads/bench.txt(ansi reset)...'
+    print $'(ansi yellow)Real-time output:(ansi reset)'
+    try {
+        ^cargo bench out+err>| ^tee ~/Downloads/bench.txt
+        print $''
+        print $'(ansi green)Benchmarks complete! Showing benchmark results:(ansi reset)'
+        cat ~/Downloads/bench.txt | rg bench | bat
+        print $''
+        print "Full output with compilation and test discovery saved to ~/Downloads/bench.txt"
+    } catch {
+        # Silently handle Ctrl+C interruption
+        null
+    }
+
+    cd $original_dir
+}
+
+
+# cmdr-specific commands
+
+def run-binaries [] {
+    let original_dir = $env.PWD
+    cd cmdr
+
+    let binaries = ["edi", "giti", "rc"]
+    let selection = try {
+        $binaries | input list --fuzzy 'Select a binary to run:'
+    } catch {
+        # User pressed Ctrl+C, exit gracefully
+        cd $original_dir
+        return
+    }
+
+    if $selection != null and $selection != "" {
+        cargo run --bin $selection
+    }
+
+    cd $original_dir
+}
+
+def install-cmdr [] {
+    let original_dir = $env.PWD
+    cd cmdr
+
+    cargo install --path . --force
+
+    cd $original_dir
+}
+
+def docker-build [] {
+    let original_dir = $env.PWD
+    cd cmdr/docker
+
+    print "Checking for running containers..."
+    docker_stop_all_containers
+
+    print "Checking for existing images..."
+    docker_remove_all_images
+
+    print "Building Docker image..."
+    ^docker build -t r3bl-cmdr-install .
+
+    print "Running Docker container..."
+    ^docker run r3bl-cmdr-install
+
+    cd $original_dir
+}
+
+# Unified commands
+
+def log [] {
+    clear
+
+    # Check for log files in tui and cmdr directories only
+    let log_locations = [
+        {path: "tui/log.txt", desc: "tui directory (from run-examples)"},
+        {path: "cmdr/log.txt", desc: "cmdr directory (from run-binaries)"}
+    ]
+    
+    let existing_logs = $log_locations | where ($it.path | path exists)
+    
+    let log_file = if ($existing_logs | length) == 0 {
+        # No existing logs - inform user
+        print "No log files found. Run 'nu run.nu run-examples' or 'nu run.nu run-binaries' first to generate logs."
+        return
+    } else if ($existing_logs | length) == 1 {
+        # Only one log exists - use it
+        let log = $existing_logs | first
+        print $"(ansi magenta)Monitoring log file: (ansi green)($log.path)(ansi magenta) \(($log.desc)\)(ansi reset)"
+        $log.path
+    } else {
+        # Multiple logs exist - let user choose
+        print "Multiple log files found:"
+        let options = $existing_logs | each {|log| $"($log.path) \(($log.desc)\)"}
+        let selection = try {
+            $options | input list --fuzzy 'Select log file to monitor:'
+        } catch {
+            # User pressed Ctrl+C, exit gracefully
+            return
+        }
+        
+        if ($selection == "") or ($selection == null) {
+            print "No log file selected."
+            return
+        }
+        
+        # Extract just the path from the selection (before the first space)
+        let log_path = $selection | split row " " | first
+        print $"(ansi magenta)Monitoring log file: (ansi green)($selection)(ansi reset)"
+        $log_path
+    }
+
+    try {
+        ^tail -f -s 5 $log_file
+        null
+    } catch {
+        # Silently handle Ctrl+C interruption
+        null
+    }
 }
