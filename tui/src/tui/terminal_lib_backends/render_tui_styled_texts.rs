@@ -32,9 +32,9 @@ pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut Ren
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, console_log, new_style, render_ops, render_pipeline, throws,
-                throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
-                tui_stylesheet, CommonResult, InlineVec, TuiStylesheet, ZOrder};
+    use crate::{CommonResult, InlineVec, TuiStylesheet, ZOrder, assert_eq2, console_log,
+                new_style, render_ops, render_pipeline, throws, throws_with_return,
+                tui_color, tui_styled_text, tui_styled_texts, tui_stylesheet};
 
     #[test]
     fn test_styled_text_renders_correctly() -> CommonResult<()> {

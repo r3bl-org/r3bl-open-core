@@ -94,7 +94,7 @@ mod converters {
 }
 
 mod display_formatter {
-    use super::{ok, Display, Formatter, Result, TimeDuration};
+    use super::{Display, Formatter, Result, TimeDuration, ok};
 
     impl Display for TimeDuration {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {

@@ -21,9 +21,9 @@ use syntect::highlighting::{Theme, ThemeSet};
 
 /// Use a [`std::io::Cursor`] as a fake [`std::fs::File`]:
 /// <https://stackoverflow.com/a/41069910/2085356>
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an I/O error if the embedded theme file cannot be loaded or parsed.
 pub fn try_load_r3bl_theme() -> std::io::Result<Theme> {
     // Load bytes from file asset.

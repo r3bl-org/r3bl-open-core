@@ -19,8 +19,8 @@ use std::fmt::Debug;
 
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-use crate::{PartialFlexBox, Size, StyleUSSpanLines,
-            get_cached_syntax_set, get_cached_theme};
+use crate::{PartialFlexBox, Size, StyleUSSpanLines, get_cached_syntax_set,
+            get_cached_theme};
 
 /// Do not create this struct directly. Please use [`new()`](EditorEngine::new) instead.
 ///

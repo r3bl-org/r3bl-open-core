@@ -84,8 +84,8 @@ mod default_settings {
         /// store. It is your database persistence folder.
         StoreFolderPath,
         /// Your [Bucket] name that is used to store the key/value pairs.
-        /// - [Bincode] is used to serialize/deserialize the value stored in the
-        ///   key/value pair.
+        /// - [Bincode] is used to serialize/deserialize the value stored in the key/value
+        ///   pair.
         /// - A [Bucket] provides typed access to a section of the key/value store [kv].
         BucketName,
     }

@@ -22,15 +22,15 @@
 //! The [newtype pattern](https://doc.rust-lang.org/rust-by-example/generics/new_types.html) is used
 //! here to wrap the underlying [`EditorBufferMut`] struct, so that it be used in one of
 //! two distinct use cases:
-//! 1. Once [`crate::EditorBuffer::get_mut()`] is called, the buffer is mutated and then the
-//!    validation checks are run. This is done by using [`EditorBufferMutWithDrop`].
+//! 1. Once [`crate::EditorBuffer::get_mut()`] is called, the buffer is mutated and then
+//!    the validation checks are run. This is done by using [`EditorBufferMutWithDrop`].
 //! 2. If you don't want the buffer to be mutated, then you can use
 //!    [`EditorBufferMutNoDrop`] by calling [`crate::EditorBuffer::get_mut_no_drop()`].
 //!
 //! # Memory Cache Invalidation
 //!
-//! When buffer content is modified through [`crate::EditorBuffer::get_mut()`], the memory size
-//! cache is automatically invalidated to ensure accurate telemetry reporting. This
+//! When buffer content is modified through [`crate::EditorBuffer::get_mut()`], the memory
+//! size cache is automatically invalidated to ensure accurate telemetry reporting. This
 //! happens in the [`Drop`] implementation of [`EditorBufferMutWithDrop`]:
 //!
 //! ```rust,ignore
@@ -45,8 +45,8 @@
 //! for operations that don't modify content (e.g., viewport resizing).
 
 use super::scroll_editor_content;
-use crate::{CaretRaw, ColWidth, MemoizedMemorySize, ScrOfs,
-            SelectionList, Size, ZeroCopyGapBuffer, col, width};
+use crate::{CaretRaw, ColWidth, MemoizedMemorySize, ScrOfs, SelectionList, Size,
+            ZeroCopyGapBuffer, col, width};
 
 /// Mutable access to editor buffer fields using concrete `ZeroCopyGapBuffer` storage.
 #[derive(Debug)]
@@ -337,8 +337,8 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 
 #[cfg(test)]
 mod tests {
-    use crate::{EditorBuffer, EditorEngine, EditorEngineConfig,
-                assert_eq2, col, height, row, width};
+    use crate::{EditorBuffer, EditorEngine, EditorEngineConfig, assert_eq2, col, height,
+                row, width};
 
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {

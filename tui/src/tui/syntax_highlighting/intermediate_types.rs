@@ -30,13 +30,13 @@
 //!    the editor component (based on scroll state in the viewport). And finally that is
 //!    converted to a [`crate::TuiStyledTexts`].
 
-use crate::{get_foreground_dim_style, get_metadata_tags_marker_style,
+use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineString, List,
+            PatternMatcherStateMachine, ScrOfs, TuiStyle, TuiStyledTexts,
+            get_foreground_dim_style, get_metadata_tags_marker_style,
             get_metadata_tags_values_style, get_metadata_title_marker_style,
             get_metadata_title_value_style,
             md_parser::constants::{COLON, COMMA, SPACE},
-            tiny_inline_string, tui_styled_text, width, CharacterMatchResult, ColIndex,
-            ColWidth, GCStringOwned, InlineString, List,
-            PatternMatcherStateMachine, ScrOfs, TuiStyle, TuiStyledTexts};
+            tiny_inline_string, tui_styled_text, width};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple
 /// spans in a line of text.
@@ -239,7 +239,7 @@ impl StyleUSSpanLine {
 }
 
 mod convert {
-    use super::{tui_styled_text, StyleUSSpan, StyleUSSpanLine, TuiStyle, TuiStyledTexts};
+    use super::{StyleUSSpan, StyleUSSpanLine, TuiStyle, TuiStyledTexts, tui_styled_text};
 
     impl From<(&TuiStyle, &str)> for StyleUSSpan {
         fn from((style, text): (&TuiStyle, &str)) -> Self { Self::new(*style, text) }
@@ -265,8 +265,8 @@ mod convert {
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
-    use crate::{assert_eq2, ch, col, list, row, scr_ofs, tui_color, ChUnitPrimitiveType,
-                ConvertToPlainText, List};
+    use crate::{ChUnitPrimitiveType, ConvertToPlainText, List, assert_eq2, ch, col,
+                list, row, scr_ofs, tui_color};
 
     mod fixtures {
         use super::*;
@@ -546,8 +546,7 @@ mod tests_clip_styled_texts {
 
         let scroll_offset_col_index = ch(1);
         let max_display_col_count = ch(77);
-        let expected_clipped_string =
-                "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
+        let expected_clipped_string = "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 01234";
 
         // BEFORE:
         // ╭0
@@ -605,8 +604,7 @@ mod tests_clip_styled_texts {
 
         let scroll_offset_col_index = ch(1);
         let max_display_col_count = ch(77);
-        let expected_clipped_string =
-                "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
+        let expected_clipped_string = "1234567890 01234567890 01234567890 01234567890 01234567890 01234567890 012345";
 
         // BEFORE:
         // ╭0

@@ -20,7 +20,7 @@ use std::{env, path::Path};
 use miette::IntoDiagnostic;
 use strum_macros::{Display, EnumString};
 
-use crate::{inline_string, ok, InlineString, SCRIPT_MOD_DEBUG};
+use crate::{InlineString, SCRIPT_MOD_DEBUG, inline_string, ok};
 
 #[cfg(target_os = "windows")]
 const OS_SPECIFIC_ENV_PATH_SEPARATOR: &str = ";";

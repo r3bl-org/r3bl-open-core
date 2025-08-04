@@ -32,18 +32,18 @@
 //! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
 //! tests in [`crate::parse_fragments_in_a_line`].
 
-use nom::{branch::alt,
+use nom::{IResult, Parser,
+          branch::alt,
           bytes::complete::{tag, take_till1},
           character::complete::anychar,
           combinator::{not, recognize},
           multi::many1,
-          sequence::preceded,
-          IResult, Parser};
+          sequence::preceded};
 
-use crate::{fg_blue, fg_magenta, fg_red, is_any_of,
+use crate::{DEBUG_MD_PARSER_STDOUT, fg_blue, fg_magenta, fg_red, is_any_of,
             md_parser::constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
                                    NEW_LINE_CHAR, NULL_CHAR, NULL_STR, STAR, UNDERSCORE},
-            specialized_parser_delim_matchers, DEBUG_MD_PARSER_STDOUT};
+            specialized_parser_delim_matchers};
 
 // XMARK: Lowest priority parser for "plain text" Markdown fragment
 
@@ -84,10 +84,11 @@ use crate::{fg_blue, fg_magenta, fg_red, is_any_of,
 /// locks the mutex does not panic while holding the lock.
 ///
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])`
-/// to handle both newline and null characters as line terminators.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The parser uses
+/// `is_any_of(&[NEW_LINE_CHAR, NULL_CHAR])` to handle both newline and null characters as
+/// line terminators.
 ///
 /// # Errors
 ///
@@ -179,8 +180,8 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
     }
 
     // # Edge case -> Normal case:
-    // Take till the first new line or null char, as [MdLineFragment::Plain], since the specialized
-    // parsers did not match the input.
+    // Take till the first new line or null char, as [MdLineFragment::Plain], since the
+    // specialized parsers did not match the input.
     let it = take_till1(is_any_of(&[NEW_LINE_CHAR, NULL_CHAR]))(input);
     DEBUG_MD_PARSER_STDOUT.then(|| {
         println!(
@@ -266,7 +267,8 @@ mod tests {
         // Plain text followed by null padding
         {
             let input = "hello\0\0\0world";
-            let (remainder, content) = parse_fragment_plain_text_no_new_line(input).unwrap();
+            let (remainder, content) =
+                parse_fragment_plain_text_no_new_line(input).unwrap();
             assert_eq2!(content, "hello");
             assert_eq2!(remainder, "\0\0\0world");
         }
@@ -274,7 +276,8 @@ mod tests {
         // Plain text with newline and null padding
         {
             let input = "hello\n\0\0\0world";
-            let (remainder, content) = parse_fragment_plain_text_no_new_line(input).unwrap();
+            let (remainder, content) =
+                parse_fragment_plain_text_no_new_line(input).unwrap();
             assert_eq2!(content, "hello");
             assert_eq2!(remainder, "\n\0\0\0world");
         }
@@ -282,7 +285,8 @@ mod tests {
         // Plain text with null in middle
         {
             let input = "hello world\0\0\0";
-            let (remainder, content) = parse_fragment_plain_text_no_new_line(input).unwrap();
+            let (remainder, content) =
+                parse_fragment_plain_text_no_new_line(input).unwrap();
             assert_eq2!(content, "hello world");
             assert_eq2!(remainder, "\0\0\0");
         }

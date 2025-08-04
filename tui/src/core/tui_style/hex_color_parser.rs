@@ -21,9 +21,9 @@
 
 use std::num::ParseIntError;
 
-use nom::{bytes::complete::{tag, take_while_m_n},
-          combinator::map_res,
-          IResult, Parser};
+use nom::{IResult, Parser,
+          bytes::complete::{tag, take_while_m_n},
+          combinator::map_res};
 
 use super::RgbValue;
 
@@ -43,7 +43,7 @@ pub fn parse_hex_color(input: &str) -> IResult<&str, RgbValue> {
 }
 
 mod hex_primary {
-    use super::{map_res, take_while_m_n, IResult, ParseIntError, Parser};
+    use super::{IResult, ParseIntError, Parser, map_res, take_while_m_n};
 
     #[allow(clippy::missing_errors_doc)]
     pub fn parse(input: &str) -> IResult<&str, u8> {

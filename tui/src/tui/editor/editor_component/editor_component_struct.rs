@@ -57,11 +57,10 @@ pub type OnEditorBufferChangeFn<A> =
 
 pub mod editor_component_impl_component_trait {
     use super::{CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT, Debug, EditorBuffer,
-                EditorComponent, EditorComponentData,
-                EditorEngineApplyEventResult, EventPropagation, FlexBox, FlexBoxId,
-                GlobalData, HasEditorBuffers, HasFocus, InputEvent, RenderPipeline,
-                SurfaceBounds, SystemClipboard, engine_public_api,
-                ok};
+                EditorComponent, EditorComponentData, EditorEngineApplyEventResult,
+                EventPropagation, FlexBox, FlexBoxId, GlobalData, HasEditorBuffers,
+                HasFocus, InputEvent, RenderPipeline, SurfaceBounds, SystemClipboard,
+                engine_public_api, ok};
 
     fn get_existing_mut_editor_buffer_from_state_or_create_new_one<S>(
         mut_state: &mut S,
@@ -72,10 +71,7 @@ pub mod editor_component_impl_component_trait {
     {
         // Add an empty editor buffer if it doesn't exist.
         if !mut_state.contains_editor_buffer(self_id) {
-            let it = EditorBuffer::new_empty(
-                Some(DEFAULT_SYN_HI_FILE_EXT),
-                None,
-            );
+            let it = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
             mut_state.insert_editor_buffer(self_id, it);
         }
         // Safe to call unwrap here, since we are guaranteed to have an editor buffer.

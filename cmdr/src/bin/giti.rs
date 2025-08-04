@@ -26,9 +26,7 @@ use r3bl_cmdr::{AnalyticsAction,
 use r3bl_tui::{CommandRunResult, CommonResult, log::try_initialize_logging_global, ok,
                run_with_safe_stack, set_mimalloc_in_main};
 
-fn main() -> CommonResult<()> {
-    run_with_safe_stack!(main_impl())
-}
+fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

@@ -22,7 +22,7 @@ use syntect::easy::HighlightLines;
 
 use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
             DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
-            EditorEvent, FlexBox, HasFocus, InputEvent, Key, GapBufferLine,
+            EditorEvent, FlexBox, GapBufferLine, HasFocus, InputEvent, Key,
             PrettyPrintDebug, RenderArgs, RenderOp, RenderOps, RenderPipeline,
             RowHeight, RowIndex, ScrollOffsetColLocationInRange, SegStringOwned,
             SelectionRange, Size, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
@@ -566,7 +566,8 @@ mod syn_hi_syntect_path {
         ));
 
         let line_content = line.content();
-        let it = try_get_syntect_highlighted_line(editor_engine, editor_buffer, line_content);
+        let it =
+            try_get_syntect_highlighted_line(editor_engine, editor_buffer, line_content);
 
         match it {
             // If enabled, and we have a SyntaxReference then try and highlight the line.

@@ -39,7 +39,7 @@ mod tests {
     use smallvec::smallvec;
 
     use super::*;
-    use crate::{col, height, ok, req_size_pc, row, width, CommonResult};
+    use crate::{CommonResult, col, height, ok, req_size_pc, row, width};
 
     #[test]
     fn test_flex_box_props_default() {

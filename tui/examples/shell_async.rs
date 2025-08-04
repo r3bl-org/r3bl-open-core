@@ -134,9 +134,9 @@ async fn main() -> miette::Result<()> {
         stdout,
         stderr,
         shared_writer.clone(),
-        shutdown_sender.clone()
+        shutdown_sender.clone(),
     );
-    
+
     let _unused = join!(
         // Wait for the monitor task
         monitor_handle,
@@ -232,7 +232,8 @@ pub mod monitor_child_output {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    #[must_use] pub fn spawn(
+    #[must_use]
+    pub fn spawn(
         stdout: tokio::process::ChildStdout,
         stderr: tokio::process::ChildStderr,
         mut shared_writer: SharedWriter,
@@ -298,9 +299,9 @@ pub mod terminal_async_constructor {
     }
 
     /// Creates a new terminal handle for a given process ID.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the terminal operations fail.
     pub async fn new(pid: u32) -> miette::Result<TerminalAsyncHandle> {
         let prompt = {
@@ -336,9 +337,9 @@ pub mod child_process_constructor {
     }
 
     /// Creates a new child process handle for the given program.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if:
     /// - The process spawn fails
     /// - The stdin/stdout/stderr cannot be accessed

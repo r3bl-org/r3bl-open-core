@@ -47,7 +47,8 @@ pub enum MkdirOptions {
 ///
 /// Returns an error if:
 /// - Insufficient permissions to create the directory
-/// - The directory already exists (when using `CreateIntermediateDirectoriesOnlyIfNotExists`)
+/// - The directory already exists (when using
+///   `CreateIntermediateDirectoriesOnlyIfNotExists`)
 /// - The path name is invalid
 /// - I/O errors occur during directory creation
 pub fn try_mkdir(new_path: impl AsRef<Path>, options: MkdirOptions) -> FsOpResult<()> {

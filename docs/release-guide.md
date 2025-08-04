@@ -22,7 +22,7 @@ cd analytics_schema
 #    w/ the Cargo.toml file open. Don't use `cargo-edit`
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
@@ -40,12 +40,12 @@ cd tui
 #    w/ the Cargo.toml file open. Don't use `cargo-edit`
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.7.2-tui"
-git tag -a v0.7.2-tui -m "v0.7.2-tui"
+git commit -S -m "v0.7.3-tui"
+git tag -a v0.7.3-tui -m "v0.7.3-tui"
 cargo publish
 git push ; git push --tags # Push tags & commits
 cd ..
@@ -58,7 +58,7 @@ cd cmdr
 #    w/ the Cargo.toml file open. Don't use `cargo-edit`
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
-cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged
+cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A

@@ -18,7 +18,7 @@
 use std::{fmt::Debug,
           ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use crate::{ch, row, ChUnit, RowIndex};
+use crate::{ChUnit, RowIndex, ch, row};
 
 /// Height is row count, i.e., the number of rows that a UI component occupies.
 ///
@@ -61,7 +61,7 @@ impl Debug for RowHeight {
 pub fn height(arg_row_height: impl Into<RowHeight>) -> RowHeight { arg_row_height.into() }
 
 mod constructor {
-    use super::{ch, row, ChUnit, RowHeight, RowIndex};
+    use super::{ChUnit, RowHeight, RowIndex, ch, row};
 
     impl RowHeight {
         pub fn new(arg_row_height: impl Into<RowHeight>) -> Self { arg_row_height.into() }
@@ -100,7 +100,7 @@ mod constructor {
 }
 
 mod ops {
-    use super::{height, Add, ChUnit, Deref, DerefMut, Div, RowHeight, Sub, SubAssign};
+    use super::{Add, ChUnit, Deref, DerefMut, Div, RowHeight, Sub, SubAssign, height};
 
     impl Deref for RowHeight {
         type Target = ChUnit;

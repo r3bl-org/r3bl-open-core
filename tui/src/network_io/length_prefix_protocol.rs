@@ -176,7 +176,7 @@ pub mod handshake {
 #[cfg(test)]
 mod tests_handshake {
     use super::*;
-    use crate::{get_mock_socket_halves, MockSocket};
+    use crate::{MockSocket, get_mock_socket_halves};
 
     #[tokio::test]
     async fn test_handshake() {
@@ -296,7 +296,7 @@ pub mod byte_io {
 #[cfg(test)]
 mod tests_byte_io {
     use super::*;
-    use crate::{get_mock_socket_halves, MockSocket};
+    use crate::{MockSocket, get_mock_socket_halves};
 
     pub fn get_all_client_messages<'a>() -> Vec<&'a str> { vec!["one", "two", "three"] }
 

@@ -22,7 +22,7 @@ use std::borrow::Cow;
 use crate::{ColIndex, GraphemeString, Length, RowIndex, SegIndex};
 
 /// Multi-line document trait for read-only operations.
-/// 
+///
 /// This trait abstracts over different multi-line document implementations,
 /// such as `GCStringOwnedDoc` (owned lines) and `ZeroCopyGapBuffer` (zero-copy lines).
 pub trait GraphemeDoc {
@@ -76,7 +76,7 @@ pub trait GraphemeDoc {
 /// Mutation operations for multi-line documents.
 pub trait GraphemeDocMut: GraphemeDoc {
     /// Associated type for document mutation results.
-    /// This handles paradigm differences - () for in-place mutations, 
+    /// This handles paradigm differences - () for in-place mutations,
     /// or other types for immutable patterns.
     type DocMutResult;
 

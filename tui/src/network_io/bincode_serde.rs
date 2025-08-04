@@ -83,7 +83,7 @@ mod tests_bincode_serde {
     use pretty_assertions::assert_eq;
     use serde::{Deserialize, Serialize};
 
-    use crate::{bincode_serde, Buffer};
+    use crate::{Buffer, bincode_serde};
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct TestPayload {

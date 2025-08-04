@@ -21,10 +21,10 @@ use diff_chunks::PixelCharDiffChunks;
 use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
-use crate::{col, dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok,
-            row, tiny_inline_string, CachedMemorySize, ColWidth, GetMemSize, InlineVec,
-            List, LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, Size,
-            TinyInlineString, TuiColor, TuiStyle};
+use crate::{CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutputDevice,
+            MemoizedMemorySize, MemorySize, Pos, Size, TinyInlineString, TuiColor,
+            TuiStyle, col, dim_underline, fg_green, fg_magenta, get_mem_size,
+            inline_string, ok, row, tiny_inline_string};
 
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
@@ -66,9 +66,7 @@ impl GetMemSize for OffscreenBuffer {
 }
 
 impl CachedMemorySize for OffscreenBuffer {
-    fn memory_size_cache(&self) -> &MemoizedMemorySize {
-        &self.memory_size_calc_cache
-    }
+    fn memory_size_cache(&self) -> &MemoizedMemorySize { &self.memory_size_calc_cache }
 
     fn memory_size_cache_mut(&mut self) -> &mut MemoizedMemorySize {
         &mut self.memory_size_calc_cache
@@ -409,8 +407,10 @@ mod pixel_char_line_impl {
                 helpers::does_current_range_exist(&acc_current_range),
             ) {
                 // Start new current range OR the next value continues the current range.
-                (helpers::Peek::NextItemContinuesRange,
-                helpers::CurrentRange::DoesNotExist | helpers::CurrentRange::Exists) => {
+                (
+                    helpers::Peek::NextItemContinuesRange,
+                    helpers::CurrentRange::DoesNotExist | helpers::CurrentRange::Exists,
+                ) => {
                     acc_current_range.push(*value);
                 }
                 // The next value does not continue the current range & the current range

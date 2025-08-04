@@ -16,7 +16,7 @@
  */
 use std::io::{Read, Write};
 
-use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use miette::IntoDiagnostic;
 
 use crate::{Buffer, BufferAtom};

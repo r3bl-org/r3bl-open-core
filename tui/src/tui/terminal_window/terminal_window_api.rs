@@ -18,8 +18,8 @@
 use std::{fmt::{Debug, Display},
           pin::Pin};
 
-use super::{main_event_loop_impl, BoxedSafeApp, GlobalData};
-use crate::{get_size, CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice};
+use super::{BoxedSafeApp, GlobalData, main_event_loop_impl};
+use crate::{CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice, get_size};
 
 #[derive(Debug)]
 pub struct TerminalWindow;

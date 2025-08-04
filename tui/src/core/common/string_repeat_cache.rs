@@ -26,7 +26,8 @@
 //! extremely frequently during rendering:
 //!
 //! - **Every frame render**: The main event loop renders 30-60 times per second
-//! - **Every line of output**: Padding, indentation, and borders require repeated characters
+//! - **Every line of output**: Padding, indentation, and borders require repeated
+//!   characters
 //! - **Logging operations**: Debug output often needs formatted alignment
 //! - **Parser operations**: Markdown parsing requires indentation tracking
 //!
@@ -230,7 +231,12 @@ pub fn get_spaces(count: usize) -> Cow<'static, str> {
 /// [`DYNAMIC_CACHE`] is a `Mutex`, so it can panic if poisoned.
 #[must_use]
 pub fn get_horiz_lines(count: usize) -> Cow<'static, str> {
-    get_cached_repeated_string(count, &HORIZ_LINE_CACHE, LIST_SPACE_DISPLAY_CHAR, LIST_SPACE_DISPLAY)
+    get_cached_repeated_string(
+        count,
+        &HORIZ_LINE_CACHE,
+        LIST_SPACE_DISPLAY_CHAR,
+        LIST_SPACE_DISPLAY,
+    )
 }
 
 /// Get a cached hash string for the given length.

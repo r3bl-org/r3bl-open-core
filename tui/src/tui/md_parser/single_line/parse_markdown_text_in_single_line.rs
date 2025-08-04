@@ -15,11 +15,16 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::{tag, take_while}, multi::many0, sequence::terminated, IResult, Parser};
+use nom::{IResult, Parser,
+          bytes::complete::{tag, take_while},
+          multi::many0,
+          sequence::terminated};
 
-use crate::{md_parser::constants::{NEW_LINE, NULL_CHAR}, md_parser_types::CheckboxParsePolicy,
-            parse_null_padded_line::is,
-            parse_inline_fragments_until_eol_or_eoi, List, MdLineFragments};
+use crate::{List, MdLineFragments,
+            md_parser::constants::{NEW_LINE, NULL_CHAR},
+            md_parser_types::CheckboxParsePolicy,
+            parse_inline_fragments_until_eol_or_eoi,
+            parse_null_padded_line::is};
 
 /// Parse a markdown text [`crate::FragmentsInOneLine`] in the input (no EOL required).
 ///
@@ -50,8 +55,9 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
 ///
 /// # Null Padding Invariant
 ///
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. It handles both regular newlines and null-padded lines.
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. It handles both regular
+/// newlines and null-padded lines.
 ///
 /// # Errors
 ///
@@ -118,7 +124,7 @@ mod inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     use super::*;
-    use crate::{assert_eq2, list, MdLineFragment};
+    use crate::{MdLineFragment, assert_eq2, list};
 
     #[test]
     fn test_parse_block_markdown_text_with_checkbox_policy_empty_string() {
@@ -153,7 +159,7 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_inner {
     use super::*;
-    use crate::{assert_eq2, list, MdLineFragment};
+    use crate::{MdLineFragment, assert_eq2, list};
 
     #[test]
     fn test_parse_block_markdown_text_with_new_line() {
@@ -178,9 +184,11 @@ mod tests_parse_block_markdown_text_inner {
             ))
         );
         assert_eq2!(
-            inner::parse_block_markdown_text_with_new_line("here is some plaintext *but what if we bold?* I guess it doesn't **matter** in my `code`\n"),
-            Ok(
-                ("",
+            inner::parse_block_markdown_text_with_new_line(
+                "here is some plaintext *but what if we bold?* I guess it doesn't **matter** in my `code`\n"
+            ),
+            Ok((
+                "",
                 list![
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Bold("but what if we bold?"),
@@ -190,8 +198,8 @@ mod tests_parse_block_markdown_text_inner {
                     MdLineFragment::Bold(""),
                     MdLineFragment::Plain(" in my "),
                     MdLineFragment::InlineCode("code"),
-                ])
-            )
+                ]
+            ))
         );
         assert_eq2!(
             inner::parse_block_markdown_text_with_new_line(
@@ -237,7 +245,7 @@ mod tests_parse_block_markdown_text_inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text {
     use super::*;
-    use crate::{assert_eq2, list, HyperlinkData, MdLineFragment};
+    use crate::{HyperlinkData, MdLineFragment, assert_eq2, list};
 
     #[test]
     fn test_parse_block_markdown_text_with_hyperlink_1() {

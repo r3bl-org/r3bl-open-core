@@ -265,96 +265,97 @@ on your computer, follow these steps:
 
 ### Prerequisites
 
-First, install the required development tools:
+The easiest way to get started is to use the bootstrap script:
 
 ```sh
-# From the repository root, install system tools (rustup, perf, nushell)
-./setup-dev-tools.sh
+# From the repository root
+./bootstrap.sh
+```
 
-# Then install Rust development tools (flamegraph, inferno, etc.)
+This script automatically installs:
+- **Rust toolchain** via rustup
+- **Nushell shell** for build scripts
+- **File watchers** (inotifywait on Linux, fswatch on macOS)
+- **All cargo development tools** (flamegraph, inferno, etc.)
+
+For manual installation:
+```sh
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install Nushell
+cargo install nu
+
+# Install development tools
 nu run.nu install-cargo-tools
 ```
 
-The `setup-dev-tools.sh` script installs:
-- **rustup**: Rust toolchain manager
-- **perf**: Linux profiling tool (required for flamegraph profiling)
-- **nushell**: Modern shell used for build scripts
-
-The `install-cargo-tools` command installs various Rust development tools including:
-- **flamegraph**: For generating performance flamegraphs
-- **inferno**: For collapsed stack analysis
-- And other useful development utilities
-
 ### Running examples
 
-After setup, you can run the examples you see in the video with the following
-commands:
+After setup, you can run the examples interactively from the repository root:
 
+```sh
+# Run examples interactively (choose from list)
+nu run.nu run-examples
+
+# Run examples with release optimizations
+nu run.nu run-examples --release
+
+# Run examples without logging
+nu run.nu run-examples --no-log
+```
+
+You can also run examples directly:
 ```sh
 cd tui/examples
 cargo run --release --example demo -- --no-log
 ```
 
-These examples cover the entire surface area of the TUI API. You can also take a look
-at the tests in the source (`tui/src/`) as well. A single
-[`nushell`](https://www.nushell.sh/) script `run.nu` in **the `tui` sub folder** in
-the repo allows you to easily build, run, test, and do so much more with the repo.
+These examples cover the entire surface area of the TUI API. The unified
+[`run.nu`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.nu) script
+at the repository root provides all development commands for the entire workspace.
 
-> The `run.nu` script works on Linux, macOS, and Windows. On Linux and macOS, you can
-> simply run `./run.nu` instead of `nu run.nu`.
+## TUI Development Workflow
 
-## Nushell scripts to build, run, test etc.
-
-Typically in the `tui` sub folder of the repo, you will run the following commands,
-each in a separate terminal window or pane.
+For TUI library development, use these commands from the repository root:
 
 ```sh
-# Terminal 1, run this first. This will watch for log output.
-cd tui
+# Terminal 1: Monitor logs from examples
 nu run.nu log
+
+# Terminal 2: Run examples interactively
+nu run.nu run-examples
 ```
 
-```sh
-# Terminal 2, run this second. This will run the examples with logging enabled.
-cd tui
-nu run.nu release-examples
-```
+### TUI-Specific Commands
+| Command                                 | Description                                      |
+| --------------------------------------- | ------------------------------------------------ |
+| `nu run.nu run-examples`                | Run TUI examples interactively with options      |
+| `nu run.nu run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis |
+| `nu run.nu run-examples-flamegraph-fold`| Generate perf-folded format for analysis         |
+| `nu run.nu bench`                       | Run benchmarks with real-time output             |
+| `nu run.nu log`                         | Monitor log files with smart detection           |
 
-| Command                                | Description                                       |
-| -------------------------------------- | ------------------------------------------------- |
-| `nu run.nu log`                           | View the log output. This [video](https://youtu.be/Sy26IMkOEiM) has a walkthrough of how to use this. |
-| `nu run.nu examples`                      | Run all the examples, with logging                    |
-| `nu run.nu release-examples`              | Run all the examples with the release binary, with logging |
-| `nu run.nu release-examples-no-log`       | Run all the examples with the release binary, no logging   |
-| `nu run.nu help`                          | See all the commands you can pass to the `run` script |
-| `nu run.nu examples-with-flamegraph-profiling` | This will run the examples and generate a flamegraph at the end so you can see profile the performance of the app. This [video](https://www.youtube.com/watch?v=Sy26IMkOEiM) has a walkthrough of how to use this |
-| `nu run.nu build`                         | Build                                             |
-| `nu run.nu clean`                         | Clean                                             |
-| `nu run.nu test`                          | Run tests                                         |
-| `nu run.nu clippy`                        | Run clippy                                        |
-| `nu run.nu docs`                          | Build docs                                        |
-| `nu run.nu serve-docs`                    | Serve docs over `VSCode` Remote SSH session         |
-| `nu run.nu rustfmt`                       | Run rustfmt                                       |
+### Testing and Development
+| Command                                | Description                         |
+| -------------------------------------- | ----------------------------------- |
+| `nu run.nu test`                       | Run all tests                       |
+| `nu run.nu watch-all-tests`            | Watch files, run all tests          |
+| `nu run.nu watch-one-test <pattern>`   | Watch files, run specific test      |
+| `nu run.nu clippy`                     | Run clippy with fixes               |
+| `nu run.nu watch-clippy`               | Watch files, run clippy             |
+| `nu run.nu docs`                       | Generate documentation               |
 
-The following commands will watch for changes in the source folder and re-run:
+For complete development setup and all available commands, see the
+[repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
-| Command                                             | Description                        |
-| --------------------------------------------------- | ---------------------------------- |
-| `nu run.nu watch-all-tests`                            | Watch all test                     |
-| `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
-| `nu run.nu watch-clippy`                               | Watch clippy                       |
-| `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
-
-There's also a `run.nu` script at the **top level folder** of the repo. It is intended
-to be used in a CI/CD environment with all the required arguments supplied or in
-interactive mode, where the user will be prompted for input.
-
-| Command                       | Description                        |
-| ----------------------------- | ---------------------------------- |
-| `nu run.nu all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
-| `nu run.nu build-full`           | This will build all the crates in the Rust workspace. And it will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
-| `nu run.nu install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`, `flamegraph` will all be installed in one go) |
-| `nu run.nu check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
+### Performance Analysis Features
+- **Flamegraph profiling**: Generate SVG and perf-folded formats for performance
+  analysis
+- **Real-time benchmarking**: Run benchmarks with live output
+- **Cross-platform file watching**: Uses `inotifywait` (Linux) or `fswatch` (macOS)
+- **Interactive example selection**: Choose examples with fuzzy search
+- **Smart log monitoring**: Automatically detects and manages log files
 
 ## Examples to get you started
 

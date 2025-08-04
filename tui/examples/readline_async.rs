@@ -442,14 +442,14 @@ pub mod file_walker {
     pub const INDENT_MULTIPLIER: usize = 4;
 
     /// Gets the current working directory path and name.
-    /// 
+    ///
     /// - Get the current working directory. Eg:
     ///   `/home/nazmul/github/r3bl_terminal_async`.
     /// - Returns a tuple of `(path, name)`. Eg:
     ///   (`/home/nazmul/github/r3bl_terminal_async`, `r3bl_terminal_async`).
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the current directory cannot be determined.
     pub fn get_current_working_directory()
     -> miette::Result<(/* path */ String, /* name */ String)> {
@@ -473,9 +473,9 @@ pub mod file_walker {
     }
 
     /// Creates a root folder from the given path.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the path cannot be converted to a folder structure.
     pub fn create_root(root_path: String) -> miette::Result<Folder> {
         // Validate that root_path is a directory.
@@ -498,9 +498,9 @@ pub mod file_walker {
     }
 
     /// Creates a child folder and adds it to the parent.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the child folder cannot be created.
     pub fn create_child_and_add_to(
         parent_node: &mut Folder,
@@ -565,9 +565,9 @@ pub mod file_walker {
     /// 3. <https://developerlife.com/2022/12/11/algo-ts-2/>
     ///
     /// Displays the folder tree structure.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if:
     /// - The root folder cannot be created
     /// - Child folders cannot be traversed
@@ -605,9 +605,7 @@ pub mod file_walker {
             // Add each sub-folder (contained in the current node) to the stack. And add
             // it to the current node's children.
             for sub_folder_name in vec_folder_name {
-                stack.push(
-                    create_child_and_add_to(&mut current_node, sub_folder_name)?,
-                );
+                stack.push(create_child_and_add_to(&mut current_node, sub_folder_name)?);
             }
         }
 
@@ -615,9 +613,9 @@ pub mod file_walker {
     }
 
     /// Prints a node in the folder tree.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the output cannot be written to the terminal.
     pub fn print_node(writer: &mut SendRawTerminal, node: &Folder) -> miette::Result<()> {
         writeln!(

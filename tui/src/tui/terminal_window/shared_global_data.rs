@@ -20,10 +20,10 @@ use std::fmt::{Debug, Formatter};
 use tokio::sync::mpsc::Sender;
 
 use super::TerminalWindowMainThreadSignal;
-use crate::{ok, spinner_impl, telemetry::telemetry_sizing::TelemetryReportLineStorage,
-            ChUnit, CommonResult, InlineString, OffscreenBuffer, OffscreenBufferPool,
-            OutputDevice, Size, SpinnerStyle, TelemetryHudReport, DEBUG_TUI_COMPOSITOR,
-            DEBUG_TUI_MOD};
+use crate::{ChUnit, CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, InlineString,
+            OffscreenBuffer, OffscreenBufferPool, OutputDevice, Size, SpinnerStyle,
+            TelemetryHudReport, ok, spinner_impl,
+            telemetry::telemetry_sizing::TelemetryReportLineStorage};
 
 /// This is a global data structure that holds state for the entire application
 /// [`crate::App`] and the terminal window [`crate::TerminalWindow`] itself.
@@ -89,9 +89,9 @@ where
     AS: Debug + Default + Clone + Sync + Send,
 {
     /// Create a new instance of [`GlobalData`] with the given parameters.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the initial window size update fails.
     pub fn try_to_create_instance(
         main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
@@ -178,7 +178,8 @@ where
                 "{a}{b}",
                 a = Self::EMPTY_HUD_REPORT_PREFIX_SPINNER,
                 b = spinner_glyph,
-            ).ok();
+            )
+            .ok();
 
             self.spinner_helper.count += 1;
 

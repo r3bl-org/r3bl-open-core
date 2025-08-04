@@ -29,9 +29,9 @@ use crate::{AnalyticsAction, common,
             report_analytics};
 
 /// The main function for `giti branch delete` command.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if:
 /// - Git operations fail
 /// - User interaction fails

@@ -46,9 +46,7 @@ use r3bl_tui::{ASTColor, CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent,
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
-fn main() -> CommonResult<()> {
-    run_with_safe_stack!(main_impl())
-}
+fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

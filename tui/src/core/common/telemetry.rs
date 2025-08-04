@@ -21,8 +21,8 @@ use std::{collections::HashMap,
 use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
 
-use crate::{glyphs, Pc, RateLimitStatus, RateLimiter, RingBuffer, RingBufferStack,
-            TimeDuration};
+use crate::{Pc, RateLimitStatus, RateLimiter, RingBuffer, RingBufferStack, TimeDuration,
+            glyphs};
 
 pub mod telemetry_sizing {
     use super::SmallString;
@@ -162,8 +162,8 @@ macro_rules! telemetry_record {
 }
 
 pub mod telemetry_constructor {
-    use super::{telemetry_default_constants, Duration, Instant, RateLimiter,
-                RingBufferStack, Telemetry, TelemetryHudReport, TimeDuration};
+    use super::{Duration, Instant, RateLimiter, RingBufferStack, Telemetry,
+                TelemetryHudReport, TimeDuration, telemetry_default_constants};
 
     #[derive(Debug)]
     pub struct ResponseTimesRingBufferOptions {
@@ -516,8 +516,8 @@ mod report_generator {
             self.report
         }
 
-        /// Actually generate the report. This can be an expensive function to execute in a
-        /// tight loop.
+        /// Actually generate the report. This can be an expensive function to execute in
+        /// a tight loop.
         ///
         /// This report is a measure of the latency of seeing output on the screen, after
         /// providing user input.
@@ -620,8 +620,8 @@ mod tests_fixtures {
         }
 
         /// Disable rate limiting and filtering.
-        pub fn create_no_filter_no_rate_limit_telemetry(
-        ) -> Telemetry<TEST_RING_BUFFER_SIZE> {
+        pub fn create_no_filter_no_rate_limit_telemetry()
+        -> Telemetry<TEST_RING_BUFFER_SIZE> {
             Telemetry::new((Duration::from_secs(0), Duration::from_micros(0)))
         }
     }
@@ -631,8 +631,8 @@ mod tests_fixtures {
 mod tests_display_format {
     use std::fmt::Write;
 
-    use super::{telemetry_sizing::{TelemetryReportLineStorage,
-                                   TELEMETRY_REPORT_STRING_SIZE},
+    use super::{telemetry_sizing::{TELEMETRY_REPORT_STRING_SIZE,
+                                   TelemetryReportLineStorage},
                 *};
 
     #[test]

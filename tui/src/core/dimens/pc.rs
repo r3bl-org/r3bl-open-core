@@ -18,8 +18,8 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::Deref};
 
-use crate::{ch, glyphs, ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType,
-            LossyConvertToByte};
+use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType,
+            LossyConvertToByte, ch, glyphs};
 
 /// Represents an integer value between 0 and 100 (inclusive). You can't directly create
 /// it, since it has to validate that the value is between 0 and 100. You can create it
@@ -169,8 +169,8 @@ impl Pc {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ch, Pc, STATS_100P_GLYPH, STATS_25P_GLYPH, STATS_50P_GLYPH,
-                STATS_75P_GLYPH};
+    use crate::{Pc, STATS_25P_GLYPH, STATS_50P_GLYPH, STATS_75P_GLYPH, STATS_100P_GLYPH,
+                ch};
 
     #[test]
     fn test_pc_works_as_expected() {

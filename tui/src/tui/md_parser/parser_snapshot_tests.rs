@@ -28,13 +28,11 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        md_parser::conformance_test_data::*, parse_markdown, ZeroCopyGapBuffer,
-        MdDocument, MdElement, MdLineFragment, HeadingData, HyperlinkData,
-        CodeBlockLineContent,
-    };
     #[allow(unused_imports)]
-    use crate::{HeadingLevel, List, BulletKind, CodeBlockLine};
+    use crate::{BulletKind, CodeBlockLine, HeadingLevel, List};
+    use crate::{CodeBlockLineContent, HeadingData, HyperlinkData, MdDocument, MdElement,
+                MdLineFragment, ZeroCopyGapBuffer, md_parser::conformance_test_data::*,
+                parse_markdown};
 
     /// Macro for creating a List from elements
     #[allow(unused_macros)]
@@ -43,7 +41,6 @@ mod tests {
             List::from(vec![$($elem),*])
         };
     }
-
 
     /// Helper to assert document has expected number of elements
     fn assert_doc_len(doc: &MdDocument, expected: usize) {
@@ -67,7 +64,9 @@ mod tests {
                     fragments.len(),
                     expected_fragments.len()
                 );
-                for (i, (actual, expected)) in fragments.iter().zip(expected_fragments.iter()).enumerate() {
+                for (i, (actual, expected)) in
+                    fragments.iter().zip(expected_fragments.iter()).enumerate()
+                {
                     assert_eq!(
                         actual, expected,
                         "Fragment {i} mismatch: {actual:?} != {expected:?}"
@@ -81,7 +80,10 @@ mod tests {
     /// Helper to assert an element is a heading
     fn assert_heading_element(element: &MdElement, level: usize, text: &str) {
         match element {
-            MdElement::Heading(HeadingData { level: actual_level, text: actual_text }) => {
+            MdElement::Heading(HeadingData {
+                level: actual_level,
+                text: actual_text,
+            }) => {
                 assert_eq!(actual_level.level, level, "Heading level mismatch");
                 assert_eq!(*actual_text, text, "Heading text mismatch");
             }
@@ -196,8 +198,13 @@ mod tests {
             match element {
                 MdElement::Text(fragments) => {
                     // Verify inline code fragments exist
-                    let has_inline_code = fragments.iter().any(|f| matches!(f, MdLineFragment::InlineCode(_)));
-                    assert!(has_inline_code || fragments.is_empty(), "Expected inline code or empty line");
+                    let has_inline_code = fragments
+                        .iter()
+                        .any(|f| matches!(f, MdLineFragment::InlineCode(_)));
+                    assert!(
+                        has_inline_code || fragments.is_empty(),
+                        "Expected inline code or empty line"
+                    );
                 }
                 _ => panic!("Expected only Text elements"),
             }
@@ -221,11 +228,14 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
-        assert_text_element(&doc[0], &[
-            MdLineFragment::Plain("This is "),
-            MdLineFragment::Bold("bold"),
-            MdLineFragment::Plain(" text"),
-        ]);
+        assert_text_element(
+            &doc[0],
+            &[
+                MdLineFragment::Plain("This is "),
+                MdLineFragment::Bold("bold"),
+                MdLineFragment::Plain(" text"),
+            ],
+        );
     }
 
     #[test]
@@ -235,11 +245,14 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
-        assert_text_element(&doc[0], &[
-            MdLineFragment::Plain("This is "),
-            MdLineFragment::Italic("italic"),
-            MdLineFragment::Plain(" text"),
-        ]);
+        assert_text_element(
+            &doc[0],
+            &[
+                MdLineFragment::Plain("This is "),
+                MdLineFragment::Italic("italic"),
+                MdLineFragment::Plain(" text"),
+            ],
+        );
     }
 
     #[test]
@@ -252,10 +265,14 @@ mod tests {
         // Verify mixed formatting elements exist
         for element in doc.iter() {
             if let MdElement::Text(fragments) = element {
-                let has_formatting = fragments.iter().any(|f| matches!(
-                    f,
-                    MdLineFragment::Bold(_) | MdLineFragment::Italic(_) | MdLineFragment::InlineCode(_)
-                ));
+                let has_formatting = fragments.iter().any(|f| {
+                    matches!(
+                        f,
+                        MdLineFragment::Bold(_)
+                            | MdLineFragment::Italic(_)
+                            | MdLineFragment::InlineCode(_)
+                    )
+                });
                 assert!(has_formatting || fragments.is_empty());
             }
         }
@@ -268,14 +285,17 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
-        assert_text_element(&doc[0], &[
-            MdLineFragment::Plain("Check out "),
-            MdLineFragment::Link(HyperlinkData {
-                text: "Rust",
-                url: "https://rust-lang.org",
-            }),
-            MdLineFragment::Plain(" website"),
-        ]);
+        assert_text_element(
+            &doc[0],
+            &[
+                MdLineFragment::Plain("Check out "),
+                MdLineFragment::Link(HyperlinkData {
+                    text: "Rust",
+                    url: "https://rust-lang.org",
+                }),
+                MdLineFragment::Plain(" website"),
+            ],
+        );
     }
 
     #[test]
@@ -285,12 +305,13 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
-        assert_text_element(&doc[0], &[
-            MdLineFragment::Image(HyperlinkData {
+        assert_text_element(
+            &doc[0],
+            &[MdLineFragment::Image(HyperlinkData {
                 text: "Alt text",
                 url: "https://example.com/image.png",
-            }),
-        ]);
+            })],
+        );
     }
 
     #[test]
@@ -335,7 +356,8 @@ mod tests {
 
     #[test]
     fn test_small_special_characters() {
-        // SPECIAL_CHARACTERS contains special characters like !@#$%^&*()_+-=[]{}|;':",./<>?
+        // SPECIAL_CHARACTERS contains special characters like
+        // !@#$%^&*()_+-=[]{}|;':",./<>?
         let gap_buffer = ZeroCopyGapBuffer::from(SPECIAL_CHARACTERS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -366,9 +388,10 @@ mod tests {
                 // Check that unicode is preserved in fragments
                 for fragment in fragments.iter() {
                     match fragment {
-                        MdLineFragment::Plain(text) |
-                        MdLineFragment::InlineCode(text) => {
-                            // Just verify text exists, don't assume all fragments have unicode
+                        MdLineFragment::Plain(text)
+                        | MdLineFragment::InlineCode(text) => {
+                            // Just verify text exists, don't assume all fragments have
+                            // unicode
                             let _ = text;
                         }
                         _ => {}
@@ -410,12 +433,14 @@ mod tests {
 
     #[test]
     fn test_small_real_world_content() {
-        // SMALL_REAL_WORLD_CONTENT is a complete document with metadata, headings, lists, code blocks
+        // SMALL_REAL_WORLD_CONTENT is a complete document with metadata, headings, lists,
+        // code blocks
         let gap_buffer = ZeroCopyGapBuffer::from(SMALL_REAL_WORLD_CONTENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
 
-        // Should have multiple elements including metadata, headings, text, lists, and code blocks
+        // Should have multiple elements including metadata, headings, text, lists, and
+        // code blocks
         assert!(doc.len() > 5, "Expected complex document structure");
 
         // Verify document has various element types
@@ -440,7 +465,10 @@ mod tests {
         assert_eq!(remainder, "");
 
         // Should be a complex document
-        assert!(doc.len() > 10, "Expected complex document with many elements");
+        assert!(
+            doc.len() > 10,
+            "Expected complex document with many elements"
+        );
 
         // Verify presence of various markdown features
         let mut has_metadata = false;
@@ -450,7 +478,10 @@ mod tests {
 
         for element in doc.iter() {
             match element {
-                MdElement::Title(_) | MdElement::Tags(_) | MdElement::Authors(_) | MdElement::Date(_) => {
+                MdElement::Title(_)
+                | MdElement::Tags(_)
+                | MdElement::Authors(_)
+                | MdElement::Date(_) => {
                     has_metadata = true;
                 }
                 MdElement::Heading(data) if data.text.chars().any(|c| c as u32 > 127) => {
@@ -462,7 +493,10 @@ mod tests {
                     }
                     // Check for checkboxes in list items
                     for line in lines.iter() {
-                        if line.iter().any(|f| matches!(f, MdLineFragment::Checkbox(_))) {
+                        if line
+                            .iter()
+                            .any(|f| matches!(f, MdLineFragment::Checkbox(_)))
+                        {
                             has_checkbox = true;
                         }
                     }
@@ -473,7 +507,10 @@ mod tests {
 
         assert!(has_metadata, "Document should have metadata");
         assert!(has_emoji_heading, "Document should have emoji in headings");
-        assert!(has_nested_list || has_checkbox, "Document should have advanced list features");
+        assert!(
+            has_nested_list || has_checkbox,
+            "Document should have advanced list features"
+        );
     }
 
     // =============================================================================
@@ -489,7 +526,10 @@ mod tests {
         // Should have multiple text elements
         assert!(doc.len() > 1, "Expected multiple lines");
         for element in doc.iter() {
-            assert!(matches!(element, MdElement::Text(_)), "Expected only text elements");
+            assert!(
+                matches!(element, MdElement::Text(_)),
+                "Expected only text elements"
+            );
         }
     }
 
@@ -510,8 +550,14 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should have multiple headings
-        let heading_count = doc.iter().filter(|e| matches!(e, MdElement::Heading(_))).count();
-        assert!(heading_count >= 2, "Expected multiple headings, found {heading_count}");
+        let heading_count = doc
+            .iter()
+            .filter(|e| matches!(e, MdElement::Heading(_)))
+            .count();
+        assert!(
+            heading_count >= 2,
+            "Expected multiple headings, found {heading_count}"
+        );
     }
 
     #[test]
@@ -522,7 +568,10 @@ mod tests {
         assert_eq!(remainder, "");
 
         // Should have at least 6 headings
-        let heading_count = doc.iter().filter(|e| matches!(e, MdElement::Heading(_))).count();
+        let heading_count = doc
+            .iter()
+            .filter(|e| matches!(e, MdElement::Heading(_)))
+            .count();
         assert!(heading_count >= 6, "Expected at least 6 headings");
 
         // Verify heading levels 1-6 are present
@@ -540,7 +589,9 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should have unordered list items
-        let has_unordered_list = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Unordered, _))));
+        let has_unordered_list = doc
+            .iter()
+            .any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Unordered, _))));
         assert!(has_unordered_list, "Expected unordered list");
     }
 
@@ -550,7 +601,9 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should have ordered list items
-        let has_ordered_list = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
+        let has_ordered_list = doc
+            .iter()
+            .any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
         assert!(has_ordered_list, "Expected ordered list");
     }
 
@@ -560,7 +613,9 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should have nested lists (indent > 0)
-        let has_nested = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, _, indent)) if *indent > 0));
+        let has_nested = doc
+            .iter()
+            .any(|e| matches!(e, MdElement::SmartList((_, _, indent)) if *indent > 0));
         assert!(has_nested, "Expected nested list items");
     }
 
@@ -609,8 +664,12 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should have both ordered and unordered lists
-        let has_ordered = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
-        let has_unordered = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Unordered, _))));
+        let has_ordered = doc
+            .iter()
+            .any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
+        let has_unordered = doc
+            .iter()
+            .any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Unordered, _))));
         assert!(has_ordered && has_unordered, "Expected mixed list types");
     }
 
@@ -650,7 +709,7 @@ mod tests {
             assert_eq!(last.content, CodeBlockLineContent::EndTag);
 
             // Middle lines should be code content
-            for i in 1..lines.len()-1 {
+            for i in 1..lines.len() - 1 {
                 assert!(matches!(lines[i].content, CodeBlockLineContent::Text(_)));
             }
         }
@@ -674,9 +733,9 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should have empty code block (just start and end tags)
-        let has_empty_code = doc.iter().any(|e| {
-            matches!(e, MdElement::CodeBlock(lines) if lines.len() <= 3)
-        });
+        let has_empty_code = doc
+            .iter()
+            .any(|e| matches!(e, MdElement::CodeBlock(lines) if lines.len() <= 3));
         assert!(has_empty_code, "Expected empty code block");
     }
 
@@ -727,7 +786,10 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should handle trailing spaces correctly
-        assert!(!doc.is_empty(), "Document should parse with trailing spaces");
+        assert!(
+            !doc.is_empty(),
+            "Document should parse with trailing spaces"
+        );
     }
 
     #[test]
@@ -736,17 +798,13 @@ mod tests {
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         // Should handle emojis in various positions
-        let has_emoji_content = doc.iter().any(|e| {
-            match e {
-                MdElement::Text(fragments) => fragments.iter().any(|f| {
-                    match f {
-                        MdLineFragment::Plain(text) => text.chars().any(|c| c as u32 > 127),
-                        _ => false
-                    }
-                }),
-                MdElement::Heading(data) => data.text.chars().any(|c| c as u32 > 127),
-                _ => false
-            }
+        let has_emoji_content = doc.iter().any(|e| match e {
+            MdElement::Text(fragments) => fragments.iter().any(|f| match f {
+                MdLineFragment::Plain(text) => text.chars().any(|c| c as u32 > 127),
+                _ => false,
+            }),
+            MdElement::Heading(data) => data.text.chars().any(|c| c as u32 > 127),
+            _ => false,
         });
         assert!(has_emoji_content, "Expected emoji content");
     }
@@ -760,7 +818,10 @@ mod tests {
         assert!(doc.len() > 5, "Blog post should have multiple elements");
         let has_heading = doc.iter().any(|e| matches!(e, MdElement::Heading(_)));
         let has_text = doc.iter().any(|e| matches!(e, MdElement::Text(_)));
-        assert!(has_heading && has_text, "Blog post should have headings and text");
+        assert!(
+            has_heading && has_text,
+            "Blog post should have headings and text"
+        );
     }
 
     // =============================================================================
@@ -779,9 +840,12 @@ mod tests {
             doc.iter().any(|e| matches!(e, MdElement::Heading(_))),
             doc.iter().any(|e| matches!(e, MdElement::SmartList(_))),
             doc.iter().any(|e| matches!(e, MdElement::CodeBlock(_))),
-            doc.iter().any(|e| matches!(e, MdElement::Text(_)))
+            doc.iter().any(|e| matches!(e, MdElement::Text(_))),
         ];
-        assert!(element_types.iter().all(|&x| x), "Complex document should have varied content");
+        assert!(
+            element_types.iter().all(|&x| x),
+            "Complex document should have varied content"
+        );
     }
 
     #[test]
@@ -792,7 +856,10 @@ mod tests {
         // Tutorial should have structured content
         assert!(doc.len() > 10, "Tutorial should have substantial content");
         // Should have sections with headings
-        let heading_count = doc.iter().filter(|e| matches!(e, MdElement::Heading(_))).count();
+        let heading_count = doc
+            .iter()
+            .filter(|e| matches!(e, MdElement::Heading(_)))
+            .count();
         assert!(heading_count >= 3, "Tutorial should have multiple sections");
     }
 
@@ -805,7 +872,10 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(MALFORMED_SYNTAX);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         // Malformed syntax should still parse something
-        assert!(remainder.is_empty() || !doc.is_empty(), "Parser should handle malformed syntax gracefully");
+        assert!(
+            remainder.is_empty() || !doc.is_empty(),
+            "Parser should handle malformed syntax gracefully"
+        );
     }
 
     #[test]
@@ -813,7 +883,10 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(UNCLOSED_FORMATTING);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         // Unclosed formatting should still parse
-        assert!(remainder.is_empty() || !doc.is_empty(), "Parser should handle unclosed formatting gracefully");
+        assert!(
+            remainder.is_empty() || !doc.is_empty(),
+            "Parser should handle unclosed formatting gracefully"
+        );
     }
 
     // =============================================================================
@@ -829,7 +902,15 @@ mod tests {
         assert!(doc.len() > 20, "Real world document should be large");
 
         // Should have all major element types
-        let has_metadata = doc.iter().any(|e| matches!(e, MdElement::Title(_) | MdElement::Tags(_) | MdElement::Authors(_) | MdElement::Date(_)));
+        let has_metadata = doc.iter().any(|e| {
+            matches!(
+                e,
+                MdElement::Title(_)
+                    | MdElement::Tags(_)
+                    | MdElement::Authors(_)
+                    | MdElement::Date(_)
+            )
+        });
         let has_headings = doc.iter().any(|e| matches!(e, MdElement::Heading(_)));
         let has_lists = doc.iter().any(|e| matches!(e, MdElement::SmartList(_)));
         let has_code = doc.iter().any(|e| matches!(e, MdElement::CodeBlock(_)));

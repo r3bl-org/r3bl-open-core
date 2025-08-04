@@ -15,11 +15,9 @@
  *   limitations under the License.
  */
 
-
 use super::{EditorBuffer, EditorContent, cur_index::CurIndex, history::EditorHistory};
-use crate::{CachedMemorySize, CaretRaw, GetMemSize,
-            InlineString, MemoizedMemorySize, MemorySize, RingBufferHeap, ScrOfs,
-            TinyInlineString, get_mem_size};
+use crate::{CachedMemorySize, CaretRaw, GetMemSize, InlineString, MemoizedMemorySize,
+            MemorySize, RingBufferHeap, ScrOfs, TinyInlineString, get_mem_size};
 
 /// The version history is stored on the heap, as a ring buffer.
 pub type HistoryBuffer = RingBufferHeap<EditorContent, MAX_UNDO_REDO_SIZE>;
@@ -54,9 +52,7 @@ impl GetMemSize for EditorBuffer {
 }
 
 impl CachedMemorySize for EditorBuffer {
-    fn memory_size_cache(&self) -> &MemoizedMemorySize {
-        &self.memory_size_calc_cache
-    }
+    fn memory_size_cache(&self) -> &MemoizedMemorySize { &self.memory_size_calc_cache }
 
     fn memory_size_cache_mut(&mut self) -> &mut MemoizedMemorySize {
         &mut self.memory_size_calc_cache
@@ -73,9 +69,7 @@ impl EditorBuffer {
 
     /// Updates cache if dirty or not present.
     /// The closure is only called if recalculation is needed.
-    pub fn upsert_memory_size_calc_cache(&mut self) {
-        self.update_memory_size_cache();
-    }
+    pub fn upsert_memory_size_calc_cache(&mut self) { self.update_memory_size_cache(); }
 
     /// Gets the cached memory size value, recalculating if necessary.
     /// This is used by external code to access buffer memory size efficiently.

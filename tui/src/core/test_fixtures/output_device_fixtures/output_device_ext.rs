@@ -37,7 +37,7 @@ impl OutputDeviceExt for OutputDevice {
 #[cfg(test)]
 mod tests {
     use super::OutputDeviceExt;
-    use crate::{lock_output_device_as_mut, LockedOutputDevice, OutputDevice};
+    use crate::{LockedOutputDevice, OutputDevice, lock_output_device_as_mut};
 
     #[test]
     fn test_mock_output_device() {

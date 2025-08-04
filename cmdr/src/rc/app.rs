@@ -17,9 +17,9 @@
 use r3bl_tui::{CommonResult, ok};
 
 /// Runs the r3bl-cmdr shell application.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Currently never returns an error as the implementation is pending.
 pub fn run_app() -> CommonResult<()> {
     println!("TODO: Implement the r3bl-cmdr shell app 🌞");

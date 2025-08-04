@@ -66,9 +66,9 @@ pub fn exists() -> bool {
 }
 
 /// Creates the configuration folder for the application.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if:
 /// - The config folder path cannot be determined
 /// - Directory creation fails due to permissions or I/O issues

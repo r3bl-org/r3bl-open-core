@@ -17,7 +17,7 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::{ch, ChUnit};
+use crate::{ChUnit, ch};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
@@ -26,7 +26,7 @@ pub struct SegIndex(pub ChUnit);
 pub fn seg_index(arg_seg_index: impl Into<SegIndex>) -> SegIndex { arg_seg_index.into() }
 
 mod seg_index_impl_block {
-    use super::{ch, seg_width, ChUnit, Deref, DerefMut, SegIndex, SegWidth};
+    use super::{ChUnit, Deref, DerefMut, SegIndex, SegWidth, ch, seg_width};
 
     impl SegIndex {
         /// Converts the segment index to a width, by adding 1.
@@ -71,7 +71,7 @@ pub struct SegWidth(pub ChUnit);
 pub fn seg_width(arg_seg_width: impl Into<SegWidth>) -> SegWidth { arg_seg_width.into() }
 
 mod seg_width_impl_block {
-    use super::{ch, seg_index, ChUnit, Deref, DerefMut, SegIndex, SegWidth};
+    use super::{ChUnit, Deref, DerefMut, SegIndex, SegWidth, ch, seg_index};
 
     impl SegWidth {
         /// Converts the width to a segment index, by subtracting 1.

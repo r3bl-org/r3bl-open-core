@@ -18,7 +18,7 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{usize, width, ChUnit, ColWidth};
+use crate::{ChUnit, ColWidth, usize, width};
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
 /// column.
@@ -45,7 +45,7 @@ impl Debug for ColIndex {
 pub fn col(arg_col_index: impl Into<ColIndex>) -> ColIndex { arg_col_index.into() }
 
 mod constructor {
-    use super::{usize, width, ChUnit, ColIndex, ColWidth};
+    use super::{ChUnit, ColIndex, ColWidth, usize, width};
 
     impl ColIndex {
         pub fn new(arg_col_index: impl Into<ColIndex>) -> Self { arg_col_index.into() }
@@ -86,8 +86,8 @@ mod constructor {
 }
 
 mod ops {
-    use super::{col, Add, AddAssign, ChUnit, ColIndex, ColWidth, Deref, DerefMut, Mul,
-                Sub, SubAssign};
+    use super::{Add, AddAssign, ChUnit, ColIndex, ColWidth, Deref, DerefMut, Mul, Sub,
+                SubAssign, col};
 
     impl Deref for ColIndex {
         type Target = ChUnit;

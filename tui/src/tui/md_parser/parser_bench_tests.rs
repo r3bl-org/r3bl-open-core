@@ -41,7 +41,8 @@
 //! ## Benchmark Categories
 //!
 //! The benchmarks test the same conformance data used in snapshot tests:
-//! - **Small inputs**: Basic markdown elements (empty strings, single lines, simple formatting)
+//! - **Small inputs**: Basic markdown elements (empty strings, single lines, simple
+//!   formatting)
 //! - **Medium inputs**: Multi-paragraph documents, lists, code blocks
 //! - **Large inputs**: Complex nested documents from real-world usage
 //! - **Invalid inputs**: Malformed syntax to test error handling
@@ -56,11 +57,7 @@ mod benchmarks {
     extern crate test;
     use test::Bencher;
 
-    use crate::{
-        parse_markdown,
-        ZeroCopyGapBuffer,
-        md_parser::conformance_test_data::*,
-    };
+    use crate::{ZeroCopyGapBuffer, md_parser::conformance_test_data::*, parse_markdown};
 
     // Helper macro to reduce boilerplate in benchmarks
     macro_rules! bench_parser {

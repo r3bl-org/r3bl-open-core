@@ -14,14 +14,14 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{ch, col, glyphs, inline_string, render_ops, render_pipeline, row,
-               send_signal, throws_with_return, Ansi256GradientIndex,
-               BoxedSafeComponent, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
-               CommonResult, Component, EventPropagation, FlexBox, FlexBoxId,
-               GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus, InputEvent,
-               Key, KeyPress, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder,
-               DEBUG_TUI_MOD};
+use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
+               ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
+               EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
+               GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, RenderOp,
+               RenderPipeline, SpecialKey, SurfaceBounds,
+               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
+               glyphs, inline_string, render_ops, render_pipeline, row, send_signal,
+               throws_with_return};
 use smallvec::smallvec;
 
 use super::{AppSignal, State};

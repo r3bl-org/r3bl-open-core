@@ -108,9 +108,9 @@ where
     }
 
     /// Routes an input event to the currently focused component.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the component fails to handle the event.
     pub fn route_event_to_focused_component(
         global_data: &mut GlobalData<S, AS>,

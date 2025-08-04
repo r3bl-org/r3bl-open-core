@@ -17,16 +17,16 @@
 
 //! # Performance considerations: `write!` vs `push_str()` vs `WriteToBuf`
 //!
-//! When working with string formatting in Rust, it's important to understand the performance
-//! implications of different approaches:
+//! When working with string formatting in Rust, it's important to understand the
+//! performance implications of different approaches:
 //!
 //! ## Performance hierarchy (fastest to slowest)
 //!
 //! ### 1. Direct `push_str()` - The absolute fastest
-//! 
+//!
 //! Use `push_str()` when you have a `&str` that doesn't require formatting. This is the
 //! lightweight path that directly appends the string without any overhead:
-//! 
+//!
 //! ```rust
 //! # use r3bl_tui::InlineString;
 //! # let mut acc = InlineString::new();
@@ -36,8 +36,8 @@
 //! ### 2. `WriteToBuf` trait - Fast batched writing
 //!
 //! For complex types that need to build strings from multiple parts, use the
-//! [`WriteToBuf`](crate::WriteToBuf) trait (see [`write_to_buf.rs`](../common/write_to_buf.rs)).
-//! This approach:
+//! [`WriteToBuf`](crate::WriteToBuf) trait (see
+//! [`write_to_buf.rs`](../common/write_to_buf.rs)). This approach:
 //! - Batches all string building into a single buffer
 //! - Makes only one call to the formatter when implementing `Display`
 //! - Allows mixing `push_str()` for literals with `write!` only when needed
@@ -46,12 +46,12 @@
 //! batching minimizes the overall impact.
 //!
 //! ### 3. Direct `write!` - Slowest due to formatting overhead
-//! 
+//!
 //! Use `write!` only when you need formatting capabilities like:
 //! - Display formatting: `write!(acc, "{}", value)`
 //! - Debug formatting: `write!(acc, "{:?}", value)`
 //! - Custom formatting: `write!(acc, "Value: {:.2}", 3.14159)`
-//! 
+//!
 //! ```rust
 //! # use std::fmt::Write;
 //! # use r3bl_tui::InlineString;
@@ -61,25 +61,25 @@
 //! ```
 //!
 //! ## Performance cost of `write!`
-//! 
+//!
 //! The `write!` macro uses `FormatArgs` internally, which is the heavy code path that:
 //! - Parses the format string at compile time
 //! - Allocates temporary storage for formatting operations
 //! - Invokes the formatting trait implementations
 //! - Goes through the formatter's state machine (checking alignment, padding, etc.)
-//! 
+//!
 //! This overhead is unnecessary when you're simply appending a string literal or `&str`
 //! that doesn't need formatting.
 //!
 //! ## Best practices
-//! 
+//!
 //! 1. **Always prefer `push_str()`** for string literals and `&str` values
 //! 2. **Use `WriteToBuf`** when implementing `Display` for complex types
 //! 3. **Only use `write!`** when you actually need formatting capabilities
 //! 4. **Mix approaches**: In `WriteToBuf` implementations, use `push_str()` for literals
 //!    and `write!` only for values that need formatting
-//! 5. For repeated patterns, consider using the optimized macros in this module
-//!    like `pad_fmt!` which avoid formatting overhead
+//! 5. For repeated patterns, consider using the optimized macros in this module like
+//!    `pad_fmt!` which avoid formatting overhead
 
 // XMARK: Clever Rust, use of decl macro w/ `tt` to allow any number of arguments.
 

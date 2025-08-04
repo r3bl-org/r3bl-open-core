@@ -26,7 +26,7 @@
 //! Previously located in `color_wheel_core/truecolor_gradient.rs`.
 
 use colorgrad::Gradient;
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
 
 use crate::{config::sizing::{StringHexColor, VecSteps},
             tui_color};
@@ -137,7 +137,7 @@ mod random_color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, ast, new_style, usize, TuiColor};
+    use crate::{TuiColor, assert_eq2, ast, new_style, usize};
 
     #[test]
     fn test_generate_random_truecolor_gradient() {

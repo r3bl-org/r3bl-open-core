@@ -19,7 +19,7 @@ use std::io::IsTerminal;
 
 use miette::IntoDiagnostic;
 
-use crate::{height, width, ColWidth, Size};
+use crate::{ColWidth, Size, height, width};
 pub const DEFAULT_WIDTH: u16 = 80;
 
 #[must_use]
@@ -122,7 +122,7 @@ pub fn is_fully_uninteractive_terminal() -> TTYResult {
     if std::env::var("CARGO").is_ok() || std::env::var("CARGO_PKG_NAME").is_ok() {
         return TTYResult::IsInteractive;
     }
-    
+
     let stdin_is_tty: bool = std::io::stdin().is_terminal();
     let stdout_is_tty: bool = std::io::stdout().is_terminal();
     let stderr_is_tty: bool = std::io::stderr().is_terminal();

@@ -21,7 +21,7 @@
 //! for a single line in the gap buffer, including buffer position, capacity,
 //! grapheme segments, and display information.
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length, Seg, SegIndex, 
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length, Seg, SegIndex,
             SegStringOwned, SegmentArray, byte_index, ch};
 
 /// Metadata for a single line in the buffer
@@ -490,7 +490,7 @@ impl LineMetadata {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ZeroCopyGapBuffer, row, seg_index, byte_index, col, width};
+    use crate::{ZeroCopyGapBuffer, byte_index, col, row, seg_index, width};
 
     #[test]
     fn test_get_byte_pos_beginning() {

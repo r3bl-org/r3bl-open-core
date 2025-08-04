@@ -19,7 +19,7 @@ use std::{fmt::Debug,
           hash::Hash,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use super::{idx, ChUnit, Index};
+use super::{ChUnit, Index, idx};
 use crate::ch;
 
 /// Represents a length measurement in character units.
@@ -72,7 +72,7 @@ impl Debug for Length {
 }
 
 mod construct {
-    use super::{ch, idx, ChUnit, Index, Length};
+    use super::{ChUnit, Index, Length, ch, idx};
 
     impl Length {
         pub fn new(arg_length: impl Into<Length>) -> Self { arg_length.into() }

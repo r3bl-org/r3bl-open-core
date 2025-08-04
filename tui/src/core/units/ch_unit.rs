@@ -18,7 +18,7 @@
 use std::{fmt::{Debug, Formatter},
           ops::{Add, AddAssign, Deref, Div, Mul, MulAssign, Sub, SubAssign}};
 
-use crate::{add_unsigned, mul_unsigned, sub_unsigned, LossyConvertToByte};
+use crate::{LossyConvertToByte, add_unsigned, mul_unsigned, sub_unsigned};
 
 /// The backing field that is used to represent a [`ChUnit`] in memory.
 pub type ChUnitPrimitiveType = u16;
@@ -137,8 +137,8 @@ impl Deref for ChUnit {
 }
 
 pub mod ch_unit_math_ops {
-    use super::{add_unsigned, ch, mul_unsigned, sub_unsigned, Add, AddAssign, ChUnit,
-                Div, Mul, MulAssign, Sub, SubAssign};
+    use super::{Add, AddAssign, ChUnit, Div, Mul, MulAssign, Sub, SubAssign,
+                add_unsigned, ch, mul_unsigned, sub_unsigned};
 
     impl MulAssign<ChUnit> for ChUnit {
         fn mul_assign(&mut self, rhs: Self) {

@@ -29,8 +29,8 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOps, ScrOfs,
-            Size, engine_public_api};
+use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOps, ScrOfs, Size,
+            engine_public_api};
 
 pub(in crate::tui::editor::editor_buffer) mod key {
     #[allow(clippy::wildcard_imports)]

@@ -17,12 +17,13 @@
 
 //! # Markdown Parser Module
 //!
-//! This module provides a comprehensive markdown parser with support for standard markdown
-//! features as well as R3BL-specific extensions.
+//! This module provides a comprehensive markdown parser with support for standard
+//! markdown features as well as R3BL-specific extensions.
 //!
 //! ## Module Organization
 //!
-//! The parser is organized into logical modules based on the scope and granularity of parsing:
+//! The parser is organized into logical modules based on the scope and granularity of
+//! parsing:
 //!
 //! ```text
 //! tui/src/tui/md_parser/
@@ -40,18 +41,18 @@
 //!
 //! ### Module Descriptions
 //!
-//! - **`block/`**: Contains parsers for multi-line markdown constructs such as fenced code blocks
-//!   and smart lists. These parsers handle content that spans multiple lines.
+//! - **`block/`**: Contains parsers for multi-line markdown constructs such as fenced
+//!   code blocks and smart lists. These parsers handle content that spans multiple lines.
 //!
-//! - **`single_line/`**: Contains parsers and utilities that operate on single lines of text.
-//!   This includes heading parsing, general markdown text parsing, and utility functions for
-//!   extracting text within line boundaries.
+//! - **`single_line/`**: Contains parsers and utilities that operate on single lines of
+//!   text. This includes heading parsing, general markdown text parsing, and utility
+//!   functions for extracting text within line boundaries.
 //!
 //! - **`fragment/`**: Contains parsers for inline markdown elements within a single line,
 //!   such as bold, italic, links, and inline code.
 //!
-//! - **`extended/`**: Contains parsers for R3BL-specific markdown extensions like metadata
-//!   key-value pairs and other custom syntax.
+//! - **`extended/`**: Contains parsers for R3BL-specific markdown extensions like
+//!   metadata key-value pairs and other custom syntax.
 //!
 //! ## Parser Naming Conventions
 //!
@@ -81,14 +82,14 @@
 //!    Markdown document model, such as [`MdDocument`], [`MdElement`], [`MdLineFragment`]
 //!    and all the other intermediate types & enums required for parsing.
 //! 3. All the parsers related to parsing metadata specific for [R3BL](https://r3bl.com)
-//!    applications, which are not standard Markdown can be found in the [`extended`] module,
-//!    specifically [`parse_unique_kv_opt_eol`] and [`parse_csv_opt_eol`].
+//!    applications, which are not standard Markdown can be found in the [`extended`]
+//!    module, specifically [`parse_unique_kv_opt_eol`] and [`parse_csv_opt_eol`].
 //! 4. All the parsers that are related to parsing the main "blocks" of Markdown, such as
 //!    ordered lists, unordered lists, code blocks, can be found in the [`block`] module.
 //! 5. All the parsers that parse within a single line of text (headings, general text)
 //!    can be found in the [`single_line`] module.
-//! 6. All the parsers that are related to parsing inline fragments of Markdown text, such as
-//!    links, bold, italic, etc. can be found in the [`fragment`] module.
+//! 6. All the parsers that are related to parsing inline fragments of Markdown text, such
+//!    as links, bold, italic, etc. can be found in the [`fragment`] module.
 //!
 //! ## Video and blog post on this
 //!
@@ -99,12 +100,14 @@
 //!
 //! ## Note on Parser Selection
 //!
-//! This is the primary and only markdown parser used in `r3bl_tui`. After extensive benchmarking
-//! and analysis, this parser has proven to be the most reliable and performant solution.
+//! This is the primary and only markdown parser used in `r3bl_tui`. After extensive
+//! benchmarking and analysis, this parser has proven to be the most reliable and
+//! performant solution.
 //!
-//! Two experimental parsers (NG parser and Simple parser) were developed but have been archived
-//! to the `r3bl-open-core-archive` repository for historical reference. See
-//! `docs/parser_strategy_analysis.md` for the detailed analysis that led to this decision.
+//! Two experimental parsers (NG parser and Simple parser) were developed but have been
+//! archived to the `r3bl-open-core-archive` repository for historical reference. See
+//! `docs/parser_strategy_analysis.md` for the detailed analysis that led to this
+//! decision.
 //!
 //! To learn about nom fundamentals, here are some resources:
 //! - Tutorial on nom parsing on [developerlife.com](https://developerlife.com/2023/02/20/guide-to-nom-parsing/).
@@ -228,9 +231,9 @@ pub mod single_line;
 #[cfg(test)]
 pub mod conformance_test_data;
 #[cfg(test)]
-pub mod parser_snapshot_tests;
-#[cfg(test)]
 pub mod parser_bench_tests;
+#[cfg(test)]
+pub mod parser_snapshot_tests;
 
 // Re-export.
 pub use block::*;

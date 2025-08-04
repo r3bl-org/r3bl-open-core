@@ -14,10 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use crate::{ch, col, diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH, render_ops,
-            row, ColIndex, Flush, FlushKind, GCStringOwned, InlineString, LockedOutputDevice,
-            OffscreenBuffer, OffscreenBufferPaint, PixelChar, RenderOp, RenderOps,
-            RowIndex, Size, TuiStyle, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE};
+use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, Flush, FlushKind,
+            GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
+            OffscreenBufferPaint, PixelChar, RenderOp, RenderOps, RowIndex, Size,
+            TuiStyle, ch, col, diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH,
+            render_ops, row};
 
 #[derive(Debug)]
 pub struct OffscreenBufferPaintImplCrossterm;
@@ -150,13 +151,15 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 if is_first_loop_iteration || !is_style_same_as_prev {
                     context.render_ops.push(RenderOp::ResetColor);
                     if let Some(style) = pixel_char_style
-                        && let Some(color) = style.color_fg {
-                            context.render_ops.push(RenderOp::SetFgColor(color));
-                        }
+                        && let Some(color) = style.color_fg
+                    {
+                        context.render_ops.push(RenderOp::SetFgColor(color));
+                    }
                     if let Some(style) = pixel_char_style
-                        && let Some(color) = style.color_bg {
-                            context.render_ops.push(RenderOp::SetBgColor(color));
-                        }
+                        && let Some(color) = style.color_bg
+                    {
+                        context.render_ops.push(RenderOp::SetBgColor(color));
+                    }
                     // Update prev_style.
                     context.prev_style = pixel_char_style;
                 }
@@ -312,10 +315,10 @@ mod render_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, height, new_style,
+    use crate::{ColWidth, assert_eq2, height, new_style,
                 offscreen_buffer_paint_impl::render_helper::style_eq,
                 render_pipeline_to_offscreen_buffer::print_text_with_attributes,
-                tui_color, width, ColWidth};
+                tui_color, width};
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {

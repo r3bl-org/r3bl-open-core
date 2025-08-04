@@ -15,15 +15,18 @@
  *   limitations under the License.
  */
 
-//! Cache for dialog border strings to avoid repeated allocation and `GCStringOwned` creation.
+//! Cache for dialog border strings to avoid repeated allocation and `GCStringOwned`
+//! creation.
 //!
 //! ## Performance Impact
 //!
-//! The flamegraph analysis shows 53M samples in `render_border_lines` → `lolcat_from_style`
-//! → `GCStringOwned::new` for dialog borders. This cache eliminates the repeated string allocation
-//! and unicode segmentation overhead by caching pre-built border strings for common sizes.
+//! The flamegraph analysis shows 53M samples in `render_border_lines` →
+//! `lolcat_from_style` → `GCStringOwned::new` for dialog borders. This cache eliminates
+//! the repeated string allocation and unicode segmentation overhead by caching pre-built
+//! border strings for common sizes.
 
-use std::{hash::{Hash, Hasher}, sync::LazyLock};
+use std::{hash::{Hash, Hasher},
+          sync::LazyLock};
 
 use crate::{BorderGlyphCharacter, ColWidth, InlineString, ch, usize};
 
@@ -145,7 +148,9 @@ pub fn get_separator_line(bounds_width: ColWidth) -> InlineString {
 
 fn create_top_border_line(bounds_width: ColWidth) -> InlineString {
     let inner_width = usize(*bounds_width - ch(2));
-    let inner_line = BorderGlyphCharacter::Horizontal.as_ref().repeat(inner_width);
+    let inner_line = BorderGlyphCharacter::Horizontal
+        .as_ref()
+        .repeat(inner_width);
 
     InlineString::from(format!(
         "{}{}{}",
@@ -169,7 +174,9 @@ fn create_middle_border_line(bounds_width: ColWidth) -> InlineString {
 
 fn create_bottom_border_line(bounds_width: ColWidth) -> InlineString {
     let inner_width = usize(*bounds_width - ch(2));
-    let inner_line = BorderGlyphCharacter::Horizontal.as_ref().repeat(inner_width);
+    let inner_line = BorderGlyphCharacter::Horizontal
+        .as_ref()
+        .repeat(inner_width);
 
     InlineString::from(format!(
         "{}{}{}",
@@ -181,7 +188,9 @@ fn create_bottom_border_line(bounds_width: ColWidth) -> InlineString {
 
 fn create_separator_line(bounds_width: ColWidth) -> InlineString {
     let inner_width = usize(*bounds_width - ch(2));
-    let inner_line = BorderGlyphCharacter::Horizontal.as_ref().repeat(inner_width);
+    let inner_line = BorderGlyphCharacter::Horizontal
+        .as_ref()
+        .repeat(inner_width);
 
     InlineString::from(format!(
         "{}{}{}",

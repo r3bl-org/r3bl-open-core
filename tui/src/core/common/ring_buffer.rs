@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use crate::{idx, len, Index, InlineVec, Length};
+use crate::{Index, InlineVec, Length, idx, len};
 
 /// There are two implementations of this trait:
 /// - [`super::RingBufferStack`] which uses a fixed-size array on the stack.

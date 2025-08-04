@@ -14,15 +14,16 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use r3bl_tui::{box_end, box_start, ch, col, height, new_style,
+use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
+               ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
+               InputEvent, LayoutDirection, LayoutManagement,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
+               Size, Surface, SurfaceProps, SurfaceRender, TuiStylesheet, ZOrder,
+               box_end, box_start, ch, col, height, new_style,
                render_component_in_current_box, render_ops,
                render_tui_styled_texts_into, req_size_pc, row, surface, throws,
                throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
-               tui_stylesheet, App, BoxedSafeApp, CommonResult, ComponentRegistry,
-               ComponentRegistryMap, ContainsResult, EventPropagation, FlexBoxId,
-               GlobalData, HasFocus, InputEvent, LayoutDirection, LayoutManagement,
-               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
-               SurfaceProps, SurfaceRender, TuiStylesheet, ZOrder, SPACER_GLYPH};
+               tui_stylesheet};
 
 use super::{AppSignal, SingleColumnComponent, State};
 

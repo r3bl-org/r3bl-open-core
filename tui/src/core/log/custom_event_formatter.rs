@@ -445,8 +445,7 @@ mod helpers {
             if let Some(cached) = cache_guard.get(&cache_key) {
                 cached.clone()
             } else {
-                let colorized =
-                    ColorWheel::lolcat_into_string(&line_1_text, style);
+                let colorized = ColorWheel::lolcat_into_string(&line_1_text, style);
                 cache_guard.insert(cache_key, colorized.clone());
                 colorized
             }

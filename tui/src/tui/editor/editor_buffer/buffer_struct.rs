@@ -417,9 +417,7 @@ pub mod content_near_caret {
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
-            if let Some(line_with_info) =
-                self.content.lines.get_line(row_index_scr_adj)
-            {
+            if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
                     caret_locate::CaretColLocationInLine::AtEnd => line_with_info
@@ -445,9 +443,7 @@ pub mod content_near_caret {
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
-            if let Some(line_with_info) =
-                self.content.lines.get_line(row_index_scr_adj)
-            {
+            if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
                     caret_locate::CaretColLocationInLine::AtEnd => line_with_info
@@ -487,9 +483,7 @@ pub mod content_near_caret {
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
-            if let Some(line_with_info) =
-                self.content.lines.get_line(row_index_scr_adj)
-            {
+            if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
                 line_with_info
                     .info()
                     .get_string_at(line_with_info.content(), col_index_scr_adj)

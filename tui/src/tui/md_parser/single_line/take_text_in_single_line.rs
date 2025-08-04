@@ -15,13 +15,13 @@
  *   limitations under the License.
  */
 
-use nom::{branch::alt,
+use nom::{Parser,
+          branch::alt,
           bytes::complete::tag,
           character::complete::anychar,
           combinator::{not, recognize},
           multi::many0,
-          sequence::preceded,
-          Parser};
+          sequence::preceded};
 
 use crate::md_parser::constants::NEW_LINE;
 

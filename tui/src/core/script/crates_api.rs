@@ -17,8 +17,9 @@
 
 use miette::IntoDiagnostic;
 
-use crate::{crates_api::constants::{CRATE, MAX_VERSION},
-            fg_magenta, http_client, ok, SCRIPT_MOD_DEBUG};
+use crate::{SCRIPT_MOD_DEBUG,
+            crates_api::constants::{CRATE, MAX_VERSION},
+            fg_magenta, http_client, ok};
 
 mod constants {
     pub const CRATE: &str = "crate";
@@ -64,13 +65,13 @@ pub async fn try_get_latest_release_version_from_crates_io(
 mod tests {
     use std::time::Duration;
 
-    use nom::{character::complete::{char, digit0},
-              combinator::map_res,
-              IResult, Parser};
+    use nom::{IResult, Parser,
+              character::complete::{char, digit0},
+              combinator::map_res};
     use tokio::time::timeout;
 
     use super::*;
-    use crate::{console_log, return_if_not_interactive_terminal, TTYResult};
+    use crate::{TTYResult, console_log, return_if_not_interactive_terminal};
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 

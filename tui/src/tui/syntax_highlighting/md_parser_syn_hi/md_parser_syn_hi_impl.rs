@@ -23,18 +23,17 @@ use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 use super::create_color_wheel_from_heading_data;
 use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
-            CommonResult, FragmentsInOneLine,
-            GradientGenerationPolicy, HeadingData, HyperlinkData, InlineString, Lines,
-            List, MdDocument, MdElement, MdLineFragment,
-            PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
+            CommonResult, FragmentsInOneLine, GradientGenerationPolicy, HeadingData,
+            HyperlinkData, InlineString, Lines, List, MdDocument, MdElement,
+            MdLineFragment, PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
             StyleUSSpanLines, TextColorizationPolicy, TuiStyle, TuiStyledTexts,
-            convert_syntect_to_styled_text, generate_ordered_list_item_bullet,
-            generate_unordered_list_item_bullet, get_bold_style,
-            get_checkbox_checked_style, get_checkbox_unchecked_style,
+            ZeroCopyGapBuffer, convert_syntect_to_styled_text,
+            generate_ordered_list_item_bullet, generate_unordered_list_item_bullet,
+            get_bold_style, get_checkbox_checked_style, get_checkbox_unchecked_style,
             get_code_block_content_style, get_code_block_lang_style,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
-            get_list_bullet_style, join, new_style, parse_markdown, ZeroCopyGapBuffer, try_get_syntax_ref,
+            get_list_bullet_style, join, new_style, parse_markdown, try_get_syntax_ref,
             tui::{constants::CODE_BLOCK_START_PARTIAL,
                   md_parser::constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
                                          LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
@@ -54,7 +53,7 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
 /// ## Technical Implementation Details
 ///
 /// 1. Take direct reference to `ZeroCopyGapBuffer` from editor
-/// 2. Pass it directly to `parse_markdown()` 
+/// 2. Pass it directly to `parse_markdown()`
 /// 3. Convert parsed document to styled spans
 ///
 /// ## Performance Characteristics
@@ -84,7 +83,7 @@ pub fn try_parse_and_highlight(
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
     // XMARK: Parse markdown from editor and render it
-    
+
     // Parse using the zero-copy approach - no conversions needed!
     let result_md_ast = parse_markdown(gap_buffer);
 
@@ -132,19 +131,19 @@ mod tests_try_parse_and_highlight {
 
             // The parser creates separate lines for each input line
             assert_eq2!(2, style_us_span_lines.len());
-            
+
             // Check the first line contains "Hello"
             let line_0 = &style_us_span_lines[0];
             assert_eq2!(line_0.len(), 1);
             let span_0 = &line_0[0];
             assert_eq2!(span_0.text_gcs.as_ref(), "Hello");
-            
+
             // Check the second line contains "World"
             let line_1 = &style_us_span_lines[1];
             assert_eq2!(line_1.len(), 1);
             let span_1 = &line_1[0];
             assert_eq2!(span_1.text_gcs.as_ref(), "World");
-            
+
             assert_eq2!(
                 span_0.style,
                 current_box_computed_style + get_foreground_style()
@@ -729,10 +728,9 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 mod tests_style_us_span_lines_from {
 
     use super::*;
-    use crate::{CodeBlockLine, HeadingLevel, assert_eq2,
-                get_metadata_tags_marker_style, get_metadata_tags_values_style,
-                get_metadata_title_marker_style, get_metadata_title_value_style, list,
-                throws, tui_color};
+    use crate::{CodeBlockLine, HeadingLevel, assert_eq2, get_metadata_tags_marker_style,
+                get_metadata_tags_values_style, get_metadata_title_marker_style,
+                get_metadata_title_value_style, list, throws, tui_color};
 
     /// Test each [`MdLineFragment`] variant is converted by
     /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
@@ -1164,7 +1162,7 @@ mod tests_style_us_span_lines_from {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
-                
+
                 // Construct ordered list elements directly
                 let ol_block_1 = MdElement::SmartList((
                     list![list![
@@ -1234,7 +1232,7 @@ mod tests_style_us_span_lines_from {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
-                
+
                 // Construct unordered list elements directly
                 let ul_block_0 = MdElement::SmartList((
                     list![list![

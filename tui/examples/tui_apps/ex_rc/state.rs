@@ -17,8 +17,8 @@
 use std::{collections::HashMap,
           fmt::{Debug, Display, Formatter, Result}};
 
-use r3bl_tui::{ComponentRegistryMap, EditorBuffer, FlexBoxId, HasEditorBuffers,
-               DEFAULT_SYN_HI_FILE_EXT};
+use r3bl_tui::{ComponentRegistryMap, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FlexBoxId,
+               HasEditorBuffers};
 
 use crate::ex_rc::Id;
 
@@ -122,7 +122,7 @@ pub mod state_mutator {
 }
 
 mod state_impl {
-    use super::{state_mutator, EditorBuffer, FlexBoxId, HasEditorBuffers, State};
+    use super::{EditorBuffer, FlexBoxId, HasEditorBuffers, State, state_mutator};
 
     impl Default for State {
         fn default() -> Self { state_mutator::get_initial_state() }
@@ -183,9 +183,16 @@ mod impl_display {
             // show memory size for each buffer individually.
 
             // Format the state summary.
-            write!(f, "State[slide={}/{}, editors={}", slide_index + 1, total_slides, editor_count)?;
+            write!(
+                f,
+                "State[slide={}/{}, editors={}",
+                slide_index + 1,
+                total_slides,
+                editor_count
+            )?;
 
-            // Add editor buffers info if available. The EditorBuffer's Display impl is fast.
+            // Add editor buffers info if available. The EditorBuffer's Display impl is
+            // fast.
             if !self.editor_buffers.is_empty() {
                 write!(f, "\n  editor_buffers=[")?;
                 for (i, (id, buffer)) in self.editor_buffers.iter().enumerate() {

@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-use super::{tui_style_attrib, TuiStyle};
-use crate::{throws, CommonError, CommonResult, InlineVec};
+use super::{TuiStyle, tui_style_attrib};
+use crate::{CommonError, CommonResult, InlineVec, throws};
 
 #[derive(Default, Debug, Clone)]
 pub struct TuiStylesheet {

@@ -16,7 +16,7 @@
  */
 
 use tracing_core::LevelFilter;
-use tracing_subscriber::{registry::LookupSpan, Layer};
+use tracing_subscriber::{Layer, registry::LookupSpan};
 
 use super::{DisplayPreference, WriterConfig};
 use crate::log::{rolling_file_appender_impl, tracing_config::TracingConfig};
@@ -252,7 +252,7 @@ mod test_tracing_shared_writer_output {
     use smallvec::smallvec;
 
     use super::{fixtures::get_expected, *};
-    use crate::{join, InlineString, InlineVec, LineStateControlSignal, SharedWriter};
+    use crate::{InlineString, InlineVec, LineStateControlSignal, SharedWriter, join};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

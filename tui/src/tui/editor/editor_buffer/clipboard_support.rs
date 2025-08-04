@@ -171,7 +171,10 @@ mod tests {
             );
 
             let new_lines = vec!["abc copied text r3bl xyz", "pqr rust uvw"];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
         }
 
         // Multi-line Pasting
@@ -191,9 +194,12 @@ mod tests {
             let new_lines = vec![
                 "abc copied text old line",
                 "new line r3bl xyz",
-                "pqr rust uvw"
+                "pqr rust uvw",
             ];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
         }
     }
 
@@ -235,7 +241,10 @@ mod tests {
             let new_lines = vec![
                 "pqr rust uvw", // First line 'abc r3bl xyz' is cut
             ];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
         }
 
         // Multi-line Cutting
@@ -277,7 +286,10 @@ mod tests {
             /* cspell:disable-next-line */
             assert_eq2!(content, "r3bl xyz\npqr ".to_string()); // copied to clipboard
             let new_lines = vec!["abc ", "rust uvw"];
-            assert_eq2!(buffer.get_lines().to_gc_string_vec(), new_lines.into_iter().map(Into::into).collect::<Vec<_>>());
+            assert_eq2!(
+                buffer.get_lines().to_gc_string_vec(),
+                new_lines.into_iter().map(Into::into).collect::<Vec<_>>()
+            );
         }
     }
 }

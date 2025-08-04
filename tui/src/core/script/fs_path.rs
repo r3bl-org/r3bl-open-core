@@ -341,7 +341,7 @@ mod tests {
             // Ensure that an invalid path returns an error.
             assert!(fs_path::try_file_exists(&new_file).is_err()); // This file does not exist.
             assert!(fs_path::try_file_exists(&new_dir).is_err()); // This directory does
-                                                                  // not exist.
+            // not exist.
         });
     }
 
@@ -457,7 +457,7 @@ mod tests {
 
     fn test_try_mkdir() {
         with_saved_pwd!({
-            use crate::{directory_create::{try_mkdir, MkdirOptions::*},
+            use crate::{directory_create::{MkdirOptions::*, try_mkdir},
                         fs_paths};
 
             // Create the root temp dir.

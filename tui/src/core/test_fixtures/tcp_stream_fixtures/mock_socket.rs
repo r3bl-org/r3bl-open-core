@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-use tokio::io::{duplex, split, DuplexStream, ReadHalf, WriteHalf};
+use tokio::io::{DuplexStream, ReadHalf, WriteHalf, duplex, split};
 
 #[derive(Debug)]
 pub struct MockSocket {

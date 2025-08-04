@@ -17,8 +17,8 @@
 
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer,
-            InlineString, ItemsOwned, ch, fmt_option};
+use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, InlineString, ItemsOwned, ch,
+            fmt_option};
 
 /// Please do not construct this struct directly and use
 /// [`new_empty`](DialogBuffer::new_empty) instead.

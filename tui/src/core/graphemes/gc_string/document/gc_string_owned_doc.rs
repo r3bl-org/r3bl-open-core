@@ -19,9 +19,10 @@
 
 use std::borrow::Cow;
 
-use crate::{ColIndex, GCStringOwned, GraphemeDoc, GraphemeDocMut,
-            GraphemeString, GraphemeStringMut, Length, RowIndex, SegIndex, col};
 use miette::miette;
+
+use crate::{ColIndex, GCStringOwned, GraphemeDoc, GraphemeDocMut, GraphemeString,
+            GraphemeStringMut, Length, RowIndex, SegIndex, col};
 
 /// The equivalent of a document in the editor, containing multiple lines of
 /// [`GCStringOwned`]. This is a very simplistic version of [`crate::ZeroCopyGapBuffer`].
@@ -58,7 +59,7 @@ impl Default for GCStringOwnedDoc {
 }
 
 /// Wrapper type to make &`GCStringOwned` implement `GraphemeString`.
-/// 
+///
 /// This wrapper allows us to return references to `GCStringOwned` from
 /// `GraphemeDoc` trait methods while still implementing `GraphemeString`.
 /// The lifetime parameter `'a` represents the lifetime of the borrowed
@@ -137,7 +138,7 @@ impl GraphemeString for GCStringOwnedRef<'_> {
 }
 
 /// Iterator for `GCStringOwnedDoc` lines.
-/// 
+///
 /// The lifetime parameter `'a` represents the lifetime of the document
 /// being iterated over. This ensures the iterator cannot outlive the
 /// document it references.

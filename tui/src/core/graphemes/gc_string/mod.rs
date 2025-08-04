@@ -25,9 +25,9 @@
 //! handling, grapheme clusters, and the three types of indices used in this system.
 
 // Submodules
-pub mod owned;
 pub mod document;
+pub mod owned;
 
 // Re-exports
-pub use owned::*;
 pub use document::*;
+pub use owned::*;

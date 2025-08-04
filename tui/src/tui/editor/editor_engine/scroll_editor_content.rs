@@ -440,11 +440,10 @@ pub fn inc_caret_row(
 #[cfg(test)]
 mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
-                GCStringOwned, assert_eq2, caret_raw, caret_scr_adj, col,
+                GCStringOwned, assert_eq2, caret_raw, caret_scr_adj,
+                clipboard_service::clipboard_test_fixtures::TestClipboard, col,
                 editor::editor_test_fixtures::mock_real_objects_for_editor, height, row,
-                scr_ofs,
-                clipboard_service::clipboard_test_fixtures::TestClipboard,
-                width};
+                scr_ofs, width};
 
     #[test]
     fn editor_scroll_vertical() {
@@ -592,7 +591,9 @@ mod tests {
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(66) + row(0)));
             // Right of viewport.
             let display_col_index = buffer.get_caret_scr_adj().col_index;
-            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
+            let result = buffer
+                .get_lines()
+                .get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "🙏🏽");
 
             // Press right 1 more time. The caret should correctly jump the width of "😀"
@@ -606,7 +607,9 @@ mod tests {
             assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(68) + row(0)));
             // Right of viewport.
             let display_col_index = buffer.get_caret_scr_adj().col_index;
-            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
+            let result = buffer
+                .get_lines()
+                .get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "😀");
         }
 
@@ -626,7 +629,9 @@ mod tests {
             assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(64) + row(0)));
             // Start of viewport.
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
+            let result = buffer
+                .get_lines()
+                .get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "r");
         }
 
@@ -646,7 +651,9 @@ mod tests {
             assert_eq2!(buffer.get_scr_ofs(), scr_ofs(col(65) + row(0)));
             // Start of viewport.
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
+            let result = buffer
+                .get_lines()
+                .get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, ".");
         }
 
@@ -664,7 +671,9 @@ mod tests {
             }
             // Start of viewport.
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
+            let result = buffer
+                .get_lines()
+                .get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "😀");
         }
 
@@ -678,7 +687,9 @@ mod tests {
             );
             // Start of viewport.
             let display_col_index = buffer.get_scr_ofs().col_index;
-            let result = buffer.get_lines().get_string_at_col(row(0), display_col_index);
+            let result = buffer
+                .get_lines()
+                .get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "░");
         }
     }

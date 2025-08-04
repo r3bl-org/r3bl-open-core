@@ -19,8 +19,8 @@
 mod tests {
     use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 
-    use crate::{assert_eq2, col, row, Button, ModifierKeysMask, MouseInput,
-                MouseInputKind};
+    use crate::{Button, ModifierKeysMask, MouseInput, MouseInputKind, assert_eq2, col,
+                row};
 
     #[test]
     fn test_convert_mouse_event_mouse_moved() {

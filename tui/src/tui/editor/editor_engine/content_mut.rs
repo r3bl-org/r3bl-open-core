@@ -18,7 +18,14 @@
 use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
-use crate::{caret_locate::{locate_col, CaretColLocationInLine}, caret_scr_adj, caret_scroll_index, col, empty_check_early_return, len, multiline_disabled_check_early_return, row, validate_buffer_mut::EditorBufferMutWithDrop, width, CaretScrAdj, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, EditorEngine, InlineString, InlineVec, RowIndex, SelectionList, SelectionRange, Width, ZeroCopyGapBuffer};
+use crate::{CaretScrAdj, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, EditorEngine,
+            InlineString, InlineVec, RowIndex, SelectionList, SelectionRange, Width,
+            ZeroCopyGapBuffer,
+            caret_locate::{CaretColLocationInLine, locate_col},
+            caret_scr_adj, caret_scroll_index, col, empty_check_early_return, len,
+            multiline_disabled_check_early_return, row,
+            validate_buffer_mut::EditorBufferMutWithDrop,
+            width};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     let EditorArgsMut { buffer, engine } = args;
@@ -202,9 +209,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
 }
 
 /// Helper function to locate caret position when we already have `buffer_mut`
-fn locate_col_impl(
-    buffer_mut: &EditorBufferMutWithDrop<'_>,
-) -> CaretColLocationInLine {
+fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> CaretColLocationInLine {
     let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
     let row_index = caret_scr_adj.row_index;
 
@@ -502,7 +507,7 @@ mod backspace_at_caret_helper {
             buffer_mut.inner.lines.delete_at_col(
                 cur_row_index,
                 delete_at_this_display_col,
-                len(1),  // Delete 1 segment, regardless of its display width
+                len(1), // Delete 1 segment, regardless of its display width
             );
 
             let new_line_content_display_width = buffer_mut
@@ -1222,7 +1227,9 @@ mod tests {
 
         assert::none_is_at_caret(&buffer);
         assert_eq2!(
-            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().content(),
+            engine_internal_api::line_at_caret_to_string(&buffer,)
+                .unwrap()
+                .content(),
             "ab"
         );
 
@@ -1290,7 +1297,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
         let expected = vec!["a"];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
+        assert_eq2!(
+            buffer.get_lines().to_gc_string_vec(),
+            expected.into_iter().map(Into::into).collect::<Vec<_>>()
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(0)));
 
         // Move caret to col: FlexBoxId::from(0), row: 1. Insert "b".
@@ -1311,7 +1321,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
         let expected = vec!["a", "b"];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
+        assert_eq2!(
+            buffer.get_lines().to_gc_string_vec(),
+            expected.into_iter().map(Into::into).collect::<Vec<_>>()
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(1) + row(1)));
 
         // Move caret to col: FlexBoxId::from(0), row: 3. Insert "😀" (unicode width = 2).
@@ -1334,7 +1347,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
         let expected = vec!["a", "b", "", "😀"];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
+        assert_eq2!(
+            buffer.get_lines().to_gc_string_vec(),
+            expected.into_iter().map(Into::into).collect::<Vec<_>>()
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(3)));
 
         // Insert "d".
@@ -1353,7 +1369,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
         let expected = vec!["a", "b", "", "😀d"];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
+        assert_eq2!(
+            buffer.get_lines().to_gc_string_vec(),
+            expected.into_iter().map(Into::into).collect::<Vec<_>>()
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(3) + row(3)));
 
         // Insert "🙏🏽" (unicode width = 2).
@@ -1373,7 +1392,10 @@ mod tests {
         );
         assert_eq2!(width(2), GCStringOwned::from("🙏🏽").width());
         let expected = vec!["a", "b", "", "😀d🙏🏽"];
-        assert_eq2!(buffer.get_lines().to_gc_string_vec(), expected.into_iter().map(Into::into).collect::<Vec<_>>());
+        assert_eq2!(
+            buffer.get_lines().to_gc_string_vec(),
+            expected.into_iter().map(Into::into).collect::<Vec<_>>()
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(3)));
     }
 
@@ -1593,14 +1615,15 @@ mod tests {
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
-            vec![
-                EditorEvent::InsertString("abcab😃".into()),
-            ],
+            vec![EditorEvent::InsertString("abcab😃".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Verify initial state
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "abcab😃");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "abcab😃"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0))); // 5 + 2 for emoji width
 
         // Backspace should delete the emoji
@@ -1610,9 +1633,12 @@ mod tests {
             EditorEvent::Backspace,
             &mut TestClipboard::default(),
         );
-        
+
         // Verify the emoji was deleted
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "abcab");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "abcab"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
     }
 
@@ -1625,12 +1651,10 @@ mod tests {
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
-            vec![
-                EditorEvent::InsertString("Hello 😃 World".into()),
-            ],
+            vec![EditorEvent::InsertString("Hello 😃 World".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Move caret to position after emoji (before " World")
         // "Hello " = 6 cols, emoji = 2 cols, so position 8
         EditorEvent::apply_editor_events::<(), ()>(
@@ -1646,10 +1670,10 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        
+
         // Caret should be at position 8 (after emoji)
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(8) + row(0)));
-        
+
         // Backspace should delete the emoji
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1657,9 +1681,12 @@ mod tests {
             EditorEvent::Backspace,
             &mut TestClipboard::default(),
         );
-        
+
         // Verify result
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "Hello  World");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "Hello  World"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
     }
 
@@ -1672,15 +1699,13 @@ mod tests {
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
-            vec![
-                EditorEvent::InsertString("👋😀🎉".into()),
-            ],
+            vec![EditorEvent::InsertString("👋😀🎉".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Each emoji has width 2, so total width is 6
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
-        
+
         // First backspace deletes 🎉
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1690,7 +1715,7 @@ mod tests {
         );
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "👋😀");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(4) + row(0)));
-        
+
         // Second backspace deletes 😀
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1700,7 +1725,7 @@ mod tests {
         );
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "👋");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(0)));
-        
+
         // Third backspace deletes 👋
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1721,15 +1746,13 @@ mod tests {
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
-            vec![
-                EditorEvent::InsertString("a😃b世界c".into()),
-            ],
+            vec![EditorEvent::InsertString("a😃b世界c".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Width: a=1, 😃=2, b=1, 世=2, 界=2, c=1, total=9
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(9) + row(0)));
-        
+
         // Backspace 'c'
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1737,9 +1760,12 @@ mod tests {
             EditorEvent::Backspace,
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃b世界");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "a😃b世界"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(8) + row(0)));
-        
+
         // Backspace '界' (width 2)
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1747,9 +1773,12 @@ mod tests {
             EditorEvent::Backspace,
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃b世");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "a😃b世"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
-        
+
         // Backspace '世' (width 2)
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1771,12 +1800,10 @@ mod tests {
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
-            vec![
-                EditorEvent::InsertString("test👨‍👩‍👧‍👦end".into()),
-            ],
+            vec![EditorEvent::InsertString("test👨‍👩‍👧‍👦end".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Move to before "end"
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1788,7 +1815,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        
+
         // Backspace should delete the entire family emoji as one unit
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1796,8 +1823,11 @@ mod tests {
             EditorEvent::Backspace,
             &mut TestClipboard::default(),
         );
-        
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "testend");
+
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "testend"
+        );
     }
 
     #[test]
@@ -1809,14 +1839,13 @@ mod tests {
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
-            vec![
-                EditorEvent::InsertString("Hello😃World".into()),
-            ],
+            vec![EditorEvent::InsertString("Hello😃World".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Move caret to position before emoji
-        for _ in 0..6 { // "World" + 1 to get before emoji
+        for _ in 0..6 {
+            // "World" + 1 to get before emoji
             EditorEvent::apply_editor_event(
                 &mut engine,
                 &mut buffer,
@@ -1824,10 +1853,10 @@ mod tests {
                 &mut TestClipboard::default(),
             );
         }
-        
+
         // Caret should be at position 5 (after "Hello")
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
-        
+
         // Delete forward should remove the emoji
         EditorEvent::apply_editor_event(
             &mut engine,
@@ -1835,9 +1864,12 @@ mod tests {
             EditorEvent::Delete,
             &mut TestClipboard::default(),
         );
-        
+
         // Verify result
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "HelloWorld");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "HelloWorld"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
     }
 
@@ -1853,7 +1885,7 @@ mod tests {
             vec![EditorEvent::InsertString("Hello😃".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Caret should be after emoji (at column 7 = 5 for "Hello" + 2 for emoji)
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0)));
 
@@ -1864,9 +1896,12 @@ mod tests {
             vec![EditorEvent::Backspace],
             &mut TestClipboard::default(),
         );
-        
+
         // Verify emoji was deleted
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "Hello");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "Hello"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
     }
 
@@ -1882,7 +1917,7 @@ mod tests {
             vec![EditorEvent::InsertString("ab😃cd".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Move caret to after emoji (column 4 = 2 + 2)
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1893,7 +1928,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        
+
         // Caret should be at column 4
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(4) + row(0)));
 
@@ -1904,7 +1939,7 @@ mod tests {
             vec![EditorEvent::Backspace],
             &mut TestClipboard::default(),
         );
-        
+
         // Verify emoji was deleted
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "abcd");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(0)));
@@ -1922,7 +1957,7 @@ mod tests {
             vec![EditorEvent::InsertString("👋😀🎉".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Each emoji has width 2, so total width is 6
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
 
@@ -1937,7 +1972,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        
+
         // Verify all emojis were deleted
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
@@ -1955,7 +1990,7 @@ mod tests {
             vec![EditorEvent::InsertString("a😃b世界c".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Width: a=1, 😃=2, b=1, 世=2, 界=2, c=1 = total 9
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(9) + row(0)));
 
@@ -1966,8 +2001,11 @@ mod tests {
             vec![EditorEvent::Backspace],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃b世界");
-        
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "a😃b世界"
+        );
+
         // Backspace to delete '界'
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1975,8 +2013,11 @@ mod tests {
             vec![EditorEvent::Backspace],
             &mut TestClipboard::default(),
         );
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃b世");
-        
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "a😃b世"
+        );
+
         // Backspace to delete '世'
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1985,7 +2026,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃b");
-        
+
         // Backspace to delete 'b'
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -1994,7 +2035,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃");
-        
+
         // Backspace to delete emoji
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -2022,7 +2063,7 @@ mod tests {
             ],
             &mut TestClipboard::default(),
         );
-        
+
         // Move caret to beginning of second line
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -2030,10 +2071,10 @@ mod tests {
             vec![EditorEvent::Home],
             &mut TestClipboard::default(),
         );
-        
+
         // Caret should be at beginning of second line
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(1)));
-        
+
         // Backspace at beginning of line should merge with previous line
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
@@ -2041,9 +2082,12 @@ mod tests {
             vec![EditorEvent::Backspace],
             &mut TestClipboard::default(),
         );
-        
+
         // Lines should be merged
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "😃HelloWorld");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "😃HelloWorld"
+        );
         // Caret should be at the merge point (after "😃Hello" = column 7)
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0)));
     }
@@ -2061,7 +2105,7 @@ mod tests {
             vec![EditorEvent::InsertString("abcab😃".into())],
             &mut TestClipboard::default(),
         );
-        
+
         // Caret should be at column 7 (5 for "abcab" + 2 for emoji)
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0)));
 
@@ -2072,9 +2116,12 @@ mod tests {
             vec![EditorEvent::Backspace],
             &mut TestClipboard::default(),
         );
-        
+
         // Verify emoji was deleted correctly
-        assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "abcab");
+        assert_eq2!(
+            buffer.get_lines().get_line_content(row(0)).unwrap(),
+            "abcab"
+        );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
     }
 }

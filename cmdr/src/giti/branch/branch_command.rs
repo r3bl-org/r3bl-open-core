@@ -29,9 +29,9 @@ use crate::{common,
 /// The main function to for `giti branch` command. This is the main routing function that
 /// directs execution flow to the appropriate subcommand handler: `checkout`, `delete`,
 /// `new`.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if any of the subcommands fail or if user interaction fails.
 pub async fn handle_branch_command(
     sub_cmd: Option<BranchSubcommand>,

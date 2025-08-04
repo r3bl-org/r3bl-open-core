@@ -18,7 +18,7 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{height, usize, ChUnit, RowHeight};
+use crate::{ChUnit, RowHeight, height, usize};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
 /// This is one part of a [`crate::Pos`] position and is different from
@@ -45,7 +45,7 @@ impl Debug for RowIndex {
 pub fn row(arg_row_index: impl Into<RowIndex>) -> RowIndex { arg_row_index.into() }
 
 mod constructor {
-    use super::{height, usize, ChUnit, RowHeight, RowIndex};
+    use super::{ChUnit, RowHeight, RowIndex, height, usize};
 
     impl RowIndex {
         pub fn new(arg_row_index: impl Into<RowIndex>) -> Self { arg_row_index.into() }

@@ -25,8 +25,8 @@
 //! - <https://en.wikipedia.org/wiki/8-bit_color>
 //! - <https://github.com/Qix-/color-convert/>
 
-use crate::{convert_rgb_into_ansi256, core::ansi::ansi_constants::ANSI_COLOR_PALETTE,
-            AnsiValue, RgbValue, TransformColor};
+use crate::{AnsiValue, RgbValue, TransformColor, convert_rgb_into_ansi256,
+            core::ansi::ansi_constants::ANSI_COLOR_PALETTE};
 
 /// This is the "top-level" color type that is used in this crate. For example this is
 /// used in [`super::ASTStyle`] to represent the foreground and background colors.

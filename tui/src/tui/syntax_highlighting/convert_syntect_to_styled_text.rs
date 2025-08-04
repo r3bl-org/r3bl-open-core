@@ -494,11 +494,16 @@ mod tests_convert_style_and_color {
         assert_eq2!(stylesheet.styles.len(), 2);
 
         // Contains.
-        assertions_for_find_styles_by_ids(stylesheet.find_styles_by_ids(&[1, 2]).as_ref());
-        assertions_for_find_styles_by_ids(get_tui_styles!(
-            @from: &stylesheet,
-            [1, 2]
-        ).as_ref());
+        assertions_for_find_styles_by_ids(
+            stylesheet.find_styles_by_ids(&[1, 2]).as_ref(),
+        );
+        assertions_for_find_styles_by_ids(
+            get_tui_styles!(
+                @from: &stylesheet,
+                [1, 2]
+            )
+            .as_ref(),
+        );
         // Does not contain.
         assert_eq2!(stylesheet.find_styles_by_ids(&[3, 4]), None);
         assert_eq2!(get_tui_styles!(@from: stylesheet, [3, 4]), None);

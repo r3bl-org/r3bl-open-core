@@ -17,11 +17,12 @@
 
 use std::fmt::Display;
 
-use crate::{Seg, ColWidth, SegWidth, ChUnit, SegIndex, ColIndex, SegContent, ContainsWideSegments};
+use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, Seg, SegContent, SegIndex,
+            SegWidth};
 
 /// Single-line grapheme-aware string trait providing core operations
 /// for working with strings that are aware of grapheme cluster boundaries.
-/// 
+///
 /// This trait is implemented by types that represent a single line of text
 /// with grapheme cluster awareness, such as `GCStringOwned` and `GapBufferLine`.
 pub trait GraphemeString {

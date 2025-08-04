@@ -18,8 +18,8 @@
 use std::{fmt::Debug,
           ops::{AddAssign, Index}};
 
-use super::{sizing::VecTuiStyledText, TuiStyledText};
-use crate::{join_with_index_fmt, ok, ConvertToPlainText, GCStringOwned, InlineString};
+use super::{TuiStyledText, sizing::VecTuiStyledText};
+use crate::{ConvertToPlainText, GCStringOwned, InlineString, join_with_index_fmt, ok};
 
 /// Macro to make building [`TuiStyledTexts`] easy.
 ///
@@ -89,7 +89,7 @@ mod impl_ops {
 
 mod impl_display {
     use super::{ConvertToPlainText, GCStringOwned, InlineString, TuiStyledTexts};
-    use crate::{join, ColWidth};
+    use crate::{ColWidth, join};
 
     impl ConvertToPlainText for TuiStyledTexts {
         fn to_plain_text(&self) -> InlineString {
@@ -113,7 +113,7 @@ mod impl_display {
 }
 
 mod impl_debug {
-    use super::{join_with_index_fmt, ok, Debug, TuiStyledTexts};
+    use super::{Debug, TuiStyledTexts, join_with_index_fmt, ok};
 
     impl Debug for TuiStyledTexts {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -135,8 +135,8 @@ mod impl_debug {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, ch, throws, throws_with_return, tui_styled_text,
-                tui_stylesheet, CommonResult, TuiStyle, TuiStylesheet};
+    use crate::{CommonResult, TuiStyle, TuiStylesheet, assert_eq2, ch, throws,
+                throws_with_return, tui_styled_text, tui_stylesheet};
 
     #[test]
     fn test_create_styled_text_with_dsl() -> CommonResult<()> {

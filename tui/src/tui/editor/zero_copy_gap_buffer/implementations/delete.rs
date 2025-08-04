@@ -112,8 +112,8 @@
 
 use miette::{Result, miette};
 
-use crate::{ByteIndex, RowIndex, SegIndex, ch, len};
 use super::super::ZeroCopyGapBuffer;
+use crate::{ByteIndex, RowIndex, SegIndex, ch, len};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position

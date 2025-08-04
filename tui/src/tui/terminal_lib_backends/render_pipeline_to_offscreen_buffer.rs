@@ -16,8 +16,8 @@
  */
 use super::{OffscreenBuffer, RenderOp, RenderPipeline, sanitize_and_save_abs_pos};
 use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
-            GCStringOwned, PixelChar, PixelCharLine, Pos, RenderOpsLocalData,
-            Size, TuiStyle, ZOrder, ch,
+            GCStringOwned, PixelChar, PixelCharLine, Pos, RenderOpsLocalData, Size,
+            TuiStyle, ZOrder, ch,
             glyphs::{self, SPACER_GLYPH},
             inline_string, usize, width};
 
@@ -304,17 +304,20 @@ mod print_text_with_attributes_helper {
     ///
     /// This function can be a significant performance bottleneck in the rendering
     /// pipeline, as it is called for every text rendering operation. The optimization
-    /// implemented here uses a fast-path approach to minimize `GCStringOwned` allocations:
+    /// implemented here uses a fast-path approach to minimize `GCStringOwned`
+    /// allocations:
     ///
-    /// - **Fast path**: Uses `GCStringOwned::width()` to check string width without creating a
-    ///   `GCStringOwned` instance
-    /// - **Early return**: When text fits within bounds, creates `GCStringOwned` only once
-    /// - **Slow path**: Only creates `GCStringOwned` for truncation when absolutely necessary
+    /// - **Fast path**: Uses `GCStringOwned::width()` to check string width without
+    ///   creating a `GCStringOwned` instance
+    /// - **Early return**: When text fits within bounds, creates `GCStringOwned` only
+    ///   once
+    /// - **Slow path**: Only creates `GCStringOwned` for truncation when absolutely
+    ///   necessary
     ///
     /// This optimization addresses the performance bottleneck identified in flamegraph
-    /// analysis, where `GCStringOwned` creation in the rendering pipeline was consuming 8.61%
-    /// of total execution time. See `/docs/tui_perf_optimize.md` for detailed performance
-    /// analysis and optimization results.
+    /// analysis, where `GCStringOwned` creation in the rendering pipeline was consuming
+    /// 8.61% of total execution time. See `/docs/tui_perf_optimize.md` for detailed
+    /// performance analysis and optimization results.
     ///
     /// # Benchmarks
     ///

@@ -17,7 +17,7 @@
 
 use miette::IntoDiagnostic;
 
-use crate::{fg_magenta, http_client, ok, SCRIPT_MOD_DEBUG};
+use crate::{SCRIPT_MOD_DEBUG, fg_magenta, http_client, ok};
 
 mod constants {
     pub const TAG_NAME: &str = "tag_name";
@@ -72,7 +72,7 @@ mod tests_github_api {
     use tokio::time::timeout;
 
     use super::*;
-    use crate::{return_if_not_interactive_terminal, TTYResult};
+    use crate::{TTYResult, return_if_not_interactive_terminal};
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 

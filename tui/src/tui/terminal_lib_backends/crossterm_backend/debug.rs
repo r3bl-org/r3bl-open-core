@@ -64,12 +64,7 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
                 "MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"
             ),
             CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
-                format_print_text(
-                    f,
-                    "Compositor..PrintText...",
-                    text,
-                    *maybe_style
-                )
+                format_print_text(f, "Compositor..PrintText...", text, *maybe_style)
             }
             PaintTextWithAttributes(text, maybe_style) => {
                 format_print_text(f, "PrintTextWithAttributes", text, *maybe_style)

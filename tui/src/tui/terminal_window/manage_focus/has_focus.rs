@@ -17,8 +17,8 @@
 
 use std::fmt::Debug;
 
-use crate::{inline_string, throws, tiny_inline_string, CommonError, CommonResult,
-            FlexBox, FlexBoxId, InlineVec};
+use crate::{CommonError, CommonResult, FlexBox, FlexBoxId, InlineVec, inline_string,
+            throws, tiny_inline_string};
 
 /// This is a global (scoped to an [`crate::App`]) struct that is used to store the `id`
 /// of the [`FlexBox`] that has keyboard focus.
@@ -109,9 +109,9 @@ impl HasFocus {
 impl HasFocus {
     /// Pushes the `id` to the `id_vec`. The previous `id` is saved and can be restored
     /// with [`reset_modal_id`](HasFocus::reset_modal_id).
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if:
     /// - No non-modal id is currently set (modal id requires a base id)
     /// - A modal id is already set (cannot nest modal ids)

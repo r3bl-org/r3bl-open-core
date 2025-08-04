@@ -19,8 +19,8 @@
 mod tests {
     use crossterm::event::{KeyCode, KeyModifiers};
 
-    use crate::{assert_eq2, crossterm_keyevent, key_press, throws, FunctionKey, Key,
-                KeyPress, ModifierKeysMask, SpecialKey};
+    use crate::{FunctionKey, Key, KeyPress, ModifierKeysMask, SpecialKey, assert_eq2,
+                crossterm_keyevent, key_press, throws};
 
     #[test]
     fn test_keypress_character_key() {

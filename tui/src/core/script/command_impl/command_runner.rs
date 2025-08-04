@@ -167,7 +167,7 @@ pub trait Run {
     fn run(
         &mut self,
     ) -> impl std::future::Future<Output = miette::Result<Vec<u8>>> + Send;
-    
+
     /// # Errors
     ///
     /// Returns an error if:

@@ -18,9 +18,9 @@ use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
 use super::TERMINAL_LIB_BACKEND;
-use crate::{ok, CrosstermDebugFormatRenderOp, InlineString, InlineVec,
-            LockedOutputDevice, PaintRenderOp, Pos, RenderOpImplCrossterm, Size,
-            TerminalLibBackend, TuiColor, TuiStyle};
+use crate::{CrosstermDebugFormatRenderOp, InlineString, InlineVec, LockedOutputDevice,
+            PaintRenderOp, Pos, RenderOpImplCrossterm, Size, TerminalLibBackend,
+            TuiColor, TuiStyle, ok};
 
 /// Here's an example. Refer to [`RenderOps`] for more details.
 ///
@@ -291,8 +291,8 @@ pub enum RenderOp {
     /// underline, strikethrough, etc) and not colors. If you need to apply color, use
     /// [`RenderOp::ApplyColors`] instead.
     ///
-    /// 1. If the [`InlineString`] argument is plain text (no ANSI sequences) then it
-    ///    will be clipped available width of the terminal screen).
+    /// 1. If the [`InlineString`] argument is plain text (no ANSI sequences) then it will
+    ///    be clipped available width of the terminal screen).
     ///
     /// 2. If the [`InlineString`] argument contains ANSI sequences then it will be
     ///    printed as-is. You are responsible for handling clipping of the text to the
@@ -373,9 +373,9 @@ pub trait Flush {
 
 pub trait DebugFormatRenderOp {
     /// Formats the `RenderOp` for debug output.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns a formatting error if writing to the formatter fails.
     fn fmt_debug(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result;
 }

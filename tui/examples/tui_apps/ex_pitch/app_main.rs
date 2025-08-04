@@ -17,20 +17,21 @@
 
 use std::fmt::Debug;
 
-use r3bl_tui::{box_end, box_start, col, glyphs, height, inline_string, new_style,
+use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
+               DEBUG_TUI_MOD, EditMode, EditorComponent, EditorEngineConfig,
+               EventPropagation, FlexBoxId, GlobalData, HasFocus, InputEvent, Key,
+               KeyPress, LayoutDirection, LayoutManagement, ModifierKeysMask,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
+               Size, Surface, SurfaceProps, SurfaceRender,
+               TerminalWindowMainThreadSignal, TuiStylesheet, ZOrder, box_end,
+               box_start, col, glyphs, height, inline_string, new_style,
                render_component_in_current_box, render_ops,
                render_tui_styled_texts_into, req_size_pc, row, send_signal, surface,
                throws, throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
-               tui_stylesheet, App, BoxedSafeApp, CommonResult, ComponentRegistry,
-               ComponentRegistryMap, EditMode, EditorComponent, EditorEngineConfig,
-               EventPropagation, FlexBoxId, GlobalData, HasFocus, InputEvent, Key,
-               KeyPress, LayoutDirection, LayoutManagement, ModifierKeysMask,
-               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
-               SurfaceProps, SurfaceRender, TerminalWindowMainThreadSignal,
-               TuiStylesheet, ZOrder, DEBUG_TUI_MOD, SPACER_GLYPH};
+               tui_stylesheet};
 use tokio::sync::mpsc::Sender;
 
-use crate::ex_pitch::state::{state_mutator, AppSignal, State, FILE_CONTENT_ARRAY};
+use crate::ex_pitch::state::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
 
 /// Constants for the ids.
 #[repr(u8)]

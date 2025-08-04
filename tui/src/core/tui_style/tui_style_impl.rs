@@ -19,8 +19,8 @@ use std::{fmt::{Display, Formatter},
           ops::{Add, AddAssign, Deref}};
 
 use super::TuiColor;
-use crate::{ch, join, join_fmt, ok, tiny_inline_string, ChUnit, InlineVecStr,
-            TinyInlineString};
+use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
+            tiny_inline_string};
 
 /// Please use [`crate::new_style`!] declarative macro to generate code for this struct.
 ///
@@ -155,7 +155,7 @@ pub mod tui_style_attrib {
 }
 
 mod addition {
-    use super::{ch, tui_style_attrib, Add, AddAssign, ChUnit, TuiStyle};
+    use super::{Add, AddAssign, ChUnit, TuiStyle, ch, tui_style_attrib};
 
     impl Add for TuiStyle {
         type Output = Self;
@@ -243,8 +243,8 @@ mod addition {
 }
 
 mod style_helper {
-    use super::{ch, join, join_fmt, ok, tiny_inline_string, tui_style_attrib, Debug,
-                Display, Formatter, InlineVecStr, TinyInlineString, TuiStyle};
+    use super::{Debug, Display, Formatter, InlineVecStr, TinyInlineString, TuiStyle, ch,
+                join, join_fmt, ok, tiny_inline_string, tui_style_attrib};
 
     impl Debug for TuiStyle {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

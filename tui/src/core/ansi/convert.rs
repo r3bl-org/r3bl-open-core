@@ -68,9 +68,8 @@ pub mod color_utils {
 #[must_use]
 pub fn convert_rgb_into_ansi256(rgb_color: RgbValue) -> AnsiValue {
     use ansi_constants::{ANSI_COLOR_PALETTE, ANSI256_FROM_GRAY};
-    use cube_mapping::{CubeMappingResult,
-                       calculate_cube_mapping_for_rgb_color, calculate_luminance,
-                       calculate_relative_diff_between_colors};
+    use cube_mapping::{CubeMappingResult, calculate_cube_mapping_for_rgb_color,
+                       calculate_luminance, calculate_relative_diff_between_colors};
 
     let luminance_approximation: usize = calculate_luminance(rgb_color).into();
     let gray_ansi256_index: u8 = ANSI256_FROM_GRAY[luminance_approximation];

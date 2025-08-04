@@ -59,8 +59,8 @@ pub enum DefaultTiming {
     /// Operations faster than this are filtered out to reduce noise in telemetry data.
     TelemetryFilterLowestResponseTimeMinMicros = 100,
     /// Rate limiting threshold (in microseconds) for telemetry reporting.
-    /// This prevents telemetry from overwhelming the system during high-frequency operations.
-    /// Equivalent to 16 milliseconds, targeting ~60 FPS refresh rate.
+    /// This prevents telemetry from overwhelming the system during high-frequency
+    /// operations. Equivalent to 16 milliseconds, targeting ~60 FPS refresh rate.
     TelemetryRateLimitTimeThresholdMicros = 16_000,
 }
 

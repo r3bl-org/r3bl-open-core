@@ -15,12 +15,11 @@
  *   limitations under the License.
  */
 
-use crossterm::event::KeyEventKind;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode,
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MediaKeyCode,
                        ModifierKeyCode};
 
 use super::{Enhanced, ModifierKeysMask};
-use crate::{try_convert_key_modifiers, MediaKey, ModifierKeyEnum, SpecialKeyExt};
+use crate::{MediaKey, ModifierKeyEnum, SpecialKeyExt, try_convert_key_modifiers};
 
 /// Examples.
 ///
@@ -132,7 +131,8 @@ macro_rules! key_press {
 /// 3. **`InputEvent`** (Unified input abstraction)
 ///    - Combines all input types: Keyboard, Mouse, Resize, Focus
 ///    - Provides a single type for the event loop to handle
-///    - Each variant wraps the appropriate cleaned-up type (`KeyPress`, `MouseInput`, etc.)
+///    - Each variant wraps the appropriate cleaned-up type (`KeyPress`, `MouseInput`,
+///      etc.)
 ///
 /// The conversion flow:
 /// ```text
@@ -150,15 +150,15 @@ macro_rules! key_press {
 ///
 /// # Kitty keyboard protocol support limitations
 ///
-/// 1. `KeyPress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0.
-///    It filters out Release and Repeat events on all platforms. This is necessary
-///    because:
+/// 1. `KeyPress` explicitly matches on `KeyEventKind::Press` as of crossterm 0.25.0. It
+///    filters out Release and Repeat events on all platforms. This is necessary because:
 ///    - Windows terminals send both Press and Release events for each key press
 ///    - Most Unix terminals only send Press events
 ///    - Terminals with [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/)
 ///      support may send Press, Release, and Repeat events
 ///
-///    By filtering to only Press events, we ensure consistent behavior across all platforms.
+///    By filtering to only Press events, we ensure consistent behavior across all
+/// platforms.
 ///
 /// 2. Also, the [`KeyEvent`]'s `state` is totally ignored in the conversion to
 ///    [`KeyPress`]. The [`crossterm::event::KeyEventState`] isn't even considered in the
@@ -313,9 +313,7 @@ pub mod convert_key_event {
     pub(crate) fn special_handling_of_character_key_event(
         key_event: KeyEvent,
     ) -> Result<KeyPress, ()> {
-        fn process_key_event(
-            key_event: KeyEvent,
-        ) -> Result<KeyPress, ()> {
+        fn process_key_event(key_event: KeyEvent) -> Result<KeyPress, ()> {
             if let KeyEvent {
                     code: KeyCode::Char(character),
                     modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT, // Ignore SHIFT.

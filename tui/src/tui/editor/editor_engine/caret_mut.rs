@@ -15,14 +15,12 @@
  *   limitations under the License.
  */
 use super::{SelectMode, scroll_editor_content};
-use crate::{CaretDirection, EditorArgsMut, EditorBuffer, EditorEngine,
-            SegStringOwned,
+use crate::{CaretDirection, ContainsWideSegments, EditorArgsMut, EditorBuffer,
+            EditorEngine, SegStringOwned,
             caret_locate::{self, CaretColLocationInLine, CaretRowLocationInBuffer,
                            locate_col},
             caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
-            multiline_disabled_check_early_return, row,
-            ContainsWideSegments,
-            width};
+            multiline_disabled_check_early_return, row, width};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
@@ -109,11 +107,7 @@ pub fn page_up(
     );
 }
 
-pub fn down(
-    buffer: &mut EditorBuffer,
-    engine: &mut EditorEngine,
-    sel_mod: SelectMode,
-) {
+pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
     multiline_disabled_check_early_return!(engine, @Nothing);
 
@@ -303,11 +297,7 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 ///   └─────⮬────┘
 ///   C0123456789
 /// ```
-pub fn right(
-    buffer: &mut EditorBuffer,
-    engine: &mut EditorEngine,
-    sel_mod: SelectMode,
-) {
+pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
 
     let line_is_empty = buffer.line_at_caret_is_empty();
@@ -574,7 +564,8 @@ mod left_helper {
 
 #[cfg(test)]
 mod tests {
-    use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent, assert_eq2, caret_raw, caret_scr_adj,
+    use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
+                assert_eq2, caret_raw, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
                 col,
                 editor::editor_test_fixtures::{assert, mock_real_objects_for_editor},
@@ -841,7 +832,9 @@ mod tests {
             &mut TestClipboard::default(),
         );
         assert_eq2!(
-            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().content(),
+            engine_internal_api::line_at_caret_to_string(&buffer,)
+                .unwrap()
+                .content(),
             "1a"
         );
         assert::str_is_at_caret(&buffer, "a");
@@ -888,7 +881,9 @@ mod tests {
         );
         assert::str_is_at_caret(&buffer, "a");
         assert_eq2!(
-            engine_internal_api::line_at_caret_to_string(&buffer,).unwrap().content(),
+            engine_internal_api::line_at_caret_to_string(&buffer,)
+                .unwrap()
+                .content(),
             "12a"
         );
 

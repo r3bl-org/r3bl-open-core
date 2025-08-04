@@ -163,7 +163,9 @@ pub mod global_color_support {
             Ok(it) => it,
             Err(()) => {
                 // Check if we've already cached the detection result
-                if let Ok(cached) = try_get_cached() { cached } else {
+                if let Ok(cached) = try_get_cached() {
+                    cached
+                } else {
                     // Not cached yet, so detect once and cache the result
                     let detected =
                         examine_env_vars_to_determine_color_support(Stream::Stdout);
@@ -360,7 +362,7 @@ mod convert_between_color_and_i8 {
 }
 
 mod helpers {
-    use super::{as_str, env, Stream};
+    use super::{Stream, as_str, env};
 
     #[must_use]
     pub fn is_a_tty(stream: Stream) -> bool {

@@ -17,8 +17,8 @@
 use std::{collections::HashMap,
           fmt::{Debug, Display, Formatter, Result}};
 
-use r3bl_tui::{EditorBuffer, ComponentRegistryMap, FlexBoxId,
-               HasEditorBuffers, DEFAULT_SYN_HI_FILE_EXT};
+use r3bl_tui::{ComponentRegistryMap, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FlexBoxId,
+               HasEditorBuffers};
 
 use crate::ex_pitch::Id;
 
@@ -121,7 +121,7 @@ pub mod state_mutator {
 }
 
 mod state_impl {
-    use super::{state_mutator, EditorBuffer, FlexBoxId, HasEditorBuffers, State};
+    use super::{EditorBuffer, FlexBoxId, HasEditorBuffers, State, state_mutator};
 
     impl Default for State {
         fn default() -> Self { state_mutator::get_initial_state() }

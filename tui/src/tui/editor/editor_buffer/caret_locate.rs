@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-use crate::{col, row, ColIndex, ColWidth, RowHeight, RowIndex};
 use super::buffer_struct::EditorBuffer;
+use crate::{ColIndex, ColWidth, RowHeight, RowIndex, col, row};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum CaretColLocationInLine {
@@ -160,7 +160,7 @@ pub mod caret_scroll_index {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, EditorEngine, EditorEngineConfig};
+    use crate::{EditorEngine, EditorEngineConfig, assert_eq2};
 
     #[test]
     fn test_locate_col_at_start() {
@@ -190,7 +190,8 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index = caret_scroll_index::col_index_for_width(line_width);
+            buffer_mut.inner.caret_raw.col_index =
+                caret_scroll_index::col_index_for_width(line_width);
         }
 
         let location = locate_col(&buffer);
@@ -252,7 +253,8 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index = caret_scroll_index::col_index_for_width(line_width);
+            buffer_mut.inner.caret_raw.col_index =
+                caret_scroll_index::col_index_for_width(line_width);
         }
         let location = locate_col(&buffer);
         assert_eq2!(location, CaretColLocationInLine::AtEnd);
@@ -371,7 +373,8 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index = caret_scroll_index::col_index_for_width(line_width);
+            buffer_mut.inner.caret_raw.col_index =
+                caret_scroll_index::col_index_for_width(line_width);
         }
         let location = locate_col(&buffer);
         assert_eq2!(location, CaretColLocationInLine::AtEnd);

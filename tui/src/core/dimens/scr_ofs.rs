@@ -85,7 +85,7 @@ mod tests {
     use std::fmt::Write;
 
     use super::*;
-    use crate::{ch, col, height, row, width, ColWidth};
+    use crate::{ColWidth, ch, col, height, row, width};
 
     #[test]
     fn test_api() {

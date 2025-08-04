@@ -14,11 +14,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 use sha2::{Digest, Sha256};
 
-use crate::{u16, GCStringOwned};
+use crate::{GCStringOwned, u16};
 
 /// Enum representing different methods for calculating the length of a string. The
 /// [`Self::calculate`] function memoizes the length of the string for the

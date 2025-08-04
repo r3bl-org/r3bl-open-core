@@ -25,12 +25,14 @@
 //! The module implements the [`From`] trait for both `&str` and `&[GCString]` to allow
 //! idiomatic conversions:
 //! - `ZeroCopyGapBuffer::from("some text")` - Converts `&str` to `ZeroCopyGapBuffer`
-//! - `ZeroCopyGapBuffer::from(&[GCString])` - Converts `&[GCString]` to `ZeroCopyGapBuffer`
+//! - `ZeroCopyGapBuffer::from(&[GCString])` - Converts `&[GCString]` to
+//!   `ZeroCopyGapBuffer`
 //!
 //! The underlying adapter functions `gap_buffer_from_lines()` and `gap_buffer_from_str()`
 //! are private implementation details and should not be used directly.
 
-use crate::{GCStringOwned, SegIndex, ZeroCopyGapBuffer, md_parser_types::constants::NEW_LINE_CHAR};
+use crate::{GCStringOwned, SegIndex, ZeroCopyGapBuffer,
+            md_parser_types::constants::NEW_LINE_CHAR};
 #[cfg(test)]
 use crate::{len, md_parser_types::constants::NULL_CHAR};
 
@@ -58,8 +60,11 @@ fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
         // Insert the text at the beginning of the line
         if !text.is_empty() {
             // Use insert_at_grapheme which is the public API
-            let _unused =
-                buffer.insert_text_at_grapheme(line_index.into(), SegIndex::from(0), text);
+            let _unused = buffer.insert_text_at_grapheme(
+                line_index.into(),
+                SegIndex::from(0),
+                text,
+            );
         }
     }
 

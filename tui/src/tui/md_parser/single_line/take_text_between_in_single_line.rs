@@ -15,18 +15,18 @@
  *   limitations under the License.
  */
 
-use nom::{bytes::complete::{tag, take_until},
+use nom::{IResult, Parser,
+          bytes::complete::{tag, take_until},
           combinator::map,
-          error::ErrorKind,
-          IResult, Parser};
+          error::ErrorKind};
 
-use crate::{fg_green, fg_red, md_parser::constants::NEW_LINE, DEBUG_MD_PARSER_STDOUT};
+use crate::{DEBUG_MD_PARSER_STDOUT, fg_green, fg_red, md_parser::constants::NEW_LINE};
 
 /// Takes the text between the start and end delimiters. Will error out if this text
 /// contains a new line.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns a nom parsing error if:
 /// - The start or end delimiter is not found
 /// - The text between delimiters contains a newline character
@@ -48,15 +48,16 @@ pub fn take_text_between_delims_err_on_new_line<'input>(
     let it = take_text_between(start_delim, end_delim).parse(input);
 
     if let Ok((_, output)) = &it
-        && output.contains(NEW_LINE) {
-            DEBUG_MD_PARSER_STDOUT.then(|| {
-                println!("{} parser error out for input: {:?}", fg_red("⬢⬢"), input);
-            });
-            return Err(nom::Err::Error(nom::error::Error {
-                input: output,
-                code: ErrorKind::CrLf,
-            }));
-        }
+        && output.contains(NEW_LINE)
+    {
+        DEBUG_MD_PARSER_STDOUT.then(|| {
+            println!("{} parser error out for input: {:?}", fg_red("⬢⬢"), input);
+        });
+        return Err(nom::Err::Error(nom::error::Error {
+            input: output,
+            code: ErrorKind::CrLf,
+        }));
+    }
 
     if it.is_err() {
         DEBUG_MD_PARSER_STDOUT.then(|| {
@@ -84,7 +85,7 @@ fn take_text_between<'input>(
 
 #[cfg(test)]
 mod tests_parse_take_between {
-    use nom::{error::Error, Err as NomErr};
+    use nom::{Err as NomErr, error::Error};
 
     use super::*;
     use crate::assert_eq2;

@@ -17,9 +17,9 @@
 
 use std::fmt::{Debug, Formatter, Result};
 
-use super::{cur_index::{CurIndex, CurIndexLoc},
-            EditorContent};
-use crate::{format_as_kilobytes_with_commas, idx, Length, RingBuffer};
+use super::{EditorContent,
+            cur_index::{CurIndex, CurIndexLoc}};
+use crate::{Length, RingBuffer, format_as_kilobytes_with_commas, idx};
 
 /// The `EditorHistory` struct manages the undo/redo functionality for the `EditorBuffer`.
 ///
@@ -59,13 +59,11 @@ use crate::{format_as_kilobytes_with_commas, idx, Length, RingBuffer};
 ///   editor events will trigger a new state to be added to the history buffer. See
 ///   [`crate::editor_engine::engine_public_api::apply_event()`] to see which events
 ///   actually get added to the editor history buffer.
-#[derive(Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Clone, PartialEq, Default)]
 pub struct EditorHistory {
     pub versions: super::sizing::HistoryBuffer,
     pub current_index: CurIndex,
 }
-
 
 impl EditorHistory {
     #[must_use]
@@ -106,7 +104,10 @@ impl EditorHistory {
         }
 
         self.versions.add(content);
-        CurIndexLoc::inc(&mut self.current_index, Length::from(self.versions.len().as_usize()));
+        CurIndexLoc::inc(
+            &mut self.current_index,
+            Length::from(self.versions.len().as_usize()),
+        );
     }
 
     /// This is the underlying function that enables undo. It changes the current index to
@@ -164,13 +165,16 @@ impl EditorHistory {
     /// Convenience method that calls [`CurIndexLoc::locate()`].
     #[must_use]
     pub fn locate_current_index(&self) -> CurIndexLoc {
-        CurIndexLoc::locate(&self.current_index, Length::from(self.versions.len().as_usize()))
+        CurIndexLoc::locate(
+            &self.current_index,
+            Length::from(self.versions.len().as_usize()),
+        )
     }
 }
 
 mod impl_debug_format {
-    use super::{format_as_kilobytes_with_commas, Debug, EditorHistory, Formatter,
-                Result, RingBuffer};
+    use super::{Debug, EditorHistory, Formatter, Result, RingBuffer,
+                format_as_kilobytes_with_commas};
     use crate::GetMemSize;
 
     impl Debug for EditorHistory {
@@ -292,10 +296,9 @@ mod tests_editor_history_struct {
 
 #[cfg(test)]
 mod tests_history_functions {
-    
 
-    use crate::{assert_eq2, cur_index::CurIndex, EditorBuffer,
-                Length, RingBuffer, ZeroCopyGapBuffer, len, row};
+    use crate::{EditorBuffer, Length, RingBuffer, ZeroCopyGapBuffer, assert_eq2,
+                cur_index::CurIndex, len, row};
 
     #[test]
     fn test_push_default() {
@@ -321,7 +324,12 @@ mod tests_history_functions {
         assert_eq2!(history_stack.len(), Length::from(1));
         assert_eq2!(history_stack.get(0).unwrap().lines.len(), len(1));
         assert_eq2!(
-            history_stack.get(0).unwrap().lines.get_line_content(row(0)).unwrap(),
+            history_stack
+                .get(0)
+                .unwrap()
+                .lines
+                .get_line_content(row(0))
+                .unwrap(),
             "abc"
         );
     }

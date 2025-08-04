@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{ok, GlobalData, InputDevice, OutputDevice};
+use r3bl_tui::{GlobalData, InputDevice, OutputDevice, ok};
 
 use super::{AppMain, State};
-use crate::{key_press, CommonResult, InputEvent, TerminalWindow};
+use crate::{CommonResult, InputEvent, TerminalWindow, key_press};
 
 pub async fn run_app() -> CommonResult<()> {
     // Create an App (renders & responds to user input).

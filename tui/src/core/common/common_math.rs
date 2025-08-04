@@ -17,7 +17,7 @@
 
 use std::fmt::Write;
 
-use crate::{constants::COMMA_CHAR, InlineString};
+use crate::{InlineString, constants::COMMA_CHAR};
 
 /// Safely subtracts two unsigned numbers and returns the result. Does not panic.
 ///

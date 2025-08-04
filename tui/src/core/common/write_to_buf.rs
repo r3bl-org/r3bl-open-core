@@ -22,36 +22,21 @@
 //!
 //! ## Performance hierarchy (fastest to slowest)
 //!
-//! 1. **Direct `push_str()`** - The absolute fastest when you have a `&str`
-//!    ```rust
-//!    # let mut buffer = String::new();
-//!    buffer.push_str("Hello, world!");  // Zero overhead, direct memory copy
-//!    ```
+//! 1. **Direct `push_str()`** - The absolute fastest when you have a `&str` ```rust # let
+//!    mut buffer = String::new(); buffer.push_str("Hello, world!");  // Zero overhead,
+//!    direct memory copy ```
 //!
-//! 2. **`WriteToBuf` trait** - Fast batched writing for complex types
-//!    ```rust
-//!    # use r3bl_tui::WriteToBuf;
-//!    # struct MyType;
-//!    # impl WriteToBuf for MyType {
-//!    #     fn write_to_buf(&self, acc: &mut String) -> std::fmt::Result {
-//!    #         acc.push_str("batched content");
-//!    #         Ok(())
-//!    #     }
-//!    # }
-//!    # let my_value = MyType;
-//!    # let mut buffer = String::new();
-//!    my_value.write_to_buf(&mut buffer)?;  // Batches all writes, one final formatter call
-//!    # Ok::<(), std::fmt::Error>(())
-//!    ```
+//! 2. **`WriteToBuf` trait** - Fast batched writing for complex types ```rust # use
+//!    r3bl_tui::WriteToBuf; # struct MyType; # impl WriteToBuf for MyType { #     fn
+//!    write_to_buf(&self, acc: &mut String) -> std::fmt::Result { # acc.push_str("batched
+//!    content"); #         Ok(()) #     } # } # let my_value = MyType; # let mut buffer =
+//!    String::new(); my_value.write_to_buf(&mut buffer)?;  // Batches all writes, one
+//!    final formatter call # Ok::<(), std::fmt::Error>(()) ```
 //!
-//! 3. **`write!` with `FormatArgs`** - Slowest due to formatting overhead
-//!    ```rust
-//!    # use std::fmt::Write;
-//!    # let mut buffer = String::new();
-//!    # let value = 42;
-//!    write!(buffer, "Value: {}", value)?;  // Goes through formatter state machine
-//!    # Ok::<(), std::fmt::Error>(())
-//!    ```
+//! 3. **`write!` with `FormatArgs`** - Slowest due to formatting overhead ```rust # use
+//!    std::fmt::Write; # let mut buffer = String::new(); # let value = 42; write!(buffer,
+//!    "Value: {}", value)?;  // Goes through formatter state machine # Ok::<(),
+//!    std::fmt::Error>(()) ```
 //!
 //! ## Why `WriteToBuf` is faster than `Display`
 //!
@@ -64,8 +49,10 @@
 //!
 //! ## When to use each approach
 //!
-//! - **Use `push_str()`** when you have literal strings or `&str` values with no formatting
-//! - **Use `WriteToBuf`** when implementing `Display` for complex types that build strings
+//! - **Use `push_str()`** when you have literal strings or `&str` values with no
+//!   formatting
+//! - **Use `WriteToBuf`** when implementing `Display` for complex types that build
+//!   strings
 //! - **Use `write!`** only when you actually need formatting capabilities
 //!
 //! ## Example: Optimal `Display` implementation

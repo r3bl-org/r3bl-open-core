@@ -206,7 +206,8 @@ pub mod branch_delete_display {
                 a = fmt::emphasis(branch_name),
                 b = fmt::emphasis_delete("deleted"),
                 c = fmt::period()
-            ).ok();
+            )
+            .ok();
         }
 
         acc
@@ -330,7 +331,8 @@ pub mod branch_delete_display {
                 a = fmt::dim(inline_string!("{}", index + 1)),
                 b = fmt::colon(),
                 c = fmt::emphasis_delete(branch)
-            ).ok();
+            )
+            .ok();
         }
 
         let mut acc = InlineString::new();
@@ -343,7 +345,8 @@ pub mod branch_delete_display {
             c = fmt::normal("branches"),
             d = fmt::colon(),
             e = prefixed_branches_joined
-        ).ok();
+        )
+        .ok();
         acc
     }
 }

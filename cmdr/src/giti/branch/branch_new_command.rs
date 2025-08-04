@@ -20,9 +20,9 @@ use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext, ReadlineEve
 use crate::giti::{BranchNewDetails, CommandRunDetails, git, local_branch_ops, ui_str};
 
 /// The main function for `giti branch new` command.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if:
 /// - Git operations fail
 /// - User input fails

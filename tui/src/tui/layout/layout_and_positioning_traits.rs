@@ -24,8 +24,8 @@ pub trait LayoutManagement {
     ///
     /// # Errors
     ///
-    /// Returns `LayoutErrorType::MismatchedSurfaceStart` if the stack of boxes is not empty
-    /// when this method is called.
+    /// Returns `LayoutErrorType::MismatchedSurfaceStart` if the stack of boxes is not
+    /// empty when this method is called.
     fn surface_start(&mut self, bounds_props: SurfaceProps) -> CommonResult<()>;
 
     /// # Errors
@@ -76,7 +76,8 @@ pub trait PerformPositioningAndSizing {
     ///
     /// # Errors
     ///
-    /// Returns an error if the box properties are invalid or if adding the root box fails.
+    /// Returns an error if the box properties are invalid or if adding the root box
+    /// fails.
     fn add_root_box(&mut self, props: FlexBoxProps) -> CommonResult<()>;
 
     /// Add non-root [`FlexBox`].

@@ -17,8 +17,8 @@
 
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 
-use super::{try_convert_key_modifiers, ModifierKeysMask};
-use crate::{col, row, Pos};
+use super::{ModifierKeysMask, try_convert_key_modifiers};
+use crate::{Pos, col, row};
 
 #[derive(Clone, Debug, Eq, PartialEq, Copy)]
 pub struct MouseInput {

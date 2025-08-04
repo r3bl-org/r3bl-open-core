@@ -17,7 +17,7 @@
 
 use std::fmt::Display;
 
-use crate::{format_as_kilobytes_with_commas, MemoizedValue};
+use crate::{MemoizedValue, format_as_kilobytes_with_commas};
 
 pub trait GetMemSize {
     fn get_mem_size(&self) -> usize;
@@ -178,7 +178,8 @@ pub trait CachedMemorySize: GetMemSize {
     fn update_memory_size_cache(&mut self) {
         if self.memory_size_cache().is_dirty() {
             let size = self.get_mem_size();
-            self.memory_size_cache_mut().upsert(|| MemorySize::new(size));
+            self.memory_size_cache_mut()
+                .upsert(|| MemorySize::new(size));
         }
     }
 

@@ -373,7 +373,8 @@
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 //!
 //! ## Performance Analysis Features
-//! - **Flamegraph profiling**: Generate SVG and perf-folded formats for performance analysis
+//! - **Flamegraph profiling**: Generate SVG and perf-folded formats for performance
+//!   analysis
 //! - **Real-time benchmarking**: Run benchmarks with live output
 //! - **Cross-platform file watching**: Uses `inotifywait` (Linux) or `fswatch` (macOS)
 //! - **Interactive example selection**: Choose examples with fuzzy search

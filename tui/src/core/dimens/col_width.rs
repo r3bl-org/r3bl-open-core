@@ -18,7 +18,7 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use crate::{ch, col, ChUnit, ColIndex};
+use crate::{ChUnit, ColIndex, ch, col};
 
 /// Width is column count, i.e., the number of columns that a UI component occupies.
 ///
@@ -60,7 +60,7 @@ impl Debug for ColWidth {
 pub fn width(arg_col_width: impl Into<ColWidth>) -> ColWidth { arg_col_width.into() }
 
 mod construct {
-    use super::{ch, col, ChUnit, ColIndex, ColWidth};
+    use super::{ChUnit, ColIndex, ColWidth, ch, col};
 
     impl ColWidth {
         pub fn new(arg_col_width: impl Into<ColWidth>) -> Self { arg_col_width.into() }
@@ -99,8 +99,8 @@ mod construct {
 }
 
 mod ops {
-    use super::{width, Add, AddAssign, ChUnit, ColWidth, Deref, DerefMut, Div, Sub,
-                SubAssign};
+    use super::{Add, AddAssign, ChUnit, ColWidth, Deref, DerefMut, Div, Sub, SubAssign,
+                width};
 
     impl Deref for ColWidth {
         type Target = ChUnit;

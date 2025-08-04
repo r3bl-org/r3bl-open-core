@@ -23,14 +23,14 @@
 //! - [`LineMetadata`] - Metadata about each line including segments and display info
 
 // Attach.
-pub mod zero_copy_gap_buffer;
 pub mod gap_buffer_line;
 pub mod line_metadata;
+pub mod zero_copy_gap_buffer;
 
 // Re-export.
-pub use zero_copy_gap_buffer::*;
 pub use gap_buffer_line::*;
 pub use line_metadata::*;
+pub use zero_copy_gap_buffer::*;
 
 /// Initial size of each line in bytes
 pub const INITIAL_LINE_SIZE: usize = 256;

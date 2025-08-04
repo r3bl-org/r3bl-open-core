@@ -15,15 +15,15 @@
  *   limitations under the License.
  */
 
-use std::{collections::{hash_map::Entry, HashMap},
+use std::{collections::{HashMap, hash_map::Entry},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
 use smallvec::smallvec;
 
-use super::{paint::paint, render_op::RenderOp, ZOrder};
-use crate::{ok, tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED, FlushKind, GlobalData, InlineVec,
-            LockedOutputDevice, RenderOps};
+use super::{ZOrder, paint::paint, render_op::RenderOp};
+use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOps, ok,
+            tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
 
 /// Macro to make it easier to create a [`RenderPipeline`]. It works w/ [`RenderOp`]
 /// items. It allows them to be added in sequence, and then flushed at the end.

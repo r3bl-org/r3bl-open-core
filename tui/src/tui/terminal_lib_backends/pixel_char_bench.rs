@@ -280,7 +280,7 @@ mod pixel_char_benchmarks {
     }
 
     // Benchmark 5: Small line (8 chars - within SmallVec capacity)
-    #[allow(clippy::cast_sign_loss )]
+    #[allow(clippy::cast_sign_loss)]
     #[bench]
     fn bench_smallvec_small_line(b: &mut Bencher) {
         b.iter(|| {

@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_from_smallvec_str() {
-        use smallvec::{smallvec, SmallVec};
+        use smallvec::{SmallVec, smallvec};
 
         let small: SmallVec<[&str; 3]> = smallvec!["a", "b", "c"];
         let items_owned = ItemsOwned::from(small);

@@ -17,11 +17,10 @@
 
 use std::io::Write;
 
-use r3bl_tui::{fg_slate_gray, ok,
-               readline_async::{choose, Header, HowToChoose, ReadlineAsyncContext,
-                                StyleSheet},
-               set_mimalloc_in_main, try_initialize_logging_global, InputDevice,
-               OutputDevice};
+use r3bl_tui::{InputDevice, OutputDevice, fg_slate_gray, ok,
+               readline_async::{Header, HowToChoose, ReadlineAsyncContext, StyleSheet,
+                                choose},
+               set_mimalloc_in_main, try_initialize_logging_global};
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

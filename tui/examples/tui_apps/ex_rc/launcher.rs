@@ -15,8 +15,8 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{key_press, ok, CommonResult, GlobalData, InputDevice, InputEvent,
-               ModifierKeysMask, OutputDevice, TerminalWindow};
+use r3bl_tui::{CommonResult, GlobalData, InputDevice, InputEvent, ModifierKeysMask,
+               OutputDevice, TerminalWindow, key_press, ok};
 
 use super::{AppMain, State};
 

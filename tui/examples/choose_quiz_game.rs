@@ -17,10 +17,10 @@
 
 use std::fmt::Display;
 
-use r3bl_tui::{ast, choose, get_terminal_width, height, new_style,
+use r3bl_tui::{ASTColor, DefaultIoDevices, ItemsOwned, ast, choose, get_terminal_width,
+               height, new_style,
                readline_async::{HowToChoose, StyleSheet},
-               set_mimalloc_in_main, usize, width, ASTColor, DefaultIoDevices,
-               ItemsOwned};
+               set_mimalloc_in_main, usize, width};
 use serde::{Deserialize, Serialize};
 
 const JSON_DATA: &str = r#"[

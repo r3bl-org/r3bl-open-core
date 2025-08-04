@@ -19,7 +19,7 @@ use std::fmt::Debug;
 
 use tokio::sync::mpsc::Sender;
 
-use crate::{throws, CommonResult, TerminalWindowMainThreadSignal};
+use crate::{CommonResult, TerminalWindowMainThreadSignal, throws};
 
 /// This is a simple animator that can be used to run a single animation task. Animators
 /// can be re-used (stopped, and restarted repeatedly).

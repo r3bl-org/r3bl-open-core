@@ -20,12 +20,14 @@
 //! # Important: Null Padding Requirement
 //!
 //! **WARNING**: The `&str` constants provided by this module CANNOT be used directly with
-//! the markdown parser! The parser now requires input from `ZeroCopyGapBuffer` which enforces
-//! a "null padding invariant" where lines end with `\n` followed by zero or more `\0` characters.
+//! the markdown parser! The parser now requires input from `ZeroCopyGapBuffer` which
+//! enforces a "null padding invariant" where lines end with `\n` followed by zero or more
+//! `\0` characters.
 //!
 //! ## Required Conversion
 //!
-//! Before using any test data from this module, you MUST convert it to `ZeroCopyGapBuffer`:
+//! Before using any test data from this module, you MUST convert it to
+//! `ZeroCopyGapBuffer`:
 //!
 //! ```rust,ignore
 //! use crate::{convert_str_to_gap_buffer, convert_vec_lines_to_gap_buffer};
@@ -43,20 +45,20 @@
 //!
 //! This module organizes test inputs by complexity and content type:
 //! - `invalid_inputs`: Edge cases and malformed syntax
-//! - `valid_small_inputs`: Simple formatting and single lines  
+//! - `valid_small_inputs`: Simple formatting and single lines
 //! - `valid_medium_inputs`: Multi-paragraph and structured content
 //! - `valid_large_inputs`: Complex nested structures
 //! - `valid_jumbo_inputs`: Real-world files and comprehensive documents
 
 pub mod invalid_inputs;
-pub mod valid_small_inputs;
-pub mod valid_medium_inputs;
-pub mod valid_large_inputs;
 pub mod valid_jumbo_inputs;
+pub mod valid_large_inputs;
+pub mod valid_medium_inputs;
+pub mod valid_small_inputs;
 
 // Re-export all constants for easy access
 pub use invalid_inputs::*;
-pub use valid_small_inputs::*;
-pub use valid_medium_inputs::*;
-pub use valid_large_inputs::*;
 pub use valid_jumbo_inputs::*;
+pub use valid_large_inputs::*;
+pub use valid_medium_inputs::*;
+pub use valid_small_inputs::*;

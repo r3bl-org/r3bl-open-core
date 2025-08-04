@@ -15,10 +15,10 @@
  *   limitations under the License.
  */
 
-use crate::{Seg, ColWidth, ColIndex, ChUnit};
+use crate::{ChUnit, ColIndex, ColWidth, Seg};
 
 /// Core segment content reference for zero-copy access to grapheme cluster segments.
-/// 
+///
 /// This struct provides a unified way to access segment content and metadata
 /// without copying the underlying string data. The lifetime parameter `'a` represents
 /// the lifetime of the borrowed string content, ensuring that the `SegContent`
@@ -34,27 +34,19 @@ pub struct SegContent<'a> {
 impl SegContent<'_> {
     /// Get the string content of this segment
     #[must_use]
-    pub fn as_str(&self) -> &str {
-        self.content
-    }
+    pub fn as_str(&self) -> &str { self.content }
 
     /// Get the display width of this segment
     #[must_use]
-    pub fn width(&self) -> ColWidth {
-        self.seg.display_width
-    }
+    pub fn width(&self) -> ColWidth { self.seg.display_width }
 
     /// Get the starting column index of this segment
     #[must_use]
-    pub fn start_col(&self) -> ColIndex {
-        self.seg.start_display_col_index
-    }
+    pub fn start_col(&self) -> ColIndex { self.seg.start_display_col_index }
 
     /// Get a reference to the underlying segment metadata
     #[must_use]
-    pub fn seg(&self) -> &Seg {
-        &self.seg
-    }
+    pub fn seg(&self) -> &Seg { &self.seg }
 
     /// Get the byte range of this segment within the original string
     #[must_use]

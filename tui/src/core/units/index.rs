@@ -76,7 +76,7 @@ impl Debug for Index {
 }
 
 mod construct {
-    use super::{ch, ChUnit, Index, Length};
+    use super::{ChUnit, Index, Length, ch};
 
     impl Index {
         pub fn new(arg_col_index: impl Into<Index>) -> Self { arg_col_index.into() }
@@ -202,7 +202,7 @@ mod tests {
     use std::hash::{DefaultHasher, Hasher};
 
     use super::*;
-    use crate::{len, BoundsCheck, BoundsStatus};
+    use crate::{BoundsCheck, BoundsStatus, len};
 
     #[test]
     fn test_index_new() {

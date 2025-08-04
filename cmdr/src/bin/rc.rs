@@ -18,9 +18,7 @@
 use r3bl_cmdr::rc::run_app;
 use r3bl_tui::{CommonResult, run_with_safe_stack, set_mimalloc_in_main, throws};
 
-fn main() -> CommonResult<()> {
-    run_with_safe_stack!(main_impl())
-}
+fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

@@ -16,10 +16,13 @@
  */
 
 use std::cmp::{self, Ordering};
-    use crate::{ColIndex, RowIndex};
 
 use super::selection_list::RowLocationInSelectionList;
-use crate::{caret_scr_adj, caret_scroll_index, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red, fg_yellow, height, inline_string, row, underline, width, CaretLocationInRange, CaretMovementDirection, CaretScrAdj, ChUnitPrimitiveType, DirectionChangeResult, EditorBuffer, SelectionRange, Size, DEBUG_TUI_COPY_PASTE};
+use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
+            ChUnitPrimitiveType, ColIndex, DEBUG_TUI_COPY_PASTE, DirectionChangeResult,
+            EditorBuffer, RowIndex, SelectionRange, Size, caret_scr_adj,
+            caret_scroll_index, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta,
+            fg_red, fg_yellow, height, inline_string, row, underline, width};
 
 /// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
 /// viewport to be passed in (from the [`crate::EditorEngine`]). However, in this module,

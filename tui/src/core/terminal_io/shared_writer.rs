@@ -20,7 +20,7 @@ use std::{io::{self, Write},
 
 use tokio::sync::{broadcast, mpsc};
 
-use crate::{ok, InlineString};
+use crate::{InlineString, ok};
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
 /// without messing up its associated `Readline` instance (in the `r3bl_terminal_async`

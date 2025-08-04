@@ -41,8 +41,8 @@
 //!
 //! # Operations
 //!
-//! - [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme]: Insert text at a
-//!   specific grapheme position with automatic optimization detection
+//! - [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme]: Insert
+//!   text at a specific grapheme position with automatic optimization detection
 //! - [`insert_empty_line()`][ZeroCopyGapBuffer::insert_empty_line]: Create new empty
 //!   lines with proper initialization
 //! - Internal helpers for byte-level manipulation and capacity management
@@ -76,8 +76,9 @@
 //!
 //! UTF-8 safety is **guaranteed by Rust's type system** at the API boundary:
 //!
-//! - **[`insert_text_at_grapheme(text: &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]**: The
-//!   `&str` parameter ensures valid UTF-8
+//! - **[`insert_text_at_grapheme(text:
+//!   &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]**: The `&str` parameter ensures
+//!   valid UTF-8
 //! - **Type system enforcement**: Impossible to pass invalid UTF-8 through safe Rust APIs
 //! - **No runtime validation needed**: UTF-8 validity guaranteed by caller's type
 //!   constraints
@@ -109,8 +110,8 @@
 
 use miette::{Result, miette};
 
-use crate::{ByteIndex, RowIndex, SegIndex, len};
 use super::super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
+use crate::{ByteIndex, RowIndex, SegIndex, len};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line

@@ -18,7 +18,7 @@
 use std::fmt::Debug;
 
 use super::FlexBoxId;
-use crate::{ok, Pos, ReqSizePc, Size, TuiStyle};
+use crate::{Pos, ReqSizePc, Size, TuiStyle, ok};
 
 /// Direction of the layout of the box.
 #[non_exhaustive]
@@ -106,7 +106,7 @@ impl std::fmt::Display for FlexBox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, height, ok, req_size_pc, row, width, CommonResult};
+    use crate::{CommonResult, col, height, ok, req_size_pc, row, width};
 
     #[test]
     fn test_flex_box_default() {

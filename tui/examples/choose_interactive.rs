@@ -15,13 +15,13 @@
  *   limitations under the License.
  */
 
-use r3bl_tui::{ast, ast_line, ast_lines, choose, get_size, get_terminal_width, height,
+use r3bl_tui::{ASTColor, ASTStyle, AnsiStyledText, DefaultIoDevices, InlineVec, ast,
+               ast_line, ast_lines, choose, get_size, get_terminal_width, height,
                inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
-               readline_async::{style::StyleSheet, HowToChoose, DEVELOPMENT_MODE},
-               set_mimalloc_in_main, throws, tui_color, usize, width, ASTColor,
-               ASTStyle, AnsiStyledText, DefaultIoDevices, InlineVec};
+               readline_async::{DEVELOPMENT_MODE, HowToChoose, style::StyleSheet},
+               set_mimalloc_in_main, throws, tui_color, usize, width};
 use smallvec::smallvec;
 
 #[tokio::main]
@@ -142,7 +142,7 @@ async fn main() -> miette::Result<()> {
 
 // Multi line header.
 async fn multi_line_header() -> miette::Result<()> {
-    let header = ast (
+    let header = ast(
         " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
         new_style!(
             color_fg: {tui_color!(171, 204, 242)}

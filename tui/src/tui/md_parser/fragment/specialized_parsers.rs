@@ -15,28 +15,29 @@
  *   limitations under the License.
  */
 
-use nom::{branch::alt,
+use nom::{IResult, Parser,
+          branch::alt,
           bytes::complete::tag,
           combinator::{map, recognize},
-          multi::many0,
-          IResult, Parser};
+          multi::many0};
 
 use super::specialized_parser_delim_matchers;
-use crate::{fg_blue, fg_red,
+use crate::{DEBUG_MD_PARSER_STDOUT, HyperlinkData, fg_blue, fg_red,
             md_parser::constants::{BACK_TICK, CHECKED, LEFT_BRACKET, LEFT_IMAGE,
                                    LEFT_PARENTHESIS, RIGHT_BRACKET, RIGHT_IMAGE,
                                    RIGHT_PARENTHESIS, STAR, UNCHECKED, UNDERSCORE},
-            take_text_between_delims_err_on_new_line, HyperlinkData,
-            DEBUG_MD_PARSER_STDOUT};
+            take_text_between_delims_err_on_new_line};
 
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher handles null padding.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher
+/// handles null padding.
 ///
 /// # Errors
 ///
-/// Returns a nom parsing error if the input doesn't start with an underscore or contains a newline.
+/// Returns a nom parsing error if the input doesn't start with an underscore or contains
+/// a newline.
 pub fn parse_fragment_starts_with_underscore_err_on_new_line(
     input: &str,
 ) -> IResult<&str, &str> {
@@ -46,13 +47,15 @@ pub fn parse_fragment_starts_with_underscore_err_on_new_line(
 }
 
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher handles null padding.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher
+/// handles null padding.
 ///
 /// # Errors
 ///
-/// Returns a nom parsing error if the input doesn't start with a star or contains a newline.
+/// Returns a nom parsing error if the input doesn't start with a star or contains a
+/// newline.
 pub fn parse_fragment_starts_with_star_err_on_new_line(
     input: &str,
 ) -> IResult<&str, &str> {
@@ -60,13 +63,15 @@ pub fn parse_fragment_starts_with_star_err_on_new_line(
 }
 
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher handles null padding.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher
+/// handles null padding.
 ///
 /// # Errors
 ///
-/// Returns a nom parsing error if the input doesn't start with a backtick or contains a newline.
+/// Returns a nom parsing error if the input doesn't start with a backtick or contains a
+/// newline.
 pub fn parse_fragment_starts_with_backtick_err_on_new_line(
     input: &str,
 ) -> IResult<&str, &str> {
@@ -105,13 +110,15 @@ pub fn parse_fragment_starts_with_backtick_err_on_new_line(
 }
 
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher handles null padding.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher
+/// handles null padding.
 ///
 /// # Errors
 ///
-/// Returns a nom parsing error if the input doesn't contain a valid image markdown syntax or contains a newline.
+/// Returns a nom parsing error if the input doesn't contain a valid image markdown syntax
+/// or contains a newline.
 pub fn parse_fragment_starts_with_left_image_err_on_new_line(
     input: &str,
 ) -> IResult<&str, HyperlinkData<'_>> {
@@ -167,13 +174,15 @@ pub fn parse_fragment_starts_with_left_image_err_on_new_line(
 }
 
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher handles null padding.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying delim matcher
+/// handles null padding.
 ///
 /// # Errors
 ///
-/// Returns a nom parsing error if the input doesn't contain a valid link markdown syntax or contains a newline.
+/// Returns a nom parsing error if the input doesn't contain a valid link markdown syntax
+/// or contains a newline.
 pub fn parse_fragment_starts_with_left_link_err_on_new_line(
     input: &str,
 ) -> IResult<&str, HyperlinkData<'_>> {
@@ -235,9 +244,9 @@ pub fn parse_fragment_starts_with_left_link_err_on_new_line(
 /// parse a checkbox into plain text, or into a boolean.
 ///
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`.
 ///
 /// # Errors
 ///
@@ -265,9 +274,9 @@ pub fn parse_fragment_starts_with_checkbox_into_str(input: &str) -> IResult<&str
 /// parse a checkbox into plain text, or into a boolean.
 ///
 /// # Null Padding Invariant
-/// 
-/// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
-/// as provided by `ZeroCopyGapBuffer::as_str()`.
+///
+/// This parser expects input where lines end with `\n` followed by zero or more `\0`
+/// characters, as provided by `ZeroCopyGapBuffer::as_str()`.
 ///
 /// # Errors
 ///
