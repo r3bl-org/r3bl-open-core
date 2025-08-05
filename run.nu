@@ -197,10 +197,23 @@ def watch-check [] { watch-files "cargo check --workspace" }
 # - Note: cargo-watch is no longer maintained (as of Oct 2024).
 
 def install-cargo-tools [] {
-    # Cargo tools
-    [bacon cargo-workspaces cargo-cache cargo-outdated cargo-update cargo-deny
-     cargo-unmaintained cargo-expand cargo-readme cargo-nextest flamegraph inferno]
-    | each {|tool| install_if_missing $tool $"cargo install ($tool)"}
+    # Cargo tools - some tools install binaries with different names
+    let cargo_tools = [
+        {name: "bacon", check: "bacon", install: "cargo install bacon"},
+        {name: "cargo-workspaces", check: "cargo-workspaces", install: "cargo install cargo-workspaces"},
+        {name: "cargo-cache", check: "cargo-cache", install: "cargo install cargo-cache"},
+        {name: "cargo-outdated", check: "cargo-outdated", install: "cargo install cargo-outdated"},
+        {name: "cargo-update", check: "cargo-update", install: "cargo install cargo-update"},
+        {name: "cargo-deny", check: "cargo-deny", install: "cargo install cargo-deny"},
+        {name: "cargo-unmaintained", check: "cargo-unmaintained", install: "cargo install cargo-unmaintained"},
+        {name: "cargo-expand", check: "cargo-expand", install: "cargo install cargo-expand"},
+        {name: "cargo-readme", check: "cargo-readme", install: "cargo install cargo-readme"},
+        {name: "cargo-nextest", check: "cargo-nextest", install: "cargo install cargo-nextest"},
+        {name: "flamegraph", check: "cargo-flamegraph", install: "cargo install flamegraph"},
+        {name: "inferno", check: "inferno-flamegraph", install: "cargo install inferno"}
+    ]
+
+    $cargo_tools | each {|tool| install_if_missing $tool.check $tool.install}
 
     # Rust components
     if (rustup component list --installed | str contains "rust-analyzer" | not $in) {
@@ -212,13 +225,20 @@ def install-cargo-tools [] {
     let pkg_mgr = get_package_manager
     # cspell:enable
 
+    # Install go and docker if not already installed.
     if ($pkg_mgr != null) {
         install_if_missing "docker" $"($pkg_mgr) docker.io docker-compose"
         install_if_missing "go" $"($pkg_mgr) golang-go"
     }
 
-    # Optional tools
+    # Install other tools.
+
+    # Install claude using script rather than npm
+    # https://docs.anthropic.com/en/docs/claude-code/setup#native-binary-installation-beta
     install_if_missing "claude" "curl -fsSL https://claude.ai/install.sh | sh"
+
+    # Install go and mcp-language-server if not already installed
+    # https://github.com/isaacphi/mcp-language-server
     if (which go | is-not-empty) {
         let mcp_path = $"($env.HOME)/go/bin/mcp-language-server"
         # cspell:disable
@@ -231,7 +251,7 @@ def install-cargo-tools [] {
         # cspell:enable
     }
 
-    # Configure claude if available
+    # Configure claude w/ mcp-language-server to use rust-analyzer if available
     if (which claude | is-not-empty) {
         try {
             print 'Configuring claude MCP servers...'
@@ -521,9 +541,9 @@ def log [] {
         {path: "tui/log.txt", desc: "tui directory (from run-examples)"},
         {path: "cmdr/log.txt", desc: "cmdr directory (from run-binaries)"}
     ]
-    
+
     let existing_logs = $log_locations | where ($it.path | path exists)
-    
+
     let log_file = if ($existing_logs | length) == 0 {
         # No existing logs - inform user
         print "No log files found. Run 'nu run.nu run-examples' or 'nu run.nu run-binaries' first to generate logs."
@@ -543,12 +563,12 @@ def log [] {
             # User pressed Ctrl+C, exit gracefully
             return
         }
-        
+
         if ($selection == "") or ($selection == null) {
             print "No log file selected."
             return
         }
-        
+
         # Extract just the path from the selection (before the first space)
         let log_path = $selection | split row " " | first
         print $"(ansi magenta)Monitoring log file: (ansi green)($selection)(ansi reset)"

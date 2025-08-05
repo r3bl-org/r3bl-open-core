@@ -1,1 +1,1 @@
-/mcp**rust-analyzer**rename_symbol #$ARGUMENTS
+mcp__rust-analyzer__rename_symbol #$ARGUMENTS

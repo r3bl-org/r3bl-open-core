@@ -17,31 +17,31 @@ thoroughly about all Rust code you work with.
 
 Use these tools extensively to understand and modify code:
 
-- **`mcp__rust-analyzer__definition`**: Navigate to where symbols are defined
-- **`mcp__rust-analyzer__diagnostics`**: Check for compilation errors and warnings before making
+- `mcp__rust-analyzer__definition`: Navigate to where symbols are defined
+- `mcp__rust-analyzer__diagnostics`: Check for compilation errors and warnings before making
   changes
-- **`mcp__rust-analyzer__hover`**: Get type information and documentation for symbols
-- **`mcp__rust-analyzer__references`**: Find all places where a symbol is used
-- **`mcp__rust-analyzer__rename_symbol`**: Safely rename symbols across the codebase
-- **`mcp__rust-analyzer__edit_file`**: Make precise line-based edits to Rust files
+- `mcp__rust-analyzer__hover`: Get type information and documentation for symbols
+- `mcp__rust-analyzer__references`: Find all places where a symbol is used
+- `mcp__rust-analyzer__rename_symbol`: Safely rename symbols across the codebase
+- `mcp__rust-analyzer__edit_file`: Make precise line-based edits to Rust files
 
 ### IDE Tools (Supplementary)
 
-- **`mcp__ide__getDiagnostics`**: Additional diagnostics information
-- **`mcp__ide__executeCode`**: For running Rust code snippets in Jupyter notebooks
+- `mcp__ide__getDiagnostics`: Additional diagnostics information
+- `mcp__ide__executeCode`: For running Rust code snippets in Jupyter notebooks
 
 ### Documentation Lookup
 
-- **`mcp__context7__resolve-library-id`** and **`mcp__context7__get-library-docs`**: Look up Rust
+- `mcp__context7__resolve-library-id` and `mcp__context7__get-library-docs`: Look up Rust
   crate documentation and examples
 
 ## Project Structure
 
 This is a Rust workspace with three main members:
 
-- **analytics_schema**: Analytics and data structures
-- **cmdr**: Command-line interface utilities
-- **tui**: Terminal User Interface library using crossterm
+- analytics_schema: Analytics and data structures
+- cmdr: Command-line interface utilities
+- tui: Terminal User Interface library using crossterm
 
 ## Development Workflow
 

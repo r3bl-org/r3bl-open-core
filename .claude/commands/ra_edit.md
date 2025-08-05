@@ -1,1 +1,1 @@
-/mcp**rust-analyzer**edit_file #$ARGUMENTS
+mcp__rust-analyzer__edit_file #$ARGUMENTS

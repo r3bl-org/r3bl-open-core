@@ -144,7 +144,12 @@ def get_example_binaries [] {
 # Run an example with flamegraph profiling using the profiling-detailed profile.
 # This provides detailed profiling with less optimization for granular data.
 def run_example_with_flamegraph_profiling_svg [options: list<string>] {
-    let selection = $options | input list --fuzzy 'Select an example to run: '
+    let selection = try {
+        $options | input list --fuzzy 'Select an example to run: '
+    } catch {
+        # User pressed Ctrl+C, exit gracefully
+        return
+    }
 
     if ($selection == "") or ($selection == null) {
         print "No example selected.";
@@ -230,7 +235,12 @@ def run_example_with_flamegraph_profiling_svg [options: list<string>] {
 # Run an example with profiling to generate collapsed stacks format (perf-folded) instead of SVG
 # This generates a much smaller text file with stack traces and sample counts
 def run_example_with_flamegraph_profiling_perf_fold [options: list<string>] {
-    let selection = $options | input list --fuzzy 'Select an example to run: '
+    let selection = try {
+        $options | input list --fuzzy 'Select an example to run: '
+    } catch {
+        # User pressed Ctrl+C, exit gracefully
+        return
+    }
 
     if ($selection == "") or ($selection == null) {
         print "No example selected.";

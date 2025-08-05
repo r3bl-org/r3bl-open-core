@@ -1,1 +1,1 @@
-/mcp**rust-analyzer**hover #$ARGUMENTS
+mcp__rust-analyzer__hover #$ARGUMENTS

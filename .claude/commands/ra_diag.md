@@ -1,1 +1,1 @@
-/mcp**rust-analyzer**diagnostics #$ARGUMENTS
+mcp__rust-analyzer__diagnostics #$ARGUMENTS

@@ -1,1 +1,1 @@
-/mcp**rust-analyzer**references #$ARGUMENTS
+mcp__rust-analyzer__references #$ARGUMENTS

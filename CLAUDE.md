@@ -6,23 +6,23 @@
 
 Use these tools to navigate and modify Rust code effectively:
 
-- **rust-analyzer**: definition, diagnostics, edit_file, hover, references, rename_symbol
-- **IDE**: getDiagnostics, getDefinition, getReferences, getHover, editFile
+- rust-analyzer: definition, diagnostics, edit_file, hover, references, rename_symbol
+- IDE: getDiagnostics, getDefinition, getReferences, getHover, editFile
 
 Use these tools to lookup documentation and APIs:
 
-- **context7**: Documentation lookup for Rust crates and APIs, and all other APIs as well
+- context7: Documentation lookup for Rust crates and APIs, and all other APIs as well
 
 ### Rust Code Quality
 
-**After completing tasks, run:**
+After completing tasks, run:
 
 - `cargo check` - Fast typecheck
 - `cargo clippy --all-targets` / `cargo clippy --fix --allow-dirty` - Lint
 - `cargo doc --no-deps` - Fix doc errors
 - `cargo nextest run` - Tests
 
-**Performance analysis:**
+Performance analysis:
 
 - `cargo bench` - Benchmarks (mark tests with `#[bench]`)
 - `cargo flamegraph` - Profiling

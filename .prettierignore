@@ -1,0 +1,5 @@
+# Prettier ignore file
+# Add files or patterns that should not be formatted by Prettier
+
+# Ignore all markdown files in .claude directory
+.claude/**/*.md

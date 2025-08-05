@@ -1,1 +1,1 @@
-/mcp**rust-analyzer**definition #$ARGUMENTS
+mcp__rust-analyzer__definition #$ARGUMENTS
