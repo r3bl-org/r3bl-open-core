@@ -16,31 +16,21 @@
     "s-nlf-fh.glassit", // GlassIt.
     "antfu.icons-carbon", // Carbon Icons (Intuitive product icons for symbols: fn, mod, etc).
     "pkief.material-icon-theme", // Material Icon Theme (Intuitive icons in file explorer).
-    "bceskavich.theme-dracula-at-night", // Dracula at Night.
-    "thiagolciobittencourt.omni-dracula-theme", // Omni Dracula Theme.
-    "dracula-theme.theme-dracula", // Dracula Theme.
     "qwtel.sqlite-viewer", // SQLite Viewer.
-    "keksiqc.idx-monospace-theme", // IDX Monospace Theme.
-    "devgauravjatt.github-catppuccin-dark", // GitHub + Catppuccino Dark Theme.
-    "bierner.emojisense", // Emoji Sense.
-    "jvitorfrancisco.theme-acid-purple", // Acid Purple.
-    "Tr3bbe.purplehaze", // Purple Haze.
+    "perkovec.emoji", // Emoji.
     "chrisjdavies.multi-highlight", // Multi Highlight.
     "alefragnani.bookmarks", // Bookmarks.
-    "GitHub.github-vscode-theme", // Github Theme.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
     "github.copilot", // Github Copilot.
     "naumovs.color-highlight", // Color Highlight.
-    "perkovec.emoji", // Emoji.
     "tamasfe.even-better-toml", // Even Better TOML.
     "nicholashsiang.vscode-opened-editors", // Opened Editors.
     "dbankier.vscode-quick-select", // Quick and Simple Text Selection.
     "stkb.rewrap", // Rewrap.
     "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.
     "rust-lang.rust-analyzer", // Rust Analyzer.
-    "hoovercj.vscode-settings-cycler", // Settings Cycler.
     "wayou.vscode-todo-highlight", // Todo Highlight.
     "fabiospampinato.vscode-todo-plus", // Todo+.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
@@ -49,11 +39,13 @@
     "fill-labs.dependi", // crates.io.
     "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "bmalehorn.vscode-fish", // Fish.
-    "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
-    "ms-azuretools.vscode-docker", // Docker.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
+    "ms-azuretools.vscode-containers", // Container tools.
+    "ms-azuretools.vscode-docker", // Docker.
+    "hoovercj.vscode-settings-cycler", // Settings Cycler.
     "ms-vscode.vscode-typescript-next", // Typescript Next.
     "compulim.vscode-clock", // Clock.
     "eamodio.gitlens", // GitLens by GitKraken.

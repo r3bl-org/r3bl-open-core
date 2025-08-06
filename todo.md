@@ -1,15 +1,22 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
+<!-- Keep this file in sync with dashboard: https://github.com/users/nazmulidris/projects/4/views/1 -->
 
 # unify rendering paths
 
 - [ ] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
       `ASText` and `TuiStyledText` into a single, optimized rendering pipeline that works for both
-      use cases while preparing for the future removal of crossterm dependency.
+      use cases while preparing for the future removal of crossterm dependency
 
 # remove crossterm
 
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
-      `r3bl_open_core` codebase.
+      `r3bl_open_core` codebase
+
+# add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
+
+- [ ] with `shuttle.rs` gone, and homelab up and running, implement this, before launching too many
+      new features in `r3bl-cmdr` that will need telemetry and analytics to see what users care
+      about
 
 # refactor or rewrite the UI layout, sizing, and styling code
 
@@ -19,7 +26,7 @@
 
 - [ ] use [`task_syntect_improve`](docs/task_syntect_improve.md) to add support for TypeScript,
       TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom `.sublime-syntax` files
-      to syntect.
+      to syntect
 
 # rewrite textwrap
 
@@ -47,7 +54,15 @@
 
 # enable mouse support
 
-- [ ] figure out how to interpret mouse events into something that is usable for the apps.
+- [ ] figure out how to interpret mouse events into something that is usable for the apps
+
+# incorporate TLS and tcp-api-server work into the codebase: https://github.com/r3bl-org/r3bl-base/issues/6
+
+# build and deploy r3bl-base backend (in homelab) for telemetry and analytics: https://github.com/r3bl-org/r3bl-base/issues/6
+
+# add animation api: https://github.com/r3bl-org/r3bl-open-core/issues/174
+
+# create robust atomic file based user configuration settings: https://github.com/nazmulidris/rust-scratch/issues/114
 
 # edi features
 
@@ -110,10 +125,6 @@
 
 - [ ] devise an approach to do this
 
-# incorporate TLS and tcp-api-server work into the codebase
-
-# build and deploy r3bl-base backend (in homelab) for telemetry and analytics
-
 # make release of `r3bl-cmdr` and `r3bl_tui` v1
 
 - [ ] remove all the language about early access release / preview (update r3bl.com website as well)
@@ -121,10 +132,6 @@
       https://github.com/r3bl-org/r3bl-open-core/issues/426
 - [ ] make sure this works on macOS (via cargo install)
 - [ ] make sure this works on windows (via cargo install)
-
-# add animation api: https://github.com/r3bl-org/r3bl-open-core/issues/174
-
-# create robust atomic file based user configuration settings: https://github.com/nazmulidris/rust-scratch/issues/114
 
 # brainstorm UX and impl of multi-user editing on LAN without any configuration (mDNS, etc)
 

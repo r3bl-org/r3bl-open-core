@@ -210,7 +210,8 @@ def install-cargo-tools [] {
         {name: "cargo-readme", check: "cargo-readme", install: "cargo install cargo-readme"},
         {name: "cargo-nextest", check: "cargo-nextest", install: "cargo install cargo-nextest"},
         {name: "flamegraph", check: "cargo-flamegraph", install: "cargo install flamegraph"},
-        {name: "inferno", check: "inferno-flamegraph", install: "cargo install inferno"}
+        {name: "inferno", check: "inferno-flamegraph", install: "cargo install inferno"},
+        {name: "sccache", check: "sccache", install: "cargo install sccache --locked"}
     ]
 
     $cargo_tools | each {|tool| install_if_missing $tool.check $tool.install}

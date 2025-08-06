@@ -96,22 +96,34 @@ what has changed recently in each of the crates in this Rust workspace.
 
 Table of contents:
 
-<!-- TOC -->
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [This workspace contains crates for building TUI, CLI, TTY apps](#this-workspace-contains-crates-for-building-tui-cli-tty-apps)
   - [Full TUI (async, raw mode, full screen) for immersive TUI apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
-  - [Partial TUI (async, partial raw mode, async readline) for choice-based user interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
+  - [Partial TUI (async, partial raw mode, async readline) for choice based user interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
   - [Partial TUI (async, partial raw mode, async readline) for async REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
 - [Power via composition](#power-via-composition)
   - [Main library crate](#main-library-crate)
   - [Main binary crate](#main-binary-crate)
 - [Project Task Organization](#project-task-organization)
+  - [Task Management Files](#task-management-files)
+  - [Workflow Connection](#workflow-connection)
 - [Documentation and Planning](#documentation-and-planning)
+  - [Release and Contribution Guides](#release-and-contribution-guides)
+  - [Technical Design Documents](#technical-design-documents)
 - [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [Quick Start](#quick-start)
+  - [Automated Setup (Recommended)](#automated-setup-recommended)
+  - [Manual Setup](#manual-setup)
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
+  - [Key Commands](#key-commands)
+  - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
+  - [Unified Script Architecture](#unified-script-architecture)
 - [Star History](#star-history)
 - [Archive](#archive)
-<!-- /TOC -->
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## This workspace contains crates for building TUI, CLI, TTY apps
 
@@ -290,6 +302,7 @@ cd r3bl-open-core
 ```
 
 The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script will:
+
 - Install Rust toolchain (rustup)
 - Install Nushell shell
 - Install file watchers (inotifywait on Linux, fswatch on macOS)
@@ -313,11 +326,12 @@ nu run.nu install-cargo-tools
 
 ## Build the workspace and run tests
 
-There's a unified [`nushell`](https://www.nushell.sh/) script that you can use to run the build and release
-pipeline for this workspace, and more (local only operations).
+There's a unified [`nushell`](https://www.nushell.sh/) script that you can use to run the build and
+release pipeline for this workspace, and more (local only operations).
 
 To get a list of available commands, you can review the `nushell` script in the root of this repo
-[`run.nu`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.nu). To see all available commands:
+[`run.nu`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.nu). To see all available
+commands:
 
 ```sh
 nu run.nu
@@ -377,9 +391,40 @@ Other commands:
 - `nu run.nu run-examples` - Run TUI examples interactively
 - `nu run.nu run-binaries` - Run cmdr binaries (edi, giti, rc) interactively
 
+### Build Cache (using sccache) Verification
+
+This project uses [sccache](https://github.com/mozilla/sccache) to speed up Rust compilation by
+caching build artifacts (configured in the `.cargo/config.toml` file). After running
+`nu run.nu install-cargo-tools`, you can verify sccache is working:
+
+```sh
+sccache --show-stats
+# Copy to clipboard for easy sharing
+sccache --show-status 2>&1 | setclip
+```
+
+This will display cache hit rates and storage information. Higher cache hit percentages indicate
+faster builds through cached compilation results.
+
+To reset the cache, you can run:
+
+```sh
+# Complete reset
+sccache --zero-stats
+sccache --stop-server
+rm -rf ~/.cache/sccache
+
+# Server starts automatically on next use
+cargo build  # or sccache --show-stats
+```
+
+There is no need to restart the server, as it is designed to be "lazy". And running `cargo build` or
+`sccache --show-stats` will automatically start the server if it is stopped.
+
 ### Unified Script Architecture
 
-The root-level `run.nu` script consolidates functionality that was previously scattered across multiple workspace-specific scripts. This unified approach provides:
+The root-level `run.nu` script consolidates functionality that was previously scattered across
+multiple workspace-specific scripts. This unified approach provides:
 
 - **Workspace-wide commands** that operate on the entire project
 - **TUI-specific commands** for running examples and benchmarks

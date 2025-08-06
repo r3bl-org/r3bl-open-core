@@ -1,5 +1,4 @@
 {
-  "enableAllProjectMcpServers": true,
   "permissions": {
     "allow": [
       "Bash(cargo bench:*)",
@@ -60,9 +59,11 @@
       "mcp__ide__getReferences",
       "mcp__ide__getHover",
       "mcp__ide__editFile",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "defaultMode": "plan"
-  }
+  },
+  "enableAllProjectMcpServers": true
 }
