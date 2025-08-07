@@ -25,62 +25,7 @@
 
 //! # Why R3BL?
 //!
-//! <img
-//! src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
-//! height="256px">
-//!
-//! # Table of contents
-//!
-//! <!-- TOC -->
-//! - [Why R3BL?](#why-r3bl)
-//! - [Introduction](#introduction)
-//! - [Framework highlights](#framework-highlights)
-//! - [Full TUI, Partial TUI, and async
-//!   readline](#full-tui-partial-tui-and-async-readline)
-//!   - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
-//!   - [Partial TUI for REPL](#partial-tui-for-repl)
-//!   - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
-//!   - [Power via composition](#power-via-composition)
-//! - [Changelog](#changelog)
-//! - [Learn how these crates are built, provide
-//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
-//! - [Run the demo locally](#run-the-demo-locally)
-//!   - [Prerequisites](#prerequisites)
-//!   - [Running examples](#running-examples)
-//! - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
-//! - [Examples to get you started](#examples-to-get-you-started)
-//!   - [Video of the demo in action](#video-of-the-demo-in-action)
-//! - [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
-//! - [Architecture overview, is message passing, was shared
-//!   memory](#architecture-overview-is-message-passing-was-shared-memory)
-//! - [I/O devices for full TUI, choice, and
-//!   REPL](#io-devices-for-full-tui-choice-and-repl)
-//! - [Life of an input event](#life-of-an-input-event-for-a-full-tui-app)
-//! - [Life of a signal (out of band event)](#life-of-a-signal-aka-out-of-band-event)
-//! - [The window](#the-window)
-//! - [Layout and styling](#layout-and-styling)
-//! - [Component registry, event routing, focus
-//!   mgmt](#component-registry-event-routing-focus-mgmt)
-//! - [Input event specificity](#input-event-specificity)
-//! - [Rendering and painting](#rendering-and-painting)
-//!   - [Offscreen buffer](#offscreen-buffer)
-//!   - [Render pipeline](#render-pipeline)
-//!   - [First render](#first-render)
-//!   - [Subsequent render](#subsequent-render)
-//! - [How does the editor component work?](#how-does-the-editor-component-work)
-//! - [Painting the caret](#painting-the-caret)
-//! - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
-//!   - [Two callback functions](#two-callback-functions)
-//!   - [Dialog HTTP requests and results](#dialog-http-requests-and-results)
-//! - [How to make HTTP requests](#how-to-make-http-requests)
-//!   - [Custom Markdown parsing and syntax
-//!     highlighting](#custom-markdown-parsing-and-syntax-highlighting)
-//! - [Grapheme support](#grapheme-support)
-//! - [Lolcat support](#lolcat-support)
-//! - [Issues and PRs](#issues-and-prs)
-//! <!-- /TOC -->
-//!
-//! # Introduction
+//! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true" height="256px">
 //!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
@@ -121,10 +66,69 @@
 //! style="color:#1E63F8">u</span><span style="color:#1A67F7">c</span><span
 //! style="color:#176BF6">t</span><span style="color:#136FF5">i</span><span
 //! style="color:#1073F4">v</span><span style="color:#0C77F3">i</span><span
-//! style="color:#097BF2">t</span><span style="color:#057FF1">y</span>. Please read the
+//! style="color:#097BF2">t</span><span style="color:#057FF1">y</span>.
+//!
+//! Please read the
 //! main [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of
 //! the `r3bl-open-core` monorepo and workspace to get a better understanding of the
 //! context in which this crate is meant to exist.
+//!
+//! # Table of contents
+//!
+//! <!-- TOC -->
+//! - [Introduction](#introduction)
+//! - [Framework highlights](#framework-highlights)
+//! - [Full TUI, Partial TUI, and async
+//!   readline](#full-tui-partial-tui-and-async-readline)
+//!   - [Partial TUI for simple choice](#partial-tui-for-simple-choice)
+//!   - [Partial TUI for REPL](#partial-tui-for-repl)
+//!   - [Full TUI for immersive apps](#full-tui-for-immersive-apps)
+//!   - [Power via composition](#power-via-composition)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide
+//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Run the demo locally](#run-the-demo-locally)
+//!   - [Prerequisites](#prerequisites)
+//!   - [Running examples](#running-examples)
+//! - [TUI Development Workflow](#tui-development-workflow)
+//!   - [TUI-Specific Commands](#tui-specific-commands)
+//!   - [Testing and Development](#testing-and-development)
+//!   - [Performance Analysis Features](#performance-analysis-features)
+//! - [Examples to get you started](#examples-to-get-you-started)
+//!   - [Video of the demo in action](#video-of-the-demo-in-action)
+//! - [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
+//! - [Architecture overview, is message passing, was shared
+//!   memory](#architecture-overview-is-message-passing-was-shared-memory)
+//! - [I/O devices for full TUI, choice, and
+//!   REPL](#io-devices-for-full-tui-choice-and-repl)
+//! - [Life of an input event for a Full TUI
+//!   app](#life-of-an-input-event-for-a-full-tui-app)
+//! - [Life of a signal (aka "out of band
+//!   event")](#life-of-a-signal-aka-out-of-band-event)
+//! - [The window](#the-window)
+//! - [Layout and styling](#layout-and-styling)
+//! - [Component registry, event routing, focus
+//!   mgmt](#component-registry-event-routing-focus-mgmt)
+//! - [Input event specificity](#input-event-specificity)
+//! - [Rendering and painting](#rendering-and-painting)
+//!   - [Offscreen buffer](#offscreen-buffer)
+//!   - [Render pipeline](#render-pipeline)
+//!   - [First render](#first-render)
+//!   - [Subsequent render](#subsequent-render)
+//! - [How does the editor component work?](#how-does-the-editor-component-work)
+//! - [Painting the caret](#painting-the-caret)
+//! - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
+//!   - [Two callback functions](#two-callback-functions)
+//!   - [Dialog HTTP requests and results](#dialog-http-requests-and-results)
+//! - [How to make HTTP requests](#how-to-make-http-requests)
+//!   - [Custom Markdown parsing and syntax
+//!     highlighting](#custom-markdown-parsing-and-syntax-highlighting)
+//! - [Grapheme support](#grapheme-support)
+//! - [Lolcat support](#lolcat-support)
+//! - [Issues and PRs](#issues-and-prs)
+//! <!-- /TOC -->
+//!
+//! # Introduction
 //!
 //! You can build fully async TUI (text user interface) apps with a modern API that brings
 //! the best of the web frontend development ideas to TUI apps written in Rust:
