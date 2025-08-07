@@ -1,6 +1,17 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 <!-- Keep this file in sync with dashboard: https://github.com/users/nazmulidris/projects/4/views/1 -->
 
+# fix r3bl-cmdr upgrade code: https://github.com/r3bl-org/r3bl-open-core/issues/437, https://github.com/nazmulidris/rust-scratch/issues/117
+
+- [x] do research and make a rust-scratch issue and project for this:
+      https://github.com/nazmulidris/rust-scratch/issues/117
+- [x] publish the README.md from the rust-scratch project to developerlife.com as tutorial:
+      https://developerlife.com/2025/08/10/pty-rust-osc-seq/
+- [ ] implement the upgrade code in `r3bl-cmdr` to use the code above:
+      https://github.com/r3bl-org/r3bl-open-core/issues/437
+- [ ] make YT video on the research (in rust-scratch) issue
+- [ ] make YT video on the implementation (to r3bl-cmdr) issue
+
 # unify rendering paths
 
 - [ ] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
@@ -38,6 +49,7 @@
 
 - [ ] support both `"**"` and `"*"` for bold, and `"_"` and `"__"` for italic (deviate from the
       markdown spec)
+- [ ] support bold and italic that spawn multiple lines (deviate from the markdown spec)
 - [ ] add blockquote support
   - [ ] impl parser support for blockquote
   - [ ] impl syntax highlighting support for blockquote

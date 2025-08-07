@@ -19,25 +19,6 @@
 //!
 //! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/r3bl-cmdr-eap.svg?raw=true" height="256px">
 //!
-//! # Table of contents
-//!
-//! <!-- TOC -->
-//!
-//! - [Introduction](#introduction)
-//! - [Installation](#installation)
-//! - [Changelog](#changelog)
-//! - [Learn how these crates are built, provide
-//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
-//! - [Run `giti` binary target](#run-giti-binary-target)
-//! - [Run `edi` binary target](#run-edi-binary-target)
-//! - [Build, run, test tasks](#build-run-test-tasks)
-//!   - [Prerequisites](#prerequisites)
-//!   - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
-//!
-//! <!-- /TOC -->
-//!
-//! # Introduction
-//!
 //! <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 //!
 //! <span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
@@ -74,45 +55,32 @@
 //! style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
 //! style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
 //!
-//! We are working on building command line apps in Rust which have rich text user
-//! interfaces (TUI). We want to lean into the terminal as a place of productivity, and
-//! build all kinds of awesome apps for it.
+//! # Table of contents
 //!
-//! 1. 🔮 Instead of just building one app, we are building a library to enable any kind
-//!    of rich TUI development w/ a twist: taking concepts that work really well for the
-//!    frontend mobile and web development world and re-imagining them for TUI & Rust.
+//! <!-- TOC -->
 //!
-//!   - Taking inspiration from things like [React](https://react.dev/), [SolidJS](https://www.solidjs.com/),
-//!     [Elm](https://guide.elm-lang.org/architecture/), [iced-rs](https://docs.rs/iced/latest/iced/),
-//!     [Jetpack Compose](https://developer.android.com/compose), [JSX](https://ui.dev/imperative-vs-declarative-programming),
-//!     [CSS](https://www.w3.org/TR/CSS/#css), but making everything async (so they can be
-//!     run in parallel & concurrent via [Tokio](https://crates.io/crates/tokio)).
-//!   - Even the thread running the main event loop doesn't block since it is async.
-//!   - Using macros to create DSLs to implement something inspired by [CSS](https://www.w3.org/TR/CSS/#css)
-//!     & [JSX](https://ui.dev/imperative-vs-declarative-programming).
+//! - [Introduction](#introduction)
+//! - [Installation](#installation)
+//! - [Changelog](#changelog)
+//! - [Learn how these crates are built, provide
+//!   feedback](#learn-how-these-crates-are-built-provide-feedback)
+//! - [Run `giti` binary target](#run-giti-binary-target)
+//! - [Run `edi` binary target](#run-edi-binary-target)
+//! - [Build, run, test tasks](#build-run-test-tasks)
+//!   - [Prerequisites](#prerequisites)
+//!   - [Binary Development Commands](#binary-development-commands)
+//!     - [Building and Installing Binaries](#building-and-installing-binaries)
+//!     - [Testing and Development](#testing-and-development)
+//!     - [Binary Development Features](#binary-development-features)
 //!
-//! 2. 🌎 We are building apps to enhance developer productivity & workflows.
+//! <!-- /TOC -->
 //!
-//!   - The idea here is not to rebuild `tmux` in Rust (separate processes mux'd onto a
-//!     single terminal window). Rather it is to build a set of integrated "apps" (or
-//!     "tasks") that run in the same process that renders to one terminal window.
-//!   - Inside of this terminal window, we can implement things like "applet" switching,
-//!     routing, tiling layout, stacking layout, etc. so that we can manage a lot of TUI
-//!     apps (which are tightly integrated) that are running in the same process, in the
-//!     same window. So you can imagine that all these "applets" have shared application
-//!     state. Each "applet" may also have its own local application state.
-//!   - You can mix and match "Full TUI" with "Partial TUI" to build for whatever use case
-//!     you need. `r3bl_tui` allows you to create application state that can be moved
-//!     between various "applets", where each "applet" can be "Full TUI" or "Partial TUI".
-//!   - Here are some examples of the types of "app"s we plan to build (for which this
-//!     infrastructure acts as the open source engine):
-//!     1. Multi user text editors w/ syntax highlighting.
-//!     2. Integrations w/ github issues.
-//!     3. Integrations w/ calendar, email, contacts APIs.
+//! # Introduction
 //!
-//! All the crates in the `r3bl-open-core` [monorepo](https://en.wikipedia.org/wiki/Monorepo)
-//! provide lots of useful functionality to help you build TUI (text user interface) apps,
-//! along w/ general niceties & ergonomics that all Rustaceans 🦀 can enjoy 🎉.
+//! Please read the
+//! main [README.md](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md) of
+//! the `r3bl-open-core` monorepo and workspace to get a better understanding of the
+//! context in which this crate is meant to exist.
 //!
 //! # Installation
 //!

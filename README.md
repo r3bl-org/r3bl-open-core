@@ -1,44 +1,131 @@
 # r3bl-open-core
 
 <img
-src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/tui/r3bl-tui.svg?raw=true"
+src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true"
 height="256px">
 
 <!-- R3BL TUI library & suite of apps focused on developer productivity -->
 
-<span style="color:#FD2F53">R</span><span style="color:#FC2C57">3</span><span
-style="color:#FB295B">B</span><span style="color:#FA265F">L</span><span
-style="color:#F92363"> </span><span style="color:#F82067">T</span><span
-style="color:#F61D6B">U</span><span style="color:#F51A6F">I</span><span
-style="color:#F31874"> </span><span style="color:#F11678">l</span><span
-style="color:#EF137C">i</span><span style="color:#ED1180">b</span><span
-style="color:#EB0F84">r</span><span style="color:#E90D89">a</span><span
-style="color:#E60B8D">r</span><span style="color:#E40A91">y</span><span
-style="color:#E10895"> </span><span style="color:#DE0799">&amp;</span><span
-style="color:#DB069E"> </span><span style="color:#D804A2">s</span><span
-style="color:#D503A6">u</span><span style="color:#D203AA">i</span><span
-style="color:#CF02AE">t</span><span style="color:#CB01B2">e</span><span
-style="color:#C801B6"> </span><span style="color:#C501B9">o</span><span
-style="color:#C101BD">f</span><span style="color:#BD01C1"> </span><span
-style="color:#BA01C4">a</span><span style="color:#B601C8">p</span><span
-style="color:#B201CB">p</span><span style="color:#AE02CF">s</span><span
-style="color:#AA03D2"> </span><span style="color:#A603D5">f</span><span
-style="color:#A204D8">o</span><span style="color:#9E06DB">c</span><span
-style="color:#9A07DE">u</span><span style="color:#9608E1">s</span><span
-style="color:#910AE3">e</span><span style="color:#8D0BE6">d</span><span
-style="color:#890DE8"> </span><span style="color:#850FEB">o</span><span
-style="color:#8111ED">n</span><span style="color:#7C13EF"> </span><span
-style="color:#7815F1">d</span><span style="color:#7418F3">e</span><span
-style="color:#701AF5">v</span><span style="color:#6B1DF6">e</span><span
-style="color:#6720F8">l</span><span style="color:#6322F9">o</span><span
-style="color:#5F25FA">p</span><span style="color:#5B28FB">e</span><span
-style="color:#572CFC">r</span><span style="color:#532FFD"> </span><span
-style="color:#4F32FD">p</span><span style="color:#4B36FE">r</span><span
-style="color:#4739FE">o</span><span style="color:#443DFE">d</span><span
-style="color:#4040FE">u</span><span style="color:#3C44FE">c</span><span
-style="color:#3948FE">t</span><span style="color:#354CFE">i</span><span
-style="color:#324FFD">v</span><span style="color:#2E53FD">i</span><span
-style="color:#2B57FC">t</span><span style="color:#285BFB">y</span>
+<!-- prettier-ignore-start -->
+```
+██████╗ ██████╗ ██████╗ ██╗         ████████╗██╗   ██╗██╗
+██╔══██╗╚════██╗██╔══██╗██║         ╚══██╔══╝██║   ██║██║
+██████╔╝ █████╔╝██████╔╝██║            ██║   ██║   ██║██║
+██╔══██╗ ╚═══██╗██╔══██╗██║            ██║   ██║   ██║██║
+██║  ██║██████╔╝██████╔╝███████╗       ██║   ╚██████╔╝██║
+╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝       ╚═╝    ╚═════╝ ╚═╝
+```
+<!-- prettier-ignore-end -->
+
+Table of contents:
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Why R3BL TUI?](#why-r3bl-tui)
+  - [The Problem with Existing Solutions](#the-problem-with-existing-solutions)
+  - [The R3BL Solution: Web and Desktop App Inspired Terminal Apps](#the-r3bl-solution-web-and-desktop-app-inspired-terminal-apps)
+  - [Built-from-Scratch Primitives](#built-from-scratch-primitives)
+  - [Advanced Rendering & Styling](#advanced-rendering--styling)
+  - [Rich Component Ecosystem](#rich-component-ecosystem)
+- [Welcome to the monorepo and workspace](#welcome-to-the-monorepo-and-workspace)
+- [This workspace contains crates for building TUI, CLI, TTY apps](#this-workspace-contains-crates-for-building-tui-cli-tty-apps)
+  - [Full TUI (async, raw mode, full screen) for immersive TUI apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
+  - [Partial TUI (async, partial raw mode, async readline) for choice based user interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
+  - [Partial TUI (async, partial raw mode, async readline) for async REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
+- [Power via composition](#power-via-composition)
+  - [Main library crate](#main-library-crate)
+  - [Main binary crate](#main-binary-crate)
+- [Project Task Organization](#project-task-organization)
+  - [Task Management Files](#task-management-files)
+  - [Workflow Connection](#workflow-connection)
+- [Documentation and Planning](#documentation-and-planning)
+  - [Release and Contribution Guides](#release-and-contribution-guides)
+  - [Technical Design Documents](#technical-design-documents)
+- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
+- [Quick Start](#quick-start)
+  - [Automated Setup (Recommended)](#automated-setup-recommended)
+  - [Manual Setup](#manual-setup)
+- [Build the workspace and run tests](#build-the-workspace-and-run-tests)
+  - [Key Commands](#key-commands)
+  - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
+  - [Unified Script Architecture](#unified-script-architecture)
+- [Star History](#star-history)
+- [Archive](#archive)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+## Why R3BL TUI?
+
+After leaving Google in 2021, I ([Nazmul Idris](https://developerlife.com/about-me/)) embarked on
+creating infrastructure for modern, powerful CLI and TUI experiences built from the ground up in
+Rust.
+
+The core architectural innovation: a purely async, immediate mode reactive UI (every state change
+triggers a render from scratch) where nothing blocks the main thread - unlike traditional approaches
+using platform-specific blocking operations like POSIX
+[`readline()`](https://man7.org/linux/man-pages/man3/readline.3.html) on Linux/macOS or Windows
+[`ReadConsole()`](https://learn.microsoft.com/en-us/windows/console/readconsole).
+
+R3BL TUI is fundamentally different from [`vim`](https://www.vim.org/),
+[`neovim`](https://neovim.io/), and [`ratatui`](https://ratatui.rs/) through its immediate mode
+reactive UI with clean separation between rendering and state mutation, and purely async nature.
+
+This fully async, responsive framework works seamlessly across Linux, macOS, and Windows. It's
+optimized for use over SSH connections by painting only diffs, and handles complex concurrent
+operations with low latency while ensuring no thread blocking.
+
+### The Problem with Existing Solutions
+
+I initially tried [Node.js](https://nodejs.org/) with
+[ink](https://developerlife.com/2021/11/25/ink-v3-advanced-ui-components/), but encountered
+fundamental limitations:
+
+- Module incompatibilities and dependency conflicts
+- Limited control over keybindings and terminal behavior
+- High resource consumption for simple tasks
+- Screen flickering and poor rendering performance
+
+### The R3BL Solution: Web and Desktop App Inspired Terminal Apps
+
+Our framework supports the full spectrum from CLI to hybrid TUI to full TUI experiences with deep
+system integration.
+
+**Key Innovation: "Applets"** - A revolutionary state management system that allows processes to
+persist state across their lifecycle and share it with other instances or processes.
+
+### Built-from-Scratch Primitives
+
+**Async Readline**: Unlike POSIX readline which is single-threaded and blocking, our implementation
+is fully async, interruptable, and non-blocking.
+
+**Choose API**: Single-shot user interactions that enter raw mode without taking over the screen or
+disrupting the terminal's back buffer.
+
+**Full TUI**: Complete raw mode with alternate screen support, fully async and non-destructive.
+
+All components are end-to-end testable using our InputDevice and OutputDevice abstractions for
+stdin, stdout, and stderr.
+
+### Advanced Rendering & Styling
+
+- **CSS-like styling** with JSX-inspired declarative layouts
+- **Gradient color support** with automatic terminal capability detection
+- **Double-buffered compositor** for efficient rendering
+- **Comprehensive color support** that adapts to terminal capabilities (even handles macOS
+  Terminal.app's lack of truecolor support)
+
+### Rich Component Ecosystem
+
+- Beautiful Markdown parser with syntax highlighting
+- Rich text editor components
+- Dialog box support
+- Animation framework (in development)
+- Process orchestration via the "script" module
+- Async REPL infrastructure
+
+R3BL TUI brings the power and ergonomics of modern web development to the terminal, creating a new
+paradigm for command-line productivity tools.
 
 We are working on building command line apps in Rust which have rich text user interfaces (TUI). We
 want to lean into the terminal as a place of productivity, and build all kinds of awesome apps for
@@ -93,37 +180,6 @@ are likely published to [crates.io](https://crates.io/crates/r3bl_tui). Together
 Here's the [changelog](https://github.com/r3bl-org/r3bl-open-core/blob/main/CHANGELOG.md) for this
 monorepo containing a Rust workspace. The changelog is a great place to start to get familiar with
 what has changed recently in each of the crates in this Rust workspace.
-
-Table of contents:
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-- [This workspace contains crates for building TUI, CLI, TTY apps](#this-workspace-contains-crates-for-building-tui-cli-tty-apps)
-  - [Full TUI (async, raw mode, full screen) for immersive TUI apps](#full-tui-async-raw-mode-full-screen-for-immersive-tui-apps)
-  - [Partial TUI (async, partial raw mode, async readline) for choice based user interaction](#partial-tui-async-partial-raw-mode-async-readline-for-choice-based-user-interaction)
-  - [Partial TUI (async, partial raw mode, async readline) for async REPL](#partial-tui-async-partial-raw-mode-async-readline-for-async-repl)
-- [Power via composition](#power-via-composition)
-  - [Main library crate](#main-library-crate)
-  - [Main binary crate](#main-binary-crate)
-- [Project Task Organization](#project-task-organization)
-  - [Task Management Files](#task-management-files)
-  - [Workflow Connection](#workflow-connection)
-- [Documentation and Planning](#documentation-and-planning)
-  - [Release and Contribution Guides](#release-and-contribution-guides)
-  - [Technical Design Documents](#technical-design-documents)
-- [Learn how these crates are built, provide feedback](#learn-how-these-crates-are-built-provide-feedback)
-- [Quick Start](#quick-start)
-  - [Automated Setup (Recommended)](#automated-setup-recommended)
-  - [Manual Setup](#manual-setup)
-- [Build the workspace and run tests](#build-the-workspace-and-run-tests)
-  - [Key Commands](#key-commands)
-  - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
-  - [Unified Script Architecture](#unified-script-architecture)
-- [Star History](#star-history)
-- [Archive](#archive)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## This workspace contains crates for building TUI, CLI, TTY apps
 
