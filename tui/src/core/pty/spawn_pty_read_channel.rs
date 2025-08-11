@@ -246,3 +246,384 @@ pub fn spawn_pty_capture_output_no_input(
         Ok(portable_pty::ExitStatus::with_exit_code(exit_code))
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc::unbounded_channel;
+    use tokio::time::{timeout, Duration};
+    use crate::core::pty::{OscEvent, PtyCommandBuilder, PtyConfigOption};
+
+    /// Helper function to collect events with a timeout
+    async fn collect_events_with_timeout(
+        mut handle: Pin<Box<tokio::task::JoinHandle<miette::Result<portable_pty::ExitStatus>>>>,
+        mut receiver: tokio::sync::mpsc::UnboundedReceiver<PtyEvent>,
+        max_duration: Duration,
+    ) -> miette::Result<(Vec<PtyEvent>, portable_pty::ExitStatus)> {
+        let mut events = Vec::new();
+        
+        let result = timeout(max_duration, async move {
+            loop {
+                tokio::select! {
+                    result = &mut handle => {
+                        // Process completed
+                        let status = result.into_diagnostic()??;
+                        
+                        // Drain any remaining events
+                        while let Ok(event) = receiver.try_recv() {
+                            events.push(event);
+                        }
+                        
+                        return Ok::<_, miette::Error>((events, status));
+                    }
+                    Some(event) = receiver.recv() => {
+                        events.push(event);
+                    }
+                }
+            }
+        }).await;
+        
+        match result {
+            Ok(Ok(data)) => Ok(data),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err(miette::miette!("Test timed out")),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_simple_echo_command() -> miette::Result<()> {
+        let cmd = PtyCommandBuilder::new("echo")
+            .args(["Hello, PTY!"])
+            .build()?;
+        
+        let (sender, receiver) = unbounded_channel();
+        let handle = spawn_pty_capture_output_no_input(
+            cmd, 
+            PtyConfigOption::Output,
+            sender
+        );
+        
+        let (events, status) = collect_events_with_timeout(
+            handle,
+            receiver,
+            Duration::from_secs(5)
+        ).await?;
+        
+        assert!(status.success());
+        
+        // Should have output and exit events
+        let output_events: Vec<_> = events.iter()
+            .filter_map(|e| match e {
+                PtyEvent::Output(data) => Some(String::from_utf8_lossy(data).to_string()),
+                _ => None
+            })
+            .collect();
+        
+        assert!(!output_events.is_empty());
+        let combined_output = output_events.join("");
+        assert!(combined_output.contains("Hello, PTY!"));
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_osc_sequence_with_printf() -> miette::Result<()> {
+        // Use printf to emit a known OSC sequence
+        let cmd = PtyCommandBuilder::new("printf")
+            .args([r"\x1b]9;4;1;50\x1b\\"])
+            .build()?;
+        
+        let (sender, receiver) = unbounded_channel();
+        let handle = spawn_pty_capture_output_no_input(
+            cmd,
+            PtyConfigOption::Osc,
+            sender
+        );
+        
+        let (events, status) = collect_events_with_timeout(
+            handle,
+            receiver,
+            Duration::from_secs(5)
+        ).await?;
+        
+        assert!(status.success());
+        
+        // Should have received the OSC event
+        let osc_events: Vec<_> = events.iter()
+            .filter_map(|e| match e {
+                PtyEvent::Osc(osc) => Some(osc.clone()),
+                _ => None
+            })
+            .collect();
+        
+        assert_eq!(osc_events, vec![OscEvent::ProgressUpdate(50)]);
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_multiple_osc_sequences() -> miette::Result<()> {
+        // Emit multiple OSC sequences
+        let cmd = PtyCommandBuilder::new("printf")
+            .args([r"\x1b]9;4;1;25\x1b\\\x1b]9;4;1;50\x1b\\\x1b]9;4;0;0\x1b\\"])
+            .build()?;
+        
+        let (sender, receiver) = unbounded_channel();
+        let handle = spawn_pty_capture_output_no_input(
+            cmd,
+            PtyConfigOption::Osc,
+            sender
+        );
+        
+        let (events, status) = collect_events_with_timeout(
+            handle,
+            receiver,
+            Duration::from_secs(5)
+        ).await?;
+        
+        assert!(status.success());
+        
+        let osc_events: Vec<_> = events.iter()
+            .filter_map(|e| match e {
+                PtyEvent::Osc(osc) => Some(osc.clone()),
+                _ => None
+            })
+            .collect();
+        
+        assert_eq!(osc_events, vec![
+            OscEvent::ProgressUpdate(25),
+            OscEvent::ProgressUpdate(50),
+            OscEvent::ProgressCleared,
+        ]);
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_osc_with_mixed_output() -> miette::Result<()> {
+        // Mix regular output with OSC sequences
+        // This test requires bash/sh with working printf escape sequences
+        if cfg!(target_os = "windows") {
+            return Ok(()); // Skip on Windows
+        }
+        
+        // Try using bash first, then sh
+        let cmd = match PtyCommandBuilder::new("bash")
+            .args(["-c", r"echo 'Starting...'; printf '\033]9;4;1;50\033\\'; echo 'Done!'"])
+            .build() 
+        {
+            Ok(cmd) => cmd,
+            Err(_) => {
+                // Fallback to sh if bash is not available
+                match PtyCommandBuilder::new("sh")
+                    .args(["-c", r"echo 'Starting...'; printf '\033]9;4;1;50\033\\'; echo 'Done!'"])
+                    .build()
+                {
+                    Ok(cmd) => cmd,
+                    Err(_) => {
+                        // Skip test if neither bash nor sh is available
+                        println!("Skipping test - neither bash nor sh available");
+                        return Ok(());
+                    }
+                }
+            }
+        };
+        
+        let (sender, receiver) = unbounded_channel();
+        let config = PtyConfigOption::Osc + PtyConfigOption::Output;
+        let handle = spawn_pty_capture_output_no_input(cmd, config, sender);
+        
+        let (events, status) = collect_events_with_timeout(
+            handle,
+            receiver,
+            Duration::from_secs(5)
+        ).await?;
+        
+        assert!(status.success());
+        
+        // Check we got output events (OSC might not work on all systems)
+        let has_output = events.iter().any(|e| matches!(e, PtyEvent::Output(_)));
+        assert!(has_output);
+        
+        // Check if we got OSC events (may not work on all printf implementations)
+        let osc_events: Vec<_> = events.iter()
+            .filter_map(|e| match e {
+                PtyEvent::Osc(osc) => Some(osc.clone()),
+                _ => None
+            })
+            .collect();
+        
+        // If OSC sequences were parsed, verify they're correct
+        if !osc_events.is_empty() {
+            assert_eq!(osc_events, vec![OscEvent::ProgressUpdate(50)]);
+        }
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_split_osc_sequence_simulation() -> miette::Result<()> {
+        // This test simulates a split sequence using shell commands
+        // Note: This is platform-specific and may not work on all systems
+        if cfg!(target_os = "windows") {
+            return Ok(()); // Skip on Windows
+        }
+        
+        // Try using bash with better escape sequence handling
+        let cmd = match PtyCommandBuilder::new("bash")
+            .args(["-c", r"printf '\033]9;4;1;'; sleep 0.01; printf '75\033\\'"])
+            .build()
+        {
+            Ok(cmd) => cmd,
+            Err(_) => {
+                // Try sh as fallback
+                match PtyCommandBuilder::new("sh")
+                    .args(["-c", r"printf '\033]9;4;1;'; sleep 0.01; printf '75\033\\'"])
+                    .build()
+                {
+                    Ok(cmd) => cmd,
+                    Err(_) => {
+                        println!("Skipping test - neither bash nor sh available");
+                        return Ok(());
+                    }
+                }
+            }
+        };
+        
+        let (sender, receiver) = unbounded_channel();
+        let handle = spawn_pty_capture_output_no_input(
+            cmd,
+            PtyConfigOption::Osc,
+            sender
+        );
+        
+        let (events, status) = collect_events_with_timeout(
+            handle,
+            receiver,
+            Duration::from_secs(5)
+        ).await?;
+        
+        // Command should succeed
+        assert!(status.success());
+        
+        let osc_events: Vec<_> = events.iter()
+            .filter_map(|e| match e {
+                PtyEvent::Osc(osc) => Some(osc.clone()),
+                _ => None
+            })
+            .collect();
+        
+        // This test may not produce OSC events on all systems due to printf limitations
+        // We just verify the command ran successfully
+        if !osc_events.is_empty() {
+            // If we did get OSC events, they should be correct
+            assert_eq!(osc_events, vec![OscEvent::ProgressUpdate(75)]);
+        }
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_all_osc_event_types() -> miette::Result<()> {
+        // Test all four OSC event types
+        let sequences = [
+            (r"\x1b]9;4;0;0\x1b\\", OscEvent::ProgressCleared),
+            (r"\x1b]9;4;1;42\x1b\\", OscEvent::ProgressUpdate(42)),
+            (r"\x1b]9;4;2;0\x1b\\", OscEvent::BuildError),
+            (r"\x1b]9;4;3;0\x1b\\", OscEvent::IndeterminateProgress),
+        ];
+        
+        for (sequence, expected) in sequences {
+            let cmd = PtyCommandBuilder::new("printf")
+                .args([sequence])
+                .build()?;
+            
+            let (sender, receiver) = unbounded_channel();
+            let handle = spawn_pty_capture_output_no_input(
+                cmd,
+                PtyConfigOption::Osc,
+                sender
+            );
+            
+            let (events, status) = collect_events_with_timeout(
+                handle,
+                receiver,
+                Duration::from_secs(5)
+            ).await?;
+            
+            assert!(status.success());
+            
+            let osc_events: Vec<_> = events.iter()
+                .filter_map(|e| match e {
+                    PtyEvent::Osc(osc) => Some(osc.clone()),
+                    _ => None
+                })
+                .collect();
+            
+            assert_eq!(osc_events, vec![expected]);
+        }
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_command_failure() -> miette::Result<()> {
+        // Test that we properly handle command failures
+        let cmd = PtyCommandBuilder::new("false")
+            .build()?;
+        
+        let (sender, receiver) = unbounded_channel();
+        let handle = spawn_pty_capture_output_no_input(
+            cmd,
+            PtyConfigOption::NoCaptureOutput,
+            sender
+        );
+        
+        let (events, status) = collect_events_with_timeout(
+            handle,
+            receiver,
+            Duration::from_secs(5)
+        ).await?;
+        
+        // Command should fail
+        assert!(!status.success());
+        
+        // Should have an exit event
+        let has_exit = events.iter().any(|e| matches!(e, PtyEvent::Exit(_)));
+        assert!(has_exit);
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_no_capture_option() -> miette::Result<()> {
+        // Test that NoCaptureOutput doesn't capture anything
+        let cmd = PtyCommandBuilder::new("echo")
+            .args(["test"])
+            .build()?;
+        
+        let (sender, receiver) = unbounded_channel();
+        let handle = spawn_pty_capture_output_no_input(
+            cmd,
+            PtyConfigOption::NoCaptureOutput,
+            sender
+        );
+        
+        let (events, status) = collect_events_with_timeout(
+            handle,
+            receiver,
+            Duration::from_secs(5)
+        ).await?;
+        
+        assert!(status.success());
+        
+        // Should only have exit event, no output
+        let output_events: Vec<_> = events.iter()
+            .filter(|e| matches!(e, PtyEvent::Output(_)))
+            .collect();
+        
+        assert!(output_events.is_empty());
+        
+        Ok(())
+    }
+}

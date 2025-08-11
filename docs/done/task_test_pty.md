@@ -1,3 +1,31 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Testing PTY-based OSC Sequence Capture](#testing-pty-based-osc-sequence-capture)
+  - [Overview](#overview)
+  - [Testing Approaches](#testing-approaches)
+    - [1. Unit Test the Parser Components](#1-unit-test-the-parser-components)
+    - [2. Integration Tests with Smaller Scope](#2-integration-tests-with-smaller-scope)
+      - [Required Refactoring](#required-refactoring)
+  - [Test Cases to Consider](#test-cases-to-consider)
+    - [Common Cases](#common-cases)
+    - [Edge Cases](#edge-cases)
+  - [Test Implementation Structure](#test-implementation-structure)
+    - [Basic Integration Test](#basic-integration-test)
+    - [Testing Split Sequences](#testing-split-sequences)
+  - [Alternative Testing Strategies](#alternative-testing-strategies)
+    - [3. Mock Command Approach](#3-mock-command-approach)
+    - [4. Abstraction Layer](#4-abstraction-layer)
+    - [5. Record/Replay Testing](#5-recordreplay-testing)
+  - [Platform Considerations](#platform-considerations)
+    - [Cross-platform printf](#cross-platform-printf)
+    - [PTY Availability](#pty-availability)
+  - [Testing Utilities](#testing-utilities)
+    - [Helper Functions](#helper-functions)
+  - [Next Steps](#next-steps)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Testing PTY-based OSC Sequence Capture
 
 ## Overview

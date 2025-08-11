@@ -50,6 +50,8 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 
 ### Plans
 
+- [`task_dual_channel_pty.md`](task_dual_channel_pty.md) - Task documentation for dual channel PTY
+  implementation
 - [`task_remove_crossterm.md`](task_remove_crossterm.md) - Task documentation for removing crossterm
   dependency
 - [`task_syntect_improve.md`](task_syntect_improve.md) - Syntect improvement plan for adding missing
@@ -63,20 +65,23 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 
 The [`done`](done) folder contains:
 
-- [`task_parser_strategy_analysis.md`](done/task_parser_strategy_analysis.md) - Analysis of parser
-  implementation strategies that led to archiving experimental parsers (NG and Simple) and keeping
-  the legacy parser as the only production implementation
-- [`task_zero_copy_gap_buffer.md`](done/task_zero_copy_gap_buffer.md) - Zero-copy gap buffer
-  implementation for editor content storage, successfully eliminating string materialization in the
-  markdown parser path with proven performance improvements
 - [`task_ng_parser_archive.md`](done/task_ng_parser_archive.md) - Complete documentation of the NG
   Parser and Simple Parser archival process, including performance analysis, migration status, and
   lessons learned from experimental parser development
-- [`task_unified_grapheme_trait.md`](done/task_unified_grapheme_trait.md) - Universal grapheme-aware
-  trait design documentation for both single-line and multi-line text structures
+- [`task_parser_strategy_analysis.md`](done/task_parser_strategy_analysis.md) - Analysis of parser
+  implementation strategies that led to archiving experimental parsers (NG and Simple) and keeping
+  the legacy parser as the only production implementation
 - [`task_refactor_nu.md`](done/task_refactor_nu.md) - Comprehensive consolidation of three separate
   run.nu files into a unified development script, including bootstrap.sh creation, cross-platform
   file watching implementation, and audience-specific documentation refactoring
+- [`task_test_pty.md`](done/task_test_pty.md) - Testing strategies and implementation approaches for
+  PTY-based OSC sequence capture, including unit tests, integration tests, and platform
+  considerations
+- [`task_unified_grapheme_trait.md`](done/task_unified_grapheme_trait.md) - Universal grapheme-aware
+  trait design documentation for both single-line and multi-line text structures
+- [`task_zero_copy_gap_buffer.md`](done/task_zero_copy_gap_buffer.md) - Zero-copy gap buffer
+  implementation for editor content storage, successfully eliminating string materialization in the
+  markdown parser path with proven performance improvements
 
 ### Video Documentation
 

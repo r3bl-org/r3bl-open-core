@@ -1,8 +1,35 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Dual Channel PTY Interactive Design](#dual-channel-pty-interactive-design)
+  - [Overview](#overview)
+  - [Core API Design](#core-api-design)
+    - [Main Function](#main-function)
+    - [PtySession Structure](#ptysession-structure)
+    - [Input Types (TO Child)](#input-types-to-child)
+    - [Configuration (Using Existing Types)](#configuration-using-existing-types)
+  - [Usage Examples](#usage-examples)
+    - [Example 1: Python REPL Interaction](#example-1-python-repl-interaction)
+    - [Example 2: Interactive Shell Commands](#example-2-interactive-shell-commands)
+    - [Example 3: SSH Session](#example-3-ssh-session)
+    - [Example 4: Controlling another TUI application](#example-4-controlling-another-tui-application)
+    - [2. Resource Management](#2-resource-management)
+    - [3. Terminal Modes](#3-terminal-modes)
+    - [4. Error Handling](#4-error-handling)
+    - [5. Buffering Strategy](#5-buffering-strategy)
+  - [Comparison with Read-Only Function](#comparison-with-read-only-function)
+  - [Future Enhancements](#future-enhancements)
+  - [Testing Strategy](#testing-strategy)
+  - [Security Considerations](#security-considerations)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Dual Channel PTY Interactive Design
 
 ## Overview
 
-This document outlines the design for `spawn_pty_interactive`, a bidirectional PTY communication function that allows both reading from and writing to a child process running in a pseudo-terminal.
+This document outlines the design for `spawn_pty_interactive`, a bidirectional PTY communication
+function that allows both reading from and writing to a child process running in a pseudo-terminal.
 
 ## Core API Design
 
@@ -21,10 +48,10 @@ pub fn spawn_pty_interactive(
 pub struct PtySession {
     /// Send input TO the child process
     pub stdin: UnboundedSender<PtyInput>,
-    
-    /// Receive output FROM the child process  
+
+    /// Receive output FROM the child process
     pub stdout: UnboundedReceiver<PtyEvent>,
-    
+
     /// Await completion
     pub handle: Pin<Box<JoinHandle<miette::Result<ExitStatus>>>>,
 }
@@ -36,16 +63,16 @@ pub struct PtySession {
 pub enum PtyInput {
     /// Send raw bytes to child's stdin
     Write(Vec<u8>),
-    
+
     /// Send text with automatic newline
     WriteLine(String),
-    
+
     /// Send control sequences (Ctrl-C, Ctrl-D, etc.)
     SendControl(ControlChar),
-    
+
     /// Resize the PTY window
     Resize(PtySize),
-    
+
     /// Close stdin (EOF)
     Close,
 }
@@ -148,7 +175,7 @@ let cmd = PtyCommandBuilder::new("ssh")
     .build()?;
 
 let mut session = spawn_pty_interactive(
-    cmd, 
+    cmd,
     Size(PtySize { rows: 40, cols: 120, pixel_width: 0, pixel_height: 0 }) + Output
 )?;
 
@@ -159,7 +186,7 @@ tokio::spawn(async move {
             PtyEvent::Output(data) => {
                 let text = String::from_utf8_lossy(&data);
                 print!("{}", text);
-                
+
                 // Detect password prompt and respond
                 if text.contains("password:") {
                     session.stdin.send(PtyInput::WriteLine("secret".into())).await?;
@@ -171,6 +198,13 @@ tokio::spawn(async move {
 });
 ```
 
+### Example 4: Controlling another TUI application
+
+TODO: Spawn something like vim, in a temp dir, send keystrokes to type "hello", then ":wq" to name
+and save the file. at the end see if the file exists and has the expected content.
+
+````rust
+
 ## Implementation Considerations
 
 ### 1. Writer Task
@@ -180,7 +214,7 @@ A second `spawn_blocking` task will be needed to write to the PTY:
 ```rust
 let writer_task = tokio::task::spawn_blocking(move || {
     let mut controller_writer = controller.try_clone_writer()?;
-    
+
     while let Some(input) = input_receiver.recv() {
         match input {
             PtyInput::Write(bytes) => {
@@ -210,7 +244,7 @@ let writer_task = tokio::task::spawn_blocking(move || {
     }
     Ok(())
 });
-```
+````
 
 ### 2. Resource Management
 
@@ -247,15 +281,15 @@ pub enum TerminalMode {
 
 ## Comparison with Read-Only Function
 
-| Feature | `spawn_pty_capture_output_no_input` | `spawn_pty_interactive` |
-|---------|--------------------------------------|-------------------------|
-| Read from child | ✅ | ✅ |
-| Write to child | ❌ | ✅ |
-| OSC capture | ✅ | ✅ |
-| Raw output capture | ✅ | ✅ |
-| Control sequences | ❌ | ✅ |
-| PTY resize | ❌ | ✅ |
-| Use cases | Monitoring, logging | REPL, SSH, shells |
+| Feature            | `spawn_pty_capture_output_no_input` | `spawn_pty_interactive` |
+| ------------------ | ----------------------------------- | ----------------------- |
+| Read from child    | ✅                                  | ✅                      |
+| Write to child     | ❌                                  | ✅                      |
+| OSC capture        | ✅                                  | ✅                      |
+| Raw output capture | ✅                                  | ✅                      |
+| Control sequences  | ❌                                  | ✅                      |
+| PTY resize         | ❌                                  | ✅                      |
+| Use cases          | Monitoring, logging                 | REPL, SSH, shells       |
 
 ## Future Enhancements
 
