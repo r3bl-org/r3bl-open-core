@@ -10,3 +10,4 @@ crash_log.txt
 **/perf.data
 **/perf.data.old
 *.log
+.serena/cache

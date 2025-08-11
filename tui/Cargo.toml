@@ -149,6 +149,9 @@ serde_json = "1.0.140"
 # - https://crates.io/crates/jemallocator
 mimalloc = "0.1.46"
 
+# For PTY support
+portable-pty = "0.9.0"
+
 [dev-dependencies]
 # For assert_eq2! macro.
 serial_test = "3.2.0"

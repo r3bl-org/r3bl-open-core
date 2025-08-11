@@ -158,7 +158,7 @@ macro_rules! key_press {
 ///      support may send Press, Release, and Repeat events
 ///
 ///    By filtering to only Press events, we ensure consistent behavior across all
-/// platforms.
+///    platforms.
 ///
 /// 2. Also, the [`KeyEvent`]'s `state` is totally ignored in the conversion to
 ///    [`KeyPress`]. The [`crossterm::event::KeyEventState`] isn't even considered in the

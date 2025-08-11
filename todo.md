@@ -7,6 +7,7 @@
       https://github.com/nazmulidris/rust-scratch/issues/117
 - [x] publish the README.md from the rust-scratch project to developerlife.com as tutorial:
       https://developerlife.com/2025/08/10/pty-rust-osc-seq/
+- [x] configure serena mcp server for semantic code search
 - [ ] implement the upgrade code in `r3bl-cmdr` to use the code above:
       https://github.com/r3bl-org/r3bl-open-core/issues/437
 - [ ] make YT video on the research (in rust-scratch) issue

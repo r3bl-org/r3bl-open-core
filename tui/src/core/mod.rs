@@ -160,6 +160,7 @@ pub mod test_fixtures;
 pub mod tui_style;
 pub mod tui_styled_text;
 pub mod units;
+pub mod pty;
 
 // Re-export.
 pub use ansi::*;
@@ -180,3 +181,4 @@ pub use test_fixtures::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
 pub use units::*;
+pub use pty::*;

@@ -1,7 +1,39 @@
 # This file contains utility functions that shared between all the `run` scripts
 # in various sub folders in this workspace.
 
-# Cross-platform file watcher
+# Cross-platform file watcher that monitors filesystem changes and runs commands.
+#
+# This function provides a unified interface for file watching across macOS (fswatch)
+# and Linux (inotifywait). It continuously monitors a directory for changes and
+# executes a specified command whenever changes are detected.
+#
+# Parameters:
+# - command: The shell command to execute when changes are detected
+# - dir: Directory to watch (default: current directory)
+#
+# Features:
+# - Automatic platform detection (Darwin/Linux)
+# - Excludes target/ and .git/ directories
+# - Graceful Ctrl+C handling
+# - Continuous monitoring loop
+#
+# Watched events:
+# - File modifications
+# - File creation
+# - File deletion
+# - File moves/renames
+#
+# Prerequisites:
+# - macOS: fswatch installed (via brew install fswatch)
+# - Linux: inotifywait installed (via apt install inotify-tools)
+#
+# Usage:
+#   watch-files "cargo test"
+#   watch-files "cargo build" "src/"
+#
+# Example:
+#   # Watch for changes and run tests
+#   watch-files "cargo test --workspace"
 def watch-files [command: string, dir: string = "."] {
     let watcher = if ($env.OS? == "Darwin") { "fswatch" } else { "inotifywait" }
     
@@ -28,7 +60,23 @@ def watch-files [command: string, dir: string = "."] {
     }
 }
 
-# Helper to install tools conditionally
+# Conditionally installs a tool if it's not already present on the system.
+#
+# This helper function checks if a tool exists in PATH and installs it
+# if missing. Provides user feedback on installation status.
+#
+# Parameters:
+# - tool: Name of the tool/binary to check for
+# - cmd: Shell command to install the tool
+#
+# Features:
+# - Idempotent - safe to call multiple times
+# - Clear feedback on tool status
+# - Uses bash for command execution
+#
+# Usage:
+#   install_if_missing "cargo-nextest" "cargo install cargo-nextest"
+#   install_if_missing "rg" "apt install ripgrep"
 def install_if_missing [tool: string, cmd: string] {
     if (which $tool | is-empty) { 
         print $'Installing ($tool)...'; bash -c $cmd 
@@ -37,7 +85,26 @@ def install_if_missing [tool: string, cmd: string] {
     }
 }
 
-# Detect system package manager
+# Detects and returns the appropriate package manager command for the current system.
+#
+# This function automatically identifies the system's package manager and returns
+# the appropriate install command with sudo where needed.
+#
+# Supported systems:
+# - macOS: brew install
+# - Debian/Ubuntu: sudo apt install -y
+# - Fedora/RHEL: sudo dnf install -y
+# - Arch/Manjaro: sudo pacman -S --noconfirm
+#
+# Returns:
+# - Package manager install command string
+# - null if no supported package manager found
+#
+# Usage:
+#   let pkg_mgr = get_package_manager
+#   if ($pkg_mgr != null) {
+#       bash -c $"($pkg_mgr) neovim"
+#   }
 def get_package_manager [] {
     if ($env.OS? == "Darwin") { 
         "brew install" 
@@ -54,7 +121,30 @@ def get_package_manager [] {
     }
 }
 
-# Run a command in a specific directory and return to original directory
+# Executes a closure in a specific directory and safely returns to the original.
+#
+# This utility ensures that directory changes are properly managed, always
+# returning to the original directory even if the closure fails.
+#
+# Parameters:
+# - dir: Target directory to change to
+# - closure: Code block to execute in the target directory
+#
+# Features:
+# - Automatic directory restoration
+# - Exception safety
+# - Returns closure's result
+#
+# Usage:
+#   let result = run_in_directory "src" {
+#       ls | where type == "file" | length
+#   }
+#
+# Example:
+#   # Count Rust files in src directory
+#   run_in_directory "src" {
+#       ls *.rs | length
+#   }
 def run_in_directory [dir: string, closure: closure] {
     let original_dir = $env.PWD
     cd $dir
@@ -68,7 +158,29 @@ def run_in_directory [dir: string, closure: closure] {
     }
 }
 
-# Docker utilities
+# Stops all running Docker containers and prunes the system.
+#
+# This utility function provides complete Docker cleanup by stopping all
+# running containers and removing unused resources.
+#
+# Operations performed:
+# 1. Lists all container IDs (running and stopped)
+# 2. Stops each container gracefully
+# 3. Prunes system to remove:
+#    - Stopped containers
+#    - Unused networks
+#    - Dangling images
+#    - Build cache
+#
+# Features:
+# - Safe handling of empty container list
+# - Progress feedback for each container
+# - Automatic system cleanup
+#
+# Usage:
+#   docker_stop_all_containers
+#
+# Note: Requires Docker to be installed and running
 def docker_stop_all_containers [] {
     let running_containers = (^docker ps -aq | lines | where $it != "")
     if ($running_containers | length) > 0 {
@@ -82,6 +194,25 @@ def docker_stop_all_containers [] {
     }
 }
 
+# Removes all Docker images from the local system.
+#
+# This function performs a complete cleanup of Docker images, useful for
+# freeing disk space or ensuring clean builds.
+#
+# Operations:
+# 1. Lists all image IDs
+# 2. Force removes each image
+#
+# Features:
+# - Handles images with dependent containers (force removal)
+# - Safe handling of empty image list
+# - Progress feedback for each image
+#
+# Warning: This will remove ALL images, including those in use.
+# Containers using these images will need to re-download them.
+#
+# Usage:
+#   docker_remove_all_images
 def docker_remove_all_images [] {
     let images = (^docker image ls -q | lines | where $it != "")
     if ($images | length) > 0 {
@@ -93,6 +224,32 @@ def docker_remove_all_images [] {
     }
 }
 
+# Discovers all Cargo projects in subdirectories of the current workspace.
+#
+# This function scans immediate subdirectories for Cargo.toml files to identify
+# Rust projects in a workspace structure.
+#
+# Returns:
+# - List of directory names containing Cargo.toml files
+#
+# Features:
+# - Only checks immediate subdirectories (not recursive)
+# - Filters out non-Cargo directories
+# - Returns clean directory names
+#
+# Usage:
+#   let projects = get_cargo_projects
+#   for project in $projects {
+#       cd $project
+#       cargo build
+#       cd ..
+#   }
+#
+# Example workspace structure:
+#   workspace/
+#   ├── tui/Cargo.toml     -> returns "tui"
+#   ├── cmdr/Cargo.toml    -> returns "cmdr"
+#   └── docs/              -> ignored (no Cargo.toml)
 def get_cargo_projects [] {
     let sub_folders_with_cargo_toml = (
         ls | where type == "dir" | each { |folder|
@@ -108,6 +265,27 @@ def get_cargo_projects [] {
     $sub_folders_with_cargo_toml
 }
 
+# Runs a selected example with configurable build and logging options.
+#
+# This function provides an interactive fuzzy-search menu for example selection
+# and handles the cargo execution with appropriate flags.
+#
+# Parameters:
+# - options: List of available examples to choose from
+# - release: Build in release mode if true
+# - no_log: Disable logging output if true
+#
+# Features:
+# - Fuzzy search for example selection
+# - Graceful cancellation (Ctrl+C)
+# - Debug/release mode support
+# - Optional logging control
+# - Detailed execution feedback
+#
+# Usage:
+#   let examples = get_example_binaries
+#   run_example $examples true false  # Release mode with logging
+#   run_example $examples false true  # Debug mode without logging
 def run_example [options: list<string>, release: bool, no_log: bool] {
     let selection = try {
         $options | input list --fuzzy 'Select an example to run: '
@@ -128,6 +306,31 @@ def run_example [options: list<string>, release: bool, no_log: bool] {
     }
 }
 
+# Automatically discovers all available examples in the examples/ directory.
+#
+# This function scans the examples directory for both individual .rs files
+# and subdirectories (for multi-file examples), returning a clean list of
+# example names that can be run with cargo.
+#
+# Discovery process:
+# 1. Finds all .rs files in examples/
+# 2. Finds all subdirectories in examples/
+# 3. Strips extensions and path prefixes
+# 4. Returns folders first, then files
+#
+# Returns:
+# - List of example names (without .rs extension or path)
+#
+# Example structure:
+#   examples/
+#   ├── simple.rs           -> "simple"
+#   ├── complex.rs          -> "complex"
+#   └── multi_file/         -> "multi_file"
+#       └── main.rs
+#
+# Usage:
+#   let examples = get_example_binaries
+#   # Returns: ["multi_file", "simple", "complex"]
 def get_example_binaries [] {
     let example_files = (ls examples | where type == "file" | where name ends-with ".rs" | get name)
     let example_binaries = $example_files | each { str replace ".rs" "" }
@@ -141,8 +344,48 @@ def get_example_binaries [] {
     $result
 }
 
-# Run an example with flamegraph profiling using the profiling-detailed profile.
-# This provides detailed profiling with less optimization for granular data.
+# Runs an example with flamegraph profiling and generates an interactive SVG visualization.
+#
+# This advanced profiling function creates detailed flame graphs for performance
+# analysis. It uses a special 'profiling-detailed' Cargo profile that balances
+# optimization with symbol visibility.
+#
+# Parameters:
+# - options: List of available examples to profile
+#
+# Technical configuration:
+# - Profile: profiling-detailed (custom profile with debug symbols)
+# - Sampling: 99Hz to minimize overhead
+# - Call graphs: Frame pointer-based with 8-level depth
+# - Symbol handling: Forced frame pointers, readable symbol names
+# - Inlining: Disabled to preserve function boundaries
+#
+# Kernel parameters temporarily modified:
+# - kernel.perf_event_paranoid=-1 (allows CPU event access)
+# - kernel.kptr_restrict=0 (allows kernel symbol access)
+# These are reset after profiling for security
+#
+# Prerequisites:
+# - perf (Linux profiling tool)
+# - cargo-flamegraph
+# - sudo access for kernel parameters
+# - firefox-beta (optional, falls back to default browser)
+#
+# Output:
+# - flamegraph.svg: Interactive SVG visualization
+#   - Width represents time spent
+#   - Height shows call stack depth
+#   - Click to zoom into functions
+#
+# Process cleanup:
+# - Automatically terminates lingering flamegraph/perf processes
+# - Resets kernel security parameters
+#
+# Usage:
+#   let examples = get_example_binaries
+#   run_example_with_flamegraph_profiling_svg $examples
+#
+# Note: The profiling-detailed profile must be defined in Cargo.toml
 def run_example_with_flamegraph_profiling_svg [options: list<string>] {
     let selection = try {
         $options | input list --fuzzy 'Select an example to run: '
@@ -232,8 +475,62 @@ def run_example_with_flamegraph_profiling_svg [options: list<string>] {
     }
 }
 
-# Run an example with profiling to generate collapsed stacks format (perf-folded) instead of SVG
-# This generates a much smaller text file with stack traces and sample counts
+# Generates collapsed stack traces (perf-folded format) for detailed performance analysis.
+#
+# This function profiles an example and outputs data in the collapsed stack format,
+# which is more compact than SVG and suitable for further processing or integration
+# with other profiling tools.
+#
+# Parameters:
+# - options: List of available examples to profile
+#
+# Output format:
+# Each line contains: stack;trace;functions sample_count
+# Example:
+#   main;process_data;calculate 150
+#   main;render;draw_frame 89
+#
+# Advantages over SVG:
+# - Much smaller file size (text vs. XML/SVG)
+# - Easier to parse programmatically
+# - Can be converted to various formats
+# - Suitable for diff comparisons
+# - Can be aggregated across multiple runs
+#
+# Technical details:
+# - Uses same profiling configuration as SVG version
+# - Profile: profiling-detailed
+# - Sampling rate: 99Hz
+# - Call graph: Frame pointer-based
+#
+# Processing pipeline:
+# 1. Build with profiling-detailed profile
+# 2. Run with perf record
+# 3. Convert with perf script
+# 4. Collapse with inferno-collapse-perf
+#
+# Prerequisites:
+# - perf (Linux profiling tool)
+# - inferno tools (via cargo install inferno)
+# - sudo access for kernel parameters
+#
+# Output files:
+# - flamegraph.perf-folded: Collapsed stack format
+# - perf.data: Raw profiling data (can be reprocessed)
+#
+# File ownership:
+# - Automatically fixes ownership of files created with sudo
+#
+# Usage:
+#   let examples = get_example_binaries
+#   run_example_with_flamegraph_profiling_perf_fold $examples
+#
+# Post-processing:
+#   # Convert to flamegraph later:
+#   cat flamegraph.perf-folded | flamegraph > output.svg
+#
+#   # Diff two profiles:
+#   inferno-diff-folded before.perf-folded after.perf-folded | flamegraph > diff.svg
 def run_example_with_flamegraph_profiling_perf_fold [options: list<string>] {
     let selection = try {
         $options | input list --fuzzy 'Select an example to run: '

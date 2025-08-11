@@ -129,6 +129,30 @@ def print-help [command: string] {
     }
 }
 
+# Synchronizes local development files to a remote build server using rsync.
+# 
+# This function sets up a continuous file watcher that monitors changes in the local
+# workspace and automatically syncs them to a remote server for distributed builds.
+# Useful for leveraging more powerful remote hardware for compilation.
+#
+# Features:
+# - Uses inotifywait to monitor file system changes
+# - Automatically excludes target/ directories from sync
+# - Provides real-time feedback on sync operations
+# - Graceful Ctrl+C handling
+#
+# Prerequisites:
+# - rsync installed locally
+# - SSH access to the remote build server
+# - inotifywait installed (part of inotify-tools)
+#
+# Usage:
+#   nu run.nu build-server
+#
+# Then on the remote server, run:
+#   bacon nextest -W
+#   bacon doc -W
+#   bacon clippy -W
 def build-server [] {
     # Where you source files live.
     let orig_path = "/home/nazmul/github/r3bl-open-core/"
@@ -190,11 +214,37 @@ def watch-clippy [] { watch-files "cargo clippy --workspace --all-targets --all-
 def watch-check [] { watch-files "cargo check --workspace" }
 
 
-# Install useful cargo tools for workspace development. You must
-# first run `bootstrap.sh` to install Rust, Cargo, and Nushell before
-# you can run this.
-# - Some tools may already be installed; this will update them if so.
-# - Note: cargo-watch is no longer maintained (as of Oct 2024).
+# Installs and configures all development tools needed for the workspace.
+#
+# This comprehensive installer sets up:
+# 1. Cargo tools for Rust development (bacon, nextest, flamegraph, etc.)
+# 2. System tools (docker, go)
+# 3. Claude Code CLI with MCP servers
+# 4. Language servers (rust-analyzer)
+#
+# Features:
+# - Cross-platform support (Windows, macOS, Linux)
+# - Automatic package manager detection
+# - Idempotent - safe to run multiple times
+# - Configures Claude MCP servers for enhanced code assistance:
+#   - rust-analyzer: Language server protocol for Rust
+#   - context7: Documentation lookup service
+#   - serena: Semantic code analysis
+#
+# Prerequisites:
+# - bootstrap.sh must be run first to install Rust, Cargo, and Nushell
+#
+# Tools installed:
+# - bacon: Background rust code checker
+# - cargo-nextest: Next-generation test runner
+# - flamegraph: Performance profiling visualization
+# - sccache: Shared compilation cache for faster builds
+# - cargo-deny: Supply chain security auditing
+# - cargo-outdated: Dependency version checker
+# - And many more...
+#
+# Usage:
+#   nu run.nu install-cargo-tools
 def install-cargo-tools [] {
     # Install uv package manager (required for Serena semantic code MCP server.
     # https://github.com/oraios/serena
@@ -282,8 +332,26 @@ def install-cargo-tools [] {
     }
 }
 
-# Run all major checks and tasks for the workspace.
-# - Installs some cargo tools, builds, tests, runs clippy, docs, audits, and formats.
+# Runs all major checks and tasks for the entire workspace.
+#
+# This is the main CI/CD command that ensures code quality and correctness.
+# It performs a comprehensive suite of checks in the following order:
+# 1. Installs/updates development tools
+# 2. Builds all workspace projects
+# 3. Runs all tests
+# 4. Runs clippy linting with auto-fixes
+# 5. Generates documentation
+# 6. Audits dependencies for security vulnerabilities
+# 7. Checks for unmaintained dependencies
+# 8. Formats all code with rustfmt
+#
+# This command is ideal for:
+# - Pre-commit checks
+# - CI/CD pipelines
+# - Ensuring code quality before PR submission
+#
+# Usage:
+#   nu run.nu all
 def all [] {
     # Installs and runs all major checks and tools for the workspace.
     install-cargo-tools
@@ -333,8 +401,30 @@ def check [] {
 
 # Replaced by watch-check command above
 
-# Check the `tui/src/lib.rs` and `cmdr/src/lib.rs` to make sure that the same
-# "lints" that are fixed here also generate warnings when Clippy runs.
+# Runs comprehensive clippy linting with automatic fixes for all workspace projects.
+#
+# This function performs multiple passes of clippy with different lint levels,
+# automatically fixing issues where possible. It applies a curated set of lints
+# that improve code quality, safety, and idiomaticity.
+#
+# Workflow:
+# 1. Runs cargo fix for basic issues
+# 2. Applies specific clippy lints with auto-fix
+# 3. Runs rustfmt after fixes
+# 4. Final pass with pedantic lints
+#
+# Lints applied include:
+# - Code clarity: needless_return, redundant_closure, unreadable_literal
+# - Type safety: cast_sign_loss, cast_possible_truncation
+# - Best practices: must_use_candidate, items_after_statements
+# - Performance: manual_instant_elapsed, map_unwrap_or
+# - Documentation: doc_markdown, missing_panics_doc
+#
+# Note: Check `tui/src/lib.rs` and `cmdr/src/lib.rs` to ensure these lints
+# also generate warnings during normal clippy runs.
+#
+# Usage:
+#   nu run.nu clippy
 def clippy [] {
     for folder in ($workspace_folders) {
         cd $folder
@@ -445,6 +535,27 @@ def audit-deps [] {
 
 # TUI-specific commands
 
+# Runs TUI example programs with optional release mode and logging control.
+#
+# This function provides an interactive menu to select and run examples from
+# the tui/examples directory. Examples are automatically discovered from both
+# standalone .rs files and subdirectories.
+#
+# Arguments:
+# - --release: Build and run in release mode for optimized performance
+# - --no-log: Disable logging output
+#
+# Features:
+# - Fuzzy search for example selection
+# - Automatic example discovery
+# - Support for both debug and release builds
+# - Optional logging control
+#
+# Usage:
+#   nu run.nu run-examples              # Debug mode with logging
+#   nu run.nu run-examples --release    # Release mode with logging
+#   nu run.nu run-examples --no-log     # Debug mode without logging
+#   nu run.nu run-examples --release --no-log  # Release mode without logging
 def run-examples [...args: string] {
     let original_dir = $env.PWD
     cd tui
@@ -458,6 +569,35 @@ def run-examples [...args: string] {
     cd $original_dir
 }
 
+# Generates an SVG flamegraph for performance profiling of TUI examples.
+#
+# This function runs a selected example with detailed performance profiling
+# and generates an interactive SVG flamegraph for visualization. Uses the
+# 'profiling-detailed' cargo profile for optimal symbol resolution.
+#
+# Features:
+# - Interactive example selection
+# - Frame pointer-based call graphs
+# - Enhanced symbol resolution with readable names
+# - Automatic browser opening for visualization
+# - Kernel parameter management for profiling
+#
+# Technical details:
+# - Uses perf with 99Hz sampling rate
+# - Forces frame pointers for accurate stack traces
+# - Prevents inlining to preserve function boundaries
+# - 8-level call graph depth limit
+#
+# Prerequisites:
+# - perf installed (via setup-dev-tools.sh)
+# - cargo-flamegraph installed (via install-cargo-tools)
+# - sudo access for kernel parameters
+#
+# Output:
+# - flamegraph.svg: Interactive visualization file
+#
+# Usage:
+#   nu run.nu run-examples-flamegraph-svg
 def run-examples-flamegraph-svg [] {
     let original_dir = $env.PWD
     cd tui
@@ -468,6 +608,33 @@ def run-examples-flamegraph-svg [] {
     cd $original_dir
 }
 
+# Generates collapsed stack format (perf-folded) for detailed performance analysis.
+#
+# This function profiles a selected example and outputs the data in collapsed
+# stack format, which is more compact than SVG and useful for further analysis
+# or integration with other profiling tools.
+#
+# Features:
+# - Same profiling capabilities as SVG version
+# - Outputs text-based collapsed stack format
+# - Shows total sample counts
+# - Much smaller file size than SVG
+# - Can be converted to various formats later
+#
+# Output format:
+# Each line contains: stack_trace sample_count
+# Example: main;foo;bar 42
+#
+# Prerequisites:
+# - perf installed
+# - inferno tools installed (via install-cargo-tools)
+# - sudo access for kernel parameters
+#
+# Output:
+# - flamegraph.perf-folded: Collapsed stack trace file
+#
+# Usage:
+#   nu run.nu run-examples-flamegraph-fold
 def run-examples-flamegraph-fold [] {
     let original_dir = $env.PWD
     cd tui
@@ -478,6 +645,26 @@ def run-examples-flamegraph-fold [] {
     cd $original_dir
 }
 
+# Runs performance benchmarks for the TUI crate.
+#
+# This function executes all benchmarks defined in the TUI crate and provides
+# both real-time output and a summary of results. Benchmark results are saved
+# for later analysis.
+#
+# Features:
+# - Real-time benchmark output with tee
+# - Filtered summary showing only benchmark results
+# - Full output saved to ~/Downloads/bench.txt
+# - Graceful Ctrl+C handling
+#
+# Output:
+# - Console: Real-time progress and filtered results
+# - File: Complete output saved to ~/Downloads/bench.txt
+#
+# Usage:
+#   nu run.nu bench
+#
+# Note: Benchmarks must be marked with #[bench] attribute
 def bench [] {
     let original_dir = $env.PWD
     cd tui
@@ -531,6 +718,28 @@ def install-cmdr [] {
     cd $original_dir
 }
 
+# Builds and runs the cmdr project in a Docker container.
+#
+# This function provides a clean, reproducible build environment using Docker.
+# It handles the complete Docker workflow including cleanup, build, and execution.
+#
+# Workflow:
+# 1. Stops all running containers
+# 2. Removes existing images
+# 3. Builds fresh Docker image
+# 4. Runs the container
+#
+# Features:
+# - Complete environment isolation
+# - Reproducible builds
+# - Automatic cleanup of old containers/images
+#
+# Prerequisites:
+# - Docker installed and running
+# - Dockerfile present in cmdr/docker/
+#
+# Usage:
+#   nu run.nu docker-build
 def docker-build [] {
     let original_dir = $env.PWD
     cd cmdr/docker
@@ -552,6 +761,27 @@ def docker-build [] {
 
 # Unified commands
 
+# Monitors log files from TUI examples or cmdr binaries in real-time.
+#
+# This function provides intelligent log file monitoring with automatic detection
+# of available log files. It uses tail -f for continuous output streaming.
+#
+# Features:
+# - Auto-detects log files in tui/ and cmdr/ directories
+# - Interactive selection when multiple logs exist
+# - Real-time streaming with tail -f
+# - Graceful Ctrl+C handling
+# - Clear user feedback about log sources
+#
+# Log sources:
+# - tui/log.txt: Generated by run-examples command
+# - cmdr/log.txt: Generated by run-binaries command
+#
+# Usage:
+#   nu run.nu log
+#
+# Prerequisites:
+#   Run 'nu run.nu run-examples' or 'nu run.nu run-binaries' first to generate logs
 def log [] {
     clear
 

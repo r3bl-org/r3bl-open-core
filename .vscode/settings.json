@@ -154,6 +154,7 @@
     "nushell",
     "objc",
     "oneshot",
+    "openpty",
     "opentelemetry",
     "ordermap",
     "orgn",
