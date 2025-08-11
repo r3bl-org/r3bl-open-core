@@ -195,8 +195,22 @@ def watch-check [] { watch-files "cargo check --workspace" }
 # you can run this.
 # - Some tools may already be installed; this will update them if so.
 # - Note: cargo-watch is no longer maintained (as of Oct 2024).
-
 def install-cargo-tools [] {
+    # Install uv package manager (required for Serena semantic code MCP server.
+    # https://github.com/oraios/serena
+    if (which uv | is-empty) {
+        print 'Installing uv...'
+        if ($nu.os-info.name == "windows") {
+            # Windows installation
+            ^powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+        } else {
+            # Linux and macOS installation
+            ^sh -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
+        }
+    } else {
+        print '✓ uv installed'
+    }
+
     # Cargo tools - some tools install binaries with different names
     let cargo_tools = [
         {name: "bacon", check: "bacon", install: "cargo install bacon"},
@@ -252,7 +266,10 @@ def install-cargo-tools [] {
         # cspell:enable
     }
 
-    # Configure claude w/ mcp-language-server to use rust-analyzer if available
+    # Configure claude MCP servers.
+    # 1. Configure claude w/ mcp-language-server to use rust-analyzer if available.
+    # 2. Add context7 MCP server.
+    # 3. Add serena MCP server.
     if (which claude | is-not-empty) {
         try {
             print 'Configuring claude MCP servers...'
@@ -260,6 +277,7 @@ def install-cargo-tools [] {
             let mcp_cmd = $"($env.HOME)/go/bin/mcp-language-server"
             claude mcp add-json "rust-analyzer" $'{"type":"stdio","command":"($mcp_cmd)","args":["--workspace","($workspace)","--lsp","rust-analyzer"],"cwd":"($workspace)"}'
             claude mcp add-json "context7" '{"type":"http","url":"https://mcp.context7.com/mcp"}'
+            claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant --project /home/nazmul/github/r3bl-open-core
         }
     }
 }
