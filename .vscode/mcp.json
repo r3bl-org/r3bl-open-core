@@ -1,5 +1,18 @@
 {
 	"servers": {
+		"serena": {
+			"command": "uvx",
+			"args": [
+				"--from",
+				"git+https://github.com/oraios/serena",
+				"serena",
+				"start-mcp-server",
+				"--context",
+				"ide-assistant",
+				"--project",
+				"/home/nazmul/github/r3bl-open-core"
+			]
+		},
 		"context7": {
 			"url": "https://mcp.context7.com/mcp",
 			"type": "http"
