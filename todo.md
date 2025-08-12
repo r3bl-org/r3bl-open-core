@@ -14,8 +14,8 @@
     - [x] example
     - [x] tests in [`task_test_pty`](docs/done/task_test_pty.md)
     - [ ] code review
-  - [ ] dual channel in [`task_dual_channel_pty`](docs/task_dual_channel_pty.md)
-    - [x] code
+  - [x] dual channel
+    - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
     - [x] example
     - [x] tests
     - [ ] code review

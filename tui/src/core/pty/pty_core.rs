@@ -6,23 +6,23 @@ use portable_pty::{CommandBuilder, MasterPty, PtySize, SlavePty};
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
             task::JoinHandle};
 
-use super::{OscEvent, PtyConfig};
+use super::OscEvent;
 
 /// Buffer size for reading PTY output (4KB stack allocation).
 ///
 /// This is used for the read buffer in PTY operations. The performance bottleneck
-/// is not this buffer size but the `Vec<u8>` allocations in `PtyEvent::Output`.
+/// is not this buffer size but the `Vec<u8>` allocations in `PtyOutputEvent::Output`.
 pub const READ_BUFFER_SIZE: usize = 4096;
 
-/// Type alias for the controlled side of a PTY (slave).
+/// Type alias for the controlled half of a PTY (slave).
 ///
 /// This represents the process-side of the PTY that the child process
 /// will use for stdin/stdout/stderr.
 pub type Controlled = Box<dyn SlavePty + Send>;
 
-/// Type alias for the controlling side of a PTY (master).
+/// Type alias for the controller half of a PTY (master).
 ///
-/// This represents the controlling side that the parent process uses
+/// This represents the controller half that the parent process uses
 /// to read from and write to the child process.
 pub type Controller = Box<dyn MasterPty + Send>;
 
@@ -36,10 +36,24 @@ pub type ControlledChild = Box<dyn portable_pty::Child + Send + Sync>;
 /// [`PtyCommandBuilder::build`].
 pub type PtyCommand = CommandBuilder;
 
-/// Unified event type for PTY output that can contain both OSC sequences and raw output
+/// Type alias for a pinned completion handle used in PTY sessions.
+///
+/// This simplifies the verbose
+/// `Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>` type used for
+/// awaiting PTY session completion. The pinning satisfies Tokio's Unpin requirement for
+/// select! macro usage. The `JoinHandle` returned by `tokio::spawn`
+/// doesn't implement Unpin by default, but select! requires all futures to be
+/// Unpin for efficient polling without moving them.
+pub type PtyCompletionHandle =
+    Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>;
+
+pub type OutputEventReceiverHalf = UnboundedReceiver<PtyOutputEvent>;
+pub type InputEventSenderHalf = UnboundedSender<PtyInputEvent>;
+
+/// Unified output event type for PTY that can contain both OSC sequences and raw output
 /// data.
 #[derive(Debug)]
-pub enum PtyEvent {
+pub enum PtyOutputEvent {
     /// OSC sequence event (if OSC capture is enabled).
     Osc(OscEvent),
     /// Raw output data (stdout/stderr combined).
@@ -52,9 +66,9 @@ pub enum PtyEvent {
     WriteError(std::io::Error),
 }
 
-/// Input types that can be sent to a child process through PTY.
+/// Input event types that can be sent to a child process through PTY.
 #[derive(Debug, Clone)]
-pub enum PtyInput {
+pub enum PtyInputEvent {
     /// Send raw bytes to child's stdin.
     Write(Vec<u8>),
     /// Send text with automatic newline.
@@ -111,32 +125,43 @@ pub enum ControlChar {
 
 /// Session handle for read-only PTY communication.
 ///
-/// Provides access to both the output stream and completion status of a PTY process:
-/// - The `event_receiver_half` channel receives combined stdout/stderr from the child
-///   process, along with optional OSC sequences and process exit events.
+/// Provides access to both the output stream and completion status of a child process
+/// running in the PTY controlled half (slave half).
+/// - The `output_event_receiver_half` channel receives combined stdout/stderr from the
+///   child process, along with optional OSC sequences and process exit events.
 /// - The `completion_handle` can be awaited to know when the process completes and get
 ///   the final exit status.
 #[derive(Debug)]
 pub struct PtyReadOnlySession {
     /// Receives output events from the child process (combined stdout/stderr).
-    pub event_receiver_half: UnboundedReceiver<PtyEvent>,
+    pub output_event_receiver_half: OutputEventReceiverHalf,
     /// Await this `completion_handle` for process completion.
-    pub completion_handle: Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>,
+    ///
+    /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
+    /// other async coordination patterns. The `JoinHandle` returned by `tokio::spawn`
+    /// doesn't implement Unpin by default, but select! requires all futures to be
+    /// Unpin for efficient polling without moving them.
+    pub completion_handle: PtyCompletionHandle,
 }
 
-/// Session handle for interactive PTY communication.
+/// Session handle for read-write PTY communication.
 ///
 /// Provides bidirectional communication with a child process running in a PTY.
 /// The `event_receiver_half` channel receives combined stdout/stderr from the child
 /// process.
 #[derive(Debug)]
-pub struct PtySession {
+pub struct PtyReadWriteSession {
     /// Send input TO the child process.
-    pub input_sender_half: UnboundedSender<PtyInput>,
+    pub input_event_sender_half: InputEventSenderHalf,
     /// Receive output FROM the child process (combined stdout/stderr).
-    pub event_receiver_half: UnboundedReceiver<PtyEvent>,
+    pub output_event_receiver_half: OutputEventReceiverHalf,
     /// Await this `completion_handle` for process completion.
-    pub completion_handle: Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>,
+    ///
+    /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
+    /// other async coordination patterns. The `JoinHandle` returned by `tokio::spawn`
+    /// doesn't implement Unpin by default, but select! requires all futures to be
+    /// Unpin for efficient polling without moving them.
+    pub completion_handle: PtyCompletionHandle,
 }
 
 /// Converts a control character to its byte representation.
@@ -177,10 +202,12 @@ pub fn control_char_to_bytes(ctrl: &ControlChar) -> Cow<'static, [u8]> {
         // Function keys
         ControlChar::F(n) => {
             match n {
+                // cspell:disable
                 1 => Cow::Borrowed(&[0x1B, 0x4F, 0x50]), // ESCOP
                 2 => Cow::Borrowed(&[0x1B, 0x4F, 0x51]), // ESCOQ
                 3 => Cow::Borrowed(&[0x1B, 0x4F, 0x52]), // ESCOR
                 4 => Cow::Borrowed(&[0x1B, 0x4F, 0x53]), // ESCOS
+                // cspell:enable
                 5 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x35, 0x7E]), // ESC[15~
                 6 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x37, 0x7E]), // ESC[17~
                 7 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x38, 0x7E]), // ESC[18~
@@ -189,8 +216,8 @@ pub fn control_char_to_bytes(ctrl: &ControlChar) -> Cow<'static, [u8]> {
                 10 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x31, 0x7E]), // ESC[21~
                 11 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x33, 0x7E]), // ESC[23~
                 12 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x34, 0x7E]), // ESC[24~
-                _ => Cow::Borrowed(&[0x1B]),             /* Just ESC for unknown
-                                                           * function keys */
+                // Unknown function keys
+                _ => Cow::Borrowed(&[0x1B]), // Just ESC
             }
         }
 
@@ -360,155 +387,309 @@ impl PtyCommandBuilder {
         Ok(cmd_to_return)
     }
 
-    /// Spawns a read-only PTY session.
-    ///
-    /// Returns a session with an output receiver for events and a `completion_handle` to
-    /// await completion. The output channel receives combined stdout/stderr from the
-    /// child process.
-    ///
-    /// # Example: Capturing command output
-    /// ```rust
-    /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyEvent};
-    ///
-    /// let mut session = PtyCommandBuilder::new("ls")
-    ///     .args(["-la"])
-    ///     .spawn_read_only(PtyConfigOption::Output)?;
-    ///
-    /// let mut output = Vec::new();
-    /// while let Some(event) = session.event_receiver_half.recv().await {
-    ///     match event {
-    ///         PtyEvent::Output(data) => output.extend_from_slice(&data),
-    ///         PtyEvent::Exit(status) if status.success() => {
-    ///             println!("Command completed successfully");
-    ///             break;
-    ///         }
-    ///         PtyEvent::Exit(status) => {
-    ///             eprintln!("Command failed with: {:?}", status);
-    ///             break;
-    ///         }
-    ///         _ => {}
-    ///     }
-    /// }
-    /// println!("Output: {}", String::from_utf8_lossy(&output));
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Example: Capturing OSC sequences from cargo build
-    /// ```rust,no_run
-    /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyEvent, OscEvent};
-    ///
-    /// let mut session = PtyCommandBuilder::new("cargo")
-    ///     .args(["build"])
-    ///     .enable_osc_sequences()  // Enable OSC 9;4 progress sequences
-    ///     .spawn_read_only(PtyConfigOption::Osc)?;
-    ///
-    /// while let Some(event) = session.event_receiver_half.recv().await {
-    ///     match event {
-    ///         PtyEvent::Osc(OscEvent::ProgressUpdate(pct)) => {
-    ///             println!("Build progress: {}%", pct);
-    ///         }
-    ///         PtyEvent::Exit(_) => break,
-    ///         _ => {}
-    ///     }
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the PTY fails to spawn or initialize properly.
-    pub fn spawn_read_only(
-        self,
-        config: impl Into<PtyConfig>,
-    ) -> miette::Result<PtyReadOnlySession> {
-        // Implementation will use spawn_pty_read_only_impl from spawn_pty_read_channel.rs
-        Ok(crate::spawn_pty_read_only_impl(self, config))
+
+
+
+}
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use super::*;
+
+    #[test]
+    fn test_pty_event_debug() {
+        let event = PtyOutputEvent::Output(b"test".to_vec());
+        let debug_str = format!("{event:?}");
+        assert!(debug_str.contains("Output"));
     }
 
-    /// Spawns a PTY session with bidirectional communication (read-write).
+    #[test]
+    fn test_pty_input_debug_and_clone() {
+        let input = PtyInputEvent::Write(b"test".to_vec());
+        let cloned = input.clone();
+        assert_eq!(format!("{input:?}"), format!("{cloned:?}"));
+    }
+
+    #[test]
+    fn test_control_char_debug_and_clone() {
+        let ctrl = ControlChar::CtrlC;
+        let cloned = ctrl.clone();
+        assert_eq!(format!("{ctrl:?}"), format!("{cloned:?}"));
+    }
+
+    #[test]
+    fn test_control_char_to_bytes_basic() {
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlC), [0x03]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlD), [0x04]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlZ), [0x1A]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlL), [0x0C]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlU), [0x15]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlA), [0x01]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlE), [0x05]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::CtrlK), [0x0B]);
+    }
+
+    #[test]
+    fn test_control_char_to_bytes_common_keys() {
+        assert_eq!(*control_char_to_bytes(&ControlChar::Tab), [0x09]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::Enter), [0x0A]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::Escape), [0x1B]);
+        assert_eq!(*control_char_to_bytes(&ControlChar::Backspace), [0x7F]);
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::Delete),
+            [0x1B, 0x5B, 0x33, 0x7E]
+        );
+    }
+
+    #[test]
+    fn test_control_char_to_bytes_arrow_keys() {
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::ArrowUp),
+            [0x1B, 0x5B, 0x41]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::ArrowDown),
+            [0x1B, 0x5B, 0x42]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::ArrowRight),
+            [0x1B, 0x5B, 0x43]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::ArrowLeft),
+            [0x1B, 0x5B, 0x44]
+        );
+    }
+
+    #[test]
+    fn test_control_char_to_bytes_navigation() {
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::Home),
+            [0x1B, 0x5B, 0x48]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::End),
+            [0x1B, 0x5B, 0x46]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::PageUp),
+            [0x1B, 0x5B, 0x35, 0x7E]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::PageDown),
+            [0x1B, 0x5B, 0x36, 0x7E]
+        );
+    }
+
+    #[test]
+    fn test_control_char_to_bytes_function_keys() {
+        // Test F1-F4 (special sequences)
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::F(1)),
+            [0x1B, 0x4F, 0x50]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::F(2)),
+            [0x1B, 0x4F, 0x51]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::F(3)),
+            [0x1B, 0x4F, 0x52]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::F(4)),
+            [0x1B, 0x4F, 0x53]
+        );
+
+        // Test F5-F12 (ESC[nn~ sequences)
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::F(5)),
+            [0x1B, 0x5B, 0x31, 0x35, 0x7E]
+        );
+        assert_eq!(
+            *control_char_to_bytes(&ControlChar::F(12)),
+            [0x1B, 0x5B, 0x32, 0x34, 0x7E]
+        );
+
+        // Test unknown function key
+        assert_eq!(*control_char_to_bytes(&ControlChar::F(99)), [0x1B]);
+    }
+
+    #[test]
+    fn test_control_char_to_bytes_raw_sequence() {
+        let custom_bytes = vec![0x1B, 0x5B, 0x32, 0x4A]; // Clear screen from cursor
+        let ctrl = ControlChar::RawSequence(custom_bytes.clone());
+        assert_eq!(*control_char_to_bytes(&ctrl), *custom_bytes);
+    }
+
+    #[test]
+    fn test_pty_command_builder_new() {
+        let builder = PtyCommandBuilder::new("test");
+        assert_eq!(builder.command, "test");
+        assert!(builder.args.is_empty());
+        assert!(builder.cwd.is_none());
+        assert!(builder.env_vars.is_empty());
+    }
+
+    #[test]
+    fn test_pty_command_builder_args() {
+        let builder = PtyCommandBuilder::new("test").args(["arg1", "arg2"]);
+
+        assert_eq!(builder.args, vec!["arg1", "arg2"]);
+    }
+
+    #[test]
+    fn test_pty_command_builder_cwd() {
+        let path = env::temp_dir();
+        let builder = PtyCommandBuilder::new("test").cwd(&path);
+
+        assert_eq!(builder.cwd, Some(path));
+    }
+
+    #[test]
+    fn test_pty_command_builder_env() {
+        let builder = PtyCommandBuilder::new("test")
+            .env("KEY1", "value1")
+            .env("KEY2", "value2");
+
+        assert_eq!(
+            builder.env_vars,
+            vec![
+                ("KEY1".to_string(), "value1".to_string()),
+                ("KEY2".to_string(), "value2".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn test_pty_command_builder_enable_osc_sequences_wt() {
+        // Simulate Windows Terminal environment
+        unsafe {
+            env::set_var("WT_SESSION", "test-session");
+        }
+
+        let builder = PtyCommandBuilder::new("test").enable_osc_sequences();
+
+        // Should not add any env vars since WT_SESSION exists
+        assert!(builder.env_vars.is_empty());
+
+        unsafe {
+            env::remove_var("WT_SESSION");
+        }
+    }
+
+    #[test]
+    fn test_pty_command_builder_enable_osc_sequences_conemu() {
+        // Simulate ConEmu environment
+        unsafe {
+            env::remove_var("WT_SESSION");
+        } // Ensure WT_SESSION is not set
+        unsafe {
+            env::set_var("ConEmuANSI", "ON");
+        }
+
+        let builder = PtyCommandBuilder::new("test").enable_osc_sequences();
+
+        // Should not add any env vars since ConEmuANSI is ON
+        assert!(builder.env_vars.is_empty());
+
+        unsafe {
+            env::remove_var("ConEmuANSI");
+        }
+    }
+
+    #[test]
+    fn test_pty_command_builder_enable_osc_sequences_fallback() {
+        // Ensure neither WT_SESSION nor ConEmuANSI are set
+        unsafe {
+            env::remove_var("WT_SESSION");
+        }
+        unsafe {
+            env::remove_var("ConEmuANSI");
+        }
+
+        let builder = PtyCommandBuilder::new("test").enable_osc_sequences();
+
+        // Should set TERM_PROGRAM to WezTerm
+        assert_eq!(
+            builder.env_vars,
+            vec![("TERM_PROGRAM".to_string(), "WezTerm".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_pty_command_builder_build() {
+        let builder = PtyCommandBuilder::new("ls")
+            .args(["-la", "-h"])
+            .env("TEST_VAR", "test_value");
+
+        let result = builder.build();
+        assert!(result.is_ok());
+
+        let _pty_command = result.unwrap();
+        // PtyCommand doesn't expose get_program(), so we just verify build succeeds
+    }
+
+    #[test]
+    fn test_pty_command_builder_build_with_cwd() {
+        let temp_dir = env::temp_dir();
+        let builder = PtyCommandBuilder::new("test").cwd(&temp_dir);
+
+        let result = builder.build();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_pty_command_builder_chaining() {
+        let builder = PtyCommandBuilder::new("cargo")
+            .args(["build", "--release"])
+            .cwd(env::current_dir().unwrap())
+            .env("CARGO_TERM_COLOR", "always")
+            .enable_osc_sequences();
+
+        let result = builder.build();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_pty_session_structs_debug() {
+        // Test that the session structs have Debug implemented
+        // We can't easily test the actual structs without spawning processes,
+        // but we can verify the types exist and have the expected fields
+
+        // These will be compile-time checks
+        fn check_debug<T: std::fmt::Debug>() {}
+
+        check_debug::<PtyReadOnlySession>();
+        check_debug::<PtyReadWriteSession>();
+    }
+
+    #[test]
+    fn test_read_buffer_size_constant() {
+        assert_eq!(READ_BUFFER_SIZE, 4096);
+    }
+
+    /// Compile-time validation that PTY type aliases are correctly defined.
     ///
-    /// Returns a session with input sender, output receiver, and `completion_handle`.
-    /// The output channel receives combined stdout/stderr from the child process.
+    /// This test ensures that the core PTY type aliases (`Controller`, `Controlled`,
+    /// and `ControlledChild`) can be used as function parameters, proving they are
+    /// properly defined and usable. If any type alias has incorrect bounds or
+    /// missing trait implementations, this test will fail at compile time.
     ///
-    /// # Example: Interactive command session
-    /// ```rust
-    /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyEvent, PtyInput};
-    ///
-    /// let mut session = PtyCommandBuilder::new("cat")
-    ///     .spawn_read_write(PtyConfigOption::Output)?;
-    ///
-    /// // Send input to the process
-    /// session.input_sender_half.send(PtyInput::WriteLine("Hello, PTY!".into()))?;
-    /// session.input_sender_half.send(PtyInput::WriteLine("This is interactive".into()))?;
-    /// session.input_sender_half.send(PtyInput::SendControl(r3bl_tui::ControlChar::CtrlD))?; // EOF
-    ///
-    /// // Collect output
-    /// let mut output = String::new();
-    /// while let Some(event) = session.event_receiver_half.recv().await {
-    ///     match event {
-    ///         PtyEvent::Output(data) => {
-    ///             output.push_str(&String::from_utf8_lossy(&data));
-    ///         }
-    ///         PtyEvent::Exit(status) => {
-    ///             println!("Process exited: {:?}", status);
-    ///             break;
-    ///         }
-    ///         _ => {}
-    ///     }
-    /// }
-    /// assert!(output.contains("Hello, PTY!"));
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Example: Python REPL interaction
-    /// ```rust,no_run
-    /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyEvent, PtyInput, ControlChar};
-    /// use tokio::time::{sleep, Duration};
-    ///
-    /// let mut session = PtyCommandBuilder::new("python3")
-    ///     .args(["-u", "-i"])  // Unbuffered, interactive
-    ///     .spawn_read_write(PtyConfigOption::Output)?;
-    ///
-    /// // Wait for Python to start
-    /// sleep(Duration::from_millis(500)).await;
-    ///
-    /// // Send Python commands
-    /// session.input_sender_half.send(PtyInput::WriteLine("x = 2 + 3".into()))?;
-    /// session.input_sender_half.send(PtyInput::WriteLine("print(f'Result: {x}')".into()))?;
-    /// session.input_sender_half.send(PtyInput::SendControl(ControlChar::CtrlD))?; // Exit
-    ///
-    /// // Process output
-    /// while let Some(event) = session.event_receiver_half.recv().await {
-    ///     match event {
-    ///         PtyEvent::Output(data) => print!("{}", String::from_utf8_lossy(&data)),
-    ///         PtyEvent::Exit(_) => break,
-    ///         _ => {}
-    ///     }
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the PTY fails to spawn or initialize properly.
-    pub fn spawn_read_write(
-        self,
-        config: impl Into<PtyConfig>,
-    ) -> miette::Result<PtySession> {
-        // Implementation will use spawn_pty_read_write_impl from
-        // spawn_pty_read_write_channels.rs
-        Ok(crate::spawn_pty_read_write_impl(self, config))
+    /// The functions are marked with `#[allow(dead_code)]` since they are never
+    /// called - they only need to compile successfully to validate the type
+    /// definitions.
+    #[test]
+    fn validate_pty_type_aliases_compile() {
+        // Verify type aliases exist and are correctly defined
+        #[allow(dead_code)]
+        fn check_controller(_: Controller) {}
+        #[allow(dead_code)]
+        fn check_controlled(_: Controlled) {}
+        #[allow(dead_code)]
+        fn check_controlled_child(_: ControlledChild) {}
+
+        // These are compile-time checks to ensure the types exist
     }
 }

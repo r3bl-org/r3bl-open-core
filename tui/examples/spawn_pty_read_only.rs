@@ -25,7 +25,7 @@
 //! ```
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{core::pty::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyEvent},
+use r3bl_tui::{core::pty::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyOutputEvent},
                set_mimalloc_in_main};
 
 // ANSI color constants for terminal output.
@@ -53,8 +53,8 @@ async fn run_cargo_clean() -> miette::Result<()> {
                 return Err(miette::miette!("Cargo clean failed"));
             }
         }
-        Some(event) = session.event_receiver_half.recv() => {
-            if let PtyEvent::Exit(status) = event
+        Some(event) = session.output_event_receiver_half.recv() => {
+            if let PtyOutputEvent::Exit(status) = event
                 && !status.success() {
                 return Err(miette::miette!("Cargo clean failed"));
             }
@@ -99,9 +99,9 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                 break;
             }
             // Handle incoming PTY events
-            Some(event) = session.event_receiver_half.recv() => {
+            Some(event) = session.output_event_receiver_half.recv() => {
                 match event {
-                    PtyEvent::Osc(osc_event) => {
+                    PtyOutputEvent::Osc(osc_event) => {
                         match osc_event {
                             OscEvent::ProgressUpdate(percentage) => {
                                 saw_progress = true;
@@ -118,7 +118,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                             }
                         }
                     }
-                    PtyEvent::Exit(_) | PtyEvent::Output(_) | PtyEvent::UnexpectedExit(_) | PtyEvent::WriteError(_) => {
+                    PtyOutputEvent::Exit(_) | PtyOutputEvent::Output(_) | PtyOutputEvent::UnexpectedExit(_) | PtyOutputEvent::WriteError(_) => {
                         // Exit event will be handled by the handle completion above
                         // Output events are not captured in this config
                         // Unexpected exit and write errors should not occur in read-only mode

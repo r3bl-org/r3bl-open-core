@@ -17,8 +17,8 @@
 //! ```
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{core::pty::{ControlChar, PtyCommandBuilder, PtyConfigOption, PtyEvent,
-                           PtyInput},
+use r3bl_tui::{core::pty::{ControlChar, PtyCommandBuilder, PtyConfigOption, PtyOutputEvent,
+                           PtyInputEvent},
                set_mimalloc_in_main};
 use tokio::time::{Duration, sleep};
 
@@ -44,9 +44,9 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     let output_handle = tokio::spawn(async move {
         let mut buffer = String::new();
 
-        while let Some(event) = session.event_receiver_half.recv().await {
+        while let Some(event) = session.output_event_receiver_half.recv().await {
             match event {
-                PtyEvent::Output(data) => {
+                PtyOutputEvent::Output(data) => {
                     let text = String::from_utf8_lossy(&data);
                     buffer.push_str(&text);
 
@@ -62,7 +62,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
                         println!();
                     }
                 }
-                PtyEvent::Exit(status) => {
+                PtyOutputEvent::Exit(status) => {
                     println!("\n{YELLOW}Python exited with status: {status:?}{RESET}");
                     break;
                 }
@@ -79,94 +79,94 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     // Demo: Basic arithmetic
     println!("{BLUE}📝 Sending: Basic arithmetic{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("2 + 2".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("2 + 2".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Variables and strings
     println!("\n{BLUE}📝 Sending: Variable assignment{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("name = 'PTY Demo'".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("name = 'PTY Demo'".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: Print variable{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("print(f'Hello from {name}!')".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("print(f'Hello from {name}!')".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Lists and loops
     println!("\n{BLUE}📝 Sending: Create a list{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("numbers = [1, 2, 3, 4, 5]".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("numbers = [1, 2, 3, 4, 5]".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: List comprehension{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("[x**2 for x in numbers]".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("[x**2 for x in numbers]".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Functions
     println!("\n{BLUE}📝 Sending: Define a function{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("def greet(name):".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("def greet(name):".into()))
         .unwrap();
     sleep(Duration::from_millis(100)).await;
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("    return f'Hello, {name}!'".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("    return f'Hello, {name}!'".into()))
         .unwrap();
     sleep(Duration::from_millis(100)).await;
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine(String::new()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine(String::new()))
         .unwrap(); // Empty line to end function
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: Call the function{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("greet('PTY User')".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("greet('PTY User')".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Error handling
     println!("\n{BLUE}📝 Sending: Intentional error to show error handling{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("1 / 0".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("1 / 0".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Import a module
     println!("\n{BLUE}📝 Sending: Import a module{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("import sys".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("import sys".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     println!("{BLUE}📝 Sending: Check Python version{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("sys.version".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("sys.version".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Exit Python
     println!("\n{BLUE}📝 Sending: Exit command (Ctrl-D){RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::SendControl(ControlChar::CtrlD))
+        .input_event_sender_half
+        .send(PtyInputEvent::SendControl(ControlChar::CtrlD))
         .unwrap();
 
     // Wait for output task to complete
@@ -195,12 +195,12 @@ async fn run_shell_demo() -> miette::Result<()> {
 
     // Spawn output handler
     let output_handle = tokio::spawn(async move {
-        while let Some(event) = session.event_receiver_half.recv().await {
+        while let Some(event) = session.output_event_receiver_half.recv().await {
             match event {
-                PtyEvent::Output(data) => {
+                PtyOutputEvent::Output(data) => {
                     print!("{CYAN}{}{RESET}", String::from_utf8_lossy(&data));
                 }
-                PtyEvent::Exit(status) => {
+                PtyOutputEvent::Exit(status) => {
                     println!("\n{YELLOW}Shell exited with status: {status:?}{RESET}");
                     break;
                 }
@@ -215,37 +215,37 @@ async fn run_shell_demo() -> miette::Result<()> {
     // Demo: Basic commands
     println!("{BLUE}📝 Sending: pwd{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("pwd".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("pwd".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     println!("\n{BLUE}📝 Sending: echo command{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("echo 'Hello from PTY shell!'".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("echo 'Hello from PTY shell!'".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     println!("\n{BLUE}📝 Sending: List files{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("ls -la | head -5".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("ls -la | head -5".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     println!("\n{BLUE}📝 Sending: Environment variable{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("echo \"Home: $HOME\"".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("echo \"Home: $HOME\"".into()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Demo: Interrupt a long-running command
     println!("\n{BLUE}📝 Sending: Start a long command and interrupt it{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine(
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine(
             "sleep 10 && echo 'This should not print'".into(),
         ))
         .unwrap();
@@ -253,16 +253,16 @@ async fn run_shell_demo() -> miette::Result<()> {
 
     println!("{BLUE}📝 Sending: Ctrl-C to interrupt{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::SendControl(ControlChar::CtrlC))
+        .input_event_sender_half
+        .send(PtyInputEvent::SendControl(ControlChar::CtrlC))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
     // Exit shell
     println!("\n{BLUE}📝 Sending: exit{RESET}");
     session
-        .input_sender_half
-        .send(PtyInput::WriteLine("exit".into()))
+        .input_event_sender_half
+        .send(PtyInputEvent::WriteLine("exit".into()))
         .unwrap();
 
     output_handle.await.into_diagnostic()?;

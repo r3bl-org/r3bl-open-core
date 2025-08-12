@@ -1,106 +1,142 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use miette::IntoDiagnostic;
-use tokio::sync::mpsc::unbounded_channel;
 
-use crate::{PtyCommandBuilder, PtyConfig, PtyEvent, PtyReadOnlySession,
-            common_impl::{create_pty_pair, create_reader_task, spawn_command_in_pty}};
+use crate::{PtyCommandBuilder, PtyConfig, PtyOutputEvent, PtyReadOnlySession,
+            common_impl::{create_pty_pair, spawn_blocking_controller_reader_task,
+                          spawn_command_in_pty}};
 
-/// Internal implementation for spawning a read-only PTY session.
-///
-/// This is called by `PtyCommandBuilder::spawn_read_only()`.
-pub(crate) fn spawn_pty_read_only_impl(
-    /* move */ command: PtyCommandBuilder,
-    /* move */ config: impl Into<PtyConfig>,
-) -> PtyReadOnlySession {
-    let config = config.into();
+impl PtyCommandBuilder {
+    /// Spawns a read-only PTY session; it spawns two Tokio tasks and one OS child
+    /// process.
+    ///
+    /// ```text
+    /// ┌──────────────┐ ◄── events ◄── ┌───────────────────────────────┐
+    /// │ Your Program │                │ Spawned Task (1) in Read Only │
+    /// │              │                │         session               │
+    /// │              │                │            ↓                  │
+    /// │ Handle       │                │ ◄─── PTY creates pair ───►    │
+    /// │ events and   │                │ ┊Master/   ┊     ┊Slave/    ┊ │
+    /// │ process      │                │ ┊Controller┊     ┊Controlled┊ │
+    /// │ completion   │                │     ↓                 ↓       │
+    /// │ from read    │                │ Spawn Tokio       Controlled  │
+    /// │ only session │                │ blocking task     spawns      │
+    /// │              │                │ (2) to read       child       │
+    /// │              │                │ from              process (3) │
+    /// │              │                │ Controller and                │
+    /// │              │                │ generate events               │
+    /// │              │                │ for your program              │
+    /// └──────────────┘                └───────────────────────────────┘
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// A session with:
+    /// 1. `output_event_receiver_half` combined stdout/stderr of child process -> events
+    /// 2. `completion_handle` to await spawned child process completion
+    ///
+    /// # Example: Capturing OSC sequences from cargo build
+    ///
+    /// ```rust,no_run
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent, OscEvent};
+    ///
+    /// let mut session = PtyCommandBuilder::new("cargo")
+    ///     .args(["build"])
+    ///     .enable_osc_sequences()  // Enable OSC 9;4 progress sequences
+    ///     .spawn_read_only(PtyConfigOption::Osc + PtyConfigOption::Output)?;
+    ///
+    /// let mut output = Vec::new();
+    /// while let Some(event) = session.output_event_receiver_half.recv().await {
+    ///     match event {
+    ///         PtyOutputEvent::Output(data) => output.extend_from_slice(&data),
+    ///         PtyOutputEvent::Osc(OscEvent::ProgressUpdate(pct)) => {
+    ///             println!("Build progress: {}%", pct);
+    ///         }
+    ///         PtyOutputEvent::Exit(status) if status.success() => {
+    ///             println!("Build completed successfully");
+    ///             break;
+    ///         }
+    ///         PtyOutputEvent::Exit(status) => {
+    ///             eprintln!("Build failed with: {:?}", status);
+    ///             break;
+    ///         }
+    ///         _ => {}
+    ///     }
+    /// }
+    /// println!("Build output: {}", String::from_utf8_lossy(&output));
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the PTY fails to spawn or initialize properly.
+    pub fn spawn_read_only(
+        self,
+        config: impl Into<PtyConfig>,
+    ) -> miette::Result<PtyReadOnlySession> {
+        let config = config.into();
 
-    // Create channel for events
-    let (event_sender_half, event_receiver_half) = unbounded_channel();
+        // Create channel to bridge events from PTY controlled side -> your program.
+        let (output_event_sender_half, output_event_receiver_half) =
+            tokio::sync::mpsc::unbounded_channel();
 
-    let completion_handle = Box::pin(tokio::spawn(async move {
-        // Build the command, ensuring CWD is set
-        let command = command.build()?;
+        // [🛫 SPAWN 0] Spawn the main orchestration task.
+        // Pin the completion handle: JoinHandle is not Unpin but select! requires it for
+        // efficient polling without moving.
+        let completion_handle = Box::pin(tokio::spawn(async move {
+            // Build the command, ensuring CWD is set.
+            let command = self.build()?;
 
-        // Create PTY pair using common implementation
-        let (controller, controlled) = create_pty_pair(&config)?;
+            // Create PTY pair: controller (master) for your program, controlled (slave)
+            // for spawned process
+            let (controller, controlled) = create_pty_pair(&config)?;
 
-        // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
-        let mut controlled_child = spawn_command_in_pty(&controlled, command)?;
+            // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
+            // The child process uses the controlled side as its stdin/stdout/stderr.
+            let mut controlled_child = spawn_command_in_pty(&controlled, command)?;
 
-        // [🛫 SPAWN 2] Spawn the reader task to process output.
-        //
-        // CRITICAL: PTY LIFECYCLE AND FILE DESCRIPTOR MANAGEMENT
-        // ========================================================
-        // Understanding how PTYs handle EOF is crucial to avoiding deadlocks.
-        //
-        // ## The PTY File Descriptor Reference Counting Problem
-        //
-        // A PTY consists of two sides: master (controller) and slave (controlled).
-        // The kernel's PTY implementation requires BOTH conditions for EOF:
-        //
-        // 1. The slave side must be closed (happens when the child process exits)
-        // 2. The reader must be the ONLY remaining reference to the master
-        //
-        // ## Why We Need Explicit Resource Management
-        //
-        // Even though the child process has exited and closed its slave FD, our
-        // `controlled` variable keeps the slave side open. The PTY won't send EOF
-        // to the master until ALL slave file descriptors are closed. Without
-        // explicitly dropping `controlled`, it would remain open until this
-        // entire function returns, causing the reader to block forever waiting
-        // for EOF that never comes.
-        //
-        // ## The Solution
-        //
-        // 1. Create reader from controller, then keep controller in scope.
-        // 2. Explicitly drop controlled after process exits - closes our slave FD.
-        // 3. This allows the reader to receive EOF and exit cleanly.
-        let blocking_reader_task_join_handle = {
-            let reader_event_sender = event_sender_half.clone();
-            let should_capture_osc = config.is_osc_capture_enabled();
-            let should_capture_output = config.is_output_capture_enabled();
-            // Get a reader from the controller for the reader task.
-            let reader = controller
-                .try_clone_reader()
-                .map_err(|e| miette::miette!("Failed to clone pty reader: {}", e))?;
-            // Use common implementation for reader task.
-            create_reader_task(
-                reader,
-                reader_event_sender,
-                should_capture_osc,
-                should_capture_output,
-            )
-        };
+            // [🛫 SPAWN 2] Spawn the reader task to process output from the controller
+            // side. NOTE: Critical resource management - see module docs for
+            // PTY lifecycle details.
+            let blocking_controller_reader_task_join_handle = {
+                let controller_reader = controller
+                    .try_clone_reader()
+                    .map_err(|e| miette::miette!("Failed to clone pty reader: {}", e))?;
+                spawn_blocking_controller_reader_task(
+                    controller_reader,
+                    output_event_sender_half.clone(),
+                    config,
+                )
+            };
 
-        // [🛬 WAIT 1] Wait for the command to complete.
-        let status = tokio::task::spawn_blocking(move || controlled_child.wait())
-            .await
-            .into_diagnostic()?
-            .into_diagnostic()?;
+            // [🛬 WAIT 1] Wait for the command to complete.
+            let status = tokio::task::spawn_blocking(move || controlled_child.wait())
+                .await
+                .into_diagnostic()?
+                .into_diagnostic()?;
 
-        // Store exit code before moving status into event.
-        let exit_code = status.exit_code();
+            let exit_code = status.exit_code();
+            let _unused = output_event_sender_half.send(PtyOutputEvent::Exit(status));
 
-        // Send exit event (moves status).
-        let _unused = event_sender_half.send(PtyEvent::Exit(status));
+            // See module docs for detailed PTY lifecycle management explanation.
+            drop(controlled); // Close the controlled half. CRITICAL for EOF to be sent to reader.
+            drop(controller); // Not critical, but good practice to release controller FD.
 
-        // CRITICAL. Explicitly drop both controlled and controller after process exits.
-        // This ensures proper PTY cleanup and allows the reader to receive EOF. If you
-        // don't do this, the call `blocking_reader_task_join_handle.await` will deadlock.
-        drop(controlled);
-        drop(controller);
+            // [🛬 WAIT 2] Wait for the reader task to complete.
+            blocking_controller_reader_task_join_handle
+                .await
+                .into_diagnostic()??;
 
-        // [🛬 WAIT 2] Wait for the reader task to complete.
-        blocking_reader_task_join_handle.await.into_diagnostic()??;
+            Ok(portable_pty::ExitStatus::with_exit_code(exit_code))
+        }));
 
-        // Recreate status for return value.
-        Ok(portable_pty::ExitStatus::with_exit_code(exit_code))
-    }));
-
-    PtyReadOnlySession {
-        event_receiver_half,
-        completion_handle,
+        Ok(PtyReadOnlySession {
+            output_event_receiver_half,
+            completion_handle,
+        })
     }
 }
 
@@ -109,14 +145,14 @@ mod tests {
     use miette::IntoDiagnostic;
     use tokio::time::{Duration, timeout};
 
-    use crate::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyEvent,
+    use crate::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyOutputEvent,
                 PtyReadOnlySession};
 
     /// Helper function to collect events with a timeout
     async fn collect_events_with_timeout(
         mut session: PtyReadOnlySession,
         max_duration: Duration,
-    ) -> miette::Result<(Vec<PtyEvent>, portable_pty::ExitStatus)> {
+    ) -> miette::Result<(Vec<PtyOutputEvent>, portable_pty::ExitStatus)> {
         let mut events = Vec::new();
 
         let result = timeout(max_duration, async move {
@@ -127,13 +163,13 @@ mod tests {
                         let status = result.into_diagnostic()??;
 
                         // Drain any remaining events
-                        while let Ok(event) = session.event_receiver_half.try_recv() {
+                        while let Ok(event) = session.output_event_receiver_half.try_recv() {
                             events.push(event);
                         }
 
                         return Ok::<_, miette::Error>((events, status));
                     }
-                    Some(event) = session.event_receiver_half.recv() => {
+                    Some(event) = session.output_event_receiver_half.recv() => {
                         events.push(event);
                     }
                 }
@@ -163,7 +199,9 @@ mod tests {
         let output_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
-                PtyEvent::Output(data) => Some(String::from_utf8_lossy(data).to_string()),
+                PtyOutputEvent::Output(data) => {
+                    Some(String::from_utf8_lossy(data).to_string())
+                }
                 _ => None,
             })
             .collect();
@@ -191,7 +229,7 @@ mod tests {
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
-                PtyEvent::Osc(osc) => Some(osc.clone()),
+                PtyOutputEvent::Osc(osc) => Some(osc.clone()),
                 _ => None,
             })
             .collect();
@@ -216,7 +254,7 @@ mod tests {
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
-                PtyEvent::Osc(osc) => Some(osc.clone()),
+                PtyOutputEvent::Osc(osc) => Some(osc.clone()),
                 _ => None,
             })
             .collect();
@@ -256,14 +294,16 @@ mod tests {
         assert!(status.success());
 
         // Check we got output events (OSC might not work on all systems)
-        let has_output = events.iter().any(|e| matches!(e, PtyEvent::Output(_)));
+        let has_output = events
+            .iter()
+            .any(|e| matches!(e, PtyOutputEvent::Output(_)));
         assert!(has_output);
 
         // Check if we got OSC events (may not work on all printf implementations)
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
-                PtyEvent::Osc(osc) => Some(osc.clone()),
+                PtyOutputEvent::Osc(osc) => Some(osc.clone()),
                 _ => None,
             })
             .collect();
@@ -298,7 +338,7 @@ mod tests {
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
-                PtyEvent::Osc(osc) => Some(osc.clone()),
+                PtyOutputEvent::Osc(osc) => Some(osc.clone()),
                 _ => None,
             })
             .collect();
@@ -336,7 +376,7 @@ mod tests {
             let osc_events: Vec<_> = events
                 .iter()
                 .filter_map(|e| match e {
-                    PtyEvent::Osc(osc) => Some(osc.clone()),
+                    PtyOutputEvent::Osc(osc) => Some(osc.clone()),
                     _ => None,
                 })
                 .collect();
@@ -360,7 +400,7 @@ mod tests {
         assert!(!status.success());
 
         // Should have an exit event
-        let has_exit = events.iter().any(|e| matches!(e, PtyEvent::Exit(_)));
+        let has_exit = events.iter().any(|e| matches!(e, PtyOutputEvent::Exit(_)));
         assert!(has_exit);
 
         Ok(())
@@ -381,7 +421,7 @@ mod tests {
         // Should only have exit event, no output
         let output_events: Vec<_> = events
             .iter()
-            .filter(|e| matches!(e, PtyEvent::Output(_)))
+            .filter(|e| matches!(e, PtyOutputEvent::Output(_)))
             .collect();
 
         assert!(output_events.is_empty());
