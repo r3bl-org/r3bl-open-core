@@ -16,6 +16,7 @@
     "assert_eq",
     "astext",
     "attribs",
+    "backpressure",
     "Bderivebuilder",
     "Bincode",
     "bindex",

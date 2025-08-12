@@ -151,6 +151,7 @@ pub mod glyphs;
 pub mod graphemes;
 pub mod log;
 pub mod misc;
+pub mod pty;
 pub mod script;
 pub mod stack_alloc_types;
 pub mod storage;
@@ -160,7 +161,6 @@ pub mod test_fixtures;
 pub mod tui_style;
 pub mod tui_styled_text;
 pub mod units;
-pub mod pty;
 
 // Re-export.
 pub use ansi::*;
@@ -172,6 +172,7 @@ pub use glyphs::*;
 pub use graphemes::*;
 pub use log::*;
 pub use misc::*;
+pub use pty::*;
 pub use script::*;
 pub use stack_alloc_types::*;
 pub use storage::*;
@@ -181,4 +182,3 @@ pub use test_fixtures::*;
 pub use tui_style::*;
 pub use tui_styled_text::*;
 pub use units::*;
-pub use pty::*;

@@ -7,16 +7,23 @@
     - [Main Function](#main-function)
     - [PtySession Structure](#ptysession-structure)
     - [Input Types (TO Child)](#input-types-to-child)
+    - [Output Types (FROM Child)](#output-types-from-child)
     - [Configuration (Using Existing Types)](#configuration-using-existing-types)
   - [Usage Examples](#usage-examples)
     - [Example 1: Python REPL Interaction](#example-1-python-repl-interaction)
     - [Example 2: Interactive Shell Commands](#example-2-interactive-shell-commands)
     - [Example 3: SSH Session](#example-3-ssh-session)
-    - [Example 4: Controlling another TUI application](#example-4-controlling-another-tui-application)
+    - [Example 4: Controlling another TUI application (Vim)](#example-4-controlling-another-tui-application-vim)
+  - [Implementation Considerations](#implementation-considerations)
+    - [1. Writer Task](#1-writer-task)
     - [2. Resource Management](#2-resource-management)
-    - [3. Terminal Modes](#3-terminal-modes)
-    - [4. Error Handling](#4-error-handling)
-    - [5. Buffering Strategy](#5-buffering-strategy)
+    - [3. Error Handling](#3-error-handling)
+    - [4. Buffering Strategy](#4-buffering-strategy)
+    - [5. Flush Implementation](#5-flush-implementation)
+  - [Code Refactoring and Shared Components](#code-refactoring-and-shared-components)
+    - [Shared Components (common_impl.rs)](#shared-components-common_implrs)
+    - [Modified Existing Types](#modified-existing-types)
+    - [Refactoring Strategy](#refactoring-strategy)
   - [Comparison with Read-Only Function](#comparison-with-read-only-function)
   - [Future Enhancements](#future-enhancements)
   - [Testing Strategy](#testing-strategy)
@@ -28,15 +35,22 @@
 
 ## Overview
 
-This document outlines the design for `spawn_pty_interactive`, a bidirectional PTY communication
-function that allows both reading from and writing to a child process running in a pseudo-terminal.
+This document outlines the design for `spawn_pty_capture_output_and_provide_input`, a bidirectional
+PTY communication function that allows both reading from and writing to a child process running in a
+pseudo-terminal. This function will be implemented in
+`tui/src/core/pty/spawn_pty_read_write_channels.rs`.
+
+**Design Philosophy**: The API treats input and output channels as dumb pipes of events, making no
+assumptions about the child process. The child process itself determines terminal modes
+(cooked/raw), interprets terminal environment variables, and handles all terminal-specific behavior.
+We simply provide the transport layer for bidirectional communication.
 
 ## Core API Design
 
 ### Main Function
 
 ```rust
-pub fn spawn_pty_interactive(
+pub fn spawn_pty_capture_output_and_provide_input(
     command: CommandBuilder,
     config: impl Into<PtyConfig>,
 ) -> miette::Result<PtySession>
@@ -73,20 +87,71 @@ pub enum PtyInput {
     /// Resize the PTY window
     Resize(PtySize),
 
+    /// Explicit flush without writing data
+    /// Forces any buffered data to be sent to the child immediately
+    Flush,
+
     /// Close stdin (EOF)
     Close,
 }
 
 pub enum ControlChar {
-    CtrlC,  // SIGINT (interrupt)
-    CtrlD,  // EOF (end of file)
-    CtrlZ,  // SIGTSTP (suspend)
-    CtrlL,  // Clear screen
-    CtrlU,  // Clear line
-    Tab,    // Autocomplete
-    Enter,  // Newline
-    Escape, // ESC key
+    // Common control characters
+    CtrlC,      // SIGINT (interrupt)
+    CtrlD,      // EOF (end of file)
+    CtrlZ,      // SIGTSTP (suspend)
+    CtrlL,      // Clear screen
+    CtrlU,      // Clear line
+    CtrlA,      // Move to beginning of line
+    CtrlE,      // Move to end of line
+    CtrlK,      // Kill to end of line
+
+    // Common keys
+    Tab,        // Autocomplete
+    Enter,      // Newline
+    Escape,     // ESC key
     Backspace,
+    Delete,
+
+    // Arrow keys
+    ArrowUp,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+
+    // Navigation keys
+    Home,
+    End,
+    PageUp,
+    PageDown,
+
+    // Function keys (F1-F12)
+    F(u8),      // F(1) for F1, F(2) for F2, etc.
+
+    // Raw escape sequence for advanced use cases
+    RawSequence(Vec<u8>),
+}
+```
+
+### Output Types (FROM Child)
+
+```rust
+pub enum PtyEvent {
+    /// Raw output from the child process
+    Output(Vec<u8>),
+
+    /// OSC (Operating System Command) sequences
+    Osc(Vec<u8>),
+
+    /// Child process exited normally
+    Exit(ExitStatus),
+
+    /// Child process crashed or terminated unexpectedly
+    UnexpectedExit(String),
+
+    /// Write operation failed - session will terminate
+    /// This gives users a chance to understand why the session ended
+    WriteError(std::io::Error),
 }
 ```
 
@@ -98,9 +163,9 @@ The function will use the existing `PtyConfig` and `PtyConfigOption` types:
 use PtyConfigOption::*;
 
 // Examples:
-spawn_pty_interactive(cmd, Output)?;  // Capture output only
-spawn_pty_interactive(cmd, Osc + Output)?;  // Capture OSC and output
-spawn_pty_interactive(cmd, Size(custom_size) + Output)?;  // Custom size
+spawn_pty_capture_output_and_provide_input(cmd, Output)?;  // Capture output only
+spawn_pty_capture_output_and_provide_input(cmd, Osc + Output)?;  // Capture OSC and output
+spawn_pty_capture_output_and_provide_input(cmd, Size(custom_size) + Output)?;  // Custom size
 ```
 
 ## Usage Examples
@@ -115,11 +180,16 @@ let cmd = PtyCommandBuilder::new("python3")
     .args(["-u"])  // Unbuffered output
     .build()?;
 
-let mut session = spawn_pty_interactive(cmd, Output)?;
+let mut session = spawn_pty_capture_output_and_provide_input(cmd, Output)?;
 
 // Send Python code
 session.stdin.send(PtyInput::WriteLine("print('Hello, World!')".into())).await?;
 session.stdin.send(PtyInput::WriteLine("2 + 2".into())).await?;
+
+// Example of explicit flush for partial input (like building a multi-line function)
+session.stdin.send(PtyInput::Write(b"def hello():".to_vec())).await?;
+session.stdin.send(PtyInput::Flush).await?;  // Ensure prompt updates
+session.stdin.send(PtyInput::Write(b"\n    print('hi')".to_vec())).await?;
 
 // Read responses
 while let Some(event) = session.stdout.recv().await {
@@ -146,7 +216,7 @@ let cmd = PtyCommandBuilder::new("bash")
     .args(["--norc"])  // Skip RC files for predictable behavior
     .build()?;
 
-let mut session = spawn_pty_interactive(cmd, Osc + Output)?;
+let mut session = spawn_pty_capture_output_and_provide_input(cmd, Osc + Output)?;
 
 // Execute commands
 session.stdin.send(PtyInput::WriteLine("ls -la".into())).await?;
@@ -174,7 +244,7 @@ let cmd = PtyCommandBuilder::new("ssh")
     .args(["user@server.com"])
     .build()?;
 
-let mut session = spawn_pty_interactive(
+let mut session = spawn_pty_capture_output_and_provide_input(
     cmd,
     Size(PtySize { rows: 40, cols: 120, pixel_width: 0, pixel_height: 0 }) + Output
 )?;
@@ -198,12 +268,49 @@ tokio::spawn(async move {
 });
 ```
 
-### Example 4: Controlling another TUI application
+### Example 4: Controlling another TUI application (Vim)
 
-TODO: Spawn something like vim, in a temp dir, send keystrokes to type "hello", then ":wq" to name
-and save the file. at the end see if the file exists and has the expected content.
+```rust
+use PtyConfigOption::*;
+use tempfile::TempDir;
 
-````rust
+// Create temp directory for test
+let temp_dir = TempDir::new()?;
+let file_path = temp_dir.path().join("test.txt");
+
+// Start vim in the temp directory
+let cmd = PtyCommandBuilder::new("vim")
+    .args([file_path.to_str().unwrap()])
+    .current_dir(temp_dir.path())
+    .build()?;
+
+let mut session = spawn_pty_capture_output_and_provide_input(cmd, Output)?;
+
+// Wait for vim to start
+tokio::time::sleep(Duration::from_millis(500)).await;
+
+// Enter insert mode
+session.stdin.send(PtyInput::SendControl(ControlChar::Escape)).await?;
+session.stdin.send(PtyInput::Write(b"i".to_vec())).await?;
+
+// Type "hello world"
+session.stdin.send(PtyInput::Write(b"hello world".to_vec())).await?;
+
+// Exit insert mode
+session.stdin.send(PtyInput::SendControl(ControlChar::Escape)).await?;
+
+// Save and quit (:wq)
+session.stdin.send(PtyInput::Write(b":wq".to_vec())).await?;
+session.stdin.send(PtyInput::SendControl(ControlChar::Enter)).await?;
+
+// Wait for vim to exit
+let exit_status = session.handle.await??;
+assert!(exit_status.success());
+
+// Verify file was created with expected content
+let content = std::fs::read_to_string(&file_path)?;
+assert_eq!(content, "hello world\n");
+```
 
 ## Implementation Considerations
 
@@ -227,69 +334,134 @@ let writer_task = tokio::task::spawn_blocking(move || {
                 controller_writer.flush()?;
             }
             PtyInput::SendControl(ctrl) => {
-                let byte = match ctrl {
-                    ControlChar::CtrlC => 0x03,
-                    ControlChar::CtrlD => 0x04,
-                    ControlChar::CtrlZ => 0x1A,
-                    // ... etc
-                };
-                controller_writer.write_all(&[byte])?;
+                let bytes = control_char_to_bytes(ctrl);  // Helper function
+                controller_writer.write_all(&bytes)?;
                 controller_writer.flush()?;
             }
             PtyInput::Resize(size) => {
                 controller.resize(size)?;
+            }
+            PtyInput::Flush => {
+                // Explicit flush without writing any data
+                // This ensures all previously written data reaches the child
+                controller_writer.flush()?;
             }
             PtyInput::Close => break,
         }
     }
     Ok(())
 });
-````
+```
 
 ### 2. Resource Management
 
 - Both reader and writer tasks must be properly cleaned up
 - The controlled (slave) side must be dropped after child exits
 - Input channel should be closed when child exits
+- Handle three termination scenarios:
+  1. Child process self-terminates (normal or crash)
+  2. We explicitly terminate the session
+  3. Unexpected termination (report as UnexpectedExit event)
 
-### 3. Terminal Modes
+### 3. Error Handling
 
-Consider adding terminal mode configuration:
+- Write errors terminate the session (no automatic retry)
+- Send `PtyEvent::WriteError` before termination for visibility
+- Report unexpected child exit via event channel
+- Handle SIGPIPE when child dies unexpectedly
+- Propagate all errors to caller for visibility
 
-```rust
-pub enum TerminalMode {
-    /// Line-buffered input with echo (default)
-    Cooked,
-    /// Raw input, no echo, no line buffering
-    Raw,
-    /// Custom termios settings
-    Custom(Termios),
-}
-```
+### 4. Buffering Strategy
 
-### 4. Error Handling
+- Use unbounded channels for simplicity
+- No backpressure handling (trust the OS PTY buffer)
+- No max buffer size limits
 
-- Handle write errors gracefully (child might have exited)
-- Detect when child process is no longer reading
-- Handle partial writes
+### 5. Flush Implementation
 
-### 5. Buffering Strategy
+The `PtyInput::Flush` variant provides explicit control over when buffered data is sent to the
+child:
 
-- Consider implementing write queue with backpressure
-- May need to buffer writes when child is slow to read
-- Handle large writes that exceed PTY buffer size
+- **How it works**: Calls `flush()` on the PTY master's writer without writing new data
+- **Use case**: Useful for protocols sensitive to message boundaries or timing
+- **Implementation**: The PTY master's internal buffers (if any) are flushed to the kernel
+- **Note**: Most writes already include automatic flush, but Flush gives explicit control
+- **Example**: Sending a partial command, then Flush to ensure it reaches the child before
+  continuing
+
+## Code Refactoring and Shared Components
+
+### Shared Components (common_impl.rs)
+
+The following components should be extracted from `spawn_pty_capture_output_no_input` into a shared
+module:
+
+1. **PTY Setup and Initialization**
+   - Creating the PTY system and pair
+   - Configuring PTY dimensions
+   - Type aliases (Controller, Controlled, ControlledChild)
+
+2. **Reader Task Logic**
+   - The `spawn_blocking` reader task implementation
+   - Buffer management (READ_BUFFER_SIZE constant)
+   - OSC sequence processing logic
+   - Event sending patterns
+
+3. **Resource Management Patterns**
+   - PTY lifecycle management (critical drop ordering)
+   - File descriptor cleanup
+   - Task synchronization patterns
+
+### Modified Existing Types
+
+1. **PtyEvent Enum** - Extend with new variants:
+
+   ```rust
+   pub enum PtyEvent {
+       // Existing
+       Osc(OscEvent),
+       Output(Vec<u8>),
+       Exit(portable_pty::ExitStatus),
+       // New variants
+       UnexpectedExit(String),
+       WriteError(std::io::Error),
+   }
+   ```
+
+2. **New Types in pty_core.rs**:
+   - PtyInput enum
+   - ControlChar enum
+   - PtySession struct
+   - control_char_to_bytes helper function
+
+### Refactoring Strategy
+
+1. **Phase 1: Extract Common Code**
+   - Create `common_impl.rs` with shared PTY setup logic
+   - Extract reader task as `create_reader_task()`
+   - Move constants and type aliases
+
+2. **Phase 2: Implement Writer Task**
+   - Add `create_writer_task()` in common_impl.rs
+   - Handle all PtyInput variants
+   - Implement error propagation
+
+3. **Phase 3: Integrate**
+   - Update `spawn_pty_capture_output_no_input` to use common_impl
+   - Implement `spawn_pty_capture_output_and_provide_input` using both reader and writer
+   - Ensure backward compatibility
 
 ## Comparison with Read-Only Function
 
-| Feature            | `spawn_pty_capture_output_no_input` | `spawn_pty_interactive` |
-| ------------------ | ----------------------------------- | ----------------------- |
-| Read from child    | ✅                                  | ✅                      |
-| Write to child     | ❌                                  | ✅                      |
-| OSC capture        | ✅                                  | ✅                      |
-| Raw output capture | ✅                                  | ✅                      |
-| Control sequences  | ❌                                  | ✅                      |
-| PTY resize         | ❌                                  | ✅                      |
-| Use cases          | Monitoring, logging                 | REPL, SSH, shells       |
+| Feature            | `spawn_pty_capture_output_no_input` | `spawn_pty_capture_output_and_provide_input` |
+| ------------------ | ----------------------------------- | -------------------------------------------- |
+| Read from child    | ✅                                  | ✅                                           |
+| Write to child     | ❌                                  | ✅                                           |
+| OSC capture        | ✅                                  | ✅                                           |
+| Raw output capture | ✅                                  | ✅                                           |
+| Control sequences  | ❌                                  | ✅                                           |
+| PTY resize         | ❌                                  | ✅                                           |
+| Use cases          | Monitoring, logging                 | REPL, SSH, shells                            |
 
 ## Future Enhancements
 
@@ -301,11 +473,12 @@ pub enum TerminalMode {
 
 ## Testing Strategy
 
-1. **Unit tests**: Test input encoding (control chars, etc.)
+1. **Unit tests**: Test input encoding (control chars, escape sequences)
 2. **Integration tests**: Test with actual commands (echo, cat, etc.)
 3. **Interactive tests**: Test with Python/Node.js REPLs
-4. **Edge cases**: Test partial writes, buffer overflow, early termination
-5. **Platform tests**: Ensure cross-platform compatibility
+4. **TUI test**: Vim test case (create file, verify content)
+5. **Edge cases**: Test child crash, write errors, early termination
+6. **Platform focus**: Linux first, then macOS, Windows last
 
 ## Security Considerations
 

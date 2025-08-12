@@ -40,10 +40,8 @@
 //! ```
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{core::pty::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyEvent,
-                           spawn_pty_capture_output_no_input},
+use r3bl_tui::{core::pty::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyEvent},
                set_mimalloc_in_main};
-use tokio::sync::mpsc::unbounded_channel;
 
 // ANSI color constants for terminal output.
 
@@ -56,17 +54,13 @@ const RESET: &str = "\x1b[0m";
 async fn run_cargo_clean() -> miette::Result<()> {
     println!("{YELLOW}🧹 Running 'cargo clean' to ensure a fresh build...{RESET}");
 
-    let cmd = PtyCommandBuilder::new("cargo")
+    let mut session = PtyCommandBuilder::new("cargo")
         .args(["clean", "-q"])
-        .build()?;
-
-    let (sender, mut receiver) = unbounded_channel();
-    let mut handle =
-        spawn_pty_capture_output_no_input(cmd, PtyConfigOption::NoCaptureOutput, sender);
+        .spawn_read_only(PtyConfigOption::NoCaptureOutput)?;
 
     // Wait for completion
     tokio::select! {
-        result = &mut handle => {
+        result = &mut session.handle => {
             let status = result.into_diagnostic()??;
             if status.success() {
                 println!("{GREEN}✓ Cargo clean completed successfully{RESET}\n");
@@ -74,7 +68,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
                 return Err(miette::miette!("Cargo clean failed"));
             }
         }
-        Some(event) = receiver.recv() => {
+        Some(event) = session.output.recv() => {
             if let PtyEvent::Exit(status) = event
                 && !status.success() {
                 return Err(miette::miette!("Cargo clean failed"));
@@ -92,16 +86,10 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
     println!("{YELLOW}========================================{RESET}");
 
     // Configure cargo build command with OSC sequences enabled
-    let cmd = PtyCommandBuilder::new("cargo")
+    let mut session = PtyCommandBuilder::new("cargo")
         .args(["build"])
         .enable_osc_sequences()
-        .build()?;
-
-    // Create channel for PTY events
-    let (sender, mut receiver) = unbounded_channel();
-
-    // Use generic PTY command with OSC capture only
-    let mut handle = spawn_pty_capture_output_no_input(cmd, PtyConfigOption::Osc, sender);
+        .spawn_read_only(PtyConfigOption::Osc)?;
 
     // Track if we saw any progress updates
     let mut saw_progress = false;
@@ -110,7 +98,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
     loop {
         tokio::select! {
             // Handle cargo build completion
-            result = &mut handle => {
+            result = &mut session.handle => {
                 let status = result.into_diagnostic()??;
 
                 // Print summary
@@ -126,7 +114,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                 break;
             }
             // Handle incoming PTY events
-            Some(event) = receiver.recv() => {
+            Some(event) = session.output.recv() => {
                 match event {
                     PtyEvent::Osc(osc_event) => {
                         match osc_event {
@@ -145,9 +133,10 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                             }
                         }
                     }
-                    PtyEvent::Exit(_) | PtyEvent::Output(_) => {
+                    PtyEvent::Exit(_) | PtyEvent::Output(_) | PtyEvent::UnexpectedExit(_) | PtyEvent::WriteError(_) => {
                         // Exit event will be handled by the handle completion above
                         // Output events are not captured in this config
+                        // Unexpected exit and write errors should not occur in read-only mode
                     }
                 }
             }

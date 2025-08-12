@@ -16,15 +16,17 @@
  */
 
 // Attach.
+pub mod common_impl;
 pub mod osc_seq;
 pub mod pty_config;
 pub mod pty_core;
-pub mod spawn_pty_read_channel;
-pub mod spawn_pty_read_write_channels;
+pub mod pty_read_only;
+pub mod pty_read_write;
 
 // Re-export.
 pub use osc_seq::*;
 pub use pty_config::*;
 pub use pty_core::*;
-pub use spawn_pty_read_channel::*;
-// pub use spawn_pty_read_write_channels::*; // TODO: not implemented yet
+// Internal implementations - not exported.
+pub(crate) use pty_read_only::spawn_pty_read_only_impl;
+pub(crate) use pty_read_write::spawn_pty_read_write_impl;
