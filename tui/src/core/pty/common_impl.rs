@@ -1,19 +1,4 @@
-/*
- *   Copyright (c) 2025 R3BL LLC
- *   All rights reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Common implementation details shared between PTY spawning functions.
 //!
@@ -96,16 +81,16 @@ pub fn create_reader_task(
         loop {
             // This is a synchronous blocking read operation.
             match reader.read(&mut read_buffer) {
-                Ok(0) | Err(_) => break, // EOF or error - PTY closed
+                Ok(0) | Err(_) => break, // EOF or error - PTY closed.
                 Ok(n) => {
                     let data = &read_buffer[..n];
 
-                    // Send raw output if configured
+                    // Send raw output if configured.
                     if should_capture_output {
                         let _unused = event_sender.send(PtyEvent::Output(data.to_vec()));
                     }
 
-                    // Process OSC sequences if configured
+                    // Process OSC sequences if configured.
                     if let Some(ref mut osc_buf) = osc_buffer {
                         for event in osc_buf.append_and_extract(data, n) {
                             let _unused = event_sender.send(PtyEvent::Osc(event));

@@ -1,6 +1,7 @@
 {
+  // R3BL Extension Pack: https://github.com/r3bl-org/r3bl-vscode-extensions
   "copyrighter.author": "R3BL LLC",
-  "copyrighter.license": "Apache2",
+  "copyrighter.license": "Apache2OneLine",
   "cSpell.words": [
     "abcab",
     "abcaba",
@@ -186,6 +187,7 @@
     "rescope",
     "RESZ",
     "retval",
+    "ringbuffer",
     "rngs",
     "roadmaps",
     "RRGGBB",
@@ -209,6 +211,7 @@
     "serialtest",
     "setclip",
     "shiki",
+    "SIGTSTP",
     "simplelog",
     "slowblink",
     "smallstr",

@@ -1,19 +1,4 @@
-/*
- *   Copyright (c) 2025 R3BL LLC
- *   All rights reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Bidirectional PTY communication implementation.
 //!
@@ -97,11 +82,11 @@
 //!     .spawn_read_write(Output)?;
 //!
 //! // Send commands
-//! session.input.send(PtyInput::WriteLine("echo 'Hello PTY!'".into()))?;
-//! session.input.send(PtyInput::SendControl(ControlChar::CtrlC))?; // Interrupt
+//! session.input_sender_half.send(PtyInput::WriteLine("echo 'Hello PTY!'".into()))?;
+//! session.input_sender_half.send(PtyInput::SendControl(ControlChar::CtrlC))?; // Interrupt
 //!
 //! // Process output
-//! while let Some(event) = session.output.recv().await {
+//! while let Some(event) = session.event_receiver_half.recv().await {
 //!     match event {
 //!         PtyEvent::Output(data) => print!("{}", String::from_utf8_lossy(&data)),
 //!         PtyEvent::Exit(status) => break,
@@ -129,8 +114,8 @@ pub(crate) fn spawn_pty_read_write_impl(
     let config = config.into();
 
     // Create channels for bidirectional communication
-    let (input_sender, input_receiver) = unbounded_channel::<PtyInput>();
-    let (event_sender, event_receiver) = unbounded_channel::<PtyEvent>();
+    let (input_sender_half, input_receiver_half) = unbounded_channel::<PtyInput>();
+    let (event_sender_half, event_receiver_half) = unbounded_channel::<PtyEvent>();
 
     // Create a sync channel for the input handler task (spawn_blocking needs sync
     // channel)
@@ -138,8 +123,8 @@ pub(crate) fn spawn_pty_read_write_impl(
         std::sync::mpsc::channel::<PtyInput>();
 
     // Clone senders for various tasks
-    let reader_event_sender = event_sender.clone();
-    let input_handler_event_sender = event_sender.clone();
+    let reader_event_sender = event_sender_half.clone();
+    let input_handler_event_sender = event_sender_half.clone();
 
     // Spawn the main orchestration task
     let handle = Box::pin(tokio::spawn(async move {
@@ -174,7 +159,7 @@ pub(crate) fn spawn_pty_read_write_impl(
 
         // Spawn a task to bridge async input channel to sync channel for input handler
         let bridge_handle = tokio::spawn(async move {
-            let mut receiver = input_receiver;
+            let mut receiver = input_receiver_half;
             while let Some(input) = receiver.recv().await {
                 if input_handler_sender.send(input).is_err() {
                     // Input handler task has exited
@@ -196,7 +181,7 @@ pub(crate) fn spawn_pty_read_write_impl(
         let exit_code = status.exit_code();
 
         // Send exit event
-        let _unused = event_sender.send(PtyEvent::Exit(status));
+        let _unused = event_sender_half.send(PtyEvent::Exit(status));
 
         // Clean up: drop the controlled side to signal EOF to reader
         drop(controlled);
@@ -213,9 +198,9 @@ pub(crate) fn spawn_pty_read_write_impl(
     }));
 
     PtySession {
-        input: input_sender,
-        output: event_receiver,
-        handle,
+        input_sender_half,
+        event_receiver_half,
+        completion_handle: handle,
     }
 }
 
@@ -234,7 +219,7 @@ mod tests {
             .unwrap();
 
         let mut output = String::new();
-        while let Some(event) = session.output.recv().await {
+        while let Some(event) = session.event_receiver_half.recv().await {
             match event {
                 PtyEvent::Output(data) => {
                     output.push_str(&String::from_utf8_lossy(&data));
@@ -260,18 +245,18 @@ mod tests {
 
         // Send some text
         session
-            .input
+            .input_sender_half
             .send(PtyInput::WriteLine("test input".into()))
             .unwrap();
 
         // Send EOF to make cat exit
         session
-            .input
+            .input_sender_half
             .send(PtyInput::SendControl(ControlChar::CtrlD))
             .unwrap();
 
         let mut output = String::new();
-        while let Some(event) = session.output.recv().await {
+        while let Some(event) = session.event_receiver_half.recv().await {
             match event {
                 PtyEvent::Output(data) => {
                     output.push_str(&String::from_utf8_lossy(&data));
@@ -308,7 +293,7 @@ mod tests {
         // Collect output with timeout
         let mut output = String::new();
         let result = timeout(Duration::from_secs(2), async {
-            while let Some(event) = session.output.recv().await {
+            while let Some(event) = session.event_receiver_half.recv().await {
                 match event {
                     PtyEvent::Output(data) => {
                         output.push_str(&String::from_utf8_lossy(&data));
@@ -345,7 +330,7 @@ mod tests {
         let mut output = String::new();
         let mut saw_exit = false;
         let result = timeout(Duration::from_secs(2), async {
-            while let Some(event) = session.output.recv().await {
+            while let Some(event) = session.event_receiver_half.recv().await {
                 match event {
                     PtyEvent::Output(data) => {
                         output.push_str(&String::from_utf8_lossy(&data));
@@ -373,57 +358,82 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_control_characters() {
         use PtyConfigOption::*;
+        use tokio::time::{Duration, timeout};
 
         let mut session = PtyCommandBuilder::new("cat")
             .spawn_read_write(Output)
             .unwrap();
 
-        // Test various control characters
+        // Test various control characters with delays for PTY processing
         session
-            .input
+            .input_sender_half
             .send(PtyInput::WriteLine("Test line".into()))
             .unwrap();
+
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
         session
-            .input
-            .send(PtyInput::SendControl(ControlChar::Enter))
-            .unwrap();
-        session
-            .input
-            .send(PtyInput::Write(b"No newline".to_vec()))
-            .unwrap();
-        session
-            .input
-            .send(PtyInput::SendControl(ControlChar::Tab))
-            .unwrap();
-        session
-            .input
-            .send(PtyInput::Write(b"After tab".to_vec()))
-            .unwrap();
-        session
-            .input
+            .input_sender_half
             .send(PtyInput::SendControl(ControlChar::Enter))
             .unwrap();
 
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        session
+            .input_sender_half
+            .send(PtyInput::Write(b"No newline".to_vec()))
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        session
+            .input_sender_half
+            .send(PtyInput::SendControl(ControlChar::Tab))
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        session
+            .input_sender_half
+            .send(PtyInput::Write(b"After tab".to_vec()))
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        session
+            .input_sender_half
+            .send(PtyInput::SendControl(ControlChar::Enter))
+            .unwrap();
+
+        // Allow time for all output to be processed before EOF
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
         // Send EOF to exit
         session
-            .input
+            .input_sender_half
             .send(PtyInput::SendControl(ControlChar::CtrlD))
             .unwrap();
 
         let mut output = String::new();
-        while let Some(event) = session.output.recv().await {
-            match event {
-                PtyEvent::Output(data) => {
-                    output.push_str(&String::from_utf8_lossy(&data));
-                }
-                PtyEvent::Exit(_) => break,
-                _ => {}
-            }
-        }
 
-        assert!(output.contains("Test line"));
-        assert!(output.contains("No newline"));
-        assert!(output.contains("After tab"));
+        // Add timeout to prevent hanging
+        let result = timeout(Duration::from_secs(5), async {
+            while let Some(event) = session.event_receiver_half.recv().await {
+                match event {
+                    PtyEvent::Output(data) => {
+                        output.push_str(&String::from_utf8_lossy(&data));
+                    }
+                    PtyEvent::Exit(_) => break,
+                    _ => {}
+                }
+            }
+        })
+        .await;
+
+        assert!(result.is_ok(), "Test timed out");
+        assert!(output.contains("Test line"), "Output: {output}");
+        assert!(output.contains("No newline"), "Output: {output}");
+        assert!(output.contains("After tab"), "Output: {output}");
     }
 
     #[tokio::test]
@@ -437,37 +447,37 @@ mod tests {
         // Send some text with ANSI color codes using raw sequences
         let red_text = b"\x1b[31mRed Text\x1b[0m";
         session
-            .input
+            .input_sender_half
             .send(PtyInput::Write(red_text.to_vec()))
             .unwrap();
         session
-            .input
+            .input_sender_half
             .send(PtyInput::SendControl(ControlChar::Enter))
             .unwrap();
 
         // Send using RawSequence variant
         let blue_seq = vec![0x1b, b'[', b'3', b'4', b'm']; // Blue color
         session
-            .input
+            .input_sender_half
             .send(PtyInput::SendControl(ControlChar::RawSequence(blue_seq)))
             .unwrap();
         session
-            .input
+            .input_sender_half
             .send(PtyInput::Write(b"Blue Text".to_vec()))
             .unwrap();
         session
-            .input
+            .input_sender_half
             .send(PtyInput::SendControl(ControlChar::Enter))
             .unwrap();
 
         // EOF to exit
         session
-            .input
+            .input_sender_half
             .send(PtyInput::SendControl(ControlChar::CtrlD))
             .unwrap();
 
         let mut output = Vec::new();
-        while let Some(event) = session.output.recv().await {
+        while let Some(event) = session.event_receiver_half.recv().await {
             match event {
                 PtyEvent::Output(data) => {
                     output.extend_from_slice(&data);

@@ -1,19 +1,4 @@
-/*
- *   Copyright (c) 2025 R3BL LLC
- *   All rights reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use std::{borrow::Cow, path::PathBuf, pin::Pin};
 
@@ -23,13 +8,26 @@ use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
 
 use super::{OscEvent, PtyConfig};
 
-// Buffer size for reading PTY output.
-pub const READ_BUFFER_SIZE: usize = 4096; // TODO: use RingBufferStack instead of Vec<u8> for better performance.
+/// Buffer size for reading PTY output (4KB stack allocation).
+///
+/// This is used for the read buffer in PTY operations. The performance bottleneck
+/// is not this buffer size but the `Vec<u8>` allocations in `PtyEvent::Output`.
+pub const READ_BUFFER_SIZE: usize = 4096;
 
-// Type aliases for better readability.
+/// Type alias for the controlled side of a PTY (slave).
+///
+/// This represents the process-side of the PTY that the child process
+/// will use for stdin/stdout/stderr.
 pub type Controlled = Box<dyn SlavePty + Send>;
-pub type Controller = Box<dyn MasterPty>;
-pub type ControlledChild = Box<dyn portable_pty::Child>;
+
+/// Type alias for the controlling side of a PTY (master).
+///
+/// This represents the controlling side that the parent process uses
+/// to read from and write to the child process.
+pub type Controller = Box<dyn MasterPty + Send>;
+
+/// Type alias for a spawned child process in a PTY.
+pub type ControlledChild = Box<dyn portable_pty::Child + Send + Sync>;
 
 /// Type alias for a validated PTY command ready for execution.
 ///
@@ -113,28 +111,32 @@ pub enum ControlChar {
 
 /// Session handle for read-only PTY communication.
 ///
-/// The output channel receives combined stdout/stderr from the child process,
-/// along with optional OSC sequences and process exit events.
+/// Provides access to both the output stream and completion status of a PTY process:
+/// - The `event_receiver_half` channel receives combined stdout/stderr from the child
+///   process, along with optional OSC sequences and process exit events.
+/// - The `completion_handle` can be awaited to know when the process completes and get
+///   the final exit status.
 #[derive(Debug)]
 pub struct PtyReadOnlySession {
     /// Receives output events from the child process (combined stdout/stderr).
-    pub output: UnboundedReceiver<PtyEvent>,
-    /// Await this handle for process completion.
-    pub handle: Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>,
+    pub event_receiver_half: UnboundedReceiver<PtyEvent>,
+    /// Await this `completion_handle` for process completion.
+    pub completion_handle: Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>,
 }
 
 /// Session handle for interactive PTY communication.
 ///
 /// Provides bidirectional communication with a child process running in a PTY.
-/// The output channel receives combined stdout/stderr from the child process.
+/// The `event_receiver_half` channel receives combined stdout/stderr from the child
+/// process.
 #[derive(Debug)]
 pub struct PtySession {
     /// Send input TO the child process.
-    pub input: UnboundedSender<PtyInput>,
+    pub input_sender_half: UnboundedSender<PtyInput>,
     /// Receive output FROM the child process (combined stdout/stderr).
-    pub output: UnboundedReceiver<PtyEvent>,
-    /// Await this handle for process completion.
-    pub handle: Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>,
+    pub event_receiver_half: UnboundedReceiver<PtyEvent>,
+    /// Await this `completion_handle` for process completion.
+    pub completion_handle: Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>,
 }
 
 /// Converts a control character to its byte representation.
@@ -360,9 +362,9 @@ impl PtyCommandBuilder {
 
     /// Spawns a read-only PTY session.
     ///
-    /// Returns a session with an output receiver for events and a handle to await
-    /// completion. The output channel receives combined stdout/stderr from the child
-    /// process.
+    /// Returns a session with an output receiver for events and a `completion_handle` to
+    /// await completion. The output channel receives combined stdout/stderr from the
+    /// child process.
     ///
     /// # Example: Capturing command output
     /// ```rust
@@ -375,7 +377,7 @@ impl PtyCommandBuilder {
     ///     .spawn_read_only(PtyConfigOption::Output)?;
     ///
     /// let mut output = Vec::new();
-    /// while let Some(event) = session.output.recv().await {
+    /// while let Some(event) = session.event_receiver_half.recv().await {
     ///     match event {
     ///         PtyEvent::Output(data) => output.extend_from_slice(&data),
     ///         PtyEvent::Exit(status) if status.success() => {
@@ -405,7 +407,7 @@ impl PtyCommandBuilder {
     ///     .enable_osc_sequences()  // Enable OSC 9;4 progress sequences
     ///     .spawn_read_only(PtyConfigOption::Osc)?;
     ///
-    /// while let Some(event) = session.output.recv().await {
+    /// while let Some(event) = session.event_receiver_half.recv().await {
     ///     match event {
     ///         PtyEvent::Osc(OscEvent::ProgressUpdate(pct)) => {
     ///             println!("Build progress: {}%", pct);
@@ -431,7 +433,7 @@ impl PtyCommandBuilder {
 
     /// Spawns a PTY session with bidirectional communication (read-write).
     ///
-    /// Returns a session with input sender, output receiver, and handle.
+    /// Returns a session with input sender, output receiver, and `completion_handle`.
     /// The output channel receives combined stdout/stderr from the child process.
     ///
     /// # Example: Interactive command session
@@ -444,13 +446,13 @@ impl PtyCommandBuilder {
     ///     .spawn_read_write(PtyConfigOption::Output)?;
     ///
     /// // Send input to the process
-    /// session.input.send(PtyInput::WriteLine("Hello, PTY!".into()))?;
-    /// session.input.send(PtyInput::WriteLine("This is interactive".into()))?;
-    /// session.input.send(PtyInput::SendControl(r3bl_tui::ControlChar::CtrlD))?; // EOF
+    /// session.input_sender_half.send(PtyInput::WriteLine("Hello, PTY!".into()))?;
+    /// session.input_sender_half.send(PtyInput::WriteLine("This is interactive".into()))?;
+    /// session.input_sender_half.send(PtyInput::SendControl(r3bl_tui::ControlChar::CtrlD))?; // EOF
     ///
     /// // Collect output
     /// let mut output = String::new();
-    /// while let Some(event) = session.output.recv().await {
+    /// while let Some(event) = session.event_receiver_half.recv().await {
     ///     match event {
     ///         PtyEvent::Output(data) => {
     ///             output.push_str(&String::from_utf8_lossy(&data));
@@ -482,12 +484,12 @@ impl PtyCommandBuilder {
     /// sleep(Duration::from_millis(500)).await;
     ///
     /// // Send Python commands
-    /// session.input.send(PtyInput::WriteLine("x = 2 + 3".into()))?;
-    /// session.input.send(PtyInput::WriteLine("print(f'Result: {x}')".into()))?;
-    /// session.input.send(PtyInput::SendControl(ControlChar::CtrlD))?; // Exit
+    /// session.input_sender_half.send(PtyInput::WriteLine("x = 2 + 3".into()))?;
+    /// session.input_sender_half.send(PtyInput::WriteLine("print(f'Result: {x}')".into()))?;
+    /// session.input_sender_half.send(PtyInput::SendControl(ControlChar::CtrlD))?; // Exit
     ///
     /// // Process output
-    /// while let Some(event) = session.output.recv().await {
+    /// while let Some(event) = session.event_receiver_half.recv().await {
     ///     match event {
     ///         PtyEvent::Output(data) => print!("{}", String::from_utf8_lossy(&data)),
     ///         PtyEvent::Exit(_) => break,

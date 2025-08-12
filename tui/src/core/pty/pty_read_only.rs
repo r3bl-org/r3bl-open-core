@@ -1,19 +1,4 @@
-/*
- *   Copyright (c) 2025 R3BL LLC
- *   All rights reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use miette::IntoDiagnostic;
 use tokio::sync::mpsc::unbounded_channel;
@@ -33,17 +18,17 @@ pub(crate) fn spawn_pty_read_only_impl(
     // Create channel for events
     let (event_sender_half, event_receiver_half) = unbounded_channel();
 
-    let handle = Box::pin(tokio::spawn(async move {
+    let completion_handle = Box::pin(tokio::spawn(async move {
         // Build the command, ensuring CWD is set
         let command = command.build()?;
 
         // Create PTY pair using common implementation
         let (controller, controlled) = create_pty_pair(&config)?;
 
-        // [SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
+        // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
         let mut controlled_child = spawn_command_in_pty(&controlled, command)?;
 
-        // [SPAWN 2] Spawn the reader task to process output.
+        // [🛫 SPAWN 2] Spawn the reader task to process output.
         //
         // CRITICAL: PTY LIFECYCLE AND FILE DESCRIPTOR MANAGEMENT
         // ========================================================
@@ -68,27 +53,27 @@ pub(crate) fn spawn_pty_read_only_impl(
         //
         // ## The Solution
         //
-        // 1. Move controller into spawn_blocking - ensures it drops after creating reader
-        // 2. Explicitly drop controlled after process exits - closes our slave FD
-        // 3. This allows the reader to receive EOF and exit cleanly
-        let reader_event_sender = event_sender_half.clone();
-        let should_capture_osc = config.is_osc_capture_enabled();
-        let should_capture_output = config.is_output_capture_enabled();
+        // 1. Create reader from controller, then keep controller in scope.
+        // 2. Explicitly drop controlled after process exits - closes our slave FD.
+        // 3. This allows the reader to receive EOF and exit cleanly.
+        let blocking_reader_task_join_handle = {
+            let reader_event_sender = event_sender_half.clone();
+            let should_capture_osc = config.is_osc_capture_enabled();
+            let should_capture_output = config.is_output_capture_enabled();
+            // Get a reader from the controller for the reader task.
+            let reader = controller
+                .try_clone_reader()
+                .map_err(|e| miette::miette!("Failed to clone pty reader: {}", e))?;
+            // Use common implementation for reader task.
+            create_reader_task(
+                reader,
+                reader_event_sender,
+                should_capture_osc,
+                should_capture_output,
+            )
+        };
 
-        // Get a reader from the controller for the reader task
-        let reader = controller
-            .try_clone_reader()
-            .map_err(|e| miette::miette!("Failed to clone pty reader: {}", e))?;
-
-        // Use common implementation for reader task
-        let blocking_reader_task_join_handle = create_reader_task(
-            reader,
-            reader_event_sender,
-            should_capture_osc,
-            should_capture_output,
-        );
-
-        // [WAIT 1] Wait for the command to complete.
+        // [🛬 WAIT 1] Wait for the command to complete.
         let status = tokio::task::spawn_blocking(move || controlled_child.wait())
             .await
             .into_diagnostic()?
@@ -100,12 +85,13 @@ pub(crate) fn spawn_pty_read_only_impl(
         // Send exit event (moves status).
         let _unused = event_sender_half.send(PtyEvent::Exit(status));
 
-        // Explicitly drop both controlled and controller after process exits.
-        // This ensures proper PTY cleanup and allows the reader to receive EOF.
+        // CRITICAL. Explicitly drop both controlled and controller after process exits.
+        // This ensures proper PTY cleanup and allows the reader to receive EOF. If you
+        // don't do this, the call `blocking_reader_task_join_handle.await` will deadlock.
         drop(controlled);
         drop(controller);
 
-        // [WAIT 2] Wait for the reader task to complete.
+        // [🛬 WAIT 2] Wait for the reader task to complete.
         blocking_reader_task_join_handle.await.into_diagnostic()??;
 
         // Recreate status for return value.
@@ -113,8 +99,8 @@ pub(crate) fn spawn_pty_read_only_impl(
     }));
 
     PtyReadOnlySession {
-        output: event_receiver_half,
-        handle,
+        event_receiver_half,
+        completion_handle,
     }
 }
 
@@ -136,18 +122,18 @@ mod tests {
         let result = timeout(max_duration, async move {
             loop {
                 tokio::select! {
-                    result = &mut session.handle => {
+                    result = &mut session.completion_handle => {
                         // Process completed
                         let status = result.into_diagnostic()??;
 
                         // Drain any remaining events
-                        while let Ok(event) = session.output.try_recv() {
+                        while let Ok(event) = session.event_receiver_half.try_recv() {
                             events.push(event);
                         }
 
                         return Ok::<_, miette::Error>((events, status));
                     }
-                    Some(event) = session.output.recv() => {
+                    Some(event) = session.event_receiver_half.recv() => {
                         events.push(event);
                     }
                 }

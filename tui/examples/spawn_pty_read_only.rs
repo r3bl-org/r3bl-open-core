@@ -1,19 +1,4 @@
-/*
- *   Copyright (c) 2024-2025 R3BL LLC
- *   All rights reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Binary for capturing and displaying OSC progress sequences from cargo builds.
 //!
@@ -60,7 +45,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
 
     // Wait for completion
     tokio::select! {
-        result = &mut session.handle => {
+        result = &mut session.completion_handle => {
             let status = result.into_diagnostic()??;
             if status.success() {
                 println!("{GREEN}✓ Cargo clean completed successfully{RESET}\n");
@@ -68,7 +53,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
                 return Err(miette::miette!("Cargo clean failed"));
             }
         }
-        Some(event) = session.output.recv() => {
+        Some(event) = session.event_receiver_half.recv() => {
             if let PtyEvent::Exit(status) = event
                 && !status.success() {
                 return Err(miette::miette!("Cargo clean failed"));
@@ -98,7 +83,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
     loop {
         tokio::select! {
             // Handle cargo build completion
-            result = &mut session.handle => {
+            result = &mut session.completion_handle => {
                 let status = result.into_diagnostic()??;
 
                 // Print summary
@@ -114,7 +99,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                 break;
             }
             // Handle incoming PTY events
-            Some(event) = session.output.recv() => {
+            Some(event) = session.event_receiver_half.recv() => {
                 match event {
                     PtyEvent::Osc(osc_event) => {
                         match osc_event {
