@@ -16,17 +16,6 @@
 		"context7": {
 			"url": "https://mcp.context7.com/mcp",
 			"type": "http"
-		},
-		"rust-analyzer": {
-			"type": "stdio",
-			"cwd": "/home/nazmul/github/r3bl-open-core",
-			"command": "/home/nazmul/go/bin/mcp-language-server",
-			"args": [
-				"--workspace",
-				"/home/nazmul/github/r3bl-open-core",
-				"--lsp",
-				"rust-analyzer"
-			]
 		}
 	},
 	"inputs": []

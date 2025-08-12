@@ -130,7 +130,7 @@ def print-help [command: string] {
 }
 
 # Synchronizes local development files to a remote build server using rsync.
-# 
+#
 # This function sets up a continuous file watcher that monitors changes in the local
 # workspace and automatically syncs them to a remote server for distributed builds.
 # Useful for leveraging more powerful remote hardware for compilation.
@@ -248,6 +248,7 @@ def watch-check [] { watch-files "cargo check --workspace" }
 def install-cargo-tools [] {
     # Install uv package manager (required for Serena semantic code MCP server.
     # https://github.com/oraios/serena
+    # https://claudelog.com/addons/serena/
     if (which uv | is-empty) {
         print 'Installing uv...'
         if ($nu.os-info.name == "windows") {
@@ -302,20 +303,6 @@ def install-cargo-tools [] {
     # https://docs.anthropic.com/en/docs/claude-code/setup#native-binary-installation-beta
     install_if_missing "claude" "curl -fsSL https://claude.ai/install.sh | sh"
 
-    # Install go and mcp-language-server if not already installed
-    # https://github.com/isaacphi/mcp-language-server
-    if (which go | is-not-empty) {
-        let mcp_path = $"($env.HOME)/go/bin/mcp-language-server"
-        # cspell:disable
-        if not ($mcp_path | path exists) {
-            print 'Installing mcp-language-server...'
-            go install github.com/isaacphi/mcp-language-server@latest
-        } else {
-            print '✓ mcp-language-server installed'
-        }
-        # cspell:enable
-    }
-
     # Configure claude MCP servers.
     # 1. Configure claude w/ mcp-language-server to use rust-analyzer if available.
     # 2. Add context7 MCP server.
@@ -325,7 +312,6 @@ def install-cargo-tools [] {
             print 'Configuring claude MCP servers...'
             let workspace = $env.PWD
             let mcp_cmd = $"($env.HOME)/go/bin/mcp-language-server"
-            claude mcp add-json "rust-analyzer" $'{"type":"stdio","command":"($mcp_cmd)","args":["--workspace","($workspace)","--lsp","rust-analyzer"],"cwd":"($workspace)"}'
             claude mcp add-json "context7" '{"type":"http","url":"https://mcp.context7.com/mcp"}'
             claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant --project /home/nazmul/github/r3bl-open-core
         }
