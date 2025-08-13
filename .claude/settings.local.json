@@ -71,7 +71,7 @@
       "mcp__serena__think_about_whether_you_are_done"
     ],
     "deny": [],
-    "defaultMode": "plan"
+    "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": true
 }

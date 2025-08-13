@@ -49,6 +49,7 @@ The [`contributing_guides`](contributing_guides) folder contains templates and g
 - [`dd_parser_conformance.md`](dd_parser_conformance.md) - Parser conformance testing documentation
 
 ### Plans
+
 - [`task_remove_crossterm.md`](task_remove_crossterm.md) - Task documentation for removing crossterm
   dependency
 - [`task_syntect_improve.md`](task_syntect_improve.md) - Syntect improvement plan for adding missing
@@ -79,9 +80,9 @@ The [`done`](done) folder contains:
 - [`task_zero_copy_gap_buffer.md`](done/task_zero_copy_gap_buffer.md) - Zero-copy gap buffer
   implementation for editor content storage, successfully eliminating string materialization in the
   markdown parser path with proven performance improvements
-- [`task_dual_channel_pty.md`](done/task_dual_channel_pty.md) - Dual channel PTY interactive
-  design documentation for bidirectional communication with child processes running in
-  pseudo-terminals, including implementation considerations and usage examples
+- [`task_dual_channel_pty.md`](done/task_dual_channel_pty.md) - Dual channel PTY interactive design
+  documentation for bidirectional communication with child processes running in pseudo-terminals,
+  including implementation considerations and usage examples
 
 ### Video Documentation
 

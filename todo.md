@@ -13,7 +13,7 @@
     - [x] code
     - [x] example
     - [x] tests in [`task_test_pty`](docs/done/task_test_pty.md)
-    - [ ] code review
+    - [-] code review
   - [x] dual channel
     - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
     - [x] example
@@ -21,8 +21,9 @@
     - [ ] code review
 - [x] Replace multiline copyright header w/ single line in all files
 - [x] Use r3bl-vscode-extension-pack https://github.com/r3bl-org/r3bl-vscode-extensions
-- [ ] implement the upgrade code in `r3bl-cmdr` to use the code above:
-      https://github.com/r3bl-org/r3bl-open-core/issues/437
+- [ ] implement the upgrade code in
+  - [-] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
+  - [ ] to use the code above: https://github.com/r3bl-org/r3bl-open-core/issues/437
 - [ ] make YT video on the research (in rust-scratch) issue
 - [ ] make YT video on the implementation (to r3bl-cmdr) issue
 
