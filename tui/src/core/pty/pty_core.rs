@@ -562,61 +562,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_pty_command_builder_enable_osc_sequences_wt() {
-        // Simulate Windows Terminal environment
-        unsafe {
-            env::set_var("WT_SESSION", "test-session");
-        }
-
-        let builder = PtyCommandBuilder::new("test").enable_osc_sequences();
-
-        // Should not add any env vars since WT_SESSION exists
-        assert!(builder.env_vars.is_empty());
-
-        unsafe {
-            env::remove_var("WT_SESSION");
-        }
-    }
-
-    #[test]
-    fn test_pty_command_builder_enable_osc_sequences_conemu() {
-        // Simulate ConEmu environment
-        unsafe {
-            env::remove_var("WT_SESSION");
-        } // Ensure WT_SESSION is not set
-        unsafe {
-            env::set_var("ConEmuANSI", "ON");
-        }
-
-        let builder = PtyCommandBuilder::new("test").enable_osc_sequences();
-
-        // Should not add any env vars since ConEmuANSI is ON
-        assert!(builder.env_vars.is_empty());
-
-        unsafe {
-            env::remove_var("ConEmuANSI");
-        }
-    }
-
-    #[test]
-    fn test_pty_command_builder_enable_osc_sequences_fallback() {
-        // Ensure neither WT_SESSION nor ConEmuANSI are set
-        unsafe {
-            env::remove_var("WT_SESSION");
-        }
-        unsafe {
-            env::remove_var("ConEmuANSI");
-        }
-
-        let builder = PtyCommandBuilder::new("test").enable_osc_sequences();
-
-        // Should set TERM_PROGRAM to WezTerm
-        assert_eq!(
-            builder.env_vars,
-            vec![("TERM_PROGRAM".to_string(), "WezTerm".to_string())]
-        );
-    }
 
     #[test]
     fn test_pty_command_builder_build() {

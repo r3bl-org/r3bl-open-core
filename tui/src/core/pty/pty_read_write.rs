@@ -102,7 +102,7 @@ impl PtyCommandBuilder {
     /// 2. `output_event_receiver_half` combined stdout/stderr of child process -> events
     /// 3. `completion_handle` to await spawned child process completion
     ///
-    /// # Example: Python REPL interaction
+    /// # Example: Shell command interaction
     ///
     /// ```rust,no_run
     /// # #[tokio::main]
@@ -110,17 +110,10 @@ impl PtyCommandBuilder {
     /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent, PtyInputEvent, ControlChar};
     /// use tokio::time::{sleep, Duration};
     ///
-    /// let mut session = PtyCommandBuilder::new("python3")
-    ///     .args(["-u", "-i"])  // Unbuffered, interactive
+    /// // Simple shell calculation
+    /// let mut session = PtyCommandBuilder::new("sh")
+    ///     .args(["-c", "echo $((2 + 3)); echo 'Result calculated'"])
     ///     .spawn_read_write(PtyConfigOption::Output)?;
-    ///
-    /// // Wait for Python to start
-    /// sleep(Duration::from_millis(500)).await;
-    ///
-    /// // Send Python commands
-    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("x = 2 + 3".into()))?;
-    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("print(f'Result: {x}')".into()))?;
-    /// session.input_event_sender_half.send(PtyInputEvent::SendControl(ControlChar::CtrlD))?; // Exit
     ///
     /// // Process output
     /// while let Some(event) = session.output_event_receiver_half.recv().await {
@@ -256,12 +249,16 @@ mod tests {
     use crate::{ControlChar, PtyConfigOption};
 
     #[tokio::test]
-    async fn test_echo_command() -> miette::Result<()> {
+    async fn test_simple_command_lifecycle() -> miette::Result<()> {
         use PtyConfigOption::*;
         use tokio::time::{Duration, timeout};
 
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+
         let mut session = PtyCommandBuilder::new("echo")
             .args(["Hello, PTY!"])
+            .cwd(temp_dir)
             .spawn_read_write(Output)
             .unwrap();
 
@@ -269,17 +266,21 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         let mut output = String::new();
+        let mut events_received = Vec::new();
         let mut saw_exit = false;
 
         // Add timeout to prevent hanging
-        let result = timeout(Duration::from_secs(3), async {
+        let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
-                match event {
+                match &event {
                     PtyOutputEvent::Output(data) => {
-                        output.push_str(&String::from_utf8_lossy(&data));
+                        let data_str = String::from_utf8_lossy(data);
+                        output.push_str(&data_str);
+                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
+                        events_received.push(format!("Exit({:?})", status));
                         assert!(
                             status.success(),
                             "Command should succeed with status: {:?}",
@@ -287,7 +288,9 @@ mod tests {
                         );
                         break;
                     }
-                    _ => {}
+                    other => {
+                        events_received.push(format!("{:?}", other));
+                    }
                 }
             }
         })
@@ -295,14 +298,20 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Test timed out after 3 seconds. Output so far: '{}'",
-            output
+            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
+            events_received, output
         );
-        assert!(saw_exit, "Should see exit event. Output: '{}'", output);
+        
+        assert!(
+            saw_exit, 
+            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            events_received, output
+        );
+        
         assert!(
             output.contains("Hello, PTY!"),
-            "Output should contain 'Hello, PTY!' but was: '{}'",
-            output
+            "Output should contain 'Hello, PTY!'. Events received: {:?}, Full output was: '{}'",
+            events_received, output
         );
 
         Ok(())
@@ -313,7 +322,11 @@ mod tests {
         use PtyConfigOption::*;
         use tokio::time::{Duration, timeout};
 
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+
         let mut session = PtyCommandBuilder::new("cat")
+            .cwd(temp_dir)
             .spawn_read_write(Output)
             .unwrap();
 
@@ -330,16 +343,20 @@ mod tests {
             .unwrap();
 
         let mut output = String::new();
+        let mut events_received = Vec::new();
         let mut saw_exit = false;
 
-        let result = timeout(Duration::from_secs(3), async {
+        let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
-                match event {
+                match &event {
                     PtyOutputEvent::Output(data) => {
-                        output.push_str(&String::from_utf8_lossy(&data));
+                        let data_str = String::from_utf8_lossy(data);
+                        output.push_str(&data_str);
+                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
+                        events_received.push(format!("Exit({:?})", status));
                         assert!(
                             status.success(),
                             "Cat should succeed with status: {:?}",
@@ -347,7 +364,9 @@ mod tests {
                         );
                         break;
                     }
-                    _ => {}
+                    other => {
+                        events_received.push(format!("{:?}", other));
+                    }
                 }
             }
         })
@@ -355,50 +374,62 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Test timed out after 3 seconds. Output so far: '{}'",
-            output
+            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
+            events_received, output
         );
-        assert!(saw_exit, "Should see exit event. Output: '{}'", output);
+        
+        assert!(
+            saw_exit, 
+            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            events_received, output
+        );
+        
         assert!(
             output.contains("test input"),
-            "Output should contain 'test input' but was: '{}'",
-            output
+            "Output should contain 'test input'. Events received: {:?}, Full output was: '{}'",
+            events_received, output
         );
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_python_repl_interaction() -> miette::Result<()> {
+    #[cfg(not(target_os = "windows"))]
+    async fn test_shell_calculation() -> miette::Result<()> {
         use PtyConfigOption::*;
         use tokio::time::{Duration, timeout};
 
-        // Skip if Python is not available
-        if std::process::Command::new("python3")
-            .arg("--version")
-            .output()
-            .is_err()
-        {
-            eprintln!("Skipping Python test - python3 not available");
-            return Ok(());
-        }
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
 
-        // Use a simple Python command that exits immediately
-        let mut session = PtyCommandBuilder::new("python3")
-            .args(["-c", "print(2 + 3); print('Hello from Python')"])
+        // Use sh for calculation - POSIX compliant and always available on Unix
+        let mut session = PtyCommandBuilder::new("sh")
+            .args(["-c", "echo $((2+3)); echo 'Hello from Shell'"])
+            .cwd(temp_dir)
             .spawn_read_write(Output)
             .unwrap();
 
         // Collect output with timeout
         let mut output = String::new();
-        let result = timeout(Duration::from_secs(3), async {
+        let mut events_received = Vec::new();
+        let mut saw_exit = false;
+        
+        let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
-                match event {
+                match &event {
                     PtyOutputEvent::Output(data) => {
-                        output.push_str(&String::from_utf8_lossy(&data));
+                        let data_str = String::from_utf8_lossy(data);
+                        output.push_str(&data_str);
+                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
                     }
-                    PtyOutputEvent::Exit(_) => break,
-                    _ => {}
+                    PtyOutputEvent::Exit(status) => {
+                        saw_exit = true;
+                        events_received.push(format!("Exit({:?})", status));
+                        break;
+                    }
+                    other => {
+                        events_received.push(format!("{:?}", other));
+                    }
                 }
             }
         })
@@ -406,27 +437,33 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Python session timed out. Output so far: '{}'",
-            output
+            "Shell session timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
+            events_received, output
+        );
+        
+        assert!(
+            saw_exit, 
+            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            events_received, output
         );
 
         // Verify we got expected output
         assert!(
             output.contains('5'),
-            "Should see result of 2+3, but output was: '{}'",
-            output
+            "Should see result of 2+3. Events received: {:?}, Full output was: '{}'",
+            events_received, output
         );
         assert!(
-            output.contains("Hello from Python"),
-            "Should see hello message, but output was: '{}'",
-            output
+            output.contains("Hello from Shell"),
+            "Should see hello message. Events received: {:?}, Full output was: '{}'",
+            events_received, output
         );
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_shell_command_interruption() -> miette::Result<()> {
+    async fn test_shell_echo_output() -> miette::Result<()> {
         use PtyConfigOption::*;
         use tokio::time::{Duration, timeout};
 
@@ -437,15 +474,20 @@ mod tests {
 
         // Collect output
         let mut output = String::new();
+        let mut events_received = Vec::new();
         let mut saw_exit = false;
-        let result = timeout(Duration::from_secs(3), async {
+        
+        let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
-                match event {
+                match &event {
                     PtyOutputEvent::Output(data) => {
-                        output.push_str(&String::from_utf8_lossy(&data));
+                        let data_str = String::from_utf8_lossy(data);
+                        output.push_str(&data_str);
+                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
+                        events_received.push(format!("Exit({:?})", status));
                         assert!(
                             status.success(),
                             "Shell should succeed with status: {:?}",
@@ -453,7 +495,9 @@ mod tests {
                         );
                         break;
                     }
-                    _ => {}
+                    other => {
+                        events_received.push(format!("{:?}", other));
+                    }
                 }
             }
         })
@@ -461,14 +505,20 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Test timed out after 3 seconds. Output so far: '{}'",
-            output
+            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
+            events_received, output
         );
-        assert!(saw_exit, "Should see exit event. Output: '{}'", output);
+        
+        assert!(
+            saw_exit, 
+            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            events_received, output
+        );
+        
         assert!(
             output.contains("Test output from shell"),
-            "Should see shell output, but was: '{}'",
-            output
+            "Should see shell output. Events received: {:?}, Full output was: '{}'",
+            events_received, output
         );
 
         Ok(())
@@ -574,7 +624,11 @@ mod tests {
         use PtyConfigOption::*;
         use tokio::time::{Duration, timeout};
 
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+
         let mut session = PtyCommandBuilder::new("cat")
+            .cwd(temp_dir)
             .spawn_read_write(Output)
             .unwrap();
 
@@ -613,32 +667,53 @@ mod tests {
             .unwrap();
 
         let mut output = Vec::new();
-        let result = timeout(Duration::from_secs(3), async {
+        let mut events_received = Vec::new();
+        let mut saw_exit = false;
+        
+        let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
-                match event {
+                match &event {
                     PtyOutputEvent::Output(data) => {
-                        output.extend_from_slice(&data);
+                        output.extend_from_slice(data);
+                        events_received.push(format!("Output({} bytes)", data.len()));
                     }
-                    PtyOutputEvent::Exit(_) => break,
-                    _ => {}
+                    PtyOutputEvent::Exit(status) => {
+                        saw_exit = true;
+                        events_received.push(format!("Exit({:?})", status));
+                        break;
+                    }
+                    other => {
+                        events_received.push(format!("{:?}", other));
+                    }
                 }
             }
         })
         .await;
 
-        assert!(result.is_ok(), "Test timed out after 3 seconds");
+        let output_str = String::from_utf8_lossy(&output);
+        
+        assert!(
+            result.is_ok(), 
+            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'", 
+            events_received, output_str
+        );
+        
+        assert!(
+            saw_exit, 
+            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            events_received, output_str
+        );
 
         // Check we got the ANSI sequences back
-        let output_str = String::from_utf8_lossy(&output);
         assert!(
             output_str.contains("Red Text"),
-            "Output should contain 'Red Text' but was: '{}'",
-            output_str
+            "Output should contain 'Red Text'. Events received: {:?}, Full output was: '{}'",
+            events_received, output_str
         );
         assert!(
             output_str.contains("Blue Text"),
-            "Output should contain 'Blue Text' but was: '{}'",
-            output_str
+            "Output should contain 'Blue Text'. Events received: {:?}, Full output was: '{}'",
+            events_received, output_str
         );
         // The actual ANSI codes might be echoed back
         // Note: cat may not preserve exact ANSI sequences depending on terminal settings

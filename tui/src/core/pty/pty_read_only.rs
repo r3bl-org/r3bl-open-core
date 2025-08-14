@@ -2,7 +2,8 @@
 
 use miette::IntoDiagnostic;
 
-use crate::{PtyCommandBuilder, PtyConfig, PtyOutputEvent, PtyReadOnlySession,
+use crate::{Controlled, ControlledChild, Controller, PtyCommandBuilder, PtyConfig,
+            PtyOutputEvent, PtyReadOnlySession,
             common_impl::{create_pty_pair, spawn_blocking_controller_reader_task,
                           spawn_command_in_pty}};
 
@@ -13,12 +14,12 @@ impl PtyCommandBuilder {
     /// ```text
     /// ┌──────────────┐ ◄── events ◄── ┌───────────────────────────────┐
     /// │ Your Program │                │ Spawned Task (1) in Read Only │
-    /// │              │                │         session               │
-    /// │              │                │            ↓                  │
-    /// │ Handle       │                │ ◄─── PTY creates pair ───►    │
+    /// │              │                │            session            │
+    /// │              │                │               ▼               │
+    /// │ Handle       │                │ ◄─── PTY creates pair ──────► │
     /// │ events and   │                │ ┊Master/   ┊     ┊Slave/    ┊ │
     /// │ process      │                │ ┊Controller┊     ┊Controlled┊ │
-    /// │ completion   │                │     ↓                 ↓       │
+    /// │ completion   │                │     ▼                 ▼       │
     /// │ from read    │                │ Spawn Tokio       Controlled  │
     /// │ only session │                │ blocking task     spawns      │
     /// │              │                │ (2) to read       child       │
@@ -29,11 +30,28 @@ impl PtyCommandBuilder {
     /// └──────────────┘                └───────────────────────────────┘
     /// ```
     ///
+    /// # Why 3 Tasks?
+    ///
+    /// 1. **Background orchestration task [`tokio::spawn`]** -> Required because this
+    ///    function needs to return immediately with a session handle, allowing the caller
+    ///    to start processing events while the PTY command runs in the background.
+    ///    Without this, the function would block until the entire PTY session completes.
+    ///
+    /// 2. **OS child process [`ControlledChild`]** -> The actual command being executed
+    ///    in the PTY. This is not a Tokio task but a system process that runs your
+    ///    command with proper terminal emulation.
+    ///
+    /// 3. **Blocking reader task [`tokio::task::spawn_blocking`]** -> Required because
+    ///    PTY file descriptors only provide synchronous [`std::io::Read`] APIs, not async
+    ///    [`tokio::io::AsyncRead`]. Using regular [`tokio::spawn`] with blocking reads
+    ///    would block the entire async runtime. [`spawn_blocking`] runs these synchronous
+    ///    reads on a dedicated thread pool.
+    ///
     /// # Returns
     ///
     /// A session with:
-    /// 1. `output_event_receiver_half` combined stdout/stderr of child process -> events
-    /// 2. `completion_handle` to await spawned child process completion
+    /// - `output_event_receiver_half` combined stdout/stderr of child process -> events
+    /// - `completion_handle` to await spawned child process completion
     ///
     /// # Example: Capturing OSC sequences from cargo build
     ///
@@ -73,6 +91,13 @@ impl PtyCommandBuilder {
     /// # Errors
     ///
     /// Returns an error if the PTY fails to spawn or initialize properly.
+    ///
+    /// [`tokio::spawn`]: tokio::spawn
+    /// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
+    /// [`std::io::Read`]: std::io::Read
+    /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
+    /// [`spawn_blocking`]: tokio::task::spawn_blocking
+    /// [`ControlledChild`]: crate::ControlledChild
     pub fn spawn_read_only(
         self,
         config: impl Into<PtyConfig>,
@@ -83,7 +108,7 @@ impl PtyCommandBuilder {
         let (output_event_sender_half, output_event_receiver_half) =
             tokio::sync::mpsc::unbounded_channel();
 
-        // [🛫 SPAWN 0] Spawn the main orchestration task.
+        // [🛫 SPAWN 0] Spawn the main orchestration task. The caller waits for this one.
         // Pin the completion handle: JoinHandle is not Unpin but select! requires it for
         // efficient polling without moving.
         let completion_handle = Box::pin(tokio::spawn(async move {
@@ -92,11 +117,13 @@ impl PtyCommandBuilder {
 
             // Create PTY pair: controller (master) for your program, controlled (slave)
             // for spawned process
-            let (controller, controlled) = create_pty_pair(&config)?;
+            let (controller, controlled): (Controller, Controlled) =
+                create_pty_pair(&config)?;
 
             // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
             // The child process uses the controlled side as its stdin/stdout/stderr.
-            let mut controlled_child = spawn_command_in_pty(&controlled, command)?;
+            let mut controlled_child: ControlledChild =
+                spawn_command_in_pty(&controlled, command)?;
 
             // [🛫 SPAWN 2] Spawn the reader task to process output from the controller
             // side. NOTE: Critical resource management - see module docs for
@@ -186,8 +213,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple_echo_command() -> miette::Result<()> {
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         let session = PtyCommandBuilder::new("echo")
             .args(["Hello, PTY!"])
+            .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::Output)?;
 
         let (events, status) =
@@ -215,9 +246,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_osc_sequence_with_printf() -> miette::Result<()> {
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         // Use printf to emit a known OSC sequence
         let session = PtyCommandBuilder::new("printf")
             .args([r"\x1b]9;4;1;50\x1b\\"])
+            .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::Osc)?;
 
         let (events, status) =
@@ -241,9 +276,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_multiple_osc_sequences() -> miette::Result<()> {
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         // Emit multiple OSC sequences
         let session = PtyCommandBuilder::new("printf")
             .args([r"\x1b]9;4;1;25\x1b\\\x1b]9;4;1;50\x1b\\\x1b]9;4;0;0\x1b\\"])
+            .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::Osc)?;
 
         let (events, status) =
@@ -279,6 +318,9 @@ mod tests {
             return Ok(()); // Skip on Windows
         }
 
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         // Try using bash first, then sh
         let config = PtyConfigOption::Osc + PtyConfigOption::Output;
         let session = PtyCommandBuilder::new("bash")
@@ -286,6 +328,7 @@ mod tests {
                 "-c",
                 r"echo 'Starting...'; printf '\033]9;4;1;50\033\\'; echo 'Done!'",
             ])
+            .cwd(temp_dir)
             .spawn_read_only(config)?;
 
         let (events, status) =
@@ -324,9 +367,13 @@ mod tests {
             return Ok(()); // Skip on Windows
         }
 
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         // Try using bash with better escape sequence handling
         let session = PtyCommandBuilder::new("bash")
             .args(["-c", r"printf '\033]9;4;1;'; sleep 0.01; printf '75\033\\'"])
+            .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::Osc)?;
 
         let (events, status) =
@@ -355,6 +402,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_all_osc_event_types() -> miette::Result<()> {
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         // Test all four OSC event types
         let sequences = [
             (r"\x1b]9;4;0;0\x1b\\", OscEvent::ProgressCleared),
@@ -366,6 +416,7 @@ mod tests {
         for (sequence, expected) in sequences {
             let session = PtyCommandBuilder::new("printf")
                 .args([sequence])
+                .cwd(temp_dir.clone())
                 .spawn_read_only(PtyConfigOption::Osc)?;
 
             let (events, status) =
@@ -389,8 +440,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_command_failure() -> miette::Result<()> {
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         // Test that we properly handle command failures
         let session = PtyCommandBuilder::new("false")
+            .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::NoCaptureOutput)?;
 
         let (events, status) =
@@ -408,9 +463,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_capture_option() -> miette::Result<()> {
+        // Create a temporary directory for the test
+        let temp_dir = std::env::temp_dir();
+        
         // Test that NoCaptureOutput doesn't capture anything
         let session = PtyCommandBuilder::new("echo")
             .args(["test"])
+            .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::NoCaptureOutput)?;
 
         let (events, status) =
