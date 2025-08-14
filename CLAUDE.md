@@ -1,5 +1,8 @@
 # Claude Code Instructions for r3bl-open-core
 
+When doing work, when you have questions about important choices to be made, or ambiguities in the
+task, please ask the user for clarification immediately.
+
 ## Rust Code Guidelines
 
 ### MCP Tools to understand and change Rust code

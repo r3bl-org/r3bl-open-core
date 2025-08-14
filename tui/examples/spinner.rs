@@ -3,7 +3,7 @@
 use std::{io::Write, time::Duration};
 
 use r3bl_tui::{CommonResult, OutputDevice, SpinnerColor, SpinnerStyle, SpinnerTemplate,
-               readline_async::{ReadlineAsyncContext, Spinner},
+               readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
                underline};
@@ -64,6 +64,15 @@ pub async fn main() -> CommonResult<()> {
         );
         example_with_concurrent_output(SpinnerStyle {
             template: SpinnerTemplate::Block,
+            color: SpinnerColor::default_color_wheel(),
+        })
+        .await?;
+
+        println_with_flush!(
+            "-------------> Example with message updates: Braille <-------------"
+        );
+        example_with_message_updates(SpinnerStyle {
+            template: SpinnerTemplate::Braille,
             color: SpinnerColor::default_color_wheel(),
         })
         .await?;
@@ -154,6 +163,65 @@ async fn example_with_concurrent_output_no_readline_async(
     sleep(ARTIFICIAL_UI_DELAY).await;
 
     // Stop spinner.
+    if let Some(mut spinner) = maybe_spinner.take() {
+        spinner.request_shutdown();
+        spinner.await_shutdown().await;
+    }
+
+    sleep(ARTIFICIAL_UI_DELAY).await;
+
+    Ok(())
+}
+
+/// Example showing how to update spinner messages dynamically.
+/// This demonstrates the new update_message() functionality.
+async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()> {
+    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ ")).await?;
+    let rl_ctx = maybe_rl_ctx.expect("terminal is not fully interactive");
+
+    let shared_writer = rl_ctx.clone_shared_writer();
+
+    // Start spinner with initial message
+    let mut maybe_spinner = Spinner::try_start(
+        "Starting installation...",
+        "Installation complete!",
+        DELAY_UNIT,
+        style,
+        OutputDevice::default(),
+        Some(shared_writer.clone()),
+    )
+    .await?;
+
+    if let Some(ref spinner) = maybe_spinner {
+        // Simulate different phases of work with updated messages
+        let phases = [
+            ("Downloading packages...", 1000),
+            ("Verifying checksums...", 800),
+            ("Installing dependencies...", 1200),
+            ("Configuring package...", 600),
+            ("Finalizing installation...", 400),
+        ];
+
+        for (message, delay_ms) in phases {
+            sleep(Duration::from_millis(delay_ms)).await;
+            spinner.update_message(message);
+        }
+
+        // Demonstrate direct access to SafeInlineString field
+        // (alternative to using update_message() method)
+        sleep(Duration::from_millis(500)).await;
+        let safe_message: &SafeInlineString = &spinner.interval_message;
+        *safe_message.lock().unwrap() = "Direct field access via SafeInlineString!".into();
+        
+        sleep(Duration::from_millis(800)).await;
+
+        // Test ANSI code stripping
+        spinner.update_message("\x1b[31mCleaning up (ANSI codes stripped)...\x1b[0m");
+        
+        sleep(Duration::from_millis(800)).await;
+    }
+
+    // Stop spinner
     if let Some(mut spinner) = maybe_spinner.take() {
         spinner.request_shutdown();
         spinner.await_shutdown().await;

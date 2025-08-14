@@ -467,6 +467,7 @@ pub type SafeLineState = Arc<StdMutex<LineState>>;
 pub type SafeHistory = Arc<StdMutex<History>>;
 
 pub type SafeBool = Arc<StdMutex<bool>>;
+pub type SafeInlineString = Arc<StdMutex<InlineString>>;
 
 /// This is a buffer of [`crate::DEFAULT_STRING_STORAGE_SIZE`] 80 rows x
 /// [`crate::DEFAULT_PAUSE_BUFFER_SIZE`] 128 columns (chars). This buffer collects output

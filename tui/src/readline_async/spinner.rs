@@ -7,8 +7,8 @@ use tokio::{sync::broadcast, time::interval};
 use crate::{contains_ansi_escape_sequence, get_terminal_width,
             is_fully_uninteractive_terminal, is_stdout_piped, ok, spinner_print,
             spinner_render, InlineString, LineStateControlSignal, OutputDevice,
-            SafeBool, SharedWriter, SpinnerStyle, StdMutex, StdoutIsPipedResult,
-            TTYResult};
+            SafeBool, SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
+            StdoutIsPipedResult, TTYResult};
 
 /// `Spinner` works in conjunction with [`crate::ReadlineAsyncContext`] to provide a
 /// spinner in the terminal for long running tasks.
@@ -69,7 +69,8 @@ use crate::{contains_ansi_escape_sequence, get_terminal_width,
 pub struct Spinner {
     pub tick_delay: Duration,
     /// ANSI escape sequences are stripped from this before being assigned.
-    pub interval_message: InlineString,
+    /// Thread-safe message that can be updated during spinner animation.
+    pub interval_message: SafeInlineString,
     pub final_message: InlineString,
     pub style: SpinnerStyle,
     pub output_device: OutputDevice,
@@ -143,7 +144,7 @@ impl Spinner {
 
         // Only start the task if the terminal is fully interactive.
         let mut spinner = Spinner {
-            interval_message: interval_msg.into(),
+            interval_message: Arc::new(StdMutex::new(interval_msg.into())),
             final_message: final_msg.into(),
             tick_delay,
             style,
@@ -305,9 +306,10 @@ impl Spinner {
                         }
 
                         // Render and print the interval message, based on style.
+                        let current_message = interval_message_clone.lock().unwrap().clone();
                         let output = spinner_render::render_tick(
                             &mut style_clone,
-                            &interval_message_clone,
+                            &current_message,
                             count,
                             get_terminal_width(),
                         );
@@ -349,6 +351,27 @@ impl Spinner {
             receiver.await.ok();
         }
     }
+
+    /// Updates the interval message that's displayed during spinner animation.
+    /// This can be called from another task/thread to update progress.
+    /// 
+    /// ANSI escape sequences are stripped from the message if present.
+    /// 
+    /// # Panics
+    ///
+    /// This will panic if the lock is poisoned, which can happen if a thread
+    /// panics while holding the lock. To avoid panics, ensure that the code that
+    /// locks the mutex does not panic while holding the lock.
+    pub fn update_message(&self, new_message: impl Into<InlineString>) {
+        let msg = new_message.into();
+        // Strip ANSI codes if present
+        let clean_msg = if contains_ansi_escape_sequence(&msg) {
+            strip_ansi_escapes::strip_str(&msg).into()
+        } else {
+            msg
+        };
+        *self.interval_message.lock().unwrap() = clean_msg;
+    }
 }
 
 #[cfg(test)]
@@ -368,6 +391,8 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_color() {
+        return_if_not_interactive_terminal!();
+
         let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
@@ -385,8 +410,6 @@ mod tests {
             Some(shared_writer),
         )
         .await;
-
-        return_if_not_interactive_terminal!();
 
         let mut spinner = res_maybe_spinner.unwrap().unwrap();
 
@@ -440,6 +463,8 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_no_color() {
+        return_if_not_interactive_terminal!();
+
         let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
 
         let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
@@ -454,8 +479,6 @@ mod tests {
             Some(shared_writer),
         )
         .await;
-
-        return_if_not_interactive_terminal!();
 
         let mut spinner = res_maybe_spinner.unwrap().unwrap();
 
@@ -505,6 +528,62 @@ mod tests {
         );
         matches!(line_control_signal_sink[3], LineStateControlSignal::Resume);
 
+        drop(line_receiver);
+    }
+
+    #[serial_test::serial]
+    #[tokio::test]
+    #[allow(clippy::needless_return)]
+    async fn test_spinner_message_update() {
+        return_if_not_interactive_terminal!();
+
+        let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
+
+        let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
+        let shared_writer = SharedWriter::new(line_sender);
+
+        let res_maybe_spinner = Spinner::try_start(
+            "initial message",
+            "final message",
+            QUANTUM,
+            SpinnerStyle::default(),
+            output_device_mock,
+            Some(shared_writer),
+        )
+        .await;
+
+        let mut spinner = res_maybe_spinner.unwrap().unwrap();
+
+        // Let the spinner run for a bit with initial message
+        tokio::time::sleep(QUANTUM).await;
+
+        // Update the message
+        spinner.update_message("updated message");
+
+        // Let it run with the updated message
+        tokio::time::sleep(QUANTUM * 2).await;
+
+        // Update with ANSI codes (should be stripped)
+        spinner.update_message("\x1b[31mupdated with ansi\x1b[0m");
+
+        // Let it run with the ANSI-stripped message
+        tokio::time::sleep(QUANTUM).await;
+
+        // Stop the spinner
+        spinner.request_shutdown();
+        spinner.await_shutdown().await;
+
+        // Verify that both messages appeared in the output
+        let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
+        
+        // Should contain both the initial and updated messages
+        assert!(output_buffer_data.contains("initial message"));
+        assert!(output_buffer_data.contains("updated message"));
+        assert!(output_buffer_data.contains("updated with ansi")); // ANSI should be stripped
+        assert!(output_buffer_data.contains("final message"));
+
+        // Clean up line receiver
+        while line_receiver.try_recv().is_ok() {}
         drop(line_receiver);
     }
 }
