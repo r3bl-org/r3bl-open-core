@@ -226,6 +226,52 @@ pub fn control_char_to_bytes(ctrl: &ControlChar) -> Cow<'static, [u8]> {
     }
 }
 
+/// Extension trait for converting portable_pty::ExitStatus to std::process::ExitStatus.
+///
+/// This trait provides cross-platform compatible conversion from portable_pty's
+/// exit status type to the standard library's exit status type, handling platform
+/// differences properly.
+pub trait ExitStatusConversion {
+    /// Converts a portable_pty::ExitStatus to std::process::ExitStatus.
+    ///
+    /// This method handles cross-platform exit status conversion properly:
+    /// - On success: Uses explicit success status (exit code 0)
+    /// - On failure: Encodes exit code in Unix wait status format with bounds checking
+    /// - Clamps large exit codes to 255 to prevent overflow
+    fn to_std_exit_status(self) -> std::process::ExitStatus;
+}
+
+impl ExitStatusConversion for portable_pty::ExitStatus {
+    fn to_std_exit_status(self) -> std::process::ExitStatus {
+        #[cfg(unix)]
+        use std::os::unix::process::ExitStatusExt;
+
+        if self.success() {
+            // Success case: use explicit success status
+            #[cfg(unix)]
+            return std::process::ExitStatus::from_raw(0);
+            #[cfg(not(unix))]
+            return std::process::ExitStatus::from_raw(0);
+        } else {
+            // Failure case: encode exit code properly
+            let code = self.exit_code();
+
+            // Ensure we don't overflow when shifting for Unix wait status format
+            let wait_status = if code <= 255 {
+                (code as i32) << 8
+            } else {
+                // If exit code is too large, clamp to 255 and encode
+                255_i32 << 8
+            };
+
+            #[cfg(unix)]
+            return std::process::ExitStatus::from_raw(wait_status);
+            #[cfg(not(unix))]
+            return std::process::ExitStatus::from_raw(wait_status);
+        }
+    }
+}
+
 /// Configuration builder for PTY commands with sensible defaults.
 ///
 /// This builder ensures critical settings are not forgotten when creating PTY commands:
@@ -386,10 +432,6 @@ impl PtyCommandBuilder {
 
         Ok(cmd_to_return)
     }
-
-
-
-
 }
 #[cfg(test)]
 mod tests {
@@ -561,7 +603,6 @@ mod tests {
             ]
         );
     }
-
 
     #[test]
     fn test_pty_command_builder_build() {

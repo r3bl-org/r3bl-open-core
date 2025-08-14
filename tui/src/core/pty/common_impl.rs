@@ -21,15 +21,16 @@ use crate::{OscBuffer, PtyCommand, PtyConfig, PtyInputEvent, PtyOutputEvent,
 pub const READ_BUFFER_SIZE: usize = 4096;
 
 /// Type alias for the controller half of the PTY (master).
-/// 
+///
 /// The controller is the "master" side that your program interacts with.
 /// It can read output from and write input to the spawned process.
 pub type Controller = Box<dyn MasterPty + Send>;
 
 /// Type alias for the controlled half of the PTY (slave).
-/// 
+///
 /// The controlled is the "slave" side that the spawned process uses as its terminal.
-/// The spawned process reads from and writes to this side, believing it has a real terminal.
+/// The spawned process reads from and writes to this side, believing it has a real
+/// terminal.
 pub type Controlled = Box<dyn SlavePty + Send>;
 
 /// Type alias for the child process spawned in the PTY.
@@ -103,8 +104,8 @@ pub fn spawn_command_in_pty(
 ///
 /// * `controller_reader` - A boxed reader that implements [`Read`] + [`Send`], typically
 ///   the read end of a PTY master file descriptor
-/// * `output_event_sender_half` - An unbounded sender for [`PtyOutputEvent`]s to communicate
-///   with other parts of the application
+/// * `output_event_sender_half` - An unbounded sender for [`PtyOutputEvent`]s to
+///   communicate with other parts of the application
 /// * `config` - Configuration settings that determine which events to capture
 ///
 /// # Returns
@@ -142,8 +143,8 @@ pub fn spawn_blocking_controller_reader_task(
 
                     // Send raw output if configured.
                     if config.is_output_capture_enabled() {
-                        let _unused =
-                            output_event_sender_half.send(PtyOutputEvent::Output(data.to_vec()));
+                        let _unused = output_event_sender_half
+                            .send(PtyOutputEvent::Output(data.to_vec()));
                     }
 
                     // Process OSC sequences if configured.

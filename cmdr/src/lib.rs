@@ -208,7 +208,7 @@
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 //!
 //! ### Binary Development Features
-//! 
+//!
 //! - **Interactive binary selection**: Choose which binary to run with fuzzy search
 //! - **Smart log monitoring**: Automatically detects and manages log files from binaries
 //! - **Docker builds**: Build release binaries in isolated Docker environment

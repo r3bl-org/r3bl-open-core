@@ -105,6 +105,25 @@ pub mod upgrade_install {
             d = fmt::period()
         )
     }
+
+    /// No formatting on this string, since the spinner will apply its own animated lolcat
+    /// formatting.
+    #[must_use]
+    pub fn rustup_update_msg_raw() -> String { "Updating Rust toolchain...".to_string() }
+
+    /// No formatting on this string, since the spinner will apply its own animated lolcat
+    /// formatting.
+    #[must_use]
+    pub fn install_with_progress_msg_raw(crate_name: &str, percentage: u8) -> String {
+        format!("Installing {crate_name}... {percentage}%")
+    }
+
+    /// No formatting on this string, since the spinner will apply its own animated lolcat
+    /// formatting.
+    #[must_use]
+    pub fn install_building_msg_raw(crate_name: &str) -> String {
+        format!("Installing {crate_name}... (building)")
+    }
 }
 
 pub mod upgrade_check {

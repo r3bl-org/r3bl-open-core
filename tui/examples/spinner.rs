@@ -211,13 +211,14 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
         // (alternative to using update_message() method)
         sleep(Duration::from_millis(500)).await;
         let safe_message: &SafeInlineString = &spinner.interval_message;
-        *safe_message.lock().unwrap() = "Direct field access via SafeInlineString!".into();
-        
+        *safe_message.lock().unwrap() =
+            "Direct field access via SafeInlineString!".into();
+
         sleep(Duration::from_millis(800)).await;
 
         // Test ANSI code stripping
         spinner.update_message("\x1b[31mCleaning up (ANSI codes stripped)...\x1b[0m");
-        
+
         sleep(Duration::from_millis(800)).await;
     }
 

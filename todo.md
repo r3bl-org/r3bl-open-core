@@ -1,7 +1,7 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 <!-- Keep this file in sync with dashboard: https://github.com/users/nazmulidris/projects/4/views/1 -->
 
-# fix r3bl-cmdr upgrade code: https://github.com/r3bl-org/r3bl-open-core/issues/437, https://github.com/nazmulidris/rust-scratch/issues/117
+# fix r3bl-cmdr upgrade code: https://github.com/r3bl-org/r3bl-open-core/issues/437
 
 - [x] do research and make a rust-scratch issue and project for this:
       https://github.com/nazmulidris/rust-scratch/issues/117
@@ -16,14 +16,14 @@
     - [x] code
     - [x] example
     - [x] tests in [`task_test_pty`](docs/done/task_test_pty.md)
-    - [⧗] code review
+    - [x] code review
   - [x] dual channel
     - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
     - [x] example
     - [x] tests
     - [⧗] code review
 - [ ] implement the upgrade code in
-  - [⧗] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
+  - [x] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
   - [ ] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
 - [ ] new feature to recall claude history in r3bl-cmdr:
       https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
@@ -142,6 +142,8 @@
 
 # create sub-issues for `giti`: https://github.com/r3bl-org/r3bl-open-core/issues/423
 
+- [ ] In the final screen, make sure to add horiz divider lines (like in log output) to separate the
+      different sections of the output
 - [ ] `giti worktree/workspace` -> list, create, delete, switch git worktrees
 - [ ] `giti branch rename` -> rename an existing branch to other
 - [ ] `giti show <name>` -> choose an older version of a file to checkout to `Downloads` and

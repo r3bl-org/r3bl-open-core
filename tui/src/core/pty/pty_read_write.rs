@@ -276,7 +276,11 @@ mod tests {
                     PtyOutputEvent::Output(data) => {
                         let data_str = String::from_utf8_lossy(data);
                         output.push_str(&data_str);
-                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
+                        events_received.push(format!(
+                            "Output({} bytes): '{}'",
+                            data.len(),
+                            data_str
+                        ));
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
@@ -299,19 +303,21 @@ mod tests {
         assert!(
             result.is_ok(),
             "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received, output
+            events_received,
+            output
         );
-        
+
         assert!(
-            saw_exit, 
-            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            saw_exit,
+            "Should see exit event. Events received: {:?}, Output: '{}'",
             events_received, output
         );
-        
+
         assert!(
             output.contains("Hello, PTY!"),
             "Output should contain 'Hello, PTY!'. Events received: {:?}, Full output was: '{}'",
-            events_received, output
+            events_received,
+            output
         );
 
         Ok(())
@@ -352,7 +358,11 @@ mod tests {
                     PtyOutputEvent::Output(data) => {
                         let data_str = String::from_utf8_lossy(data);
                         output.push_str(&data_str);
-                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
+                        events_received.push(format!(
+                            "Output({} bytes): '{}'",
+                            data.len(),
+                            data_str
+                        ));
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
@@ -375,19 +385,21 @@ mod tests {
         assert!(
             result.is_ok(),
             "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received, output
+            events_received,
+            output
         );
-        
+
         assert!(
-            saw_exit, 
-            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            saw_exit,
+            "Should see exit event. Events received: {:?}, Output: '{}'",
             events_received, output
         );
-        
+
         assert!(
             output.contains("test input"),
             "Output should contain 'test input'. Events received: {:?}, Full output was: '{}'",
-            events_received, output
+            events_received,
+            output
         );
 
         Ok(())
@@ -413,14 +425,18 @@ mod tests {
         let mut output = String::new();
         let mut events_received = Vec::new();
         let mut saw_exit = false;
-        
+
         let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
                 match &event {
                     PtyOutputEvent::Output(data) => {
                         let data_str = String::from_utf8_lossy(data);
                         output.push_str(&data_str);
-                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
+                        events_received.push(format!(
+                            "Output({} bytes): '{}'",
+                            data.len(),
+                            data_str
+                        ));
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
@@ -438,12 +454,13 @@ mod tests {
         assert!(
             result.is_ok(),
             "Shell session timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received, output
+            events_received,
+            output
         );
-        
+
         assert!(
-            saw_exit, 
-            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            saw_exit,
+            "Should see exit event. Events received: {:?}, Output: '{}'",
             events_received, output
         );
 
@@ -451,12 +468,14 @@ mod tests {
         assert!(
             output.contains('5'),
             "Should see result of 2+3. Events received: {:?}, Full output was: '{}'",
-            events_received, output
+            events_received,
+            output
         );
         assert!(
             output.contains("Hello from Shell"),
             "Should see hello message. Events received: {:?}, Full output was: '{}'",
-            events_received, output
+            events_received,
+            output
         );
 
         Ok(())
@@ -476,14 +495,18 @@ mod tests {
         let mut output = String::new();
         let mut events_received = Vec::new();
         let mut saw_exit = false;
-        
+
         let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
                 match &event {
                     PtyOutputEvent::Output(data) => {
                         let data_str = String::from_utf8_lossy(data);
                         output.push_str(&data_str);
-                        events_received.push(format!("Output({} bytes): '{}'", data.len(), data_str));
+                        events_received.push(format!(
+                            "Output({} bytes): '{}'",
+                            data.len(),
+                            data_str
+                        ));
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
@@ -506,19 +529,21 @@ mod tests {
         assert!(
             result.is_ok(),
             "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received, output
+            events_received,
+            output
         );
-        
+
         assert!(
-            saw_exit, 
-            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            saw_exit,
+            "Should see exit event. Events received: {:?}, Output: '{}'",
             events_received, output
         );
-        
+
         assert!(
             output.contains("Test output from shell"),
             "Should see shell output. Events received: {:?}, Full output was: '{}'",
-            events_received, output
+            events_received,
+            output
         );
 
         Ok(())
@@ -669,7 +694,7 @@ mod tests {
         let mut output = Vec::new();
         let mut events_received = Vec::new();
         let mut saw_exit = false;
-        
+
         let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
                 match &event {
@@ -691,16 +716,17 @@ mod tests {
         .await;
 
         let output_str = String::from_utf8_lossy(&output);
-        
+
         assert!(
-            result.is_ok(), 
-            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'", 
-            events_received, output_str
+            result.is_ok(),
+            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
+            events_received,
+            output_str
         );
-        
+
         assert!(
-            saw_exit, 
-            "Should see exit event. Events received: {:?}, Output: '{}'", 
+            saw_exit,
+            "Should see exit event. Events received: {:?}, Output: '{}'",
             events_received, output_str
         );
 
@@ -708,12 +734,14 @@ mod tests {
         assert!(
             output_str.contains("Red Text"),
             "Output should contain 'Red Text'. Events received: {:?}, Full output was: '{}'",
-            events_received, output_str
+            events_received,
+            output_str
         );
         assert!(
             output_str.contains("Blue Text"),
             "Output should contain 'Blue Text'. Events received: {:?}, Full output was: '{}'",
-            events_received, output_str
+            events_received,
+            output_str
         );
         // The actual ANSI codes might be echoed back
         // Note: cat may not preserve exact ANSI sequences depending on terminal settings

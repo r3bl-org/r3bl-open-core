@@ -215,7 +215,7 @@ mod tests {
     async fn test_simple_echo_command() -> miette::Result<()> {
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         let session = PtyCommandBuilder::new("echo")
             .args(["Hello, PTY!"])
             .cwd(temp_dir)
@@ -248,7 +248,7 @@ mod tests {
     async fn test_osc_sequence_with_printf() -> miette::Result<()> {
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         // Use printf to emit a known OSC sequence
         let session = PtyCommandBuilder::new("printf")
             .args([r"\x1b]9;4;1;50\x1b\\"])
@@ -278,7 +278,7 @@ mod tests {
     async fn test_multiple_osc_sequences() -> miette::Result<()> {
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         // Emit multiple OSC sequences
         let session = PtyCommandBuilder::new("printf")
             .args([r"\x1b]9;4;1;25\x1b\\\x1b]9;4;1;50\x1b\\\x1b]9;4;0;0\x1b\\"])
@@ -320,7 +320,7 @@ mod tests {
 
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         // Try using bash first, then sh
         let config = PtyConfigOption::Osc + PtyConfigOption::Output;
         let session = PtyCommandBuilder::new("bash")
@@ -369,7 +369,7 @@ mod tests {
 
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         // Try using bash with better escape sequence handling
         let session = PtyCommandBuilder::new("bash")
             .args(["-c", r"printf '\033]9;4;1;'; sleep 0.01; printf '75\033\\'"])
@@ -404,7 +404,7 @@ mod tests {
     async fn test_all_osc_event_types() -> miette::Result<()> {
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         // Test all four OSC event types
         let sequences = [
             (r"\x1b]9;4;0;0\x1b\\", OscEvent::ProgressCleared),
@@ -442,7 +442,7 @@ mod tests {
     async fn test_command_failure() -> miette::Result<()> {
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         // Test that we properly handle command failures
         let session = PtyCommandBuilder::new("false")
             .cwd(temp_dir)
@@ -465,7 +465,7 @@ mod tests {
     async fn test_no_capture_option() -> miette::Result<()> {
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
-        
+
         // Test that NoCaptureOutput doesn't capture anything
         let session = PtyCommandBuilder::new("echo")
             .args(["test"])

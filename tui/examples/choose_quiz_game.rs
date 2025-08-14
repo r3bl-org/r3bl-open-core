@@ -293,8 +293,8 @@ mod tests {
             correct_answer: "Paris".to_string(),
         };
 
-        let correct_answer = Some(vec!["Paris".to_string()]);
-        let result = check_answer(&guess, &correct_answer);
+        let correct_answer = Some(ItemsOwned::from(vec!["Paris".to_string()]));
+        let result = check_answer(&guess, correct_answer.as_ref());
         assert_eq!(result, Answer::Correct);
     }
 
@@ -310,8 +310,8 @@ mod tests {
             correct_answer: "Paris".to_string(),
         };
 
-        let incorrect_answer = Some(vec!["London".to_string()]);
-        let result = check_answer(&guess, &incorrect_answer);
+        let incorrect_answer = Some(ItemsOwned::from(vec!["London".to_string()]));
+        let result = check_answer(&guess, incorrect_answer.as_ref());
         assert_eq!(result, Answer::Incorrect);
     }
 }

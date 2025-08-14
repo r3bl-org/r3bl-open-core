@@ -17,8 +17,8 @@
 //! ```
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{core::pty::{ControlChar, PtyCommandBuilder, PtyConfigOption, PtyOutputEvent,
-                           PtyInputEvent},
+use r3bl_tui::{core::pty::{ControlChar, PtyCommandBuilder, PtyConfigOption,
+                           PtyInputEvent, PtyOutputEvent},
                set_mimalloc_in_main};
 use tokio::time::{Duration, sleep};
 
@@ -95,7 +95,9 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     println!("{BLUE}📝 Sending: Print variable{RESET}");
     session
         .input_event_sender_half
-        .send(PtyInputEvent::WriteLine("print(f'Hello from {name}!')".into()))
+        .send(PtyInputEvent::WriteLine(
+            "print(f'Hello from {name}!')".into(),
+        ))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
@@ -123,7 +125,9 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     sleep(Duration::from_millis(100)).await;
     session
         .input_event_sender_half
-        .send(PtyInputEvent::WriteLine("    return f'Hello, {name}!'".into()))
+        .send(PtyInputEvent::WriteLine(
+            "    return f'Hello, {name}!'".into(),
+        ))
         .unwrap();
     sleep(Duration::from_millis(100)).await;
     session
@@ -223,7 +227,9 @@ async fn run_shell_demo() -> miette::Result<()> {
     println!("\n{BLUE}📝 Sending: echo command{RESET}");
     session
         .input_event_sender_half
-        .send(PtyInputEvent::WriteLine("echo 'Hello from PTY shell!'".into()))
+        .send(PtyInputEvent::WriteLine(
+            "echo 'Hello from PTY shell!'".into(),
+        ))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
