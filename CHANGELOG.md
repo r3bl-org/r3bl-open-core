@@ -3,6 +3,7 @@
 
 - [Changelog](#changelog)
   - [`global-config`](#global-config)
+    - [Global config (next)](#global-config-next)
     - [Global config (2025-08-04)](#global-config-2025-08-04)
     - [Global config (2025-07-22)](#global-config-2025-07-22)
     - [Global config (2025-04-21)](#global-config-2025-04-21)
@@ -10,6 +11,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
+    - [v0.7.4 (next)](#v074-next)
     - [v0.7.3 (2025-08-04)](#v073-2025-08-04)
     - [v0.7.2 (2025-07-23)](#v072-2025-07-23)
     - [v0.7.1 (2025-05-10)](#v071-2025-05-10)
@@ -35,6 +37,7 @@
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
   - [`r3bl-cmdr`](#r3bl-cmdr)
+    - [v0.0.22 (next)](#v0022-next)
     - [v0.0.21 (2025-08-04)](#v0021-2025-08-04)
     - [v0.0.20 (2025-07-23)](#v0020-2025-07-23)
     - [v0.0.19 (2025-05-10)](#v0019-2025-05-10)
@@ -169,6 +172,36 @@ This section contains all the changes that are made to global configuration to b
 monorepo, along with the top level `run.nu` script. Things like RUSTSEC advisory whitelist and which
 tasks are run in CICD are included here.
 
+### Global config (next)
+
+**Changed:**
+
+- **Build system migration:** Migrated from nushell to fish shell for all build scripts - `run.fish`
+  replaces `run.nu` throughout the project for improved maintainability and readability
+- **uv Python package manager & runtime:** `run.fish` `install-cargo-tools` command now includes
+  installation of `uv` Python runtime (required for `serena` MCP server)
+- **MCP server configuration:** Automated setup for `serena` semantic language MCP server and
+  `context7` documentation lookup server in Claude Code
+- **Copyright headers:** Shrunk copyright headers in all files for better readability
+- **Claude Code configuration:** Updated Claude Code configuration files and VS Code settings for
+  improved development experience
+- **Updated project bootstrap experience:** `fzf` and `fish` are now required for the `bootstrap.sh`
+  script to work correctly, ensuring a smoother setup process
+
+**Added:**
+
+- **MCP server integration:** Integration with [`serena`](https://github.com/oraios/serena) semantic
+  language MCP server for improved Claude Code performance and efficiency
+- **Documentation lookup:** [`context7`](https://mcp.context7.com/mcp) MCP server configuration for
+  real-time documentation and API lookup
+- **Compilation cache:** [`sccache`](https://github.com/mozilla/sccache) support for shared
+  compilation cache to significantly speed up cargo builds across the project
+
+**Removed:**
+
+- **Legacy tools:** Removed `go` and `mcp-language-server` dependencies (replaced with more
+  efficient `serena` MCP server)
+
 ### Global config (2025-08-04)
 
 **Added:**
@@ -289,6 +322,26 @@ following:
 <!-- Active crates section -->
 
 ## `r3bl_tui`
+
+### v0.7.4 (next)
+
+**Added:**
+
+- **PTY module:** New comprehensive PTY (pseudo-terminal) module with both read_only and read_write
+  APIs for spawning and controlling child processes
+- **Dynamic Spinner messaging:** Enhanced Spinner with dynamic `interval_message` support, allowing
+  real-time message updates during execution
+- **OSC sequence parsing:** Added support for parsing OSC (Operating System Command) terminal
+  control sequences
+- **PTY examples:** Multiple examples demonstrating PTY functionality including
+  `spawn_pty_read_only.rs` and `spawn_pty_read_write.rs`
+
+**Enhanced:**
+
+- **Spinner-PTY integration:** Integrated Spinner with PTY module for real-time progress reporting
+  during long-running operations
+- **Test coverage:** Improved PTY test coverage and fixed test failures
+- **Documentation:** Enhanced PTY module documentation with comprehensive usage examples
 
 ### v0.7.3 (2025-08-04)
 
@@ -855,6 +908,20 @@ handle many more corner cases.
     increments the state every second and the gradient color wheel is updated accordingly.
 
 ## `r3bl-cmdr`
+
+### v0.0.22 (next)
+
+**Enhanced:**
+
+- **Upgrade experience:** Complete overhaul of the upgrade command using PTY for resilient and rich
+  user experience
+- **Real-time feedback:** Users now see live progress from rustup and cargo install messages during
+  upgrade process
+- **Progress visibility:** Eliminated timeout appearance issues - upgrade process shows continuous
+  progress instead of appearing hung
+- **Error handling:** Improved error handling and recovery mechanisms during upgrade process
+- **User experience:** Upgrade process provides rich feedback instead of waiting on a potentially
+  misleading timeout screen
 
 ### v0.0.21 (2025-08-04)
 

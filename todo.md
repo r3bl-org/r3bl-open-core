@@ -21,10 +21,10 @@
     - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
     - [x] example
     - [x] tests
-    - [⧗] code review
-- [ ] implement the upgrade code in
+    - [␩] code review
+- [␩] implement the upgrade code in
   - [x] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
-  - [ ] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
+  - [␩] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
 - [ ] new feature to recall claude history in r3bl-cmdr:
       https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
 - [ ] make YT video on the research (in rust-scratch) issue

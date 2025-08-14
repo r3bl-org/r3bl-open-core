@@ -290,25 +290,24 @@ function install-cargo-tools
 
     # Cargo tools - some tools install binaries with different names
     set cargo_tools \
-        "bacon:bacon:cargo install bacon" \
-        "cargo-workspaces:cargo-workspaces:cargo install cargo-workspaces" \
-        "cargo-cache:cargo-cache:cargo install cargo-cache" \
-        "cargo-outdated:cargo-outdated:cargo install cargo-outdated" \
-        "cargo-update:cargo-update:cargo install cargo-update" \
-        "cargo-deny:cargo-deny:cargo install cargo-deny" \
-        "cargo-unmaintained:cargo-unmaintained:cargo install cargo-unmaintained" \
-        "cargo-expand:cargo-expand:cargo install cargo-expand" \
-        "cargo-readme:cargo-readme:cargo install cargo-readme" \
-        "cargo-nextest:cargo-nextest:cargo install cargo-nextest" \
-        "flamegraph:cargo-flamegraph:cargo install flamegraph" \
-        "inferno:inferno-flamegraph:cargo install inferno" \
-        "sccache:sccache:cargo install sccache --locked"
+        "bacon|cargo install bacon" \
+        "cargo-workspaces|cargo install cargo-workspaces" \
+        "cargo-cache|cargo install cargo-cache" \
+        "cargo-outdated|cargo install cargo-outdated" \
+        "cargo-update|cargo install cargo-update" \
+        "cargo-deny|cargo install cargo-deny" \
+        "cargo-unmaintained|cargo install cargo-unmaintained" \
+        "cargo-expand|cargo install cargo-expand" \
+        "cargo-readme|cargo install cargo-readme" \
+        "cargo-nextest|cargo install cargo-nextest" \
+        "cargo-flamegraph|cargo install flamegraph" \
+        "inferno-flamegraph|cargo install inferno" \
+        "sccache|cargo install sccache --locked"
 
     for tool_info in $cargo_tools
-        set tool_parts (string split : $tool_info)
-        set name $tool_parts[1]
-        set check $tool_parts[2]
-        set install $tool_parts[3]
+        set tool_parts (string split "|" $tool_info)
+        set check $tool_parts[1]
+        set install $tool_parts[2]
         install_if_missing $check $install
     end
 
@@ -326,7 +325,6 @@ function install-cargo-tools
     # Install go and docker if not already installed.
     if test -n "$pkg_mgr"
         install_if_missing docker "$pkg_mgr docker.io docker-compose"
-        install_if_missing go "$pkg_mgr golang-go"
     end
 
     # Install other tools.
