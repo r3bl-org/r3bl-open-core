@@ -49,8 +49,25 @@ if ! command -v cargo &>/dev/null; then
     echo "You may need to restart your shell or run: source $HOME/.cargo/env"
 fi
 
-# Install nushell
-install_if_missing "nu" "cargo install nu"
+# Install fish shell and fzf
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
+        echo "Warning: Homebrew not found. Install it from https://brew.sh/ then re-run this script"
+        echo "Skipping fish and fzf installation..."
+    else
+        install_if_missing "fish" "${PKG_MGR:-brew install} fish"
+        install_if_missing "fzf" "${PKG_MGR:-brew install} fzf"
+    fi
+elif [[ -n "$PKG_MGR" ]]; then
+    install_if_missing "fish" "$PKG_MGR fish"
+    install_if_missing "fzf" "$PKG_MGR fzf"
+else
+    echo "Warning: No supported package manager found. Install fish and fzf manually"
+    echo "  Ubuntu/Debian: sudo apt-get install fish fzf"
+    echo "  RHEL/CentOS/Fedora: sudo dnf install fish fzf"
+    echo "  Arch: sudo pacman -S fish fzf"
+    echo "  openSUSE: sudo zypper install fish fzf"
+fi
 
 # Install file watcher
 # cspell:disable
@@ -73,11 +90,11 @@ fi
 # cspell:enable
 
 # Setup development tools
-if command -v nu &>/dev/null; then
+if command -v fish &>/dev/null; then
     echo "Setting up development tools..."
-    nu run.nu install-cargo-tools
+    fish run.fish install-cargo-tools
 else
-    echo "Warning: nushell (nu) not found in PATH. Skipping cargo tools installation."
-    echo "You may need to restart your shell or run: source $HOME/.cargo/env"
-    echo "Then run: nu run.nu install-cargo-tools"
+    echo "Warning: fish shell not found in PATH. Skipping cargo tools installation."
+    echo "You may need to restart your shell or install fish first"
+    echo "Then run: fish run.fish install-cargo-tools"
 fi

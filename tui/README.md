@@ -24,7 +24,7 @@ height="256px">
 - [Run the demo locally](#run-the-demo-locally)
   - [Prerequisites](#prerequisites)
   - [Running examples](#running-examples)
-- [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
+- [Fish scripts to build, run, test etc.](#fish-scripts-to-build-run-test-etc)
 - [Examples to get you started](#examples-to-get-you-started)
   - [Video of the demo in action](#video-of-the-demo-in-action)
 - [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
@@ -274,7 +274,7 @@ The easiest way to get started is to use the bootstrap script:
 
 This script automatically installs:
 - **Rust toolchain** via rustup
-- **Nushell shell** for build scripts
+- **Fish shell** for build scripts
 - **File watchers** (inotifywait on Linux, fswatch on macOS)
 - **All cargo development tools** (flamegraph, inferno, etc.)
 
@@ -283,11 +283,11 @@ For manual installation:
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Install Nushell
+# Install Fish
 cargo install nu
 
 # Install development tools
-nu run.nu install-cargo-tools
+fish run.fish install-cargo-tools
 ```
 
 ### Running examples
@@ -296,13 +296,13 @@ After setup, you can run the examples interactively from the repository root:
 
 ```sh
 # Run examples interactively (choose from list)
-nu run.nu run-examples
+fish run.fish run-examples
 
 # Run examples with release optimizations
-nu run.nu run-examples --release
+fish run.fish run-examples --release
 
 # Run examples without logging
-nu run.nu run-examples --no-log
+fish run.fish run-examples --no-log
 ```
 
 You can also run examples directly:
@@ -321,30 +321,30 @@ For TUI library development, use these commands from the repository root:
 
 ```sh
 # Terminal 1: Monitor logs from examples
-nu run.nu log
+fish run.fish log
 
 # Terminal 2: Run examples interactively
-nu run.nu run-examples
+fish run.fish run-examples
 ```
 
 ### TUI-Specific Commands
-| Command                                 | Description                                      |
-| --------------------------------------- | ------------------------------------------------ |
-| `nu run.nu run-examples`                | Run TUI examples interactively with options      |
-| `nu run.nu run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis |
-| `nu run.nu run-examples-flamegraph-fold`| Generate perf-folded format for analysis         |
-| `nu run.nu bench`                       | Run benchmarks with real-time output             |
-| `nu run.nu log`                         | Monitor log files with smart detection           |
+| Command                                      | Description                                       |
+|----------------------------------------------|---------------------------------------------------|
+| `fish run.fish run-examples`                | Run TUI examples interactively with options      |
+| `fish run.fish run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis |
+| `fish run.fish run-examples-flamegraph-fold`| Generate perf-folded format for analysis         |
+| `fish run.fish bench`                       | Run benchmarks with real-time output             |
+| `fish run.fish log`                         | Monitor log files with smart detection           |
 
 ### Testing and Development
-| Command                                | Description                         |
-| -------------------------------------- | ----------------------------------- |
-| `nu run.nu test`                       | Run all tests                       |
-| `nu run.nu watch-all-tests`            | Watch files, run all tests          |
-| `nu run.nu watch-one-test <pattern>`   | Watch files, run specific test      |
-| `nu run.nu clippy`                     | Run clippy with fixes               |
-| `nu run.nu watch-clippy`               | Watch files, run clippy             |
-| `nu run.nu docs`                       | Generate documentation               |
+| Command                               | Description                     |
+|---------------------------------------|---------------------------------|
+| `fish run.fish test`                  | Run all tests                   |
+| `fish run.fish watch-all-tests`       | Watch files, run all tests     |
+| `fish run.fish watch-one-test <pattern>` | Watch files, run specific test |
+| `fish run.fish clippy`                | Run clippy with fixes           |
+| `fish run.fish watch-clippy`          | Watch files, run clippy         |
+| `fish run.fish docs`                  | Generate documentation          |
 
 For complete development setup and all available commands, see the
 [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
@@ -776,11 +776,11 @@ be performed in order to render to an `OffscreenBuffer`. There is a different co
 path that is taken for ANSI text and plain text (which includes `StyledText` which is
 just plain text with a color). Syntax highlighted text is also just `StyledText`.
 
-| UTF-8 | Task                                                                                                    |
-| ----- | ------------------------------------------------------------------------------------------------------- |
+| UTF-8 | Task                                                                                                     |
+|-------|----------------------------------------------------------------------------------------------------------|
 | Y     | convert `RenderPipeline` to `List<List<PixelChar>>` (`OffscreenBuffer`)                                 |
 | Y     | paint each `PixelChar` in `List<List<PixelChar>>` to stdout using `OffscreenBufferPainterImplCrossterm` |
-| Y     | save the `List<List<PixelChar>>` to `GlobalSharedState`                                                 |
+| Y     | save the `List<List<PixelChar>>` to `GlobalSharedState`                                                  |
 
 Currently only `crossterm` is supported for actually painting to the terminal. But
 this process is really simple making it very easy to swap out other terminal libraries

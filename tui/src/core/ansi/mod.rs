@@ -182,29 +182,29 @@
 //!
 //! ## Nushell commands
 //!
-//! | Command                                 | Description                                                                                         |
-//! |-----------------------------------------|-----------------------------------------------------------------------------------------------------|
-//! | `nu run.nu build`                          | Build the project                                                                                   |
-//! | `nu run.nu clean`                          | Clean the project                                                                                   |
-//! | `nu run.nu run`                            | Run examples                                                                                        |
-//! | `nu run.nu run-release`                    | Run examples with release flag                                                                      |
-//! | `nu run.nu run-flamegraph`                 | Run examples with flamegraph profiling                                                              |
-//! | `nu run.nu test`                           | Run tests                                                                                           |
-//! | `nu run.nu clippy`                         | Run clippy                                                                                          |
-//! | `nu run.nu docs`                           | Build docs                                                                                          |
-//! | `nu run.nu serve-docs`                     | Serve docs. Useful if you SSH into a remote machine via `VSCode` and want to view the docs locally     |
-//! | `nu run.nu upgrade-deps`                   | Upgrade dependencies                                                                                |
-//! | `nu run.nu rustfmt`                        | Run rustfmt                                                                                         |
+//! | Command                         | Description                                                                                              |
+//! |---------------------------------|------------------------------------------------------------------------------------------------------|
+//! | `fish run.fish build`           | Build the project                                                                                        |
+//! | `fish run.fish clean`           | Clean the project                                                                                        |
+//! | `fish run.fish run`             | Run examples                                                                                             |
+//! | `fish run.fish run-release`     | Run examples with release flag                                                                           |
+//! | `fish run.fish run-flamegraph`  | Run examples with flamegraph profiling                                                                   |
+//! | `fish run.fish test`            | Run tests                                                                                                |
+//! | `fish run.fish clippy`          | Run clippy                                                                                               |
+//! | `fish run.fish docs`            | Build docs                                                                                               |
+//! | `fish run.fish serve-docs`      | Serve docs. Useful if you SSH into a remote machine via `VSCode` and want to view the docs locally      |
+//! | `fish run.fish upgrade-deps`    | Upgrade dependencies                                                                                     |
+//! | `fish run.fish rustfmt`         | Run rustfmt                                                                                              |
 //!
 //! The following commands will watch for changes in the source folder and re-run:
 //!
-//! | Command                                     | Description                                                                                         |
-//! |---------------------------------------------|-----------------------------------------------------------------------------------------------------|
-//! | `nu run.nu watch-run`                          | Watch run                                                                                           |
-//! | `nu run.nu watch-all-tests`                    | Watch all tests                                                                                     |
-//! | `nu run.nu watch-one-test <test_name>`         | Watch one test                                                                                      |
-//! | `nu run.nu watch-clippy`                       | Watch clippy                                                                                        |
-//! | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test                                                                  |
+//! | Command                                             | Description                         |
+//! |-----------------------------------------------------|-------------------------------------|
+//! | `fish run.fish watch-run`                          | Watch run                           |
+//! | `fish run.fish watch-all-tests`                    | Watch all tests                     |
+//! | `fish run.fish watch-one-test <test_name>`         | Watch one test                      |
+//! | `fish run.fish watch-clippy`                       | Watch clippy                        |
+//! | `fish run.fish watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
 //!
 //! # References
 //!

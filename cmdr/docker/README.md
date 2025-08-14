@@ -1,7 +1,7 @@
 # Run the build in docker
 
 ```shell
-cd cmdr && nu run.nu build-release-in-docker
+cd cmdr && fish run.fish docker-build
 ```
 
 # Install docker & docker compose

@@ -299,7 +299,7 @@
 //! cargo install nu
 //!
 //! # Install development tools
-//! nu run.nu install-cargo-tools
+//! fish run.fish install-cargo-tools
 //! ```
 //!
 //! ## Running examples
@@ -308,13 +308,13 @@
 //!
 //! ```sh
 //! # Run examples interactively (choose from list)
-//! nu run.nu run-examples
+//! fish run.fish run-examples
 //!
 //! # Run examples with release optimizations
-//! nu run.nu run-examples --release
+//! fish run.fish run-examples --release
 //!
 //! # Run examples without logging
-//! nu run.nu run-examples --no-log
+//! fish run.fish run-examples --no-log
 //! ```
 //!
 //! You can also run examples directly:
@@ -333,35 +333,38 @@
 //!
 //! ```sh
 //! # Terminal 1: Monitor logs from examples
-//! nu run.nu log
+//! fish run.fish log
 //!
 //! # Terminal 2: Run examples interactively
-//! nu run.nu run-examples
+//! fish run.fish run-examples
 //! ```
 //!
 //! ## TUI-Specific Commands
+//!
 //! | Command                                 | Description                                      |
 //! | --------------------------------------- | ------------------------------------------------ |
-//! | `nu run.nu run-examples`                | Run TUI examples interactively with options      |
-//! | `nu run.nu run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis |
-//! | `nu run.nu run-examples-flamegraph-fold`| Generate perf-folded format for analysis         |
-//! | `nu run.nu bench`                       | Run benchmarks with real-time output             |
-//! | `nu run.nu log`                         | Monitor log files with smart detection           |
+//! | `fish run.fish run-examples`                | Run TUI examples interactively with options      |
+//! | `fish run.fish run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis |
+//! | `fish run.fish run-examples-flamegraph-fold`| Generate perf-folded format for analysis         |
+//! | `fish run.fish bench`                       | Run benchmarks with real-time output             |
+//! | `fish run.fish log`                         | Monitor log files with smart detection           |
 //!
 //! ## Testing and Development
+//!
 //! | Command                                | Description                         |
 //! | -------------------------------------- | ----------------------------------- |
-//! | `nu run.nu test`                       | Run all tests                       |
-//! | `nu run.nu watch-all-tests`            | Watch files, run all tests          |
-//! | `nu run.nu watch-one-test <pattern>`   | Watch files, run specific test      |
-//! | `nu run.nu clippy`                     | Run clippy with fixes               |
-//! | `nu run.nu watch-clippy`               | Watch files, run clippy             |
-//! | `nu run.nu docs`                       | Generate documentation               |
+//! | `fish run.fish test`                       | Run all tests                       |
+//! | `fish run.fish watch-all-tests`            | Watch files, run all tests          |
+//! | `fish run.fish watch-one-test <pattern>`   | Watch files, run specific test      |
+//! | `fish run.fish clippy`                     | Run clippy with fixes               |
+//! | `fish run.fish watch-clippy`               | Watch files, run clippy             |
+//! | `fish run.fish docs`                       | Generate documentation               |
 //!
 //! For complete development setup and all available commands, see the
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 //!
 //! ## Performance Analysis Features
+//! 
 //! - **Flamegraph profiling**: Generate SVG and perf-folded formats for performance
 //!   analysis
 //! - **Real-time benchmarking**: Run benchmarks with live output

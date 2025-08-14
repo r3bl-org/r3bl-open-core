@@ -37,10 +37,10 @@ If you're interested in contributing code, updating docs, etc., please follow th
 4. Make your changes and commit them with a descriptive commit message. Please read our
    [guide to writing a 📝 commit message](COMMIT_MESSAGE.md).
 5. Write tests when relevant.
-6. Run tests: `nu run.nu test` (works on all OSs) or simply `./run.nu test` (works on MacOS and
+6. Run tests: `fish run.fish test` (works on all OSs) or simply `./run.nu test` (works on MacOS and
    Linux). Take a look at
    [other scripts you can run](https://github.com/r3bl-org/r3bl-open-core/tree/main/tui#run-the-demo-locally).
-7. Run the code to make sure everything works `nu run.nu run` or `./run.nu run` if you are using
+7. Run the code to make sure everything works `fish run.fish run` or `./run.nu run` if you are using
    MacOS or Linux.
 8. Squash your commits into **one commit**.
 9. Push your changes to your forked repository.

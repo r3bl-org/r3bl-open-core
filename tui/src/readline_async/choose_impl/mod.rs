@@ -104,12 +104,13 @@
 //! # Introduction
 //!
 //! `choose_impl` allows you to add simple interactivity to your CLI app. It is not a full
-//! TUI, neither is it like [`crate::ReadlineAsyncContext`]. It simply allows you to provide
-//! a list of items and ask the user to choose one or more of them.
+//! TUI, neither is it like [`crate::ReadlineAsyncContext`]. It simply allows you to
+//! provide a list of items and ask the user to choose one or more of them.
 //!
 //! # Examples
 //!
-//! To run the examples, you can run `nu run.nu examples` in the `terminal_async` folder.
+//! To run the examples, you can run `fish run.fish examples` in the `terminal_async`
+//! folder.
 //!
 //! # Changelog
 //!
@@ -386,41 +387,41 @@
 //! Go to the `tui` folder and run the commands below. These commands are defined in the
 //! `./run` folder.
 //!
-//! | Command                                | Description                                |
-//! | -------------------------------------- | ------------------------------------------ |
-//! | `nu run.nu examples`                      | Run examples in the `./examples` folder    |
-//! | `nu run.nu piped`                         | Run binary with piped input                |
-//! | `nu run.nu build`                         | Build                                      |
-//! | `nu run.nu clean`                         | Clean                                      |
-//! | `nu run.nu all`                           | All                                        |
-//! | `nu run.nu examples-with-flamegraph-profiling` | Run examples with flamegraph profiling |
-//! | `nu run.nu test`                          | Run tests                                  |
-//! | `nu run.nu clippy`                        | Run clippy                                 |
-//! | `nu run.nu docs`                          | Build docs                                 |
-//! | `nu run.nu serve-docs`                    | Serve docs over `VSCode` Remote SSH session. |
-//! | `nu run.nu upgrade-deps`                  | Upgrade deps                               |
-//! | `nu run.nu rustfmt`                       | Run rustfmt                                |
+//! | Command                                             | Description                                          |
+//! |-----------------------------------------------------|------------------------------------------------------|
+//! | `fish run.fish examples`                           | Run examples in the `./examples` folder             |
+//! | `fish run.fish piped`                              | Run binary with piped input                         |
+//! | `fish run.fish build`                              | Build                                                |
+//! | `fish run.fish clean`                              | Clean                                                |
+//! | `fish run.fish all`                                | All                                                  |
+//! | `fish run.fish examples-with-flamegraph-profiling` | Run examples with flamegraph profiling              |
+//! | `fish run.fish test`                               | Run tests                                            |
+//! | `fish run.fish clippy`                             | Run clippy                                           |
+//! | `fish run.fish docs`                               | Build docs                                           |
+//! | `fish run.fish serve-docs`                         | Serve docs over `VSCode` Remote SSH session         |
+//! | `fish run.fish upgrade-deps`                       | Upgrade deps                                         |
+//! | `fish run.fish rustfmt`                            | Run rustfmt                                          |
 //!
 //! The following commands will watch for changes in the source folder and re-run:
 //!
-//! | Command                                             | Description                        |
-//! | --------------------------------------------------- | ---------------------------------- |
-//! | `nu run.nu watch-examples`                             | Watch run examples                 |
-//! | `nu run.nu watch-all-tests`                            | Watch all test                     |
-//! | `nu run.nu watch-one-test <test_name>`                 | Watch one test                     |
-//! | `nu run.nu watch-clippy`                               | Watch clippy                       |
-//! | `nu run.nu watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test |
+//! | Command                                                     | Description                             |
+//! |-------------------------------------------------------------|----------------------------------------|
+//! | `fish run.fish watch-examples`                             | Watch run examples                     |
+//! | `fish run.fish watch-all-tests`                            | Watch all test                         |
+//! | `fish run.fish watch-one-test <test_name>`                 | Watch one test                         |
+//! | `fish run.fish watch-clippy`                               | Watch clippy                           |
+//! | `fish run.fish watch-macro-expansion-one-test <test_name>` | Watch macro expansion for one test     |
 //!
 //! There's also a `run` script at the **top level folder** of the repo. It is intended to
 //! be used in a CI/CD environment w/ all the required arguments supplied or in
 //! interactive mode, where the user will be prompted for input.
 //!
-//! | Command                       | Description                        |
-//! | ----------------------------- | ---------------------------------- |
-//! | `nu run.nu all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD |
-//! | `nu run.nu build-full`           | This will build all the crates in the Rust workspace. It will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
-//! | `nu run.nu install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`,and `flamegraph` will all be installed in one go) |
-//! | `nu run.nu check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace |
+//! | Command                              | Description                                                                                                                                                                                                                                         |
+//! |--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+//! | `fish run.fish all`                  | Run all the tests, linting, formatting, etc. in one go. Used in CI/CD                                                                                                                                                                             |
+//! | `fish run.fish build-full`           | This will build all the crates in the Rust workspace. It will install all the required pre-requisite tools needed to work with this crate (what `install-cargo-tools` does) and clear the cargo cache, cleaning, and then do a really clean build. |
+//! | `fish run.fish install-cargo-tools`  | This will install all the required pre-requisite tools needed to work with this crate (things like `cargo-deny`,and `flamegraph` will all be installed in one go)                                                                              |
+//! | `fish run.fish check-licenses`       | Use `cargo-deny` to audit all licenses used in the Rust workspace                                                                                                                                                                                  |
 //!
 //! # References
 //!

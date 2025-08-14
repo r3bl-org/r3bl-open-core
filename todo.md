@@ -8,22 +8,25 @@
 - [x] publish the README.md from the rust-scratch project to developerlife.com as tutorial:
       https://developerlife.com/2025/08/10/pty-rust-osc-seq/
 - [x] configure serena mcp server for semantic code search
+- [x] Replace multiline copyright header w/ single line in all files
+- [x] Use r3bl-vscode-extension-pack https://github.com/r3bl-org/r3bl-vscode-extensions
+- [x] Remove nushell and replace all nushell scripts with fish and fzf
 - [x] add `pty` module and implement the following:
   - [x] single channel
     - [x] code
     - [x] example
     - [x] tests in [`task_test_pty`](docs/done/task_test_pty.md)
-    - [-] code review
+    - [⧗] code review
   - [x] dual channel
     - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
     - [x] example
     - [x] tests
-    - [ ] code review
-- [x] Replace multiline copyright header w/ single line in all files
-- [x] Use r3bl-vscode-extension-pack https://github.com/r3bl-org/r3bl-vscode-extensions
+    - [⧗] code review
 - [ ] implement the upgrade code in
-  - [-] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
-  - [ ] to use the code above: https://github.com/r3bl-org/r3bl-open-core/issues/437
+  - [⧗] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
+  - [ ] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
+- [ ] new feature to recall claude history in r3bl-cmdr:
+      https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
 - [ ] make YT video on the research (in rust-scratch) issue
 - [ ] make YT video on the implementation (to r3bl-cmdr) issue
 
@@ -139,6 +142,7 @@
 
 # create sub-issues for `giti`: https://github.com/r3bl-org/r3bl-open-core/issues/423
 
+- [ ] `giti worktree/workspace` -> list, create, delete, switch git worktrees
 - [ ] `giti branch rename` -> rename an existing branch to other
 - [ ] `giti show <name>` -> choose an older version of a file to checkout to `Downloads` and
       optionally view in the `editor_component` itself in a TUI applet

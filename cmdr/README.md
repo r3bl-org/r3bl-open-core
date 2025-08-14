@@ -17,7 +17,7 @@
 - [Run `edi` binary target](#run-edi-binary-target)
 - [Build, run, test tasks](#build-run-test-tasks)
   - [Prerequisites](#prerequisites)
-  - [Nushell scripts to build, run, test etc.](#nushell-scripts-to-build-run-test-etc)
+  - [Fish scripts to build, run, test etc.](#fish-scripts-to-build-run-test-etc)
 
 <!-- /TOC -->
 
@@ -158,14 +158,14 @@ To run from binary:
 To run from source:
 - Clone the `r3bl-open-core` repo.
 - Run `./bootstrap.sh` to install all required tools (Linux/macOS).
-- Run `nu run.nu install-cmdr` to install `giti` locally to `~/.cargo/bin`.
+- Run `fish run.fish install-cmdr` to install `giti` locally to `~/.cargo/bin`.
 - Run `giti` from anywhere on your system.
 - Try `giti --help` to see the available commands.
 - To delete one or more branches in your repo run `giti branch delete`.
 - To checkout a branch run `giti branch checkout`.
 - To create a new branch run `giti branch new`.
 - If you want to generate log output for `giti`, run `giti -l`. For example, `giti -l
-  branch delete`. To view this log output run `nu run.nu log`.
+  branch delete`. To view this log output run `fish run.fish log`.
 
 ## Run `edi` binary target
 
@@ -186,12 +186,12 @@ To run from binary:
 To run from source:
 - Clone the `r3bl-open-core` repo.
 - Run `./bootstrap.sh` to install all required tools (Linux/macOS).
-- Run `nu run.nu install-cmdr` to install `edi` locally to `~/.cargo/bin`.
+- Run `fish run.fish install-cmdr` to install `edi` locally to `~/.cargo/bin`.
 - Run `edi` from anywhere on your system.
 - Try `edi --help` to see the available commands.
 - To open an existing file, run `edi <file_name>`. For example, `edi README.md`.
 - If you want to generate log output for `edi`, run `edi -l`. For example, `edi -l
-  README.md`. To view this log output run `nu run.nu log`.
+  README.md`. To view this log output run `fish run.fish log`.
 
 ## Build, run, test tasks
 
@@ -212,32 +212,35 @@ This script automatically installs:
 For manual installation:
 1. Install the Rust toolchain using `rustup` by following the instructions [here](https://rustup.rs/).
 2. Install [`nu`](https://crates.io/crates/nu) shell: `cargo install nu`
-3. Install development tools: `nu run.nu install-cargo-tools`
+3. Install development tools: `fish run.fish install-cargo-tools`
 
 ### Binary Development Commands
 
 For cmdr binary development, use these commands from the repository root:
 
 #### Building and Installing Binaries
-| Command                        | Description                                     |
-| ------------------------------ | ----------------------------------------------- |
-| `nu run.nu install-cmdr`       | Install cmdr binaries to ~/.cargo/bin           |
-| `nu run.nu run-binaries`       | Interactively run edi, giti, or rc              |
-| `nu run.nu docker-build`       | Build release binaries in Docker                |
-| `nu run.nu log`                | Monitor log files with smart detection          |
+
+| Command                      | Description                             |
+|------------------------------|-----------------------------------------|
+| `fish run.fish install-cmdr` | Install cmdr binaries to ~/.cargo/bin  |
+| `fish run.fish run-binaries` | Interactively run edi, giti, or rc     |
+| `fish run.fish docker-build` | Build release binaries in Docker       |
+| `fish run.fish log`          | Monitor log files with smart detection |
 
 #### Testing and Development
-| Command                        | Description                                     |
-| ------------------------------ | ----------------------------------------------- |
-| `nu run.nu test`               | Run all tests                                   |
-| `nu run.nu clippy`             | Run clippy with fixes                           |
-| `nu run.nu watch-all-tests`    | Watch files, run all tests                      |
-| `nu run.nu watch-clippy`       | Watch files, run clippy                         |
+
+| Command                         | Description                     |
+|---------------------------------|---------------------------------|
+| `fish run.fish test`            | Run all tests                   |
+| `fish run.fish clippy`          | Run clippy with fixes           |
+| `fish run.fish watch-all-tests` | Watch files, run all tests     |
+| `fish run.fish watch-clippy`    | Watch files, run clippy        |
 
 For complete development setup and all available commands, see the
 [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
 #### Binary Development Features
+
 - **Interactive binary selection**: Choose which binary to run with fuzzy search
 - **Smart log monitoring**: Automatically detects and manages log files from binaries
 - **Docker builds**: Build release binaries in isolated Docker environment

@@ -161,7 +161,7 @@
   - [ ] Document benchmark results in this file
 
 - [ ] Profile the new implementation
-  - [ ] Run `nu run.nu examples-with-flamegraph-profiling-detailed-perf-fold`
+  - [ ] Run `fish run.fish examples-with-flamegraph-profiling-detailed-perf-fold`
   - [ ] Select `profile_textwrap` example
   - [ ] Analyze flamegraph for hot paths
   - [ ] Verify reduction from 45M samples baseline

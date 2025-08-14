@@ -360,7 +360,7 @@ cd r3bl-open-core
 The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script will:
 
 - Install Rust toolchain (rustup)
-- Install Nushell shell
+- Install Fish shell and fzf
 - Install file watchers (inotifywait on Linux, fswatch on macOS)
 - Install all required cargo development tools
 - Detect your package manager automatically
@@ -373,30 +373,32 @@ If you prefer manual installation or are on Windows:
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Install Nushell
-cargo install nu
+# Install Fish and fzf (via package manager)
+# Ubuntu/Debian: sudo apt install fish fzf
+# macOS: brew install fish fzf
+# Or run ./bootstrap.sh for automatic detection
 
 # Install development tools
-nu run.nu install-cargo-tools
+fish run.fish install-cargo-tools
 ```
 
 ## Build the workspace and run tests
 
-There's a unified [`nushell`](https://www.nushell.sh/) script that you can use to run the build and
+There's a unified [`fish`](https://fishshell.com/) script that you can use to run the build and
 release pipeline for this workspace, and more (local only operations).
 
-To get a list of available commands, you can review the `nushell` script in the root of this repo
-[`run.nu`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.nu). To see all available
+To get a list of available commands, you can review the `fish` script in the root of this repo
+[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish). To see all available
 commands:
 
 ```sh
-nu run.nu
+fish run.fish
 ```
 
 You should see output that looks like this:
 
 ```text
-Usage: run <command> [args]
+Usage: fish run.fish <command> [args]
 
 Workspace-wide commands:
     all                  Run all major checks
@@ -440,18 +442,18 @@ Other commands:
 
 ### Key Commands
 
-- `nu run.nu all` - Run all major checks (build, test, clippy, docs, audit, format)
-- `nu run.nu build` - Build the entire workspace
-- `nu run.nu test` - Run all tests across the workspace
-- `nu run.nu watch-all-tests` - Watch for file changes and run tests automatically
-- `nu run.nu run-examples` - Run TUI examples interactively
-- `nu run.nu run-binaries` - Run cmdr binaries (edi, giti, rc) interactively
+- `fish run.fish all` - Run all major checks (build, test, clippy, docs, audit, format)
+- `fish run.fish build` - Build the entire workspace
+- `fish run.fish test` - Run all tests across the workspace
+- `fish run.fish watch-all-tests` - Watch for file changes and run tests automatically
+- `fish run.fish run-examples` - Run TUI examples interactively
+- `fish run.fish run-binaries` - Run cmdr binaries (edi, giti, rc) interactively
 
 ### Build Cache (using sccache) Verification
 
 This project uses [sccache](https://github.com/mozilla/sccache) to speed up Rust compilation by
 caching build artifacts (configured in the `.cargo/config.toml` file). After running
-`nu run.nu install-cargo-tools`, you can verify sccache is working:
+`fish run.fish install-cargo-tools`, you can verify sccache is working:
 
 ```sh
 sccache --show-stats
@@ -479,7 +481,7 @@ There is no need to restart the server, as it is designed to be "lazy". And runn
 
 ### Unified Script Architecture
 
-The root-level `run.nu` script consolidates functionality that was previously scattered across
+The root-level `run.fish` script consolidates functionality that was previously scattered across
 multiple workspace-specific scripts. This unified approach provides:
 
 - **Workspace-wide commands** that operate on the entire project
