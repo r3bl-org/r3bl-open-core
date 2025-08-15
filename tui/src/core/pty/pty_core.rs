@@ -246,12 +246,14 @@ impl ExitStatusConversion for portable_pty::ExitStatus {
     fn to_std_exit_status(self) -> std::process::ExitStatus {
         #[cfg(unix)]
         use std::os::unix::process::ExitStatusExt;
+        #[cfg(windows)]
+        use std::os::windows::process::ExitStatusExt;
 
         if self.success() {
             // Success case: use explicit success status
             #[cfg(unix)]
             return std::process::ExitStatus::from_raw(0);
-            #[cfg(not(unix))]
+            #[cfg(windows)]
             return std::process::ExitStatus::from_raw(0);
         }
         // Failure case: encode exit code properly
@@ -261,16 +263,30 @@ impl ExitStatusConversion for portable_pty::ExitStatus {
         let wait_status = if code <= 255 {
             #[allow(clippy::cast_possible_wrap)]
             let code_i32 = code as i32;
-            code_i32 << 8
+            #[cfg(unix)]
+            {
+                code_i32 << 8
+            }
+            #[cfg(windows)]
+            {
+                code_i32
+            }
         } else {
             // If exit code is too large, clamp to 255 and encode
-            255_i32 << 8
+            #[cfg(unix)]
+            {
+                255_i32 << 8
+            }
+            #[cfg(windows)]
+            {
+                255_i32
+            }
         };
 
         #[cfg(unix)]
         return std::process::ExitStatus::from_raw(wait_status);
-        #[cfg(not(unix))]
-        return std::process::ExitStatus::from_raw(wait_status);
+        #[cfg(windows)]
+        return std::process::ExitStatus::from_raw(wait_status as u32);
     }
 }
 
