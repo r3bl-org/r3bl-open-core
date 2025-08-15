@@ -83,6 +83,9 @@ The [`done`](done) folder contains:
 - [`task_dual_channel_pty.md`](done/task_dual_channel_pty.md) - Dual channel PTY interactive design
   documentation for bidirectional communication with child processes running in pseudo-terminals,
   including implementation considerations and usage examples
+- [`task_prd_ch_bin.md`](done/task_prd_ch_bin.md) - Complete implementation of the `ch` binary
+  in r3bl-cmdr crate for recalling and copying Claude Code prompt history, including TUI interface,
+  clipboard integration, cross-platform support, and comprehensive image handling functionality
 
 ### Video Documentation
 

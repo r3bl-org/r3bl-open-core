@@ -1,0 +1,52 @@
+{
+  "projects": {
+    "/home/nazmul/github/r3bl-open-core": {
+      "history": [
+        {
+          "display": "take a look at @docs/task_prd_ch_bin.md and use it as your todo list for our session today",
+          "pastedContents": {}
+        },
+        {
+          "display": "Help me implement a new feature for copying previous Claude prompts to clipboard",
+          "pastedContents": {}
+        },
+        {
+          "display": "Show me the structure of the cmdr crate and existing binaries",
+          "pastedContents": {}
+        },
+        {
+          "display": "Fix the compilation errors in the ch binary implementation",
+          "pastedContents": {}
+        },
+        {
+          "display": "Add proper error handling for non-interactive terminals",
+          "pastedContents": {}
+        },
+        {
+          "display": "Implement serde deserialization for Claude configuration files",
+          "pastedContents": {}
+        },
+        {
+          "display": "Create a TUI interface using the choose() function for prompt selection",
+          "pastedContents": {}
+        },
+        {
+          "display": "Test the clipboard integration and verify prompts are copied correctly",
+          "pastedContents": {}
+        }
+      ]
+    },
+    "/home/nazmul/github/some-other-project": {
+      "history": [
+        {
+          "display": "Help me debug this React component",
+          "pastedContents": {}
+        },
+        {
+          "display": "Explain the difference between useState and useReducer",
+          "pastedContents": {}
+        }
+      ]
+    }
+  }
+}

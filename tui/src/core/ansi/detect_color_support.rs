@@ -223,6 +223,158 @@ pub mod global_color_support {
     }
 }
 
+/// # Terminal Hyperlink (OSC 8) Support Detection with Performance Optimization
+///
+/// This module provides efficient hyperlink support detection for terminal applications
+/// with the same performance-critical caching strategy used for color detection.
+///
+/// ## Blacklist Approach
+///
+/// This implementation uses a blacklist approach where hyperlink support is assumed to be
+/// available by default, and only disabled for terminals known to lack OSC 8 support.
+/// This approach is future-proof as most modern terminals (2018+) support OSC 8.
+pub mod global_hyperlink_support {
+    use super::{AtomicI8, HyperlinkSupport, Ordering,
+                examine_env_vars_to_determine_hyperlink_support};
+
+    /// Global override for hyperlink support detection.
+    ///
+    /// - `NOT_SET_VALUE`: Detection not performed yet
+    /// - `0`: `NotSupported` (blacklisted terminal)
+    /// - `1`: Supported (default assumption)
+    static HYPERLINK_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+    /// Cached result of hyperlink support detection.
+    ///
+    /// Uses the same caching strategy as color support to avoid repeated expensive
+    /// environment variable lookups.
+    static HYPERLINK_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
+
+    const NOT_SET_VALUE: i8 = -1;
+
+    /// Detects hyperlink support with caching for performance.
+    ///
+    /// This is the primary entry point for hyperlink support detection.
+    /// It implements the same memoization strategy as color detection to prevent
+    /// performance bottlenecks.
+    ///
+    /// # Returns
+    /// - `HyperlinkSupport::Supported` - Terminal supports OSC 8 hyperlinks (default)
+    /// - `HyperlinkSupport::NotSupported` - Terminal is known to lack OSC 8 support
+    #[must_use]
+    pub fn detect() -> HyperlinkSupport {
+        // Check for global override first
+        if let Ok(override_value) = try_get_override() {
+            return override_value;
+        }
+
+        // Check for cached value
+        if let Ok(cached_value) = try_get_cached() {
+            return cached_value;
+        }
+
+        // Perform detection and cache result
+        let detected = examine_env_vars_to_determine_hyperlink_support();
+        set_cached(detected);
+        detected
+    }
+
+    /// Sets a global override for hyperlink support detection.
+    ///
+    /// This allows applications to force enable/disable hyperlink support
+    /// regardless of terminal detection.
+    pub fn set_override(hyperlink_support: HyperlinkSupport) {
+        let value = hyperlink_support as i8;
+        HYPERLINK_SUPPORT_GLOBAL.store(value, Ordering::Release);
+    }
+
+    /// Clears the global override, returning to automatic detection.
+    pub fn clear_override() {
+        HYPERLINK_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::Release);
+    }
+
+    /// Clears the cached detection result, forcing re-detection on next call.
+    pub fn clear_cache() {
+        HYPERLINK_SUPPORT_CACHED.store(NOT_SET_VALUE, Ordering::Release);
+    }
+
+    /// Attempts to get the cached hyperlink support result.
+    pub fn try_get_cached() -> Result<HyperlinkSupport, ()> {
+        let it = HYPERLINK_SUPPORT_CACHED.load(Ordering::Acquire);
+        HyperlinkSupport::try_from(it)
+    }
+
+    /// Sets the cached hyperlink support result.
+    fn set_cached(hyperlink_support: HyperlinkSupport) {
+        let value = hyperlink_support as i8;
+        HYPERLINK_SUPPORT_CACHED.store(value, Ordering::Release);
+    }
+
+    /// Attempts to get the global override result.
+    pub fn try_get_override() -> Result<HyperlinkSupport, ()> {
+        let it = HYPERLINK_SUPPORT_GLOBAL.load(Ordering::Acquire);
+        HyperlinkSupport::try_from(it)
+    }
+}
+
+/// Determine whether OSC 8 hyperlinks are supported heuristically.
+///
+/// ## Blacklist Strategy
+///
+/// This function implements a blacklist approach where hyperlink support is assumed
+/// to be available by default, and only disabled for terminals known to lack support:
+///
+/// - Apple Terminal (`TERM_PROGRAM=Apple_Terminal`)
+/// - xterm (legacy versions)
+/// - rxvt/urxvt family
+/// - Other legacy terminals
+///
+/// ## Environment Variables Checked
+///
+/// - `NO_HYPERLINKS` - Explicit opt-out (similar to `NO_COLOR`)
+/// - `TERM_PROGRAM` - Specific terminal detection
+/// - `TERM` - Terminal type detection
+///
+/// ## Performance Note
+///
+/// Like color detection, this function is expensive due to environment variable
+/// lookups and should only be called through [`global_hyperlink_support::detect()`].
+#[must_use]
+pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
+    // Check for explicit opt-out
+    if env::var("NO_HYPERLINKS").is_ok() {
+        return HyperlinkSupport::NotSupported;
+    }
+
+    // Check for known unsupported terminals by TERM_PROGRAM
+    if let Ok(term_program) = env::var("TERM_PROGRAM")
+        && term_program == "Apple_Terminal"
+    {
+        return HyperlinkSupport::NotSupported;
+    }
+
+    // Check for known unsupported terminals by TERM
+    if let Ok(term) = env::var("TERM") {
+        // xterm (unless it's a modern variant with 256color support)
+        if term == "xterm" || term.starts_with("xterm-") && !term.contains("256color") {
+            return HyperlinkSupport::NotSupported;
+        }
+
+        // rxvt family
+        if term.starts_with("rxvt") || term.starts_with("urxvt") {
+            return HyperlinkSupport::NotSupported;
+        }
+
+        // Other known unsupported terminals
+        if term == "linux" || term == "screen" || term == "dumb" {
+            return HyperlinkSupport::NotSupported;
+        }
+    }
+
+    // Default to supported (modern terminal assumption)
+    HyperlinkSupport::Supported
+}
+
 /// Determine whether color is supported heuristically. This is based on the environment
 /// variables.
 ///
@@ -316,7 +468,41 @@ pub enum ColorSupport {
     NoColor,
 }
 
-/// These trail implementations allow us to use `ColorSupport` and `i8` interchangeably.
+/// Represents hyperlink (OSC 8) support in the terminal.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum HyperlinkSupport {
+    NotSupported,
+    Supported,
+}
+
+/// These trait implementations allow us to use `HyperlinkSupport` and `i8`
+/// interchangeably.
+mod convert_between_hyperlink_and_i8 {
+    impl TryFrom<i8> for super::HyperlinkSupport {
+        type Error = ();
+
+        #[rustfmt::skip]
+        fn try_from(value: i8) -> Result<Self, Self::Error> {
+            match value {
+                0 => Ok(super::HyperlinkSupport::NotSupported),
+                1 => Ok(super::HyperlinkSupport::Supported),
+                _ => Err(()),
+            }
+        }
+    }
+
+    impl From<super::HyperlinkSupport> for i8 {
+        #[rustfmt::skip]
+        fn from(hyperlink_support: super::HyperlinkSupport) -> Self {
+            match hyperlink_support {
+                super::HyperlinkSupport::NotSupported => 0,
+                super::HyperlinkSupport::Supported => 1,
+            }
+        }
+    }
+}
+
+/// These trait implementations allow us to use `ColorSupport` and `i8` interchangeably.
 mod convert_between_color_and_i8 {
     impl TryFrom<i8> for super::ColorSupport {
         type Error = ();
@@ -472,5 +658,232 @@ mod tests {
     fn cycle_5() {
         global_color_support::clear_override();
         assert_eq!(global_color_support::try_get_override(), Err(()));
+    }
+
+    mod hyperlink_detection_tests {
+        use serial_test::serial;
+
+        use super::*;
+
+        #[test]
+        #[serial]
+        fn test_no_hyperlinks_env_var() {
+            // Mock NO_HYPERLINKS environment variable
+            unsafe {
+                global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
+                std::env::set_var("NO_HYPERLINKS", "1");
+                let result = examine_env_vars_to_determine_hyperlink_support();
+                assert_eq!(result, HyperlinkSupport::NotSupported);
+                std::env::remove_var("NO_HYPERLINKS");
+            }
+        }
+
+        #[test]
+        #[serial]
+        fn test_apple_terminal_blacklist() {
+            // Mock Apple Terminal
+            unsafe {
+                global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
+                std::env::set_var("TERM_PROGRAM", "Apple_Terminal");
+                let result = examine_env_vars_to_determine_hyperlink_support();
+                assert_eq!(result, HyperlinkSupport::NotSupported);
+                std::env::remove_var("TERM_PROGRAM");
+            }
+        }
+
+        #[test]
+        #[serial]
+        fn test_xterm_blacklist() {
+            unsafe {
+                // Test basic xterm
+                global_hyperlink_support::clear_cache();
+                std::env::set_var("TERM", "xterm");
+                let result = examine_env_vars_to_determine_hyperlink_support();
+                assert_eq!(result, HyperlinkSupport::NotSupported);
+
+                // Test xterm without 256color
+                global_hyperlink_support::clear_cache();
+                std::env::set_var("TERM", "xterm-color");
+                let result = examine_env_vars_to_determine_hyperlink_support();
+                assert_eq!(result, HyperlinkSupport::NotSupported);
+
+                std::env::remove_var("TERM");
+            }
+        }
+
+        #[test]
+        #[serial]
+        fn test_xterm_256color_supported() {
+            unsafe {
+                // xterm with 256color should be supported
+                global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
+                std::env::set_var("TERM", "xterm-256color");
+                let result = examine_env_vars_to_determine_hyperlink_support();
+                assert_eq!(result, HyperlinkSupport::Supported);
+                std::env::remove_var("TERM");
+            }
+        }
+
+        #[test]
+        #[serial]
+        fn test_rxvt_family_blacklist() {
+            let unsupported_terms = ["rxvt", "rxvt-unicode", "urxvt", "urxvt-256color"];
+
+            unsafe {
+                for term in &unsupported_terms {
+                    global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
+                    std::env::set_var("TERM", term);
+                    let result = examine_env_vars_to_determine_hyperlink_support();
+                    assert_eq!(
+                        result,
+                        HyperlinkSupport::NotSupported,
+                        "Terminal {} should not support hyperlinks",
+                        term
+                    );
+                }
+
+                std::env::remove_var("TERM");
+            }
+        }
+
+        #[test]
+        #[serial]
+        fn test_legacy_terminals_blacklist() {
+            let unsupported_terms = ["linux", "screen", "dumb"];
+
+            unsafe {
+                for term in &unsupported_terms {
+                    global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
+                    std::env::set_var("TERM", term);
+                    let result = examine_env_vars_to_determine_hyperlink_support();
+                    assert_eq!(
+                        result,
+                        HyperlinkSupport::NotSupported,
+                        "Terminal {} should not support hyperlinks",
+                        term
+                    );
+                }
+
+                std::env::remove_var("TERM");
+            }
+        }
+
+        #[test]
+        #[serial]
+        fn test_modern_terminals_supported() {
+            let supported_terms = [
+                "xterm-256color",
+                "screen-256color",
+                "tmux-256color",
+                "alacritty",
+                "kitty",
+                "wezterm",
+                "foot",
+                "gnome-terminal",
+                "konsole",
+                "tilix",
+            ];
+
+            unsafe {
+                for term in &supported_terms {
+                    global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
+                    std::env::set_var("TERM", term);
+                    let result = examine_env_vars_to_determine_hyperlink_support();
+                    assert_eq!(
+                        result,
+                        HyperlinkSupport::Supported,
+                        "Terminal {} should support hyperlinks",
+                        term
+                    );
+                }
+
+                std::env::remove_var("TERM");
+            }
+        }
+
+        #[test]
+        #[serial]
+        fn test_default_to_supported() {
+            // Clear environment variables to test default behavior
+            unsafe {
+                std::env::remove_var("NO_HYPERLINKS");
+                std::env::remove_var("TERM_PROGRAM");
+                std::env::remove_var("TERM");
+            }
+
+            let result = examine_env_vars_to_determine_hyperlink_support();
+            assert_eq!(result, HyperlinkSupport::Supported);
+        }
+
+        #[test]
+        #[serial]
+        fn test_global_hyperlink_support_caching() {
+            // Clear any existing state
+            global_hyperlink_support::clear_override();
+            global_hyperlink_support::clear_cache();
+
+            // First call should detect and cache
+            let first_result = global_hyperlink_support::detect();
+
+            // Verify that cache now has a value
+            assert_eq!(global_hyperlink_support::try_get_cached(), Ok(first_result));
+
+            // Second call should return the same cached result
+            let second_result = global_hyperlink_support::detect();
+            assert_eq!(first_result, second_result);
+
+            // Clear cache and verify it's cleared
+            global_hyperlink_support::clear_cache();
+            assert!(global_hyperlink_support::try_get_cached().is_err());
+        }
+
+        #[test]
+        #[serial]
+        fn test_global_hyperlink_support_override() {
+            // Test setting override to NotSupported
+            global_hyperlink_support::set_override(HyperlinkSupport::NotSupported);
+            assert_eq!(
+                global_hyperlink_support::try_get_override(),
+                Ok(HyperlinkSupport::NotSupported)
+            );
+            assert_eq!(
+                global_hyperlink_support::detect(),
+                HyperlinkSupport::NotSupported
+            );
+
+            // Test setting override to Supported
+            global_hyperlink_support::set_override(HyperlinkSupport::Supported);
+            assert_eq!(
+                global_hyperlink_support::try_get_override(),
+                Ok(HyperlinkSupport::Supported)
+            );
+            assert_eq!(
+                global_hyperlink_support::detect(),
+                HyperlinkSupport::Supported
+            );
+
+            // Test clearing override
+            global_hyperlink_support::clear_override();
+            assert_eq!(global_hyperlink_support::try_get_override(), Err(()));
+        }
+
+        #[test]
+        fn test_hyperlink_support_conversion() {
+            // Test i8 to HyperlinkSupport conversion
+            assert_eq!(
+                HyperlinkSupport::try_from(0),
+                Ok(HyperlinkSupport::NotSupported)
+            );
+            assert_eq!(
+                HyperlinkSupport::try_from(1),
+                Ok(HyperlinkSupport::Supported)
+            );
+            assert_eq!(HyperlinkSupport::try_from(2), Err(()));
+            assert_eq!(HyperlinkSupport::try_from(-1), Err(()));
+
+            // Test HyperlinkSupport to i8 conversion
+            assert_eq!(i8::from(HyperlinkSupport::NotSupported), 0);
+            assert_eq!(i8::from(HyperlinkSupport::Supported), 1);
+        }
     }
 }

@@ -226,13 +226,14 @@ pub fn control_char_to_bytes(ctrl: &ControlChar) -> Cow<'static, [u8]> {
     }
 }
 
-/// Extension trait for converting portable_pty::ExitStatus to std::process::ExitStatus.
+/// Extension trait for converting `portable_pty::ExitStatus` to
+/// `std::process::ExitStatus`.
 ///
-/// This trait provides cross-platform compatible conversion from portable_pty's
+/// This trait provides cross-platform compatible conversion from `portable_pty`'s
 /// exit status type to the standard library's exit status type, handling platform
 /// differences properly.
 pub trait ExitStatusConversion {
-    /// Converts a portable_pty::ExitStatus to std::process::ExitStatus.
+    /// Converts a `portable_pty::ExitStatus` to `std::process::ExitStatus`.
     ///
     /// This method handles cross-platform exit status conversion properly:
     /// - On success: Uses explicit success status (exit code 0)
@@ -252,23 +253,24 @@ impl ExitStatusConversion for portable_pty::ExitStatus {
             return std::process::ExitStatus::from_raw(0);
             #[cfg(not(unix))]
             return std::process::ExitStatus::from_raw(0);
-        } else {
-            // Failure case: encode exit code properly
-            let code = self.exit_code();
-
-            // Ensure we don't overflow when shifting for Unix wait status format
-            let wait_status = if code <= 255 {
-                (code as i32) << 8
-            } else {
-                // If exit code is too large, clamp to 255 and encode
-                255_i32 << 8
-            };
-
-            #[cfg(unix)]
-            return std::process::ExitStatus::from_raw(wait_status);
-            #[cfg(not(unix))]
-            return std::process::ExitStatus::from_raw(wait_status);
         }
+        // Failure case: encode exit code properly
+        let code = self.exit_code();
+
+        // Ensure we don't overflow when shifting for Unix wait status format
+        let wait_status = if code <= 255 {
+            #[allow(clippy::cast_possible_wrap)]
+            let code_i32 = code as i32;
+            code_i32 << 8
+        } else {
+            // If exit code is too large, clamp to 255 and encode
+            255_i32 << 8
+        };
+
+        #[cfg(unix)]
+        return std::process::ExitStatus::from_raw(wait_status);
+        #[cfg(not(unix))]
+        return std::process::ExitStatus::from_raw(wait_status);
     }
 }
 

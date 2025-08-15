@@ -1,0 +1,31 @@
+{
+  "projects": {
+    "/home/nazmul/github/r3bl-open-core": {
+      "history": [
+        {
+          "display": "Multiple screenshots from testing [Image #1] [Image #2] [Image #3]",
+          "pastedContents": {
+            "1": {
+              "id": 1,
+              "type": "image",
+              "content": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+              "mediaType": "image/png"
+            },
+            "2": {
+              "id": 2,
+              "type": "image",
+              "content": "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDAREAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/",
+              "mediaType": "image/jpeg"
+            },
+            "3": {
+              "id": 3,
+              "type": "image",
+              "content": "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+              "mediaType": "image/gif"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

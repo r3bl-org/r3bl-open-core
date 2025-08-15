@@ -116,6 +116,9 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                             OscEvent::IndeterminateProgress => {
                                 println!("{GREEN}⏳ Build in progress (indeterminate){RESET}");
                             }
+                            OscEvent::Hyperlink { uri, text } => {
+                                println!("{GREEN}🔗 Hyperlink detected: {text} -> {uri}{RESET}");
+                            }
                         }
                     }
                     PtyOutputEvent::Exit(_) | PtyOutputEvent::Output(_) | PtyOutputEvent::UnexpectedExit(_) | PtyOutputEvent::WriteError(_) => {

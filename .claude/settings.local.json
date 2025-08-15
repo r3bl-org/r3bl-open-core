@@ -68,7 +68,8 @@
       "mcp__serena__onboarding",
       "mcp__serena__think_about_collected_information",
       "mcp__serena__think_about_task_adherence",
-      "mcp__serena__think_about_whether_you_are_done"
+      "mcp__serena__think_about_whether_you_are_done",
+      "WebSearch"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

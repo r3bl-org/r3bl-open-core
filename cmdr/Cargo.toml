@@ -37,6 +37,10 @@ path = "src/bin/edi.rs"
 name = "rc"
 path = "src/bin/rc.rs"
 
+[[bin]]
+name = "ch"
+path = "src/bin/ch.rs"
+
 [lib]
 name = "r3bl_cmdr"
 path = "src/lib.rs"
@@ -62,6 +66,9 @@ clap = { version = "4.5.37", features = ["derive", "wrap_help", "help"] }
 # serde-json.
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+
+# Base64 decoding for image handling.
+base64 = "0.22.1"
 
 # Open URLs.
 open = "5.3.2"

@@ -121,11 +121,15 @@ pub fn get_self_bin_name() -> InlineString {
 }
 
 /// Get the emoji representing the currently running executable (at run time).
+/// When adding new binaries make sure to update this function to return the
+/// correct emoji for the new binary.
 #[must_use]
 pub fn get_self_bin_emoji() -> String {
     match get_self_bin_name().as_str() {
         "giti" => "🐱".to_string(),
         "edi" => "🦜".to_string(),
+        "ch" => "🔮".to_string(),
+        "rc" => "🐒".to_string(),
         _ => "👾".to_string(),
     }
 }
@@ -320,6 +324,10 @@ fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>
                 spinner.update_message(format!(
                     "Installing {crate_name}... (error occurred)"
                 ));
+            }
+            OscEvent::Hyperlink { .. } => {
+                // Hyperlinks aren't relevant for cargo install progress,
+                // so we ignore them here
             }
         }
     }

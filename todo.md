@@ -25,7 +25,8 @@
 - [␩] implement the upgrade code in
   - [x] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
   - [␩] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
-- [ ] new feature to recall claude history in r3bl-cmdr:
+- [x] new feature to recall claude history in r3bl-cmdr
+      [`task_prd_ch_bin`](`docs/done/task_prd_ch_bin.md`):
       https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
 - [ ] make YT video on the research (in rust-scratch) issue
 - [ ] make YT video on the implementation (to r3bl-cmdr) issue

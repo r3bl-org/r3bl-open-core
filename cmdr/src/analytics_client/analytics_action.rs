@@ -12,6 +12,8 @@ pub enum AnalyticsAction {
     EdiFileOpenSingle,
     EdiFileOpenMultiple,
     EdiFileSave,
+    ChAppStart,
+    ChFailedToRun,
     MachineIdProxyCreate,
 }
 
@@ -27,6 +29,8 @@ impl std::fmt::Display for AnalyticsAction {
             AnalyticsAction::EdiFileOpenSingle =>     "edi file open one file",
             AnalyticsAction::EdiFileOpenMultiple =>   "edi file open many files",
             AnalyticsAction::EdiFileSave =>           "edi file save",
+            AnalyticsAction::ChAppStart =>            "ch app start",
+            AnalyticsAction::ChFailedToRun =>         "ch failed to run",
             AnalyticsAction::MachineIdProxyCreate =>  "proxy machine id create",
         };
         write!(f, "{action}")
