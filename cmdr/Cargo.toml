@@ -1,16 +1,16 @@
 [package]
 name = "r3bl-cmdr"
-version = "0.0.21"
+version = "0.0.22"
 readme = "README.md"
 edition = "2024"
 homepage = "https://r3bl.com"
 license = "Apache-2.0"
 
 description = """
-A TUI app suite for developers. Includes a Markdown editor `edi` and a git client `giti`.
+A TUI app suite for developers. Includes a Markdown editor `edi`, a git client `giti`, a Claude Code helper `ch`.
 """
 # At most 5 keywords w/ no spaces, each has max length of 20 char.
-keywords = ["tui", "editor", "git"]
+keywords = ["tui", "editor", "git", "claude"]
 categories = ["command-line-interface", "command-line-utilities"]
 
 repository = "https://github.com/r3bl-org/r3bl-open-core"
@@ -50,7 +50,7 @@ path = "src/lib.rs"
 [dependencies]
 # R3BL crates (from this mono repo).
 r3bl_analytics_schema = { path = "../analytics_schema", version = "0.0.3" } # version is required to publish to crates.io
-r3bl_tui = { path = "../tui", version = "0.7.3" }                           # version is required to publish to crates.io
+r3bl_tui = { path = "../tui", version = "0.7.4" }                           # version is required to publish to crates.io
 
 # HTTP client for analytics_client.
 # Reqwest (HTTP client). Use `rustls` instead of `openssl` for TLS support.

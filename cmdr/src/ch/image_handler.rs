@@ -27,6 +27,10 @@ pub fn count_images_in_history_item(history_item: &HistoryItem) -> usize {
 }
 
 /// Parse pasted contents to extract images and text
+///
+/// # Errors
+///
+/// Returns an error if the JSON deserialization fails for any content entry
 pub fn parse_pasted_contents(
     pasted_contents: Value,
 ) -> CommonResult<ParsedPastedContents> {
@@ -104,6 +108,10 @@ pub fn media_type_to_extension(media_type: &str) -> &str {
 }
 
 /// Decode base64 image data
+///
+/// # Errors
+///
+/// Returns an error if the base64 decoding fails
 pub fn decode_base64_image(base64_data: &str) -> CommonResult<Vec<u8>> {
     general_purpose::STANDARD
         .decode(base64_data)
@@ -112,6 +120,11 @@ pub fn decode_base64_image(base64_data: &str) -> CommonResult<Vec<u8>> {
 }
 
 /// Get the Downloads directory for the current platform
+///
+/// # Errors
+///
+/// Returns an error if neither the Downloads directory nor the home directory can be
+/// determined
 pub fn get_downloads_directory() -> CommonResult<PathBuf> {
     if let Some(downloads_dir) = dirs::download_dir() {
         Ok(downloads_dir)
@@ -124,6 +137,19 @@ pub fn get_downloads_directory() -> CommonResult<PathBuf> {
 }
 
 /// Save images to the Downloads directory
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Failed to get the Downloads directory
+/// - Failed to create the Downloads directory
+/// - Failed to decode base64 image data
+/// - Failed to write image file to disk
+///
+/// # Panics
+///
+/// Panics if the `saved_images` vector is empty when trying to access the last element
+/// (this should never happen as we always push before accessing)
 pub fn save_images_to_downloads(
     project_path: &str,
     images: &[ImageContent],

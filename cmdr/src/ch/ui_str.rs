@@ -94,16 +94,18 @@ pub fn prompt_with_images_copied_msg(
     image_count: usize,
     saved_images: &[SavedImageInfo],
 ) -> InlineString {
-    let downloads_dir = saved_images
-        .first()
-        .map(|img| {
+    use std::fmt::Write;
+
+    let downloads_dir = saved_images.first().map_or_else(
+        || "Downloads".to_string(),
+        |img| {
             img.filepath
                 .parent()
                 .unwrap_or(&img.filepath)
                 .display()
                 .to_string()
-        })
-        .unwrap_or_else(|| "Downloads".to_string());
+        },
+    );
 
     let image_text = if image_count == 1 { "image" } else { "images" };
     let separator = build_horizontal_separator();
@@ -123,7 +125,8 @@ pub fn prompt_with_images_copied_msg(
                 image_info.filepath.display().to_string()
             }
         };
-        image_list.push_str(&format!("{}. {}\n", index + 1, file_path_display));
+        writeln!(&mut image_list, "{}. {}", index + 1, file_path_display)
+            .expect("Writing to String should never fail");
     }
     // Remove trailing newline
     if image_list.ends_with('\n') {

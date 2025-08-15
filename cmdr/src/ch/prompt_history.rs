@@ -8,6 +8,10 @@ use r3bl_tui::CommonResult;
 use super::types::{ClaudeConfig, HistoryItem};
 
 /// Get the path to the Claude configuration file based on the current platform
+///
+/// # Errors
+///
+/// Returns an error if the home directory cannot be determined
 pub fn get_claude_config_path() -> CommonResult<PathBuf> {
     if cfg!(target_os = "windows") {
         // Try APPDATA first, then home directory
@@ -42,6 +46,14 @@ pub fn get_claude_config_path() -> CommonResult<PathBuf> {
 }
 
 /// Read and parse the Claude configuration file
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Failed to get the configuration file path
+/// - Configuration file doesn't exist
+/// - Failed to read the configuration file
+/// - Failed to parse the JSON content
 pub fn read_claude_config() -> CommonResult<ClaudeConfig> {
     // Check if we should use test data
     if let Ok(test_file) = std::env::var("CH_USE_TEST_DATA") {
@@ -88,6 +100,10 @@ pub fn read_claude_config() -> CommonResult<ClaudeConfig> {
 }
 
 /// Get the current working directory as a string
+///
+/// # Errors
+///
+/// Returns an error if the current directory cannot be determined
 pub fn get_current_project_path() -> CommonResult<String> {
     let current_dir = env::current_dir().into_diagnostic()?;
     Ok(current_dir.to_string_lossy().to_string())
@@ -137,6 +153,17 @@ pub fn find_matching_project_path(
 }
 
 /// Get prompt history for the current project
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Failed to read the Claude configuration
+/// - Failed to get the current project path
+///
+/// # Panics
+///
+/// Panics if the project path returned by `find_matching_project_path` doesn't exist in
+/// the configuration (this should never happen as the function ensures the path exists)
 pub fn get_prompts_for_current_project() -> CommonResult<(String, Vec<HistoryItem>)> {
     let config = read_claude_config()?;
     let current_path = get_current_project_path()?;
