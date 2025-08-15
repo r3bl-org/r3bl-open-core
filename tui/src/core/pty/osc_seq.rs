@@ -584,16 +584,13 @@ mod tests {
             ];
 
             for (input_char, expected_encoding) in test_cases {
-                let path_str = format!("/home/user/file{}test.txt", input_char);
+                let path_str = format!("/home/user/file{input_char}test.txt");
                 let path = Path::new(&path_str);
                 let result = format_file_hyperlink(path);
 
                 assert!(
                     result.contains(expected_encoding),
-                    "Failed to encode '{}' as '{}' in result: {}",
-                    input_char,
-                    expected_encoding,
-                    result
+                    "Failed to encode '{input_char}' as '{expected_encoding}' in result: {result}"
                 );
             }
         }

@@ -284,16 +284,15 @@ mod tests {
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
-                        events_received.push(format!("Exit({:?})", status));
+                        events_received.push(format!("Exit({status:?})"));
                         assert!(
                             status.success(),
-                            "Command should succeed with status: {:?}",
-                            status
+                            "Command should succeed with status: {status:?}"
                         );
                         break;
                     }
                     other => {
-                        events_received.push(format!("{:?}", other));
+                        events_received.push(format!("{other:?}"));
                     }
                 }
             }
@@ -302,22 +301,17 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received,
-            output
+            "Test timed out after 10 seconds. Events received: {events_received:?}, Output so far: '{output}'"
         );
 
         assert!(
             saw_exit,
-            "Should see exit event. Events received: {:?}, Output: '{}'",
-            events_received, output
+            "Should see exit event. Events received: {events_received:?}, Output: '{output}'"
         );
 
         assert!(
             output.contains("Hello, PTY!"),
-            "Output should contain 'Hello, PTY!'. Events received: {:?}, Full output was: '{}'",
-            events_received,
-            output
+            "Output should contain 'Hello, PTY!'. Events received: {events_received:?}, Full output was: '{output}'"
         );
 
         Ok(())
@@ -366,16 +360,15 @@ mod tests {
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
-                        events_received.push(format!("Exit({:?})", status));
+                        events_received.push(format!("Exit({status:?})"));
                         assert!(
                             status.success(),
-                            "Cat should succeed with status: {:?}",
-                            status
+                            "Cat should succeed with status: {status:?}"
                         );
                         break;
                     }
                     other => {
-                        events_received.push(format!("{:?}", other));
+                        events_received.push(format!("{other:?}"));
                     }
                 }
             }
@@ -384,22 +377,17 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received,
-            output
+            "Test timed out after 10 seconds. Events received: {events_received:?}, Output so far: '{output}'"
         );
 
         assert!(
             saw_exit,
-            "Should see exit event. Events received: {:?}, Output: '{}'",
-            events_received, output
+            "Should see exit event. Events received: {events_received:?}, Output: '{output}'"
         );
 
         assert!(
             output.contains("test input"),
-            "Output should contain 'test input'. Events received: {:?}, Full output was: '{}'",
-            events_received,
-            output
+            "Output should contain 'test input'. Events received: {events_received:?}, Full output was: '{output}'"
         );
 
         Ok(())
@@ -440,11 +428,11 @@ mod tests {
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
-                        events_received.push(format!("Exit({:?})", status));
+                        events_received.push(format!("Exit({status:?})"));
                         break;
                     }
                     other => {
-                        events_received.push(format!("{:?}", other));
+                        events_received.push(format!("{other:?}"));
                     }
                 }
             }
@@ -453,29 +441,22 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Shell session timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received,
-            output
+            "Shell session timed out after 10 seconds. Events received: {events_received:?}, Output so far: '{output}'"
         );
 
         assert!(
             saw_exit,
-            "Should see exit event. Events received: {:?}, Output: '{}'",
-            events_received, output
+            "Should see exit event. Events received: {events_received:?}, Output: '{output}'"
         );
 
         // Verify we got expected output
         assert!(
             output.contains('5'),
-            "Should see result of 2+3. Events received: {:?}, Full output was: '{}'",
-            events_received,
-            output
+            "Should see result of 2+3. Events received: {events_received:?}, Full output was: '{output}'"
         );
         assert!(
             output.contains("Hello from Shell"),
-            "Should see hello message. Events received: {:?}, Full output was: '{}'",
-            events_received,
-            output
+            "Should see hello message. Events received: {events_received:?}, Full output was: '{output}'"
         );
 
         Ok(())
@@ -490,6 +471,9 @@ mod tests {
             .args(["-c", "echo 'Test output from shell'"])
             .spawn_read_write(Output)
             .unwrap();
+
+        // Give the shell command a moment to start and produce output
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Collect output
         let mut output = String::new();
@@ -510,16 +494,15 @@ mod tests {
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
-                        events_received.push(format!("Exit({:?})", status));
+                        events_received.push(format!("Exit({status:?})"));
                         assert!(
                             status.success(),
-                            "Shell should succeed with status: {:?}",
-                            status
+                            "Shell should succeed with status: {status:?}"
                         );
                         break;
                     }
                     other => {
-                        events_received.push(format!("{:?}", other));
+                        events_received.push(format!("{other:?}"));
                     }
                 }
             }
@@ -528,22 +511,17 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received,
-            output
+            "Test timed out after 10 seconds. Events received: {events_received:?}, Output so far: '{output}'"
         );
 
         assert!(
             saw_exit,
-            "Should see exit event. Events received: {:?}, Output: '{}'",
-            events_received, output
+            "Should see exit event. Events received: {events_received:?}, Output: '{output}'"
         );
 
         assert!(
             output.contains("Test output from shell"),
-            "Should see shell output. Events received: {:?}, Full output was: '{}'",
-            events_received,
-            output
+            "Should see shell output. Events received: {events_received:?}, Full output was: '{output}'"
         );
 
         Ok(())
@@ -566,10 +544,29 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(10)).await;
 
-        session
+        // Check if the session is still alive before sending
+        if session
             .input_event_sender_half
             .send(PtyInputEvent::SendControl(ControlChar::Enter))
-            .unwrap();
+            .is_err()
+        {
+            // Session ended early, check output
+            let mut output = String::new();
+            while let Some(event) = session.output_event_receiver_half.recv().await {
+                match event {
+                    PtyOutputEvent::Output(data) => {
+                        output.push_str(&String::from_utf8_lossy(&data));
+                    }
+                    PtyOutputEvent::Exit(status) => {
+                        panic!(
+                            "PTY exited early with status: {status:?}, output: '{output}'"
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            panic!("Failed to send Enter control character, output so far: '{output}'");
+        }
 
         tokio::time::sleep(Duration::from_millis(10)).await;
 
@@ -624,21 +621,18 @@ mod tests {
         })
         .await;
 
-        assert!(result.is_ok(), "Test timed out. Output: '{}'", output);
+        assert!(result.is_ok(), "Test timed out. Output: '{output}'");
         assert!(
             output.contains("Test line"),
-            "Output should contain 'Test line' but was: '{}'",
-            output
+            "Output should contain 'Test line' but was: '{output}'"
         );
         assert!(
             output.contains("No newline"),
-            "Output should contain 'No newline' but was: '{}'",
-            output
+            "Output should contain 'No newline' but was: '{output}'"
         );
         assert!(
             output.contains("After tab"),
-            "Output should contain 'After tab' but was: '{}'",
-            output
+            "Output should contain 'After tab' but was: '{output}'"
         );
 
         Ok(())
@@ -674,6 +668,9 @@ mod tests {
             .send(PtyInputEvent::SendControl(ControlChar::Enter))
             .unwrap();
 
+        // Add a delay to ensure the first line is processed
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
         // Send using RawSequence variant
         let blue_seq = vec![0x1b, b'[', b'3', b'4', b'm']; // Blue color
         session
@@ -686,10 +683,23 @@ mod tests {
             .input_event_sender_half
             .send(PtyInputEvent::Write(b"Blue Text".to_vec()))
             .unwrap();
+
+        // Send reset sequence after blue text
+        let reset_seq = vec![0x1b, b'[', b'0', b'm']; // Reset color
+        session
+            .input_event_sender_half
+            .send(PtyInputEvent::SendControl(ControlChar::RawSequence(
+                reset_seq,
+            )))
+            .unwrap();
+
         session
             .input_event_sender_half
             .send(PtyInputEvent::SendControl(ControlChar::Enter))
             .unwrap();
+
+        // Add a delay to ensure all input is processed before EOF
+        tokio::time::sleep(Duration::from_millis(100)).await;
 
         // EOF to exit
         session
@@ -710,11 +720,11 @@ mod tests {
                     }
                     PtyOutputEvent::Exit(status) => {
                         saw_exit = true;
-                        events_received.push(format!("Exit({:?})", status));
+                        events_received.push(format!("Exit({status:?})"));
                         break;
                     }
                     other => {
-                        events_received.push(format!("{:?}", other));
+                        events_received.push(format!("{other:?}"));
                     }
                 }
             }
@@ -725,29 +735,22 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Test timed out after 10 seconds. Events received: {:?}, Output so far: '{}'",
-            events_received,
-            output_str
+            "Test timed out after 10 seconds. Events received: {events_received:?}, Output so far: '{output_str}'"
         );
 
         assert!(
             saw_exit,
-            "Should see exit event. Events received: {:?}, Output: '{}'",
-            events_received, output_str
+            "Should see exit event. Events received: {events_received:?}, Output: '{output_str}'"
         );
 
         // Check we got the ANSI sequences back
         assert!(
             output_str.contains("Red Text"),
-            "Output should contain 'Red Text'. Events received: {:?}, Full output was: '{}'",
-            events_received,
-            output_str
+            "Output should contain 'Red Text'. Events received: {events_received:?}, Full output was: '{output_str}'"
         );
         assert!(
             output_str.contains("Blue Text"),
-            "Output should contain 'Blue Text'. Events received: {:?}, Full output was: '{}'",
-            events_received,
-            output_str
+            "Output should contain 'Blue Text'. Events received: {events_received:?}, Full output was: '{output_str}'"
         );
         // The actual ANSI codes might be echoed back
         // Note: cat may not preserve exact ANSI sequences depending on terminal settings

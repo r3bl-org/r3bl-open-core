@@ -299,6 +299,11 @@ pub mod global_hyperlink_support {
     }
 
     /// Attempts to get the cached hyperlink support result.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no cached value is available (i.e., the value is -1).
+    #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn try_get_cached() -> Result<HyperlinkSupport, ()> {
         let it = HYPERLINK_SUPPORT_CACHED.load(Ordering::Acquire);
         HyperlinkSupport::try_from(it)
@@ -311,6 +316,11 @@ pub mod global_hyperlink_support {
     }
 
     /// Attempts to get the global override result.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(())` if no override value has been set (i.e., the value is -1).
+    #[allow(clippy::result_unit_err, static_mut_refs)]
     pub fn try_get_override() -> Result<HyperlinkSupport, ()> {
         let it = HYPERLINK_SUPPORT_GLOBAL.load(Ordering::Acquire);
         HyperlinkSupport::try_from(it)
@@ -737,8 +747,7 @@ mod tests {
                     assert_eq!(
                         result,
                         HyperlinkSupport::NotSupported,
-                        "Terminal {} should not support hyperlinks",
-                        term
+                        "Terminal {term} should not support hyperlinks"
                     );
                 }
 
@@ -759,8 +768,7 @@ mod tests {
                     assert_eq!(
                         result,
                         HyperlinkSupport::NotSupported,
-                        "Terminal {} should not support hyperlinks",
-                        term
+                        "Terminal {term} should not support hyperlinks"
                     );
                 }
 
@@ -792,8 +800,7 @@ mod tests {
                     assert_eq!(
                         result,
                         HyperlinkSupport::Supported,
-                        "Terminal {} should support hyperlinks",
-                        term
+                        "Terminal {term} should support hyperlinks"
                     );
                 }
 

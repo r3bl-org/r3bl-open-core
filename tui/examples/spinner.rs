@@ -174,7 +174,7 @@ async fn example_with_concurrent_output_no_readline_async(
 }
 
 /// Example showing how to update spinner messages dynamically.
-/// This demonstrates the new update_message() functionality.
+/// This demonstrates the new `update_message()` functionality.
 async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()> {
     let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ ")).await?;
     let rl_ctx = maybe_rl_ctx.expect("terminal is not fully interactive");

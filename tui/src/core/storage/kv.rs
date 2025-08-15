@@ -421,7 +421,7 @@ mod kv_tests {
                 .into_diagnostic()
                 .wrap_err(KvErrorCouldNot::GetValueFromItemFromIteratorFromBucket)?;
 
-            map.insert(key.to_string(), payload);
+            map.insert(key.clone(), payload);
         }
 
         assert_eq!(map.get("foo"), Some(&"bar".to_string()));
