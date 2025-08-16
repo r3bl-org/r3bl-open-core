@@ -7,7 +7,8 @@
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 ch::{CLIArg, ChResult},
-                report_analytics, upgrade_check};
+                report_analytics,
+                upgrade_check::{self, ExitContext}};
 use r3bl_tui::{CommonResult, log::try_initialize_logging_global, ok,
                run_with_safe_stack, set_mimalloc_in_main};
 
@@ -64,13 +65,13 @@ pub async fn launch_ch(cli_arg: CLIArg) {
         }
         // This branch is for strange errors like terminal not interactive.
         Err(error) => {
-            report_unrecoverable_errors(error);
+            report_unrecoverable_errors(error).await;
         }
     }
 }
 
 /// Unknown and unrecoverable errors: `readline_async` or choose not working.
-pub fn report_unrecoverable_errors(report: miette::Report) {
+pub async fn report_unrecoverable_errors(report: miette::Report) {
     report_analytics::start_task_to_generate_event(
         String::new(),
         AnalyticsAction::ChFailedToRun,
@@ -83,10 +84,11 @@ pub fn report_unrecoverable_errors(report: miette::Report) {
     );
 
     println!("{}", r3bl_cmdr::ch::ui_str::unrecoverable_error_msg(report));
+    upgrade_check::show_exit_message(ExitContext::Error).await;
 }
 
 /// Display the result of ch command execution.
 pub async fn display_ch_result(ch_result: ChResult) {
     println!("{ch_result}");
-    upgrade_check::show_exit_message().await;
+    upgrade_check::show_exit_message(ExitContext::Normal).await;
 }

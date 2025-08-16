@@ -62,6 +62,16 @@ use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 
 pub static UPGRADE_REQUIRED: AtomicBool = AtomicBool::new(false);
+/// Context for the exit message to determine what to display.
+#[derive(Debug, Clone, Copy)]
+pub enum ExitContext {
+    /// Normal exit - show simple goodbye message
+    Normal,
+    /// Error exit - show full message with GitHub link
+    Error,
+    /// Help command - show full message with GitHub link
+    Help,
+}
 
 /// Checks if a newer version of the crate is available on crates.io.
 ///
@@ -140,9 +150,9 @@ pub fn is_upgrade_required() -> bool {
 
 /// Prints any pending upgrade message, then asks the user if they'd like to install
 /// the new version now.
-pub async fn show_exit_message() {
+pub async fn show_exit_message(context: ExitContext) {
     if is_upgrade_required() {
-        // Show the “upgrade available” text.
+        // Show the "upgrade available" text.
         println!("{}", ui_str::upgrade_check::upgrade_is_required_msg());
 
         // Ask the user.
@@ -173,7 +183,7 @@ pub async fn show_exit_message() {
         .ok()
         .and_then(|items| items.into_iter().next());
 
-        // If they chose “Yes, upgrade now”, run `cargo install …`.
+        // If they chose "Yes, upgrade now", run `cargo install …`.
         if let Some(user_choice) = maybe_user_choice
             && user_choice == yes_no_options[0]
         {
@@ -181,8 +191,15 @@ pub async fn show_exit_message() {
         }
     }
 
-    // Print goodbye message.
-    println!("{}", ui_str::goodbye_greetings::thanks_msg());
+    // Print goodbye message based on context.
+    match context {
+        ExitContext::Normal => {
+            println!("{}", ui_str::goodbye_greetings::thanks_msg_simple());
+        }
+        ExitContext::Error | ExitContext::Help => {
+            println!("{}", ui_str::goodbye_greetings::thanks_msg_with_github());
+        }
+    }
 }
 
 // XMARK: how to use long running potentially blocking synchronous code in Tokio, with

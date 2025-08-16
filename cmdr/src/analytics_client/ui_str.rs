@@ -171,8 +171,31 @@ pub mod goodbye_greetings {
     use super::*;
 
     #[must_use]
-    pub fn thanks_msg() -> InlineString {
-        let goodbye_msg = if let Ok(username) = var("USER") {
+    pub fn thanks_msg_simple() -> InlineString {
+        let goodbye_msg = common_msg();
+
+        InlineString::from(ColorWheel::lolcat_into_string(&goodbye_msg, None))
+    }
+
+    #[must_use]
+    pub fn thanks_msg_with_github() -> InlineString {
+        let goodbye_msg = common_msg();
+
+        let star_us_msg = inline_string!(
+            "{a}\n{b}",
+            a = "Please report issues & star us on GitHub:",
+            b = "https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
+        );
+
+        let combined = inline_string!("{goodbye_msg}\n{star_us_msg}");
+
+        InlineString::from(ColorWheel::lolcat_into_string(&combined, None))
+    }
+
+    /// Helper function to generate the goodbye message with optional username.
+    #[must_use]
+    fn common_msg() -> InlineString {
+        if let Ok(username) = var("USER") {
             inline_string!(
                 "Goodbye, 👋 {a}. Thanks for using {b} {c}!",
                 a = username,
@@ -185,16 +208,6 @@ pub mod goodbye_greetings {
                 a = get_self_bin_emoji(),
                 b = get_self_bin_name()
             )
-        };
-
-        let star_us_msg = inline_string!(
-            "{a}\n{b}",
-            a = "Please report issues & star us on GitHub:",
-            b = "https://github.com/r3bl-org/r3bl-open-core/issues/new/choose"
-        );
-
-        let combined = inline_string!("{goodbye_msg}\n{star_us_msg}");
-
-        InlineString::from(ColorWheel::lolcat_into_string(&combined, None))
+        }
     }
 }

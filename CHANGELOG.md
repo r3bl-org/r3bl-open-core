@@ -11,6 +11,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
+    - [v0.7.5 (next)](#v075-next)
     - [v0.7.4 (2025-08-15)](#v074-2025-08-15)
     - [v0.7.3 (2025-08-04)](#v073-2025-08-04)
     - [v0.7.2 (2025-07-23)](#v072-2025-07-23)
@@ -37,6 +38,7 @@
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
   - [`r3bl-cmdr`](#r3bl-cmdr)
+    - [v0.0.23 (next)](#v0023-next)
     - [v0.0.22 (2025-08-15)](#v0022-2025-08-15)
     - [v0.0.21 (2025-08-04)](#v0021-2025-08-04)
     - [v0.0.20 (2025-07-23)](#v0020-2025-07-23)
@@ -324,6 +326,14 @@ following:
 <!-- Active crates section -->
 
 ## `r3bl_tui`
+
+### v0.7.5 (next)
+
+Fixed Windows compatibility issues with PTY exit status handling.
+
+- Fixed:
+  - Windows compatibility for PTY exit status handling by properly using Windows-specific exit code
+    encoding instead of Unix signal-based encoding
 
 ### v0.7.4 (2025-08-15)
 
@@ -934,6 +944,15 @@ handle many more corner cases.
     increments the state every second and the gradient color wheel is updated accordingly.
 
 ## `r3bl-cmdr`
+
+### v0.0.23 (next)
+
+Refactored `ch` command type system and enhanced user experience with improved output formatting.
+
+- Changed:
+  - Refactored `ch` command result type to `ChResult` for improved type clarity and better output
+    formatting
+  - Enhanced output messages for better user experience
 
 ### v0.0.22 (2025-08-15)
 

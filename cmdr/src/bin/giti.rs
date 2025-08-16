@@ -7,7 +7,8 @@
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 giti::{CLIArg, CLICommand, CommandRunDetails, branch, ui_str},
-                report_analytics, upgrade_check};
+                report_analytics,
+                upgrade_check::{self, ExitContext}};
 use r3bl_tui::{CommandRunResult, CommonResult, log::try_initialize_logging_global, ok,
                run_with_safe_stack, set_mimalloc_in_main};
 
@@ -71,13 +72,13 @@ pub async fn launch_giti(cli_arg: CLIArg) {
         }
         // This branch is for strange errors like terminal not interactive.
         Err(error) => {
-            report_unrecoverable_errors(error);
+            report_unrecoverable_errors(error).await;
         }
     }
 }
 
 /// Unknown and unrecoverable errors: `readline_async` or choose not working.
-pub fn report_unrecoverable_errors(report: miette::Report) {
+pub async fn report_unrecoverable_errors(report: miette::Report) {
     report_analytics::start_task_to_generate_event(
         String::new(),
         AnalyticsAction::GitiFailedToRun,
@@ -90,6 +91,7 @@ pub fn report_unrecoverable_errors(report: miette::Report) {
     );
 
     println!("{}", ui_str::unrecoverable_error_msg(report));
+    upgrade_check::show_exit_message(ExitContext::Error).await;
 }
 
 /// Command ran and produced result: success, not success, fail, no-op.
@@ -97,5 +99,5 @@ pub async fn display_command_run_result(
     cmd_run_result: CommandRunResult<CommandRunDetails>,
 ) {
     println!("{cmd_run_result}");
-    upgrade_check::show_exit_message().await;
+    upgrade_check::show_exit_message(ExitContext::Normal).await;
 }

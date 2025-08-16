@@ -2,7 +2,8 @@
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
                 edi::{clap_config::CLIArg, launcher, ui_templates},
-                report_analytics, upgrade_check};
+                report_analytics,
+                upgrade_check::{self, ExitContext}};
 use r3bl_tui::{CommonResult, log::try_initialize_logging_global, run_with_safe_stack,
                set_mimalloc_in_main, throws};
 
@@ -76,6 +77,6 @@ async fn main_impl() -> CommonResult<()> {
         });
 
         // Exit message.
-        upgrade_check::show_exit_message().await;
+        upgrade_check::show_exit_message(ExitContext::Normal).await;
     })
 }
