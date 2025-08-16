@@ -62,8 +62,8 @@ cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty -
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
-git commit -S -m "v0.0.22-cmdr"
-git tag -a v0.0.22-cmdr -m "v0.0.22-cmdr"
+git commit -S -m "v0.0.23-cmdr"
+git tag -a v0.0.23-cmdr -m "v0.0.23-cmdr"
 cargo publish
 # 2) Don't forget to test the release on a clean machine by running `cargo install r3bl-cmdr`
 # You can do this using `cd cmdr && fish run.fish build-release-in-docker`
