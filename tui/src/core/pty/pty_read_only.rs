@@ -5,7 +5,7 @@ use miette::IntoDiagnostic;
 use crate::{Controlled, ControlledChild, Controller, PtyCommandBuilder, PtyConfig,
             PtyOutputEvent, PtyReadOnlySession,
             pty_common_io::{create_pty_pair, spawn_blocking_controller_reader_task,
-                          spawn_command_in_pty}};
+                            spawn_command_in_pty}};
 
 impl PtyCommandBuilder {
     /// Spawns a read-only PTY session; it spawns two Tokio tasks and one OS child

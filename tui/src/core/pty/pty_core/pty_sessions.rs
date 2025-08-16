@@ -2,7 +2,8 @@
 
 //! PTY session handle types for read-only and read-write communication.
 
-use super::pty_types::{InputEventSenderHalf, OutputEventReceiverHalf, PtyCompletionHandle};
+use super::pty_types::{InputEventSenderHalf, OutputEventReceiverHalf,
+                       PtyCompletionHandle};
 
 /// Session handle for read-only PTY communication.
 ///
@@ -39,8 +40,8 @@ pub struct PtyReadOnlySession {
 ///   stdout/stderr output
 /// - Used for interactive terminal applications, REPLs, shell sessions, and automated
 ///   command execution
-/// - Integrates with [`super::pty_events::PtyInputEvent`] for input and [`super::pty_events::PtyOutputEvent`] for output
-///   handling
+/// - Integrates with [`super::pty_events::PtyInputEvent`] for input and
+///   [`super::pty_events::PtyOutputEvent`] for output handling
 #[derive(Debug)]
 pub struct PtyReadWriteSession {
     /// Send input TO the child process.

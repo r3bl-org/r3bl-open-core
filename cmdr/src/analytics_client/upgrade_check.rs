@@ -48,10 +48,10 @@ use std::{env::current_exe,
           sync::atomic::AtomicBool,
           time::Duration};
 
-use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice, SpinnerStyle,
-               StyleSheet, ast, ast_line, choose,
-               core::pty::{pty_to_std_exit_status, PtyCommandBuilder,
-                           PtyConfigOption, PtyOutputEvent},
+use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
+               SpinnerStyle, StyleSheet, ast, ast_line, choose,
+               core::pty::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent,
+                           pty_to_std_exit_status},
                height, inline_string,
                spinner::Spinner,
                try_get_latest_release_version_from_crates_io};

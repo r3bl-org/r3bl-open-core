@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use miette::Report;
-use r3bl_tui::{HyperlinkSupport, InlineString, fg_color, get_terminal_width,
-               global_hyperlink_support, glyphs, hyperlink::format_file_hyperlink,
-               inline_string, tui_color};
+use r3bl_tui::{HyperlinkSupport, InlineString, fg_color, format_file_hyperlink,
+               get_terminal_width, global_hyperlink_support, glyphs, inline_string,
+               tui_color};
 
 use super::types::SavedImageInfo;
 use crate::common::fmt;

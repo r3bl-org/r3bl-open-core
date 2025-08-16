@@ -12,8 +12,8 @@ use std::borrow::Cow;
 ///   (Tab, Backspace), function keys (F1-F12), raw escape sequences
 /// - Converts to ANSI escape sequences via [`control_char_to_bytes`] for terminal
 ///   compatibility
-/// - Used with [`super::pty_events::PtyInputEvent::SendControl`] to send keyboard commands to child
-///   processes
+/// - Used with [`super::pty_events::PtyInputEvent::SendControl`] to send keyboard
+///   commands to child processes
 /// - Supports both standard terminal operations and custom escape sequences
 #[derive(Debug, Clone)]
 pub enum ControlChar {

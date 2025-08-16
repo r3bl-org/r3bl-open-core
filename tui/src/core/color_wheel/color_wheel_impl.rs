@@ -100,9 +100,9 @@ use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
             ColorWheelSpeed, GradientKind, GradientLengthKind, Lolcat, LolcatBuilder,
             Seed,
             color_wheel_config::{defaults::{Defaults, get_default_gradient_stops},
-                     sizing::VecSteps},
-            generate_random_truecolor_gradient, generate_truecolor_gradient,
-            get_gradient_array_for, color_wheel_helpers};
+                                 sizing::VecSteps},
+            color_wheel_helpers, generate_random_truecolor_gradient,
+            generate_truecolor_gradient, get_gradient_array_for};
 use crate::{ChUnit, GCStringOwned, GradientGenerationPolicy, RgbValue,
             TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts,
             WriteToBuf, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,

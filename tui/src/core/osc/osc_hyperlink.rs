@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use super::codes;
+use super::osc_codes;
 
 /// Creates an OSC 8 hyperlink sequence.
 ///
@@ -17,7 +17,7 @@ use super::codes;
 ///
 /// # Example
 /// ```
-/// use r3bl_tui::core::osc::hyperlink::format_hyperlink;
+/// use r3bl_tui::core::osc::osc_hyperlink::format_hyperlink;
 /// let link = format_hyperlink("https://example.com", "Example");
 /// assert_eq!(link, "\u{1b}]8;;https://example.com\u{1b}\\Example\u{1b}]8;;\u{1b}\\");
 /// ```
@@ -25,13 +25,13 @@ use super::codes;
 pub fn format_hyperlink(uri: &str, text: &str) -> String {
     format!(
         "{}{}{}{}{}{}{}",
-        codes::OSC8_START,
+        osc_codes::OSC8_START,
         uri,
-        codes::END,
+        osc_codes::END,
         text,
-        codes::OSC8_START,
+        osc_codes::OSC8_START,
         "", // Empty URI to close the hyperlink
-        codes::END
+        osc_codes::END
     )
 }
 
@@ -49,7 +49,7 @@ pub fn format_hyperlink(uri: &str, text: &str) -> String {
 ///
 /// # Example
 /// ```
-/// use r3bl_tui::core::osc::hyperlink::format_file_hyperlink;
+/// use r3bl_tui::core::osc::osc_hyperlink::format_file_hyperlink;
 /// use std::path::Path;
 /// let path = Path::new("/home/user/document.txt");
 /// let link = format_file_hyperlink(path);
@@ -110,7 +110,8 @@ mod tests {
     fn test_format_hyperlink_special_chars() {
         let result =
             format_hyperlink("https://example.com/path?q=test&v=1", "Complex URL");
-        let expected = "\x1b]8;;https://example.com/path?q=test&v=1\x1b\\Complex URL\x1b]8;;\x1b\\";
+        let expected =
+            "\x1b]8;;https://example.com/path?q=test&v=1\x1b\\Complex URL\x1b]8;;\x1b\\";
         assert_eq!(result, expected);
     }
 

@@ -56,7 +56,8 @@ impl Lolcat {
 
         for seg in us.iter() {
             let seg_str = seg.get_str(us.as_str());
-            let new_color = color_wheel_helpers::get_color_tuple(&self.color_wheel_control);
+            let new_color =
+                color_wheel_helpers::get_color_tuple(&self.color_wheel_control);
             let derived_from_new_color = color_wheel_helpers::calc_fg_color(new_color);
 
             let style = if self.color_wheel_control.background_mode

@@ -6,7 +6,7 @@ use tokio::sync::mpsc::unbounded_channel;
 use crate::{PtyCommandBuilder, PtyConfig, PtyInputEvent, PtyOutputEvent,
             PtyReadWriteSession,
             pty_common_io::{create_input_handler_task, create_pty_pair,
-                          spawn_blocking_controller_reader_task, spawn_command_in_pty}};
+                            spawn_blocking_controller_reader_task, spawn_command_in_pty}};
 
 impl PtyCommandBuilder {
     /// Spawns a read-write PTY session; it spawns three Tokio tasks and one OS child

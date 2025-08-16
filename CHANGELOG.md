@@ -11,6 +11,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
+    - [v0.7.6 (2025-08-16)](#v076-2025-08-16)
     - [v0.7.5 (2025-08-15)](#v075-2025-08-15)
     - [v0.7.4 (2025-08-15)](#v074-2025-08-15)
     - [v0.7.3 (2025-08-04)](#v073-2025-08-04)
@@ -38,6 +39,7 @@
     - [v0.3.2 (2023-03-06)](#v032-2023-03-06)
     - [v0.3.1 (2023-03-06)](#v031-2023-03-06)
   - [`r3bl-cmdr`](#r3bl-cmdr)
+    - [v0.0.24 (2025-08-16)](#v0024-2025-08-16)
     - [v0.0.23 (2025-08-15)](#v0023-2025-08-15)
     - [v0.0.22 (2025-08-15)](#v0022-2025-08-15)
     - [v0.0.21 (2025-08-04)](#v0021-2025-08-04)
@@ -324,6 +326,14 @@ following:
 <!-- Active crates section -->
 
 ## `r3bl_tui`
+
+### v0.7.6 (2025-08-16)
+
+Refactor and reorganize the `pty` module to improve ergonomics and usability.
+
+- Changed:
+  - Refactor the `pty` module to be more ergonomic.
+  - Move the `osc_seq.rs` into a top level `osc` module.
 
 ### v0.7.5 (2025-08-15)
 
@@ -922,6 +932,14 @@ handle many more corner cases.
     increments the state every second and the gradient color wheel is updated accordingly.
 
 ## `r3bl-cmdr`
+
+### v0.0.24 (2025-08-16)
+
+Documentation update for the `ch` command.
+
+- Added:
+  - Documentation for the `ch` command and its features, including usage examples and
+    configuration options in the `README.md` file and `lib.rs` (for `docs.rs`).
 
 ### v0.0.23 (2025-08-15)
 

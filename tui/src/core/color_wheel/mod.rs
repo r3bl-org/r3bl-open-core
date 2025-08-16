@@ -14,20 +14,20 @@
 
 // Attach sources.
 pub mod color_wheel_config;
-pub mod gradients;
 pub mod color_wheel_helpers;
-pub mod lolcat;
 pub mod color_wheel_policies;
 pub mod color_wheel_types;
+pub mod gradients;
+pub mod lolcat;
 
 // Private implementation details.
 mod color_wheel_impl;
 
 // Re-export everything for backward compatibility.
-pub use color_wheel_impl::*;
 pub use color_wheel_config::*;
-pub use gradients::*;
 pub use color_wheel_helpers::*;
-pub use lolcat::*;
+pub use color_wheel_impl::*;
 pub use color_wheel_policies::*;
 pub use color_wheel_types::*;
+pub use gradients::*;
+pub use lolcat::*;

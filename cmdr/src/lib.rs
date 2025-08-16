@@ -109,8 +109,8 @@
 //!    cd r3bl-open-core       # navigate to the repo root
 //!    ./bootstrap.sh          # install all required tools
 //!    cd cmdr/                # navigate to the cmdr crate
-//!    cargo install --path .  # install the cmdr crate from source to get binaries in ~/.cargo/bin
-//!    ```
+//!    cargo install --path .  # install the cmdr crate from source to get binaries in
+//! ~/.cargo/bin    ```
 //!
 //! # Changelog
 //!

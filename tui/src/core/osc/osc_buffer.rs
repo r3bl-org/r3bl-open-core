@@ -2,7 +2,7 @@
 
 //! OSC buffer for accumulating and parsing OSC sequences.
 
-use super::{codes, event::OscEvent};
+use super::{osc_codes, osc_event::OscEvent};
 
 /// Buffer for accumulating and parsing OSC (Operating System Command) sequences.
 ///
@@ -60,13 +60,13 @@ impl OscBuffer {
     pub fn extract_next_sequence(&mut self) -> Option<OscEvent> {
         // OSC sequence format "codes::START {state};{progress} codes::END"
         // Find start of OSC sequence.
-        let start_idx = self.data.find(codes::START)?;
-        let after_start_idx = start_idx + codes::START.len();
+        let start_idx = self.data.find(osc_codes::START)?;
+        let after_start_idx = start_idx + osc_codes::START.len();
 
         // Find end of sequence.
-        let end_idx = self.data[after_start_idx..].find(codes::END)?;
+        let end_idx = self.data[after_start_idx..].find(osc_codes::END)?;
         let params_end_idx = after_start_idx + end_idx;
-        let sequence_end_idx = params_end_idx + codes::END.len();
+        let sequence_end_idx = params_end_idx + osc_codes::END.len();
 
         // Extract parameters.
         let params = &self.data[after_start_idx..params_end_idx];
@@ -90,7 +90,7 @@ impl OscBuffer {
     /// * `None` if parameters were malformed or state was unknown.
     #[must_use]
     pub fn parse_osc_params(&self, params: &str) -> Option<OscEvent> {
-        let parts: Vec<&str> = params.split(codes::DELIMITER).collect();
+        let parts: Vec<&str> = params.split(osc_codes::DELIMITER).collect();
         if parts.len() != 2 {
             // Gracefully handle malformed sequences.
             return None;

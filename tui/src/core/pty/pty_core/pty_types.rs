@@ -5,7 +5,8 @@
 use std::pin::Pin;
 
 use portable_pty::{CommandBuilder, MasterPty, SlavePty};
-use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender}, task::JoinHandle};
+use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
+            task::JoinHandle};
 
 use super::{PtyInputEvent, PtyOutputEvent};
 
@@ -32,8 +33,8 @@ pub type ControlledChild = Box<dyn portable_pty::Child + Send + Sync>;
 
 /// Type alias for a validated PTY command ready for execution.
 ///
-/// This enhances readability by making the flow clear: [`crate::PtyCommandBuilder`] `-> build()
-/// ->` [`PtyCommand`]. This is a validated [`CommandBuilder`] returned by
+/// This enhances readability by making the flow clear: [`crate::PtyCommandBuilder`] `->
+/// build() ->` [`PtyCommand`]. This is a validated [`CommandBuilder`] returned by
 /// [`crate::PtyCommandBuilder::build`].
 pub type PtyCommand = CommandBuilder;
 

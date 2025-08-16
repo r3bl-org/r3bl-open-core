@@ -4,8 +4,8 @@
 
 use portable_pty::PtySize;
 
-use crate::OscEvent;
 use super::pty_control::ControlChar;
+use crate::OscEvent;
 
 /// Output event types received from a PTY child process.
 ///
@@ -15,8 +15,9 @@ use super::pty_control::ControlChar;
 ///   (terminal sequences), `UnexpectedExit` (crashes), `WriteError` (I/O failures)
 /// - Handles real-time streaming with combined stdout/stderr output for terminal
 ///   emulation
-/// - Used with [`super::pty_sessions::PtyReadOnlySession`] and [`super::pty_sessions::PtyReadWriteSession`] to monitor process
-///   output and lifecycle events
+/// - Used with [`super::pty_sessions::PtyReadOnlySession`] and
+///   [`super::pty_sessions::PtyReadWriteSession`] to monitor process output and lifecycle
+///   events
 /// - Integrates with [`portable_pty`] for cross-platform terminal compatibility
 #[derive(Debug)]
 pub enum PtyOutputEvent {
@@ -40,7 +41,8 @@ pub enum PtyOutputEvent {
 ///   `Resize`, `Flush`, `Close`
 /// - Supports terminal control sequences, window resizing, and process lifecycle
 ///   management
-/// - Used with [`super::pty_sessions::PtyReadWriteSession`] for interactive terminal applications
+/// - Used with [`super::pty_sessions::PtyReadWriteSession`] for interactive terminal
+///   applications
 #[derive(Debug, Clone)]
 pub enum PtyInputEvent {
     /// Send raw bytes to child's stdin.
