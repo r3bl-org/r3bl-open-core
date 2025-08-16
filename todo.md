@@ -29,7 +29,7 @@
       [`task_prd_ch_bin`](`docs/done/task_prd_ch_bin.md`):
       https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
 - [ ] make YT video on the research (in rust-scratch) issue
-- [ ] make YT video on the implementation (to r3bl-cmdr) issue
+- [ ] make YT video on the `ch` implementation (in r3bl-cmdr)
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 
@@ -37,11 +37,22 @@
       new features in `r3bl-cmdr` that will need telemetry and analytics to see what users care
       about
 
+# incorporate TLS and tcp-api-server work into the codebase: https://github.com/r3bl-org/r3bl-base/issues/6
+
+# create robust atomic file based user configuration settings: https://github.com/nazmulidris/rust-scratch/issues/114
+
+# build and deploy r3bl-base backend (in homelab) for telemetry and analytics: https://github.com/r3bl-org/r3bl-base/issues/6
+
+# add analytics to `ch` binary in r3bl-cmdr
+
+- [ ] task [`task_ch_analytics`](docs/task_ch_analytics.md) to add analytics to `ch`
+
 # build `chi` binary in r3bl-cmdr
 
-- [ ] run `claude` in a read-write PTY. provide `Ctrl+I` -> use edi to create a prompt, and then
-      insert it into claude with `Ctrl+Enter`. provide `Ctrl+H` -> use `ch` mechanism to show the
-      prompt history and allow user to select a prompt to insert into `claude`.
+- [ ] PRD [`task_prd_chi`](docs/task_prd_chi.md) to build `chi`
+  - [ ] make a release
+  - [ ] make a YT video on it
+  - [ ] publicize on hacker news, Reto, Boris, TWiR, etc.
 
 # unify rendering paths
 
@@ -94,13 +105,7 @@
 
 - [ ] figure out how to interpret mouse events into something that is usable for the apps
 
-# incorporate TLS and tcp-api-server work into the codebase: https://github.com/r3bl-org/r3bl-base/issues/6
-
-# build and deploy r3bl-base backend (in homelab) for telemetry and analytics: https://github.com/r3bl-org/r3bl-base/issues/6
-
 # add animation api: https://github.com/r3bl-org/r3bl-open-core/issues/174
-
-# create robust atomic file based user configuration settings: https://github.com/nazmulidris/rust-scratch/issues/114
 
 # edi features
 

@@ -24,6 +24,13 @@
   - [Rollback Plan](#rollback-plan)
   - [Success Criteria](#success-criteria)
   - [Implementation Progress (Phase 2 & 3)](#implementation-progress-phase-2--3)
+  - [Implementation Complete ✅](#implementation-complete-)
+    - [Key Features Implemented:](#key-features-implemented)
+  - [Implementation Details and Challenges](#implementation-details-and-challenges)
+    - [Error Type Conversions](#error-type-conversions)
+    - [Signal Handling](#signal-handling)
+    - [Exit Status Conversion](#exit-status-conversion)
+    - [Code Quality Improvements](#code-quality-improvements)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -240,7 +247,7 @@ async fn run_cargo_install_with_progress(
         tokio::select! {
             _ = signal::ctrl_c() => {
                 // User pressed Ctrl+C
-                return Err(Error::new(ErrorKind::Interrupted, 
+                return Err(Error::new(ErrorKind::Interrupted,
                     "Installation cancelled by user"));
             }
             event = session.output_event_receiver_half.recv() => {
@@ -263,7 +270,7 @@ async fn run_cargo_install_with_progress(
                     }
                     None => {
                         // Channel closed unexpectedly
-                        return Err(Error::new(ErrorKind::Other, 
+                        return Err(Error::new(ErrorKind::Other,
                             "PTY session ended unexpectedly"));
                     }
                     _ => {} // Ignore Output events in Osc mode
@@ -312,7 +319,7 @@ Add new messages in `ui_str.rs`:
 ```rust
 pub mod upgrade_install {
     // ... existing messages ...
-    
+
     /// No formatting on this string, since the spinner will apply its own animated lolcat
     /// formatting.
     #[must_use]
@@ -397,13 +404,15 @@ Phase 2 and Phase 3 have been successfully implemented. The upgrade process now:
 
 1. **Phase 1 (Previously Complete)**: Spinner supports dynamic message updates
 2. **Phase 2 (Now Complete)**: PTY integration with dual-command execution:
-   - `rustup update` runs first with spinner (no progress tracking since rustup doesn't emit OSC codes)
+   - `rustup update` runs first with spinner (no progress tracking since rustup doesn't emit OSC
+     codes)
    - `cargo install` runs second with real-time OSC progress updates
    - Clean Ctrl+C handling at any point
    - Proper error handling and status reporting
 3. **Phase 3 (Now Complete)**: UI messages added for different progress states
 
 ### Key Features Implemented:
+
 - **Dual-command workflow**: rustup update → cargo install
 - **Progress tracking**: Dynamic spinner updates during cargo install with percentage completion
 - **Error handling**: Proper conversion between PTY error types and std::io::Error
@@ -413,25 +422,33 @@ Phase 2 and Phase 3 have been successfully implemented. The upgrade process now:
 ## Implementation Details and Challenges
 
 ### Error Type Conversions
+
 One key challenge was handling the different error and status types:
 
 - **PTY API returns**: `miette::Result<PtyReadOnlySession>` and `portable_pty::ExitStatus`
 - **Function signature needs**: `Result<std::process::ExitStatus, std::io::Error>`
 
-**Solution**: Added proper error mapping using `.map_err()` and status conversion using `ExitStatusExt::from_raw()` with the `#[cfg(unix)]` import.
+**Solution**: Added proper error mapping using `.map_err()` and status conversion using
+`ExitStatusExt::from_raw()` with the `#[cfg(unix)]` import.
 
 ### Signal Handling
-The `signal::ctrl_c()` function returns a future that needs to be handled properly in `tokio::select!` macro. The original approach had pinning issues.
 
-**Solution**: Removed the separate `ctrl_c` variable and used `signal::ctrl_c()` directly in the select branches.
+The `signal::ctrl_c()` function returns a future that needs to be handled properly in
+`tokio::select!` macro. The original approach had pinning issues.
+
+**Solution**: Removed the separate `ctrl_c` variable and used `signal::ctrl_c()` directly in the
+select branches.
 
 ### Exit Status Conversion
+
 Converting from `portable_pty::ExitStatus` (u32) to `std::process::ExitStatus` required:
+
 - Using `ExitStatusExt::from_raw()` trait (Unix-specific)
 - Proper bit shifting for non-zero exit codes: `(code as i32) << 8`
 - Type casting from u32 to i32 with potential overflow handling
 
 ### Code Quality Improvements
+
 - Removed unused imports (`Stdio`, `TokioCommand`, `PtyReadOnlySession`)
 - Fixed mutable variable warnings
 - Applied clippy suggestions for better error handling patterns
