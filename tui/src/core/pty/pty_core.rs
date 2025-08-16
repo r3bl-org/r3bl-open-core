@@ -38,264 +38,28 @@ pub type PtyCommand = CommandBuilder;
 
 /// Type alias for a pinned completion handle used in PTY sessions.
 ///
-/// This simplifies the verbose
-/// `Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>` type used for
-/// awaiting PTY session completion. The pinning satisfies Tokio's Unpin requirement for
-/// select! macro usage. The `JoinHandle` returned by `tokio::spawn`
-/// doesn't implement Unpin by default, but select! requires all futures to be
-/// Unpin for efficient polling without moving them.
+/// The pinning satisfies Tokio's [`Unpin`] requirement for [`select!`] macro usage. The
+/// [`JoinHandle`] returned by [`tokio::spawn`] doesn't implement [`Unpin`] by default,
+/// but [`select!`] requires all futures to be [`Unpin`] for efficient polling without
+/// moving them.
+///
+/// [`select!`]: tokio::select
 pub type PtyCompletionHandle =
     Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>;
 
 pub type OutputEventReceiverHalf = UnboundedReceiver<PtyOutputEvent>;
 pub type InputEventSenderHalf = UnboundedSender<PtyInputEvent>;
 
-/// Unified output event type for PTY that can contain both OSC sequences and raw output
-/// data.
-#[derive(Debug)]
-pub enum PtyOutputEvent {
-    /// OSC sequence event (if OSC capture is enabled).
-    Osc(OscEvent),
-    /// Raw output data (stdout/stderr combined).
-    Output(Vec<u8>),
-    /// Process exited with status.
-    Exit(portable_pty::ExitStatus),
-    /// Child process crashed or terminated unexpectedly.
-    UnexpectedExit(String),
-    /// Write operation failed - session will terminate.
-    WriteError(std::io::Error),
-}
-
-/// Input event types that can be sent to a child process through PTY.
-#[derive(Debug, Clone)]
-pub enum PtyInputEvent {
-    /// Send raw bytes to child's stdin.
-    Write(Vec<u8>),
-    /// Send text with automatic newline.
-    WriteLine(String),
-    /// Send control sequences (Ctrl-C, Ctrl-D, etc.).
-    SendControl(ControlChar),
-    /// Resize the PTY window.
-    Resize(PtySize),
-    /// Explicit flush without writing data.
-    /// Forces any buffered data to be sent to the child immediately.
-    Flush,
-    /// Close stdin (EOF).
-    Close,
-}
-
-/// Control characters and special keys that can be sent to PTY.
-#[derive(Debug, Clone)]
-pub enum ControlChar {
-    // Common control characters
-    CtrlC, // SIGINT (interrupt)
-    CtrlD, // EOF (end of file)
-    CtrlZ, // SIGTSTP (suspend)
-    CtrlL, // Clear screen
-    CtrlU, // Clear line
-    CtrlA, // Move to beginning of line
-    CtrlE, // Move to end of line
-    CtrlK, // Kill to end of line
-
-    // Common keys
-    Tab,    // Autocomplete
-    Enter,  // Newline
-    Escape, // ESC key
-    Backspace,
-    Delete,
-
-    // Arrow keys
-    ArrowUp,
-    ArrowDown,
-    ArrowLeft,
-    ArrowRight,
-
-    // Navigation keys
-    Home,
-    End,
-    PageUp,
-    PageDown,
-
-    // Function keys (F1-F12)
-    F(u8), // F(1) for F1, F(2) for F2, etc.
-
-    // Raw escape sequence for advanced use cases
-    RawSequence(Vec<u8>),
-}
-
-/// Session handle for read-only PTY communication.
-///
-/// Provides access to both the output stream and completion status of a child process
-/// running in the PTY controlled half (slave half).
-/// - The `output_event_receiver_half` channel receives combined stdout/stderr from the
-///   child process, along with optional OSC sequences and process exit events.
-/// - The `completion_handle` can be awaited to know when the process completes and get
-///   the final exit status.
-#[derive(Debug)]
-pub struct PtyReadOnlySession {
-    /// Receives output events from the child process (combined stdout/stderr).
-    pub output_event_receiver_half: OutputEventReceiverHalf,
-    /// Await this `completion_handle` for process completion.
-    ///
-    /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
-    /// other async coordination patterns. The `JoinHandle` returned by `tokio::spawn`
-    /// doesn't implement Unpin by default, but select! requires all futures to be
-    /// Unpin for efficient polling without moving them.
-    pub completion_handle: PtyCompletionHandle,
-}
-
-/// Session handle for read-write PTY communication.
-///
-/// Provides bidirectional communication with a child process running in a PTY.
-/// The `event_receiver_half` channel receives combined stdout/stderr from the child
-/// process.
-#[derive(Debug)]
-pub struct PtyReadWriteSession {
-    /// Send input TO the child process.
-    pub input_event_sender_half: InputEventSenderHalf,
-    /// Receive output FROM the child process (combined stdout/stderr).
-    pub output_event_receiver_half: OutputEventReceiverHalf,
-    /// Await this `completion_handle` for process completion.
-    ///
-    /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
-    /// other async coordination patterns. The `JoinHandle` returned by `tokio::spawn`
-    /// doesn't implement Unpin by default, but select! requires all futures to be
-    /// Unpin for efficient polling without moving them.
-    pub completion_handle: PtyCompletionHandle,
-}
-
-/// Converts a control character to its byte representation.
-///
-/// Returns a `Cow` to avoid unnecessary allocations for static sequences.
-#[must_use]
-pub fn control_char_to_bytes(ctrl: &ControlChar) -> Cow<'static, [u8]> {
-    match ctrl {
-        // Control characters
-        ControlChar::CtrlC => Cow::Borrowed(&[0x03]),
-        ControlChar::CtrlD => Cow::Borrowed(&[0x04]),
-        ControlChar::CtrlZ => Cow::Borrowed(&[0x1A]),
-        ControlChar::CtrlL => Cow::Borrowed(&[0x0C]),
-        ControlChar::CtrlU => Cow::Borrowed(&[0x15]),
-        ControlChar::CtrlA => Cow::Borrowed(&[0x01]),
-        ControlChar::CtrlE => Cow::Borrowed(&[0x05]),
-        ControlChar::CtrlK => Cow::Borrowed(&[0x0B]),
-
-        // Common keys
-        ControlChar::Tab => Cow::Borrowed(&[0x09]),
-        ControlChar::Enter => Cow::Borrowed(&[0x0A]),
-        ControlChar::Escape => Cow::Borrowed(&[0x1B]),
-        ControlChar::Backspace => Cow::Borrowed(&[0x7F]),
-        ControlChar::Delete => Cow::Borrowed(&[0x1B, 0x5B, 0x33, 0x7E]), // ESC[3~
-
-        // Arrow keys (ANSI escape sequences)
-        ControlChar::ArrowUp => Cow::Borrowed(&[0x1B, 0x5B, 0x41]), // ESC[A
-        ControlChar::ArrowDown => Cow::Borrowed(&[0x1B, 0x5B, 0x42]), // ESC[B
-        ControlChar::ArrowRight => Cow::Borrowed(&[0x1B, 0x5B, 0x43]), // ESC[C
-        ControlChar::ArrowLeft => Cow::Borrowed(&[0x1B, 0x5B, 0x44]), // ESC[D
-
-        // Navigation keys
-        ControlChar::Home => Cow::Borrowed(&[0x1B, 0x5B, 0x48]), // ESC[H
-        ControlChar::End => Cow::Borrowed(&[0x1B, 0x5B, 0x46]),  // ESC[F
-        ControlChar::PageUp => Cow::Borrowed(&[0x1B, 0x5B, 0x35, 0x7E]), // ESC[5~
-        ControlChar::PageDown => Cow::Borrowed(&[0x1B, 0x5B, 0x36, 0x7E]), // ESC[6~
-
-        // Function keys
-        ControlChar::F(n) => {
-            match n {
-                // cspell:disable
-                1 => Cow::Borrowed(&[0x1B, 0x4F, 0x50]), // ESCOP
-                2 => Cow::Borrowed(&[0x1B, 0x4F, 0x51]), // ESCOQ
-                3 => Cow::Borrowed(&[0x1B, 0x4F, 0x52]), // ESCOR
-                4 => Cow::Borrowed(&[0x1B, 0x4F, 0x53]), // ESCOS
-                // cspell:enable
-                5 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x35, 0x7E]), // ESC[15~
-                6 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x37, 0x7E]), // ESC[17~
-                7 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x38, 0x7E]), // ESC[18~
-                8 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x39, 0x7E]), // ESC[19~
-                9 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x30, 0x7E]), // ESC[20~
-                10 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x31, 0x7E]), // ESC[21~
-                11 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x33, 0x7E]), // ESC[23~
-                12 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x34, 0x7E]), // ESC[24~
-                // Unknown function keys
-                _ => Cow::Borrowed(&[0x1B]), // Just ESC
-            }
-        }
-
-        // Raw sequence - pass through as-is (requires owned data)
-        ControlChar::RawSequence(bytes) => Cow::Owned(bytes.clone()),
-    }
-}
-
-/// Extension trait for converting `portable_pty::ExitStatus` to
-/// `std::process::ExitStatus`.
-///
-/// This trait provides cross-platform compatible conversion from `portable_pty`'s
-/// exit status type to the standard library's exit status type, handling platform
-/// differences properly.
-pub trait ExitStatusConversion {
-    /// Converts a `portable_pty::ExitStatus` to `std::process::ExitStatus`.
-    ///
-    /// This method handles cross-platform exit status conversion properly:
-    /// - On success: Uses explicit success status (exit code 0)
-    /// - On failure: Encodes exit code in Unix wait status format with bounds checking
-    /// - Clamps large exit codes to 255 to prevent overflow
-    fn to_std_exit_status(self) -> std::process::ExitStatus;
-}
-
-impl ExitStatusConversion for portable_pty::ExitStatus {
-    fn to_std_exit_status(self) -> std::process::ExitStatus {
-        #[cfg(unix)]
-        use std::os::unix::process::ExitStatusExt;
-        #[cfg(windows)]
-        use std::os::windows::process::ExitStatusExt;
-
-        if self.success() {
-            // Success case: use explicit success status
-            #[cfg(unix)]
-            return std::process::ExitStatus::from_raw(0);
-            #[cfg(windows)]
-            return std::process::ExitStatus::from_raw(0);
-        }
-        // Failure case: encode exit code properly
-        let code = self.exit_code();
-
-        // Ensure we don't overflow when shifting for Unix wait status format
-        let wait_status = if code <= 255 {
-            #[allow(clippy::cast_possible_wrap)]
-            let code_i32 = code as i32;
-            #[cfg(unix)]
-            {
-                code_i32 << 8
-            }
-            #[cfg(windows)]
-            {
-                code_i32
-            }
-        } else {
-            // If exit code is too large, clamp to 255 and encode
-            #[cfg(unix)]
-            {
-                255_i32 << 8
-            }
-            #[cfg(windows)]
-            {
-                255_i32
-            }
-        };
-
-        #[cfg(unix)]
-        return std::process::ExitStatus::from_raw(wait_status);
-        #[cfg(windows)]
-        return std::process::ExitStatus::from_raw(wait_status as u32);
-    }
-}
-
 /// Configuration builder for PTY commands with sensible defaults.
 ///
-/// This builder ensures critical settings are not forgotten when creating PTY commands:
-/// - Automatically sets the current working directory if not specified
-/// - Provides methods for common terminal environment variables
-/// - Ensures commands spawn in the correct context (not in `$HOME`)
+/// # Summary
+/// - Builder pattern API for constructing PTY commands with proper configuration
+/// - Features: automatic working directory, environment variables, OSC sequence support,
+///   command arguments chaining
+/// - Prevents common PTY issues like spawning in wrong directory or missing terminal
+///   environment settings
+/// - Used to create [`PtyCommand`] instances for spawning child processes in PTY sessions
+/// - Integrates with cargo, npm, and other CLI tools requiring terminal emulation
 ///
 /// # Examples
 ///
@@ -451,6 +215,284 @@ impl PtyCommandBuilder {
         Ok(cmd_to_return)
     }
 }
+
+/// Output event types received from a PTY child process.
+///
+/// # Summary
+/// - Bidirectional communication API for receiving output from PTY child processes
+/// - Event types: `Output` (stdout/stderr data), `Exit` (process completion), `Osc`
+///   (terminal sequences), `UnexpectedExit` (crashes), `WriteError` (I/O failures)
+/// - Handles real-time streaming with combined stdout/stderr output for terminal
+///   emulation
+/// - Used with [`PtyReadOnlySession`] and [`PtyReadWriteSession`] to monitor process
+///   output and lifecycle events
+/// - Integrates with [`portable_pty`] for cross-platform terminal compatibility
+#[derive(Debug)]
+pub enum PtyOutputEvent {
+    /// OSC sequence event (if OSC capture is enabled).
+    Osc(OscEvent),
+    /// Raw output data (stdout/stderr combined).
+    Output(Vec<u8>),
+    /// Process exited with status.
+    Exit(portable_pty::ExitStatus),
+    /// Child process crashed or terminated unexpectedly.
+    UnexpectedExit(String),
+    /// Write operation failed - session will terminate.
+    WriteError(std::io::Error),
+}
+
+/// Input event types that can be sent to a child process through PTY.
+///
+/// # Summary
+/// - Bidirectional communication API for sending commands to PTY child processes
+/// - Event types: `Write` (raw data), `WriteLine` (text), `SendControl` (key sequences),
+///   `Resize`, `Flush`, `Close`
+/// - Supports terminal control sequences, window resizing, and process lifecycle
+///   management
+/// - Used with [`PtyReadWriteSession`] for interactive terminal applications
+#[derive(Debug, Clone)]
+pub enum PtyInputEvent {
+    /// Send raw bytes to child's stdin.
+    Write(Vec<u8>),
+    /// Send text with automatic newline.
+    WriteLine(String),
+    /// Send control sequences (Ctrl-C, Ctrl-D, etc.).
+    SendControl(ControlChar),
+    /// Resize the PTY window.
+    Resize(PtySize),
+    /// Explicit flush without writing data.
+    /// Forces any buffered data to be sent to the child immediately.
+    Flush,
+    /// Close stdin (EOF).
+    Close,
+}
+
+/// Control characters and special keys that can be sent to PTY.
+///
+/// # Summary
+/// - Terminal control sequence API for keyboard input emulation in PTY sessions
+/// - Character types: Control keys (Ctrl-C/D/Z), navigation (arrows, Home/End), editing
+///   (Tab, Backspace), function keys (F1-F12), raw escape sequences
+/// - Converts to ANSI escape sequences via [`control_char_to_bytes`] for terminal
+///   compatibility
+/// - Used with [`PtyInputEvent::SendControl`] to send keyboard commands to child
+///   processes
+/// - Supports both standard terminal operations and custom escape sequences
+#[derive(Debug, Clone)]
+pub enum ControlChar {
+    // Common control characters
+    CtrlC, // SIGINT (interrupt)
+    CtrlD, // EOF (end of file)
+    CtrlZ, // SIGTSTP (suspend)
+    CtrlL, // Clear screen
+    CtrlU, // Clear line
+    CtrlA, // Move to beginning of line
+    CtrlE, // Move to end of line
+    CtrlK, // Kill to end of line
+
+    // Common keys
+    Tab,    // Autocomplete
+    Enter,  // Newline
+    Escape, // ESC key
+    Backspace,
+    Delete,
+
+    // Arrow keys
+    ArrowUp,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+
+    // Navigation keys
+    Home,
+    End,
+    PageUp,
+    PageDown,
+
+    // Function keys (F1-F12)
+    F(u8), // F(1) for F1, F(2) for F2, etc.
+
+    // Raw escape sequence for advanced use cases
+    RawSequence(Vec<u8>),
+}
+
+/// Session handle for read-only PTY communication.
+///
+/// # Summary
+/// - Unidirectional PTY session for monitoring child process output without input
+///   capability
+/// - Components: `output_event_receiver_half` (event stream), `completion_handle` (exit
+///   status)
+/// - Receives combined stdout/stderr, OSC sequences, and process lifecycle events
+/// - Used for monitoring long-running processes, capturing command output, or observing
+///   terminal applications
+/// - Integrates with Tokio async runtime via pinned [`PtyCompletionHandle`] for efficient
+///   polling in `select!` macros
+#[derive(Debug)]
+pub struct PtyReadOnlySession {
+    /// Receives output events from the child process (combined stdout/stderr).
+    pub output_event_receiver_half: OutputEventReceiverHalf,
+    /// Await this `completion_handle` for process completion.
+    ///
+    /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
+    /// other async coordination patterns. The `JoinHandle` returned by `tokio::spawn`
+    /// doesn't implement Unpin by default, but select! requires all futures to be
+    /// Unpin for efficient polling without moving them.
+    pub completion_handle: PtyCompletionHandle,
+}
+
+/// Session handle for read-write PTY communication.
+///
+/// # Summary
+/// - Bidirectional PTY session for full interaction with child processes
+/// - Components: `input_event_sender_half` (send input), `output_event_receiver_half`
+///   (receive output), `completion_handle` (exit status)
+/// - Supports sending keyboard input, control sequences, window resizing, and receiving
+///   stdout/stderr output
+/// - Used for interactive terminal applications, REPLs, shell sessions, and automated
+///   command execution
+/// - Integrates with [`PtyInputEvent`] for input and [`PtyOutputEvent`] for output
+///   handling
+#[derive(Debug)]
+pub struct PtyReadWriteSession {
+    /// Send input TO the child process.
+    pub input_event_sender_half: InputEventSenderHalf,
+    /// Receive output FROM the child process (combined stdout/stderr).
+    pub output_event_receiver_half: OutputEventReceiverHalf,
+    /// Await this `completion_handle` for process completion.
+    ///
+    /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
+    /// other async coordination patterns. The `JoinHandle` returned by `tokio::spawn`
+    /// doesn't implement Unpin by default, but select! requires all futures to be
+    /// Unpin for efficient polling without moving them.
+    pub completion_handle: PtyCompletionHandle,
+}
+
+/// Converts a control character to its byte representation.
+///
+/// Returns a `Cow` to avoid unnecessary allocations for static sequences.
+#[must_use]
+pub fn control_char_to_bytes(ctrl: &ControlChar) -> Cow<'static, [u8]> {
+    match ctrl {
+        // Control characters
+        ControlChar::CtrlC => Cow::Borrowed(&[0x03]),
+        ControlChar::CtrlD => Cow::Borrowed(&[0x04]),
+        ControlChar::CtrlZ => Cow::Borrowed(&[0x1A]),
+        ControlChar::CtrlL => Cow::Borrowed(&[0x0C]),
+        ControlChar::CtrlU => Cow::Borrowed(&[0x15]),
+        ControlChar::CtrlA => Cow::Borrowed(&[0x01]),
+        ControlChar::CtrlE => Cow::Borrowed(&[0x05]),
+        ControlChar::CtrlK => Cow::Borrowed(&[0x0B]),
+
+        // Common keys
+        ControlChar::Tab => Cow::Borrowed(&[0x09]),
+        ControlChar::Enter => Cow::Borrowed(&[0x0A]),
+        ControlChar::Escape => Cow::Borrowed(&[0x1B]),
+        ControlChar::Backspace => Cow::Borrowed(&[0x7F]),
+        ControlChar::Delete => Cow::Borrowed(&[0x1B, 0x5B, 0x33, 0x7E]), // ESC[3~
+
+        // Arrow keys (ANSI escape sequences)
+        ControlChar::ArrowUp => Cow::Borrowed(&[0x1B, 0x5B, 0x41]), // ESC[A
+        ControlChar::ArrowDown => Cow::Borrowed(&[0x1B, 0x5B, 0x42]), // ESC[B
+        ControlChar::ArrowRight => Cow::Borrowed(&[0x1B, 0x5B, 0x43]), // ESC[C
+        ControlChar::ArrowLeft => Cow::Borrowed(&[0x1B, 0x5B, 0x44]), // ESC[D
+
+        // Navigation keys
+        ControlChar::Home => Cow::Borrowed(&[0x1B, 0x5B, 0x48]), // ESC[H
+        ControlChar::End => Cow::Borrowed(&[0x1B, 0x5B, 0x46]),  // ESC[F
+        ControlChar::PageUp => Cow::Borrowed(&[0x1B, 0x5B, 0x35, 0x7E]), // ESC[5~
+        ControlChar::PageDown => Cow::Borrowed(&[0x1B, 0x5B, 0x36, 0x7E]), // ESC[6~
+
+        // Function keys
+        ControlChar::F(n) => {
+            match n {
+                // cspell:disable
+                1 => Cow::Borrowed(&[0x1B, 0x4F, 0x50]), // ESCOP
+                2 => Cow::Borrowed(&[0x1B, 0x4F, 0x51]), // ESCOQ
+                3 => Cow::Borrowed(&[0x1B, 0x4F, 0x52]), // ESCOR
+                4 => Cow::Borrowed(&[0x1B, 0x4F, 0x53]), // ESCOS
+                // cspell:enable
+                5 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x35, 0x7E]), // ESC[15~
+                6 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x37, 0x7E]), // ESC[17~
+                7 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x38, 0x7E]), // ESC[18~
+                8 => Cow::Borrowed(&[0x1B, 0x5B, 0x31, 0x39, 0x7E]), // ESC[19~
+                9 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x30, 0x7E]), // ESC[20~
+                10 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x31, 0x7E]), // ESC[21~
+                11 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x33, 0x7E]), // ESC[23~
+                12 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x34, 0x7E]), // ESC[24~
+                // Unknown function keys
+                _ => Cow::Borrowed(&[0x1B]), // Just ESC
+            }
+        }
+
+        // Raw sequence - pass through as-is (requires owned data)
+        ControlChar::RawSequence(bytes) => Cow::Owned(bytes.clone()),
+    }
+}
+
+/// Converts `portable_pty::ExitStatus` to `std::process::ExitStatus`.
+///
+/// # Summary
+/// - Cross-platform compatibility function for PTY exit status conversion
+/// - Converts between `portable_pty` and standard library exit status types
+/// - Handles Unix wait status format encoding and Windows exit codes
+/// - Clamps large exit codes to 255 to prevent overflow on Unix systems
+/// - Used internally by PTY sessions to provide consistent exit status reporting across
+///   different operating systems
+///
+/// This function handles cross-platform exit status conversion properly:
+/// - On success: Uses explicit success status (exit code 0)
+/// - On failure: Encodes exit code in Unix wait status format with bounds checking
+/// - Clamps large exit codes to 255 to prevent overflow
+#[must_use]
+pub fn pty_to_std_exit_status(
+    status: portable_pty::ExitStatus,
+) -> std::process::ExitStatus {
+    #[cfg(unix)]
+    use std::os::unix::process::ExitStatusExt;
+    #[cfg(windows)]
+    use std::os::windows::process::ExitStatusExt;
+
+    if status.success() {
+        // Success case: use explicit success status
+        #[cfg(unix)]
+        return std::process::ExitStatus::from_raw(0);
+        #[cfg(windows)]
+        return std::process::ExitStatus::from_raw(0);
+    }
+    // Failure case: encode exit code properly
+    let code = status.exit_code();
+
+    // Ensure we don't overflow when shifting for Unix wait status format
+    let wait_status = if code <= 255 {
+        #[allow(clippy::cast_possible_wrap)]
+        let code_i32 = code as i32;
+        #[cfg(unix)]
+        {
+            code_i32 << 8
+        }
+        #[cfg(windows)]
+        {
+            code_i32
+        }
+    } else {
+        // If exit code is too large, clamp to 255 and encode
+        #[cfg(unix)]
+        {
+            255_i32 << 8
+        }
+        #[cfg(windows)]
+        {
+            255_i32
+        }
+    };
+
+    #[cfg(unix)]
+    return std::process::ExitStatus::from_raw(wait_status);
+    #[cfg(windows)]
+    return std::process::ExitStatus::from_raw(wait_status as u32);
+}
+
 #[cfg(test)]
 mod tests {
     use std::env;

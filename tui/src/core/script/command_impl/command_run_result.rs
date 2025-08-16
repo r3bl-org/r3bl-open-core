@@ -6,9 +6,18 @@ use tokio::process::Command;
 
 use crate::InlineString;
 
-/// Hold all the possible outcomes of executing a [`tokio::process::Command`]. This is
-/// used to report the success or failure to a user (display via stdout output) or
+/// Hold all the possible outcomes of executing a [`Command`].
+///
+/// This is used to report the success or failure to a user (display via stdout output) or
 /// operator (debug via log output).
+///
+/// # Summary
+/// - High-level command execution result for CLI tools (specifically giti)
+/// - Three states: Noop (command not run), Run (success), Fail (error)
+/// - Carries user-friendly messages and command details
+/// - Uses [`Command`] for one-shot command execution
+///
+/// [`Command`]: tokio::process::Command
 #[derive(Debug)]
 pub enum CommandRunResult<T: Debug + Display> {
     /// Command was not run (probably because the command would be a no-op).

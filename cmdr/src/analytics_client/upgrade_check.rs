@@ -50,7 +50,7 @@ use std::{env::current_exe,
 
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OutputDevice, SpinnerStyle,
                StyleSheet, ast, ast_line, choose,
-               core::pty::{ExitStatusConversion, OscEvent, PtyCommandBuilder,
+               core::pty::{pty_to_std_exit_status, OscEvent, PtyCommandBuilder,
                            PtyConfigOption, PtyOutputEvent},
                height, inline_string,
                spinner::Spinner,
@@ -268,7 +268,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
                         }
                     }
                     Some(PtyOutputEvent::Exit(status)) => {
-                        return Ok(status.to_std_exit_status());
+                        return Ok(pty_to_std_exit_status(status));
                     }
                     Some(PtyOutputEvent::UnexpectedExit(msg)) => {
                         return Err(Error::other(msg));
@@ -307,7 +307,7 @@ async fn run_cargo_install_with_progress(
                         handle_osc_event(osc, crate_name, spinner);
                     }
                     Some(PtyOutputEvent::Exit(status)) => {
-                        return Ok(status.to_std_exit_status());
+                        return Ok(pty_to_std_exit_status(status));
                     }
                     Some(PtyOutputEvent::UnexpectedExit(msg)) => {
                         return Err(Error::other(msg));
