@@ -6,9 +6,9 @@
 
 use clap::Parser;
 use r3bl_cmdr::{AnalyticsAction,
-                ch::{CLIArg, CommandRunDetails},
+                ch::{CLIArg, ChResult},
                 report_analytics, upgrade_check};
-use r3bl_tui::{CommandRunResult, CommonResult, log::try_initialize_logging_global, ok,
+use r3bl_tui::{CommonResult, log::try_initialize_logging_global, ok,
                run_with_safe_stack, set_mimalloc_in_main};
 
 fn main() -> CommonResult<()> { run_with_safe_stack!(main_impl()) }
@@ -59,8 +59,8 @@ pub async fn launch_ch(cli_arg: CLIArg) {
         // This branch is for both successful and unsuccessful command executions. Even
         // though the `res` is not `Err` it does not mean that the command ran
         // successfully, it may have failed gracefully.
-        Ok(cmd_run_result) => {
-            display_command_run_result(cmd_run_result).await;
+        Ok(ch_result) => {
+            display_ch_result(ch_result).await;
         }
         // This branch is for strange errors like terminal not interactive.
         Err(error) => {
@@ -85,10 +85,8 @@ pub fn report_unrecoverable_errors(report: miette::Report) {
     println!("{}", r3bl_cmdr::ch::ui_str::unrecoverable_error_msg(report));
 }
 
-/// Command ran and produced result: success, not success, fail, no-op.
-pub async fn display_command_run_result(
-    cmd_run_result: CommandRunResult<CommandRunDetails>,
-) {
-    println!("{cmd_run_result}");
+/// Display the result of ch command execution.
+pub async fn display_ch_result(ch_result: ChResult) {
+    println!("{ch_result}");
     upgrade_check::show_exit_message().await;
 }

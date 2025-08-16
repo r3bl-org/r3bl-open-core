@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::collections::HashMap;
+use std::{collections::HashMap,
+          fmt::{Display, Formatter, Result}};
 
 use serde::Deserialize;
 
@@ -63,29 +64,45 @@ pub struct SavedImageInfo {
     pub media_type: String,
 }
 
-/// Command run details for analytics and reporting
+/// Result type specific to ch command operations
 #[derive(Debug)]
-pub struct ChDetails {
-    pub selected_prompt: Option<String>,
-    pub project_path: String,
-    pub total_prompts: usize,
+pub enum ChResult {
+    /// User successfully selected a prompt
+    PromptSelected {
+        prompt: String,
+        project_path: String,
+        total_prompts: usize,
+        success_message: String,
+    },
+    /// User cancelled the selection (ESC or Ctrl+C)
+    SelectionCancelled {
+        project_path: String,
+        total_prompts: usize,
+    },
+    /// No prompts found for the current project
+    NoPromptsFound { project_path: String },
+    /// Terminal is not interactive
+    TerminalNotInteractive,
 }
 
-/// Command run details enum for the ch binary
-#[derive(Debug)]
-pub enum CommandRunDetails {
-    Ch(ChDetails),
-}
+impl Display for ChResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        use crate::ch::ui_str;
 
-impl std::fmt::Display for CommandRunDetails {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CommandRunDetails::Ch(details) => {
-                if let Some(ref prompt) = details.selected_prompt {
-                    write!(f, "Selected prompt: {prompt}")
-                } else {
-                    write!(f, "No prompt selected")
-                }
+            ChResult::PromptSelected {
+                success_message, ..
+            } => {
+                write!(f, "{success_message}")
+            }
+            ChResult::SelectionCancelled { .. } => {
+                write!(f, "{}", ui_str::selection_cancelled_msg())
+            }
+            ChResult::NoPromptsFound { project_path } => {
+                write!(f, "{}", ui_str::no_prompts_found_msg(project_path))
+            }
+            ChResult::TerminalNotInteractive => {
+                write!(f, "{}", ui_str::terminal_not_interactive_msg())
             }
         }
     }

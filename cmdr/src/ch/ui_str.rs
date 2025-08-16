@@ -85,7 +85,7 @@ pub fn prompt_copied_msg(prompt: &str) -> InlineString {
 
 /// Generate message when user cancels selection
 #[must_use]
-pub fn selection_cancelled_msg() -> InlineString { fmt::normal("No prompt selected") }
+pub fn selection_cancelled_msg() -> InlineString { fmt::dim("No prompt selected") }
 
 /// Generate success message when prompt with images is copied
 #[must_use]

@@ -1,14 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, InlineString,
-               TTYResult, ast, ast_line, choose, height, inline_vec,
-               is_fully_uninteractive_terminal,
+use r3bl_tui::{CommonResult, DefaultIoDevices, InlineString, TTYResult, ast, ast_line,
+               choose, height, inline_vec, is_fully_uninteractive_terminal,
                readline_async::{HowToChoose, StyleSheet},
                tui::editor::editor_buffer::{clipboard_service::SystemClipboard,
                                             clipboard_support::ClipboardService}};
 
 use super::{CLIArg, image_handler, prompt_history,
-            types::{ChDetails, CommandRunDetails, HistoryItem, ImageContent},
+            types::{ChResult, HistoryItem, ImageContent},
             ui_str};
 use crate::prefix_single_select_instruction_header;
 
@@ -21,19 +20,10 @@ use crate::prefix_single_select_instruction_header;
 /// - Failed to display the prompt selection UI
 /// - Failed to copy selected prompt to clipboard
 /// - Failed to parse or handle pasted image contents
-pub async fn handle_ch_command(
-    _cli_arg: CLIArg,
-) -> CommonResult<CommandRunResult<CommandRunDetails>> {
+pub async fn handle_ch_command(_cli_arg: CLIArg) -> CommonResult<ChResult> {
     // Check if terminal is interactive
     if let TTYResult::IsNotInteractive = is_fully_uninteractive_terminal() {
-        return Ok(CommandRunResult::Noop(
-            ui_str::terminal_not_interactive_msg(),
-            CommandRunDetails::Ch(ChDetails {
-                selected_prompt: None,
-                project_path: "unknown".to_string(),
-                total_prompts: 0,
-            }),
-        ));
+        return Ok(ChResult::TerminalNotInteractive);
     }
 
     // Get prompt history for current project
@@ -41,14 +31,7 @@ pub async fn handle_ch_command(
 
     // Check if we have any prompts
     if history.is_empty() {
-        return Ok(CommandRunResult::Noop(
-            ui_str::no_prompts_found_msg(&project_path),
-            CommandRunDetails::Ch(ChDetails {
-                selected_prompt: None,
-                project_path,
-                total_prompts: 0,
-            }),
-        ));
+        return Ok(ChResult::NoPromptsFound { project_path });
     }
 
     // Prepare display/original pairs for ALL history items
@@ -113,14 +96,10 @@ pub async fn handle_ch_command(
         )),
         None => {
             // User cancelled selection
-            Ok(CommandRunResult::Noop(
-                ui_str::selection_cancelled_msg(),
-                CommandRunDetails::Ch(ChDetails {
-                    selected_prompt: None,
-                    project_path,
-                    total_prompts: history.len(),
-                }),
-            ))
+            Ok(ChResult::SelectionCancelled {
+                project_path,
+                total_prompts: history.len(),
+            })
         }
     }
 }
@@ -130,7 +109,7 @@ fn handle_selected_prompt(
     prompt_pairs: &[(String, String)],
     history: &[HistoryItem],
     project_path: &str,
-) -> CommandRunResult<CommandRunDetails> {
+) -> ChResult {
     // Find the original prompt from the display prompt
     let selected_as_string = selected_display_prompt.to_string();
     let selected_index = prompt_pairs
@@ -157,14 +136,12 @@ fn handle_selected_prompt(
     }
 
     // Return success result
-    CommandRunResult::Noop(
-        success_message,
-        CommandRunDetails::Ch(ChDetails {
-            selected_prompt: Some(original_prompt),
-            project_path: project_path.to_string(),
-            total_prompts: history.len(),
-        }),
-    )
+    ChResult::PromptSelected {
+        prompt: original_prompt,
+        project_path: project_path.to_string(),
+        total_prompts: history.len(),
+        success_message: success_message.to_string(),
+    }
 }
 
 fn process_history_item(
