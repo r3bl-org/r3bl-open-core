@@ -13,7 +13,6 @@ don't know where to start, check out the issues that are labeled `good first iss
 
 <!-- TOC -->
 
-- [Discord server](#discord-server)
 - [Code of conduct](#code-of-conduct)
 - [Style guide](#style-guide)
 - [🤝 Contribute](#-contribute)
@@ -24,13 +23,6 @@ don't know where to start, check out the issues that are labeled `good first iss
 - [License](#license)
 
 <!-- /TOC -->
-
-### Discord server
-
-<a id="markdown-discord-server" name="discord-server"></a>
-
-Please join our [Discord server](https://discord.gg/8M2ePAevaM) to discuss the `r3bl-open-core`
-project and ask questions.
 
 ### Code of conduct
 
@@ -75,7 +67,7 @@ Below are some guides to help you get started:
 
 If you want to work on an issue, please comment on the issue asking to be assigned to it, so that we
 can assign the issue to you. If you have any questions about the issue, we can discuss them in the
-comments or on [R3BL Discord server](https://discord.gg/8M2ePAevaM).
+comments.
 
 ### Feature requests and bug reports
 
