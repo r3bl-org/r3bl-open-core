@@ -25,7 +25,7 @@
 //! ```
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{core::pty::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyOutputEvent},
+use r3bl_tui::{OscEvent, core::pty::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent},
                set_mimalloc_in_main};
 
 // ANSI color constants for terminal output.

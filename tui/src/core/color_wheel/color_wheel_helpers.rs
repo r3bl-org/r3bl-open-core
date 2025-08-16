@@ -11,7 +11,7 @@
 //! and ensure proper contrast ratios. Previously located in
 //! `color_wheel_core/color_helpers.rs`.
 
-use super::types::ColorWheelControl;
+use super::color_wheel_types::ColorWheelControl;
 use crate::LossyConvertToByte;
 
 /// More info on luminance:

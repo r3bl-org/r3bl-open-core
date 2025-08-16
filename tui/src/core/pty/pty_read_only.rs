@@ -4,7 +4,7 @@ use miette::IntoDiagnostic;
 
 use crate::{Controlled, ControlledChild, Controller, PtyCommandBuilder, PtyConfig,
             PtyOutputEvent, PtyReadOnlySession,
-            common_impl::{create_pty_pair, spawn_blocking_controller_reader_task,
+            pty_common_io::{create_pty_pair, spawn_blocking_controller_reader_task,
                           spawn_command_in_pty}};
 
 impl PtyCommandBuilder {

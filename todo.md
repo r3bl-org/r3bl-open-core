@@ -31,6 +31,18 @@
 - [ ] make YT video on the research (in rust-scratch) issue
 - [ ] make YT video on the implementation (to r3bl-cmdr) issue
 
+# add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
+
+- [ ] with `shuttle.rs` gone, and homelab up and running, implement this, before launching too many
+      new features in `r3bl-cmdr` that will need telemetry and analytics to see what users care
+      about
+
+# build `chi` binary in r3bl-cmdr
+
+- [ ] run `claude` in a read-write PTY. provide `Ctrl+I` -> use edi to create a prompt, and then
+      insert it into claude with `Ctrl+Enter`. provide `Ctrl+H` -> use `ch` mechanism to show the
+      prompt history and allow user to select a prompt to insert into `claude`.
+
 # unify rendering paths
 
 - [ ] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
@@ -42,11 +54,6 @@
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
       `r3bl_open_core` codebase
 
-# add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
-
-- [ ] with `shuttle.rs` gone, and homelab up and running, implement this, before launching too many
-      new features in `r3bl-cmdr` that will need telemetry and analytics to see what users care
-      about
 
 # refactor or rewrite the UI layout, sizing, and styling code
 

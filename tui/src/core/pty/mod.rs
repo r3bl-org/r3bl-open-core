@@ -238,14 +238,14 @@
 //! ```
 
 // Attach.
-pub mod common_impl;
-pub mod osc_seq;
+pub mod pty_command_builder;
+pub mod pty_common_io;
 pub mod pty_config;
 pub mod pty_core;
 pub mod pty_read_only;
 pub mod pty_read_write;
 
 // Re-export.
-pub use osc_seq::*;
+pub use pty_command_builder::*;
 pub use pty_config::*;
 pub use pty_core::*;

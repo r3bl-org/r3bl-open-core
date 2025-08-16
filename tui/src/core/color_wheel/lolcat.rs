@@ -15,7 +15,7 @@
 use std::{borrow::Cow,
           fmt::{Debug, Formatter, Result}};
 
-use super::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta, helpers};
+use super::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta, color_wheel_helpers};
 use crate::{GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
 
 /// Please use the [`LolcatBuilder`] to create this struct (lots of documentation is
@@ -56,8 +56,8 @@ impl Lolcat {
 
         for seg in us.iter() {
             let seg_str = seg.get_str(us.as_str());
-            let new_color = helpers::get_color_tuple(&self.color_wheel_control);
-            let derived_from_new_color = helpers::calc_fg_color(new_color);
+            let new_color = color_wheel_helpers::get_color_tuple(&self.color_wheel_control);
+            let derived_from_new_color = color_wheel_helpers::calc_fg_color(new_color);
 
             let style = if self.color_wheel_control.background_mode
                 == Colorize::BothBackgroundAndForeground

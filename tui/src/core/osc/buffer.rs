@@ -1,41 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! OSC (Operating System Command) sequence parsing for terminal progress indicators.
-//!
-//! Parses OSC 9;4 sequences used by Cargo and other build tools to communicate
-//! progress information. Supports four progress states: progress updates (0-100%),
-//! progress cleared, build errors, and indeterminate progress.
-//!
-//! The [`OscBuffer`] handles partial sequences split across buffer reads and
-//! gracefully ignores malformed input.
+//! OSC buffer for accumulating and parsing OSC sequences.
 
-/// Represents the different types of OSC events that can be handled.
-#[derive(Debug, Clone, PartialEq)]
-pub enum OscEvent {
-    /// Set specific progress value 0-100% (OSC 9;4 state 1).
-    ProgressUpdate(u8),
-    /// Clear/remove progress indicator (OSC 9;4 state 0).
-    ProgressCleared,
-    /// Build error occurred (OSC 9;4 state 2).
-    BuildError,
-    /// Indeterminate progress - build is running but no
-    /// specific progress (OSC 9;4 state 3).
-    IndeterminateProgress,
-    /// Hyperlink (OSC 8) with URI and display text.
-    Hyperlink { uri: String, text: String },
-}
-
-/// OSC sequence constants wrapped in a dedicated module for clarity.
-mod osc_codes {
-    /// OSC 9;4 sequence prefix: ESC ] 9 ; 4 ;
-    pub const START: &str = "\x1b]9;4;";
-    /// OSC 8 hyperlink sequence prefix: ESC ] 8 ; ;
-    pub const OSC8_START: &str = "\x1b]8;;";
-    /// Sequence terminator: ESC \\ (String Terminator)
-    pub const END: &str = "\x1b\\";
-    /// Parameter delimiter within OSC sequences
-    pub const DELIMITER: char = ';';
-}
+use super::{codes, event::OscEvent};
 
 /// Buffer for accumulating and parsing OSC (Operating System Command) sequences.
 ///
@@ -49,93 +16,6 @@ pub struct OscBuffer {
 
 impl Default for OscBuffer {
     fn default() -> Self { Self::new() }
-}
-
-/// Helper functions for creating OSC 8 hyperlink sequences.
-pub mod hyperlink {
-    use std::path::Path;
-
-    use super::osc_codes;
-
-    /// Creates an OSC 8 hyperlink sequence.
-    ///
-    /// # Arguments
-    /// * `uri` - The URI/URL to link to (e.g., "<https://example.com>", "<file:///path/to/file>")
-    /// * `text` - The display text for the hyperlink
-    ///
-    /// # Returns
-    /// A string containing the complete OSC 8 hyperlink sequence
-    ///
-    /// # Example
-    /// ```
-    /// use r3bl_tui::core::pty::osc_seq::hyperlink::format_hyperlink;
-    /// let link = format_hyperlink("https://example.com", "Example");
-    /// assert_eq!(link, "\u{1b}]8;;https://example.com\u{1b}\\Example\u{1b}]8;;\u{1b}\\");
-    /// ```
-    #[must_use]
-    pub fn format_hyperlink(uri: &str, text: &str) -> String {
-        format!(
-            "{}{}{}{}{}{}{}",
-            osc_codes::OSC8_START,
-            uri,
-            osc_codes::END,
-            text,
-            osc_codes::OSC8_START,
-            "", // Empty URI to close the hyperlink
-            osc_codes::END
-        )
-    }
-
-    /// Creates an OSC 8 hyperlink for a file path.
-    ///
-    /// This function converts a file path to a proper file:// URI and creates
-    /// a clickable hyperlink that will open the file in the default application
-    /// when clicked in a terminal that supports OSC 8.
-    ///
-    /// # Arguments
-    /// * `path` - The file path to create a hyperlink for
-    ///
-    /// # Returns
-    /// A string containing the OSC 8 hyperlink sequence for the file
-    ///
-    /// # Example
-    /// ```
-    /// use r3bl_tui::core::pty::osc_seq::hyperlink::format_file_hyperlink;
-    /// use std::path::Path;
-    /// let path = Path::new("/home/user/document.txt");
-    /// let link = format_file_hyperlink(path);
-    /// // Result will be a clickable link showing the path
-    /// ```
-    #[must_use]
-    pub fn format_file_hyperlink(path: &Path) -> String {
-        let display_text = path.display().to_string();
-
-        // Convert path to file:// URI
-        let uri = if path.is_absolute() {
-            format!("file://{}", path.display())
-        } else {
-            // For relative paths, convert to absolute first
-            match std::env::current_dir().map(|cwd| cwd.join(path)) {
-                Ok(abs_path) => format!("file://{}", abs_path.display()),
-                Err(_) => format!("file://{}", path.display()), // Fallback
-            }
-        };
-
-        // URL encode special characters in the URI
-        let encoded_uri = uri
-            .chars()
-            .map(|c| match c {
-                ' ' => "%20".to_string(),
-                '#' => "%23".to_string(),
-                '?' => "%3F".to_string(),
-                '&' => "%26".to_string(),
-                '%' => "%25".to_string(),
-                _ => c.to_string(),
-            })
-            .collect::<String>();
-
-        format_hyperlink(&encoded_uri, &display_text)
-    }
 }
 
 impl OscBuffer {
@@ -178,15 +58,15 @@ impl OscBuffer {
     /// * `Some(OscEvent)` if a complete sequence was found and parsed.
     /// * `None` if no complete sequence is available.
     pub fn extract_next_sequence(&mut self) -> Option<OscEvent> {
-        // OSC sequence format "osc::START {state};{progress} osc::END"
+        // OSC sequence format "codes::START {state};{progress} codes::END"
         // Find start of OSC sequence.
-        let start_idx = self.data.find(osc_codes::START)?;
-        let after_start_idx = start_idx + osc_codes::START.len();
+        let start_idx = self.data.find(codes::START)?;
+        let after_start_idx = start_idx + codes::START.len();
 
         // Find end of sequence.
-        let end_idx = self.data[after_start_idx..].find(osc_codes::END)?;
+        let end_idx = self.data[after_start_idx..].find(codes::END)?;
         let params_end_idx = after_start_idx + end_idx;
-        let sequence_end_idx = params_end_idx + osc_codes::END.len();
+        let sequence_end_idx = params_end_idx + codes::END.len();
 
         // Extract parameters.
         let params = &self.data[after_start_idx..params_end_idx];
@@ -210,7 +90,7 @@ impl OscBuffer {
     /// * `None` if parameters were malformed or state was unknown.
     #[must_use]
     pub fn parse_osc_params(&self, params: &str) -> Option<OscEvent> {
-        let parts: Vec<&str> = params.split(osc_codes::DELIMITER).collect();
+        let parts: Vec<&str> = params.split(codes::DELIMITER).collect();
         if parts.len() != 2 {
             // Gracefully handle malformed sequences.
             return None;
@@ -497,102 +377,5 @@ mod tests {
         let input = b"\x1b]9;4;1;99.9\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![OscEvent::ProgressUpdate(99)]);
-    }
-
-    mod hyperlink_tests {
-        use std::path::Path;
-
-        use super::hyperlink::{format_file_hyperlink, format_hyperlink};
-
-        #[test]
-        fn test_format_hyperlink_basic() {
-            let result = format_hyperlink("https://example.com", "Example Link");
-            let expected = "\x1b]8;;https://example.com\x1b\\Example Link\x1b]8;;\x1b\\";
-            assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn test_format_hyperlink_empty() {
-            let result = format_hyperlink("", "Empty URI");
-            let expected = "\x1b]8;;\x1b\\Empty URI\x1b]8;;\x1b\\";
-            assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn test_format_hyperlink_special_chars() {
-            let result =
-                format_hyperlink("https://example.com/path?q=test&v=1", "Complex URL");
-            let expected = "\x1b]8;;https://example.com/path?q=test&v=1\x1b\\Complex URL\x1b]8;;\x1b\\";
-            assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn test_format_file_hyperlink_absolute_path() {
-            let path = Path::new("/home/user/document.txt");
-            let result = format_file_hyperlink(path);
-
-            // Should contain file:// URI and display text
-            assert!(result.contains("file:///home/user/document.txt"));
-            assert!(result.contains("/home/user/document.txt"));
-            assert!(result.starts_with("\x1b]8;;"));
-            assert!(result.ends_with("\x1b]8;;\x1b\\"));
-        }
-
-        #[test]
-        fn test_format_file_hyperlink_with_spaces() {
-            let path = Path::new("/home/user/my document.txt");
-            let result = format_file_hyperlink(path);
-
-            // URI should have URL-encoded spaces
-            assert!(result.contains("file:///home/user/my%20document.txt"));
-            // Display text should keep original spaces
-            assert!(result.contains("/home/user/my document.txt"));
-        }
-
-        #[test]
-        fn test_format_file_hyperlink_with_special_chars() {
-            let path = Path::new("/home/user/file#with&special%chars?.txt");
-            let result = format_file_hyperlink(path);
-
-            // URI should have URL-encoded special characters
-            assert!(
-                result.contains("file:///home/user/file%23with%26special%25chars%3F.txt")
-            );
-            // Display text should keep original characters
-            assert!(result.contains("/home/user/file#with&special%chars?.txt"));
-        }
-
-        #[test]
-        fn test_format_file_hyperlink_relative_path() {
-            let path = Path::new("./relative/path.txt");
-            let result = format_file_hyperlink(path);
-
-            // Should contain file:// URI (will be converted to absolute)
-            assert!(result.starts_with("\x1b]8;;file://"));
-            // Display text should show the original relative path
-            assert!(result.contains("./relative/path.txt"));
-        }
-
-        #[test]
-        fn test_url_encoding_coverage() {
-            let test_cases = [
-                (" ", "%20"),
-                ("#", "%23"),
-                ("?", "%3F"),
-                ("&", "%26"),
-                ("%", "%25"),
-            ];
-
-            for (input_char, expected_encoding) in test_cases {
-                let path_str = format!("/home/user/file{input_char}test.txt");
-                let path = Path::new(&path_str);
-                let result = format_file_hyperlink(path);
-
-                assert!(
-                    result.contains(expected_encoding),
-                    "Failed to encode '{input_char}' as '{expected_encoding}' in result: {result}"
-                );
-            }
-        }
     }
 }

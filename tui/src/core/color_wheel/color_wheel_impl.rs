@@ -99,10 +99,10 @@ use smallvec::SmallVec;
 use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
             ColorWheelSpeed, GradientKind, GradientLengthKind, Lolcat, LolcatBuilder,
             Seed,
-            config::{defaults::{Defaults, get_default_gradient_stops},
+            color_wheel_config::{defaults::{Defaults, get_default_gradient_stops},
                      sizing::VecSteps},
             generate_random_truecolor_gradient, generate_truecolor_gradient,
-            get_gradient_array_for, helpers};
+            get_gradient_array_for, color_wheel_helpers};
 use crate::{ChUnit, GCStringOwned, GradientGenerationPolicy, RgbValue,
             TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts,
             WriteToBuf, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
@@ -869,7 +869,7 @@ impl ColorWheel {
 
             if let Some((bg_red, bg_green, bg_blue)) = maybe_bg_color {
                 let (fg_red, fg_green, fg_blue) =
-                    helpers::calc_fg_color((bg_red, bg_green, bg_blue));
+                    color_wheel_helpers::calc_fg_color((bg_red, bg_green, bg_blue));
                 tui_styled_text!(
                     @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(
                         maybe_style,
@@ -1055,7 +1055,7 @@ mod lolcat_helper {
 
     /// Handle lolcat color generation and seed advancement.
     pub fn generate_next_lolcat_color(lolcat: &mut Lolcat) -> TuiColor {
-        let new_color = helpers::get_color_tuple(&lolcat.color_wheel_control);
+        let new_color = color_wheel_helpers::get_color_tuple(&lolcat.color_wheel_control);
         lolcat.color_wheel_control.seed +=
             Seed::from(lolcat.color_wheel_control.color_change_speed);
         tui_color!(new_color.0, new_color.1, new_color.2)

@@ -13,7 +13,7 @@
 use colorgrad::Gradient;
 use rand::{Rng, rngs::ThreadRng};
 
-use crate::{config::sizing::{StringHexColor, VecSteps},
+use crate::{color_wheel_config::sizing::{StringHexColor, VecSteps},
             tui_color};
 
 /// # Arguments

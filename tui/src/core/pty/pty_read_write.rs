@@ -5,39 +5,55 @@ use tokio::sync::mpsc::unbounded_channel;
 
 use crate::{PtyCommandBuilder, PtyConfig, PtyInputEvent, PtyOutputEvent,
             PtyReadWriteSession,
-            common_impl::{create_input_handler_task, create_pty_pair,
+            pty_common_io::{create_input_handler_task, create_pty_pair,
                           spawn_blocking_controller_reader_task, spawn_command_in_pty}};
 
 impl PtyCommandBuilder {
-    /// Spawns a PTY session with bidirectional communication (read-write).
+    /// Spawns a read-write PTY session; it spawns three Tokio tasks and one OS child
+    /// process with bidirectional communication.
     ///
     /// ```text
-    /// ┌────────────┐   ┌────────────┐   ┌─────────────────┐
-    /// │Your Program│◄─►│    PTY     │   │Spawned Process  │
-    /// │            │   │Controller/ │   │                 │
-    /// │Reads/writes│   │  Master    │   │stdin/stdout/    │
-    /// │through     │   │     ↕      │   │stderr redirected│
-    /// │controller/ │   │    PTY     │   │to slave/        │
-    /// │master side │   │     ↕      │   │controlled side  │
-    /// │            │   │ Slave/     │◄─►│                 │
-    /// │            │   │Controlled  │   │                 │
-    /// └────────────┘   └────────────┘   └─────────────────┘
+    /// ┌──────────────┐ ◄── events ◄── ┌───────────────────────────────┐
+    /// │ Your Program │                │ Spawned Task (1) in Read      │
+    /// │              │ ──► input ───► │          Write session        │
+    /// │              │                │               ▼               │
+    /// │ Handle       │                │ ◄─── PTY creates pair ──────► │
+    /// │ events and   │                │ ┊Master/   ┊     ┊Slave/    ┊ │
+    /// │ process      │                │ ┊Controller┊     ┊Controlled┊ │
+    /// │ completion   │                │     ▼                 ▼       │
+    /// │ and send     │                │ Spawn Tokio       Controlled  │
+    /// │ input to     │                │ blocking task     spawns      │
+    /// │ read/write   │                │ (2) to read       child       │
+    /// │ session      │                │ from              process (3) │
+    /// │              │                │ Controller and    + Spawn     │
+    /// │              │                │ generate events   bridge      │
+    /// │              │                │ for your program  task (4)    │
+    /// │              │                │                   for input   │
+    /// └──────────────┘                └───────────────────────────────┘
     /// ```
     ///
-    /// This function provides the internal implementation for
-    /// [`PtyCommandBuilder::spawn_read_write()`], which enables both reading from and
-    /// writing to a child process running in a pseudo-terminal.
+    /// # Why 4 Tasks?
     ///
-    /// # Core Architecture
+    /// 1. **Background orchestration task [`tokio::spawn`]** -> Required because this
+    ///    function needs to return immediately with a session handle, allowing the caller
+    ///    to start processing events and sending input while the PTY command runs in the
+    ///    background. Without this, the function would block until the entire PTY session
+    ///    completes.
     ///
-    /// - **Shared functionality**: Uses `common_impl.rs` for PTY setup, reader/writer
-    ///   tasks
-    /// - **Session management**: [`PtyReadWriteSession`] struct provides channels for
-    ///   bidirectional communication
-    /// - **Type system**: [`PtyInputEvent`] for sending commands, [`super::ControlChar`]
-    ///   for special keys, extended [`PtyOutputEvent`] for output
-    /// - **Memory efficiency**: [`super::control_char_to_bytes()`] uses `Cow<'static,
-    ///   [u8]>` to avoid unnecessary allocations
+    /// 2. **OS child process [`crate::ControlledChild`]** -> The actual command being
+    ///    executed in the PTY. This is not a Tokio task but a system process that runs
+    ///    your command with proper terminal emulation.
+    ///
+    /// 3. **Blocking reader task [`tokio::task::spawn_blocking`]** -> Required because
+    ///    PTY file descriptors only provide synchronous [`std::io::Read`] APIs, not async
+    ///    [`tokio::io::AsyncRead`]. Using regular [`tokio::spawn`] with blocking reads
+    ///    would block the entire async runtime. [`spawn_blocking`] runs these synchronous
+    ///    reads on a dedicated thread pool.
+    ///
+    /// 4. **Bridge task [`tokio::spawn`]** -> Unique to read-write mode. Converts async
+    ///    input from your program to sync channel for the blocking input handler. This
+    ///    enables bidirectional communication while maintaining proper async/sync
+    ///    boundaries.
     ///
     /// # Design Decisions
     ///
@@ -48,61 +64,25 @@ impl PtyCommandBuilder {
     /// terminal-specific behavior. We simply provide the transport layer.
     ///
     /// ## Single Input Handler Architecture
-    ///
     /// A single task owns the [`portable_pty::MasterPty`] and handles all input
     /// operations including resize. This avoids complex synchronization and ensures
-    /// clean resource management. The task:
-    /// - Processes all [`PtyInputEvent`] commands
-    /// - Handles PTY resizing directly
-    /// - Manages the write side of the PTY
-    /// - Reports errors via the event channel
-    ///
-    /// ## Task Separation
-    ///
-    /// - **Reader task**: Independently reads from PTY, processes OSC sequences, sends
-    ///   events
-    /// - **Input handler task**: Owns [`portable_pty::MasterPty`], processes all input
-    ///   commands including resize
-    /// - **Bridge task**: Converts async channel to sync channel for the blocking input
-    ///   handler
+    /// clean resource management.
     ///
     /// ## Error Handling
-    ///
-    /// - Write errors terminate the session (no automatic retry)
-    /// - Errors are reported via [`PtyOutputEvent::WriteError`] before termination
-    /// - Three termination scenarios handled:
-    ///   1. Child process self-terminates (normal or crash)
-    ///   2. Explicit session termination via [`PtyInputEvent::Close`]
-    ///   3. Unexpected termination (reported as [`PtyOutputEvent::UnexpectedExit`] event)
-    ///
-    /// ## Memory Efficiency
-    ///
-    /// - Control character sequences use `&'static [u8]` to avoid heap allocations
-    /// - Only [`crate::ControlChar::RawSequence`] variants require owned data
-    /// - Unbounded channels for simplicity (no backpressure handling)
-    ///
-    /// # Features
-    ///
-    /// - **Bidirectional communication**: Full read/write support for interactive
-    ///   processes
-    /// - **Control characters**: Comprehensive support including:
-    ///   - Standard controls (Ctrl-C, Ctrl-D, Ctrl-Z, etc.)
-    ///   - Arrow keys and navigation (Home, End, `PageUp`, `PageDown`)
-    ///   - Function keys (F1-F12)
-    ///   - Raw escape sequences for custom needs
-    /// - **PTY resizing**: Dynamic terminal size adjustment via [`PtyInputEvent::Resize`]
-    /// - **Explicit flush control**: [`PtyInputEvent::Flush`] for protocols sensitive to
-    ///   message boundaries
-    /// - **Proper cleanup**: Careful resource management prevents PTY deadlocks
+    /// Write errors terminate the session (no automatic retry). Errors are reported via
+    /// [`PtyOutputEvent::WriteError`] before termination. Three termination scenarios:
+    /// 1. Child process self-terminates (normal or crash)
+    /// 2. Explicit session termination via [`PtyInputEvent::Close`]
+    /// 3. Unexpected termination (reported as [`PtyOutputEvent::UnexpectedExit`] event)
     ///
     /// # Returns
     ///
     /// A session with:
-    /// 1. `input_event_sender_half` for sending input events to the PTY
-    /// 2. `output_event_receiver_half` combined stdout/stderr of child process -> events
-    /// 3. `completion_handle` to await spawned child process completion
+    /// - `input_event_sender_half` for sending input events to the PTY
+    /// - `output_event_receiver_half` combined stdout/stderr of child process -> events
+    /// - `completion_handle` to await spawned child process completion
     ///
-    /// # Example: Shell command interaction
+    /// # Example: Interactive shell session with input/output
     ///
     /// ```rust,no_run
     /// # #[tokio::main]
@@ -110,16 +90,35 @@ impl PtyCommandBuilder {
     /// use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent, PtyInputEvent, ControlChar};
     /// use tokio::time::{sleep, Duration};
     ///
-    /// // Simple shell calculation
+    /// // Start an interactive shell
     /// let mut session = PtyCommandBuilder::new("sh")
-    ///     .args(["-c", "echo $((2 + 3)); echo 'Result calculated'"])
     ///     .spawn_read_write(PtyConfigOption::Output)?;
     ///
-    /// // Process output
+    /// // Send commands to the shell
+    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("echo 'Hello from shell'".into()))?;
+    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("date".into()))?;
+    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("exit".into()))?;
+    ///
+    /// // Process output events
+    /// let mut output = Vec::new();
     /// while let Some(event) = session.output_event_receiver_half.recv().await {
     ///     match event {
-    ///         PtyOutputEvent::Output(data) => print!("{}", String::from_utf8_lossy(&data)),
-    ///         PtyOutputEvent::Exit(_) => break,
+    ///         PtyOutputEvent::Output(data) => {
+    ///             output.extend_from_slice(&data);
+    ///             print!("{}", String::from_utf8_lossy(&data));
+    ///         }
+    ///         PtyOutputEvent::Exit(status) if status.success() => {
+    ///             println!("Shell session completed successfully");
+    ///             break;
+    ///         }
+    ///         PtyOutputEvent::Exit(status) => {
+    ///             eprintln!("Shell exited with: {:?}", status);
+    ///             break;
+    ///         }
+    ///         PtyOutputEvent::WriteError(err) => {
+    ///             eprintln!("Write error: {}", err);
+    ///             break;
+    ///         }
     ///         _ => {}
     ///     }
     /// }
@@ -130,6 +129,14 @@ impl PtyCommandBuilder {
     /// # Errors
     ///
     /// Returns an error if the PTY fails to spawn or initialize properly.
+    ///
+    /// [`tokio::spawn`]: tokio::spawn
+    /// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
+    /// [`std::io::Read`]: std::io::Read
+    /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
+    /// [`spawn_blocking`]: tokio::task::spawn_blocking
+    /// [`crate::ControlledChild`]: crate::ControlledChild
+    /// [`portable_pty::MasterPty`]: portable_pty::MasterPty
     pub fn spawn_read_write(
         self,
         config: impl Into<PtyConfig>,

@@ -1,11 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Common implementation details shared between PTY spawning functions.
+//! Common I/O implementation shared between PTY session types.
 //!
-//! This module contains the shared logic for:
-//! - PTY setup and initialization
-//! - Reader and writer task creation
-//! - Resource management patterns
+//! This module provides the core I/O functionality used by both read-only and
+//! read-write PTY sessions:
+//! - PTY pair creation and configuration
+//! - Async task spawning for I/O operations
+//! - Input/output event handling
+//! - Resource management and cleanup
 
 use std::{io::{Read, Write},
           sync::mpsc::{Receiver, RecvTimeoutError},
