@@ -14,7 +14,6 @@ use std::{io::{Read, Write},
           time::Duration};
 
 use portable_pty::{Child, MasterPty, SlavePty, native_pty_system};
-use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{OscBuffer, PtyCommand, PtyConfig, PtyInputEvent, PtyOutputEvent,
             control_char_to_bytes};
@@ -124,10 +123,11 @@ pub fn spawn_command_in_pty(
 #[must_use]
 pub fn spawn_blocking_controller_reader_task(
     mut controller_reader: Box<dyn Read + Send>,
-    output_event_sender_half: UnboundedSender<PtyOutputEvent>,
-    config: impl Into<PtyConfig>,
+    output_event_sender_half: tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
+    arg_config: impl Into<PtyConfig>,
 ) -> tokio::task::JoinHandle<miette::Result<()>> {
-    let config = config.into();
+    let config: PtyConfig = arg_config.into();
+
     tokio::task::spawn_blocking(move || -> miette::Result<()> {
         let mut read_buffer = [0u8; READ_BUFFER_SIZE];
         let mut osc_buffer = if config.is_osc_capture_enabled() {
@@ -183,7 +183,7 @@ pub fn spawn_blocking_controller_reader_task(
 pub fn create_input_handler_task(
     controller: Box<dyn MasterPty + Send>,
     input_receiver: Receiver<PtyInputEvent>,
-    event_sender: UnboundedSender<PtyOutputEvent>,
+    event_sender: tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
 ) -> tokio::task::JoinHandle<miette::Result<()>> {
     tokio::task::spawn_blocking(move || -> miette::Result<()> {
         let controller = controller;

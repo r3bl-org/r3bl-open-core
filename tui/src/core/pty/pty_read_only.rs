@@ -12,22 +12,22 @@ impl PtyCommandBuilder {
     /// process.
     ///
     /// ```text
-    /// ┌──────────────┐ ◄── events ◄── ┌───────────────────────────────┐
-    /// │ Your Program │                │ Spawned Task (1) in Read Only │
-    /// │              │                │            session            │
-    /// │              │                │               ▼               │
-    /// │ Handle       │                │ ◄─── PTY creates pair ──────► │
-    /// │ events and   │                │ ┊Master/   ┊     ┊Slave/    ┊ │
-    /// │ process      │                │ ┊Controller┊     ┊Controlled┊ │
-    /// │ completion   │                │     ▼                 ▼       │
-    /// │ from read    │                │ Spawn Tokio       Controlled  │
-    /// │ only session │                │ blocking task     spawns      │
-    /// │              │                │ (2) to read       child       │
-    /// │              │                │ from              process (3) │
-    /// │              │                │ Controller and                │
-    /// │              │                │ generate events               │
-    /// │              │                │ for your program              │
-    /// └──────────────┘                └───────────────────────────────┘
+    /// ┌──────────────────────────┐ ◄── output ◄── ┌───────────────────────────────┐
+    /// │ Your Program             │     events     │ Spawned Task (1) in Read Only │
+    /// │                          │                │            session            │
+    /// │                          │                │               ▼               │
+    /// │ a) Handle output events  │                │ ◄─── PTY creates pair ──────► │
+    /// │    from                  │                │ ┊Master/   ┊     ┊Slave/    ┊ │
+    /// │ b) Process completion of │                │ ┊Controller┊     ┊Controlled┊ │
+    /// │ read only session        │                │     ▼                 ▼       │
+    /// │                          │                │ Spawn Tokio       Controlled  │
+    /// │                          │                │ blocking task     spawns      │
+    /// │                          │                │ (3) to read       child       │
+    /// │                          │                │ from              process (2) │
+    /// │                          │                │ Controller and                │
+    /// │                          │                │ generate events               │
+    /// │                          │                │ for your program              │
+    /// └──────────────────────────┘                └───────────────────────────────┘
     /// ```
     ///
     /// # Why 3 Tasks?
@@ -39,7 +39,8 @@ impl PtyCommandBuilder {
     ///
     /// 2. **OS child process [`ControlledChild`]** -> The actual command being executed
     ///    in the PTY. This is not a Tokio task but a system process that runs your
-    ///    command with proper terminal emulation.
+    ///    command with terminal emulation (the child thinks it is in an interactive
+    ///    terminal).
     ///
     /// 3. **Blocking reader task [`tokio::task::spawn_blocking`]** -> Required because
     ///    PTY file descriptors only provide synchronous [`std::io::Read`] APIs, not async
@@ -100,9 +101,9 @@ impl PtyCommandBuilder {
     /// [`ControlledChild`]: crate::ControlledChild
     pub fn spawn_read_only(
         self,
-        config: impl Into<PtyConfig>,
+        arg_config: impl Into<PtyConfig>,
     ) -> miette::Result<PtyReadOnlySession> {
-        let config = config.into();
+        let config = arg_config.into();
 
         // Create channel to bridge events from PTY controlled side -> your program.
         let (output_event_sender_half, output_event_receiver_half) =

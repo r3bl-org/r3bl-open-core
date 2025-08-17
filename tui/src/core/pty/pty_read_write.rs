@@ -1,7 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use miette::IntoDiagnostic;
-use tokio::sync::mpsc::unbounded_channel;
 
 use crate::{PtyCommandBuilder, PtyConfig, PtyInputEvent, PtyOutputEvent,
             PtyReadWriteSession,
@@ -13,23 +12,23 @@ impl PtyCommandBuilder {
     /// process with bidirectional communication.
     ///
     /// ```text
-    /// ┌──────────────┐ ◄── events ◄── ┌───────────────────────────────┐
-    /// │ Your Program │                │ Spawned Task (1) in Read      │
-    /// │              │ ──► input ───► │          Write session        │
-    /// │              │                │               ▼               │
-    /// │ Handle       │                │ ◄─── PTY creates pair ──────► │
-    /// │ events and   │                │ ┊Master/   ┊     ┊Slave/    ┊ │
-    /// │ process      │                │ ┊Controller┊     ┊Controlled┊ │
-    /// │ completion   │                │     ▼                 ▼       │
-    /// │ and send     │                │ Spawn Tokio       Controlled  │
-    /// │ input to     │                │ blocking task     spawns      │
-    /// │ read/write   │                │ (2) to read       child       │
-    /// │ session      │                │ from              process (3) │
-    /// │              │                │ Controller and    + Spawn     │
-    /// │              │                │ generate events   bridge      │
-    /// │              │                │ for your program  task (4)    │
-    /// │              │                │                   for input   │
-    /// └──────────────┘                └───────────────────────────────┘
+    /// ┌──────────────────────────┐ ◄── output ◄── ┌───────────────────────────────┐
+    /// │ Your Program             │     events     │ Spawned Task (1) in Read      │
+    /// │                          │                │          Write session        │
+    /// │                          │ ──► input ───► │               ▼               │
+    /// │ a) Handle output events  │     events     │ ◄─── PTY creates pair ──────► │
+    /// │    from                  │                │ ┊Master/   ┊     ┊Slave/    ┊ │
+    /// │ b) Send input events to  │                │ ┊Controller┊     ┊Controlled┊ │
+    /// │ c) Process completion of │                │     ▼                 ▼       │
+    /// │ read/write session       │                │ Spawn Tokio       Controlled  │
+    /// │                          │                │ blocking task     spawns      │
+    /// │                          │                │ (3) to read       child       │
+    /// │                          │                │ from              process (2) │
+    /// │                          │                │ Controller and    + Spawn     │
+    /// │                          │                │ generate events   bridge      │
+    /// │                          │                │ for your program  task (4)    │
+    /// │                          │                │                   for input   │
+    /// └──────────────────────────┘                └───────────────────────────────┘
     /// ```
     ///
     /// # Why 4 Tasks?
@@ -42,7 +41,8 @@ impl PtyCommandBuilder {
     ///
     /// 2. **OS child process [`crate::ControlledChild`]** -> The actual command being
     ///    executed in the PTY. This is not a Tokio task but a system process that runs
-    ///    your command with proper terminal emulation.
+    ///    your command with terminal emulation (the child thinks it is in an interactive
+    ///    terminal).
     ///
     /// 3. **Blocking reader task [`tokio::task::spawn_blocking`]** -> Required because
     ///    PTY file descriptors only provide synchronous [`std::io::Read`] APIs, not async
@@ -50,25 +50,32 @@ impl PtyCommandBuilder {
     ///    would block the entire async runtime. [`spawn_blocking`] runs these synchronous
     ///    reads on a dedicated thread pool.
     ///
-    /// 4. **Bridge task [`tokio::spawn`]** -> Unique to read-write mode. Converts async
-    ///    input from your program to sync channel for the blocking input handler. This
-    ///    enables bidirectional communication while maintaining proper async/sync
-    ///    boundaries.
+    /// 4. **Bridge task [`tokio::spawn`]** -> Unique to read-write mode (the 3 above are
+    ///    the same for read-only mode). Converts async input from your program to sync
+    ///    channel for the blocking input handler. This enables bidirectional
+    ///    communication while maintaining proper async/sync boundaries. The bridge task
+    ///    serves as an async-to-sync adapter, necessary because `portable_pty` only
+    ///    provides synchronous I/O APIs, while the input handler must run in
+    ///    `spawn_blocking` context to avoid blocking the tokio runtime. Without this
+    ///    bridge, async code couldn't send input to the synchronous PTY writer.
     ///
     /// # Design Decisions
     ///
     /// ## Dumb Pipes Approach
+    ///
     /// The API treats input and output channels as dumb pipes of events, making no
     /// assumptions about the child process. The child determines terminal modes
     /// (cooked/raw), interprets environment variables, and handles all
     /// terminal-specific behavior. We simply provide the transport layer.
     ///
     /// ## Single Input Handler Architecture
+    ///
     /// A single task owns the [`portable_pty::MasterPty`] and handles all input
     /// operations including resize. This avoids complex synchronization and ensures
     /// clean resource management.
     ///
     /// ## Error Handling
+    ///
     /// Write errors terminate the session (no automatic retry). Errors are reported via
     /// [`PtyOutputEvent::WriteError`] before termination. Three termination scenarios:
     /// 1. Child process self-terminates (normal or crash)
@@ -139,17 +146,17 @@ impl PtyCommandBuilder {
     /// [`portable_pty::MasterPty`]: portable_pty::MasterPty
     pub fn spawn_read_write(
         self,
-        config: impl Into<PtyConfig>,
+        arg_config: impl Into<PtyConfig>,
     ) -> miette::Result<PtyReadWriteSession> {
-        let config = config.into();
+        let config = arg_config.into();
 
         // Create channels for bidirectional communication
         // Input: Your program → spawned process
-        let (input_event_sender_half, input_receiver_half) =
-            unbounded_channel::<PtyInputEvent>();
-        // Output: Spawned process → your program
+        let (input_event_sender_half, mut input_receiver_half) =
+            tokio::sync::mpsc::unbounded_channel::<PtyInputEvent>();
+        // Output: Your program ← spawned process
         let (event_sender_half, output_event_receiver_half) =
-            unbounded_channel::<PtyOutputEvent>();
+            tokio::sync::mpsc::unbounded_channel::<PtyOutputEvent>();
 
         // Create a sync channel for the input handler task (spawn_blocking needs sync
         // channel). This bridges the async input channel to blocking I/O operations.
@@ -203,8 +210,7 @@ impl PtyCommandBuilder {
             // input handler This allows async input from your program to be
             // processed by the blocking input handler
             let bridge_handle = tokio::spawn(async move {
-                let mut receiver = input_receiver_half;
-                while let Some(input) = receiver.recv().await {
+                while let Some(input) = input_receiver_half.recv().await {
                     if input_handler_sender.send(input).is_err() {
                         // Input handler task has exited
                         break;

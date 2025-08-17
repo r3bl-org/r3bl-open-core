@@ -89,7 +89,7 @@
 //! - [How to use it](#how-to-use-it)
 //! - [Build, run, test tasks](#build-run-test-tasks)
 //!   - [Prerequisites](#prerequisites)
-//!   - [Nushell commands](#nushell-commands)
+//!   - [Fish commands](#fish-commands)
 //! - [References](#references)
 //! - [Why make a new crate for this?](#why-make-a-new-crate-for-this)
 //!
@@ -161,25 +161,11 @@
 //! [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
 //! [`fg_blue()`], etc.
 //!
-//!
 //! Please a look at the
 //! [`main` example](https://github.com/r3bl-org/r3bl_ansi_color/blob/main/examples/main.rs) to get a
 //! better idea of how to use this crate.
 //!
-//! # Build, run, test tasks
-//!
-//! ## Prerequisites
-//!
-//! 🌠 In order for these to work you have to install the Rust toolchain and `nu` and
-//! `cargo-watch`:
-//!
-//! 1. Install the Rust toolchain using `rustup` by following the instructions [here](https://rustup.rs/).
-//! 1. Install `cargo-watch` using `cargo install cargo-watch`.
-//! 1. Install `flamegraph` using `cargo install flamegraph`.
-//! 1. Install [`nu`](https://www.nushell.sh/) on your system using `cargo install nu`. It
-//!    is available for Linux, macOS, and Windows. And it is written in Rust.
-//!
-//! ## Nushell commands
+//! ## fish commands
 //!
 //! | Command                         | Description                                                                                              |
 //! |---------------------------------|------------------------------------------------------------------------------------------------------|

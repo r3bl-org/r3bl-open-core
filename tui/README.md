@@ -246,7 +246,7 @@ edi
 
 You can mix and match "Full TUI" with "Partial TUI" to build for whatever use case you
 need. `r3bl_tui` allows you to create application state that can be moved between
-various "applets", where each "applet" can be "Full TUI" or "Partial TUI".//!
+various "applets", where each "applet" can be "Full TUI" or "Partial TUI".
 
 ## Changelog
 
@@ -268,30 +268,21 @@ on your computer, follow these steps:
 
 ### Prerequisites
 
-The easiest way to get started is to use the bootstrap script:
+🌠 The easiest way to get started is to use the bootstrap script:
 
-```sh
-# From the repository root
+```bash
 ./bootstrap.sh
-```
-
-This script automatically installs:
-- **Rust toolchain** via rustup
-- **Nushell shell** for build scripts
-- **File watchers** (inotifywait on Linux, fswatch on macOS)
-- **All cargo development tools** (flamegraph, inferno, etc.)
-
-For manual installation:
-```sh
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Install Nushell
-cargo install nu
-
-# Install development tools
 fish run.fish install-cargo-tools
 ```
+
+This script above automatically installs:
+- Rust toolchain via rustup
+- Fish shell
+- File watchers (inotifywait/fswatch)
+- All required cargo development tools
+
+For complete development setup and all available commands, see the
+[repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 
 ### Running examples
 
@@ -315,7 +306,7 @@ cargo run --release --example demo -- --no-log
 ```
 
 These examples cover the entire surface area of the TUI API. The unified
-[`run.nu`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.nu) script
+[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish) script
 at the repository root provides all development commands for the entire workspace.
 
 ## TUI Development Workflow

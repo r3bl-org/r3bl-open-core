@@ -215,40 +215,16 @@ To run from source:
 
 ```bash
 ./bootstrap.sh
+fish run.fish install-cargo-tools
+cargo install --path .
 ```
 
-This script automatically installs:
+This script above automatically installs:
 - Rust toolchain via rustup
-- Nushell shell
+- Fish shell
 - File watchers (inotifywait/fswatch)
 - All required cargo development tools
-
-For manual installation:
-1. Install the Rust toolchain using `rustup` by following the instructions [here](https://rustup.rs/).
-2. Install [`nu`](https://crates.io/crates/nu) shell: `cargo install nu`
-3. Install development tools: `fish run.fish install-cargo-tools`
-
-### Binary Development Commands
-
-For cmdr binary development, use these commands from the repository root:
-
-#### Building and Installing Binaries
-
-| Command                      | Description                             |
-|------------------------------|-----------------------------------------|
-| `fish run.fish install-cmdr` | Install cmdr binaries to ~/.cargo/bin  |
-| `fish run.fish run-binaries` | Interactively run edi, giti, or rc     |
-| `fish run.fish docker-build` | Build release binaries in Docker       |
-| `fish run.fish log`          | Monitor log files with smart detection |
-
-#### Testing and Development
-
-| Command                         | Description                     |
-|---------------------------------|---------------------------------|
-| `fish run.fish test`            | Run all tests                   |
-| `fish run.fish clippy`          | Run clippy with fixes           |
-| `fish run.fish watch-all-tests` | Watch files, run all tests     |
-| `fish run.fish watch-clippy`    | Watch files, run clippy        |
+- The `r3bl-cmdr` binaries
 
 For complete development setup and all available commands, see the
 [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).

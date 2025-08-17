@@ -42,6 +42,7 @@
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "esbenp.prettier-vscode", // Prettier -> very slow for large docs.
     "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
     "ms-azuretools.vscode-containers", // Container tools.
     "ms-azuretools.vscode-docker", // Docker.

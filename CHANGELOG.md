@@ -940,6 +940,7 @@ Documentation update for the `ch` command.
 - Added:
   - Documentation for the `ch` command and its features, including usage examples and
     configuration options in the `README.md` file and `lib.rs` (for `docs.rs`).
+  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
 
 ### v0.0.23 (2025-08-15)
 
@@ -949,6 +950,7 @@ Refactored `ch` command type system and enhanced user experience with improved o
   - Refactored `ch` command result type to `ChResult` for improved type clarity and better output
     formatting
   - Enhanced output messages for better user experience
+  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
 
 ### v0.0.22 (2025-08-15)
 
@@ -965,6 +967,7 @@ resilient real-time feedback during the update process.
   - Image handling with automatic saving to `~/Downloads` directory using friendly filenames
   - Smart project matching that finds Claude projects from current or parent directories
   - Interactive terminal detection with graceful error handling for non-interactive environments
+  - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
 - Enhanced upgrade experience:
   - Complete overhaul of upgrade command using PTY for resilient and rich user experience
   - Real-time feedback showing live progress from rustup and cargo install messages
@@ -973,6 +976,7 @@ resilient real-time feedback during the update process.
   - Added OSC 8 hyperlink support to make saved image file paths clickable in compatible terminals
   - Implemented blacklist-based terminal capability detection for OSC 8 hyperlinks
   - Enhanced user experience with rich feedback instead of misleading timeout screens
+  - ![giti-upgrade video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/giti-upgrade.gif?raw=true)
 
 ### v0.0.21 (2025-08-04)
 

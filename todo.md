@@ -28,8 +28,6 @@
 - [x] new feature to recall claude history in r3bl-cmdr
       [`task_prd_ch_bin`](`docs/done/task_prd_ch_bin.md`):
       https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
-- [ ] make YT video on the research (in rust-scratch) issue
-- [ ] make YT video on the `ch` implementation (in r3bl-cmdr)
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 
@@ -50,9 +48,6 @@
 # build `chi` binary in r3bl-cmdr
 
 - [ ] PRD [`task_prd_chi`](docs/task_prd_chi.md) to build `chi`
-  - [ ] make a release
-  - [ ] make a YT video on it
-  - [ ] publicize on hacker news, Reto, Boris, TWiR, etc.
 
 # unify rendering paths
 
