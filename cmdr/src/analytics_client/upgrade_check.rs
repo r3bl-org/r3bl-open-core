@@ -255,7 +255,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
                 // User pressed Ctrl+C
                 return Err(Error::new(ErrorKind::Interrupted, "Update cancelled by user"));
             }
-            event = session.output_event_receiver_half.recv() => {
+            event = session.output_event_ch_rx_half.recv() => {
                 match event {
                     Some(PtyOutputEvent::Output(data)) => {
                         // Convert bytes to string and extract meaningful info
@@ -301,7 +301,7 @@ async fn run_cargo_install_with_progress(
                 return Err(Error::new(ErrorKind::Interrupted,
                     "Installation cancelled by user"));
             }
-            event = session.output_event_receiver_half.recv() => {
+            event = session.output_event_ch_rx_half.recv() => {
                 match event {
                     Some(PtyOutputEvent::Osc(osc)) => {
                         handle_osc_event(osc, crate_name, spinner);

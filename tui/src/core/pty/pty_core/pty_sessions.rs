@@ -20,14 +20,14 @@ use super::pty_types::{InputEventSenderHalf, OutputEventReceiverHalf,
 #[derive(Debug)]
 pub struct PtyReadOnlySession {
     /// Receives output events from the child process (combined stdout/stderr).
-    pub output_event_receiver_half: OutputEventReceiverHalf,
+    pub output_event_ch_rx_half: OutputEventReceiverHalf,
     /// Await this `completion_handle` for process completion.
     ///
     /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
     /// other async coordination patterns. The `JoinHandle` returned by `tokio::spawn`
     /// doesn't implement Unpin by default, but select! requires all futures to be
     /// Unpin for efficient polling without moving them.
-    pub completion_handle: PtyCompletionHandle,
+    pub pinned_boxed_session_completion_handle: PtyCompletionHandle,
 }
 
 /// Session handle for read-write PTY communication.

@@ -712,10 +712,13 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
 
+    use serial_test::serial;
+
     use super::*;
-    use crate::{CodeBlockLine, HeadingLevel, assert_eq2, get_metadata_tags_marker_style,
-                get_metadata_tags_values_style, get_metadata_title_marker_style,
-                get_metadata_title_value_style, list, throws, tui_color};
+    use crate::{CodeBlockLine, ColorSupport, HeadingLevel, assert_eq2,
+                get_metadata_tags_marker_style, get_metadata_tags_values_style,
+                get_metadata_title_marker_style, get_metadata_title_value_style,
+                global_color_support, list, throws, tui_color};
 
     /// Test each [`MdLineFragment`] variant is converted by
     /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
@@ -925,7 +928,17 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_inline_code() {
+            // Create a guard that will clean up on drop
+            struct ColorSupportGuard;
+            impl Drop for ColorSupportGuard {
+                fn drop(&mut self) { global_color_support::clear_override(); }
+            }
+
+            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = ColorSupportGuard;
+
             let fragment = MdLineFragment::InlineCode("Foobar");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -975,7 +988,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_bold() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let fragment = MdLineFragment::Bold("Foobar");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -997,6 +1012,7 @@ mod tests_style_us_span_lines_from {
                 actual[2],
                 StyleUSSpan::new(style + get_foreground_dim_style(), "*",)
             );
+            global_color_support::clear_override();
         }
 
         #[test]
@@ -1019,8 +1035,18 @@ mod tests_style_us_span_lines_from {
         use crate::BulletKind;
 
         #[test]
+        #[serial]
         #[allow(clippy::missing_errors_doc)]
         fn test_block_metadata_tags() -> Result<(), ()> {
+            // Create a guard that will clean up on drop
+            struct ColorSupportGuard;
+            impl Drop for ColorSupportGuard {
+                fn drop(&mut self) { global_color_support::clear_override(); }
+            }
+
+            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = ColorSupportGuard;
+
             throws!({
                 let tags = MdElement::Tags(list!["tag1", "tag2", "tag3"]);
                 let style = new_style!(
@@ -1059,7 +1085,7 @@ mod tests_style_us_span_lines_from {
                     iter.next().ok_or(())?,
                     &StyleUSSpan::new(style + get_metadata_tags_values_style(), "tag3",)
                 );
-            });
+            })
         }
 
         #[test]
@@ -1142,7 +1168,17 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_block_ol() {
+            // Create a guard that will clean up on drop
+            struct ColorSupportGuard;
+            impl Drop for ColorSupportGuard {
+                fn drop(&mut self) { global_color_support::clear_override(); }
+            }
+
+            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = ColorSupportGuard;
+
             {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
@@ -1212,7 +1248,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_block_ul() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
@@ -1273,6 +1311,7 @@ mod tests_style_us_span_lines_from {
                     );
                 }
             }
+            global_color_support::clear_override();
         }
 
         #[test]

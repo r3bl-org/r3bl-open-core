@@ -46,7 +46,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
 
     // Wait for completion
     tokio::select! {
-        result = &mut session.completion_handle => {
+        result = &mut session.pinned_boxed_session_completion_handle => {
             let status = result.into_diagnostic()??;
             if status.success() {
                 println!("{GREEN}✓ Cargo clean completed successfully{RESET}\n");
@@ -54,7 +54,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
                 return Err(miette::miette!("Cargo clean failed"));
             }
         }
-        Some(event) = session.output_event_receiver_half.recv() => {
+        Some(event) = session.output_event_ch_rx_half.recv() => {
             if let PtyOutputEvent::Exit(status) = event
                 && !status.success() {
                 return Err(miette::miette!("Cargo clean failed"));
@@ -84,7 +84,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
     loop {
         tokio::select! {
             // Handle cargo build completion
-            result = &mut session.completion_handle => {
+            result = &mut session.pinned_boxed_session_completion_handle => {
                 let status = result.into_diagnostic()??;
 
                 // Print summary
@@ -100,7 +100,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                 break;
             }
             // Handle incoming PTY events
-            Some(event) = session.output_event_receiver_half.recv() => {
+            Some(event) = session.output_event_ch_rx_half.recv() => {
                 match event {
                     PtyOutputEvent::Osc(osc_event) => {
                         match osc_event {

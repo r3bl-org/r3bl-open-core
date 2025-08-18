@@ -34,14 +34,14 @@
     "wayou.vscode-todo-highlight", // Todo Highlight.
     "fabiospampinato.vscode-todo-plus", // Todo+.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
-    "streetsidesoftware.code-spell-checker", // Code Spell Checker.
-    "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
+    "streetsidesoftware.code-spell-checker", // Code Spell Checker. Configure this so it does not slow down IDE
     "fill-labs.dependi", // crates.io.
-    "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "bmalehorn.vscode-fish", // Fish.
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
+    "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "esbenp.prettier-vscode", // Prettier -> very slow for large docs.
     "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
     "ms-azuretools.vscode-containers", // Container tools.

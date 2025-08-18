@@ -197,7 +197,7 @@
 //!     .args(["-la"])
 //!     .spawn_read_only(PtyConfigOption::Output)?;
 //!
-//! while let Some(event) = session.output_event_receiver_half.recv().await {
+//! while let Some(event) = session.output_event_ch_rx_half.recv().await {
 //!     match event {
 //!         PtyOutputEvent::Output(data) => {
 //!             print!("{}", String::from_utf8_lossy(&data));

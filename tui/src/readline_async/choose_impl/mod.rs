@@ -40,7 +40,7 @@
 //! - [`StyleSheet::hot_pink_style()`] - Hot pink color theme
 //!
 //! You can also create custom styles by constructing a `StyleSheet` with your own
-//! [`TuiStyle`] settings. See the examples for detailed styling demonstrations.
+//! [`crate::TuiStyle`] settings. See the examples for detailed styling demonstrations.
 
 // https://github.com/rust-lang/rust-clippy
 // https://rust-lang.github.io/rust-clippy/master/index.html
