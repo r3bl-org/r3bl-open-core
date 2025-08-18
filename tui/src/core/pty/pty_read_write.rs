@@ -1,11 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use miette::IntoDiagnostic;
+use std::{io::Write, sync::mpsc::RecvTimeoutError, time::Duration};
 
-use crate::{PtyCommandBuilder, PtyConfig, PtyInputEvent, PtyOutputEvent,
-            PtyReadWriteSession,
-            pty_common_io::{create_input_handler_task, create_pty_pair,
-                            spawn_blocking_controller_reader_task, spawn_command_in_pty}};
+use miette::{IntoDiagnostic, miette};
+
+use crate::{Controlled, ControlledChild, Controller, ControllerWriter,
+            PtyCommandBuilder, PtyConfig, PtyInputEvent, PtyOutputEvent,
+            PtyReadWriteSession, ok,
+            pty_common_io::{create_pty_pair,
+                            spawn_blocking_controller_output_reader_task,
+                            spawn_command_in_pty}};
 
 impl PtyCommandBuilder {
     /// Spawns a read-write PTY session; it spawns three Tokio tasks and one OS child
@@ -39,13 +43,13 @@ impl PtyCommandBuilder {
     ///    background. Without this, the function would block until the entire PTY session
     ///    completes.
     ///
-    /// 2. **OS child process [`crate::ControlledChild`]** -> The actual command being
-    ///    executed in the PTY. This is not a Tokio task but a system process that runs
-    ///    your command with terminal emulation (the child thinks it is in an interactive
+    /// 2. **OS child process [`ControlledChild`]** -> The actual command being executed
+    ///    in the PTY. This is not a Tokio task but a system process that runs your
+    ///    command with terminal emulation (the child thinks it is in an interactive
     ///    terminal).
     ///
-    /// 3. **Blocking reader task [`tokio::task::spawn_blocking`]** -> Required because
-    ///    PTY file descriptors only provide synchronous [`std::io::Read`] APIs, not async
+    /// 3. **Blocking reader task [`spawn_blocking`]** -> Required because PTY file
+    ///    descriptors only provide synchronous [`std::io::Read`] APIs, not async
     ///    [`tokio::io::AsyncRead`]. Using regular [`tokio::spawn`] with blocking reads
     ///    would block the entire async runtime. [`spawn_blocking`] runs these synchronous
     ///    reads on a dedicated thread pool.
@@ -54,9 +58,9 @@ impl PtyCommandBuilder {
     ///    the same for read-only mode). Converts async input from your program to sync
     ///    channel for the blocking input handler. This enables bidirectional
     ///    communication while maintaining proper async/sync boundaries. The bridge task
-    ///    serves as an async-to-sync adapter, necessary because `portable_pty` only
+    ///    serves as an async-to-sync adapter, necessary because [`mod@portable_pty`] only
     ///    provides synchronous I/O APIs, while the input handler must run in
-    ///    `spawn_blocking` context to avoid blocking the tokio runtime. Without this
+    ///    [`spawn_blocking`] context to avoid blocking the tokio runtime. Without this
     ///    bridge, async code couldn't send input to the synchronous PTY writer.
     ///
     /// # Design Decisions
@@ -102,9 +106,9 @@ impl PtyCommandBuilder {
     ///     .spawn_read_write(PtyConfigOption::Output)?;
     ///
     /// // Send commands to the shell
-    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("echo 'Hello from shell'".into()))?;
-    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("date".into()))?;
-    /// session.input_event_sender_half.send(PtyInputEvent::WriteLine("exit".into()))?;
+    /// session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("echo 'Hello from shell'".into()))?;
+    /// session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("date".into()))?;
+    /// session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("exit".into()))?;
     ///
     /// // Process output events
     /// let mut output = Vec::new();
@@ -138,11 +142,9 @@ impl PtyCommandBuilder {
     /// Returns an error if the PTY fails to spawn or initialize properly.
     ///
     /// [`tokio::spawn`]: tokio::spawn
-    /// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
+    /// [`spawn_blocking`]: tokio::task::spawn_blocking
     /// [`std::io::Read`]: std::io::Read
     /// [`tokio::io::AsyncRead`]: tokio::io::AsyncRead
-    /// [`spawn_blocking`]: tokio::task::spawn_blocking
-    /// [`crate::ControlledChild`]: crate::ControlledChild
     /// [`portable_pty::MasterPty`]: portable_pty::MasterPty
     pub fn spawn_read_write(
         self,
@@ -150,116 +152,353 @@ impl PtyCommandBuilder {
     ) -> miette::Result<PtyReadWriteSession> {
         let pty_config = arg_config.into();
 
-        // Create channels for bidirectional communication.
-        // Input: Your program → spawned process.
+        // 1. Async channel for output from spawned process → your program.
         let (
-            /* return this to your program */ input_event_ch_tx_half,
-            /* used by the bridge task */ mut input_event_ch_rx_half,
+            /* used by 2 tasks for sending output and error */
+            output_evt_ch_tx_half,
+            /* return this to your program */ output_evt_ch_rx_half,
+        ) = tokio::sync::mpsc::unbounded_channel::<PtyOutputEvent>();
+
+        // 2. Async channel for input from your program → spawned process.
+        let (
+            /* return this to your program */ input_evt_ch_tx_half,
+            /* bridge (async side) task relays input events from your program to PTY */
+            input_evt_ch_rx_half,
         ) = tokio::sync::mpsc::unbounded_channel::<PtyInputEvent>();
-        // Output: Your program ← spawned process.
-        let (event_sender_half, output_event_receiver_half) =
-            tokio::sync::mpsc::unbounded_channel::<PtyOutputEvent>();
 
-        // Create a sync channel for the input handler task (spawn_blocking needs sync
-        // channel). This bridges the async input channel to blocking I/O operations.
-        let (input_handler_sender, input_handler_receiver) =
-            std::sync::mpsc::channel::<PtyInputEvent>();
-
-        // Clone senders for various tasks
-        let reader_event_sender = event_sender_half.clone();
-        let input_handler_event_sender = event_sender_half.clone();
-
-        // [🛫 SPAWN 0] Spawn the main orchestration task.
-        // Pin the completion handle: JoinHandle is not Unpin but select! requires it for
-        // efficient polling without moving.
-        let handle = Box::pin(tokio::spawn(async move {
+        // [🛫 SPAWN 0] Spawn the main orchestration task. This is returned to your
+        // program, which waits for this to complete.
+        let session_completion_handle = tokio::spawn(async move {
             // Build the command, ensuring CWD is set
             let command = self.build()?;
 
             // Create PTY pair: controller (master) for bidirectional I/O, controlled
             // (slave) for spawned process
-            let (controller, controlled) = create_pty_pair(&pty_config)?;
+            let (controller, controlled): (Controller, Controlled) =
+                create_pty_pair(&pty_config)?;
 
-            // Spawn the command in the controlled PTY (slave side)
-            // The child process will use controlled as its stdin/stdout/stderr
-            let mut child = spawn_command_in_pty(&controlled, command)?;
+            // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
+            // The child process uses the controlled side as its stdin/stdout/stderr.
+            let mut controlled_child: ControlledChild =
+                spawn_command_in_pty(&controlled, command)?;
 
-            // Clone a reader from the controller for the reader task
-            // NOTE: Critical resource management - see module docs for PTY lifecycle
-            // details.
-            let reader = controller
-                .try_clone_reader()
-                .map_err(|e| miette::miette!("Failed to clone reader: {}", e))?;
+            // [🛫 SPAWN 2] Start the reader task with a controller reader clone to handle
+            // output from spawned process. NOTE: Critical resource management
+            // - see module docs for PTY lifecycle details.
+            let output_reader_task_handle = {
+                let controller_reader = controller
+                    .try_clone_reader()
+                    .map_err(|e| miette!("Failed to clone reader: {}", e))?;
+                spawn_blocking_controller_output_reader_task(
+                    controller_reader,
+                    output_evt_ch_tx_half.clone(),
+                    pty_config,
+                )
+            };
 
-            // Start the reader task with a controller reader clone to handle output from
-            // spawned process
-            let reader_handle = spawn_blocking_controller_reader_task(
-                reader,
-                reader_event_sender,
-                pty_config,
-            );
-
-            // The input handler task owns the controller and handles all input operations
-            // This task writes input from your program to the spawned process via
-            // controller
-            let input_handler_handle = create_input_handler_task(
+            // [🛫 SPAWN 3 & 4] The input writer task owns the controller and handles all
+            // input operations, along with its bridge task for async-to-sync conversion.
+            // These two tasks are now encapsulated together.
+            let input_writer_task_handle = create_controller_input_writer_task(
                 controller,
-                input_handler_receiver,
-                input_handler_event_sender,
+                input_evt_ch_rx_half,
+                output_evt_ch_tx_half.clone(),
             );
 
-            // Spawn a bridge task to convert async input channel to sync channel for
-            // input handler This allows async input from your program to be
-            // processed by the blocking input handler
-            let bridge_handle = tokio::spawn(async move {
-                while let Some(input) = input_event_ch_rx_half.recv().await {
-                    if input_handler_sender.send(input).is_err() {
-                        // Input handler task has exited
-                        break;
-                    }
-                }
-
-                // Ensure input handler gets Close signal
-                let _unused = input_handler_sender.send(PtyInputEvent::Close);
-            });
-
-            // Wait for the child process to complete
-            let status = tokio::task::spawn_blocking(move || child.wait())
+            // [🛬 WAIT 1] Wait for the child process to complete.
+            let status = tokio::task::spawn_blocking(move || controlled_child.wait())
                 .await
                 .into_diagnostic()?
                 .into_diagnostic()?;
 
-            // Store exit code before moving status
+            // Store exit code before moving status.
             let exit_code = status.exit_code();
 
-            // Send exit event
-            let _unused = event_sender_half.send(PtyOutputEvent::Exit(status));
+            // Send exit event.
+            let _unused = output_evt_ch_tx_half.send(PtyOutputEvent::Exit(status));
 
             // CRITICAL: Drop the controlled half to signal EOF to reader.
             // See module docs for detailed PTY lifecycle management explanation.
             drop(controlled);
 
-            // input_sender will be dropped when this task completes
+            // Wait for all tasks to complete in proper order.
+            // [🛬 WAIT 3 & 4] Wait for the input writer task (which includes bridge) to
+            // complete.
+            let _unused = input_writer_task_handle.await;
+            // [🛬 WAIT 2] Wait for the reader task to complete.
+            let _unused = output_reader_task_handle.await;
 
-            // Wait for all tasks to complete in proper order
-            let _unused = bridge_handle.await;
-            let _unused = input_handler_handle.await;
-            let _unused = reader_handle.await;
-
-            // Return the exit status
+            // Return the exit status.
             Ok(portable_pty::ExitStatus::with_exit_code(exit_code))
-        }));
+        });
 
         Ok(PtyReadWriteSession {
-            input_event_ch_tx_half,
-            output_event_receiver_half,
-            completion_handle: handle,
+            input_event_ch_tx_half: input_evt_ch_tx_half,
+            output_event_receiver_half: output_evt_ch_rx_half,
+            // Pin the completion handle: JoinHandle is not Unpin but select! requires it
+            // for efficient polling without moving.
+            pinned_boxed_session_completion_handle: Box::pin(session_completion_handle),
         })
     }
 }
 
+/// Creates an input handler task that sends input to the PTY and handles resize.
+///
+/// Flow: your program → async input channel → this task (bridge + writer) → PTY
+///
+/// This task:
+/// - Reads input commands from a channel
+/// - Writes data to the PTY master
+/// - Handles control characters and text input
+/// - Handles PTY resize commands
+/// - Reports write errors through the output event channel, that is sent to your program
+///
+/// This single task owns the [`MasterPty`] and handles all input operations.
+/// It internally spawns both a bridge task (for async-to-sync conversion) and
+/// a blocking writer task, returning a combined handle.
+///
+/// Returns a [`JoinHandle`] for the combined tasks.
+///
+/// [`MasterPty`]: portable_pty::MasterPty
+/// [`JoinHandle`]: tokio::task::JoinHandle
+#[must_use]
+fn create_controller_input_writer_task(
+    controller: Controller,
+    /* async */
+    input_evt_ch_rx_half: tokio::sync::mpsc::UnboundedReceiver<PtyInputEvent>,
+    /* async */
+    output_evt_ch_tx_half: tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
+) -> tokio::task::JoinHandle<miette::Result<()>> {
+    // Create a sync channel for the input writer task to actually write to PTY
+    // (which is sync). The bridge task allows async input channel to perform sync
+    // blocking PTY I/O operations via this channel.
+    // Flow: (your program) async → bridge → sync channel → writer → PTY (child process).
+    let (
+        /* Bridge task sends input events from your program (async side) to sync
+         * channel */
+        input_evt_bridge_sync_tx_half,
+        /* Writer task receives input events from sync channel and writes to PTY */
+        input_evt_bridge_sync_rx_half,
+    ) = std::sync::mpsc::channel::<PtyInputEvent>();
+
+    // [🛫 SPAWN 3] The input writer task owns the controller and handles all
+    // input operations. This task writes input from your program to
+    // the spawned process via controller.
+    let input_writer_task_handle = spawn_blocking_writer_task(
+        controller,
+        input_evt_bridge_sync_rx_half,
+        output_evt_ch_tx_half.clone(),
+    );
+
+    // [🛫 SPAWN 4] Spawn a bridge task to convert async input channel to sync
+    // channel for input handler. This allows async input from your
+    // program to be processed by the blocking input handler.
+    let input_writer_bridge_handle = spawn_async_to_sync_bridge_task(
+        input_evt_ch_rx_half,
+        input_evt_bridge_sync_tx_half,
+    );
+
+    // Return combined handle using tokio::join! that waits for both tasks.
+    tokio::spawn(async move {
+        // [🛬 WAIT 3 & 4] Wait for both the input writer and bridge tasks
+        let (_bridge, writer) =
+            tokio::join!(input_writer_bridge_handle, input_writer_task_handle);
+        writer.map_err(|e| miette!("Input writer task failed: {}", e))?
+    })
+}
+
+/// Spawns a bridge task to convert async input channel to sync channel.
+///
+/// Flow: your program → async input channel → this task → sync channel → writer task
+///
+/// This task:
+/// - Reads input events from an async unbounded channel
+/// - Forwards them to a sync channel for the blocking writer task
+/// - Handles channel closure gracefully
+/// - Ensures the writer task receives a Close signal when done
+///
+/// This bridge enables async input from your program to be processed by
+/// the blocking PTY writer task running in [`tokio::task::spawn_blocking`]
+/// context. This conversion is necessary because [`portable_pty`] provides
+/// only synchronous APIs, not async ones, like our code in this module,
+/// while the input must come from async channels.
+///
+/// Returns a `JoinHandle` for the spawned async task.
+///
+/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
+/// [`portable_pty`]: mod@portable_pty
+#[must_use]
+fn spawn_async_to_sync_bridge_task(
+    mut input_evt_ch_rx_half: tokio::sync::mpsc::UnboundedReceiver<PtyInputEvent>,
+    input_evt_bridge_sync_tx_half: std::sync::mpsc::Sender<PtyInputEvent>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        while let Some(input) = input_evt_ch_rx_half.recv().await {
+            if input_evt_bridge_sync_tx_half.send(input).is_err() {
+                // input writer task has exited
+                break;
+            }
+        }
+
+        // Ensure input handler gets Close signal.
+        let _unused = input_evt_bridge_sync_tx_half.send(PtyInputEvent::Close);
+    })
+}
+
+/// Handles writing input events to the PTY controller in a blocking context.
+///
+/// Flow: your program → async input channel → bridge task → sync channel → this task →
+/// PTY
+///
+/// This task:
+/// - Reads input commands from a sync channel
+/// - Writes data to the PTY master using [`tokio::task::spawn_blocking`] because
+///   [`portable_pty`] provides only synchronous I/O APIs, not async ones, like our code
+///   in this module
+/// - Handles control characters and text input
+/// - Handles PTY resize commands
+/// - Reports write errors through the output event channel, that is sent to your program
+///
+/// This task owns the `Controller` and handles all input operations in a
+/// blocking thread to avoid blocking the async runtime.
+///
+/// Returns a `JoinHandle` for the spawned blocking task.
+///
+/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
+/// [`portable_pty`]: mod@portable_pty
+#[must_use]
+fn spawn_blocking_writer_task(
+    controller: Controller,
+    input_evt_bridge_sync_rx_half: std::sync::mpsc::Receiver<PtyInputEvent>,
+    output_evt_ch_tx_half: tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
+) -> tokio::task::JoinHandle<miette::Result<()>> {
+    tokio::task::spawn_blocking(move || -> miette::Result<()> {
+        // Get a writer from the controller.
+        let mut writer = controller
+            .take_writer()
+            .map_err(|e| miette!("Failed to take PTY writer: {}", e))?;
+
+        // Process input commands until channel closes or Close command received.
+        loop {
+            // Use timeout to periodically check if we should exit. If not, the blocking
+            // recv() will block indefinitely. The actual exit is handled by the
+            // `Err(RecvTimeoutError::Disconnected)` branch.
+            match input_evt_bridge_sync_rx_half.recv_timeout(Duration::from_millis(100)) {
+                Err(RecvTimeoutError::Disconnected) => {
+                    // Channel closed, exit gracefully.
+                    break;
+                }
+                Err(RecvTimeoutError::Timeout) => {
+                    // Timeout is normal, continue checking.
+                }
+                Ok(input) => {
+                    match handle_pty_input_event(
+                        input,
+                        &mut writer,
+                        &controller,
+                        &output_evt_ch_tx_half,
+                    )? {
+                        LoopContinuation::Continue => {
+                            // Continue processing.
+                        }
+                        LoopContinuation::Break => {
+                            // Close command received, exit the task.
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Controller drops here automatically when the closure ends. So we don't have to
+        // explicitly close it (like we do in the read-only code).
+        drop(controller);
+
+        Ok(())
+    })
+}
+
+/// Indicates whether the PTY input processing loop should continue or break.
+#[derive(Debug, PartialEq)]
+enum LoopContinuation {
+    Continue,
+    Break,
+}
+
+/// Handles a single PTY input event, writing data and reporting errors as needed.
+/// Returns the loop continuation state.
+fn handle_pty_input_event(
+    input: PtyInputEvent,
+    writer: &mut ControllerWriter,
+    controller: &Controller,
+    output_evt_ch_tx_half: &tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
+) -> miette::Result<LoopContinuation> {
+    match input {
+        PtyInputEvent::Write(bytes) => write_to_pty_with_flush(
+            writer,
+            &bytes,
+            "Failed to write to PTY",
+            output_evt_ch_tx_half,
+        )?,
+        PtyInputEvent::WriteLine(text) => write_to_pty_with_flush(
+            writer,
+            &{
+                let mut data = text.into_bytes();
+                data.push(b'\n');
+                data
+            },
+            "Failed to write line to PTY",
+            output_evt_ch_tx_half,
+        )?,
+        PtyInputEvent::SendControl(ctrl) => write_to_pty_with_flush(
+            writer,
+            &ctrl.to_bytes(),
+            "Failed to send control char to PTY",
+            output_evt_ch_tx_half,
+        )?,
+        PtyInputEvent::Resize(size) => controller.resize(size).map_err(|e| {
+            let _unused = output_evt_ch_tx_half
+                .send(PtyOutputEvent::WriteError(miette!("Resize failed: {e}")));
+            miette!("Failed to resize PTY")
+        })?,
+        PtyInputEvent::Flush => writer.flush().map_err(|e| {
+            let _unused = output_evt_ch_tx_half
+                .send(PtyOutputEvent::WriteError(miette!("Flush failed: {e}")));
+            miette!("Failed to flush PTY")
+        })?,
+        PtyInputEvent::Close => return Ok(LoopContinuation::Break),
+    }
+
+    Ok(LoopContinuation::Continue)
+}
+
+/// Writes data to PTY and flushes, sending error events on failure.
+fn write_to_pty_with_flush(
+    writer: &mut ControllerWriter,
+    data: &[u8],
+    error_msg: &str,
+    output_evt_ch_tx_half: &tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
+) -> miette::Result<()> {
+    writer.write_all(data).map_err(|e| {
+        let _unused = output_evt_ch_tx_half
+            .send(PtyOutputEvent::WriteError(miette!("Write failed: {}", e)));
+        miette!("{error_msg}")
+    })?;
+
+    writer.flush().map_err(|e| {
+        let _unused = output_evt_ch_tx_half
+            .send(PtyOutputEvent::WriteError(miette!("Flush failed: {}", e)));
+        miette!("{error_msg}")
+    })?;
+
+    ok!()
+}
+
 #[cfg(test)]
 mod tests {
+    use portable_pty::PtySize;
+    use tokio::sync::mpsc::unbounded_channel;
+
     use super::*;
     use crate::{ControlChar, PtyConfigOption};
 
@@ -412,7 +651,7 @@ mod tests {
 
     async fn test_simple_command_lifecycle() -> miette::Result<()> {
         use PtyConfigOption::*;
-        use tokio::time::{Duration, timeout};
+        use tokio::time::timeout;
 
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
@@ -480,7 +719,7 @@ mod tests {
 
     async fn test_cat_with_input() -> miette::Result<()> {
         use PtyConfigOption::*;
-        use tokio::time::{Duration, timeout};
+        use tokio::time::timeout;
 
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
@@ -556,7 +795,7 @@ mod tests {
     #[cfg(not(target_os = "windows"))]
     async fn test_shell_calculation() -> miette::Result<()> {
         use PtyConfigOption::*;
-        use tokio::time::{Duration, timeout};
+        use tokio::time::timeout;
 
         // Create a temporary directory for the test
         let temp_dir = std::env::temp_dir();
@@ -624,7 +863,7 @@ mod tests {
     #[cfg(not(target_os = "windows"))]
     async fn test_shell_echo_output() -> miette::Result<()> {
         use PtyConfigOption::*;
-        use tokio::time::{Duration, timeout};
+        use tokio::time::timeout;
 
         // Use a more reliable command - use /bin/echo directly instead of shell
         let mut session = PtyCommandBuilder::new("/bin/echo")
@@ -689,7 +928,7 @@ mod tests {
 
     async fn test_multiple_control_characters() -> miette::Result<()> {
         use PtyConfigOption::*;
-        use tokio::time::{Duration, timeout};
+        use tokio::time::timeout;
 
         let mut session = PtyCommandBuilder::new("cat")
             .spawn_read_write(Output)
@@ -799,7 +1038,7 @@ mod tests {
 
     async fn test_raw_escape_sequences() -> miette::Result<()> {
         use PtyConfigOption::*;
-        use tokio::time::{Duration, timeout};
+        use tokio::time::timeout;
 
         // Skip this test in CI environments due to terminal emulation differences
         if is_ci::uncached() {
@@ -914,5 +1153,179 @@ mod tests {
         // Note: cat may not preserve exact ANSI sequences depending on terminal settings
 
         Ok(())
+    }
+
+    // XMARK: Input handler task tests
+
+    #[tokio::test]
+    async fn test_create_input_handler_task_write() {
+        let config = PtyConfig::default();
+        let (controller, _controlled) = create_pty_pair(&config).unwrap();
+
+        let (input_sender, input_receiver) = unbounded_channel();
+        let (event_sender, _event_receiver) = unbounded_channel();
+
+        let handle =
+            create_controller_input_writer_task(controller, input_receiver, event_sender);
+
+        // Send write command
+        let test_data = b"test input";
+        input_sender
+            .send(PtyInputEvent::Write(test_data.to_vec()))
+            .unwrap();
+
+        // Send close to terminate task
+        input_sender.send(PtyInputEvent::Close).unwrap();
+
+        // Give a bit of time for the close event to be processed
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Drop sender to close the channel
+        drop(input_sender);
+
+        // Task should complete successfully
+        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        assert!(result.is_ok(), "Task timed out");
+    }
+
+    #[tokio::test]
+    async fn test_create_input_handler_task_write_line() {
+        let config = PtyConfig::default();
+        let (controller, _controlled) = create_pty_pair(&config).unwrap();
+
+        let (input_sender, input_receiver) = unbounded_channel();
+        let (event_sender, _event_receiver) = unbounded_channel();
+
+        let handle =
+            create_controller_input_writer_task(controller, input_receiver, event_sender);
+
+        // Send write line command
+        input_sender
+            .send(PtyInputEvent::WriteLine("test line".to_string()))
+            .unwrap();
+
+        // Send close to terminate task
+        input_sender.send(PtyInputEvent::Close).unwrap();
+
+        // Give a bit of time for the close event to be processed
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Drop sender to close the channel
+        drop(input_sender);
+
+        // Task should complete successfully
+        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        assert!(result.is_ok(), "Task timed out");
+    }
+
+    #[tokio::test]
+    async fn test_create_input_handler_task_control_char() {
+        let config = PtyConfig::default();
+        let (controller, _controlled) = create_pty_pair(&config).unwrap();
+
+        let (input_sender, input_receiver) = unbounded_channel();
+        let (event_sender, _event_receiver) = unbounded_channel();
+
+        let handle =
+            create_controller_input_writer_task(controller, input_receiver, event_sender);
+
+        // Send control character
+        input_sender
+            .send(PtyInputEvent::SendControl(ControlChar::CtrlC))
+            .unwrap();
+
+        // Send close to terminate task
+        input_sender.send(PtyInputEvent::Close).unwrap();
+
+        // Give a bit of time for the close event to be processed
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Drop sender to close the channel
+        drop(input_sender);
+
+        // Task should complete successfully
+        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        assert!(result.is_ok(), "Task timed out");
+    }
+
+    #[tokio::test]
+    async fn test_create_input_handler_task_resize() {
+        let config = PtyConfig::default();
+        let (controller, _controlled) = create_pty_pair(&config).unwrap();
+
+        let (input_sender, input_receiver) = unbounded_channel();
+        let (event_sender, _event_receiver) = unbounded_channel();
+
+        let handle =
+            create_controller_input_writer_task(controller, input_receiver, event_sender);
+
+        // Send resize command
+        let new_size = PtySize {
+            rows: 40,
+            cols: 120,
+            pixel_width: 0,
+            pixel_height: 0,
+        };
+        input_sender.send(PtyInputEvent::Resize(new_size)).unwrap();
+
+        // Send close to terminate task
+        input_sender.send(PtyInputEvent::Close).unwrap();
+
+        // Give a bit of time for the close event to be processed
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Drop sender to close the channel
+        drop(input_sender);
+
+        // Task should complete successfully
+        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        assert!(result.is_ok(), "Task timed out");
+    }
+
+    #[tokio::test]
+    async fn test_create_input_handler_task_flush() {
+        let config = PtyConfig::default();
+        let (controller, _controlled) = create_pty_pair(&config).unwrap();
+
+        let (input_sender, input_receiver) = unbounded_channel();
+        let (event_sender, _event_receiver) = unbounded_channel();
+
+        let handle =
+            create_controller_input_writer_task(controller, input_receiver, event_sender);
+
+        // Send flush command
+        input_sender.send(PtyInputEvent::Flush).unwrap();
+
+        // Send close to terminate task
+        input_sender.send(PtyInputEvent::Close).unwrap();
+
+        // Give a bit of time for the close event to be processed
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Drop sender to close the channel
+        drop(input_sender);
+
+        // Task should complete successfully
+        let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
+        assert!(result.is_ok(), "Task timed out");
+    }
+
+    #[tokio::test]
+    async fn test_create_input_handler_task_channel_disconnect() {
+        let config = PtyConfig::default();
+        let (controller, _controlled) = create_pty_pair(&config).unwrap();
+
+        let (input_sender, input_receiver) = unbounded_channel();
+        let (event_sender, _event_receiver) = unbounded_channel();
+
+        let handle =
+            create_controller_input_writer_task(controller, input_receiver, event_sender);
+
+        // Drop sender to disconnect channel
+        drop(input_sender);
+
+        // Task should complete successfully when channel disconnects
+        let result = tokio::time::timeout(Duration::from_millis(500), handle).await;
+        assert!(result.is_ok());
     }
 }

@@ -4,7 +4,8 @@ use miette::IntoDiagnostic;
 
 use crate::{Controlled, ControlledChild, Controller, PtyCommandBuilder, PtyConfig,
             PtyOutputEvent, PtyReadOnlySession,
-            pty_common_io::{create_pty_pair, spawn_blocking_controller_reader_task,
+            pty_common_io::{create_pty_pair,
+                            spawn_blocking_controller_output_reader_task,
                             spawn_command_in_pty}};
 
 impl PtyCommandBuilder {
@@ -67,7 +68,7 @@ impl PtyCommandBuilder {
     ///     .spawn_read_only(PtyConfigOption::Osc + PtyConfigOption::Output)?;
     ///
     /// let mut output = Vec::new();
-    /// while let Some(event) = session.output_event_ch_rx_half.recv().await {
+    /// while let Some(event) = session.output_evt_ch_rx_half.recv().await {
     ///     match event {
     ///         PtyOutputEvent::Output(data) => output.extend_from_slice(&data),
     ///         PtyOutputEvent::Osc(OscEvent::ProgressUpdate(pct)) => {
@@ -107,8 +108,8 @@ impl PtyCommandBuilder {
 
         // Create channel to bridge events from PTY controlled side -> your program.
         let (
-            /* return this to your program */ output_event_ch_tx_half,
-            /* used by blocking reader task */ output_event_ch_rx_half,
+            /* return this to your program */ output_evt_ch_tx_half,
+            /* used by blocking reader task */ output_evt_ch_rx_half,
         ) = tokio::sync::mpsc::unbounded_channel();
 
         // [🛫 SPAWN 0] Spawn the main orchestration task. This is returned to your
@@ -124,42 +125,37 @@ impl PtyCommandBuilder {
 
             // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
             // The child process uses the controlled side as its stdin/stdout/stderr.
-            let mut controlled_child: ControlledChild =
+            let controlled_child: ControlledChild =
                 spawn_command_in_pty(&controlled, command)?;
 
             // [🛫 SPAWN 2] Spawn the reader task to process output from the controller
             // side. NOTE: Critical resource management - see module docs for
             // PTY lifecycle details.
-            let blocking_controller_reader_task_handle = {
+            let output_reader_task_handle = {
                 let controller_reader = controller
                     .try_clone_reader()
                     .map_err(|e| miette::miette!("Failed to clone pty reader: {}", e))?;
-                spawn_blocking_controller_reader_task(
+                spawn_blocking_controller_output_reader_task(
                     controller_reader,
-                    output_event_ch_tx_half.clone(),
+                    output_evt_ch_tx_half.clone(),
                     pty_config,
                 )
             };
 
             // [🛬 WAIT 1] Wait for the command to complete.
-            let child_proc_exit_status =
-                tokio::task::spawn_blocking(move || controlled_child.wait())
-                    .await
-                    .into_diagnostic()?
-                    .into_diagnostic()?;
-
-            let child_proc_exit_code = child_proc_exit_status.exit_code();
-            let _unused = output_event_ch_tx_half
-                .send(PtyOutputEvent::Exit(child_proc_exit_status));
+            let child_proc_exit_code = spawn_child_process_waiter(
+                controlled_child,
+                output_evt_ch_tx_half.clone(),
+            )
+            .await
+            .into_diagnostic()??;
 
             // See module docs for detailed PTY lifecycle management explanation.
             drop(controlled); // Close the controlled half. CRITICAL for EOF to be sent to reader.
             drop(controller); // Not critical, but good practice to release controller FD.
 
             // [🛬 WAIT 2] Wait for the reader task to complete.
-            blocking_controller_reader_task_handle
-                .await
-                .into_diagnostic()??;
+            output_reader_task_handle.await.into_diagnostic()??;
 
             Ok(portable_pty::ExitStatus::with_exit_code(
                 child_proc_exit_code,
@@ -167,12 +163,43 @@ impl PtyCommandBuilder {
         });
 
         Ok(PtyReadOnlySession {
-            output_event_ch_rx_half,
+            output_evt_ch_rx_half,
             // Pin the completion handle: JoinHandle is not Unpin but select! requires it
             // for efficient polling without moving.
             pinned_boxed_session_completion_handle: Box::pin(session_completion_handle),
         })
     }
+}
+
+/// Spawns a task to wait for child process completion and send exit event.
+///
+/// Flow: child process → this task → output event channel → your program
+///
+/// This task:
+/// - Waits for the child process to complete in a blocking context using
+///   [`tokio::task::spawn_blocking`] because [`portable_pty`] provides only synchronous
+///   APIs, not async ones, like our code in this module
+/// - Sends the exit status as a `PtyOutputEvent::Exit` event
+/// - Returns the exit code for the orchestration task
+///
+/// This function encapsulates the child process waiting logic to keep the
+/// main orchestration task cleaner and more focused.
+///
+/// Returns a `JoinHandle` that resolves to the child process exit code.
+///
+/// [`tokio::task::spawn_blocking`]: tokio::task::spawn_blocking
+/// [`portable_pty`]: mod@portable_pty
+#[must_use]
+fn spawn_child_process_waiter(
+    mut controlled_child: ControlledChild,
+    output_evt_ch_tx_half: tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
+) -> tokio::task::JoinHandle<miette::Result<u32>> {
+    tokio::task::spawn_blocking(move || -> miette::Result<u32> {
+        let status = controlled_child.wait().into_diagnostic()?;
+        let exit_code = status.exit_code();
+        let _unused = output_evt_ch_tx_half.send(PtyOutputEvent::Exit(status));
+        Ok(exit_code)
+    })
 }
 
 #[cfg(test)]
@@ -198,13 +225,13 @@ mod tests {
                         let status = result.into_diagnostic()??;
 
                         // Drain any remaining events
-                        while let Ok(event) = session.output_event_ch_rx_half.try_recv() {
+                        while let Ok(event) = session.output_evt_ch_rx_half.try_recv() {
                             events.push(event);
                         }
 
                         return Ok::<_, miette::Error>((events, status));
                     }
-                    Some(event) = session.output_event_ch_rx_half.recv() => {
+                    Some(event) = session.output_evt_ch_rx_half.recv() => {
                         events.push(event);
                     }
                 }

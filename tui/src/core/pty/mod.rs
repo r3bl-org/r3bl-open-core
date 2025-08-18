@@ -197,7 +197,7 @@
 //!     .args(["-la"])
 //!     .spawn_read_only(PtyConfigOption::Output)?;
 //!
-//! while let Some(event) = session.output_event_ch_rx_half.recv().await {
+//! while let Some(event) = session.output_evt_ch_rx_half.recv().await {
 //!     match event {
 //!         PtyOutputEvent::Output(data) => {
 //!             print!("{}", String::from_utf8_lossy(&data));
@@ -220,8 +220,8 @@
 //!     .spawn_read_write(PtyConfigOption::Output)?;
 //!
 //! // Send input
-//! session.input_event_sender_half.send(PtyInputEvent::WriteLine("Hello, PTY!".into()))?;
-//! session.input_event_sender_half.send(PtyInputEvent::SendControl(ControlChar::CtrlD))?; // EOF
+//! session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("Hello, PTY!".into()))?;
+//! session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlChar::CtrlD))?; // EOF
 //!
 //! // Read output
 //! while let Some(event) = session.output_event_receiver_half.recv().await {

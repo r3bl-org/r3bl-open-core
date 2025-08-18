@@ -600,3 +600,32 @@
 - [x] update `CHANGELOG.md` with the latest changes
 - [x] update `README.md` with the latest changes
 - [x] make a release of `r3bl_tui` and `r3bl-cmdr` crates
+
+# fix r3bl-cmdr upgrade code: https://github.com/r3bl-org/r3bl-open-core/issues/437
+
+- [x] do research and make a rust-scratch issue and project for this:
+      https://github.com/nazmulidris/rust-scratch/issues/117
+- [x] publish the README.md from the rust-scratch project to developerlife.com as tutorial:
+      https://developerlife.com/2025/08/10/pty-rust-osc-seq/
+- [x] configure serena mcp server for semantic code search
+- [x] Replace multiline copyright header w/ single line in all files
+- [x] Use r3bl-vscode-extension-pack https://github.com/r3bl-org/r3bl-vscode-extensions
+- [x] Remove nushell and replace all nushell scripts with fish and fzf
+- [x] add `pty` module and implement the following:
+  - [x] single channel
+    - [x] code
+    - [x] example
+    - [x] tests in [`task_test_pty`](docs/done/task_test_pty.md)
+    - [x] code review
+  - [x] dual channel
+    - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
+    - [x] example
+    - [x] tests
+    - [x] code review
+- [x] implement the upgrade code in
+  - [x] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
+  - [x] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
+- [x] new feature to recall claude history in r3bl-cmdr
+      [`task_prd_ch_bin`](`docs/done/task_prd_ch_bin.md`):
+      https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
+

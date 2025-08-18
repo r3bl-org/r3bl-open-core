@@ -1,33 +1,18 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 <!-- Keep this file in sync with dashboard: https://github.com/users/nazmulidris/projects/4/views/1 -->
 
-# fix r3bl-cmdr upgrade code: https://github.com/r3bl-org/r3bl-open-core/issues/437
+# add more OSC (operating system command) sequences to r3bl_tui
 
-- [x] do research and make a rust-scratch issue and project for this:
-      https://github.com/nazmulidris/rust-scratch/issues/117
-- [x] publish the README.md from the rust-scratch project to developerlife.com as tutorial:
-      https://developerlife.com/2025/08/10/pty-rust-osc-seq/
-- [x] configure serena mcp server for semantic code search
-- [x] Replace multiline copyright header w/ single line in all files
-- [x] Use r3bl-vscode-extension-pack https://github.com/r3bl-org/r3bl-vscode-extensions
-- [x] Remove nushell and replace all nushell scripts with fish and fzf
-- [x] add `pty` module and implement the following:
-  - [x] single channel
-    - [x] code
-    - [x] example
-    - [x] tests in [`task_test_pty`](docs/done/task_test_pty.md)
-    - [x] code review
-  - [x] dual channel
-    - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
-    - [x] example
-    - [x] tests
-    - [␩] code review
-- [␩] implement the upgrade code in
-  - [x] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
-  - [␩] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
-- [x] new feature to recall claude history in r3bl-cmdr
-      [`task_prd_ch_bin`](`docs/done/task_prd_ch_bin.md`):
-      https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
+- [ ] Changing the terminal window's title.
+- [ ] Modifying the cursor's shape or color.
+- [ ] Copying text to the system's clipboard. A well-known example is OSC 52, which is
+      widely used for copying text from a remote SSH session to your local computer's
+      clipboard.
+- [ ] Displaying system notifications.
+
+# create tmux POC
+
+- [ ] [`task_tmux_example`](docs/task_tmux_example.md)
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 
@@ -59,7 +44,6 @@
 
 - [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
       `r3bl_open_core` codebase
-
 
 # refactor or rewrite the UI layout, sizing, and styling code
 

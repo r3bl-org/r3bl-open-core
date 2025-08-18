@@ -726,7 +726,9 @@ mod tests_style_us_span_lines_from {
         use super::*;
 
         #[test]
+        #[serial]
         fn test_checkbox_unchecked() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let fragment = MdLineFragment::Checkbox(false);
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -747,7 +749,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_checkbox_checked() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let fragment = MdLineFragment::Checkbox(true);
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -765,7 +769,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_image() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let fragment = MdLineFragment::Image(HyperlinkData {
                 text: "R3BL",
                 url: "https://r3bl.com",
@@ -799,7 +805,9 @@ mod tests_style_us_span_lines_from {
 
         #[allow(clippy::too_many_lines)]
         #[test]
+        #[serial]
         fn test_link() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let fragment = MdLineFragment::Link(HyperlinkData {
                 text: "R3BL",
                 url: "https://r3bl.com",
@@ -963,7 +971,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_italic() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let fragment = MdLineFragment::Italic("Foobar");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1016,7 +1026,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_plain() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let fragment = MdLineFragment::Plain("Foobar");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1089,7 +1101,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_block_metadata_title() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let title = MdElement::Title("Something");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1119,7 +1133,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_block_codeblock() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let codeblock_block = MdElement::CodeBlock(list!(
                 CodeBlockLine {
                     language: Some("ts"),
@@ -1315,7 +1331,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_block_text() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let text_block = MdElement::Text(list![MdLineFragment::Plain("Foobar")]);
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1334,7 +1352,9 @@ mod tests_style_us_span_lines_from {
         }
 
         #[test]
+        #[serial]
         fn test_block_heading() {
+            global_color_support::set_override(ColorSupport::Truecolor);
             let heading_block = MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 1 },
                 text: "Foobar",

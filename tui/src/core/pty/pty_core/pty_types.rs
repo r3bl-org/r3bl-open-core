@@ -31,6 +31,9 @@ pub type Controller = Box<dyn MasterPty + Send>;
 /// Type alias for a spawned child process in a PTY.
 pub type ControlledChild = Box<dyn portable_pty::Child + Send + Sync>;
 
+/// Type alias for the writer used in PTY operations.
+pub type ControllerWriter = Box<dyn std::io::Write + Send>;
+
 /// Type alias for a validated PTY command ready for execution.
 ///
 /// This enhances readability by making the flow clear: [`crate::PtyCommandBuilder`] `->

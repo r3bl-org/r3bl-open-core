@@ -30,7 +30,7 @@ pub enum PtyOutputEvent {
     /// Child process crashed or terminated unexpectedly.
     UnexpectedExit(String),
     /// Write operation failed - session will terminate.
-    WriteError(std::io::Error),
+    WriteError(miette::Error),
 }
 
 /// Input event types that can be sent to a child process through PTY.
