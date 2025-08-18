@@ -103,16 +103,16 @@ impl PtyCommandBuilder {
         self,
         arg_config: impl Into<PtyConfig>,
     ) -> miette::Result<PtyReadOnlySession> {
-        let config = arg_config.into();
+        let pty_config = arg_config.into();
 
         // Create channel to bridge events from PTY controlled side -> your program.
         let (
-            /* return this */ output_event_ch_tx_half,
+            /* return this to your program */ output_event_ch_tx_half,
             /* used by blocking reader task */ output_event_ch_rx_half,
         ) = tokio::sync::mpsc::unbounded_channel();
 
-        // [🛫 SPAWN 0] Spawn the main orchestration task. Your program waits for this
-        // one.
+        // [🛫 SPAWN 0] Spawn the main orchestration task. This is returned to your
+        // program, which waits for this to complete.
         let session_completion_handle = tokio::spawn(async move {
             // Build the command, ensuring CWD is set.
             let command = self.build()?;
@@ -120,7 +120,7 @@ impl PtyCommandBuilder {
             // Create PTY pair: controller (master) for your program, controlled (slave)
             // for spawned process
             let (controller, controlled): (Controller, Controlled) =
-                create_pty_pair(&config)?;
+                create_pty_pair(&pty_config)?;
 
             // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
             // The child process uses the controlled side as its stdin/stdout/stderr.
@@ -137,7 +137,7 @@ impl PtyCommandBuilder {
                 spawn_blocking_controller_reader_task(
                     controller_reader,
                     output_event_ch_tx_half.clone(),
-                    config,
+                    pty_config,
                 )
             };
 

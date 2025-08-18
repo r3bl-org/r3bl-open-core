@@ -148,13 +148,15 @@ impl PtyCommandBuilder {
         self,
         arg_config: impl Into<PtyConfig>,
     ) -> miette::Result<PtyReadWriteSession> {
-        let config = arg_config.into();
+        let pty_config = arg_config.into();
 
-        // Create channels for bidirectional communication
-        // Input: Your program → spawned process
-        let (input_event_sender_half, mut input_receiver_half) =
-            tokio::sync::mpsc::unbounded_channel::<PtyInputEvent>();
-        // Output: Your program ← spawned process
+        // Create channels for bidirectional communication.
+        // Input: Your program → spawned process.
+        let (
+            /* return this to your program */ input_event_ch_tx_half,
+            /* used by the bridge task */ mut input_event_ch_rx_half,
+        ) = tokio::sync::mpsc::unbounded_channel::<PtyInputEvent>();
+        // Output: Your program ← spawned process.
         let (event_sender_half, output_event_receiver_half) =
             tokio::sync::mpsc::unbounded_channel::<PtyOutputEvent>();
 
@@ -176,7 +178,7 @@ impl PtyCommandBuilder {
 
             // Create PTY pair: controller (master) for bidirectional I/O, controlled
             // (slave) for spawned process
-            let (controller, controlled) = create_pty_pair(&config)?;
+            let (controller, controlled) = create_pty_pair(&pty_config)?;
 
             // Spawn the command in the controlled PTY (slave side)
             // The child process will use controlled as its stdin/stdout/stderr
@@ -194,7 +196,7 @@ impl PtyCommandBuilder {
             let reader_handle = spawn_blocking_controller_reader_task(
                 reader,
                 reader_event_sender,
-                config,
+                pty_config,
             );
 
             // The input handler task owns the controller and handles all input operations
@@ -210,7 +212,7 @@ impl PtyCommandBuilder {
             // input handler This allows async input from your program to be
             // processed by the blocking input handler
             let bridge_handle = tokio::spawn(async move {
-                while let Some(input) = input_receiver_half.recv().await {
+                while let Some(input) = input_event_ch_rx_half.recv().await {
                     if input_handler_sender.send(input).is_err() {
                         // Input handler task has exited
                         break;
@@ -249,7 +251,7 @@ impl PtyCommandBuilder {
         }));
 
         Ok(PtyReadWriteSession {
-            input_event_sender_half,
+            input_event_ch_tx_half,
             output_event_receiver_half,
             completion_handle: handle,
         })
@@ -490,13 +492,13 @@ mod tests {
 
         // Send some text
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::WriteLine("test input".into()))
             .unwrap();
 
         // Send EOF to make cat exit
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::CtrlD))
             .unwrap();
 
@@ -695,7 +697,7 @@ mod tests {
 
         // Test various control characters with delays for PTY processing
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::WriteLine("Test line".into()))
             .unwrap();
 
@@ -703,7 +705,7 @@ mod tests {
 
         // Check if the session is still alive before sending
         if session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::Enter))
             .is_err()
         {
@@ -728,28 +730,28 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::Write(b"No newline".to_vec()))
             .unwrap();
 
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::Tab))
             .unwrap();
 
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::Write(b"After tab".to_vec()))
             .unwrap();
 
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::Enter))
             .unwrap();
 
@@ -758,7 +760,7 @@ mod tests {
 
         // Send EOF to exit
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::CtrlD))
             .unwrap();
 
@@ -816,11 +818,11 @@ mod tests {
         // Send some text with ANSI color codes using raw sequences
         let red_text = b"\x1b[31mRed Text\x1b[0m";
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::Write(red_text.to_vec()))
             .unwrap();
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::Enter))
             .unwrap();
 
@@ -830,27 +832,27 @@ mod tests {
         // Send using RawSequence variant
         let blue_seq = vec![0x1b, b'[', b'3', b'4', b'm']; // Blue color
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::RawSequence(
                 blue_seq,
             )))
             .unwrap();
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::Write(b"Blue Text".to_vec()))
             .unwrap();
 
         // Send reset sequence after blue text
         let reset_seq = vec![0x1b, b'[', b'0', b'm']; // Reset color
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::RawSequence(
                 reset_seq,
             )))
             .unwrap();
 
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::Enter))
             .unwrap();
 
@@ -859,7 +861,7 @@ mod tests {
 
         // EOF to exit
         session
-            .input_event_sender_half
+            .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(ControlChar::CtrlD))
             .unwrap();
 

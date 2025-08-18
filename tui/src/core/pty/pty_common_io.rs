@@ -126,11 +126,12 @@ pub fn spawn_blocking_controller_reader_task(
     output_event_sender_half: tokio::sync::mpsc::UnboundedSender<PtyOutputEvent>,
     arg_config: impl Into<PtyConfig>,
 ) -> tokio::task::JoinHandle<miette::Result<()>> {
-    let config: PtyConfig = arg_config.into();
+    let pty_config: PtyConfig = arg_config.into();
 
+    // Async <-> Sync bridge using `spawn_blocking`.
     tokio::task::spawn_blocking(move || -> miette::Result<()> {
         let mut read_buffer = [0u8; READ_BUFFER_SIZE];
-        let mut osc_buffer = if config.is_osc_capture_enabled() {
+        let mut osc_buffer = if pty_config.is_osc_capture_enabled() {
             Some(OscBuffer::new())
         } else {
             None
@@ -144,7 +145,7 @@ pub fn spawn_blocking_controller_reader_task(
                     let data = &read_buffer[..n];
 
                     // Send raw output if configured.
-                    if config.is_output_capture_enabled() {
+                    if pty_config.is_output_capture_enabled() {
                         let _unused = output_event_sender_half
                             .send(PtyOutputEvent::Output(data.to_vec()));
                     }

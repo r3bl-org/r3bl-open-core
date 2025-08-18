@@ -186,17 +186,16 @@ function build-server
     set dest_path "$dest_host:$orig_path"
 
     # Function to run rsync. Simple.
-    function run_rsync
+    function run_rsync --argument-names orig_path dest_path
         echo (set_color cyan --underline)"Changes detected, running rsync"(set_color normal)
 
         set prefix "┤ "
         set hanging_prefix "├ "
-        set tab "\t"
         set msg_1 (set_color yellow)"$orig_path"(set_color normal)
         set msg_2 (set_color blue)"$dest_path"(set_color normal)
-        echo "$prefix"from:"$tab$msg_1"
-        echo "$hanging_prefix"to:"$tab$msg_2"
-        rsync -q -avz --delete --exclude target/ $orig_path $dest_path
+        printf "$prefix%s\t%s\n" "from:" "$msg_1"
+        printf "$hanging_prefix%s\t%s\n" "to:" "$msg_2"
+        rsync -q -avz --delete --exclude target/ "$orig_path" "$dest_path"
 
         echo (set_color cyan --underline)"Rsync complete"(set_color normal)
     end
@@ -218,7 +217,7 @@ function build-server
         end
 
         # Run rsync
-        run_rsync
+        run_rsync "$orig_path" "$dest_path"
     end
 end
 

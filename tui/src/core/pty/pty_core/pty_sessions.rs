@@ -45,7 +45,7 @@ pub struct PtyReadOnlySession {
 #[derive(Debug)]
 pub struct PtyReadWriteSession {
     /// Send input TO the child process.
-    pub input_event_sender_half: InputEventSenderHalf,
+    pub input_event_ch_tx_half: InputEventSenderHalf,
     /// Receive output FROM the child process (combined stdout/stderr).
     pub output_event_receiver_half: OutputEventReceiverHalf,
     /// Await this `completion_handle` for process completion.
