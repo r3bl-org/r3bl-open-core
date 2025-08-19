@@ -190,8 +190,8 @@ impl TryFrom<InputEvent> for EditorEvent {
                 key: Key::Character('a'),
                 mask:
                     ModifierKeysMask {
-                        shift_key_state: KeyState::NotPressed,
                         ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
                         alt_key_state: KeyState::NotPressed,
                     },
             }) => Ok(EditorEvent::Select(SelectionAction::All)),

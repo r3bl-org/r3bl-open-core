@@ -708,8 +708,8 @@ mod no_syn_hi_path {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CaretDirection, EditorEngineConfig, KeyState, List, ModifierKeysMask,
-                clipboard_service::clipboard_test_fixtures::TestClipboard};
+    use crate::{CaretDirection, EditorEngineConfig, List, ModifierKeysMask,
+                clipboard_service::clipboard_test_fixtures::TestClipboard, key_press};
 
     #[test]
     fn test_undo_redo_clears_ast_cache() {
@@ -726,14 +726,9 @@ mod tests {
         assert!(!engine.ast_cache_is_empty());
 
         // Apply undo event
-        let undo_event = InputEvent::Keyboard(KeyPress::WithModifiers {
-            key: Key::Character('z'),
-            mask: ModifierKeysMask {
-                ctrl_key_state: KeyState::Pressed,
-                shift_key_state: KeyState::NotPressed,
-                alt_key_state: KeyState::NotPressed,
-            },
-        });
+        let undo_event = InputEvent::Keyboard(
+            key_press! { @char ModifierKeysMask::new().with_ctrl(), 'z' },
+        );
 
         let result =
             apply_event(&mut buffer, &mut engine, undo_event, &mut clipboard).unwrap();
@@ -748,14 +743,9 @@ mod tests {
         assert!(!engine.ast_cache_is_empty());
 
         // Apply redo event
-        let redo_event = InputEvent::Keyboard(KeyPress::WithModifiers {
-            key: Key::Character('y'),
-            mask: ModifierKeysMask {
-                ctrl_key_state: KeyState::Pressed,
-                shift_key_state: KeyState::NotPressed,
-                alt_key_state: KeyState::NotPressed,
-            },
-        });
+        let redo_event = InputEvent::Keyboard(
+            key_press! { @char ModifierKeysMask::new().with_ctrl(), 'y' },
+        );
 
         let result =
             apply_event(&mut buffer, &mut engine, redo_event, &mut clipboard).unwrap();
@@ -777,9 +767,7 @@ mod tests {
             engine.set_ast_cache(test_ast);
             assert!(!engine.ast_cache_is_empty());
 
-            let insert_event = InputEvent::Keyboard(KeyPress::Plain {
-                key: Key::Character('a'),
-            });
+            let insert_event = InputEvent::Keyboard(key_press! { @char 'a' });
 
             let result =
                 apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard)
@@ -794,9 +782,8 @@ mod tests {
             engine.set_ast_cache(test_ast);
             assert!(!engine.ast_cache_is_empty());
 
-            let delete_event = InputEvent::Keyboard(KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Delete),
-            });
+            let delete_event =
+                InputEvent::Keyboard(key_press! { @special SpecialKey::Delete });
 
             let result =
                 apply_event(&mut buffer, &mut engine, delete_event, &mut clipboard)
@@ -815,9 +802,8 @@ mod tests {
             engine.set_ast_cache(test_ast);
             assert!(!engine.ast_cache_is_empty());
 
-            let backspace_event = InputEvent::Keyboard(KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Backspace),
-            });
+            let backspace_event =
+                InputEvent::Keyboard(key_press! { @special SpecialKey::Backspace });
 
             let result =
                 apply_event(&mut buffer, &mut engine, backspace_event, &mut clipboard)
@@ -843,18 +829,10 @@ mod tests {
 
         // Test arrow key navigation
         let nav_events = vec![
-            InputEvent::Keyboard(KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Up),
-            }),
-            InputEvent::Keyboard(KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Down),
-            }),
-            InputEvent::Keyboard(KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Left),
-            }),
-            InputEvent::Keyboard(KeyPress::Plain {
-                key: Key::SpecialKey(SpecialKey::Right),
-            }),
+            InputEvent::Keyboard(key_press! { @special SpecialKey::Up }),
+            InputEvent::Keyboard(key_press! { @special SpecialKey::Down }),
+            InputEvent::Keyboard(key_press! { @special SpecialKey::Left }),
+            InputEvent::Keyboard(key_press! { @special SpecialKey::Right }),
         ];
 
         for event in nav_events {
@@ -876,18 +854,14 @@ mod tests {
         let mut clipboard = TestClipboard::default();
 
         // Try to insert a character in readonly mode
-        let insert_event = InputEvent::Keyboard(KeyPress::Plain {
-            key: Key::Character('a'),
-        });
+        let insert_event = InputEvent::Keyboard(key_press! { @char 'a' });
 
         let result =
             apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard).unwrap();
         assert!(matches!(result, EditorEngineApplyEventResult::NotApplied));
 
         // Navigation should still work
-        let nav_event = InputEvent::Keyboard(KeyPress::Plain {
-            key: Key::SpecialKey(SpecialKey::Right),
-        });
+        let nav_event = InputEvent::Keyboard(key_press! { @special SpecialKey::Right });
 
         let result =
             apply_event(&mut buffer, &mut engine, nav_event, &mut clipboard).unwrap();

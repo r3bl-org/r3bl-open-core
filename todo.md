@@ -1,18 +1,9 @@
 <!-- Move completed tasks to done.md. The task on top is the one to work on next. -->
 <!-- Keep this file in sync with dashboard: https://github.com/users/nazmulidris/projects/4/views/1 -->
 
-# add more OSC (operating system command) sequences to r3bl_tui
-
-- [ ] Changing the terminal window's title.
-- [ ] Modifying the cursor's shape or color.
-- [ ] Copying text to the system's clipboard. A well-known example is OSC 52, which is
-      widely used for copying text from a remote SSH session to your local computer's
-      clipboard.
-- [ ] Displaying system notifications.
-
 # create tmux POC
 
-- [ ] [`task_tmux_example`](docs/task_tmux_example.md)
+- [ ] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 

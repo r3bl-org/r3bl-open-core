@@ -94,7 +94,7 @@ macro_rules! key_press {
 /// [`crossterm::event::KeyEvent`]. See [`convert_key_event`] for more information on the
 /// conversion.
 ///
-/// Please use the [`key_press`!] macro instead of directly constructing this struct.
+/// Please use the [`key_press`] macro instead of directly constructing this struct.
 ///
 /// # Architecture: Why Multiple Struct Layers?
 ///

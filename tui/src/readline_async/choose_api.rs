@@ -439,12 +439,11 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
             }
             | KeyPress::WithModifiers {
                 key: Key::Character('c'),
-                mask:
-                    ModifierKeysMask {
-                        ctrl_key_state: KeyState::Pressed,
-                        shift_key_state: KeyState::NotPressed,
-                        alt_key_state: KeyState::NotPressed,
-                    },
+                mask: ModifierKeysMask {
+                    ctrl_key_state: KeyState::Pressed,
+                    shift_key_state: KeyState::NotPressed,
+                    alt_key_state: KeyState::NotPressed,
+                },
             },
         ) => keypress_handler_helper::handle_escape_or_ctrl_c(),
 
