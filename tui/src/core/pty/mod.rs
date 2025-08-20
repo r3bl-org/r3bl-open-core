@@ -212,7 +212,7 @@
 //!
 //! ### Interactive session (send input to process):
 //! ```rust
-//! use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent, PtyInputEvent, ControlChar};
+//! use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent, PtyInputEvent, ControlSequence, CursorKeyMode};
 //!
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -221,7 +221,7 @@
 //!
 //! // Send input
 //! session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("Hello, PTY!".into()))?;
-//! session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlChar::CtrlD))?; // EOF
+//! session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()))?; // EOF
 //!
 //! // Read output
 //! while let Some(event) = session.output_event_receiver_half.recv().await {

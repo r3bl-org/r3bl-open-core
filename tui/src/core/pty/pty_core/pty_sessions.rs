@@ -2,8 +2,8 @@
 
 //! PTY session handle types for read-only and read-write communication.
 
-use super::pty_types::{InputEventSenderHalf, OutputEventReceiverHalf,
-                       PtyCompletionHandle};
+use super::pty_types::{InputEventSenderHalf, ReadOnlyOutputEventReceiverHalf,
+                       ReadWriteOutputEventReceiverHalf, PtyCompletionHandle};
 
 /// Session handle for read-only PTY communication.
 ///
@@ -20,7 +20,7 @@ use super::pty_types::{InputEventSenderHalf, OutputEventReceiverHalf,
 #[derive(Debug)]
 pub struct PtyReadOnlySession {
     /// Receives output events from the child process (combined stdout/stderr).
-    pub output_evt_ch_rx_half: OutputEventReceiverHalf,
+    pub output_evt_ch_rx_half: ReadOnlyOutputEventReceiverHalf,
     /// Await this `completion_handle` for process completion.
     ///
     /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and
@@ -41,13 +41,13 @@ pub struct PtyReadOnlySession {
 /// - Used for interactive terminal applications, REPLs, shell sessions, and automated
 ///   command execution
 /// - Integrates with [`super::pty_events::PtyInputEvent`] for input and
-///   [`super::pty_events::PtyOutputEvent`] for output handling
+///   [`super::pty_events::PtyReadWriteOutputEvent`] for output handling
 #[derive(Debug)]
 pub struct PtyReadWriteSession {
     /// Send input TO the child process.
     pub input_event_ch_tx_half: InputEventSenderHalf,
     /// Receive output FROM the child process (combined stdout/stderr).
-    pub output_event_receiver_half: OutputEventReceiverHalf,
+    pub output_event_receiver_half: ReadWriteOutputEventReceiverHalf,
     /// Await this `completion_handle` for process completion.
     ///
     /// Pinned to satisfy Tokio's Unpin requirement for select! macro usage in tests and

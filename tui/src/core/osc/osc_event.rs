@@ -16,4 +16,6 @@ pub enum OscEvent {
     IndeterminateProgress,
     /// Hyperlink (OSC 8) with URI and display text.
     Hyperlink { uri: String, text: String },
+    /// Set terminal window title and tab name (OSC 0).
+    SetTitleAndTab(String),
 }

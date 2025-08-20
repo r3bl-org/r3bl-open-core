@@ -11,6 +11,7 @@
     - [Global config (2025-03-19)](#global-config-2025-03-19)
     - [Global config (2024-12-04)](#global-config-2024-12-04)
   - [`r3bl_tui`](#r3bl_tui)
+    - [v0.7.7 (next)](#v077-next)
     - [v0.7.6 (2025-08-16)](#v076-2025-08-16)
     - [v0.7.5 (2025-08-15)](#v075-2025-08-15)
     - [v0.7.4 (2025-08-15)](#v074-2025-08-15)
@@ -326,6 +327,23 @@ following:
 <!-- Active crates section -->
 
 ## `r3bl_tui`
+
+### v0.7.7 (next)
+
+TODO: integrate the following fenced text code block into change log format
+```
+Add PTY simple example with infra that is precursor for PTY mux
+- Add pty_simple_example.rs to tui examples. It spawns htop in a PTY
+  slave (interactive). And allows inputs and outputs from the "real"
+  terminal to be mapped to the child htop process.
+- Clean up read-only session so that it does not use the same code and
+  enums that is read-write specific.
+- Clean up read-write session so that it now handles cursor mode
+  properly (application vs normal mode). And expected input events from
+  real terminals are extensively supported.
+- Add robust testing for read-write session with testing for htop
+  which is now added as a prerequisite in `bootstrap.sh`.
+```
 
 ### v0.7.6 (2025-08-16)
 

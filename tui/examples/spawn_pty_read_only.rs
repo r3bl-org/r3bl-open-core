@@ -26,7 +26,7 @@
 
 use miette::IntoDiagnostic;
 use r3bl_tui::{OscEvent,
-               core::pty::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent},
+               core::pty::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent},
                set_mimalloc_in_main};
 
 // ANSI color constants for terminal output.
@@ -55,7 +55,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
             }
         }
         Some(event) = session.output_evt_ch_rx_half.recv() => {
-            if let PtyOutputEvent::Exit(status) = event
+            if let PtyReadOnlyOutputEvent::Exit(status) = event
                 && !status.success() {
                 return Err(miette::miette!("Cargo clean failed"));
             }
@@ -102,7 +102,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
             // Handle incoming PTY events
             Some(event) = session.output_evt_ch_rx_half.recv() => {
                 match event {
-                    PtyOutputEvent::Osc(osc_event) => {
+                    PtyReadOnlyOutputEvent::Osc(osc_event) => {
                         match osc_event {
                             OscEvent::ProgressUpdate(percentage) => {
                                 saw_progress = true;
@@ -119,10 +119,11 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                             }
                             OscEvent::Hyperlink { uri, text } => {
                                 println!("{GREEN}🔗 Hyperlink detected: {text} -> {uri}{RESET}");
-                            }
+                            },
+                            _ => {}
                         }
                     }
-                    PtyOutputEvent::Exit(_) | PtyOutputEvent::Output(_) | PtyOutputEvent::UnexpectedExit(_) | PtyOutputEvent::WriteError(_) => {
+                    PtyReadOnlyOutputEvent::Exit(_) | PtyReadOnlyOutputEvent::Output(_) => {
                         // Exit event will be handled by the handle completion above
                         // Output events are not captured in this config
                         // Unexpected exit and write errors should not occur in read-only mode

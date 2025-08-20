@@ -8,7 +8,7 @@ use portable_pty::{CommandBuilder, MasterPty, SlavePty};
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
             task::JoinHandle};
 
-use super::{PtyInputEvent, PtyOutputEvent};
+use super::{PtyInputEvent, PtyReadOnlyOutputEvent, PtyReadWriteOutputEvent};
 
 /// Buffer size for reading PTY output (4KB stack allocation).
 ///
@@ -34,6 +34,9 @@ pub type ControlledChild = Box<dyn portable_pty::Child + Send + Sync>;
 /// Type alias for the writer used in PTY operations.
 pub type ControllerWriter = Box<dyn std::io::Write + Send>;
 
+/// Type alias for the reader used in PTY operations.
+pub type ControllerReader = Box<dyn std::io::Read + Send>;
+
 /// Type alias for a validated PTY command ready for execution.
 ///
 /// This enhances readability by making the flow clear: [`crate::PtyCommandBuilder`] `->
@@ -52,8 +55,11 @@ pub type PtyCommand = CommandBuilder;
 pub type PtyCompletionHandle =
     Pin<Box<JoinHandle<miette::Result<portable_pty::ExitStatus>>>>;
 
-/// Type alias for the output event receiver half of a channel.
-pub type OutputEventReceiverHalf = UnboundedReceiver<PtyOutputEvent>;
+/// Type alias for the read-only output event receiver half of a channel.
+pub type ReadOnlyOutputEventReceiverHalf = UnboundedReceiver<PtyReadOnlyOutputEvent>;
+
+/// Type alias for the read-write output event receiver half of a channel.
+pub type ReadWriteOutputEventReceiverHalf = UnboundedReceiver<PtyReadWriteOutputEvent>;
 
 /// Type alias for the input event sender half of a channel.
 pub type InputEventSenderHalf = UnboundedSender<PtyInputEvent>;

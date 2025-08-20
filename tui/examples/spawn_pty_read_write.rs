@@ -17,8 +17,9 @@
 //! ```
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{core::pty::{ControlChar, PtyCommandBuilder, PtyConfigOption,
-                           PtyInputEvent, PtyOutputEvent},
+use portable_pty::PtySize;
+use r3bl_tui::{core::pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
+                           PtyInputEvent, PtyReadWriteOutputEvent},
                set_mimalloc_in_main};
 use tokio::time::{Duration, sleep};
 
@@ -38,7 +39,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     // Start Python with unbuffered output for immediate feedback
     let mut session = PtyCommandBuilder::new("python3")
         .args(["-u", "-i"]) // -u: unbuffered, -i: interactive
-        .spawn_read_write(PtyConfigOption::Output)?;
+        .spawn_read_write(PtySize::default())?;
 
     // Spawn a task to handle output
     let output_handle = tokio::spawn(async move {
@@ -46,7 +47,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
 
         while let Some(event) = session.output_event_receiver_half.recv().await {
             match event {
-                PtyOutputEvent::Output(data) => {
+                PtyReadWriteOutputEvent::Output(data) => {
                     let text = String::from_utf8_lossy(&data);
                     buffer.push_str(&text);
 
@@ -62,7 +63,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
                         println!();
                     }
                 }
-                PtyOutputEvent::Exit(status) => {
+                PtyReadWriteOutputEvent::Exit(status) => {
                     println!("\n{YELLOW}Python exited with status: {status:?}{RESET}");
                     break;
                 }
@@ -170,7 +171,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     println!("\n{BLUE}📝 Sending: Exit command (Ctrl-D){RESET}");
     session
         .input_event_ch_tx_half
-        .send(PtyInputEvent::SendControl(ControlChar::CtrlD))
+        .send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()))
         .unwrap();
 
     // Wait for output task to complete
@@ -195,16 +196,16 @@ async fn run_shell_demo() -> miette::Result<()> {
     // Start a shell session
     let mut session = PtyCommandBuilder::new("sh")
         .args(["-i"]) // Interactive mode
-        .spawn_read_write(PtyConfigOption::Output)?;
+        .spawn_read_write(PtySize::default())?;
 
     // Spawn output handler
     let output_handle = tokio::spawn(async move {
         while let Some(event) = session.output_event_receiver_half.recv().await {
             match event {
-                PtyOutputEvent::Output(data) => {
+                PtyReadWriteOutputEvent::Output(data) => {
                     print!("{CYAN}{}{RESET}", String::from_utf8_lossy(&data));
                 }
-                PtyOutputEvent::Exit(status) => {
+                PtyReadWriteOutputEvent::Exit(status) => {
                     println!("\n{YELLOW}Shell exited with status: {status:?}{RESET}");
                     break;
                 }
@@ -260,7 +261,7 @@ async fn run_shell_demo() -> miette::Result<()> {
     println!("{BLUE}📝 Sending: Ctrl-C to interrupt{RESET}");
     session
         .input_event_ch_tx_half
-        .send(PtyInputEvent::SendControl(ControlChar::CtrlC))
+        .send(PtyInputEvent::SendControl(ControlSequence::CtrlC, CursorKeyMode::default()))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 

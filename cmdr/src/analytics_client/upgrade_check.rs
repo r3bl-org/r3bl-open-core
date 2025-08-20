@@ -50,7 +50,7 @@ use std::{env::current_exe,
 
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
                SpinnerStyle, StyleSheet, ast, ast_line, choose,
-               core::pty::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent,
+               core::pty::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
                            pty_to_std_exit_status},
                height, inline_string,
                spinner::Spinner,
@@ -257,7 +257,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
             }
             event = session.output_evt_ch_rx_half.recv() => {
                 match event {
-                    Some(PtyOutputEvent::Output(data)) => {
+                    Some(PtyReadOnlyOutputEvent::Output(data)) => {
                         // Convert bytes to string and extract meaningful info
                         if let Ok(text) = std::str::from_utf8(&data) {
                             let progress_info = extract_rustup_progress(text);
@@ -267,11 +267,8 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
                                 }
                         }
                     }
-                    Some(PtyOutputEvent::Exit(status)) => {
+                    Some(PtyReadOnlyOutputEvent::Exit(status)) => {
                         return Ok(pty_to_std_exit_status(status));
-                    }
-                    Some(PtyOutputEvent::UnexpectedExit(msg)) => {
-                        return Err(Error::other(msg));
                     }
                     None => {
                         // Channel closed unexpectedly
@@ -303,14 +300,11 @@ async fn run_cargo_install_with_progress(
             }
             event = session.output_evt_ch_rx_half.recv() => {
                 match event {
-                    Some(PtyOutputEvent::Osc(osc)) => {
+                    Some(PtyReadOnlyOutputEvent::Osc(osc)) => {
                         handle_osc_event(osc, crate_name, spinner);
                     }
-                    Some(PtyOutputEvent::Exit(status)) => {
+                    Some(PtyReadOnlyOutputEvent::Exit(status)) => {
                         return Ok(pty_to_std_exit_status(status));
-                    }
-                    Some(PtyOutputEvent::UnexpectedExit(msg)) => {
-                        return Err(Error::other(msg));
                     }
                     None => {
                         // Channel closed unexpectedly
@@ -345,7 +339,8 @@ fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>
             OscEvent::Hyperlink { .. } => {
                 // Hyperlinks aren't relevant for cargo install progress,
                 // so we ignore them here
-            }
+            },
+            _ => {}
         }
     }
 }

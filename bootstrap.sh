@@ -89,6 +89,23 @@ else
 fi
 # cspell:enable
 
+# Install htop for PTY integration tests
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
+        echo "Warning: Homebrew not found. Skipping htop installation..."
+    else
+        install_if_missing "htop" "${PKG_MGR:-brew install} htop"
+    fi
+elif [[ -n "$PKG_MGR" ]]; then
+    install_if_missing "htop" "$PKG_MGR htop"
+else
+    echo "Warning: No supported package manager found. Install htop manually"
+    echo "  Ubuntu/Debian: sudo apt-get install htop"
+    echo "  RHEL/CentOS/Fedora: sudo dnf install htop"
+    echo "  Arch: sudo pacman -S htop"
+    echo "  openSUSE: sudo zypper install htop"
+fi
+
 # Setup development tools
 if command -v fish &>/dev/null; then
     echo "Setting up development tools..."

@@ -8,6 +8,7 @@
 //!   cleared, build errors, and indeterminate progress.
 //! - OSC 8 sequences for creating terminal hyperlinks that can be clicked to open URLs or
 //!   file paths.
+//! - Terminal control sequences (OSC 0) for setting window titles and tab names.
 //!
 //! The [`OscBuffer`] handles partial sequences split across buffer reads and
 //! gracefully ignores malformed input.
@@ -16,8 +17,10 @@ pub mod osc_buffer;
 pub mod osc_codes;
 pub mod osc_event;
 pub mod osc_hyperlink;
+pub mod osc_controller;
 
 // Re-export main types and functions for convenience
 pub use osc_buffer::*;
 pub use osc_event::*;
 pub use osc_hyperlink::*;
+pub use osc_controller::*;
