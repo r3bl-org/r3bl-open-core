@@ -7,14 +7,20 @@ task, please ask the user for clarification immediately.
 
 ### MCP Tools to understand and change Rust code
 
-Use these tools to navigate and modify Rust code effectively:
+Use these MCP tools to navigate and modify Rust code effectively:
 
-- rust-analyzer: definition, diagnostics, edit_file, hover, references, rename_symbol
-- IDE: getDiagnostics, getDefinition, getReferences, getHover, editFile
+- serena: definition, diagnostics, edit_file, hover, references, rename symbol, etc.
 
 Use these tools to lookup documentation and APIs:
 
 - context7: Documentation lookup for Rust crates and APIs, and all other APIs as well
+
+# Testing interactive terminal applications
+
+For testing interactive terminal applications, use (they are both installed):
+
+- `tmux`
+- `screen`
 
 ### Rust Code Quality
 

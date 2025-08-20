@@ -120,7 +120,9 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                             OscEvent::Hyperlink { uri, text } => {
                                 println!("{GREEN}🔗 Hyperlink detected: {text} -> {uri}{RESET}");
                             },
-                            _ => {}
+                            OscEvent::SetTitleAndTab(title) => {
+                                println!("{GREEN}📝 Terminal title/tab update: {title}{RESET}");
+                            }
                         }
                     }
                     PtyReadOnlyOutputEvent::Exit(_) | PtyReadOnlyOutputEvent::Output(_) => {

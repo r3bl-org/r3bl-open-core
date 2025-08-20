@@ -109,7 +109,7 @@ impl PtyCommandBuilder {
     /// ```rust,no_run
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use r3bl_tui::{PtyCommandBuilder, PtyInputEvent};
+    /// use r3bl_tui::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent};
     /// use portable_pty::PtySize;
     /// use tokio::time::{sleep, Duration};
     ///
@@ -176,22 +176,25 @@ impl PtyCommandBuilder {
             input_evt_ch_rx_half,
         ) = tokio::sync::mpsc::unbounded_channel::<PtyInputEvent>();
 
+        // Build the command, ensuring CWD is set
+        let command = self.build()?;
+
+        // Create PTY pair: controller (master) for bidirectional I/O, controlled
+        // (slave) for spawned process
+        let (controller, controlled): (Controller, Controlled) =
+            create_pty_pair(pty_size)?;
+
+        // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
+        // The child process uses the controlled side as its stdin/stdout/stderr.
+        let mut controlled_child: ControlledChild =
+            spawn_command_in_pty(&controlled, command)?;
+
+        // Clone the killer handle before moving the child into the completion task
+        let child_process_terminate_handle = controlled_child.clone_killer();
+
         // [🛫 SPAWN 0] Spawn the main orchestration task. This is returned to your
         // program, which waits for this to complete.
         let session_completion_handle = tokio::spawn(async move {
-            // Build the command, ensuring CWD is set
-            let command = self.build()?;
-
-            // Create PTY pair: controller (master) for bidirectional I/O, controlled
-            // (slave) for spawned process
-            let (controller, controlled): (Controller, Controlled) =
-                create_pty_pair(pty_size)?;
-
-            // [🛫 SPAWN 1] Spawn the command with PTY (makes is_terminal() return true).
-            // The child process uses the controlled side as its stdin/stdout/stderr.
-            let mut controlled_child: ControlledChild =
-                spawn_command_in_pty(&controlled, command)?;
-
             // [🛫 SPAWN 2] Start the passthrough reader task with mode detection for
             // interactive sessions. This directly writes PTY output to stdout
             // for immediate display and detects cursor mode changes.
@@ -250,6 +253,7 @@ impl PtyCommandBuilder {
             // Pin the completion handle: JoinHandle is not Unpin but select! requires it
             // for efficient polling without moving.
             pinned_boxed_session_completion_handle: Box::pin(session_completion_handle),
+            child_process_terminate_handle,
         })
     }
 }
@@ -554,8 +558,7 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
                     // Error reading - PTY closed or error
                     let _unused = output_evt_ch_tx_half.send(
                         PtyReadWriteOutputEvent::UnexpectedExit(format!(
-                            "Read error: {}",
-                            e
+                            "Read error: {e}"
                         )),
                     );
                     break;
@@ -1337,6 +1340,7 @@ mod tests {
     /// - Test fails hard if htop missing (not skipped) to ensure proper CI setup
     /// - Requires PTY support (not available in all containerized environments)
     #[cfg(not(target_os = "windows"))] // Linux and macOS only
+    #[allow(clippy::too_many_lines)]
     async fn test_htop_interactive_with_cursor_modes() -> miette::Result<()> {
         use std::process::Command;
 
@@ -1350,15 +1354,14 @@ mod tests {
             .output()
             .expect("Failed to check for htop");
 
-        if !htop_check.status.success() {
-            panic!(
-                "htop is required for this test but is not installed!\n\
+        assert!(
+            htop_check.status.success(),
+            "htop is required for this test but is not installed!\n\
                  Please install htop:\n\
                  - Linux: Use your package manager (apt, dnf, pacman, etc.)\n\
                  - macOS: brew install htop\n\
                  - Or run: ./bootstrap.sh"
-            );
-        }
+        );
 
         println!("htop found, launching with 10-second refresh delay...");
 
@@ -1488,9 +1491,9 @@ mod tests {
 
             if arrow_result.is_ok() {
                 mode_success_count += 1;
-                println!("✓ Arrow key sent successfully in {} mode", mode_name);
+                println!("✓ Arrow key sent successfully in {mode_name} mode");
             } else {
-                println!("✗ Failed to send arrow key in {} mode", mode_name);
+                println!("✗ Failed to send arrow key in {mode_name} mode");
             }
 
             tokio::time::sleep(Duration::from_millis(50)).await;
@@ -1499,8 +1502,7 @@ mod tests {
         // Phase 4 Assertion: Verify both cursor modes work
         assert_eq!(
             mode_success_count, 2,
-            "Both cursor modes (Normal and Application) should work. Only {} succeeded",
-            mode_success_count
+            "Both cursor modes (Normal and Application) should work. Only {mode_success_count} succeeded"
         );
 
         // Capture baseline before F2 for comparison
@@ -1542,7 +1544,7 @@ mod tests {
                 || setup_output.contains("Display")
                 || setup_output.contains("Colors")
                 || setup_output.contains("Columns")
-                || (setup_output.len() > 0 && setup_output.len() != before_f2.len()));
+                || (!setup_output.is_empty() && setup_output.len() != before_f2.len()));
 
         assert!(
             setup_menu_appeared,
@@ -1594,7 +1596,7 @@ mod tests {
         // Phase 6 Assertion: Verify htop exited properly or handle timeout gracefully
         match exit_result {
             Ok(Ok(status)) => {
-                println!("✓ htop exited cleanly with status: {:?}", status);
+                println!("✓ htop exited cleanly with status: {status:?}");
                 // For most cases, htop should exit with success
                 if !status.success() {
                     println!(
@@ -1657,7 +1659,7 @@ mod tests {
                         output.push_str(&String::from_utf8_lossy(&data));
                     }
                 }
-                _ = tokio::time::sleep_until(deadline) => break,
+                () = tokio::time::sleep_until(deadline) => break,
             }
         }
 

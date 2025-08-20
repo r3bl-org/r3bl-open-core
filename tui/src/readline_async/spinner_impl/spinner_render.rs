@@ -4,7 +4,6 @@ use std::ops::Not;
 use crossterm::style::{self, Stylize};
 
 use crate::{contains_ansi_escape_sequence,GCStringOwned,
-            convert_from_tui_color_to_crossterm_color,
             inline_string,
             spinner_render::style::style,
             width,
@@ -86,7 +85,7 @@ fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
     if let SpinnerColor::ColorWheel(color_wheel) = color {
         let maybe_next_color = color_wheel.next_color();
         if let Some(next_color) = maybe_next_color {
-            let color = convert_from_tui_color_to_crossterm_color(next_color);
+            let color = next_color.into();
             let styled_content = style(output).with(color);
             return inline_string!("{styled_content}");
         }

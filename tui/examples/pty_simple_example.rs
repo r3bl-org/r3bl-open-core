@@ -5,9 +5,11 @@
 //! This is a simplified example to debug PTY integration issues.
 
 use portable_pty::PtySize;
-use r3bl_tui::{core::{get_size,
-                      pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder, PtyConfigOption,
-                            PtyInputEvent, PtyReadWriteOutputEvent, PtyReadWriteSession},
+use r3bl_tui::{ansi::terminal_output,
+               core::{get_size,
+                      pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
+                            PtyInputEvent, PtyReadWriteOutputEvent,
+                            PtyReadWriteSession},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
                lock_output_device_as_mut, set_mimalloc_in_main,
@@ -42,11 +44,7 @@ async fn main() -> miette::Result<()> {
     tracing::debug!("Raw mode started");
 
     // Clear screen and reset cursor
-    {
-        let out = lock_output_device_as_mut!(&output_device);
-        let _unused = write!(out, "\x1B[2J\x1B[H"); // Clear screen and home cursor
-        let _unused = out.flush();
-    }
+    terminal_output::clear_screen_and_home_cursor(&output_device);
     tracing::debug!("Screen cleared");
 
     // Spawn htop process
@@ -58,9 +56,8 @@ async fn main() -> miette::Result<()> {
     };
 
     tracing::debug!("Spawning htop with PTY size: {:?}", pty_size);
-    
-    let session = PtyCommandBuilder::new("htop")
-        .spawn_read_write(pty_size)?;
+
+    let session = PtyCommandBuilder::new("htop").spawn_read_write(pty_size)?;
 
     tracing::debug!("htop process started successfully");
 
@@ -97,17 +94,17 @@ async fn run_event_loop(
                 match event {
                     PtyReadWriteOutputEvent::Output(data) => {
                         output_count += 1;
-                        if output_count <= 10 || output_count % 100 == 0 {
+                        if output_count <= 10 || output_count.is_multiple_of(100) {
                             tracing::debug!("PTY output #{}: {} bytes", output_count, data.len());
                         }
-                        
+
                         // Debug: Log the actual bytes when we get small outputs (likely from key responses)
                         if data.len() < 1000 {
-                            tracing::debug!("PTY output #{} content ({} bytes): {:?}", 
+                            tracing::debug!("PTY output #{} content ({} bytes): {:?}",
                                 output_count, data.len(), String::from_utf8_lossy(&data));
                             tracing::debug!("PTY output #{} raw bytes: {:02x?}", output_count, &data[..data.len().min(100)]);
                         }
-                        
+
                         // Write the PTY output to the output device
                         let out = lock_output_device_as_mut!(output_device);
                         if let Err(e) = out.write_all(&data) {
@@ -127,10 +124,7 @@ async fn run_event_loop(
 
             // Handle user input
             Ok(event) = input_device.next() => {
-                let input_event = match InputEvent::try_from(event) {
-                    Ok(event) => event,
-                    Err(_) => continue,
-                };
+                let Ok(input_event) = InputEvent::try_from(event) else { continue };
 
                 match input_event {
                     InputEvent::Keyboard(key) => {
@@ -159,15 +153,15 @@ async fn run_event_loop(
                         }
 
                         // Convert key to PTY input event and send
-                        if let Some(event) = Option::<PtyInputEvent>::from(key.clone()) {
+                        if let Some(event) = Option::<PtyInputEvent>::from(key) {
                             input_count += 1;
                             tracing::debug!("Input #{}: key={:?}, event={:?}", input_count, key, event);
-                            
+
                             // Debug: Log the actual bytes being sent for arrow keys
                             if let PtyInputEvent::SendControl(ref ctrl, ref mode) = event {
                                 tracing::debug!("Sending control bytes: {:02x?}", ctrl.to_bytes(*mode).as_ref());
                             }
-                            
+
                             if let Err(e) = session.input_event_ch_tx_half.send(event.clone()) {
                                 tracing::error!("Failed to send input to PTY: {}", e);
                             } else {

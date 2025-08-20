@@ -1,10 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use std::io::Read;
+
 use miette::IntoDiagnostic;
 
-use crate::{pty_common_io::{create_pty_pair,
-                            spawn_command_in_pty, READ_BUFFER_SIZE}, Controlled, ControlledChild, Controller, ControllerReader, OscBuffer, PtyCommandBuilder, PtyConfig, PtyReadOnlyOutputEvent, PtyReadOnlySession};
+use crate::{Controlled, ControlledChild, Controller, ControllerReader, OscBuffer,
+            PtyCommandBuilder, PtyConfig, PtyReadOnlyOutputEvent, PtyReadOnlySession,
+            pty_common_io::{READ_BUFFER_SIZE, create_pty_pair, spawn_command_in_pty}};
 
 impl PtyCommandBuilder {
     /// Spawns a read-only PTY session; it spawns two Tokio tasks and one OS child
@@ -290,8 +292,8 @@ pub fn spawn_blocking_controller_output_reader_task(
                     // Process OSC sequences if configured.
                     if let Some(ref mut osc_buf) = osc_buffer {
                         for event in osc_buf.append_and_extract(data, n) {
-                            let _unused =
-                                output_event_ch_tx_half.send(PtyReadOnlyOutputEvent::Osc(event));
+                            let _unused = output_event_ch_tx_half
+                                .send(PtyReadOnlyOutputEvent::Osc(event));
                         }
                     }
                 }
@@ -308,9 +310,12 @@ pub fn spawn_blocking_controller_output_reader_task(
 #[cfg(test)]
 mod tests {
     use miette::IntoDiagnostic;
-    use tokio::{sync::mpsc::unbounded_channel, time::{timeout, Duration}};
+    use tokio::{sync::mpsc::unbounded_channel,
+                time::{Duration, timeout}};
 
-    use crate::{pty_read_only::spawn_blocking_controller_output_reader_task, OscEvent, PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent, PtyReadOnlySession};
+    use crate::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
+                PtyReadOnlySession,
+                pty_read_only::spawn_blocking_controller_output_reader_task};
 
     /// Helper function to collect events with a timeout
     async fn collect_events_with_timeout(
@@ -592,7 +597,9 @@ mod tests {
         assert!(!status.success());
 
         // Should have an exit event
-        let has_exit = events.iter().any(|e| matches!(e, PtyReadOnlyOutputEvent::Exit(_)));
+        let has_exit = events
+            .iter()
+            .any(|e| matches!(e, PtyReadOnlyOutputEvent::Exit(_)));
         assert!(has_exit);
 
         Ok(())
@@ -625,7 +632,7 @@ mod tests {
         Ok(())
     }
 
-        #[tokio::test]
+    #[tokio::test]
     async fn test_create_reader_task_no_capture() {
         let (event_sender, mut event_receiver) = unbounded_channel();
 
@@ -858,5 +865,4 @@ mod tests {
             "Expected OSC progress update event with 25%"
         );
     }
-
 }

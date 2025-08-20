@@ -4,7 +4,7 @@
 
 use std::pin::Pin;
 
-use portable_pty::{CommandBuilder, MasterPty, SlavePty};
+use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
             task::JoinHandle};
 
@@ -36,6 +36,9 @@ pub type ControllerWriter = Box<dyn std::io::Write + Send>;
 
 /// Type alias for the reader used in PTY operations.
 pub type ControllerReader = Box<dyn std::io::Read + Send>;
+
+/// Type alias for a controlled child termination handle.
+pub type ControlledChildTerminationHandle = Box<dyn ChildKiller + Send + Sync>;
 
 /// Type alias for a validated PTY command ready for execution.
 ///

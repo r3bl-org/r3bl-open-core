@@ -2,13 +2,10 @@
 
 //! OSC controller for sending OSC sequences to the terminal.
 
-use std::io::Write;
-use crate::{
-    core::terminal_io::OutputDevice,
-    lock_output_device_as_mut,
-};
-use super::{osc_codes, OscEvent};
 use miette::IntoDiagnostic;
+
+use super::{OscEvent, osc_codes};
+use crate::{core::terminal_io::OutputDevice, lock_output_device_as_mut};
 
 /// Controller for sending OSC sequences to the terminal.
 /// This provides a high-level interface for common OSC operations
@@ -17,14 +14,25 @@ pub struct OscController<'a> {
     output_device: &'a OutputDevice,
 }
 
+impl std::fmt::Debug for OscController<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OscController")
+            .field("output_device", &"<OutputDevice>")
+            .finish()
+    }
+}
+
 impl<'a> OscController<'a> {
     /// Creates a new OSC controller with the given output device.
-    pub fn new(output_device: &'a OutputDevice) -> Self {
-        Self { output_device }
-    }
+    #[must_use]
+    pub fn new(output_device: &'a OutputDevice) -> Self { Self { output_device } }
 
     /// Set terminal window title and tab name using OSC 0 sequence.
     /// This is the most commonly supported title-setting sequence across terminals.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the output device fails.
     pub fn set_title_and_tab(&mut self, text: &str) -> miette::Result<()> {
         let sequence = format!(
             "{}{}{}",
@@ -36,6 +44,10 @@ impl<'a> OscController<'a> {
     }
 
     /// Generic method to send any OSC event to the terminal.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if writing to the output device fails.
     pub fn send_event(&mut self, event: OscEvent) -> miette::Result<()> {
         match event {
             OscEvent::SetTitleAndTab(text) => self.set_title_and_tab(&text),
@@ -47,11 +59,8 @@ impl<'a> OscController<'a> {
 
     /// Low-level method to write an OSC sequence directly to the output device.
     fn write_sequence(&mut self, sequence: &str) -> miette::Result<()> {
-        write!(
-            lock_output_device_as_mut!(self.output_device),
-            "{}",
-            sequence
-        ).into_diagnostic()?;
+        write!(lock_output_device_as_mut!(self.output_device), "{sequence}")
+            .into_diagnostic()?;
         Ok(())
     }
 }

@@ -99,6 +99,9 @@ strip-ansi-escapes = "0.2.1"
 # Color gradients.
 colorgrad = "0.7.1"
 
+# ANSI/VT sequence parsing for PTY multiplexer.
+vte = "0.13"
+
 # Fast non-cryptographic hash for ColorWheel cache
 rustc-hash = "2.1.0"
 
@@ -151,6 +154,9 @@ mimalloc = "0.1.46"
 
 # For PTY support
 portable-pty = "0.9.0"
+
+# Desktop notifications
+notify-rust = "4.11.3"
 
 [dev-dependencies]
 # For assert_eq2! macro.

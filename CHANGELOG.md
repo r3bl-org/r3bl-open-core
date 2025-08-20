@@ -330,20 +330,35 @@ following:
 
 ### v0.7.7 (next)
 
-TODO: integrate the following fenced text code block into change log format
-```
-Add PTY simple example with infra that is precursor for PTY mux
-- Add pty_simple_example.rs to tui examples. It spawns htop in a PTY
-  slave (interactive). And allows inputs and outputs from the "real"
-  terminal to be mapped to the child htop process.
-- Clean up read-only session so that it does not use the same code and
-  enums that is read-write specific.
-- Clean up read-write session so that it now handles cursor mode
-  properly (application vs normal mode). And expected input events from
-  real terminals are extensively supported.
-- Add robust testing for read-write session with testing for htop
-  which is now added as a prerequisite in `bootstrap.sh`.
-```
+This release introduces a comprehensive PTY multiplexer implementation with terminal multiplexing
+functionality similar to tmux, along with significant enhancements to PTY infrastructure and
+terminal output capabilities.
+
+- Added:
+  - Complete `pty_mux` module providing terminal multiplexing functionality similar to tmux
+  - `pty_mux_example.rs` demonstrating multiplexer capabilities with multiple TUI processes
+  - Support for spawning and switching between multiple TUI processes using Ctrl+1 through Ctrl+9
+  - Live status bar showing process states (🟢 running, 🔴 stopped) and keyboard shortcuts
+  - OSC sequence integration for dynamic terminal title updates
+  - Fake resize technique for proper TUI app repainting when switching processes
+  - Support for configurable TUI processes: less, htop, claude, gitui
+  - `pty_simple_example.rs` for basic PTY functionality demonstration with htop
+  - `pty_rw_echo_example.rs` for PTY echo testing and validation
+  - `ansi/terminal_output.rs` module with high-level terminal operations
+  - Crossterm-based functions for cursor movement, screen clearing, and color management
+  - Flush operations and immediate output handling for responsive terminal updates
+  - Robust testing infrastructure with htop as prerequisite in `bootstrap.sh`
+
+- Changed:
+  - Enhanced PTY read-write session with comprehensive cursor mode support (application vs normal
+    mode)
+  - Improved PTY input/output event handling with extensive terminal input event mapping
+  - Enhanced color conversion in `crossterm_color_converter.rs` for better color handling
+  - Improved styling in readline components (`apply_style_macro.rs`)
+  - Enhanced spinner rendering with better visual feedback (`spinner_render.rs`)
+  - Improved crossterm backend rendering operations (`render_op_impl.rs`)
+  - Integrated with r3bl_tui's TuiColor system for consistent styling across components
+  - Cleaned up read-only session to remove read-write specific code and enums
 
 ### v0.7.6 (2025-08-16)
 
@@ -956,8 +971,8 @@ handle many more corner cases.
 Documentation update for the `ch` command.
 
 - Added:
-  - Documentation for the `ch` command and its features, including usage examples and
-    configuration options in the `README.md` file and `lib.rs` (for `docs.rs`).
+  - Documentation for the `ch` command and its features, including usage examples and configuration
+    options in the `README.md` file and `lib.rs` (for `docs.rs`).
   - ![ch video](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/cmdr/videos/ch.gif?raw=true)
 
 ### v0.0.23 (2025-08-15)

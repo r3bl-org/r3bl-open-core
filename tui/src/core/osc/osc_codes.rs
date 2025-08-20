@@ -20,5 +20,5 @@ pub const DELIMITER: char = ';';
 pub const OSC0_SET_TITLE_AND_TAB: &str = "\x1b]0;";
 
 /// Alternative terminator: BEL character (0x07)
-/// Some terminals prefer this over the STRING_TERMINATOR
+/// Some terminals prefer this over the `STRING_TERMINATOR`
 pub const BELL_TERMINATOR: &str = "\x07";

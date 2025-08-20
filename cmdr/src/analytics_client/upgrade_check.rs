@@ -336,11 +336,10 @@ fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>
                     "Installing {crate_name}... (error occurred)"
                 ));
             }
-            OscEvent::Hyperlink { .. } => {
-                // Hyperlinks aren't relevant for cargo install progress,
+            OscEvent::Hyperlink { .. } | OscEvent::SetTitleAndTab(_) => {
+                // Hyperlinks and title/tab events aren't relevant for cargo install progress,
                 // so we ignore them here
-            },
-            _ => {}
+            }
         }
     }
 }

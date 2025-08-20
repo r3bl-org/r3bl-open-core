@@ -341,7 +341,7 @@ function install-cargo-tools
         set workspace $PWD
         set mcp_cmd "$HOME/go/bin/mcp-language-server"
         claude mcp add-json context7 '{"type":"http","url":"https://mcp.context7.com/mcp"}'
-        claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant --project /home/nazmul/github/r3bl-open-core 2>/dev/null || true
+        claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context agent --project /home/nazmul/github/r3bl-open-core 2>/dev/null || true
     end
 end
 

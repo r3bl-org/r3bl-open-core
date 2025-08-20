@@ -4,6 +4,7 @@
 # create tmux POC
 
 - [ ] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
+- [x] [`task_ring_buffer_enhance`](docs/done/task_ring_buffer_enhance.md)
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 

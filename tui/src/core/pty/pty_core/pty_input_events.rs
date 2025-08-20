@@ -4,7 +4,7 @@
 //!
 //! This module defines events that flow FROM the application TO the PTY child process:
 //! - [`PtyInputEvent`] - Commands that can be sent to a PTY child process
-//! - KeyPress to PtyInputEvent conversion using algorithmic approach
+//! - `KeyPress` to `PtyInputEvent` conversion using algorithmic approach
 //! - Terminal control sequence generation for cross-platform compatibility
 
 use portable_pty::PtySize;
@@ -29,14 +29,29 @@ pub enum PtyInputEvent {
     Write(Vec<u8>),
     /// Send text with automatic newline.
     WriteLine(String),
-    /// Send control sequences with cursor mode awareness (Ctrl-C, Ctrl-D, arrow keys, etc.).
+    /// Send control sequences with cursor mode awareness (Ctrl-C, Ctrl-D, arrow keys,
+    /// etc.).
     SendControl(ControlSequence, CursorKeyMode),
     /// Resize the PTY window.
     Resize(PtySize),
     /// Explicit flush without writing data.
     /// Forces any buffered data to be sent to the child immediately.
     Flush,
-    /// Close stdin (EOF).
+    /// Close stdin (EOF) - graceful input termination only.
+    ///
+    /// **Important**: This event only stops the input writer loop and sends EOF to the
+    /// child process's stdin. It does **not** kill the child process itself. The child
+    /// process may continue running and prevent session termination.
+    ///
+    /// For forceful process termination, use the `child_process_terminate_handle` from
+    /// [`crate::PtyReadWriteSession`] to call `kill()` on the child process directly.
+    ///
+    /// # Use Cases
+    /// - Graceful shutdown: Send `Close` and wait for child to exit naturally
+    /// - Forceful shutdown: Call `child_process_terminate_handle.kill()` then send `Close`
+    ///
+    /// # See Also
+    /// - [`crate::PtyReadWriteSession::child_process_terminate_handle`] for process termination
     Close,
 }
 
@@ -70,7 +85,7 @@ impl ModifierState {
     /// | 7    | ctrl+alt         |
     /// | 8    | ctrl+alt+shift   |
     fn to_csi_modifier(self) -> u8 {
-        1 + (if self.shift { 1 } else { 0 })
+        1 + u8::from(self.shift)
             + (if self.alt { 2 } else { 0 })
             + (if self.ctrl { 4 } else { 0 })
     }
@@ -114,17 +129,17 @@ fn convert_plain_key(key: Key) -> Option<PtyInputEvent> {
             },
         ),
 
-        _ => None,
+        Key::KittyKeyboardProtocol(_) => None,
     }
 }
 
 /// Convert modified keys using algorithmic approach
 fn convert_modified_key(key: Key, modifiers: ModifierState) -> Option<PtyInputEvent> {
     match key {
-        Key::Character(ch) => convert_character_with_modifiers(ch, modifiers),
+        Key::Character(ch) => Some(convert_character_with_modifiers(ch, modifiers)),
         Key::SpecialKey(special) => convert_special_key(special, modifiers),
         Key::FunctionKey(func) => convert_function_key(func, modifiers),
-        _ => None,
+        Key::KittyKeyboardProtocol(_) => None,
     }
 }
 
@@ -132,7 +147,7 @@ fn convert_modified_key(key: Key, modifiers: ModifierState) -> Option<PtyInputEv
 fn convert_character_with_modifiers(
     ch: char,
     modifiers: ModifierState,
-) -> Option<PtyInputEvent> {
+) -> PtyInputEvent {
     match modifiers {
         // Ctrl-only combinations
         ModifierState {
@@ -149,9 +164,10 @@ fn convert_character_with_modifiers(
         } => {
             // For ASCII characters, use ESC + char
             if ch.is_ascii() {
-                Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1B, ch as u8,
-                ]), CursorKeyMode::default()))
+                PtyInputEvent::SendControl(
+                    ControlSequence::RawSequence(vec![0x1B, ch as u8]),
+                    CursorKeyMode::default(),
+                )
             } else {
                 // For non-ASCII, use CSI u sequences
                 generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
@@ -176,16 +192,20 @@ fn convert_character_with_modifiers(
         } => {
             // For letters, send ESC + uppercase
             if ch.is_ascii_alphabetic() {
-                Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1B,
-                    ch.to_ascii_uppercase() as u8,
-                ]), CursorKeyMode::default()))
+                PtyInputEvent::SendControl(
+                    ControlSequence::RawSequence(vec![
+                        0x1B,
+                        ch.to_ascii_uppercase() as u8,
+                    ]),
+                    CursorKeyMode::default(),
+                )
             } else if ch.is_ascii() {
                 // For other ASCII chars, send ESC + char (shift is handled by the char
                 // itself)
-                Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1B, ch as u8,
-                ]), CursorKeyMode::default()))
+                PtyInputEvent::SendControl(
+                    ControlSequence::RawSequence(vec![0x1B, ch as u8]),
+                    CursorKeyMode::default(),
+                )
             } else {
                 generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
             }
@@ -198,9 +218,10 @@ fn convert_character_with_modifiers(
             alt: true,
         } => {
             if let Some(ctrl_code) = get_ctrl_code_extended(ch) {
-                Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1B, ctrl_code,
-                ]), CursorKeyMode::default()))
+                PtyInputEvent::SendControl(
+                    ControlSequence::RawSequence(vec![0x1B, ctrl_code]),
+                    CursorKeyMode::default(),
+                )
             } else {
                 // Fallback to CSI u for unsupported combinations
                 generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
@@ -228,41 +249,82 @@ fn convert_character_with_modifiers(
     }
 }
 
-/// Convert Ctrl+character combinations
-fn convert_ctrl_character(ch: char) -> Option<PtyInputEvent> {
+/// Convert Ctrl+letter combinations (a-z, A-Z)
+fn convert_ctrl_letter(ch: char) -> PtyInputEvent {
     match ch {
-        // Use dedicated ControlChar variants for common ones
-        'a' | 'A' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlA, CursorKeyMode::default())),
-        'c' | 'C' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlC, CursorKeyMode::default())),
-        'd' | 'D' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default())),
-        'e' | 'E' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlE, CursorKeyMode::default())),
-        'k' | 'K' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlK, CursorKeyMode::default())),
-        'l' | 'L' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlL, CursorKeyMode::default())),
-        'u' | 'U' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlU, CursorKeyMode::default())),
-        'z' | 'Z' => Some(PtyInputEvent::SendControl(ControlSequence::CtrlZ, CursorKeyMode::default())),
+        'a' | 'A' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlA,
+            CursorKeyMode::default(),
+        ),
+        'c' | 'C' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlC,
+            CursorKeyMode::default(),
+        ),
+        'd' | 'D' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlD,
+            CursorKeyMode::default(),
+        ),
+        'e' | 'E' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlE,
+            CursorKeyMode::default(),
+        ),
+        'k' | 'K' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlK,
+            CursorKeyMode::default(),
+        ),
+        'l' | 'L' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlL,
+            CursorKeyMode::default(),
+        ),
+        'u' | 'U' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlU,
+            CursorKeyMode::default(),
+        ),
+        'z' | 'Z' => PtyInputEvent::SendControl(
+            ControlSequence::CtrlZ,
+            CursorKeyMode::default(),
+        ),
+        _ => {
+            if let Some(ctrl_code) = get_ctrl_code_extended(ch) {
+                PtyInputEvent::SendControl(
+                    ControlSequence::RawSequence(vec![ctrl_code]),
+                    CursorKeyMode::default(),
+                )
+            } else {
+                generate_csi_u_sequence(ch as u32, 5)
+            }
+        }
+    }
+}
 
-        // Special cases for important symbols
-        ' ' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-            0x00,
-        ]), CursorKeyMode::default())), // Ctrl+Space -> NUL (autocomplete)
-        '[' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-            0x1B,
-        ]), CursorKeyMode::default())), // Ctrl+[ -> ESC
-        '\\' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-            28,
-        ]), CursorKeyMode::default())), // Ctrl+\ -> FS
-        ']' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-            29,
-        ]), CursorKeyMode::default())), // Ctrl+] -> GS
-        '^' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-            30,
-        ]), CursorKeyMode::default())), // Ctrl+^ -> RS
-        '_' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-            31,
-        ]), CursorKeyMode::default())), // Ctrl+_ -> US
-        '`' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-            0x00,
-        ]), CursorKeyMode::default())), // Ctrl+` -> NUL (alternative)
+/// Convert Ctrl+symbol combinations (space, punctuation, etc.)
+fn convert_ctrl_symbol(ch: char) -> PtyInputEvent {
+    match ch {
+        // Special cases for important symbols - multiple ways to send NUL
+        ' ' | '`' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x00]),
+            CursorKeyMode::default(),
+        ), // Ctrl+Space/Ctrl+` -> NUL (autocomplete/alternative)
+        '[' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x1B]),
+            CursorKeyMode::default(),
+        ), // Ctrl+[ -> ESC
+        '\\' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![28]),
+            CursorKeyMode::default(),
+        ), // Ctrl+\ -> FS
+        ']' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![29]),
+            CursorKeyMode::default(),
+        ), // Ctrl+] -> GS
+        '^' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![30]),
+            CursorKeyMode::default(),
+        ), // Ctrl+^ -> RS
+        '_' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![31]),
+            CursorKeyMode::default(),
+        ), // Ctrl+_ -> US
 
         // Additional important symbols
         '-' => generate_csi_u_sequence('-' as u32, 5), // Ctrl+- (zoom out)
@@ -273,49 +335,52 @@ fn convert_ctrl_character(ch: char) -> Option<PtyInputEvent> {
         ',' => generate_csi_u_sequence(',' as u32, 5), // Ctrl+, (settings)
         '.' => generate_csi_u_sequence('.' as u32, 5), // Ctrl+. (context menu)
         '/' => generate_csi_u_sequence('/' as u32, 5), // Ctrl+/ (comment)
+        _ => generate_csi_u_sequence(ch as u32, 5), // Fallback for other symbols
+    }
+}
 
-        // Numbers (very important for tmux, screen, tabs)
-        '0'..='9' => {
-            // Ctrl+2 is special (NUL), Ctrl+3-7 have special meanings
-            match ch {
-                '2' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x00,
-                ]), CursorKeyMode::default())), // Ctrl+2 -> NUL
-                '3' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1B,
-                ]), CursorKeyMode::default())), // Ctrl+3 -> ESC
-                '4' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1C,
-                ]), CursorKeyMode::default())), // Ctrl+4 -> FS
-                '5' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1D,
-                ]), CursorKeyMode::default())), // Ctrl+5 -> GS
-                '6' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1E,
-                ]), CursorKeyMode::default())), // Ctrl+6 -> RS
-                '7' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1F,
-                ]), CursorKeyMode::default())), // Ctrl+7 -> US
-                '8' => Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x7F,
-                ]), CursorKeyMode::default())), // Ctrl+8 -> DEL
-                // For 0, 1, 9 use CSI u sequences as they don't have traditional control
-                // codes
-                _ => generate_csi_u_sequence(ch as u32, 5),
-            }
-        }
+/// Convert Ctrl+number combinations (0-9)
+fn convert_ctrl_number(ch: char) -> PtyInputEvent {
+    match ch {
+        '2' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x00]),
+            CursorKeyMode::default(),
+        ), // Ctrl+2 -> NUL
+        '3' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x1B]),
+            CursorKeyMode::default(),
+        ), // Ctrl+3 -> ESC
+        '4' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x1C]),
+            CursorKeyMode::default(),
+        ), // Ctrl+4 -> FS
+        '5' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x1D]),
+            CursorKeyMode::default(),
+        ), // Ctrl+5 -> GS
+        '6' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x1E]),
+            CursorKeyMode::default(),
+        ), // Ctrl+6 -> RS
+        '7' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x1F]),
+            CursorKeyMode::default(),
+        ), // Ctrl+7 -> US
+        '8' => PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(vec![0x7F]),
+            CursorKeyMode::default(),
+        ), // Ctrl+8 -> DEL
+        // For 0, 1, 9 use CSI u sequences as they don't have traditional control codes
+        _ => generate_csi_u_sequence(ch as u32, 5),
+    }
+}
 
-        // Algorithmic approach for remaining letters
-        _ => {
-            if let Some(ctrl_code) = get_ctrl_code_extended(ch) {
-                Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    ctrl_code,
-                ]), CursorKeyMode::default()))
-            } else {
-                // For other symbols, use CSI u sequences
-                generate_csi_u_sequence(ch as u32, 5) // Modifier 5 = Ctrl
-            }
-        }
+/// Convert Ctrl+character combinations
+fn convert_ctrl_character(ch: char) -> PtyInputEvent {
+    match ch {
+        'a'..='z' | 'A'..='Z' => convert_ctrl_letter(ch),
+        '0'..='9' => convert_ctrl_number(ch),
+        _ => convert_ctrl_symbol(ch),
     }
 }
 
@@ -344,35 +409,66 @@ fn convert_special_key(
         })
     {
         return match special {
-            SpecialKey::Enter => Some(PtyInputEvent::SendControl(ControlSequence::Enter, CursorKeyMode::default())),
-            SpecialKey::Tab => Some(PtyInputEvent::SendControl(ControlSequence::Tab, CursorKeyMode::default())),
-            SpecialKey::Backspace => {
-                Some(PtyInputEvent::SendControl(ControlSequence::Backspace, CursorKeyMode::default()))
-            }
-            SpecialKey::Esc => Some(PtyInputEvent::SendControl(ControlSequence::Escape, CursorKeyMode::default())),
-            SpecialKey::Delete => Some(PtyInputEvent::SendControl(ControlSequence::Delete, CursorKeyMode::default())),
-            SpecialKey::Up => Some(PtyInputEvent::SendControl(ControlSequence::ArrowUp, CursorKeyMode::default())),
-            SpecialKey::Down => Some(PtyInputEvent::SendControl(ControlSequence::ArrowDown, CursorKeyMode::default())),
-            SpecialKey::Right => {
-                Some(PtyInputEvent::SendControl(ControlSequence::ArrowRight, CursorKeyMode::default()))
-            }
-            SpecialKey::Left => Some(PtyInputEvent::SendControl(ControlSequence::ArrowLeft, CursorKeyMode::default())),
-            SpecialKey::Home => Some(PtyInputEvent::SendControl(ControlSequence::Home, CursorKeyMode::default())),
-            SpecialKey::End => Some(PtyInputEvent::SendControl(ControlSequence::End, CursorKeyMode::default())),
-            SpecialKey::PageUp => Some(PtyInputEvent::SendControl(ControlSequence::PageUp, CursorKeyMode::default())),
-            SpecialKey::PageDown => {
-                Some(PtyInputEvent::SendControl(ControlSequence::PageDown, CursorKeyMode::default()))
-            }
-            SpecialKey::Insert => {
-                Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1B, 0x5B, 0x32, 0x7E,
-                ]), CursorKeyMode::default()))
-            }
-            SpecialKey::BackTab => {
-                Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(vec![
-                    0x1B, 0x5B, 0x5A,
-                ]), CursorKeyMode::default()))
-            }
+            SpecialKey::Enter => Some(PtyInputEvent::SendControl(
+                ControlSequence::Enter,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Tab => Some(PtyInputEvent::SendControl(
+                ControlSequence::Tab,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Backspace => Some(PtyInputEvent::SendControl(
+                ControlSequence::Backspace,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Esc => Some(PtyInputEvent::SendControl(
+                ControlSequence::Escape,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Delete => Some(PtyInputEvent::SendControl(
+                ControlSequence::Delete,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Up => Some(PtyInputEvent::SendControl(
+                ControlSequence::ArrowUp,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Down => Some(PtyInputEvent::SendControl(
+                ControlSequence::ArrowDown,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Right => Some(PtyInputEvent::SendControl(
+                ControlSequence::ArrowRight,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Left => Some(PtyInputEvent::SendControl(
+                ControlSequence::ArrowLeft,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Home => Some(PtyInputEvent::SendControl(
+                ControlSequence::Home,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::End => Some(PtyInputEvent::SendControl(
+                ControlSequence::End,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::PageUp => Some(PtyInputEvent::SendControl(
+                ControlSequence::PageUp,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::PageDown => Some(PtyInputEvent::SendControl(
+                ControlSequence::PageDown,
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::Insert => Some(PtyInputEvent::SendControl(
+                ControlSequence::RawSequence(vec![0x1B, 0x5B, 0x32, 0x7E]),
+                CursorKeyMode::default(),
+            )),
+            SpecialKey::BackTab => Some(PtyInputEvent::SendControl(
+                ControlSequence::RawSequence(vec![0x1B, 0x5B, 0x5A]),
+                CursorKeyMode::default(),
+            )),
         };
     }
 
@@ -393,7 +489,7 @@ fn convert_special_key(
         _ => return None,
     };
 
-    generate_csi_sequence(key_code, modifiers.to_csi_modifier(), base_seq)
+    Some(generate_csi_sequence(key_code, modifiers.to_csi_modifier(), base_seq))
 }
 
 /// Convert function keys with modifiers
@@ -424,7 +520,10 @@ fn convert_function_key(
             alt: false,
         })
     {
-        return Some(PtyInputEvent::SendControl(ControlSequence::F(func_num), CursorKeyMode::default()));
+        return Some(PtyInputEvent::SendControl(
+            ControlSequence::F(func_num),
+            CursorKeyMode::default(),
+        ));
     }
 
     // Modified function keys - use CSI sequences
@@ -458,7 +557,7 @@ fn convert_function_key(
         _ => return None,
     };
 
-    generate_csi_sequence(key_code, modifiers.to_csi_modifier(), &base_seq)
+    Some(generate_csi_sequence(key_code, modifiers.to_csi_modifier(), &base_seq))
 }
 
 /// Generate CSI sequence: ESC[key;modifier;letter or ESC[key;modifier~
@@ -466,40 +565,43 @@ fn generate_csi_sequence(
     key_code: u32,
     modifier: u8,
     suffix: &str,
-) -> Option<PtyInputEvent> {
+) -> PtyInputEvent {
     if modifier == 1 {
         // No modifier - use simple sequence
         let seq = if suffix == "~" {
-            format!("\x1B[{}~", key_code)
+            format!("\x1B[{key_code}~")
         } else {
-            format!("\x1B[{}", suffix)
+            format!("\x1B[{suffix}")
         };
-        Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(
-            seq.into_bytes(),
-        ), CursorKeyMode::default()))
+        PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(seq.into_bytes()),
+            CursorKeyMode::default(),
+        )
     } else {
         // With modifier
         let seq = if suffix == "~" {
-            format!("\x1B[{};{}~", key_code, modifier)
+            format!("\x1B[{key_code};{modifier}~")
         } else {
-            format!("\x1B[1;{}{}", modifier, suffix)
+            format!("\x1B[1;{modifier}{suffix}")
         };
-        Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(
-            seq.into_bytes(),
-        ), CursorKeyMode::default()))
+        PtyInputEvent::SendControl(
+            ControlSequence::RawSequence(seq.into_bytes()),
+            CursorKeyMode::default(),
+        )
     }
 }
 
 /// Generate CSI u sequence: ESC[unicode;modifier;u
-fn generate_csi_u_sequence(unicode: u32, modifier: u8) -> Option<PtyInputEvent> {
+fn generate_csi_u_sequence(unicode: u32, modifier: u8) -> PtyInputEvent {
     let seq = if modifier == 1 {
-        format!("\x1B[{}u", unicode)
+        format!("\x1B[{unicode}u")
     } else {
-        format!("\x1B[{};{}u", unicode, modifier)
+        format!("\x1B[{unicode};{modifier}u")
     };
-    Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(
-        seq.into_bytes(),
-    ), CursorKeyMode::default()))
+    PtyInputEvent::SendControl(
+        ControlSequence::RawSequence(seq.into_bytes()),
+        CursorKeyMode::default(),
+    )
 }
 
 #[cfg(test)]
@@ -685,20 +787,14 @@ mod tests {
                 // Should be raw sequence
                 assert!(
                     matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _)) if bytes == &raw_bytes),
-                    "Ctrl+{} should produce raw sequence {:?}, got {:?}",
-                    digit,
-                    raw_bytes,
-                    event
+                    "Ctrl+{digit} should produce raw sequence {raw_bytes:?}, got {event:?}"
                 );
             } else {
                 // Should be CSI u sequence
                 assert!(
                     matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
                     if String::from_utf8_lossy(bytes).contains(expected_csi)),
-                    "Ctrl+{} should produce CSI u sequence containing '{}', got {:?}",
-                    digit,
-                    expected_csi,
-                    event
+                    "Ctrl+{digit} should produce CSI u sequence containing '{expected_csi}', got {event:?}"
                 );
             }
         }
@@ -741,10 +837,7 @@ mod tests {
             let event = Option::<PtyInputEvent>::from(key);
             assert!(
                 matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _)) if bytes == &expected_bytes),
-                "Ctrl+{} should produce raw sequence {:?}, got {:?}",
-                symbol,
-                expected_bytes,
-                event
+                "Ctrl+{symbol} should produce raw sequence {expected_bytes:?}, got {event:?}"
             );
         }
 
@@ -762,10 +855,7 @@ mod tests {
             assert!(
                 matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
                 if String::from_utf8_lossy(bytes).contains(expected_csi)),
-                "Ctrl+{} should produce CSI u sequence containing '{}', got {:?}",
-                symbol,
-                expected_csi,
-                event
+                "Ctrl+{symbol} should produce CSI u sequence containing '{expected_csi}', got {event:?}"
             );
         }
     }
@@ -786,10 +876,7 @@ mod tests {
             let expected = vec![0x1B, digit as u8];
             assert!(
                 matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _)) if bytes == &expected),
-                "Alt+{} should produce ESC+digit {:?}, got {:?}",
-                digit,
-                expected,
-                event
+                "Alt+{digit} should produce ESC+digit {expected:?}, got {event:?}"
             );
         }
 
@@ -807,10 +894,7 @@ mod tests {
             let expected = vec![0x1B, letter as u8];
             assert!(
                 matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _)) if bytes == &expected),
-                "Alt+{} should produce ESC+char {:?}, got {:?}",
-                letter,
-                expected,
-                event
+                "Alt+{letter} should produce ESC+char {expected:?}, got {event:?}"
             );
         }
 
@@ -828,10 +912,7 @@ mod tests {
             let expected = vec![0x1B, symbol as u8];
             assert!(
                 matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _)) if bytes == &expected),
-                "Alt+{} should produce ESC+symbol {:?}, got {:?}",
-                symbol,
-                expected,
-                event
+                "Alt+{symbol} should produce ESC+symbol {expected:?}, got {event:?}"
             );
         }
     }
@@ -852,8 +933,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("84;6u")), // 'T' = 84
-            "Ctrl+Shift+T should produce CSI u sequence, got {:?}",
-            event
+            "Ctrl+Shift+T should produce CSI u sequence, got {event:?}"
         );
 
         // Test Ctrl+Alt combinations
@@ -870,8 +950,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if bytes == &[0x1B, 1]), // ESC + Ctrl+A (1)
-            "Ctrl+Alt+A should produce ESC+CtrlA, got {:?}",
-            event
+            "Ctrl+Alt+A should produce ESC+CtrlA, got {event:?}"
         );
 
         // Test Alt+Shift combinations
@@ -888,8 +967,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if bytes == &[0x1B, b'A']),
-            "Alt+Shift+A should produce ESC+A, got {:?}",
-            event
+            "Alt+Shift+A should produce ESC+A, got {event:?}"
         );
 
         // Test Ctrl+Alt+Shift (all three)
@@ -907,8 +985,7 @@ mod tests {
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("120;8u")), /* 'x' = 120,
                                                                     * modifier = 8 */
-            "Ctrl+Alt+Shift+x should produce CSI u sequence, got {:?}",
-            event
+            "Ctrl+Alt+Shift+x should produce CSI u sequence, got {event:?}"
         );
     }
 
@@ -928,8 +1005,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("1;5A")),
-            "Ctrl+Up should produce CSI sequence, got {:?}",
-            event
+            "Ctrl+Up should produce CSI sequence, got {event:?}"
         );
 
         // Test Shift+Tab
@@ -946,8 +1022,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("1;2I")),
-            "Shift+Tab should produce CSI sequence, got {:?}",
-            event
+            "Shift+Tab should produce CSI sequence, got {event:?}"
         );
 
         // Test Alt+Home
@@ -964,8 +1039,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("1;3H")),
-            "Alt+Home should produce CSI sequence, got {:?}",
-            event
+            "Alt+Home should produce CSI sequence, got {event:?}"
         );
     }
 
@@ -985,8 +1059,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("1;5P")),
-            "Ctrl+F1 should produce CSI sequence, got {:?}",
-            event
+            "Ctrl+F1 should produce CSI sequence, got {event:?}"
         );
 
         // Test Shift+F5
@@ -1003,8 +1076,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("15;2~")),
-            "Shift+F5 should produce CSI sequence, got {:?}",
-            event
+            "Shift+F5 should produce CSI sequence, got {event:?}"
         );
 
         // Test Alt+F12
@@ -1021,8 +1093,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("24;3~")),
-            "Alt+F12 should produce CSI sequence, got {:?}",
-            event
+            "Alt+F12 should produce CSI sequence, got {event:?}"
         );
     }
 
@@ -1041,8 +1112,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes) == "\x1B[32;2u"),
-            "Shift+Space should produce CSI u sequence, got {:?}",
-            event
+            "Shift+Space should produce CSI u sequence, got {event:?}"
         );
 
         // Test shift-only for non-space character (should fall through to CSI u)
@@ -1058,8 +1128,7 @@ mod tests {
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("120;2u")), // 'x' = 120
-            "Shift+X should produce CSI u sequence, got {:?}",
-            event
+            "Shift+X should produce CSI u sequence, got {event:?}"
         );
 
         // Test uppercase letters with Ctrl
@@ -1086,11 +1155,9 @@ mod tests {
 
             // Both should produce the same result
             assert_eq!(
-                format!("{:?}", event_lower),
-                format!("{:?}", event_upper),
-                "Ctrl+{} and Ctrl+{} should produce the same result",
-                lower,
-                upper
+                format!("{event_lower:?}"),
+                format!("{event_upper:?}"),
+                "Ctrl+{lower} and Ctrl+{upper} should produce the same result"
             );
         }
 

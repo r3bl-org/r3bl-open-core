@@ -11,7 +11,6 @@ use smallvec::smallvec;
 
 use crate::{Flush, GCStringOwned, InlineVec, LockedOutputDevice, PaintRenderOp, Pos,
             RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle,
-            crossterm_color_converter::convert_from_tui_color_to_crossterm_color,
             disable_raw_mode_now, enable_raw_mode_now, flush_now, queue_render_op,
             sanitize_and_save_abs_pos};
 
@@ -230,7 +229,7 @@ mod impl_self {
             color: TuiColor,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
-            let color = convert_from_tui_color_to_crossterm_color(color);
+            let color = color.into();
 
             queue_render_op!(
                 locked_output_device,
@@ -243,8 +242,7 @@ mod impl_self {
             color: TuiColor,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
-            let color: crossterm::style::Color =
-                convert_from_tui_color_to_crossterm_color(color);
+            let color: crossterm::style::Color = color.into();
 
             queue_render_op!(
                 locked_output_device,
@@ -290,8 +288,7 @@ mod impl_self {
             if let Some(style) = maybe_style {
                 // Handle background color.
                 if let Some(tui_color_bg) = style.color_bg {
-                    let color_bg: crossterm::style::Color =
-                        crate::convert_from_tui_color_to_crossterm_color(tui_color_bg);
+                    let color_bg: crossterm::style::Color = tui_color_bg.into();
 
                     queue_render_op!(
                         locked_output_device,
@@ -302,8 +299,7 @@ mod impl_self {
 
                 // Handle foreground color.
                 if let Some(tui_color_fg) = style.color_fg {
-                    let color_fg: crossterm::style::Color =
-                        crate::convert_from_tui_color_to_crossterm_color(tui_color_fg);
+                    let color_fg: crossterm::style::Color = tui_color_fg.into();
 
                     queue_render_op!(
                         locked_output_device,

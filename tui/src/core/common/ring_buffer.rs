@@ -48,4 +48,12 @@ pub trait RingBuffer<T, const N: usize> {
             slice.iter().filter_map(|style| style.as_ref()).collect();
         acc
     }
+
+    /// Get a mutable reference to an element at the given index.
+    /// Returns None if index >= count (out of bounds).
+    fn get_mut(&mut self, arg_index: impl Into<Index>) -> Option<&mut T>;
+
+    /// Set the value at the given index.
+    /// Returns Some(()) if successful (index < count), None if out of bounds.
+    fn set(&mut self, arg_index: impl Into<Index>, value: T) -> Option<()>;
 }

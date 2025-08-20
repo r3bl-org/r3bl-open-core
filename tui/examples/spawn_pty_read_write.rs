@@ -171,7 +171,10 @@ async fn run_python_repl_demo() -> miette::Result<()> {
     println!("\n{BLUE}📝 Sending: Exit command (Ctrl-D){RESET}");
     session
         .input_event_ch_tx_half
-        .send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()))
+        .send(PtyInputEvent::SendControl(
+            ControlSequence::CtrlD,
+            CursorKeyMode::default(),
+        ))
         .unwrap();
 
     // Wait for output task to complete
@@ -261,7 +264,10 @@ async fn run_shell_demo() -> miette::Result<()> {
     println!("{BLUE}📝 Sending: Ctrl-C to interrupt{RESET}");
     session
         .input_event_ch_tx_half
-        .send(PtyInputEvent::SendControl(ControlSequence::CtrlC, CursorKeyMode::default()))
+        .send(PtyInputEvent::SendControl(
+            ControlSequence::CtrlC,
+            CursorKeyMode::default(),
+        ))
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 

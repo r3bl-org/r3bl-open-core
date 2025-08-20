@@ -218,6 +218,7 @@ impl WriteToBuf for SgrCode {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;

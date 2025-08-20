@@ -235,6 +235,7 @@ pub mod ansi_styled_text;
 pub mod ast_color;
 pub mod convert;
 pub mod detect_color_support;
+pub mod terminal_output;
 pub mod transform_color;
 
 pub use ansi_escape_codes::*;
@@ -242,4 +243,5 @@ pub use ansi_styled_text::*;
 pub use ast_color::*;
 pub use convert::*;
 pub use detect_color_support::*;
+pub use terminal_output::*;
 pub use transform_color::*;

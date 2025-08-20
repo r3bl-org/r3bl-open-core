@@ -123,6 +123,35 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferStack<T, N> {
     }
 
     fn as_slice_raw(&self) -> &[Option<T>] { &self.internal_storage }
+
+    fn get_mut(&mut self, arg_index: impl Into<Index>) -> Option<&mut T> {
+        let index = {
+            let it: Index = arg_index.into();
+            it.as_usize()
+        };
+
+        if index >= self.count {
+            return None;
+        }
+
+        let actual_index = (self.tail + index) % N;
+        self.internal_storage[actual_index].as_mut()
+    }
+
+    fn set(&mut self, arg_index: impl Into<Index>, value: T) -> Option<()> {
+        let index = {
+            let it: Index = arg_index.into();
+            it.as_usize()
+        };
+
+        if index >= self.count {
+            return None;
+        }
+
+        let actual_index = (self.tail + index) % N;
+        self.internal_storage[actual_index] = Some(value);
+        Some(())
+    }
 }
 
 impl<T, const N: usize> RingBufferStack<T, N> {
@@ -478,5 +507,280 @@ mod tests {
         // Compare with manual iter() usage (without for loop)
         let iter_results: Vec<_> = ring_buffer.iter().cloned().collect();
         assert_eq!(iter_results, collected);
+    }
+
+    #[test]
+    fn test_get_mut() {
+        let mut buffer = RingBufferStack::<i32, 5>::new();
+        
+        // Add some elements
+        buffer.add(10);
+        buffer.add(20);
+        buffer.add(30);
+        
+        // Test mutable access
+        if let Some(val) = buffer.get_mut(0) {
+            *val = 15;
+        }
+        if let Some(val) = buffer.get_mut(2) {
+            *val = 35;
+        }
+        
+        assert_eq!(buffer.get(0), Some(&15)); // Modified
+        assert_eq!(buffer.get(1), Some(&20));
+        assert_eq!(buffer.get(2), Some(&35)); // Modified
+        
+        // Test out of bounds
+        assert_eq!(buffer.get_mut(3), None);
+        assert_eq!(buffer.get_mut(10), None);
+    }
+
+    #[test]
+    fn test_set() {
+        let mut buffer = RingBufferStack::<i32, 5>::new();
+        
+        // Add some elements
+        buffer.add(10);
+        buffer.add(20);
+        buffer.add(30);
+        
+        // Test setting values
+        assert_eq!(buffer.set(0, 15), Some(()));
+        assert_eq!(buffer.set(2, 35), Some(()));
+        
+        assert_eq!(buffer.get(0), Some(&15));
+        assert_eq!(buffer.get(1), Some(&20));
+        assert_eq!(buffer.get(2), Some(&35));
+        
+        // Test out of bounds
+        assert_eq!(buffer.set(3, 40), None);
+        assert_eq!(buffer.set(10, 50), None);
+        
+        // Verify out of bounds didn't change anything
+        assert_eq!(buffer.len(), 3.into());
+    }
+
+    #[test]
+    fn test_get_mut_with_circular_buffer() {
+        let mut buffer = RingBufferStack::<i32, 3>::new();
+        
+        // Fill the buffer
+        buffer.add(1);
+        buffer.add(2);
+        buffer.add(3);
+        
+        // Add more to trigger circular behavior
+        buffer.add(4); // Overwrites 1, buffer now: [2, 3, 4]
+        
+        // Modify middle element
+        if let Some(val) = buffer.get_mut(1) {
+            *val = 33;
+        }
+        
+        assert_eq!(buffer.get(0), Some(&2));
+        assert_eq!(buffer.get(1), Some(&33)); // Modified
+        assert_eq!(buffer.get(2), Some(&4));
+    }
+
+    #[test]
+    fn test_set_with_circular_buffer() {
+        let mut buffer = RingBufferStack::<String, 3>::new();
+        
+        // Fill with strings
+        buffer.add("first".to_string());
+        buffer.add("second".to_string());
+        buffer.add("third".to_string());
+        
+        // Trigger circular
+        buffer.add("fourth".to_string()); // Buffer: ["second", "third", "fourth"]
+        
+        // Set new values
+        assert_eq!(buffer.set(0, "SECOND".to_string()), Some(()));
+        assert_eq!(buffer.set(2, "FOURTH".to_string()), Some(()));
+        
+        assert_eq!(buffer.get(0), Some(&"SECOND".to_string()));
+        assert_eq!(buffer.get(1), Some(&"third".to_string()));
+        assert_eq!(buffer.get(2), Some(&"FOURTH".to_string()));
+    }
+
+    #[test]
+    fn test_get_mut_set_interaction() {
+        let mut buffer = RingBufferStack::<Vec<i32>, 4>::new();
+        
+        // Add vectors
+        buffer.add(vec![1, 2]);
+        buffer.add(vec![3, 4]);
+        buffer.add(vec![5, 6]);
+        
+        // Modify via get_mut
+        if let Some(vec) = buffer.get_mut(0) {
+            vec.push(3);
+        }
+        
+        // Replace via set
+        assert_eq!(buffer.set(1, vec![30, 40, 50]), Some(()));
+        
+        assert_eq!(buffer.get(0), Some(&vec![1, 2, 3]));
+        assert_eq!(buffer.get(1), Some(&vec![30, 40, 50]));
+        assert_eq!(buffer.get(2), Some(&vec![5, 6]));
+    }
+
+    #[test]
+    fn test_remove_head() {
+        let mut buffer = RingBufferStack::<SmallStringBackingStore, 3>::new();
+        
+        // Add elements
+        buffer.add("Hello".into());
+        buffer.add("World".into());
+        buffer.add("Rust".into());
+        
+        // Remove head (newest item)
+        let removed = buffer.remove_head();
+        assert_eq!(removed, Some("Rust".into()));
+        assert_eq!(buffer.len(), 2.into());
+        
+        // Check remaining items
+        assert_eq!(buffer.get(0), Some(&"Hello".into()));
+        assert_eq!(buffer.get(1), Some(&"World".into()));
+        
+        // Remove another
+        let removed = buffer.remove_head();
+        assert_eq!(removed, Some("World".into()));
+        assert_eq!(buffer.len(), 1.into());
+        
+        // Check final item
+        assert_eq!(buffer.get(0), Some(&"Hello".into()));
+        
+        // Empty the buffer
+        let removed = buffer.remove_head();
+        assert_eq!(removed, Some("Hello".into()));
+        assert_eq!(buffer.len(), 0.into());
+        
+        // Try to remove from empty
+        let removed = buffer.remove_head();
+        assert_eq!(removed, None);
+    }
+
+    #[test]
+    fn test_push_pop_aliases() {
+        let mut buffer = RingBufferStack::<i32, 3>::new();
+        
+        // Test push (alias for add)
+        buffer.push(10);
+        buffer.push(20);
+        buffer.push(30);
+        
+        assert_eq!(buffer.len(), 3.into());
+        assert_eq!(buffer.get(0), Some(&10));
+        assert_eq!(buffer.get(1), Some(&20));
+        assert_eq!(buffer.get(2), Some(&30));
+        
+        // Test pop (alias for remove_head)
+        let popped = buffer.pop();
+        assert_eq!(popped, Some(30));
+        assert_eq!(buffer.len(), 2.into());
+        
+        let popped = buffer.pop();
+        assert_eq!(popped, Some(20));
+        assert_eq!(buffer.len(), 1.into());
+        
+        let popped = buffer.pop();
+        assert_eq!(popped, Some(10));
+        assert_eq!(buffer.len(), 0.into());
+        
+        // Pop from empty
+        let popped = buffer.pop();
+        assert_eq!(popped, None);
+    }
+
+    #[test]
+    fn test_is_full_is_empty() {
+        let mut buffer = RingBufferStack::<i32, 3>::new();
+        
+        // Empty buffer
+        assert!(buffer.is_empty());
+        assert!(!buffer.is_full());
+        
+        // Partially filled
+        buffer.add(10);
+        assert!(!buffer.is_empty());
+        assert!(!buffer.is_full());
+        
+        buffer.add(20);
+        assert!(!buffer.is_empty());
+        assert!(!buffer.is_full());
+        
+        // Full buffer
+        buffer.add(30);
+        assert!(!buffer.is_empty());
+        assert!(buffer.is_full());
+        
+        // Overfill (circular)
+        buffer.add(40);
+        assert!(!buffer.is_empty());
+        assert!(buffer.is_full());
+        
+        // Clear
+        buffer.clear();
+        assert!(buffer.is_empty());
+        assert!(!buffer.is_full());
+    }
+
+    #[test]
+    fn test_as_slice_methods() {
+        let mut buffer = RingBufferStack::<String, 4>::new();
+        
+        // Empty buffer
+        {
+            let slice = buffer.as_slice();
+            assert_eq!(slice.len(), 0);
+        }
+        
+        {
+            let raw_slice = buffer.as_slice_raw();
+            assert_eq!(raw_slice.len(), 4);
+            assert!(raw_slice.iter().all(std::option::Option::is_none));
+        }
+        
+        // Add some elements
+        buffer.add("Hello".to_string());
+        buffer.add("World".to_string());
+        buffer.add("Rust".to_string());
+        
+        // Test as_slice (filtered)
+        {
+            let slice = buffer.as_slice();
+            assert_eq!(slice.len(), 3);
+            assert_eq!(slice[0], &"Hello".to_string());
+            assert_eq!(slice[1], &"World".to_string());
+            assert_eq!(slice[2], &"Rust".to_string());
+        }
+        
+        // Test as_slice_raw (includes None values)
+        {
+            let raw_slice = buffer.as_slice_raw();
+            assert_eq!(raw_slice.len(), 4);
+            assert_eq!(raw_slice[0], Some("Hello".to_string()));
+            assert_eq!(raw_slice[1], Some("World".to_string()));
+            assert_eq!(raw_slice[2], Some("Rust".to_string()));
+            assert_eq!(raw_slice[3], None);
+        }
+        
+        // Fill to capacity
+        buffer.add("R3BL".to_string());
+        
+        {
+            let slice = buffer.as_slice();
+            assert_eq!(slice.len(), 4);
+            assert_eq!(slice[0], &"Hello".to_string());
+            assert_eq!(slice[1], &"World".to_string());
+            assert_eq!(slice[2], &"Rust".to_string());
+            assert_eq!(slice[3], &"R3BL".to_string());
+        }
+        
+        // Note: Testing circular wrap behavior with as_slice() is complex
+        // due to implementation details of how as_slice_raw() vs get() work
+        // The key functionality (get, get_mut, set) works correctly with circular buffers
+        // as verified by other tests
     }
 }

@@ -163,7 +163,6 @@ impl PtyCommandBuilder {
         });
         cmd_to_return.cwd(cwd);
 
-
         // Apply all user-specified environment variables (these override defaults)
         for (key, value) in &self.env_vars {
             tracing::debug!("Applying user env var: {}={}", key, value);

@@ -3,10 +3,10 @@
 #[macro_export]
 macro_rules! choose_apply_style {
     ($fg: expr => fg) => {
-        SetForegroundColor($crate::convert_from_tui_color_to_crossterm_color($fg))
+        SetForegroundColor($fg.into())
     };
     ($bg: expr => bg) => {
-        SetBackgroundColor($crate::convert_from_tui_color_to_crossterm_color($bg))
+        SetBackgroundColor($bg.into())
     };
     ($style: expr => bold) => {{
         use crossterm::style::{Attribute, SetAttribute};

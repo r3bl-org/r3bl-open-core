@@ -80,7 +80,7 @@ impl Default for CursorKeyMode {
 
 /// Terminal control sequences with mode-aware generation.
 ///
-/// This replaces the old ControlChar enum and provides mode-aware
+/// This replaces the old `ControlChar` enum and provides mode-aware
 /// sequence generation for better terminal application compatibility.
 #[derive(Debug, Clone)]
 pub enum ControlSequence {
@@ -198,12 +198,14 @@ impl ControlSequence {
 ///
 /// Scans for terminal mode switching sequences and maintains a buffer
 /// for partial sequence detection across read boundaries.
+#[derive(Debug)]
 pub struct CursorModeDetector {
     buffer: Vec<u8>,
 }
 
 impl CursorModeDetector {
     /// Creates a new cursor mode detector.
+    #[must_use]
     pub fn new() -> Self { Self { buffer: Vec::new() } }
 
     /// Scans incoming data for cursor mode change sequences.

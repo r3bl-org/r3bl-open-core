@@ -182,14 +182,15 @@
 //! - [`PtyCommandBuilder`]: Builder for configuring and spawning PTY commands
 //! - [`PtyReadWriteSession`]: Read-write PTY session handle
 //! - [`PtyReadOnlySession`]: Read-only PTY session handle
-//! - [`PtyOutputEvent`]: Events received from PTY processes (output, OSC sequences, exit)
+//! - [`PtyReadWriteOutputEvent`]: Events received from PTY processes (output, OSC
+//!   sequences, exit)
 //! - [`PtyInputEvent`]: Input types that can be sent to interactive sessions
 //!
 //! ## Quick Start
 //!
 //! ### Read-only session (capture command output):
 //! ```rust
-//! use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent};
+//! use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent};
 //!
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -199,10 +200,10 @@
 //!
 //! while let Some(event) = session.output_evt_ch_rx_half.recv().await {
 //!     match event {
-//!         PtyOutputEvent::Output(data) => {
+//!         PtyReadOnlyOutputEvent::Output(data) => {
 //!             print!("{}", String::from_utf8_lossy(&data));
 //!         }
-//!         PtyOutputEvent::Exit(_) => break,
+//!         PtyReadOnlyOutputEvent::Exit(_) => break,
 //!         _ => {}
 //!     }
 //! }
@@ -212,12 +213,13 @@
 //!
 //! ### Interactive session (send input to process):
 //! ```rust
-//! use r3bl_tui::{PtyCommandBuilder, PtyConfigOption, PtyOutputEvent, PtyInputEvent, ControlSequence, CursorKeyMode};
+//! use r3bl_tui::{PtyCommandBuilder, PtyReadWriteOutputEvent, PtyInputEvent, ControlSequence, CursorKeyMode};
+//! use portable_pty::PtySize;
 //!
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut session = PtyCommandBuilder::new("cat")
-//!     .spawn_read_write(PtyConfigOption::Output)?;
+//!     .spawn_read_write(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 })?;
 //!
 //! // Send input
 //! session.input_event_ch_tx_half.send(PtyInputEvent::WriteLine("Hello, PTY!".into()))?;
@@ -226,10 +228,10 @@
 //! // Read output
 //! while let Some(event) = session.output_event_receiver_half.recv().await {
 //!     match event {
-//!         PtyOutputEvent::Output(data) => {
+//!         PtyReadWriteOutputEvent::Output(data) => {
 //!             print!("{}", String::from_utf8_lossy(&data));
 //!         }
-//!         PtyOutputEvent::Exit(_) => break,
+//!         PtyReadWriteOutputEvent::Exit(_) => break,
 //!         _ => {}
 //!     }
 //! }
@@ -249,3 +251,4 @@ pub mod pty_read_write;
 pub use pty_command_builder::*;
 pub use pty_config::*;
 pub use pty_core::*;
+// pub use pty_read_write::*; // Currently unused

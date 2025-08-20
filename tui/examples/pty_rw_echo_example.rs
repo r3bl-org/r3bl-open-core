@@ -5,8 +5,9 @@
 use std::io::Write;
 
 use portable_pty::PtySize;
-use r3bl_tui::{core::{get_size,
-                      pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder, PtyConfigOption,
+use r3bl_tui::{ansi::terminal_output,
+               core::{get_size,
+                      pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
                             PtyInputEvent, PtyReadWriteOutputEvent},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
@@ -38,11 +39,7 @@ async fn main() -> miette::Result<()> {
     );
 
     // Clear screen
-    {
-        let out = lock_output_device_as_mut!(&output_device);
-        let _unused = write!(out, "\x1B[2J\x1B[H");
-        let _unused = out.flush();
-    }
+    terminal_output::clear_screen_and_home_cursor(&output_device);
 
     // Spawn cat process (simple echo)
     let pty_size = PtySize {
@@ -52,8 +49,7 @@ async fn main() -> miette::Result<()> {
         pixel_height: 0,
     };
 
-    let mut session = PtyCommandBuilder::new("cat")
-        .spawn_read_write(pty_size)?;
+    let mut session = PtyCommandBuilder::new("cat").spawn_read_write(pty_size)?;
 
     println!("Type something and press Enter to see it echo back:");
 
@@ -77,33 +73,27 @@ async fn main() -> miette::Result<()> {
 
             // Handle user input
             Ok(event) = input_device.next() => {
-                let input_event = match InputEvent::try_from(event) {
-                    Ok(event) => event,
-                    Err(_) => continue,
-                };
+                let Ok(input_event) = InputEvent::try_from(event) else { continue };
 
-                match input_event {
-                    InputEvent::Keyboard(key) => {
-                        // Check for Ctrl+Q
-                        if let KeyPress::WithModifiers {
-                            key: Key::Character('q'),
-                            mask: ModifierKeysMask {
-                                ctrl_key_state: KeyState::Pressed,
-                                shift_key_state: KeyState::NotPressed,
-                                alt_key_state: KeyState::NotPressed,
-                            },
-                        } = key {
-                            // Send Ctrl+D to cat
-                            let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()));
-                            break;
-                        }
-
-                        // Convert key to PTY event and send
-                        if let Some(event) = Option::<PtyInputEvent>::from(key) {
-                            let _unused = session.input_event_ch_tx_half.send(event);
-                        }
+                if let InputEvent::Keyboard(key) = input_event {
+                    // Check for Ctrl+Q
+                    if let KeyPress::WithModifiers {
+                        key: Key::Character('q'),
+                        mask: ModifierKeysMask {
+                            ctrl_key_state: KeyState::Pressed,
+                            shift_key_state: KeyState::NotPressed,
+                            alt_key_state: KeyState::NotPressed,
+                        },
+                    } = key {
+                        // Send Ctrl+D to cat
+                        let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default()));
+                        break;
                     }
-                    _ => {}
+
+                    // Convert key to PTY event and send
+                    if let Some(event) = Option::<PtyInputEvent>::from(key) {
+                        let _unused = session.input_event_ch_tx_half.send(event);
+                    }
                 }
             }
         }

@@ -15,12 +15,12 @@
 
 pub mod osc_buffer;
 pub mod osc_codes;
+pub mod osc_controller;
 pub mod osc_event;
 pub mod osc_hyperlink;
-pub mod osc_controller;
 
 // Re-export main types and functions for convenience
 pub use osc_buffer::*;
+pub use osc_controller::*;
 pub use osc_event::*;
 pub use osc_hyperlink::*;
-pub use osc_controller::*;

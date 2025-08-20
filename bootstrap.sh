@@ -106,6 +106,25 @@ else
     echo "  openSUSE: sudo zypper install htop"
 fi
 
+# Install screen and tmux terminal multiplexers
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
+        echo "Warning: Homebrew not found. Skipping screen and tmux installation..."
+    else
+        install_if_missing "screen" "${PKG_MGR:-brew install} screen"
+        install_if_missing "tmux" "${PKG_MGR:-brew install} tmux"
+    fi
+elif [[ -n "$PKG_MGR" ]]; then
+    install_if_missing "screen" "$PKG_MGR screen"
+    install_if_missing "tmux" "$PKG_MGR tmux"
+else
+    echo "Warning: No supported package manager found. Install screen and tmux manually"
+    echo "  Ubuntu/Debian: sudo apt-get install screen tmux"
+    echo "  RHEL/CentOS/Fedora: sudo dnf install screen tmux"
+    echo "  Arch: sudo pacman -S screen tmux"
+    echo "  openSUSE: sudo zypper install screen tmux"
+fi
+
 # Setup development tools
 if command -v fish &>/dev/null; then
     echo "Setting up development tools..."

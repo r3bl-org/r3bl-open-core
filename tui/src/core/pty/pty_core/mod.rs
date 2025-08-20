@@ -11,8 +11,9 @@
 //!
 //! The module is organized into focused submodules for maintainability:
 //! - [`pty_types`] - Core type aliases and constants
-//! - [`pty_input_events`] - Input event definitions and KeyPress conversion
-//! - [`pty_output_events`] - Output event definitions, terminal control sequences, and cursor mode detection
+//! - [`pty_input_events`] - Input event definitions and `KeyPress` conversion
+//! - [`pty_output_events`] - Output event definitions, terminal control sequences, and
+//!   cursor mode detection
 //! - [`pty_sessions`] - Session handle types
 //! - [`pty_utils`] - Cross-platform utility functions
 
