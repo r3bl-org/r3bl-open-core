@@ -1,18 +1,20 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! `PTYMux` terminal multiplexer example.
+//! `PTYMux` terminal multiplexer example with universal process compatibility.
 //!
 //! This example demonstrates how to use the `pty_mux` module to create a terminal
-//! multiplexer similar to tmux, allowing you to run multiple TUI processes in a
-//! single terminal window and switch between them using keyboard shortcuts.
+//! multiplexer similar to tmux, but with enhanced support for truecolor and TUI apps that
+//! frequently re-render their UI, with support for ALL types of programs:
+//! interactive shells, TUI applications, and CLI tools.
 //!
 //! ## Features
 //!
-//! - **Multiple TUI processes**: Spawns multiple terminal applications
+//! - **Universal compatibility**: Supports bash, TUI apps, and CLI tools
+//! - **Per-process virtual terminals**: Each process maintains its own buffer
+//! - **Instant switching**: No delays or fake resize hacks needed
 //! - **Dynamic process switching**: Use F1 through F9 to switch between processes
 //! - **Live status bar**: Shows process status and available shortcuts
 //! - **Terminal title updates**: Uses OSC sequences to update terminal title
-//! - **Fake resize technique**: Ensures proper TUI app repainting when switching
 //!
 //! ## Usage
 //!
@@ -26,22 +28,25 @@
 //! - `F2` to switch to less (file viewer)
 //! - `F3` to switch to htop (process monitor)
 //! - `F4` to switch to gitui (git TUI)
+//! - `F5` to switch to bash (interactive shell)
 //! - `Ctrl+Q` to quit
 //! - The status bar shows live process status and available shortcuts
 //!
 //! ## Configured Processes
 //!
-//! This example is configured to run the following TUI applications:
+//! This example demonstrates universal compatibility with different process types:
+//! - `claude` - Claude AI assistant CLI (interactive TUI app)
 //! - `less /etc/adduser.conf` - File pager for viewing configuration
-//! - `htop` - Process monitor
-//! - `claude` - Claude AI assistant CLI
-//! - `gitui` - Git terminal user interface
+//! - `htop` - Process monitor (full-screen TUI)
+//! - `gitui` - Git terminal user interface (interactive TUI)
+//! - `bash` - Interactive shell (demonstrates universal compatibility)
 //!
 //! Note: All processes are started immediately at startup for fast switching.
 //! All applications are proper TUI applications that respond to SIGWINCH
 //! and will repaint correctly when switching between them.
 
-use r3bl_tui::{core::{pty_mux::{PTYMux, Process},
+use r3bl_tui::{core::{get_size,
+                      pty_mux::{PTYMux, Process},
                       term::{TTYResult, is_fully_interactive_terminal},
                       try_initialize_logging_global},
                set_mimalloc_in_main};
@@ -63,24 +68,47 @@ async fn main() -> miette::Result<()> {
         std::process::exit(1);
     }
 
-    println!("🚀 Starting PTYMux Example");
-    println!("📋 Configured processes: claude, less, htop, gitui");
+    println!("🚀 Starting PTYMux Example - Universal Process Compatibility");
+    println!("📋 Configured processes: claude, less, htop, gitui, bash");
+    println!("🌟 Demonstrates universal compatibility:");
+    println!("   • AI assistant (claude) with interactive chat");
+    println!("   • TUI applications (less, htop, gitui) with proper ANSI handling");
+    println!("   • Interactive shells (bash) with persistent command history");
+    println!("   • Per-process virtual terminals for instant switching");
     println!("⌨️  Controls:");
-    println!("   • F1: claude");
-    println!("   • F2: less");
-    println!("   • F3: htop");
-    println!("   • F4: gitui");
+    println!("   • F1: claude (AI assistant)");
+    println!("   • F2: less (file viewer)");
+    println!("   • F3: htop (process monitor)");
+    println!("   • F4: gitui (git TUI)");
+    println!("   • F5: bash (interactive shell)");
     println!("   • Ctrl+Q: Quit");
-    println!("📊 Status bar will show live process status and shortcuts");
+    println!("📊 Status bar shows live process status and shortcuts");
     println!("📝 Debug output will be written to log.txt");
     println!();
 
-    // TUI processes only - all are proper TUI applications that respond to SIGWINCH
+    // Get terminal size for process creation
+    let terminal_size = get_size()?;
+
+    // Mixed process types demonstrating universal compatibility:
+    // - claude: AI assistant (existing TUI app)
+    // - TUI apps: less, htop, gitui (proper TUI applications)
+    // - bash: Interactive shell (universal compatibility demonstration)
     let processes = vec![
-        Process::new("claude", "/home/nazmul/.claude/local/claude", vec![]),
-        Process::new("less", "less", vec!["/etc/adduser.conf".to_string()]),
-        Process::new("htop", "htop", vec![]),
-        Process::new("gitui", "gitui", vec![]),
+        Process::new(
+            "claude",
+            "/home/nazmul/.claude/local/claude",
+            vec![],
+            terminal_size,
+        ),
+        Process::new(
+            "less",
+            "less",
+            vec!["/etc/adduser.conf".to_string()],
+            terminal_size,
+        ),
+        Process::new("htop", "htop", vec![], terminal_size),
+        Process::new("gitui", "gitui", vec![], terminal_size),
+        Process::new("bash", "bash", vec![], terminal_size),
     ];
 
     println!(

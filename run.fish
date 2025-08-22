@@ -271,7 +271,7 @@ end
 # Usage:
 #   fish run.fish install-cargo-tools
 function install-cargo-tools
-    # Install uv package manager (required for Serena semantic code MCP server.
+    # Install uv package manager (required for Serena semantic code MCP server).
     # https://github.com/oraios/serena
     # https://claudelog.com/addons/serena/
     if not command -v uv >/dev/null

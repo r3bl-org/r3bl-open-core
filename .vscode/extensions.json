@@ -13,33 +13,34 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
-    "s-nlf-fh.glassit", // GlassIt.
-    "antfu.icons-carbon", // Carbon Icons (Intuitive product icons for symbols: fn, mod, etc).
-    "pkief.material-icon-theme", // Material Icon Theme (Intuitive icons in file explorer).
-    "qwtel.sqlite-viewer", // SQLite Viewer.
-    "perkovec.emoji", // Emoji.
-    "chrisjdavies.multi-highlight", // Multi Highlight.
-    "alefragnani.bookmarks", // Bookmarks.
-    "vadimcn.vscode-lldb", // LLDB. Debugger.
-    "ms-vscode.cpptools", // C/C++. Debugger.
+    "usernamehw.errorlens", // Error Lens.
+    "rust-lang.rust-analyzer", // Rust Analyzer.
+    "fill-labs.dependi", // crates.io.
+    "stkb.rewrap", // Rewrap.
     "mishkinf.goto-next-previous-member", // Go to Next/Previous Member.
-    "github.copilot", // Github Copilot.
     "naumovs.color-highlight", // Color Highlight.
     "tamasfe.even-better-toml", // Even Better TOML.
     "nicholashsiang.vscode-opened-editors", // Opened Editors.
+    "chrisjdavies.multi-highlight", // Multi Highlight.
     "dbankier.vscode-quick-select", // Quick and Simple Text Selection.
-    "stkb.rewrap", // Rewrap.
-    "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.
-    "rust-lang.rust-analyzer", // Rust Analyzer.
-    "wayou.vscode-todo-highlight", // Todo Highlight.
-    "fabiospampinato.vscode-todo-plus", // Todo+.
-    "github.vscode-pull-request-github", // Github Pull Requests and Issues.
-    "streetsidesoftware.code-spell-checker", // Code Spell Checker. Configure this so it does not slow down IDE
-    "fill-labs.dependi", // crates.io.
     "bmalehorn.vscode-fish", // Fish.
+    "qwtel.sqlite-viewer", // SQLite Viewer.
+    "perkovec.emoji", // Emoji.
+    "vadimcn.vscode-lldb", // LLDB. Debugger.
+    "ms-vscode.cpptools", // C/C++. Debugger.
+    "streetsidesoftware.code-spell-checker", // Code Spell Checker. Configure this so it does not slow down IDE
+    "github.copilot", // Github Copilot.
+    "github.vscode-pull-request-github", // Github Pull Requests and Issues.
+    "s-nlf-fh.glassit", // GlassIt.
+    "antfu.icons-carbon", // Carbon Icons (Intuitive product icons for symbols: fn, mod, etc).
+    "pkief.material-icon-theme", // Material Icon Theme (Intuitive icons in file explorer).
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "alefragnani.bookmarks", // Bookmarks.
+    "wayou.vscode-todo-highlight", // Todo Highlight.
+    "fabiospampinato.vscode-todo-plus", // Todo+.
+    "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.
     "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
     "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "esbenp.prettier-vscode", // Prettier -> very slow for large docs.

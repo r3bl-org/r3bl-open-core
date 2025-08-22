@@ -2,16 +2,13 @@
 
 //! Dynamic display management for the PTY multiplexer.
 //!
-//! This module handles rendering output from the active process using OffscreenBuffer
+//! This module handles rendering output from the active process using `OffscreenBuffer`
 //! as a compositor to eliminate visual artifacts. It maintains a dynamic status bar
 //! showing process information and keyboard shortcuts.
 
 
-use miette::IntoDiagnostic;
-use vte::Parser;
-
-use super::{ProcessManager, ProcessOutput, ansi_parser::AnsiToBufferProcessor};
-use crate::{idx, lock_output_device_as_mut, tui_style_attrib, ANSIBasicColor, FlushKind, OffscreenBuffer, PixelChar, RingBuffer, RingBufferStack, Size, TuiColor, TuiStyle, OutputDevice,
+use super::ProcessManager;
+use crate::{lock_output_device_as_mut, tui_style_attrib, ANSIBasicColor, FlushKind, OffscreenBuffer, PixelChar, Size, TuiColor, TuiStyle, TuiStyleAttribs, OutputDevice,
             tui::terminal_lib_backends::{OffscreenBufferPaint, OffscreenBufferPaintImplCrossterm}};
 
 /// Height reserved for the status bar at the bottom of the terminal.
@@ -21,133 +18,105 @@ pub const STATUS_BAR_HEIGHT: u16 = 1;
 pub const MAX_PROCESSES: usize = 9;
 
 
-/// Manages display rendering and status bar for the multiplexer using OffscreenBuffer composition.
+/// Manages display rendering and status bar for the multiplexer with per-process buffers.
+///
+/// This renderer gets the active process's buffer from `ProcessManager` and composites
+/// the status bar into it for final rendering. No longer maintains its own single buffer.
 pub struct OutputRenderer {
     terminal_size: Size,
-    offscreen_buffer: OffscreenBuffer,
-    vte_parser: Parser,
-    first_output_seen: RingBufferStack<(), MAX_PROCESSES>, // None=false, Some(())=true
+    // Removed: single offscreen_buffer - now uses per-process buffers
+    // Removed: vte_parser - now handled per-process
+    // Removed: first_output_seen - now handled per-process
 }
 
 impl std::fmt::Debug for OutputRenderer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OutputRenderer")
             .field("terminal_size", &self.terminal_size)
-            .field("offscreen_buffer", &self.offscreen_buffer)
-            .field("vte_parser", &"<Parser>")
-            .field("first_output_seen", &self.first_output_seen)
             .finish()
     }
 }
 
 impl OutputRenderer {
     /// Create a new output renderer with the given terminal size.
+    ///
+    /// With per-process buffers, the renderer no longer maintains its own buffer
+    /// or parser - it gets buffers from the `ProcessManager` when needed.
     #[must_use]
     pub fn new(terminal_size: Size) -> Self {
         Self {
             terminal_size,
-            offscreen_buffer: OffscreenBuffer::new_with_capacity_initialized(terminal_size),
-            vte_parser: Parser::new(),
-            // RingBufferStack initializes with all None by default (all false)
-            first_output_seen: RingBufferStack::new(),
         }
     }
 
-    /// Render output from the process manager using OffscreenBuffer composition.
+    /// Render the active process's buffer with status bar using per-process buffers.
     ///
-    /// This processes PTY output through ANSI parsing into an OffscreenBuffer,
-    /// composites the status bar, and then paints the entire buffer atomically
-    /// to eliminate visual artifacts.
+    /// **Per-process buffer compositing**:
+    /// This method demonstrates how the virtual terminal architecture works:
+    /// 1. Get the active process's complete virtual terminal (`OffscreenBuffer`)
+    /// 2. Clone it for compositing (preserves the original state)
+    /// 3. Composite the status bar into the last row
+    /// 4. Paint the entire composite to the real terminal atomically
+    ///
+    /// **Key benefits**:
+    /// - The original process buffer is never modified (preserves state)
+    /// - Status bar is overlaid without affecting the process's virtual terminal
+    /// - Atomic painting eliminates visual artifacts
+    /// - Works universally with all program types
     ///
     /// # Errors
     ///
     /// Returns an error if terminal output operations fail.
-    pub fn render(
+    pub fn render_from_active_buffer(
         &mut self,
-        output: ProcessOutput,
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
-    ) -> miette::Result<()>
-    {
-        match output {
-            ProcessOutput::Active(data) => {
-                let active_index = process_manager.active_index();
+    ) -> miette::Result<()> {
+        // Get the active process's buffer
+        let active_buffer = process_manager.get_active_buffer();
 
-                // Clear buffer on first output from this process
-                if self.first_output_seen.get(idx(active_index)).is_none() {
-                    self.offscreen_buffer.clear();
-                    // Mark as seen by setting to Some(())
-                    self.first_output_seen.set(idx(active_index), ());
-                }
+        // Clone the buffer for compositing (we don't modify the original)
+        let mut composite_buffer = active_buffer.clone();
 
-                // Process PTY output through ANSI parser into OffscreenBuffer
-                self.process_pty_output(&data)?;
+        // Composite status bar into the last row
+        self.composite_status_bar_into_buffer(&mut composite_buffer, process_manager);
 
-                // Composite status bar into buffer (last row)
-                self.composite_status_bar(process_manager);
+        // Paint the composite buffer to terminal
+        self.paint_buffer(&composite_buffer, output_device);
 
-                // Paint buffer to terminal using existing paint infrastructure
-                self.paint_buffer(output_device)?;
-            }
-            ProcessOutput::ProcessSwitch {
-                from: _from,
-                to: to_index,
-            } => {
-                // Clear buffer for new process
-                self.offscreen_buffer.clear();
-
-                // Mark as first output for new process
-                self.first_output_seen.set(idx(to_index), ()); // Reset to "not seen" - will be None until set
-
-                // Clear terminal screen for process switch
-                {
-                    let locked_output_device = lock_output_device_as_mut!(output_device);
-                    write!(locked_output_device, "{}{}", 
-                           crossterm::terminal::Clear(crossterm::terminal::ClearType::All),
-                           crossterm::cursor::MoveTo(0, 0)).into_diagnostic()?;
-                }
-
-                // Render initial status bar
-                self.composite_status_bar(process_manager);
-                self.paint_buffer(output_device)?;
-            }
-        }
         Ok(())
     }
 
-    /// Process PTY output through ANSI parser and update OffscreenBuffer.
-    fn process_pty_output(&mut self, data: &[u8]) -> miette::Result<()> {
-        let mut processor = AnsiToBufferProcessor::new(&mut self.offscreen_buffer);
 
-        for &byte in data {
-            self.vte_parser.advance(&mut processor, byte);
-        }
-
-        // Update buffer cursor position from processor
-        self.offscreen_buffer.my_pos = processor.cursor_pos();
-        Ok(())
-    }
-
-    /// Composite status bar into the last row of OffscreenBuffer.
-    fn composite_status_bar(&mut self, process_manager: &ProcessManager) {
+    /// Composite status bar into the last row of the given `OffscreenBuffer`.
+    ///
+    /// This modifies the provided buffer by writing the status bar to its last row.
+    fn composite_status_bar_into_buffer(
+        &mut self,
+        ofs_buf: &mut OffscreenBuffer,
+        process_manager: &ProcessManager
+    ) {
         let status_text = self.generate_status_text(process_manager);
         let last_row_idx = self.terminal_size.row_height.as_usize().saturating_sub(1);
 
         // Clear status bar row
         for col_idx in 0..self.terminal_size.col_width.as_usize() {
-            self.offscreen_buffer.buffer[last_row_idx][col_idx] = PixelChar::Spacer;
+            ofs_buf[last_row_idx][col_idx] = PixelChar::Spacer;
         }
 
         // Write status text with appropriate style
         let status_style = Some(TuiStyle {
             id: None,
-            bold: Some(tui_style_attrib::Bold),
-            italic: None,
-            dim: None,
-            underline: None,
-            reverse: None,
-            hidden: None,
-            strikethrough: None,
+            attribs: TuiStyleAttribs {
+                bold: Some(tui_style_attrib::Bold),
+                italic: None,
+                dim: None,
+                underline: None,
+                blink: None,
+                reverse: None,
+                hidden: None,
+                strikethrough: None,
+            },
             computed: None,
             color_fg: Some(TuiColor::Basic(ANSIBasicColor::White)),
             color_bg: Some(TuiColor::Basic(ANSIBasicColor::Blue)),
@@ -159,18 +128,21 @@ impl OutputRenderer {
             if col_idx >= self.terminal_size.col_width.as_usize() {
                 break;
             }
-            self.offscreen_buffer.buffer[last_row_idx][col_idx] = PixelChar::PlainText {
+            ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
                 display_char: ch,
                 maybe_style: status_style,
             };
         }
     }
 
-    /// Paint OffscreenBuffer to terminal using existing paint infrastructure.
-    fn paint_buffer(&mut self, output_device: &OutputDevice) -> miette::Result<()>
-    {
+    /// Paint the given `OffscreenBuffer` to terminal using existing paint infrastructure.
+    fn paint_buffer(
+        &mut self,
+        ofs_buf: &OffscreenBuffer,
+        output_device: &OutputDevice
+    ) {
         let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-        let render_ops = crossterm_impl.render(&self.offscreen_buffer);
+        let render_ops = crossterm_impl.render(ofs_buf);
 
         crossterm_impl.paint(
             render_ops,
@@ -179,8 +151,6 @@ impl OutputRenderer {
             lock_output_device_as_mut!(output_device),
             false, // is_mock = false
         );
-
-        Ok(())
     }
 
     /// Generate the complete status bar text with process tabs and shortcuts.
@@ -242,7 +212,7 @@ impl OutputRenderer {
         }
     }
 
-    /// Render initial status bar on startup using OffscreenBuffer composition.
+    /// Render initial status bar on startup using `OffscreenBuffer` composition.
     ///
     /// # Errors
     ///
@@ -253,27 +223,16 @@ impl OutputRenderer {
         process_manager: &ProcessManager,
     ) -> miette::Result<()>
     {
-        // Clear buffer first
-        self.offscreen_buffer.clear();
-
-        // Clear terminal screen
-        {
-            let locked_output_device = lock_output_device_as_mut!(output_device);
-            write!(locked_output_device, "{}{}", 
-                   crossterm::terminal::Clear(crossterm::terminal::ClearType::All),
-                   crossterm::cursor::MoveTo(0, 0)).into_diagnostic()?;
-        }
-
-        // Render status bar into buffer and paint
-        self.composite_status_bar(process_manager);
-        self.paint_buffer(output_device)?;
-        Ok(())
+        // With per-process buffers, just render from the active buffer
+        self.render_from_active_buffer(output_device, process_manager)
     }
 
-    /// Update the terminal size for the renderer and recreate OffscreenBuffer.
+    /// Update the terminal size for the renderer.
+    ///
+    /// With per-process buffers, the renderer doesn't maintain its own buffer,
+    /// so this just updates the terminal size for status bar compositing.
     pub fn update_terminal_size(&mut self, new_size: Size) {
         self.terminal_size = new_size;
-        self.offscreen_buffer = OffscreenBuffer::new_with_capacity_initialized(new_size);
     }
 
 }

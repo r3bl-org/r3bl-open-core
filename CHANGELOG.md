@@ -330,12 +330,17 @@ following:
 
 ### v0.7.7 (next)
 
+TODO: add ansi_parser.rs and new ["Per-Process Buffer Architecture"](`docs/task_pty_mux_example.md`)
+TODO: add clean up of existing color & offscreen buffer code
+
 This release introduces a comprehensive PTY multiplexer implementation with terminal multiplexing
-functionality similar to tmux, along with significant enhancements to PTY infrastructure and
-terminal output capabilities.
+functionality similar to tmux, but with enhanced support for truecolor and TUI apps that frequently
+re-render their UI, along with significant enhancements to PTY infrastructure and terminal output
+capabilities.
 
 - Added:
-  - Complete `pty_mux` module providing terminal multiplexing functionality similar to tmux
+  - Complete `pty_mux` module providing terminal multiplexing functionality similar to tmux, but
+    with enhanced support for truecolor and TUI apps that frequently re-render their UI,
   - `pty_mux_example.rs` demonstrating multiplexer capabilities with multiple TUI processes
   - Support for spawning and switching between multiple TUI processes using Ctrl+1 through Ctrl+9
   - Live status bar showing process states (🟢 running, 🔴 stopped) and keyboard shortcuts

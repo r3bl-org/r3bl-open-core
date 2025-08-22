@@ -1,9 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use core::fmt::Debug;
 use std::{fmt::{Display, Formatter},
-          ops::{Add, AddAssign, Deref}};
+          ops::{Add, AddAssign}};
 
-use super::TuiColor;
+use super::{TuiColor, TuiStyleAttribs, tui_style_attrib};
 use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
             tiny_inline_string};
 
@@ -17,7 +17,7 @@ use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
 /// Here's an example.
 ///
 /// ```
-/// use r3bl_tui::{TuiStyle, TuiColor, TuiStylesheet, RgbValue, tui_style_attrib};
+/// use r3bl_tui::{TuiStyle, TuiStyleAttribs, TuiColor, TuiStylesheet, RgbValue, tui_style_attrib};
 ///
 /// // Turquoise: TuiColor::Rgb { r: 51, g: 255, b: 255 }
 /// // Pink:      TuiColor::Rgb { r: 252, g: 157, b: 248 }
@@ -28,15 +28,21 @@ use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
 /// let _ = stylesheet.add_styles(smallvec::smallvec![
 ///     TuiStyle {
 ///         id: Some(tui_style_attrib::Id(0)),
-///         bold: Some(tui_style_attrib::Bold),
-///         dim: Some(tui_style_attrib::Dim),
+///         attribs: TuiStyleAttribs {
+///             bold: Some(tui_style_attrib::Bold),
+///             dim: Some(tui_style_attrib::Dim),
+///             ..Default::default()
+///         },
 ///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
 ///         .. Default::default()
 ///     },
 ///     TuiStyle {
 ///         id: Some(tui_style_attrib::Id(1)),
-///         bold: Some(tui_style_attrib::Bold),
-///         dim: Some(tui_style_attrib::Dim),
+///         attribs: TuiStyleAttribs {
+///             bold: Some(tui_style_attrib::Bold),
+///             dim: Some(tui_style_attrib::Dim),
+///             ..Default::default()
+///         },
 ///         color_fg: Some(TuiColor::Rgb (RgbValue{ red: 55, green: 55, blue: 248 })),
 ///         .. Default::default()
 ///     },
@@ -49,13 +55,7 @@ use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
 pub struct TuiStyle {
     // XMARK: Use of newtype pattern `Option<T>` instead of `bool`
     pub id: Option<tui_style_attrib::Id>,
-    pub bold: Option<tui_style_attrib::Bold>,
-    pub italic: Option<tui_style_attrib::Italic>,
-    pub dim: Option<tui_style_attrib::Dim>,
-    pub underline: Option<tui_style_attrib::Underline>,
-    pub reverse: Option<tui_style_attrib::Reverse>,
-    pub hidden: Option<tui_style_attrib::Hidden>,
-    pub strikethrough: Option<tui_style_attrib::Strikethrough>,
+    pub attribs: TuiStyleAttribs,
     pub computed: Option<tui_style_attrib::Computed>,
     pub color_fg: Option<TuiColor>,
     pub color_bg: Option<TuiColor>,
@@ -67,77 +67,6 @@ pub struct TuiStyle {
     pub lolcat: Option<tui_style_attrib::Lolcat>,
 }
 
-pub mod tui_style_attrib {
-    use super::{Debug, Deref, TinyInlineString};
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Id(pub u8);
-
-    impl Id {
-        #[must_use]
-        pub fn eq(maybe_id: Option<Id>, other: u8) -> bool {
-            match maybe_id {
-                None => false,
-                Some(id) => id.0 == other,
-            }
-        }
-
-        #[must_use]
-        pub fn fmt_id(maybe_id: Option<Id>) -> TinyInlineString {
-            use std::fmt::Write;
-            let mut acc = TinyInlineString::new();
-            match maybe_id {
-                None => {
-                    // We don't care about the result of this operation.
-                    write!(acc, "id: N/A").ok();
-                }
-                Some(id) => {
-                    // We don't care about the result of this operation.
-                    write!(acc, "id: {}", id.0).ok();
-                }
-            }
-            acc
-        }
-    }
-
-    pub fn id(arg_val: impl Into<u8>) -> Option<Id> { Some(Id(arg_val.into())) }
-
-    impl From<u8> for Id {
-        fn from(id: u8) -> Self { Id(id) }
-    }
-
-    impl Deref for Id {
-        type Target = u8;
-        fn deref(&self) -> &Self::Target { &self.0 }
-    }
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Bold;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Italic;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Dim;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Underline;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Reverse;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Hidden;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Strikethrough;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Computed;
-
-    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-    pub struct Lolcat;
-}
 
 mod addition {
     use super::{Add, AddAssign, ChUnit, TuiStyle, ch, tui_style_attrib};
@@ -150,35 +79,41 @@ mod addition {
     pub fn add_styles(lhs: TuiStyle, rhs: TuiStyle) -> TuiStyle {
         // other (if set) overrides new_style.
         fn apply_style_flag(new_style: &mut TuiStyle, other: &TuiStyle) {
+            // Apply color attributes
             if other.color_fg.is_some() {
                 new_style.color_fg = other.color_fg;
             }
             if other.color_bg.is_some() {
                 new_style.color_bg = other.color_bg;
             }
-            if other.bold.is_some() {
-                new_style.bold = other.bold;
+            // Apply style attributes
+            if other.attribs.bold.is_some() {
+                new_style.attribs.bold = other.attribs.bold;
             }
-            if other.italic.is_some() {
-                new_style.italic = other.italic;
+            if other.attribs.italic.is_some() {
+                new_style.attribs.italic = other.attribs.italic;
             }
-            if other.dim.is_some() {
-                new_style.dim = other.dim;
+            if other.attribs.dim.is_some() {
+                new_style.attribs.dim = other.attribs.dim;
             }
-            if other.underline.is_some() {
-                new_style.underline = other.underline;
+            if other.attribs.underline.is_some() {
+                new_style.attribs.underline = other.attribs.underline;
             }
+            if other.attribs.blink.is_some() {
+                new_style.attribs.blink = other.attribs.blink;
+            }
+            if other.attribs.reverse.is_some() {
+                new_style.attribs.reverse = other.attribs.reverse;
+            }
+            if other.attribs.hidden.is_some() {
+                new_style.attribs.hidden = other.attribs.hidden;
+            }
+            if other.attribs.strikethrough.is_some() {
+                new_style.attribs.strikethrough = other.attribs.strikethrough;
+            }
+            // Apply padding (not part of attribs)
             if other.padding.is_some() {
                 new_style.padding = other.padding;
-            }
-            if other.reverse.is_some() {
-                new_style.reverse = other.reverse;
-            }
-            if other.hidden.is_some() {
-                new_style.hidden = other.hidden;
-            }
-            if other.strikethrough.is_some() {
-                new_style.strikethrough = other.strikethrough;
             }
         }
 
@@ -245,31 +180,35 @@ mod style_helper {
                 acc_attrs.push(&id_str);
             }
 
-            if self.bold.is_some() {
+            if self.attribs.bold.is_some() {
                 acc_attrs.push("bold");
             }
 
-            if self.italic.is_some() {
+            if self.attribs.italic.is_some() {
                 acc_attrs.push("italic");
             }
 
-            if self.dim.is_some() {
+            if self.attribs.dim.is_some() {
                 acc_attrs.push("dim");
             }
 
-            if self.underline.is_some() {
+            if self.attribs.underline.is_some() {
                 acc_attrs.push("underline");
             }
 
-            if self.reverse.is_some() {
+            if self.attribs.blink.is_some() {
+                acc_attrs.push("blink");
+            }
+
+            if self.attribs.reverse.is_some() {
                 acc_attrs.push("reverse");
             }
 
-            if self.hidden.is_some() {
+            if self.attribs.hidden.is_some() {
                 acc_attrs.push("hidden");
             }
 
-            if self.strikethrough.is_some() {
+            if self.attribs.strikethrough.is_some() {
                 acc_attrs.push("strikethrough");
             }
 
@@ -300,31 +239,35 @@ mod style_helper {
             // Need `acc` since we don't know how many attributes are set.
             let mut acc = InlineVecStr::new();
 
-            if self.bold.is_some() {
+            if self.attribs.bold.is_some() {
                 acc.push("bld");
             }
 
-            if self.italic.is_some() {
+            if self.attribs.italic.is_some() {
                 acc.push("itl");
             }
 
-            if self.dim.is_some() {
+            if self.attribs.dim.is_some() {
                 acc.push("dim");
             }
 
-            if self.underline.is_some() {
+            if self.attribs.underline.is_some() {
                 acc.push("und");
             }
 
-            if self.reverse.is_some() {
+            if self.attribs.blink.is_some() {
+                acc.push("blk");
+            }
+
+            if self.attribs.reverse.is_some() {
                 acc.push("rev");
             }
 
-            if self.hidden.is_some() {
+            if self.attribs.hidden.is_some() {
                 acc.push("hid");
             }
 
-            if self.strikethrough.is_some() {
+            if self.attribs.strikethrough.is_some() {
                 acc.push("str");
             }
 
@@ -332,7 +275,7 @@ mod style_helper {
                 acc.push("fg");
             }
 
-            if self.color_fg.is_some() {
+            if self.color_bg.is_some() {
                 acc.push("bg");
             }
 
@@ -366,14 +309,19 @@ mod test_style {
 
     #[test]
     fn test_all_fields_in_style() {
-        let style = TuiStyle {
-            id: Some(tui_style_attrib::Id(1)),
+        let attribs = TuiStyleAttribs {
             bold: Some(tui_style_attrib::Bold),
             dim: Some(tui_style_attrib::Dim),
             underline: Some(tui_style_attrib::Underline),
             reverse: Some(tui_style_attrib::Reverse),
             hidden: Some(tui_style_attrib::Hidden),
             strikethrough: Some(tui_style_attrib::Strikethrough),
+            ..Default::default()
+        };
+        
+        let style = TuiStyle {
+            id: Some(tui_style_attrib::Id(1)),
+            attribs,
             color_fg: tui_color!(red).into(),
             color_bg: tui_color!(0, 0, 0).into(),
             padding: Some(ch(10)),
@@ -382,12 +330,12 @@ mod test_style {
 
         assert!(style.computed.is_none());
         assert!(tui_style_attrib::Id::eq(style.id, 1));
-        assert!(style.bold.is_some());
-        assert!(style.dim.is_some());
-        assert!(style.underline.is_some());
-        assert!(style.reverse.is_some());
-        assert!(style.hidden.is_some());
-        assert!(style.strikethrough.is_some());
+        assert!(style.attribs.bold.is_some());
+        assert!(style.attribs.dim.is_some());
+        assert!(style.attribs.underline.is_some());
+        assert!(style.attribs.reverse.is_some());
+        assert!(style.attribs.hidden.is_some());
+        assert!(style.attribs.strikethrough.is_some());
         assert_eq2!(style.color_fg, tui_color!(red).into());
         assert_eq2!(style.color_bg, tui_color!(0, 0, 0).into());
         assert_eq2!(style.padding, Some(ch(10)));
@@ -395,13 +343,18 @@ mod test_style {
 
     #[test]
     fn test_style() {
-        let style = TuiStyle {
-            id: Some(tui_style_attrib::Id(1)),
-            color_fg: tui_color!(0, 0, 0).into(),
-            color_bg: tui_color!(0, 0, 0).into(),
+        let attribs = TuiStyleAttribs {
             bold: Some(tui_style_attrib::Bold),
             dim: Some(tui_style_attrib::Dim),
             italic: Some(tui_style_attrib::Italic),
+            ..Default::default()
+        };
+        
+        let style = TuiStyle {
+            id: Some(tui_style_attrib::Id(1)),
+            attribs,
+            color_fg: tui_color!(0, 0, 0).into(),
+            color_bg: tui_color!(0, 0, 0).into(),
             ..TuiStyle::default()
         };
 
@@ -409,11 +362,11 @@ mod test_style {
 
         assert!(style.computed.is_none());
         assert!(tui_style_attrib::Id::eq(style.id, 1));
-        assert!(style.bold.is_some());
-        assert!(style.dim.is_some());
-        assert!(style.italic.is_some());
-        assert!(style.underline.is_none());
-        assert!(style.strikethrough.is_none());
-        assert!(style.reverse.is_none());
+        assert!(style.attribs.bold.is_some());
+        assert!(style.attribs.dim.is_some());
+        assert!(style.attribs.italic.is_some());
+        assert!(style.attribs.underline.is_none());
+        assert!(style.attribs.strikethrough.is_none());
+        assert!(style.attribs.reverse.is_none());
     }
 }

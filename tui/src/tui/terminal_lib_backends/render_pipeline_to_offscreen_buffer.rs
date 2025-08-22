@@ -16,7 +16,7 @@ impl RenderPipeline {
     pub fn convert(
         &self,
         window_size: Size,
-        mut_offscreen_buffer: &mut OffscreenBuffer, /* Pass in the locked buffer. */
+        ofs_buf: &mut OffscreenBuffer, /* Pass in the locked buffer. */
     ) {
         let mut local_data = RenderOpsLocalData::default();
 
@@ -27,7 +27,7 @@ impl RenderPipeline {
                         process_render_op(
                             render_op,
                             window_size,
-                            mut_offscreen_buffer,
+                            ofs_buf,
                             &mut local_data,
                         );
                     }
@@ -39,7 +39,7 @@ impl RenderPipeline {
             // % is Display, ? is Debug.
             tracing::info!(
                 message = %inline_string!("offscreen_buffer {ch}", ch = glyphs::SCREEN_BUFFER_GLYPH),
-                offscreen_buffer = ?mut_offscreen_buffer
+                offscreen_buffer = ?ofs_buf
             );
         });
     }
@@ -48,7 +48,7 @@ impl RenderPipeline {
 pub fn process_render_op(
     render_op: &RenderOp,
     window_size: Size,
-    my_offscreen_buffer: &mut OffscreenBuffer,
+    ofs_buf: &mut OffscreenBuffer,
     local_data: &mut RenderOpsLocalData,
 ) {
     match render_op {
@@ -56,31 +56,31 @@ pub fn process_render_op(
         RenderOp::Noop | RenderOp::EnterRawMode | RenderOp::ExitRawMode => {}
         // Do process these.
         RenderOp::ClearScreen => {
-            my_offscreen_buffer.clear();
+            ofs_buf.clear();
         }
         RenderOp::MoveCursorPositionAbs(new_abs_pos) => {
-            my_offscreen_buffer.my_pos =
+            ofs_buf.my_pos =
                 sanitize_and_save_abs_pos(*new_abs_pos, window_size, local_data);
         }
         RenderOp::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
-            my_offscreen_buffer.my_pos =
+            ofs_buf.my_pos =
                 sanitize_and_save_abs_pos(new_abs_pos, window_size, local_data);
         }
         RenderOp::SetFgColor(fg_color_ref) => {
-            my_offscreen_buffer.my_fg_color = Some(*fg_color_ref);
+            ofs_buf.my_fg_color = Some(*fg_color_ref);
         }
         RenderOp::SetBgColor(bg_color_ref) => {
-            my_offscreen_buffer.my_bg_color = Some(*bg_color_ref);
+            ofs_buf.my_bg_color = Some(*bg_color_ref);
         }
         RenderOp::ResetColor => {
-            my_offscreen_buffer.my_fg_color = None;
-            my_offscreen_buffer.my_bg_color = None;
+            ofs_buf.my_fg_color = None;
+            ofs_buf.my_bg_color = None;
         }
         RenderOp::ApplyColors(maybe_style_ref) => {
             if let Some(style_ref) = maybe_style_ref {
-                my_offscreen_buffer.my_fg_color = style_ref.color_fg;
-                my_offscreen_buffer.my_bg_color = style_ref.color_bg;
+                ofs_buf.my_fg_color = style_ref.color_fg;
+                ofs_buf.my_bg_color = style_ref.color_bg;
             }
         }
         RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
@@ -93,11 +93,11 @@ pub fn process_render_op(
             let result_new_pos = print_text_with_attributes(
                 arg_text_ref,
                 maybe_style_ref.as_ref(),
-                my_offscreen_buffer,
+                ofs_buf,
                 None,
             );
             if let Ok(new_pos) = result_new_pos {
-                my_offscreen_buffer.my_pos =
+                ofs_buf.my_pos =
                     sanitize_and_save_abs_pos(new_pos, window_size, local_data);
             }
         }
@@ -158,29 +158,29 @@ pub fn process_render_op(
 ///
 /// Returns [`CommonErrorType::DisplaySizeTooSmall`] if the target row index exceeds
 /// the offscreen buffer's available rows (i.e., when
-/// `my_offscreen_buffer.my_pos.row_index` is greater than or equal to the number of rows
-/// in `my_offscreen_buffer.buffer`).
+/// `ofs_buf.my_pos.row_index` is greater than or equal to the number of rows
+/// in `ofs_buf.buffer`).
 pub fn print_text_with_attributes(
     string: &str,
     maybe_style_ref: Option<&TuiStyle>,
-    my_offscreen_buffer: &mut OffscreenBuffer,
+    ofs_buf: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ColWidth>,
 ) -> CommonResult<Pos> {
     // Get col and row index from `my_pos`.
-    let display_col_index = usize(my_offscreen_buffer.my_pos.col_index);
-    let display_row_index = usize(my_offscreen_buffer.my_pos.row_index);
+    let display_col_index = usize(ofs_buf.my_pos.col_index);
+    let display_row_index = usize(ofs_buf.my_pos.row_index);
 
     // Clip text to bounds using helper function.
     let text_gcs = print_text_with_attributes_helper::clip_text_to_bounds(
         string,
         display_col_index,
         maybe_max_display_col_count,
-        my_offscreen_buffer.window_size.col_width,
+        ofs_buf.window_size.col_width,
     );
 
     // Try to get the line at `row_index`.
     let mut line_copy = {
-        if let Some(line) = my_offscreen_buffer.buffer.get(display_row_index) {
+        if let Some(line) = ofs_buf.buffer.get(display_row_index) {
             Ok(line.clone())
         } else {
             // Clip vertically.
@@ -204,7 +204,7 @@ pub fn print_text_with_attributes(
                 width: {e:?}",
                 a = display_row_index,
                 b = display_col_index,
-                c = my_offscreen_buffer.window_size,
+                c = ofs_buf.window_size,
                 d = text_gcs.string,
                 e = text_gcs.display_width,
             )
@@ -219,7 +219,7 @@ pub fn print_text_with_attributes(
     // Compose style using helper function.
     let maybe_style = print_text_with_attributes_helper::compose_style(
         maybe_style_ref,
-        my_offscreen_buffer,
+        ofs_buf,
     );
 
     DEBUG_TUI_COMPOSITOR.then(|| {
@@ -268,12 +268,12 @@ pub fn print_text_with_attributes(
 
     // Mimic what stdout does and move the position.col_index forward by the width of
     // the text that was added to display.
-    let new_pos = my_offscreen_buffer
+    let new_pos = ofs_buf
         .my_pos
         .add_col(already_inserted_display_width);
 
     // Replace the line in `my_offscreen_buffer` with the new line.
-    my_offscreen_buffer.buffer[display_row_index] = line_copy;
+    ofs_buf.buffer[display_row_index] = line_copy;
 
     Ok(new_pos)
 }
@@ -344,21 +344,21 @@ mod print_text_with_attributes_helper {
     /// Composes the final style by merging provided style with buffer colors.
     pub fn compose_style(
         maybe_style_ref: Option<&TuiStyle>,
-        my_offscreen_buffer: &OffscreenBuffer,
+        ofs_buf: &OffscreenBuffer,
     ) -> Option<TuiStyle> {
         if let Some(maybe_style) = maybe_style_ref {
             // We get the attributes from `maybe_style_ref`.
             let mut it = *maybe_style;
             // We get the colors from `my_fg_color` and `my_bg_color`.
-            it.color_fg = my_offscreen_buffer.my_fg_color;
-            it.color_bg = my_offscreen_buffer.my_bg_color;
+            it.color_fg = ofs_buf.my_fg_color;
+            it.color_bg = ofs_buf.my_bg_color;
             Some(it)
-        } else if my_offscreen_buffer.my_fg_color.is_some()
-            || my_offscreen_buffer.my_bg_color.is_some()
+        } else if ofs_buf.my_fg_color.is_some()
+            || ofs_buf.my_bg_color.is_some()
         {
             Some(TuiStyle {
-                color_fg: my_offscreen_buffer.my_fg_color,
-                color_bg: my_offscreen_buffer.my_bg_color,
+                color_fg: ofs_buf.my_fg_color,
+                color_bg: ofs_buf.my_bg_color,
                 ..Default::default()
             })
         } else {
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = width(10) + height(2);
-        let mut my_offscreen_buffer =
+        let mut ofs_buf =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
 
         // Input:  R0 "hello12345😃"
@@ -507,15 +507,15 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold italic color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
-            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.my_pos = col(0) + row(0);
+            ofs_buf.my_fg_color = Some(tui_color!(green));
+            ofs_buf.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
-                &mut my_offscreen_buffer,
+                &mut ofs_buf,
                 maybe_max_display_col_count,
             )
             .ok();
@@ -523,7 +523,7 @@ mod tests {
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][0],
+                ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(
@@ -532,7 +532,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][4],
+                ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     maybe_style: Some(
@@ -541,7 +541,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][5],
+                ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
                     maybe_style: Some(
@@ -550,7 +550,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][9],
+                ofs_buf.buffer[0][9],
                 PixelChar::PlainText {
                     display_char: '5',
                     maybe_style: Some(
@@ -570,15 +570,15 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
-            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.my_pos = col(0) + row(0);
+            ofs_buf.my_fg_color = Some(tui_color!(green));
+            ofs_buf.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
-                &mut my_offscreen_buffer,
+                &mut ofs_buf,
                 maybe_max_display_col_count,
             )
             .ok();
@@ -586,7 +586,7 @@ mod tests {
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][0],
+                ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(
@@ -595,7 +595,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][4],
+                ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     maybe_style: Some(
@@ -604,7 +604,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][5],
+                ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
                     maybe_style: Some(
@@ -612,7 +612,7 @@ mod tests {
                     ),
                 }
             );
-            assert_eq2!(my_offscreen_buffer.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
         }
     }
 
@@ -626,22 +626,22 @@ mod tests {
         // Output: R0 "hello12345"
         //            C0123456789
         {
-            let mut my_offscreen_buffer =
-                OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
-            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.my_pos = col(0) + row(0);
+            ofs_buf.my_fg_color = Some(tui_color!(green));
+            ofs_buf.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
-                &mut my_offscreen_buffer,
+                &mut ofs_buf,
                 maybe_max_display_col_count,
             )
             .ok();
@@ -649,7 +649,7 @@ mod tests {
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][0],
+                ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(
@@ -658,7 +658,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][4],
+                ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     maybe_style: Some(
@@ -667,7 +667,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][5],
+                ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
                     maybe_style: Some(
@@ -676,7 +676,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][9],
+                ofs_buf.buffer[0][9],
                 PixelChar::PlainText {
                     display_char: '5',
                     maybe_style: Some(
@@ -691,22 +691,22 @@ mod tests {
         // Output: R0 "hello1234╳"
         //            C0123456789
         {
-            let mut my_offscreen_buffer =
-                OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
-            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.my_pos = col(0) + row(0);
+            ofs_buf.my_fg_color = Some(tui_color!(green));
+            ofs_buf.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
-                &mut my_offscreen_buffer,
+                &mut ofs_buf,
                 maybe_max_display_col_count,
             )
             .ok();
@@ -714,7 +714,7 @@ mod tests {
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][0],
+                ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(
@@ -723,7 +723,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][4],
+                ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     maybe_style: Some(
@@ -732,7 +732,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][5],
+                ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
                     maybe_style: Some(
@@ -740,28 +740,28 @@ mod tests {
                     ),
                 }
             );
-            assert_eq2!(my_offscreen_buffer.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
         }
 
         // R0 "hello123😃"
         //    C0123456789
         {
-            let mut my_offscreen_buffer =
-                OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello123😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!( dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
-            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.my_pos = col(0) + row(0);
+            ofs_buf.my_fg_color = Some(tui_color!(green));
+            ofs_buf.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
-                &mut my_offscreen_buffer,
+                &mut ofs_buf,
                 maybe_max_display_col_count,
             )
             .ok();
@@ -769,7 +769,7 @@ mod tests {
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][0],
+                ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(
@@ -778,7 +778,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][4],
+                ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     maybe_style: Some(
@@ -787,7 +787,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][5],
+                ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
                     maybe_style: Some(
@@ -796,7 +796,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][8],
+                ofs_buf.buffer[0][8],
                 PixelChar::PlainText {
                     display_char: '😃',
                     maybe_style: Some(
@@ -804,28 +804,28 @@ mod tests {
                     ),
                 }
             );
-            assert_eq2!(my_offscreen_buffer.buffer[0][9], PixelChar::Void);
+            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Void);
         }
 
         // R0 "hello12😃"
         //    C0123456789
         {
-            let mut my_offscreen_buffer =
-                OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf =
+            OffscreenBuffer::new_with_capacity_initialized(window_size);
             let text = "hello12😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            my_offscreen_buffer.my_pos = col(0) + row(0);
-            my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
-            my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.my_pos = col(0) + row(0);
+            ofs_buf.my_fg_color = Some(tui_color!(green));
+            ofs_buf.my_bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
                 text,
                 maybe_style.as_ref(),
-                &mut my_offscreen_buffer,
+                &mut ofs_buf,
                 maybe_max_display_col_count,
             )
             .ok();
@@ -852,7 +852,7 @@ mod tests {
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][0],
+                ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(
@@ -861,7 +861,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][4],
+                ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
                     maybe_style: Some(
@@ -870,7 +870,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][5],
+                ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
                     maybe_style: Some(
@@ -879,7 +879,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][7],
+                ofs_buf.buffer[0][7],
                 PixelChar::PlainText {
                     display_char: '😃',
                     maybe_style: Some(
@@ -887,8 +887,8 @@ mod tests {
                     ),
                 }
             );
-            assert_eq2!(my_offscreen_buffer.buffer[0][8], PixelChar::Void);
-            assert_eq2!(my_offscreen_buffer.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
+            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
         }
     }
 
@@ -940,14 +940,14 @@ mod tests {
         //     0: ╳ ..
         //     9: ╳
 
-        let mut my_offscreen_buffer =
+        let mut ofs_buf =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
-        pipeline.convert(window_size, &mut my_offscreen_buffer);
+        pipeline.convert(window_size, &mut ofs_buf);
 
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
-        assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
+        assert_eq2!(ofs_buf.buffer.len(), 2);
         assert_eq2!(
-            my_offscreen_buffer.buffer[0][0],
+            ofs_buf.buffer[0][0],
             PixelChar::PlainText {
                 display_char: 'h',
                 maybe_style: Some(
@@ -956,7 +956,7 @@ mod tests {
             }
         );
         assert_eq2!(
-            my_offscreen_buffer.buffer[0][7],
+            ofs_buf.buffer[0][7],
             PixelChar::PlainText {
                 display_char: '😃',
                 maybe_style: Some(
@@ -964,8 +964,8 @@ mod tests {
                 ),
             }
         );
-        assert_eq2!(my_offscreen_buffer.buffer[0][8], PixelChar::Void);
-        assert_eq2!(my_offscreen_buffer.buffer[0][9], PixelChar::Spacer);
+        assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
+        assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
     }
 
     #[test]
@@ -1009,9 +1009,9 @@ mod tests {
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
-        let mut my_offscreen_buffer =
+        let mut ofs_buf =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
-        pipeline.convert(window_size, &mut my_offscreen_buffer);
+        pipeline.convert(window_size, &mut ofs_buf);
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
         // row_index: [0]
@@ -1042,14 +1042,14 @@ mod tests {
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
 
         // Contains 2 lines.
-        assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
+        assert_eq2!(ofs_buf.buffer.len(), 2);
 
         // Line 1 (row_index = 0).
         {
-            assert_eq2!(my_offscreen_buffer.buffer[0][0], PixelChar::Spacer);
-            assert_eq2!(my_offscreen_buffer.buffer[0][1], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[0][0], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[0][1], PixelChar::Spacer);
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][2],
+                ofs_buf.buffer[0][2],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(
@@ -1058,7 +1058,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][7],
+                ofs_buf.buffer[0][7],
                 PixelChar::PlainText {
                     display_char: '😃',
                     maybe_style: Some(
@@ -1066,18 +1066,18 @@ mod tests {
                     ),
                 }
             );
-            assert_eq2!(my_offscreen_buffer.buffer[0][8], PixelChar::Void);
-            assert_eq2!(my_offscreen_buffer.buffer[0][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
+            assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
         }
 
         // Line 2 (row_index = 1)
         {
-            assert_eq2!(my_offscreen_buffer.buffer[1][0], PixelChar::Spacer);
-            assert_eq2!(my_offscreen_buffer.buffer[1][1], PixelChar::Spacer);
-            assert_eq2!(my_offscreen_buffer.buffer[1][2], PixelChar::Spacer);
-            assert_eq2!(my_offscreen_buffer.buffer[1][3], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[1][0], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[1][1], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[1][2], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[1][3], PixelChar::Spacer);
             assert_eq2!(
-                my_offscreen_buffer.buffer[1][4],
+                ofs_buf.buffer[1][4],
                 PixelChar::PlainText {
                     display_char: 'w',
                     maybe_style: Some(
@@ -1086,7 +1086,7 @@ mod tests {
                 }
             );
             assert_eq2!(
-                my_offscreen_buffer.buffer[1][8],
+                ofs_buf.buffer[1][8],
                 PixelChar::PlainText {
                     display_char: 'd',
                     maybe_style: Some(
@@ -1094,7 +1094,7 @@ mod tests {
                     ),
                 }
             );
-            assert_eq2!(my_offscreen_buffer.buffer[1][9], PixelChar::Spacer);
+            assert_eq2!(ofs_buf.buffer[1][9], PixelChar::Spacer);
         }
     }
 
@@ -1120,15 +1120,16 @@ mod tests {
             pipeline.get_all_render_op_in(ZOrder::Normal)
         );
 
-        let mut my_offscreen_buffer =
+        let mut ofs_buf =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
-        pipeline.convert(window_size, &mut my_offscreen_buffer);
-        println!("my_offscreen_buffer: \n{my_offscreen_buffer:#?}");
+        pipeline.convert(window_size, &mut ofs_buf);
+        println!("ofs_buf: 
+{ofs_buf:#?}");
 
         // Line 1 (row_index = 7)
         {
             assert_eq2!(
-                my_offscreen_buffer.buffer[0][max_col - 1],
+                ofs_buf.buffer[0][max_col - 1],
                 PixelChar::PlainText {
                     display_char: 'h',
                     maybe_style: Some(new_style! ( dim bold )),
@@ -1138,7 +1139,7 @@ mod tests {
         // Line 2 (row_index = 7)
         {
             assert_eq2!(
-                my_offscreen_buffer.buffer[1][max_col - 1],
+                ofs_buf.buffer[1][max_col - 1],
                 PixelChar::PlainText {
                     display_char: 'i',
                     maybe_style: Some(new_style! ( dim bold )),

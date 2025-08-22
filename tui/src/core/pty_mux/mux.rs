@@ -128,7 +128,7 @@ impl PTYMux {
         terminal_output::clear_screen_and_home_cursor(&self.output_device);
 
         // Trigger initial process switch to show first process
-        self.process_manager.switch_to(0).await?;
+        self.process_manager.switch_to(0);
 
         // Render initial status bar
         self.output_renderer
@@ -157,15 +157,27 @@ impl PTYMux {
 
         'main_loop: loop {
             tokio::select! {
-                // Poll for PTY output frequently
+                // Poll ALL processes and update their virtual terminal buffers
                 _ = output_poll_interval.tick() => {
-                    // Try to get output from active process (non-blocking)
-                    while let Some(output) = self.process_manager.try_get_output() {
-                        self.output_renderer.render(
-                            output,
+                    // **Core of per-process virtual terminal architecture**:
+                    // Poll ALL processes continuously (every 10ms), not just the active one.
+                    // Each process updates its own OffscreenBuffer independently.
+                    // This is what enables instant switching with full state preservation.
+                    let active_had_output = self.process_manager.poll_all_processes();
+                    
+                    // **Selective rendering optimization**:
+                    // Only render when the currently visible process has new output.
+                    // All other processes continue updating their virtual terminals
+                    // in the background, ready for instant switching.
+                    if active_had_output {
+                        // Get the active process's virtual terminal and render it
+                        self.output_renderer.render_from_active_buffer(
                             &self.output_device,
                             &self.process_manager
                         )?;
+                        
+                        // Clear the "needs rendering" flag for the active process
+                        self.process_manager.mark_active_as_rendered();
                     }
                 }
 
@@ -193,7 +205,7 @@ impl PTYMux {
                         &mut self.process_manager,
                         &mut osc,
                         &self.output_device
-                    ).await?;
+                    )?;
 
                     if should_exit {
                         tracing::debug!("Exit requested by input router - breaking main event loop");
@@ -217,7 +229,7 @@ impl PTYMux {
     /// all components are aware of the new size.
     pub fn update_terminal_size(&mut self, new_size: Size) {
         self.terminal_size = new_size;
-        self.process_manager.update_terminal_size(new_size);
+        self.process_manager.handle_terminal_resize(new_size);
         self.output_renderer.update_terminal_size(new_size);
     }
 

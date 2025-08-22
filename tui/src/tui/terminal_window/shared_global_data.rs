@@ -15,7 +15,7 @@ use crate::{ChUnit, CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, InlineStr
 ///
 /// # Fields
 /// - The `window_size` holds the [Size] of the terminal window.
-/// - The `maybe_saved_offscreen_buffer` holds the last rendered [`OffscreenBuffer`].
+/// - The `maybe_saved_ofs_buf` holds the last rendered [`OffscreenBuffer`].
 /// - The `main_thread_channel_sender` is used to send [`TerminalWindowMainThreadSignal`]s
 /// - The `state` holds the application's state.
 /// - The `output_device` is the terminal's output device (anything that implements
@@ -27,7 +27,7 @@ where
     AS: Debug + Default + Clone + Sync + Send,
 {
     pub window_size: Size,
-    pub maybe_saved_offscreen_buffer: Option<OffscreenBuffer>,
+    pub maybe_saved_ofs_buf: Option<OffscreenBuffer>,
     pub main_thread_channel_sender: Sender<TerminalWindowMainThreadSignal<AS>>,
     pub state: S,
     pub output_device: OutputDevice,
@@ -54,7 +54,7 @@ where
         write!(f, "GlobalData")?;
         write!(f, "\n  - window_size: {:?}", self.window_size)?;
         write!(f, "\n  - ")?;
-        match &self.maybe_saved_offscreen_buffer {
+        match &self.maybe_saved_ofs_buf {
             None => write!(f, "no saved offscreen_buffer")?,
             Some(offscreen_buffer) => {
                 if DEBUG_TUI_COMPOSITOR {
@@ -90,7 +90,7 @@ where
     {
         let mut it = GlobalData {
             window_size: Size::default(),
-            maybe_saved_offscreen_buffer: Option::default(),
+            maybe_saved_ofs_buf: Option::default(),
             state,
             main_thread_channel_sender,
             output_device,

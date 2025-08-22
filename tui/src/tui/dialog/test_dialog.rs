@@ -20,7 +20,7 @@ pub mod mock_real_objects_for_dialog {
             mpsc::channel::<_>(DefaultSize::MainThreadSignalChannelBufferSize.into());
         let state = create_state();
         let window_size = window_size.unwrap_or_default();
-        let maybe_saved_offscreen_buffer = Option::default();
+        let maybe_saved_ofs_buf = Option::default();
         let (output_device, stdout_mock) = OutputDevice::new_mock();
         let offscreen_buffer_pool = OffscreenBufferPool::new(window_size);
         let spinner_helper = SpinnerHelper::default();
@@ -28,7 +28,7 @@ pub mod mock_real_objects_for_dialog {
         let global_data = GlobalData {
             state,
             window_size,
-            maybe_saved_offscreen_buffer,
+            maybe_saved_ofs_buf,
             main_thread_channel_sender,
             output_device,
             offscreen_buffer_pool,

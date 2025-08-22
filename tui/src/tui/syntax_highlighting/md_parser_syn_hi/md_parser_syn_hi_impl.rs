@@ -87,11 +87,29 @@ pub fn try_parse_and_highlight(
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
+    use serial_test::serial;
+
     use super::*;
-    use crate::{assert_eq2, fg_cyan, throws, tui_color};
+    use crate::{ColorSupport, assert_eq2, fg_cyan, global_color_support, throws, tui_color};
+
+    /// RAII guard for color support override cleanup
+    struct ColorSupportGuard;
+    impl Drop for ColorSupportGuard {
+        fn drop(&mut self) { 
+            global_color_support::clear_override(); 
+        }
+    }
+
+    /// Helper function to set color support override and return cleanup guard
+    fn set_color_override() -> ColorSupportGuard {
+        global_color_support::set_override(ColorSupport::Truecolor);
+        ColorSupportGuard
+    }
 
     #[test]
+    #[serial]
     fn from_gap_buffer() -> CommonResult<()> {
+        let _guard = set_color_override();
         throws!({
             let gap_buffer = {
                 let mut buffer = ZeroCopyGapBuffer::new();
@@ -720,6 +738,20 @@ mod tests_style_us_span_lines_from {
                 get_metadata_title_marker_style, get_metadata_title_value_style,
                 global_color_support, list, throws, tui_color};
 
+    /// RAII guard for color support override cleanup
+    struct ColorSupportGuard;
+    impl Drop for ColorSupportGuard {
+        fn drop(&mut self) { 
+            global_color_support::clear_override(); 
+        }
+    }
+
+    /// Helper function to set color support override and return cleanup guard
+    fn set_color_override() -> ColorSupportGuard {
+        global_color_support::set_override(ColorSupport::Truecolor);
+        ColorSupportGuard
+    }
+
     /// Test each [`MdLineFragment`] variant is converted by
     /// [StyleUSSpan::from_fragment](StyleUSSpan::from_fragment).
     mod from_fragment {
@@ -728,7 +760,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_checkbox_unchecked() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let fragment = MdLineFragment::Checkbox(false);
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -751,7 +783,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_checkbox_checked() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let fragment = MdLineFragment::Checkbox(true);
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -771,7 +803,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_image() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let fragment = MdLineFragment::Image(HyperlinkData {
                 text: "R3BL",
                 url: "https://r3bl.com",
@@ -807,7 +839,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_link() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let fragment = MdLineFragment::Link(HyperlinkData {
                 text: "R3BL",
                 url: "https://r3bl.com",
@@ -938,14 +970,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_inline_code() {
-            // Create a guard that will clean up on drop
-            struct ColorSupportGuard;
-            impl Drop for ColorSupportGuard {
-                fn drop(&mut self) { global_color_support::clear_override(); }
-            }
-
-            global_color_support::set_override(ColorSupport::Truecolor);
-            let _guard = ColorSupportGuard;
+            let _guard = set_color_override();
 
             let fragment = MdLineFragment::InlineCode("Foobar");
             let style = new_style!(
@@ -973,7 +998,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_italic() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let fragment = MdLineFragment::Italic("Foobar");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1000,7 +1025,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_bold() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let fragment = MdLineFragment::Bold("Foobar");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1022,13 +1047,12 @@ mod tests_style_us_span_lines_from {
                 actual[2],
                 StyleUSSpan::new(style + get_foreground_dim_style(), "*",)
             );
-            global_color_support::clear_override();
         }
 
         #[test]
         #[serial]
         fn test_plain() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let fragment = MdLineFragment::Plain("Foobar");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1050,14 +1074,7 @@ mod tests_style_us_span_lines_from {
         #[serial]
         #[allow(clippy::missing_errors_doc)]
         fn test_block_metadata_tags() -> Result<(), ()> {
-            // Create a guard that will clean up on drop
-            struct ColorSupportGuard;
-            impl Drop for ColorSupportGuard {
-                fn drop(&mut self) { global_color_support::clear_override(); }
-            }
-
-            global_color_support::set_override(ColorSupport::Truecolor);
-            let _guard = ColorSupportGuard;
+            let _guard = set_color_override();
 
             throws!({
                 let tags = MdElement::Tags(list!["tag1", "tag2", "tag3"]);
@@ -1103,7 +1120,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_block_metadata_title() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let title = MdElement::Title("Something");
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1135,7 +1152,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_block_codeblock() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let codeblock_block = MdElement::CodeBlock(list!(
                 CodeBlockLine {
                     language: Some("ts"),
@@ -1186,14 +1203,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_block_ol() {
-            // Create a guard that will clean up on drop
-            struct ColorSupportGuard;
-            impl Drop for ColorSupportGuard {
-                fn drop(&mut self) { global_color_support::clear_override(); }
-            }
-
-            global_color_support::set_override(ColorSupport::Truecolor);
-            let _guard = ColorSupportGuard;
+            let _guard = set_color_override();
 
             {
                 let style = new_style!(
@@ -1266,7 +1276,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_block_ul() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             {
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
@@ -1327,13 +1337,12 @@ mod tests_style_us_span_lines_from {
                     );
                 }
             }
-            global_color_support::clear_override();
         }
 
         #[test]
         #[serial]
         fn test_block_text() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let text_block = MdElement::Text(list![MdLineFragment::Plain("Foobar")]);
             let style = new_style!(
                 color_bg: {tui_color!(red)}
@@ -1354,7 +1363,7 @@ mod tests_style_us_span_lines_from {
         #[test]
         #[serial]
         fn test_block_heading() {
-            global_color_support::set_override(ColorSupport::Truecolor);
+            let _guard = set_color_override();
             let heading_block = MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 1 },
                 text: "Foobar",
@@ -1376,7 +1385,7 @@ mod tests_style_us_span_lines_from {
 
             // First span is the heading level `# ` in dim w/ Red bg color, and no fg
             // color.
-            assert!(spans_in_line[0].style.dim.is_some());
+            assert!(spans_in_line[0].style.attribs.dim.is_some());
             assert_eq2!(spans_in_line[0].style.color_bg.unwrap(), tui_color!(red));
             assert_eq2!(spans_in_line[0].style.color_fg.is_some(), false);
             assert_eq2!(spans_in_line[0].text_gcs.as_ref(), "# ");
@@ -1384,7 +1393,7 @@ mod tests_style_us_span_lines_from {
             // The remainder of the spans are the heading text which are colorized with a
             // color wheel.
             for span in &spans_in_line[1..=6] {
-                assert!(span.style.dim.is_none());
+                assert!(span.style.attribs.dim.is_none());
                 assert_eq2!(span.style.color_bg.unwrap(), tui_color!(red));
                 assert_eq2!(span.style.color_fg.is_some(), true);
             }

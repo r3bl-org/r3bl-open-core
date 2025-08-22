@@ -81,6 +81,10 @@ mod construct {
     impl From<u8> for ColWidth {
         fn from(val: u8) -> Self { ColWidth(val.into()) }
     }
+
+    impl From<ColWidth> for u16 {
+        fn from(col_width: ColWidth) -> Self { col_width.0.into() }
+    }
 }
 
 mod ops {

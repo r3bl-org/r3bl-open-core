@@ -29,7 +29,7 @@ impl InputRouter {
     /// # Errors
     ///
     /// Returns an error if terminal operations or process switching fails.
-    pub async fn handle_input(
+    pub fn handle_input(
         &mut self,
         event: InputEvent,
         process_manager: &mut ProcessManager,
@@ -78,7 +78,7 @@ impl InputRouter {
                                     output_device,
                                 );
 
-                                process_manager.switch_to(process_index).await?;
+                                process_manager.switch_to(process_index);
                                 Self::update_terminal_title(process_manager, osc)?;
                                 tracing::debug!("Process switch completed successfully");
                             }
@@ -137,7 +137,14 @@ impl InputRouter {
         process_manager: &ProcessManager,
         osc: &mut OscController<'_>,
     ) -> miette::Result<()> {
-        let title = format!("PTYMux - {}", process_manager.active_name());
+        // Check if the active process has set a custom terminal title
+        let title = if let Some(custom_title) = process_manager.active_terminal_title() {
+            // Use the process's custom title
+            format!("PTYMux - {} - {}", process_manager.active_name(), custom_title)
+        } else {
+            // Use default title with just process name
+            format!("PTYMux - {}", process_manager.active_name())
+        };
         osc.set_title_and_tab(&title)?;
         Ok(())
     }
@@ -148,7 +155,7 @@ impl InputRouter {
     /// to reserve space for the status bar.
     fn handle_resize(process_manager: &mut ProcessManager, new_size: Size) {
         // Update manager's size (full terminal size)
-        process_manager.update_terminal_size(new_size);
+        process_manager.handle_terminal_resize(new_size);
 
         // Forward reduced size to all PTY sessions to reserve status bar space
         // Note: The process manager handles the actual PTY size conversion

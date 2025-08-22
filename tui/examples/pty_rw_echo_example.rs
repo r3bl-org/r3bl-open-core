@@ -43,8 +43,8 @@ async fn main() -> miette::Result<()> {
 
     // Spawn cat process (simple echo)
     let pty_size = PtySize {
-        rows: terminal_size.row_height.0.value,
-        cols: terminal_size.col_width.0.value,
+        rows: terminal_size.row_height.into(),
+        cols: terminal_size.col_width.into(),
         pixel_width: 0,
         pixel_height: 0,
     };

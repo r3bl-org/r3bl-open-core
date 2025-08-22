@@ -42,7 +42,7 @@
 
 use std::fmt::{Display, Formatter, Result};
 
-use crate::{BufTextStorage, WriteToBuf};
+use crate::{ANSIBasicColor, AnsiValue, BufTextStorage, WriteToBuf};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SgrCode {
@@ -57,8 +57,17 @@ pub enum SgrCode {
     Invert,
     Hidden,
     Strikethrough,
-    ForegroundAnsi256(u8),
-    BackgroundAnsi256(u8),
+    ResetBoldDim,       // SGR 22 - resets both bold and dim
+    ResetItalic,        // SGR 23
+    ResetUnderline,     // SGR 24
+    ResetBlink,         // SGR 25 - resets both slow and rapid blink
+    ResetInvert,        // SGR 27
+    ResetHidden,        // SGR 28
+    ResetStrikethrough, // SGR 29
+    ForegroundBasic(ANSIBasicColor),
+    BackgroundBasic(ANSIBasicColor),
+    ForegroundAnsi256(AnsiValue),
+    BackgroundAnsi256(AnsiValue),
     ForegroundRGB(u8, u8, u8),
     BackgroundRGB(u8, u8, u8),
 }
@@ -178,17 +187,107 @@ impl WriteToBuf for SgrCode {
                 buf.push_str(SGR);
                 Ok(())
             }
-            SgrCode::ForegroundAnsi256(index) => {
+            SgrCode::ResetBoldDim => {
                 buf.push_str(CSI);
-                buf.push_str("38;5;");
-                buf.push_str(U8_STRINGS[index as usize]);
+                buf.push_str("22");
                 buf.push_str(SGR);
                 Ok(())
             }
-            SgrCode::BackgroundAnsi256(index) => {
+            SgrCode::ResetItalic => {
+                buf.push_str(CSI);
+                buf.push_str("23");
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ResetUnderline => {
+                buf.push_str(CSI);
+                buf.push_str("24");
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ResetBlink => {
+                buf.push_str(CSI);
+                buf.push_str("25");
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ResetInvert => {
+                buf.push_str(CSI);
+                buf.push_str("27");
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ResetHidden => {
+                buf.push_str(CSI);
+                buf.push_str("28");
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ResetStrikethrough => {
+                buf.push_str(CSI);
+                buf.push_str("29");
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ForegroundBasic(color) => {
+                buf.push_str(CSI);
+                let code = match color {
+                    ANSIBasicColor::Black => "30",
+                    ANSIBasicColor::DarkRed => "31",
+                    ANSIBasicColor::DarkGreen => "32",
+                    ANSIBasicColor::DarkYellow => "33",
+                    ANSIBasicColor::DarkBlue => "34",
+                    ANSIBasicColor::DarkMagenta => "35",
+                    ANSIBasicColor::DarkCyan => "36",
+                    ANSIBasicColor::Gray => "37",
+                    ANSIBasicColor::DarkGray => "90",
+                    ANSIBasicColor::Red => "91",
+                    ANSIBasicColor::Green => "92",
+                    ANSIBasicColor::Yellow => "93",
+                    ANSIBasicColor::Blue => "94",
+                    ANSIBasicColor::Magenta => "95",
+                    ANSIBasicColor::Cyan => "96",
+                    ANSIBasicColor::White => "97",
+                };
+                buf.push_str(code);
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::BackgroundBasic(color) => {
+                buf.push_str(CSI);
+                let code = match color {
+                    ANSIBasicColor::Black => "40",
+                    ANSIBasicColor::DarkRed => "41",
+                    ANSIBasicColor::DarkGreen => "42",
+                    ANSIBasicColor::DarkYellow => "43",
+                    ANSIBasicColor::DarkBlue => "44",
+                    ANSIBasicColor::DarkMagenta => "45",
+                    ANSIBasicColor::DarkCyan => "46",
+                    ANSIBasicColor::Gray => "47",
+                    ANSIBasicColor::DarkGray => "100",
+                    ANSIBasicColor::Red => "101",
+                    ANSIBasicColor::Green => "102",
+                    ANSIBasicColor::Yellow => "103",
+                    ANSIBasicColor::Blue => "104",
+                    ANSIBasicColor::Magenta => "105",
+                    ANSIBasicColor::Cyan => "106",
+                    ANSIBasicColor::White => "107",
+                };
+                buf.push_str(code);
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::ForegroundAnsi256(ansi_value) => {
+                buf.push_str(CSI);
+                buf.push_str("38;5;");
+                buf.push_str(U8_STRINGS[ansi_value.index as usize]);
+                buf.push_str(SGR);
+                Ok(())
+            }
+            SgrCode::BackgroundAnsi256(ansi_value) => {
                 buf.push_str(CSI);
                 buf.push_str("48;5;");
-                buf.push_str(U8_STRINGS[index as usize]);
+                buf.push_str(U8_STRINGS[ansi_value.index as usize]);
                 buf.push_str(SGR);
                 Ok(())
             }
@@ -293,13 +392,13 @@ mod tests {
 
     #[test]
     fn fg_color_ansi256() {
-        let sgr_code = SgrCode::ForegroundAnsi256(150);
+        let sgr_code = SgrCode::ForegroundAnsi256(AnsiValue::new(150));
         assert_eq!(sgr_code.to_string(), "\x1b[38;5;150m");
     }
 
     #[test]
     fn bg_color_ansi256() {
-        let sgr_code = SgrCode::BackgroundAnsi256(150);
+        let sgr_code = SgrCode::BackgroundAnsi256(AnsiValue::new(150));
         assert_eq!(sgr_code.to_string(), "\x1b[48;5;150m");
     }
 
@@ -314,6 +413,92 @@ mod tests {
         let sgr_code = SgrCode::BackgroundRGB(175, 215, 135);
         assert_eq!(sgr_code.to_string(), "\x1b[48;2;175;215;135m");
     }
+
+    #[test]
+    fn reset_bold_dim() {
+        let sgr_code = SgrCode::ResetBoldDim;
+        assert_eq!(sgr_code.to_string(), "\x1b[22m");
+    }
+
+    #[test]
+    fn reset_italic() {
+        let sgr_code = SgrCode::ResetItalic;
+        assert_eq!(sgr_code.to_string(), "\x1b[23m");
+    }
+
+    #[test]
+    fn reset_underline() {
+        let sgr_code = SgrCode::ResetUnderline;
+        assert_eq!(sgr_code.to_string(), "\x1b[24m");
+    }
+
+    #[test]
+    fn reset_blink() {
+        let sgr_code = SgrCode::ResetBlink;
+        assert_eq!(sgr_code.to_string(), "\x1b[25m");
+    }
+
+    #[test]
+    fn reset_invert() {
+        let sgr_code = SgrCode::ResetInvert;
+        assert_eq!(sgr_code.to_string(), "\x1b[27m");
+    }
+
+    #[test]
+    fn reset_hidden() {
+        let sgr_code = SgrCode::ResetHidden;
+        assert_eq!(sgr_code.to_string(), "\x1b[28m");
+    }
+
+    #[test]
+    fn reset_strikethrough() {
+        let sgr_code = SgrCode::ResetStrikethrough;
+        assert_eq!(sgr_code.to_string(), "\x1b[29m");
+    }
+
+    #[test]
+    fn fg_basic_red() {
+        let sgr_code = SgrCode::ForegroundBasic(ANSIBasicColor::Red);
+        assert_eq!(sgr_code.to_string(), "\x1b[91m");
+    }
+
+    #[test]
+    fn fg_basic_dark_red() {
+        let sgr_code = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed);
+        assert_eq!(sgr_code.to_string(), "\x1b[31m");
+    }
+
+    #[test]
+    fn bg_basic_blue() {
+        let sgr_code = SgrCode::BackgroundBasic(ANSIBasicColor::Blue);
+        assert_eq!(sgr_code.to_string(), "\x1b[104m");
+    }
+
+    #[test]
+    fn bg_basic_dark_blue() {
+        let sgr_code = SgrCode::BackgroundBasic(ANSIBasicColor::DarkBlue);
+        assert_eq!(sgr_code.to_string(), "\x1b[44m");
+    }
+
+    #[test]
+    fn fg_basic_all_variants() {
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Black).to_string(), "\x1b[30m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkGray).to_string(), "\x1b[90m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed).to_string(), "\x1b[31m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkGreen).to_string(), "\x1b[32m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkYellow).to_string(), "\x1b[33m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkBlue).to_string(), "\x1b[34m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkMagenta).to_string(), "\x1b[35m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkCyan).to_string(), "\x1b[36m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Gray).to_string(), "\x1b[37m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::White).to_string(), "\x1b[97m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Red).to_string(), "\x1b[91m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Green).to_string(), "\x1b[92m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Yellow).to_string(), "\x1b[93m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Blue).to_string(), "\x1b[94m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Magenta).to_string(), "\x1b[95m");
+        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Cyan).to_string(), "\x1b[96m");
+    }
 }
 
 #[cfg(test)]
@@ -323,11 +508,11 @@ mod benchmarks {
 
     use test::Bencher;
 
-    use crate::{BufTextStorage, SgrCode, WriteToBuf};
+    use crate::{AnsiValue, BufTextStorage, SgrCode, WriteToBuf};
 
     #[bench]
     fn bench_ansi256_formatting_all_values(b: &mut Bencher) {
-        let codes: Vec<SgrCode> = (0..=255).map(SgrCode::ForegroundAnsi256).collect();
+        let codes: Vec<SgrCode> = (0..=255).map(|i| SgrCode::ForegroundAnsi256(AnsiValue::new(i))).collect();
         b.iter(|| {
             let mut buf = BufTextStorage::new();
             for code in &codes {
@@ -356,8 +541,8 @@ mod benchmarks {
         let codes = vec![
             SgrCode::Reset,
             SgrCode::Bold,
-            SgrCode::ForegroundAnsi256(150),
-            SgrCode::BackgroundAnsi256(42),
+            SgrCode::ForegroundAnsi256(AnsiValue::new(150)),
+            SgrCode::BackgroundAnsi256(AnsiValue::new(42)),
             SgrCode::ForegroundRGB(175, 215, 135),
             SgrCode::Underline,
             SgrCode::BackgroundRGB(50, 100, 150),

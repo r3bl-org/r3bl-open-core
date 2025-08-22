@@ -44,8 +44,7 @@ pub trait RingBuffer<T, const N: usize> {
     ///   this function.
     fn as_slice(&self) -> InlineVec<&T> {
         let slice = self.as_slice_raw();
-        let acc: InlineVec<&T> =
-            slice.iter().filter_map(|style| style.as_ref()).collect();
+        let acc: InlineVec<&T> = slice.iter().filter_map(|item| item.as_ref()).collect();
         acc
     }
 

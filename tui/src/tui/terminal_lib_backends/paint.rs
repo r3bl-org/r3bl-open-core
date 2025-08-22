@@ -65,7 +65,7 @@ pub fn paint<S, AS>(
     }
 
     fn perform_full_paint(
-        offscreen_buffer: &OffscreenBuffer,
+        ofs_buf: &OffscreenBuffer,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
@@ -74,7 +74,7 @@ pub fn paint<S, AS>(
         match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-                let render_ops = crossterm_impl.render(offscreen_buffer);
+                let render_ops = crossterm_impl.render(ofs_buf);
                 crossterm_impl.paint(
                     render_ops,
                     flush_kind,
@@ -89,7 +89,7 @@ pub fn paint<S, AS>(
 
     // If this is None, then a full paint will be performed & the offscreen buffer will be
     // saved to global_data.
-    let maybe_saved_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.clone();
+    let maybe_saved_ofs_buf = global_data.maybe_saved_ofs_buf.clone();
 
     let window_size = global_data.window_size;
 
@@ -99,7 +99,7 @@ pub fn paint<S, AS>(
 
     pipeline.convert(window_size, &mut buffer_from_pool);
 
-    match maybe_saved_offscreen_buffer {
+    match maybe_saved_ofs_buf {
         None => {
             perform_full_paint(
                 &buffer_from_pool,
@@ -134,12 +134,12 @@ pub fn paint<S, AS>(
     }
 
     // Give back the buffer to the pool.
-    if let Some(old_buffer) = global_data.maybe_saved_offscreen_buffer.take() {
+    if let Some(old_buffer) = global_data.maybe_saved_ofs_buf.take() {
         global_data.offscreen_buffer_pool.give_back(old_buffer);
     }
 
     // Save the buffer to global_data.
-    global_data.maybe_saved_offscreen_buffer = Some(buffer_from_pool);
+    global_data.maybe_saved_ofs_buf = Some(buffer_from_pool);
 }
 
 /// 1. Ensure that the [Pos] is within the bounds of the terminal window using
