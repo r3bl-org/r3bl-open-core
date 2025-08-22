@@ -1,17 +1,19 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Process lifecycle management for the PTY multiplexer.
+//! Process lifecycle management for the PTY multiplexer with per-process buffers.
 //!
-//! This module manages multiple PTY sessions, handles process switching,
-//! and implements the "fake resize" technique for proper TUI app repainting.
+//! This module implements true terminal multiplexing where each process maintains
+//! its own virtual terminal (`OffscreenBuffer`) and ANSI parser. Process switching
+//! is instant with no delays or hacks - just display a different buffer.
+
+use std::fmt::{Debug, Formatter, Result};
 
 use portable_pty::PtySize;
-use tokio::time::{Duration, sleep};
-
 use super::output_renderer::STATUS_BAR_HEIGHT;
-use crate::{Size,
+use crate::{OffscreenBuffer, Size,
             core::pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
-                        PtyReadWriteSession}};
+                        PtyReadWriteSession},
+            height};
 
 /// Manages multiple PTY processes and handles switching between them.
 #[derive(Debug)]
@@ -22,7 +24,10 @@ pub struct ProcessManager {
 }
 
 /// Represents a single process that can be managed by the multiplexer.
-#[derive(Debug)]
+///
+/// Each process maintains its own virtual terminal state through an [`OffscreenBuffer`]
+/// and [`ANSI parser`](vte::Parser), enabling true terminal multiplexing where switching
+/// between processes is instant and preserves the complete terminal state.
 pub struct Process {
     /// Display name for this process (shown in status bar)
     pub name: String,
@@ -34,36 +39,137 @@ pub struct Process {
     session: Option<PtyReadWriteSession>,
     /// Whether the process is currently running
     is_running: bool,
-}
+    /// Virtual terminal buffer for this process (per-process buffer architecture)
+    ofs_buf: OffscreenBuffer,
 
-/// Output events from the process manager.
-#[derive(Debug)]
-pub enum ProcessOutput {
-    /// Output from the currently active process
-    Active(Vec<u8>),
-    /// Notification that processes were switched
-    ProcessSwitch { from: usize, to: usize },
+    /// Tracks if this process has unrendered output since last render
+    has_unrendered_output: bool,
+    /// Terminal title set by OSC sequences (None if not set)
+    pub terminal_title: Option<String>,
 }
 
 impl Process {
-    /// Create a new process definition.
+    /// Create a new process definition with virtual terminal buffer.
+    ///
+    /// The buffer is sized to (height-1, width) to reserve space for the status bar.
+    /// Each process gets its own virtual terminal that persists when switching.
     pub fn new(
         name: impl Into<String>,
         command: impl Into<String>,
         args: Vec<String>,
+        terminal_size: Size,
     ) -> Self {
+        // Reserve bottom row for status bar - buffer gets reduced height
+        let buffer_size = Size {
+            row_height: height(
+                terminal_size.row_height.saturating_sub(STATUS_BAR_HEIGHT),
+            ),
+            col_width: terminal_size.col_width,
+        };
+
         Self {
             name: name.into(),
             command: command.into(),
             args,
             session: None,
             is_running: false,
+            ofs_buf: OffscreenBuffer::new_with_capacity_initialized(buffer_size),
+
+            has_unrendered_output: false,
+            terminal_title: None,
         }
     }
 
     /// Returns whether this process is currently running.
     #[must_use]
     pub fn is_running(&self) -> bool { self.is_running }
+
+    /// Update the process's virtual terminal buffer with new PTY output.
+    ///
+    /// This is the core of the per-process virtual terminal architecture:
+    /// Each process maintains its own complete terminal state through an
+    /// `OffscreenBuffer`. Raw PTY bytes are processed through the ANSI parser and
+    /// converted into `PixelChar` updates in the virtual terminal buffer.
+    ///
+    /// This allows each process to maintain its complete screen state independently,
+    /// enabling instant switching without any delays or resizing tricks.
+    pub fn process_pty_output_and_update_buffer(&mut self, output: Vec<u8>) {
+        if !output.is_empty() {
+            // Process bytes and extract any OSC events
+            let osc_events = self.ofs_buf.apply_ansi_bytes(&output);
+
+            // Handle any OSC events that were detected
+            for event in osc_events {
+                match event {
+                    crate::core::osc::OscEvent::SetTitleAndTab(title) => {
+                        self.terminal_title = Some(title.clone());
+                        tracing::debug!(
+                            "Process '{}' set terminal title: {}",
+                            self.name,
+                            title
+                        );
+                    }
+                    _ => {
+                        // Other OSC events can be handled here in the future
+                    }
+                }
+            }
+            self.has_unrendered_output = true;
+
+            tracing::trace!(
+                "Process '{}' updated buffer with {} bytes, cursor at {:?}",
+                self.name,
+                output.len(),
+                self.ofs_buf.my_pos
+            );
+        }
+    }
+
+    /// Try to get output from this process's PTY session without blocking.
+    ///
+    /// Returns None if no output is immediately available, or Some(output) if
+    /// there is new data to process.
+    pub fn try_get_output(&mut self) -> Option<Vec<u8>> {
+        if let Some(session) = &mut self.session
+            && let Ok(event) = session.output_event_receiver_half.try_recv()
+        {
+            match event {
+                PtyReadWriteOutputEvent::Output(data) => {
+                    tracing::trace!(
+                        "Process '{}' received {} bytes of output",
+                        self.name,
+                        data.len()
+                    );
+                    return Some(data);
+                }
+                PtyReadWriteOutputEvent::Exit(_status) => {
+                    self.is_running = false;
+                    tracing::debug!("Process '{}' has exited", self.name);
+                    return None;
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Mark this process as having been rendered (clear unrendered output flag).
+    pub fn mark_as_rendered(&mut self) { self.has_unrendered_output = false; }
+}
+
+impl Debug for Process {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.debug_struct("Process")
+            .field("name", &self.name)
+            .field("command", &self.command)
+            .field("args", &self.args)
+            .field("session", &self.session)
+            .field("is_running", &self.is_running)
+            .field("offscreen_buffer", &self.ofs_buf)
+.field("has_unrendered_output", &self.has_unrendered_output)
+            .field("terminal_title", &self.terminal_title)
+            .finish()
+    }
 }
 
 impl ProcessManager {
@@ -103,57 +209,39 @@ impl ProcessManager {
         Ok(())
     }
 
-    /// Switch to the process at the given index with enhanced repaint strategy.
+    /// Switch to the process at the given index.
     ///
-    /// Uses aggressive terminal reset sequences and enhanced fake resize to ensure
-    /// complete repaints when switching between TUI processes.
+    /// **Instant switching with per-process virtual terminals**:
+    /// This is where the per-process buffer architecture shines - switching
+    /// between processes is truly instant because each process maintains its
+    /// complete terminal state independently.
     ///
-    /// # Errors
+    /// **What happens**:
+    /// 1. Change the `active_index` to point to a different process
+    /// 2. That's it! No delays, no resize tricks, no screen clearing
+    /// 3. The next render will display the target process's virtual terminal
     ///
-    /// Returns an error if sending terminal sequences or resize events fails.
-    pub async fn switch_to(&mut self, index: usize) -> miette::Result<()> {
+    /// **Why this works universally**:
+    /// - TUI apps: Their complete screen state is preserved in the `OffscreenBuffer`
+    /// - bash: Your command history and current prompt state remain intact
+    /// - CLI tools: All their output is preserved exactly as they generated it
+    pub fn switch_to(&mut self, index: usize) -> Option<usize> {
         if index >= self.processes.len() {
-            return Ok(());
+            return None;
         }
 
         let old_index = self.active_index;
         self.active_index = index;
-        tracing::debug!("Switching from process {} to {}", old_index, index);
 
-        if let Some(session) = &mut self.processes[index].session {
-            // Only use fake resize - this is the correct and sufficient approach
-            // The fake resize sends SIGWINCH, causing TUI apps to repaint themselves
-            
-            // 1. Fake resize sequence (tiny -> actual size)
-            let tiny_size = PtySize {
-                rows: 10,
-                cols: 10,
-                pixel_width: 0,
-                pixel_height: 0,
-            };
-            let _unused = session
-                .input_event_ch_tx_half
-                .send(PtyInputEvent::Resize(tiny_size));
-            sleep(Duration::from_millis(50)).await;
+        tracing::debug!(
+            "Switched from process {} ('{}') to process {} ('{}') - instant switch with per-process buffers",
+            old_index,
+            self.processes[old_index].name,
+            index,
+            self.processes[index].name
+        );
 
-            // 2. Resize to actual size - this triggers SIGWINCH and full repaint
-            let real_size = PtySize {
-                rows: self
-                    .terminal_size
-                    .row_height
-                    .0
-                    .value
-                    .saturating_sub(STATUS_BAR_HEIGHT),
-                cols: self.terminal_size.col_width.0.value,
-                pixel_width: 0,
-                pixel_height: 0,
-            };
-            let _unused = session
-                .input_event_ch_tx_half
-                .send(PtyInputEvent::Resize(real_size));
-        }
-
-        Ok(())
+        Some(old_index)
     }
 
     /// Spawn a process at the given index.
@@ -166,10 +254,8 @@ impl ProcessManager {
             rows: self
                 .terminal_size
                 .row_height
-                .0
-                .value
                 .saturating_sub(STATUS_BAR_HEIGHT),
-            cols: self.terminal_size.col_width.0.value,
+            cols: self.terminal_size.col_width.into(),
             pixel_width: 0,
             pixel_height: 0,
         };
@@ -184,40 +270,51 @@ impl ProcessManager {
         Ok(())
     }
 
-    /// Try to get output from the active process without blocking.
+    /// Poll all processes and update their virtual terminal buffers.
     ///
-    /// Returns None if no output is immediately available.
-    pub fn try_get_output(&mut self) -> Option<ProcessOutput> {
-        // First drain ALL background processes to prevent their buffers from filling up
-        // This is critical - if we don't drain them, they'll block and stop working
+    /// This is the heart of the per-process virtual terminal architecture:
+    ///
+    /// **Key Innovation**: ALL processes are polled continuously, not just the active
+    /// one. Each process maintains its own complete virtual terminal state through
+    /// its `OffscreenBuffer`. When you switch between processes, you're instantly
+    /// seeing their maintained terminal state - no delays, no fake resize tricks
+    /// needed.
+    ///
+    /// **How it works**:
+    /// 1. Poll each process for new PTY output (non-blocking)
+    /// 2. If output exists, process it through the ANSI parser
+    /// 3. Update the process's virtual terminal buffer
+    /// 4. Track if the currently active process had updates
+    ///
+    /// **Why this enables universal compatibility**:
+    /// - bash: Command history and prompt state persist in the virtual terminal
+    /// - TUI apps: Complete screen state maintained perfectly
+    /// - CLI tools: Output preserved exactly as generated
+    ///
+    /// Returns true if the active process had new output (triggers rendering).
+    pub fn poll_all_processes(&mut self) -> bool {
+        let mut active_had_output = false;
+
         for (i, process) in self.processes.iter_mut().enumerate() {
-            if i != self.active_index
-                && let Some(session) = &mut process.session
-            {
-                // Drain all pending output from background processes
-                while session.output_event_receiver_half.try_recv().is_ok() {
-                    // Discard - we're not displaying this process right now
+            if let Some(output) = process.try_get_output() {
+                // Update this process's virtual terminal buffer
+                process.process_pty_output_and_update_buffer(output);
+
+                // Track if the active process had output
+                if i == self.active_index {
+                    active_had_output = true;
                 }
+
+                tracing::trace!(
+                    "Process {} ('{}') updated its virtual terminal buffer (active: {})",
+                    i,
+                    process.name,
+                    i == self.active_index
+                );
             }
         }
 
-        // Now try to get output from the active process
-        if let Some(session) = &mut self.processes[self.active_index].session
-            && let Ok(event) = session.output_event_receiver_half.try_recv()
-        {
-            match event {
-                PtyReadWriteOutputEvent::Output(data) => {
-                    return Some(ProcessOutput::Active(data));
-                }
-                PtyReadWriteOutputEvent::Exit(_status) => {
-                    self.processes[self.active_index].is_running = false;
-                    return None;
-                }
-                _ => {}
-            }
-        }
-
-        None
+        active_had_output
     }
 
     /// Send input to the currently active process.
@@ -244,29 +341,77 @@ impl ProcessManager {
     #[must_use]
     pub fn active_index(&self) -> usize { self.active_index }
 
-    /// Update the terminal size and propagate to all active PTY sessions.
-    pub fn update_terminal_size(&mut self, new_size: Size) {
+    /// Get the terminal title of the currently active process (if any).
+    #[must_use]
+    pub fn active_terminal_title(&self) -> Option<&str> {
+        self.processes[self.active_index].terminal_title.as_deref()
+    }
+
+    /// Get read-only access to the active process's virtual terminal buffer.
+    #[must_use]
+    pub fn get_active_buffer(&self) -> &OffscreenBuffer {
+        &self.processes[self.active_index].ofs_buf
+    }
+
+    /// Mark the active process as having been rendered.
+    pub fn mark_active_as_rendered(&mut self) {
+        self.processes[self.active_index].mark_as_rendered();
+    }
+    /// Handle terminal resize with per-process buffer architecture.
+    ///
+    /// This creates fresh buffers at the new size for all processes and resets
+    /// their parsers for a clean state. Each PTY is notified of the resize
+    /// for natural reflow.
+    pub fn handle_terminal_resize(&mut self, new_size: Size) {
         self.terminal_size = new_size;
 
-        // Send resize events to all active PTY sessions
+        // Calculate PTY size (reserve status bar)
         let pty_size = PtySize {
-            rows: new_size
-                .row_height
-                .0
-                .value
-                .saturating_sub(STATUS_BAR_HEIGHT),
-            cols: new_size.col_width.0.value,
+            rows: new_size.row_height.saturating_sub(STATUS_BAR_HEIGHT),
+            cols: new_size.col_width.into(),
             pixel_width: 0,
             pixel_height: 0,
         };
 
-        for process in &self.processes {
+        let buffer_size = Size {
+            row_height: height(new_size.row_height.saturating_sub(STATUS_BAR_HEIGHT)),
+            col_width: new_size.col_width,
+        };
+
+        tracing::debug!(
+            "Handling terminal resize to {:?}, PTY size: {:?}, buffer size: {:?}",
+            new_size,
+            pty_size,
+            buffer_size
+        );
+
+        // Update all processes with new buffers and parsers
+        for (i, process) in self.processes.iter_mut().enumerate() {
+            // Create fresh buffer at new size
+            process.ofs_buf = OffscreenBuffer::new_with_capacity_initialized(buffer_size);
+
+// Clear unrendered output flag since we're starting fresh
+            process.has_unrendered_output = false;
+
+            // Send resize event to PTY session
             if let Some(session) = &process.session {
                 let _unused = session
                     .input_event_ch_tx_half
                     .send(PtyInputEvent::Resize(pty_size));
+
+                tracing::debug!(
+                    "Sent resize event to process {} ('{}') with PTY size {:?}",
+                    i,
+                    process.name,
+                    pty_size
+                );
             }
         }
+
+        tracing::debug!(
+            "Terminal resize handling completed for {} processes",
+            self.processes.len()
+        );
     }
 
     /// Shutdown all running processes.

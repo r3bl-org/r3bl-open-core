@@ -9,7 +9,7 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             GradientGenerationPolicy, HasDialogBuffers, InlineString, InputEvent, Key,
             MinSize, PartialFlexBox, Pos, RenderOp, RenderOps, RenderPipeline, Size,
             SpecialKey, SurfaceBounds, SystemClipboard, TextColorizationPolicy,
-            TuiStyle, ZOrder, ch, col, editor_engine::engine_public_api, height,
+            TuiStyle, TuiStyleAttribs, ZOrder, ch, col, editor_engine::engine_public_api, height,
             inline_string, pc, render_ops, render_pipeline,
             render_tui_styled_texts_into, row, terminal_lib_backends::KeyPress,
             throws_with_return, tui_style_attrib, u16, usize, width};
@@ -227,7 +227,7 @@ mod internal_impl {
                 GlobalData, GradientGenerationPolicy, HasDialogBuffers, InlineString,
                 InputEvent, Key, KeyPress, MinSize, PartialFlexBox, Pos, RenderOp,
                 RenderOps, RenderPipeline, Size, SpecialKey, SurfaceBounds,
-                TextColorizationPolicy, TuiStyle, ZOrder, ch, col, engine_public_api,
+                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, ch, col, engine_public_api,
                 height, inline_string, pc, render_ops, render_tui_styled_texts_into,
                 row, throws_with_return, tui_style_attrib, u16, usize, width};
 
@@ -438,14 +438,15 @@ mod internal_impl {
 
             ops.push(RenderOp::PaintTextWithAttributes(
                 msg.into(),
-                Some(if let Some(style) = maybe_style {
-                    TuiStyle {
-                        dim: Some(tui_style_attrib::Dim),
-                        ..style
-                    }
+                Some(if let Some(mut style) = maybe_style {
+                    style.attribs.dim = Some(tui_style_attrib::Dim);
+                    style
                 } else {
                     TuiStyle {
-                        dim: Some(tui_style_attrib::Dim),
+                        attribs: TuiStyleAttribs {
+                            dim: Some(tui_style_attrib::Dim),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     }
                 }),
@@ -487,7 +488,7 @@ mod internal_impl {
 
     mod render_results_panel_inner {
         use super::{Cow, DialogEngine, DisplayConstants, GCStringOwned, InlineString,
-                    Pos, RenderOp, RenderOps, Size, TuiStyle, col, height,
+                    Pos, RenderOp, RenderOps, Size, TuiStyle, TuiStyleAttribs, col, height,
                     inline_string, row, tui_style_attrib, width};
 
         pub fn paint_results(
@@ -565,13 +566,16 @@ mod internal_impl {
                     let my_selected_style =
                         match dialog_engine.dialog_options.maybe_style_results_panel {
                             // Update existing style.
-                            Some(style) => TuiStyle {
-                                underline: Some(tui_style_attrib::Underline),
-                                ..style
+                            Some(mut style) => {
+                                style.attribs.underline = Some(tui_style_attrib::Underline);
+                                style
                             },
                             // No existing style, so create a new style w/ only underline.
                             _ => TuiStyle {
-                                underline: Some(tui_style_attrib::Underline),
+                                attribs: TuiStyleAttribs {
+                                    underline: Some(tui_style_attrib::Underline),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                         }

@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{TuiStyle, tui_style_attrib};
-use crate::{CommonError, CommonResult, InlineVec, throws};
+use super::TuiStyle;
+use crate::{CommonError, CommonResult, InlineVec, TuiStyleId, throws};
 
 #[derive(Default, Debug, Clone)]
 pub struct TuiStylesheet {
@@ -83,7 +83,7 @@ impl TuiStylesheet {
         let id: u8 = arg_id.into();
         self.styles
             .iter()
-            .find(|style| tui_style_attrib::Id::eq(style.id, id))
+            .find(|style| TuiStyleId::eq(style.id, id))
             .copied()
     }
 

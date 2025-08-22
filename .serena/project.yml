@@ -5,9 +5,13 @@
 #  * csharp: Requires the presence of a .sln file in the project folder.
 language: rust
 
+# Maximum characters for tool responses (especially search results)
+max_answer_chars: 1000000
+
 # whether to use the project's gitignore file to ignore files
 # Added on 2025-04-07
 ignore_all_files_in_gitignore: true
+
 # list of additional paths to ignore
 # same syntax as gitignore, so you can use * and **
 # Was previously called `ignored_dirs`, please update your config if you are using that.
@@ -18,7 +22,6 @@ ignored_paths: []
 # If set to true, all editing tools will be disabled and attempts to use them will result in an error
 # Added on 2025-04-18
 read_only: false
-
 
 # list of tool names to exclude. We recommend not excluding any tools, see the readme for more details.
 # Below is the complete list of tools for convenience.
@@ -60,7 +63,7 @@ read_only: false
 #  * `think_about_whether_you_are_done`: Thinking tool for determining whether the task is truly completed.
 #  * `write_memory`: Writes a named memory (for future reference) to Serena's project-specific memory store.
 excluded_tools: []
-
+    
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
 initial_prompt: ""

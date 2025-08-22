@@ -134,7 +134,7 @@ mod tests {
 
     mod helpers {
         use super::*;
-        use crate::{tui_color, tui_style_attrib};
+        use crate::{tui_color, tui_style_id};
 
         pub fn create_styled_text() -> CommonResult<TuiStyledTexts> {
             throws_with_return!({
@@ -159,13 +159,13 @@ mod tests {
             throws_with_return!({
                 tui_stylesheet! {
                     TuiStyle {
-                        id: tui_style_attrib::id(1),
+                        id: tui_style_id(1),
                         padding: Some(ch(1)),
                         color_bg: Some(tui_color!(55, 55, 100)),
                         ..Default::default()
                     },
                     TuiStyle {
-                        id: tui_style_attrib::id(2),
+                        id: tui_style_id(2),
                         padding: Some(ch(1)),
                         color_bg: Some(tui_color!(55, 55, 248)),
                         ..Default::default()

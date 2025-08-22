@@ -82,6 +82,10 @@ mod constructor {
     impl From<u8> for RowHeight {
         fn from(val: u8) -> Self { RowHeight(val.into()) }
     }
+
+    impl From<RowHeight> for u16 {
+        fn from(row_height: RowHeight) -> Self { row_height.0.into() }
+    }
 }
 
 mod ops {

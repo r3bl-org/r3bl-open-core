@@ -236,13 +236,13 @@ mod heading_cache {
                 style.id.hash(state);
                 style.color_fg.hash(state);
                 style.color_bg.hash(state);
-                style.bold.hash(state);
-                style.italic.hash(state);
-                style.underline.hash(state);
-                style.dim.hash(state);
-                style.reverse.hash(state);
-                style.hidden.hash(state);
-                style.strikethrough.hash(state);
+                style.attribs.bold.hash(state);
+                style.attribs.italic.hash(state);
+                style.attribs.underline.hash(state);
+                style.attribs.dim.hash(state);
+                style.attribs.reverse.hash(state);
+                style.attribs.hidden.hash(state);
+                style.attribs.strikethrough.hash(state);
                 style.computed.hash(state);
                 style.padding.hash(state);
             }
@@ -341,7 +341,7 @@ mod helpers {
             }
         };
         style.color_bg = Some(TuiColor::Rgb(HEADING_BG_COLOR));
-        style.bold = Some(tui_style_attrib::Bold);
+        style.attribs.bold = Some(tui_style_attrib::Bold);
         (level_str, style)
     }
 

@@ -33,31 +33,35 @@ macro_rules! new_style {
 macro_rules! apply_style {
     // Attrib.
     ($style:ident, bold $($rem:tt)*) => {{
-        $style.bold = Some($crate::tui_style_attrib::Bold);
+        $style.attribs.bold = Some($crate::tui_style_attrib::Bold);
         $crate::apply_style!($style, $($rem)*);
     }};
     ($style:ident, italic $($rem:tt)*) => {{
-        $style.italic = Some($crate::tui_style_attrib::Italic);
+        $style.attribs.italic = Some($crate::tui_style_attrib::Italic);
         $crate::apply_style!($style, $($rem)*);
     }};
     ($style:ident, dim $($rem:tt)*) => {{
-        $style.dim = Some($crate::tui_style_attrib::Dim);
+        $style.attribs.dim = Some($crate::tui_style_attrib::Dim);
         $crate::apply_style!($style, $($rem)*);
     }};
     ($style:ident, underline $($rem:tt)*) => {{
-        $style.underline = Some($crate::tui_style_attrib::Underline);
+        $style.attribs.underline = Some($crate::tui_style_attrib::Underline);
         $crate::apply_style!($style, $($rem)*);
     }};
     ($style:ident, reverse $($rem:tt)*) => {{
-        $style.reverse = Some($crate::tui_style_attrib::Reverse);
+        $style.attribs.reverse = Some($crate::tui_style_attrib::Reverse);
         $crate::apply_style!($style, $($rem)*);
     }};
     ($style:ident, hidden $($rem:tt)*) => {{
-        $style.hidden = Some($crate::tui_style_attrib::Hidden);
+        $style.attribs.hidden = Some($crate::tui_style_attrib::Hidden);
         $crate::apply_style!($style, $($rem)*);
     }};
     ($style:ident, strikethrough $($rem:tt)*) => {{
-        $style.strikethrough = Some($crate::tui_style_attrib::Strikethrough);
+        $style.attribs.strikethrough = Some($crate::tui_style_attrib::Strikethrough);
+        $crate::apply_style!($style, $($rem)*);
+    }};
+    ($style:ident, blink $($rem:tt)*) => {{
+        $style.attribs.blink = Some($crate::tui_style_attrib::Blink);
         $crate::apply_style!($style, $($rem)*);
     }};
     ($style:ident, lolcat $($rem:tt)*) => {{
@@ -87,7 +91,7 @@ macro_rules! apply_style {
     }};
     // Id.
     ($style:ident, id: $id:block $($rem:tt)*) => {{
-        $style.id = $crate::tui_style_attrib::id($id);
+        $style.id = $crate::tui_style_id($id);
         $crate::apply_style!($style, $($rem)*);
     }};
     // Base case: do nothing if no tokens are left.
@@ -96,22 +100,22 @@ macro_rules! apply_style {
 
 #[cfg(test)]
 mod tests {
-    use crate::{TuiStyle, ch, tui_color};
+    use crate::{TuiStyle, TuiStyleId, ch, tui_color};
     const BLACK: crate::TuiColor = tui_color!(black);
 
     #[test]
     fn test_syntax_bold_italic() {
         let s = new_style!(bold italic);
-        assert!(s.bold.is_some());
-        assert!(s.italic.is_some());
+        assert!(s.attribs.bold.is_some());
+        assert!(s.attribs.italic.is_some());
     }
 
     #[test]
     fn test_apply_style_multiple_attributes() {
         let mut s = TuiStyle::default();
         apply_style!(s, bold italic lolcat);
-        assert!(s.bold.is_some());
-        assert!(s.italic.is_some());
+        assert!(s.attribs.bold.is_some());
+        assert!(s.attribs.italic.is_some());
         assert!(s.lolcat.is_some());
     }
 
@@ -133,8 +137,8 @@ mod tests {
     fn test_apply_style_bold_italic_color_fg_color_bg() {
         let mut s = TuiStyle::default();
         apply_style!(s, bold italic color_fg: {BLACK} color_bg: {BLACK});
-        assert!(s.bold.is_some());
-        assert!(s.italic.is_some());
+        assert!(s.attribs.bold.is_some());
+        assert!(s.attribs.italic.is_some());
         assert_eq!(s.color_fg, Some(BLACK));
         assert_eq!(s.color_bg, Some(BLACK));
     }
@@ -143,8 +147,8 @@ mod tests {
     fn test_apply_style_bold_italic_color_fg_padding() {
         let mut s = TuiStyle::default();
         apply_style!(s, bold italic color_fg: {BLACK} padding: {2});
-        assert!(s.bold.is_some());
-        assert!(s.italic.is_some());
+        assert!(s.attribs.bold.is_some());
+        assert!(s.attribs.italic.is_some());
         assert_eq!(s.color_fg, Some(BLACK));
         assert_eq!(s.padding, Some(ch(2)));
     }
@@ -153,9 +157,9 @@ mod tests {
     fn test_apply_style_bold_italic_id_color_fg_color_bg() {
         let mut s = TuiStyle::default();
         apply_style!(s, bold italic id: {100} color_fg: {BLACK} color_bg: {BLACK});
-        assert_eq!(s.id, Some(crate::tui_style_attrib::Id(100)));
-        assert!(s.bold.is_some());
-        assert!(s.italic.is_some());
+        assert_eq!(s.id, Some(TuiStyleId(100)));
+        assert!(s.attribs.bold.is_some());
+        assert!(s.attribs.italic.is_some());
         assert_eq!(s.color_fg, Some(BLACK));
         assert_eq!(s.padding, None);
         assert_eq!(s.color_bg, Some(BLACK));

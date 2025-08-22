@@ -96,13 +96,13 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ///   - Make sure to flush at the:
     ///     - End of line.
     ///     - When style changes.
-    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOps {
+    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOps {
         use render_helper::Context;
 
         let mut context = Context::new();
 
         // For each line in the offscreen buffer.
-        for (row_index, line) in offscreen_buffer.buffer.iter().enumerate() {
+        for (row_index, line) in ofs_buf.buffer.iter().enumerate() {
             context.clear_for_new_line(row(row_index));
 
             // For each pixel char in the line.
@@ -253,12 +253,12 @@ mod render_helper {
             (Some(this), Some(other)) => {
                 this.color_fg == other.color_fg
                     && this.color_bg == other.color_bg
-                    && this.bold == other.bold
-                    && this.dim == other.dim
-                    && this.underline == other.underline
-                    && this.reverse == other.reverse
-                    && this.hidden == other.hidden
-                    && this.strikethrough == other.strikethrough
+                    && this.attribs.bold == other.attribs.bold
+                    && this.attribs.dim == other.attribs.dim
+                    && this.attribs.underline == other.attribs.underline
+                    && this.attribs.reverse == other.attribs.reverse
+                    && this.attribs.hidden == other.attribs.hidden
+                    && this.attribs.strikethrough == other.attribs.strikethrough
             }
             (None, None) => true,
             _ => false,
@@ -308,7 +308,7 @@ mod tests {
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
         let window_size = width(10) + height(2);
-        let mut my_offscreen_buffer =
+        let mut ofs_buf =
             OffscreenBuffer::new_with_capacity_initialized(window_size);
 
         // Input:  R0 "hello1234😃"
@@ -320,18 +320,18 @@ mod tests {
         let maybe_style = Some(
             new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
         );
-        my_offscreen_buffer.my_pos = col(0) + row(0);
-        my_offscreen_buffer.my_fg_color = Some(tui_color!(green));
-        my_offscreen_buffer.my_bg_color = Some(tui_color!(blue));
+        ofs_buf.my_pos = col(0) + row(0);
+        ofs_buf.my_fg_color = Some(tui_color!(green));
+        ofs_buf.my_bg_color = Some(tui_color!(blue));
         let maybe_max_display_col_count: Option<ColWidth> = Some(width(10));
         print_text_with_attributes(
             text,
             maybe_style.as_ref(),
-            &mut my_offscreen_buffer,
+            &mut ofs_buf,
             maybe_max_display_col_count,
         )
         .ok();
-        my_offscreen_buffer
+        ofs_buf
 
         // Output:
         // my_offscreen_buffer:

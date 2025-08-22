@@ -11,6 +11,20 @@ use crate::{CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutpu
             TuiStyle, col, dim_underline, fg_green, fg_magenta, get_mem_size,
             inline_string, ok, row, tiny_inline_string};
 
+/// Character set modes for terminal emulation.
+///
+/// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to handle
+/// ESC ( sequences that switch between ASCII and DEC line-drawing graphics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CharacterSet {
+    /// Normal ASCII character set (ESC ( B)
+    #[default]
+    Ascii,
+    /// DEC Special Graphics character set for line drawing (ESC ( 0)
+    /// Maps ASCII characters to box-drawing Unicode characters
+    Graphics,
+}
+
 /// Represents a grid of cells where the row/column index maps to the terminal screen.
 ///
 /// This works regardless of the size of each cell. Cells can contain emoji who's display
@@ -24,6 +38,13 @@ use crate::{CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutpu
 /// indices of the terminal screen. By inserting a [`PixelChar::Void`] pixel char in the
 /// next cell, we signal the rendering logic to skip it since it has already been painted.
 /// And this is different than a [`PixelChar::Spacer`] which has to be painted!
+///
+/// This is a very flexible representation of a terminal screen buffer, which can work
+/// with both:
+/// 1. [`crate::RenderPipeline::paint()`]
+/// 2. ANSI escape sequences; for more details see
+///    [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] and the
+///    [`OffscreenBuffer::apply_ansi_bytes()`].
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
@@ -36,6 +57,59 @@ pub struct OffscreenBuffer {
     /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`]
     /// which is called in a hot loop on every render.
     memory_size_calc_cache: MemoizedMemorySize,
+
+    /// Saved cursor position for ANSI escape sequence support.
+    ///
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// the DECSC (ESC 7) and DECRC (ESC 8) escape sequences for saving and restoring
+    /// cursor position.
+    ///
+    /// ## Data Flow:
+    /// ```text
+    /// 1. Child process (e.g., vim) sends ESC 7 to save cursor
+    ///    ↓
+    /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
+    ///    ↓
+    /// 3. Saves current cursor_pos to buffer.saved_cursor_pos
+    ///    ↓
+    /// 4. Later, child sends ESC 8 to restore cursor
+    ///    ↓
+    /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
+    ///    ↓
+    /// 6. Restores cursor_pos from buffer.saved_cursor_pos
+    /// ```
+    pub saved_cursor_pos: Option<Pos>,
+
+    /// Active character set for ANSI escape sequence support.
+    ///
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// character set switching via ESC ( B (ASCII) and ESC ( 0 (DEC graphics).
+    /// When in Graphics mode, characters like 'q' are translated to box-drawing
+    /// characters like '─' during the `print()` operation.
+    ///
+    /// ## Character Set Usage:
+    /// ```text
+    /// ASCII Mode (ESC ( B):   'q' → 'q' (literal)
+    /// Graphics Mode (ESC ( 0): 'q' → '─' (horizontal line)
+    /// ```
+    pub character_set: CharacterSet,
+
+    /// Auto-wrap mode (DECAWM) for ANSI escape sequence support.
+    ///
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to control
+    /// line wrapping behavior when printing characters. This implements the VT100
+    /// DECAWM (Auto Wrap Mode) specification.
+    ///
+    /// ## DECAWM Control:
+    /// ```text
+    /// ESC[?7h: Enable auto-wrap (default)  - Characters wrap to next line
+    /// ESC[?7l: Disable auto-wrap          - Characters overwrite at right margin
+    /// ```
+    ///
+    /// When enabled (default), characters that would exceed the right margin
+    /// automatically wrap to the beginning of the next line. When disabled,
+    /// the cursor stays at the right margin and subsequent characters overwrite.
+    pub auto_wrap_mode: bool,
 }
 
 impl GetMemSize for OffscreenBuffer {
@@ -195,6 +269,9 @@ mod offscreen_buffer_impl {
                 my_fg_color: None,
                 my_bg_color: None,
                 memory_size_calc_cache: MemoizedMemorySize::default(),
+                saved_cursor_pos: None,
+                character_set: CharacterSet::default(),
+                auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
             };
             // Explicitly calculate and cache the initial memory size.
             // We know the cache is empty (invariant), so directly populate it.
@@ -544,78 +621,971 @@ pub trait OffscreenBufferPaint {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{assert_eq2, height, new_style, tui_color, width};
+    use super::{test_fixtures_offscreen_buffer::*, *};
+    use crate::{ANSIBasicColor, assert_eq2, height, new_style, tui_color,
+                tui_style_attrib, width};
 
     #[test]
     fn test_offscreen_buffer_construction() {
         let window_size = width(10) + height(2);
-        let my_offscreen_buffer =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
-        assert_eq2!(my_offscreen_buffer.buffer.len(), 2);
-        assert_eq2!(my_offscreen_buffer.buffer[0].len(), 10);
-        assert_eq2!(my_offscreen_buffer.buffer[1].len(), 10);
-        for line in my_offscreen_buffer.buffer.iter() {
-            for pixel_char in line.iter() {
-                assert_eq2!(pixel_char, &PixelChar::Spacer);
+        let ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        assert_eq2!(ofs_buf.buffer.len(), 2);
+        assert_eq2!(ofs_buf.buffer[0].len(), 10);
+        assert_eq2!(ofs_buf.buffer[1].len(), 10);
+
+        // Check all cells are empty using assert_empty_at
+        for row in 0..2 {
+            for col in 0..10 {
+                assert_empty_at(&ofs_buf, row, col);
             }
         }
-        // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+        // println!("my_offscreen_buffer: {:#?}", my_offscreen_buffer);
     }
 
     #[test]
     fn test_offscreen_buffer_re_init() {
         let window_size = width(10) + height(2);
-        let mut my_offscreen_buffer =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
 
-        my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
+        ofs_buf.buffer[0][0] = PixelChar::PlainText {
             display_char: 'a',
             maybe_style: Some(new_style!(color_bg: {tui_color!(green)})),
         };
 
-        my_offscreen_buffer.buffer[1][9] = PixelChar::PlainText {
+        ofs_buf.buffer[1][9] = PixelChar::PlainText {
             display_char: 'z',
             maybe_style: Some(new_style!(color_bg: {tui_color!(red)})),
         };
 
-        // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
-        my_offscreen_buffer.clear();
-        for line in my_offscreen_buffer.buffer.iter() {
-            for pixel_char in line.iter() {
-                assert_eq2!(pixel_char, &PixelChar::Spacer);
+        // Verify the characters were set correctly
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'a',
+            |style_from_buffer| {
+                matches!(
+                    style_from_buffer.color_bg,
+                    Some(TuiColor::Basic(ANSIBasicColor::Green))
+                )
+            },
+            "green background",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf,
+            1,
+            9,
+            'z',
+            |style_from_buffer| {
+                matches!(
+                    style_from_buffer.color_bg,
+                    Some(TuiColor::Basic(ANSIBasicColor::Red))
+                )
+            },
+            "red background",
+        );
+
+        // println!("my_offscreen_buffer: {:#?}", my_offscreen_buffer);
+        ofs_buf.clear();
+
+        // Check all cells are empty using assert_empty_at
+        for row in 0..2 {
+            for col in 0..10 {
+                assert_empty_at(&ofs_buf, row, col);
             }
         }
-        // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
+        // println!("my_offscreen_buffer: {:#?}", my_offscreen_buffer);
     }
 
     #[test]
     fn test_memory_size_caching() {
         let window_size = width(10) + height(2);
-        let mut my_offscreen_buffer =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
 
         // First call should calculate and cache
-        let size1 = my_offscreen_buffer.get_mem_size_cached();
+        let size1 = ofs_buf.get_mem_size_cached();
         assert_ne!(format!("{size1}"), "?");
 
         // Second call should use cached value (no recalculation)
-        let size2 = my_offscreen_buffer.get_mem_size_cached();
+        let size2 = ofs_buf.get_mem_size_cached();
         assert_eq!(format!("{size1}"), format!("{}", size2));
 
         // Modify buffer through DerefMut (invalidates cache)
-        my_offscreen_buffer.buffer[0][0] = PixelChar::PlainText {
+        ofs_buf.buffer[0][0] = PixelChar::PlainText {
             display_char: 'x',
             maybe_style: None,
         };
 
+        // Verify the character was set
+        assert_plain_char_at(&ofs_buf, 0, 0, 'x');
+
         // Next call should recalculate
-        let size3 = my_offscreen_buffer.get_mem_size_cached();
+        let size3 = ofs_buf.get_mem_size_cached();
         assert_ne!(format!("{size3}"), "?");
 
         // Clear should also invalidate cache
-        my_offscreen_buffer.clear();
-        let size4 = my_offscreen_buffer.get_mem_size_cached();
+        ofs_buf.clear();
+        let size4 = ofs_buf.get_mem_size_cached();
         assert_ne!(format!("{size4}"), "?");
+    }
+
+    #[test]
+    fn test_buffer_text_operations() {
+        let window_size = width(10) + height(3);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Write "Hello" at row 0
+        for (i, ch) in "Hello".chars().enumerate() {
+            ofs_buf.buffer[0][i] = PixelChar::PlainText {
+                display_char: ch,
+                maybe_style: None,
+            };
+        }
+
+        // Verify using assert_plain_text_at
+        assert_plain_text_at(&ofs_buf, 0, 0, "Hello");
+
+        // Verify remaining cells in row 0 are empty
+        for col in 5..10 {
+            assert_empty_at(&ofs_buf, 0, col);
+        }
+
+        // Verify other rows are completely empty
+        for row in 1..3 {
+            for col in 0..10 {
+                assert_empty_at(&ofs_buf, row, col);
+            }
+        }
+    }
+
+    #[test]
+    fn test_buffer_styled_content() {
+        let window_size = width(10) + height(2);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Add bold red text
+        ofs_buf.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'R',
+            maybe_style: Some(new_style!(
+                bold color_fg: {tui_color!(red)}
+            )),
+        };
+
+        // Add italic blue text
+        ofs_buf.buffer[0][1] = PixelChar::PlainText {
+            display_char: 'B',
+            maybe_style: Some(new_style!(
+                italic color_fg: {tui_color!(blue)}
+            )),
+        };
+
+        // Verify with comprehensive style checks
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'R',
+            |style_from_buffer| {
+                matches!(
+                    (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
+                    (
+                        Some(tui_style_attrib::Bold),
+                        Some(TuiColor::Basic(ANSIBasicColor::Red))
+                    )
+                )
+            },
+            "bold red text",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'B',
+            |style_from_buffer| {
+                matches!(
+                    (style_from_buffer.attribs.italic, style_from_buffer.color_fg),
+                    (
+                        Some(tui_style_attrib::Italic),
+                        Some(TuiColor::Basic(ANSIBasicColor::Blue))
+                    )
+                )
+            },
+            "italic blue text",
+        );
+    }
+
+    #[test]
+    fn test_buffer_mixed_content() {
+        let window_size = width(8) + height(2);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Row 0: "Hi " followed by styled "World"
+        ofs_buf.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'H',
+            maybe_style: None,
+        };
+        ofs_buf.buffer[0][1] = PixelChar::PlainText {
+            display_char: 'i',
+            maybe_style: None,
+        };
+        ofs_buf.buffer[0][2] = PixelChar::PlainText {
+            display_char: ' ',
+            maybe_style: None,
+        };
+
+        // Add styled "World"
+        for (i, ch) in "World".chars().enumerate() {
+            ofs_buf.buffer[0][3 + i] = PixelChar::PlainText {
+                display_char: ch,
+                maybe_style: Some(new_style!(
+                    underline color_fg: {tui_color!(green)}
+                )),
+            };
+        }
+
+        // Verify plain text
+        assert_plain_text_at(&ofs_buf, 0, 0, "Hi ");
+
+        // Verify each styled character
+        for (i, ch) in "World".chars().enumerate() {
+            assert_styled_char_at(
+                &ofs_buf,
+                0,
+                3 + i,
+                ch,
+                |style_from_buffer| {
+                    matches!(
+                        (
+                            style_from_buffer.attribs.underline,
+                            style_from_buffer.color_fg
+                        ),
+                        (
+                            Some(tui_style_attrib::Underline),
+                            Some(TuiColor::Basic(ANSIBasicColor::Green))
+                        )
+                    )
+                },
+                "underlined green text",
+            );
+        }
+
+        // Verify row 1 is empty
+        for col in 0..8 {
+            assert_empty_at(&ofs_buf, 1, col);
+        }
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn test_comprehensive_buffer_validation() {
+        // This test demonstrates comprehensive use of all test utilities
+        let window_size = width(15) + height(4);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Initially, verify entire buffer is empty
+        for row in 0..4 {
+            for col in 0..15 {
+                assert_empty_at(&ofs_buf, row, col);
+            }
+        }
+
+        // Add plain text "Hello" at row 0
+        for (i, ch) in "Hello".chars().enumerate() {
+            ofs_buf.buffer[0][i] = PixelChar::PlainText {
+                display_char: ch,
+                maybe_style: None,
+            };
+        }
+
+        // Verify plain text was added correctly
+        assert_plain_text_at(&ofs_buf, 0, 0, "Hello");
+
+        // Verify individual plain characters
+        assert_plain_char_at(&ofs_buf, 0, 0, 'H');
+        assert_plain_char_at(&ofs_buf, 0, 1, 'e');
+        assert_plain_char_at(&ofs_buf, 0, 4, 'o');
+
+        // Add styled "World!" at row 1 with different styles
+        ofs_buf.buffer[1][0] = PixelChar::PlainText {
+            display_char: 'W',
+            maybe_style: Some(new_style!(bold color_fg: {tui_color!(red)})),
+        };
+
+        ofs_buf.buffer[1][1] = PixelChar::PlainText {
+            display_char: 'o',
+            maybe_style: Some(new_style!(italic color_fg: {tui_color!(blue)})),
+        };
+
+        ofs_buf.buffer[1][2] = PixelChar::PlainText {
+            display_char: 'r',
+            maybe_style: Some(new_style!(underline color_fg: {tui_color!(green)})),
+        };
+
+        ofs_buf.buffer[1][3] = PixelChar::PlainText {
+            display_char: 'l',
+            maybe_style: Some(new_style!(dim color_bg: {tui_color!(yellow)})),
+        };
+
+        ofs_buf.buffer[1][4] = PixelChar::PlainText {
+            display_char: 'd',
+            maybe_style: Some(new_style!(reverse)),
+        };
+
+        ofs_buf.buffer[1][5] = PixelChar::PlainText {
+            display_char: '!',
+            maybe_style: Some(new_style!(
+                bold italic underline
+                color_fg: {tui_color!(magenta)}
+            )),
+        };
+
+        // Verify each styled character with specific style checks
+        assert_styled_char_at(
+            &ofs_buf,
+            1,
+            0,
+            'W',
+            |style_from_buffer| {
+                matches!(
+                    (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
+                    (
+                        Some(tui_style_attrib::Bold),
+                        Some(TuiColor::Basic(ANSIBasicColor::Red))
+                    )
+                )
+            },
+            "bold red W",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf,
+            1,
+            1,
+            'o',
+            |style_from_buffer| {
+                matches!(
+                    (style_from_buffer.attribs.italic, style_from_buffer.color_fg),
+                    (
+                        Some(tui_style_attrib::Italic),
+                        Some(TuiColor::Basic(ANSIBasicColor::Blue))
+                    )
+                )
+            },
+            "italic blue o",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf,
+            1,
+            2,
+            'r',
+            |style_from_buffer| {
+                matches!(
+                    (
+                        style_from_buffer.attribs.underline,
+                        style_from_buffer.color_fg
+                    ),
+                    (
+                        Some(tui_style_attrib::Underline),
+                        Some(TuiColor::Basic(ANSIBasicColor::Green))
+                    )
+                )
+            },
+            "underlined green r",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf,
+            1,
+            3,
+            'l',
+            |style_from_buffer| {
+                matches!(
+                    (style_from_buffer.attribs.dim, style_from_buffer.color_bg),
+                    (
+                        Some(tui_style_attrib::Dim),
+                        Some(TuiColor::Basic(ANSIBasicColor::Yellow))
+                    )
+                )
+            },
+            "dim with yellow background l",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf,
+            1,
+            4,
+            'd',
+            |style_from_buffer| {
+                matches!(
+                    style_from_buffer.attribs.reverse,
+                    Some(tui_style_attrib::Reverse)
+                )
+            },
+            "reversed d",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf,
+            1,
+            5,
+            '!',
+            |style_from_buffer| {
+                matches!(style_from_buffer.attribs.bold, Some(tui_style_attrib::Bold))
+                    && matches!(
+                        style_from_buffer.attribs.italic,
+                        Some(tui_style_attrib::Italic)
+                    )
+                    && matches!(
+                        style_from_buffer.attribs.underline,
+                        Some(tui_style_attrib::Underline)
+                    )
+                    && matches!(
+                        style_from_buffer.color_fg,
+                        Some(TuiColor::Basic(ANSIBasicColor::Magenta))
+                    )
+            },
+            "multi-styled exclamation",
+        );
+
+        // Add mixed content on row 2: plain and styled alternating
+        for i in 0..6 {
+            if i % 2 == 0 {
+                // Even positions: plain text
+                ofs_buf.buffer[2][i] = PixelChar::PlainText {
+                    #[allow(clippy::cast_possible_truncation)]
+                    display_char: char::from_digit(i as u32, 10).unwrap(),
+                    maybe_style: None,
+                };
+            } else {
+                // Odd positions: styled text
+                ofs_buf.buffer[2][i] = PixelChar::PlainText {
+                    #[allow(clippy::cast_possible_truncation)]
+                    display_char: char::from_digit(i as u32, 10).unwrap(),
+                    maybe_style: Some(new_style!(bold color_fg: {tui_color!(cyan)})),
+                };
+            }
+        }
+
+        // Verify alternating plain and styled characters
+        for i in 0..6 {
+            #[allow(clippy::cast_possible_truncation)]
+            let expected_char = char::from_digit(i as u32, 10).unwrap();
+            if i % 2 == 0 {
+                assert_plain_char_at(&ofs_buf, 2, i, expected_char);
+            } else {
+                assert_styled_char_at(
+                    &ofs_buf,
+                    2,
+                    i,
+                    expected_char,
+                    |style_from_buffer| {
+                        matches!(
+                            (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
+                            (
+                                Some(tui_style_attrib::Bold),
+                                Some(TuiColor::Basic(ANSIBasicColor::Cyan))
+                            )
+                        )
+                    },
+                    "bold cyan digit",
+                );
+            }
+        }
+
+        // Verify remaining cells in each row are empty
+        for col in 5..15 {
+            assert_empty_at(&ofs_buf, 0, col); // After "Hello"
+        }
+        for col in 6..15 {
+            assert_empty_at(&ofs_buf, 1, col); // After "World!"
+            assert_empty_at(&ofs_buf, 2, col); // After "012345"
+        }
+
+        // Verify row 3 is completely empty
+        for col in 0..15 {
+            assert_empty_at(&ofs_buf, 3, col);
+        }
+
+        // Test partial clear: clear row 1
+        for col in 0..15 {
+            ofs_buf.buffer[1][col] = PixelChar::Spacer;
+        }
+
+        // Verify row 1 is now empty
+        for col in 0..15 {
+            assert_empty_at(&ofs_buf, 1, col);
+        }
+
+        // Verify other content is still intact
+        assert_plain_text_at(&ofs_buf, 0, 0, "Hello");
+        assert_plain_char_at(&ofs_buf, 2, 0, '0');
+        assert_styled_char_at(
+            &ofs_buf,
+            2,
+            1,
+            '1',
+            |style_from_buffer| {
+                matches!(style_from_buffer.attribs.bold, Some(tui_style_attrib::Bold))
+            },
+            "bold cyan 1",
+        );
+    }
+
+    #[test]
+    fn test_diff_method() {
+        // Test the diff method that compares two buffers
+        let window_size = width(5) + height(3);
+        let mut ofs_buf_1 = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf_2 = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Initially both buffers are empty, diff should be None or empty
+        let diff = ofs_buf_1.diff(&ofs_buf_2);
+        assert!(
+            diff.is_none() || diff.unwrap().is_empty(),
+            "Diff of two empty buffers should be None or empty"
+        );
+
+        // Add content to buffer1
+        ofs_buf_1.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'A',
+            maybe_style: None,
+        };
+        ofs_buf_1.buffer[1][2] = PixelChar::PlainText {
+            display_char: 'B',
+            maybe_style: Some(new_style!(bold)),
+        };
+
+        // Diff should now show differences
+        let diff = ofs_buf_1.diff(&ofs_buf_2);
+        assert!(
+            diff.is_some(),
+            "Diff should return Some when there are differences"
+        );
+        let diff_chunks = diff.unwrap();
+        assert!(!diff_chunks.is_empty(), "Diff should detect differences");
+
+        // Verify the diff chunks contain the expected positions
+        let has_00_diff = diff_chunks.iter().any(|(pos, _)| *pos == row(0) + col(0));
+        let has_12_diff = diff_chunks.iter().any(|(pos, _)| *pos == row(1) + col(2));
+        assert!(has_00_diff, "Diff should detect change at [0][0]");
+        assert!(has_12_diff, "Diff should detect change at [1][2]");
+
+        // Make buffer2 match buffer1
+        ofs_buf_2.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'A',
+            maybe_style: None,
+        };
+        ofs_buf_2.buffer[1][2] = PixelChar::PlainText {
+            display_char: 'B',
+            maybe_style: Some(new_style!(bold)),
+        };
+
+        // Now diff should be None or empty again
+        let diff = ofs_buf_1.diff(&ofs_buf_2);
+        assert!(
+            diff.is_none() || diff.unwrap().is_empty(),
+            "Diff of identical buffers should be None or empty"
+        );
+
+        // Test style-only changes
+        ofs_buf_1.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'A',
+            maybe_style: Some(new_style!(italic)),
+        };
+
+        let diff = ofs_buf_1.diff(&ofs_buf_2);
+        assert!(
+            diff.is_some() && !diff.unwrap().is_empty(),
+            "Diff should detect style-only changes"
+        );
+    }
+
+    #[test]
+    fn test_deref_and_deref_mut() {
+        // Test Deref and DerefMut implementations
+        let window_size = width(3) + height(2);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Test Deref (read-only access)
+        let rows: &PixelCharLines = &ofs_buf;
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].len(), 3);
+
+        // Verify all cells are initially Spacer
+        for row in 0..2 {
+            for col in 0..3 {
+                assert_empty_at(&ofs_buf, row, col);
+            }
+        }
+
+        // Test DerefMut (mutable access)
+        let rows_mut: &mut PixelCharLines = &mut ofs_buf;
+        rows_mut[0][1] = PixelChar::PlainText {
+            display_char: 'X',
+            maybe_style: None,
+        };
+
+        // Verify the change
+        assert_plain_char_at(&ofs_buf, 0, 1, 'X');
+
+        // Verify cache invalidation happens with DerefMut
+        let _size1 = ofs_buf.get_mem_size_cached();
+        // Mutate through DerefMut
+        ofs_buf.buffer[1][1] = PixelChar::PlainText {
+            display_char: 'Y',
+            maybe_style: None,
+        };
+        // Cache should be invalidated (tested indirectly through memory_size_caching
+        // test)
+        assert_plain_char_at(&ofs_buf, 1, 1, 'Y');
+    }
+
+    #[test]
+    fn test_pixel_char_variants() {
+        // Test different PixelChar variants and their behavior
+        let window_size = width(4) + height(2);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Test Spacer variant (default)
+        assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
+        assert_empty_at(&ofs_buf, 0, 0);
+
+        // Test PlainText with no style
+        ofs_buf.buffer[0][1] = PixelChar::PlainText {
+            display_char: 'a',
+            maybe_style: None,
+        };
+        assert_plain_char_at(&ofs_buf, 0, 1, 'a');
+
+        // Test PlainText with style
+        ofs_buf.buffer[0][2] = PixelChar::PlainText {
+            display_char: 'b',
+            maybe_style: Some(new_style!(underline color_fg: {tui_color!(red)})),
+        };
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            2,
+            'b',
+            |style_from_buffer| {
+                matches!(
+                    style_from_buffer.attribs.underline,
+                    Some(tui_style_attrib::Underline)
+                ) && matches!(
+                    style_from_buffer.color_fg,
+                    Some(TuiColor::Basic(ANSIBasicColor::Red))
+                )
+            },
+            "underlined red 'b'",
+        );
+
+        // Test space character with no style (should be considered empty)
+        ofs_buf.buffer[1][0] = PixelChar::PlainText {
+            display_char: ' ',
+            maybe_style: None,
+        };
+        assert_empty_at(&ofs_buf, 1, 0);
+
+        // Test space character with style (should NOT be considered empty)
+        ofs_buf.buffer[1][1] = PixelChar::PlainText {
+            display_char: ' ',
+            maybe_style: Some(new_style!(color_bg: {tui_color!(blue)})),
+        };
+        // This should NOT be empty because it has a style
+        match &ofs_buf.buffer[1][1] {
+            PixelChar::PlainText {
+                display_char,
+                maybe_style,
+            } => {
+                assert_eq!(*display_char, ' ');
+                assert!(maybe_style.is_some());
+            }
+            _ => panic!("Expected styled space"),
+        }
+    }
+
+    #[test]
+    fn test_invalidate_memory_size_calc_cache() {
+        // Test cache invalidation through mutations
+        let window_size = width(3) + height(2);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Get initial size (calculates and caches)
+        let size1 = ofs_buf.get_mem_size_cached();
+        assert_ne!(format!("{size1}"), "?");
+
+        // Modify buffer content (this should invalidate cache via DerefMut)
+        ofs_buf.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'X',
+            maybe_style: None,
+        };
+
+        // Get size again - should be recalculated
+        let size2 = ofs_buf.get_mem_size_cached();
+        assert_ne!(format!("{size2}"), "?");
+
+        // The test_memory_size_caching test already covers this more thoroughly
+        // This test just verifies the cache invalidation mechanism works
+    }
+
+    #[test]
+    fn test_buffer_boundaries() {
+        // Test edge cases and boundary conditions
+        let window_size = width(2) + height(2);
+        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Test all corners
+        ofs_buf.buffer[0][0] = PixelChar::PlainText {
+            display_char: '1',
+            maybe_style: None,
+        };
+        ofs_buf.buffer[0][1] = PixelChar::PlainText {
+            display_char: '2',
+            maybe_style: None,
+        };
+        ofs_buf.buffer[1][0] = PixelChar::PlainText {
+            display_char: '3',
+            maybe_style: None,
+        };
+        ofs_buf.buffer[1][1] = PixelChar::PlainText {
+            display_char: '4',
+            maybe_style: None,
+        };
+
+        assert_plain_char_at(&ofs_buf, 0, 0, '1');
+        assert_plain_char_at(&ofs_buf, 0, 1, '2');
+        assert_plain_char_at(&ofs_buf, 1, 0, '3');
+        assert_plain_char_at(&ofs_buf, 1, 1, '4');
+
+        // Test clearing and reinitializing
+        ofs_buf.clear();
+        for row in 0..2 {
+            for col in 0..2 {
+                assert_empty_at(&ofs_buf, row, col);
+            }
+        }
+    }
+
+    #[test]
+    fn test_diff_with_styles() {
+        // Test diff method with complex style changes
+        let window_size = width(3) + height(2);
+        let mut ofs_buf_1 = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf_2 = OffscreenBuffer::new_with_capacity_initialized(window_size);
+
+        // Set up buffer1 with styled content
+        ofs_buf_1.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'A',
+            maybe_style: Some(new_style!(bold color_fg: {tui_color!(red)})),
+        };
+
+        // Set up buffer2 with same char but different style
+        ofs_buf_2.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'A',
+            maybe_style: Some(new_style!(italic color_fg: {tui_color!(blue)})),
+        };
+
+        // Diff should detect the style difference
+        let diff = ofs_buf_1.diff(&ofs_buf_2);
+        assert!(
+            diff.is_some() && !diff.unwrap().is_empty(),
+            "Diff should detect style differences"
+        );
+
+        // Change buffer2 to match buffer1 exactly
+        ofs_buf_2.buffer[0][0] = PixelChar::PlainText {
+            display_char: 'A',
+            maybe_style: Some(new_style!(bold color_fg: {tui_color!(red)})),
+        };
+
+        let diff = ofs_buf_1.diff(&ofs_buf_2);
+        assert!(
+            diff.is_none() || diff.unwrap().is_empty(),
+            "Diff should be None or empty when styles match"
+        );
+    }
+
+    #[test]
+    fn test_default_pixel_char() {
+        // Test PixelChar::default()
+        let default_char = PixelChar::default();
+        assert!(matches!(default_char, PixelChar::Spacer));
+
+        // Test that new buffer uses default
+        let window_size = width(1) + height(1);
+        let ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
+    }
+}
+
+#[cfg(test)]
+pub mod test_fixtures_offscreen_buffer {
+    use super::*;
+
+    /// Assert a plain character at a specific position
+    ///
+    /// # Panics
+    ///
+    /// Panics if the row or column is out of bounds, or if the character at the position
+    /// doesn't match the expected character.
+    pub fn assert_plain_char_at(
+        ofs_buf: &OffscreenBuffer,
+        row: usize,
+        col: usize,
+        expected_char: char,
+    ) {
+        // Add bounds checking with custom error messages
+        assert!(
+            row < ofs_buf.buffer.len(),
+            "Row {} is out of bounds (buffer has {} rows)",
+            row,
+            ofs_buf.buffer.len()
+        );
+        assert!(
+            col < ofs_buf.buffer[row].len(),
+            "Column {} is out of bounds at row {} (row has {} columns)",
+            col,
+            row,
+            ofs_buf.buffer[row].len()
+        );
+
+        match &ofs_buf.buffer[row][col] {
+            PixelChar::PlainText { display_char, .. } => {
+                assert_eq!(
+                    *display_char, expected_char,
+                    "Expected {expected_char} at [{row}][{col}], but found {display_char}"
+                );
+            }
+            other => panic!(
+                "Expected PlainText with '{expected_char}' at [{row}][{col}], but found {other:?}"
+            ),
+        }
+    }
+
+    /// Assert a styled character with style validation
+    ///
+    /// # Panics
+    ///
+    /// Panics if the row or column is out of bounds, if the character doesn't match,
+    /// or if the style validation fails.
+    pub fn assert_styled_char_at(
+        ofs_buf: &OffscreenBuffer,
+        row: usize,
+        col: usize,
+        expected_char: char,
+        check_style: impl Fn(&TuiStyle) -> bool,
+        style_desc: &str,
+    ) {
+        // Add bounds checking with custom error messages
+        assert!(
+            row < ofs_buf.buffer.len(),
+            "Row {} is out of bounds (buffer has {} rows)",
+            row,
+            ofs_buf.buffer.len()
+        );
+        assert!(
+            col < ofs_buf.buffer[row].len(),
+            "Column {} is out of bounds at row {} (row has {} columns)",
+            col,
+            row,
+            ofs_buf.buffer[row].len()
+        );
+
+        match &ofs_buf.buffer[row][col] {
+            PixelChar::PlainText {
+                display_char,
+                maybe_style,
+            } => {
+                assert_eq!(
+                    *display_char, expected_char,
+                    "Expected '{expected_char}' at [{row}][{col}], but found '{display_char}'"
+                );
+
+                if let Some(style_from_buffer) = maybe_style {
+                    assert!(
+                        check_style(style_from_buffer),
+                        "Style check failed at [{row}][{col}]: {style_desc}"
+                    );
+                } else {
+                    panic!(
+                        "Expected styled character '{expected_char}' at [{row}][{col}], but no style found"
+                    );
+                }
+            }
+            other => panic!(
+                "Expected styled PlainText with '{expected_char}' at [{row}][{col}], but found {other:?}"
+            ),
+        }
+    }
+
+    /// Assert a cell is empty (Spacer or unstyled space)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the row or column is out of bounds, or if the cell is not empty.
+    pub fn assert_empty_at(ofs_buf: &OffscreenBuffer, row: usize, col: usize) {
+        // Add bounds checking with custom error messages
+        assert!(
+            row < ofs_buf.buffer.len(),
+            "Row {} is out of bounds (buffer has {} rows)",
+            row,
+            ofs_buf.buffer.len()
+        );
+        assert!(
+            col < ofs_buf.buffer[row].len(),
+            "Column {} is out of bounds at row {} (row has {} columns)",
+            col,
+            row,
+            ofs_buf.buffer[row].len()
+        );
+
+        match &ofs_buf.buffer[row][col] {
+            PixelChar::Spacer
+            | PixelChar::PlainText {
+                display_char: ' ',
+                maybe_style: None,
+            } => {} // OK - empty or space
+
+            other => panic!("Expected empty cell at [{row}][{col}], but found {other:?}"),
+        }
+    }
+
+    /// Assert plain text string starting at position
+    ///
+    /// # Panics
+    ///
+    /// Panics if the row is out of bounds, or if the text at the position doesn't
+    /// match the expected string.
+    pub fn assert_plain_text_at(
+        ofs_buf: &OffscreenBuffer,
+        row: usize,
+        start_col: usize,
+        expected_text: &str,
+    ) {
+        // Add bounds checking for the entire text string
+        assert!(
+            row < ofs_buf.buffer.len(),
+            "Row {} is out of bounds (buffer has {} rows)",
+            row,
+            ofs_buf.buffer.len()
+        );
+
+        let end_col = start_col + expected_text.chars().count();
+        assert!(
+            end_col <= ofs_buf.buffer[row].len(),
+            "Text '{}' starting at column {} would extend to column {} which is beyond row {} width of {} columns",
+            expected_text,
+            start_col,
+            end_col,
+            row,
+            ofs_buf.buffer[row].len()
+        );
+
+        for (i, expected_char) in expected_text.chars().enumerate() {
+            assert_plain_char_at(ofs_buf, row, start_col + i, expected_char);
+        }
     }
 }

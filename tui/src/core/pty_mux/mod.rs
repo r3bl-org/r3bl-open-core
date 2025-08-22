@@ -3,48 +3,78 @@
 //! Terminal multiplexer module for `r3bl_tui`.
 //!
 //! This module provides tmux-like functionality for multiplexing terminal sessions,
-//! allowing users to run multiple TUI processes in a single terminal window and switch
-//! between them using keyboard shortcuts.
+//! with universal compatibility for ALL programs: TUI applications, interactive shells,
+//! and command-line tools.
 //!
 //! ## Key Features
 //!
-//! - **Multiple PTY session management**: Spawn and manage multiple TUI applications
-//! - **Dynamic keyboard-driven process switching**: Ctrl+1 through Ctrl+9 (based on
-//!   process count)
+//! - **Per-process virtual terminals**: Each process maintains its own
+//!   [`OffscreenBuffer`]
+//! - **Universal compatibility**: Works with bash, TUI apps, CLI tools, and more
+//! - **Instant switching**: No delays or hacks needed - just display different buffers
+//! - **Dynamic keyboard-driven process switching**: F1 through F9 (based on process
+//!   count)
 //! - **Status bar with process information**: Live status indicators for each process
 //! - **OSC sequence integration**: Dynamic terminal title updates
-//! - **Fake resize technique**: Ensures proper TUI app repainting when switching
 //! - **Resource management**: Clean cleanup of PTY sessions and raw mode
 //!
 //! ## Architecture
 //!
-//! The module is designed around several key components:
+//! The module is designed around a **per-process virtual terminal** architecture where
+//! each process maintains its own complete terminal state through an [`OffscreenBuffer`].
+//! This enables true terminal multiplexing similar to tmux, but with enhanced support for
+//! truecolor and TUI apps that frequently re-render their UI, with instant switching and
+//! universal compatibility.
+//!
+//! ### Key Components:
 //!
 //! - [`PTYMux`]: Main orchestrator that manages the event loop and coordinates components
-//! - [`ProcessManager`]: Handles PTY lifecycle management and process switching
+//! - [`ProcessManager`]: Handles PTY lifecycle management and maintains per-process
+//!   virtual terminals
 //! - [`InputRouter`]: Routes keyboard input and handles dynamic shortcuts
-//! - [`OutputRenderer`]: Manages display rendering and status bar
+//! - [`OutputRenderer`]: Renders the active process's buffer with status bar compositing
+//!
+//! ### Virtual Terminal Architecture:
+//!
+//! Each Process contains:
+//! - **[`OffscreenBuffer`]**: Acts as a virtual terminal maintaining complete screen
+//!   state
+//! - **[`ANSI Parser`]**: Processes PTY output and updates the virtual terminal
+//! - **[`PTY Session`]**: The actual process communication channel
+//!
+//! The multiplexer continuously polls ALL processes and updates their virtual terminals
+//! independently when they produce output, but only renders the active process's buffer
+//! to the actual terminal.
 //!
 //! ## Usage Example
 //!
 //! ```rust,no_run
-//! use r3bl_tui::core::pty_mux::{PTYMux, Process};
+//! use r3bl_tui::core::{pty_mux::{PTYMux, Process}, get_size};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
+//!     let terminal_size = get_size()?;
+//!
+//!     // Mix of different program types - all supported!
 //!     let processes = vec![
-//!         Process::new("editor", "nvim", vec![]),
-//!         Process::new("top", "btop", vec![]),
+//!         Process::new("bash", "bash", vec![], terminal_size),
+//!         Process::new("editor", "nvim", vec![], terminal_size),
+//!         Process::new("monitor", "htop", vec![], terminal_size),
 //!     ];
 //!
 //!     let multiplexer = PTYMux::builder()
 //!         .processes(processes)
 //!         .build()?;
 //!
+//!     // F1/F2/F3 to switch processes, Ctrl+Q to quit
 //!     multiplexer.run().await?;
 //!     Ok(())
 //! }
 //! ```
+//!
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`ANSI Parser`]: crate::ansi_parser::AnsiToBufferProcessor
+//! [`PTY Session`]: crate::PtyReadWriteSession
 
 pub mod ansi_parser;
 pub mod input_router;
@@ -55,4 +85,4 @@ pub mod process_manager;
 pub use input_router::InputRouter;
 pub use mux::{PTYMux, PTYMuxBuilder};
 pub use output_renderer::OutputRenderer;
-pub use process_manager::{Process, ProcessManager, ProcessOutput};
+pub use process_manager::{Process, ProcessManager};

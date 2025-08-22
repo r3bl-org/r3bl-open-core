@@ -265,7 +265,7 @@ where
             );
 
             if let Some(ref mut offscreen_buffer) =
-                self.global_data.maybe_saved_offscreen_buffer
+                self.global_data.maybe_saved_ofs_buf
             {
                 let mem_used = inline_string!(
                     "mem used: {size}",
@@ -597,7 +597,7 @@ pub fn handle_resize<S, AS>(
     AS: Debug + Default + Clone + Sync + Send,
 {
     global_data_mut_ref.set_size(new_size);
-    global_data_mut_ref.maybe_saved_offscreen_buffer = None;
+    global_data_mut_ref.maybe_saved_ofs_buf = None;
     global_data_mut_ref.offscreen_buffer_pool.resize(new_size);
 
     // We don't care about the result of this operation.
@@ -729,7 +729,7 @@ where
                 app.app_render(global_data_mut_ref, component_registry_map, has_focus)
             }
             SufficientSize::IsTooSmall => {
-                global_data_mut_ref.maybe_saved_offscreen_buffer = None;
+                global_data_mut_ref.maybe_saved_ofs_buf = None;
                 Ok(render_window_too_small_error(window_size))
             }
         };
@@ -831,7 +831,7 @@ mod tests {
                 InlineVec, InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress,
                 OutputDevice, OutputDeviceExt, PixelChar, RenderOp, RenderPipeline,
                 SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, TuiStyle, ZOrder, assert_eq2, ch, col,
+                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2, ch, col,
                 defaults::get_default_gradient_stops, height, inline_string,
                 is_fully_uninteractive_terminal, key_press, main_event_loop_impl,
                 new_style, ok, render_ops, render_pipeline,
@@ -840,6 +840,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
+    #[allow(clippy::too_many_lines)]
     async fn test_main_event_loop_impl() -> CommonResult<()> {
         // Enable tracing to debug this test.
         // let _guard = TracingConfig {
@@ -910,10 +911,10 @@ mod tests {
 
         // println!(
         //     "global_data.offscreen_buffer: {:?}",
-        //     global_data.maybe_saved_offscreen_buffer
+        //     global_data.maybe_saved_ofs_buf
         // );
 
-        let my_offscreen_buffer = global_data.maybe_saved_offscreen_buffer.unwrap();
+        let ofs_buf = global_data.maybe_saved_ofs_buf.unwrap();
 
         // This is for CI/CD environment. It does not support truecolor, and degrades to
         // ANSI 256 colors
@@ -923,11 +924,11 @@ mod tests {
                 let PixelChar::PlainText {
                     display_char,
                     maybe_style: _,
-                } = my_offscreen_buffer.buffer[4][7]
+                } = ofs_buf.buffer[4][7]
                 else {
                     panic!(
                         "Expected PixelChar::PlainText, got: {:?}",
-                        my_offscreen_buffer.buffer[4][7]
+                        ofs_buf.buffer[4][7]
                     );
                 };
                 assert_eq2!(display_char.to_string(), "S");
@@ -938,11 +939,11 @@ mod tests {
                 let PixelChar::PlainText {
                     display_char,
                     maybe_style: _,
-                } = my_offscreen_buffer.buffer[10][7]
+                } = ofs_buf.buffer[10][7]
                 else {
                     panic!(
                         "Expected PixelChar::PlainText, got: {:?}",
-                        my_offscreen_buffer.buffer[10][7]
+                        ofs_buf.buffer[10][7]
                     );
                 };
                 assert_eq2!(display_char.to_string(), "H");
@@ -960,7 +961,7 @@ mod tests {
                             ..Default::default()
                         }),
                     },
-                    my_offscreen_buffer.buffer[4][7].clone()
+                    ofs_buf.buffer[4][7].clone()
                 );
             }
 
@@ -971,11 +972,14 @@ mod tests {
                         display_char: 'H',
                         maybe_style: Some(TuiStyle {
                             id: None,
-                            dim: Some(tui_style_attrib::Dim),
+                            attribs: TuiStyleAttribs {
+                                dim: Some(tui_style_attrib::Dim),
+                                ..Default::default()
+                            },
                             ..Default::default()
                         }),
                     },
-                    my_offscreen_buffer.buffer[10][7].clone()
+                    ofs_buf.buffer[10][7].clone()
                 );
             }
         }

@@ -18,8 +18,8 @@
 use syntect::parsing::SyntaxSet;
 
 use super::{StyleUSSpan, StyleUSSpanLine};
-use crate::{List, TuiColor, TuiStyle, TuiStyledTexts, tui_color, tui_style_attrib,
-            tui_styled_text};
+use crate::{List, TuiColor, TuiStyle, TuiStyleAttribs, TuiStyledTexts, tui_color,
+            tui_style_attrib, tui_styled_text};
 
 // Type aliases for syntect types.
 
@@ -102,18 +102,21 @@ pub fn convert_style_from_syntect_to_tui(st_style: SyntectStyle) -> TuiStyle {
     TuiStyle {
         color_fg: Some(convert_color_from_syntect_to_tui(st_style.foreground)),
         color_bg: Some(convert_color_from_syntect_to_tui(st_style.background)),
-        bold: st_style
-            .font_style
-            .contains(SyntectFontStyle::BOLD)
-            .then_some(tui_style_attrib::Bold),
-        italic: st_style
-            .font_style
-            .contains(SyntectFontStyle::ITALIC)
-            .then_some(tui_style_attrib::Italic),
-        underline: st_style
-            .font_style
-            .contains(SyntectFontStyle::UNDERLINE)
-            .then_some(tui_style_attrib::Underline),
+        attribs: TuiStyleAttribs {
+            bold: st_style
+                .font_style
+                .contains(SyntectFontStyle::BOLD)
+                .then_some(tui_style_attrib::Bold),
+            italic: st_style
+                .font_style
+                .contains(SyntectFontStyle::ITALIC)
+                .then_some(tui_style_attrib::Italic),
+            underline: st_style
+                .font_style
+                .contains(SyntectFontStyle::UNDERLINE)
+                .then_some(tui_style_attrib::Underline),
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -224,7 +227,7 @@ mod tests_simple_md_highlight {
             assert_eq2!(line.len(), 4);
             assert_eq2!(line.to_plain_text(), "# My Heading\n");
             let col1 = &line[0];
-            assert!(col1.get_style().bold.is_some());
+            assert!(col1.get_style().attribs.bold.is_some());
             let col3 = &line[2];
             assert_eq2!(col3.get_style().color_fg.unwrap(), tui_color!(46, 206, 43));
         }
@@ -326,7 +329,7 @@ mod tests_convert_span_line_and_highlighted_line {
                 styled_texts[1].get_style().color_bg.unwrap(),
                 tui_color!(0, 0, 0)
             );
-            assert!(styled_texts[1].get_style().bold.is_some());
+            assert!(styled_texts[1].get_style().attribs.bold.is_some());
         }
 
         // item 3.
@@ -340,8 +343,8 @@ mod tests_convert_span_line_and_highlighted_line {
                 styled_texts[2].get_style().color_bg.unwrap(),
                 tui_color!(0, 0, 0)
             );
-            assert!(styled_texts[2].get_style().bold.is_some());
-            assert!(styled_texts[2].get_style().underline.is_some());
+            assert!(styled_texts[2].get_style().attribs.bold.is_some());
+            assert!(styled_texts[2].get_style().attribs.underline.is_some());
         }
     }
 }
@@ -350,10 +353,10 @@ mod tests_convert_span_line_and_highlighted_line {
 mod tests_convert_style_and_color {
     use smallvec::smallvec;
 
-    use crate::{CommonResult, InlineVec, TuiStyle, TuiStylesheet, assert_eq2, ch,
-                console_log, convert_style_from_syntect_to_tui, get_tui_style,
-                get_tui_styles, new_style, throws, tui_color, tui_style_attrib,
-                tui_stylesheet};
+    use crate::{CommonResult, InlineVec, TuiStyle, TuiStyleAttribs, TuiStylesheet,
+                assert_eq2, ch, console_log, convert_style_from_syntect_to_tui,
+                get_tui_style, get_tui_styles, new_style, throws, tui_color,
+                tui_style_attrib, tui_style_id, tui_stylesheet};
 
     #[test]
     fn syntect_style_conversion() {
@@ -367,8 +370,8 @@ mod tests_convert_style_and_color {
         let style = convert_style_from_syntect_to_tui(st_style);
         assert_eq2!(style.color_fg.unwrap(), tui_color!(255, 255, 255));
         assert_eq2!(style.color_bg.unwrap(), tui_color!(0, 0, 0));
-        assert!(style.bold.is_some());
-        assert!(style.underline.is_some());
+        assert!(style.attribs.bold.is_some());
+        assert!(style.attribs.underline.is_some());
     }
 
     #[test]
@@ -416,10 +419,10 @@ mod tests_convert_style_and_color {
         assert_eq2!(my_style.padding.unwrap(), ch(3));
         assert_eq2!(my_style.color_bg.unwrap(), tui_color!(yellow));
         assert_eq2!(my_style.color_fg.unwrap(), tui_color!(red));
-        assert!(my_style.bold.is_some());
-        assert!(my_style.dim.is_some());
+        assert!(my_style.attribs.bold.is_some());
+        assert!(my_style.attribs.dim.is_some());
         assert!(my_style.computed.is_some());
-        assert!(my_style.underline.is_none());
+        assert!(my_style.attribs.underline.is_none());
     }
 
     #[test]
@@ -437,23 +440,17 @@ mod tests_convert_style_and_color {
         assert_eq2!(stylesheet.styles.len(), 2);
 
         // No macro.
-        assert_eq2!(
-            stylesheet.find_style_by_id(1).unwrap().id,
-            tui_style_attrib::id(1)
-        );
-        assert_eq2!(
-            stylesheet.find_style_by_id(2).unwrap().id,
-            tui_style_attrib::id(2)
-        );
+        assert_eq2!(stylesheet.find_style_by_id(1).unwrap().id, tui_style_id(1));
+        assert_eq2!(stylesheet.find_style_by_id(2).unwrap().id, tui_style_id(2));
         assert!(stylesheet.find_style_by_id(3).is_none());
         // Macro.
         assert_eq2!(
             get_tui_style!(@from: stylesheet, 1).unwrap().id,
-            tui_style_attrib::id(1)
+            tui_style_id(1)
         );
         assert_eq2!(
             get_tui_style!(@from: stylesheet, 2).unwrap().id,
-            tui_style_attrib::id(2)
+            tui_style_id(2)
         );
         assert!(get_tui_style!(@from: stylesheet, 3).is_none());
     }
@@ -462,8 +459,8 @@ mod tests_convert_style_and_color {
     fn test_stylesheet_find_styles_by_ids() {
         fn assertions_for_find_styles_by_ids(result: Option<&InlineVec<TuiStyle>>) {
             assert_eq2!(result.unwrap().len(), 2);
-            assert_eq2!(result.unwrap()[0].id, tui_style_attrib::id(1));
-            assert_eq2!(result.unwrap()[1].id, tui_style_attrib::id(2));
+            assert_eq2!(result.unwrap()[0].id, tui_style_id(1));
+            assert_eq2!(result.unwrap()[1].id, tui_style_id(2));
         }
 
         let mut stylesheet = TuiStylesheet::new();
@@ -523,54 +520,36 @@ mod tests_convert_style_and_color {
             };
 
             assert_eq2!(stylesheet.styles.len(), 6);
-            assert_eq2!(
-                stylesheet.find_style_by_id(1).unwrap().id,
-                tui_style_attrib::id(1)
-            );
-            assert_eq2!(
-                stylesheet.find_style_by_id(2).unwrap().id,
-                tui_style_attrib::id(2)
-            );
-            assert_eq2!(
-                stylesheet.find_style_by_id(3).unwrap().id,
-                tui_style_attrib::id(3)
-            );
-            assert_eq2!(
-                stylesheet.find_style_by_id(4).unwrap().id,
-                tui_style_attrib::id(4)
-            );
-            assert_eq2!(
-                stylesheet.find_style_by_id(5).unwrap().id,
-                tui_style_attrib::id(5)
-            );
-            assert_eq2!(
-                stylesheet.find_style_by_id(6).unwrap().id,
-                tui_style_attrib::id(6)
-            );
+            assert_eq2!(stylesheet.find_style_by_id(1).unwrap().id, tui_style_id(1));
+            assert_eq2!(stylesheet.find_style_by_id(2).unwrap().id, tui_style_id(2));
+            assert_eq2!(stylesheet.find_style_by_id(3).unwrap().id, tui_style_id(3));
+            assert_eq2!(stylesheet.find_style_by_id(4).unwrap().id, tui_style_id(4));
+            assert_eq2!(stylesheet.find_style_by_id(5).unwrap().id, tui_style_id(5));
+            assert_eq2!(stylesheet.find_style_by_id(6).unwrap().id, tui_style_id(6));
             assert!(stylesheet.find_style_by_id(7).is_none());
 
             let result = stylesheet.find_styles_by_ids(&[1, 2]);
             assert_eq2!(result.as_ref().unwrap().len(), 2);
-            assert_eq2!(result.as_ref().unwrap()[0].id, tui_style_attrib::id(1));
-            assert_eq2!(result.as_ref().unwrap()[1].id, tui_style_attrib::id(2));
+            assert_eq2!(result.as_ref().unwrap()[0].id, tui_style_id(1));
+            assert_eq2!(result.as_ref().unwrap()[1].id, tui_style_id(2));
             assert_eq2!(stylesheet.find_styles_by_ids(&[13, 41]), None);
             let style7 = make_a_style(7);
             let result = stylesheet.add_style(style7);
             result.unwrap();
             assert_eq2!(stylesheet.styles.len(), 7);
-            assert_eq2!(
-                stylesheet.find_style_by_id(7).unwrap().id,
-                tui_style_attrib::id(7)
-            );
+            assert_eq2!(stylesheet.find_style_by_id(7).unwrap().id, tui_style_id(7));
         });
     }
 
     /// Helper function.
-    fn make_a_style(id: u8) -> TuiStyle {
+    fn make_a_style(arg: u8) -> TuiStyle {
         TuiStyle {
-            id: Some(tui_style_attrib::Id(id)),
-            dim: Some(tui_style_attrib::Dim),
-            bold: Some(tui_style_attrib::Bold),
+            id: tui_style_id(arg),
+            attribs: TuiStyleAttribs {
+                dim: Some(tui_style_attrib::Dim),
+                bold: Some(tui_style_attrib::Bold),
+                ..Default::default()
+            },
             color_fg: tui_color!(0, 0, 0).into(),
             color_bg: tui_color!(0, 0, 0).into(),
             ..TuiStyle::default()
