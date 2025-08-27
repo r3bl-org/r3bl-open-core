@@ -158,7 +158,8 @@ impl OffscreenBuffer {
 mod tests {
     use crate::{ANSIBasicColor, SgrCode, TuiColor,
                 ansi_parser::{ansi_parser_perform_impl_tests::tests_parse_common::create_test_offscreen_buffer_10r_by_10c,
-                              csi_codes::{self, CsiSequence}},
+                              csi_codes::{self, CsiSequence},
+                              term_units::{TermRow, TermCol}},
                 col,
                 offscreen_buffer::test_fixtures_offscreen_buffer::*,
                 row};
@@ -327,9 +328,9 @@ mod tests {
 
         let events = ofs_buf.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
-            move_to_r2_c3 = CsiSequence::CursorPosition { row: 2, col: 3 }, // 1-based index
-            move_to_r1_c1 = CsiSequence::CursorPosition { row: 1, col: 1 }, // 1-based index
-            move_to_r8_c8 = CsiSequence::CursorPosition { row: 8, col: 8 }, // 1-based index
+            move_to_r2_c3 = CsiSequence::CursorPosition { row: TermRow::new(2), col: TermCol::new(3) },
+            move_to_r1_c1 = CsiSequence::CursorPosition { row: TermRow::new(1), col: TermCol::new(1) },
+            move_to_r8_c8 = CsiSequence::CursorPosition { row: TermRow::new(8), col: TermCol::new(8) },
         ));
 
         assert_eq!(events.len(), 0);

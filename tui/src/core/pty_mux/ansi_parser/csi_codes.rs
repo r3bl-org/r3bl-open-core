@@ -3,7 +3,7 @@
 //! Control Sequence Introducer (CSI) codes for terminal control.
 //!
 //! CSI sequences are the most common type of ANSI escape sequences used in modern terminals.
-//! They provide parameterized control over cursor movement, text formatting, colors, and 
+//! They provide parameterized control over cursor movement, text formatting, colors, and
 //! display manipulation.
 //!
 //! ## Structure
@@ -23,6 +23,9 @@
 //! - `ESC[1;5H` - Move cursor to row 1, column 5
 //! - `ESC[31m` - Set text color to red
 //! - `ESC[1A` - Move cursor up 1 line
+
+use std::fmt;
+use crate::{BufTextStorage, WriteToBuf};
 
 // CSI sequence components
 
@@ -332,10 +335,10 @@ pub const SAVE_CURSOR_DEC: u16 = 1048;
 /// Alternate screen buffer
 pub const ALT_SCREEN_BUFFER: u16 = 1049;
 
-// CSI sequence builder following the same pattern as SgrCode
+// Import terminal coordinate types
+use super::term_units::{TermRow, TermCol};
 
-use std::fmt;
-use crate::{BufTextStorage, WriteToBuf};
+// CSI sequence builder following the same pattern as SgrCode
 
 /// Builder for CSI (Control Sequence Introducer) sequences.
 /// Similar to `SgrCode` but for cursor movement and other CSI commands.
@@ -350,9 +353,9 @@ pub enum CsiSequence {
     /// Cursor Backward (CUB) - ESC [ n D
     CursorBackward(u16),
     /// Cursor Position (CUP) - ESC [ row ; col H
-    CursorPosition { row: u16, col: u16 },
+    CursorPosition { row: TermRow, col: TermCol },
     /// Cursor Position alternate form (HVP) - ESC [ row ; col f
-    CursorPositionAlt { row: u16, col: u16 },
+    CursorPositionAlt { row: TermRow, col: TermCol },
     /// Erase Display (ED) - ESC [ n J
     EraseDisplay(u16),
     /// Erase Line (EL) - ESC [ n K
@@ -404,15 +407,15 @@ impl WriteToBuf for CsiSequence {
                 acc.push(CUB_CURSOR_BACKWARD);
             }
             CsiSequence::CursorPosition { row, col } => {
-                acc.push_str(&row.to_string());
+                acc.push_str(&row.as_u16().to_string());
                 acc.push(';');
-                acc.push_str(&col.to_string());
+                acc.push_str(&col.as_u16().to_string());
                 acc.push(CUP_CURSOR_POSITION);
             }
             CsiSequence::CursorPositionAlt { row, col } => {
-                acc.push_str(&row.to_string());
+                acc.push_str(&row.as_u16().to_string());
                 acc.push(';');
-                acc.push_str(&col.to_string());
+                acc.push_str(&col.as_u16().to_string());
                 acc.push(HVP_CURSOR_POSITION);
             }
             CsiSequence::EraseDisplay(n) => {
@@ -456,7 +459,7 @@ impl WriteToBuf for CsiSequence {
         }
         Ok(())
     }
-    
+
     fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&acc.clone())
     }

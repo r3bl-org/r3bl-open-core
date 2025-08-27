@@ -11,6 +11,7 @@ mod ansi_parser_public_api;
 mod ansi_to_tui_color;
 pub mod csi_codes;
 pub mod esc_codes;
+pub mod term_units;
 
 // Re-export public API.
 pub use ansi_parser_public_api::*;

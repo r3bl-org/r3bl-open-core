@@ -3,7 +3,7 @@
 //! Tests for full ANSI sequences that simulate real applications.
 
 use crate::{ANSIBasicColor, SgrCode, TuiColor, height, width, OffscreenBuffer,
-            ansi_parser::{csi_codes::CsiSequence, esc_codes::EscSequence},
+            ansi_parser::{csi_codes::CsiSequence, esc_codes::EscSequence, term_units::{TermRow, TermCol}},
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
             tui_style_attrib};
 use crate::ansi_parser::ansi_parser_perform_impl::{new, process_bytes};
@@ -27,12 +27,12 @@ fn test_vim_like_sequence() {
         let sequence = format!(
             "{clear_screen}{home_position}{reverse_video}{status_text}{reset_attrs}{save_cursor}{move_to_cmd}{prompt}{restore_cursor}{restored_text}",
             clear_screen = CsiSequence::EraseDisplay(2),  // ESC[2J
-            home_position = CsiSequence::CursorPosition { row: 1, col: 1 }, // ESC[H
+            home_position = CsiSequence::CursorPosition { row: TermRow::new(1), col: TermCol::new(1) }, // ESC[H
             reverse_video = SgrCode::Invert, // ESC[7m
             status_text = "-- INSERT --",
             reset_attrs = SgrCode::Reset, // ESC[0m
             save_cursor = EscSequence::SaveCursor, // ESC 7
-            move_to_cmd = CsiSequence::CursorPosition { row: 24, col: 1 }, // ESC[24;1H
+            move_to_cmd = CsiSequence::CursorPosition { row: TermRow::new(24), col: TermCol::new(1) }, // ESC[24;1H
             prompt = ":",
             restore_cursor = EscSequence::RestoreCursor, // ESC 8
             restored_text = "Hello World!"

@@ -7,7 +7,8 @@ use vte::Perform;
 use super::tests_parse_common::create_test_offscreen_buffer_10r_by_10c;
 use crate::{ansi_parser::{ansi_parser_perform_impl::{new, process_bytes},
                           csi_codes::{CSI_PARAM_SEPARATOR, CSI_START,
-                                      CUP_CURSOR_POSITION, CsiSequence}},
+                                      CUP_CURSOR_POSITION, CsiSequence},
+                          term_units::{TermRow, TermCol}},
             col,
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
             row};
@@ -47,7 +48,7 @@ fn test_csi_h_home_position() {
         processor.print('X');
 
         // Send ESC[H to move to home position (1,1)
-        let sequence = CsiSequence::CursorPosition { row: 1, col: 1 }.to_string();
+        let sequence = CsiSequence::CursorPosition { row: TermRow::new(1), col: TermCol::new(1) }.to_string();
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
@@ -97,7 +98,7 @@ fn test_csi_h_specific_position() {
         let mut processor = new(&mut ofs_buf);
 
         // Send ESC[5;10H to move to row 5, column 10 (1-based)
-        let sequence = CsiSequence::CursorPosition { row: 5, col: 10 }.to_string();
+        let sequence = CsiSequence::CursorPosition { row: TermRow::new(5), col: TermCol::new(10) }.to_string();
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
@@ -136,7 +137,7 @@ fn test_csi_h_with_boundary_clamping() {
         let mut processor = new(&mut ofs_buf);
 
         // Try to position beyond buffer bounds: ESC[999;999H
-        let sequence = CsiSequence::CursorPosition { row: 999, col: 999 }.to_string();
+        let sequence = CsiSequence::CursorPosition { row: TermRow::new(999), col: TermCol::new(999) }.to_string();
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
@@ -178,7 +179,7 @@ fn test_csi_f_alternate_form() {
         let mut processor = new(&mut ofs_buf);
 
         // ESC[f is alternate form of ESC[H (should go to home)
-        let sequence = CsiSequence::CursorPositionAlt { row: 1, col: 1 }.to_string();
+        let sequence = CsiSequence::CursorPositionAlt { row: TermRow::new(1), col: TermCol::new(1) }.to_string();
         process_bytes(&mut processor, &mut parser, sequence);
 
         assert_eq!(processor.cursor_pos.row_index.as_usize(), 0);
@@ -187,7 +188,7 @@ fn test_csi_f_alternate_form() {
         processor.print('F');
 
         // ESC[3;7f should position at row 3, col 7
-        let sequence = CsiSequence::CursorPositionAlt { row: 3, col: 7 }.to_string();
+        let sequence = CsiSequence::CursorPositionAlt { row: TermRow::new(3), col: TermCol::new(7) }.to_string();
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
