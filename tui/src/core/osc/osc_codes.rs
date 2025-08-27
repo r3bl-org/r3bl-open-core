@@ -70,3 +70,190 @@ pub const OSC_CODE_TITLE: &str = "2";
 
 /// OSC code 8: Hyperlink
 pub const OSC_CODE_HYPERLINK: &str = "8";
+
+use std::fmt;
+
+use crate::core::common::write_to_buf::{BufTextStorage, WriteToBuf};
+
+/// OSC sequence builder enum that provides type-safe construction of Operating System Command sequences.
+///
+/// This enum follows the same pattern as `CsiSequence` and `EscSequence`, providing a structured
+/// way to build OSC sequences instead of manual string formatting.
+///
+/// OSC sequences follow the format: `ESC ] code ; parameters ST`
+/// where ST is the String Terminator (ESC \ or BEL).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OscSequence {
+    /// OSC 0: Set both window title and icon name
+    /// Format: `ESC ] 0 ; title ST`
+    SetTitleAndIcon(String),
+    
+    /// OSC 1: Set icon name only
+    /// Format: `ESC ] 1 ; icon_name ST`
+    SetIcon(String),
+    
+    /// OSC 2: Set window title only\
+    /// Format: `ESC ] 2 ; title ST`
+    SetTitle(String),
+    
+    /// OSC 8: Hyperlink start sequence
+    /// Format: `ESC ] 8 ; id ; uri ST`
+    /// The `id` parameter is optional and used for link identification
+    HyperlinkStart { uri: String, id: Option<String> },
+    
+    /// OSC 8: Hyperlink end sequence\
+    /// Format: `ESC ] 8 ; ; ST`
+    /// This closes the hyperlink started by `HyperlinkStart`
+    HyperlinkEnd,
+}
+
+impl fmt::Display for OscSequence {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut acc = BufTextStorage::new();
+        self.write_to_buf(&mut acc)?;
+        self.write_buf_to_fmt(&acc, f)
+    }
+}
+
+impl WriteToBuf for OscSequence {
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
+        acc.push_str(OSC_START);
+        match self {
+            OscSequence::SetTitleAndIcon(title) => {
+                acc.push_str(OSC_CODE_TITLE_AND_ICON);
+                acc.push(DELIMITER);
+                acc.push_str(title);
+            }
+            OscSequence::SetIcon(icon) => {
+                acc.push_str(OSC_CODE_ICON);
+                acc.push(DELIMITER);
+                acc.push_str(icon);
+            }
+            OscSequence::SetTitle(title) => {
+                acc.push_str(OSC_CODE_TITLE);
+                acc.push(DELIMITER);
+                acc.push_str(title);
+            }
+            OscSequence::HyperlinkStart { uri, id } => {
+                acc.push_str(OSC_CODE_HYPERLINK);
+                acc.push(DELIMITER);
+                if let Some(link_id) = id {
+                    acc.push_str(link_id);
+                }
+                acc.push(DELIMITER);
+                acc.push_str(uri);
+            }
+            OscSequence::HyperlinkEnd => {
+                acc.push_str(OSC_CODE_HYPERLINK);
+                acc.push(DELIMITER);
+                acc.push(DELIMITER);
+            }
+        }
+        // Use BELL_TERMINATOR as the default terminator (more compatible)
+        acc.push_str(BELL_TERMINATOR);
+        Ok(())
+    }
+
+    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&acc.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_osc_sequence_set_title_and_icon() {
+        let sequence = OscSequence::SetTitleAndIcon("My Title".to_string());
+        let result = sequence.to_string();
+        let expected = "\x1b]0;My Title\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_set_icon() {
+        let sequence = OscSequence::SetIcon("Icon Name".to_string());
+        let result = sequence.to_string();
+        let expected = "\x1b]1;Icon Name\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_set_title() {
+        let sequence = OscSequence::SetTitle("Window Title".to_string());
+        let result = sequence.to_string();
+        let expected = "\x1b]2;Window Title\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_hyperlink_start_with_id() {
+        let sequence = OscSequence::HyperlinkStart {
+            uri: "https://example.com".to_string(),
+            id: Some("link1".to_string()),
+        };
+        let result = sequence.to_string();
+        let expected = "\x1b]8;link1;https://example.com\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_hyperlink_start_without_id() {
+        let sequence = OscSequence::HyperlinkStart {
+            uri: "https://example.com".to_string(),
+            id: None,
+        };
+        let result = sequence.to_string();
+        let expected = "\x1b]8;;https://example.com\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_hyperlink_end() {
+        let sequence = OscSequence::HyperlinkEnd;
+        let result = sequence.to_string();
+        let expected = "\x1b]8;;\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_empty_strings() {
+        let sequence = OscSequence::SetTitle(String::new());
+        let result = sequence.to_string();
+        let expected = "\x1b]2;\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_special_characters() {
+        let sequence = OscSequence::SetTitle("Title with spaces & symbols!".to_string());
+        let result = sequence.to_string();
+        let expected = "\x1b]2;Title with spaces & symbols!\x07";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_osc_sequence_clone_and_debug() {
+        let original = OscSequence::SetTitle("Test".to_string());
+        let cloned = original.clone();
+        assert_eq!(original, cloned);
+        
+        let debug_output = format!("{original:?}");
+        assert!(debug_output.contains("SetTitle"));
+        assert!(debug_output.contains("Test"));
+    }
+
+    #[test]
+    fn test_hyperlink_complete_sequence() {
+        let start = OscSequence::HyperlinkStart {
+            uri: "https://r3bl.com".to_string(),
+            id: Some("r3bl".to_string()),
+        };
+        let end = OscSequence::HyperlinkEnd;
+        
+        let complete_link = format!("{start}Link Text{end}");
+        let expected = "\x1b]8;r3bl;https://r3bl.com\x07Link Text\x1b]8;;\x07";
+        assert_eq!(complete_link, expected);
+    }
+}

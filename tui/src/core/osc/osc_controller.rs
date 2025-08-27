@@ -4,7 +4,7 @@
 
 use miette::IntoDiagnostic;
 
-use super::{OscEvent, osc_codes};
+use super::{OscEvent, osc_codes::OscSequence};
 use crate::{core::terminal_io::OutputDevice, lock_output_device_as_mut};
 
 /// Controller for sending OSC sequences to the terminal.
@@ -34,13 +34,8 @@ impl<'a> OscController<'a> {
     ///
     /// Returns an error if writing to the output device fails.
     pub fn set_title_and_tab(&mut self, text: &str) -> miette::Result<()> {
-        let sequence = format!(
-            "{}{}{}",
-            osc_codes::OSC0_SET_TITLE_AND_TAB,
-            text,
-            osc_codes::BELL_TERMINATOR
-        );
-        self.write_sequence(&sequence)
+        let sequence = OscSequence::SetTitleAndIcon(text.to_string());
+        self.write_sequence(&sequence.to_string())
     }
 
     /// Generic method to send any OSC event to the terminal.

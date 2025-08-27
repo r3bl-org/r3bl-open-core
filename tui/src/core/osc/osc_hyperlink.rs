@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use super::osc_codes;
+use super::osc_codes::OscSequence;
 
 /// Creates an OSC 8 hyperlink sequence.
 ///
@@ -19,20 +19,16 @@ use super::osc_codes;
 /// ```
 /// use r3bl_tui::core::osc::osc_hyperlink::format_hyperlink;
 /// let link = format_hyperlink("https://example.com", "Example");
-/// assert_eq!(link, "\u{1b}]8;;https://example.com\u{1b}\\Example\u{1b}]8;;\u{1b}\\");
+/// assert_eq!(link, "\u{1b}]8;;https://example.com\u{7}Example\u{1b}]8;;\u{7}");
 /// ```
 #[must_use]
 pub fn format_hyperlink(uri: &str, text: &str) -> String {
-    format!(
-        "{}{}{}{}{}{}{}",
-        osc_codes::OSC8_START,
-        uri,
-        osc_codes::END,
-        text,
-        osc_codes::OSC8_START,
-        "", // Empty URI to close the hyperlink
-        osc_codes::END
-    )
+    let start = OscSequence::HyperlinkStart {
+        uri: uri.to_string(),
+        id: None,
+    };
+    let end = OscSequence::HyperlinkEnd;
+    format!("{start}{text}{end}")
 }
 
 /// Creates an OSC 8 hyperlink for a file path.
@@ -95,14 +91,14 @@ mod tests {
     #[test]
     fn test_format_hyperlink_basic() {
         let result = format_hyperlink("https://example.com", "Example Link");
-        let expected = "\x1b]8;;https://example.com\x1b\\Example Link\x1b]8;;\x1b\\";
+        let expected = "\x1b]8;;https://example.com\x07Example Link\x1b]8;;\x07";
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_format_hyperlink_empty() {
         let result = format_hyperlink("", "Empty URI");
-        let expected = "\x1b]8;;\x1b\\Empty URI\x1b]8;;\x1b\\";
+        let expected = "\x1b]8;;\x07Empty URI\x1b]8;;\x07";
         assert_eq!(result, expected);
     }
 
@@ -111,7 +107,7 @@ mod tests {
         let result =
             format_hyperlink("https://example.com/path?q=test&v=1", "Complex URL");
         let expected =
-            "\x1b]8;;https://example.com/path?q=test&v=1\x1b\\Complex URL\x1b]8;;\x1b\\";
+            "\x1b]8;;https://example.com/path?q=test&v=1\x07Complex URL\x1b]8;;\x07";
         assert_eq!(result, expected);
     }
 
@@ -124,7 +120,7 @@ mod tests {
         assert!(result.contains("file:///home/user/document.txt"));
         assert!(result.contains("/home/user/document.txt"));
         assert!(result.starts_with("\x1b]8;;"));
-        assert!(result.ends_with("\x1b]8;;\x1b\\"));
+        assert!(result.ends_with("\x1b]8;;\x07"));
     }
 
     #[test]

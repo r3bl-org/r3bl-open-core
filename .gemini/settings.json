@@ -1,20 +1,5 @@
 {
   "mcpServers": {
-    "serena": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/oraios/serena",
-        "serena",
-        "start-mcp-server",
-        "--context",
-        "agent",
-        "--project",
-        "/home/nazmul/github/r3bl-open-core",
-        "--mode",
-        "onboarding"
-      ]
-    },
     "context7": {
       "httpUrl": "https://mcp.context7.com/mcp",
       "headers": {

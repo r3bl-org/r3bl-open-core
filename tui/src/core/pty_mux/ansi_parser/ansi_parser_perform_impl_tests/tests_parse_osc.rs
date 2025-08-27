@@ -6,7 +6,7 @@ use crate::{core::osc::OscEvent,
             offscreen_buffer::test_fixtures_offscreen_buffer::*};
 use super::tests_parse_common::create_test_offscreen_buffer_10r_by_10c;
 use crate::ansi_parser::ansi_parser_perform_impl::{new, process_bytes};
-use crate::core::osc::osc_codes::{OSC0_SET_TITLE_AND_TAB, OSC2_SET_TITLE, OSC8_START, BELL_TERMINATOR};
+use crate::core::osc::osc_codes::OscSequence;
 
 #[test]
 fn test_osc_title_sequences() {
@@ -17,11 +17,11 @@ fn test_osc_title_sequences() {
         let mut processor = new(&mut ofs_buf);
 
         // Test OSC 0 (set title and icon)
-        let sequence = format!("{}Test Title{}", OSC0_SET_TITLE_AND_TAB, BELL_TERMINATOR);
+        let sequence = OscSequence::SetTitleAndIcon("Test Title".to_string()).to_string();
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Test OSC 2 (set title only)
-        let sequence = format!("{}Window Title{}", OSC2_SET_TITLE, BELL_TERMINATOR);
+        let sequence = OscSequence::SetTitle("Window Title".to_string()).to_string();
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Verify OSC events were captured
@@ -52,8 +52,12 @@ fn test_osc_hyperlink() {
         let mut processor = new(&mut ofs_buf);
 
         // Test OSC 8 hyperlink
-        let sequence = format!("{}https://example.com{}Link Text{}{}", 
-            OSC8_START, BELL_TERMINATOR, OSC8_START, BELL_TERMINATOR);
+        let hyperlink_start = OscSequence::HyperlinkStart {
+            uri: "https://example.com".to_string(),
+            id: None,
+        };
+        let hyperlink_end = OscSequence::HyperlinkEnd;
+        let sequence = format!("{}Link Text{}", hyperlink_start, hyperlink_end);
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Verify hyperlink event was captured

@@ -42,12 +42,16 @@
 //!
 //! ### Creating Terminal Coordinates
 //! ```rust
+//! use r3bl_tui::ansi_parser::term_units::{TermRow, TermCol};
+//!
 //! let row = TermRow::new(5);      // Terminal row 5 (1-based)
 //! let col = TermCol::new(10);     // Terminal column 10 (1-based)
 //! ```
 //!
 //! ### Converting Between Systems
 //! ```rust
+//! use r3bl_tui::{Row, ansi_parser::term_units::TermRow};
+//!
 //! // From buffer to terminal coordinates
 //! let buffer_row = Row::new(4);   // 0-based
 //! let term_row = TermRow::from_zero_based(buffer_row); // Now 5 (1-based)
