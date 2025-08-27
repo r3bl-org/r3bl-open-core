@@ -39,6 +39,18 @@ fn test_decawm_with_sequence(processor: &mut AnsiToBufferProcessor, enable: bool
 fn test_decawm_default_enabled() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
+    // Auto-wrap mode default enabled test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │ A │ B │ C │ D │ E │ F │ G │ H │ I │ J │ ← First 10 chars fill line
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 1:  │ K │   │   │   │   │   │   │   │   │   │ ← 11th char wraps to next line
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    //             ╰─ cursor ends here (1,1)
+    //
+    // Sequence: Write 11 characters A-K (DECAWM enabled by default)
+
     {
         let mut processor = new(&mut ofs_buf);
 
@@ -67,6 +79,18 @@ fn test_decawm_default_enabled() {
 #[test]
 fn test_decawm_disabled_overwrites() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+    // Auto-wrap mode disabled overwrite test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │ A │ B │ C │ D │ E │ F │ G │ H │ I │ L │ ← chars J,K,L overwrite at col 9
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   cursor stays at right margin
+    // Row 1:  │   │   │   │   │   │   │   │   │   │   │ ← second line remains empty
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    //                                                 ╰─ cursor stays here (0,9)
+    //
+    // Sequence: ESC[?7l (disable wrap) → Write 12 characters A-L
 
     {
         let mut processor = new(&mut ofs_buf);
@@ -103,6 +127,22 @@ fn test_decawm_disabled_overwrites() {
 fn test_decawm_re_enable() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
+    // Auto-wrap mode re-enable test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 2:  │   │   │   │   │   │   │   │   │ X │ Y │ ← start at col 8, write X,Y
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 3:  │ Z │   │   │   │   │   │   │   │   │   │ ← Z wraps to next line
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    //             ╰─ cursor ends here (3,1)
+    //
+    // Sequence: ESC[?7l → ESC[?7h → Move to (2,8) → Write X,Y,Z
+
     {
         let mut processor = new(&mut ofs_buf);
 
@@ -134,6 +174,19 @@ fn test_decawm_re_enable() {
 #[test]
 fn test_decawm_mode_switching() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+    // Auto-wrap mode switching test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │   │   │   │   │   │   │   │   │ A │ B │ ← start at col 8, write A,B
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 1:  │ C │   │   │   │   │   │   │   │   │ E │ ← C wraps, then disable wrap
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   D,E overwrite at col 9
+    //
+    // Sequence:
+    // 1. Start at (0,8) → Write A,B,C (C wraps due to DECAWM enabled)
+    // 2. ESC[?7l (disable wrap) → Move to (1,9) → Write D,E (E overwrites D)
 
     {
         let mut processor = new(&mut ofs_buf);

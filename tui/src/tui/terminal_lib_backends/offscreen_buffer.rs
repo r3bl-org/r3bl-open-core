@@ -45,13 +45,13 @@ pub struct AnsiParserSupport {
     ///    ↓
     /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
     ///    ↓
-    /// 3. Saves current cursor_pos to buffer.saved_cursor_pos
+    /// 3. Saves current cursor_pos to buffer.ansi_parser_support.saved_cursor_pos
     ///    ↓
     /// 4. Later, child sends ESC 8 to restore cursor
     ///    ↓
     /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
     ///    ↓
-    /// 6. Restores cursor_pos from buffer.saved_cursor_pos
+    /// 6. Restores cursor_pos from buffer.ansi_parser_support.saved_cursor_pos
     /// ```
     pub saved_cursor_pos: Option<Pos>,
 
@@ -130,7 +130,6 @@ pub struct OffscreenBuffer {
     /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`]
     /// which is called in a hot loop on every render.
     memory_size_calc_cache: MemoizedMemorySize,
-
     /// ANSI parser support fields grouped together for better organization.
     pub ansi_parser_support: AnsiParserSupport,
 }

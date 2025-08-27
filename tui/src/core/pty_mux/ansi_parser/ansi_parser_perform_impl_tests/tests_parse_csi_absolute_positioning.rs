@@ -17,6 +17,28 @@ fn test_csi_h_home_position() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
     let mut parser = vte::Parser::new();
 
+    // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+    // 1-based index.
+    //
+    // Cursor home positioning test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │ H │   │   │   │   │   │   │   │   │   │ ← 2. ESC[H moves to home (1,1)
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   in 1-based, (0,0) in 0-based
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 5:  │   │   │   │   │   │ X │   │   │   │   │ ← 1. start at (5,5)
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    //
+    // Sequence: Write 'X' at (5,5) → ESC[H → Write 'H' at home (0,0)
+
     {
         let mut processor = new(&mut ofs_buf);
 
@@ -50,6 +72,26 @@ fn test_csi_h_home_position() {
 fn test_csi_h_specific_position() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
     let mut parser = vte::Parser::new();
+
+    // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+    // 1-based index.
+    //
+    // Cursor specific positioning test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 4:  │   │   │   │   │   │   │   │   │   │ A │ ← ESC[5;10H moves to row 5, col 10
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   (1-based), which is (4,9) 0-based
+    //
+    // Sequence: ESC[5;10H → Write 'A' at (4,9)
 
     {
         let mut processor = new(&mut ofs_buf);
@@ -116,6 +158,22 @@ fn test_csi_f_alternate_form() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
     let mut parser = vte::Parser::new();
 
+    // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+    // 1-based index.
+    //
+    // Cursor alternate form positioning test (ESC[f instead of ESC[H):
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │ F │   │   │   │   │   │   │   │   │   │ ← 1. ESC[f moves to home (1,1)
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   in 1-based, (0,0) in 0-based
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 2:  │   │   │   │   │   │   │ G │   │   │   │ ← 2. ESC[3;7f moves to row 3, col 7
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   in 1-based, (2,6) in 0-based
+    //
+    // Sequence: ESC[f → Write 'F' at home → ESC[3;7f → Write 'G' at (2,6)
+
     {
         let mut processor = new(&mut ofs_buf);
 
@@ -148,6 +206,22 @@ fn test_csi_f_alternate_form() {
 fn test_csi_position_with_missing_params() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
     let mut parser = vte::Parser::new();
+
+    // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+    // 1-based index.
+    //
+    // Missing parameter handling test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │   │   │   │   │ M │   │   │   │   │   │ ← 1. ESC[;5H missing row → default 1
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤   col 5 (1-based) = (0,4) 0-based
+    //         │   │   │   │   │   │   │   │   │   │   │
+    //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
+    // Row 2:  │ N │   │   │   │   │   │   │   │   │   │ ← 2. ESC[3;H missing col → default 1
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   row 3 (1-based) = (2,0) 0-based
+    //
+    // Sequence: ESC[;5H → Write 'M' at (0,4) → ESC[3;H → Write 'N' at (2,0)
 
     {
         let mut processor = new(&mut ofs_buf);

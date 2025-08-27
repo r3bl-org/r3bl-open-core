@@ -77,6 +77,22 @@ pub struct AnsiToBufferProcessor<'a> {
 impl OffscreenBuffer {
     /// Process & apply ANSI/VT sequences directly to this buffer.
     ///
+    /// ## Data Flow:
+    ///
+    /// ```text
+    /// 1. Child process (e.g., vim) sends ESC 7 to save cursor
+    ///    ↓
+    /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
+    ///    ↓
+    /// 3. Saves current cursor_pos to buffer.ansi_parser_support.saved_cursor_pos
+    ///    ↓
+    /// 4. Later, child sends ESC 8 to restore cursor
+    ///    ↓
+    /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
+    ///    ↓
+    /// 6. Restores cursor_pos from buffer.ansi_parser_support.saved_cursor_pos
+    /// ```
+    ///
     /// # Arguments
     ///
     /// * `bytes` - The byte sequence containing ANSI/VT escape sequences to process
@@ -143,7 +159,9 @@ mod tests {
     use crate::{ANSIBasicColor, SgrCode, TuiColor,
                 ansi_parser::{ansi_parser_perform_impl_tests::tests_parse_common::create_test_offscreen_buffer_10r_by_10c,
                               csi_codes::{self, CsiSequence}},
-                offscreen_buffer::test_fixtures_offscreen_buffer::*};
+                col,
+                offscreen_buffer::test_fixtures_offscreen_buffer::*,
+                row};
 
     #[test]
     #[allow(clippy::items_after_statements)]
@@ -152,14 +170,32 @@ mod tests {
 
         const TEXT: &str = "Hello";
 
+        // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // 1-based index.
+        //
+        // Buffer layout with plain text:
+        //
+        // Column:   0   1   2   3   4   5   6   7   8   9
+        //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+        // Row 0:  │ H │ e │ l │ l │ o │   │   │   │   │   │
+        //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+        //                               ╰─ cursor ends here
+
         // Test that the public API processes text correctly.
         let events = ofs_buf.apply_ansi_bytes(TEXT);
 
         // Should not produce any OSC events for SGR sequences.
-        assert_eq!(events.len(), 0);
+        assert_eq!(events.len(), 0, "no OSC events expected");
 
         // Verify "Hello" is in the buffer.
         assert_plain_text_at(&ofs_buf, 0, 0, TEXT);
+
+        // Verify cursor position is updated correctly.
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(0) + col(TEXT.len()),
+            "cursor should be at end of text"
+        );
     }
 
     #[test]
@@ -169,16 +205,30 @@ mod tests {
 
         const TEXT: &str = "Red Text";
 
+        // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
+        // 1-based index.
+        //
+        // Buffer layout with colored text:
+        //
+        // Column:   0   1   2   3   4   5   6   7   8   9
+        //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+        // Row 0:  │ R │ e │ d │   │ T │ e │ x │ t │   │   │
+        //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+        //          ╰─────────────────────────────╯  ╰─ cursor ends here
+        //           All chars have red foreground
+        //
+        // Sequence: ESC[31m + "Red Text" + ESC[0m
+
         // Test processing with ANSI color codes.
         let events = ofs_buf.apply_ansi_bytes(format!(
-            "{fg_color}{text}{reset}",
-            fg_color = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
+            "{red_fg}{text}{reset}",
+            red_fg = SgrCode::ForegroundBasic(ANSIBasicColor::Red),
             text = TEXT,
             reset = SgrCode::Reset
         ));
 
         // Should not produce any OSC events for SGR sequences.
-        assert_eq!(events.len(), 0);
+        assert_eq!(events.len(), 0, "no OSC events expected");
 
         // Verify the text with proper styling.
         for (col, expected_char) in TEXT.chars().enumerate() {
@@ -188,14 +238,19 @@ mod tests {
                 col,
                 expected_char,
                 |style_from_buffer| {
-                    matches!(
-                        style_from_buffer.color_fg,
-                        Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                    )
+                    style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Red))
                 },
                 "red foreground",
             );
         }
+
+        // Verify cursor position is updated correctly.
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(0) + col(TEXT.len()),
+            "cursor should be at end of text"
+        );
     }
 
     #[test]
@@ -204,13 +259,14 @@ mod tests {
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
-
+        //
         // Buffer layout after cursor movements:
         //
-        // Column:  0   1   2   3   4   5   6   7   8   9
+        // Column:   0   1   2   3   4   5   6   7   8   9
         //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
         // Row 0:  │ A │   │   │ B │ D │   │   │   │   │   │
         //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+        //                               ╰─── cursor ends after writing 'D'
         //
         // Sequence breakdown:
         // 1. Write 'A' at (0,0) → cursor moves to (0,1)
@@ -222,22 +278,18 @@ mod tests {
         // Test cursor movement sequences.
         let events = ofs_buf.apply_ansi_bytes(format!(
             "A{right_2}B{up_1}D",
-            right_2 = csi_codes::CsiSequence::CursorForward(2), // move right 2.
-            up_1 = csi_codes::CsiSequence::CursorUp(1),         // move up 1.
+            right_2 = csi_codes::CsiSequence::CursorForward(2),
+            up_1 = csi_codes::CsiSequence::CursorUp(1),
         ));
 
         // Should not produce any OSC events.
-        assert_eq!(events.len(), 0);
+        assert_eq!(events.len(), 0, "no OSC events expected");
 
+        // Verify cursor position after all operations.
         assert_eq!(
-            ofs_buf.my_pos.row_index.as_usize(),
-            0,
-            "cursor should be at row 0"
-        );
-        assert_eq!(
-            ofs_buf.my_pos.col_index.as_usize(),
-            5,
-            "cursor should be at column 5 after writing 'D'"
+            ofs_buf.my_pos,
+            row(0) + col(5),
+            "cursor should be at (0,5) after writing 'D'"
         );
 
         // Verify characters at specific positions instead of continuous string.
@@ -253,10 +305,10 @@ mod tests {
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
-
+        //
         // Buffer layout after cursor position changes:
         //
-        // Column:  0   1   2   3   4   5   6   7   8   9
+        // Column:   0   1   2   3   4   5   6   7   8   9
         //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
         // Row 0:  │ H │ o │ m │ e │ t │   │   │   │   │   │
         //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
@@ -274,21 +326,25 @@ mod tests {
         // Sequence: "Start" → move(1,2) → "Mid" → move(0,0) → "Home" → move(7,7) → "End"
 
         let events = ofs_buf.apply_ansi_bytes(format!(
-            "Start{move_to_2_3}Mid{move_to_1_1}Home{move_to_8_8}End",
-            move_to_2_3 = CsiSequence::CursorPosition { row: 2, col: 3 },
-            move_to_1_1 = CsiSequence::CursorPosition { row: 1, col: 1 },
-            move_to_8_8 = CsiSequence::CursorPosition { row: 8, col: 8 },
+            "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
+            move_to_r2_c3 = CsiSequence::CursorPosition { row: 2, col: 3 }, // 1-based index
+            move_to_r1_c1 = CsiSequence::CursorPosition { row: 1, col: 1 }, // 1-based index
+            move_to_r8_c8 = CsiSequence::CursorPosition { row: 8, col: 8 }, // 1-based index
         ));
 
         assert_eq!(events.len(), 0);
 
         // Verify layout matches diagram.
+        // cspell:disable-next-line
         assert_plain_text_at(&ofs_buf, 0, 0, "Homet");
         assert_plain_text_at(&ofs_buf, 1, 2, "Mid");
         assert_plain_text_at(&ofs_buf, 7, 7, "End");
 
         // Cursor wraps from (7,10) to (8,0).
-        assert_eq!(ofs_buf.my_pos.row_index.as_usize(), 8);
-        assert_eq!(ofs_buf.my_pos.col_index.as_usize(), 0);
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(8) + col(0),
+            "cursor should be at (8,0) wrapping after 'End'"
+        );
     }
 }

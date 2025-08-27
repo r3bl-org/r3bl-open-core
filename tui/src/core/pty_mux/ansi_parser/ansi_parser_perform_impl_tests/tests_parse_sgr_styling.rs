@@ -16,6 +16,17 @@ fn test_sgr_reset_behavior() {
     #[allow(clippy::items_after_statements)]
     const NORM: &str = "NORM";
 
+    // SGR reset behavior test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │ R │ E │ D │ N │ O │ R │ M │   │   │   │
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    //          ╰────────╯ ╰──────────╯
+    //           bold+red   no styling
+    //
+    // Sequence: ESC[1m ESC[31m "RED" ESC[0m "NORM"
+
     // Test SGR reset by sending this sequence to the processor:
     // Set bold+red, write "RED", reset all, write "NORM"
     {
@@ -62,6 +73,18 @@ fn test_sgr_reset_behavior() {
 #[test]
 fn test_sgr_partial_reset() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+    // SGR partial reset test (SGR 22 resets bold/dim only):
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │ A │ B │   │   │   │   │   │   │   │   │
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    //          ╰─╯ ╰─╯
+    //            │   └─ B: italic + dark red (bold reset by SGR 22)
+    //            └─ A: bold + italic + dark red
+    //
+    // Sequence: ESC[1m ESC[3m ESC[31m A ESC[22m B
 
     // Test partial SGR resets (SGR 22 resets bold/dim only)
     {
@@ -130,6 +153,23 @@ fn test_sgr_partial_reset() {
 #[allow(clippy::too_many_lines)]
 fn test_sgr_color_attributes() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+    // SGR color attributes test:
+    //
+    // Column:  0   1   2   3   4   5   6   7   8   9
+    //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    // Row 0:  │ B │ R │ G │ W │   │ X │ Y │ Z │   │   │
+    //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    //          ╰─╯ ╰─╯ ╰─╯ ╰─╯     ╰─╯ ╰─╯ ╰─╯
+    //           │   │   │   │       │   │   └─ Z: red fg + blue bg
+    //           │   │   │   │       │   └─ Y: green bg
+    //           │   │   │   │       └─ X: red bg
+    //           │   │   │   └─ W: white fg
+    //           │   │   └─ G: green fg
+    //           │   └─ R: red fg
+    //           └─ B: black fg
+    //
+    // Sequence: ESC[30mB ESC[31mR ESC[32mG ESC[37mW ESC[0m  ESC[41mX ESC[42mY ESC[0m ESC[31mESC[44mZ ESC[0m
 
     // Test various SGR color sequences through VTE parser
     {
