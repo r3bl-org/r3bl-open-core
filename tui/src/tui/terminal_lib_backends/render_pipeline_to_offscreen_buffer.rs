@@ -217,10 +217,8 @@ pub fn print_text_with_attributes(
     let insertion_col_index = display_col_index;
 
     // Compose style using helper function.
-    let maybe_style = print_text_with_attributes_helper::compose_style(
-        maybe_style_ref,
-        ofs_buf,
-    );
+    let maybe_style =
+        print_text_with_attributes_helper::compose_style(maybe_style_ref, ofs_buf);
 
     DEBUG_TUI_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
@@ -268,9 +266,7 @@ pub fn print_text_with_attributes(
 
     // Mimic what stdout does and move the position.col_index forward by the width of
     // the text that was added to display.
-    let new_pos = ofs_buf
-        .my_pos
-        .add_col(already_inserted_display_width);
+    let new_pos = ofs_buf.my_pos.add_col(already_inserted_display_width);
 
     // Replace the line in `my_offscreen_buffer` with the new line.
     ofs_buf.buffer[display_row_index] = line_copy;
@@ -353,9 +349,7 @@ mod print_text_with_attributes_helper {
             it.color_fg = ofs_buf.my_fg_color;
             it.color_bg = ofs_buf.my_bg_color;
             Some(it)
-        } else if ofs_buf.my_fg_color.is_some()
-            || ofs_buf.my_bg_color.is_some()
-        {
+        } else if ofs_buf.my_fg_color.is_some() || ofs_buf.my_bg_color.is_some() {
             Some(TuiStyle {
                 color_fg: ofs_buf.my_fg_color,
                 color_bg: ofs_buf.my_bg_color,
@@ -494,8 +488,7 @@ mod tests {
     #[test]
     fn test_print_plain_text_render_path_reuse_buffer() {
         let window_size = width(10) + height(2);
-        let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Input:  R0 "hello12345😃"
         //            C0123456789
@@ -626,8 +619,7 @@ mod tests {
         // Output: R0 "hello12345"
         //            C0123456789
         {
-            let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
             let text = "hello12345😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -691,8 +683,7 @@ mod tests {
         // Output: R0 "hello1234╳"
         //            C0123456789
         {
-            let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
             let text = "hello1234😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -746,8 +737,7 @@ mod tests {
         // R0 "hello123😃"
         //    C0123456789
         {
-            let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
             let text = "hello123😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -810,8 +800,7 @@ mod tests {
         // R0 "hello12😃"
         //    C0123456789
         {
-            let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+            let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
             let text = "hello12😃";
             // The style colors should be overwritten by fg_color and bg_color.
             let maybe_style = Some(
@@ -940,8 +929,7 @@ mod tests {
         //     0: ╳ ..
         //     9: ╳
 
-        let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
         pipeline.convert(window_size, &mut ofs_buf);
 
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -1009,8 +997,7 @@ mod tests {
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
-        let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
         pipeline.convert(window_size, &mut ofs_buf);
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
@@ -1120,11 +1107,12 @@ mod tests {
             pipeline.get_all_render_op_in(ZOrder::Normal)
         );
 
-        let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
         pipeline.convert(window_size, &mut ofs_buf);
-        println!("ofs_buf: 
-{ofs_buf:#?}");
+        println!(
+            "ofs_buf:
+{ofs_buf:#?}"
+        );
 
         // Line 1 (row_index = 7)
         {

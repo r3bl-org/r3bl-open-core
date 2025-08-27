@@ -8,7 +8,8 @@ use super::tests_parse_common::create_test_offscreen_buffer_10r_by_10c;
 use crate::{Pos,
             ansi_parser::{ansi_parser_perform_impl::new,
                           ansi_parser_public_api::AnsiToBufferProcessor,
-                          csi_codes::{DECAWM_AUTO_WRAP, RM_RESET_PRIVATE_MODE,
+                          csi_codes::{CSI_PRIVATE_MODE_PREFIX, CSI_START,
+                                      DECAWM_AUTO_WRAP, RM_RESET_PRIVATE_MODE,
                                       SM_SET_PRIVATE_MODE}},
             col,
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
@@ -21,7 +22,13 @@ fn test_decawm_with_sequence(processor: &mut AnsiToBufferProcessor, enable: bool
     } else {
         RM_RESET_PRIVATE_MODE
     };
-    let sequence = format!("\x1b[?{DECAWM_AUTO_WRAP}{command}");
+    let sequence = format!(
+        "{a}{b}{c}{d}",
+        a = CSI_START,
+        b = CSI_PRIVATE_MODE_PREFIX,
+        c = DECAWM_AUTO_WRAP,
+        d = command
+    );
     let mut parser = vte::Parser::new();
     for byte in sequence.bytes() {
         parser.advance(processor, byte);
@@ -36,7 +43,7 @@ fn test_decawm_default_enabled() {
         let mut processor = new(&mut ofs_buf);
 
         // DECAWM should be enabled by default
-        assert!(processor.ofs_buf.auto_wrap_mode);
+        assert!(processor.ofs_buf.ansi_parser_support.auto_wrap_mode);
 
         // Position at end of line and write 11 characters
         processor.cursor_pos = row(0) + col(0);
@@ -66,7 +73,7 @@ fn test_decawm_disabled_overwrites() {
 
         // Disable auto-wrap mode
         test_decawm_with_sequence(&mut processor, false);
-        assert!(!processor.ofs_buf.auto_wrap_mode);
+        assert!(!processor.ofs_buf.ansi_parser_support.auto_wrap_mode);
 
         // Position at end of line and write 12 characters
         processor.cursor_pos = row(0) + col(0);
@@ -102,7 +109,7 @@ fn test_decawm_re_enable() {
         // Disable then re-enable auto-wrap mode
         test_decawm_with_sequence(&mut processor, false);
         test_decawm_with_sequence(&mut processor, true);
-        assert!(processor.ofs_buf.auto_wrap_mode);
+        assert!(processor.ofs_buf.ansi_parser_support.auto_wrap_mode);
 
         // Test wrapping works again
         processor.cursor_pos = row(2) + col(8);

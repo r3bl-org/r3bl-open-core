@@ -11,7 +11,7 @@ use crate::ansi_parser::ansi_parser_perform_impl::{new, process_bytes};
 /// Create a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal
 /// size).
 fn create_offscreen_buffer_24r_by_80c() -> OffscreenBuffer {
-    OffscreenBuffer::new_with_capacity_initialized(height(24) + width(80))
+    OffscreenBuffer::new_empty(height(24) + width(80))
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn test_vim_like_sequence() {
             restore_cursor = EscSequence::RestoreCursor, // ESC 8
             restored_text = "Hello World!"
         );
-        
+
         process_bytes(&mut processor, &mut parser, sequence);
     }
 
@@ -51,10 +51,10 @@ fn test_vim_like_sequence() {
         |style| matches!(style.attribs.reverse, Some(tui_style_attrib::Reverse)),
         "reverse video status"
     );
-    
+
     // Command prompt should be at bottom
     assert_plain_char_at(&ofs_buf, 23, 0, ':');
-    
+
     // Content should be restored at saved position
     assert_plain_text_at(&ofs_buf, 0, 12, "Hello World!");
 }

@@ -2,17 +2,21 @@
 
 use std::{borrow::Cow, fmt::Debug};
 
+use super::{DialogEngine, DialogEngineConfigOptions, DialogEngineMode};
 use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer,
-            DialogChoice, DialogEngine, DialogEngineArgs, DialogEngineConfigOptions,
-            DialogEngineMode, DialogEvent, EditorEngineApplyEventResult,
+            DialogChoice, DialogEngineArgs, DialogEvent, EditorEngineApplyEventResult,
             EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
             GradientGenerationPolicy, HasDialogBuffers, InlineString, InputEvent, Key,
             MinSize, PartialFlexBox, Pos, RenderOp, RenderOps, RenderPipeline, Size,
             SpecialKey, SurfaceBounds, SystemClipboard, TextColorizationPolicy,
-            TuiStyle, TuiStyleAttribs, ZOrder, ch, col, editor_engine::engine_public_api, height,
-            inline_string, pc, render_ops, render_pipeline,
-            render_tui_styled_texts_into, row, terminal_lib_backends::KeyPress,
-            throws_with_return, tui_style_attrib, u16, usize, width};
+            TuiStyle, ZOrder, ch, col,
+            editor_engine::engine_public_api,
+            height, inline_string, pc, render_ops, render_pipeline,
+            render_tui_styled_texts_into, row,
+            terminal_lib_backends::KeyPress,
+            throws_with_return,
+            tui_style_attrib::{Dim, Underline},
+            tui_style_attribs, u16, usize, width};
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {
@@ -220,16 +224,8 @@ pub enum DisplayConstants {
 }
 
 mod internal_impl {
-    use super::{ColorWheel, CommonError, CommonErrorType, CommonResult, Cow, Debug,
-                DialogBuffer, DialogChoice, DialogEngine, DialogEngineArgs,
-                DialogEngineConfigOptions, DialogEngineMode, DialogEvent,
-                DisplayConstants, EventPropagation, FlexBox, FlexBoxId, GCStringOwned,
-                GlobalData, GradientGenerationPolicy, HasDialogBuffers, InlineString,
-                InputEvent, Key, KeyPress, MinSize, PartialFlexBox, Pos, RenderOp,
-                RenderOps, RenderPipeline, Size, SpecialKey, SurfaceBounds,
-                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, ch, col, engine_public_api,
-                height, inline_string, pc, render_ops, render_tui_styled_texts_into,
-                row, throws_with_return, tui_style_attrib, u16, usize, width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Return the [`FlexBox`] for the dialog to be rendered in.
     ///
@@ -439,14 +435,11 @@ mod internal_impl {
             ops.push(RenderOp::PaintTextWithAttributes(
                 msg.into(),
                 Some(if let Some(mut style) = maybe_style {
-                    style.attribs.dim = Some(tui_style_attrib::Dim);
+                    style.attribs.dim = Some(Dim);
                     style
                 } else {
                     TuiStyle {
-                        attribs: TuiStyleAttribs {
-                            dim: Some(tui_style_attrib::Dim),
-                            ..Default::default()
-                        },
+                        attribs: tui_style_attribs(Dim),
                         ..Default::default()
                     }
                 }),
@@ -487,9 +480,8 @@ mod internal_impl {
     }
 
     mod render_results_panel_inner {
-        use super::{Cow, DialogEngine, DisplayConstants, GCStringOwned, InlineString,
-                    Pos, RenderOp, RenderOps, Size, TuiStyle, TuiStyleAttribs, col, height,
-                    inline_string, row, tui_style_attrib, width};
+        #[allow(clippy::wildcard_imports)]
+        use super::*;
 
         pub fn paint_results(
             ops: &mut RenderOps,
@@ -567,15 +559,12 @@ mod internal_impl {
                         match dialog_engine.dialog_options.maybe_style_results_panel {
                             // Update existing style.
                             Some(mut style) => {
-                                style.attribs.underline = Some(tui_style_attrib::Underline);
+                                style.attribs.underline = Some(Underline);
                                 style
-                            },
+                            }
                             // No existing style, so create a new style w/ only underline.
                             _ => TuiStyle {
-                                attribs: TuiStyleAttribs {
-                                    underline: Some(tui_style_attrib::Underline),
-                                    ..Default::default()
-                                },
+                                attribs: tui_style_attribs(Underline),
                                 ..Default::default()
                             },
                         }

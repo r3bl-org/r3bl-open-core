@@ -6,7 +6,8 @@ use vte::Perform;
 
 use super::tests_parse_common::create_test_offscreen_buffer_10r_by_10c;
 use crate::{ansi_parser::{ansi_parser_perform_impl::{new, process_bytes},
-                          csi_codes::CsiSequence},
+                          csi_codes::{CSI_PARAM_SEPARATOR, CSI_START,
+                                      CUP_CURSOR_POSITION, CsiSequence}},
             col,
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
             row};
@@ -154,10 +155,17 @@ fn test_csi_position_with_missing_params() {
         // Start at non-home position
         processor.cursor_pos = row(3) + col(3);
 
-        // ESC[;5H - missing row param, should default to 1
+        // ESC[;5H - missing row param, should default to 1 (`5` is arbitrary here)
         // Note: Using raw string as CsiSequence doesn't support missing params (it is
         // always valid)
-        let sequence = "\x1b[;5H";
+        let sequence = format!(
+            "{start}{missing_row}{sep}{col}{cmd}",
+            start = CSI_START,
+            missing_row = "",
+            sep = CSI_PARAM_SEPARATOR,
+            col = "5",
+            cmd = CUP_CURSOR_POSITION
+        );
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
@@ -167,10 +175,17 @@ fn test_csi_position_with_missing_params() {
 
         processor.print('M');
 
-        // ESC[3;H - missing col param, should default to 1
+        // ESC[3;H - missing col param, should default to 1 (`3` is arbitrary here)
         // Note: Using raw string as CsiSequence doesn't support missing params (it is
         // always valid)
-        let sequence = "\x1b[3;H";
+        let sequence = format!(
+            "{start}{row}{sep}{missing_col}{cmd}",
+            start = CSI_START,
+            row = "3",
+            sep = CSI_PARAM_SEPARATOR,
+            missing_col = "",
+            cmd = CUP_CURSOR_POSITION
+        );
         process_bytes(&mut processor, &mut parser, sequence);
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses

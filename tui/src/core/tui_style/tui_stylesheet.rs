@@ -128,26 +128,26 @@ impl TuiStylesheet {
 /// ```
 /// # use r3bl_tui::{
 ///     ch, ChUnit, TuiColor, RgbValue, TuiStyle, TryAdd, tui_stylesheet,
-///     CommonResult, throws_with_return, TuiStylesheet, tui_style_attrib
+///     CommonResult, throws_with_return, TuiStylesheet, tui_style_attrib, TuiStyleId
 /// };
 /// fn create_tui_stylesheet() -> CommonResult<TuiStylesheet> {
 ///   throws_with_return!({
 ///     tui_stylesheet! {
 ///         TuiStyle {
-///             id: tui_style_attrib::id(1),
+///             id: Some(TuiStyleId(1)),
 ///             padding: Some(ch(1)),
 ///             color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(55, 55, 248))),
 ///             ..Default::default()
 ///         },
 ///         smallvec::smallvec![
 ///             TuiStyle {
-///                 id: tui_style_attrib::id(2),
+///                 id: Some(TuiStyleId(2)),
 ///                 padding: Some(ch(1)),
 ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(155, 155, 48))),
 ///                 ..Default::default()
 ///             },
 ///             TuiStyle {
-///                 id: tui_style_attrib::id(3),
+///                 id: Some(TuiStyleId(3)),
 ///                 padding: Some(ch(1)),
 ///                 color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(5, 5, 48))),
 ///                 ..Default::default()

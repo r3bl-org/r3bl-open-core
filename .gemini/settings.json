@@ -8,9 +8,11 @@
         "serena",
         "start-mcp-server",
         "--context",
-        "ide-assistant",
+        "agent",
         "--project",
-        "/home/nazmul/github/r3bl-open-core"
+        "/home/nazmul/github/r3bl-open-core",
+        "--mode",
+        "onboarding"
       ]
     },
     "context7": {

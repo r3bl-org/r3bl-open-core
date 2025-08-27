@@ -2,12 +2,16 @@
 
 //! General tests for ANSI parser functionality.
 
-use crate::{ANSIBasicColor, SgrCode, TuiColor, Pos,
-            offscreen_buffer::test_fixtures_offscreen_buffer::*,
-            tui_style_attrib, TuiStyle, TuiStyleAttribs, col, row};
-use super::tests_parse_common::create_test_offscreen_buffer_10r_by_10c;
-use crate::ansi_parser::ansi_parser_perform_impl::{new, process_bytes};
 use vte::Perform;
+
+use super::tests_parse_common::create_test_offscreen_buffer_10r_by_10c;
+use crate::{ANSIBasicColor, Pos, SgrCode, TuiColor, TuiStyle,
+            ansi_parser::ansi_parser_perform_impl::{new, process_bytes},
+            col,
+            offscreen_buffer::test_fixtures_offscreen_buffer::*,
+            row,
+            tui_style_attrib::{Bold, Italic},
+            tui_style_attribs};
 
 #[test]
 fn test_processor_creation() {
@@ -55,13 +59,9 @@ fn test_sgr_reset_behavior() {
             col,
             expected_char,
             |style_from_buffer| {
-                matches!(
-                    (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
-                    (
-                        Some(tui_style_attrib::Bold),
-                        Some(TuiColor::Basic(ANSIBasicColor::Red))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attribs(Bold)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Red))
             },
             "bold red text",
         );
@@ -98,18 +98,9 @@ fn test_sgr_partial_reset() {
         0,
         'A',
         |style_from_buffer| {
-            matches!(
-                (
-                    style_from_buffer.attribs.bold,
-                    style_from_buffer.attribs.italic,
-                    style_from_buffer.color_fg
-                ),
-                (
-                    Some(tui_style_attrib::Bold),
-                    Some(tui_style_attrib::Italic),
-                    Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                )
-            )
+            style_from_buffer.attribs == tui_style_attribs(Bold + Italic)
+                && style_from_buffer.color_fg
+                    == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
         },
         "bold italic red",
     );
@@ -121,18 +112,9 @@ fn test_sgr_partial_reset() {
         1,
         'B',
         |style_from_buffer| {
-            matches!(
-                (
-                    style_from_buffer.attribs.bold,
-                    style_from_buffer.attribs.italic,
-                    style_from_buffer.color_fg
-                ),
-                (
-                    None,
-                    Some(tui_style_attrib::Italic),
-                    Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                )
-            )
+            style_from_buffer.attribs == tui_style_attribs(Italic)
+                && style_from_buffer.color_fg
+                    == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
         },
         "italic red (no bold)",
     );
@@ -229,22 +211,9 @@ fn test_print_character_with_styles() {
     {
         let mut processor = new(&mut ofs_buf);
         processor.current_style = Some(TuiStyle {
-            id: None,
-            attribs: TuiStyleAttribs {
-                bold: Some(tui_style_attrib::Bold),
-                italic: None,
-                dim: None,
-                underline: None,
-                blink: None,
-                reverse: None,
-                hidden: None,
-                strikethrough: None,
-            },
-            computed: None,
+            attribs: tui_style_attribs(Bold),
             color_fg: Some(TuiColor::Basic(ANSIBasicColor::DarkRed)),
-            color_bg: None,
-            padding: None,
-            lolcat: None,
+            ..Default::default()
         });
         processor.print('S');
 
@@ -259,13 +228,9 @@ fn test_print_character_with_styles() {
         0,
         'S',
         |style_from_buffer| {
-            matches!(
-                (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
-                (
-                    Some(tui_style_attrib::Bold),
-                    Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                )
-            )
+            style_from_buffer.attribs == tui_style_attribs(Bold)
+                && style_from_buffer.color_fg
+                    == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
         },
         "bold red style",
     );
@@ -302,10 +267,7 @@ fn test_vte_parser_integration() {
         5,
         'R',
         |style_from_buffer| {
-            matches!(
-                style_from_buffer.color_fg,
-                Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-            )
+            style_from_buffer.color_fg == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
         },
         "red foreground",
     );

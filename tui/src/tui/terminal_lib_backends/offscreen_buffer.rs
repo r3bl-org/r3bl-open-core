@@ -25,39 +25,14 @@ pub enum CharacterSet {
     Graphics,
 }
 
-/// Represents a grid of cells where the row/column index maps to the terminal screen.
+/// Support structure for ANSI escape sequence parsing and terminal state management.
 ///
-/// This works regardless of the size of each cell. Cells can contain emoji who's display
-/// width is greater than one. This complicates things since a "😃" takes up 2 display
-/// widths.
+/// This struct groups together all fields related to [`ANSI parser`] functionality that
+/// need to be maintained by the [`OffscreenBuffer`] for proper terminal emulation.
 ///
-/// Let's say one cell has a "😃" in it. The cell's display width is 2. The cell's byte
-/// size is 4. The next cell after it will have to contain nothing or void.
-///
-/// Why? This is because the col & row indices of the grid map to display col & row
-/// indices of the terminal screen. By inserting a [`PixelChar::Void`] pixel char in the
-/// next cell, we signal the rendering logic to skip it since it has already been painted.
-/// And this is different than a [`PixelChar::Spacer`] which has to be painted!
-///
-/// This is a very flexible representation of a terminal screen buffer, which can work
-/// with both:
-/// 1. [`crate::RenderPipeline::paint()`]
-/// 2. ANSI escape sequences; for more details see
-///    [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] and the
-///    [`OffscreenBuffer::apply_ansi_bytes()`].
-#[derive(Clone, PartialEq)]
-pub struct OffscreenBuffer {
-    pub buffer: PixelCharLines,
-    pub window_size: Size,
-    pub my_pos: Pos,
-    pub my_fg_color: Option<TuiColor>,
-    pub my_bg_color: Option<TuiColor>,
-    /// Memoized memory size calculation for performance.
-    /// This avoids expensive recalculation in
-    /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`]
-    /// which is called in a hot loop on every render.
-    memory_size_calc_cache: MemoizedMemorySize,
-
+/// [`ANSI parser`]: crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AnsiParserSupport {
     /// Saved cursor position for ANSI escape sequence support.
     ///
     /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
@@ -110,6 +85,54 @@ pub struct OffscreenBuffer {
     /// automatically wrap to the beginning of the next line. When disabled,
     /// the cursor stays at the right margin and subsequent characters overwrite.
     pub auto_wrap_mode: bool,
+}
+
+impl Default for AnsiParserSupport {
+    /// Creates a new `AnsiParserSupport` with VT100-compliant defaults.
+    fn default() -> Self {
+        Self {
+            saved_cursor_pos: None,
+            character_set: CharacterSet::default(),
+            auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
+        }
+    }
+}
+
+/// Represents a grid of cells where the row/column index maps to the terminal screen.
+///
+/// This works regardless of the size of each cell. Cells can contain emoji who's display
+/// width is greater than one. This complicates things since a "😃" takes up 2 display
+/// widths.
+///
+/// Let's say one cell has a "😃" in it. The cell's display width is 2. The cell's byte
+/// size is 4. The next cell after it will have to contain nothing or void.
+///
+/// Why? This is because the col & row indices of the grid map to display col & row
+/// indices of the terminal screen. By inserting a [`PixelChar::Void`] pixel char in the
+/// next cell, we signal the rendering logic to skip it since it has already been painted.
+/// And this is different than a [`PixelChar::Spacer`] which has to be painted!
+///
+/// This is a very flexible representation of a terminal screen buffer, which can work
+/// with both:
+/// 1. [`crate::RenderPipeline::paint()`]
+/// 2. ANSI escape sequences; for more details see
+///    [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] and the
+///    [`OffscreenBuffer::apply_ansi_bytes()`].
+#[derive(Clone, PartialEq)]
+pub struct OffscreenBuffer {
+    pub buffer: PixelCharLines,
+    pub window_size: Size,
+    pub my_pos: Pos,
+    pub my_fg_color: Option<TuiColor>,
+    pub my_bg_color: Option<TuiColor>,
+    /// Memoized memory size calculation for performance.
+    /// This avoids expensive recalculation in
+    /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`]
+    /// which is called in a hot loop on every render.
+    memory_size_calc_cache: MemoizedMemorySize,
+
+    /// ANSI parser support fields grouped together for better organization.
+    pub ansi_parser_support: AnsiParserSupport,
 }
 
 impl GetMemSize for OffscreenBuffer {
@@ -261,17 +284,16 @@ mod offscreen_buffer_impl {
 
         /// Create a new buffer and fill it with empty chars.
         #[must_use]
-        pub fn new_with_capacity_initialized(window_size: Size) -> Self {
+        pub fn new_empty(window_size_arg: impl Into<Size>) -> Self {
+            let window_size = window_size_arg.into();
             let mut buffer = Self {
-                buffer: PixelCharLines::new_with_capacity_initialized(window_size),
+                buffer: PixelCharLines::new_empty(window_size),
                 window_size,
                 my_pos: Pos::default(),
                 my_fg_color: None,
                 my_bg_color: None,
                 memory_size_calc_cache: MemoizedMemorySize::default(),
-                saved_cursor_pos: None,
-                character_set: CharacterSet::default(),
-                auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
+                ansi_parser_support: AnsiParserSupport::default(),
             };
             // Explicitly calculate and cache the initial memory size.
             // We know the cache is empty (invariant), so directly populate it.
@@ -321,12 +343,13 @@ mod pixel_char_lines_impl {
 
     impl PixelCharLines {
         #[must_use]
-        pub fn new_with_capacity_initialized(window_size: Size) -> Self {
+        pub fn new_empty(window_size_arg: impl Into<Size>) -> Self {
+            let window_size = window_size_arg.into();
             let window_height = window_size.row_height;
             let window_width = window_size.col_width;
             Self {
                 lines: smallvec![
-                    PixelCharLine::new_with_capacity_initialized(window_width);
+                    PixelCharLine::new_empty(window_width);
                     window_height.as_usize()
                 ],
             }
@@ -514,7 +537,8 @@ mod pixel_char_line_impl {
     impl PixelCharLine {
         /// Create a new row with the given width and fill it with the empty chars.
         #[must_use]
-        pub fn new_with_capacity_initialized(window_width: ColWidth) -> Self {
+        pub fn new_empty(window_width_arg: impl Into<ColWidth>) -> Self {
+            let window_width = window_width_arg.into();
             Self {
                 pixel_chars: vec![PixelChar::Spacer; window_width.as_usize()],
             }
@@ -623,12 +647,13 @@ pub trait OffscreenBufferPaint {
 mod tests {
     use super::{test_fixtures_offscreen_buffer::*, *};
     use crate::{ANSIBasicColor, assert_eq2, height, new_style, tui_color,
-                tui_style_attrib, width};
+                tui_style_attrib::{Bold, Dim, Italic, Reverse, Underline},
+                tui_style_attribs, width};
 
     #[test]
     fn test_offscreen_buffer_construction() {
         let window_size = width(10) + height(2);
-        let ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let ofs_buf = OffscreenBuffer::new_empty(window_size);
         assert_eq2!(ofs_buf.buffer.len(), 2);
         assert_eq2!(ofs_buf.buffer[0].len(), 10);
         assert_eq2!(ofs_buf.buffer[1].len(), 10);
@@ -645,7 +670,7 @@ mod tests {
     #[test]
     fn test_offscreen_buffer_re_init() {
         let window_size = width(10) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         ofs_buf.buffer[0][0] = PixelChar::PlainText {
             display_char: 'a',
@@ -701,7 +726,7 @@ mod tests {
     #[test]
     fn test_memory_size_caching() {
         let window_size = width(10) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // First call should calculate and cache
         let size1 = ofs_buf.get_mem_size_cached();
@@ -733,7 +758,7 @@ mod tests {
     #[test]
     fn test_buffer_text_operations() {
         let window_size = width(10) + height(3);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Write "Hello" at row 0
         for (i, ch) in "Hello".chars().enumerate() {
@@ -762,7 +787,7 @@ mod tests {
     #[test]
     fn test_buffer_styled_content() {
         let window_size = width(10) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Add bold red text
         ofs_buf.buffer[0][0] = PixelChar::PlainText {
@@ -787,13 +812,9 @@ mod tests {
             0,
             'R',
             |style_from_buffer| {
-                matches!(
-                    (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
-                    (
-                        Some(tui_style_attrib::Bold),
-                        Some(TuiColor::Basic(ANSIBasicColor::Red))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attribs(Bold)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Red))
             },
             "bold red text",
         );
@@ -804,13 +825,9 @@ mod tests {
             1,
             'B',
             |style_from_buffer| {
-                matches!(
-                    (style_from_buffer.attribs.italic, style_from_buffer.color_fg),
-                    (
-                        Some(tui_style_attrib::Italic),
-                        Some(TuiColor::Basic(ANSIBasicColor::Blue))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attribs(Italic)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Blue))
             },
             "italic blue text",
         );
@@ -819,7 +836,7 @@ mod tests {
     #[test]
     fn test_buffer_mixed_content() {
         let window_size = width(8) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Row 0: "Hi " followed by styled "World"
         ofs_buf.buffer[0][0] = PixelChar::PlainText {
@@ -856,16 +873,9 @@ mod tests {
                 3 + i,
                 ch,
                 |style_from_buffer| {
-                    matches!(
-                        (
-                            style_from_buffer.attribs.underline,
-                            style_from_buffer.color_fg
-                        ),
-                        (
-                            Some(tui_style_attrib::Underline),
-                            Some(TuiColor::Basic(ANSIBasicColor::Green))
-                        )
-                    )
+                    style_from_buffer.attribs == tui_style_attribs(Underline)
+                        && style_from_buffer.color_fg
+                            == Some(TuiColor::Basic(ANSIBasicColor::Green))
                 },
                 "underlined green text",
             );
@@ -882,7 +892,7 @@ mod tests {
     fn test_comprehensive_buffer_validation() {
         // This test demonstrates comprehensive use of all test utilities
         let window_size = width(15) + height(4);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Initially, verify entire buffer is empty
         for row in 0..4 {
@@ -948,13 +958,9 @@ mod tests {
             0,
             'W',
             |style_from_buffer| {
-                matches!(
-                    (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
-                    (
-                        Some(tui_style_attrib::Bold),
-                        Some(TuiColor::Basic(ANSIBasicColor::Red))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attribs(Bold)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Red))
             },
             "bold red W",
         );
@@ -965,13 +971,9 @@ mod tests {
             1,
             'o',
             |style_from_buffer| {
-                matches!(
-                    (style_from_buffer.attribs.italic, style_from_buffer.color_fg),
-                    (
-                        Some(tui_style_attrib::Italic),
-                        Some(TuiColor::Basic(ANSIBasicColor::Blue))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attribs(Italic)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Blue))
             },
             "italic blue o",
         );
@@ -982,16 +984,9 @@ mod tests {
             2,
             'r',
             |style_from_buffer| {
-                matches!(
-                    (
-                        style_from_buffer.attribs.underline,
-                        style_from_buffer.color_fg
-                    ),
-                    (
-                        Some(tui_style_attrib::Underline),
-                        Some(TuiColor::Basic(ANSIBasicColor::Green))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attribs(Underline)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Green))
             },
             "underlined green r",
         );
@@ -1002,13 +997,9 @@ mod tests {
             3,
             'l',
             |style_from_buffer| {
-                matches!(
-                    (style_from_buffer.attribs.dim, style_from_buffer.color_bg),
-                    (
-                        Some(tui_style_attrib::Dim),
-                        Some(TuiColor::Basic(ANSIBasicColor::Yellow))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attribs(Dim)
+                    && style_from_buffer.color_bg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Yellow))
             },
             "dim with yellow background l",
         );
@@ -1018,12 +1009,7 @@ mod tests {
             1,
             4,
             'd',
-            |style_from_buffer| {
-                matches!(
-                    style_from_buffer.attribs.reverse,
-                    Some(tui_style_attrib::Reverse)
-                )
-            },
+            |style_from_buffer| style_from_buffer.attribs == tui_style_attribs(Reverse),
             "reversed d",
         );
 
@@ -1033,19 +1019,9 @@ mod tests {
             5,
             '!',
             |style_from_buffer| {
-                matches!(style_from_buffer.attribs.bold, Some(tui_style_attrib::Bold))
-                    && matches!(
-                        style_from_buffer.attribs.italic,
-                        Some(tui_style_attrib::Italic)
-                    )
-                    && matches!(
-                        style_from_buffer.attribs.underline,
-                        Some(tui_style_attrib::Underline)
-                    )
-                    && matches!(
-                        style_from_buffer.color_fg,
-                        Some(TuiColor::Basic(ANSIBasicColor::Magenta))
-                    )
+                style_from_buffer.attribs == tui_style_attribs(Bold + Italic + Underline)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Magenta))
             },
             "multi-styled exclamation",
         );
@@ -1082,13 +1058,9 @@ mod tests {
                     i,
                     expected_char,
                     |style_from_buffer| {
-                        matches!(
-                            (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
-                            (
-                                Some(tui_style_attrib::Bold),
-                                Some(TuiColor::Basic(ANSIBasicColor::Cyan))
-                            )
-                        )
+                        style_from_buffer.attribs == tui_style_attribs(Bold)
+                            && style_from_buffer.color_fg
+                                == Some(TuiColor::Basic(ANSIBasicColor::Cyan))
                     },
                     "bold cyan digit",
                 );
@@ -1127,9 +1099,7 @@ mod tests {
             2,
             1,
             '1',
-            |style_from_buffer| {
-                matches!(style_from_buffer.attribs.bold, Some(tui_style_attrib::Bold))
-            },
+            |style_from_buffer| style_from_buffer.attribs == tui_style_attribs(Bold),
             "bold cyan 1",
         );
     }
@@ -1138,8 +1108,8 @@ mod tests {
     fn test_diff_method() {
         // Test the diff method that compares two buffers
         let window_size = width(5) + height(3);
-        let mut ofs_buf_1 = OffscreenBuffer::new_with_capacity_initialized(window_size);
-        let mut ofs_buf_2 = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf_1 = OffscreenBuffer::new_empty(window_size);
+        let mut ofs_buf_2 = OffscreenBuffer::new_empty(window_size);
 
         // Initially both buffers are empty, diff should be None or empty
         let diff = ofs_buf_1.diff(&ofs_buf_2);
@@ -1207,7 +1177,7 @@ mod tests {
     fn test_deref_and_deref_mut() {
         // Test Deref and DerefMut implementations
         let window_size = width(3) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Test Deref (read-only access)
         let rows: &PixelCharLines = &ofs_buf;
@@ -1247,7 +1217,7 @@ mod tests {
     fn test_pixel_char_variants() {
         // Test different PixelChar variants and their behavior
         let window_size = width(4) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Test Spacer variant (default)
         assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
@@ -1271,13 +1241,9 @@ mod tests {
             2,
             'b',
             |style_from_buffer| {
-                matches!(
-                    style_from_buffer.attribs.underline,
-                    Some(tui_style_attrib::Underline)
-                ) && matches!(
-                    style_from_buffer.color_fg,
-                    Some(TuiColor::Basic(ANSIBasicColor::Red))
-                )
+                style_from_buffer.attribs == tui_style_attribs(Underline)
+                    && style_from_buffer.color_fg
+                        == Some(TuiColor::Basic(ANSIBasicColor::Red))
             },
             "underlined red 'b'",
         );
@@ -1311,7 +1277,7 @@ mod tests {
     fn test_invalidate_memory_size_calc_cache() {
         // Test cache invalidation through mutations
         let window_size = width(3) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Get initial size (calculates and caches)
         let size1 = ofs_buf.get_mem_size_cached();
@@ -1335,7 +1301,7 @@ mod tests {
     fn test_buffer_boundaries() {
         // Test edge cases and boundary conditions
         let window_size = width(2) + height(2);
-        let mut ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Test all corners
         ofs_buf.buffer[0][0] = PixelChar::PlainText {
@@ -1373,8 +1339,8 @@ mod tests {
     fn test_diff_with_styles() {
         // Test diff method with complex style changes
         let window_size = width(3) + height(2);
-        let mut ofs_buf_1 = OffscreenBuffer::new_with_capacity_initialized(window_size);
-        let mut ofs_buf_2 = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf_1 = OffscreenBuffer::new_empty(window_size);
+        let mut ofs_buf_2 = OffscreenBuffer::new_empty(window_size);
 
         // Set up buffer1 with styled content
         ofs_buf_1.buffer[0][0] = PixelChar::PlainText {
@@ -1416,7 +1382,7 @@ mod tests {
 
         // Test that new buffer uses default
         let window_size = width(1) + height(1);
-        let ofs_buf = OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let ofs_buf = OffscreenBuffer::new_empty(window_size);
         assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
     }
 }

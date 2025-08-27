@@ -92,11 +92,11 @@ impl OffscreenBuffer {
     /// ```
     /// use r3bl_tui::{OffscreenBuffer, Size, height, width, SgrCode, ANSIBasicColor};
     ///
-    /// let mut buffer = OffscreenBuffer::new_with_capacity_initialized(height(10) + width(10));
+    /// let mut ofs_buf = OffscreenBuffer::new_empty(height(10) + width(10));
     /// let red_text = format!("Hello{a}Red Text{b}",
     ///     a = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
     ///     b = SgrCode::Reset);
-    /// let events = buffer.apply_ansi_bytes(red_text);
+    /// let events = ofs_buf.apply_ansi_bytes(red_text);
     /// ```
     ///
     /// # Processing details
@@ -140,45 +140,37 @@ impl OffscreenBuffer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{ANSIBasicColor, SgrCode, TuiColor,
-                ansi_parser::{csi_codes, csi_codes::CsiSequence},
-                height,
-                offscreen_buffer::test_fixtures_offscreen_buffer::*,
-                width};
-
-    /// Create a test `OffscreenBuffer` with 10x10 dimensions (9 content rows + 1 status
-    /// bar).
-    fn create_test_offscreen_buffer() -> OffscreenBuffer {
-        OffscreenBuffer::new_with_capacity_initialized(height(10) + width(10))
-    }
+                ansi_parser::{ansi_parser_perform_impl_tests::tests_parse_common::create_test_offscreen_buffer_10r_by_10c,
+                              csi_codes::{self, CsiSequence}},
+                offscreen_buffer::test_fixtures_offscreen_buffer::*};
 
     #[test]
     #[allow(clippy::items_after_statements)]
     fn test_public_api_plain_text() {
-        let mut buffer = create_test_offscreen_buffer();
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         const TEXT: &str = "Hello";
 
         // Test that the public API processes text correctly.
-        let events = buffer.apply_ansi_bytes(TEXT);
+        let events = ofs_buf.apply_ansi_bytes(TEXT);
 
         // Should not produce any OSC events for SGR sequences.
         assert_eq!(events.len(), 0);
 
         // Verify "Hello" is in the buffer.
-        assert_plain_text_at(&buffer, 0, 0, TEXT);
+        assert_plain_text_at(&ofs_buf, 0, 0, TEXT);
     }
 
     #[test]
     #[allow(clippy::items_after_statements)]
     fn test_public_api_with_colors() {
-        let mut buffer = create_test_offscreen_buffer();
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         const TEXT: &str = "Red Text";
 
         // Test processing with ANSI color codes.
-        let events = buffer.apply_ansi_bytes(format!(
+        let events = ofs_buf.apply_ansi_bytes(format!(
             "{fg_color}{text}{reset}",
             fg_color = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
             text = TEXT,
@@ -191,7 +183,7 @@ mod tests {
         // Verify the text with proper styling.
         for (col, expected_char) in TEXT.chars().enumerate() {
             assert_styled_char_at(
-                &buffer,
+                &ofs_buf,
                 0,
                 col,
                 expected_char,
@@ -208,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_public_api_cursor_movement() {
-        let mut buffer = create_test_offscreen_buffer();
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
@@ -228,7 +220,7 @@ mod tests {
         // 5. Write 'D' at (0,4) → cursor moves to (0,5)
 
         // Test cursor movement sequences.
-        let events = buffer.apply_ansi_bytes(format!(
+        let events = ofs_buf.apply_ansi_bytes(format!(
             "A{right_2}B{up_1}D",
             right_2 = csi_codes::CsiSequence::CursorForward(2), // move right 2.
             up_1 = csi_codes::CsiSequence::CursorUp(1),         // move up 1.
@@ -238,26 +230,26 @@ mod tests {
         assert_eq!(events.len(), 0);
 
         assert_eq!(
-            buffer.my_pos.row_index.as_usize(),
+            ofs_buf.my_pos.row_index.as_usize(),
             0,
             "cursor should be at row 0"
         );
         assert_eq!(
-            buffer.my_pos.col_index.as_usize(),
+            ofs_buf.my_pos.col_index.as_usize(),
             5,
             "cursor should be at column 5 after writing 'D'"
         );
 
         // Verify characters at specific positions instead of continuous string.
-        assert_plain_char_at(&buffer, 0, 0, 'A');
-        assert_empty_at(&buffer, 0, 1); // Empty space
-        assert_empty_at(&buffer, 0, 2); // Empty space
-        assert_plain_text_at(&buffer, 0, 3, "BD");
+        assert_plain_char_at(&ofs_buf, 0, 0, 'A');
+        assert_empty_at(&ofs_buf, 0, 1); // Empty space
+        assert_empty_at(&ofs_buf, 0, 2); // Empty space
+        assert_plain_text_at(&ofs_buf, 0, 3, "BD");
     }
 
     #[test]
     fn test_public_api_csi_position_change() {
-        let mut buffer = create_test_offscreen_buffer();
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Note: OffscreenBuffer uses 0-based index, and terminal (CSI, ESC seq, etc) uses
         // 1-based index.
@@ -281,7 +273,7 @@ mod tests {
         //
         // Sequence: "Start" → move(1,2) → "Mid" → move(0,0) → "Home" → move(7,7) → "End"
 
-        let events = buffer.apply_ansi_bytes(format!(
+        let events = ofs_buf.apply_ansi_bytes(format!(
             "Start{move_to_2_3}Mid{move_to_1_1}Home{move_to_8_8}End",
             move_to_2_3 = CsiSequence::CursorPosition { row: 2, col: 3 },
             move_to_1_1 = CsiSequence::CursorPosition { row: 1, col: 1 },
@@ -291,12 +283,12 @@ mod tests {
         assert_eq!(events.len(), 0);
 
         // Verify layout matches diagram.
-        assert_plain_text_at(&buffer, 0, 0, "Homet");
-        assert_plain_text_at(&buffer, 1, 2, "Mid");
-        assert_plain_text_at(&buffer, 7, 7, "End");
+        assert_plain_text_at(&ofs_buf, 0, 0, "Homet");
+        assert_plain_text_at(&ofs_buf, 1, 2, "Mid");
+        assert_plain_text_at(&ofs_buf, 7, 7, "End");
 
         // Cursor wraps from (7,10) to (8,0).
-        assert_eq!(buffer.my_pos.row_index.as_usize(), 8);
-        assert_eq!(buffer.my_pos.col_index.as_usize(), 0);
+        assert_eq!(ofs_buf.my_pos.row_index.as_usize(), 8);
+        assert_eq!(ofs_buf.my_pos.col_index.as_usize(), 0);
     }
 }

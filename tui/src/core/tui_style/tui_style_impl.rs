@@ -17,7 +17,7 @@ use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
 /// Here's an example.
 ///
 /// ```
-/// use r3bl_tui::{TuiStyle, TuiStyleAttribs, TuiColor, TuiStylesheet, RgbValue, tui_style_attrib};
+/// use r3bl_tui::{TuiStyle, TuiStyleAttribs, TuiColor, TuiStylesheet, RgbValue, tui_style_attrib, TuiStyleId};
 ///
 /// // Turquoise: TuiColor::Rgb { r: 51, g: 255, b: 255 }
 /// // Pink:      TuiColor::Rgb { r: 252, g: 157, b: 248 }
@@ -27,7 +27,7 @@ use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
 ///
 /// let _ = stylesheet.add_styles(smallvec::smallvec![
 ///     TuiStyle {
-///         id: Some(Id(0)),
+///         id: Some(TuiStyleId(0)),
 ///         attribs: TuiStyleAttribs {
 ///             bold: Some(tui_style_attrib::Bold),
 ///             dim: Some(tui_style_attrib::Dim),
@@ -37,7 +37,7 @@ use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
 ///         .. Default::default()
 ///     },
 ///     TuiStyle {
-///         id: Some(Id(1)),
+///         id: Some(TuiStyleId(1)),
 ///         attribs: TuiStyleAttribs {
 ///             bold: Some(tui_style_attrib::Bold),
 ///             dim: Some(tui_style_attrib::Dim),
@@ -74,6 +74,7 @@ pub fn tui_style_id(arg_val: impl Into<u8>) -> Option<TuiStyleId> {
 }
 
 mod id_impl {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     impl TuiStyleId {
@@ -114,6 +115,7 @@ mod id_impl {
 }
 
 mod addition {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     impl Add for TuiStyle {
@@ -208,6 +210,7 @@ mod addition {
 }
 
 mod style_helper {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     impl Debug for TuiStyle {
@@ -339,6 +342,7 @@ mod style_helper {
 }
 
 mod style_impl {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     impl TuiStyle {

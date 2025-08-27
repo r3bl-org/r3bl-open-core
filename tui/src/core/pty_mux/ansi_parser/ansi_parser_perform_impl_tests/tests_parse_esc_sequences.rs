@@ -85,7 +85,7 @@ fn test_esc_save_restore_cursor() {
 
     // Verify saved cursor position persisted in buffer
     assert_eq!(
-        ofs_buf.saved_cursor_pos,
+        ofs_buf.ansi_parser_support.saved_cursor_pos,
         Some(row(3) + col(6))
     );
 
@@ -127,7 +127,7 @@ fn test_esc_character_set_switching() {
     }
 
     // Verify character set state after processor is dropped
-    assert_eq!(ofs_buf.character_set, CharacterSet::Ascii);
+    assert_eq!(ofs_buf.ansi_parser_support.character_set, CharacterSet::Ascii);
 
     // Verify the characters
     assert_plain_char_at(&ofs_buf, 0, 0, 'q'); // ASCII 'q'

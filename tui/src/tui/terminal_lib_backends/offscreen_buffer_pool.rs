@@ -20,7 +20,7 @@ impl OffscreenBufferPool {
     pub fn new(window_size: Size) -> Self {
         let mut pool = RingBufferStack::new();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            pool.add(OffscreenBuffer::new_with_capacity_initialized(window_size));
+            pool.add(OffscreenBuffer::new_empty(window_size));
         }
 
         Self { pool, window_size }
@@ -29,9 +29,7 @@ impl OffscreenBufferPool {
     /// Get a buffer from the pool. If the pool is empty, a new buffer is created.
     pub fn take(&mut self) -> Option<OffscreenBuffer> {
         if self.pool.is_empty() {
-            Some(OffscreenBuffer::new_with_capacity_initialized(
-                self.window_size,
-            ))
+            Some(OffscreenBuffer::new_empty(self.window_size))
         } else {
             self.pool.pop()
         }
@@ -61,10 +59,7 @@ impl OffscreenBufferPool {
     fn rebuild_pool(&mut self) {
         self.pool.clear();
         for _ in 0..OFFSCREEN_BUFFER_POOL_SIZE {
-            self.pool
-                .push(OffscreenBuffer::new_with_capacity_initialized(
-                    self.window_size,
-                ));
+            self.pool.push(OffscreenBuffer::new_empty(self.window_size));
         }
     }
 

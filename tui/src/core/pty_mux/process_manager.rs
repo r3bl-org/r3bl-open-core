@@ -9,6 +9,7 @@
 use std::fmt::{Debug, Formatter, Result};
 
 use portable_pty::PtySize;
+
 use super::output_renderer::STATUS_BAR_HEIGHT;
 use crate::{OffscreenBuffer, Size,
             core::pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
@@ -73,7 +74,7 @@ impl Process {
             args,
             session: None,
             is_running: false,
-            ofs_buf: OffscreenBuffer::new_with_capacity_initialized(buffer_size),
+            ofs_buf: OffscreenBuffer::new_empty(buffer_size),
 
             has_unrendered_output: false,
             terminal_title: None,
@@ -166,7 +167,7 @@ impl Debug for Process {
             .field("session", &self.session)
             .field("is_running", &self.is_running)
             .field("offscreen_buffer", &self.ofs_buf)
-.field("has_unrendered_output", &self.has_unrendered_output)
+            .field("has_unrendered_output", &self.has_unrendered_output)
             .field("terminal_title", &self.terminal_title)
             .finish()
     }
@@ -388,9 +389,9 @@ impl ProcessManager {
         // Update all processes with new buffers and parsers
         for (i, process) in self.processes.iter_mut().enumerate() {
             // Create fresh buffer at new size
-            process.ofs_buf = OffscreenBuffer::new_with_capacity_initialized(buffer_size);
+            process.ofs_buf = OffscreenBuffer::new_empty(buffer_size);
 
-// Clear unrendered output flag since we're starting fresh
+            // Clear unrendered output flag since we're starting fresh
             process.has_unrendered_output = false;
 
             // Send resize event to PTY session

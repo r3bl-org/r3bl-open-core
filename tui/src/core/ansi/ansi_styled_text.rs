@@ -8,8 +8,8 @@ use strum_macros::EnumCount;
 use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, GCStringOwned, InlineString,
             InlineVec, PixelChar, SgrCode, TuiStyle, WriteToBuf, inline_string,
             tui_color,
-            tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
-                                          Strikethrough, Underline}};
+            tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse, Strikethrough,
+                               Underline}};
 
 /// Please don't create this struct directly, use [`crate::ast()`], [`crate::ast_line`!],
 /// [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
@@ -716,14 +716,14 @@ mod convert_vec_ast_style_to_tui_style {
                     ASTStyle::Background(color) => {
                         tui_style.color_bg = Some(color.into());
                     }
-                    ASTStyle::Bold => tui_style.attribs.bold = Some(Bold),
-                    ASTStyle::Dim => tui_style.attribs.dim = Some(Dim),
-                    ASTStyle::Italic => tui_style.attribs.italic = Some(Italic),
-                    ASTStyle::Underline => tui_style.attribs.underline = Some(Underline),
-                    ASTStyle::Invert => tui_style.attribs.reverse = Some(Reverse),
-                    ASTStyle::Hidden => tui_style.attribs.hidden = Some(Hidden),
+                    ASTStyle::Bold => tui_style.attribs += Bold,
+                    ASTStyle::Dim => tui_style.attribs += Dim,
+                    ASTStyle::Italic => tui_style.attribs += Italic,
+                    ASTStyle::Underline => tui_style.attribs += Underline,
+                    ASTStyle::Invert => tui_style.attribs += Reverse,
+                    ASTStyle::Hidden => tui_style.attribs += Hidden,
                     ASTStyle::Strikethrough => {
-                        tui_style.attribs.strikethrough = Some(Strikethrough);
+                        tui_style.attribs += Strikethrough;
                     }
                     // TuiStyle doesn't have direct equivalents for these:
                     ASTStyle::Overline | ASTStyle::RapidBlink | ASTStyle::SlowBlink => {}
@@ -890,29 +890,20 @@ mod tests {
 
     use super::dim;
     use crate::{ASTColor, ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport,
-                InlineVec, PixelChar, TuiColor, TuiStyle, TuiStyleAttribs,
+                InlineVec, PixelChar, TuiColor, TuiStyle,
                 ansi::sizing::InlineVecASTextStyles,
                 ansi_styled_text::ansi_styled_text_impl::ASTextConvertOptions,
                 global_color_support, tui_color,
                 tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
                                               Strikethrough, Underline},
-                width};
+                tui_style_attribs, width};
 
     #[serial]
     #[test]
     fn test_convert_tui_style_to_vec_ast_style() {
         {
             let tui_style = TuiStyle {
-                attribs: TuiStyleAttribs {
-                    bold: Some(Bold),
-                    dim: None,
-                    italic: Some(Italic),
-                    underline: None,
-                    reverse: None,
-                    hidden: None,
-                    strikethrough: Some(Strikethrough),
-                    ..Default::default()
-                },
+                attribs: tui_style_attribs(Bold + Italic + Strikethrough),
                 ..Default::default()
             };
             let ast_styles: InlineVecASTextStyles = tui_style.into();
@@ -924,16 +915,7 @@ mod tests {
 
         {
             let tui_style = TuiStyle {
-                attribs: TuiStyleAttribs {
-                    bold: None,
-                    dim: Some(Dim),
-                    italic: None,
-                    underline: Some(Underline),
-                    reverse: Some(Reverse),
-                    hidden: Some(Hidden),
-                    strikethrough: None,
-                    ..Default::default()
-                },
+                attribs: tui_style_attribs(Dim + Underline + Reverse + Hidden),
                 ..Default::default()
             };
             let ast_styles: InlineVecASTextStyles = tui_style.into();
@@ -950,16 +932,9 @@ mod tests {
 
         {
             let tui_style = TuiStyle {
-                attribs: TuiStyleAttribs {
-                    bold: Some(Bold),
-                    dim: Some(Dim),
-                    italic: Some(Italic),
-                    underline: Some(Underline),
-                    reverse: Some(Reverse),
-                    hidden: Some(Hidden),
-                    strikethrough: Some(Strikethrough),
-                    ..Default::default()
-                },
+                attribs: tui_style_attribs(
+                    Bold + Dim + Italic + Underline + Reverse + Hidden + Strikethrough,
+                ),
                 ..Default::default()
             };
             let ast_styles: InlineVecASTextStyles = tui_style.into();
@@ -1151,12 +1126,7 @@ mod tests {
             ASTStyle::Overline, // This should be ignored
         ];
         let expected_tui_style_1 = TuiStyle {
-            attribs: TuiStyleAttribs {
-                bold: Some(Bold),
-                italic: Some(Italic),
-                underline: Some(Underline),
-                ..Default::default()
-            },
+            attribs: tui_style_attribs(Bold + Italic + Underline),
             color_fg: Some(TuiColor::Ansi(196.into())),
             color_bg: Some(TuiColor::Rgb((50, 50, 50).into())),
             ..Default::default()
@@ -1172,12 +1142,7 @@ mod tests {
             ASTStyle::RapidBlink, // This should be ignored
         ];
         let expected_tui_style_2 = TuiStyle {
-            attribs: TuiStyleAttribs {
-                dim: Some(Dim),
-                strikethrough: Some(Strikethrough),
-                hidden: Some(Hidden),
-                ..Default::default()
-            },
+            attribs: tui_style_attribs(Dim + Strikethrough + Hidden),
             ..Default::default()
         };
         let converted_tui_style_2: TuiStyle = ast_styles_2.into();
@@ -1205,10 +1170,7 @@ mod tests {
         // Test case 5: Invert style
         let ast_styles_5: ASTextStyles = smallvec![ASTStyle::Invert];
         let expected_tui_style_5 = TuiStyle {
-            attribs: TuiStyleAttribs {
-                reverse: Some(Reverse),
-                ..Default::default()
-            },
+            attribs: tui_style_attribs(Reverse),
             ..Default::default()
         };
         let converted_tui_style_5: TuiStyle = ast_styles_5.into();
@@ -1253,10 +1215,7 @@ mod tests {
     #[test]
     fn test_ast_convert_method() {
         let tui_style = TuiStyle {
-            attribs: TuiStyleAttribs {
-                bold: Some(Bold),
-                ..Default::default()
-            },
+            attribs: tui_style_attribs(Bold),
             color_fg: Some(TuiColor::Ansi(196.into())), // Red.
             ..Default::default()
         };
@@ -1467,7 +1426,7 @@ mod tests {
                                                * World" (len 11) */
             };
             let res: InlineVec<PixelChar> = styled_text.convert(opt);
-            assert!(res.is_empty());
+            assert!(res.is_empty()); // convert returns empty for invalid end
         }
 
         // Test case 10.1: Valid range, end is last index
@@ -1574,10 +1533,7 @@ mod tests {
     #[test]
     fn test_ast_clip() {
         let tui_style = TuiStyle {
-            attribs: TuiStyleAttribs {
-                bold: Some(Bold),
-                ..Default::default()
-            },
+            attribs: tui_style_attribs(Bold),
             color_fg: Some(TuiColor::Ansi(196.into())), // Red.
             ..Default::default()
         };

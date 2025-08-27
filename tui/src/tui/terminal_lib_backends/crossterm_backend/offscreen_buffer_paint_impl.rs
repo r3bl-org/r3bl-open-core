@@ -308,8 +308,7 @@ mod tests {
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {
         let window_size = width(10) + height(2);
-        let mut ofs_buf =
-            OffscreenBuffer::new_with_capacity_initialized(window_size);
+        let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
 
         // Input:  R0 "hello1234😃"
         //            C0123456789

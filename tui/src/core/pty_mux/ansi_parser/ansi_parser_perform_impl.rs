@@ -27,7 +27,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
     /// Handle printable characters.
     fn print(&mut self, ch: char) {
         // Apply character set translation if in graphics mode
-        let display_char = match self.ofs_buf.character_set {
+        let display_char = match self.ofs_buf.ansi_parser_support.character_set {
             CharacterSet::Graphics => char_translation::translate_dec_graphics(ch),
             CharacterSet::Ascii => ch,
         };
@@ -53,7 +53,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode)
             if new_col.check_overflows(col_max) == crate::BoundsStatus::Overflowed {
-                if self.ofs_buf.auto_wrap_mode {
+                if self.ofs_buf.ansi_parser_support.auto_wrap_mode {
                     // DECAWM enabled: wrap to next line (default behavior)
                     self.cursor_pos.col_index = col(0);
                     let next_row = current_row + row(1);
@@ -177,7 +177,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::SCP_SAVE_CURSOR => {
                 // CSI s - Save current cursor position
                 // Alternative to ESC 7 (DECSC)
-                self.ofs_buf.saved_cursor_pos = Some(self.cursor_pos);
+                self.ofs_buf.ansi_parser_support.saved_cursor_pos = Some(self.cursor_pos);
                 tracing::trace!(
                     "CSI s (SCP): Saved cursor position {:?}",
                     self.cursor_pos
@@ -186,7 +186,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::RCP_RESTORE_CURSOR => {
                 // CSI u - Restore saved cursor position
                 // Alternative to ESC 8 (DECRC)
-                if let Some(saved_pos) = self.ofs_buf.saved_cursor_pos {
+                if let Some(saved_pos) = self.ofs_buf.ansi_parser_support.saved_cursor_pos {
                     self.cursor_pos = saved_pos;
                     tracing::trace!(
                         "CSI u (RCP): Restored cursor position to {:?}",
@@ -309,7 +309,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
                         .unwrap_or(0);
                     match mode {
                         csi_codes::DECAWM_AUTO_WRAP => {
-                            self.ofs_buf.auto_wrap_mode = true;
+                            self.ofs_buf.ansi_parser_support.auto_wrap_mode = true;
                             tracing::trace!("ESC[?7h: Enabled auto-wrap mode (DECAWM)");
                         }
                         _ => tracing::debug!("CSI ?{}h: Unhandled private mode", mode),
@@ -330,7 +330,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
                         .unwrap_or(0);
                     match mode {
                         csi_codes::DECAWM_AUTO_WRAP => {
-                            self.ofs_buf.auto_wrap_mode = false;
+                            self.ofs_buf.ansi_parser_support.auto_wrap_mode = false;
                             tracing::trace!("ESC[?7l: Disabled auto-wrap mode (DECAWM)");
                         }
                         _ => tracing::debug!("CSI ?{}l: Unhandled private mode", mode),
@@ -455,8 +455,8 @@ impl Perform for AnsiToBufferProcessor<'_> {
     /// ## Supported ESC Sequences
     ///
     /// ### Cursor Save/Restore (Requires Persistent State)
-    /// - **ESC 7 (DECSC)**: Save cursor position to `ofs_buf.saved_cursor_pos`
-    /// - **ESC 8 (DECRC)**: Restore cursor from `ofs_buf.saved_cursor_pos`
+    /// - **ESC 7 (DECSC)**: Save cursor position to `ofs_buf.ansi_parser_support.saved_cursor_pos`
+    /// - **ESC 8 (DECRC)**: Restore cursor from `ofs_buf.ansi_parser_support.saved_cursor_pos`
     ///
     /// ### Character Set Selection (Requires Persistent State)
     /// - **ESC ( B**: Select ASCII character set (normal text)
@@ -475,13 +475,13 @@ impl Perform for AnsiToBufferProcessor<'_> {
     /// Session 1: vim at position (5,10) sends ESC 7
     ///   → AnsiToBufferProcessor::new() with cursor_pos = ofs_buf.my_pos (5,10)
     ///   → esc_dispatch() handles ESC 7
-    ///   → Saves ofs_buf.saved_cursor_pos = Some((5,10))
+    ///   → Saves ofs_buf.ansi_parser_support.saved_cursor_pos = Some((5,10))
     ///   → drop() updates ofs_buf.my_pos
     ///
     /// Session 2: vim moves cursor to (20,30), then sends ESC 8
     ///   → AnsiToBufferProcessor::new() with cursor_pos = ofs_buf.my_pos (20,30)
     ///   → esc_dispatch() handles ESC 8
-    ///   → Restores cursor_pos = ofs_buf.saved_cursor_pos.unwrap() // (5,10)
+    ///   → Restores cursor_pos = ofs_buf.ansi_parser_support.saved_cursor_pos.unwrap() // (5,10)
     ///   → drop() updates ofs_buf.my_pos = (5,10) ✓
     /// ```
     fn esc_dispatch(&mut self, intermediates: &[u8], _ignore: bool, byte: u8) {
@@ -490,7 +490,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
                 // DECSC - Save current cursor position
                 // The cursor position is saved to persistent buffer state so it
                 // survives across multiple AnsiToBufferProcessor instances
-                self.ofs_buf.saved_cursor_pos = Some(self.cursor_pos);
+                self.ofs_buf.ansi_parser_support.saved_cursor_pos = Some(self.cursor_pos);
                 tracing::trace!(
                     "ESC 7 (DECSC): Saved cursor position {:?}",
                     self.cursor_pos
@@ -499,7 +499,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             esc_codes::DECRC_RESTORE_CURSOR => {
                 // DECRC - Restore saved cursor position
                 // Retrieves the previously saved position from buffer's persistent state
-                if let Some(saved_pos) = self.ofs_buf.saved_cursor_pos {
+                if let Some(saved_pos) = self.ofs_buf.ansi_parser_support.saved_cursor_pos {
                     self.cursor_pos = saved_pos;
                     tracing::trace!(
                         "ESC 8 (DECRC): Restored cursor position to {:?}",
@@ -524,13 +524,13 @@ impl Perform for AnsiToBufferProcessor<'_> {
                 match byte {
                     esc_codes::CHARSET_ASCII => {
                         // Select ASCII character set (normal mode)
-                        self.ofs_buf.character_set = CharacterSet::Ascii;
+                        self.ofs_buf.ansi_parser_support.character_set = CharacterSet::Ascii;
                         tracing::trace!("ESC ( B: Selected ASCII character set");
                     }
                     esc_codes::CHARSET_DEC_GRAPHICS => {
                         // Select DEC Special Graphics character set
                         // This enables box-drawing characters
-                        self.ofs_buf.character_set = CharacterSet::Graphics;
+                        self.ofs_buf.ansi_parser_support.character_set = CharacterSet::Graphics;
                         tracing::trace!("ESC ( 0: Selected DEC graphics character set");
                     }
                     _ => {
@@ -910,10 +910,10 @@ mod terminal_ops {
         processor.cursor_pos = Pos::default();
 
         // Clear saved cursor state
-        processor.ofs_buf.saved_cursor_pos = None;
+        processor.ofs_buf.ansi_parser_support.saved_cursor_pos = None;
 
         // Reset to ASCII character set
-        processor.ofs_buf.character_set = CharacterSet::Ascii;
+        processor.ofs_buf.ansi_parser_support.character_set = CharacterSet::Ascii;
 
         // Clear any SGR attributes
         reset_sgr_attributes(processor);

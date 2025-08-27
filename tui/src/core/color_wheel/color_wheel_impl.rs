@@ -1179,8 +1179,9 @@ mod tests_color_wheel_rgb {
     use serial_test::serial;
 
     use super::*;
-    use crate::{ColorSupport, TuiStyleAttribs, assert_eq2, global_color_support,
-                tui_style::tui_style_attrib::{Bold, Dim}};
+    use crate::{ColorSupport, assert_eq2, global_color_support,
+                tui_style::tui_style_attrib::{Bold, Dim},
+                tui_style_attribs};
 
     #[test]
     fn test_convert_lolcat_seed_to_index() {
@@ -1465,11 +1466,7 @@ mod tests_color_wheel_rgb {
         global_color_support::set_override(ColorSupport::Truecolor);
 
         let style = TuiStyle {
-            attribs: TuiStyleAttribs {
-                dim: Some(Dim),
-                bold: Some(Bold),
-                ..Default::default()
-            },
+            attribs: tui_style_attribs(Dim + Bold),
             ..Default::default()
         };
 

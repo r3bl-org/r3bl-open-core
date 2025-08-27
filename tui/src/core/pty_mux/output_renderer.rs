@@ -6,17 +6,20 @@
 //! as a compositor to eliminate visual artifacts. It maintains a dynamic status bar
 //! showing process information and keyboard shortcuts.
 
-
 use super::ProcessManager;
-use crate::{lock_output_device_as_mut, tui_style_attrib, ANSIBasicColor, FlushKind, OffscreenBuffer, PixelChar, Size, TuiColor, TuiStyle, TuiStyleAttribs, OutputDevice,
-            tui::terminal_lib_backends::{OffscreenBufferPaint, OffscreenBufferPaintImplCrossterm}};
+use crate::{ANSIBasicColor, BoundsCheck, FlushKind, OffscreenBuffer, OutputDevice,
+            PixelChar, Size, TuiColor, TuiStyle, bounds_check, idx,
+            lock_output_device_as_mut,
+            tui::terminal_lib_backends::{OffscreenBufferPaint,
+                                         OffscreenBufferPaintImplCrossterm},
+            tui_style_attrib::Bold,
+            tui_style_attribs};
 
 /// Height reserved for the status bar at the bottom of the terminal.
 pub const STATUS_BAR_HEIGHT: u16 = 1;
 
 /// Maximum number of processes supported (F1-F9).
 pub const MAX_PROCESSES: usize = 9;
-
 
 /// Manages display rendering and status bar for the multiplexer with per-process buffers.
 ///
@@ -43,11 +46,7 @@ impl OutputRenderer {
     /// With per-process buffers, the renderer no longer maintains its own buffer
     /// or parser - it gets buffers from the `ProcessManager` when needed.
     #[must_use]
-    pub fn new(terminal_size: Size) -> Self {
-        Self {
-            terminal_size,
-        }
-    }
+    pub fn new(terminal_size: Size) -> Self { Self { terminal_size } }
 
     /// Render the active process's buffer with status bar using per-process buffers.
     ///
@@ -87,14 +86,13 @@ impl OutputRenderer {
         Ok(())
     }
 
-
     /// Composite status bar into the last row of the given `OffscreenBuffer`.
     ///
     /// This modifies the provided buffer by writing the status bar to its last row.
     fn composite_status_bar_into_buffer(
         &mut self,
         ofs_buf: &mut OffscreenBuffer,
-        process_manager: &ProcessManager
+        process_manager: &ProcessManager,
     ) {
         let status_text = self.generate_status_text(process_manager);
         let last_row_idx = self.terminal_size.row_height.as_usize().saturating_sub(1);
@@ -106,28 +104,16 @@ impl OutputRenderer {
 
         // Write status text with appropriate style
         let status_style = Some(TuiStyle {
-            id: None,
-            attribs: TuiStyleAttribs {
-                bold: Some(tui_style_attrib::Bold),
-                italic: None,
-                dim: None,
-                underline: None,
-                blink: None,
-                reverse: None,
-                hidden: None,
-                strikethrough: None,
-            },
-            computed: None,
+            attribs: tui_style_attribs(Bold),
             color_fg: Some(TuiColor::Basic(ANSIBasicColor::White)),
             color_bg: Some(TuiColor::Basic(ANSIBasicColor::Blue)),
-            padding: None,
-            lolcat: None,
+            ..Default::default()
         });
 
         for (col_idx, ch) in status_text.chars().enumerate() {
-            if col_idx >= self.terminal_size.col_width.as_usize() {
+            bounds_check!(idx(col_idx), self.terminal_size.col_width.as_usize(), {
                 break;
-            }
+            });
             ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
                 display_char: ch,
                 maybe_style: status_style,
@@ -136,11 +122,7 @@ impl OutputRenderer {
     }
 
     /// Paint the given `OffscreenBuffer` to terminal using existing paint infrastructure.
-    fn paint_buffer(
-        &mut self,
-        ofs_buf: &OffscreenBuffer,
-        output_device: &OutputDevice
-    ) {
+    fn paint_buffer(&mut self, ofs_buf: &OffscreenBuffer, output_device: &OutputDevice) {
         let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
         let render_ops = crossterm_impl.render(ofs_buf);
 
@@ -171,9 +153,10 @@ impl OutputRenderer {
 
             // Check if we have space for this tab
             let tab_width = tab_text.chars().count();
-            if current_width + tab_width > self.terminal_size.col_width.as_usize() {
+            let new_width = current_width + tab_width;
+            bounds_check!(idx(new_width), self.terminal_size.col_width.as_usize(), {
                 break;
-            }
+            });
 
             status_parts.push(tab_text);
             current_width += tab_width;
@@ -184,10 +167,12 @@ impl OutputRenderer {
         let shortcuts = Self::generate_shortcuts_text(process_count);
 
         // Check if we have space for shortcuts
-        let available_width = self.terminal_size.col_width.as_usize().saturating_sub(current_width);
-        if shortcuts.chars().count() <= available_width {
-            status_parts.push(shortcuts);
-        }
+        let shortcuts_width = shortcuts.chars().count();
+        let total_width = current_width + shortcuts_width;
+        bounds_check!(idx(total_width), self.terminal_size.col_width.as_usize(), {
+            return status_parts.join("");
+        });
+        status_parts.push(shortcuts);
 
         status_parts.join("")
     }
@@ -221,8 +206,7 @@ impl OutputRenderer {
         &mut self,
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
-    ) -> miette::Result<()>
-    {
+    ) -> miette::Result<()> {
         // With per-process buffers, just render from the active buffer
         self.render_from_active_buffer(output_device, process_manager)
     }
@@ -234,5 +218,4 @@ impl OutputRenderer {
     pub fn update_terminal_size(&mut self, new_size: Size) {
         self.terminal_size = new_size;
     }
-
 }

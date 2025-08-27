@@ -24,6 +24,17 @@
 //! - `ESC[31m` - Set text color to red
 //! - `ESC[1A` - Move cursor up 1 line
 
+// CSI sequence components
+
+/// CSI sequence start: ESC [
+pub const CSI_START: &str = "\x1b[";
+
+/// Private mode prefix for CSI sequences
+pub const CSI_PRIVATE_MODE_PREFIX: char = '?';
+
+/// Parameter separator in CSI sequences
+pub const CSI_PARAM_SEPARATOR: char = ';';
+
 // Cursor Movement
 
 /// CSI A: Cursor Up (CUU)
