@@ -11,8 +11,7 @@ use vte::{Params, Perform};
 
 use super::{ansi_parser_public_api::AnsiToBufferProcessor,
             ansi_to_tui_color::ansi_to_tui_color, csi_codes, esc_codes};
-use crate::{BoundsCheck, CharacterSet, OffscreenBuffer, PixelChar, Pos, TuiStyle,
-            TuiStyleAttribs, col,
+use crate::{BoundsCheck, CharacterSet, PixelChar, Pos, TuiStyle, col,
             core::osc::{OscEvent, osc_codes},
             row, tui_style_attrib};
 
@@ -177,7 +176,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::SCP_SAVE_CURSOR => {
                 // CSI s - Save current cursor position
                 // Alternative to ESC 7 (DECSC)
-                self.ofs_buf.ansi_parser_support.saved_cursor_pos = Some(self.cursor_pos);
+                self.ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore = Some(self.cursor_pos);
                 tracing::trace!(
                     "CSI s (SCP): Saved cursor position {:?}",
                     self.cursor_pos
@@ -186,7 +185,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::RCP_RESTORE_CURSOR => {
                 // CSI u - Restore saved cursor position
                 // Alternative to ESC 8 (DECRC)
-                if let Some(saved_pos) = self.ofs_buf.ansi_parser_support.saved_cursor_pos {
+                if let Some(saved_pos) = self.ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore {
                     self.cursor_pos = saved_pos;
                     tracing::trace!(
                         "CSI u (RCP): Restored cursor position to {:?}",
@@ -455,8 +454,8 @@ impl Perform for AnsiToBufferProcessor<'_> {
     /// ## Supported ESC Sequences
     ///
     /// ### Cursor Save/Restore (Requires Persistent State)
-    /// - **ESC 7 (DECSC)**: Save cursor position to `ofs_buf.ansi_parser_support.saved_cursor_pos`
-    /// - **ESC 8 (DECRC)**: Restore cursor from `ofs_buf.ansi_parser_support.saved_cursor_pos`
+    /// - **ESC 7 (DECSC)**: Save cursor position to `ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore`
+    /// - **ESC 8 (DECRC)**: Restore cursor from `ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore`
     ///
     /// ### Character Set Selection (Requires Persistent State)
     /// - **ESC ( B**: Select ASCII character set (normal text)
@@ -475,13 +474,13 @@ impl Perform for AnsiToBufferProcessor<'_> {
     /// Session 1: vim at position (5,10) sends ESC 7
     ///   → AnsiToBufferProcessor::new() with cursor_pos = ofs_buf.my_pos (5,10)
     ///   → esc_dispatch() handles ESC 7
-    ///   → Saves ofs_buf.ansi_parser_support.saved_cursor_pos = Some((5,10))
+    ///   → Saves ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore = Some((5,10))
     ///   → drop() updates ofs_buf.my_pos
     ///
     /// Session 2: vim moves cursor to (20,30), then sends ESC 8
     ///   → AnsiToBufferProcessor::new() with cursor_pos = ofs_buf.my_pos (20,30)
     ///   → esc_dispatch() handles ESC 8
-    ///   → Restores cursor_pos = ofs_buf.ansi_parser_support.saved_cursor_pos.unwrap() // (5,10)
+    ///   → Restores cursor_pos = ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore.unwrap() // (5,10)
     ///   → drop() updates ofs_buf.my_pos = (5,10) ✓
     /// ```
     fn esc_dispatch(&mut self, intermediates: &[u8], _ignore: bool, byte: u8) {
@@ -490,7 +489,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
                 // DECSC - Save current cursor position
                 // The cursor position is saved to persistent buffer state so it
                 // survives across multiple AnsiToBufferProcessor instances
-                self.ofs_buf.ansi_parser_support.saved_cursor_pos = Some(self.cursor_pos);
+                self.ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore = Some(self.cursor_pos);
                 tracing::trace!(
                     "ESC 7 (DECSC): Saved cursor position {:?}",
                     self.cursor_pos
@@ -499,7 +498,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             esc_codes::DECRC_RESTORE_CURSOR => {
                 // DECRC - Restore saved cursor position
                 // Retrieves the previously saved position from buffer's persistent state
-                if let Some(saved_pos) = self.ofs_buf.ansi_parser_support.saved_cursor_pos {
+                if let Some(saved_pos) = self.ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore {
                     self.cursor_pos = saved_pos;
                     tracing::trace!(
                         "ESC 8 (DECRC): Restored cursor position to {:?}",
@@ -569,47 +568,6 @@ impl Perform for AnsiToBufferProcessor<'_> {
     }
 }
 
-/// Create a new processor for the given `ofs_buf`.
-///
-/// This creates a fresh processor instance with all SGR (Select Graphic Rendition)
-/// attributes reset to their default state. The processor is designed to be
-/// transient/stateless - created fresh for each batch of bytes to process.
-///
-/// **CRITICAL FIX**: The processor now initializes its cursor position from the
-/// buffer's current position (`ofs_buf.my_pos`) instead of `Pos::default()`. This
-/// ensures that ESC sequences like ESC 7 (save cursor) work correctly by saving
-/// the actual cursor position rather than (0,0).
-pub fn new(ofs_buf: &mut OffscreenBuffer) -> AnsiToBufferProcessor<'_> {
-    // CRITICAL FIX: Initialize from buffer's current position, not default!
-    // This ensures ESC 7 saves the actual cursor position, not (0,0)
-    // We need to copy the position before borrowing buffer mutably
-    let initial_cursor_pos = ofs_buf.my_pos;
-
-    AnsiToBufferProcessor {
-        ofs_buf,
-        cursor_pos: initial_cursor_pos, // ← Was: Pos::default()
-        current_style: None,
-        attribs: TuiStyleAttribs::default(),
-        fg_color: None,
-        bg_color: None,
-        pending_osc_events: Vec::new(),
-    }
-}
-
-/// Handle the core parsing loop where each byte is fed to the [`VTE parser`], which
-/// in turn calls methods on the processor (via the [`Perform`] trait).
-///
-/// [`VTE parser`]: vte::Parser
-/// [`Perform`]: vte::Perform
-pub fn process_bytes(
-    processor: &mut AnsiToBufferProcessor,
-    parser: &mut vte::Parser,
-    bytes: impl AsRef<[u8]>,
-) {
-    for &byte in bytes.as_ref() {
-        parser.advance(processor, byte);
-    }
-}
 
 /// Cursor movement operations.
 pub mod cursor_ops {
@@ -910,7 +868,7 @@ mod terminal_ops {
         processor.cursor_pos = Pos::default();
 
         // Clear saved cursor state
-        processor.ofs_buf.ansi_parser_support.saved_cursor_pos = None;
+        processor.ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore = None;
 
         // Reset to ASCII character set
         processor.ofs_buf.ansi_parser_support.character_set = CharacterSet::Ascii;

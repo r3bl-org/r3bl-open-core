@@ -1552,7 +1552,7 @@ DeviceStatusReport(u16),
 ```rust
 // New implementations in csi_dispatch()
 csi_codes::SCP_SAVE_CURSOR => {
-    self.buffer.saved_cursor_pos = Some(self.cursor_pos);
+    self.buffer.cursor_pos_for_esc_save_and_restore = Some(self.cursor_pos);
     tracing::trace!("CSI s (SCP): Saved cursor position {:?}", self.cursor_pos);
 }
 csi_codes::CNL_CURSOR_NEXT_LINE => {

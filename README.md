@@ -440,12 +440,14 @@ Other commands:
 
 ### Key Commands
 
-- `fish run.fish all` - Run all major checks (build, test, clippy, docs, audit, format)
-- `fish run.fish build` - Build the entire workspace
-- `fish run.fish test` - Run all tests across the workspace
-- `fish run.fish watch-all-tests` - Watch for file changes and run tests automatically
-- `fish run.fish run-examples` - Run TUI examples interactively
-- `fish run.fish run-binaries` - Run cmdr binaries (edi, giti, rc) interactively
+| Command                         | Description                                                     |
+| ------------------------------- | --------------------------------------------------------------- |
+| `fish run.fish all`             | Run all major checks (build, test, clippy, docs, audit, format) |
+| `fish run.fish build`           | Build the entire workspace                                      |
+| `fish run.fish test`            | Run all tests across the workspace                              |
+| `fish run.fish watch-all-tests` | Watch for file changes and run tests automatically              |
+| `fish run.fish run-examples`    | Run TUI examples interactively                                  |
+| `fish run.fish run-binaries`    | Run cmdr binaries (edi, giti, rc) interactively                 |
 
 ### Build Cache (using sccache) Verification
 

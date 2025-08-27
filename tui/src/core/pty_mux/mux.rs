@@ -164,7 +164,7 @@ impl PTYMux {
                     // Each process updates its own OffscreenBuffer independently.
                     // This is what enables instant switching with full state preservation.
                     let active_had_output = self.process_manager.poll_all_processes();
-                    
+
                     // **Selective rendering optimization**:
                     // Only render when the currently visible process has new output.
                     // All other processes continue updating their virtual terminals
@@ -175,7 +175,7 @@ impl PTYMux {
                             &self.output_device,
                             &self.process_manager
                         )?;
-                        
+
                         // Clear the "needs rendering" flag for the active process
                         self.process_manager.mark_active_as_rendered();
                     }

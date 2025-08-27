@@ -76,13 +76,16 @@
 //! [`ANSI Parser`]: crate::ansi_parser::AnsiToBufferProcessor
 //! [`PTY Session`]: crate::PtyReadWriteSession
 
+// Attach.
 pub mod ansi_parser;
 pub mod input_router;
 pub mod mux;
 pub mod output_renderer;
 pub mod process_manager;
 
-pub use input_router::InputRouter;
-pub use mux::{PTYMux, PTYMuxBuilder};
-pub use output_renderer::OutputRenderer;
-pub use process_manager::{Process, ProcessManager};
+// Re-export.
+pub use ansi_parser::*;
+pub use input_router::*;
+pub use mux::*;
+pub use output_renderer::*;
+pub use process_manager::*;

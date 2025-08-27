@@ -54,23 +54,82 @@
 //! feature that's less common in modern applications but still important for
 //! compatibility.
 
-use super::ansi_parser_perform_impl;
 use crate::{OffscreenBuffer, Pos, TuiStyle, TuiStyleAttribs, core::osc::OscEvent};
 
-/// Processes ANSI sequences from [`PTY output`] and updates [`OffscreenBuffer`].
+/// Terminal state context for ANSI sequence processing.
 ///
-/// [`PTY output`]: crate::Process::process_pty_output_and_update_buffer
+/// This processor is created and populated by [`OffscreenBuffer::apply_ansi_bytes`] and
+/// passed to the VTE parser implementation. It holds the current terminal state (cursor
+/// position, styling, colors) while ANSI processing functions apply the effects of parsed
+/// escape sequences.
+///
+/// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 #[derive(Debug)]
 pub struct AnsiToBufferProcessor<'a> {
+    /// Target buffer receiving processed terminal output (characters, styles, cursor
+    /// updates). Characters are written at the current cursor position, and the
+    /// buffer's viewport and scrolling are managed automatically as content flows
+    /// beyond boundaries.
     pub ofs_buf: &'a mut OffscreenBuffer,
+
+    /// Current cursor position tracked during ANSI processing (0-based coordinates).
+    /// Updated by cursor movement sequences (CUP, CUU, CUD, etc.) and character output.
+    /// On [`AnsiToBufferProcessor::drop`], this position is saved back to
+    /// `self.ofs_buf.my_pos` to persist cursor state.
     pub cursor_pos: Pos,
+
+    /// Complete computed style combining attributes and colors for efficient rendering
     pub current_style: Option<TuiStyle>,
-    // SGR state tracking with type-safe pattern using shared TuiStyleAttribs.
+
+    /// Text attributes (bold, italic, underline, etc.) from SGR sequences
     pub attribs: TuiStyleAttribs,
+
+    /// Current foreground color from SGR color sequences
     pub fg_color: Option<crate::TuiColor>,
+
+    /// Current background color from SGR color sequences
     pub bg_color: Option<crate::TuiColor>,
-    /// Pending OSC events to be retrieved after processing.
+
+    /// OSC events (hyperlinks, titles, etc.) accumulated during processing
     pub pending_osc_events: Vec<OscEvent>,
+}
+
+impl<'a> AnsiToBufferProcessor<'a> {
+    /// Create a new processor for the given `ofs_buf`.
+    ///
+    /// This creates a fresh processor instance with all SGR (Select Graphic Rendition)
+    /// attributes reset to their default state. The processor is designed to be
+    /// transient/stateless - created fresh for each batch of bytes to process.
+    ///
+    /// The processor initializes its cursor position from the buffer's current position
+    /// (`ofs_buf.my_pos`) instead of `Pos::default()`. This ensures that ESC sequences
+    /// like ESC 7 (save cursor) work correctly by saving the actual cursor position
+    /// rather than (0,0).
+    pub fn new(ofs_buf: &'a mut OffscreenBuffer) -> Self {
+        let initial_cursor_pos = ofs_buf.my_pos;
+
+        Self {
+            ofs_buf,
+            cursor_pos: initial_cursor_pos, // ← Was: Pos::default()
+            current_style: None,
+            attribs: TuiStyleAttribs::default(),
+            fg_color: None,
+            bg_color: None,
+            pending_osc_events: Vec::new(),
+        }
+    }
+
+    /// Handle the core parsing loop where each byte is fed to the [`VTE parser`], which
+    /// in turn calls methods on the processor (via the [`Perform`] trait).
+    ///
+    /// [`VTE parser`]: vte::Parser
+    /// [`Perform`]: vte::Perform
+    pub fn process_bytes(&mut self, bytes: impl AsRef<[u8]>) {
+        let mut parser = vte::Parser::new();
+        for &byte in bytes.as_ref() {
+            parser.advance(self, byte);
+        }
+    }
 }
 
 /// Public API to process ANSI/VT sequences and apply them to an [`OffscreenBuffer`].
@@ -81,16 +140,16 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// 1. Child process (e.g., vim) sends ESC 7 to save cursor
-    ///    ↓
+    ///                             ↓
     /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
-    ///    ↓
-    /// 3. Saves current cursor_pos to buffer.ansi_parser_support.saved_cursor_pos
-    ///    ↓
+    ///                             ↓
+    /// 3. Saves current cursor_pos to buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
+    ///                             ↓
     /// 4. Later, child sends ESC 8 to restore cursor
-    ///    ↓
+    ///                             ↓
     /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
-    ///    ↓
-    /// 6. Restores cursor_pos from buffer.ansi_parser_support.saved_cursor_pos
+    ///                             ↓
+    /// 6. Restores cursor_pos from buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
     /// ```
     ///
     /// # Arguments
@@ -137,13 +196,9 @@ impl OffscreenBuffer {
     /// [`OSC events`]: crate::core::osc::OscEvent
     #[must_use]
     pub fn apply_ansi_bytes(&mut self, bytes: impl AsRef<[u8]>) -> Vec<OscEvent> {
-        let mut processor = ansi_parser_perform_impl::new(self);
+        let mut processor = AnsiToBufferProcessor::new(self);
 
-        ansi_parser_perform_impl::process_bytes(
-            &mut processor,
-            &mut vte::Parser::new(),
-            bytes.as_ref(),
-        );
+        processor.process_bytes(bytes.as_ref());
 
         let events = processor.pending_osc_events.clone();
 
@@ -157,9 +212,9 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests {
     use crate::{ANSIBasicColor, SgrCode, TuiColor,
-                ansi_parser::{ansi_parser_perform_impl_tests::tests_parse_common::create_test_offscreen_buffer_10r_by_10c,
-                              csi_codes::{self, CsiSequence},
-                              term_units::{TermRow, TermCol}},
+                ansi_parser::{ansi_parser_perform_impl_tests::create_test_offscreen_buffer_10r_by_10c,
+                              csi_codes::{self, csi_seq_cursor_pos},
+                              term_units::{term_col, term_row}},
                 col,
                 offscreen_buffer::test_fixtures_offscreen_buffer::*,
                 row};
@@ -178,7 +233,7 @@ mod tests {
         //
         // Column:   0   1   2   3   4   5   6   7   8   9
         //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-        // Row 0:  │ H │ e │ l │ l │ o │   │   │   │   │   │
+        // Row 0:  │ H │ e │ l │ l │ o │ ␩ │   │   │   │   │
         //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
         //                               ╰─ cursor ends here
 
@@ -213,7 +268,7 @@ mod tests {
         //
         // Column:   0   1   2   3   4   5   6   7   8   9
         //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-        // Row 0:  │ R │ e │ d │   │ T │ e │ x │ t │   │   │
+        // Row 0:  │ R │ e │ d │   │ T │ e │ x │ t │ ␩ │   │
         //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
         //          ╰─────────────────────────────╯  ╰─ cursor ends here
         //           All chars have red foreground
@@ -265,7 +320,7 @@ mod tests {
         //
         // Column:   0   1   2   3   4   5   6   7   8   9
         //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-        // Row 0:  │ A │   │   │ B │ D │   │   │   │   │   │
+        // Row 0:  │ A │   │   │ B │ D │ ␩ │   │   │   │   │
         //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
         //                               ╰─── cursor ends after writing 'D'
         //
@@ -321,19 +376,19 @@ mod tests {
         //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
         // Row 7:  │   │   │   │   │   │   │   │ E │ n │ d │
         //         ├───┼───┼───┼───┼───┼───┼───┼───┼───┼───┤
-        // Row 8:  │ ← cursor ends here (8,0) after wrapping
-        //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+        // Row 8:  │ ␩ │   │   │   │   │   │   │   │   │   │ ← cursor ends here (8,0)
+        //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘   after wrapping
         //
-        // Sequence: "Start" → move(1,2) → "Mid" → move(0,0) → "Home" → move(7,7) → "End"
+        // Sequence: "Start" → move(2,3) → "Mid" → move(1,1) → "Home" → move(8,8) → "End"
 
         let events = ofs_buf.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
-            move_to_r2_c3 = CsiSequence::CursorPosition { row: TermRow::new(2), col: TermCol::new(3) },
-            move_to_r1_c1 = CsiSequence::CursorPosition { row: TermRow::new(1), col: TermCol::new(1) },
-            move_to_r8_c8 = CsiSequence::CursorPosition { row: TermRow::new(8), col: TermCol::new(8) },
+            move_to_r2_c3 = csi_seq_cursor_pos(term_row(2) + term_col(3)),
+            move_to_r1_c1 = csi_seq_cursor_pos(term_row(1) + term_col(1)),
+            move_to_r8_c8 = csi_seq_cursor_pos(term_row(8) + term_col(8)),
         ));
 
-        assert_eq!(events.len(), 0);
+        assert_eq!(events.len(), 0, "no OSC events expected");
 
         // Verify layout matches diagram.
         // cspell:disable-next-line

@@ -33,7 +33,11 @@ pub enum CharacterSet {
 /// [`ANSI parser`]: crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AnsiParserSupport {
-    /// Saved cursor position for ANSI escape sequence support.
+    /// Temporary cursor position storage for DECSC/DECRC escape sequences only.
+    ///
+    /// This field is ONLY used for ESC 7 (DECSC) save and ESC 8 (DECRC) restore operations,
+    /// as well as their CSI equivalents (CSI s and CSI u). It does NOT track the current 
+    /// cursor position - that's stored in `OffscreenBuffer::my_pos`.
     ///
     /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
     /// the DECSC (ESC 7) and DECRC (ESC 8) escape sequences for saving and restoring
@@ -42,18 +46,18 @@ pub struct AnsiParserSupport {
     /// ## Data Flow:
     /// ```text
     /// 1. Child process (e.g., vim) sends ESC 7 to save cursor
-    ///    ↓
+    ///                             ↓
     /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
-    ///    ↓
-    /// 3. Saves current cursor_pos to buffer.ansi_parser_support.saved_cursor_pos
-    ///    ↓
+    ///                             ↓
+    /// 3. Saves current cursor_pos to buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
+    ///                             ↓
     /// 4. Later, child sends ESC 8 to restore cursor
-    ///    ↓
+    ///                             ↓
     /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
-    ///    ↓
-    /// 6. Restores cursor_pos from buffer.ansi_parser_support.saved_cursor_pos
+    ///                             ↓
+    /// 6. Restores cursor_pos from buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
     /// ```
-    pub saved_cursor_pos: Option<Pos>,
+    pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
 
     /// Active character set for ANSI escape sequence support.
     ///
@@ -91,7 +95,7 @@ impl Default for AnsiParserSupport {
     /// Creates a new `AnsiParserSupport` with VT100-compliant defaults.
     fn default() -> Self {
         Self {
-            saved_cursor_pos: None,
+            cursor_pos_for_esc_save_and_restore: None,
             character_set: CharacterSet::default(),
             auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
         }
@@ -122,6 +126,17 @@ impl Default for AnsiParserSupport {
 pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
     pub window_size: Size,
+    /// The current active cursor position in the buffer.
+    /// 
+    /// This is the primary cursor position tracker for the entire offscreen buffer system,
+    /// used by multiple subsystems:
+    /// - **Render pipeline**: Updated when processing `RenderOp::MoveCursorPositionAbs/RelTo`
+    /// - **Text rendering**: Starting position for `print_text_with_attributes()`  
+    /// - **ANSI parser**: Initial position for sequence processing, updated via Drop impl
+    /// - **Terminal emulation**: Tracks where the next character should be rendered
+    /// 
+    /// Note: This is different from `ansi_parser_support.cursor_pos_for_esc_save_and_restore`
+    /// which is only used for DECSC/DECRC (ESC 7/8) save/restore operations.
     pub my_pos: Pos,
     pub my_fg_color: Option<TuiColor>,
     pub my_bg_color: Option<TuiColor>,

@@ -4,25 +4,24 @@
 
 use crate::{core::osc::OscEvent,
             offscreen_buffer::test_fixtures_offscreen_buffer::*};
-use super::tests_parse_common::create_test_offscreen_buffer_10r_by_10c;
-use crate::ansi_parser::ansi_parser_perform_impl::{new, process_bytes};
+use super::create_test_offscreen_buffer_10r_by_10c;
+use crate::AnsiToBufferProcessor;
 use crate::core::osc::osc_codes::OscSequence;
 
 #[test]
 fn test_osc_title_sequences() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-    let mut parser = vte::Parser::new();
 
     {
-        let mut processor = new(&mut ofs_buf);
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Test OSC 0 (set title and icon)
         let sequence = OscSequence::SetTitleAndIcon("Test Title".to_string()).to_string();
-        process_bytes(&mut processor, &mut parser, sequence);
+        processor.process_bytes(sequence);
 
         // Test OSC 2 (set title only)
         let sequence = OscSequence::SetTitle("Window Title".to_string()).to_string();
-        process_bytes(&mut processor, &mut parser, sequence);
+        processor.process_bytes(sequence);
 
         // Verify OSC events were captured
         assert_eq!(processor.pending_osc_events.len(), 2);
@@ -46,10 +45,9 @@ fn test_osc_title_sequences() {
 #[test]
 fn test_osc_hyperlink() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-    let mut parser = vte::Parser::new();
 
     {
-        let mut processor = new(&mut ofs_buf);
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Test OSC 8 hyperlink
         let hyperlink_start = OscSequence::HyperlinkStart {
@@ -58,7 +56,7 @@ fn test_osc_hyperlink() {
         };
         let hyperlink_end = OscSequence::HyperlinkEnd;
         let sequence = format!("{}Link Text{}", hyperlink_start, hyperlink_end);
-        process_bytes(&mut processor, &mut parser, sequence);
+        processor.process_bytes(sequence);
 
         // Verify hyperlink event was captured
         assert_eq!(processor.pending_osc_events.len(), 2);

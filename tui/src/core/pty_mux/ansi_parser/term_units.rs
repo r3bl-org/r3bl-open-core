@@ -11,7 +11,7 @@
 //! applications:
 //!
 //! ### Terminal Coordinates (1-based)
-//! - Used by ANSI escape sequences like `ESC[row;colH` 
+//! - Used by ANSI escape sequences like `ESC[row;colH`
 //! - Top-left corner is (1, 1)
 //! - Examples: `ESC[1;1H` moves to top-left, `ESC[5;10H` moves to row 5, column 10
 //! - Represented by [`TermRow`] and [`TermCol`] types
@@ -27,12 +27,12 @@
 //! These newtype wrappers prevent accidentally mixing coordinate systems:
 //!
 //! ```rust
-//! use r3bl_tui::ansi_parser::term_units::{TermRow, TermCol};
+//! use r3bl_tui::ansi_parser::term_units::{TermRow, TermCol, term_row, term_col};
 //! use r3bl_tui::{Row, Col};
 //!
 //! // Clear intent - terminal coordinates
-//! let term_pos = (TermRow::new(5), TermCol::new(10)); // Row 5, Col 10 in terminal
-//! 
+//! let term_pos = (term_row(5), term_col(10)); // Row 5, Col 10 in terminal
+//!
 //! // Convert to buffer coordinates when needed
 //! let buffer_row = term_pos.0.to_zero_based().unwrap(); // Row 4 in buffer (0-based)
 //! let buffer_col = term_pos.1.to_zero_based().unwrap(); // Col 9 in buffer (0-based)
@@ -42,23 +42,23 @@
 //!
 //! ### Creating Terminal Coordinates
 //! ```rust
-//! use r3bl_tui::ansi_parser::term_units::{TermRow, TermCol};
+//! use r3bl_tui::ansi_parser::term_units::{TermRow, TermCol, term_row, term_col};
 //!
-//! let row = TermRow::new(5);      // Terminal row 5 (1-based)
-//! let col = TermCol::new(10);     // Terminal column 10 (1-based)
+//! let row = term_row(5);      // Terminal row 5 (1-based)
+//! let col = term_col(10);     // Terminal column 10 (1-based)
 //! ```
 //!
 //! ### Converting Between Systems
 //! ```rust
-//! use r3bl_tui::{Row, ansi_parser::term_units::TermRow};
+//! use r3bl_tui::{Row, ansi_parser::term_units::{TermRow, term_row}};
 //!
 //! // From buffer to terminal coordinates
 //! let buffer_row = Row::new(4);   // 0-based
-//! let term_row = TermRow::from_zero_based(buffer_row); // Now 5 (1-based)
+//! let term_row_from_buf = TermRow::from_zero_based(buffer_row); // Now 5 (1-based)
 //!
-//! // From terminal to buffer coordinates  
-//! let term_row = TermRow::new(5); // 1-based
-//! let buffer_row = term_row.to_zero_based().unwrap(); // Now 4 (0-based)
+//! // From terminal to buffer coordinates
+//! let term_row_direct = term_row(5); // 1-based
+//! let buffer_row_2 = term_row_direct.to_zero_based().unwrap(); // Now 4 (0-based)
 //! ```
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
@@ -66,18 +66,18 @@
 //! [`Col`]: crate::Col
 
 /// 1-based row index for terminal coordinates (CSI/ESC sequences).
-/// 
+///
 /// Terminal sequences like `ESC[5;10H` use 1-based indexing where row 1, col 1
 /// is the top-left corner. This is different from buffer coordinates which are 0-based.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use r3bl_tui::ansi_parser::term_units::TermRow;
+/// use r3bl_tui::ansi_parser::term_units::{TermRow, term_row};
 /// use r3bl_tui::Row;
 ///
 /// // Create a terminal row (1-based)
-/// let term_row = TermRow::new(5); // Terminal row 5
+/// let term_row = term_row(5); // Terminal row 5
 /// assert_eq!(term_row.as_u16(), 5);
 ///
 /// // Convert to buffer coordinates (0-based)
@@ -93,18 +93,18 @@
 pub struct TermRow(pub u16);
 
 /// 1-based column index for terminal coordinates (CSI/ESC sequences).
-/// 
+///
 /// Terminal sequences like `ESC[5;10H` use 1-based indexing where row 1, col 1
 /// is the top-left corner. This is different from buffer coordinates which are 0-based.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use r3bl_tui::ansi_parser::term_units::TermCol;
+/// use r3bl_tui::ansi_parser::term_units::{TermCol, term_col};
 /// use r3bl_tui::Col;
 ///
 /// // Create a terminal column (1-based)
-/// let term_col = TermCol::new(10); // Terminal column 10
+/// let term_col = term_col(10); // Terminal column 10
 /// assert_eq!(term_col.as_u16(), 10);
 ///
 /// // Convert to buffer coordinates (0-based)
@@ -119,6 +119,14 @@ pub struct TermRow(pub u16);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermCol(pub u16);
 
+pub fn term_row(arg: impl Into<TermRow>) -> TermRow {
+    arg.into()
+}
+
+pub fn term_col(arg: impl Into<TermCol>) -> TermCol {
+    arg.into()
+}
+
 impl TermRow {
     /// Create a new TermRow with 1-based indexing.
     ///
@@ -127,28 +135,28 @@ impl TermRow {
     ///
     /// # Examples
     /// ```rust
-    /// use r3bl_tui::ansi_parser::term_units::TermRow;
-    /// 
-    /// let row = TermRow::new(5);
+    /// use r3bl_tui::ansi_parser::term_units::{TermRow, term_row};
+    ///
+    /// let row = term_row(5);
     /// assert_eq!(row.as_u16(), 5);
     /// ```
     pub const fn new(value: u16) -> Self {
         Self(value)
     }
-    
+
     /// Get the raw 1-based value.
     ///
     /// # Examples
     /// ```rust
-    /// use r3bl_tui::ansi_parser::term_units::TermRow;
-    /// 
-    /// let row = TermRow::new(42);
+    /// use r3bl_tui::ansi_parser::term_units::{TermRow, term_row};
+    ///
+    /// let row = term_row(42);
     /// assert_eq!(row.as_u16(), 42);
     /// ```
     pub const fn as_u16(self) -> u16 {
         self.0
     }
-    
+
     /// Convert from 0-based Row to 1-based TermRow.
     ///
     /// # Arguments
@@ -166,7 +174,7 @@ impl TermRow {
     pub fn from_zero_based(row: crate::Row) -> Self {
         Self(row.as_usize() as u16 + 1)
     }
-    
+
     /// Convert to 0-based Row. Returns None if the value is 0 (invalid for 1-based).
     ///
     /// # Returns
@@ -175,9 +183,9 @@ impl TermRow {
     ///
     /// # Examples
     /// ```rust
-    /// use r3bl_tui::ansi_parser::term_units::TermRow;
+    /// use r3bl_tui::ansi_parser::term_units::{TermRow, term_row};
     ///
-    /// let term_row = TermRow::new(5);
+    /// let term_row = term_row(5);
     /// let buffer_row = term_row.to_zero_based().unwrap();
     /// assert_eq!(buffer_row.as_usize(), 4);
     ///
@@ -202,28 +210,28 @@ impl TermCol {
     ///
     /// # Examples
     /// ```rust
-    /// use r3bl_tui::ansi_parser::term_units::TermCol;
-    /// 
-    /// let col = TermCol::new(10);
+    /// use r3bl_tui::ansi_parser::term_units::{TermCol, term_col};
+    ///
+    /// let col = term_col(10);
     /// assert_eq!(col.as_u16(), 10);
     /// ```
     pub const fn new(value: u16) -> Self {
         Self(value)
     }
-    
+
     /// Get the raw 1-based value.
     ///
     /// # Examples
     /// ```rust
-    /// use r3bl_tui::ansi_parser::term_units::TermCol;
-    /// 
-    /// let col = TermCol::new(80);
+    /// use r3bl_tui::ansi_parser::term_units::{TermCol, term_col};
+    ///
+    /// let col = term_col(80);
     /// assert_eq!(col.as_u16(), 80);
     /// ```
     pub const fn as_u16(self) -> u16 {
         self.0
     }
-    
+
     /// Convert from 0-based Col to 1-based TermCol.
     ///
     /// # Arguments
@@ -241,7 +249,7 @@ impl TermCol {
     pub fn from_zero_based(col: crate::Col) -> Self {
         Self(col.as_usize() as u16 + 1)
     }
-    
+
     /// Convert to 0-based Col. Returns None if the value is 0 (invalid for 1-based).
     ///
     /// # Returns
@@ -250,9 +258,9 @@ impl TermCol {
     ///
     /// # Examples
     /// ```rust
-    /// use r3bl_tui::ansi_parser::term_units::TermCol;
+    /// use r3bl_tui::ansi_parser::term_units::{TermCol, term_col};
     ///
-    /// let term_col = TermCol::new(10);
+    /// let term_col = term_col(10);
     /// let buffer_col = term_col.to_zero_based().unwrap();
     /// assert_eq!(buffer_col.as_usize(), 9);
     ///
@@ -275,8 +283,57 @@ impl std::fmt::Display for TermRow {
     }
 }
 
+impl From<u16> for TermRow {
+    fn from(value: u16) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<u16> for TermCol {
+    fn from(value: u16) -> Self {
+        Self::new(value)
+    }
+}
+
 impl std::fmt::Display for TermCol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+use std::ops::Add;
+use super::csi_codes::CsiSequence;
+
+/// Add TermCol to TermRow to create a cursor position.
+///
+/// # Examples
+/// ```rust
+/// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
+/// 
+/// let position = term_row(5) + term_col(10);
+/// // This creates a CsiSequence::CursorPosition { row: TermRow(5), col: TermCol(10) }
+/// ```
+impl Add<TermCol> for TermRow {
+    type Output = CsiSequence;
+
+    fn add(self, rhs: TermCol) -> Self::Output {
+        CsiSequence::CursorPosition { row: self, col: rhs }
+    }
+}
+
+/// Add TermRow to TermCol to create a cursor position.
+///
+/// # Examples
+/// ```rust
+/// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
+/// 
+/// let position = term_col(10) + term_row(5);
+/// // This creates a CsiSequence::CursorPosition { row: TermRow(5), col: TermCol(10) }
+/// ```
+impl Add<TermRow> for TermCol {
+    type Output = CsiSequence;
+
+    fn add(self, rhs: TermRow) -> Self::Output {
+        CsiSequence::CursorPosition { row: rhs, col: self }
     }
 }

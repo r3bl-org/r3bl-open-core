@@ -338,6 +338,49 @@ pub const ALT_SCREEN_BUFFER: u16 = 1049;
 // Import terminal coordinate types
 use super::term_units::{TermRow, TermCol};
 
+/// Helper function to create a CsiSequence::CursorPosition.
+/// 
+/// # Examples
+/// ```
+/// use r3bl_tui::ansi_parser::csi_codes::csi_seq_cursor_pos;
+/// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
+/// 
+/// // Instead of:
+/// // CsiSequence::CursorPosition { row: term_row(2), col: term_col(3) }
+/// 
+/// // You can write:
+/// let seq = csi_seq_cursor_pos(term_row(2) + term_col(3));
+/// ```
+pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
+    match position {
+        CsiSequence::CursorPosition { .. } => position,
+        _ => panic!("Expected CsiSequence::CursorPosition"),
+    }
+}
+
+/// Helper function to create a CsiSequence::CursorPositionAlt.
+/// 
+/// # Examples
+/// ```
+/// use r3bl_tui::ansi_parser::csi_codes::csi_seq_cursor_pos_alt;
+/// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
+/// 
+/// // Instead of:
+/// // CsiSequence::CursorPositionAlt { row: term_row(3), col: term_col(7) }
+/// 
+/// // You can write:
+/// let seq = csi_seq_cursor_pos_alt(term_row(3) + term_col(7));
+/// ```
+pub fn csi_seq_cursor_pos_alt(position: CsiSequence) -> CsiSequence {
+    match position {
+        CsiSequence::CursorPosition { row, col } => {
+            CsiSequence::CursorPositionAlt { row, col }
+        }
+        CsiSequence::CursorPositionAlt { .. } => position,
+        _ => panic!("Expected CsiSequence::CursorPosition or CursorPositionAlt"),
+    }
+}
+
 // CSI sequence builder following the same pattern as SgrCode
 
 /// Builder for CSI (Control Sequence Introducer) sequences.
@@ -376,6 +419,12 @@ pub enum CsiSequence {
     ScrollDown(u16),
     /// Device Status Report (DSR) - ESC [ n n
     DeviceStatusReport(u16),
+    /// Enable Private Mode - ESC [ ? n h (n = mode number like DECAWM_AUTO_WRAP)
+    /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
+    EnablePrivateMode(u16),
+    /// Disable Private Mode - ESC [ ? n l (n = mode number like DECAWM_AUTO_WRAP)
+    /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
+    DisablePrivateMode(u16),
 }
 
 impl fmt::Display for CsiSequence {
@@ -455,6 +504,16 @@ impl WriteToBuf for CsiSequence {
             CsiSequence::DeviceStatusReport(n) => {
                 acc.push_str(&n.to_string());
                 acc.push(DSR_DEVICE_STATUS);
+            }
+            CsiSequence::EnablePrivateMode(n) => {
+                acc.push(CSI_PRIVATE_MODE_PREFIX);
+                acc.push_str(&n.to_string());
+                acc.push(SM_SET_PRIVATE_MODE);
+            }
+            CsiSequence::DisablePrivateMode(n) => {
+                acc.push(CSI_PRIVATE_MODE_PREFIX);
+                acc.push_str(&n.to_string());
+                acc.push(RM_RESET_PRIVATE_MODE);
             }
         }
         Ok(())

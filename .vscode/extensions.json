@@ -13,6 +13,7 @@
   //
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
+    "streetsidesoftware.code-spell-checker", // [SLOW] Code Spell Checker. Configure it so it doesn't slow down IDE
     "usernamehw.errorlens", // Error Lens.
     "rust-lang.rust-analyzer", // Rust Analyzer.
     "fill-labs.dependi", // crates.io.
@@ -28,22 +29,22 @@
     "perkovec.emoji", // Emoji.
     "vadimcn.vscode-lldb", // LLDB. Debugger.
     "ms-vscode.cpptools", // C/C++. Debugger.
-    "streetsidesoftware.code-spell-checker", // Code Spell Checker. Configure this so it does not slow down IDE
     "github.copilot", // Github Copilot.
     "github.vscode-pull-request-github", // Github Pull Requests and Issues.
     "s-nlf-fh.glassit", // GlassIt.
-    "antfu.icons-carbon", // Carbon Icons (Intuitive product icons for symbols: fn, mod, etc).
-    "pkief.material-icon-theme", // Material Icon Theme (Intuitive icons in file explorer).
+    "antfu.icons-carbon", // Carbon Icons "product icon" theme for VSCode panels and UI decorations
+    "pkief.material-icon-theme", // Material "file icon" theme for file extension, folder, symbol, etc icons
   ],
   // List of extensions that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
+    "esbenp.prettier-vscode", // [SLOW] Prettier -> very slow for large docs.
+    "pkief.material-product-icons", // Material "product icon" theme -> conflicts w/ Carbon "product icon" theme.
     "alefragnani.bookmarks", // Bookmarks.
     "wayou.vscode-todo-highlight", // Todo Highlight.
     "fabiospampinato.vscode-todo-plus", // Todo+.
     "lorenzopirro.rust-flash-snippets", // Rust Flash Snippets.
     "TheNuProjectContributors.vscode-nushell-lang", // Nushell.
-    "alefragnani.separators", // Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
-    "esbenp.prettier-vscode", // Prettier -> very slow for large docs.
+    "alefragnani.separators", // [SLOW] Separators, Suspected (in the past) that this makes VSCode main thread unresponsive after running for a few hours.
     "huynhduong.nvtokyo-theme", // Tokyo Night NV Theme.
     "ms-azuretools.vscode-containers", // Container tools.
     "ms-azuretools.vscode-docker", // Docker.
@@ -60,13 +61,9 @@
     "baincd.custom-auto-fold", // Custom Auto Fold (for copyright header).
     "mohammadbaqer.better-folding", // Zen folding.
     "felicio.vscode-fold", // Fold (conflicts with Zen folding).
-    "unifiedjs.vscode-mdx", // MDX.
-    "ms-vscode.vscode-typescript-next", // Typescript Next.
-    "esbenp.prettier-vscode", // prettier.
     "unifiedjs.vscode-remark", // remark.
     "ccy.ayu-adaptive", // Ayu Adaptive theme.
     "owldarkertheme.owldarker-theme", // Owl Darker theme.
-    "Compulim.vscode-clock",
     "nowsci.glassit-linux",
     "bungcip.better-toml",
     "donjayamanne.githistory",
@@ -74,8 +71,6 @@
     "rsbondi.highlight-words",
     "arzg.intellij-theme",
     "satokaz.vscode-markdown-header-coloring",
-    "pkief.material-icon-theme",
-    "pkief.material-product-icons",
     "sdras.night-owl",
     "artdiniz.quitcontrol-vscode",
     "minhdo.tokyo-darker-night",
