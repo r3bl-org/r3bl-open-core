@@ -4,16 +4,16 @@
 
 use vte::Perform;
 
-use super::create_test_offscreen_buffer_10r_by_10c;
-use crate::{ANSIBasicColor, CharacterSet, SgrCode, TuiColor, TuiStyle,
+use super::tests_fixtures::*;
+use crate::{ANSIBasicColor, CharacterSet, SgrCode,
             ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor, esc_codes},
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
-            tui_style_attrib::{self, Bold},
-            tui_style_attribs};
+            tui_style_attrib::{self}};
 
 /// Tests for SGR (Select Graphic Rendition) styling operations.
 pub mod sgr_styling {
     use super::*;
+    use crate::{col, row};
 
     #[test]
     fn test_sgr_reset_behavior() {
@@ -26,31 +26,25 @@ pub mod sgr_styling {
 
         // SGR reset behavior test:
         //
-        // Column:  0   1   2   3   4   5   6   7   8   9
+        // Column:   0   1   2   3   4   5   6   7   8   9
         //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-        // Row 0:  │ R │ E │ D │ N │ O │ R │ M │   │   │   │
+        // Row 0:  │ R │ E │ D │ N │ O │ R │ M │ ␩ │   │   │
         //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
-        //          └─────────┘ └─────────────┘
+        //          └─────────┘ └─────────────┘  ╰─ cursor ends here (r:0,c:7)
         //           bold+red   no styling
         //
         // Sequence: ESC[1m ESC[31m "RED" ESC[0m "NORM"
 
-        // Test SGR reset by sending this sequence to the processor:
         // Set bold+red, write "RED", reset all, write "NORM"
-        {
-            let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
-            processor.process_bytes(
-                /* sequence */
-                format!(
-                    "{bold}{fg_red}{text1}{reset_all}{text2}",
-                    bold = SgrCode::Bold,
-                    fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::Red),
-                    reset_all = SgrCode::Reset,
-                    text1 = RED,
-                    text2 = NORM
-                ),
-            );
-        } // processor dropped here
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        processor.process_bytes(format!(
+            "{bold}{fg_red}{text1}{reset_all}{text2}",
+            bold = SgrCode::Bold,
+            fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::Red),
+            text1 = RED,
+            reset_all = SgrCode::Reset,
+            text2 = NORM
+        ));
 
         // Verify "RED" has bold and red color
         for (col, expected_char) in RED.chars().enumerate() {
@@ -60,13 +54,8 @@ pub mod sgr_styling {
                 col,
                 expected_char,
                 |style_from_buffer| {
-                    matches!(
-                        (style_from_buffer.attribs.bold, style_from_buffer.color_fg),
-                        (
-                            Some(tui_style_attrib::Bold),
-                            Some(TuiColor::Basic(ANSIBasicColor::Red))
-                        )
-                    )
+                    style_from_buffer.color_fg == Some(ANSIBasicColor::Red.into())
+                        && style_from_buffer.attribs == tui_style_attrib::Bold.into()
                 },
                 "bold red text",
             );
@@ -74,6 +63,18 @@ pub mod sgr_styling {
 
         // Verify "NORM" has no styling (SGR 0 reset everything)
         assert_plain_text_at(&ofs_buf, 0, RED.len(), NORM);
+
+        // Verify empty cells after "NORM"
+        for col_idx in (RED.len() + NORM.len())..10 {
+            assert_empty_at(&ofs_buf, 0, col_idx);
+        }
+
+        // Verify final cursor position in ofs_buf.my_pos
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(0) + col(RED.len() + NORM.len()),
+            "final cursor position after writing RED and NORM should be at row 0, col 7",
+        );
     }
 
     #[test]
@@ -82,30 +83,27 @@ pub mod sgr_styling {
 
         // SGR partial reset test (SGR 22 resets bold/dim only):
         //
-        // Column:  0   1   2   3   4   5   6   7   8   9
+        // Column:   0   1   2   3   4   5   6   7   8   9
         //         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-        // Row 0:  │ A │ B │   │   │   │   │   │   │   │   │
+        // Row 0:  │ A │ B │ ␩ │   │   │   │   │   │   │   │
         //         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
-        //          └─┘ └─┘
-        //            │   └─ B: italic + dark red (bold reset by SGR 22)
-        //            └─ A: bold + italic + dark red
+        //          └─┘ └─┘  ╰─ cursor ends here (r:0,c:2)
+        //           │   └─ B: italic + dark red (bold reset by SGR 22)
+        //           └───── A: bold + italic + dark red
         //
         // Sequence: ESC[1m ESC[3m ESC[31m A ESC[22m B
 
         // Test partial SGR resets (SGR 22 resets bold/dim only)
-        {
-            let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
-            // Set bold+italic+red, write "A", reset bold/dim only, write "B"
-            let sequence = format!(
-                "{bold}{italic}{fg_red}A{reset_bold_dim}B",
-                bold = SgrCode::Bold,
-                italic = SgrCode::Italic,
-                fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
-                reset_bold_dim = SgrCode::ResetBoldDim
-            );
-            processor.process_bytes(&sequence);
-        }
+        // Set bold+italic+red, write "A", reset bold/dim only, write "B"
+        processor.process_bytes(format!(
+            "{bold}{italic}{fg_red}A{reset_bold_dim}B",
+            bold = SgrCode::Bold,
+            italic = SgrCode::Italic,
+            fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
+            reset_bold_dim = SgrCode::ResetBoldDim
+        ));
 
         // Verify 'A' has bold, italic, and red
         assert_styled_char_at(
@@ -114,20 +112,11 @@ pub mod sgr_styling {
             0,
             'A',
             |style_from_buffer| {
-                matches!(
-                    (
-                        style_from_buffer.attribs.bold,
-                        style_from_buffer.attribs.italic,
-                        style_from_buffer.color_fg
-                    ),
-                    (
-                        Some(tui_style_attrib::Bold),
-                        Some(tui_style_attrib::Italic),
-                        Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                    )
-                )
+                style_from_buffer.attribs
+                    == tui_style_attrib::Bold + tui_style_attrib::Italic
+                    && style_from_buffer.color_fg == Some(ANSIBasicColor::DarkRed.into())
             },
-            "bold italic red",
+            "bold italic dark-red",
         );
 
         // Verify 'B' has italic and red but NOT bold (SGR 22 reset bold/dim)
@@ -137,20 +126,22 @@ pub mod sgr_styling {
             1,
             'B',
             |style_from_buffer| {
-                matches!(
-                    (
-                        style_from_buffer.attribs.bold,
-                        style_from_buffer.attribs.italic,
-                        style_from_buffer.color_fg
-                    ),
-                    (
-                        None,
-                        Some(tui_style_attrib::Italic),
-                        Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                    )
-                )
+                style_from_buffer.attribs == tui_style_attrib::Italic.into()
+                    && style_from_buffer.color_fg == Some(ANSIBasicColor::DarkRed.into())
             },
-            "italic red (no bold)",
+            "italic dark-red (no bold)",
+        );
+
+        // Verify empty cells after "AB"
+        for col_idx in 2..10 {
+            assert_empty_at(&ofs_buf, 0, col_idx);
+        }
+
+        // Verify final cursor position in ofs_buf.my_pos
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(0) + col(2),
+            "final cursor position after writing AB should be at row 0, col 2",
         );
     }
 
@@ -174,29 +165,24 @@ pub mod sgr_styling {
         //           │   └─ R: red fg
         //           └─ B: black fg
         //
-        // Sequence: ESC[30mB ESC[31mR ESC[32mG ESC[37mW ESC[0m  ESC[41mX ESC[42mY ESC[0m ESC[31mESC[44mZ ESC[0m
+        // Sequence: ESC[30mB ESC[31mR ESC[32mG ESC[37mW ESC[0m ESC[41mX ESC[42mY ESC[0m
+        //           ESC[31mESC[44mZ ESC[0m
 
         // Test various SGR color sequences through VTE parser
-        {
-            let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
-            // Test foreground colors: black, red, green, white, then background colors
-            let sequence = format!(
-                "{fg_black}B{fg_red}R{fg_green}G{fg_white}W{reset} {bg_red}X{bg_green}Y{reset2}{fg_red2}{bg_blue}Z{reset3}",
-                fg_black = SgrCode::ForegroundBasic(ANSIBasicColor::Black),
+        // Test foreground colors: black, red, green, white, then background colors
+        processor.process_bytes(format!(
+                "{fg_blk}B{fg_red}R{fg_grn}G{fg_wht}W{rst} {bg_red}X{bg_grn}Y{rst}{fg_red}{bg_blu}Z{rst}",
+                fg_blk = SgrCode::ForegroundBasic(ANSIBasicColor::Black),
                 fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
-                fg_green = SgrCode::ForegroundBasic(ANSIBasicColor::DarkGreen),
-                fg_white = SgrCode::ForegroundBasic(ANSIBasicColor::White),
-                reset = SgrCode::Reset,
+                fg_grn = SgrCode::ForegroundBasic(ANSIBasicColor::DarkGreen),
+                fg_wht = SgrCode::ForegroundBasic(ANSIBasicColor::White),
                 bg_red = SgrCode::BackgroundBasic(ANSIBasicColor::DarkRed),
-                bg_green = SgrCode::BackgroundBasic(ANSIBasicColor::DarkGreen),
-                reset2 = SgrCode::Reset,
-                fg_red2 = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
-                bg_blue = SgrCode::BackgroundBasic(ANSIBasicColor::DarkBlue),
-                reset3 = SgrCode::Reset
-            );
-            processor.process_bytes(&sequence);
-        }
+                bg_grn = SgrCode::BackgroundBasic(ANSIBasicColor::DarkGreen),
+                bg_blu = SgrCode::BackgroundBasic(ANSIBasicColor::DarkBlue),
+                rst = SgrCode::Reset,
+            ));
 
         // Verify colors in buffer
         assert_styled_char_at(
@@ -205,10 +191,7 @@ pub mod sgr_styling {
             0,
             'B',
             |style_from_buffer| {
-                matches!(
-                    style_from_buffer.color_fg,
-                    Some(TuiColor::Basic(ANSIBasicColor::Black))
-                )
+                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::Black.into()
             },
             "black foreground",
         );
@@ -219,10 +202,7 @@ pub mod sgr_styling {
             1,
             'R',
             |style_from_buffer| {
-                matches!(
-                    style_from_buffer.color_fg,
-                    Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                )
+                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "red foreground",
         );
@@ -233,10 +213,7 @@ pub mod sgr_styling {
             2,
             'G',
             |style_from_buffer| {
-                matches!(
-                    style_from_buffer.color_fg,
-                    Some(TuiColor::Basic(ANSIBasicColor::DarkGreen))
-                )
+                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkGreen.into()
             },
             "green foreground",
         );
@@ -247,10 +224,7 @@ pub mod sgr_styling {
             3,
             'W',
             |style_from_buffer| {
-                matches!(
-                    style_from_buffer.color_fg,
-                    Some(TuiColor::Basic(ANSIBasicColor::White))
-                )
+                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::White.into()
             },
             "white foreground",
         );
@@ -263,10 +237,7 @@ pub mod sgr_styling {
             5,
             'X',
             |style_from_buffer| {
-                matches!(
-                    style_from_buffer.color_bg,
-                    Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-                )
+                style_from_buffer.color_bg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "red background",
         );
@@ -277,10 +248,7 @@ pub mod sgr_styling {
             6,
             'Y',
             |style_from_buffer| {
-                matches!(
-                    style_from_buffer.color_bg,
-                    Some(TuiColor::Basic(ANSIBasicColor::DarkGreen))
-                )
+                style_from_buffer.color_bg.unwrap() == ANSIBasicColor::DarkGreen.into()
             },
             "green background",
         );
@@ -291,15 +259,146 @@ pub mod sgr_styling {
             7,
             'Z',
             |style_from_buffer| {
-                matches!(
-                    (style_from_buffer.color_fg, style_from_buffer.color_bg),
-                    (
-                        Some(TuiColor::Basic(ANSIBasicColor::DarkRed)),
-                        Some(TuiColor::Basic(ANSIBasicColor::DarkBlue))
-                    )
-                )
+                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+                    && style_from_buffer.color_bg.unwrap()
+                        == ANSIBasicColor::DarkBlue.into()
             },
             "red on blue",
+        );
+    }
+
+    #[test]
+    fn test_sgr_slow_blink() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+
+        // Test ESC[5m (slow blink)
+        processor.process_bytes(format!(
+            "{code}{text}",
+            code = SgrCode::SlowBlink,
+            text = "BLINK"
+        ));
+
+        // Test each character in "BLINK" for the blink attribute
+        for (col, expected_char) in "BLINK".chars().enumerate() {
+            assert_styled_char_at(
+                &ofs_buf,
+                0,
+                col,
+                expected_char,
+                |style_from_buffer| {
+                    style_from_buffer.attribs == tui_style_attrib::Blink.into()
+                },
+                "slow blink",
+            );
+        }
+    }
+
+    #[test]
+    fn test_sgr_rapid_blink() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+
+        // Test ESC[6m (rapid blink) - this tests our bug fix!
+        processor.process_bytes(format!(
+            "{code}{text}",
+            code = SgrCode::RapidBlink,
+            text = "RAPID"
+        ));
+
+        // Test each character in "RAPID" for the blink attribute
+        for (col, expected_char) in "RAPID".chars().enumerate() {
+            assert_styled_char_at(
+                &ofs_buf,
+                0,
+                col,
+                expected_char,
+                |style_from_buffer| {
+                    style_from_buffer.attribs == tui_style_attrib::Blink.into()
+                },
+                "rapid blink",
+            );
+        }
+    }
+
+    #[test]
+    fn test_sgr_both_blink_types_equivalent() {
+        let mut ofs_buf1 = create_test_offscreen_buffer_10r_by_10c();
+        let mut ofs_buf2 = create_test_offscreen_buffer_10r_by_10c();
+
+        // Test that both SGR 5 and SGR 6 produce the same result
+        let mut processor1 = AnsiToBufferProcessor::new(&mut ofs_buf1);
+        let mut processor2 = AnsiToBufferProcessor::new(&mut ofs_buf2);
+
+        processor1.process_bytes(format!(
+            "{code}{text}",
+            code = SgrCode::SlowBlink,
+            text = "A"
+        ));
+        processor2.process_bytes(format!(
+            "{code}{text}",
+            code = SgrCode::RapidBlink,
+            text = "A"
+        ));
+
+        // Both should have blink attribute set
+        assert_styled_char_at(
+            &ofs_buf1,
+            0,
+            0,
+            'A',
+            |style_from_buffer| {
+                style_from_buffer.attribs == tui_style_attrib::Blink.into()
+            },
+            "slow blink should work",
+        );
+
+        assert_styled_char_at(
+            &ofs_buf2,
+            0,
+            0,
+            'A',
+            |style_from_buffer| {
+                style_from_buffer.attribs == tui_style_attrib::Blink.into()
+            },
+            "rapid blink should work equivalently",
+        );
+    }
+
+    #[test]
+    fn test_sgr_blink_reset() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+
+        // Set blink, write char, reset blink, write char
+        processor.process_bytes(format!(
+            "{c1}{t1}{c2}{t2}",
+            c1 = SgrCode::SlowBlink,
+            c2 = SgrCode::ResetBlink,
+            t1 = "A",
+            t2 = "B"
+        ));
+
+        // First char should have blink
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'A',
+            |style_from_buffer| {
+                style_from_buffer.attribs.blink == tui_style_attrib::Blink.into()
+            },
+            "blink enabled",
+        );
+
+        // Second char should not have blink
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'B',
+            |style_from_buffer| style_from_buffer.attribs.blink.is_none(),
+            "blink reset",
         );
     }
 }
@@ -312,77 +411,45 @@ pub mod character_sets {
     fn test_esc_character_set_switching() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-        {
-            let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
-            // Start with ASCII mode and write 'q'
-            let seq = esc_codes::EscSequence::SelectAscii.to_string();
-            processor.process_bytes(&seq); // ESC ( B - Select ASCII
-            processor.print('q');
+        // Start with ASCII mode and write 'q'
+        processor.process_bytes(esc_codes::EscSequence::SelectAscii.to_string());
+        processor.print('q');
 
-            // Switch to DEC graphics mode
-            let seq = esc_codes::EscSequence::SelectGraphics.to_string();
-            processor.process_bytes(&seq); // ESC ( 0 - Select DEC graphics
+        // Switch to DEC graphics mode
+        processor.process_bytes(esc_codes::EscSequence::SelectDECGraphics.to_string());
 
-            // Write 'q' which should be translated to '─' (horizontal line)
-            processor.print('q');
+        assert_eq!(
+            ofs_buf.ansi_parser_support.character_set,
+            CharacterSet::DECGraphics
+        );
 
-            // Write 'x' which should be translated to '│' (vertical line)
-            processor.print('x');
+        // Currently in DEC graphics mode
+        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
-            // Switch back to ASCII
-            let seq = esc_codes::EscSequence::SelectAscii.to_string();
-            processor.process_bytes(&seq);
+        // Write 'q' which should be translated to '─' (horizontal line)
+        processor.print('q');
 
-            // Write 'q' again (should be normal 'q')
-            processor.print('q');
-        }
+        // Write 'x' which should be translated to '│' (vertical line)
+        processor.print('x');
+
+        // Switch back to ASCII
+        processor.process_bytes(esc_codes::EscSequence::SelectAscii.to_string());
+
+        // Write 'q' again (should be normal 'q')
+        processor.print('q');
 
         // Verify character set state after processor is dropped
-        assert_eq!(ofs_buf.ansi_parser_support.character_set, CharacterSet::Ascii);
+        assert_eq!(
+            ofs_buf.ansi_parser_support.character_set,
+            CharacterSet::Ascii
+        );
 
         // Verify the characters
         assert_plain_char_at(&ofs_buf, 0, 0, 'q'); // ASCII 'q'
         assert_plain_char_at(&ofs_buf, 0, 1, '─'); // DEC graphics 'q' -> horizontal line
         assert_plain_char_at(&ofs_buf, 0, 2, '│'); // DEC graphics 'x' -> vertical line
         assert_plain_char_at(&ofs_buf, 0, 3, 'q'); // ASCII 'q' again
-    }
-}
-
-/// Tests for character printing with styles.
-pub mod printing {
-    use super::*;
-
-    #[test]
-    fn test_print_character_with_styles() {
-        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-
-        // Process styled character
-        {
-            let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
-            processor.current_style = Some(TuiStyle {
-                attribs: tui_style_attribs(Bold),
-                color_fg: Some(TuiColor::Basic(ANSIBasicColor::DarkRed)),
-                ..Default::default()
-            });
-            processor.print('S');
-
-            // Verify cursor advanced
-            assert_eq!(processor.cursor_pos.col_index.as_usize(), 1);
-        }
-
-        // Verify the styled character is in the buffer
-        assert_styled_char_at(
-            &ofs_buf,
-            0,
-            0,
-            'S',
-            |style_from_buffer| {
-                style_from_buffer.attribs == tui_style_attribs(Bold)
-                    && style_from_buffer.color_fg
-                        == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
-            },
-            "bold red style",
-        );
     }
 }

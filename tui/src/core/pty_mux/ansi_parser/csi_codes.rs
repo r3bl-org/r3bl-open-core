@@ -6,6 +6,20 @@
 //! They provide parameterized control over cursor movement, text formatting, colors, and
 //! display manipulation.
 //!
+//! ## Evolution from ESC Sequences
+//!
+//! CSI sequences evolved from the simpler direct ESC sequences to provide greater flexibility:
+//!
+//! - **ESC sequences** (the predecessors): Simple, non-parameterized commands like `ESC 7`
+//!   (save cursor) or `ESC D` (move down one line). See [`esc_codes`] for details.
+//! - **CSI sequences** (modern approach): Parameterized commands like `ESC[s` (save cursor)
+//!   or `ESC[5B` (move down 5 lines). The parameters make them much more flexible.
+//!
+//! Many operations can be performed using either approach for backward compatibility.
+//! Modern applications typically prefer CSI for their flexibility.
+//!
+//! [`esc_codes`]: crate::ansi_parser::esc_codes
+//!
 //! ## Structure
 //! CSI sequences follow the pattern: `ESC [ parameters final_character`
 //! - Start with ESC (0x1B) followed by `[`
@@ -338,16 +352,110 @@ pub const ALT_SCREEN_BUFFER: u16 = 1049;
 // Import terminal coordinate types
 use super::term_units::{TermRow, TermCol};
 
+/// Device Status Report types for CSI n sequences
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DeviceStatusReportType {
+    /// Request terminal status (5)
+    RequestStatus,
+    /// Request cursor position (6)
+    RequestCursorPosition,
+    /// Unknown/unsupported DSR type
+    Other(u16),
+}
+
+impl DeviceStatusReportType {
+    pub fn as_u16(&self) -> u16 {
+        match self {
+            Self::RequestStatus => 5,
+            Self::RequestCursorPosition => 6,
+            Self::Other(n) => *n,
+        }
+    }
+}
+
+impl From<u16> for DeviceStatusReportType {
+    fn from(value: u16) -> Self {
+        match value {
+            5 => Self::RequestStatus,
+            6 => Self::RequestCursorPosition,
+            n => Self::Other(n),
+        }
+    }
+}
+
+/// DEC Private Mode types for CSI ? h/l sequences
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PrivateModeType {
+    /// DECCKM - Application Cursor Keys (1)
+    CursorKeys,
+    /// DECANM - VT52 Mode (2)
+    Vt52Mode,
+    /// DECCOLM - 132 Column Mode (3)
+    Column132,
+    /// DECSCLM - Smooth Scroll (4)
+    SmoothScroll,
+    /// DECSCNM - Reverse Video (5)
+    ReverseVideo,
+    /// DECOM - Origin Mode (6)
+    OriginMode,
+    /// DECAWM - Auto Wrap Mode (7)
+    AutoWrap,
+    /// DECTCEM - Show/Hide Cursor (25)
+    ShowCursor,
+    /// Save Cursor (1048)
+    SaveCursorDec,
+    /// Use Alternate Screen Buffer (1049)
+    AlternateScreenBuffer,
+    /// Unknown/unsupported private mode
+    Other(u16),
+}
+
+impl PrivateModeType {
+    pub fn as_u16(&self) -> u16 {
+        match self {
+            Self::CursorKeys => DECCKM_CURSOR_KEYS,
+            Self::Vt52Mode => DECANM_VT52_MODE,
+            Self::Column132 => DECCOLM_132_COLUMN,
+            Self::SmoothScroll => DECSCLM_SMOOTH_SCROLL,
+            Self::ReverseVideo => DECSCNM_REVERSE_VIDEO,
+            Self::OriginMode => DECOM_ORIGIN_MODE,
+            Self::AutoWrap => DECAWM_AUTO_WRAP,
+            Self::ShowCursor => DECTCEM_SHOW_CURSOR,
+            Self::SaveCursorDec => SAVE_CURSOR_DEC,
+            Self::AlternateScreenBuffer => ALT_SCREEN_BUFFER,
+            Self::Other(n) => *n,
+        }
+    }
+}
+
+impl From<u16> for PrivateModeType {
+    fn from(value: u16) -> Self {
+        match value {
+            DECCKM_CURSOR_KEYS => Self::CursorKeys,
+            DECANM_VT52_MODE => Self::Vt52Mode,
+            DECCOLM_132_COLUMN => Self::Column132,
+            DECSCLM_SMOOTH_SCROLL => Self::SmoothScroll,
+            DECSCNM_REVERSE_VIDEO => Self::ReverseVideo,
+            DECOM_ORIGIN_MODE => Self::OriginMode,
+            DECAWM_AUTO_WRAP => Self::AutoWrap,
+            DECTCEM_SHOW_CURSOR => Self::ShowCursor,
+            SAVE_CURSOR_DEC => Self::SaveCursorDec,
+            ALT_SCREEN_BUFFER => Self::AlternateScreenBuffer,
+            n => Self::Other(n),
+        }
+    }
+}
+
 /// Helper function to create a CsiSequence::CursorPosition.
 /// 
 /// # Examples
 /// ```
 /// use r3bl_tui::ansi_parser::csi_codes::csi_seq_cursor_pos;
 /// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
-/// 
+///
 /// // Instead of:
 /// // CsiSequence::CursorPosition { row: term_row(2), col: term_col(3) }
-/// 
+///
 /// // You can write:
 /// let seq = csi_seq_cursor_pos(term_row(2) + term_col(3));
 /// ```
@@ -359,15 +467,15 @@ pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
 }
 
 /// Helper function to create a CsiSequence::CursorPositionAlt.
-/// 
+///
 /// # Examples
 /// ```
 /// use r3bl_tui::ansi_parser::csi_codes::csi_seq_cursor_pos_alt;
 /// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
-/// 
+///
 /// // Instead of:
 /// // CsiSequence::CursorPositionAlt { row: term_row(3), col: term_col(7) }
-/// 
+///
 /// // You can write:
 /// let seq = csi_seq_cursor_pos_alt(term_row(3) + term_col(7));
 /// ```
@@ -418,13 +526,13 @@ pub enum CsiSequence {
     /// Scroll Down (SD) - ESC [ n T
     ScrollDown(u16),
     /// Device Status Report (DSR) - ESC [ n n
-    DeviceStatusReport(u16),
+    DeviceStatusReport(DeviceStatusReportType),
     /// Enable Private Mode - ESC [ ? n h (n = mode number like DECAWM_AUTO_WRAP)
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
-    EnablePrivateMode(u16),
+    EnablePrivateMode(PrivateModeType),
     /// Disable Private Mode - ESC [ ? n l (n = mode number like DECAWM_AUTO_WRAP)
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
-    DisablePrivateMode(u16),
+    DisablePrivateMode(PrivateModeType),
 }
 
 impl fmt::Display for CsiSequence {
@@ -501,18 +609,18 @@ impl WriteToBuf for CsiSequence {
                 acc.push_str(&n.to_string());
                 acc.push(SD_SCROLL_DOWN);
             }
-            CsiSequence::DeviceStatusReport(n) => {
-                acc.push_str(&n.to_string());
+            CsiSequence::DeviceStatusReport(dsr_type) => {
+                acc.push_str(&dsr_type.as_u16().to_string());
                 acc.push(DSR_DEVICE_STATUS);
             }
-            CsiSequence::EnablePrivateMode(n) => {
+            CsiSequence::EnablePrivateMode(mode) => {
                 acc.push(CSI_PRIVATE_MODE_PREFIX);
-                acc.push_str(&n.to_string());
+                acc.push_str(&mode.as_u16().to_string());
                 acc.push(SM_SET_PRIVATE_MODE);
             }
-            CsiSequence::DisablePrivateMode(n) => {
+            CsiSequence::DisablePrivateMode(mode) => {
                 acc.push(CSI_PRIVATE_MODE_PREFIX);
-                acc.push_str(&n.to_string());
+                acc.push_str(&mode.as_u16().to_string());
                 acc.push(RM_RESET_PRIVATE_MODE);
             }
         }

@@ -53,71 +53,64 @@
 //! They are also used to switch character sets (e.g., from ASCII to a graphics set), a
 //! feature that's less common in modern applications but still important for
 //! compatibility.
+//!
+//! ## Evolution and Overlap Between ESC and CSI
+//!
+//! There is significant functional overlap between ESC and CSI sequences, largely due to
+//! the evolutionary history of terminal control:
+//!
+//! **ESC sequences came first**: They were the original, simple terminal control codes
+//! used in early terminals like the VT100. Each ESC sequence does one specific thing
+//! without parameters. For example, `ESC D` moves the cursor down exactly one line.
+//!
+//! **CSI sequences evolved later**: As terminals became more sophisticated, the need for
+//! parameterized control became apparent. CSI sequences (ESC[) were introduced to provide
+//! the same functionality with much greater flexibility. For example, `ESC[5B` moves the
+//! cursor down 5 lines, and `ESC[31m` sets the foreground color to red.
+//!
+//! **Why both exist**: Modern terminals support both for backward compatibility. Many
+//! operations can be performed using either approach:
+//!
+//! | Operation | ESC Sequence | CSI Sequence | Notes |
+//! |-----------|-------------|--------------|-------|
+//! | Save cursor | `ESC 7` | `ESC[s` | Both work identically |
+//! | Restore cursor | `ESC 8` | `ESC[u` | Both work identically |
+//! | Move cursor down 1 line | `ESC D` | `ESC[1B` | CSI version can take parameters |
+//! | Move cursor up 1 line | `ESC M` | `ESC[1A` | CSI version can take parameters |
+//!
+//! This overlap is demonstrated in the test suite: the cursor operations tests contain
+//! both `test_csi_save_restore_cursor` and `test_esc_save_restore_cursor`, showing both
+//! approaches work identically.
+//!
+//! **Modern practice**: New applications typically use CSI sequences for their
+//! flexibility, while ESC sequences remain for compatibility and simple operations that
+//! don't need parameters.
 
-use crate::{OffscreenBuffer, Pos, TuiStyle, TuiStyleAttribs, core::osc::OscEvent};
+use crate::{OffscreenBuffer, core::osc::OscEvent};
 
 /// Terminal state context for ANSI sequence processing.
 ///
-/// This processor is created and populated by [`OffscreenBuffer::apply_ansi_bytes`] and
-/// passed to the VTE parser implementation. It holds the current terminal state (cursor
-/// position, styling, colors) while ANSI processing functions apply the effects of parsed
-/// escape sequences.
-///
-/// [`OffscreenBuffer::apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
+/// This processor is created by [`OffscreenBuffer::apply_ansi_bytes`] and passed to the
+/// VTE parser implementation. It provides direct access to persistent terminal state
+/// stored in the buffer's [`OffscreenBuffer::ansi_parser_support`] field. All state is
+/// stored directly in the buffer and persisted between processor instances.
 #[derive(Debug)]
 pub struct AnsiToBufferProcessor<'a> {
-    /// Target buffer receiving processed terminal output (characters, styles, cursor
-    /// updates). Characters are written at the current cursor position, and the
+    /// Target buffer receiving processed terminal output and storing all persistent
+    /// terminal state. Characters are written at the current cursor position, and the
     /// buffer's viewport and scrolling are managed automatically as content flows
     /// beyond boundaries.
     pub ofs_buf: &'a mut OffscreenBuffer,
-
-    /// Current cursor position tracked during ANSI processing (0-based coordinates).
-    /// Updated by cursor movement sequences (CUP, CUU, CUD, etc.) and character output.
-    /// On [`AnsiToBufferProcessor::drop`], this position is saved back to
-    /// `self.ofs_buf.my_pos` to persist cursor state.
-    pub cursor_pos: Pos,
-
-    /// Complete computed style combining attributes and colors for efficient rendering
-    pub current_style: Option<TuiStyle>,
-
-    /// Text attributes (bold, italic, underline, etc.) from SGR sequences
-    pub attribs: TuiStyleAttribs,
-
-    /// Current foreground color from SGR color sequences
-    pub fg_color: Option<crate::TuiColor>,
-
-    /// Current background color from SGR color sequences
-    pub bg_color: Option<crate::TuiColor>,
-
-    /// OSC events (hyperlinks, titles, etc.) accumulated during processing
-    pub pending_osc_events: Vec<OscEvent>,
 }
 
 impl<'a> AnsiToBufferProcessor<'a> {
     /// Create a new processor for the given `ofs_buf`.
     ///
-    /// This creates a fresh processor instance with all SGR (Select Graphic Rendition)
-    /// attributes reset to their default state. The processor is designed to be
-    /// transient/stateless - created fresh for each batch of bytes to process.
-    ///
-    /// The processor initializes its cursor position from the buffer's current position
-    /// (`ofs_buf.my_pos`) instead of `Pos::default()`. This ensures that ESC sequences
-    /// like ESC 7 (save cursor) work correctly by saving the actual cursor position
-    /// rather than (0,0).
-    pub fn new(ofs_buf: &'a mut OffscreenBuffer) -> Self {
-        let initial_cursor_pos = ofs_buf.my_pos;
-
-        Self {
-            ofs_buf,
-            cursor_pos: initial_cursor_pos, // ← Was: Pos::default()
-            current_style: None,
-            attribs: TuiStyleAttribs::default(),
-            fg_color: None,
-            bg_color: None,
-            pending_osc_events: Vec::new(),
-        }
-    }
+    /// This creates a processor instance that provides direct access to persistent
+    /// terminal state stored in the buffer's `ansi_parser_support` field.
+    /// All terminal state is maintained in the buffer and persists between processor
+    /// instances.
+    pub fn new(ofs_buf: &'a mut OffscreenBuffer) -> Self { Self { ofs_buf } }
 
     /// Handle the core parsing loop where each byte is fed to the [`VTE parser`], which
     /// in turn calls methods on the processor (via the [`Perform`] trait).
@@ -143,13 +136,13 @@ impl OffscreenBuffer {
     ///                             ↓
     /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
     ///                             ↓
-    /// 3. Saves current cursor_pos to buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
+    /// 3. Saves current cursor_pos to buffer.my_pos_for_esc_save_and_restore
     ///                             ↓
     /// 4. Later, child sends ESC 8 to restore cursor
     ///                             ↓
     /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
     ///                             ↓
-    /// 6. Restores cursor_pos from buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
+    /// 6. Restores cursor_pos from buffer.my_pos_for_esc_save_and_restore
     /// ```
     ///
     /// # Arguments
@@ -176,17 +169,17 @@ impl OffscreenBuffer {
     ///
     /// # Processing details
     ///
-    /// The processor is designed to be transient/stateless - created fresh for each
-    /// batch of bytes to process. This is intentional because:
+    /// The processor is designed to be a transient manipulator that works directly on the
+    /// buffer's state. It's created fresh for each batch of bytes to process:
     ///
     /// - Style attributes (`bold`, `fg_color`, etc.) are SGR (Select Graphic Rendition)
     ///   attributes that apply to characters being written. These styles get baked into
-    ///   the [`PixelChar`] objects in the buffer. Once a character is written with its
-    ///   style, the style state in the processor (the `bold`, `italic`, `fg_color`,
-    ///   `bg_color` fields, etc.) is no longer needed.
-    /// - Cursor position is working state that gets copied to the buffer at the end of
-    ///   processing.
-    /// - All persistent state lives in the [`OffscreenBuffer`], not the processor.
+    ///   the [`PixelChar`] objects in the buffer and stored in the buffer's
+    ///   `ansi_parser_support` field for persistence.
+    /// - Cursor position is read from and written directly to `buffer.my_pos` during
+    ///   processing - no copying or synchronization is needed.
+    /// - All persistent state lives in the [`OffscreenBuffer`], accessed directly by the
+    ///   processor through mutable references.
     /// - The [`VTE Parser`] (which must maintain state across reads for split sequences)
     ///   is kept separately in the [`Process`] struct.
     ///
@@ -197,22 +190,19 @@ impl OffscreenBuffer {
     #[must_use]
     pub fn apply_ansi_bytes(&mut self, bytes: impl AsRef<[u8]>) -> Vec<OscEvent> {
         let mut processor = AnsiToBufferProcessor::new(self);
-
         processor.process_bytes(bytes.as_ref());
-
-        let events = processor.pending_osc_events.clone();
-
-        // The buffer's cursor position will be updated automatically on drop.
-        drop(processor);
-
-        events
+        processor
+            .ofs_buf
+            .ansi_parser_support
+            .pending_osc_events
+            .clone()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{ANSIBasicColor, SgrCode, TuiColor,
-                ansi_parser::{ansi_parser_perform_impl_tests::create_test_offscreen_buffer_10r_by_10c,
+                ansi_parser::{ansi_parser_perform_impl_tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c,
                               csi_codes::{self, csi_seq_cursor_pos},
                               term_units::{term_col, term_row}},
                 col,

@@ -125,6 +125,44 @@ else
     echo "  openSUSE: sudo zypper install screen tmux"
 fi
 
+# Install Node.js and npm
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
+        echo "Warning: Homebrew not found. Skipping Node.js installation..."
+    else
+        install_if_missing "node" "${PKG_MGR:-brew install} node"
+    fi
+elif [[ -n "$PKG_MGR" ]]; then
+    install_if_missing "node" "$PKG_MGR nodejs npm"
+else
+    echo "Warning: No supported package manager found. Install Node.js and npm manually"
+    echo "  Ubuntu/Debian: sudo apt-get install nodejs npm"
+    echo "  RHEL/CentOS/Fedora: sudo dnf install nodejs npm"
+    echo "  Arch: sudo pacman -S nodejs npm"
+    echo "  openSUSE: sudo zypper install nodejs npm"
+fi
+
+# Install Claude Code via npm
+if command -v npm &>/dev/null; then
+    if ! command -v claude &>/dev/null; then
+        echo "Installing Claude Code..."
+        npm install -g @anthropic-ai/claude-code
+        # Fix npm permissions
+        sudo chown -R $USER:$(id -gn) $(npm -g config get prefix)
+        
+        # Configure MCP servers for Claude
+        if command -v claude &>/dev/null; then
+            echo "Configuring Claude MCP servers..."
+            claude mcp add-json context7 '{"type":"http","url":"https://mcp.context7.com/mcp"}'
+            claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant --project "$PWD" 2>/dev/null || true
+        fi
+    else
+        echo "✓ claude already installed"
+    fi
+else
+    echo "Warning: npm not found. Cannot install Claude Code"
+fi
+
 # Setup development tools
 if command -v fish &>/dev/null; then
     echo "Setting up development tools..."

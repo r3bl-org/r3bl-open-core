@@ -5,8 +5,6 @@
 //! This module processes ANSI sequences from PTY output and updates an `OffscreenBuffer`
 //! accordingly. It uses the `vte` crate (same as `Alacritty`) for robust ANSI parsing.
 
-#[rustfmt::skip] // Reorder the following for better readability
-
 // Attach.
 pub mod ansi_parser_perform_impl;
 pub mod ansi_parser_public_api;
@@ -18,6 +16,17 @@ pub mod term_units;
 // Re-export.
 pub use ansi_parser_public_api::*;
 
-// Test modules.
+// Test modules (no `ansi_parser_perform_impl_tests/mod.rs`).
 #[cfg(test)]
-mod ansi_parser_perform_impl_tests;
+#[rustfmt::skip] // Keep the ordering of the following lines as is.
+mod ansi_parser_perform_impl_tests {
+    pub(super) mod tests_fixtures; // Used by all the test modules below.
+    mod tests_processor_lifecycle;
+    mod tests_character_encoding;
+    mod tests_cursor_operations;
+    mod tests_control_sequences;
+    mod tests_display_operations;
+    mod tests_line_wrap_and_scroll_control;
+    mod tests_osc_sequences; // <- TODO review
+    mod tests_integration; // <- TODO review
+}

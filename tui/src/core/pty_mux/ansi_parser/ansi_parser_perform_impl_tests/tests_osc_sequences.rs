@@ -4,7 +4,7 @@
 
 use crate::{core::osc::OscEvent,
             offscreen_buffer::test_fixtures_offscreen_buffer::*};
-use super::create_test_offscreen_buffer_10r_by_10c;
+use super::tests_fixtures::*;
 use crate::AnsiToBufferProcessor;
 use crate::core::osc::osc_codes::OscSequence;
 
@@ -12,7 +12,6 @@ use crate::core::osc::osc_codes::OscSequence;
 fn test_osc_title_sequences() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    {
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Test OSC 0 (set title and icon)
@@ -24,49 +23,46 @@ fn test_osc_title_sequences() {
         processor.process_bytes(sequence);
 
         // Verify OSC events were captured
-        assert_eq!(processor.pending_osc_events.len(), 2);
+        assert_eq!(processor.ofs_buf.ansi_parser_support.pending_osc_events.len(), 2);
 
-        match &processor.pending_osc_events[0] {
+        match &processor.ofs_buf.ansi_parser_support.pending_osc_events[0] {
             OscEvent::SetTitleAndTab(title) => {
                 assert_eq!(title, "Test Title");
             }
             _ => panic!("Expected SetTitleAndTab event"),
         }
 
-        match &processor.pending_osc_events[1] {
+        match &processor.ofs_buf.ansi_parser_support.pending_osc_events[1] {
             OscEvent::SetTitleAndTab(title) => {
                 assert_eq!(title, "Window Title");
             }
             _ => panic!("Expected SetTitleAndTab event"),
         }
-    }
 }
 
 #[test]
 fn test_osc_hyperlink() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    {
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+    let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
-        // Test OSC 8 hyperlink
-        let hyperlink_start = OscSequence::HyperlinkStart {
-            uri: "https://example.com".to_string(),
-            id: None,
-        };
-        let hyperlink_end = OscSequence::HyperlinkEnd;
-        let sequence = format!("{}Link Text{}", hyperlink_start, hyperlink_end);
-        processor.process_bytes(sequence);
+    // Test OSC 8 hyperlink
+    let hyperlink_start = OscSequence::HyperlinkStart {
+        uri: "https://example.com".to_string(),
+        id: None,
+    };
+    let hyperlink_end = OscSequence::HyperlinkEnd;
+    let sequence = format!("{}Link Text{}", hyperlink_start, hyperlink_end);
+    processor.process_bytes(sequence);
 
-        // Verify hyperlink event was captured
-        assert_eq!(processor.pending_osc_events.len(), 2);
+    // Verify hyperlink event was captured
+    assert_eq!(processor.ofs_buf.ansi_parser_support.pending_osc_events.len(), 2);
 
-        match &processor.pending_osc_events[0] {
-            OscEvent::Hyperlink { uri, text: _ } => {
-                assert_eq!(uri, "https://example.com");
-            }
-            _ => panic!("Expected Hyperlink event"),
+    match &processor.ofs_buf.ansi_parser_support.pending_osc_events[0] {
+        OscEvent::Hyperlink { uri, text: _ } => {
+            assert_eq!(uri, "https://example.com");
         }
+        _ => panic!("Expected Hyperlink event"),
     }
 
     // Verify text was written

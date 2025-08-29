@@ -22,7 +22,7 @@ pub enum CharacterSet {
     Ascii,
     /// DEC Special Graphics character set for line drawing (ESC ( 0)
     /// Maps ASCII characters to box-drawing Unicode characters
-    Graphics,
+    DECGraphics,
 }
 
 /// Support structure for ANSI escape sequence parsing and terminal state management.
@@ -30,14 +30,20 @@ pub enum CharacterSet {
 /// This struct groups together all fields related to [`ANSI parser`] functionality that
 /// need to be maintained by the [`OffscreenBuffer`] for proper terminal emulation.
 ///
+/// One field missing from here is [`OffscreenBuffer::my_pos`] which tracks the current
+/// cursor position. This is because `my_pos` is used by multiple subsystems and is the
+/// primary cursor position tracker for the entire offscreen buffer system.
+///
 /// [`ANSI parser`]: crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// [`OffscreenBuffer::my_pos`]: crate::offscreen_buffer::OffscreenBuffer::my_pos
+#[derive(Debug, Clone, PartialEq)]
 pub struct AnsiParserSupport {
     /// Temporary cursor position storage for DECSC/DECRC escape sequences only.
     ///
-    /// This field is ONLY used for ESC 7 (DECSC) save and ESC 8 (DECRC) restore operations,
-    /// as well as their CSI equivalents (CSI s and CSI u). It does NOT track the current 
-    /// cursor position - that's stored in `OffscreenBuffer::my_pos`.
+    /// This field is ONLY used for ESC 7 (DECSC) save and ESC 8 (DECRC) restore
+    /// operations, as well as their CSI equivalents (CSI s and CSI u). It does NOT
+    /// track the current cursor position - that's stored in
+    /// [`OffscreenBuffer::my_pos`].
     ///
     /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
     /// the DECSC (ESC 7) and DECRC (ESC 8) escape sequences for saving and restoring
@@ -89,6 +95,21 @@ pub struct AnsiParserSupport {
     /// automatically wrap to the beginning of the next line. When disabled,
     /// the cursor stays at the right margin and subsequent characters overwrite.
     pub auto_wrap_mode: bool,
+
+    /// Complete computed style combining attributes and colors for efficient rendering
+    pub current_style: Option<crate::TuiStyle>,
+
+    /// Text attributes (bold, italic, underline, etc.) from SGR sequences
+    pub attribs: crate::TuiStyleAttribs,
+
+    /// Current foreground color from SGR color sequences
+    pub fg_color: Option<crate::TuiColor>,
+
+    /// Current background color from SGR color sequences
+    pub bg_color: Option<crate::TuiColor>,
+
+    /// OSC events (hyperlinks, titles, etc.) accumulated during processing
+    pub pending_osc_events: Vec<crate::core::osc::OscEvent>,
 }
 
 impl Default for AnsiParserSupport {
@@ -98,6 +119,11 @@ impl Default for AnsiParserSupport {
             cursor_pos_for_esc_save_and_restore: None,
             character_set: CharacterSet::default(),
             auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
+            current_style: None,
+            attribs: crate::TuiStyleAttribs::default(),
+            fg_color: None,
+            bg_color: None,
+            pending_osc_events: Vec::new(),
         }
     }
 }
@@ -127,16 +153,19 @@ pub struct OffscreenBuffer {
     pub buffer: PixelCharLines,
     pub window_size: Size,
     /// The current active cursor position in the buffer.
-    /// 
-    /// This is the primary cursor position tracker for the entire offscreen buffer system,
-    /// used by multiple subsystems:
-    /// - **Render pipeline**: Updated when processing `RenderOp::MoveCursorPositionAbs/RelTo`
-    /// - **Text rendering**: Starting position for `print_text_with_attributes()`  
-    /// - **ANSI parser**: Initial position for sequence processing, updated via Drop impl
+    ///
+    /// This is the primary cursor position tracker for the entire offscreen buffer
+    /// system, used by multiple subsystems:
+    /// - **Render pipeline**: Updated when processing
+    ///   `RenderOp::MoveCursorPositionAbs/RelTo`
+    /// - **Text rendering**: Starting position for `print_text_with_attributes()`
+    /// - **ANSI parser**: Directly reads from and writes to this position during
+    ///   sequence processing
     /// - **Terminal emulation**: Tracks where the next character should be rendered
-    /// 
-    /// Note: This is different from `ansi_parser_support.cursor_pos_for_esc_save_and_restore`
-    /// which is only used for DECSC/DECRC (ESC 7/8) save/restore operations.
+    ///
+    /// Note: This is different from
+    /// `ansi_parser_support.cursor_pos_for_esc_save_and_restore` which is only used
+    /// for DECSC/DECRC (ESC 7/8) save/restore operations.
     pub my_pos: Pos,
     pub my_fg_color: Option<TuiColor>,
     pub my_bg_color: Option<TuiColor>,

@@ -8,7 +8,7 @@
         "serena",
         "start-mcp-server",
         "--context",
-        "agent",
+        "ide-assistant",
         "--project",
         "/home/nazmul/github/r3bl-open-core",
         "--mode",

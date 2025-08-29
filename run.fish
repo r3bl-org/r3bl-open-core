@@ -327,22 +327,7 @@ function install-cargo-tools
     end
 
     # Install other tools.
-
-    # Install claude using script rather than npm
-    # https://docs.anthropic.com/en/docs/claude-code/setup#native-binary-installation-beta
-    install_if_missing claude "curl -fsSL https://claude.ai/install.sh | sh"
-
-    # Configure claude MCP servers.
-    # 1. Configure claude w/ mcp-language-server to use rust-analyzer if available.
-    # 2. Add context7 MCP server.
-    # 3. Add serena MCP server.
-    if command -v claude >/dev/null
-        echo 'Configuring claude MCP servers...'
-        set workspace $PWD
-        set mcp_cmd "$HOME/go/bin/mcp-language-server"
-        claude mcp add-json context7 '{"type":"http","url":"https://mcp.context7.com/mcp"}'
-        claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context agent --project /home/nazmul/github/r3bl-open-core 2>/dev/null || true
-    end
+    # Note: Claude Code installation and MCP configuration moved to bootstrap.sh
 end
 
 # Runs all major checks and tasks for the entire workspace.

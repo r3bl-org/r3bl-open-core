@@ -315,6 +315,23 @@ pub enum ANSIBasicColor {
     DarkCyan,
 }
 
+mod convenience_conversions {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl From<ANSIBasicColor> for TuiColor {
+        fn from(basic_color: ANSIBasicColor) -> Self { TuiColor::Basic(basic_color) }
+    }
+
+    impl From<RgbValue> for TuiColor {
+        fn from(rgb_value: RgbValue) -> Self { TuiColor::Rgb(rgb_value) }
+    }
+
+    impl From<AnsiValue> for TuiColor {
+        fn from(ansi_value: AnsiValue) -> Self { TuiColor::Ansi(ansi_value) }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Copy, Debug)]
 pub struct RgbValue {
     pub red: u8,

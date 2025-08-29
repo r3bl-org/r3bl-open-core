@@ -6,6 +6,22 @@
 //! the more advanced CSI sequences. They provide fundamental terminal operations
 //! without the flexibility of parameters.
 //!
+//! ## Relationship to CSI Sequences
+//!
+//! ESC sequences are the predecessors to the more modern CSI sequences:
+//!
+//! - **ESC sequences** (this module): Original, simple commands used in early terminals
+//!   like the VT100. Each does one specific thing: `ESC 7` saves cursor, `ESC 8` restores
+//!   it.
+//! - **CSI sequences** (the successors): Modern, parameterized commands that evolved from
+//!   ESC to provide greater flexibility. See [`csi_codes`] for the modern equivalents.
+//!
+//! Both approaches coexist for backward compatibility. For example:
+//! - `ESC 7` / `ESC 8` (this module) vs `ESC[s` / `ESC[u` (CSI equivalent)
+//! - `ESC D` (move down 1 line) vs `ESC[1B` or `ESC[5B` (move down N lines)
+//!
+//! [`csi_codes`]: crate::ansi_parser::csi_codes
+//!
 //! ## Structure
 //! ESC sequences follow simpler patterns than CSI:
 //! - Single character: `ESC character` (e.g., `ESC c` for reset)
@@ -22,6 +38,10 @@
 //! - `ESC 8` - Restore saved cursor position
 //! - `ESC ( 0` - Switch to line-drawing character set
 //! - `ESC c` - Reset terminal to initial state
+
+use std::fmt;
+
+use crate::{BufTextStorage, WriteToBuf};
 
 // Cursor Save/Restore Operations
 
@@ -102,10 +122,30 @@ pub const DECKPAM_APP_KEYPAD: u8 = b'=';
 /// Disables application keypad mode
 pub const DECKPNM_NORMAL_KEYPAD: u8 = b'>';
 
-// ESC sequence builder following the same pattern as SgrCode
+// C0 Control Characters (handled by execute() method)
+// These are not ESC sequences but basic control characters
 
-use std::fmt;
-use crate::{BufTextStorage, WriteToBuf};
+/// Backspace control character (BS)
+/// Moves cursor one position to the left
+pub const BACKSPACE: u8 = 0x08;
+
+/// Horizontal Tab control character (HT)
+/// Moves cursor to next tab stop
+pub const TAB: u8 = b'\t';
+
+/// Line Feed control character (LF)
+/// Moves cursor to next line
+pub const LINE_FEED: u8 = b'\n';
+
+/// Carriage Return control character (CR)
+/// Moves cursor to beginning of current line
+pub const CARRIAGE_RETURN: u8 = b'\r';
+
+/// Standard terminal tab stop width (8 columns)
+/// Used for calculating tab positions
+pub const TAB_STOP_WIDTH: usize = 8;
+
+// ESC sequence builder following the same pattern as SgrCode
 
 /// Builder for ESC (direct escape) sequences.
 /// Similar to `SgrCode` but for direct escape sequences.
@@ -124,7 +164,7 @@ pub enum EscSequence {
     /// ESC ( B - Select ASCII character set
     SelectAscii,
     /// ESC ( 0 - Select DEC graphics character set
-    SelectGraphics,
+    SelectDECGraphics,
 }
 
 impl fmt::Display for EscSequence {
@@ -148,15 +188,19 @@ impl WriteToBuf for EscSequence {
                 acc.push('(');
                 acc.push(CHARSET_ASCII as char);
             }
-            EscSequence::SelectGraphics => {
+            EscSequence::SelectDECGraphics => {
                 acc.push('(');
                 acc.push(CHARSET_DEC_GRAPHICS as char);
             }
         }
         Ok(())
     }
-    
-    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+
+    fn write_buf_to_fmt(
+        &self,
+        acc: &BufTextStorage,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         f.write_str(&acc.clone())
     }
 }
