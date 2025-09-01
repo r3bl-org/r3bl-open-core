@@ -9,7 +9,8 @@ use super::{FlushKind, RenderOps};
 use crate::{CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutputDevice,
             MemoizedMemorySize, MemorySize, Pos, Size, TinyInlineString, TuiColor,
             TuiStyle, col, dim_underline, fg_green, fg_magenta, get_mem_size,
-            inline_string, ok, row, tiny_inline_string};
+            inline_string, ok, row, tiny_inline_string,
+            core::pty_mux::ansi_parser::term_units::TermRow};
 
 /// Character set modes for terminal emulation.
 ///
@@ -110,6 +111,43 @@ pub struct AnsiParserSupport {
 
     /// OSC events (hyperlinks, titles, etc.) accumulated during processing
     pub pending_osc_events: Vec<crate::core::osc::OscEvent>,
+
+    /// Top margin for the **scrollable region** (DECSTBM) - 1-based row number.
+    ///
+    /// This variable defines the **upper boundary** of the area where scrolling occurs.
+    /// Rows above this boundary are part of the **static top region** and do not scroll.
+    ///
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// DECSTBM (Set Top and Bottom Margins) functionality via ESC [ top ; bottom r.
+    /// 
+    /// When `None`, the default top margin is row 1 (first row), making the
+    /// entire terminal screen the scrollable region.
+    /// When `Some(n)`, scrolling operations only affect rows from n to scroll_region_bottom.
+    ///
+    /// ## DECSTBM Usage:
+    /// ```text
+    /// ESC [ 5 ; 20 r   - Set scrolling region from row 5 to row 20
+    /// ESC [ r          - Reset to full screen (clears both margins)
+    /// ```
+    pub scroll_region_top: Option<TermRow>,
+
+    /// Bottom margin for the **scrollable region** (DECSTBM) - 1-based row number.
+    ///
+    /// This variable defines the **lower boundary** of the area where scrolling occurs.
+    /// Rows below this boundary are part of the **static bottom region** and do not scroll.
+    ///
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// DECSTBM (Set Top and Bottom Margins) functionality via ESC [ top ; bottom r.
+    ///
+    /// When `None`, the default bottom margin is the last row of the terminal,
+    /// making the entire terminal screen the scrollable region.
+    /// When `Some(n)`, scrolling operations only affect rows from scroll_region_top to n.
+    ///
+    /// ## DECSTBM Behavior:
+    /// - Scrolling commands (ESC D, ESC M, CSI S, CSI T) only affect the region
+    /// - Cursor movement is constrained to the region boundaries
+    /// - Content outside the region remains unchanged during scrolling
+    pub scroll_region_bottom: Option<TermRow>,
 }
 
 impl Default for AnsiParserSupport {
@@ -124,6 +162,8 @@ impl Default for AnsiParserSupport {
             fg_color: None,
             bg_color: None,
             pending_osc_events: Vec::new(),
+            scroll_region_top: None,    // Default: no top margin (uses row 1)
+            scroll_region_bottom: None, // Default: no bottom margin (uses last row)
         }
     }
 }

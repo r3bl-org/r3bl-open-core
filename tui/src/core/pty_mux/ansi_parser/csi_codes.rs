@@ -114,6 +114,8 @@ pub const SU_SCROLL_UP: char = 'S';
 /// CSI T: Scroll Down (SD)
 /// Scrolls text down by n lines (default 1)
 pub const SD_SCROLL_DOWN: char = 'T';
+/// DECSTBM - Set Top and Bottom Margins - ESC [ top ; bottom r
+pub const DECSTBM_SET_MARGINS: char = 'r';
 
 // Text Formatting (SGR)
 
@@ -525,6 +527,8 @@ pub enum CsiSequence {
     ScrollUp(u16),
     /// Scroll Down (SD) - ESC [ n T
     ScrollDown(u16),
+    /// Set Top and Bottom Margins (DECSTBM) - ESC [ top ; bottom r
+    SetScrollingMargins { top: Option<TermRow>, bottom: Option<TermRow> },
     /// Device Status Report (DSR) - ESC [ n n
     DeviceStatusReport(DeviceStatusReportType),
     /// Enable Private Mode - ESC [ ? n h (n = mode number like DECAWM_AUTO_WRAP)
@@ -608,6 +612,16 @@ impl WriteToBuf for CsiSequence {
             CsiSequence::ScrollDown(n) => {
                 acc.push_str(&n.to_string());
                 acc.push(SD_SCROLL_DOWN);
+            }
+            CsiSequence::SetScrollingMargins { top, bottom } => {
+                if let Some(top_row) = top {
+                    acc.push_str(&top_row.as_u16().to_string());
+                }
+                acc.push(';');
+                if let Some(bottom_row) = bottom {
+                    acc.push_str(&bottom_row.as_u16().to_string());
+                }
+                acc.push(DECSTBM_SET_MARGINS);
             }
             CsiSequence::DeviceStatusReport(dsr_type) => {
                 acc.push_str(&dsr_type.as_u16().to_string());

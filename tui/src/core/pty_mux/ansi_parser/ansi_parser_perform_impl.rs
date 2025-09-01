@@ -10,7 +10,10 @@
 use vte::{Params, Perform};
 
 use super::{ansi_parser_public_api::AnsiToBufferProcessor,
-            ansi_to_tui_color::ansi_to_tui_color, csi_codes::{self, DeviceStatusReportType, PrivateModeType}, esc_codes};
+            ansi_to_tui_color::ansi_to_tui_color,
+            csi_codes::{self, DeviceStatusReportType, PrivateModeType},
+            esc_codes,
+            term_units::term_row};
 use crate::{BoundsCheck,
             BoundsStatus::{Overflowed, Within},
             CharacterSet, PixelChar, Pos, TuiStyle, col,
@@ -106,6 +109,34 @@ impl Perform for AnsiToBufferProcessor<'_> {
     }
 
     /// Handle CSI (Control Sequence Introducer) sequences.
+    ///
+    /// This method processes ANSI escape sequences that follow the pattern `ESC[...char`
+    /// where `char` is the final dispatch character that determines the operation.
+    ///
+    /// ## Parameter Handling
+    ///
+    /// All cursor movement and scroll operations follow VT100 specification for parameter
+    /// handling:
+    /// - **Missing parameters** (None) default to 1
+    /// - **Zero parameters** (Some(0)) are treated as 1
+    /// - This ensures compatibility with real VT100 terminals and modern terminal
+    ///   emulators
+    ///
+    /// ### Examples
+    /// - `ESC[A` (no param) → move up 1 line
+    /// - `ESC[0A` (zero param) → move up 1 line (0 treated as 1)
+    /// - `ESC[5A` (explicit param) → move up 5 lines
+    /// - `ESC[S` (no param) → scroll up 1 line
+    /// - `ESC[0S` (zero param) → scroll up 1 line (0 treated as 1)
+    ///
+    /// ## Supported Operations
+    /// - Cursor movements: CUU, CUD, CUF, CUB, CNL, CPL, CHA, CUP
+    /// - Scrolling: SU (Scroll Up), SD (Scroll Down)
+    /// - Display control: ED, EL
+    /// - Cursor save/restore: SCP, RCP
+    /// - Margins: DECSTBM
+    /// - Modes: SM, RM (including private modes with ? prefix)
+    /// - Graphics: SGR (Select Graphic Rendition)
     #[allow(clippy::too_many_lines)]
     fn csi_dispatch(
         &mut self,
@@ -117,47 +148,51 @@ impl Perform for AnsiToBufferProcessor<'_> {
         #[allow(clippy::match_same_arms)]
         match dispatch_char {
             csi_codes::CUU_CURSOR_UP => {
-                let n = i64::from(
-                    params
-                        .iter()
-                        .next()
-                        .and_then(|p| p.first())
-                        .copied()
-                        .unwrap_or(1),
-                );
+                let n = params
+                    .iter()
+                    .next()
+                    .and_then(|p| p.first())
+                    .copied()
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 cursor_ops::cursor_up(self, n);
             }
             csi_codes::CUD_CURSOR_DOWN => {
-                let n = i64::from(
-                    params
-                        .iter()
-                        .next()
-                        .and_then(|p| p.first())
-                        .copied()
-                        .unwrap_or(1),
-                );
+                let n = params
+                    .iter()
+                    .next()
+                    .and_then(|p| p.first())
+                    .copied()
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 cursor_ops::cursor_down(self, n);
             }
             csi_codes::CUF_CURSOR_FORWARD => {
-                let n = i64::from(
-                    params
-                        .iter()
-                        .next()
-                        .and_then(|p| p.first())
-                        .copied()
-                        .unwrap_or(1),
-                );
+                let n = params
+                    .iter()
+                    .next()
+                    .and_then(|p| p.first())
+                    .copied()
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 cursor_ops::cursor_forward(self, n);
             }
             csi_codes::CUB_CURSOR_BACKWARD => {
-                let n = i64::from(
-                    params
-                        .iter()
-                        .next()
-                        .and_then(|p| p.first())
-                        .copied()
-                        .unwrap_or(1),
-                );
+                let n = params
+                    .iter()
+                    .next()
+                    .and_then(|p| p.first())
+                    .copied()
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 cursor_ops::cursor_backward(self, n);
             }
             csi_codes::CUP_CURSOR_POSITION | csi_codes::HVP_CURSOR_POSITION => {
@@ -197,14 +232,15 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::CNL_CURSOR_NEXT_LINE => {
                 // CSI E - Cursor Next Line
                 // Move cursor to beginning of line n lines down
-                let n = i64::from(
-                    params
-                        .iter()
-                        .next()
-                        .and_then(|p| p.first())
-                        .copied()
-                        .unwrap_or(1),
-                );
+                let n = params
+                    .iter()
+                    .next()
+                    .and_then(|p| p.first())
+                    .copied()
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 cursor_ops::cursor_down(self, n);
                 self.ofs_buf.my_pos.col_index = col(0);
                 tracing::trace!("CSI E (CNL): Moved to next line {}", n);
@@ -212,14 +248,15 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::CPL_CURSOR_PREV_LINE => {
                 // CSI F - Cursor Previous Line
                 // Move cursor to beginning of line n lines up
-                let n = i64::from(
-                    params
-                        .iter()
-                        .next()
-                        .and_then(|p| p.first())
-                        .copied()
-                        .unwrap_or(1),
-                );
+                let n = params
+                    .iter()
+                    .next()
+                    .and_then(|p| p.first())
+                    .copied()
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 cursor_ops::cursor_up(self, n);
                 self.ofs_buf.my_pos.col_index = col(0);
                 tracing::trace!("CSI F (CPL): Moved to previous line {}", n);
@@ -232,9 +269,12 @@ impl Perform for AnsiToBufferProcessor<'_> {
                     .next()
                     .and_then(|p| p.first())
                     .copied()
-                    .unwrap_or(1);
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 // Convert from 1-based to 0-based, clamp to buffer width
-                let target_col = (n as usize).saturating_sub(1);
+                let target_col = n.saturating_sub(1) as usize;
                 let max_col = self.ofs_buf.window_size.col_width.as_usize();
                 self.ofs_buf.my_pos.col_index =
                     col(target_col.min(max_col.saturating_sub(1)));
@@ -248,7 +288,10 @@ impl Perform for AnsiToBufferProcessor<'_> {
                     .next()
                     .and_then(|p| p.first())
                     .copied()
-                    .unwrap_or(1) as usize;
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 for _ in 0..n {
                     scroll_ops::scroll_buffer_up(self);
                 }
@@ -262,11 +305,90 @@ impl Perform for AnsiToBufferProcessor<'_> {
                     .next()
                     .and_then(|p| p.first())
                     .copied()
-                    .unwrap_or(1) as usize;
+                    .map_or(
+                        /* None -> 1 */ 1,
+                        /* Some(0) -> 1 */ |v| u16::max(v, 1),
+                    );
                 for _ in 0..n {
                     scroll_ops::scroll_buffer_down(self);
                 }
                 tracing::trace!("CSI T (SD): Scrolled down {} lines", n);
+            }
+            csi_codes::DECSTBM_SET_MARGINS => {
+                // CSI r - Set Top and Bottom Margins (DECSTBM)
+                // ESC [ top ; bottom r
+                let maybe_top = params
+                    .iter()
+                    .next()
+                    .and_then(|params| params.first())
+                    .copied();
+                let maybe_bottom = params
+                    .iter()
+                    .nth(1)
+                    .and_then(|params| params.first())
+                    .copied();
+
+                // Store terminal's 1-based coordinates (will be converted to 0-based when
+                // used)
+                let buffer_height: u16 = self.ofs_buf.window_size.row_height.into();
+
+                match (maybe_top, maybe_bottom) {
+                    // ESC [ r parsed as (Some(0), None) - Reset to full screen
+                    (Some(0), None) => {
+                        self.ofs_buf.ansi_parser_support.scroll_region_top = None;
+                        self.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
+                        tracing::trace!(
+                            "CSI r (DECSTBM): Reset scroll region to full screen (no params)"
+                        );
+                    }
+                    // ESC [ 0 ; 0 r or other reset cases
+                    (Some(0), Some(0)) | (None, None) => {
+                        self.ofs_buf.ansi_parser_support.scroll_region_top = None;
+                        self.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
+                        tracing::trace!(
+                            "CSI r (DECSTBM): Reset scroll region to full screen"
+                        );
+                    }
+                    // Check if we have no parameters (empty params) - also reset
+                    _ if params.is_empty() => {
+                        self.ofs_buf.ansi_parser_support.scroll_region_top = None;
+                        self.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
+                        tracing::trace!(
+                            "CSI r (DECSTBM): Reset scroll region to full screen (empty params)"
+                        );
+                    }
+                    (top_param, bottom_param) => {
+                        // Set scrolling region with bounds checking
+                        let top_row = top_param.map_or(
+                            /* None -> 1 */ 1,
+                            /* Some(v) -> max(v,1) */ |v| v.max(1),
+                        );
+                        let bottom_row = bottom_param.map_or(
+                            /* None -> buffer_height */ buffer_height,
+                            /* Some(v) -> min(v,buffer_height) */
+                            |v| v.min(buffer_height),
+                        );
+
+                        if top_row < bottom_row && bottom_row <= buffer_height {
+                            self.ofs_buf.ansi_parser_support.scroll_region_top =
+                                Some(term_row(top_row));
+                            self.ofs_buf.ansi_parser_support.scroll_region_bottom =
+                                Some(term_row(bottom_row));
+                            tracing::trace!(
+                                "CSI r (DECSTBM): Set scroll region from row {} to row {}",
+                                top_row,
+                                bottom_row
+                            );
+                        } else {
+                            tracing::warn!(
+                                "CSI r (DECSTBM): Invalid margins top={}, bottom={}, buffer_height={}",
+                                top_row,
+                                bottom_row,
+                                buffer_height
+                            );
+                        }
+                    }
+                }
             }
             csi_codes::DSR_DEVICE_STATUS => {
                 // CSI n - Device Status Report
@@ -314,7 +436,10 @@ impl Perform for AnsiToBufferProcessor<'_> {
                             self.ofs_buf.ansi_parser_support.auto_wrap_mode = true;
                             tracing::trace!("ESC[?7h: Enabled auto-wrap mode (DECAWM)");
                         }
-                        _ => tracing::debug!("CSI ?{}h: Unhandled private mode", mode.as_u16()),
+                        _ => tracing::debug!(
+                            "CSI ?{}h: Unhandled private mode",
+                            mode.as_u16()
+                        ),
                     }
                 } else {
                     tracing::debug!("CSI h: Standard mode setting not implemented");
@@ -336,7 +461,10 @@ impl Perform for AnsiToBufferProcessor<'_> {
                             self.ofs_buf.ansi_parser_support.auto_wrap_mode = false;
                             tracing::trace!("ESC[?7l: Disabled auto-wrap mode (DECAWM)");
                         }
-                        _ => tracing::debug!("CSI ?{}l: Unhandled private mode", mode.as_u16()),
+                        _ => tracing::debug!(
+                            "CSI ?{}l: Unhandled private mode",
+                            mode.as_u16()
+                        ),
                     }
                 } else {
                     tracing::debug!("CSI l: Standard mode reset not implemented");
@@ -590,32 +718,49 @@ pub mod cursor_ops {
     use super::*;
 
     /// Move cursor up by n lines.
-    pub fn cursor_up(processor: &mut AnsiToBufferProcessor, n: i64) {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let n = n.max(1) as usize; // Safe: n.max(1) ensures n >= 1, i64 to usize is safe here
+    /// Respects DECSTBM scroll region margins.
+    pub fn cursor_up(processor: &mut AnsiToBufferProcessor, n: u16) {
+        let n = n.max(1) as usize;
         let current_row = processor.ofs_buf.my_pos.row_index.as_usize();
-        processor.ofs_buf.my_pos.row_index = row(current_row.saturating_sub(n));
+
+        // Get scroll region boundaries (1-based to 0-based conversion)
+        let scroll_top = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_top
+            .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(0);
+
+        // Clamp cursor movement to scroll region top
+        let new_row = current_row.saturating_sub(n).max(scroll_top);
+        processor.ofs_buf.my_pos.row_index = row(new_row);
     }
 
     /// Move cursor down by n lines.
-    pub fn cursor_down(processor: &mut AnsiToBufferProcessor, n: i64) {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let n = n.max(1) as usize; // Safe: n.max(1) ensures n >= 1, i64 to usize is safe here
-        let max_row = processor.ofs_buf.window_size.row_height;
-        let new_row = processor.ofs_buf.my_pos.row_index + row(n);
-        // Clamp to max_row-1 if it would overflow
-        processor.ofs_buf.my_pos.row_index =
-            if new_row.check_overflows(max_row) == Overflowed {
-                max_row.convert_to_row_index()
-            } else {
-                new_row
-            };
+    /// Respects DECSTBM scroll region margins.
+    pub fn cursor_down(processor: &mut AnsiToBufferProcessor, n: u16) {
+        let n = n.max(1) as usize;
+        let current_row = processor.ofs_buf.my_pos.row_index.as_usize();
+        let max_row = processor.ofs_buf.window_size.row_height.as_usize();
+
+        // Get scroll region boundaries (1-based to 0-based conversion)
+        let scroll_bottom = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_bottom
+            .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(max_row.saturating_sub(1));
+
+        // Clamp cursor movement to scroll region bottom
+        let new_row = (current_row + n).min(scroll_bottom);
+        processor.ofs_buf.my_pos.row_index = row(new_row);
     }
 
     /// Move cursor forward by n columns.
-    pub fn cursor_forward(processor: &mut AnsiToBufferProcessor, n: i64) {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let n = n.max(1) as usize; // Safe: n.max(1) ensures n >= 1, i64 to usize is safe here
+    pub fn cursor_forward(processor: &mut AnsiToBufferProcessor, n: u16) {
+        let n = n.max(1) as usize;
         let max_col = processor.ofs_buf.window_size.col_width;
         let new_col = processor.ofs_buf.my_pos.col_index + col(n);
         // Clamp to max_col-1 if it would overflow
@@ -628,49 +773,55 @@ pub mod cursor_ops {
     }
 
     /// Move cursor backward by n columns.
-    pub fn cursor_backward(processor: &mut AnsiToBufferProcessor, n: i64) {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let n = n.max(1) as usize; // Safe: n.max(1) ensures n >= 1, i64 to usize is safe here
+    pub fn cursor_backward(processor: &mut AnsiToBufferProcessor, n: u16) {
+        let n = n.max(1) as usize;
         let current_col = processor.ofs_buf.my_pos.col_index.as_usize();
         processor.ofs_buf.my_pos.col_index = col(current_col.saturating_sub(n));
     }
 
     /// Set cursor position (1-based coordinates from ANSI, converted to 0-based).
+    /// Respects DECSTBM scroll region margins.
     pub fn cursor_position(processor: &mut AnsiToBufferProcessor, params: &Params) {
         let row_param = params
             .iter()
             .next()
             .and_then(|p| p.first())
             .copied()
-            .unwrap_or(1)
-            .max(1) as usize
-            - 1;
+            .map_or(1, |v| v.max(1))
+            .saturating_sub(1) as usize;
         let col_param = params
             .iter()
             .nth(1)
             .and_then(|p| p.first())
             .copied()
-            .unwrap_or(1)
-            .max(1) as usize
-            - 1;
-        let max_row = processor.ofs_buf.window_size.row_height;
-        let max_col = processor.ofs_buf.window_size.col_width;
+            .map_or(1, |v| v.max(1))
+            .saturating_sub(1) as usize;
+        let max_row = processor.ofs_buf.window_size.row_height.as_usize();
+        let max_col = processor.ofs_buf.window_size.col_width.as_usize();
 
-        let new_row = row(row_param);
-        let new_col = col(col_param);
+        // Get scroll region boundaries (1-based to 0-based conversion)
+        let scroll_top = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_top
+            .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(0);
+        let scroll_bottom = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_bottom
+            .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(max_row.saturating_sub(1));
 
-        // Clamp row and column to valid bounds
+        // Clamp row to scroll region bounds and column to buffer bounds
+        let new_row = row_param.max(scroll_top).min(scroll_bottom);
+        let new_col = col_param.min(max_col.saturating_sub(1));
+
         processor.ofs_buf.my_pos = Pos {
-            col_index: if new_col.check_overflows(max_col) == Overflowed {
-                max_col.convert_to_col_index()
-            } else {
-                new_col
-            },
-            row_index: if new_row.check_overflows(max_row) == Overflowed {
-                max_row.convert_to_row_index()
-            } else {
-                new_row
-            },
+            col_index: col(new_col),
+            row_index: row(new_row),
         };
     }
 }
@@ -682,63 +833,119 @@ mod scroll_ops {
 
     /// Move cursor down one line, scrolling the buffer if at bottom.
     /// Implements the ESC D (IND) escape sequence.
+    /// Respects DECSTBM scroll region margins.
     pub fn index_down(processor: &mut AnsiToBufferProcessor) {
         let max_row = processor.ofs_buf.window_size.row_height;
+        let current_row = processor.ofs_buf.my_pos.row_index.as_usize();
 
-        // Check if we're at or beyond the max row (need to scroll)
-        let next_row = processor.ofs_buf.my_pos.row_index + row(1);
-        if next_row.check_overflows(max_row) == Overflowed {
-            // At bottom - scroll buffer content up by one line
+        // Get scroll region boundaries (1-based to 0-based conversion)
+        let scroll_bottom = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_bottom
+            .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(max_row.as_usize().saturating_sub(1));
+
+        // Check if we're at the bottom of the scroll region
+        if current_row >= scroll_bottom {
+            // At scroll region bottom - scroll buffer content up by one line
             scroll_buffer_up(processor);
         } else {
-            // Not at bottom - just move cursor down
+            // Not at scroll region bottom - just move cursor down
             cursor_ops::cursor_down(processor, 1);
         }
     }
 
     /// Move cursor up one line, scrolling the buffer if at top.
     /// Implements the ESC M (RI) escape sequence.
+    /// Respects DECSTBM scroll region margins.
     pub fn reverse_index_up(processor: &mut AnsiToBufferProcessor) {
-        // Check if we're at the top row (row 0)
-        if processor.ofs_buf.my_pos.row_index == row(0) {
-            // At top - scroll buffer content down by one line
+        let current_row = processor.ofs_buf.my_pos.row_index.as_usize();
+
+        // Get scroll region boundaries (1-based to 0-based conversion)
+        let scroll_top = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_top
+            .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(0);
+
+        // Check if we're at the top of the scroll region
+        if current_row <= scroll_top {
+            // At scroll region top - scroll buffer content down by one line
             scroll_buffer_down(processor);
         } else {
-            // Not at top - just move cursor up
+            // Not at scroll region top - just move cursor up
             cursor_ops::cursor_up(processor, 1);
         }
     }
 
     /// Scroll buffer content up by one line (for ESC D at bottom).
     /// The top line is lost, and a new empty line appears at bottom.
+    /// Respects DECSTBM scroll region margins.
     pub fn scroll_buffer_up(processor: &mut AnsiToBufferProcessor) {
         let max_row = processor.ofs_buf.window_size.row_height.as_usize();
 
-        // Shift all lines up by one (line 0 is lost)
-        for row in 0..max_row.saturating_sub(1) {
+        // Get scroll region boundaries (1-based to 0-based conversion)
+        let scroll_top = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_top
+            .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(0);
+        let scroll_bottom = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_bottom
+            .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(max_row.saturating_sub(1));
+
+        // Shift lines up within the scroll region only
+        // For each row from top to (bottom-1), copy the row below it
+        for row in scroll_top..scroll_bottom {
             processor.ofs_buf.buffer[row] = processor.ofs_buf.buffer[row + 1].clone();
         }
 
-        // Clear the new bottom line
-        let new_bottom_row = max_row.saturating_sub(1);
+        // Clear the bottom line of the scroll region
         for col in 0..processor.ofs_buf.window_size.col_width.as_usize() {
-            processor.ofs_buf.buffer[new_bottom_row][col] = PixelChar::Spacer;
+            processor.ofs_buf.buffer[scroll_bottom][col] = PixelChar::Spacer;
         }
     }
 
     /// Scroll buffer content down by one line (for ESC M at top).
     /// The bottom line is lost, and a new empty line appears at top.
+    /// Respects DECSTBM scroll region margins.
     pub fn scroll_buffer_down(processor: &mut AnsiToBufferProcessor) {
         let max_row = processor.ofs_buf.window_size.row_height.as_usize();
 
-        // Shift all lines down by one (bottom line is lost)
-        for row in (1..max_row).rev() {
+        // Get scroll region boundaries (1-based to 0-based conversion)
+        let scroll_top = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_top
+            .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(0);
+        let scroll_bottom = processor
+            .ofs_buf
+            .ansi_parser_support
+            .scroll_region_bottom
+            .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
+            .map(|row| row.as_usize())
+            .unwrap_or(max_row.saturating_sub(1));
+
+        // Shift lines down within the scroll region only
+        for row in (scroll_top + 1..=scroll_bottom).rev() {
             processor.ofs_buf.buffer[row] = processor.ofs_buf.buffer[row - 1].clone();
         }
 
-        // Clear the new top line
+        // Clear the new top line of the scroll region
         for col in 0..processor.ofs_buf.window_size.col_width.as_usize() {
-            processor.ofs_buf.buffer[0][col] = PixelChar::Spacer;
+            processor.ofs_buf.buffer[scroll_top][col] = PixelChar::Spacer;
         }
     }
 }
@@ -904,6 +1111,7 @@ mod terminal_ops {
 
     /// Reset terminal to initial state (ESC c).
     /// Clears the buffer, resets cursor, and clears saved state.
+    /// Clears DECSTBM scroll region margins.
     pub fn reset_terminal(processor: &mut AnsiToBufferProcessor) {
         clear_buffer(processor);
 
@@ -918,6 +1126,10 @@ mod terminal_ops {
 
         // Reset to ASCII character set
         processor.ofs_buf.ansi_parser_support.character_set = CharacterSet::Ascii;
+
+        // Clear DECSTBM scroll region margins
+        processor.ofs_buf.ansi_parser_support.scroll_region_top = None;
+        processor.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
 
         // Clear any SGR attributes
         reset_sgr_attributes(processor);
