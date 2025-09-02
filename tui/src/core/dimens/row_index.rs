@@ -69,6 +69,10 @@ mod constructor {
     impl From<i32> for RowIndex {
         fn from(val: i32) -> Self { RowIndex(val.into()) }
     }
+
+    impl From<RowIndex> for u16 {
+        fn from(row: RowIndex) -> Self { row.as_u16() }
+    }
 }
 
 mod ops {

@@ -346,7 +346,7 @@ pub mod movement {
         );
 
         // 2. Move up 2 rows and write 'B'
-        cursor_ops::cursor_up(&mut processor, 2);
+        cursor_ops::cursor_up_by_n(&mut processor, 2);
         assert_eq!(
             processor.ofs_buf.my_pos,
             row(3) + col(4),
@@ -361,7 +361,7 @@ pub mod movement {
         );
 
         // 3. Try to move up beyond boundary
-        cursor_ops::cursor_up(&mut processor, 10);
+        cursor_ops::cursor_up_by_n(&mut processor, 10);
         assert_eq!(processor.ofs_buf.my_pos.row_index, row(0)); // Should stop at row 0
         assert_eq!(
             processor.ofs_buf.my_pos,
@@ -414,7 +414,7 @@ pub mod movement {
         );
 
         // 2. Move down 3 rows and write another character
-        cursor_ops::cursor_down(&mut processor, 3);
+        cursor_ops::cursor_down_by_n(&mut processor, 3);
         assert_eq!(
             processor.ofs_buf.my_pos,
             row(5) + col(5),
@@ -423,7 +423,7 @@ pub mod movement {
         processor.print('Y');
 
         // 3. Try to move down beyond boundary
-        cursor_ops::cursor_down(&mut processor, 10);
+        cursor_ops::cursor_down_by_n(&mut processor, 10);
         assert_eq!(
             processor.ofs_buf.my_pos,
             row(9) + col(6),
@@ -464,12 +464,12 @@ pub mod movement {
         processor.print('L');
 
         // 2. Move forward 2 columns and write another character
-        cursor_ops::cursor_forward(&mut processor, 2);
+        cursor_ops::cursor_forward_by_n(&mut processor, 2);
         assert_eq!(processor.ofs_buf.my_pos.col_index, col(6)); // Should be at column 6
         processor.print('M');
 
         // 3. Try to move forward beyond boundary
-        cursor_ops::cursor_forward(&mut processor, 10);
+        cursor_ops::cursor_forward_by_n(&mut processor, 10);
         assert_eq!(processor.ofs_buf.my_pos.col_index, col(9)); // Should stop at column 9
         processor.print('N');
 
@@ -511,7 +511,7 @@ pub mod movement {
         );
 
         // 2. Move backward 3 columns and write another character
-        cursor_ops::cursor_backward(&mut processor, 3);
+        cursor_ops::cursor_backward_by_n(&mut processor, 3);
         assert_eq!(
             processor.ofs_buf.my_pos,
             row(6) + col(5),
@@ -525,7 +525,7 @@ pub mod movement {
         );
 
         // 3. Try to move backward beyond boundary
-        cursor_ops::cursor_backward(&mut processor, 10);
+        cursor_ops::cursor_backward_by_n(&mut processor, 10);
         assert_eq!(
             processor.ofs_buf.my_pos,
             row(6) + col(0),
