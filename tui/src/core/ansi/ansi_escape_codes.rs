@@ -317,7 +317,6 @@ impl WriteToBuf for SgrCode {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -482,22 +481,70 @@ mod tests {
 
     #[test]
     fn fg_basic_all_variants() {
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Black).to_string(), "\x1b[30m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkGray).to_string(), "\x1b[90m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed).to_string(), "\x1b[31m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkGreen).to_string(), "\x1b[32m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkYellow).to_string(), "\x1b[33m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkBlue).to_string(), "\x1b[34m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkMagenta).to_string(), "\x1b[35m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::DarkCyan).to_string(), "\x1b[36m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Gray).to_string(), "\x1b[37m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::White).to_string(), "\x1b[97m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Red).to_string(), "\x1b[91m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Green).to_string(), "\x1b[92m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Yellow).to_string(), "\x1b[93m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Blue).to_string(), "\x1b[94m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Magenta).to_string(), "\x1b[95m");
-        assert_eq!(SgrCode::ForegroundBasic(ANSIBasicColor::Cyan).to_string(), "\x1b[96m");
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Black).to_string(),
+            "\x1b[30m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::DarkGray).to_string(),
+            "\x1b[90m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed).to_string(),
+            "\x1b[31m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::DarkGreen).to_string(),
+            "\x1b[32m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::DarkYellow).to_string(),
+            "\x1b[33m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::DarkBlue).to_string(),
+            "\x1b[34m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::DarkMagenta).to_string(),
+            "\x1b[35m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::DarkCyan).to_string(),
+            "\x1b[36m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Gray).to_string(),
+            "\x1b[37m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::White).to_string(),
+            "\x1b[97m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Red).to_string(),
+            "\x1b[91m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Green).to_string(),
+            "\x1b[92m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Yellow).to_string(),
+            "\x1b[93m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Blue).to_string(),
+            "\x1b[94m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Magenta).to_string(),
+            "\x1b[95m"
+        );
+        assert_eq!(
+            SgrCode::ForegroundBasic(ANSIBasicColor::Cyan).to_string(),
+            "\x1b[96m"
+        );
     }
 }
 
@@ -512,7 +559,9 @@ mod benchmarks {
 
     #[bench]
     fn bench_ansi256_formatting_all_values(b: &mut Bencher) {
-        let codes: Vec<SgrCode> = (0..=255).map(|i| SgrCode::ForegroundAnsi256(AnsiValue::new(i))).collect();
+        let codes: Vec<SgrCode> = (0..=255)
+            .map(|i| SgrCode::ForegroundAnsi256(AnsiValue::new(i)))
+            .collect();
         b.iter(|| {
             let mut buf = BufTextStorage::new();
             for code in &codes {

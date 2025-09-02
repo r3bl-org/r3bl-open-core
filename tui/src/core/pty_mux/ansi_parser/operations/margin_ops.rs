@@ -4,10 +4,8 @@
 
 use vte::Params;
 
-use crate::ansi_parser_perform_impl::param_utils::ParamsExt;
-
-use super::super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
-                          term_units::term_row};
+use super::super::{ansi_parser_public_api::AnsiToBufferProcessor, term_units::term_row};
+use crate::core::pty_mux::ansi_parser::param_utils::ParamsExt;
 
 /// Handle Set Top and Bottom Margins (DECSTBM) command.
 /// CSI r - ESC [ top ; bottom r

@@ -2,18 +2,20 @@
 
 //! Control Sequence Introducer (CSI) codes for terminal control.
 //!
-//! CSI sequences are the most common type of ANSI escape sequences used in modern terminals.
-//! They provide parameterized control over cursor movement, text formatting, colors, and
-//! display manipulation.
+//! CSI sequences are the most common type of ANSI escape sequences used in modern
+//! terminals. They provide parameterized control over cursor movement, text formatting,
+//! colors, and display manipulation.
 //!
 //! ## Evolution from ESC Sequences
 //!
-//! CSI sequences evolved from the simpler direct ESC sequences to provide greater flexibility:
+//! CSI sequences evolved from the simpler direct ESC sequences to provide greater
+//! flexibility:
 //!
-//! - **ESC sequences** (the predecessors): Simple, non-parameterized commands like `ESC 7`
-//!   (save cursor) or `ESC D` (move down one line). See [`esc_codes`] for details.
-//! - **CSI sequences** (modern approach): Parameterized commands like `ESC[s` (save cursor)
-//!   or `ESC[5B` (move down 5 lines). The parameters make them much more flexible.
+//! - **ESC sequences** (the predecessors): Simple, non-parameterized commands like `ESC
+//!   7` (save cursor) or `ESC D` (move down one line). See [`esc_codes`] for details.
+//! - **CSI sequences** (modern approach): Parameterized commands like `ESC[s` (save
+//!   cursor) or `ESC[5B` (move down 5 lines). The parameters make them much more
+//!   flexible.
 //!
 //! Many operations can be performed using either approach for backward compatibility.
 //! Modern applications typically prefer CSI for their flexibility.
@@ -28,8 +30,10 @@
 //!
 //! ## Common Uses
 //! - **Cursor Movement**: Move cursor to specific positions or by relative amounts
-//! - **Text Formatting**: Apply colors, bold, italic, underline, and other text attributes
-//! - **Display Control**: Clear screen/lines, scroll content, save/restore cursor position
+//! - **Text Formatting**: Apply colors, bold, italic, underline, and other text
+//!   attributes
+//! - **Display Control**: Clear screen/lines, scroll content, save/restore cursor
+//!   position
 //! - **Terminal Modes**: Configure terminal behavior and features
 //!
 //! ## Examples
@@ -39,9 +43,10 @@
 //! - `ESC[1A` - Move cursor up 1 line
 
 use std::fmt;
+
+use super::{super::term_units::{TermCol, TermRow},
+            dsr_codes::DsrRequestType};
 use crate::{BufTextStorage, WriteToBuf};
-use super::dsr_codes::DsrRequestType;
-use super::term_units::{TermRow, TermCol};
 
 // CSI sequence components.
 
@@ -353,7 +358,6 @@ pub const SAVE_CURSOR_DEC: u16 = 1048;
 /// Alternate screen buffer
 pub const ALT_SCREEN_BUFFER: u16 = 1049;
 
-
 /// DEC Private Mode types for CSI ? h/l sequences
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PrivateModeType {
@@ -450,7 +454,8 @@ pub mod csi_test_helpers {
     /// Helper function to create a `CsiSequence::CursorPositionAlt`.
     ///
     /// # Panics
-    /// Panics if the provided position is not a `CsiSequence::CursorPosition` or `CursorPositionAlt`.
+    /// Panics if the provided position is not a `CsiSequence::CursorPosition` or
+    /// `CursorPositionAlt`.
     ///
     /// # Examples
     /// ```
@@ -512,7 +517,10 @@ pub enum CsiSequence {
     /// Scroll Down (SD) - ESC [ n T
     ScrollDown(u16),
     /// Set Top and Bottom Margins (DECSTBM) - ESC [ top ; bottom r
-    SetScrollingMargins { top: Option<TermRow>, bottom: Option<TermRow> },
+    SetScrollingMargins {
+        top: Option<TermRow>,
+        bottom: Option<TermRow>,
+    },
     /// Device Status Report (DSR) - ESC [ n n
     DeviceStatusReport(DsrRequestType),
     /// Enable Private Mode - ESC [ ? n h (n = mode number like `DECAWM_AUTO_WRAP`)
@@ -625,7 +633,11 @@ impl WriteToBuf for CsiSequence {
         Ok(())
     }
 
-    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn write_buf_to_fmt(
+        &self,
+        acc: &BufTextStorage,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         f.write_str(&acc.clone())
     }
 }

@@ -33,7 +33,7 @@
 ///
 /// ```rust
 /// use r3bl_tui::OscEvent;
-/// 
+///
 /// // Example of matching OSC events:
 /// let event = OscEvent::ProgressUpdate(75);
 /// match event {

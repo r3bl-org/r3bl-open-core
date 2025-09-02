@@ -3,13 +3,15 @@
 //! Integration tests for complex ANSI sequences and VTE parser integration.
 
 use super::tests_fixtures::*;
-use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, TuiColor, height, width,
+use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, TuiColor,
             ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor,
-                          csi_codes::{csi_test_helpers::csi_seq_cursor_pos, CsiSequence},
+                          csi_codes::{CsiSequence,
+                                      csi_test_helpers::csi_seq_cursor_pos},
                           esc_codes::EscSequence,
-                          term_units::{term_row, term_col}},
+                          term_units::{term_col, term_row}},
+            height,
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
-            tui_style_attrib};
+            tui_style_attrib, width};
 
 /// Create a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal size).
 fn create_offscreen_buffer_24r_by_80c() -> OffscreenBuffer {
@@ -30,11 +32,11 @@ pub mod full_sequences {
         // Simulate a vim-like sequence using proper builders
         let sequence = format!(
             "{clear_screen}{home_position}{reverse_video}{status_text}{reset_attrs}{save_cursor}{move_to_cmd}{prompt}{restore_cursor}{restored_text}",
-            clear_screen = CsiSequence::EraseDisplay(2),  // ESC[2J
+            clear_screen = CsiSequence::EraseDisplay(2), // ESC[2J
             home_position = csi_seq_cursor_pos(term_row(1) + term_col(1)), // ESC[H
-            reverse_video = SgrCode::Invert, // ESC[7m
+            reverse_video = SgrCode::Invert,             // ESC[7m
             status_text = "-- INSERT --",
-            reset_attrs = SgrCode::Reset, // ESC[0m
+            reset_attrs = SgrCode::Reset,          // ESC[0m
             save_cursor = EscSequence::SaveCursor, // ESC 7
             move_to_cmd = csi_seq_cursor_pos(term_row(24) + term_col(1)), // ESC[24;1H
             prompt = ":",
@@ -52,7 +54,7 @@ pub mod full_sequences {
             0,
             '-',
             |style| matches!(style.attribs.reverse, Some(tui_style_attrib::Reverse)),
-            "reverse video status"
+            "reverse video status",
         );
 
         // Command prompt should be at bottom
@@ -146,7 +148,8 @@ pub mod vte_parser {
             5,
             'R',
             |style_from_buffer| {
-                style_from_buffer.color_fg == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
+                style_from_buffer.color_fg
+                    == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
             },
             "red foreground",
         );

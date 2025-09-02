@@ -6,9 +6,9 @@
 mod tests {
     use crate::{DsrRequestFromPtyEvent, col, row};
     use crate::core::pty_mux::ansi_parser::{
-        ansi_parser_perform_impl_tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c,
-        csi_codes::CsiSequence,
-        dsr_codes::{dsr_test_helpers::dsr_cursor_position_response, DSR_STATUS_OK_FULL_RESPONSE, DsrRequestType}
+        tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c,
+        protocols::csi_codes::CsiSequence,
+        protocols::dsr_codes::{dsr_test_helpers::dsr_cursor_position_response, DSR_STATUS_OK_FULL_RESPONSE, DsrRequestType}
     };
 
     #[test]
@@ -16,7 +16,10 @@ mod tests {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Send CSI 5n (status report request)
-        let dsr_request = format!("{}", CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus));
+        let dsr_request = format!(
+            "{}",
+            CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus)
+        );
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
 
         // Should not produce OSC events
@@ -24,7 +27,7 @@ mod tests {
 
         // Should produce exactly one DSR response
         assert_eq!(dsr_responses.len(), 1, "expected one DSR response");
-        
+
         // Check the response is a status report
         assert_eq!(
             dsr_responses[0],
@@ -34,7 +37,11 @@ mod tests {
 
         // Verify the response bytes are correct
         let response_bytes = dsr_responses[0].to_string().into_bytes();
-        assert_eq!(response_bytes, DSR_STATUS_OK_FULL_RESPONSE.as_bytes(), "expected ESC[0n response");
+        assert_eq!(
+            response_bytes,
+            DSR_STATUS_OK_FULL_RESPONSE.as_bytes(),
+            "expected ESC[0n response"
+        );
     }
 
     #[test]
@@ -45,7 +52,10 @@ mod tests {
         ofs_buf.my_pos = row(3) + col(5);
 
         // Send CSI 6n (cursor position report request)
-        let dsr_request = format!("{}", CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition));
+        let dsr_request = format!(
+            "{}",
+            CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition)
+        );
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
 
         // Should not produce OSC events
@@ -53,7 +63,7 @@ mod tests {
 
         // Should produce exactly one DSR response
         assert_eq!(dsr_responses.len(), 1, "expected one DSR response");
-        
+
         // Check the response is a cursor position report with correct 1-based position
         assert_eq!(
             dsr_responses[0],
@@ -64,7 +74,11 @@ mod tests {
         // Verify the response bytes are correct
         let response_bytes = dsr_responses[0].to_string().into_bytes();
         let expected_bytes = dsr_cursor_position_response(4, 6);
-        assert_eq!(response_bytes, expected_bytes.as_bytes(), "expected ESC[4;6R response");
+        assert_eq!(
+            response_bytes,
+            expected_bytes.as_bytes(),
+            "expected ESC[4;6R response"
+        );
     }
 
     #[test]
@@ -75,7 +89,10 @@ mod tests {
         assert_eq!(ofs_buf.my_pos, row(0) + col(0));
 
         // Send CSI 6n (cursor position report request)
-        let dsr_request = format!("{}", CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition));
+        let dsr_request = format!(
+            "{}",
+            CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition)
+        );
         let (_osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
 
         // Should produce cursor position report at (1, 1) in 1-based coordinates
@@ -88,7 +105,11 @@ mod tests {
         // Verify the response bytes
         let response_bytes = dsr_responses[0].to_string().into_bytes();
         let expected_bytes = dsr_cursor_position_response(1, 1);
-        assert_eq!(response_bytes, expected_bytes.as_bytes(), "expected ESC[1;1R response");
+        assert_eq!(
+            response_bytes,
+            expected_bytes.as_bytes(),
+            "expected ESC[1;1R response"
+        );
     }
 
     #[test]
@@ -96,12 +117,19 @@ mod tests {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Send CSI 99n (unknown DSR request)
-        let dsr_request = format!("{}", CsiSequence::DeviceStatusReport(DsrRequestType::Other(99)));
+        let dsr_request = format!(
+            "{}",
+            CsiSequence::DeviceStatusReport(DsrRequestType::Other(99))
+        );
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
 
         // Should not produce any events for unknown DSR requests
         assert_eq!(osc_events.len(), 0, "no OSC events expected");
-        assert_eq!(dsr_responses.len(), 0, "no DSR responses expected for unknown request");
+        assert_eq!(
+            dsr_responses.len(),
+            0,
+            "no DSR responses expected for unknown request"
+        );
     }
 
     #[test]
@@ -114,15 +142,15 @@ mod tests {
         // Send multiple DSR requests in one sequence
         let dsr_requests = format!(
             "{}{}{}",
-            CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus),  // Status report
-            CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition),  // Cursor position
-            CsiSequence::DeviceStatusReport(DsrRequestType::Other(99))  // Unknown
+            CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus), /* Status report */
+            CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition), /* Cursor position */
+            CsiSequence::DeviceStatusReport(DsrRequestType::Other(99)) // Unknown
         );
         let (_osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_requests);
 
         // Should produce exactly two DSR responses (status and cursor position)
         assert_eq!(dsr_responses.len(), 2, "expected two DSR responses");
-        
+
         // Check the responses
         assert_eq!(dsr_responses[0], DsrRequestFromPtyEvent::TerminalStatus);
         assert_eq!(
@@ -136,7 +164,10 @@ mod tests {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // First DSR request
-        let dsr_request = format!("{}", CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus));
+        let dsr_request = format!(
+            "{}",
+            CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus)
+        );
         let (_, dsr_responses1) = ofs_buf.apply_ansi_bytes(&dsr_request);
         assert_eq!(dsr_responses1.len(), 1, "expected one DSR response");
 
@@ -144,17 +175,20 @@ mod tests {
         let plain_text = "Hello";
         let (_, dsr_responses2) = ofs_buf.apply_ansi_bytes(plain_text);
         assert_eq!(
-            dsr_responses2.len(), 
-            0, 
+            dsr_responses2.len(),
+            0,
             "DSR responses should be cleared after each apply_ansi_bytes call"
         );
 
         // Third DSR request
-        let dsr_request = format!("{}", CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition));
+        let dsr_request = format!(
+            "{}",
+            CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition)
+        );
         let (_, dsr_responses3) = ofs_buf.apply_ansi_bytes(&dsr_request);
         assert_eq!(
-            dsr_responses3.len(), 
-            1, 
+            dsr_responses3.len(),
+            1,
             "should get new DSR response, not accumulate old ones"
         );
     }

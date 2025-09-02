@@ -337,8 +337,8 @@ fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>
                 ));
             }
             OscEvent::Hyperlink { .. } | OscEvent::SetTitleAndTab(_) => {
-                // Hyperlinks and title/tab events aren't relevant for cargo install progress,
-                // so we ignore them here
+                // Hyperlinks and title/tab events aren't relevant for cargo install
+                // progress, so we ignore them here
             }
         }
     }

@@ -4,8 +4,7 @@
 
 use vte::Params;
 
-use super::{super::super::ansi_parser_public_api::AnsiToBufferProcessor,
-            param_utils::ParamsExt};
+use super::super::{ansi_parser_public_api::AnsiToBufferProcessor, param_utils::ParamsExt};
 use crate::{BoundsCheck, BoundsStatus::Overflowed, Pos, col, row};
 
 /// Move cursor up by n lines.
@@ -180,7 +179,7 @@ pub fn cursor_prev_line(processor: &mut AnsiToBufferProcessor, params: &Params) 
 }
 
 /// Handle CHA (Cursor Horizontal Absolute) - move cursor to column n (1-based).
-pub fn cursor_horizontal_absolute(
+pub fn cursor_column(
     processor: &mut AnsiToBufferProcessor,
     params: &Params,
 ) {

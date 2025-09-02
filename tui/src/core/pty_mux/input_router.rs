@@ -9,9 +9,11 @@
 use super::ProcessManager;
 use crate::{Size,
             ansi::terminal_output,
-            core::{osc::OscController, pty::{PtyInputEvent, pty_core::pty_sessions::show_notification}, terminal_io::OutputDevice},
-            tui::terminal_lib_backends::{FunctionKey, InputEvent, Key, KeyPress, KeyState,
-                                         ModifierKeysMask}};
+            core::{osc::OscController,
+                   pty::{PtyInputEvent, pty_core::pty_sessions::show_notification},
+                   terminal_io::OutputDevice},
+            tui::terminal_lib_backends::{FunctionKey, InputEvent, Key, KeyPress,
+                                         KeyState, ModifierKeysMask}};
 
 /// Routes input events to appropriate handlers and manages dynamic keyboard shortcuts.
 #[derive(Debug)]
@@ -40,7 +42,9 @@ impl InputRouter {
             InputEvent::Keyboard(key) => {
                 match key {
                     // Process switching: Handle F1 through F9 for switching processes
-                    KeyPress::Plain { key: Key::FunctionKey(fn_key) } => {
+                    KeyPress::Plain {
+                        key: Key::FunctionKey(fn_key),
+                    } => {
                         let (fn_number, process_index) = match fn_key {
                             FunctionKey::F1 => (1, 0),
                             FunctionKey::F2 => (2, 1),
@@ -56,11 +60,16 @@ impl InputRouter {
 
                         tracing::debug!("Received F{} for process switching", fn_number);
 
-                        // Only switch if the process index is valid for current process count
+                        // Only switch if the process index is valid for current process
+                        // count
                         if process_index < process_manager.processes().len() {
                             let old_index = process_manager.active_index();
                             if old_index == process_index {
-                                tracing::debug!("F{} pressed but already on process {}", fn_number, process_index);
+                                tracing::debug!(
+                                    "F{} pressed but already on process {}",
+                                    fn_number,
+                                    process_index
+                                );
                             } else {
                                 tracing::debug!(
                                     "Process switch: {} -> {} (triggered by F{})",
@@ -68,11 +77,15 @@ impl InputRouter {
                                     process_index,
                                     fn_number
                                 );
-                                
+
                                 // Show notification for process switching
-                                let process_name = &process_manager.processes()[process_index].command;
-                                show_notification("PTY Mux - Process Switch", &format!("Switching to {process_name}"));
-                                
+                                let process_name =
+                                    &process_manager.processes()[process_index].command;
+                                show_notification(
+                                    "PTY Mux - Process Switch",
+                                    &format!("Switching to {process_name}"),
+                                );
+
                                 // Clear the screen before switching
                                 terminal_output::clear_screen_and_home_cursor(
                                     output_device,
@@ -102,16 +115,19 @@ impl InputRouter {
                             },
                     } => {
                         tracing::debug!("Exit requested (Ctrl+Q)");
-                        
+
                         // Show notification for exit
                         show_notification("PTY Mux - Exit", "Exiting PTY Mux");
-                        
+
                         return Ok(true); // Exit requested
                     }
                     _ => {
                         // Show notification for other key presses (useful for debugging)
-                        show_notification("PTY Mux - Key Press", &format!("Key pressed: {key:?}"));
-                        
+                        show_notification(
+                            "PTY Mux - Key Press",
+                            &format!("Key pressed: {key:?}"),
+                        );
+
                         // Forward all other input to active PTY using proper conversion
                         if let Some(pty_event) = Option::<PtyInputEvent>::from(key) {
                             tracing::debug!("Forwarding input to PTY: {:?}", pty_event);
@@ -140,7 +156,11 @@ impl InputRouter {
         // Check if the active process has set a custom terminal title
         let title = if let Some(custom_title) = process_manager.active_terminal_title() {
             // Use the process's custom title
-            format!("PTYMux - {} - {}", process_manager.active_name(), custom_title)
+            format!(
+                "PTYMux - {} - {}",
+                process_manager.active_name(),
+                custom_title
+            )
         } else {
             // Use default title with just process name
             format!("PTYMux - {}", process_manager.active_name())

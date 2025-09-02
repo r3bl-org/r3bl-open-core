@@ -9,7 +9,7 @@ use super::tests_fixtures::*;
 use crate::{ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor,
                           csi_codes::{CsiSequence, PrivateModeType},
                           esc_codes,
-                          term_units::{term_row, term_col}},
+                          term_units::{term_col, term_row}},
             col,
             core::pty_mux::ansi_parser::esc_codes::RIS_RESET_TERMINAL,
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
@@ -843,10 +843,11 @@ pub mod decstbm_scroll_margins {
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Set scroll region from row 3 to row 7 (1-based) - ESC [ 3 ; 7 r
-        let sequence = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(3)), 
-            bottom: Some(term_row(7)) 
-        }.to_string();
+        let sequence = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(3)),
+            bottom: Some(term_row(7)),
+        }
+        .to_string();
         processor.process_bytes(sequence);
 
         // Verify margins are set correctly (converted to 1-based internally)
@@ -866,10 +867,11 @@ pub mod decstbm_scroll_margins {
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Set some margins first
-        let sequence = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(3)), 
-            bottom: Some(term_row(7)) 
-        }.to_string();
+        let sequence = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(3)),
+            bottom: Some(term_row(7)),
+        }
+        .to_string();
         processor.process_bytes(sequence);
         assert!(
             processor
@@ -887,10 +889,11 @@ pub mod decstbm_scroll_margins {
         );
 
         // Reset margins with ESC [ r (no parameters)
-        let reset_sequence = CsiSequence::SetScrollingMargins { 
-            top: None, 
-            bottom: None 
-        }.to_string();
+        let reset_sequence = CsiSequence::SetScrollingMargins {
+            top: None,
+            bottom: None,
+        }
+        .to_string();
         processor.process_bytes(reset_sequence);
 
         // Verify margins are cleared
@@ -911,10 +914,11 @@ pub mod decstbm_scroll_margins {
         fill_buffer_with_lines(processor.ofs_buf);
 
         // Set scroll region from row 3 to row 7 (1-based)
-        let set_margins = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(3)), 
-            bottom: Some(term_row(7)) 
-        }.to_string();
+        let set_margins = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(3)),
+            bottom: Some(term_row(7)),
+        }
+        .to_string();
         processor.process_bytes(set_margins);
 
         // Scroll up one line - should only affect rows 2-6 (0-based)
@@ -943,17 +947,19 @@ pub mod decstbm_scroll_margins {
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Set scroll region from row 3 to row 7 (1-based)
-        let set_margins = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(3)), 
-            bottom: Some(term_row(7)) 
-        }.to_string();
+        let set_margins = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(3)),
+            bottom: Some(term_row(7)),
+        }
+        .to_string();
         processor.process_bytes(set_margins);
 
         // Position cursor at top of scroll region
-        let cursor_pos = CsiSequence::CursorPosition { 
-            row: term_row(3), 
-            col: term_col(1) 
-        }.to_string();
+        let cursor_pos = CsiSequence::CursorPosition {
+            row: term_row(3),
+            col: term_col(1),
+        }
+        .to_string();
         processor.process_bytes(cursor_pos);
         assert_eq!(processor.ofs_buf.my_pos.row_index.as_usize(), 2); // 0-based row 2
 
@@ -963,10 +969,11 @@ pub mod decstbm_scroll_margins {
         assert_eq!(processor.ofs_buf.my_pos.row_index.as_usize(), 2); // Still at top margin
 
         // Move cursor to bottom of scroll region
-        let cursor_pos_bottom = CsiSequence::CursorPosition { 
-            row: term_row(7), 
-            col: term_col(1) 
-        }.to_string();
+        let cursor_pos_bottom = CsiSequence::CursorPosition {
+            row: term_row(7),
+            col: term_col(1),
+        }
+        .to_string();
         processor.process_bytes(cursor_pos_bottom);
         assert_eq!(processor.ofs_buf.my_pos.row_index.as_usize(), 6); // 0-based row 6
 
@@ -982,33 +989,37 @@ pub mod decstbm_scroll_margins {
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Set scroll region from row 3 to row 7 (1-based)
-        let set_margins = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(3)), 
-            bottom: Some(term_row(7)) 
-        }.to_string();
+        let set_margins = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(3)),
+            bottom: Some(term_row(7)),
+        }
+        .to_string();
         processor.process_bytes(set_margins);
 
         // Try to position cursor above scroll region
-        let cursor_above = CsiSequence::CursorPosition { 
-            row: term_row(1), 
-            col: term_col(5) 
-        }.to_string();
+        let cursor_above = CsiSequence::CursorPosition {
+            row: term_row(1),
+            col: term_col(5),
+        }
+        .to_string();
         processor.process_bytes(cursor_above);
         assert_eq!(processor.ofs_buf.my_pos.row_index.as_usize(), 2); // Clamped to top margin
 
         // Try to position cursor below scroll region
-        let cursor_below = CsiSequence::CursorPosition { 
-            row: term_row(9), 
-            col: term_col(5) 
-        }.to_string();
+        let cursor_below = CsiSequence::CursorPosition {
+            row: term_row(9),
+            col: term_col(5),
+        }
+        .to_string();
         processor.process_bytes(cursor_below);
         assert_eq!(processor.ofs_buf.my_pos.row_index.as_usize(), 6); // Clamped to bottom margin
 
         // Position within scroll region should work normally
-        let cursor_within = CsiSequence::CursorPosition { 
-            row: term_row(5), 
-            col: term_col(5) 
-        }.to_string();
+        let cursor_within = CsiSequence::CursorPosition {
+            row: term_row(5),
+            col: term_col(5),
+        }
+        .to_string();
         processor.process_bytes(cursor_within);
         assert_eq!(processor.ofs_buf.my_pos.row_index.as_usize(), 4); // 0-based row 4
     }
@@ -1020,17 +1031,19 @@ pub mod decstbm_scroll_margins {
         fill_buffer_with_lines(processor.ofs_buf);
 
         // Set scroll region from row 3 to row 7 (1-based)
-        let set_margins = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(3)), 
-            bottom: Some(term_row(7)) 
-        }.to_string();
+        let set_margins = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(3)),
+            bottom: Some(term_row(7)),
+        }
+        .to_string();
         processor.process_bytes(set_margins);
 
         // Position cursor at bottom of scroll region
-        let cursor_pos = CsiSequence::CursorPosition { 
-            row: term_row(7), 
-            col: term_col(1) 
-        }.to_string();
+        let cursor_pos = CsiSequence::CursorPosition {
+            row: term_row(7),
+            col: term_col(1),
+        }
+        .to_string();
         processor.process_bytes(cursor_pos);
 
         // Send ESC D (Index) - should scroll the region up
@@ -1046,10 +1059,11 @@ pub mod decstbm_scroll_margins {
         assert_empty_at(processor.ofs_buf, 6, 0); // Bottom row cleared
 
         // Position cursor at top of scroll region
-        let cursor_pos_top = CsiSequence::CursorPosition { 
-            row: term_row(3), 
-            col: term_col(1) 
-        }.to_string();
+        let cursor_pos_top = CsiSequence::CursorPosition {
+            row: term_row(3),
+            col: term_col(1),
+        }
+        .to_string();
         processor.process_bytes(cursor_pos_top);
 
         // Send ESC M (Reverse Index) - should scroll the region down
@@ -1066,10 +1080,11 @@ pub mod decstbm_scroll_margins {
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Set scroll margins
-        let set_margins = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(3)), 
-            bottom: Some(term_row(7)) 
-        }.to_string();
+        let set_margins = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(3)),
+            bottom: Some(term_row(7)),
+        }
+        .to_string();
         processor.process_bytes(set_margins);
         assert!(
             processor
@@ -1100,10 +1115,11 @@ pub mod decstbm_scroll_margins {
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
 
         // Try to set invalid margins (top >= bottom)
-        let invalid_margins = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(7)), 
-            bottom: Some(term_row(3)) 
-        }.to_string();
+        let invalid_margins = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(7)),
+            bottom: Some(term_row(3)),
+        }
+        .to_string();
         processor.process_bytes(invalid_margins);
 
         // Margins should remain None
@@ -1117,10 +1133,11 @@ pub mod decstbm_scroll_margins {
         );
 
         // Try to set margins beyond buffer height
-        let large_margins = CsiSequence::SetScrollingMargins { 
-            top: Some(term_row(1)), 
-            bottom: Some(term_row(15)) 
-        }.to_string();
+        let large_margins = CsiSequence::SetScrollingMargins {
+            top: Some(term_row(1)),
+            bottom: Some(term_row(15)),
+        }
+        .to_string();
         processor.process_bytes(large_margins);
 
         // Should be clamped to buffer height

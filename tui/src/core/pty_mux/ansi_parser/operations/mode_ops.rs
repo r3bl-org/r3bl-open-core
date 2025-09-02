@@ -4,13 +4,17 @@
 
 use vte::Params;
 
-use crate::ansi_parser_perform_impl::param_utils::ParamsExt;
-
-use super::super::super::{ansi_parser_public_api::AnsiToBufferProcessor, csi_codes::PrivateModeType};
+use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
+                   protocols::csi_codes::PrivateModeType};
+use crate::core::pty_mux::ansi_parser::param_utils::ParamsExt;
 
 /// Handle Set Mode (CSI h) command.
 /// Supports both standard modes and private modes (with ? prefix).
-pub fn set_mode(processor: &mut AnsiToBufferProcessor, params: &Params, intermediates: &[u8]) {
+pub fn set_mode(
+    processor: &mut AnsiToBufferProcessor,
+    params: &Params,
+    intermediates: &[u8],
+) {
     let is_private_mode = intermediates.contains(&b'?');
     if is_private_mode {
         let mode_num = params.extract_nth_opt(0).unwrap_or(0);
@@ -20,10 +24,7 @@ pub fn set_mode(processor: &mut AnsiToBufferProcessor, params: &Params, intermed
                 processor.ofs_buf.ansi_parser_support.auto_wrap_mode = true;
                 tracing::trace!("ESC[?7h: Enabled auto-wrap mode (DECAWM)");
             }
-            _ => tracing::debug!(
-                "CSI ?{}h: Unhandled private mode",
-                mode.as_u16()
-            ),
+            _ => tracing::debug!("CSI ?{}h: Unhandled private mode", mode.as_u16()),
         }
     } else {
         tracing::debug!("CSI h: Standard mode setting not implemented");
@@ -32,7 +33,11 @@ pub fn set_mode(processor: &mut AnsiToBufferProcessor, params: &Params, intermed
 
 /// Handle Reset Mode (CSI l) command.
 /// Supports both standard modes and private modes (with ? prefix).
-pub fn reset_mode(processor: &mut AnsiToBufferProcessor, params: &Params, intermediates: &[u8]) {
+pub fn reset_mode(
+    processor: &mut AnsiToBufferProcessor,
+    params: &Params,
+    intermediates: &[u8],
+) {
     let is_private_mode = intermediates.contains(&b'?');
     if is_private_mode {
         let mode_num = params.extract_nth_opt(0).unwrap_or(0);
@@ -42,10 +47,7 @@ pub fn reset_mode(processor: &mut AnsiToBufferProcessor, params: &Params, interm
                 processor.ofs_buf.ansi_parser_support.auto_wrap_mode = false;
                 tracing::trace!("ESC[?7l: Disabled auto-wrap mode (DECAWM)");
             }
-            _ => tracing::debug!(
-                "CSI ?{}l: Unhandled private mode",
-                mode.as_u16()
-            ),
+            _ => tracing::debug!("CSI ?{}l: Unhandled private mode", mode.as_u16()),
         }
     } else {
         tracing::debug!("CSI l: Standard mode reset not implemented");

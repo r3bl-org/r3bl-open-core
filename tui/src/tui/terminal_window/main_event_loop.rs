@@ -264,9 +264,7 @@ where
                 report = %self.global_data.get_hud_report_no_spinner(),
             );
 
-            if let Some(ref mut offscreen_buffer) =
-                self.global_data.maybe_saved_ofs_buf
-            {
+            if let Some(ref mut offscreen_buffer) = self.global_data.maybe_saved_ofs_buf {
                 let mem_used = inline_string!(
                     "mem used: {size}",
                     size = offscreen_buffer.get_mem_size_cached()
@@ -831,8 +829,8 @@ mod tests {
                 InlineVec, InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress,
                 OutputDevice, OutputDeviceExt, PixelChar, RenderOp, RenderPipeline,
                 SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2, ch, col,
-                defaults::get_default_gradient_stops, height, inline_string,
+                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
+                ch, col, defaults::get_default_gradient_stops, height, inline_string,
                 is_fully_uninteractive_terminal, key_press, main_event_loop_impl,
                 new_style, ok, render_ops, render_pipeline,
                 render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,

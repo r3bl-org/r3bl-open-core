@@ -2,7 +2,7 @@
 
 //! Terminal state operations.
 
-use super::super::super::ansi_parser_public_api::AnsiToBufferProcessor;
+use super::super::ansi_parser_public_api::AnsiToBufferProcessor;
 use crate::{CharacterSet, PixelChar, Pos};
 
 /// Clear all buffer content.
@@ -48,11 +48,11 @@ pub fn reset_terminal(processor: &mut AnsiToBufferProcessor) {
     // Reset to ASCII character set
     processor.ofs_buf.ansi_parser_support.character_set = CharacterSet::Ascii;
 
-    // Clear DECSTBM scroll region margins
+    // Clear DECSTBM scroll region margins.
     processor.ofs_buf.ansi_parser_support.scroll_region_top = None;
     processor.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
 
-    // Clear any SGR attributes
+    // Clear any SGR attributes.
     reset_sgr_attributes(processor);
 
     tracing::trace!("ESC c: Terminal reset to initial state");

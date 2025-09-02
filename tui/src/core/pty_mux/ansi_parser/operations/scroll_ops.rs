@@ -2,7 +2,9 @@
 
 //! Scrolling operations.
 
-use super::{super::super::ansi_parser_public_api::AnsiToBufferProcessor, cursor_ops, param_utils::ParamsExt};
+use super::{super::{ansi_parser_public_api::AnsiToBufferProcessor,
+                    param_utils::ParamsExt},
+            cursor_ops};
 use crate::PixelChar;
 
 /// Move cursor down one line, scrolling the buffer if at bottom.

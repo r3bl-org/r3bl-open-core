@@ -9,17 +9,17 @@
 
 use vte::{Params, Perform};
 
-use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
-                   csi_codes::{self},
-                   esc_codes};
+// Import the operation modules.
+use super::operations::{cursor_ops, dsr_ops, margin_ops, mode_ops, scroll_ops, sgr_ops,
+                        terminal_ops};
+use super::{ansi_parser_public_api::AnsiToBufferProcessor,
+            protocols::{csi_codes::{self},
+                        esc_codes}};
 use crate::{BoundsCheck,
             BoundsStatus::{Overflowed, Within},
-            CharacterSet, PixelChar, col, row,
-            core::osc::{OscEvent, osc_codes}};
-
-// Import the operation modules.
-use super::{char_translation, cursor_ops, dsr_ops, margin_ops, mode_ops, 
-            scroll_ops, sgr_ops, terminal_ops};
+            CharacterSet, PixelChar, col,
+            core::osc::{OscEvent, osc_codes},
+            row};
 
 /// Internal methods for `AnsiToBufferProcessor` to implement [`Perform`] trait.
 impl Perform for AnsiToBufferProcessor<'_> {
@@ -27,7 +27,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
     fn print(&mut self, ch: char) {
         // Apply character set translation if in graphics mode.
         let display_char = match self.ofs_buf.ansi_parser_support.character_set {
-            CharacterSet::DECGraphics => char_translation::translate_dec_graphics(ch),
+            CharacterSet::DECGraphics => translate_dec_graphics(ch),
             CharacterSet::Ascii => ch,
         };
 
@@ -156,7 +156,9 @@ impl Perform for AnsiToBufferProcessor<'_> {
             }
             csi_codes::CNL_CURSOR_NEXT_LINE => cursor_ops::cursor_next_line(self, params),
             csi_codes::CPL_CURSOR_PREV_LINE => cursor_ops::cursor_prev_line(self, params),
-            csi_codes::CHA_CURSOR_COLUMN => cursor_ops::cursor_horizontal_absolute(self, params),
+            csi_codes::CHA_CURSOR_COLUMN => {
+                cursor_ops::cursor_column(self, params);
+            }
             csi_codes::SCP_SAVE_CURSOR => cursor_ops::save_cursor_position(self),
             csi_codes::RCP_RESTORE_CURSOR => cursor_ops::restore_cursor_position(self),
 
@@ -168,14 +170,14 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::DECSTBM_SET_MARGINS => margin_ops::set_margins(self, params),
 
             // Device status operations
-            csi_codes::DSR_DEVICE_STATUS => dsr_ops::device_status_report(self, params),
+            csi_codes::DSR_DEVICE_STATUS => dsr_ops::status_report(self, params),
 
             // Mode operations
             csi_codes::SM_SET_MODE => mode_ops::set_mode(self, params, intermediates),
             csi_codes::RM_RESET_MODE => mode_ops::reset_mode(self, params, intermediates),
 
             // Graphics operations
-            csi_codes::SGR_SET_GRAPHICS => sgr_ops::sgr(self, params),
+            csi_codes::SGR_SET_GRAPHICS => sgr_ops::set_graphics_rendition(self, params),
 
             // Display control operations (ignored)
             _ => {
@@ -418,7 +420,26 @@ impl Perform for AnsiToBufferProcessor<'_> {
 
     /// Hook for DCS - ends the DCS sequence, signaling that all data has been received.
     fn unhook(&mut self) {
-        // Ignore DCS end
+        // Ignore DCS end.
     }
 }
 
+/// Translate DEC Special Graphics characters to Unicode box-drawing characters.
+/// Used when `character_set` is `DECGraphics` (after ESC ( 0).
+#[must_use]
+fn translate_dec_graphics(c: char) -> char {
+    match c {
+        'j' => '┘', // Lower right corner.
+        'k' => '┐', // Upper right corner.
+        'l' => '┌', // Upper left corner.
+        'm' => '└', // Lower left corner.
+        'n' => '┼', // Crossing lines.
+        'q' => '─', // Horizontal line.
+        't' => '├', // Left "T".
+        'u' => '┤', // Right "T".
+        'v' => '┴', // Bottom "T".
+        'w' => '┬', // Top "T".
+        'x' => '│', // Vertical line.
+        _ => c,     // Pass through unmapped characters.
+    }
+}

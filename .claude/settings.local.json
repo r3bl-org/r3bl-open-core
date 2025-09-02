@@ -71,7 +71,8 @@
       "mcp__serena__think_about_whether_you_are_done",
       "WebSearch",
       "mcp__serena__read_file",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "WebFetch(domain:vt100.net)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

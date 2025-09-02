@@ -6,30 +6,21 @@
 //! accordingly. It uses the `vte` crate (same as `Alacritty`) for robust ANSI parsing.
 
 // Attach.
-pub mod ansi_parser_perform_impl;
 pub mod ansi_parser_public_api;
 pub mod ansi_to_tui_color;
-pub mod csi_codes;
-pub mod dsr_codes;
-pub mod esc_codes;
+pub mod operations;
+pub mod param_utils;
+pub mod perform;
+pub mod protocols;
 pub mod term_units;
 
 // Re-export.
 pub use ansi_parser_public_api::*;
-pub use dsr_codes::*;
+pub use operations::*;
+pub use param_utils::*;
+pub use protocols::*;
+pub use term_units::*;
 
-// Test modules (no `ansi_parser_perform_impl_tests/mod.rs`).
+// Test modules.
 #[cfg(test)]
-#[rustfmt::skip] // Keep the ordering of the following lines as is.
-mod ansi_parser_perform_impl_tests {
-    pub(super) mod tests_fixtures; // Used by all the test modules below.
-    mod tests_processor_lifecycle;
-    mod tests_character_encoding;
-    mod tests_cursor_operations;
-    mod tests_control_sequences;
-    mod tests_display_operations;
-    mod tests_line_wrap_and_scroll_control;
-    mod tests_osc_sequences; // <- TODO review
-    mod tests_integration; // <- TODO review
-    mod tests_dsr_responses; // <- TODO review
-}
+mod tests;

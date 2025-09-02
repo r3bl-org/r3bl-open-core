@@ -5,10 +5,9 @@
 //! This example demonstrates how PTY Mux can handle OSC sequences from processes
 //! to dynamically update the terminal title.
 
-use r3bl_tui::{
-    core::pty_mux::{PTYMux, Process},
-    Size, height, width,
-};
+use r3bl_tui::{Size,
+               core::pty_mux::{PTYMux, Process},
+               height, width};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -27,17 +26,13 @@ async fn main() -> miette::Result<()> {
 
     // Create processes - one of them will emit OSC sequences
     let processes = vec![
-        Process::new(
-            "bash",
-            "bash",
-            vec![],
-            terminal_size,
-        ),
+        Process::new("bash", "bash", vec![], terminal_size),
         Process::new(
             "OSC Demo",
             "bash",
-            vec!["-c".to_string(), 
-                 "echo 'This process will change the terminal title'; \
+            vec![
+                "-c".to_string(),
+                "echo 'This process will change the terminal title'; \
                   sleep 1; \
                   printf '\\033]0;Dynamic Title 1\\007'; \
                   echo 'Title changed to: Dynamic Title 1'; \
@@ -49,22 +44,17 @@ async fn main() -> miette::Result<()> {
                   echo 'Title changed to: Dynamic Title 3'; \
                   sleep 2; \
                   echo 'Demo complete'; \
-                  exec bash".to_string()],
+                  exec bash"
+                    .to_string(),
+            ],
             terminal_size,
         ),
-        Process::new(
-            "htop",
-            "htop",
-            vec![],
-            terminal_size,
-        ),
+        Process::new("htop", "htop", vec![], terminal_size),
     ];
 
     // Create and run the multiplexer
-    let mux = PTYMux::builder()
-        .processes(processes)
-        .build()?;
-    
+    let mux = PTYMux::builder().processes(processes).build()?;
+
     println!("PTY Mux OSC Demo");
     println!("================");
     println!("Press F1-F3 to switch between processes");
@@ -72,8 +62,8 @@ async fn main() -> miette::Result<()> {
     println!("Press Ctrl+Q to exit");
     println!();
     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-    
+
     mux.run().await?;
-    
+
     Ok(())
 }

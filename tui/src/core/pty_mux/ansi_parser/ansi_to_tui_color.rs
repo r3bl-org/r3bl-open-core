@@ -8,7 +8,7 @@ use crate::{ANSIBasicColor, TuiColor};
 /// Supports both standard (30-37, 40-47) and bright (90-97, 100-107) colors.
 pub(super) fn ansi_to_tui_color(ansi_code: i64) -> TuiColor {
     match ansi_code {
-        // Standard colors (30-37, 40-47)
+        // Standard colors (30-37, 40-47).
         30 | 40 => TuiColor::Basic(ANSIBasicColor::Black),
         31 | 41 => TuiColor::Basic(ANSIBasicColor::DarkRed),
         32 | 42 => TuiColor::Basic(ANSIBasicColor::DarkGreen),
@@ -18,7 +18,7 @@ pub(super) fn ansi_to_tui_color(ansi_code: i64) -> TuiColor {
         36 | 46 => TuiColor::Basic(ANSIBasicColor::DarkCyan),
         37 | 47 => TuiColor::Basic(ANSIBasicColor::Gray),
 
-        // Bright colors (90-97, 100-107)
+        // Bright colors (90-97, 100-107).
         90 | 100 => TuiColor::Basic(ANSIBasicColor::DarkGray),
         91 | 101 => TuiColor::Basic(ANSIBasicColor::Red),
         92 | 102 => TuiColor::Basic(ANSIBasicColor::Green),

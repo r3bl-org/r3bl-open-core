@@ -88,8 +88,7 @@
 
 use std::mem::take;
 
-use crate::{DsrRequestFromPtyEvent, OffscreenBuffer,
-            core::osc::OscEvent};
+use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
 
 /// Terminal state context for ANSI sequence processing.
 ///
@@ -205,19 +204,20 @@ impl OffscreenBuffer {
         // Use std::mem::take to move events out and leave empty vectors
         let osc_events =
             take(&mut processor.ofs_buf.ansi_parser_support.pending_osc_events);
-        let dsr_responses =
+        let pending_dsr_requests =
             take(&mut processor.ofs_buf.ansi_parser_support.pending_dsr_responses);
 
-        (osc_events, dsr_responses)
+        (osc_events, pending_dsr_requests)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{ANSIBasicColor, SgrCode, TuiColor,
-                ansi_parser::{ansi_parser_perform_impl_tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c,
-                              csi_codes::{self, csi_test_helpers::csi_seq_cursor_pos},
-                              term_units::{term_col, term_row}},
+                ansi_parser::{protocols::csi_codes::{self,
+                                                     csi_test_helpers::csi_seq_cursor_pos},
+                              term_units::{term_col, term_row},
+                              tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c},
                 col,
                 offscreen_buffer::test_fixtures_offscreen_buffer::*,
                 row};
@@ -368,10 +368,10 @@ mod tests {
         // First call with OSC sequence (set title)
         let osc_title = "\x1b]0;First Title\x07".to_string();
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&osc_title);
-        
+
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
-        
+
         match &osc_events[0] {
             crate::OscEvent::SetTitleAndTab(title) => {
                 assert_eq!(title, "First Title");
@@ -382,13 +382,20 @@ mod tests {
         // Second call with another OSC sequence
         let osc_title2 = "\x1b]0;Second Title\x07".to_string();
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&osc_title2);
-        
-        assert_eq!(osc_events2.len(), 1, "should get one NEW OSC event, not accumulated");
+
+        assert_eq!(
+            osc_events2.len(),
+            1,
+            "should get one NEW OSC event, not accumulated"
+        );
         assert_eq!(dsr_responses2.len(), 0, "no DSR responses expected");
-        
+
         match &osc_events2[0] {
             crate::OscEvent::SetTitleAndTab(title) => {
-                assert_eq!(title, "Second Title", "should be the new title, not accumulated with first");
+                assert_eq!(
+                    title, "Second Title",
+                    "should be the new title, not accumulated with first"
+                );
             }
             _ => panic!("Expected SetTitleAndTab event"),
         }
@@ -396,10 +403,10 @@ mod tests {
         // Third call with no OSC sequences
         let plain_text = "Hello";
         let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
-        
+
         assert_eq!(
-            osc_events3.len(), 
-            0, 
+            osc_events3.len(),
+            0,
             "OSC events should be empty after being drained"
         );
         assert_eq!(dsr_responses3.len(), 0, "no DSR responses expected");
@@ -412,34 +419,43 @@ mod tests {
         // First DSR request (status report)
         let dsr_status = "\x1b[5n".to_string();
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_status);
-        
+
         assert_eq!(osc_events.len(), 0, "no OSC events expected");
         assert_eq!(dsr_responses.len(), 1, "should get one DSR response");
-        assert_eq!(dsr_responses[0], crate::DsrRequestFromPtyEvent::TerminalStatus);
+        assert_eq!(
+            dsr_responses[0],
+            crate::DsrRequestFromPtyEvent::TerminalStatus
+        );
 
         // Second call with cursor position request
         let dsr_cursor = "\x1b[6n".to_string();
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&dsr_cursor);
-        
+
         assert_eq!(osc_events2.len(), 0, "no OSC events expected");
-        assert_eq!(dsr_responses2.len(), 1, "should get one NEW DSR response, not accumulated");
-        
+        assert_eq!(
+            dsr_responses2.len(),
+            1,
+            "should get one NEW DSR response, not accumulated"
+        );
+
         match &dsr_responses2[0] {
             crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
-                assert_eq!(*row, 1, "cursor at origin should be row 1 (1-based)");
-                assert_eq!(*col, 1, "cursor at origin should be col 1 (1-based)");
+                assert_eq!(row, &1, "cursor at origin should be row 1 (1-based)");
+                assert_eq!(col, &1, "cursor at origin should be col 1 (1-based)");
             }
-            crate::DsrRequestFromPtyEvent::TerminalStatus => panic!("Expected CursorPositionReport"),
+            crate::DsrRequestFromPtyEvent::TerminalStatus => {
+                panic!("Expected CursorPositionReport")
+            }
         }
 
         // Third call with no DSR requests
         let plain_text = "Test";
         let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
-        
+
         assert_eq!(osc_events3.len(), 0, "no OSC events expected");
         assert_eq!(
-            dsr_responses3.len(), 
-            0, 
+            dsr_responses3.len(),
+            0,
             "DSR responses should be empty after being drained"
         );
     }
@@ -450,14 +466,14 @@ mod tests {
 
         // Send a mix of OSC and DSR sequences in one call
         let mixed_sequence = format!(
-            "{}{}{}", 
-            "\x1b]0;Mixed Title\x07",  // OSC 0: Set title
-            "\x1b[5n",                  // DSR: Status report
-            "\x1b[6n"                   // DSR: Cursor position
+            "{}{}{}",
+            "\x1b]0;Mixed Title\x07", // OSC 0: Set title
+            "\x1b[5n",                // DSR: Status report
+            "\x1b[6n"                 // DSR: Cursor position
         );
-        
+
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&mixed_sequence);
-        
+
         // Should get exactly one OSC event
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
         match &osc_events[0] {
@@ -466,16 +482,21 @@ mod tests {
             }
             _ => panic!("Expected SetTitleAndTab event"),
         }
-        
+
         // Should get exactly two DSR responses
         assert_eq!(dsr_responses.len(), 2, "should get two DSR responses");
-        assert_eq!(dsr_responses[0], crate::DsrRequestFromPtyEvent::TerminalStatus);
+        assert_eq!(
+            dsr_responses[0],
+            crate::DsrRequestFromPtyEvent::TerminalStatus
+        );
         match &dsr_responses[1] {
             crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
-                assert_eq!(*row, 1);
-                assert_eq!(*col, 1);
+                assert_eq!(row, &1);
+                assert_eq!(col, &1);
             }
-            crate::DsrRequestFromPtyEvent::TerminalStatus => panic!("Expected CursorPositionReport"),
+            crate::DsrRequestFromPtyEvent::TerminalStatus => {
+                panic!("Expected CursorPositionReport")
+            }
         }
 
         // Verify both are drained on next call
@@ -491,20 +512,20 @@ mod tests {
         // Send multiple OSC sequences in one call
         let multi_osc = format!(
             "{}{}{}",
-            "\x1b]0;Title One\x07",   // OSC 0
-            "\x1b]2;Title Two\x07",   // OSC 2
-            "\x1b]1;Icon Name\x07"    // OSC 1
+            "\x1b]0;Title One\x07", // OSC 0
+            "\x1b]2;Title Two\x07", // OSC 2
+            "\x1b]1;Icon Name\x07"  // OSC 1
         );
-        
+
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&multi_osc);
-        
+
         assert_eq!(osc_events.len(), 3, "should get three OSC events");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
-        
+
         // All should be SetTitleAndTab events
         for event in &osc_events {
             match event {
-                crate::OscEvent::SetTitleAndTab(_) => {},
+                crate::OscEvent::SetTitleAndTab(_) => {}
                 _ => panic!("Expected SetTitleAndTab event"),
             }
         }

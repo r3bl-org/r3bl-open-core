@@ -11,8 +11,11 @@ use std::fmt::{Debug, Formatter, Result};
 use portable_pty::PtySize;
 
 use super::output_renderer::STATUS_BAR_HEIGHT;
-use crate::{core::{osc::OscEvent, pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
-                        PtyReadWriteSession}}, height, OffscreenBuffer, Size};
+use crate::{OffscreenBuffer, Size,
+            core::{osc::OscEvent,
+                   pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
+                         PtyReadWriteSession}},
+            height};
 
 /// Manages multiple PTY processes and handles switching between them.
 #[derive(Debug)]
@@ -116,20 +119,21 @@ impl Process {
 
             // Handle any DSR response events - send them back through PTY.
             if !dsr_responses.is_empty()
-                && let Some(session) = &self.session {
-                    for dsr_event in dsr_responses {
-                        let response_bytes = dsr_event.to_string().into_bytes();
-                        tracing::debug!(
-                            "Process '{}' sending DSR response: {:?}",
-                            self.name,
-                            dsr_event
-                        );
-                        // Send the response back through the PTY input channel.
-                        let _unused = session.input_event_ch_tx_half.send(
-                            crate::PtyInputEvent::Write(response_bytes)
-                        );
-                    }
+                && let Some(session) = &self.session
+            {
+                for dsr_event in dsr_responses {
+                    let response_bytes = dsr_event.to_string().into_bytes();
+                    tracing::debug!(
+                        "Process '{}' sending DSR response: {:?}",
+                        self.name,
+                        dsr_event
+                    );
+                    // Send the response back through the PTY input channel.
+                    let _unused = session
+                        .input_event_ch_tx_half
+                        .send(crate::PtyInputEvent::Write(response_bytes));
                 }
+            }
             self.has_unrendered_output = true;
 
             tracing::trace!(

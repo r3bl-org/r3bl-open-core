@@ -6,11 +6,13 @@ use vte::Perform;
 
 use super::tests_fixtures::*;
 use crate::{Pos,
-            ansi_parser::{ansi_parser_perform_impl::cursor_ops,
-                          ansi_parser_public_api::AnsiToBufferProcessor,
-                          csi_codes::{CSI_PARAM_SEPARATOR, CSI_START, CsiSequence,
-                                      csi_test_helpers::{csi_seq_cursor_pos, csi_seq_cursor_pos_alt}},
-                          esc_codes,
+            ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor,
+                          operations::cursor_ops,
+                          protocols::{csi_codes::{CSI_PARAM_SEPARATOR, CSI_START,
+                                                  CsiSequence,
+                                                  csi_test_helpers::{csi_seq_cursor_pos,
+                                                                     csi_seq_cursor_pos_alt}},
+                                      esc_codes},
                           term_units::{term_col, term_row}},
             col,
             offscreen_buffer::test_fixtures_offscreen_buffer::*,

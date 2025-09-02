@@ -48,10 +48,12 @@ pub enum PtyInputEvent {
     ///
     /// # Use Cases
     /// - Graceful shutdown: Send `Close` and wait for child to exit naturally
-    /// - Forceful shutdown: Call `child_process_terminate_handle.kill()` then send `Close`
+    /// - Forceful shutdown: Call `child_process_terminate_handle.kill()` then send
+    ///   `Close`
     ///
     /// # See Also
-    /// - [`crate::PtyReadWriteSession::child_process_terminate_handle`] for process termination
+    /// - [`crate::PtyReadWriteSession::child_process_terminate_handle`] for process
+    ///   termination
     Close,
 }
 
@@ -144,10 +146,7 @@ fn convert_modified_key(key: Key, modifiers: ModifierState) -> Option<PtyInputEv
 }
 
 /// Algorithmically convert characters with modifiers
-fn convert_character_with_modifiers(
-    ch: char,
-    modifiers: ModifierState,
-) -> PtyInputEvent {
+fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyInputEvent {
     match modifiers {
         // Ctrl-only combinations
         ModifierState {
@@ -252,38 +251,30 @@ fn convert_character_with_modifiers(
 /// Convert Ctrl+letter combinations (a-z, A-Z)
 fn convert_ctrl_letter(ch: char) -> PtyInputEvent {
     match ch {
-        'a' | 'A' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlA,
-            CursorKeyMode::default(),
-        ),
-        'c' | 'C' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlC,
-            CursorKeyMode::default(),
-        ),
-        'd' | 'D' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlD,
-            CursorKeyMode::default(),
-        ),
-        'e' | 'E' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlE,
-            CursorKeyMode::default(),
-        ),
-        'k' | 'K' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlK,
-            CursorKeyMode::default(),
-        ),
-        'l' | 'L' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlL,
-            CursorKeyMode::default(),
-        ),
-        'u' | 'U' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlU,
-            CursorKeyMode::default(),
-        ),
-        'z' | 'Z' => PtyInputEvent::SendControl(
-            ControlSequence::CtrlZ,
-            CursorKeyMode::default(),
-        ),
+        'a' | 'A' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlA, CursorKeyMode::default())
+        }
+        'c' | 'C' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlC, CursorKeyMode::default())
+        }
+        'd' | 'D' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlD, CursorKeyMode::default())
+        }
+        'e' | 'E' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlE, CursorKeyMode::default())
+        }
+        'k' | 'K' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlK, CursorKeyMode::default())
+        }
+        'l' | 'L' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlL, CursorKeyMode::default())
+        }
+        'u' | 'U' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlU, CursorKeyMode::default())
+        }
+        'z' | 'Z' => {
+            PtyInputEvent::SendControl(ControlSequence::CtrlZ, CursorKeyMode::default())
+        }
         _ => {
             if let Some(ctrl_code) = get_ctrl_code_extended(ch) {
                 PtyInputEvent::SendControl(
@@ -335,7 +326,7 @@ fn convert_ctrl_symbol(ch: char) -> PtyInputEvent {
         ',' => generate_csi_u_sequence(',' as u32, 5), // Ctrl+, (settings)
         '.' => generate_csi_u_sequence('.' as u32, 5), // Ctrl+. (context menu)
         '/' => generate_csi_u_sequence('/' as u32, 5), // Ctrl+/ (comment)
-        _ => generate_csi_u_sequence(ch as u32, 5), // Fallback for other symbols
+        _ => generate_csi_u_sequence(ch as u32, 5),    // Fallback for other symbols
     }
 }
 
@@ -489,7 +480,11 @@ fn convert_special_key(
         _ => return None,
     };
 
-    Some(generate_csi_sequence(key_code, modifiers.to_csi_modifier(), base_seq))
+    Some(generate_csi_sequence(
+        key_code,
+        modifiers.to_csi_modifier(),
+        base_seq,
+    ))
 }
 
 /// Convert function keys with modifiers
@@ -557,15 +552,15 @@ fn convert_function_key(
         _ => return None,
     };
 
-    Some(generate_csi_sequence(key_code, modifiers.to_csi_modifier(), &base_seq))
+    Some(generate_csi_sequence(
+        key_code,
+        modifiers.to_csi_modifier(),
+        &base_seq,
+    ))
 }
 
 /// Generate CSI sequence: ESC[key;modifier;letter or ESC[key;modifier~
-fn generate_csi_sequence(
-    key_code: u32,
-    modifier: u8,
-    suffix: &str,
-) -> PtyInputEvent {
+fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputEvent {
     if modifier == 1 {
         // No modifier - use simple sequence
         let seq = if suffix == "~" {

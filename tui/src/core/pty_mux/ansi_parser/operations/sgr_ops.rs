@@ -4,9 +4,8 @@
 
 use vte::Params;
 
-use super::super::super::{ansi_parser_public_api::AnsiToBufferProcessor, 
-                        ansi_to_tui_color::ansi_to_tui_color,
-                        csi_codes};
+use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
+                   ansi_to_tui_color::ansi_to_tui_color, protocols::csi_codes};
 use crate::{TuiStyle, tui_style_attrib};
 
 /// Update the current `TuiStyle` based on SGR attributes.
@@ -123,7 +122,7 @@ fn apply_sgr_param(processor: &mut AnsiToBufferProcessor, param: u16) {
 }
 
 /// Handle SGR (Select Graphic Rendition) parameters.
-pub fn sgr(processor: &mut AnsiToBufferProcessor, params: &Params) {
+pub fn set_graphics_rendition(processor: &mut AnsiToBufferProcessor, params: &Params) {
     for param_slice in params {
         for &param in param_slice {
             apply_sgr_param(processor, param);

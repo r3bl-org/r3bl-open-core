@@ -34,7 +34,7 @@
 
 // Common OSC sequence components for sending outgoing sequences
 
-/// Generic OSC sequence start: ESC ] 
+/// Generic OSC sequence start: ESC ]
 pub const OSC_START: &str = "\x1b]";
 /// OSC 9;4 sequence prefix: ESC ] 9 ; 4 ;
 pub const START: &str = "\x1b]9;4;";
@@ -83,10 +83,11 @@ use std::fmt;
 
 use crate::core::common::write_to_buf::{BufTextStorage, WriteToBuf};
 
-/// OSC sequence builder enum that provides type-safe construction of Operating System Command sequences.
+/// OSC sequence builder enum that provides type-safe construction of Operating System
+/// Command sequences.
 ///
-/// This enum follows the same pattern as `CsiSequence` and `EscSequence`, providing a structured
-/// way to build OSC sequences instead of manual string formatting.
+/// This enum follows the same pattern as `CsiSequence` and `EscSequence`, providing a
+/// structured way to build OSC sequences instead of manual string formatting.
 ///
 /// OSC sequences follow the format: `ESC ] code ; parameters ST`
 /// where ST is the String Terminator (ESC \ or BEL).
@@ -95,20 +96,20 @@ pub enum OscSequence {
     /// OSC 0: Set both window title and icon name
     /// Format: `ESC ] 0 ; title ST`
     SetTitleAndIcon(String),
-    
+
     /// OSC 1: Set icon name only
     /// Format: `ESC ] 1 ; icon_name ST`
     SetIcon(String),
-    
+
     /// OSC 2: Set window title only\
     /// Format: `ESC ] 2 ; title ST`
     SetTitle(String),
-    
+
     /// OSC 8: Hyperlink start sequence
     /// Format: `ESC ] 8 ; id ; uri ST`
     /// The `id` parameter is optional and used for link identification
     HyperlinkStart { uri: String, id: Option<String> },
-    
+
     /// OSC 8: Hyperlink end sequence\
     /// Format: `ESC ] 8 ; ; ST`
     /// This closes the hyperlink started by `HyperlinkStart`
@@ -162,7 +163,11 @@ impl WriteToBuf for OscSequence {
         Ok(())
     }
 
-    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn write_buf_to_fmt(
+        &self,
+        acc: &BufTextStorage,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
         f.write_str(&acc.clone())
     }
 }
@@ -246,7 +251,7 @@ mod tests {
         let original = OscSequence::SetTitle("Test".to_string());
         let cloned = original.clone();
         assert_eq!(original, cloned);
-        
+
         let debug_output = format!("{original:?}");
         assert!(debug_output.contains("SetTitle"));
         assert!(debug_output.contains("Test"));
@@ -259,7 +264,7 @@ mod tests {
             id: Some("r3bl".to_string()),
         };
         let end = OscSequence::HyperlinkEnd;
-        
+
         let complete_link = format!("{start}Link Text{end}");
         let expected = "\x1b]8;r3bl;https://r3bl.com\x07Link Text\x1b]8;;\x07";
         assert_eq!(complete_link, expected);

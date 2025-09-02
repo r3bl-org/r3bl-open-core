@@ -50,7 +50,7 @@ pub enum DsrRequestType {
 }
 
 impl DsrRequestType {
-    #[must_use] 
+    #[must_use]
     pub fn as_u16(&self) -> u16 {
         match self {
             Self::RequestStatus => 5,

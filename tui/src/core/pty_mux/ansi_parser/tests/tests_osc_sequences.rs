@@ -2,10 +2,9 @@
 
 //! Tests for OSC (Operating System Command) sequences.
 
-use crate::{core::osc::OscEvent,
-            offscreen_buffer::test_fixtures_offscreen_buffer::*};
 use super::tests_fixtures::*;
-use crate::core::osc::osc_codes::OscSequence;
+use crate::{core::osc::{OscEvent, osc_codes::OscSequence},
+            offscreen_buffer::test_fixtures_offscreen_buffer::*};
 
 #[test]
 fn test_osc_title_sequences() {
@@ -18,7 +17,7 @@ fn test_osc_title_sequences() {
     // Should get one OSC event
     assert_eq!(osc_events1.len(), 1);
     assert_eq!(dsr_responses1.len(), 0);
-    
+
     match &osc_events1[0] {
         OscEvent::SetTitleAndTab(title) => {
             assert_eq!(title, "Test Title");
@@ -33,7 +32,7 @@ fn test_osc_title_sequences() {
     // Should get one new OSC event (not accumulated)
     assert_eq!(osc_events2.len(), 1);
     assert_eq!(dsr_responses2.len(), 0);
-    
+
     match &osc_events2[0] {
         OscEvent::SetTitleAndTab(title) => {
             assert_eq!(title, "Window Title");
@@ -68,7 +67,7 @@ fn test_osc_hyperlink() {
 
     // Verify text was written
     assert_plain_text_at(&ofs_buf, 0, 0, "Link Text");
-    
+
     // Verify events are drained on next call
     let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("more text");
     assert_eq!(osc_events2.len(), 0, "OSC events should be drained");

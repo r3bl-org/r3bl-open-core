@@ -90,14 +90,13 @@ mod tests_try_parse_and_highlight {
     use serial_test::serial;
 
     use super::*;
-    use crate::{ColorSupport, assert_eq2, fg_cyan, global_color_support, throws, tui_color};
+    use crate::{ColorSupport, assert_eq2, fg_cyan, global_color_support, throws,
+                tui_color};
 
     /// RAII guard for color support override cleanup
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
-        fn drop(&mut self) { 
-            global_color_support::clear_override(); 
-        }
+        fn drop(&mut self) { global_color_support::clear_override(); }
     }
 
     /// Helper function to set color support override and return cleanup guard
@@ -741,9 +740,7 @@ mod tests_style_us_span_lines_from {
     /// RAII guard for color support override cleanup
     struct ColorSupportGuard;
     impl Drop for ColorSupportGuard {
-        fn drop(&mut self) { 
-            global_color_support::clear_override(); 
-        }
+        fn drop(&mut self) { global_color_support::clear_override(); }
     }
 
     /// Helper function to set color support override and return cleanup guard
