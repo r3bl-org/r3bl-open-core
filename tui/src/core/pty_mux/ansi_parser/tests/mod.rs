@@ -2,12 +2,15 @@
 
 pub(super) mod tests_fixtures; // Make fixtures accessible to parent module.
 
+mod test_basic_operations;
 mod tests_character_encoding;
+mod tests_character_operations;
 mod tests_control_sequences;
 mod tests_cursor_operations;
 mod tests_display_operations;
 mod tests_dsr_responses;
 mod tests_integration;
+mod tests_line_operations;
 mod tests_line_wrap_and_scroll_control;
 mod tests_osc_sequences;
 mod tests_processor_lifecycle;

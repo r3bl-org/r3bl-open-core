@@ -8,3 +8,56 @@ use crate::{OffscreenBuffer, height, width};
 pub fn create_test_offscreen_buffer_10r_by_10c() -> OffscreenBuffer {
     OffscreenBuffer::new_empty(height(10) + width(10))
 }
+
+/// Create a test buffer with numbered lines for easier test verification.
+pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
+    let mut buf = OffscreenBuffer::new_empty(height(rows) + width(cols));
+    for r in 0..rows {
+        let line_text = format!("Line{:02}", r);
+        for (c, ch) in line_text.chars().enumerate() {
+            if c < cols {
+                buf.buffer[r][c] = crate::PixelChar::PlainText {
+                    display_char: ch,
+                    maybe_style: None,
+                };
+            }
+        }
+        // Fill remaining columns with spaces
+        for c in line_text.len()..cols {
+            buf.buffer[r][c] = crate::PixelChar::Spacer;
+        }
+    }
+    buf
+}
+
+/// Helper to verify line content matches expected text.
+pub fn assert_line_content(buf: &OffscreenBuffer, row: usize, expected: &str) {
+    let actual: String = buf.buffer[row]
+        .iter()
+        .take(expected.len())
+        .map(|pixel_char| match pixel_char {
+            crate::PixelChar::PlainText { display_char, .. } => *display_char,
+            crate::PixelChar::Spacer => ' ',
+            _ => ' ',
+        })
+        .collect();
+
+    assert_eq!(
+        actual, expected,
+        "Line {} content mismatch. Expected: '{}', got: '{}'",
+        row, expected, actual
+    );
+}
+
+/// Helper to verify a line contains only blank/space characters.
+pub fn assert_blank_line(buf: &OffscreenBuffer, row: usize) {
+    let is_blank = buf.buffer[row]
+        .iter()
+        .all(|pixel_char| matches!(pixel_char, crate::PixelChar::Spacer));
+
+    assert!(
+        is_blank,
+        "Line {} should be blank but contains non-space characters",
+        row
+    );
+}

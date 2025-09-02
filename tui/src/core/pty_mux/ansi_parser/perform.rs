@@ -10,8 +10,8 @@
 use vte::{Params, Perform};
 
 // Import the operation modules.
-use super::operations::{cursor_ops, dsr_ops, margin_ops, mode_ops, scroll_ops, sgr_ops,
-                        terminal_ops};
+use super::operations::{char_ops, cursor_ops, dsr_ops, line_ops, margin_ops, mode_ops,
+                        scroll_ops, sgr_ops, terminal_ops};
 use super::{ansi_parser_public_api::AnsiToBufferProcessor,
             protocols::{csi_codes::{self},
                         esc_codes}};
@@ -179,9 +179,101 @@ impl Perform for AnsiToBufferProcessor<'_> {
             // Graphics operations
             csi_codes::SGR_SET_GRAPHICS => sgr_ops::set_graphics_rendition(self, params),
 
-            // Display control operations (ignored)
-            _ => {
+            // Line operations
+            csi_codes::IL_INSERT_LINE => line_ops::insert_lines(self, params),
+            csi_codes::DL_DELETE_LINE => line_ops::delete_lines(self, params),
+
+            // Character operations
+            csi_codes::DCH_DELETE_CHAR => char_ops::delete_chars(self, params),
+            csi_codes::ICH_INSERT_CHAR => char_ops::insert_chars(self, params),
+            csi_codes::ECH_ERASE_CHAR => char_ops::erase_chars(self, params),
+
+            // Additional cursor positioning
+            csi_codes::VPA_VERTICAL_POSITION => {
+                cursor_ops::vertical_position_absolute(self, params)
+            }
+
+            // Display control operations (explicitly ignored)
+            csi_codes::ED_ERASE_DISPLAY | csi_codes::EL_ERASE_LINE => {
                 // Clear screen/line - ignore, TUI apps will repaint themselves
+            }
+
+            // Other unimplemented CSI sequences
+            'I' => {
+                // CHT (Cursor Horizontal Tab) - Move cursor forward N tab stops
+                // Not needed: Tab handling is done via execute() with TAB character
+            }
+            'Z' => {
+                // CBT (Cursor Backward Tab) - Move cursor backward N tab stops
+                // Not needed: Reverse tab rarely used, complex tab stop tracking required
+            }
+            'g' => {
+                // TBC (Tab Clear) - Clear tab stops (0=current, 3=all)
+                // Not needed: Tab stops are application-specific, TUI apps manage their
+                // own
+            }
+            'a' => {
+                // HPR (Horizontal Position Relative) - Same as CUF (Cursor Forward)
+                // Not needed: CUF already implemented, this is redundant
+            }
+            'e' => {
+                // VPR (Vertical Position Relative) - Same as CUD (Cursor Down)
+                // Not needed: CUD already implemented, this is redundant
+            }
+            '`' => {
+                // HPA (Horizontal Position Absolute) - Same as CHA
+                // Not needed: CHA already implemented, this is redundant
+            }
+            'U' => {
+                // NP (Next Page) - Move to next page in page memory
+                // Not needed: Page memory not supported in multiplexer
+            }
+            'V' => {
+                // PP (Preceding Page) - Move to previous page in page memory
+                // Not needed: Page memory not supported in multiplexer
+            }
+            '~' => {
+                // DECLL (DEC Load LEDs) - Set keyboard LED indicators
+                // Not needed: Hardware control not applicable in multiplexer
+            }
+            '}' => {
+                // DECIC (DEC Insert Column) - Insert blank columns at cursor
+                // Not needed: Column insertion rarely used, complex for TUI apps
+            }
+            '|' => {
+                // DECDC (DEC Delete Column) - Delete columns at cursor
+                // Not needed: Column deletion rarely used, complex for TUI apps
+            }
+            't' => {
+                // Window manipulation (resize, move, iconify, etc.)
+                // Not needed: Window ops handled by terminal emulator, not multiplexer
+            }
+            'c' => {
+                // DA (Device Attributes) - Request terminal type/capabilities
+                // Not needed: Multiplexer doesn't respond to queries, parent terminal
+                // does
+            }
+            'q' => {
+                // DECSCUSR (Set Cursor Style) - Change cursor shape/blink
+                // Not needed: Cursor rendering handled by terminal emulator
+            }
+            'p' => {
+                // Various DEC private sequences (DECRQM, etc.)
+                // Not needed: Private mode requests handled by parent terminal
+            }
+            'x' => {
+                // DECREQTPARM (Request Terminal Parameters) - Request terminal settings
+                // Not needed: Terminal parameters managed by parent emulator
+            }
+            'z' => {
+                // DECERA/DECSERA (DEC Erase/Selective Erase Rectangular Area)
+                // Not needed: Rectangular operations complex, rarely used
+            }
+
+            // Any other unrecognized sequences
+            _ => {
+                // Unknown CSI sequence - safely ignore
+                // Multiplexer passes through raw data, parent terminal handles unknowns
             }
         }
     }

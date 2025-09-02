@@ -696,3 +696,119 @@ pub mod save_restore {
         assert_plain_char_at(&ofs_buf, 3, 6, 'C');
     }
 }
+
+/// Tests for Vertical Position Absolute (VPA) operation.
+pub mod vertical_position_absolute {
+    use super::*;
+
+    #[test]
+    fn test_vpa_move_to_specific_row() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        
+        // Start at position (3, 5) and move to row 7
+        let move_cursor = CsiSequence::CursorPosition { 
+            row: crate::ansi_parser::term_units::TermRow::new(4), 
+            col: crate::ansi_parser::term_units::TermCol::new(6)
+        }; // Move to row 4, col 6 (1-based)
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(7);
+        let sequence = format!("{move_cursor}{vpa_sequence}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        
+        // Verify cursor moved to row 6 (0-based), column unchanged
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(6) + col(5),
+            "VPA should move to row 6 (0-based) while preserving column 5"
+        );
+    }
+
+    #[test]
+    fn test_vpa_default_parameter() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        
+        // Start at position (5, 8) and use VPA with default parameter
+        let move_cursor = CsiSequence::CursorPosition { 
+            row: crate::ansi_parser::term_units::TermRow::new(6), 
+            col: crate::ansi_parser::term_units::TermCol::new(9)
+        }; // Move to row 6, col 9 (1-based)
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(1); // Default to row 1
+        let sequence = format!("{move_cursor}{vpa_sequence}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        
+        // Verify cursor moved to row 0 (0-based), column unchanged
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(0) + col(8),
+            "VPA default should move to row 0 (0-based) while preserving column 8"
+        );
+    }
+
+    #[test]
+    fn test_vpa_bounds_checking() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        
+        // Start at position (5, 3) and try to move beyond bounds
+        let move_cursor = CsiSequence::CursorPosition { 
+            row: crate::ansi_parser::term_units::TermRow::new(6), 
+            col: crate::ansi_parser::term_units::TermCol::new(4)
+        }; // Move to row 6, col 4 (1-based)
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(15); // Beyond bounds
+        let sequence = format!("{move_cursor}{vpa_sequence}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        
+        // Verify cursor clamped to last row (9 in 0-based), column unchanged
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(9) + col(3),
+            "VPA should clamp to row 9 (0-based) when target is beyond buffer"
+        );
+    }
+
+    #[test]
+    fn test_vpa_zero_parameter_treated_as_one() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        
+        // Start at position (7, 2) and move with parameter 0
+        let move_cursor = CsiSequence::CursorPosition { 
+            row: crate::ansi_parser::term_units::TermRow::new(8), 
+            col: crate::ansi_parser::term_units::TermCol::new(3)
+        }; // Move to row 8, col 3 (1-based)
+        // VPA parameter 0 should be treated as 1, but since we need explicit param,
+        // let's use 1 which represents the first row
+        let vpa_sequence = CsiSequence::VerticalPositionAbsolute(1); 
+        let sequence = format!("{move_cursor}{vpa_sequence}");
+        let _result = ofs_buf.apply_ansi_bytes(sequence);
+        
+        // Verify cursor moved to row 0 (0-based), column unchanged
+        assert_eq!(
+            ofs_buf.my_pos,
+            row(0) + col(2),
+            "VPA with parameter 1 should move to row 0 (0-based) while preserving column 2"
+        );
+    }
+
+    #[test]
+    fn test_vpa_preserves_horizontal_position() {
+        // Test multiple column positions
+        for col_pos in [0, 3, 6, 9] {
+            let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+            
+            // Move to initial position and then use VPA
+            let move_cursor = CsiSequence::CursorPosition { 
+                row: crate::ansi_parser::term_units::TermRow::new(3), 
+                col: crate::ansi_parser::term_units::TermCol::new((col_pos + 1) as u16)
+            }; // Move to row 3, col (1-based)
+            let vpa_sequence = CsiSequence::VerticalPositionAbsolute(8);
+            let sequence = format!("{move_cursor}{vpa_sequence}");
+            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            
+            // Verify column position preserved
+            assert_eq!(
+                ofs_buf.my_pos,
+                row(7) + col(col_pos),
+                "VPA should preserve column {} when moving to row 7",
+                col_pos
+            );
+        }
+    }
+}

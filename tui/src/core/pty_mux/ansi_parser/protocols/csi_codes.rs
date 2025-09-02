@@ -124,6 +124,42 @@ pub const SD_SCROLL_DOWN: char = 'T';
 /// DECSTBM - Set Top and Bottom Margins - ESC [ top ; bottom r
 pub const DECSTBM_SET_MARGINS: char = 'r';
 
+// Line Operations.
+
+/// CSI L: Insert Line (IL)
+/// Inserts one or more blank lines, starting at the cursor
+/// Lines below cursor and in scrolling region move down
+pub const IL_INSERT_LINE: char = 'L';
+
+/// CSI M: Delete Line (DL)  
+/// Deletes one or more lines in the scrolling region, starting with cursor line
+/// Lines below cursor move up, blank lines added at bottom
+pub const DL_DELETE_LINE: char = 'M';
+
+// Character Operations.
+
+/// CSI P: Delete Character (DCH)
+/// Deletes one or more characters on current line
+/// Characters to the right shift left, blanks inserted at end
+pub const DCH_DELETE_CHAR: char = 'P';
+
+/// CSI @: Insert Character (ICH)
+/// Inserts one or more blank characters at cursor position
+/// Characters to the right shift right, rightmost characters lost
+pub const ICH_INSERT_CHAR: char = '@';
+
+/// CSI X: Erase Character (ECH)
+/// Erases one or more characters at cursor position  
+/// Characters are replaced with blanks, no shifting occurs
+pub const ECH_ERASE_CHAR: char = 'X';
+
+// Additional Cursor Positioning.
+
+/// CSI d: Vertical Position Absolute (VPA)
+/// Moves cursor to specified row (default 1)
+/// Horizontal position unchanged
+pub const VPA_VERTICAL_POSITION: char = 'd';
+
 // Text Formatting (SGR).
 
 /// CSI m: Select Graphic Rendition (SGR)
@@ -529,6 +565,18 @@ pub enum CsiSequence {
     /// Disable Private Mode - ESC [ ? n l (n = mode number like `DECAWM_AUTO_WRAP`)
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
     DisablePrivateMode(PrivateModeType),
+    /// Insert Line (IL) - ESC [ n L
+    InsertLine(u16),
+    /// Delete Line (DL) - ESC [ n M
+    DeleteLine(u16),
+    /// Delete Character (DCH) - ESC [ n P
+    DeleteChar(u16),
+    /// Insert Character (ICH) - ESC [ n @
+    InsertChar(u16),
+    /// Erase Character (ECH) - ESC [ n X
+    EraseChar(u16),
+    /// Vertical Position Absolute (VPA) - ESC [ n d
+    VerticalPositionAbsolute(u16),
 }
 
 impl fmt::Display for CsiSequence {
@@ -628,6 +676,30 @@ impl WriteToBuf for CsiSequence {
                 acc.push(CSI_PRIVATE_MODE_PREFIX);
                 acc.push_str(&mode.as_u16().to_string());
                 acc.push(RM_RESET_PRIVATE_MODE);
+            }
+            CsiSequence::InsertLine(n) => {
+                acc.push_str(&n.to_string());
+                acc.push(IL_INSERT_LINE);
+            }
+            CsiSequence::DeleteLine(n) => {
+                acc.push_str(&n.to_string());
+                acc.push(DL_DELETE_LINE);
+            }
+            CsiSequence::DeleteChar(n) => {
+                acc.push_str(&n.to_string());
+                acc.push(DCH_DELETE_CHAR);
+            }
+            CsiSequence::InsertChar(n) => {
+                acc.push_str(&n.to_string());
+                acc.push(ICH_INSERT_CHAR);
+            }
+            CsiSequence::EraseChar(n) => {
+                acc.push_str(&n.to_string());
+                acc.push(ECH_ERASE_CHAR);
+            }
+            CsiSequence::VerticalPositionAbsolute(n) => {
+                acc.push_str(&n.to_string());
+                acc.push(VPA_VERTICAL_POSITION);
             }
         }
         Ok(())

@@ -214,3 +214,22 @@ pub fn restore_cursor_position(processor: &mut AnsiToBufferProcessor) {
         tracing::trace!("CSI u (RCP): Restored cursor position to {:?}", saved_pos);
     }
 }
+
+/// Handle VPA (Vertical Position Absolute) - move cursor to specified row.
+/// The horizontal position remains unchanged.
+/// Row parameter is 1-based, with default value of 1.
+pub fn vertical_position_absolute(processor: &mut AnsiToBufferProcessor, params: &Params) {
+    let target_row = params.extract_nth_non_zero(0);
+    let max_row: u16 = processor.ofs_buf.window_size.row_height.into();
+    
+    // Convert from 1-based to 0-based and clamp to valid range
+    let new_row = u16::min(target_row.saturating_sub(1), max_row.saturating_sub(1));
+    
+    // Update only the row, preserve column
+    processor.ofs_buf.my_pos.row_index = row(new_row);
+    
+    tracing::trace!(
+        "CSI {}d (VPA): Moved cursor to row {} (0-based: {})", 
+        target_row, target_row, new_row
+    );
+}
