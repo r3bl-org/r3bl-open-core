@@ -2,7 +2,7 @@
 
 //! Scrolling operations.
 
-use super::{super::super::ansi_parser_public_api::AnsiToBufferProcessor, cursor_ops, param_utils::extract_nth_param_non_zero};
+use super::{super::super::ansi_parser_public_api::AnsiToBufferProcessor, cursor_ops, param_utils::ParamsExt};
 use crate::PixelChar;
 
 /// Move cursor down one line, scrolling the buffer if at bottom.
@@ -17,9 +17,8 @@ pub fn index_down(processor: &mut AnsiToBufferProcessor) {
         .ofs_buf
         .ansi_parser_support
         .scroll_region_bottom
-        .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
-        .map(|row| row.as_usize())
-        .unwrap_or(max_row.as_usize().saturating_sub(1));
+        .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1-based to 0-based
+        .map_or(max_row.as_usize().saturating_sub(1), |row| row.as_usize());
 
     // Check if we're at the bottom of the scroll region
     if current_row >= scroll_bottom {
@@ -42,9 +41,8 @@ pub fn reverse_index_up(processor: &mut AnsiToBufferProcessor) {
         .ofs_buf
         .ansi_parser_support
         .scroll_region_top
-        .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
-        .map(|row| row.as_usize())
-        .unwrap_or(0);
+        .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1-based to 0-based
+        .map_or(0, |row| row.as_usize());
 
     // Check if we're at the top of the scroll region
     if current_row <= scroll_top {
@@ -67,16 +65,14 @@ pub fn scroll_buffer_up(processor: &mut AnsiToBufferProcessor) {
         .ofs_buf
         .ansi_parser_support
         .scroll_region_top
-        .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
-        .map(|row| row.as_usize())
-        .unwrap_or(0);
+        .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1-based to 0-based
+        .map_or(0, |row| row.as_usize());
     let scroll_bottom = processor
         .ofs_buf
         .ansi_parser_support
         .scroll_region_bottom
-        .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
-        .map(|row| row.as_usize())
-        .unwrap_or(max_row.saturating_sub(1));
+        .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1-based to 0-based
+        .map_or(max_row.saturating_sub(1), |row| row.as_usize());
 
     // Shift lines up within the scroll region only
     // For each row from top to (bottom-1), copy the row below it
@@ -101,16 +97,14 @@ pub fn scroll_buffer_down(processor: &mut AnsiToBufferProcessor) {
         .ofs_buf
         .ansi_parser_support
         .scroll_region_top
-        .and_then(|t| t.to_zero_based()) // Convert 1-based to 0-based
-        .map(|row| row.as_usize())
-        .unwrap_or(0);
+        .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1-based to 0-based
+        .map_or(0, |row| row.as_usize());
     let scroll_bottom = processor
         .ofs_buf
         .ansi_parser_support
         .scroll_region_bottom
-        .and_then(|b| b.to_zero_based()) // Convert 1-based to 0-based
-        .map(|row| row.as_usize())
-        .unwrap_or(max_row.saturating_sub(1));
+        .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1-based to 0-based
+        .map_or(max_row.saturating_sub(1), |row| row.as_usize());
 
     // Shift lines down within the scroll region only
     for row in (scroll_top + 1..=scroll_bottom).rev() {
@@ -125,7 +119,7 @@ pub fn scroll_buffer_down(processor: &mut AnsiToBufferProcessor) {
 
 /// Handle SU (Scroll Up) - scroll display up by n lines.
 pub fn scroll_up(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let n = extract_nth_param_non_zero(params, 0);
+    let n = params.extract_nth_non_zero(0);
     for _ in 0..n {
         scroll_buffer_up(processor);
     }
@@ -134,7 +128,7 @@ pub fn scroll_up(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
 pub fn scroll_down(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let n = extract_nth_param_non_zero(params, 0);
+    let n = params.extract_nth_non_zero(0);
     for _ in 0..n {
         scroll_buffer_down(processor);
     }

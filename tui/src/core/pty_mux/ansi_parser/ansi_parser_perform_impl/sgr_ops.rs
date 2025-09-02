@@ -44,11 +44,11 @@ fn apply_sgr_param(processor: &mut AnsiToBufferProcessor, param: u16) {
         }
         csi_codes::SGR_BOLD => {
             processor.ofs_buf.ansi_parser_support.attribs.bold =
-                Some(tui_style_attrib::Bold)
+                Some(tui_style_attrib::Bold);
         }
         csi_codes::SGR_DIM => {
             processor.ofs_buf.ansi_parser_support.attribs.dim =
-                Some(tui_style_attrib::Dim)
+                Some(tui_style_attrib::Dim);
         }
         csi_codes::SGR_ITALIC => {
             processor.ofs_buf.ansi_parser_support.attribs.italic =
@@ -79,36 +79,36 @@ fn apply_sgr_param(processor: &mut AnsiToBufferProcessor, param: u16) {
             processor.ofs_buf.ansi_parser_support.attribs.dim = None;
         }
         csi_codes::SGR_RESET_ITALIC => {
-            processor.ofs_buf.ansi_parser_support.attribs.italic = None
+            processor.ofs_buf.ansi_parser_support.attribs.italic = None;
         }
         csi_codes::SGR_RESET_UNDERLINE => {
-            processor.ofs_buf.ansi_parser_support.attribs.underline = None
+            processor.ofs_buf.ansi_parser_support.attribs.underline = None;
         }
         csi_codes::SGR_RESET_BLINK => {
-            processor.ofs_buf.ansi_parser_support.attribs.blink = None
+            processor.ofs_buf.ansi_parser_support.attribs.blink = None;
         }
         csi_codes::SGR_RESET_REVERSE => {
-            processor.ofs_buf.ansi_parser_support.attribs.reverse = None
+            processor.ofs_buf.ansi_parser_support.attribs.reverse = None;
         }
         csi_codes::SGR_RESET_HIDDEN => {
-            processor.ofs_buf.ansi_parser_support.attribs.hidden = None
+            processor.ofs_buf.ansi_parser_support.attribs.hidden = None;
         }
         csi_codes::SGR_RESET_STRIKETHROUGH => {
-            processor.ofs_buf.ansi_parser_support.attribs.strikethrough = None
+            processor.ofs_buf.ansi_parser_support.attribs.strikethrough = None;
         }
         csi_codes::SGR_FG_BLACK..=csi_codes::SGR_FG_WHITE => {
             processor.ofs_buf.ansi_parser_support.fg_color =
                 Some(ansi_to_tui_color(param.into()));
         }
         csi_codes::SGR_FG_DEFAULT => {
-            processor.ofs_buf.ansi_parser_support.fg_color = None
+            processor.ofs_buf.ansi_parser_support.fg_color = None;
         } /* Default foreground */
         csi_codes::SGR_BG_BLACK..=csi_codes::SGR_BG_WHITE => {
             processor.ofs_buf.ansi_parser_support.bg_color =
                 Some(ansi_to_tui_color(param.into()));
         }
         csi_codes::SGR_BG_DEFAULT => {
-            processor.ofs_buf.ansi_parser_support.bg_color = None
+            processor.ofs_buf.ansi_parser_support.bg_color = None;
         } /* Default background */
         csi_codes::SGR_FG_BRIGHT_BLACK..=csi_codes::SGR_FG_BRIGHT_WHITE => {
             processor.ofs_buf.ansi_parser_support.fg_color =

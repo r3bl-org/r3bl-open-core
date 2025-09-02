@@ -11,10 +11,8 @@ use std::fmt::{Debug, Formatter, Result};
 use portable_pty::PtySize;
 
 use super::output_renderer::STATUS_BAR_HEIGHT;
-use crate::{OffscreenBuffer, Size,
-            core::pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
-                        PtyReadWriteSession},
-            height};
+use crate::{core::{osc::OscEvent, pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
+                        PtyReadWriteSession}}, height, OffscreenBuffer, Size};
 
 /// Manages multiple PTY processes and handles switching between them.
 #[derive(Debug)]
@@ -102,7 +100,7 @@ impl Process {
             // Handle any OSC events that were detected
             for event in osc_events {
                 match event {
-                    crate::core::osc::OscEvent::SetTitleAndTab(title) => {
+                    OscEvent::SetTitleAndTab(title) => {
                         self.terminal_title = Some(title.clone());
                         tracing::debug!(
                             "Process '{}' set terminal title: {}",

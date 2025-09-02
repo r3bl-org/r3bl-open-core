@@ -9,7 +9,6 @@
 
 use vte::Params;
 
-
 /// Extract the nth parameter (0-indexed) with VT100-compliant default handling.
 ///
 /// ## Parameter Handling Rules
@@ -24,7 +23,8 @@ use vte::Params;
 /// - `extract_nth_param_non_zero(params, 1)` extracts the second parameter
 /// - `ESC[A` (no param) → returns 1 for any n
 /// - `ESC[0;5A` → returns 1 for n=0, 5 for n=1
-pub fn extract_nth_param_non_zero(params: &Params, n: usize) -> u16 {
+#[must_use]
+fn extract_nth_param_non_zero(params: &Params, n: usize) -> u16 {
     params
         .iter()
         .nth(n)
@@ -50,6 +50,22 @@ pub fn extract_nth_param_non_zero(params: &Params, n: usize) -> u16 {
 /// - `extract_nth_optional_param(params, 1)` extracts the second parameter
 /// - `ESC[5A` → returns Some(5) for n=0, None for n=1
 /// - `ESC[0;7A` → returns Some(0) for n=0, Some(7) for n=1
-pub fn extract_nth_optional_param(params: &Params, n: usize) -> Option<u16> {
+#[must_use]
+fn extract_nth_optional_param(params: &Params, n: usize) -> Option<u16> {
     params.iter().nth(n).and_then(|p| p.first()).copied()
+}
+
+pub trait ParamsExt {
+    fn extract_nth_non_zero(&self, n: usize) -> u16;
+    fn extract_nth_opt(&self, n: usize) -> Option<u16>;
+}
+
+impl ParamsExt for Params {
+    fn extract_nth_non_zero(&self, n: usize) -> u16 {
+        extract_nth_param_non_zero(self, n)
+    }
+
+    fn extract_nth_opt(&self, n: usize) -> Option<u16> {
+        extract_nth_optional_param(self, n)
+    }
 }

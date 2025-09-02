@@ -4,7 +4,7 @@
 
 use vte::Params;
 
-use crate::ansi_parser_perform_impl::param_utils::extract_nth_optional_param;
+use crate::ansi_parser_perform_impl::param_utils::ParamsExt;
 
 use super::super::super::{ansi_parser_public_api::AnsiToBufferProcessor, csi_codes::PrivateModeType};
 
@@ -13,7 +13,7 @@ use super::super::super::{ansi_parser_public_api::AnsiToBufferProcessor, csi_cod
 pub fn set_mode(processor: &mut AnsiToBufferProcessor, params: &Params, intermediates: &[u8]) {
     let is_private_mode = intermediates.contains(&b'?');
     if is_private_mode {
-        let mode_num = extract_nth_optional_param(params, 0).unwrap_or(0);
+        let mode_num = params.extract_nth_opt(0).unwrap_or(0);
         let mode = PrivateModeType::from(mode_num);
         match mode {
             PrivateModeType::AutoWrap => {
@@ -35,7 +35,7 @@ pub fn set_mode(processor: &mut AnsiToBufferProcessor, params: &Params, intermed
 pub fn reset_mode(processor: &mut AnsiToBufferProcessor, params: &Params, intermediates: &[u8]) {
     let is_private_mode = intermediates.contains(&b'?');
     if is_private_mode {
-        let mode_num = extract_nth_optional_param(params, 0).unwrap_or(0);
+        let mode_num = params.extract_nth_opt(0).unwrap_or(0);
         let mode = PrivateModeType::from(mode_num);
         match mode {
             PrivateModeType::AutoWrap => {

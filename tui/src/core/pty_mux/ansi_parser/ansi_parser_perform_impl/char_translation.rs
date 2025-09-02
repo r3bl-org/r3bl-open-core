@@ -3,7 +3,8 @@
 //! Character set translation operations.
 
 /// Translate DEC Special Graphics characters to Unicode box-drawing characters.
-/// Used when `character_set` is DECGraphics (after ESC ( 0).
+/// Used when `character_set` is `DECGraphics` (after ESC ( 0).
+#[must_use] 
 pub fn translate_dec_graphics(c: char) -> char {
     match c {
         'j' => '┘', // Lower right corner

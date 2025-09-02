@@ -52,7 +52,7 @@ fn test_osc_hyperlink() {
         id: None,
     };
     let hyperlink_end = OscSequence::HyperlinkEnd;
-    let sequence = format!("{}Link Text{}", hyperlink_start, hyperlink_end);
+    let sequence = format!("{hyperlink_start}Link Text{hyperlink_end}");
     processor.process_bytes(sequence);
 
     // Verify hyperlink event was captured

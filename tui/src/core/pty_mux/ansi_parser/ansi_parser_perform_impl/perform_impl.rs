@@ -17,7 +17,7 @@ use crate::{BoundsCheck,
             CharacterSet, PixelChar, col, row,
             core::osc::{OscEvent, osc_codes}};
 
-// Import the operation modules
+// Import the operation modules.
 use super::{char_translation, cursor_ops, device_ops, margin_ops, mode_ops, 
             scroll_ops, sgr_ops, terminal_ops};
 
@@ -25,7 +25,7 @@ use super::{char_translation, cursor_ops, device_ops, margin_ops, mode_ops,
 impl Perform for AnsiToBufferProcessor<'_> {
     /// Handle printable characters.
     fn print(&mut self, ch: char) {
-        // Apply character set translation if in graphics mode
+        // Apply character set translation if in graphics mode.
         let display_char = match self.ofs_buf.ansi_parser_support.character_set {
             CharacterSet::DECGraphics => char_translation::translate_dec_graphics(ch),
             CharacterSet::Ascii => ch,
@@ -36,21 +36,21 @@ impl Perform for AnsiToBufferProcessor<'_> {
         let current_row = self.ofs_buf.my_pos.row_index;
         let current_col = self.ofs_buf.my_pos.col_index;
 
-        // Only write if within bounds
+        // Only write if within bounds.
         if current_row.check_overflows(row_max) == Within
             && current_col.check_overflows(col_max) == Within
         {
-            // Write character to buffer using public fields
+            // Write character to buffer using public fields.
             self.ofs_buf.buffer[current_row.as_usize()][current_col.as_usize()] =
                 PixelChar::PlainText {
                     display_char, // Use the translated character
                     maybe_style: self.ofs_buf.ansi_parser_support.current_style,
                 };
 
-            // Move cursor forward
+            // Move cursor forward.
             let new_col = current_col + col(1);
 
-            // Handle line wrap based on DECAWM (Auto Wrap Mode)
+            // Handle line wrap based on DECAWM (Auto Wrap Mode).
             if new_col.check_overflows(col_max) == Overflowed {
                 if self.ofs_buf.ansi_parser_support.auto_wrap_mode {
                     // DECAWM enabled: wrap to next line (default behavior)
@@ -152,7 +152,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::CUF_CURSOR_FORWARD => cursor_ops::cursor_forward(self, params),
             csi_codes::CUB_CURSOR_BACKWARD => cursor_ops::cursor_backward(self, params),
             csi_codes::CUP_CURSOR_POSITION | csi_codes::HVP_CURSOR_POSITION => {
-                cursor_ops::cursor_position(self, params)
+                cursor_ops::cursor_position(self, params);
             }
             csi_codes::CNL_CURSOR_NEXT_LINE => cursor_ops::cursor_next_line(self, params),
             csi_codes::CPL_CURSOR_PREV_LINE => cursor_ops::cursor_prev_line(self, params),
@@ -178,11 +178,9 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::SGR_SET_GRAPHICS => sgr_ops::sgr(self, params),
 
             // Display control operations (ignored)
-            csi_codes::ED_ERASE_DISPLAY | csi_codes::EL_ERASE_LINE => {
+            _ => {
                 // Clear screen/line - ignore, TUI apps will repaint themselves
             }
-
-            _ => {} /* Ignore other CSI sequences */
         }
     }
 

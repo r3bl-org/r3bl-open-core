@@ -366,6 +366,7 @@ pub enum DeviceStatusReportType {
 }
 
 impl DeviceStatusReportType {
+    #[must_use] 
     pub fn as_u16(&self) -> u16 {
         match self {
             Self::RequestStatus => 5,
@@ -413,6 +414,7 @@ pub enum PrivateModeType {
 }
 
 impl PrivateModeType {
+    #[must_use] 
     pub fn as_u16(&self) -> u16 {
         match self {
             Self::CursorKeys => DECCKM_CURSOR_KEYS,
@@ -448,7 +450,10 @@ impl From<u16> for PrivateModeType {
     }
 }
 
-/// Helper function to create a CsiSequence::CursorPosition.
+/// Helper function to create a `CsiSequence::CursorPosition`.
+/// 
+/// # Panics
+/// Panics if the provided position is not a `CsiSequence::CursorPosition`.
 /// 
 /// # Examples
 /// ```
@@ -461,6 +466,7 @@ impl From<u16> for PrivateModeType {
 /// // You can write:
 /// let seq = csi_seq_cursor_pos(term_row(2) + term_col(3));
 /// ```
+#[must_use] 
 pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
     match position {
         CsiSequence::CursorPosition { .. } => position,
@@ -468,7 +474,10 @@ pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
     }
 }
 
-/// Helper function to create a CsiSequence::CursorPositionAlt.
+/// Helper function to create a `CsiSequence::CursorPositionAlt`.
+///
+/// # Panics
+/// Panics if the provided position is not a `CsiSequence::CursorPosition` or `CursorPositionAlt`.
 ///
 /// # Examples
 /// ```
@@ -481,6 +490,7 @@ pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
 /// // You can write:
 /// let seq = csi_seq_cursor_pos_alt(term_row(3) + term_col(7));
 /// ```
+#[must_use] 
 pub fn csi_seq_cursor_pos_alt(position: CsiSequence) -> CsiSequence {
     match position {
         CsiSequence::CursorPosition { row, col } => {
@@ -531,10 +541,10 @@ pub enum CsiSequence {
     SetScrollingMargins { top: Option<TermRow>, bottom: Option<TermRow> },
     /// Device Status Report (DSR) - ESC [ n n
     DeviceStatusReport(DeviceStatusReportType),
-    /// Enable Private Mode - ESC [ ? n h (n = mode number like DECAWM_AUTO_WRAP)
+    /// Enable Private Mode - ESC [ ? n h (n = mode number like `DECAWM_AUTO_WRAP`)
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
     EnablePrivateMode(PrivateModeType),
-    /// Disable Private Mode - ESC [ ? n l (n = mode number like DECAWM_AUTO_WRAP)
+    /// Disable Private Mode - ESC [ ? n l (n = mode number like `DECAWM_AUTO_WRAP`)
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
     DisablePrivateMode(PrivateModeType),
 }

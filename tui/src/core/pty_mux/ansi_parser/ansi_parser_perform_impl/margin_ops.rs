@@ -4,9 +4,10 @@
 
 use vte::Params;
 
+use crate::ansi_parser_perform_impl::param_utils::ParamsExt;
+
 use super::super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
                           term_units::term_row};
-use crate::ansi_parser_perform_impl::param_utils::extract_nth_optional_param;
 
 /// Handle Set Top and Bottom Margins (DECSTBM) command.
 /// CSI r - ESC [ top ; bottom r
@@ -14,26 +15,26 @@ use crate::ansi_parser_perform_impl::param_utils::extract_nth_optional_param;
 /// This command sets the scrolling region for the terminal. Lines outside
 /// the scrolling region are not affected by scroll operations.
 pub fn set_margins(processor: &mut AnsiToBufferProcessor, params: &Params) {
-    let maybe_top = extract_nth_optional_param(params, 0);
-    let maybe_bottom = extract_nth_optional_param(params, 1);
+    let maybe_top = params.extract_nth_opt(0);
+    let maybe_bottom = params.extract_nth_opt(1);
 
-    // Store terminal's 1-based coordinates (will be converted to 0-based when used)
+    // Store terminal's 1-based coordinates (will be converted to 0-based when used).
     let buffer_height: u16 = processor.ofs_buf.window_size.row_height.into();
 
     match (maybe_top, maybe_bottom) {
-        // Reset scroll region to full screen
+        // Reset scroll region to full screen.
         // Handles: ESC [ r (no params), ESC [ 0 r, ESC [ 0 ; 0 r
         // All these cases mean "reset to use the entire screen for scrolling"
-        (None, None) | (Some(0), None) | (Some(0), Some(0)) => {
+        (None | Some(0), None) | (Some(0), Some(0)) => {
             processor.ofs_buf.ansi_parser_support.scroll_region_top = None;
             processor.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
             tracing::trace!("CSI r (DECSTBM): Reset scroll region to full screen");
         }
-        // Set specific scroll margins
+        // Set specific scroll margins.
         // Handles: ESC [ top ; bottom r where top/bottom are valid line numbers
         // This restricts scrolling to only occur within the specified region
         _ => {
-            // Set scrolling region with bounds checking
+            // Set scrolling region with bounds checking.
             let top_row = maybe_top.map_or(
                 /* None -> 1 */ 1,
                 /* Some(v) -> max(v,1) */ |v| u16::max(v, 1),

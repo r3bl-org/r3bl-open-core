@@ -17,7 +17,7 @@ use crate::{ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor,
 
 pub fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {
     for r in 0..ofs_buf.window_size.row_height.as_usize() {
-        let line_text = format!("Line-{}", r);
+        let line_text = format!("Line-{r}");
         for (c, char) in line_text.chars().enumerate() {
             ofs_buf.buffer[r][c] = crate::PixelChar::PlainText {
                 display_char: char,
@@ -546,7 +546,7 @@ pub mod scrolling {
             row(6) + col(0),
             "Cursor should move down"
         );
-        assert_plain_text_at(&processor.ofs_buf, 5, 0, "Line-5");
+        assert_plain_text_at(processor.ofs_buf, 5, 0, "Line-5");
 
         // Execute Reverse Index (ESC M) - should just move cursor up
         processor.esc_dispatch(&[], false, esc_codes::RI_REVERSE_INDEX_UP);
@@ -555,7 +555,7 @@ pub mod scrolling {
             row(5) + col(0),
             "Cursor should move up"
         );
-        assert_plain_text_at(&processor.ofs_buf, 6, 0, "Line-6");
+        assert_plain_text_at(processor.ofs_buf, 6, 0, "Line-6");
     }
 
     #[test]
@@ -572,9 +572,9 @@ pub mod scrolling {
         processor.process_bytes("\x1b[1S");
 
         // After scrolling up by 1, Line-1 should be at row 0
-        assert_plain_text_at(&processor.ofs_buf, 0, 0, "Line-1");
+        assert_plain_text_at(processor.ofs_buf, 0, 0, "Line-1");
         // Bottom row should be empty
-        assert_empty_at(&processor.ofs_buf, 9, 0);
+        assert_empty_at(processor.ofs_buf, 9, 0);
     }
 
     #[test]
@@ -591,9 +591,9 @@ pub mod scrolling {
         processor.process_bytes("\x1b[1T");
 
         // After scrolling down by 1, top row should be empty
-        assert_empty_at(&processor.ofs_buf, 0, 0);
+        assert_empty_at(processor.ofs_buf, 0, 0);
         // Line-0 should move to row 1
-        assert_plain_text_at(&processor.ofs_buf, 1, 0, "Line-0");
+        assert_plain_text_at(processor.ofs_buf, 1, 0, "Line-0");
     }
 
     #[test]
@@ -666,23 +666,23 @@ pub mod scrolling {
         processor.process_bytes(sequence);
 
         // After scroll up by 1: Line-1 should now be at top (0 treated as 1)
-        assert_plain_text_at(&processor.ofs_buf, 0, 0, "Line-1");
+        assert_plain_text_at(processor.ofs_buf, 0, 0, "Line-1");
         // Bottom should be empty
-        assert_empty_at(&processor.ofs_buf, 9, 0);
+        assert_empty_at(processor.ofs_buf, 9, 0);
 
         // Reset buffer for next test
-        fill_buffer_with_lines(&mut processor.ofs_buf);
+        fill_buffer_with_lines(processor.ofs_buf);
 
         // Test CSI 0 T (Scroll Down by 0 lines) - also treated as 1
         let sequence = CsiSequence::ScrollDown(0).to_string();
         processor.process_bytes(sequence);
 
         // After scroll down by 1: top should be empty, Line-0 moves to row 1
-        assert_empty_at(&processor.ofs_buf, 0, 0);
-        assert_plain_text_at(&processor.ofs_buf, 1, 0, "Line-0");
+        assert_empty_at(processor.ofs_buf, 0, 0);
+        assert_plain_text_at(processor.ofs_buf, 1, 0, "Line-0");
 
         // Reset buffer for final test
-        fill_buffer_with_lines(&mut processor.ofs_buf);
+        fill_buffer_with_lines(processor.ofs_buf);
 
         // Test single line scroll up followed by single line scroll down
         let sequence_up = CsiSequence::ScrollUp(1).to_string();
@@ -694,8 +694,8 @@ pub mod scrolling {
         // After scroll up then down:
         // - Top line empty (from scroll down)
         // - Line-1 should be at row 1 (was at row 0 after scroll up, moved down)
-        assert_empty_at(&processor.ofs_buf, 0, 0);
-        assert_plain_text_at(&processor.ofs_buf, 1, 0, "Line-1");
+        assert_empty_at(processor.ofs_buf, 0, 0);
+        assert_plain_text_at(processor.ofs_buf, 1, 0, "Line-1");
     }
 }
 
@@ -737,7 +737,7 @@ pub mod line_wrap_scroll_interaction {
         processor.print('J');
 
         // Verify no scrolling occurred - "Line-0" should still be at top
-        assert_plain_text_at(&processor.ofs_buf, 0, 0, "Line-0");
+        assert_plain_text_at(processor.ofs_buf, 0, 0, "Line-0");
 
         // J gets written at (9,9), cursor tries to advance but wraps to (9,0)
         // since we're at the bottom row
@@ -748,10 +748,10 @@ pub mod line_wrap_scroll_interaction {
         );
 
         // The 'J' character should be at position (9,9) where it was printed
-        assert_plain_char_at(&processor.ofs_buf, 9, 9, 'J');
+        assert_plain_char_at(processor.ofs_buf, 9, 9, 'J');
 
         // ABCDEFGHI should still be there from positions 0-8
-        assert_plain_char_at(&processor.ofs_buf, 9, 0, 'A');
+        assert_plain_char_at(processor.ofs_buf, 9, 0, 'A');
     }
 
     #[test]
@@ -777,11 +777,11 @@ pub mod line_wrap_scroll_interaction {
         );
 
         // Verify 'X' is at position (5,9) where it was printed
-        assert_plain_char_at(&processor.ofs_buf, 5, 9, 'X');
+        assert_plain_char_at(processor.ofs_buf, 5, 9, 'X');
 
         // Verify no scrolling occurred by checking that row 0 is still empty
         // (since we never filled it in this test)
-        assert_empty_at(&processor.ofs_buf, 0, 0);
+        assert_empty_at(processor.ofs_buf, 0, 0);
     }
 
     #[test]
@@ -810,22 +810,22 @@ pub mod line_wrap_scroll_interaction {
         );
 
         // Verify no scrolling - Line-0 still at top
-        assert_plain_text_at(&processor.ofs_buf, 0, 0, "Line-0");
+        assert_plain_text_at(processor.ofs_buf, 0, 0, "Line-0");
 
         // Continue printing - should continue from wrapped position
         processor.print('D'); // written at (9,0), cursor to (9,1)
         processor.print('E'); // written at (9,1), cursor to (9,2)
 
         // Verify characters are placed correctly
-        assert_plain_char_at(&processor.ofs_buf, 9, 7, 'A'); // A at original pos
-        assert_plain_char_at(&processor.ofs_buf, 9, 8, 'B'); // B at original pos
-        assert_plain_char_at(&processor.ofs_buf, 9, 9, 'C'); // C at rightmost pos
-        assert_plain_char_at(&processor.ofs_buf, 9, 0, 'D'); // D overwrites Line-9 start
-        assert_plain_char_at(&processor.ofs_buf, 9, 1, 'E'); // E follows D
+        assert_plain_char_at(processor.ofs_buf, 9, 7, 'A'); // A at original pos
+        assert_plain_char_at(processor.ofs_buf, 9, 8, 'B'); // B at original pos
+        assert_plain_char_at(processor.ofs_buf, 9, 9, 'C'); // C at rightmost pos
+        assert_plain_char_at(processor.ofs_buf, 9, 0, 'D'); // D overwrites Line-9 start
+        assert_plain_char_at(processor.ofs_buf, 9, 1, 'E'); // E follows D
 
         // Original content should still be present where not overwritten
-        assert_plain_text_at(&processor.ofs_buf, 0, 0, "Line-0");
-        assert_plain_text_at(&processor.ofs_buf, 8, 0, "Line-8");
+        assert_plain_text_at(processor.ofs_buf, 0, 0, "Line-0");
+        assert_plain_text_at(processor.ofs_buf, 8, 0, "Line-8");
     }
 }
 
@@ -908,7 +908,7 @@ pub mod decstbm_scroll_margins {
     fn test_scrolling_within_margins() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
-        fill_buffer_with_lines(&mut processor.ofs_buf);
+        fill_buffer_with_lines(processor.ofs_buf);
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins { 
@@ -922,19 +922,19 @@ pub mod decstbm_scroll_margins {
         processor.process_bytes(scroll_up);
 
         // Content outside scroll region should be unchanged
-        assert_plain_text_at(&processor.ofs_buf, 0, 0, "Line-0"); // Above region
-        assert_plain_text_at(&processor.ofs_buf, 1, 0, "Line-1"); // Above region
-        assert_plain_text_at(&processor.ofs_buf, 8, 0, "Line-8"); // Below region
-        assert_plain_text_at(&processor.ofs_buf, 9, 0, "Line-9"); // Below region
+        assert_plain_text_at(processor.ofs_buf, 0, 0, "Line-0"); // Above region
+        assert_plain_text_at(processor.ofs_buf, 1, 0, "Line-1"); // Above region
+        assert_plain_text_at(processor.ofs_buf, 8, 0, "Line-8"); // Below region
+        assert_plain_text_at(processor.ofs_buf, 9, 0, "Line-9"); // Below region
 
         // Within scroll region: Line-2 should be gone, Line-3 moved up
-        assert_plain_text_at(&processor.ofs_buf, 2, 0, "Line-3"); // Line-3 moved to row 2
-        assert_plain_text_at(&processor.ofs_buf, 3, 0, "Line-4"); // Line-4 moved to row 3
-        assert_plain_text_at(&processor.ofs_buf, 4, 0, "Line-5"); // Line-5 moved to row 4
-        assert_plain_text_at(&processor.ofs_buf, 5, 0, "Line-6"); // Line-6 moved to row 5
+        assert_plain_text_at(processor.ofs_buf, 2, 0, "Line-3"); // Line-3 moved to row 2
+        assert_plain_text_at(processor.ofs_buf, 3, 0, "Line-4"); // Line-4 moved to row 3
+        assert_plain_text_at(processor.ofs_buf, 4, 0, "Line-5"); // Line-5 moved to row 4
+        assert_plain_text_at(processor.ofs_buf, 5, 0, "Line-6"); // Line-6 moved to row 5
 
         // Bottom of scroll region should be cleared
-        assert_empty_at(&processor.ofs_buf, 6, 0); // Row 6 cleared
+        assert_empty_at(processor.ofs_buf, 6, 0); // Row 6 cleared
     }
 
     #[test]
@@ -1017,7 +1017,7 @@ pub mod decstbm_scroll_margins {
     fn test_index_and_reverse_index_with_margins() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
-        fill_buffer_with_lines(&mut processor.ofs_buf);
+        fill_buffer_with_lines(processor.ofs_buf);
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins { 
@@ -1037,13 +1037,13 @@ pub mod decstbm_scroll_margins {
         processor.process_bytes("\x1bD");
 
         // Content outside scroll region should be unchanged
-        assert_plain_text_at(&processor.ofs_buf, 0, 0, "Line-0"); // Above region
-        assert_plain_text_at(&processor.ofs_buf, 1, 0, "Line-1"); // Above region
-        assert_plain_text_at(&processor.ofs_buf, 8, 0, "Line-8"); // Below region
+        assert_plain_text_at(processor.ofs_buf, 0, 0, "Line-0"); // Above region
+        assert_plain_text_at(processor.ofs_buf, 1, 0, "Line-1"); // Above region
+        assert_plain_text_at(processor.ofs_buf, 8, 0, "Line-8"); // Below region
 
         // Within scroll region: should have scrolled up
-        assert_plain_text_at(&processor.ofs_buf, 2, 0, "Line-3"); // Line-3 moved to row 2
-        assert_empty_at(&processor.ofs_buf, 6, 0); // Bottom row cleared
+        assert_plain_text_at(processor.ofs_buf, 2, 0, "Line-3"); // Line-3 moved to row 2
+        assert_empty_at(processor.ofs_buf, 6, 0); // Bottom row cleared
 
         // Position cursor at top of scroll region
         let cursor_pos_top = CsiSequence::CursorPosition { 
@@ -1056,8 +1056,8 @@ pub mod decstbm_scroll_margins {
         processor.process_bytes("\x1bM");
 
         // Top of scroll region should be cleared
-        assert_empty_at(&processor.ofs_buf, 2, 0); // Top row cleared
-        assert_plain_text_at(&processor.ofs_buf, 3, 0, "Line-3"); // Line-3 moved down
+        assert_empty_at(processor.ofs_buf, 2, 0); // Top row cleared
+        assert_plain_text_at(processor.ofs_buf, 3, 0, "Line-3"); // Line-3 moved down
     }
 
     #[test]

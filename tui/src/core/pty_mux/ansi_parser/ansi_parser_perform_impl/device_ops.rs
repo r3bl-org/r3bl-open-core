@@ -5,8 +5,8 @@
 use vte::Params;
 
 use super::super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
-                           csi_codes::DeviceStatusReportType};
-use crate::ansi_parser_perform_impl::param_utils::extract_nth_optional_param;
+                          csi_codes::DeviceStatusReportType};
+use crate::ansi_parser_perform_impl::param_utils::ParamsExt;
 
 /// Handle Device Status Report (CSI n) command.
 ///
@@ -15,7 +15,7 @@ use crate::ansi_parser_perform_impl::param_utils::extract_nth_optional_param;
 /// but for now we just log the requests as our current architecture doesn't support
 /// sending responses.
 pub fn device_status_report(processor: &mut AnsiToBufferProcessor, params: &Params) {
-    let n = extract_nth_optional_param(params, 0).unwrap_or(0);
+    let n = params.extract_nth_opt(0).unwrap_or(0);
     let dsr_type = DeviceStatusReportType::from(n);
 
     match dsr_type {

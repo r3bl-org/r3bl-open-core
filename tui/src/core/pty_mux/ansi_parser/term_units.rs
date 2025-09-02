@@ -124,7 +124,7 @@ pub fn term_row(arg: impl Into<TermRow>) -> TermRow { arg.into() }
 pub fn term_col(arg: impl Into<TermCol>) -> TermCol { arg.into() }
 
 impl TermRow {
-    /// Create a new TermRow with 1-based indexing.
+    /// Create a new `TermRow` with 1-based indexing.
     ///
     /// # Arguments
     /// * `value` - The 1-based row number (must be >= 1 for valid terminal coordinates)
@@ -136,6 +136,7 @@ impl TermRow {
     /// let row = term_row(5);
     /// assert_eq!(row.as_u16(), 5);
     /// ```
+    #[must_use] 
     pub const fn new(value: u16) -> Self { Self(value) }
 
     /// Get the raw 1-based value.
@@ -147,9 +148,10 @@ impl TermRow {
     /// let row = term_row(42);
     /// assert_eq!(row.as_u16(), 42);
     /// ```
+    #[must_use] 
     pub const fn as_u16(self) -> u16 { self.0 }
 
-    /// Convert from 0-based Row to 1-based TermRow.
+    /// Convert from 0-based Row to 1-based `TermRow`.
     ///
     /// # Arguments
     /// * `row` - The 0-based row from buffer coordinates
@@ -163,7 +165,11 @@ impl TermRow {
     /// let term_row = TermRow::from_zero_based(buffer_row);
     /// assert_eq!(term_row.as_u16(), 5); // Terminal row 5 (1-based)
     /// ```
-    pub fn from_zero_based(row: crate::Row) -> Self { Self(row.as_usize() as u16 + 1) }
+    #[must_use] 
+    pub fn from_zero_based(row: crate::Row) -> Self { 
+        #[allow(clippy::cast_possible_truncation)]
+        { Self(row.as_usize() as u16 + 1) }
+    }
 
     /// Convert to 0-based Row. Returns None if the value is 0 (invalid for 1-based).
     ///
@@ -183,6 +189,7 @@ impl TermRow {
     /// let invalid_row = TermRow::new(0);
     /// assert!(invalid_row.to_zero_based().is_none());
     /// ```
+    #[must_use] 
     pub fn to_zero_based(self) -> Option<crate::Row> {
         if self.0 == 0 {
             None
@@ -193,7 +200,7 @@ impl TermRow {
 }
 
 impl TermCol {
-    /// Create a new TermCol with 1-based indexing.
+    /// Create a new `TermCol` with 1-based indexing.
     ///
     /// # Arguments
     /// * `value` - The 1-based column number (must be >= 1 for valid terminal
@@ -206,6 +213,7 @@ impl TermCol {
     /// let col = term_col(10);
     /// assert_eq!(col.as_u16(), 10);
     /// ```
+    #[must_use] 
     pub const fn new(value: u16) -> Self { Self(value) }
 
     /// Get the raw 1-based value.
@@ -217,9 +225,10 @@ impl TermCol {
     /// let col = term_col(80);
     /// assert_eq!(col.as_u16(), 80);
     /// ```
+    #[must_use] 
     pub const fn as_u16(self) -> u16 { self.0 }
 
-    /// Convert from 0-based Col to 1-based TermCol.
+    /// Convert from 0-based Col to 1-based `TermCol`.
     ///
     /// # Arguments
     /// * `col` - The 0-based column from buffer coordinates
@@ -233,7 +242,11 @@ impl TermCol {
     /// let term_col = TermCol::from_zero_based(buffer_col);
     /// assert_eq!(term_col.as_u16(), 10); // Terminal column 10 (1-based)
     /// ```
-    pub fn from_zero_based(col: crate::Col) -> Self { Self(col.as_usize() as u16 + 1) }
+    #[must_use] 
+    pub fn from_zero_based(col: crate::Col) -> Self { 
+        #[allow(clippy::cast_possible_truncation)]
+        { Self(col.as_usize() as u16 + 1) }
+    }
 
     /// Convert to 0-based Col. Returns None if the value is 0 (invalid for 1-based).
     ///
@@ -253,6 +266,7 @@ impl TermCol {
     /// let invalid_col = TermCol::new(0);
     /// assert!(invalid_col.to_zero_based().is_none());
     /// ```
+    #[must_use] 
     pub fn to_zero_based(self) -> Option<crate::Col> {
         if self.0 == 0 {
             None
@@ -273,19 +287,31 @@ mod convenience_conversions {
     use super::*;
 
     impl From<i32> for TermRow {
-        fn from(value: i32) -> Self { Self::new(value as u16) }
+        fn from(value: i32) -> Self { 
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            { Self::new(value as u16) }
+        }
     }
 
     impl From<i32> for TermCol {
-        fn from(value: i32) -> Self { Self::new(value as u16) }
+        fn from(value: i32) -> Self { 
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            { Self::new(value as u16) }
+        }
     }
 
     impl From<usize> for TermRow {
-        fn from(value: usize) -> Self { Self::new(value as u16) }
+        fn from(value: usize) -> Self { 
+            #[allow(clippy::cast_possible_truncation)]
+            { Self::new(value as u16) }
+        }
     }
 
     impl From<usize> for TermCol {
-        fn from(value: usize) -> Self { Self::new(value as u16) }
+        fn from(value: usize) -> Self { 
+            #[allow(clippy::cast_possible_truncation)]
+            { Self::new(value as u16) }
+        }
     }
 
     impl From<u16> for TermRow {
@@ -307,7 +333,7 @@ use std::ops::Add;
 
 use super::csi_codes::CsiSequence;
 
-/// Add TermCol to TermRow to create a cursor position.
+/// Add `TermCol` to `TermRow` to create a cursor position.
 ///
 /// # Examples
 /// ```rust
@@ -327,7 +353,7 @@ impl Add<TermCol> for TermRow {
     }
 }
 
-/// Add TermRow to TermCol to create a cursor position.
+/// Add `TermRow` to `TermCol` to create a cursor position.
 ///
 /// # Examples
 /// ```rust

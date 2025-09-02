@@ -6,11 +6,7 @@ use diff_chunks::PixelCharDiffChunks;
 use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
-use crate::{CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutputDevice,
-            MemoizedMemorySize, MemorySize, Pos, Size, TinyInlineString, TuiColor,
-            TuiStyle, col, dim_underline, fg_green, fg_magenta, get_mem_size,
-            inline_string, ok, row, tiny_inline_string,
-            core::pty_mux::ansi_parser::term_units::TermRow};
+use crate::{col, core::{self, osc, pty_mux::ansi_parser::term_units::TermRow}, dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok, osc::OscEvent, row, tiny_inline_string, CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, Size, TinyInlineString, TuiColor, TuiStyle};
 
 /// Character set modes for terminal emulation.
 ///
@@ -98,19 +94,20 @@ pub struct AnsiParserSupport {
     pub auto_wrap_mode: bool,
 
     /// Complete computed style combining attributes and colors for efficient rendering
-    pub current_style: Option<crate::TuiStyle>,
+    pub current_style: Option<TuiStyle>,
+
 
     /// Text attributes (bold, italic, underline, etc.) from SGR sequences
     pub attribs: crate::TuiStyleAttribs,
 
     /// Current foreground color from SGR color sequences
-    pub fg_color: Option<crate::TuiColor>,
+    pub fg_color: Option<TuiColor>,
 
     /// Current background color from SGR color sequences
-    pub bg_color: Option<crate::TuiColor>,
+    pub bg_color: Option<TuiColor>,
 
     /// OSC events (hyperlinks, titles, etc.) accumulated during processing
-    pub pending_osc_events: Vec<crate::core::osc::OscEvent>,
+    pub pending_osc_events: Vec<OscEvent>,
 
     /// Top margin for the **scrollable region** (DECSTBM) - 1-based row number.
     ///
@@ -119,10 +116,10 @@ pub struct AnsiParserSupport {
     ///
     /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
     /// DECSTBM (Set Top and Bottom Margins) functionality via ESC [ top ; bottom r.
-    /// 
+    ///
     /// When `None`, the default top margin is row 1 (first row), making the
     /// entire terminal screen the scrollable region.
-    /// When `Some(n)`, scrolling operations only affect rows from n to scroll_region_bottom.
+    /// When `Some(n)`, scrolling operations only affect rows from n to `scroll_region_bottom`.
     ///
     /// ## DECSTBM Usage:
     /// ```text
@@ -141,7 +138,7 @@ pub struct AnsiParserSupport {
     ///
     /// When `None`, the default bottom margin is the last row of the terminal,
     /// making the entire terminal screen the scrollable region.
-    /// When `Some(n)`, scrolling operations only affect rows from scroll_region_top to n.
+    /// When `Some(n)`, scrolling operations only affect rows from `scroll_region_top` to n.
     ///
     /// ## DECSTBM Behavior:
     /// - Scrolling commands (ESC D, ESC M, CSI S, CSI T) only affect the region
