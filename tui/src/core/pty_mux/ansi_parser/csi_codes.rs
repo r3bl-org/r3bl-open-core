@@ -40,8 +40,10 @@
 
 use std::fmt;
 use crate::{BufTextStorage, WriteToBuf};
+use super::dsr_codes::DsrRequestType;
+use super::term_units::{TermRow, TermCol};
 
-// CSI sequence components
+// CSI sequence components.
 
 /// CSI sequence start: ESC [
 pub const CSI_START: &str = "\x1b[";
@@ -52,7 +54,7 @@ pub const CSI_PRIVATE_MODE_PREFIX: char = '?';
 /// Parameter separator in CSI sequences
 pub const CSI_PARAM_SEPARATOR: char = ';';
 
-// Cursor Movement
+// Cursor Movement.
 
 /// CSI A: Cursor Up (CUU)
 /// Moves cursor up by n lines (default 1)
@@ -90,7 +92,7 @@ pub const CUP_CURSOR_POSITION: char = 'H';
 /// Same as CUP - moves cursor to row n, column m (default 1,1)
 pub const HVP_CURSOR_POSITION: char = 'f';
 
-// Erasing
+// Erasing.
 
 /// CSI J: Erase in Display (ED)
 /// 0 = erase from cursor to end of screen (default)
@@ -105,7 +107,7 @@ pub const ED_ERASE_DISPLAY: char = 'J';
 /// 2 = erase entire line
 pub const EL_ERASE_LINE: char = 'K';
 
-// Scrolling
+// Scrolling.
 
 /// CSI S: Scroll Up (SU)
 /// Scrolls text up by n lines (default 1)
@@ -117,13 +119,13 @@ pub const SD_SCROLL_DOWN: char = 'T';
 /// DECSTBM - Set Top and Bottom Margins - ESC [ top ; bottom r
 pub const DECSTBM_SET_MARGINS: char = 'r';
 
-// Text Formatting (SGR)
+// Text Formatting (SGR).
 
 /// CSI m: Select Graphic Rendition (SGR)
 /// Sets colors and text attributes
 pub const SGR_SET_GRAPHICS: char = 'm';
 
-// SGR Parameters
+// SGR Parameters.
 
 /// Reset all attributes
 pub const SGR_RESET: u16 = 0;
@@ -176,7 +178,7 @@ pub const SGR_RESET_HIDDEN: u16 = 28;
 /// Reset Strikethrough
 pub const SGR_RESET_STRIKETHROUGH: u16 = 29;
 
-// Foreground Colors (30-37, 90-97)
+// Foreground Colors (30-37, 90-97).
 
 /// Black foreground
 pub const SGR_FG_BLACK: u16 = 30;
@@ -229,7 +231,7 @@ pub const SGR_FG_BRIGHT_CYAN: u16 = 96;
 /// Bright White foreground
 pub const SGR_FG_BRIGHT_WHITE: u16 = 97;
 
-// Background Colors (40-47, 100-107)
+// Background Colors (40-47, 100-107).
 
 /// Black background
 pub const SGR_BG_BLACK: u16 = 40;
@@ -282,7 +284,7 @@ pub const SGR_BG_BRIGHT_CYAN: u16 = 106;
 /// Bright White background
 pub const SGR_BG_BRIGHT_WHITE: u16 = 107;
 
-// Cursor Save/Restore (CSI versions)
+// Cursor Save/Restore (CSI versions).
 
 /// CSI s: Save Cursor Position (SCP)
 /// Alternative to ESC 7
@@ -292,14 +294,14 @@ pub const SCP_SAVE_CURSOR: char = 's';
 /// Alternative to ESC 8
 pub const RCP_RESTORE_CURSOR: char = 'u';
 
-// Device Status
+// Device Status.
 
 /// CSI n: Device Status Report (DSR)
 /// 5 = request status
 /// 6 = request cursor position
 pub const DSR_DEVICE_STATUS: char = 'n';
 
-// Mode Setting
+// Mode Setting.
 
 /// CSI h: Set Mode (SM)
 /// Sets various terminal modes
@@ -309,7 +311,7 @@ pub const SM_SET_MODE: char = 'h';
 /// Resets various terminal modes
 pub const RM_RESET_MODE: char = 'l';
 
-// Private Mode Setting (with ? prefix)
+// Private Mode Setting (with ? prefix).
 
 /// CSI ? h: Set Private Mode
 /// Sets DEC private modes
@@ -319,7 +321,7 @@ pub const SM_SET_PRIVATE_MODE: char = 'h';
 /// Resets DEC private modes
 pub const RM_RESET_PRIVATE_MODE: char = 'l';
 
-// Common Private Mode Numbers
+// Common Private Mode Numbers.
 
 /// Cursor visibility (DECTCEM)
 pub const DECCKM_CURSOR_KEYS: u16 = 1;
@@ -351,40 +353,6 @@ pub const SAVE_CURSOR_DEC: u16 = 1048;
 /// Alternate screen buffer
 pub const ALT_SCREEN_BUFFER: u16 = 1049;
 
-// Import terminal coordinate types
-use super::term_units::{TermRow, TermCol};
-
-/// Device Status Report types for CSI n sequences
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DeviceStatusReportType {
-    /// Request terminal status (5)
-    RequestStatus,
-    /// Request cursor position (6)
-    RequestCursorPosition,
-    /// Unknown/unsupported DSR type
-    Other(u16),
-}
-
-impl DeviceStatusReportType {
-    #[must_use] 
-    pub fn as_u16(&self) -> u16 {
-        match self {
-            Self::RequestStatus => 5,
-            Self::RequestCursorPosition => 6,
-            Self::Other(n) => *n,
-        }
-    }
-}
-
-impl From<u16> for DeviceStatusReportType {
-    fn from(value: u16) -> Self {
-        match value {
-            5 => Self::RequestStatus,
-            6 => Self::RequestCursorPosition,
-            n => Self::Other(n),
-        }
-    }
-}
 
 /// DEC Private Mode types for CSI ? h/l sequences
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -414,7 +382,7 @@ pub enum PrivateModeType {
 }
 
 impl PrivateModeType {
-    #[must_use] 
+    #[must_use]
     pub fn as_u16(&self) -> u16 {
         match self {
             Self::CursorKeys => DECCKM_CURSOR_KEYS,
@@ -450,58 +418,64 @@ impl From<u16> for PrivateModeType {
     }
 }
 
-/// Helper function to create a `CsiSequence::CursorPosition`.
-/// 
-/// # Panics
-/// Panics if the provided position is not a `CsiSequence::CursorPosition`.
-/// 
-/// # Examples
-/// ```
-/// use r3bl_tui::ansi_parser::csi_codes::csi_seq_cursor_pos;
-/// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
-///
-/// // Instead of:
-/// // CsiSequence::CursorPosition { row: term_row(2), col: term_col(3) }
-///
-/// // You can write:
-/// let seq = csi_seq_cursor_pos(term_row(2) + term_col(3));
-/// ```
-#[must_use] 
-pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
-    match position {
-        CsiSequence::CursorPosition { .. } => position,
-        _ => panic!("Expected CsiSequence::CursorPosition"),
-    }
-}
+/// Test helper functions for CSI sequences.
+#[cfg(test)]
+pub mod csi_test_helpers {
+    use super::CsiSequence;
 
-/// Helper function to create a `CsiSequence::CursorPositionAlt`.
-///
-/// # Panics
-/// Panics if the provided position is not a `CsiSequence::CursorPosition` or `CursorPositionAlt`.
-///
-/// # Examples
-/// ```
-/// use r3bl_tui::ansi_parser::csi_codes::csi_seq_cursor_pos_alt;
-/// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
-///
-/// // Instead of:
-/// // CsiSequence::CursorPositionAlt { row: term_row(3), col: term_col(7) }
-///
-/// // You can write:
-/// let seq = csi_seq_cursor_pos_alt(term_row(3) + term_col(7));
-/// ```
-#[must_use] 
-pub fn csi_seq_cursor_pos_alt(position: CsiSequence) -> CsiSequence {
-    match position {
-        CsiSequence::CursorPosition { row, col } => {
-            CsiSequence::CursorPositionAlt { row, col }
+    /// Helper function to create a `CsiSequence::CursorPosition`.
+    ///
+    /// # Panics
+    /// Panics if the provided position is not a `CsiSequence::CursorPosition`.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::ansi_parser::csi_codes::csi_test_helpers::csi_seq_cursor_pos;
+    /// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
+    ///
+    /// // Instead of:
+    /// // CsiSequence::CursorPosition { row: term_row(2), col: term_col(3) }
+    ///
+    /// // You can write:
+    /// let seq = csi_seq_cursor_pos(term_row(2) + term_col(3));
+    /// ```
+    #[must_use]
+    pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
+        match position {
+            CsiSequence::CursorPosition { .. } => position,
+            _ => panic!("Expected CsiSequence::CursorPosition"),
         }
-        CsiSequence::CursorPositionAlt { .. } => position,
-        _ => panic!("Expected CsiSequence::CursorPosition or CursorPositionAlt"),
+    }
+
+    /// Helper function to create a `CsiSequence::CursorPositionAlt`.
+    ///
+    /// # Panics
+    /// Panics if the provided position is not a `CsiSequence::CursorPosition` or `CursorPositionAlt`.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::ansi_parser::csi_codes::csi_test_helpers::csi_seq_cursor_pos_alt;
+    /// use r3bl_tui::ansi_parser::term_units::{term_row, term_col};
+    ///
+    /// // Instead of:
+    /// // CsiSequence::CursorPositionAlt { row: term_row(3), col: term_col(7) }
+    ///
+    /// // You can write:
+    /// let seq = csi_seq_cursor_pos_alt(term_row(3) + term_col(7));
+    /// ```
+    #[must_use]
+    pub fn csi_seq_cursor_pos_alt(position: CsiSequence) -> CsiSequence {
+        match position {
+            CsiSequence::CursorPosition { row, col } => {
+                CsiSequence::CursorPositionAlt { row, col }
+            }
+            CsiSequence::CursorPositionAlt { .. } => position,
+            _ => panic!("Expected CsiSequence::CursorPosition or CursorPositionAlt"),
+        }
     }
 }
 
-// CSI sequence builder following the same pattern as SgrCode
+// CSI sequence builder following the same pattern as SgrCode.
 
 /// Builder for CSI (Control Sequence Introducer) sequences.
 /// Similar to `SgrCode` but for cursor movement and other CSI commands.
@@ -540,7 +514,7 @@ pub enum CsiSequence {
     /// Set Top and Bottom Margins (DECSTBM) - ESC [ top ; bottom r
     SetScrollingMargins { top: Option<TermRow>, bottom: Option<TermRow> },
     /// Device Status Report (DSR) - ESC [ n n
-    DeviceStatusReport(DeviceStatusReportType),
+    DeviceStatusReport(DsrRequestType),
     /// Enable Private Mode - ESC [ ? n h (n = mode number like `DECAWM_AUTO_WRAP`)
     /// See [`crate::offscreen_buffer::AnsiParserSupport::auto_wrap_mode`]
     EnablePrivateMode(PrivateModeType),
@@ -579,13 +553,13 @@ impl WriteToBuf for CsiSequence {
             }
             CsiSequence::CursorPosition { row, col } => {
                 acc.push_str(&row.as_u16().to_string());
-                acc.push(';');
+                acc.push(CSI_PARAM_SEPARATOR);
                 acc.push_str(&col.as_u16().to_string());
                 acc.push(CUP_CURSOR_POSITION);
             }
             CsiSequence::CursorPositionAlt { row, col } => {
                 acc.push_str(&row.as_u16().to_string());
-                acc.push(';');
+                acc.push(CSI_PARAM_SEPARATOR);
                 acc.push_str(&col.as_u16().to_string());
                 acc.push(HVP_CURSOR_POSITION);
             }
@@ -627,7 +601,7 @@ impl WriteToBuf for CsiSequence {
                 if let Some(top_row) = top {
                     acc.push_str(&top_row.as_u16().to_string());
                 }
-                acc.push(';');
+                acc.push(CSI_PARAM_SEPARATOR);
                 if let Some(bottom_row) = bottom {
                     acc.push_str(&bottom_row.as_u16().to_string());
                 }

@@ -10,11 +10,13 @@ pub mod ansi_parser_perform_impl;
 pub mod ansi_parser_public_api;
 pub mod ansi_to_tui_color;
 pub mod csi_codes;
+pub mod dsr_codes;
 pub mod esc_codes;
 pub mod term_units;
 
 // Re-export.
 pub use ansi_parser_public_api::*;
+pub use dsr_codes::*;
 
 // Test modules (no `ansi_parser_perform_impl_tests/mod.rs`).
 #[cfg(test)]
@@ -29,4 +31,5 @@ mod ansi_parser_perform_impl_tests {
     mod tests_line_wrap_and_scroll_control;
     mod tests_osc_sequences; // <- TODO review
     mod tests_integration; // <- TODO review
+    mod tests_dsr_responses; // <- TODO review
 }

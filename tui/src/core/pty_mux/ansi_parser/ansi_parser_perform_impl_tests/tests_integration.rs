@@ -5,7 +5,7 @@
 use super::tests_fixtures::*;
 use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, TuiColor, height, width,
             ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor,
-                          csi_codes::{csi_seq_cursor_pos, CsiSequence},
+                          csi_codes::{csi_test_helpers::csi_seq_cursor_pos, CsiSequence},
                           esc_codes::EscSequence,
                           term_units::{term_row, term_col}},
             offscreen_buffer::test_fixtures_offscreen_buffer::*,

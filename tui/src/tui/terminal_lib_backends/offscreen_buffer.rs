@@ -6,7 +6,7 @@ use diff_chunks::PixelCharDiffChunks;
 use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
-use crate::{col, core::{self, osc, pty_mux::ansi_parser::term_units::TermRow}, dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok, osc::OscEvent, row, tiny_inline_string, CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, Size, TinyInlineString, TuiColor, TuiStyle};
+use crate::{col, core::pty_mux::ansi_parser::term_units::TermRow, dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok, osc::OscEvent, row, tiny_inline_string, CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, Size, TinyInlineString, TuiColor, TuiStyle};
 
 /// Character set modes for terminal emulation.
 ///
@@ -96,7 +96,6 @@ pub struct AnsiParserSupport {
     /// Complete computed style combining attributes and colors for efficient rendering
     pub current_style: Option<TuiStyle>,
 
-
     /// Text attributes (bold, italic, underline, etc.) from SGR sequences
     pub attribs: crate::TuiStyleAttribs,
 
@@ -108,6 +107,9 @@ pub struct AnsiParserSupport {
 
     /// OSC events (hyperlinks, titles, etc.) accumulated during processing
     pub pending_osc_events: Vec<OscEvent>,
+
+    /// DSR response events accumulated during processing - need to be sent back to PTY
+    pub pending_dsr_responses: Vec<crate::DsrRequestFromPtyEvent>,
 
     /// Top margin for the **scrollable region** (DECSTBM) - 1-based row number.
     ///
@@ -159,6 +161,7 @@ impl Default for AnsiParserSupport {
             fg_color: None,
             bg_color: None,
             pending_osc_events: Vec::new(),
+            pending_dsr_responses: Vec::new(),
             scroll_region_top: None,    // Default: no top margin (uses row 1)
             scroll_region_bottom: None, // Default: no bottom margin (uses last row)
         }

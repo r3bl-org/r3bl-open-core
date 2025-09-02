@@ -14,7 +14,7 @@ pub mod char_translation;
 pub mod param_utils;
 pub mod mode_ops;
 pub mod margin_ops;
-pub mod device_ops;
+pub mod dsr_ops;
 
 // Re-export the main implementation (the Perform trait impl)
 // Note: The actual implementation is in perform_impl module

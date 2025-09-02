@@ -2,9 +2,17 @@
 
 //! Operating System Command (OSC) codes for terminal control.
 //!
-//! OSC sequences provide communication between applications and the terminal emulator
+//! OSC sequences allow child processes to send commands to the terminal emulator
 //! for features that affect the terminal's operating system integration, such as
 //! window titles, notifications, and hyperlinks.
+//!
+//! ## Data Flow
+//!
+//! **Child process → PTY → Terminal emulator**: Child process sends OSC commands
+//! to control terminal features (titles, hyperlinks, notifications, etc.)
+//!
+//! Unlike DSR sequences, OSC sequences are typically unidirectional - the child
+//! process sends commands to the terminal but doesn't expect responses back.
 //!
 //! ## Structure
 //! OSC sequences follow the pattern: `ESC ] code ; parameters ST`

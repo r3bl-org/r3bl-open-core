@@ -86,7 +86,10 @@
 //! flexibility, while ESC sequences remain for compatibility and simple operations that
 //! don't need parameters.
 
-use crate::{OffscreenBuffer, core::osc::OscEvent};
+use std::mem::take;
+
+use crate::{DsrRequestFromPtyEvent, OffscreenBuffer,
+            core::osc::OscEvent};
 
 /// Terminal state context for ANSI sequence processing.
 ///
@@ -151,9 +154,12 @@ impl OffscreenBuffer {
     ///
     /// # Returns
     ///
-    /// A vector of [`OSC events`] that were detected during processing (e.g., title
-    /// changes, hyperlinks). Returns an empty vector if no [`OSC events`] were
-    /// detected.
+    /// A tuple containing:
+    /// - A vector of [`OSC events`] that were detected during processing (e.g., title
+    ///   changes, hyperlinks). Returns an empty vector if no [`OSC events`] were
+    ///   detected.
+    /// - A vector of [`DSR response events`] that need to be sent back to the child
+    ///   process through the PTY input channel.
     ///
     /// # Example
     ///
@@ -164,7 +170,7 @@ impl OffscreenBuffer {
     /// let red_text = format!("Hello{a}Red Text{b}",
     ///     a = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
     ///     b = SgrCode::Reset);
-    /// let events = ofs_buf.apply_ansi_bytes(red_text);
+    /// let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(red_text);
     /// ```
     ///
     /// # Processing details
@@ -187,15 +193,22 @@ impl OffscreenBuffer {
     /// [`Process`]: crate::pty_mux::Process
     /// [`PixelChar`]: crate::PixelChar
     /// [`OSC events`]: crate::core::osc::OscEvent
+    /// [`DSR response events`]: crate::DsrRequestFromPtyEvent
     #[must_use]
-    pub fn apply_ansi_bytes(&mut self, bytes: impl AsRef<[u8]>) -> Vec<OscEvent> {
+    pub fn apply_ansi_bytes(
+        &mut self,
+        bytes: impl AsRef<[u8]>,
+    ) -> (Vec<OscEvent>, Vec<DsrRequestFromPtyEvent>) {
         let mut processor = AnsiToBufferProcessor::new(self);
         processor.process_bytes(bytes.as_ref());
-        processor
-            .ofs_buf
-            .ansi_parser_support
-            .pending_osc_events
-            .clone()
+
+        // Use std::mem::take to move events out and leave empty vectors
+        let osc_events =
+            take(&mut processor.ofs_buf.ansi_parser_support.pending_osc_events);
+        let dsr_responses =
+            take(&mut processor.ofs_buf.ansi_parser_support.pending_dsr_responses);
+
+        (osc_events, dsr_responses)
     }
 }
 
@@ -203,7 +216,7 @@ impl OffscreenBuffer {
 mod tests {
     use crate::{ANSIBasicColor, SgrCode, TuiColor,
                 ansi_parser::{ansi_parser_perform_impl_tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c,
-                              csi_codes::{self, csi_seq_cursor_pos},
+                              csi_codes::{self, csi_test_helpers::csi_seq_cursor_pos},
                               term_units::{term_col, term_row}},
                 col,
                 offscreen_buffer::test_fixtures_offscreen_buffer::*,
@@ -228,10 +241,11 @@ mod tests {
         //                               ╰─ cursor ends here
 
         // Test that the public API processes text correctly.
-        let events = ofs_buf.apply_ansi_bytes(TEXT);
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(TEXT);
 
         // Should not produce any OSC events for SGR sequences.
-        assert_eq!(events.len(), 0, "no OSC events expected");
+        assert_eq!(osc_events.len(), 0, "no OSC events expected");
+        assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         // Verify "Hello" is in the buffer.
         assert_plain_text_at(&ofs_buf, 0, 0, TEXT);
@@ -266,7 +280,7 @@ mod tests {
         // Sequence: ESC[31m + "Red Text" + ESC[0m
 
         // Test processing with ANSI color codes.
-        let events = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
             "{red_fg}{text}{reset}",
             red_fg = SgrCode::ForegroundBasic(ANSIBasicColor::Red),
             text = TEXT,
@@ -274,7 +288,8 @@ mod tests {
         ));
 
         // Should not produce any OSC events for SGR sequences.
-        assert_eq!(events.len(), 0, "no OSC events expected");
+        assert_eq!(osc_events.len(), 0, "no OSC events expected");
+        assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         // Verify the text with proper styling.
         for (col, expected_char) in TEXT.chars().enumerate() {
@@ -322,14 +337,15 @@ mod tests {
         // 5. Write 'D' at (0,4) → cursor moves to (0,5)
 
         // Test cursor movement sequences.
-        let events = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
             "A{right_2}B{up_1}D",
             right_2 = csi_codes::CsiSequence::CursorForward(2),
             up_1 = csi_codes::CsiSequence::CursorUp(1),
         ));
 
         // Should not produce any OSC events.
-        assert_eq!(events.len(), 0, "no OSC events expected");
+        assert_eq!(osc_events.len(), 0, "no OSC events expected");
+        assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         // Verify cursor position after all operations.
         assert_eq!(
@@ -343,6 +359,160 @@ mod tests {
         assert_empty_at(&ofs_buf, 0, 1); // Empty space
         assert_empty_at(&ofs_buf, 0, 2); // Empty space
         assert_plain_text_at(&ofs_buf, 0, 3, "BD");
+    }
+
+    #[test]
+    fn test_osc_events_are_drained_not_accumulated() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // First call with OSC sequence (set title)
+        let osc_title = "\x1b]0;First Title\x07".to_string();
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&osc_title);
+        
+        assert_eq!(osc_events.len(), 1, "should get one OSC event");
+        assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
+        
+        match &osc_events[0] {
+            crate::OscEvent::SetTitleAndTab(title) => {
+                assert_eq!(title, "First Title");
+            }
+            _ => panic!("Expected SetTitleAndTab event"),
+        }
+
+        // Second call with another OSC sequence
+        let osc_title2 = "\x1b]0;Second Title\x07".to_string();
+        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&osc_title2);
+        
+        assert_eq!(osc_events2.len(), 1, "should get one NEW OSC event, not accumulated");
+        assert_eq!(dsr_responses2.len(), 0, "no DSR responses expected");
+        
+        match &osc_events2[0] {
+            crate::OscEvent::SetTitleAndTab(title) => {
+                assert_eq!(title, "Second Title", "should be the new title, not accumulated with first");
+            }
+            _ => panic!("Expected SetTitleAndTab event"),
+        }
+
+        // Third call with no OSC sequences
+        let plain_text = "Hello";
+        let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
+        
+        assert_eq!(
+            osc_events3.len(), 
+            0, 
+            "OSC events should be empty after being drained"
+        );
+        assert_eq!(dsr_responses3.len(), 0, "no DSR responses expected");
+    }
+
+    #[test]
+    fn test_dsr_events_are_drained_in_public_api() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // First DSR request (status report)
+        let dsr_status = "\x1b[5n".to_string();
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_status);
+        
+        assert_eq!(osc_events.len(), 0, "no OSC events expected");
+        assert_eq!(dsr_responses.len(), 1, "should get one DSR response");
+        assert_eq!(dsr_responses[0], crate::DsrRequestFromPtyEvent::TerminalStatus);
+
+        // Second call with cursor position request
+        let dsr_cursor = "\x1b[6n".to_string();
+        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&dsr_cursor);
+        
+        assert_eq!(osc_events2.len(), 0, "no OSC events expected");
+        assert_eq!(dsr_responses2.len(), 1, "should get one NEW DSR response, not accumulated");
+        
+        match &dsr_responses2[0] {
+            crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
+                assert_eq!(*row, 1, "cursor at origin should be row 1 (1-based)");
+                assert_eq!(*col, 1, "cursor at origin should be col 1 (1-based)");
+            }
+            crate::DsrRequestFromPtyEvent::TerminalStatus => panic!("Expected CursorPositionReport"),
+        }
+
+        // Third call with no DSR requests
+        let plain_text = "Test";
+        let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
+        
+        assert_eq!(osc_events3.len(), 0, "no OSC events expected");
+        assert_eq!(
+            dsr_responses3.len(), 
+            0, 
+            "DSR responses should be empty after being drained"
+        );
+    }
+
+    #[test]
+    fn test_mixed_osc_and_dsr_events() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Send a mix of OSC and DSR sequences in one call
+        let mixed_sequence = format!(
+            "{}{}{}", 
+            "\x1b]0;Mixed Title\x07",  // OSC 0: Set title
+            "\x1b[5n",                  // DSR: Status report
+            "\x1b[6n"                   // DSR: Cursor position
+        );
+        
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&mixed_sequence);
+        
+        // Should get exactly one OSC event
+        assert_eq!(osc_events.len(), 1, "should get one OSC event");
+        match &osc_events[0] {
+            crate::OscEvent::SetTitleAndTab(title) => {
+                assert_eq!(title, "Mixed Title");
+            }
+            _ => panic!("Expected SetTitleAndTab event"),
+        }
+        
+        // Should get exactly two DSR responses
+        assert_eq!(dsr_responses.len(), 2, "should get two DSR responses");
+        assert_eq!(dsr_responses[0], crate::DsrRequestFromPtyEvent::TerminalStatus);
+        match &dsr_responses[1] {
+            crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
+                assert_eq!(*row, 1);
+                assert_eq!(*col, 1);
+            }
+            crate::DsrRequestFromPtyEvent::TerminalStatus => panic!("Expected CursorPositionReport"),
+        }
+
+        // Verify both are drained on next call
+        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("text");
+        assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
+        assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
+    }
+
+    #[test]
+    fn test_multiple_osc_events_in_one_call() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Send multiple OSC sequences in one call
+        let multi_osc = format!(
+            "{}{}{}",
+            "\x1b]0;Title One\x07",   // OSC 0
+            "\x1b]2;Title Two\x07",   // OSC 2
+            "\x1b]1;Icon Name\x07"    // OSC 1
+        );
+        
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&multi_osc);
+        
+        assert_eq!(osc_events.len(), 3, "should get three OSC events");
+        assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
+        
+        // All should be SetTitleAndTab events
+        for event in &osc_events {
+            match event {
+                crate::OscEvent::SetTitleAndTab(_) => {},
+                _ => panic!("Expected SetTitleAndTab event"),
+            }
+        }
+
+        // Next call should have empty events
+        let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("normal text");
+        assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
+        assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
     }
 
     #[test]
@@ -371,14 +541,15 @@ mod tests {
         //
         // Sequence: "Start" → move(2,3) → "Mid" → move(1,1) → "Home" → move(8,8) → "End"
 
-        let events = ofs_buf.apply_ansi_bytes(format!(
+        let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
             move_to_r2_c3 = csi_seq_cursor_pos(term_row(2) + term_col(3)),
             move_to_r1_c1 = csi_seq_cursor_pos(term_row(1) + term_col(1)),
             move_to_r8_c8 = csi_seq_cursor_pos(term_row(8) + term_col(8)),
         ));
 
-        assert_eq!(events.len(), 0, "no OSC events expected");
+        assert_eq!(osc_events.len(), 0, "no OSC events expected");
+        assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
         // Verify layout matches diagram.
         // cspell:disable-next-line

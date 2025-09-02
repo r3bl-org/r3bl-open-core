@@ -18,7 +18,7 @@ use crate::{BoundsCheck,
             core::osc::{OscEvent, osc_codes}};
 
 // Import the operation modules.
-use super::{char_translation, cursor_ops, device_ops, margin_ops, mode_ops, 
+use super::{char_translation, cursor_ops, dsr_ops, margin_ops, mode_ops, 
             scroll_ops, sgr_ops, terminal_ops};
 
 /// Internal methods for `AnsiToBufferProcessor` to implement [`Perform`] trait.
@@ -168,7 +168,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             csi_codes::DECSTBM_SET_MARGINS => margin_ops::set_margins(self, params),
 
             // Device status operations
-            csi_codes::DSR_DEVICE_STATUS => device_ops::device_status_report(self, params),
+            csi_codes::DSR_DEVICE_STATUS => dsr_ops::device_status_report(self, params),
 
             // Mode operations
             csi_codes::SM_SET_MODE => mode_ops::set_mode(self, params, intermediates),
