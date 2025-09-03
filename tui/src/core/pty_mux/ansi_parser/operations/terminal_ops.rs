@@ -54,6 +54,4 @@ pub fn reset_terminal(processor: &mut AnsiToBufferProcessor) {
 
     // Clear any SGR attributes.
     reset_sgr_attributes(processor);
-
-    tracing::trace!("ESC c: Terminal reset to initial state");
 }

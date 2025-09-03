@@ -3,8 +3,12 @@
 
 # create tmux POC
 
-- [ ] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
 - [x] [`task_ring_buffer_enhance`](docs/done/task_ring_buffer_enhance.md)
+- [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
+- [ ] extend `main_event_loop.rs` to support OSC output to terminal emulator (main window)
+  - via `GlobalData::main_thread_channel_sender` -> add a variant to `TerminalWindowMainThreadSignal`
+  - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
+  - using `OscController` to write to `OutputDevice`
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 

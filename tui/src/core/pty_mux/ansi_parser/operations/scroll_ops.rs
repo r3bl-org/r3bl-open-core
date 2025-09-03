@@ -125,7 +125,6 @@ pub fn scroll_up(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
     for _ in 0..n {
         scroll_buffer_up(processor);
     }
-    tracing::trace!("CSI S (SU): Scrolled up {} lines", n);
 }
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
@@ -134,5 +133,4 @@ pub fn scroll_down(processor: &mut AnsiToBufferProcessor, params: &vte::Params) 
     for _ in 0..n {
         scroll_buffer_down(processor);
     }
-    tracing::trace!("CSI T (SD): Scrolled down {} lines", n);
 }

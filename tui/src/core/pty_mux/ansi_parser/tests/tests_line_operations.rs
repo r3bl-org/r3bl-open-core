@@ -101,7 +101,7 @@ pub mod insert_line {
 
         // Verify no changes occurred
         for r in 0..5 {
-            assert_line_content(&ofs_buf, r, &format!("Line{:02}", r));
+            assert_line_content(&ofs_buf, r, &format!("Line{r:02}"));
         }
     }
 }
@@ -207,7 +207,7 @@ pub mod delete_line {
 
         // Verify no changes occurred
         for r in 0..5 {
-            assert_line_content(&ofs_buf, r, &format!("Line{:02}", r));
+            assert_line_content(&ofs_buf, r, &format!("Line{r:02}"));
         }
     }
 }

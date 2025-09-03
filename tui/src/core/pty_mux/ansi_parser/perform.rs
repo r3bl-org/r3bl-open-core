@@ -24,6 +24,44 @@ use crate::{BoundsCheck,
 /// Internal methods for `AnsiToBufferProcessor` to implement [`Perform`] trait.
 impl Perform for AnsiToBufferProcessor<'_> {
     /// Handle printable characters.
+    ///
+    /// ## Print Sequence Architecture
+    ///
+    /// ```text
+    /// Application writes "Hello"
+    ///         ↓
+    ///     PTY Slave (character stream)
+    ///         ↓
+    ///     PTY Master (we read bytes)
+    ///         ↓
+    ///     VTE Parser (identifies printable chars)
+    ///         ↓
+    ///     print() [THIS METHOD]
+    ///         ↓
+    ///     Character Set Translation (if DEC graphics)
+    ///         ↓
+    ///     Bounds Check & Write to Buffer
+    ///         ↓
+    ///     Cursor Movement (with DECAWM wrap handling)
+    /// ```
+    ///
+    /// ## Character Processing Flow
+    /// 1. Receives printable character from VTE parser
+    /// 2. Translates character if `DECGraphics` mode active (ESC ( 0)
+    /// 3. Writes character to buffer at current cursor position
+    /// 4. Advances cursor, handling line wrap based on DECAWM mode
+    ///
+    /// ## Example: Line Wrapping
+    /// ```text
+    /// Buffer width: 10 cols
+    /// Cursor at col 9, DECAWM enabled:
+    ///   print('A') → writes at col 9, cursor moves to col 10
+    ///   print('B') → writes at col 10, wraps to next line col 0
+    ///
+    /// With DECAWM disabled:
+    ///   print('A') → writes at col 9, cursor moves to col 10
+    ///   print('B') → overwrites at col 10, cursor stays at col 10
+    /// ```
     fn print(&mut self, ch: char) {
         // Apply character set translation if in graphics mode.
         let display_char = match self.ofs_buf.ansi_parser_support.character_set {
@@ -69,7 +107,38 @@ impl Perform for AnsiToBufferProcessor<'_> {
         }
     }
 
-    /// Handle control characters (C0 set): backspace, tab, LF, CR
+    /// Handle control characters (C0 set): backspace, tab, LF, CR.
+    ///
+    /// ## Control Character Architecture
+    ///
+    /// ```text
+    /// Application sends '\n' (0x0A)
+    ///         ↓
+    ///     PTY Slave (control byte)
+    ///         ↓
+    ///     PTY Master (raw byte stream)
+    ///         ↓
+    ///     VTE Parser (identifies C0 control chars)
+    ///         ↓
+    ///     execute() [THIS METHOD]
+    ///         ↓
+    ///     Direct cursor manipulation
+    ///         ↓
+    ///     No buffer content changes
+    /// ```
+    ///
+    /// ## Supported Control Characters
+    /// - **BS (0x08)**: Move cursor left one position
+    /// - **TAB (0x09)**: Move cursor to next 8-column tab stop
+    /// - **LF (0x0A)**: Move cursor down one line
+    /// - **CR (0x0D)**: Move cursor to start of current line
+    ///
+    /// ## Tab Stop Example
+    /// ```text
+    /// Tab stops at columns: 0, 8, 16, 24, 32...
+    /// Cursor at col 5 + TAB → moves to col 8
+    /// Cursor at col 12 + TAB → moves to col 16
+    /// ```
     fn execute(&mut self, byte: u8) {
         match byte {
             // Backspace
@@ -114,6 +183,35 @@ impl Perform for AnsiToBufferProcessor<'_> {
     /// This method processes ANSI escape sequences that follow the pattern `ESC[...char`
     /// where `char` is the final dispatch character that determines the operation.
     ///
+    /// ## CSI Sequence Architecture
+    ///
+    /// ```text
+    /// Application sends "ESC[2J" (clear screen)
+    ///         ↓
+    ///     PTY Slave (escape sequence)
+    ///         ↓
+    ///     PTY Master (byte stream)
+    ///         ↓
+    ///     VTE Parser (parses ESC[...char pattern)
+    ///         ↓
+    ///     csi_dispatch() [THIS METHOD]
+    ///         ↓
+    ///     Route to operation module:
+    ///       - cursor_ops:: for movement (A,B,C,D,H)
+    ///       - scroll_ops:: for scrolling (S,T)
+    ///       - sgr_ops:: for styling (m)
+    ///       - line_ops:: for lines (L,M)
+    ///       - char_ops:: for chars (@,P,X)
+    ///         ↓
+    ///     Update OffscreenBuffer state
+    /// ```
+    ///
+    /// ## CSI Dispatch Flow
+    /// 1. Receives parsed CSI parameters from VTE
+    /// 2. Matches final dispatch character to operation
+    /// 3. Delegates to specialized operation module
+    /// 4. Operation module updates buffer/cursor state
+    ///
     /// ## Parameter Handling
     ///
     /// All cursor movement and scroll operations follow VT100 specification for parameter
@@ -138,6 +236,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
     /// - Margins: DECSTBM
     /// - Modes: SM, RM (including private modes with ? prefix)
     /// - Graphics: SGR (Select Graphic Rendition)
+    #[allow(clippy::too_many_lines)]
     fn csi_dispatch(
         &mut self,
         params: &Params,
@@ -145,6 +244,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
         _ignore: bool,
         dispatch_char: char,
     ) {
+        #[allow(clippy::match_same_arms)]
         match dispatch_char {
             // Cursor movement operations
             csi_codes::CUU_CURSOR_UP => cursor_ops::cursor_up(self, params),
@@ -190,95 +290,167 @@ impl Perform for AnsiToBufferProcessor<'_> {
 
             // Additional cursor positioning
             csi_codes::VPA_VERTICAL_POSITION => {
-                cursor_ops::vertical_position_absolute(self, params)
+                cursor_ops::vertical_position_absolute(self, params);
             }
 
             // Display control operations (explicitly ignored)
             csi_codes::ED_ERASE_DISPLAY | csi_codes::EL_ERASE_LINE => {
                 // Clear screen/line - ignore, TUI apps will repaint themselves
+                tracing::warn!(
+                    "CSI {}: Clear display/line operation ignored",
+                    dispatch_char
+                );
             }
 
             // Other unimplemented CSI sequences
             'I' => {
                 // CHT (Cursor Horizontal Tab) - Move cursor forward N tab stops
                 // Not needed: Tab handling is done via execute() with TAB character
+                tracing::warn!("CSI I: Cursor Horizontal Tab not implemented");
             }
             'Z' => {
                 // CBT (Cursor Backward Tab) - Move cursor backward N tab stops
                 // Not needed: Reverse tab rarely used, complex tab stop tracking required
+                tracing::warn!("CSI Z: Cursor Backward Tab not implemented");
             }
             'g' => {
                 // TBC (Tab Clear) - Clear tab stops (0=current, 3=all)
                 // Not needed: Tab stops are application-specific, TUI apps manage their
                 // own
+                tracing::warn!("CSI g: Tab Clear not implemented");
             }
             'a' => {
                 // HPR (Horizontal Position Relative) - Same as CUF (Cursor Forward)
                 // Not needed: CUF already implemented, this is redundant
+                tracing::warn!(
+                    "CSI a: Horizontal Position Relative not implemented (use CUF instead)"
+                );
             }
             'e' => {
                 // VPR (Vertical Position Relative) - Same as CUD (Cursor Down)
                 // Not needed: CUD already implemented, this is redundant
+                tracing::warn!(
+                    "CSI e: Vertical Position Relative not implemented (use CUD instead)"
+                );
             }
             '`' => {
                 // HPA (Horizontal Position Absolute) - Same as CHA
                 // Not needed: CHA already implemented, this is redundant
+                tracing::warn!(
+                    "CSI `: Horizontal Position Absolute not implemented (use CHA instead)"
+                );
             }
             'U' => {
                 // NP (Next Page) - Move to next page in page memory
                 // Not needed: Page memory not supported in multiplexer
+                tracing::warn!("CSI U: Next Page not supported in multiplexer");
             }
             'V' => {
                 // PP (Preceding Page) - Move to previous page in page memory
                 // Not needed: Page memory not supported in multiplexer
+                tracing::warn!("CSI V: Preceding Page not supported in multiplexer");
             }
             '~' => {
                 // DECLL (DEC Load LEDs) - Set keyboard LED indicators
                 // Not needed: Hardware control not applicable in multiplexer
+                tracing::warn!("CSI ~: DEC Load LEDs not supported in multiplexer");
             }
             '}' => {
                 // DECIC (DEC Insert Column) - Insert blank columns at cursor
                 // Not needed: Column insertion rarely used, complex for TUI apps
+                tracing::warn!("CSI }}: DEC Insert Column not implemented");
             }
             '|' => {
                 // DECDC (DEC Delete Column) - Delete columns at cursor
                 // Not needed: Column deletion rarely used, complex for TUI apps
+                tracing::warn!("CSI |: DEC Delete Column not implemented");
             }
             't' => {
                 // Window manipulation (resize, move, iconify, etc.)
                 // Not needed: Window ops handled by terminal emulator, not multiplexer
+                tracing::warn!("CSI t: Window manipulation not supported in multiplexer");
             }
             'c' => {
                 // DA (Device Attributes) - Request terminal type/capabilities
                 // Not needed: Multiplexer doesn't respond to queries, parent terminal
                 // does
+                tracing::warn!(
+                    "CSI c: Device Attributes query not supported in multiplexer"
+                );
             }
             'q' => {
                 // DECSCUSR (Set Cursor Style) - Change cursor shape/blink
                 // Not needed: Cursor rendering handled by terminal emulator
+                tracing::warn!("CSI q: Set Cursor Style not supported in multiplexer");
             }
             'p' => {
                 // Various DEC private sequences (DECRQM, etc.)
                 // Not needed: Private mode requests handled by parent terminal
+                tracing::warn!(
+                    "CSI p: DEC private sequences not supported in multiplexer"
+                );
             }
             'x' => {
                 // DECREQTPARM (Request Terminal Parameters) - Request terminal settings
                 // Not needed: Terminal parameters managed by parent emulator
+                tracing::warn!(
+                    "CSI x: Request Terminal Parameters not supported in multiplexer"
+                );
             }
             'z' => {
                 // DECERA/DECSERA (DEC Erase/Selective Erase Rectangular Area)
                 // Not needed: Rectangular operations complex, rarely used
+                tracing::warn!("CSI z: DEC Rectangular Erase not implemented");
             }
 
             // Any other unrecognized sequences
             _ => {
                 // Unknown CSI sequence - safely ignore
                 // Multiplexer passes through raw data, parent terminal handles unknowns
+                tracing::warn!("CSI {}: Unknown CSI sequence", dispatch_char);
             }
         }
     }
 
     /// Handle OSC (Operating System Command) sequences.
+    ///
+    /// ## OSC Sequence Architecture
+    ///
+    /// ```text
+    /// Application sends "ESC]0;My Title\007"
+    ///         ↓
+    ///     PTY Slave (OSC sequence)
+    ///         ↓
+    ///     PTY Master (byte stream)
+    ///         ↓
+    ///     VTE Parser (accumulates OSC params)
+    ///         ↓
+    ///     osc_dispatch() [THIS METHOD]
+    ///         ↓
+    ///     Parse OSC code & params
+    ///         ↓
+    ///     Queue OscEvent:
+    ///       - SetTitleAndTab (OSC 0,1,2)
+    ///       - Hyperlink (OSC 8)
+    ///         ↓
+    ///     Events consumed by OutputRenderer
+    /// ```
+    ///
+    /// ## OSC Processing Flow
+    /// 1. Receives complete OSC sequence from VTE
+    /// 2. Parses first param as OSC code
+    /// 3. Processes based on code (title, hyperlink, etc)
+    /// 4. Queues events for later rendering
+    ///
+    /// ## Example: Window Title
+    /// ```text
+    /// OSC 0 ; "vim - file.rs" ST
+    ///   ↓
+    /// params[0] = "0" (code)
+    /// params[1] = "vim - file.rs" (title)
+    ///   ↓
+    /// Pushes SetTitleAndTab event
+    /// ```
     fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
         if params.is_empty() {
             return;
@@ -432,10 +604,6 @@ impl Perform for AnsiToBufferProcessor<'_> {
                 self.ofs_buf
                     .ansi_parser_support
                     .cursor_pos_for_esc_save_and_restore = Some(self.ofs_buf.my_pos);
-                tracing::trace!(
-                    "ESC 7 (DECSC): Saved cursor position {:?}",
-                    self.ofs_buf.my_pos
-                );
             }
             esc_codes::DECRC_RESTORE_CURSOR => {
                 // DECRC - Restore saved cursor position
@@ -446,10 +614,6 @@ impl Perform for AnsiToBufferProcessor<'_> {
                     .cursor_pos_for_esc_save_and_restore
                 {
                     self.ofs_buf.my_pos = saved_pos;
-                    tracing::trace!(
-                        "ESC 8 (DECRC): Restored cursor position to {:?}",
-                        saved_pos
-                    );
                 }
             }
             esc_codes::IND_INDEX_DOWN => {
@@ -471,46 +635,58 @@ impl Perform for AnsiToBufferProcessor<'_> {
                         // Select ASCII character set (normal mode)
                         self.ofs_buf.ansi_parser_support.character_set =
                             CharacterSet::Ascii;
-                        tracing::trace!("ESC ( B: Selected ASCII character set");
                     }
                     esc_codes::CHARSET_DEC_GRAPHICS => {
                         // Select DEC Special Graphics character set
                         // This enables box-drawing characters
                         self.ofs_buf.ansi_parser_support.character_set =
                             CharacterSet::DECGraphics;
-                        tracing::trace!("ESC ( 0: Selected DEC graphics character set");
                     }
-                    _ => {
-                        tracing::trace!(
-                            "ESC ( {}: Unsupported character set",
-                            byte as char
-                        );
-                    }
+                    _ => {}
                 }
             }
-            _ => {
-                tracing::trace!("ESC {}: Unsupported escape sequence", byte as char);
-            }
+            _ => {}
         }
     }
 
     /// Hook for DCS (Device Control String) start.
     ///
-    /// Starts a Device Control String (DCS), used for:
+    /// ## DCS Sequence Architecture (Not Implemented)
+    ///
+    /// ```text
+    /// Application sends DCS sequence
+    ///         ↓
+    ///     VTE Parser identifies DCS
+    ///         ↓
+    ///     hook() → put() → unhook()
+    ///         ↓
+    ///     Currently ignored (no DCS support)
+    /// ```
+    ///
+    /// DCS sequences are used for:
     /// - Sixel graphics
     /// - `ReGIS` graphics
     /// - Custom protocol extensions
+    ///
+    /// These are not needed for terminal multiplexing.
     fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _c: char) {
         // Ignore DCS sequences
     }
 
     /// Handle DCS data by continuing to receive bytes for an active DCS sequence started
     /// by hook.
+    ///
+    /// This method receives the actual data payload of a DCS sequence. For terminal
+    /// multiplexing, DCS sequences are not processed, so this data is ignored.
     fn put(&mut self, _byte: u8) {
         // Ignore DCS data
     }
 
     /// Hook for DCS - ends the DCS sequence, signaling that all data has been received.
+    ///
+    /// This marks the end of a DCS sequence that began with `hook()` and had data
+    /// transmitted via `put()`. Since DCS sequences are not processed by the terminal
+    /// multiplexer, this simply completes the ignored sequence.
     fn unhook(&mut self) {
         // Ignore DCS end.
     }

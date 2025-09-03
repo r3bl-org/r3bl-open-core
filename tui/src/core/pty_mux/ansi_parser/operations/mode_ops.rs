@@ -22,12 +22,13 @@ pub fn set_mode(
         match mode {
             PrivateModeType::AutoWrap => {
                 processor.ofs_buf.ansi_parser_support.auto_wrap_mode = true;
-                tracing::trace!("ESC[?7h: Enabled auto-wrap mode (DECAWM)");
             }
-            _ => tracing::debug!("CSI ?{}h: Unhandled private mode", mode.as_u16()),
+            _ => {
+                tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
+            }
         }
     } else {
-        tracing::debug!("CSI h: Standard mode setting not implemented");
+        tracing::warn!("CSI h: Standard mode setting not implemented");
     }
 }
 
@@ -45,11 +46,12 @@ pub fn reset_mode(
         match mode {
             PrivateModeType::AutoWrap => {
                 processor.ofs_buf.ansi_parser_support.auto_wrap_mode = false;
-                tracing::trace!("ESC[?7l: Disabled auto-wrap mode (DECAWM)");
             }
-            _ => tracing::debug!("CSI ?{}l: Unhandled private mode", mode.as_u16()),
+            _ => {
+                tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());
+            }
         }
     } else {
-        tracing::debug!("CSI l: Standard mode reset not implemented");
+        tracing::warn!("CSI l: Standard mode reset not implemented");
     }
 }

@@ -440,8 +440,16 @@ mod tests {
 
         match &dsr_responses2[0] {
             crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
-                assert_eq!(row, &1, "cursor at origin should be row 1 (1-based)");
-                assert_eq!(col, &1, "cursor at origin should be col 1 (1-based)");
+                assert_eq!(
+                    row.as_u16(),
+                    1,
+                    "cursor at origin should be row 1 (1-based)"
+                );
+                assert_eq!(
+                    col.as_u16(),
+                    1,
+                    "cursor at origin should be col 1 (1-based)"
+                );
             }
             crate::DsrRequestFromPtyEvent::TerminalStatus => {
                 panic!("Expected CursorPositionReport")
@@ -491,8 +499,8 @@ mod tests {
         );
         match &dsr_responses[1] {
             crate::DsrRequestFromPtyEvent::CursorPosition { row, col } => {
-                assert_eq!(row, &1);
-                assert_eq!(col, &1);
+                assert_eq!(row.as_u16(), 1);
+                assert_eq!(col.as_u16(), 1);
             }
             crate::DsrRequestFromPtyEvent::TerminalStatus => {
                 panic!("Expected CursorPositionReport")

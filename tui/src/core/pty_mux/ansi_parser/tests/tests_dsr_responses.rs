@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{DsrRequestFromPtyEvent, col, row};
+    use crate::{DsrRequestFromPtyEvent, col, row, term_col, term_row};
     use crate::core::pty_mux::ansi_parser::{
         tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c,
         protocols::csi_codes::CsiSequence,
@@ -67,13 +67,16 @@ mod tests {
         // Check the response is a cursor position report with correct 1-based position
         assert_eq!(
             dsr_responses[0],
-            DsrRequestFromPtyEvent::CursorPosition { row: 4, col: 6 },
+            DsrRequestFromPtyEvent::CursorPosition {
+                row: term_row(4),
+                col: term_col(6)
+            },
             "expected cursor position report at (4, 6) in 1-based coordinates"
         );
 
         // Verify the response bytes are correct
         let response_bytes = dsr_responses[0].to_string().into_bytes();
-        let expected_bytes = dsr_cursor_position_response(4, 6);
+        let expected_bytes = dsr_cursor_position_response(term_row(4), term_col(6));
         assert_eq!(
             response_bytes,
             expected_bytes.as_bytes(),
@@ -98,13 +101,16 @@ mod tests {
         // Should produce cursor position report at (1, 1) in 1-based coordinates
         assert_eq!(
             dsr_responses[0],
-            DsrRequestFromPtyEvent::CursorPosition { row: 1, col: 1 },
+            DsrRequestFromPtyEvent::CursorPosition {
+                row: term_row(1),
+                col: term_col(1)
+            },
             "expected cursor position report at (1, 1) for origin"
         );
 
         // Verify the response bytes
         let response_bytes = dsr_responses[0].to_string().into_bytes();
-        let expected_bytes = dsr_cursor_position_response(1, 1);
+        let expected_bytes = dsr_cursor_position_response(term_row(1), term_col(1));
         assert_eq!(
             response_bytes,
             expected_bytes.as_bytes(),
@@ -155,7 +161,10 @@ mod tests {
         assert_eq!(dsr_responses[0], DsrRequestFromPtyEvent::TerminalStatus);
         assert_eq!(
             dsr_responses[1],
-            DsrRequestFromPtyEvent::CursorPosition { row: 3, col: 4 }
+            DsrRequestFromPtyEvent::CursorPosition {
+                row: term_row(3),
+                col: term_col(4)
+            }
         );
     }
 

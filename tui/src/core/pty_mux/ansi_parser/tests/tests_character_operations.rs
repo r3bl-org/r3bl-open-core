@@ -69,16 +69,16 @@ pub mod delete_char {
     #[test]
     fn test_delete_chars_beyond_right_margin_ignored() {
         let mut ofs_buf = create_alphabet_buffer();
-        
+
         // Move cursor beyond right margin and try to delete
         // The cursor will be clamped to column 10, and delete will happen there
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(11); // Move to column 11 (beyond)
         let delete_char = CsiSequence::DeleteChar(1);
         let sequence = format!("{move_cursor}{delete_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
-        
-        // When cursor is clamped to position 10, DeleteChar will delete 'J' at position 10,
-        // leaving a space at the end
+
+        // When cursor is clamped to position 10, DeleteChar will delete 'J' at position
+        // 10, leaving a space at the end
         assert_line_content(&ofs_buf, 0, "ABCDEFGHI ");
     }
 }
@@ -133,16 +133,16 @@ pub mod insert_char {
     #[test]
     fn test_insert_chars_beyond_right_margin_ignored() {
         let mut ofs_buf = create_alphabet_buffer();
-        
+
         // Move cursor beyond right margin and try to insert
         // The cursor will be clamped to column 10, and insert will happen there
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(11); // Move to column 11 (beyond)
         let insert_char = CsiSequence::InsertChar(1);
         let sequence = format!("{move_cursor}{insert_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
-        
-        // When cursor is clamped to position 10, InsertChar will insert a space at position 10,
-        // pushing 'J' off the right edge
+
+        // When cursor is clamped to position 10, InsertChar will insert a space at
+        // position 10, pushing 'J' off the right edge
         assert_line_content(&ofs_buf, 0, "ABCDEFGHI ");
     }
 }
@@ -196,14 +196,14 @@ pub mod erase_char {
     #[test]
     fn test_erase_chars_beyond_right_margin_ignored() {
         let mut ofs_buf = create_alphabet_buffer();
-        
+
         // Move cursor beyond right margin and try to erase
         // The cursor will be clamped to column 10, and erase will happen there
         let move_cursor = CsiSequence::CursorHorizontalAbsolute(11); // Move to column 11 (beyond)
         let erase_char = CsiSequence::EraseChar(1);
         let sequence = format!("{move_cursor}{erase_char}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
-        
+
         // When cursor is clamped to position 10, EraseChar will erase 'J' at position 10,
         // replacing it with a space
         assert_line_content(&ofs_buf, 0, "ABCDEFGHI ");

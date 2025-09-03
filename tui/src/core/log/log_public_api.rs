@@ -380,6 +380,21 @@ pub fn try_initialize_logging_global(
 /// If you don't want to use sophisticated logging, you can use the [`file_log`] function
 /// to log messages to a file.
 ///
+/// # Example
+///
+/// ```no_run
+/// # use r3bl_tui::log::{
+/// #     TracingConfig, DisplayPreference, WriterConfig,
+/// #     try_initialize_logging_thread_local
+/// # };
+/// fn test_logging_setup() {
+///     try_initialize_logging_thread_local(
+///        DisplayPreference::Stdout
+///     ).unwrap();
+///     tracing::info!("This is an info message");
+/// }
+/// ```
+///
 /// # Errors
 ///
 /// Returns an error if:

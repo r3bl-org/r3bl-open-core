@@ -26,7 +26,6 @@ pub fn set_margins(processor: &mut AnsiToBufferProcessor, params: &Params) {
         (None | Some(0), None) | (Some(0), Some(0)) => {
             processor.ofs_buf.ansi_parser_support.scroll_region_top = None;
             processor.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
-            tracing::trace!("CSI r (DECSTBM): Reset scroll region to full screen");
         }
         // Set specific scroll margins.
         // Handles: ESC [ top ; bottom r where top/bottom are valid line numbers
@@ -48,11 +47,6 @@ pub fn set_margins(processor: &mut AnsiToBufferProcessor, params: &Params) {
                     Some(term_row(top_row));
                 processor.ofs_buf.ansi_parser_support.scroll_region_bottom =
                     Some(term_row(bottom_row));
-                tracing::trace!(
-                    "CSI r (DECSTBM): Set scroll region from row {} to row {}",
-                    top_row,
-                    bottom_row
-                );
             } else {
                 tracing::warn!(
                     "CSI r (DECSTBM): Invalid margins top={}, bottom={}, buffer_height={}",

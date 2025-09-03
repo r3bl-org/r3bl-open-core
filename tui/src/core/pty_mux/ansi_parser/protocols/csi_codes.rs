@@ -131,7 +131,7 @@ pub const DECSTBM_SET_MARGINS: char = 'r';
 /// Lines below cursor and in scrolling region move down
 pub const IL_INSERT_LINE: char = 'L';
 
-/// CSI M: Delete Line (DL)  
+/// CSI M: Delete Line (DL)
 /// Deletes one or more lines in the scrolling region, starting with cursor line
 /// Lines below cursor move up, blank lines added at bottom
 pub const DL_DELETE_LINE: char = 'M';
@@ -149,7 +149,7 @@ pub const DCH_DELETE_CHAR: char = 'P';
 pub const ICH_INSERT_CHAR: char = '@';
 
 /// CSI X: Erase Character (ECH)
-/// Erases one or more characters at cursor position  
+/// Erases one or more characters at cursor position
 /// Characters are replaced with blanks, no shifting occurs
 pub const ECH_ERASE_CHAR: char = 'X';
 
@@ -588,6 +588,7 @@ impl fmt::Display for CsiSequence {
 }
 
 impl WriteToBuf for CsiSequence {
+    #[allow(clippy::too_many_lines)]
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
         acc.push_str("\x1b[");
         match self {

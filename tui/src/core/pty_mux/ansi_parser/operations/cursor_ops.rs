@@ -167,7 +167,6 @@ pub fn cursor_next_line(processor: &mut AnsiToBufferProcessor, params: &Params) 
     let n = params.extract_nth_non_zero(0);
     cursor_down_by_n(processor, n);
     processor.ofs_buf.my_pos.col_index = col(0);
-    tracing::trace!("CSI E (CNL): Moved to next line {}", n);
 }
 
 /// Handle CPL (Cursor Previous Line) - move cursor to beginning of line n lines up.
@@ -175,20 +174,15 @@ pub fn cursor_prev_line(processor: &mut AnsiToBufferProcessor, params: &Params) 
     let n = params.extract_nth_non_zero(0);
     cursor_up_by_n(processor, n);
     processor.ofs_buf.my_pos.col_index = col(0);
-    tracing::trace!("CSI F (CPL): Moved to previous line {}", n);
 }
 
 /// Handle CHA (Cursor Horizontal Absolute) - move cursor to column n (1-based).
-pub fn cursor_column(
-    processor: &mut AnsiToBufferProcessor,
-    params: &Params,
-) {
+pub fn cursor_column(processor: &mut AnsiToBufferProcessor, params: &Params) {
     let n = params.extract_nth_non_zero(0);
     // Convert from 1-based to 0-based, clamp to buffer width.
     let target_col = n.saturating_sub(1);
     let max_col: u16 = processor.ofs_buf.window_size.col_width.into();
     processor.ofs_buf.my_pos.col_index = col(target_col.min(max_col.saturating_sub(1)));
-    tracing::trace!("CSI G (CHA): Moved to column {}", n);
 }
 
 /// Handle SCP (Save Cursor Position) - save current cursor position.
@@ -197,10 +191,6 @@ pub fn save_cursor_position(processor: &mut AnsiToBufferProcessor) {
         .ofs_buf
         .ansi_parser_support
         .cursor_pos_for_esc_save_and_restore = Some(processor.ofs_buf.my_pos);
-    tracing::trace!(
-        "CSI s (SCP): Saved cursor position {:?}",
-        processor.ofs_buf.my_pos
-    );
 }
 
 /// Handle RCP (Restore Cursor Position) - restore saved cursor position.
@@ -211,25 +201,22 @@ pub fn restore_cursor_position(processor: &mut AnsiToBufferProcessor) {
         .cursor_pos_for_esc_save_and_restore
     {
         processor.ofs_buf.my_pos = saved_pos;
-        tracing::trace!("CSI u (RCP): Restored cursor position to {:?}", saved_pos);
     }
 }
 
 /// Handle VPA (Vertical Position Absolute) - move cursor to specified row.
 /// The horizontal position remains unchanged.
 /// Row parameter is 1-based, with default value of 1.
-pub fn vertical_position_absolute(processor: &mut AnsiToBufferProcessor, params: &Params) {
+pub fn vertical_position_absolute(
+    processor: &mut AnsiToBufferProcessor,
+    params: &Params,
+) {
     let target_row = params.extract_nth_non_zero(0);
     let max_row: u16 = processor.ofs_buf.window_size.row_height.into();
-    
+
     // Convert from 1-based to 0-based and clamp to valid range
     let new_row = u16::min(target_row.saturating_sub(1), max_row.saturating_sub(1));
-    
+
     // Update only the row, preserve column
     processor.ofs_buf.my_pos.row_index = row(new_row);
-    
-    tracing::trace!(
-        "CSI {}d (VPA): Moved cursor to row {} (0-based: {})", 
-        target_row, target_row, new_row
-    );
 }

@@ -13,7 +13,7 @@ pub fn create_test_offscreen_buffer_10r_by_10c() -> OffscreenBuffer {
 pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
     let mut buf = OffscreenBuffer::new_empty(height(rows) + width(cols));
     for r in 0..rows {
-        let line_text = format!("Line{:02}", r);
+        let line_text = format!("Line{r:02}");
         for (c, ch) in line_text.chars().enumerate() {
             if c < cols {
                 buf.buffer[r][c] = crate::PixelChar::PlainText {
@@ -37,15 +37,13 @@ pub fn assert_line_content(buf: &OffscreenBuffer, row: usize, expected: &str) {
         .take(expected.len())
         .map(|pixel_char| match pixel_char {
             crate::PixelChar::PlainText { display_char, .. } => *display_char,
-            crate::PixelChar::Spacer => ' ',
-            _ => ' ',
+            crate::PixelChar::Spacer | crate::PixelChar::Void => ' ',
         })
         .collect();
 
     assert_eq!(
         actual, expected,
-        "Line {} content mismatch. Expected: '{}', got: '{}'",
-        row, expected, actual
+        "Line {row} content mismatch. Expected: '{expected}', got: '{actual}'"
     );
 }
 
@@ -57,7 +55,6 @@ pub fn assert_blank_line(buf: &OffscreenBuffer, row: usize) {
 
     assert!(
         is_blank,
-        "Line {} should be blank but contains non-space characters",
-        row
+        "Line {row} should be blank but contains non-space characters"
     );
 }
