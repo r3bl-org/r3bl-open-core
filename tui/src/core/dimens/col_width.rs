@@ -60,6 +60,12 @@ mod construct {
         /// - last col index == width - 1 (which is this function)
         #[must_use]
         pub fn convert_to_col_index(&self) -> ColIndex { col(self.0 - ch(1)) }
+
+        #[must_use]
+        pub fn as_u16(&self) -> u16 { self.0.into() }
+
+        #[must_use]
+        pub fn as_usize(&self) -> usize { self.0.into() }
     }
 
     impl From<ChUnit> for ColWidth {

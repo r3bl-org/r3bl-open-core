@@ -6,7 +6,6 @@ use vte::Params;
 
 use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
                    protocols::csi_codes::PrivateModeType};
-use crate::core::pty_mux::ansi_parser::param_utils::ParamsExt;
 
 /// Handle Set Mode (CSI h) command.
 /// Supports both standard modes and private modes (with ? prefix).
@@ -17,8 +16,7 @@ pub fn set_mode(
 ) {
     let is_private_mode = intermediates.contains(&b'?');
     if is_private_mode {
-        let mode_num = params.extract_nth_opt(0).unwrap_or(0);
-        let mode = PrivateModeType::from(mode_num);
+        let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
                 processor.ofs_buf.ansi_parser_support.auto_wrap_mode = true;
@@ -41,8 +39,7 @@ pub fn reset_mode(
 ) {
     let is_private_mode = intermediates.contains(&b'?');
     if is_private_mode {
-        let mode_num = params.extract_nth_opt(0).unwrap_or(0);
-        let mode = PrivateModeType::from(mode_num);
+        let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
                 processor.ofs_buf.ansi_parser_support.auto_wrap_mode = false;

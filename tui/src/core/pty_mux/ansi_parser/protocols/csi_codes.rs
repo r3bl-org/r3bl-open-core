@@ -42,9 +42,10 @@
 //! - `ESC[31m` - Set text color to red
 //! - `ESC[1A` - Move cursor up 1 line
 
-use std::fmt;
+use std::{cmp::max, fmt};
 
-use super::{super::term_units::{TermCol, TermRow},
+use super::{super::{param_utils::ParamsExt,
+                    term_units::{TermCol, TermRow, term_row}},
             dsr_codes::DsrRequestType};
 use crate::{BufTextStorage, WriteToBuf};
 
@@ -455,6 +456,104 @@ impl From<u16> for PrivateModeType {
             ALT_SCREEN_BUFFER => Self::AlternateScreenBuffer,
             n => Self::Other(n),
         }
+    }
+}
+
+impl From<&vte::Params> for PrivateModeType {
+    fn from(params: &vte::Params) -> Self {
+        let mode_num = params.extract_nth_opt(0).unwrap_or(0);
+        mode_num.into()
+    }
+}
+
+/// Margin request types for DECSTBM (Set Top and Bottom Margins) operations.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MarginRequest {
+    /// Reset margins to full screen (ESC[r, ESC[0r, ESC[0;0r)
+    Reset,
+    /// Set specific scrolling region margins
+    SetRegion { top: TermRow, bottom: TermRow },
+}
+
+impl From<(Option<u16>, Option<u16>)> for MarginRequest {
+    fn from((maybe_top, maybe_bottom): (Option<u16>, Option<u16>)) -> Self {
+        // VT100 spec: missing params or zero params mean reset to full screen
+        match (maybe_top, maybe_bottom) {
+            (None | Some(0), None) | (Some(0), Some(0)) => Self::Reset,
+            _ => {
+                // Convert to 1-based terminal coordinates (VT100 spec uses 1-based)
+                let top_row = maybe_top.map_or(1, |v| max(v, 1));
+                let bottom_row = maybe_bottom.unwrap_or(24); // Default bottom
+                Self::SetRegion {
+                    top: term_row(top_row),
+                    bottom: term_row(bottom_row),
+                }
+            }
+        }
+    }
+}
+
+impl From<&vte::Params> for MarginRequest {
+    fn from(params: &vte::Params) -> Self {
+        let maybe_top = params.extract_nth_opt(0);
+        let maybe_bottom = params.extract_nth_opt(1);
+        (maybe_top, maybe_bottom).into()
+    }
+}
+
+/// Movement count for cursor and scroll operations.
+///
+/// VT100 specification: missing parameters or zero parameters default to 1.
+/// This type encapsulates that logic for all movement operations.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MovementCount(pub u16);
+
+impl MovementCount {
+    /// Get the movement count as a u16.
+    #[must_use]
+    pub fn as_u16(self) -> u16 { self.0 }
+
+    /// Get the movement count as a usize.
+    #[must_use]
+    pub fn as_usize(self) -> usize { self.0 as usize }
+}
+
+impl From<&vte::Params> for MovementCount {
+    fn from(params: &vte::Params) -> Self {
+        // ParamsExt::extract_nth_non_zero() guarantees count >= 1
+        // per VT100 spec: missing or zero parameters default to 1
+        let count = params.extract_nth_non_zero(0);
+        Self(count)
+    }
+}
+
+/// Cursor position request for CUP (Cursor Position) operations.
+///
+/// VT100 specification: coordinates are 1-based, but internally converted to 0-based.
+/// Missing or zero parameters default to 1.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CursorPositionRequest {
+    /// Row position (0-based, converted from 1-based VT100)
+    pub row: u16,
+    /// Column position (0-based, converted from 1-based VT100)
+    pub col: u16,
+}
+
+impl From<(u16, u16)> for CursorPositionRequest {
+    fn from((row_param, col_param): (u16, u16)) -> Self {
+        // Convert from 1-based VT100 coordinates to 0-based internal coordinates
+        Self {
+            row: row_param.saturating_sub(1),
+            col: col_param.saturating_sub(1),
+        }
+    }
+}
+
+impl From<&vte::Params> for CursorPositionRequest {
+    fn from(params: &vte::Params) -> Self {
+        let row_param = params.extract_nth_non_zero(0);
+        let col_param = params.extract_nth_non_zero(1);
+        (row_param, col_param).into()
     }
 }
 

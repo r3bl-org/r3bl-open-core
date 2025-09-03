@@ -7,6 +7,8 @@
 //! compliant. It provides support to parse ANSI escape sequences and update
 //! an [`crate::OffscreenBuffer`] accordingly.
 
+use std::cmp::min;
+
 use vte::{Params, Perform};
 
 // Import the operation modules.
@@ -143,21 +145,21 @@ impl Perform for AnsiToBufferProcessor<'_> {
         match byte {
             // Backspace
             esc_codes::BACKSPACE => {
-                let current_col = self.ofs_buf.my_pos.col_index.as_usize();
-                if current_col > 0 {
-                    self.ofs_buf.my_pos.col_index = col(current_col - 1);
+                let current_col = self.ofs_buf.my_pos.col_index;
+                if current_col.as_usize() > 0 {
+                    self.ofs_buf.my_pos.col_index = col(current_col.as_usize() - 1);
                 }
             }
             // Tab - move to next tab stop boundary
             esc_codes::TAB => {
-                let current_col = self.ofs_buf.my_pos.col_index.as_usize();
-                let current_tab_zone = current_col / esc_codes::TAB_STOP_WIDTH;
+                let current_col = self.ofs_buf.my_pos.col_index;
+                let current_tab_zone = current_col.as_usize() / esc_codes::TAB_STOP_WIDTH;
                 let next_tab_zone = current_tab_zone + 1;
                 let next_tab_col = next_tab_zone * esc_codes::TAB_STOP_WIDTH;
                 let max_col = self.ofs_buf.window_size.col_width;
 
                 // Clamp to max valid column index if it would overflow
-                self.ofs_buf.my_pos.col_index = col(usize::min(
+                self.ofs_buf.my_pos.col_index = col(min(
                     next_tab_col,
                     max_col.convert_to_col_index().as_usize(),
                 ));

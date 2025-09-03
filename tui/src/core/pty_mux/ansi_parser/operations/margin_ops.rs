@@ -2,10 +2,12 @@
 
 //! Margin setting operations (DECSTBM).
 
+use std::cmp::min;
+
 use vte::Params;
 
-use super::super::{ansi_parser_public_api::AnsiToBufferProcessor, term_units::term_row};
-use crate::core::pty_mux::ansi_parser::param_utils::ParamsExt;
+use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
+                   protocols::csi_codes::MarginRequest};
 
 /// Handle Set Top and Bottom Margins (DECSTBM) command.
 /// CSI r - ESC [ top ; bottom r
@@ -13,45 +15,31 @@ use crate::core::pty_mux::ansi_parser::param_utils::ParamsExt;
 /// This command sets the scrolling region for the terminal. Lines outside
 /// the scrolling region are not affected by scroll operations.
 pub fn set_margins(processor: &mut AnsiToBufferProcessor, params: &Params) {
-    let maybe_top = params.extract_nth_opt(0);
-    let maybe_bottom = params.extract_nth_opt(1);
-
-    // Store terminal's 1-based coordinates (will be converted to 0-based when used).
+    let request = MarginRequest::from(params);
     let buffer_height: u16 = processor.ofs_buf.window_size.row_height.into();
 
-    match (maybe_top, maybe_bottom) {
-        // Reset scroll region to full screen.
-        // Handles: ESC [ r (no params), ESC [ 0 r, ESC [ 0 ; 0 r
-        // All these cases mean "reset to use the entire screen for scrolling"
-        (None | Some(0), None) | (Some(0), Some(0)) => {
+    match request {
+        MarginRequest::Reset => {
+            // Reset scroll region to full screen.
             processor.ofs_buf.ansi_parser_support.scroll_region_top = None;
             processor.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
         }
-        // Set specific scroll margins.
-        // Handles: ESC [ top ; bottom r where top/bottom are valid line numbers
-        // This restricts scrolling to only occur within the specified region
-        _ => {
-            // Set scrolling region with bounds checking.
-            let top_row = maybe_top.map_or(
-                /* None -> 1 */ 1,
-                /* Some(v) -> max(v,1) */ |v| u16::max(v, 1),
-            );
-            let bottom_row = maybe_bottom.map_or(
-                /* None -> buffer_height */ buffer_height,
-                /* Some(v) -> min(v,buffer_height) */
-                |v| u16::min(v, buffer_height),
-            );
+        MarginRequest::SetRegion { top, bottom } => {
+            let top_value = top.as_u16();
+            let bottom_value = bottom.as_u16();
 
-            if top_row < bottom_row && bottom_row <= buffer_height {
-                processor.ofs_buf.ansi_parser_support.scroll_region_top =
-                    Some(term_row(top_row));
+            // Validate margins against buffer height.
+            let clamped_bottom = min(bottom_value, buffer_height);
+
+            if top_value < clamped_bottom && clamped_bottom <= buffer_height {
+                processor.ofs_buf.ansi_parser_support.scroll_region_top = Some(top);
                 processor.ofs_buf.ansi_parser_support.scroll_region_bottom =
-                    Some(term_row(bottom_row));
+                    Some(super::super::term_units::term_row(clamped_bottom));
             } else {
                 tracing::warn!(
                     "CSI r (DECSTBM): Invalid margins top={}, bottom={}, buffer_height={}",
-                    top_row,
-                    bottom_row,
+                    top_value,
+                    clamped_bottom,
                     buffer_height
                 );
             }

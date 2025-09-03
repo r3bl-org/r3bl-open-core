@@ -25,7 +25,8 @@ use std::fmt::{self, Display};
 
 use super::{super::term_units::{TermCol, TermRow},
             csi_codes::CSI_PARAM_SEPARATOR};
-use crate::core::common::write_to_buf::{BufTextStorage, WriteToBuf};
+use crate::{ParamsExt,
+            core::common::write_to_buf::{BufTextStorage, WriteToBuf}};
 
 // DSR response sequence components.
 
@@ -74,12 +75,19 @@ mod dsr_request_type_impl {
         }
     }
 
+    impl From<&vte::Params> for DsrRequestType {
+        fn from(params: &vte::Params) -> Self {
+            let first_param_or_zero = params.extract_nth_opt(0).unwrap_or(0);
+            first_param_or_zero.into()
+        }
+    }
+
     impl From<u16> for DsrRequestType {
-        fn from(value: u16) -> Self {
-            match value {
+        fn from(n: u16) -> Self {
+            match n {
                 5 => Self::RequestStatus,
                 6 => Self::RequestCursorPosition,
-                n => Self::Other(n),
+                other => Self::Other(other),
             }
         }
     }

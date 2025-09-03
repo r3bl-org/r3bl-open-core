@@ -7,11 +7,9 @@ use crate::{CharacterSet, PixelChar, Pos};
 
 /// Clear all buffer content.
 fn clear_buffer(processor: &mut AnsiToBufferProcessor) {
-    let max_row = processor.ofs_buf.window_size.row_height.as_usize();
-    for row in 0..max_row {
-        for col in 0..processor.ofs_buf.window_size.col_width.as_usize() {
-            processor.ofs_buf.buffer[row][col] = PixelChar::Spacer;
-        }
+    let max_row = processor.ofs_buf.window_size.row_height;
+    for row in 0..max_row.as_usize() {
+        processor.ofs_buf.buffer[row].fill(PixelChar::Spacer);
     }
 }
 
@@ -36,16 +34,16 @@ fn reset_sgr_attributes(processor: &mut AnsiToBufferProcessor) {
 pub fn reset_terminal(processor: &mut AnsiToBufferProcessor) {
     clear_buffer(processor);
 
-    // Reset cursor to home position
+    // Reset cursor to home position.
     processor.ofs_buf.my_pos = Pos::default();
 
-    // Clear saved cursor state
+    // Clear saved cursor state.
     processor
         .ofs_buf
         .ansi_parser_support
         .cursor_pos_for_esc_save_and_restore = None;
 
-    // Reset to ASCII character set
+    // Reset to ASCII character set.
     processor.ofs_buf.ansi_parser_support.character_set = CharacterSet::Ascii;
 
     // Clear DECSTBM scroll region margins.
