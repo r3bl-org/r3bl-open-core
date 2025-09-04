@@ -44,8 +44,9 @@ impl Debug for ColWidth {
 
 pub fn width(arg_col_width: impl Into<ColWidth>) -> ColWidth { arg_col_width.into() }
 
-mod construct {
-    use super::{ColIndex, ColWidth, ch, col};
+mod impl_core {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl ColWidth {
         pub fn new(arg_col_width: impl Into<ColWidth>) -> Self { arg_col_width.into() }
@@ -70,7 +71,8 @@ mod construct {
 }
 
 mod impl_from_numeric {
-    use super::{ChUnit, ColWidth, ch};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<ChUnit> for ColWidth {
         fn from(ch_unit: ChUnit) -> Self { ColWidth(ch_unit) }
@@ -97,9 +99,9 @@ mod impl_from_numeric {
     }
 }
 
-mod ops {
-    use super::{Add, AddAssign, ChUnit, ColWidth, Deref, DerefMut, Div, Sub, SubAssign,
-                width};
+mod impl_deref {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for ColWidth {
         type Target = ChUnit;
@@ -110,6 +112,11 @@ mod ops {
     impl DerefMut for ColWidth {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
     }
+}
+
+mod dimension_arithmetic_operators {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Add<ColWidth> for ColWidth {
         type Output = ColWidth;

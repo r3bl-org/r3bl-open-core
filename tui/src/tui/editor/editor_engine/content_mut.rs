@@ -4,9 +4,9 @@ use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
 use crate::{CaretScrAdj, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, EditorEngine,
-            InlineString, InlineVec, RowIndex, SelectionList, SelectionRange, Width,
+            InlineString, InlineVec, ContentPositionStatus, RowIndex, SelectionList, SelectionRange, Width,
             ZeroCopyGapBuffer,
-            caret_locate::{CaretColLocationInLine, locate_col},
+            caret_locate::locate_col,
             caret_scr_adj, caret_scroll_index, col, empty_check_early_return, len,
             multiline_disabled_check_early_return, row,
             validate_buffer_mut::EditorBufferMutWithDrop,
@@ -130,7 +130,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
         if index < line_count - 1 {
             // Insert newline logic similar to insert_new_line_at_caret
             match locate_col_impl(&buffer_mut) {
-                CaretColLocationInLine::AtEnd => {
+                ContentPositionStatus::AtEnd | ContentPositionStatus::Beyond => {
                     // Insert new line at end
                     let new_row_index = scroll_editor_content::inc_caret_row(
                         buffer_mut.inner.caret_raw,
@@ -145,7 +145,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
 
                     buffer_mut.inner.lines.insert_line(new_row_index);
                 }
-                CaretColLocationInLine::AtStart => {
+                ContentPositionStatus::AtStart => {
                     // Insert new line at start
                     let cur_row_index = (*buffer_mut.inner.caret_raw
                         + *buffer_mut.inner.scr_ofs)
@@ -158,7 +158,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                         buffer_mut.inner.vp.row_height,
                     );
                 }
-                CaretColLocationInLine::InMiddle => {
+                ContentPositionStatus::Within => {
                     // Split line in middle
                     let caret_scr_adj =
                         *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
@@ -194,22 +194,24 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
 }
 
 /// Helper function to locate caret position when we already have `buffer_mut`
-fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> CaretColLocationInLine {
+fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> ContentPositionStatus {
     let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
     let row_index = caret_scr_adj.row_index;
 
     if let Some(line_width) = buffer_mut.inner.lines.get_line_display_width(row_index) {
         let col_index = caret_scr_adj.col_index;
 
-        if col_index == col(0) {
-            CaretColLocationInLine::AtStart
+        if col_index.as_usize() > line_width.as_usize() {
+            ContentPositionStatus::Beyond
+        } else if col_index == col(0) {
+            ContentPositionStatus::AtStart
         } else if col_index >= caret_scroll_index::col_index_for_width(line_width) {
-            CaretColLocationInLine::AtEnd
+            ContentPositionStatus::AtEnd
         } else {
-            CaretColLocationInLine::InMiddle
+            ContentPositionStatus::Within
         }
     } else {
-        CaretColLocationInLine::AtEnd
+        ContentPositionStatus::AtEnd
     }
 }
 
@@ -255,17 +257,17 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
     }
 
     match locate_col(buffer) {
-        CaretColLocationInLine::AtEnd => {
+        ContentPositionStatus::AtEnd | ContentPositionStatus::Beyond => {
             insert_new_line_at_caret_helper::insert_new_line_at_end_of_current_line(
                 EditorArgsMut { engine, buffer },
             );
         }
-        CaretColLocationInLine::AtStart => {
+        ContentPositionStatus::AtStart => {
             insert_new_line_at_caret_helper::insert_new_line_at_start_of_current_line(
                 EditorArgsMut { engine, buffer },
             );
         }
-        CaretColLocationInLine::InMiddle => {
+        ContentPositionStatus::Within => {
             insert_new_line_at_caret_helper::insert_new_line_at_middle_of_current_line(
                 EditorArgsMut { engine, buffer },
             );

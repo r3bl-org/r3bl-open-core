@@ -1,75 +1,66 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::cmp::Ordering;
-
 use super::{ColIndex, ColWidth, RowHeight, RowIndex};
-use crate::{BoundsCheck, BoundsStatus, PositionStatus};
+use crate::{BoundsCheck, BoundsOverflowStatus, ContentPositionStatus};
+
+impl From<(/* position */ u16, /* length */ u16)> for ContentPositionStatus {
+    fn from((position, length): (u16, u16)) -> Self {
+        if position > length {
+            ContentPositionStatus::Beyond
+        } else if position == 0 {
+            ContentPositionStatus::AtStart
+        } else if position == length {
+            ContentPositionStatus::AtEnd
+        } else {
+            ContentPositionStatus::Within
+        }
+    }
+}
 
 impl BoundsCheck<RowHeight> for RowIndex {
-    fn check_overflows(&self, height: RowHeight) -> BoundsStatus {
+    fn check_overflows(&self, height: RowHeight) -> BoundsOverflowStatus {
         let this = *self;
         let other = height.convert_to_row_index() /*-1*/;
         if this > other {
-            BoundsStatus::Overflowed
+            BoundsOverflowStatus::Overflowed
         } else {
-            BoundsStatus::Within
+            BoundsOverflowStatus::Within
         }
     }
 
-    fn check_content_position(&self, content_length: RowHeight) -> PositionStatus {
-        let this = *self;
-        let length = content_length.as_usize();
-
-        match this.as_usize().cmp(&length) {
-            Ordering::Less => PositionStatus::Within,
-            Ordering::Equal => PositionStatus::Boundary,
-            Ordering::Greater => PositionStatus::Beyond,
-        }
+    fn check_content_position(&self, content_length: RowHeight) -> ContentPositionStatus {
+        (self.as_u16(), content_length.as_u16()).into()
     }
 }
 
 impl BoundsCheck<ColWidth> for ColIndex {
-    fn check_overflows(&self, width: ColWidth) -> BoundsStatus {
+    fn check_overflows(&self, width: ColWidth) -> BoundsOverflowStatus {
         let this = *self;
         let other = width.convert_to_col_index() /*-1*/;
         if this > other {
-            BoundsStatus::Overflowed
+            BoundsOverflowStatus::Overflowed
         } else {
-            BoundsStatus::Within
+            BoundsOverflowStatus::Within
         }
     }
 
-    fn check_content_position(&self, content_length: ColWidth) -> PositionStatus {
-        let this = *self;
-        let length = content_length.as_usize();
-
-        match this.as_usize().cmp(&length) {
-            Ordering::Less => PositionStatus::Within,
-            Ordering::Equal => PositionStatus::Boundary,
-            Ordering::Greater => PositionStatus::Beyond,
-        }
+    fn check_content_position(&self, content_length: ColWidth) -> ContentPositionStatus {
+        (self.as_u16(), content_length.as_u16()).into()
     }
 }
 
 impl BoundsCheck<RowIndex> for RowIndex {
-    fn check_overflows(&self, other: RowIndex) -> BoundsStatus {
+    fn check_overflows(&self, other: RowIndex) -> BoundsOverflowStatus {
         let this = *self;
         if this > other {
-            BoundsStatus::Overflowed
+            BoundsOverflowStatus::Overflowed
         } else {
-            BoundsStatus::Within
+            BoundsOverflowStatus::Within
         }
     }
 
-    fn check_content_position(&self, content_length: RowIndex) -> PositionStatus {
-        let this = *self;
-        let length = content_length.as_usize();
-
-        match this.as_usize().cmp(&length) {
-            Ordering::Less => PositionStatus::Within,
-            Ordering::Equal => PositionStatus::Boundary,
-            Ordering::Greater => PositionStatus::Beyond,
-        }
+    fn check_content_position(&self, content_length: RowIndex) -> ContentPositionStatus {
+        (self.as_u16(), content_length.as_u16()).into()
     }
 }
 
@@ -85,11 +76,11 @@ mod tests_bounds_check_overflows {
         let width = width(5);
 
         for col_index in &within {
-            assert_eq!(col_index.check_overflows(width), BoundsStatus::Within);
+            assert_eq!(col_index.check_overflows(width), BoundsOverflowStatus::Within);
         }
 
         for col_index in &overflowed {
-            assert_eq!(col_index.check_overflows(width), BoundsStatus::Overflowed);
+            assert_eq!(col_index.check_overflows(width), BoundsOverflowStatus::Overflowed);
         }
     }
 
@@ -100,11 +91,11 @@ mod tests_bounds_check_overflows {
         let height = height(5);
 
         for row_index in &within {
-            assert_eq!(row_index.check_overflows(height), BoundsStatus::Within);
+            assert_eq!(row_index.check_overflows(height), BoundsOverflowStatus::Within);
         }
 
         for row_index in &overflowed {
-            assert_eq!(row_index.check_overflows(height), BoundsStatus::Overflowed);
+            assert_eq!(row_index.check_overflows(height), BoundsOverflowStatus::Overflowed);
         }
     }
 
@@ -115,11 +106,11 @@ mod tests_bounds_check_overflows {
         let max = row(5);
 
         for row_index in &within {
-            assert_eq!(row_index.check_overflows(max), BoundsStatus::Within);
+            assert_eq!(row_index.check_overflows(max), BoundsOverflowStatus::Within);
         }
 
         for row_index in &overflowed {
-            assert_eq!(row_index.check_overflows(max), BoundsStatus::Overflowed);
+            assert_eq!(row_index.check_overflows(max), BoundsOverflowStatus::Overflowed);
         }
     }
 }

@@ -1,92 +1,194 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::buffer_struct::EditorBuffer;
-use crate::{ColIndex, ColWidth, RowHeight, RowIndex, col, row};
+use crate::{BoundsCheck, ColIndex, ColWidth, ContentPositionStatus, RowHeight, RowIndex, col,
+            row};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub enum CaretColLocationInLine {
-    /// Also covers state where there is no col, or only 1 col.
-    AtStart,
-    AtEnd,
-    InMiddle,
+/// Represents the position of a row within a buffer.
+///
+/// ## Why this exists separately from ContentPositionStatus
+///
+/// [`ContentPositionStatus`] is designed for cursor/content positions where the index can be
+/// one position *after* the last element (for insertion). For example, in a string
+/// of length 5, position 5 is valid and means "after the last character".
+///
+/// Row positions have different semantics: you are ON a specific row, not between rows.
+/// Being on row 2 in a 3-row buffer means you're ON the last row, not after it.
+///
+/// ### Key differences:
+/// - [`AtEnd`]: Position is at `index == length` (cursor after last element)
+/// - [`OnLastRow`]: Row index is `index == length - 1` (ON the last row)
+///
+/// ### Precedence rule for ambiguous cases:
+/// - Single line buffer (row 0 is both first and last): Returns [`OnFirstRow`]
+/// - Empty buffer: Returns [`OnFirstRow`]
+/// - This maintains consistency: "first" takes precedence over "last" in ambiguous cases
+///
+/// [`OnFirstRow`]: RowContentPositionStatus::OnFirstRow
+/// [`OnLastRow`]: RowContentPositionStatus::OnLastRow
+/// [`AtEnd`]: ContentPositionStatus::AtEnd
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum RowContentPositionStatus {
+    /// On the first row (row index 0).
+    /// For single-line buffers, this takes precedence over `OnLastRow`.
+    OnFirstRow,
+
+    /// On a middle row (neither first nor last).
+    /// Only possible when buffer has 3+ lines.
+    OnMiddleRow,
+
+    /// On the last row of the buffer.
+    /// Only returned when buffer has 2+ lines.
+    OnLastRow,
+
+    /// Row index is beyond the buffer bounds (row >= line_count).
+    BeyondBuffer,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub enum CaretRowLocationInBuffer {
-    /// Also covers state where there is no row, or only 1 row.
-    AtTop,
-    AtBottom,
-    InMiddle,
-}
-
-/// Locate the col.
-#[must_use]
-pub fn locate_col(editor_buffer: &EditorBuffer) -> CaretColLocationInLine {
-    if col_is_at_start_of_line(editor_buffer) {
-        CaretColLocationInLine::AtStart
-    } else if col_is_at_end_of_line(editor_buffer) {
-        CaretColLocationInLine::AtEnd
-    } else {
-        CaretColLocationInLine::InMiddle
-    }
-}
-
-fn col_is_at_start_of_line(buffer: &EditorBuffer) -> bool {
-    if buffer.line_at_caret_scr_adj().is_some() {
-        buffer.get_caret_scr_adj().col_index == col(0)
-    } else {
-        false
-    }
-}
-
-fn col_is_at_end_of_line(buffer: &EditorBuffer) -> bool {
-    if buffer.line_at_caret_scr_adj().is_some() {
-        let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
-        buffer.get_caret_scr_adj().col_index
-            == caret_scroll_index::col_index_for_width(line_display_width)
-    } else {
-        false
-    }
-}
-
-/// Locate the row.
-#[must_use]
-pub fn locate_row(buffer: &EditorBuffer) -> CaretRowLocationInBuffer {
-    if row_is_at_top_of_buffer(buffer) {
-        CaretRowLocationInBuffer::AtTop
-    } else if row_is_at_bottom_of_buffer(buffer) {
-        CaretRowLocationInBuffer::AtBottom
-    } else {
-        CaretRowLocationInBuffer::InMiddle
-    }
-}
-
+/// Locate the col position using [`BoundsCheck::check_content_position`] method on
+/// [`ColIndex`].
+///
 /// ```text
 /// R ┌──────────┐
-/// 0 ❱          │
+/// 0 ❱hello     │  <- AtStart (col 0)
 ///   └⮬─────────┘
 ///   C0123456789
 /// ```
-fn row_is_at_top_of_buffer(buffer: &EditorBuffer) -> bool {
-    buffer.get_caret_scr_adj().row_index == row(0)
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 ❱hello     │  <- Within (col 3)
+///   └───⮬──────┘
+///   C0123456789
+/// ```
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 ❱hello░    │  <- AtEnd (col 5, after last char)
+///   └─────⮬────┘
+///   C0123456789
+/// ```
+#[must_use]
+pub fn locate_col(editor_buffer: &EditorBuffer) -> ContentPositionStatus {
+    if let Some(_line) = editor_buffer.line_at_caret_scr_adj() {
+        let col_index = editor_buffer.get_caret_scr_adj().col_index;
+        let line_display_width = editor_buffer.get_line_display_width_at_caret_scr_adj();
+        col_index.check_content_position(line_display_width)
+    } else {
+        // No line available - treat as at start
+        ContentPositionStatus::AtStart
+    }
 }
 
+/// Locate the row position in the buffer.
+///
+/// Returns [`RowContentPositionStatus`] instead of [`ContentPositionStatus`] because row positions
+/// have different semantics than cursor positions (see [`RowContentPositionStatus`]
+/// documentation).
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 ❱░         │  <- OnFirstRow (single line or empty buffer)
+///   └⮬─────────┘
+///   C0123456789
+/// ```
+///
 /// ```text
 /// R ┌──────────┐
 /// 0 │a         │
-/// 1 ❱a         │
+/// 1 ❱a         │  <- OnMiddleRow
+/// 2 │b         │
 ///   └⮬─────────┘
 ///   C0123456789
 /// ```
-fn row_is_at_bottom_of_buffer(buffer: &EditorBuffer) -> bool {
-    if buffer.is_empty() || buffer.get_lines().len().as_usize() == 1 {
-        // If there is only one line, then the caret is not at the bottom, its at the top.
-        false
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 │a         │
+/// 1 │b         │
+/// 2 ❱c         │  <- OnLastRow (only when buffer has >1 line)
+///   └⮬─────────┘
+///   C0123456789
+/// ```
+#[must_use]
+pub fn locate_row(buffer: &EditorBuffer) -> RowContentPositionStatus {
+    let row_index = buffer.get_caret_scr_adj().row_index;
+    let buffer_line_count = buffer.get_lines().len().as_usize();
+
+    if buffer_line_count == 0 {
+        // Empty buffer: treat as on first row
+        RowContentPositionStatus::OnFirstRow
+    } else if row_index.as_usize() >= buffer_line_count {
+        // Beyond buffer bounds
+        RowContentPositionStatus::BeyondBuffer
+    } else if buffer_line_count == 1 {
+        // Single line: always on first row (precedence rule)
+        RowContentPositionStatus::OnFirstRow
     } else {
-        /* lines.len() - 1 is the last row index */
-        let max_row_index = buffer.get_max_row_index();
-        buffer.get_caret_scr_adj().row_index == max_row_index
+        // Multiple lines (2+)
+        if row_index.as_usize() == 0 {
+            RowContentPositionStatus::OnFirstRow
+        } else if row_index.as_usize() == buffer_line_count - 1 {
+            RowContentPositionStatus::OnLastRow
+        } else {
+            RowContentPositionStatus::OnMiddleRow
+        }
     }
+}
+
+/// Helper function to check if column is at the start of line.
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 ❱hello     │  <- returns true
+///   └⮬─────────┘
+///   C0123456789
+/// ```
+#[must_use]
+pub fn col_is_at_start(buffer: &EditorBuffer) -> bool {
+    locate_col(buffer) == ContentPositionStatus::AtStart
+}
+
+/// Helper function to check if column is at the end of line.
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 ❱hello░    │  <- returns true
+///   └─────⮬────┘
+///   C0123456789
+/// ```
+#[must_use]
+pub fn col_is_at_end(buffer: &EditorBuffer) -> bool {
+    locate_col(buffer) == ContentPositionStatus::AtEnd
+}
+
+/// Helper function to check if row is at the top of buffer.
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 ❱first     │  <- returns true
+/// 1 │second    │
+///   └⮬─────────┘
+///   C0123456789
+/// ```
+#[must_use]
+pub fn row_is_at_top(buffer: &EditorBuffer) -> bool {
+    locate_row(buffer) == RowContentPositionStatus::OnFirstRow
+}
+
+/// Helper function to check if row is at the bottom of buffer.
+///
+/// ```text
+/// R ┌──────────┐
+/// 0 │first     │
+/// 1 │second    │
+/// 2 ❱last      │  <- returns true
+///   └⮬─────────┘
+///   C0123456789
+/// ```
+#[must_use]
+pub fn row_is_at_bottom(buffer: &EditorBuffer) -> bool {
+    locate_row(buffer) == RowContentPositionStatus::OnLastRow
 }
 
 pub mod caret_scroll_index {
@@ -106,8 +208,8 @@ pub mod caret_scroll_index {
     /// Here's an example:
     /// ```text
     /// R ┌──────────┐
-    /// 0 ▸hello░    │
-    ///   └─────▴────┘
+    /// 0 ❱hello░    │
+    ///   └─────⮬────┘
     ///   C0123456789
     /// ```
     #[must_use]
@@ -161,7 +263,7 @@ mod tests {
         }
 
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::AtStart);
+        assert_eq2!(location, ContentPositionStatus::AtStart);
     }
 
     #[test]
@@ -180,7 +282,7 @@ mod tests {
         }
 
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::AtEnd);
+        assert_eq2!(location, ContentPositionStatus::AtEnd);
     }
 
     #[test]
@@ -197,7 +299,7 @@ mod tests {
         }
 
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::InMiddle);
+        assert_eq2!(location, ContentPositionStatus::Within);
     }
 
     #[test]
@@ -215,7 +317,7 @@ mod tests {
 
         let location = locate_col(&buffer);
         // Empty line: col 0 is both start and end, implementation treats this as AtStart
-        assert_eq2!(location, CaretColLocationInLine::AtStart);
+        assert_eq2!(location, ContentPositionStatus::AtStart);
     }
 
     #[test]
@@ -231,7 +333,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(6); // Right before emoji
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::InMiddle);
+        assert_eq2!(location, ContentPositionStatus::Within);
 
         // Test at end with Unicode
         let line_width = buffer.get_lines().get_line_display_width(row(0)).unwrap();
@@ -242,7 +344,7 @@ mod tests {
                 caret_scroll_index::col_index_for_width(line_width);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::AtEnd);
+        assert_eq2!(location, ContentPositionStatus::AtEnd);
     }
 
     #[test]
@@ -259,7 +361,7 @@ mod tests {
         }
 
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::AtTop);
+        assert_eq2!(location, RowContentPositionStatus::OnFirstRow);
     }
 
     #[test]
@@ -276,7 +378,7 @@ mod tests {
         }
 
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::AtBottom);
+        assert_eq2!(location, RowContentPositionStatus::OnLastRow);
     }
 
     #[test]
@@ -293,7 +395,7 @@ mod tests {
         }
 
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::InMiddle);
+        assert_eq2!(location, RowContentPositionStatus::OnMiddleRow);
     }
 
     #[test]
@@ -310,7 +412,7 @@ mod tests {
         }
 
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::AtTop);
+        assert_eq2!(location, RowContentPositionStatus::OnFirstRow);
     }
 
     #[test]
@@ -319,7 +421,7 @@ mod tests {
         // Empty buffer
 
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::AtTop);
+        assert_eq2!(location, RowContentPositionStatus::OnFirstRow);
     }
 
     #[test]
@@ -335,7 +437,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::AtStart);
+        assert_eq2!(location, ContentPositionStatus::AtStart);
 
         // Test not at start
         {
@@ -344,7 +446,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(5);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::InMiddle);
+        assert_eq2!(location, ContentPositionStatus::Within);
     }
 
     #[test]
@@ -362,7 +464,7 @@ mod tests {
                 caret_scroll_index::col_index_for_width(line_width);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::AtEnd);
+        assert_eq2!(location, ContentPositionStatus::AtEnd);
 
         // Test not at end
         {
@@ -371,7 +473,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(2);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, CaretColLocationInLine::InMiddle);
+        assert_eq2!(location, ContentPositionStatus::Within);
     }
 
     #[test]
@@ -387,7 +489,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::AtTop);
+        assert_eq2!(location, RowContentPositionStatus::OnFirstRow);
 
         // Test not at top (with 2 lines, row 1 is the bottom)
         {
@@ -396,7 +498,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::InMiddle);
+        assert_eq2!(location, RowContentPositionStatus::OnMiddleRow);
     }
 
     #[test]
@@ -412,7 +514,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::AtBottom);
+        assert_eq2!(location, RowContentPositionStatus::OnLastRow);
 
         // Test not at bottom
         {
@@ -421,7 +523,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
         let location = locate_row(&buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::InMiddle);
+        assert_eq2!(location, RowContentPositionStatus::OnMiddleRow);
 
         // Test single line (should return false)
         let mut single_line_buffer = EditorBuffer::new_empty(None, None);
@@ -432,7 +534,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
         let location = locate_row(&single_line_buffer);
-        assert_eq2!(location, CaretRowLocationInBuffer::AtTop); // Single line is at top, not bottom
+        assert_eq2!(location, RowContentPositionStatus::OnFirstRow); // Single line is at top, not bottom
     }
 
     #[test]
@@ -453,6 +555,6 @@ mod tests {
         // The caret is at the start of the visible area, but not the start of the line
         let location = locate_col(&buffer);
         // Scroll adjusted position is col 5, which is in the middle of the line
-        assert_eq2!(location, CaretColLocationInLine::InMiddle);
+        assert_eq2!(location, ContentPositionStatus::Within);
     }
 }

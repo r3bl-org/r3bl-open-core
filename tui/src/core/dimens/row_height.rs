@@ -45,8 +45,9 @@ impl Debug for RowHeight {
 
 pub fn height(arg_row_height: impl Into<RowHeight>) -> RowHeight { arg_row_height.into() }
 
-mod constructor {
-    use super::{RowHeight, RowIndex, ch, row};
+mod impl_core {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl RowHeight {
         pub fn new(arg_row_height: impl Into<RowHeight>) -> Self { arg_row_height.into() }
@@ -61,11 +62,18 @@ mod constructor {
         /// - `last row index == height - 1` (which is this function)
         #[must_use]
         pub fn convert_to_row_index(&self) -> RowIndex { row(self.0 - ch(1)) }
+
+        #[must_use]
+        pub fn as_u16(&self) -> u16 { self.0.into() }
+
+        #[must_use]
+        pub fn as_usize(&self) -> usize { self.0.into() }
     }
 }
 
 mod impl_from_numeric {
-    use super::{ChUnit, RowHeight, ch};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<ChUnit> for RowHeight {
         fn from(ch_unit: ChUnit) -> Self { RowHeight(ch_unit) }
@@ -92,8 +100,9 @@ mod impl_from_numeric {
     }
 }
 
-mod ops {
-    use super::{Add, ChUnit, Deref, DerefMut, Div, RowHeight, Sub, SubAssign, height};
+mod impl_deref {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for RowHeight {
         type Target = ChUnit;
@@ -104,6 +113,11 @@ mod ops {
     impl DerefMut for RowHeight {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
     }
+}
+
+mod dimension_arithmetic_operators {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Add<RowHeight> for RowHeight {
         type Output = RowHeight;

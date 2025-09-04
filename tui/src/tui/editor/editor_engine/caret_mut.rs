@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{SelectMode, scroll_editor_content};
 use crate::{CaretDirection, ContainsWideSegments, EditorArgsMut, EditorBuffer,
-            EditorEngine, SegStringOwned,
-            caret_locate::{self, CaretColLocationInLine, CaretRowLocationInBuffer,
-                           locate_col},
+            EditorEngine, ContentPositionStatus, SegStringOwned,
+            caret_locate::{self, locate_col, RowContentPositionStatus},
             caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
             multiline_disabled_check_early_return, row, width};
 
@@ -15,7 +14,7 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
     let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     match caret_locate::locate_row(buffer) {
-        CaretRowLocationInBuffer::AtTop => {
+        RowContentPositionStatus::OnFirstRow => {
             // Do nothing if the caret (scroll adjusted) is at the top.
             if buffer.get_caret_scr_adj().col_index != col(0) {
                 // When buffer_mut goes out of scope, it will be dropped &
@@ -30,7 +29,7 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
                 }
             }
         }
-        CaretRowLocationInBuffer::AtBottom | CaretRowLocationInBuffer::InMiddle => {
+        RowContentPositionStatus::OnLastRow | RowContentPositionStatus::OnMiddleRow | RowContentPositionStatus::BeyondBuffer => {
             {
                 // When buffer_mut goes out of scope, it will be dropped &
                 // validation performed.
@@ -294,13 +293,17 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
 
     match caret_col_loc_in_line {
         // Special case of empty line w/ caret at start.
-        CaretColLocationInLine::AtStart if line_is_empty => {
+        ContentPositionStatus::AtStart if line_is_empty => {
             right_helper::right_at_end(buffer, engine);
         }
-        CaretColLocationInLine::AtStart | CaretColLocationInLine::InMiddle => {
+        ContentPositionStatus::AtStart | ContentPositionStatus::Within => {
             right_helper::right_normal(buffer, engine);
         }
-        CaretColLocationInLine::AtEnd => {
+        ContentPositionStatus::AtEnd => {
+            right_helper::right_at_end(buffer, engine);
+        }
+        ContentPositionStatus::Beyond => {
+            // Treat beyond as at end
             right_helper::right_at_end(buffer, engine);
         }
     }
@@ -466,14 +469,18 @@ pub fn left(
     let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     match locate_col(buffer) {
-        CaretColLocationInLine::AtStart => {
+        ContentPositionStatus::AtStart => {
             left_helper::left_at_start(buffer, editor);
         }
-        CaretColLocationInLine::AtEnd => {
+        ContentPositionStatus::AtEnd => {
             left_helper::left_at_end(buffer, editor);
         }
-        CaretColLocationInLine::InMiddle => {
+        ContentPositionStatus::Within => {
             left_helper::left_in_middle(buffer, editor);
+        }
+        ContentPositionStatus::Beyond => {
+            // Treat beyond as at end
+            left_helper::left_at_end(buffer, editor);
         }
     }
 

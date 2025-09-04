@@ -187,7 +187,7 @@ mod tests {
     use std::hash::{DefaultHasher, Hasher};
 
     use super::*;
-    use crate::{BoundsCheck, BoundsStatus, len};
+    use crate::{BoundsCheck, BoundsOverflowStatus, len};
 
     #[test]
     fn test_index_new() {
@@ -469,22 +469,22 @@ mod tests {
         // Test index within bounds
         let index = idx(5);
         let length = len(10);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         // Test index at boundary
         let index = idx(9);
         let length = len(10);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         // Test index overflowing
         let index = idx(10);
         let length = len(10);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
 
         // Test index far beyond bounds
         let index = idx(20);
         let length = len(10);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
     }
 
     #[test]
@@ -492,22 +492,22 @@ mod tests {
         // Test index within bounds
         let index1 = idx(5);
         let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
 
         // Test index at boundary
         let index1 = idx(10);
         let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
 
         // Test index overflowing
         let index1 = idx(11);
         let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Overflowed);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Overflowed);
 
         // Test index far beyond bounds
         let index1 = idx(20);
         let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Overflowed);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Overflowed);
     }
 
     #[test]
@@ -515,27 +515,27 @@ mod tests {
         // Test with zero length
         let index = idx(0);
         let length = len(0);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         // Test with zero index against zero length
         let index = idx(0);
         let length = len(0);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         // Test with non-zero index against zero length
         let index = idx(1);
         let length = len(0);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
 
         // Test with maximum values
         let index = idx(u16::MAX);
         let length = len(u16::MAX);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
 
         // Test with maximum index against maximum length
         let index = idx(u16::MAX - 1);
         let length = len(u16::MAX);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
     }
 
     #[test]
@@ -545,7 +545,7 @@ mod tests {
         let length = len(10);
 
         // Check if index is within bounds
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         // Convert index to length
         let new_length = index.convert_to_length();
@@ -562,7 +562,7 @@ mod tests {
         // Check if the new index is within bounds
         assert_eq!(
             result_index.check_overflows(length),
-            BoundsStatus::Overflowed
+            BoundsOverflowStatus::Overflowed
         );
 
         // Subtract length from index
@@ -570,6 +570,6 @@ mod tests {
         assert_eq!(result_index, idx(5));
 
         // Check if the new index is within bounds
-        assert_eq!(result_index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(result_index.check_overflows(length), BoundsOverflowStatus::Within);
     }
 }

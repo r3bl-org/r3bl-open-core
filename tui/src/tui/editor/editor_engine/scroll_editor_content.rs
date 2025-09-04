@@ -10,7 +10,7 @@
 use std::cmp::Ordering;
 
 use super::{SelectMode, caret_mut};
-use crate::{BoundsCheck, BoundsStatus, CaretDirection, CaretRaw, ColIndex, ColWidth,
+use crate::{BoundsCheck, BoundsOverflowStatus, CaretDirection, CaretRaw, ColIndex, ColWidth,
             EditorArgsMut, EditorBuffer, RowHeight, RowIndex, ScrOfs,
             check_overflows, caret_scroll_index, ch, col, height, row, width};
 
@@ -100,7 +100,7 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
 
     if caret_scr_adj.col_index.check_overflows(line_display_width)
-        == BoundsStatus::Overflowed
+        == BoundsOverflowStatus::Overflowed
     {
         caret_mut::to_end_of_line(buffer, engine, SelectMode::Disabled);
     }
@@ -411,10 +411,10 @@ pub fn inc_caret_row(
     viewport_height: RowHeight,
 ) -> RowIndex {
     match caret.row_index.check_overflows(viewport_height) {
-        BoundsStatus::Overflowed => {
+        BoundsOverflowStatus::Overflowed => {
             scroll_offset.row_index += row(1); // Activate vertical scroll.
         }
-        BoundsStatus::Within => {
+        BoundsOverflowStatus::Within => {
             caret.row_index += row(1); // Scroll inactive & Not at bottom of viewport.
         }
     }

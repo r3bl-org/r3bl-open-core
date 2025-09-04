@@ -378,7 +378,7 @@ pub mod content_near_caret {
 
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
 
-            if let caret_locate::CaretColLocationInLine::AtEnd =
+            if let crate::ContentPositionStatus::AtEnd =
                 caret_locate::locate_col(self)
             {
                 // Use the efficient GapBufferLine approach directly
@@ -405,7 +405,7 @@ pub mod content_near_caret {
             if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    caret_locate::CaretColLocationInLine::AtEnd => line_with_info
+                    crate::ContentPositionStatus::AtEnd => line_with_info
                         .info()
                         .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.
@@ -431,7 +431,7 @@ pub mod content_near_caret {
             if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
                 match caret_locate::locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    caret_locate::CaretColLocationInLine::AtEnd => line_with_info
+                    crate::ContentPositionStatus::AtEnd => line_with_info
                         .info()
                         .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.

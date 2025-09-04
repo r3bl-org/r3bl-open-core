@@ -8,69 +8,76 @@
 //! within the bounds of a length:
 //!
 //! ```
-//! use r3bl_tui::{BoundsCheck, BoundsStatus, Index, Length, idx, len};
+//! use r3bl_tui::{BoundsCheck, BoundsOverflowStatus, Index, Length, idx, len};
 //! let index = idx(10);
 //! let length = len(10);
 //! let bounds_status = index.check_overflows(length);
-//! assert_eq!(bounds_status, BoundsStatus::Overflowed);
+//! assert_eq!(bounds_status, BoundsOverflowStatus::Overflowed);
 //! ```
 //!
 //! Here's an example of how to use the [`BoundsCheck`] trait to check if an index is
 //! within the bounds of another index:
 //!
 //! ```
-//! use r3bl_tui::{BoundsCheck, BoundsStatus, Index, idx};
+//! use r3bl_tui::{BoundsCheck, BoundsOverflowStatus, Index, idx};
 //! let index1 = idx(10);
 //! let index2 = idx(10);
 //! let bounds_status = index1.check_overflows(index2);
-//! assert_eq!(bounds_status, BoundsStatus::Within);
+//! assert_eq!(bounds_status, BoundsOverflowStatus::Within);
 //! ```
 
-use std::cmp::Ordering;
 
-use super::{BoundsCheck, BoundsStatus, Index, Length, PositionStatus};
+use super::{BoundsCheck, BoundsOverflowStatus, Index, Length, ContentPositionStatus};
 
 impl BoundsCheck<Length> for Index {
-    fn check_overflows(&self, length: Length) -> BoundsStatus {
+    fn check_overflows(&self, length: Length) -> BoundsOverflowStatus {
         let this = *self;
         let other = length.convert_to_index() /*-1*/;
         if this > other {
-            BoundsStatus::Overflowed
+            BoundsOverflowStatus::Overflowed
         } else {
-            BoundsStatus::Within
+            BoundsOverflowStatus::Within
         }
     }
 
-    fn check_content_position(&self, content_length: Length) -> PositionStatus {
-        let this = *self;
+    fn check_content_position(&self, content_length: Length) -> ContentPositionStatus {
+        let this_value = self.as_usize();
         let length = content_length.as_usize();
 
-        match this.as_usize().cmp(&length) {
-            Ordering::Less => PositionStatus::Within,
-            Ordering::Equal => PositionStatus::Boundary,
-            Ordering::Greater => PositionStatus::Beyond,
+        if this_value > length {
+            ContentPositionStatus::Beyond
+        } else if this_value == 0 {
+            ContentPositionStatus::AtStart
+        } else if this_value == length {
+            ContentPositionStatus::AtEnd
+        } else {
+            ContentPositionStatus::Within
         }
     }
 }
 
 impl BoundsCheck<Index> for Index {
-    fn check_overflows(&self, other: Index) -> BoundsStatus {
+    fn check_overflows(&self, other: Index) -> BoundsOverflowStatus {
         let this = *self;
         if this > other {
-            BoundsStatus::Overflowed
+            BoundsOverflowStatus::Overflowed
         } else {
-            BoundsStatus::Within
+            BoundsOverflowStatus::Within
         }
     }
 
-    fn check_content_position(&self, content_length: Index) -> PositionStatus {
-        let this = *self;
+    fn check_content_position(&self, content_length: Index) -> ContentPositionStatus {
+        let this_value = self.as_usize();
         let length = content_length.as_usize();
 
-        match this.as_usize().cmp(&length) {
-            Ordering::Less => PositionStatus::Within,
-            Ordering::Equal => PositionStatus::Boundary,
-            Ordering::Greater => PositionStatus::Beyond,
+        if this_value > length {
+            ContentPositionStatus::Beyond
+        } else if this_value == 0 {
+            ContentPositionStatus::AtStart
+        } else if this_value == length {
+            ContentPositionStatus::AtEnd
+        } else {
+            ContentPositionStatus::Within
         }
     }
 }
@@ -85,16 +92,16 @@ mod tests_check_overflows {
         let length = len(10);
 
         let index = idx(0);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         let index = idx(9);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         let index = idx(10);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
 
         let index = idx(11);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
     }
 
     #[test]
@@ -102,26 +109,26 @@ mod tests_check_overflows {
         let index2 = idx(10);
 
         let index1 = idx(0);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
 
         let index1 = idx(9);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
 
         let index1 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
 
         let index1 = idx(11);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Overflowed);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Overflowed);
     }
 
     #[test]
     fn test_index_bounds_check_zero_length() {
         let length = len(0);
         let index = idx(0);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Within);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
         let index = idx(1);
-        assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
+        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
     }
 
     #[test]
@@ -129,10 +136,10 @@ mod tests_check_overflows {
         let index2 = idx(0);
 
         let index1 = idx(0);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Within);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
 
         let index1 = idx(1);
-        assert_eq!(index1.check_overflows(index2), BoundsStatus::Overflowed);
+        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Overflowed);
     }
 }
 
@@ -145,29 +152,30 @@ mod tests_check_content_position {
     fn test_index_content_position_check_length() {
         let length = len(5);
 
-        // Within content (indices 0-4 are valid content positions)
+        // At start
         let index = idx(0);
-        assert_eq!(index.check_content_position(length), PositionStatus::Within);
+        assert_eq!(index.check_content_position(length), ContentPositionStatus::AtStart);
 
+        // Within content (indices 1-4 are valid content positions)
         let index = idx(2);
-        assert_eq!(index.check_content_position(length), PositionStatus::Within);
+        assert_eq!(index.check_content_position(length), ContentPositionStatus::Within);
 
         let index = idx(4);
-        assert_eq!(index.check_content_position(length), PositionStatus::Within);
+        assert_eq!(index.check_content_position(length), ContentPositionStatus::Within);
 
-        // At boundary (index 5 is end of content for length 5)
+        // At end (index 5 is end of content for length 5)
         let index = idx(5);
         assert_eq!(
             index.check_content_position(length),
-            PositionStatus::Boundary
+            ContentPositionStatus::AtEnd
         );
 
         // Beyond content
         let index = idx(6);
-        assert_eq!(index.check_content_position(length), PositionStatus::Beyond);
+        assert_eq!(index.check_content_position(length), ContentPositionStatus::Beyond);
 
         let index = idx(10);
-        assert_eq!(index.check_content_position(length), PositionStatus::Beyond);
+        assert_eq!(index.check_content_position(length), ContentPositionStatus::Beyond);
     }
 
     #[test]
@@ -176,13 +184,13 @@ mod tests_check_content_position {
         let index = idx(2);
 
         // For content checking: index 2 is within content for length 3
-        assert_eq!(index.check_content_position(length), PositionStatus::Within);
+        assert_eq!(index.check_content_position(length), ContentPositionStatus::Within);
 
-        // Content boundary is at index 3
+        // Content end boundary is at index 3
         let boundary_index = idx(3);
         assert_eq!(
             boundary_index.check_content_position(length),
-            PositionStatus::Boundary
+            ContentPositionStatus::AtEnd
         );
     }
 
@@ -190,14 +198,14 @@ mod tests_check_content_position {
     fn test_index_content_position_check_zero_length() {
         let length = len(0);
 
-        // For zero length content, index 0 should be boundary (end of empty content)
+        // For zero length content, index 0 should be AtStart (precedence over AtEnd)
         let index = idx(0);
         assert_eq!(
             index.check_content_position(length),
-            PositionStatus::Boundary
+            ContentPositionStatus::AtStart
         );
 
         let index = idx(1);
-        assert_eq!(index.check_content_position(length), PositionStatus::Beyond);
+        assert_eq!(index.check_content_position(length), ContentPositionStatus::Beyond);
     }
 }

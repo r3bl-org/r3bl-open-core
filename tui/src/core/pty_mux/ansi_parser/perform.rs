@@ -18,7 +18,7 @@ use super::{ansi_parser_public_api::AnsiToBufferProcessor,
             protocols::{csi_codes::{self},
                         esc_codes}};
 use crate::{BoundsCheck,
-            BoundsStatus::{Overflowed, Within},
+            BoundsOverflowStatus::{Overflowed, Within},
             CharacterSet, ColIndex, PixelChar, RowIndex, col,
             core::osc::{OscEvent, osc_codes}};
 

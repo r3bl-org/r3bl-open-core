@@ -9,7 +9,7 @@ use vte::Params;
 use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
                    protocols::csi_codes::{CursorPositionRequest, MovementCount},
                    term_units::TermRow};
-use crate::{BoundsCheck, BoundsStatus::Overflowed, ColIndex, Pos, RowIndex, col, row};
+use crate::{BoundsCheck, BoundsOverflowStatus::Overflowed, ColIndex, Pos, RowIndex, col, row};
 
 /// Move cursor up by n lines.
 /// Respects DECSTBM scroll region margins.
