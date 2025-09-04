@@ -7,8 +7,8 @@
 //! showing process information and keyboard shortcuts.
 
 use super::ProcessManager;
-use crate::{ANSIBasicColor, BoundsCheck, FlushKind, OffscreenBuffer, OutputDevice,
-            PixelChar, Size, TuiColor, TuiStyle, bounds_check, idx,
+use crate::{ANSIBasicColor, FlushKind, OffscreenBuffer, OutputDevice,
+            PixelChar, Size, TuiColor, TuiStyle, check_overflows, BoundsCheck, idx, len,
             lock_output_device_as_mut,
             tui::terminal_lib_backends::{OffscreenBufferPaint,
                                          OffscreenBufferPaintImplCrossterm},
@@ -111,9 +111,9 @@ impl OutputRenderer {
         });
 
         for (col_idx, ch) in status_text.chars().enumerate() {
-            bounds_check!(idx(col_idx), self.terminal_size.col_width.as_usize(), {
+            if check_overflows!(idx(col_idx), len(self.terminal_size.col_width.as_usize())) {
                 break;
-            });
+            }
             ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
                 display_char: ch,
                 maybe_style: status_style,
@@ -154,9 +154,9 @@ impl OutputRenderer {
             // Check if we have space for this tab
             let tab_width = tab_text.chars().count();
             let new_width = current_width + tab_width;
-            bounds_check!(idx(new_width), self.terminal_size.col_width.as_usize(), {
+            if check_overflows!(idx(new_width), len(self.terminal_size.col_width.as_usize())) {
                 break;
-            });
+            }
 
             status_parts.push(tab_text);
             current_width += tab_width;
@@ -169,9 +169,9 @@ impl OutputRenderer {
         // Check if we have space for shortcuts
         let shortcuts_width = shortcuts.chars().count();
         let total_width = current_width + shortcuts_width;
-        bounds_check!(idx(total_width), self.terminal_size.col_width.as_usize(), {
+        if check_overflows!(idx(total_width), len(self.terminal_size.col_width.as_usize())) {
             return status_parts.join("");
-        });
+        }
         status_parts.push(shortcuts);
 
         status_parts.join("")

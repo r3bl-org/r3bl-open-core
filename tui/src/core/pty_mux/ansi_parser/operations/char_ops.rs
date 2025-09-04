@@ -6,7 +6,7 @@ use std::cmp::min;
 
 use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
                    protocols::csi_codes::MovementCount};
-use crate::{PixelChar, len, BoundsCheck, BoundsStatus};
+use crate::{PixelChar, len, check_overflows, BoundsCheck};
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
 /// Characters to the right of cursor shift left.
@@ -19,7 +19,7 @@ pub fn delete_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
     let max_col = processor.ofs_buf.window_size.col_width;
 
     // Nothing to delete if cursor is at or beyond right margin
-    if current_col.check_overflows(max_col) == BoundsStatus::Overflowed {
+    if check_overflows!(current_col, max_col) {
         return;
     }
 
@@ -50,7 +50,7 @@ pub fn insert_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
     let max_col = processor.ofs_buf.window_size.col_width;
 
     // Nothing to insert if cursor is at or beyond right margin
-    if current_col.check_overflows(max_col) == BoundsStatus::Overflowed {
+    if check_overflows!(current_col, max_col) {
         return;
     }
 
@@ -83,7 +83,7 @@ pub fn erase_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) 
     let max_col = processor.ofs_buf.window_size.col_width;
 
     // Nothing to erase if cursor is at or beyond right margin
-    if current_col.check_overflows(max_col) == BoundsStatus::Overflowed {
+    if check_overflows!(current_col, max_col) {
         return;
     }
 

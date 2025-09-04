@@ -1,26 +1,108 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-/// Represents the result of a bounds check operation.
+//! Bounds checking utilities for terminal user interface index validation.
+//!
+//! This module provides a comprehensive system for validating index positions against
+//! various bounds, specifically designed for TUI applications where precise position
+//! validation is crucial for rendering and user interaction.
+//!
+//! # Core Concepts
+//!
+//! The module implements two distinct paradigms for bounds checking:
+//!
+//! ## Array-Style Bounds Checking (`check_overflows`)
+//!
+//! Traditional array bounds checking where an index is valid if it's less than the
+//! maximum length. This is used when checking if an index can access existing content:
+//! - Index `i` is valid for length `n` if `i < n`
+//! - Index `i` overflows if `i >= n`
+//! - Used for: accessing array elements, validating content indices
+//!
+//! > See the [`crate::dimens_bounds_check_impl`] and [`crate::unit_bounds_check_impl`]
+//! > modules for trait implementations. The `dimens` module contains implementations
+//! > for `RowIndex`, `ColIndex` types with `RowHeight`, `ColWidth`, etc. The `units`
+//! > module contains implementations for the generic `Index` and `Length` types.
+//!
+//! ## Content Position Checking (`check_content_position`)
+//!
+//! Content-aware position checking that distinguishes between positions within content,
+//! at content boundaries, and beyond content. This is essential for text editing and
+//! cursor positioning:
+//! - `Within`: Index points to existing content (`i < length`)
+//! - `Boundary`: Index is at the end boundary (`i == length`) - valid for
+//!   cursor/insertion
+//! - `Beyond`: Index exceeds content boundaries (`i > length`) - invalid position
+//!
+//! > See the [`crate::dimens_bounds_check_impl`] and [`crate::unit_bounds_check_impl`]
+//! > modules for trait implementations. The `dimens` module contains implementations
+//! > for `RowIndex`, `ColIndex` types with `RowHeight`, `ColWidth`, etc. The `units`
+//! > module contains implementations for the generic `Index` and `Length` types.
+//!
+//! # Key Components
+//!
+//! - [`BoundsCheck`] trait: Core functionality for both checking paradigms
+//! - [`BoundsStatus`] enum: Results for array-style bounds checking
+//! - [`PositionStatus`] enum: Results for content position checking
+//! - [`check_overflows!`](crate::check_overflows) macro: Concise syntax for overflow
+//!   checking
+//!
+//! # Usage Patterns
+//!
+//! ## Text Editor Cursor Validation
+//! ```
+//! use r3bl_tui::{BoundsCheck, PositionStatus, idx, len};
+//!
+//! let line_length = len(10);
+//! let cursor_pos = idx(8);
+//!
+//! match cursor_pos.check_content_position(line_length) {
+//!     PositionStatus::Within => println!("Cursor on character"),
+//!     PositionStatus::Boundary => println!("Cursor at end of line"),
+//!     PositionStatus::Beyond => println!("Invalid cursor position"),
+//! }
+//! ```
+//!
+//! ## Array Access Validation
+//! ```
+//! use r3bl_tui::{check_overflows, BoundsCheck, idx, len};
+//!
+//! let data_length = len(5);
+//! let index = idx(3);
+//!
+//! if !check_overflows!(index, data_length) {
+//!     // Safe to access data[index]
+//! }
+//! ```
+//!
+//! ## Terminal Coordinate Validation
+//! ```
+//! use r3bl_tui::{BoundsCheck, BoundsStatus, RowIndex, RowHeight};
+//!
+//! let row = RowIndex::new(15);
+//! let screen_height = RowHeight::new(20);
+//!
+//! if row.check_overflows(screen_height) == BoundsStatus::Within {
+//!     // Safe to render at this row
+//! }
+//! ```
+
+/// Result of array-style bounds checking operations.
 ///
-/// This enum is used to indicate whether an index is within the bounds of a length
-/// or another index, or if it has overflowed those bounds.
+/// Used with [`BoundsCheck::check_overflows`] to determine if an index can safely
+/// access array content. See the [module documentation](self) for details on the
+/// bounds checking paradigms.
 ///
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{BoundsCheck, BoundsStatus, Index, Length, idx, len};
+/// use r3bl_tui::{BoundsCheck, BoundsStatus, idx, len};
 ///
 /// let index = idx(5);
 /// let length = len(10);
+/// assert_eq!(index.check_overflows(length), BoundsStatus::Within);
 ///
-/// // Check if the index is within the bounds of the length
-/// let status = index.check_overflows(length);
-/// assert_eq!(status, BoundsStatus::Within);
-///
-/// // Check if an index that exceeds the length is overflowed
 /// let large_index = idx(10);
-/// let status = large_index.check_overflows(length);
-/// assert_eq!(status, BoundsStatus::Overflowed);
+/// assert_eq!(large_index.check_overflows(length), BoundsStatus::Overflowed);
 /// ```
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum BoundsStatus {
@@ -30,213 +112,106 @@ pub enum BoundsStatus {
     Overflowed,
 }
 
-/// A macro for performing bounds checks with a concise syntax.
+/// Concise macro for array-style bounds overflow checking.
 ///
-/// This macro automatically calls `len()` on the `$length` parameter before passing it to
-/// `check_overflows`. If the check determines that the index has overflowed, the provided
-/// block of code is executed.
+/// Returns `true` if the index overflows the bounds (`index >= max`), `false` if within
+/// bounds. Equivalent to `index.check_overflows(max) == BoundsStatus::Overflowed`.
+///
+/// See the [module documentation](self) for the difference between overflow checking
+/// and content position checking.
 ///
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{BoundsCheck, BoundsStatus, bounds_check, idx, len};
+/// use r3bl_tui::{check_overflows, idx, len};
 ///
-/// let index = idx(15);
-/// let array = [1, 2, 3, 4, 5];
+/// if check_overflows!(idx(5), len(10)) {
+///     // Handle overflow case
+/// }
 ///
-/// bounds_check!(index, array.len(), {
-///     println!("Index {:?} overflows array length {:?}", index, array.len());
-/// });
+/// // Replaces verbose syntax:
+/// # use r3bl_tui::{BoundsCheck, BoundsStatus, ColIndex, ColWidth};
+/// # let index = ColIndex::new(5);
+/// # let width = ColWidth::new(10);
+/// // if index.check_overflows(width) == BoundsStatus::Overflowed { ... }
+/// if check_overflows!(index, width) { /* ... */ }
 /// ```
 #[macro_export]
-macro_rules! bounds_check {
-    ($index:expr, $length:expr, $overflow_handler:block) => {
-        if $index.check_overflows($crate::len($length))
-            == $crate::BoundsStatus::Overflowed
-        {
-            $overflow_handler
-        }
+macro_rules! check_overflows {
+    ($index:expr, $max:expr) => {
+        $index.check_overflows($max) == $crate::BoundsStatus::Overflowed
     };
 }
 
-/// This trait "formalizes" the concept of checking for overflow. More specifically, when
-/// an index (row or col index) overflows a length (width or height).
+/// Core trait for index bounds validation in TUI applications.
 ///
-/// When `a` and `b` are both unsigned integers, the following are equivalent:
-/// - `a >= b`
-/// - `a > b-1`
-///
-/// So, the following expressions are equivalent:
-/// - `row_index >= height`
-/// - `row_index > height - 1`
+/// Provides both array-style bounds checking and content position checking.
+/// See the [module documentation](self) for detailed explanations of both paradigms.
 ///
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{
-///     BoundsCheck, BoundsStatus,
-///     RowHeight, RowIndex, ColIndex, ColWidth
-/// };
+/// use r3bl_tui::{BoundsCheck, BoundsStatus, RowIndex, RowHeight};
 ///
 /// let row_index = RowIndex::new(5);
 /// let height = RowHeight::new(5);
-/// assert_eq!(
-///     row_index.check_overflows(height),
-///     BoundsStatus::Overflowed
-/// );
-///
-/// let col_index = ColIndex::new(3);
-/// let width = ColWidth::new(5);
-/// assert_eq!(
-///     col_index.check_overflows(width),
-///     BoundsStatus::Within
-/// );
+/// assert_eq!(row_index.check_overflows(height), BoundsStatus::Overflowed);
 /// ```
 pub trait BoundsCheck<OtherType> {
-    /// Checks if this index overflows the given bounds.
+    /// Performs array-style bounds checking.
     ///
-    /// This method cleans up the expression doing the following manual comparison.
-    /// Before this method, code like this was used: `col_index >= width`.
-    /// - And: `a >= b` === `a > b-1`.
-    /// - So: `col_index > width - 1`.
+    /// Returns `BoundsStatus::Within` if the index can safely access content,
+    /// `BoundsStatus::Overflowed` if the index would exceed array bounds.
     ///
-    /// Returns:
-    /// - `BoundsStatus::Within` if the index is within the bounds
-    /// - `BoundsStatus::Overflowed` if the index exceeds the bounds
-    ///
-    /// This method performs array-style bounds checking where an index is considered
-    /// to overflow if it is greater than the maximum valid index (length - 1).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use r3bl_tui::{BoundsCheck, BoundsStatus, idx, len};
-    ///
-    /// let index = idx(5);
-    /// let length = len(10);
-    /// assert_eq!(index.check_overflows(length), BoundsStatus::Within);
-    ///
-    /// let index = idx(10);
-    /// let length = len(10);
-    /// assert_eq!(index.check_overflows(length), BoundsStatus::Overflowed);
-    /// ```
+    /// See the [module documentation](self) for detailed explanation of bounds checking.
     fn check_overflows(&self, max: OtherType) -> BoundsStatus;
 
-    /// Checks the position of this index relative to content length.
+    /// Performs content position checking.
     ///
-    /// This is different from array bounds checking, as it treats the length as content
-    /// size rather than array capacity, where index == length is considered a
-    /// boundary position rather than an overflow.
+    /// Returns `PositionStatus` indicating whether the index is within content,
+    /// at a content boundary, or beyond content boundaries.
     ///
-    /// Returns:
-    /// - `PositionStatus::Within` if the index is less than the content length (valid for
-    ///   content access)
-    /// - `PositionStatus::Boundary` if the index equals the content length (at the end of
-    ///   content)
-    /// - `PositionStatus::Beyond` if the index is greater than the content length (past
-    ///   the end of content)
+    /// See the [module documentation](self) for detailed explanation of content position
+    /// checking.
     fn check_content_position(&self, content_length: OtherType) -> PositionStatus;
 }
 
-/// Represents the position status of an index relative to content boundaries.
+/// Result of content position checking operations.
 ///
-/// This enum provides detailed information about where an index falls in relation
-/// to content length, which is particularly useful for text editing, cursor positioning,
-/// and content navigation scenarios where different boundary conditions require
-/// different handling.
+/// Used with [`BoundsCheck::check_content_position`] to determine the relationship
+/// between an index and content boundaries. Essential for text editing and cursor
+/// positioning where boundary conditions require different handling.
 ///
-/// # Variants
-///
-/// - [`Within`](PositionStatus::Within) - Index points to a valid position inside the
-///   content
-/// - [`Boundary`](PositionStatus::Boundary) - Index is at the exact boundary (end) of
-///   content
-/// - [`Beyond`](PositionStatus::Beyond) - Index exceeds the content boundaries
+/// See the [module documentation](self) for detailed explanation of content position
+/// checking and use cases for each variant.
 ///
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{BoundsCheck, PositionStatus, Index, Length};
+/// use r3bl_tui::{BoundsCheck, PositionStatus, idx, len};
 ///
-/// let content_length = Length::new(5); // Content with 5 elements (indices 0-4)
+/// let content_length = len(5);
 ///
-/// // Within content - valid content positions
-/// let index = Index::new(0);
-/// assert_eq!(index.check_content_position(content_length), PositionStatus::Within);
-///
-/// let index = Index::new(3);
-/// assert_eq!(index.check_content_position(content_length), PositionStatus::Within);
-///
-/// // At boundary - often valid for cursor positioning
-/// let index = Index::new(5);
-/// assert_eq!(index.check_content_position(content_length), PositionStatus::Boundary);
-///
-/// // Beyond content - invalid position
-/// let index = Index::new(7);
-/// assert_eq!(index.check_content_position(content_length), PositionStatus::Beyond);
+/// assert_eq!(idx(3).check_content_position(content_length), PositionStatus::Within);
+/// assert_eq!(idx(5).check_content_position(content_length), PositionStatus::Boundary);
+/// assert_eq!(idx(7).check_content_position(content_length), PositionStatus::Beyond);
 /// ```
-///
-/// # Use Cases
-///
-/// ## Text Editor Cursor Positioning
-/// - `Within`: Cursor is positioned on an existing character
-/// - `Boundary`: Cursor is at the end of the line/content (valid for insertion)
-/// - `Beyond`: Invalid cursor position that needs correction
-///
-/// ## Content Validation
-/// - `Within`: Safe to access content at this index
-/// - `Boundary`: Safe for append operations, but not for content access
-/// - `Beyond`: Requires bounds checking or error handling
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PositionStatus {
-    /// The index is within valid content boundaries.
-    ///
-    /// This indicates that the index points to an actual element within the content.
-    /// For example, in a string of length 5, indices 0 through 4 would be `Within`.
-    ///
-    /// # Use Cases
-    /// - Safe to access content at this position
-    /// - Valid cursor position on existing content
-    /// - Can perform read/write operations at this index
+    /// Index points to existing content (`index < length`).
     Within,
 
-    /// The index is exactly at the content boundary.
-    ///
-    /// This indicates that the index is equal to the content length, positioning
-    /// it at the exact end of the content. While this is not a valid index for
-    /// accessing existing content, it's often a valid position for operations
-    /// like cursor placement or content insertion.
-    ///
-    /// # Use Cases
-    /// - Valid cursor position at the end of content
-    /// - Safe position for append/insert operations
-    /// - Boundary condition that may need special handling
-    ///
-    /// # Examples
-    /// For content of length 5, index 5 would be `Boundary`.
+    /// Index is at the content boundary (`index == length`), valid for cursor/insertion.
     Boundary,
 
-    /// The index exceeds the content boundaries.
-    ///
-    /// This indicates that the index is greater than the content length,
-    /// positioning it well beyond any valid content or boundary position.
-    /// This typically represents an error condition or requires bounds
-    /// correction.
-    ///
-    /// # Use Cases
-    /// - Invalid position requiring error handling
-    /// - Needs bounds checking or index clamping
-    /// - May indicate a programming error or user input validation issue
-    ///
-    /// # Examples
-    /// For content of length 5, any index greater than 5 would be `Beyond`.
+    /// Index exceeds content boundaries (`index > length`), requires correction.
     Beyond,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{bounds_check, idx};
+    use crate::{idx, len};
 
     #[test]
     fn test_bounds_status_equality() {
@@ -263,90 +238,192 @@ mod tests {
     }
 
     #[test]
-    fn test_bounds_check_macro() {
-        let lines = ["line1", "line2", "line3"];
+    fn test_position_status_equality() {
+        assert_eq!(PositionStatus::Within, PositionStatus::Within);
+        assert_eq!(PositionStatus::Boundary, PositionStatus::Boundary);
+        assert_eq!(PositionStatus::Beyond, PositionStatus::Beyond);
+        assert_ne!(PositionStatus::Within, PositionStatus::Boundary);
+        assert_ne!(PositionStatus::Boundary, PositionStatus::Beyond);
+        assert_ne!(PositionStatus::Within, PositionStatus::Beyond);
+    }
 
-        // Test case: index within bounds
-        {
-            let line_index = idx(1);
-            let mut executed = false;
+    #[test]
+    fn test_position_status_copy() {
+        let status1 = PositionStatus::Within;
+        let status2 = status1;
+        assert_eq!(status1, status2);
 
-            bounds_check!(line_index, lines.len(), {
-                executed = true;
-            });
+        let status3 = PositionStatus::Boundary;
+        let status4 = status3;
+        assert_eq!(status3, status4);
 
-            // Block should not execute when index is within bounds
-            assert!(
-                !executed,
-                "Handler block should not execute when index is within bounds"
-            );
-        }
+        let status5 = PositionStatus::Beyond;
+        let status6 = status5;
+        assert_eq!(status5, status6);
+    }
 
-        // Test case: index at boundary (equal to length)
-        {
-            let line_index = idx(3); // lines.len() == 3
-            let mut executed = false;
+    #[test]
+    fn test_position_status_debug() {
+        assert_eq!(format!("{:?}", PositionStatus::Within), "Within");
+        assert_eq!(format!("{:?}", PositionStatus::Boundary), "Boundary");
+        assert_eq!(format!("{:?}", PositionStatus::Beyond), "Beyond");
+    }
 
-            bounds_check!(line_index, lines.len(), {
-                executed = true;
-            });
+    #[test]
+    fn test_check_overflows_macro() {
+        use crate::{ColIndex, ColWidth};
 
-            // Block should execute when index equals length
-            assert!(
-                executed,
-                "Handler block should execute when index equals length"
-            );
-        }
+        // Test basic cases with Index/Length
+        assert!(!check_overflows!(idx(1), len(3)), "Within bounds");
+        assert!(check_overflows!(idx(3), len(3)), "At boundary");
+        assert!(check_overflows!(idx(5), len(3)), "Beyond bounds");
+        assert!(
+            !check_overflows!(idx(0), len(0)),
+            "Empty collection edge case"
+        );
 
-        // Test case: index beyond bounds
-        {
-            let line_index = idx(5);
-            let mut executed = false;
+        // Test with typed indices
+        assert!(
+            !check_overflows!(ColIndex::new(5), ColWidth::new(10)),
+            "Typed indices within bounds"
+        );
+        assert!(
+            check_overflows!(ColIndex::new(10), ColWidth::new(10)),
+            "Typed indices at boundary"
+        );
 
-            bounds_check!(line_index, lines.len(), {
-                executed = true;
-            });
-
-            // Block should execute when index exceeds length
-            assert!(
-                executed,
-                "Handler block should execute when index exceeds length"
-            );
-        }
-
-        // Test case: return value from handler block
-        {
-            let line_index = idx(10);
-
-            let result = (|| {
-                bounds_check!(line_index, lines.len(), {
-                    return "Overflow detected";
-                });
-
-                "No overflow"
-            })();
-
+        // Verify macro matches direct method calls
+        let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
+        for (index_val, length_val) in test_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
             assert_eq!(
-                result, "Overflow detected",
-                "Handler block's return value should be propagated"
+                check_overflows!(index, length),
+                index.check_overflows(length) == BoundsStatus::Overflowed,
+                "Macro should match direct method for index {index_val} and length {length_val}"
             );
         }
+    }
 
-        // Test case: empty collection
-        {
-            let empty_vec: Vec<String> = vec![];
-            let line_index = idx(0);
-            let mut executed = false;
+    #[test]
+    fn test_check_content_position_basic() {
+        let content_length = len(5);
 
-            bounds_check!(line_index, empty_vec.len(), {
-                executed = true;
-            });
+        // Within content
+        assert_eq!(
+            idx(0).check_content_position(content_length),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            idx(2).check_content_position(content_length),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            idx(4).check_content_position(content_length),
+            PositionStatus::Within
+        );
 
-            // Block should execute when index equals length of empty collection
-            assert!(
-                !executed,
-                "Handler block should not execute when index equals length of empty collection"
-            );
-        }
+        // At boundary
+        assert_eq!(
+            idx(5).check_content_position(content_length),
+            PositionStatus::Boundary
+        );
+
+        // Beyond content
+        assert_eq!(
+            idx(6).check_content_position(content_length),
+            PositionStatus::Beyond
+        );
+        assert_eq!(
+            idx(10).check_content_position(content_length),
+            PositionStatus::Beyond
+        );
+    }
+
+    #[test]
+    fn test_check_content_position_edge_cases() {
+        // Zero-length content
+        let zero_length = len(0);
+        assert_eq!(
+            idx(0).check_content_position(zero_length),
+            PositionStatus::Boundary
+        );
+        assert_eq!(
+            idx(1).check_content_position(zero_length),
+            PositionStatus::Beyond
+        );
+
+        // Single element content
+        let single_length = len(1);
+        assert_eq!(
+            idx(0).check_content_position(single_length),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            idx(1).check_content_position(single_length),
+            PositionStatus::Boundary
+        );
+        assert_eq!(
+            idx(2).check_content_position(single_length),
+            PositionStatus::Beyond
+        );
+    }
+
+    #[test]
+    fn test_check_content_position_with_typed_indices() {
+        use crate::{ColIndex, ColWidth, RowHeight, RowIndex};
+
+        // Test with ColIndex/ColWidth
+        let col_width = ColWidth::new(3);
+        assert_eq!(
+            ColIndex::new(0).check_content_position(col_width),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            ColIndex::new(2).check_content_position(col_width),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            ColIndex::new(3).check_content_position(col_width),
+            PositionStatus::Boundary
+        );
+        assert_eq!(
+            ColIndex::new(4).check_content_position(col_width),
+            PositionStatus::Beyond
+        );
+
+        // Test with RowIndex/RowHeight
+        let row_height = RowHeight::new(2);
+        assert_eq!(
+            RowIndex::new(0).check_content_position(row_height),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            RowIndex::new(1).check_content_position(row_height),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            RowIndex::new(2).check_content_position(row_height),
+            PositionStatus::Boundary
+        );
+        assert_eq!(
+            RowIndex::new(3).check_content_position(row_height),
+            PositionStatus::Beyond
+        );
+
+        // Test with Index/Index
+        let other_index = idx(4);
+        assert_eq!(
+            idx(2).check_content_position(other_index),
+            PositionStatus::Within
+        );
+        assert_eq!(
+            idx(4).check_content_position(other_index),
+            PositionStatus::Boundary
+        );
+        assert_eq!(
+            idx(5).check_content_position(other_index),
+            PositionStatus::Beyond
+        );
     }
 }

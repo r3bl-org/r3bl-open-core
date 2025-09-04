@@ -8,7 +8,7 @@ pub mod caret;
 pub mod col_index;
 pub mod col_width;
 pub mod dim;
-pub mod dimens_check_overflows; // Don't re-export.
+pub mod dimens_bounds_check_impl; // Don't re-export.
 pub mod pc;
 pub mod pos;
 pub mod req_size_pc;

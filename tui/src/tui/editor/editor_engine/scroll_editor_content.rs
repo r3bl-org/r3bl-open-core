@@ -12,7 +12,7 @@ use std::cmp::Ordering;
 use super::{SelectMode, caret_mut};
 use crate::{BoundsCheck, BoundsStatus, CaretDirection, CaretRaw, ColIndex, ColWidth,
             EditorArgsMut, EditorBuffer, RowHeight, RowIndex, ScrOfs,
-            caret_scroll_index, ch, col, height, row, width};
+            check_overflows, caret_scroll_index, ch, col, height, row, width};
 
 /// # Scrolling not active
 ///
@@ -73,7 +73,7 @@ pub fn inc_caret_col_by(
     // Just move the caret right.
     caret_raw.add_col_with_bounds(col_amt, line_display_width);
 
-    if caret_raw.col_index.check_overflows(vp_width) == BoundsStatus::Overflowed {
+    if check_overflows!(caret_raw.col_index, vp_width) {
         // The following is equivalent to:
         // `let diff_overflow = (caret_raw.col_index + ch!(1)) - vp_width;`
         let diff_overflow = caret_raw.col_index.convert_to_width() /*+1*/ - vp_width;
