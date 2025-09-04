@@ -27,10 +27,23 @@ impl Debug for RowIndex {
     }
 }
 
+/// Creates a new [`RowIndex`] from any type that can be converted into it.
+///
+/// This is a convenience function that provides a shorter way to create
+/// row indices.
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{RowIndex, row};
+/// let row = row(5_usize);
+/// assert_eq!(row, RowIndex::new(5));
+/// ```
 pub fn row(arg_row_index: impl Into<RowIndex>) -> RowIndex { arg_row_index.into() }
 
-mod constructor {
-    use super::{ChUnit, RowHeight, RowIndex, height, usize};
+mod impl_core {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl RowIndex {
         pub fn new(arg_row_index: impl Into<RowIndex>) -> Self { arg_row_index.into() }
@@ -49,6 +62,11 @@ mod constructor {
         #[must_use]
         pub fn convert_to_height(&self) -> RowHeight { height(self.0 + 1) }
     }
+}
+
+mod impl_from {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<ChUnit> for RowIndex {
         fn from(ch_unit: ChUnit) -> Self { RowIndex(ch_unit) }
@@ -75,9 +93,9 @@ mod constructor {
     }
 }
 
-mod ops {
-    use super::{Add, AddAssign, ChUnit, Deref, DerefMut, Mul, RowHeight, RowIndex, Sub,
-                SubAssign};
+mod impl_deref {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for RowIndex {
         type Target = ChUnit;
@@ -88,6 +106,11 @@ mod ops {
     impl DerefMut for RowIndex {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
     }
+}
+
+mod dimension_arithmetic_operators {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Sub<RowIndex> for RowIndex {
         type Output = RowIndex;
@@ -154,6 +177,14 @@ mod ops {
             self_copy
         }
     }
+}
+
+mod numeric_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
+
+    // Generate numeric operations using macro
+    create_numeric_arithmetic_operators!(RowIndex, row, [usize, u16, i32]);
 }
 
 #[cfg(test)]
@@ -273,5 +304,93 @@ mod tests {
     #[test]
     fn test_from_usize() {
         assert_eq!(RowIndex::from(5usize), row(5));
+    }
+
+    #[test]
+    fn test_row_index_add_i32() {
+        // Add positive i32.
+        {
+            let row_idx = row(5);
+            let result = row_idx + 3i32;
+            assert_eq!(result, row(8));
+        }
+        // Add negative i32 (should be treated as 0).
+        {
+            let row_idx = row(5);
+            let result = row_idx + -3i32;
+            assert_eq!(result, row(5)); // -3 becomes 0
+        }
+        // Add zero.
+        {
+            let row_idx = row(5);
+            let result = row_idx + 0i32;
+            assert_eq!(result, row(5));
+        }
+    }
+
+    #[test]
+    fn test_row_index_sub_i32() {
+        // Subtract positive i32.
+        {
+            let row_idx = row(10);
+            let result = row_idx - 3i32;
+            assert_eq!(result, row(7));
+        }
+        // Subtract larger value (should saturate to 0).
+        {
+            let row_idx = row(5);
+            let result = row_idx - 10i32;
+            assert_eq!(result, row(0));
+        }
+        // Subtract negative i32 (should be treated as 0, no change).
+        {
+            let row_idx = row(5);
+            let result = row_idx - -3i32;
+            assert_eq!(result, row(5)); // -3 becomes 0
+        }
+        // Subtract zero.
+        {
+            let row_idx = row(5);
+            let result = row_idx - 0i32;
+            assert_eq!(result, row(5));
+        }
+    }
+
+    #[test]
+    fn test_row_index_add_assign_i32() {
+        // AddAssign positive i32.
+        {
+            let mut row_idx = row(5);
+            row_idx += 3i32;
+            assert_eq!(row_idx, row(8));
+        }
+        // AddAssign negative i32 (should be treated as 0).
+        {
+            let mut row_idx = row(5);
+            row_idx += -3i32;
+            assert_eq!(row_idx, row(5)); // -3 becomes 0
+        }
+    }
+
+    #[test]
+    fn test_row_index_sub_assign_i32() {
+        // SubAssign positive i32.
+        {
+            let mut row_idx = row(10);
+            row_idx -= 3i32;
+            assert_eq!(row_idx, row(7));
+        }
+        // SubAssign larger value (should saturate to 0).
+        {
+            let mut row_idx = row(5);
+            row_idx -= 10i32;
+            assert_eq!(row_idx, row(0));
+        }
+        // SubAssign negative i32 (should be treated as 0, no change).
+        {
+            let mut row_idx = row(5);
+            row_idx -= -3i32;
+            assert_eq!(row_idx, row(5)); // -3 becomes 0
+        }
     }
 }

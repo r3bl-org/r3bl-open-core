@@ -5,7 +5,7 @@
 use super::{super::{ansi_parser_public_api::AnsiToBufferProcessor,
                     protocols::csi_codes::MovementCount},
             cursor_ops};
-use crate::PixelChar;
+use crate::{PixelChar, row};
 
 /// Move cursor down one line, scrolling the buffer if at bottom.
 /// Implements the ESC D (IND) escape sequence.
@@ -18,15 +18,18 @@ pub fn index_down(processor: &mut AnsiToBufferProcessor) {
     let maybe_scroll_region = processor.ofs_buf.ansi_parser_support.scroll_region_bottom;
     let scroll_bottom_boundary = maybe_scroll_region
         .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(/* None */ max_row.convert_to_row_index().as_usize(), /* Some */ |row| row.as_usize());
+        .map_or(
+            /* None */ max_row.convert_to_row_index(),
+            /* Some */ Into::into,
+        );
 
     // Check if we're at the bottom of the scroll region.
-    if current_row.as_usize() >= scroll_bottom_boundary {
+    if current_row >= scroll_bottom_boundary {
         // At scroll region bottom - scroll buffer content up by one line.
         scroll_buffer_up(processor);
     } else {
         // Not at scroll region bottom - just move cursor down.
-        cursor_ops::cursor_down_by_n(processor, 1);
+        cursor_ops::cursor_down_by_n(processor, row(1));
     }
 }
 
@@ -40,15 +43,15 @@ pub fn reverse_index_up(processor: &mut AnsiToBufferProcessor) {
     let maybe_scroll_region = processor.ofs_buf.ansi_parser_support.scroll_region_top;
     let scroll_top_boundary = maybe_scroll_region
         .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(/* None */ 0, /* Some */ |row| row.as_usize());
+        .map_or(/* None */ row(0), /* Some */ std::convert::identity);
 
     // Check if we're at the top of the scroll region.
-    if current_row.as_usize() <= scroll_top_boundary {
+    if current_row <= scroll_top_boundary {
         // At scroll region top - scroll buffer content down by one line.
         scroll_buffer_down(processor);
     } else {
         // Not at scroll region top - just move cursor up.
-        cursor_ops::cursor_up_by_n(processor, 1);
+        cursor_ops::cursor_up_by_n(processor, row(1));
     }
 }
 
@@ -69,11 +72,16 @@ pub fn scroll_buffer_up(processor: &mut AnsiToBufferProcessor) {
         processor.ofs_buf.ansi_parser_support.scroll_region_bottom;
     let scroll_bottom = maybe_scroll_region_bottom
         .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(max_row.convert_to_row_index().as_usize(), |row| row.as_usize());
+        .map_or(max_row.convert_to_row_index().as_usize(), |row| {
+            row.as_usize()
+        });
 
     // Shift lines up within the scroll region only.
+    // Note: We can't use copy_within() here because PixelCharLine doesn't implement Copy
+    // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
     for row in scroll_top..scroll_bottom {
-        processor.ofs_buf.buffer[row] = processor.ofs_buf.buffer[row + 1].clone();
+        processor.ofs_buf.buffer[row] = 
+            processor.ofs_buf.buffer[row + 1].clone();
     }
 
     // Clear the bottom line of the scroll region.
@@ -97,11 +105,16 @@ pub fn scroll_buffer_down(processor: &mut AnsiToBufferProcessor) {
         processor.ofs_buf.ansi_parser_support.scroll_region_bottom;
     let scroll_bottom = maybe_scroll_region_bottom
         .and_then(super::super::term_units::TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(max_row.convert_to_row_index().as_usize(), |row| row.as_usize());
+        .map_or(max_row.convert_to_row_index().as_usize(), |row| {
+            row.as_usize()
+        });
 
     // Shift lines down within the scroll region only.
+    // Note: We can't use copy_within() here because PixelCharLine doesn't implement Copy
+    // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
     for row in (scroll_top + 1..=scroll_bottom).rev() {
-        processor.ofs_buf.buffer[row] = processor.ofs_buf.buffer[row - 1].clone();
+        processor.ofs_buf.buffer[row] = 
+            processor.ofs_buf.buffer[row - 1].clone();
     }
 
     // Clear the new top line of the scroll region.
@@ -110,16 +123,16 @@ pub fn scroll_buffer_down(processor: &mut AnsiToBufferProcessor) {
 
 /// Handle SU (Scroll Up) - scroll display up by n lines.
 pub fn scroll_up(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_scroll_up = MovementCount::from(params).as_u16();
-    for _ in 0..lines_to_scroll_up {
+    let lines_to_scroll_up = row(MovementCount::from(params).as_u16());
+    for _ in 0..lines_to_scroll_up.as_u16() {
         scroll_buffer_up(processor);
     }
 }
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
 pub fn scroll_down(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_scroll_down = MovementCount::from(params).as_u16();
-    for _ in 0..lines_to_scroll_down {
+    let lines_to_scroll_down = row(MovementCount::from(params).as_u16());
+    for _ in 0..lines_to_scroll_down.as_u16() {
         scroll_buffer_down(processor);
     }
 }

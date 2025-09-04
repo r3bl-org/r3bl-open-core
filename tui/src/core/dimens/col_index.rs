@@ -27,10 +27,23 @@ impl Debug for ColIndex {
     }
 }
 
+/// Creates a new [`ColIndex`] from any type that can be converted into it.
+///
+/// This is a convenience function that provides a shorter way to create
+/// column indices.
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::{ColIndex, col};
+/// let col = col(5_usize);
+/// assert_eq!(col, ColIndex::new(5));
+/// ```
 pub fn col(arg_col_index: impl Into<ColIndex>) -> ColIndex { arg_col_index.into() }
 
-mod constructor {
-    use super::{ChUnit, ColIndex, ColWidth, usize, width};
+mod impl_core {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl ColIndex {
         pub fn new(arg_col_index: impl Into<ColIndex>) -> Self { arg_col_index.into() }
@@ -48,6 +61,11 @@ mod constructor {
         #[must_use]
         pub fn convert_to_width(&self) -> ColWidth { width(self.0 + 1) }
     }
+}
+
+mod impl_from {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<ChUnit> for ColIndex {
         fn from(ch_unit: ChUnit) -> Self { ColIndex(ch_unit) }
@@ -74,9 +92,9 @@ mod constructor {
     }
 }
 
-mod ops {
-    use super::{Add, AddAssign, ChUnit, ColIndex, ColWidth, Deref, DerefMut, Mul, Sub,
-                SubAssign, col};
+mod impl_deref {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for ColIndex {
         type Target = ChUnit;
@@ -87,6 +105,11 @@ mod ops {
     impl DerefMut for ColIndex {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
     }
+}
+
+mod dimension_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Sub<ColIndex> for ColIndex {
         type Output = ColIndex;
@@ -154,6 +177,14 @@ mod ops {
             self_copy
         }
     }
+}
+
+mod numeric_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
+
+    // Generate numeric operations using macro
+    create_numeric_arithmetic_operators!(ColIndex, col, [usize, u16, i32]);
 }
 
 #[cfg(test)]
@@ -273,5 +304,93 @@ mod tests {
     #[test]
     fn test_convert_from_usize() {
         assert_eq!(ColIndex::from(5usize), col(5));
+    }
+
+    #[test]
+    fn test_col_index_add_i32() {
+        // Add positive i32.
+        {
+            let col_idx = col(5);
+            let result = col_idx + 3i32;
+            assert_eq!(result, col(8));
+        }
+        // Add negative i32 (should be treated as 0).
+        {
+            let col_idx = col(5);
+            let result = col_idx + -3i32;
+            assert_eq!(result, col(5)); // -3 becomes 0
+        }
+        // Add zero.
+        {
+            let col_idx = col(5);
+            let result = col_idx + 0i32;
+            assert_eq!(result, col(5));
+        }
+    }
+
+    #[test]
+    fn test_col_index_sub_i32() {
+        // Subtract positive i32.
+        {
+            let col_idx = col(10);
+            let result = col_idx - 3i32;
+            assert_eq!(result, col(7));
+        }
+        // Subtract larger value (should saturate to 0).
+        {
+            let col_idx = col(5);
+            let result = col_idx - 10i32;
+            assert_eq!(result, col(0));
+        }
+        // Subtract negative i32 (should be treated as 0, no change).
+        {
+            let col_idx = col(5);
+            let result = col_idx - -3i32;
+            assert_eq!(result, col(5)); // -3 becomes 0
+        }
+        // Subtract zero.
+        {
+            let col_idx = col(5);
+            let result = col_idx - 0i32;
+            assert_eq!(result, col(5));
+        }
+    }
+
+    #[test]
+    fn test_col_index_add_assign_i32() {
+        // AddAssign positive i32.
+        {
+            let mut col_idx = col(5);
+            col_idx += 3i32;
+            assert_eq!(col_idx, col(8));
+        }
+        // AddAssign negative i32 (should be treated as 0).
+        {
+            let mut col_idx = col(5);
+            col_idx += -3i32;
+            assert_eq!(col_idx, col(5)); // -3 becomes 0
+        }
+    }
+
+    #[test]
+    fn test_col_index_sub_assign_i32() {
+        // SubAssign positive i32.
+        {
+            let mut col_idx = col(10);
+            col_idx -= 3i32;
+            assert_eq!(col_idx, col(7));
+        }
+        // SubAssign larger value (should saturate to 0).
+        {
+            let mut col_idx = col(5);
+            col_idx -= 10i32;
+            assert_eq!(col_idx, col(0));
+        }
+        // SubAssign negative i32 (should be treated as 0, no change).
+        {
+            let mut col_idx = col(5);
+            col_idx -= -3i32;
+            assert_eq!(col_idx, col(5)); // -3 becomes 0
+        }
     }
 }

@@ -67,34 +67,6 @@ macro_rules! throws_with_return {
     }};
 }
 
-/// Syntactic sugar to run a conditional statement. You can use [`bool::then()`] instead
-/// of this macro in most case, except for when you need to return something from the
-/// block.
-///
-/// # Example
-///
-/// ```
-/// use r3bl_tui::call_if_true;
-/// const DBG_FLAG: bool = true;
-/// call_if_true!(
-///     DBG_FLAG,
-///     eprintln!(
-///         "{} {} {}\r",
-///         "one",
-///         "two",
-///         "three"
-///     )
-/// );
-/// ```
-#[macro_export]
-macro_rules! call_if_true {
-    ($cond:expr, $block: expr) => {{
-        if $cond {
-            $block
-        }
-    }};
-}
-
 /// This is a really simple macro to make it effortless to use the color console logger.
 ///
 /// It takes a single identifier as an argument, or any number of them. It simply dumps an
@@ -187,37 +159,7 @@ macro_rules! console_log {
     };
 }
 
-/// Runs the `$code` block after evaluating the `$eval` expression and assigning it to
-/// `$id`.
-/// - It returns the `$id` after running the `$code` block.
-/// - Note that `$id` is not leaked into the caller's scope / block.
-///
-/// # Examples
-///
-/// ```no_run
-/// use r3bl_tui::with;
-/// let it = with! {
-///     Some(12),
-///     as it /* This only exists in the scope of the run block below. */,
-///     run {
-///         match it {
-///             Some(val) => assert!(val == 12),
-///             _ => todo!()
-///         };
-///     }
-/// };
-/// assert!(it == Some(12));
-/// ```
-#[macro_export]
-macro_rules! with {
-    ($eval:expr, as $id:ident, run $code:block) => {{
-        let $id = $eval;
-        $code;
-        $id
-    }};
-}
-
-/// Similar to [`with!`] except `$id` is a mutable reference to the `$eval` expression.
+/// The `$id` is a mutable reference to the `$eval` expression.
 /// - It returns the `$id` after running the `$code` block.
 /// - Note that `$id` is not leaked into the caller's scope / block.
 ///
@@ -241,31 +183,6 @@ macro_rules! with_mut {
         let mut $id = $eval;
         $code;
         $id
-    }};
-}
-
-/// Similar to [`with_mut!`] except that it returns the value of the `$code` block.
-/// - Note that `$id` is not leaked into the caller's scope / block.
-///
-/// # Example
-///
-/// ```
-/// use r3bl_tui::with_mut_returns;
-/// let queue = with_mut_returns! {
-///     vec![1, 2, 3],
-///     as it,
-///     return {
-///         it.push(4);
-///         assert_eq!(it.len(), 4);
-///         it[3]
-///     }
-/// };
-/// ```
-#[macro_export]
-macro_rules! with_mut_returns {
-    ($eval:expr, as $id:ident, return $code:block) => {{
-        let mut $id = $eval;
-        $code
     }};
 }
 

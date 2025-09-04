@@ -526,7 +526,7 @@ mod backspace_at_caret_helper {
         engine: &mut EditorEngine,
     ) -> Option<()> {
         let caret_scr_adj = buffer.get_caret_scr_adj();
-        let prev_row_index = caret_scr_adj.row_index - row(1);
+        let prev_row_index = caret_scr_adj.row_index - 1;
 
         // A line above the caret exists.
         let prev_line_display_width =

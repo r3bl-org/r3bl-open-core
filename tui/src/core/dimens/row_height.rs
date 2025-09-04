@@ -46,7 +46,7 @@ impl Debug for RowHeight {
 pub fn height(arg_row_height: impl Into<RowHeight>) -> RowHeight { arg_row_height.into() }
 
 mod constructor {
-    use super::{ChUnit, RowHeight, RowIndex, ch, row};
+    use super::{RowHeight, RowIndex, ch, row};
 
     impl RowHeight {
         pub fn new(arg_row_height: impl Into<RowHeight>) -> Self { arg_row_height.into() }
@@ -62,6 +62,10 @@ mod constructor {
         #[must_use]
         pub fn convert_to_row_index(&self) -> RowIndex { row(self.0 - ch(1)) }
     }
+}
+
+mod impl_from_numeric {
+    use super::{ChUnit, RowHeight, ch};
 
     impl From<ChUnit> for RowHeight {
         fn from(ch_unit: ChUnit) -> Self { RowHeight(ch_unit) }

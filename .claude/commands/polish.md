@@ -9,4 +9,9 @@ crate), do the following:
   - `cargo clippy --all-targets`
   - `cargo test --doc`
   - `cargo doc --no-deps`
-4. Finally run `cargo fmt` to format the code
+4. In all the code that is part of the current git working tree, make sure that there is sufficient
+   documentation and test code coverage.
+   - For existing tests, make sure they add value and are not redundant or needless.
+   - If they are needless, remove them. If there are missing tests, then add them.
+5. Make sure that all tests and doctests pass
+6. Finally run `cargo fmt` to format the code

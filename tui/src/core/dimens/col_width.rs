@@ -45,7 +45,7 @@ impl Debug for ColWidth {
 pub fn width(arg_col_width: impl Into<ColWidth>) -> ColWidth { arg_col_width.into() }
 
 mod construct {
-    use super::{ChUnit, ColIndex, ColWidth, ch, col};
+    use super::{ColIndex, ColWidth, ch, col};
 
     impl ColWidth {
         pub fn new(arg_col_width: impl Into<ColWidth>) -> Self { arg_col_width.into() }
@@ -67,6 +67,10 @@ mod construct {
         #[must_use]
         pub fn as_usize(&self) -> usize { self.0.into() }
     }
+}
+
+mod impl_from_numeric {
+    use super::{ChUnit, ColWidth, ch};
 
     impl From<ChUnit> for ColWidth {
         fn from(ch_unit: ChUnit) -> Self { ColWidth(ch_unit) }

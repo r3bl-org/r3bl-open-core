@@ -19,9 +19,8 @@ use super::{ansi_parser_public_api::AnsiToBufferProcessor,
                         esc_codes}};
 use crate::{BoundsCheck,
             BoundsStatus::{Overflowed, Within},
-            CharacterSet, PixelChar, col,
-            core::osc::{OscEvent, osc_codes},
-            row};
+            CharacterSet, ColIndex, PixelChar, RowIndex, col,
+            core::osc::{OscEvent, osc_codes}};
 
 /// Internal methods for `AnsiToBufferProcessor` to implement [`Perform`] trait.
 impl Perform for AnsiToBufferProcessor<'_> {
@@ -88,14 +87,14 @@ impl Perform for AnsiToBufferProcessor<'_> {
                 };
 
             // Move cursor forward.
-            let new_col = current_col + col(1);
+            let new_col: ColIndex = current_col + 1;
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
             if new_col.check_overflows(col_max) == Overflowed {
                 if self.ofs_buf.ansi_parser_support.auto_wrap_mode {
                     // DECAWM enabled: wrap to next line (default behavior)
                     self.ofs_buf.my_pos.col_index = col(0);
-                    let next_row = current_row + row(1);
+                    let next_row: RowIndex = current_row + 1;
                     if next_row.check_overflows(row_max) == Within {
                         self.ofs_buf.my_pos.row_index = next_row;
                     }
@@ -146,8 +145,8 @@ impl Perform for AnsiToBufferProcessor<'_> {
             // Backspace
             esc_codes::BACKSPACE => {
                 let current_col = self.ofs_buf.my_pos.col_index;
-                if current_col.as_usize() > 0 {
-                    self.ofs_buf.my_pos.col_index = col(current_col.as_usize() - 1);
+                if current_col > col(0) {
+                    self.ofs_buf.my_pos.col_index = current_col - 1;
                 }
             }
             // Tab - move to next tab stop boundary
@@ -159,15 +158,13 @@ impl Perform for AnsiToBufferProcessor<'_> {
                 let max_col = self.ofs_buf.window_size.col_width;
 
                 // Clamp to max valid column index if it would overflow
-                self.ofs_buf.my_pos.col_index = col(min(
-                    next_tab_col,
-                    max_col.convert_to_col_index().as_usize(),
-                ));
+                self.ofs_buf.my_pos.col_index =
+                    col(min(next_tab_col, max_col.convert_to_col_index().as_usize()));
             }
             // Line feed (newline)
             esc_codes::LINE_FEED => {
                 let max_row = self.ofs_buf.window_size.row_height;
-                let next_row = self.ofs_buf.my_pos.row_index + row(1);
+                let next_row: RowIndex = self.ofs_buf.my_pos.row_index + 1;
                 if next_row.check_overflows(max_row) == Within {
                     self.ofs_buf.my_pos.row_index = next_row;
                 }

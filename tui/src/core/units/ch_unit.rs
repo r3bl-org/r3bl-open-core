@@ -3,7 +3,7 @@
 use std::{fmt::{Debug, Formatter},
           ops::{Add, AddAssign, Deref, Div, Mul, MulAssign, Sub, SubAssign}};
 
-use crate::{LossyConvertToByte, add_unsigned, mul_unsigned, sub_unsigned};
+use crate::LossyConvertToByte;
 
 /// The backing field that is used to represent a [`ChUnit`] in memory.
 pub type ChUnitPrimitiveType = u16;
@@ -122,12 +122,11 @@ impl Deref for ChUnit {
 }
 
 pub mod ch_unit_math_ops {
-    use super::{Add, AddAssign, ChUnit, Div, Mul, MulAssign, Sub, SubAssign,
-                add_unsigned, ch, mul_unsigned, sub_unsigned};
+    use super::{Add, AddAssign, ChUnit, Div, Mul, MulAssign, Sub, SubAssign, ch};
 
     impl MulAssign<ChUnit> for ChUnit {
         fn mul_assign(&mut self, rhs: Self) {
-            self.value = mul_unsigned!(self.value, rhs.value);
+            self.value = self.value.saturating_mul(rhs.value);
         }
     }
 
@@ -135,25 +134,25 @@ pub mod ch_unit_math_ops {
         type Output = Self;
 
         fn add(self, rhs: Self) -> Self::Output {
-            ch(add_unsigned!(self.value, rhs.value))
+            ch(self.value.saturating_add(rhs.value))
         }
     }
 
     impl Add<u16> for ChUnit {
         type Output = Self;
 
-        fn add(self, rhs: u16) -> Self::Output { ch(add_unsigned!(self.value, rhs)) }
+        fn add(self, rhs: u16) -> Self::Output { ch(self.value.saturating_add(rhs)) }
     }
 
     impl AddAssign for ChUnit {
         fn add_assign(&mut self, rhs: Self) {
-            self.value = add_unsigned!(self.value, rhs.value);
+            self.value = self.value.saturating_add(rhs.value);
         }
     }
 
     impl AddAssign<u16> for ChUnit {
         fn add_assign(&mut self, rhs: u16) {
-            self.value = add_unsigned!(self.value, rhs);
+            self.value = self.value.saturating_add(rhs);
         }
     }
 
@@ -161,25 +160,25 @@ pub mod ch_unit_math_ops {
         type Output = Self;
 
         fn sub(self, rhs: Self) -> Self::Output {
-            ch(sub_unsigned!(self.value, rhs.value))
+            ch(self.value.saturating_sub(rhs.value))
         }
     }
 
     impl Sub<u16> for ChUnit {
         type Output = Self;
 
-        fn sub(self, rhs: u16) -> Self::Output { ch(sub_unsigned!(self.value, rhs)) }
+        fn sub(self, rhs: u16) -> Self::Output { ch(self.value.saturating_sub(rhs)) }
     }
 
     impl SubAssign for ChUnit {
         fn sub_assign(&mut self, rhs: Self) {
-            self.value = sub_unsigned!(self.value, rhs.value);
+            self.value = self.value.saturating_sub(rhs.value);
         }
     }
 
     impl SubAssign<u16> for ChUnit {
         fn sub_assign(&mut self, rhs: u16) {
-            self.value = sub_unsigned!(self.value, rhs);
+            self.value = self.value.saturating_sub(rhs);
         }
     }
 
@@ -187,14 +186,14 @@ pub mod ch_unit_math_ops {
         type Output = Self;
 
         fn mul(self, rhs: Self) -> Self::Output {
-            ch(mul_unsigned!(self.value, rhs.value))
+            ch(self.value.saturating_mul(rhs.value))
         }
     }
 
     impl Mul<u16> for ChUnit {
         type Output = Self;
 
-        fn mul(self, rhs: u16) -> Self::Output { ch(mul_unsigned!(self.value, rhs)) }
+        fn mul(self, rhs: u16) -> Self::Output { ch(self.value.saturating_mul(rhs)) }
     }
 
     impl Div<u16> for ChUnit {

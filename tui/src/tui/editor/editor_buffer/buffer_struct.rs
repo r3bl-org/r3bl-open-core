@@ -483,7 +483,7 @@ pub mod content_near_caret {
                 return None;
             }
             let caret_scr_adj_row_index = self.get_caret_scr_adj().row_index;
-            let next_line_row_index = caret_scr_adj_row_index + row(1);
+            let next_line_row_index = caret_scr_adj_row_index + 1;
             // Use the concrete method that delegates to get_line
             self.get_lines().get_line_content(next_line_row_index)
         }

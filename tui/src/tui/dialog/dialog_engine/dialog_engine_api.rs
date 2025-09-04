@@ -599,8 +599,8 @@ mod internal_impl {
         let mut ops = render_ops!();
 
         let row_pos = {
-            let col_index = origin_pos.col_index + col(1);
-            let row_index = origin_pos.row_index + row(1);
+            let col_index = origin_pos.col_index + 1;
+            let row_index = origin_pos.row_index + 1;
             col_index + row_index
         };
 
@@ -742,7 +742,7 @@ mod internal_impl {
         /// Calculates the position for a specific row
         fn calculate_row_position(origin_pos: Pos, row_idx: u16) -> Pos {
             let col_index = origin_pos.col_index;
-            let row_index = origin_pos.row_index + row(row_idx);
+            let row_index = origin_pos.row_index + row_idx;
             col_index + row_index
         }
 
