@@ -49,6 +49,20 @@ if ! command -v cargo &>/dev/null; then
     echo "You may need to restart your shell or run: source $HOME/.cargo/env"
 fi
 
+# Configure RUSTFLAGS for faster compilation on Linux
+if [[ "$OSTYPE" == "linux"* ]]; then
+    if ! grep -q "RUSTFLAGS.*-Z threads=" "$HOME/.profile" 2>/dev/null; then
+        echo "Configuring Rust parallel compiler for faster builds..."
+        echo "" >> "$HOME/.profile"
+        echo "# https://corrode.dev/blog/tips-for-faster-rust-compile-times/#switch-to-the-new-parallel-compiler-frontend" >> "$HOME/.profile"
+        echo "export RUSTFLAGS=\"-Z threads=8\"" >> "$HOME/.profile"
+        echo "✓ Added RUSTFLAGS configuration to ~/.profile"
+        echo "Note: You may need to restart your shell or run: source ~/.profile"
+    else
+        echo "✓ RUSTFLAGS already configured in ~/.profile"
+    fi
+fi
+
 # Install fish shell and fzf
 if [[ "$OSTYPE" == "darwin"* ]]; then
     if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
