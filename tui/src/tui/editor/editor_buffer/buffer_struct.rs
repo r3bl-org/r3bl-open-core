@@ -2,10 +2,11 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
 use super::{SelectionList, history::EditorHistory, render_cache::RenderCache};
-use crate::{CaretRaw, CaretScrAdj, ColWidth, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEFAULT_SYN_HI_FILE_EXT, EditorBufferMutWithDrop, GapBufferLine, GetMemSize,
-            InlineString, MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs,
-            SegStringOwned, Size, TinyInlineString, ZeroCopyGapBuffer, caret_locate,
+use crate::{CaretRaw, CaretScrAdj, ColWidth, ContentPositionStatus,
+            DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
+            EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
+            MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegStringOwned,
+            Size, TinyInlineString, ZeroCopyGapBuffer, caret_locate::locate_col,
             format_as_kilobytes_with_commas, glyphs, height, inline_string, ok, row,
             validate_buffer_mut::EditorBufferMutNoDrop, width, with_mut};
 
@@ -378,9 +379,7 @@ pub mod content_near_caret {
 
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
 
-            if let crate::ContentPositionStatus::AtEnd =
-                caret_locate::locate_col(self)
-            {
+            if let ContentPositionStatus::AtEnd = locate_col(self) {
                 // Use the efficient GapBufferLine approach directly
                 if let Some(line_with_info) =
                     self.content.lines.get_line(row_index_scr_adj)
@@ -403,9 +402,9 @@ pub mod content_near_caret {
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
             if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
-                match caret_locate::locate_col(self) {
+                match locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    crate::ContentPositionStatus::AtEnd => line_with_info
+                    ContentPositionStatus::AtEnd => line_with_info
                         .info()
                         .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.
@@ -429,9 +428,9 @@ pub mod content_near_caret {
             let col_index_scr_adj = self.get_caret_scr_adj().col_index;
 
             if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
-                match caret_locate::locate_col(self) {
+                match locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    crate::ContentPositionStatus::AtEnd => line_with_info
+                    ContentPositionStatus::AtEnd => line_with_info
                         .info()
                         .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.

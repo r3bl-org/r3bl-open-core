@@ -3,7 +3,8 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{ChUnit, ColWidth, usize, width};
+use crate::{ChUnit, ColWidth, IndexMarker, UnitCompare,
+            create_numeric_arithmetic_operators, usize, width};
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
 /// column.
@@ -63,7 +64,7 @@ mod impl_core {
     }
 }
 
-mod impl_from {
+mod impl_from_numeric {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -185,6 +186,19 @@ mod numeric_arithmetic_operators {
 
     // Generate numeric operations using macro
     create_numeric_arithmetic_operators!(ColIndex, col, [usize, u16, i32]);
+}
+
+mod bounds_check_trait_impls {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl UnitCompare for ColIndex {
+        fn as_usize(&self) -> usize { self.0.into() }
+
+        fn as_u16(&self) -> u16 { self.0.into() }
+    }
+
+    impl IndexMarker for ColIndex {}
 }
 
 #[cfg(test)]

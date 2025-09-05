@@ -10,9 +10,9 @@
 use std::cmp::Ordering;
 
 use super::{SelectMode, caret_mut};
-use crate::{BoundsCheck, BoundsOverflowStatus, CaretDirection, CaretRaw, ColIndex, ColWidth,
-            EditorArgsMut, EditorBuffer, RowHeight, RowIndex, ScrOfs,
-            check_overflows, caret_scroll_index, ch, col, height, row, width};
+use crate::{BoundsCheck, BoundsOverflowStatus, CaretDirection, CaretRaw, ColIndex,
+            ColWidth, EditorArgsMut, EditorBuffer, RowHeight, RowIndex, ScrOfs,
+            caret_scroll_index, ch, check_overflows, col, height, row, width};
 
 /// # Scrolling not active
 ///

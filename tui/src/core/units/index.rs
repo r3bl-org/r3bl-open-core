@@ -4,8 +4,8 @@ use std::{fmt::Debug,
           hash::Hash,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use super::{ChUnit, Length};
-use crate::ch;
+use super::{ChUnit, Length, ch};
+use crate::{IndexMarker, UnitCompare, create_numeric_arithmetic_operators};
 
 /// Represents an index position in character units.
 ///
@@ -60,8 +60,9 @@ impl Debug for Index {
     }
 }
 
-mod construct {
-    use super::{ChUnit, Index, Length, ch};
+mod impl_core {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Index {
         pub fn new(arg_col_index: impl Into<Index>) -> Self { arg_col_index.into() }
@@ -80,6 +81,11 @@ mod construct {
         #[must_use]
         pub fn convert_to_length(&self) -> Length { Length(self.0 + ch(1)) }
     }
+}
+
+mod impl_from_numeric {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<ChUnit> for Index {
         fn from(ch_unit: ChUnit) -> Self { Index(ch_unit) }
@@ -102,9 +108,9 @@ mod construct {
     }
 }
 
-mod ops {
-    use super::{Add, AddAssign, ChUnit, Deref, DerefMut, Index, Length, Mul, Sub,
-                SubAssign};
+mod impl_deref {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for Index {
         type Target = ChUnit;
@@ -115,6 +121,11 @@ mod ops {
     impl DerefMut for Index {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
     }
+}
+
+mod dimension_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Add<Index> for Index {
         type Output = Index;
@@ -182,6 +193,28 @@ mod ops {
         }
     }
 }
+
+mod numeric_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
+
+    // Generate numeric operations using macro
+    create_numeric_arithmetic_operators!(Index, idx, [usize, u16, i32]);
+}
+
+mod bounds_check_trait_impls {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl UnitCompare for Index {
+        fn as_usize(&self) -> usize { self.0.into() }
+
+        fn as_u16(&self) -> u16 { self.0.into() }
+    }
+
+    impl IndexMarker for Index {}
+}
+
 #[cfg(test)]
 mod tests {
     use std::hash::{DefaultHasher, Hasher};
@@ -479,36 +512,22 @@ mod tests {
         // Test index overflowing
         let index = idx(10);
         let length = len(10);
-        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
+        assert_eq!(
+            index.check_overflows(length),
+            BoundsOverflowStatus::Overflowed
+        );
 
         // Test index far beyond bounds
         let index = idx(20);
         let length = len(10);
-        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
+        assert_eq!(
+            index.check_overflows(length),
+            BoundsOverflowStatus::Overflowed
+        );
     }
 
-    #[test]
-    fn test_index_bounds_check_with_index() {
-        // Test index within bounds
-        let index1 = idx(5);
-        let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
-
-        // Test index at boundary
-        let index1 = idx(10);
-        let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Within);
-
-        // Test index overflowing
-        let index1 = idx(11);
-        let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Overflowed);
-
-        // Test index far beyond bounds
-        let index1 = idx(20);
-        let index2 = idx(10);
-        assert_eq!(index1.check_overflows(index2), BoundsOverflowStatus::Overflowed);
-    }
+    // Test for Index-to-Index comparison removed as this is no longer supported.
+    // BoundsCheck is now specifically for Index-to-Length comparisons only.
 
     #[test]
     fn test_index_bounds_check_edge_cases() {
@@ -525,12 +544,18 @@ mod tests {
         // Test with non-zero index against zero length
         let index = idx(1);
         let length = len(0);
-        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
+        assert_eq!(
+            index.check_overflows(length),
+            BoundsOverflowStatus::Overflowed
+        );
 
         // Test with maximum values
         let index = idx(u16::MAX);
         let length = len(u16::MAX);
-        assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Overflowed);
+        assert_eq!(
+            index.check_overflows(length),
+            BoundsOverflowStatus::Overflowed
+        );
 
         // Test with maximum index against maximum length
         let index = idx(u16::MAX - 1);
@@ -570,6 +595,9 @@ mod tests {
         assert_eq!(result_index, idx(5));
 
         // Check if the new index is within bounds
-        assert_eq!(result_index.check_overflows(length), BoundsOverflowStatus::Within);
+        assert_eq!(
+            result_index.check_overflows(length),
+            BoundsOverflowStatus::Within
+        );
     }
 }

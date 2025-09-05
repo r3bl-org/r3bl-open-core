@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{EditorArgsMut, check_overflows, BoundsCheck, caret_scroll_index, ch};
+use crate::{EditorArgsMut, caret_scroll_index, ch};
 
 // Unicode glyphs links (for the ASCII diagrams):
 // - https://symbl.cc/en/unicode/blocks/box-drawing/
@@ -70,7 +70,7 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     // Make sure that caret row can't go past the bottom of the buffer.
     {
         let caret_scr_adj_row_index = buffer.get_caret_scr_adj().row_index;
-        if check_overflows!(caret_scr_adj_row_index, max_row) {
+        if caret_scr_adj_row_index > max_row {
             let diff = max_row - buffer.get_caret_scr_adj().row_index;
             let buffer_mut = buffer.get_mut_no_drop(vp);
             buffer_mut.inner.caret_raw.row_index -= diff;
@@ -80,7 +80,7 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     // Make sure that scr_ofs row can't go past the bottom of the buffer.
     {
         let scr_ofs_row_index = buffer.get_scr_ofs().row_index;
-        if check_overflows!(scr_ofs_row_index, max_row) {
+        if scr_ofs_row_index > max_row {
             let diff = max_row - scr_ofs_row_index;
             let buffer_mut = buffer.get_mut_no_drop(vp);
             buffer_mut.inner.scr_ofs.row_index -= diff;

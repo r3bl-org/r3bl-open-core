@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{SelectMode, scroll_editor_content};
-use crate::{CaretDirection, ContainsWideSegments, EditorArgsMut, EditorBuffer,
-            EditorEngine, ContentPositionStatus, SegStringOwned,
-            caret_locate::{self, locate_col, RowContentPositionStatus},
+use crate::{CaretDirection, ContainsWideSegments, ContentPositionStatus, EditorArgsMut,
+            EditorBuffer, EditorEngine, SegStringOwned,
+            caret_locate::{self, RowContentPositionStatus, locate_col},
             caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
             multiline_disabled_check_early_return, row, width};
 
@@ -29,7 +29,9 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
                 }
             }
         }
-        RowContentPositionStatus::OnLastRow | RowContentPositionStatus::OnMiddleRow | RowContentPositionStatus::BeyondBuffer => {
+        RowContentPositionStatus::OnLastRow
+        | RowContentPositionStatus::OnMiddleRow
+        | RowContentPositionStatus::BeyondBuffer => {
             {
                 // When buffer_mut goes out of scope, it will be dropped &
                 // validation performed.

@@ -4,8 +4,8 @@ use std::{fmt::Debug,
           hash::Hash,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use super::{ChUnit, Index, idx};
-use crate::ch;
+use super::{ChUnit, Index, ch, idx};
+use crate::{LengthMarker, UnitCompare, create_numeric_arithmetic_operators};
 
 /// Represents a length measurement in character units.
 ///
@@ -56,8 +56,9 @@ impl Debug for Length {
     }
 }
 
-mod construct {
-    use super::{ChUnit, Index, Length, ch, idx};
+mod impl_core {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Length {
         pub fn new(arg_length: impl Into<Length>) -> Self { arg_length.into() }
@@ -83,6 +84,11 @@ mod construct {
             idx(it)
         }
     }
+}
+
+mod impl_from_numeric {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<ChUnit> for Length {
         fn from(ch_unit: ChUnit) -> Self { Length(ch_unit) }
@@ -105,8 +111,9 @@ mod construct {
     }
 }
 
-mod ops {
-    use super::{Add, AddAssign, ChUnit, Deref, DerefMut, Div, Length, Sub, SubAssign};
+mod impl_deref {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Deref for Length {
         type Target = ChUnit;
@@ -117,6 +124,11 @@ mod ops {
     impl DerefMut for Length {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
     }
+}
+
+mod dimension_arithmetic_operators {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl Add<Length> for Length {
         type Output = Length;
@@ -144,6 +156,32 @@ mod ops {
         fn div(self, rhs: Length) -> Self::Output { Length(self.0 / rhs.0) }
     }
 }
+
+mod numeric_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
+
+    // Generate numeric operations using macro
+    create_numeric_arithmetic_operators!(Length, len, [usize, u16, i32]);
+}
+
+mod bounds_check_trait_impls {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl UnitCompare for Length {
+        fn as_usize(&self) -> usize { self.0.into() }
+
+        fn as_u16(&self) -> u16 { self.0.into() }
+    }
+
+    impl LengthMarker for Length {
+        type IndexType = Index;
+
+        fn convert_to_index(&self) -> Self::IndexType { self.convert_to_index() }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

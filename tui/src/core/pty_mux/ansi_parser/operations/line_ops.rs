@@ -10,7 +10,7 @@ use crate::{PixelChar, RowIndex, row};
 /// Lines below cursor and within scroll region shift down.
 /// Lines scrolled off the bottom are lost.
 pub fn insert_lines(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_insert = row(MovementCount::from(params).as_u16());
+    let lines_to_insert = MovementCount::parse_as_row_height(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
 
     for _ in 0..lines_to_insert.as_u16() {
@@ -22,7 +22,7 @@ pub fn insert_lines(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
 /// Lines below cursor and within scroll region shift up.
 /// Blank lines are added at the bottom of the scroll region.
 pub fn delete_lines(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_delete = row(MovementCount::from(params).as_u16());
+    let lines_to_delete = MovementCount::parse_as_row_height(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
 
     for _ in 0..lines_to_delete.as_u16() {
@@ -40,7 +40,7 @@ fn insert_line_at(processor: &mut AnsiToBufferProcessor, row_index: RowIndex) {
     let maybe_scroll_region_top = processor.ofs_buf.ansi_parser_support.scroll_region_top;
     let scroll_top = maybe_scroll_region_top
         .and_then(TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(/* None */ row(0), /* Some */ std::convert::identity);
+        .map_or(/* None */ row(0), /* Some */ Into::into);
 
     // Get bottom boundary of scroll region (or screen bottom if no region set).
     let maybe_scroll_region_bottom =
@@ -62,10 +62,10 @@ fn insert_line_at(processor: &mut AnsiToBufferProcessor, row_index: RowIndex) {
     // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
     let row_start = row_index.as_usize();
     let row_end = scroll_bottom.as_usize();
-    
+
     for shift_row in (row_start + 1..=row_end).rev() {
         if shift_row > row_start {
-            processor.ofs_buf.buffer[shift_row] = 
+            processor.ofs_buf.buffer[shift_row] =
                 processor.ofs_buf.buffer[shift_row - 1].clone();
         }
     }
@@ -84,7 +84,7 @@ fn delete_line_at(processor: &mut AnsiToBufferProcessor, row_index: RowIndex) {
     let maybe_scroll_region_top = processor.ofs_buf.ansi_parser_support.scroll_region_top;
     let scroll_top = maybe_scroll_region_top
         .and_then(TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(/* None */ row(0), /* Some */ std::convert::identity);
+        .map_or(/* None */ row(0), /* Some */ Into::into);
 
     // Get bottom boundary of scroll region (or screen bottom if no region set).
     let maybe_scroll_region_bottom =
@@ -106,9 +106,9 @@ fn delete_line_at(processor: &mut AnsiToBufferProcessor, row_index: RowIndex) {
     // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
     let row_start = row_index.as_usize();
     let row_end = scroll_bottom.as_usize();
-    
+
     for shift_row in row_start..row_end {
-        processor.ofs_buf.buffer[shift_row] = 
+        processor.ofs_buf.buffer[shift_row] =
             processor.ofs_buf.buffer[shift_row + 1].clone();
     }
 

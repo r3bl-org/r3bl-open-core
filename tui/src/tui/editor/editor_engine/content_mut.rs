@@ -3,14 +3,12 @@
 use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
-use crate::{CaretScrAdj, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, EditorEngine,
-            InlineString, InlineVec, ContentPositionStatus, RowIndex, SelectionList, SelectionRange, Width,
-            ZeroCopyGapBuffer,
-            caret_locate::locate_col,
-            caret_scr_adj, caret_scroll_index, col, empty_check_early_return, len,
-            multiline_disabled_check_early_return, row,
-            validate_buffer_mut::EditorBufferMutWithDrop,
-            width};
+use crate::{CaretScrAdj, ColIndex, ColWidth, ContentPositionStatus, EditorArgsMut,
+            EditorBuffer, EditorEngine, InlineString, InlineVec, RowIndex,
+            SelectionList, SelectionRange, Width, ZeroCopyGapBuffer,
+            caret_locate::locate_col, caret_scr_adj, caret_scroll_index, col,
+            empty_check_early_return, len, multiline_disabled_check_early_return, row,
+            validate_buffer_mut::EditorBufferMutWithDrop, width};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     let EditorArgsMut { buffer, engine } = args;

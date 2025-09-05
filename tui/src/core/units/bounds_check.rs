@@ -22,6 +22,34 @@
 //! Returns [`ContentPositionStatus`] variants indicating the relationship between an
 //! index and content boundaries, including start, within, end, and beyond positions.
 //!
+//! # Type System
+//!
+//! The bounds checking system is built around two main type categories that ensure
+//! type safety and prevent incorrect comparisons:
+//!
+//! ## Index Types (0-based position indicators)
+//!
+//! Types that implement [`IndexMarker`] represent positions within content, starting
+//! from 0:
+//! - [`Index`] - Generic 0-based position
+//! - [`RowIndex`] - Row position in a terminal grid
+//! - [`ColIndex`] - Column position in a terminal grid
+//!
+//! ## Length Types (1-based size measurements)
+//!
+//! Types that implement [`LengthMarker`] represent sizes or extents, starting from 1:
+//! - [`Length`] - Generic 1-based size
+//! - [`RowHeight`] - Height of terminal content
+//! - [`ColWidth`] - Width of terminal content
+//!
+//! ## Type Safety Guarantees
+//!
+//! The trait system enforces several important constraints:
+//! - Only index types can be bounds-checked against length types
+//! - Each length type has a corresponding index type via [`LengthMarker::IndexType`]
+//! - Automatic conversion between compatible types via [`LengthMarker::convert_to_index`]
+//! - Prevents accidental comparisons between incompatible types (e.g., row vs column)
+//!
 //! # Key Components
 //!
 //! - [`BoundsCheck`] trait: Core functionality for both checking paradigms
@@ -32,11 +60,15 @@
 //!
 //! ## Implementations
 //!
-//! See [`crate::dimens_bounds_check_impl`] and [`crate::unit_bounds_check_impl`]
-//! modules for trait implementations. The [`dimens`] module contains implementations
-//! for [`RowIndex`], [`ColIndex`] types with [`RowHeight`], [`ColWidth`], etc. The
-//! `units` module contains implementations for the generic [`Index`] and [`Length`]
-//! types.
+//! The module provides a single generic implementation of [`BoundsCheck`] that works
+//! with any index type implementing [`IndexMarker`] and any length type implementing
+//! [`LengthMarker`]. This eliminates code duplication and ensures consistent behavior
+//! across all unit types.
+//!
+//! Individual types implement the required marker traits in their respective modules:
+//! - [`UnitCompare`] - Enables numeric conversions for comparison operations
+//! - [`IndexMarker`] - Identifies 0-based position types
+//! - [`LengthMarker`] - Identifies 1-based size types with index correspondence
 //!
 //! # Usage Example
 //!
@@ -88,9 +120,9 @@
 /// ```
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum BoundsOverflowStatus {
-    /// Indicates that an index is within the bounds of a length or another index.
+    /// Indicates that an index is within the bounds of a length.
     Within,
-    /// Indicates that an index has overflowed the bounds of a length or another index.
+    /// Indicates that an index has overflowed the bounds of a length.
     Overflowed,
 }
 
@@ -126,10 +158,62 @@ macro_rules! check_overflows {
     };
 }
 
+/// Core trait for unit comparison operations.
+///
+/// Provides standardized methods to convert unit types to common numeric types
+/// for comparison operations. This trait enables generic implementations of
+/// bounds checking across different unit types.
+pub trait UnitCompare {
+    /// Convert the unit to a usize value for numeric comparison, usually for array
+    /// indexing operations.
+    fn as_usize(&self) -> usize;
+
+    /// Convert the unit to a u16 value for crossterm compatibility and other terminal and
+    /// pty based operations.
+    fn as_u16(&self) -> u16;
+}
+
+/// Marker trait for index-type units (0-based position indicators).
+///
+/// This trait identifies types that represent positions or indices within
+/// content, such as `RowIndex`, `ColIndex`, and `Index`. These are 0-based
+/// values where the first position is index 0.
+///
+/// See the [module documentation](self) Type System section for details on
+/// how index types relate to length types and the type safety guarantees.
+pub trait IndexMarker: UnitCompare {}
+
+/// Marker trait for length-type units (1-based size measurements).
+///
+/// This trait identifies types that represent sizes or lengths of content,
+/// such as `RowHeight`, `ColWidth`, and `Length`. These are 1-based values
+/// where a length of 1 means "one unit of size".
+///
+/// Each length type has a corresponding index type via [`IndexType`](Self::IndexType),
+/// enabling safe bounds checking operations.
+///
+/// See the [module documentation](self) Type System section for details on
+/// how length types relate to index types and the type safety guarantees.
+pub trait LengthMarker: UnitCompare {
+    /// The corresponding index type for this length type.
+    type IndexType: IndexMarker;
+
+    /// Convert this length to the corresponding index type.
+    ///
+    /// This typically involves subtracting 1 from the length value since
+    /// lengths are 1-based and indices are 0-based.
+    fn convert_to_index(&self) -> Self::IndexType;
+}
+
 /// Core trait for index bounds validation in TUI applications.
 ///
 /// Provides both array-style bounds checking and content position checking.
 /// See the [module documentation](self) for detailed explanations of both paradigms.
+///
+/// This trait is now generic over length types that implement `LengthMarker`,
+/// and can only be implemented by index types that implement `IndexMarker`.
+/// This ensures type safety and prevents incorrect comparisons between incompatible
+/// types.
 ///
 /// # Examples
 ///
@@ -140,7 +224,10 @@ macro_rules! check_overflows {
 /// let height = RowHeight::new(5);
 /// assert_eq!(row_index.check_overflows(height), BoundsOverflowStatus::Overflowed);
 /// ```
-pub trait BoundsCheck<OtherType> {
+pub trait BoundsCheck<OtherType: LengthMarker>
+where
+    Self: IndexMarker,
+{
     /// Performs array-style bounds checking.
     ///
     /// Returns `BoundsOverflowStatus::Within` if the index can safely access content,
@@ -157,6 +244,44 @@ pub trait BoundsCheck<OtherType> {
     /// See the [module documentation](self) for detailed explanation of content position
     /// checking.
     fn check_content_position(&self, content_length: OtherType) -> ContentPositionStatus;
+}
+
+/// Generic implementation of [`BoundsCheck`] for any [`IndexMarker`] type with
+/// [`LengthMarker`] type.
+///
+/// This single implementation works with all index and length types that implement the
+/// required marker traits, eliminating code duplication and ensuring consistent behavior.
+/// The trait system guarantees type safety by only allowing compatible index-length
+/// pairs.
+impl<I, L> BoundsCheck<L> for I
+where
+    I: IndexMarker + PartialOrd + Copy,
+    L: LengthMarker<IndexType = I>,
+{
+    fn check_overflows(&self, length: L) -> BoundsOverflowStatus {
+        let this = *self;
+        let other = length.convert_to_index();
+        if this > other {
+            BoundsOverflowStatus::Overflowed
+        } else {
+            BoundsOverflowStatus::Within
+        }
+    }
+
+    fn check_content_position(&self, content_length: L) -> ContentPositionStatus {
+        let position = self.as_usize();
+        let length = content_length.as_usize();
+
+        if position > length {
+            ContentPositionStatus::Beyond
+        } else if position == 0 {
+            ContentPositionStatus::AtStart
+        } else if position == length {
+            ContentPositionStatus::AtEnd
+        } else {
+            ContentPositionStatus::Within
+        }
+    }
 }
 
 /// Result of content position checking operations.
@@ -181,7 +306,7 @@ pub trait BoundsCheck<OtherType> {
 /// assert_eq!(idx(7).check_content_position(content_length), ContentPositionStatus::Beyond);
 /// ```
 ///
-/// ## Why RowContentPositionStatus exists separate from this enum
+/// ## Why [`RowContentPositionStatus`](crate::RowContentPositionStatus) exists separate from this enum
 ///
 /// [`crate::RowContentPositionStatus`] has different semantics for handling row positions
 /// in a terminal buffer, which is why it does not use this enum.
@@ -205,7 +330,7 @@ pub enum ContentPositionStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{idx, len};
+    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx, len};
 
     #[test]
     fn test_bounds_overflow_status_equality() {
@@ -290,8 +415,6 @@ mod tests {
 
     #[test]
     fn test_check_overflows_macro() {
-        use crate::{ColIndex, ColWidth};
-
         // Test basic cases with Index/Length
         assert!(!check_overflows!(idx(1), len(3)), "Within bounds");
         assert!(check_overflows!(idx(3), len(3)), "At boundary");
@@ -392,8 +515,6 @@ mod tests {
 
     #[test]
     fn test_check_content_position_with_typed_indices() {
-        use crate::{ColIndex, ColWidth, RowHeight, RowIndex};
-
         // Test with ColIndex/ColWidth
         let col_width = ColWidth::new(3);
         assert_eq!(
@@ -432,28 +553,14 @@ mod tests {
             ContentPositionStatus::Beyond
         );
 
-        // Test with Index/Index
-        let other_index = idx(4);
-        assert_eq!(
-            idx(0).check_content_position(other_index),
-            ContentPositionStatus::AtStart
-        );
-        assert_eq!(
-            idx(2).check_content_position(other_index),
-            ContentPositionStatus::Within
-        );
-        assert_eq!(
-            idx(4).check_content_position(other_index),
-            ContentPositionStatus::AtEnd
-        );
-        assert_eq!(
-            idx(5).check_content_position(other_index),
-            ContentPositionStatus::Beyond
-        );
+        // Test with Index/Index removed as this is no longer supported.
+        // BoundsCheck is now specifically for Index-to-Length comparisons only.
     }
 
     #[test]
     fn test_position_status_empty_content_precedence() {
+        use super::*;
+
         // Test that AtStart takes precedence over AtEnd for empty content
         let empty_length = len(0);
         assert_eq!(
@@ -462,7 +569,6 @@ mod tests {
         );
 
         // Test with typed indices too
-        use crate::{ColIndex, ColWidth, RowHeight, RowIndex};
 
         let empty_col_width = ColWidth::new(0);
         assert_eq!(

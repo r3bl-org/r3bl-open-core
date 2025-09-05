@@ -204,3 +204,193 @@ impl WriteToBuf for EscSequence {
         f.write_str(&acc.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_esc_sequence_save_cursor() {
+        let sequence = EscSequence::SaveCursor;
+        let result = sequence.to_string();
+        let expected = "\x1b7";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_esc_sequence_restore_cursor() {
+        let sequence = EscSequence::RestoreCursor;
+        let result = sequence.to_string();
+        let expected = "\x1b8";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_esc_sequence_index_down() {
+        let sequence = EscSequence::IndexDown;
+        let result = sequence.to_string();
+        let expected = "\x1bD";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_esc_sequence_reverse_index() {
+        let sequence = EscSequence::ReverseIndex;
+        let result = sequence.to_string();
+        let expected = "\x1bM";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_esc_sequence_reset_terminal() {
+        let sequence = EscSequence::ResetTerminal;
+        let result = sequence.to_string();
+        let expected = "\x1bc";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_esc_sequence_select_ascii() {
+        let sequence = EscSequence::SelectAscii;
+        let result = sequence.to_string();
+        let expected = "\x1b(B";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_esc_sequence_select_dec_graphics() {
+        let sequence = EscSequence::SelectDECGraphics;
+        let result = sequence.to_string();
+        let expected = "\x1b(0";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_esc_sequence_write_to_buf_save_cursor() {
+        let sequence = EscSequence::SaveCursor;
+        let mut buffer = BufTextStorage::new();
+        let result = sequence.write_to_buf(&mut buffer);
+        
+        assert!(result.is_ok());
+        assert_eq!(buffer.to_string(), "\x1b7");
+    }
+
+    #[test]
+    fn test_esc_sequence_write_to_buf_select_ascii() {
+        let sequence = EscSequence::SelectAscii;
+        let mut buffer = BufTextStorage::new();
+        let result = sequence.write_to_buf(&mut buffer);
+        
+        assert!(result.is_ok());
+        assert_eq!(buffer.to_string(), "\x1b(B");
+    }
+
+    #[test]
+    fn test_esc_sequence_write_to_buf_select_dec_graphics() {
+        let sequence = EscSequence::SelectDECGraphics;
+        let mut buffer = BufTextStorage::new();
+        let result = sequence.write_to_buf(&mut buffer);
+        
+        assert!(result.is_ok());
+        assert_eq!(buffer.to_string(), "\x1b(0");
+    }
+
+    #[test]
+    fn test_esc_sequence_clone() {
+        let original = EscSequence::SaveCursor;
+        let cloned = original.clone();
+        assert_eq!(original, cloned);
+    }
+
+    #[test]
+    fn test_esc_sequence_debug() {
+        let sequence = EscSequence::SaveCursor;
+        let debug_output = format!("{sequence:?}");
+        assert!(debug_output.contains("SaveCursor"));
+    }
+
+    #[test]
+    fn test_esc_sequence_equality() {
+        let seq1 = EscSequence::SaveCursor;
+        let seq2 = EscSequence::SaveCursor;
+        let seq3 = EscSequence::RestoreCursor;
+        
+        assert_eq!(seq1, seq2);
+        assert_ne!(seq1, seq3);
+    }
+
+    #[test]
+    fn test_esc_sequence_copy_trait() {
+        let sequence = EscSequence::IndexDown;
+        let copied = sequence; // This tests the Copy trait
+        let another_copy = sequence; // Should still work after first copy
+        
+        assert_eq!(copied, another_copy);
+        assert_eq!(copied.to_string(), "\x1bD");
+        assert_eq!(another_copy.to_string(), "\x1bD");
+    }
+
+    #[test]
+    fn test_all_escape_sequences_generate_unique_outputs() {
+        let sequences = [
+            EscSequence::SaveCursor,
+            EscSequence::RestoreCursor,
+            EscSequence::IndexDown,
+            EscSequence::ReverseIndex,
+            EscSequence::ResetTerminal,
+            EscSequence::SelectAscii,
+            EscSequence::SelectDECGraphics,
+        ];
+        
+        let mut outputs = std::collections::HashSet::new();
+        
+        for sequence in &sequences {
+            let output = sequence.to_string();
+            // Each sequence should produce a unique output
+            assert!(outputs.insert(output.clone()), 
+                   "Duplicate output found: {}", output);
+        }
+        
+        // Should have 7 unique outputs
+        assert_eq!(outputs.len(), 7);
+    }
+
+    #[test]
+    fn test_escape_sequences_start_with_escape() {
+        let sequences = [
+            EscSequence::SaveCursor,
+            EscSequence::RestoreCursor,
+            EscSequence::IndexDown,
+            EscSequence::ReverseIndex,
+            EscSequence::ResetTerminal,
+            EscSequence::SelectAscii,
+            EscSequence::SelectDECGraphics,
+        ];
+        
+        for sequence in &sequences {
+            let output = sequence.to_string();
+            assert!(output.starts_with('\x1b'), 
+                   "Sequence {:?} should start with ESC character, got: {:?}", 
+                   sequence, output);
+        }
+    }
+
+    #[test]
+    fn test_character_set_sequences_have_correct_format() {
+        let ascii_seq = EscSequence::SelectAscii;
+        let dec_graphics_seq = EscSequence::SelectDECGraphics;
+        
+        let ascii_output = ascii_seq.to_string();
+        let dec_graphics_output = dec_graphics_seq.to_string();
+        
+        // Both should be ESC + ( + character
+        assert_eq!(ascii_output.len(), 3);
+        assert_eq!(dec_graphics_output.len(), 3);
+        
+        assert_eq!(ascii_output.chars().nth(1), Some('('));
+        assert_eq!(dec_graphics_output.chars().nth(1), Some('('));
+        
+        assert_eq!(ascii_output.chars().nth(2), Some('B'));
+        assert_eq!(dec_graphics_output.chars().nth(2), Some('0'));
+    }
+}

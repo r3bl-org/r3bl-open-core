@@ -1,33 +1,39 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-/// Generates `Add`, `AddAssign`, `Sub`, and `SubAssign` implementations for numeric types.
+/// Generates `Add`, `AddAssign`, `Sub`, and `SubAssign` implementations for numeric
+/// types.
 ///
 /// This macro reduces boilerplate for types that need to support arithmetic operations
 /// with primitive numeric types (usize, u16, i32). It's used internally by dimension
 /// types like `ColIndex` and `RowIndex` to provide ergonomic arithmetic operations.
 ///
 /// # Parameters
-/// - `$type`: The struct type that will receive the implementations (e.g., `ColIndex`, `RowIndex`)
-/// - `$constructor`: The constructor function that creates instances of `$type` (e.g., `col`, `row`)
+/// - `$type`: The struct type that will receive the implementations (e.g., `ColIndex`,
+///   `RowIndex`)
+/// - `$constructor`: The constructor function that creates instances of `$type` (e.g.,
+///   `col`, `row`)
 /// - `[$($numeric_type:ident),*]`: Array of numeric types to implement operations for
 ///
 /// # Generated Operations
 /// For each numeric type `T` in the array, the macro generates:
 /// - `impl Add<T> for $type` - Addition that returns a new instance
 /// - `impl AddAssign<T> for $type` - In-place addition
-/// - `impl Sub<T> for $type` - Subtraction that returns a new instance (uses `saturating_sub`)
+/// - `impl Sub<T> for $type` - Subtraction that returns a new instance (uses
+///   `saturating_sub`)
 /// - `impl SubAssign<T> for $type` - In-place subtraction
 ///
 /// # Type Requirements
 /// The target type (`$type`) must implement:
 /// - `as_usize(self) -> usize` - Convert to usize for arithmetic
 /// - `as_u16(self) -> u16` - Convert to u16 for arithmetic (when using u16 operations)
-/// 
+///
 /// The constructor function must accept the result of arithmetic operations.
 ///
 /// # Special Handling
-/// - **Subtraction**: Uses `saturating_sub()` to prevent underflow (returns 0 instead of panicking)
-/// - **i32 operations**: Negative values are treated as 0 using `rhs.max(0)` before conversion
+/// - **Subtraction**: Uses `saturating_sub()` to prevent underflow (returns 0 instead of
+///   panicking)
+/// - **i32 operations**: Negative values are treated as 0 using `rhs.max(0)` before
+///   conversion
 /// - **Type conversions**: Each numeric type uses its appropriate conversion method:
 ///   - `usize`: Uses `as_usize()` directly
 ///   - `u16`: Uses `as_u16()` and converts result back via constructor
@@ -43,18 +49,19 @@
 /// The generated implementations enable operations like:
 /// ```
 /// use r3bl_tui::{ColIndex, col};
-/// 
+///
 /// let index = col(10);
-/// 
+///
 /// // Basic operations work with different numeric types
 /// assert_eq!(index + 5usize, col(15));
 /// assert_eq!(index + 3u16, col(13));
 /// assert_eq!(index - 3usize, col(7));
-/// 
+///
 /// // Special behaviors: underflow protection and negative i32 handling
 /// assert_eq!(col(2) - 5usize, col(0));  // saturating_sub prevents panic
 /// assert_eq!(index + (-5i32), col(10)); // negative i32 becomes 0
 /// ```
+#[macro_export]
 macro_rules! create_numeric_arithmetic_operators {
     ($type:ty, $constructor:ident, [$($numeric_type:ident),*]) => {
         $(
@@ -140,6 +147,7 @@ mod tests {
 
     impl TestIndex {
         fn as_usize(self) -> usize { self.0 }
+        #[allow(clippy::cast_possible_truncation)]
         fn as_u16(self) -> u16 { self.0 as u16 }
     }
 

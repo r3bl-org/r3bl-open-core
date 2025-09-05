@@ -1,15 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::buffer_struct::EditorBuffer;
-use crate::{BoundsCheck, ColIndex, ColWidth, ContentPositionStatus, RowHeight, RowIndex, col,
-            row};
+use crate::{BoundsCheck, ColIndex, ColWidth, ContentPositionStatus, RowHeight, RowIndex,
+            col, row};
 
 /// Represents the position of a row within a buffer.
 ///
-/// ## Why this exists separately from ContentPositionStatus
+/// ## Why this exists separately from [`ContentPositionStatus`]
 ///
-/// [`ContentPositionStatus`] is designed for cursor/content positions where the index can be
-/// one position *after* the last element (for insertion). For example, in a string
+/// [`ContentPositionStatus`] is designed for cursor/content positions where the index can
+/// be one position *after* the last element (for insertion). For example, in a string
 /// of length 5, position 5 is valid and means "after the last character".
 ///
 /// Row positions have different semantics: you are ON a specific row, not between rows.
@@ -41,7 +41,7 @@ pub enum RowContentPositionStatus {
     /// Only returned when buffer has 2+ lines.
     OnLastRow,
 
-    /// Row index is beyond the buffer bounds (row >= line_count).
+    /// Row index is beyond the buffer bounds (row >= `line_count`).
     BeyondBuffer,
 }
 
@@ -82,9 +82,9 @@ pub fn locate_col(editor_buffer: &EditorBuffer) -> ContentPositionStatus {
 
 /// Locate the row position in the buffer.
 ///
-/// Returns [`RowContentPositionStatus`] instead of [`ContentPositionStatus`] because row positions
-/// have different semantics than cursor positions (see [`RowContentPositionStatus`]
-/// documentation).
+/// Returns [`RowContentPositionStatus`] instead of [`ContentPositionStatus`] because row
+/// positions have different semantics than cursor positions (see
+/// [`RowContentPositionStatus`] documentation).
 ///
 /// ```text
 /// R ┌──────────┐

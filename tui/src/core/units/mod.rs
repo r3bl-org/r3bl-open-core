@@ -6,7 +6,6 @@ pub mod byte_index;
 pub mod ch_unit;
 pub mod index;
 pub mod length;
-pub mod unit_bounds_check_impl; // Don't re-export.
 
 // Re-export.
 pub use bounds_check::*;

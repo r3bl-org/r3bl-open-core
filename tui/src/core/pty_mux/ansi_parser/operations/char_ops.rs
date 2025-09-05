@@ -6,14 +6,13 @@ use std::cmp::min;
 
 use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
                    protocols::csi_codes::MovementCount};
-use crate::{PixelChar, len, check_overflows, BoundsCheck};
+use crate::{BoundsCheck, PixelChar, check_overflows};
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
 /// Characters to the right of cursor shift left.
 /// Blank characters are inserted at the end of the line.
 pub fn delete_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let chars_to_delete = len(MovementCount::from(params).as_u16());
-
+    let chars_to_delete = MovementCount::parse_as_length(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
     let current_col = processor.ofs_buf.my_pos.col_index;
     let max_col = processor.ofs_buf.window_size.col_width;
@@ -44,7 +43,7 @@ pub fn delete_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
 /// Characters to the right of cursor shift right.
 /// Characters shifted beyond the right margin are lost.
 pub fn insert_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let chars_to_insert = len(MovementCount::from(params).as_u16());
+    let chars_to_insert = MovementCount::parse_as_length(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
     let current_col = processor.ofs_buf.my_pos.col_index;
     let max_col = processor.ofs_buf.window_size.col_width;
@@ -77,7 +76,7 @@ pub fn insert_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
 /// Characters are replaced with blanks, no shifting occurs.
 /// This is different from DCH which shifts characters left.
 pub fn erase_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let chars_to_erase = len(MovementCount::from(params).as_u16());
+    let chars_to_erase = MovementCount::parse_as_length(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
     let current_col = processor.ofs_buf.my_pos.col_index;
     let max_col = processor.ofs_buf.window_size.col_width;

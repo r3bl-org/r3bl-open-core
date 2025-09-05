@@ -3,7 +3,8 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use crate::{ChUnit, ColIndex, ch, col};
+use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch, col,
+            create_numeric_arithmetic_operators};
 
 /// Width is column count, i.e., the number of columns that a UI component occupies.
 ///
@@ -153,6 +154,31 @@ mod dimension_arithmetic_operators {
             let value = *self / rhs;
             width(value)
         }
+    }
+}
+
+mod numeric_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
+
+    // Generate numeric operations using macro
+    create_numeric_arithmetic_operators!(ColWidth, width, [usize, u16, i32]);
+}
+
+mod bounds_check_trait_impls {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl UnitCompare for ColWidth {
+        fn as_usize(&self) -> usize { self.0.into() }
+
+        fn as_u16(&self) -> u16 { self.0.into() }
+    }
+
+    impl LengthMarker for ColWidth {
+        type IndexType = ColIndex;
+
+        fn convert_to_index(&self) -> Self::IndexType { self.convert_to_col_index() }
     }
 }
 

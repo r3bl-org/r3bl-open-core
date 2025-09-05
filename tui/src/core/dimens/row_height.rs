@@ -3,7 +3,8 @@
 use std::{fmt::Debug,
           ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use crate::{ChUnit, RowIndex, ch, row};
+use crate::{ChUnit, LengthMarker, RowIndex, UnitCompare, ch,
+            create_numeric_arithmetic_operators, row};
 
 /// Height is row count, i.e., the number of rows that a UI component occupies.
 ///
@@ -150,6 +151,31 @@ mod dimension_arithmetic_operators {
             let value = *self / rhs;
             height(value)
         }
+    }
+}
+
+mod numeric_arithmetic_operators {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
+
+    // Generate numeric operations using macro
+    create_numeric_arithmetic_operators!(RowHeight, height, [usize, u16, i32]);
+}
+
+mod bounds_check_trait_impls {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl UnitCompare for RowHeight {
+        fn as_usize(&self) -> usize { self.0.into() }
+
+        fn as_u16(&self) -> u16 { self.0.into() }
+    }
+
+    impl LengthMarker for RowHeight {
+        type IndexType = RowIndex;
+
+        fn convert_to_index(&self) -> Self::IndexType { self.convert_to_row_index() }
     }
 }
 

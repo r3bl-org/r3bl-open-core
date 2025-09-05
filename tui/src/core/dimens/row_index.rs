@@ -3,7 +3,8 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{ChUnit, RowHeight, height, usize};
+use crate::{ChUnit, IndexMarker, RowHeight, UnitCompare,
+            create_numeric_arithmetic_operators, height, usize};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
 /// This is one part of a [`crate::Pos`] position and is different from
@@ -64,7 +65,7 @@ mod impl_core {
     }
 }
 
-mod impl_from {
+mod impl_from_numeric {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -185,6 +186,19 @@ mod numeric_arithmetic_operators {
 
     // Generate numeric operations using macro
     create_numeric_arithmetic_operators!(RowIndex, row, [usize, u16, i32]);
+}
+
+mod bounds_check_trait_impls {
+    #![allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl UnitCompare for RowIndex {
+        fn as_usize(&self) -> usize { self.0.into() }
+
+        fn as_u16(&self) -> u16 { self.0.into() }
+    }
+
+    impl IndexMarker for RowIndex {}
 }
 
 #[cfg(test)]

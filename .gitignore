@@ -11,3 +11,4 @@ crash_log.txt
 **/perf.data.old
 *.log
 .serena/cache
+rustc-ice-*.txt

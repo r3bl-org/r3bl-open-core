@@ -1,14 +1,11 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-#[macro_use] // Module-private macro used locally. [macro_export] makes it available crate-wide.
-pub mod shared_macros;
-
 // Attach source files.
+pub mod boilerplate_codegen_macros;
 pub mod caret;
 pub mod col_index;
 pub mod col_width;
 pub mod dim;
-pub mod dimens_bounds_check_impl; // Don't re-export.
 pub mod pc;
 pub mod pos;
 pub mod req_size_pc;
