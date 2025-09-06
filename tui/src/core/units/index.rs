@@ -212,7 +212,9 @@ mod bounds_check_trait_impls {
         fn as_u16(&self) -> u16 { self.0.into() }
     }
 
-    impl IndexMarker for Index {}
+    impl IndexMarker for Index {
+    type LengthType = Length;
+}
 }
 
 #[cfg(test)]

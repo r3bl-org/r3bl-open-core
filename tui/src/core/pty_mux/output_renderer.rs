@@ -7,8 +7,8 @@
 //! showing process information and keyboard shortcuts.
 
 use super::ProcessManager;
-use crate::{ANSIBasicColor, BoundsCheck, FlushKind, OffscreenBuffer, OutputDevice,
-            PixelChar, Size, TuiColor, TuiStyle, check_overflows, col,
+use crate::{ANSIBasicColor, FlushKind, OffscreenBuffer, OutputDevice,
+            PixelChar, Size, TuiColor, TuiStyle, LengthMarker, col,
             lock_output_device_as_mut,
             tui::terminal_lib_backends::{OffscreenBufferPaint,
                                          OffscreenBufferPaintImplCrossterm},
@@ -111,7 +111,7 @@ impl OutputRenderer {
         });
 
         for (col_idx, ch) in status_text.chars().enumerate() {
-            if check_overflows!(col(col_idx), self.terminal_size.col_width) {
+            if self.terminal_size.col_width.is_overflowed_by(col(col_idx)) {
                 break;
             }
             ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
@@ -154,7 +154,7 @@ impl OutputRenderer {
             // Check if we have space for this tab
             let tab_width = tab_text.chars().count();
             let new_width = current_width + tab_width;
-            if check_overflows!(col(new_width), self.terminal_size.col_width) {
+            if self.terminal_size.col_width.is_overflowed_by(col(new_width)) {
                 break;
             }
 
@@ -169,7 +169,7 @@ impl OutputRenderer {
         // Check if we have space for shortcuts
         let shortcuts_width = shortcuts.chars().count();
         let total_width = current_width + shortcuts_width;
-        if check_overflows!(col(total_width), self.terminal_size.col_width) {
+        if self.terminal_size.col_width.is_overflowed_by(col(total_width)) {
             return status_parts.join("");
         }
         status_parts.push(shortcuts);

@@ -10,10 +10,10 @@ use crate::{PixelChar, RowIndex, row};
 /// Lines below cursor and within scroll region shift down.
 /// Lines scrolled off the bottom are lost.
 pub fn insert_lines(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_insert = MovementCount::parse_as_row_height(params);
+    let insert_lines_count = MovementCount::parse_as_row_height(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
 
-    for _ in 0..lines_to_insert.as_u16() {
+    for _ in 0..insert_lines_count.as_u16() {
         insert_line_at(processor, current_row);
     }
 }
@@ -22,10 +22,10 @@ pub fn insert_lines(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
 /// Lines below cursor and within scroll region shift up.
 /// Blank lines are added at the bottom of the scroll region.
 pub fn delete_lines(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_delete = MovementCount::parse_as_row_height(params);
+    let delete_lines_count = MovementCount::parse_as_row_height(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
 
-    for _ in 0..lines_to_delete.as_u16() {
+    for _ in 0..delete_lines_count.as_u16() {
         delete_line_at(processor, current_row);
     }
 }

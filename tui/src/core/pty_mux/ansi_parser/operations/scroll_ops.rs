@@ -121,16 +121,16 @@ pub fn scroll_buffer_down(processor: &mut AnsiToBufferProcessor) {
 
 /// Handle SU (Scroll Up) - scroll display up by n lines.
 pub fn scroll_up(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_scroll_up = MovementCount::parse_as_row_height(params);
-    for _ in 0..lines_to_scroll_up.as_u16() {
+    let scroll_up_by = MovementCount::parse_as_row_height(params);
+    for _ in 0..scroll_up_by.as_u16() {
         scroll_buffer_up(processor);
     }
 }
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
 pub fn scroll_down(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
-    let lines_to_scroll_down = MovementCount::parse_as_row_height(params);
-    for _ in 0..lines_to_scroll_down.as_u16() {
+    let scroll_down_by = MovementCount::parse_as_row_height(params);
+    for _ in 0..scroll_down_by.as_u16() {
         scroll_buffer_down(processor);
     }
 }

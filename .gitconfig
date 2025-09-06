@@ -1,0 +1,66 @@
+[color]
+	ui = true
+	interactive = true
+	status = true
+[credential]
+	helper = store
+[user]
+	email = nazmul@fasterlap.com
+	name = Nazmul Idris
+	# for github & git commit signing 
+	signingkey = /home/nazmul/github/notes/files/linux-sshd-customize/github-commit-signing/id_github.pub
+[core]
+	editor = micro
+	autocrlf = input
+	commentChar = //
+	pager = diff-so-fancy | less --tabs=4 -RFX
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[pull]
+	rebase = true
+[color "status"]
+	changed = blue
+	untracked = red
+	added = magenta
+	updated = green
+	branch = yellow bold
+	header = white
+[color "interactive"]
+	help = white
+	prompt = white
+	header = white
+	error = white
+[merge]
+	conflictstyle = diff3
+[init]
+	defaultBranch = main
+# for github & git commit signing
+[gpg]
+	format = ssh
+# for github & git commit signing
+[commit]
+	gpgsign = true
+# for github & git commit signing
+[gpg "ssh"]
+	allowedSignersFile = /home/nazmul/github/notes/files/linux-sshd-customize/github-commit-signing/.git_allowed_signers
+
+# Look at /home/nazmul/github/notes/files/linux-sshd-customize/github-commit-signing/README.md for more details
+# on git, ssh keys, github, and commit signing.
+[interactive]
+	diffFilter = diff-so-fancy --patch
+[color "diff-highlight"]
+	oldNormal = red bold
+	oldHighlight = red bold 52
+	newNormal = green bold
+	newHighlight = green bold 22
+[color "diff"]
+	meta = 11
+	frag = magenta bold
+	func = 146 bold
+	commit = yellow bold
+	old = red bold
+	new = green bold
+	whitespace = red reverse

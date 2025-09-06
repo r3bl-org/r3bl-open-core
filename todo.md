@@ -97,9 +97,10 @@
       process into edi itself
 - [ ] show table of contents with type ahead complete on `ctrl+y`
 
-# giti feature
+# giti features: https://github.com/r3bl-org/r3bl-open-core/issues/423
 
-- add giti feature to search logs
+- [ ] The parent issue has some pre-existing sub-issues. Make sure that all sub-issues in
+      the body of the issue have been created. Then work on each of them.
 
 # editor fixes and enhancements
 
@@ -127,20 +128,6 @@
       case for most code in `r3bl_open_core` repo
 - [ ] add fps counter row to bottom of `edi`, just like in the `tui/examples/demo/*` add an
       FPS/telemetry display to bottom of `edi`
-
-# create sub-issues for `giti`: https://github.com/r3bl-org/r3bl-open-core/issues/423
-
-- [ ] In the final screen, make sure to add horiz divider lines (like in log output) to separate the
-      different sections of the output
-- [ ] `giti worktree/workspace` -> list, create, delete, switch git worktrees
-- [ ] `giti branch rename` -> rename an existing branch to other
-- [ ] `giti show <name>` -> choose an older version of a file to checkout to `Downloads` and
-      optionally view in the `editor_component` itself in a TUI applet
-- [ ] `giti develop *` -> choose issues using TUI app as part of the flow
-- [ ] `giti commit`
-- [ ] `giti delete *` -> switch to main and pull (delete remotes)
-- [ ] `giti --manual` -> show the user guide for giti using the TUI MD component w/ search, jump to
-      headings, etc
 
 # test `giti` user flow
 

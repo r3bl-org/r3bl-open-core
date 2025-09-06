@@ -55,8 +55,10 @@
 //! - [`BoundsCheck`] trait: Core functionality for both checking paradigms
 //! - [`BoundsOverflowStatus`] enum: Results for array-style bounds checking
 //! - [`ContentPositionStatus`] enum: Results for content position checking
-//! - [`check_overflows!`](crate::check_overflows) macro: Concise syntax for overflow
-//!   checking
+//! - [`LengthMarker::is_overflowed_by`] method: Convenient overflow checking from length
+//!   perspective ("Does this length get overflowed by this index?")
+//! - [`IndexMarker::overflows`] method: Convenient overflow checking from index
+//!   perspective ("Does this index overflow this length?")
 //!
 //! ## Implementations
 //!
@@ -70,10 +72,10 @@
 //! - [`IndexMarker`] - Identifies 0-based position types
 //! - [`LengthMarker`] - Identifies 1-based size types with index correspondence
 //!
-//! # Usage Example
+//! # Usage Examples
 //!
 //! ```
-//! use r3bl_tui::{BoundsCheck, ContentPositionStatus, check_overflows, idx, len};
+//! use r3bl_tui::{BoundsCheck, ContentPositionStatus, idx, len};
 //!
 //! let content_length = len(10);
 //! let cursor_pos = idx(8);
@@ -86,8 +88,15 @@
 //!     ContentPositionStatus::Beyond => println!("Invalid position"),
 //! }
 //!
-//! // Array-style overflow checking
-//! if !check_overflows!(cursor_pos, content_length) {
+//! // Array-style overflow checking - two equivalent approaches:
+//!
+//! // Approach 1: Length perspective - "Does this length get overflowed by this index?"
+//! if !content_length.is_overflowed_by(cursor_pos) {
+//!     // Safe to access content[cursor_pos]
+//! }
+//!
+//! // Approach 2: Index perspective - "Does this index overflow this length?"
+//! if !cursor_pos.overflows(content_length) {
 //!     // Safe to access content[cursor_pos]
 //! }
 //! ```
@@ -138,26 +147,19 @@ pub enum BoundsOverflowStatus {
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{check_overflows, idx, len};
+/// use r3bl_tui::{idx, len};
 ///
-/// if check_overflows!(idx(5), len(10)) {
+/// if len(10).is_overflowed_by(idx(5)) {
 ///     // Handle overflow case
 /// }
 ///
-/// // Replaces verbose syntax:
+/// // More convenient than verbose syntax:
 /// # use r3bl_tui::{BoundsCheck, BoundsOverflowStatus, ColIndex, ColWidth};
 /// # let index = ColIndex::new(5);
 /// # let width = ColWidth::new(10);
 /// // if index.check_overflows(width) == BoundsOverflowStatus::Overflowed { ... }
-/// if check_overflows!(index, width) { /* ... */ }
+/// if width.is_overflowed_by(index) { /* ... */ }
 /// ```
-#[macro_export]
-macro_rules! check_overflows {
-    ($index:expr, $max:expr) => {
-        $index.check_overflows($max) == $crate::BoundsOverflowStatus::Overflowed
-    };
-}
-
 /// Core trait for unit comparison operations.
 ///
 /// Provides standardized methods to convert unit types to common numeric types
@@ -179,9 +181,41 @@ pub trait UnitCompare {
 /// content, such as `RowIndex`, `ColIndex`, and `Index`. These are 0-based
 /// values where the first position is index 0.
 ///
+/// Each index type has a corresponding length type via [`LengthType`](Self::LengthType),
+/// enabling safe bounds checking operations in both directions.
+///
 /// See the [module documentation](self) Type System section for details on
 /// how index types relate to length types and the type safety guarantees.
-pub trait IndexMarker: UnitCompare {}
+pub trait IndexMarker: UnitCompare {
+    /// The corresponding length type for this index type.
+    type LengthType: LengthMarker<IndexType = Self>;
+
+    /// Answers the question: "Does this index overflow this length?"
+    ///
+    /// Check if this index overflows the given length's bounds.
+    /// Returns true if the index is greater than or equal to the length.
+    ///
+    /// This is the inverse of [`LengthMarker::is_overflowed_by`] and provides
+    /// a natural way to express bounds checking from the index's perspective.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{col, width};
+    ///
+    /// let index = col(10);
+    /// let max_width = width(10);
+    /// assert!(index.overflows(max_width));  // At boundary - overflows
+    ///
+    /// let smaller_index = col(5);
+    /// assert!(!smaller_index.overflows(max_width));  // Within bounds
+    /// ```
+    fn overflows(&self, length: Self::LengthType) -> bool
+    where
+        Self: PartialOrd + Sized + Copy,
+    {
+        length.is_overflowed_by(*self)
+    }
+}
 
 /// Marker trait for length-type units (1-based size measurements).
 ///
@@ -203,6 +237,31 @@ pub trait LengthMarker: UnitCompare {
     /// This typically involves subtracting 1 from the length value since
     /// lengths are 1-based and indices are 0-based.
     fn convert_to_index(&self) -> Self::IndexType;
+
+    /// Answers the question: "Does this length get overflowed by this index?"
+    ///
+    /// Check if the given index would overflow this length's bounds.
+    /// Returns true if the index is greater than or equal to the length.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{col, width};
+    ///
+    /// let max_col = width(10);
+    /// assert!(!max_col.is_overflowed_by(col(5)));  // Within bounds
+    /// assert!(max_col.is_overflowed_by(col(10)));  // At boundary - overflows
+    /// assert!(max_col.is_overflowed_by(col(15)));  // Beyond boundary
+    /// ```
+    fn is_overflowed_by(&self, index: Self::IndexType) -> bool
+    where
+        Self::IndexType: PartialOrd,
+    {
+        // Special case: empty collection (length 0) has no valid indices
+        if self.as_usize() == 0 {
+            return true;
+        }
+        index > self.convert_to_index()
+    }
 }
 
 /// Core trait for index bounds validation in TUI applications.
@@ -414,35 +473,105 @@ mod tests {
     }
 
     #[test]
-    fn test_check_overflows_macro() {
+    fn test_is_overflowed_by() {
         // Test basic cases with Index/Length
-        assert!(!check_overflows!(idx(1), len(3)), "Within bounds");
-        assert!(check_overflows!(idx(3), len(3)), "At boundary");
-        assert!(check_overflows!(idx(5), len(3)), "Beyond bounds");
+        assert!(!len(3).is_overflowed_by(idx(1)), "Within bounds");
+        assert!(len(3).is_overflowed_by(idx(3)), "At boundary");
+        assert!(len(3).is_overflowed_by(idx(5)), "Beyond bounds");
         assert!(
-            !check_overflows!(idx(0), len(0)),
+            len(0).is_overflowed_by(idx(0)),
             "Empty collection edge case"
         );
 
-        // Test with typed indices
+        // Test with typed dimensions
         assert!(
-            !check_overflows!(ColIndex::new(5), ColWidth::new(10)),
+            !ColWidth::new(10).is_overflowed_by(ColIndex::new(5)),
             "Typed indices within bounds"
         );
         assert!(
-            check_overflows!(ColIndex::new(10), ColWidth::new(10)),
+            ColWidth::new(10).is_overflowed_by(ColIndex::new(10)),
             "Typed indices at boundary"
         );
+        assert!(
+            !RowHeight::new(5).is_overflowed_by(RowIndex::new(3)),
+            "Row indices within bounds"
+        );
+        assert!(
+            RowHeight::new(5).is_overflowed_by(RowIndex::new(5)),
+            "Row indices at boundary"
+        );
 
-        // Verify macro matches direct method calls
+        // Verify method matches existing check_overflows behavior
         let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
         for (index_val, length_val) in test_cases {
             let index = idx(index_val);
             let length = len(length_val);
             assert_eq!(
-                check_overflows!(index, length),
+                length.is_overflowed_by(index),
                 index.check_overflows(length) == BoundsOverflowStatus::Overflowed,
-                "Macro should match direct method for index {index_val} and length {length_val}"
+                "New method should match existing behavior for index {index_val} and length {length_val}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_overflows() {
+        // Test basic cases with Index/Length - should mirror is_overflowed_by results
+        assert!(!idx(1).overflows(len(3)), "Within bounds");
+        assert!(idx(3).overflows(len(3)), "At boundary");
+        assert!(idx(5).overflows(len(3)), "Beyond bounds");
+        assert!(idx(0).overflows(len(0)), "Empty collection edge case");
+
+        // Test with typed dimensions
+        assert!(
+            !ColIndex::new(5).overflows(ColWidth::new(10)),
+            "Typed indices within bounds"
+        );
+        assert!(
+            ColIndex::new(10).overflows(ColWidth::new(10)),
+            "Typed indices at boundary"
+        );
+        assert!(
+            !RowIndex::new(3).overflows(RowHeight::new(5)),
+            "Row indices within bounds"
+        );
+        assert!(
+            RowIndex::new(5).overflows(RowHeight::new(5)),
+            "Row indices at boundary"
+        );
+
+        // Verify method matches is_overflowed_by behavior (inverse relationship)
+        let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
+        for (index_val, length_val) in test_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+            assert_eq!(
+                index.overflows(length),
+                length.is_overflowed_by(index),
+                "overflows() should match is_overflowed_by() for index {index_val} and length {length_val}"
+            );
+        }
+
+        // Test with specific typed combinations
+        let col_cases = [(0, 5), (4, 5), (5, 5), (6, 5)];
+        for (index_val, width_val) in col_cases {
+            let col_index = ColIndex::new(index_val);
+            let col_width = ColWidth::new(width_val);
+            assert_eq!(
+                col_index.overflows(col_width),
+                col_width.is_overflowed_by(col_index),
+                "ColIndex::overflows should match ColWidth::is_overflowed_by for index {index_val} and width {width_val}"
+            );
+        }
+
+        let row_cases = [(0, 3), (2, 3), (3, 3), (4, 3)];
+        for (index_val, height_val) in row_cases {
+            let row_index = RowIndex::new(index_val);
+            let row_height = RowHeight::new(height_val);
+            assert_eq!(
+                row_index.overflows(row_height),
+                row_height.is_overflowed_by(row_index),
+                "RowIndex::overflows should match RowHeight::is_overflowed_by for index {index_val} and height {height_val}"
             );
         }
     }

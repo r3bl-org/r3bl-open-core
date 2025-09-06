@@ -17,7 +17,7 @@ use crate::{BoundsCheck, BoundsOverflowStatus::Overflowed, ColIndex, Pos, RowInd
 /// Respects DECSTBM scroll region margins.
 pub fn cursor_up(processor: &mut AnsiToBufferProcessor, params: &Params) {
     // Extract movement count (guaranteed >= 1 by VT100 spec).
-    let lines_to_move_up = MovementCount::parse_as_row_height(params);
+    let move_up_by = MovementCount::parse_as_row_height(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
 
     // Get top boundary of scroll region (or 0 if no region set).
@@ -27,7 +27,7 @@ pub fn cursor_up(processor: &mut AnsiToBufferProcessor, params: &Params) {
         .map_or(/* None */ row(0), /* Some */ Into::into);
 
     // Move cursor up but don't go above scroll region boundary.
-    let potential_new_row = current_row - lines_to_move_up;
+    let potential_new_row = current_row - move_up_by;
     let new_row = if potential_new_row < scroll_top_boundary {
         scroll_top_boundary
     } else {
@@ -40,7 +40,7 @@ pub fn cursor_up(processor: &mut AnsiToBufferProcessor, params: &Params) {
 /// Respects DECSTBM scroll region margins.
 pub fn cursor_down(processor: &mut AnsiToBufferProcessor, params: &Params) {
     // Extract movement count (guaranteed >= 1 by VT100 spec).
-    let lines_to_move_down = MovementCount::parse_as_row_height(params);
+    let move_down_by = MovementCount::parse_as_row_height(params);
     let current_row = processor.ofs_buf.my_pos.row_index;
     let max_row = processor.ofs_buf.window_size.row_height;
 
@@ -54,7 +54,7 @@ pub fn cursor_down(processor: &mut AnsiToBufferProcessor, params: &Params) {
         );
 
     // Move cursor down but don't go below scroll region boundary.
-    let potential_new_row = current_row + lines_to_move_down;
+    let potential_new_row = current_row + move_down_by;
     let new_row = if potential_new_row > scroll_bottom_boundary {
         scroll_bottom_boundary
     } else {
@@ -65,9 +65,9 @@ pub fn cursor_down(processor: &mut AnsiToBufferProcessor, params: &Params) {
 
 /// Move cursor forward by n columns.
 pub fn cursor_forward(processor: &mut AnsiToBufferProcessor, params: &Params) {
-    let cols_to_move_forward = MovementCount::parse_as_col_width(params);
+    let move_forward_by = MovementCount::parse_as_col_width(params);
     let max_col = processor.ofs_buf.window_size.col_width;
-    let new_col = processor.ofs_buf.my_pos.col_index + cols_to_move_forward;
+    let new_col = processor.ofs_buf.my_pos.col_index + move_forward_by;
     // Clamp to max_col-1 if it would overflow.
     processor.ofs_buf.my_pos.col_index = if new_col.check_overflows(max_col) == Overflowed
     {
@@ -79,9 +79,9 @@ pub fn cursor_forward(processor: &mut AnsiToBufferProcessor, params: &Params) {
 
 /// Move cursor backward by n columns.
 pub fn cursor_backward(processor: &mut AnsiToBufferProcessor, params: &Params) {
-    let cols_to_move_backward = MovementCount::parse_as_col_width(params);
+    let move_backward_by = MovementCount::parse_as_col_width(params);
     let current_col = processor.ofs_buf.my_pos.col_index;
-    processor.ofs_buf.my_pos.col_index = current_col - cols_to_move_backward;
+    processor.ofs_buf.my_pos.col_index = current_col - move_backward_by;
 }
 
 /// Set cursor position (1-based coordinates from ANSI, converted to 0-based).
@@ -126,7 +126,7 @@ pub fn cursor_position(processor: &mut AnsiToBufferProcessor, params: &Params) {
 
 /// Internal helper: Move cursor up by n lines (direct parameter).
 pub fn cursor_up_by_n(processor: &mut AnsiToBufferProcessor, n: RowIndex) {
-    let lines_to_move_up = max(n.as_u16(), 1); // Ensure at least 1 movement
+    let move_up_by = max(n.as_u16(), 1); // Ensure at least 1 movement
     let current_row = processor.ofs_buf.my_pos.row_index;
 
     // Get top boundary of scroll region (or 0 if no region set).
@@ -137,7 +137,7 @@ pub fn cursor_up_by_n(processor: &mut AnsiToBufferProcessor, n: RowIndex) {
 
     // Move cursor up but don't go above scroll region boundary.
     let new_row = max(
-        current_row.as_u16().saturating_sub(lines_to_move_up),
+        current_row.as_u16().saturating_sub(move_up_by),
         scroll_top_boundary.into(),
     );
     processor.ofs_buf.my_pos.row_index = row(new_row);
@@ -145,7 +145,7 @@ pub fn cursor_up_by_n(processor: &mut AnsiToBufferProcessor, n: RowIndex) {
 
 /// Internal helper: Move cursor down by n lines (direct parameter).
 pub fn cursor_down_by_n(processor: &mut AnsiToBufferProcessor, n: RowIndex) {
-    let lines_to_move_down = max(n.as_u16(), 1); // Ensure at least 1 movement
+    let move_down_by = max(n.as_u16(), 1); // Ensure at least 1 movement
     let current_row = processor.ofs_buf.my_pos.row_index;
     let max_row = processor.ofs_buf.window_size.row_height;
 
@@ -160,7 +160,7 @@ pub fn cursor_down_by_n(processor: &mut AnsiToBufferProcessor, n: RowIndex) {
 
     // Move cursor down but don't go below scroll region boundary.
     let new_row = min(
-        current_row.as_u16() + lines_to_move_down,
+        current_row.as_u16() + move_down_by,
         scroll_bottom_boundary.into(),
     );
     processor.ofs_buf.my_pos.row_index = row(new_row);
@@ -168,9 +168,9 @@ pub fn cursor_down_by_n(processor: &mut AnsiToBufferProcessor, n: RowIndex) {
 
 /// Internal helper: Move cursor forward by n columns (direct parameter).
 pub fn cursor_forward_by_n(processor: &mut AnsiToBufferProcessor, n: ColIndex) {
-    let cols_to_move_forward = max(n.as_u16(), 1);
+    let move_forward_by = max(n.as_u16(), 1);
     let max_col = processor.ofs_buf.window_size.col_width;
-    let new_col = processor.ofs_buf.my_pos.col_index + cols_to_move_forward;
+    let new_col = processor.ofs_buf.my_pos.col_index + move_forward_by;
     // Clamp to max_col-1 if it would overflow.
     processor.ofs_buf.my_pos.col_index = if new_col.check_overflows(max_col) == Overflowed
     {
@@ -182,22 +182,22 @@ pub fn cursor_forward_by_n(processor: &mut AnsiToBufferProcessor, n: ColIndex) {
 
 /// Internal helper: Move cursor backward by n columns (direct parameter).
 pub fn cursor_backward_by_n(processor: &mut AnsiToBufferProcessor, n: ColIndex) {
-    let cols_to_move_backward = max(n.as_u16(), 1);
+    let move_backward_by = max(n.as_u16(), 1);
     let current_col = processor.ofs_buf.my_pos.col_index;
-    processor.ofs_buf.my_pos.col_index = current_col - cols_to_move_backward;
+    processor.ofs_buf.my_pos.col_index = current_col - move_backward_by;
 }
 
 /// Handle CNL (Cursor Next Line) - move cursor to beginning of line n lines down.
 pub fn cursor_next_line(processor: &mut AnsiToBufferProcessor, params: &Params) {
-    let lines_to_move_down = MovementCount::parse_as_row_height(params);
-    cursor_down_by_n(processor, lines_to_move_down.convert_to_row_index());
+    let move_down_by = MovementCount::parse_as_row_height(params);
+    cursor_down_by_n(processor, move_down_by.convert_to_row_index());
     processor.ofs_buf.my_pos.col_index = col(0);
 }
 
 /// Handle CPL (Cursor Previous Line) - move cursor to beginning of line n lines up.
 pub fn cursor_prev_line(processor: &mut AnsiToBufferProcessor, params: &Params) {
-    let lines_to_move_up = MovementCount::parse_as_row_height(params);
-    cursor_up_by_n(processor, lines_to_move_up.convert_to_row_index());
+    let move_up_by = MovementCount::parse_as_row_height(params);
+    cursor_up_by_n(processor, move_up_by.convert_to_row_index());
     processor.ofs_buf.my_pos.col_index = col(0);
 }
 
