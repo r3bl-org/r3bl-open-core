@@ -11,8 +11,8 @@ use std::cmp::Ordering;
 
 use super::{SelectMode, caret_mut};
 use crate::{BoundsCheck, BoundsOverflowStatus, CaretDirection, CaretRaw, ColIndex,
-            ColWidth, EditorArgsMut, EditorBuffer, RowHeight, RowIndex, ScrOfs,
-            caret_scroll_index, ch, LengthMarker, col, height, row, width};
+            ColWidth, EditorArgsMut, EditorBuffer, LengthMarker, RowHeight, RowIndex,
+            ScrOfs, caret_scroll_index, ch, col, height, row, width};
 
 /// # Scrolling not active
 ///

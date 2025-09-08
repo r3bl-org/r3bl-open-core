@@ -13,4 +13,4 @@ mod tests_integration;
 mod tests_line_operations;
 mod tests_line_wrap_and_scroll_control;
 mod tests_osc_sequences;
-mod tests_processor_lifecycle;
+mod tests_performer_lifecycle;

@@ -199,8 +199,8 @@ mod bounds_check_trait_impls {
     }
 
     impl IndexMarker for ColIndex {
-    type LengthType = ColWidth;
-}
+        type LengthType = ColWidth;
+    }
 }
 
 #[cfg(test)]

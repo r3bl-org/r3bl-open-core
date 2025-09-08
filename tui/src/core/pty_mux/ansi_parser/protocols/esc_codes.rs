@@ -270,7 +270,7 @@ mod tests {
         let sequence = EscSequence::SaveCursor;
         let mut buffer = BufTextStorage::new();
         let result = sequence.write_to_buf(&mut buffer);
-        
+
         assert!(result.is_ok());
         assert_eq!(buffer.to_string(), "\x1b7");
     }
@@ -280,7 +280,7 @@ mod tests {
         let sequence = EscSequence::SelectAscii;
         let mut buffer = BufTextStorage::new();
         let result = sequence.write_to_buf(&mut buffer);
-        
+
         assert!(result.is_ok());
         assert_eq!(buffer.to_string(), "\x1b(B");
     }
@@ -290,7 +290,7 @@ mod tests {
         let sequence = EscSequence::SelectDECGraphics;
         let mut buffer = BufTextStorage::new();
         let result = sequence.write_to_buf(&mut buffer);
-        
+
         assert!(result.is_ok());
         assert_eq!(buffer.to_string(), "\x1b(0");
     }
@@ -314,7 +314,7 @@ mod tests {
         let seq1 = EscSequence::SaveCursor;
         let seq2 = EscSequence::SaveCursor;
         let seq3 = EscSequence::RestoreCursor;
-        
+
         assert_eq!(seq1, seq2);
         assert_ne!(seq1, seq3);
     }
@@ -324,7 +324,7 @@ mod tests {
         let sequence = EscSequence::IndexDown;
         let copied = sequence; // This tests the Copy trait
         let another_copy = sequence; // Should still work after first copy
-        
+
         assert_eq!(copied, another_copy);
         assert_eq!(copied.to_string(), "\x1bD");
         assert_eq!(another_copy.to_string(), "\x1bD");
@@ -341,16 +341,19 @@ mod tests {
             EscSequence::SelectAscii,
             EscSequence::SelectDECGraphics,
         ];
-        
+
         let mut outputs = std::collections::HashSet::new();
-        
+
         for sequence in &sequences {
             let output = sequence.to_string();
             // Each sequence should produce a unique output
-            assert!(outputs.insert(output.clone()), 
-                   "Duplicate output found: {}", output);
+            assert!(
+                outputs.insert(output.clone()),
+                "Duplicate output found: {}",
+                output
+            );
         }
-        
+
         // Should have 7 unique outputs
         assert_eq!(outputs.len(), 7);
     }
@@ -366,12 +369,15 @@ mod tests {
             EscSequence::SelectAscii,
             EscSequence::SelectDECGraphics,
         ];
-        
+
         for sequence in &sequences {
             let output = sequence.to_string();
-            assert!(output.starts_with('\x1b'), 
-                   "Sequence {:?} should start with ESC character, got: {:?}", 
-                   sequence, output);
+            assert!(
+                output.starts_with('\x1b'),
+                "Sequence {:?} should start with ESC character, got: {:?}",
+                sequence,
+                output
+            );
         }
     }
 
@@ -379,17 +385,17 @@ mod tests {
     fn test_character_set_sequences_have_correct_format() {
         let ascii_seq = EscSequence::SelectAscii;
         let dec_graphics_seq = EscSequence::SelectDECGraphics;
-        
+
         let ascii_output = ascii_seq.to_string();
         let dec_graphics_output = dec_graphics_seq.to_string();
-        
+
         // Both should be ESC + ( + character
         assert_eq!(ascii_output.len(), 3);
         assert_eq!(dec_graphics_output.len(), 3);
-        
+
         assert_eq!(ascii_output.chars().nth(1), Some('('));
         assert_eq!(dec_graphics_output.chars().nth(1), Some('('));
-        
+
         assert_eq!(ascii_output.chars().nth(2), Some('B'));
         assert_eq!(dec_graphics_output.chars().nth(2), Some('0'));
     }

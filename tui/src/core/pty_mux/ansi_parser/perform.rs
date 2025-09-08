@@ -14,7 +14,7 @@ use vte::{Params, Perform};
 // Import the operation modules.
 use super::operations::{char_ops, cursor_ops, dsr_ops, line_ops, margin_ops, mode_ops,
                         scroll_ops, sgr_ops, terminal_ops};
-use super::{ansi_parser_public_api::AnsiToBufferProcessor,
+use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
             protocols::{csi_codes::{self},
                         esc_codes}};
 use crate::{BoundsCheck,
@@ -22,8 +22,8 @@ use crate::{BoundsCheck,
             CharacterSet, ColIndex, PixelChar, RowIndex, col,
             core::osc::{OscEvent, osc_codes}};
 
-/// Internal methods for `AnsiToBufferProcessor` to implement [`Perform`] trait.
-impl Perform for AnsiToBufferProcessor<'_> {
+/// Internal methods for `AnsiToOfsBufPerformer` to implement [`Perform`] trait.
+impl Perform for AnsiToOfsBufPerformer<'_> {
     /// Handle printable characters.
     ///
     /// ## Print Sequence Architecture
@@ -585,12 +585,12 @@ impl Perform for AnsiToBufferProcessor<'_> {
     ///
     /// ```text
     /// Session 1: vim at position (5,10) sends ESC 7
-    ///   → AnsiToBufferProcessor::new() with ofs_buf.my_pos = (5,10)
+    ///   → AnsiToOfsBufPerformer::new() with ofs_buf.my_pos = (5,10)
     ///   → esc_dispatch() handles ESC 7
     ///   → Saves ofs_buf.ansi_parser_support.cursor_pos_for_esc_save_and_restore = Some((5,10))
     ///
     /// Session 2: vim moves cursor to (20,30), then sends ESC 8
-    ///   → AnsiToBufferProcessor::new() with ofs_buf.my_pos = (20,30)
+    ///   → AnsiToOfsBufPerformer::new() with ofs_buf.my_pos = (20,30)
     ///   → esc_dispatch() handles ESC 8
     ///   → Restores ofs_buf.my_pos = cursor_pos_for_esc_save_and_restore.unwrap_or() // (5,10) ✓
     /// ```
@@ -599,7 +599,7 @@ impl Perform for AnsiToBufferProcessor<'_> {
             esc_codes::DECSC_SAVE_CURSOR => {
                 // DECSC - Save current cursor position
                 // The cursor position is saved to persistent buffer state so it
-                // survives across multiple AnsiToBufferProcessor instances
+                // survives across multiple AnsiToOfsBufPerformer instances
                 self.ofs_buf
                     .ansi_parser_support
                     .cursor_pos_for_esc_save_and_restore = Some(self.ofs_buf.my_pos);

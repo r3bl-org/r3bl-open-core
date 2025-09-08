@@ -5,21 +5,21 @@
 use vte::Perform;
 
 use super::tests_fixtures::*;
-use crate::{AnsiToBufferProcessor, offscreen_buffer::test_fixtures_offscreen_buffer::*};
+use crate::{AnsiToOfsBufPerformer, offscreen_buffer::test_fixtures_offscreen_buffer::*};
 
 #[test]
 fn test_utf8_characters() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
     // Process UTF-8 characters including emojis
-    let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+    let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
     // Print various UTF-8 characters
-    processor.print('H');
-    processor.print('é'); // Latin character with accent
-    processor.print('中'); // Chinese character
-    processor.print('🦀'); // Emoji (Rust crab)
-    processor.print('!');
+    performer.print('H');
+    performer.print('é'); // Latin character with accent
+    performer.print('中'); // Chinese character
+    performer.print('🦀'); // Emoji (Rust crab)
+    performer.print('!');
 
     // Verify all UTF-8 characters are in the buffer
     assert_plain_char_at(&ofs_buf, 0, 0, 'H');

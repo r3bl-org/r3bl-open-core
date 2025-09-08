@@ -213,8 +213,8 @@ mod bounds_check_trait_impls {
     }
 
     impl IndexMarker for Index {
-    type LengthType = Length;
-}
+        type LengthType = Length;
+    }
 }
 
 #[cfg(test)]

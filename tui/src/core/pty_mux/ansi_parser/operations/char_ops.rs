@@ -4,18 +4,18 @@
 
 use std::cmp::min;
 
-use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
+use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount};
-use crate::{PixelChar, LengthMarker};
+use crate::{LengthMarker, PixelChar};
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
 /// Characters to the right of cursor shift left.
 /// Blank characters are inserted at the end of the line.
-pub fn delete_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
+pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let delete_count = MovementCount::parse_as_length(params);
-    let current_row = processor.ofs_buf.my_pos.row_index;
-    let current_col = processor.ofs_buf.my_pos.col_index;
-    let max_col = processor.ofs_buf.window_size.col_width;
+    let current_row = performer.ofs_buf.my_pos.row_index;
+    let current_col = performer.ofs_buf.my_pos.col_index;
+    let max_col = performer.ofs_buf.window_size.col_width;
 
     // Nothing to delete if cursor is at or beyond right margin
     if max_col.is_overflowed_by(current_col) {
@@ -29,24 +29,23 @@ pub fn delete_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
     );
 
     // Shift characters left to fill the gap using copy_within
-    let source_range =
-        current_col.as_usize() + actual_delete_count..max_col.as_usize();
-    processor.ofs_buf.buffer[current_row.as_usize()]
+    let source_range = current_col.as_usize() + actual_delete_count..max_col.as_usize();
+    performer.ofs_buf.buffer[current_row.as_usize()]
         .copy_within(source_range, current_col.as_usize());
 
     // Fill the end of the line with blank characters
     let blank_range = max_col.as_usize() - actual_delete_count..max_col.as_usize();
-    processor.ofs_buf.buffer[current_row.as_usize()][blank_range].fill(PixelChar::Spacer);
+    performer.ofs_buf.buffer[current_row.as_usize()][blank_range].fill(PixelChar::Spacer);
 }
 
 /// Handle ICH (Insert Character) - insert n blank characters at cursor position.
 /// Characters to the right of cursor shift right.
 /// Characters shifted beyond the right margin are lost.
-pub fn insert_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
+pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let insert_count = MovementCount::parse_as_length(params);
-    let current_row = processor.ofs_buf.my_pos.row_index;
-    let current_col = processor.ofs_buf.my_pos.col_index;
-    let max_col = processor.ofs_buf.window_size.col_width;
+    let current_row = performer.ofs_buf.my_pos.row_index;
+    let current_col = performer.ofs_buf.my_pos.col_index;
+    let max_col = performer.ofs_buf.window_size.col_width;
 
     // Nothing to insert if cursor is at or beyond right margin
     if max_col.is_overflowed_by(current_col) {
@@ -61,25 +60,24 @@ pub fn insert_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params)
 
     // Shift characters right using copy_within
     let destination_col = current_col.as_usize() + actual_insert_count;
-    let source_range =
-        current_col.as_usize()..max_col.as_usize() - actual_insert_count;
-    processor.ofs_buf.buffer[current_row.as_usize()]
+    let source_range = current_col.as_usize()..max_col.as_usize() - actual_insert_count;
+    performer.ofs_buf.buffer[current_row.as_usize()]
         .copy_within(source_range, destination_col);
 
     // Insert blank characters at cursor position
     let insert_range = current_col.as_usize()..destination_col;
-    processor.ofs_buf.buffer[current_row.as_usize()][insert_range]
+    performer.ofs_buf.buffer[current_row.as_usize()][insert_range]
         .fill(PixelChar::Spacer);
 }
 
 /// Handle ECH (Erase Character) - erase n characters at cursor position.
 /// Characters are replaced with blanks, no shifting occurs.
 /// This is different from DCH which shifts characters left.
-pub fn erase_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
+pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let erase_count = MovementCount::parse_as_length(params);
-    let current_row = processor.ofs_buf.my_pos.row_index;
-    let current_col = processor.ofs_buf.my_pos.col_index;
-    let max_col = processor.ofs_buf.window_size.col_width;
+    let current_row = performer.ofs_buf.my_pos.row_index;
+    let current_col = performer.ofs_buf.my_pos.col_index;
+    let max_col = performer.ofs_buf.window_size.col_width;
 
     // Nothing to erase if cursor is at or beyond right margin
     if max_col.is_overflowed_by(current_col) {
@@ -93,7 +91,6 @@ pub fn erase_chars(processor: &mut AnsiToBufferProcessor, params: &vte::Params) 
     );
 
     // Replace characters with blanks (no shifting)
-    let erase_range =
-        current_col.as_usize()..current_col.as_usize() + actual_erase_count;
-    processor.ofs_buf.buffer[current_row.as_usize()][erase_range].fill(PixelChar::Spacer);
+    let erase_range = current_col.as_usize()..current_col.as_usize() + actual_erase_count;
+    performer.ofs_buf.buffer[current_row.as_usize()][erase_range].fill(PixelChar::Spacer);
 }

@@ -7,9 +7,8 @@
 //! showing process information and keyboard shortcuts.
 
 use super::ProcessManager;
-use crate::{ANSIBasicColor, FlushKind, OffscreenBuffer, OutputDevice,
-            PixelChar, Size, TuiColor, TuiStyle, LengthMarker, col,
-            lock_output_device_as_mut,
+use crate::{ANSIBasicColor, FlushKind, LengthMarker, OffscreenBuffer, OutputDevice,
+            PixelChar, Size, TuiColor, TuiStyle, col, lock_output_device_as_mut,
             tui::terminal_lib_backends::{OffscreenBufferPaint,
                                          OffscreenBufferPaintImplCrossterm},
             tui_style_attrib::Bold,
@@ -154,7 +153,11 @@ impl OutputRenderer {
             // Check if we have space for this tab
             let tab_width = tab_text.chars().count();
             let new_width = current_width + tab_width;
-            if self.terminal_size.col_width.is_overflowed_by(col(new_width)) {
+            if self
+                .terminal_size
+                .col_width
+                .is_overflowed_by(col(new_width))
+            {
                 break;
             }
 
@@ -169,7 +172,11 @@ impl OutputRenderer {
         // Check if we have space for shortcuts
         let shortcuts_width = shortcuts.chars().count();
         let total_width = current_width + shortcuts_width;
-        if self.terminal_size.col_width.is_overflowed_by(col(total_width)) {
+        if self
+            .terminal_size
+            .col_width
+            .is_overflowed_by(col(total_width))
+        {
             return status_parts.join("");
         }
         status_parts.push(shortcuts);

@@ -199,8 +199,8 @@ mod bounds_check_trait_impls {
     }
 
     impl IndexMarker for RowIndex {
-    type LengthType = RowHeight;
-}
+        type LengthType = RowHeight;
+    }
 }
 
 #[cfg(test)]

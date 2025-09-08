@@ -92,12 +92,12 @@ use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
 
 /// Terminal state context for ANSI sequence processing.
 ///
-/// This processor is created by [`OffscreenBuffer::apply_ansi_bytes`] and passed to the
+/// This performer is created by [`OffscreenBuffer::apply_ansi_bytes`] and passed to the
 /// VTE parser implementation. It provides direct access to persistent terminal state
 /// stored in the buffer's [`OffscreenBuffer::ansi_parser_support`] field. All state is
-/// stored directly in the buffer and persisted between processor instances.
+/// stored directly in the buffer and persisted between performer instances.
 #[derive(Debug)]
-pub struct AnsiToBufferProcessor<'a> {
+pub struct AnsiToOfsBufPerformer<'a> {
     /// Target buffer receiving processed terminal output and storing all persistent
     /// terminal state. Characters are written at the current cursor position, and the
     /// buffer's viewport and scrolling are managed automatically as content flows
@@ -105,24 +105,25 @@ pub struct AnsiToBufferProcessor<'a> {
     pub ofs_buf: &'a mut OffscreenBuffer,
 }
 
-impl<'a> AnsiToBufferProcessor<'a> {
-    /// Create a new processor for the given `ofs_buf`.
+impl<'a> AnsiToOfsBufPerformer<'a> {
+    /// Create a new performer for the given `ofs_buf`.
     ///
-    /// This creates a processor instance that provides direct access to persistent
+    /// This creates a performer instance that provides direct access to persistent
     /// terminal state stored in the buffer's `ansi_parser_support` field.
-    /// All terminal state is maintained in the buffer and persists between processor
+    /// All terminal state is maintained in the buffer and persists between performer
     /// instances.
     pub fn new(ofs_buf: &'a mut OffscreenBuffer) -> Self { Self { ofs_buf } }
 
     /// Handle the core parsing loop where each byte is fed to the [`VTE parser`], which
-    /// in turn calls methods on the processor (via the [`Perform`] trait).
+    /// in turn calls methods on the performer (via the [`Perform`] trait).
     ///
     /// [`VTE parser`]: vte::Parser
     /// [`Perform`]: vte::Perform
-    pub fn process_bytes(&mut self, bytes: impl AsRef<[u8]>) {
+    pub fn apply_ansi_bytes(&mut self, bytes: impl AsRef<[u8]>) {
         let mut parser = vte::Parser::new();
+        let performer = self;
         for &byte in bytes.as_ref() {
-            parser.advance(self, byte);
+            parser.advance(performer, byte);
         }
     }
 }
@@ -136,13 +137,13 @@ impl OffscreenBuffer {
     /// ```text
     /// 1. Child process (e.g., vim) sends ESC 7 to save cursor
     ///                             ↓
-    /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
+    /// 2. AnsiToOfsBufPerformer::esc_dispatch() handles ESC 7
     ///                             ↓
     /// 3. Saves current cursor_pos to buffer.my_pos_for_esc_save_and_restore
     ///                             ↓
     /// 4. Later, child sends ESC 8 to restore cursor
     ///                             ↓
-    /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
+    /// 5. AnsiToOfsBufPerformer::esc_dispatch() handles ESC 8
     ///                             ↓
     /// 6. Restores cursor_pos from buffer.my_pos_for_esc_save_and_restore
     /// ```
@@ -174,7 +175,7 @@ impl OffscreenBuffer {
     ///
     /// # Processing details
     ///
-    /// The processor is designed to be a transient manipulator that works directly on the
+    /// The performer is designed to be a transient manipulator that works directly on the
     /// buffer's state. It's created fresh for each batch of bytes to process:
     ///
     /// - Style attributes (`bold`, `fg_color`, etc.) are SGR (Select Graphic Rendition)
@@ -184,7 +185,7 @@ impl OffscreenBuffer {
     /// - Cursor position is read from and written directly to `buffer.my_pos` during
     ///   processing - no copying or synchronization is needed.
     /// - All persistent state lives in the [`OffscreenBuffer`], accessed directly by the
-    ///   processor through mutable references.
+    ///   performer through mutable references.
     /// - The [`VTE Parser`] (which must maintain state across reads for split sequences)
     ///   is kept separately in the [`Process`] struct.
     ///
@@ -198,14 +199,14 @@ impl OffscreenBuffer {
         &mut self,
         bytes: impl AsRef<[u8]>,
     ) -> (Vec<OscEvent>, Vec<DsrRequestFromPtyEvent>) {
-        let mut processor = AnsiToBufferProcessor::new(self);
-        processor.process_bytes(bytes.as_ref());
+        let mut performer = AnsiToOfsBufPerformer::new(self);
+        performer.apply_ansi_bytes(bytes.as_ref());
 
         // Use std::mem::take to move events out and leave empty vectors
         let osc_events =
-            take(&mut processor.ofs_buf.ansi_parser_support.pending_osc_events);
+            take(&mut performer.ofs_buf.ansi_parser_support.pending_osc_events);
         let pending_dsr_requests =
-            take(&mut processor.ofs_buf.ansi_parser_support.pending_dsr_responses);
+            take(&mut performer.ofs_buf.ansi_parser_support.pending_dsr_responses);
 
         (osc_events, pending_dsr_requests)
     }

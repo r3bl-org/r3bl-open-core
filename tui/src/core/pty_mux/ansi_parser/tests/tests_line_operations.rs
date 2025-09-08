@@ -3,7 +3,7 @@
 //! Tests for line insertion and deletion operations (IL/DL).
 
 use super::tests_fixtures::*;
-use crate::{ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor,
+use crate::{ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           protocols::csi_codes::CsiSequence, term_units::term_row},
             col, row, term_col};
 
@@ -87,17 +87,17 @@ pub mod insert_line {
     #[test]
     fn test_insert_line_outside_margins_ignored() {
         let mut ofs_buf = create_numbered_buffer(5, 10);
-        let processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
-        processor.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(2));
-        processor.ofs_buf.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
+        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(2));
+        performer.ofs_buf.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
 
         // Move cursor to row 0 (outside margins)
-        processor.ofs_buf.my_pos = row(0) + col(0);
+        performer.ofs_buf.my_pos = row(0) + col(0);
 
         // Try to insert line: ESC[L (should be ignored)
-        //         processor.csi_dispatch(&[], &[], false, 'L');
+        //         performer.csi_dispatch(&[], &[], false, 'L');
 
         // Verify no changes occurred
         for r in 0..5 {
@@ -191,19 +191,19 @@ pub mod delete_line {
     #[test]
     fn test_delete_line_outside_margins_ignored() {
         let mut ofs_buf = create_numbered_buffer(5, 10);
-        let processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
-        processor.ofs_buf.ansi_parser_support.scroll_region_top =
+        performer.ofs_buf.ansi_parser_support.scroll_region_top =
             Some(crate::ansi_parser::term_units::term_row(2));
-        processor.ofs_buf.ansi_parser_support.scroll_region_bottom =
+        performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
             Some(crate::ansi_parser::term_units::term_row(4));
 
         // Move cursor to row 4 (outside margins)
-        processor.ofs_buf.my_pos = row(4) + col(0);
+        performer.ofs_buf.my_pos = row(4) + col(0);
 
         // Try to delete line: ESC[M (should be ignored)
-        //         processor.csi_dispatch(&[], &[], false, 'M');
+        //         performer.csi_dispatch(&[], &[], false, 'M');
 
         // Verify no changes occurred
         for r in 0..5 {

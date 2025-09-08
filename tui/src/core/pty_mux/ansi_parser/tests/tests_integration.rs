@@ -4,7 +4,7 @@
 
 use super::tests_fixtures::*;
 use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, TuiColor,
-            ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor,
+            ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           csi_codes::{CsiSequence,
                                       csi_test_helpers::csi_seq_cursor_pos},
                           esc_codes::EscSequence,
@@ -27,7 +27,7 @@ pub mod full_sequences {
     fn test_vim_like_sequence() {
         let mut ofs_buf = create_offscreen_buffer_24r_by_80c();
 
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Simulate a vim-like sequence using proper builders
         let sequence = format!(
@@ -44,7 +44,7 @@ pub mod full_sequences {
             restored_text = "Hello World!"
         );
 
-        processor.process_bytes(sequence);
+        performer.apply_ansi_bytes(sequence);
 
         // Verify the sequence worked correctly
         // Status line should be at top with reverse video
@@ -68,7 +68,7 @@ pub mod full_sequences {
     fn test_complex_ansi_sequences() {
         let mut ofs_buf = create_offscreen_buffer_24r_by_80c();
 
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Simulate: Bold text, colored text, cursor movement
         let sequence = format!(
@@ -78,7 +78,7 @@ pub mod full_sequences {
             fg_green = SgrCode::ForegroundBasic(ANSIBasicColor::DarkGreen),
             reset2 = SgrCode::Reset
         );
-        processor.process_bytes(sequence);
+        performer.apply_ansi_bytes(sequence);
 
         // Verify "Bold" with bold style
         for (i, ch) in "Bold".chars().enumerate() {
@@ -125,7 +125,7 @@ pub mod vte_parser {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Process ANSI sequences through VTE parser
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Print "Hello" with red foreground
         let input = format!(
@@ -133,10 +133,10 @@ pub mod vte_parser {
             fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
             reset = SgrCode::Reset
         );
-        processor.process_bytes(&input);
+        performer.apply_ansi_bytes(&input);
 
         // Verify cursor position after processing
-        assert_eq!(processor.ofs_buf.my_pos.col_index.as_usize(), 6);
+        assert_eq!(performer.ofs_buf.my_pos.col_index.as_usize(), 6);
 
         // Verify "Hello" is in the buffer
         assert_plain_text_at(&ofs_buf, 0, 0, "Hello");

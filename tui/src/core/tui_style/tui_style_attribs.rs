@@ -5,7 +5,7 @@ use std::ops::{Add, AddAssign};
 
 /// Contains the visual style attributes that can be applied to text.
 /// This struct is shared between `TuiStyle` (which adds id, computed, padding, lolcat)
-/// and `AnsiToBufferProcessor` (which uses these for ANSI sequence processing).
+/// and `AnsiToOfsBufPerformer` (which uses these for ANSI sequence processing).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default, Debug)]
 pub struct TuiStyleAttribs {
     // XMARK: Use of newtype pattern `Option<T>` instead of `bool`.

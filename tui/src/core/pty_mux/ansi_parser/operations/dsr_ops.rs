@@ -2,7 +2,7 @@
 
 //! Device Status Report (DSR) operations.
 
-use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
+use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::dsr_codes::DsrRequestType};
 use crate::DsrRequestFromPtyEvent;
 
@@ -11,11 +11,11 @@ use crate::DsrRequestFromPtyEvent;
 /// This command is used by applications to query the terminal's status.
 /// Generates DSR response events that will be processed by the process manager
 /// and sent back to the child process through the PTY input channel.
-pub fn status_report(processor: &mut AnsiToBufferProcessor, params: &vte::Params) {
+pub fn status_report(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     match DsrRequestType::from(params) {
         DsrRequestType::RequestStatus => {
             // Status report request - respond with ESC[0n (terminal OK).
-            processor
+            performer
                 .ofs_buf
                 .ansi_parser_support
                 .pending_dsr_responses
@@ -24,9 +24,9 @@ pub fn status_report(processor: &mut AnsiToBufferProcessor, params: &vte::Params
         DsrRequestType::RequestCursorPosition => {
             // Cursor position report - respond with ESC[row;colR.
             // Convert 0-based internal position to 1-based terminal position.
-            let row = processor.ofs_buf.my_pos.row_index.into();
-            let col = processor.ofs_buf.my_pos.col_index.into();
-            processor
+            let row = performer.ofs_buf.my_pos.row_index.into();
+            let col = performer.ofs_buf.my_pos.col_index.into();
+            performer
                 .ofs_buf
                 .ansi_parser_support
                 .pending_dsr_responses

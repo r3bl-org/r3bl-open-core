@@ -893,43 +893,58 @@ mod tests {
         F: Fn(&vte::Params),
     {
         use vte::{Parser, Perform};
-        
+
         struct TestPerformer<F> {
             test_fn: Option<F>,
         }
-        
+
         impl<F> TestPerformer<F>
         where
             F: Fn(&vte::Params),
         {
             fn new(test_fn: F) -> Self {
-                Self { test_fn: Some(test_fn) }
+                Self {
+                    test_fn: Some(test_fn),
+                }
             }
         }
-        
+
         impl<F> Perform for TestPerformer<F>
         where
             F: Fn(&vte::Params),
         {
-            fn csi_dispatch(&mut self, params: &vte::Params, _intermediates: &[u8], _ignore: bool, _c: char) {
+            fn csi_dispatch(
+                &mut self,
+                params: &vte::Params,
+                _intermediates: &[u8],
+                _ignore: bool,
+                _c: char,
+            ) {
                 if let Some(test_fn) = self.test_fn.take() {
                     test_fn(params);
                 }
             }
-            
+
             // Required by Perform trait but unused
             fn print(&mut self, _c: char) {}
             fn execute(&mut self, _byte: u8) {}
-            fn hook(&mut self, _params: &vte::Params, _intermediates: &[u8], _ignore: bool, _c: char) {}
+            fn hook(
+                &mut self,
+                _params: &vte::Params,
+                _intermediates: &[u8],
+                _ignore: bool,
+                _c: char,
+            ) {
+            }
             fn put(&mut self, _byte: u8) {}
             fn unhook(&mut self) {}
             fn osc_dispatch(&mut self, _params: &[&[u8]], _bell_terminated: bool) {}
             fn esc_dispatch(&mut self, _intermediates: &[u8], _ignore: bool, _byte: u8) {}
         }
-        
+
         let mut parser = Parser::new();
         let mut performer = TestPerformer::new(test_fn);
-        
+
         for byte in sequence.bytes() {
             parser.advance(&mut performer, byte);
         }
@@ -1024,7 +1039,8 @@ mod tests {
 
         #[test]
         fn test_parse_as_row_index_with_valid_value() {
-            process_csi_sequence_and_test("\x1b[5d", |params| { // VPA command
+            process_csi_sequence_and_test("\x1b[5d", |params| {
+                // VPA command
                 let result = AbsolutePosition::parse_as_row_index(params);
                 assert_eq!(result.as_u16(), 4); // Should be 0-based (5-1=4)
             });
@@ -1056,7 +1072,8 @@ mod tests {
 
         #[test]
         fn test_parse_as_col_index_with_valid_value() {
-            process_csi_sequence_and_test("\x1b[10G", |params| { // CHA command
+            process_csi_sequence_and_test("\x1b[10G", |params| {
+                // CHA command
                 let result = AbsolutePosition::parse_as_col_index(params);
                 assert_eq!(result.as_u16(), 9); // Should be 0-based (10-1=9)
             });
@@ -1092,7 +1109,8 @@ mod tests {
 
         #[test]
         fn test_from_params_with_both_values() {
-            process_csi_sequence_and_test("\x1b[5;10H", |params| { // CUP command
+            process_csi_sequence_and_test("\x1b[5;10H", |params| {
+                // CUP command
                 let result = CursorPositionRequest::from(params);
                 assert_eq!(result.row, 4); // Should be 0-based (5-1=4)
                 assert_eq!(result.col, 9); // Should be 0-based (10-1=9)
@@ -1128,7 +1146,8 @@ mod tests {
 
         #[test]
         fn test_from_params_with_column_only() {
-            process_csi_sequence_and_test("\x1b[;5H", |params| { // Empty row, col=5
+            process_csi_sequence_and_test("\x1b[;5H", |params| {
+                // Empty row, col=5
                 let result = CursorPositionRequest::from(params);
                 assert_eq!(result.row, 0); // Missing row defaults to 1, then 1-1=0
                 assert_eq!(result.col, 4); // Should be 0-based (5-1=4)
@@ -1147,7 +1166,7 @@ mod tests {
             let request1 = CursorPositionRequest { row: 5, col: 10 };
             let request2 = CursorPositionRequest { row: 5, col: 10 };
             let request3 = CursorPositionRequest { row: 5, col: 11 };
-            
+
             assert_eq!(request1, request2);
             assert_ne!(request1, request3);
         }

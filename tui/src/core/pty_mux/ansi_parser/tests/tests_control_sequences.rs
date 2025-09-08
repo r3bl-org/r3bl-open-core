@@ -5,7 +5,7 @@
 use vte::Perform;
 
 use super::tests_fixtures::*;
-use crate::{AnsiToBufferProcessor, col, core::pty_mux::ansi_parser::esc_codes,
+use crate::{AnsiToOfsBufPerformer, col, core::pty_mux::ansi_parser::esc_codes,
             offscreen_buffer::test_fixtures_offscreen_buffer::*, row};
 
 /// Tests for C0 control characters (CR, LF, Tab, Backspace, etc.).
@@ -17,55 +17,55 @@ pub mod control_chars {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Test various control characters
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Print some text
-        processor.print('A');
-        processor.print('B');
-        processor.print('C');
+        performer.print('A');
+        performer.print('B');
+        performer.print('C');
 
         // Carriage return should move to start of line
-        processor.execute(esc_codes::CARRIAGE_RETURN);
+        performer.execute(esc_codes::CARRIAGE_RETURN);
         assert_eq!(
-            processor.ofs_buf.my_pos,
+            performer.ofs_buf.my_pos,
             row(0) + col(0),
             "Cursor should be at start of line after CR"
         );
-        processor.print('X'); // Should overwrite 'A'
+        performer.print('X'); // Should overwrite 'A'
 
         // Line feed should move to next line, but same column
-        processor.execute(esc_codes::LINE_FEED);
+        performer.execute(esc_codes::LINE_FEED);
         assert_eq!(
-            processor.ofs_buf.my_pos,
+            performer.ofs_buf.my_pos,
             row(1) + col(1),
             "Cursor should move to next row after LF, but same column"
         );
 
         // Reset column for next test
-        processor.ofs_buf.my_pos.col_index = col(0);
-        processor.print('Y');
+        performer.ofs_buf.my_pos.col_index = col(0);
+        performer.print('Y');
 
         // Tab should advance cursor
-        processor.execute(esc_codes::TAB);
+        performer.execute(esc_codes::TAB);
         assert_eq!(
-            processor.ofs_buf.my_pos,
+            performer.ofs_buf.my_pos,
             row(1) + col(8),
             "Cursor should move to col 8 after tab"
         );
-        processor.print('Z');
+        performer.print('Z');
 
         // Backspace should move cursor back
-        processor.ofs_buf.my_pos.col_index = col(3);
-        processor.print('M');
-        processor.execute(esc_codes::BACKSPACE); // Backspace
+        performer.ofs_buf.my_pos.col_index = col(3);
+        performer.print('M');
+        performer.execute(esc_codes::BACKSPACE); // Backspace
         assert_eq!(
-            processor.ofs_buf.my_pos,
+            performer.ofs_buf.my_pos,
             row(1) + col(3),
             "Cursor should move back one column after BS, to col 3"
         );
-        processor.print('N'); // Should overwrite 'M' at col 3
+        performer.print('N'); // Should overwrite 'M' at col 3
         assert_eq!(
-            processor.ofs_buf.my_pos,
+            performer.ofs_buf.my_pos,
             row(1) + col(4),
             "Cursor should move to col 4 after printing 'N', same row"
         );

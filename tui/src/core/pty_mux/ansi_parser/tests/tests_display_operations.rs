@@ -6,7 +6,7 @@ use vte::Perform;
 
 use super::tests_fixtures::*;
 use crate::{ANSIBasicColor, CharacterSet, SgrCode,
-            ansi_parser::{ansi_parser_public_api::AnsiToBufferProcessor, esc_codes},
+            ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer, esc_codes},
             offscreen_buffer::test_fixtures_offscreen_buffer::*,
             tui_style_attrib::{self}};
 
@@ -36,8 +36,8 @@ pub mod sgr_styling {
         // Sequence: ESC[1m ESC[31m "RED" ESC[0m "NORM"
 
         // Set bold+red, write "RED", reset all, write "NORM"
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
-        processor.process_bytes(format!(
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+        performer.apply_ansi_bytes(format!(
             "{bold}{fg_red}{text1}{reset_all}{text2}",
             bold = SgrCode::Bold,
             fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::Red),
@@ -94,10 +94,10 @@ pub mod sgr_styling {
         // Sequence: ESC[1m ESC[3m ESC[31m A ESC[22m B
 
         // Test partial SGR resets (SGR 22 resets bold/dim only)
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Set bold+italic+red, write "A", reset bold/dim only, write "B"
-        processor.process_bytes(format!(
+        performer.apply_ansi_bytes(format!(
             "{bold}{italic}{fg_red}A{reset_bold_dim}B",
             bold = SgrCode::Bold,
             italic = SgrCode::Italic,
@@ -169,10 +169,10 @@ pub mod sgr_styling {
         //           ESC[31mESC[44mZ ESC[0m
 
         // Test various SGR color sequences through VTE parser
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Test foreground colors: black, red, green, white, then background colors
-        processor.process_bytes(format!(
+        performer.apply_ansi_bytes(format!(
                 "{fg_blk}B{fg_red}R{fg_grn}G{fg_wht}W{rst} {bg_red}X{bg_grn}Y{rst}{fg_red}{bg_blu}Z{rst}",
                 fg_blk = SgrCode::ForegroundBasic(ANSIBasicColor::Black),
                 fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
@@ -270,10 +270,10 @@ pub mod sgr_styling {
     #[test]
     fn test_sgr_slow_blink() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Test ESC[5m (slow blink)
-        processor.process_bytes(format!(
+        performer.apply_ansi_bytes(format!(
             "{code}{text}",
             code = SgrCode::SlowBlink,
             text = "BLINK"
@@ -297,10 +297,10 @@ pub mod sgr_styling {
     #[test]
     fn test_sgr_rapid_blink() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Test ESC[6m (rapid blink) - this tests our bug fix!
-        processor.process_bytes(format!(
+        performer.apply_ansi_bytes(format!(
             "{code}{text}",
             code = SgrCode::RapidBlink,
             text = "RAPID"
@@ -327,15 +327,15 @@ pub mod sgr_styling {
         let mut ofs_buf2 = create_test_offscreen_buffer_10r_by_10c();
 
         // Test that both SGR 5 and SGR 6 produce the same result
-        let mut processor1 = AnsiToBufferProcessor::new(&mut ofs_buf1);
-        let mut processor2 = AnsiToBufferProcessor::new(&mut ofs_buf2);
+        let mut performer1 = AnsiToOfsBufPerformer::new(&mut ofs_buf1);
+        let mut performer2 = AnsiToOfsBufPerformer::new(&mut ofs_buf2);
 
-        processor1.process_bytes(format!(
+        performer1.apply_ansi_bytes(format!(
             "{code}{text}",
             code = SgrCode::SlowBlink,
             text = "A"
         ));
-        processor2.process_bytes(format!(
+        performer2.apply_ansi_bytes(format!(
             "{code}{text}",
             code = SgrCode::RapidBlink,
             text = "A"
@@ -368,10 +368,10 @@ pub mod sgr_styling {
     #[test]
     fn test_sgr_blink_reset() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Set blink, write char, reset blink, write char
-        processor.process_bytes(format!(
+        performer.apply_ansi_bytes(format!(
             "{c1}{t1}{c2}{t2}",
             c1 = SgrCode::SlowBlink,
             c2 = SgrCode::ResetBlink,
@@ -411,14 +411,14 @@ pub mod character_sets {
     fn test_esc_character_set_switching() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Start with ASCII mode and write 'q'
-        processor.process_bytes(esc_codes::EscSequence::SelectAscii.to_string());
-        processor.print('q');
+        performer.apply_ansi_bytes(esc_codes::EscSequence::SelectAscii.to_string());
+        performer.print('q');
 
         // Switch to DEC graphics mode
-        processor.process_bytes(esc_codes::EscSequence::SelectDECGraphics.to_string());
+        performer.apply_ansi_bytes(esc_codes::EscSequence::SelectDECGraphics.to_string());
 
         assert_eq!(
             ofs_buf.ansi_parser_support.character_set,
@@ -426,21 +426,21 @@ pub mod character_sets {
         );
 
         // Currently in DEC graphics mode
-        let mut processor = AnsiToBufferProcessor::new(&mut ofs_buf);
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Write 'q' which should be translated to '─' (horizontal line)
-        processor.print('q');
+        performer.print('q');
 
         // Write 'x' which should be translated to '│' (vertical line)
-        processor.print('x');
+        performer.print('x');
 
         // Switch back to ASCII
-        processor.process_bytes(esc_codes::EscSequence::SelectAscii.to_string());
+        performer.apply_ansi_bytes(esc_codes::EscSequence::SelectAscii.to_string());
 
         // Write 'q' again (should be normal 'q')
-        processor.print('q');
+        performer.print('q');
 
-        // Verify character set state after processor is dropped
+        // Verify character set state after performer is dropped
         assert_eq!(
             ofs_buf.ansi_parser_support.character_set,
             CharacterSet::Ascii

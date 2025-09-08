@@ -4,13 +4,13 @@
 
 use vte::Params;
 
-use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
+use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::PrivateModeType};
 
 /// Handle Set Mode (CSI h) command.
 /// Supports both standard modes and private modes (with ? prefix).
 pub fn set_mode(
-    processor: &mut AnsiToBufferProcessor,
+    performer: &mut AnsiToOfsBufPerformer,
     params: &Params,
     intermediates: &[u8],
 ) {
@@ -19,7 +19,7 @@ pub fn set_mode(
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
-                processor.ofs_buf.ansi_parser_support.auto_wrap_mode = true;
+                performer.ofs_buf.ansi_parser_support.auto_wrap_mode = true;
             }
             _ => {
                 tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
@@ -33,7 +33,7 @@ pub fn set_mode(
 /// Handle Reset Mode (CSI l) command.
 /// Supports both standard modes and private modes (with ? prefix).
 pub fn reset_mode(
-    processor: &mut AnsiToBufferProcessor,
+    performer: &mut AnsiToOfsBufPerformer,
     params: &Params,
     intermediates: &[u8],
 ) {
@@ -42,7 +42,7 @@ pub fn reset_mode(
         let mode = PrivateModeType::from(params);
         match mode {
             PrivateModeType::AutoWrap => {
-                processor.ofs_buf.ansi_parser_support.auto_wrap_mode = false;
+                performer.ofs_buf.ansi_parser_support.auto_wrap_mode = false;
             }
             _ => {
                 tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());

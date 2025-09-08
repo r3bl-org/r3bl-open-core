@@ -6,7 +6,7 @@ use std::cmp::min;
 
 use vte::Params;
 
-use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
+use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MarginRequest};
 
 /// Handle Set Top and Bottom Margins (DECSTBM) command.
@@ -14,15 +14,15 @@ use super::super::{ansi_parser_public_api::AnsiToBufferProcessor,
 ///
 /// This command sets the scrolling region for the terminal. Lines outside
 /// the scrolling region are not affected by scroll operations.
-pub fn set_margins(processor: &mut AnsiToBufferProcessor, params: &Params) {
+pub fn set_margins(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let request = MarginRequest::from(params);
-    let buffer_height: u16 = processor.ofs_buf.window_size.row_height.into();
+    let buffer_height: u16 = performer.ofs_buf.window_size.row_height.into();
 
     match request {
         MarginRequest::Reset => {
             // Reset scroll region to full screen.
-            processor.ofs_buf.ansi_parser_support.scroll_region_top = None;
-            processor.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
+            performer.ofs_buf.ansi_parser_support.scroll_region_top = None;
+            performer.ofs_buf.ansi_parser_support.scroll_region_bottom = None;
         }
         MarginRequest::SetRegion { top, bottom } => {
             let top_value = top.as_u16();
@@ -32,8 +32,8 @@ pub fn set_margins(processor: &mut AnsiToBufferProcessor, params: &Params) {
             let clamped_bottom = min(bottom_value, buffer_height);
 
             if top_value < clamped_bottom && clamped_bottom <= buffer_height {
-                processor.ofs_buf.ansi_parser_support.scroll_region_top = Some(top);
-                processor.ofs_buf.ansi_parser_support.scroll_region_bottom =
+                performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(top);
+                performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
                     Some(super::super::term_units::term_row(clamped_bottom));
             } else {
                 tracing::warn!(

@@ -14,7 +14,7 @@ use crate::{CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutpu
 
 /// Character set modes for terminal emulation.
 ///
-/// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to handle
+/// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to handle
 /// ESC ( sequences that switch between ASCII and DEC line-drawing graphics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CharacterSet {
@@ -35,7 +35,7 @@ pub enum CharacterSet {
 /// cursor position. This is because `my_pos` is used by multiple subsystems and is the
 /// primary cursor position tracker for the entire offscreen buffer system.
 ///
-/// [`ANSI parser`]: crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor
+/// [`ANSI parser`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
 /// [`OffscreenBuffer::my_pos`]: crate::offscreen_buffer::OffscreenBuffer::my_pos
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnsiParserSupport {
@@ -46,7 +46,7 @@ pub struct AnsiParserSupport {
     /// track the current cursor position - that's stored in
     /// [`OffscreenBuffer::my_pos`].
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
     /// the DECSC (ESC 7) and DECRC (ESC 8) escape sequences for saving and restoring
     /// cursor position.
     ///
@@ -54,13 +54,13 @@ pub struct AnsiParserSupport {
     /// ```text
     /// 1. Child process (e.g., vim) sends ESC 7 to save cursor
     ///                             ↓
-    /// 2. AnsiToBufferProcessor::esc_dispatch() handles ESC 7
+    /// 2. AnsiToOfsBufPerformer::esc_dispatch() handles ESC 7
     ///                             ↓
     /// 3. Saves current cursor_pos to buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
     ///                             ↓
     /// 4. Later, child sends ESC 8 to restore cursor
     ///                             ↓
-    /// 5. AnsiToBufferProcessor::esc_dispatch() handles ESC 8
+    /// 5. AnsiToOfsBufPerformer::esc_dispatch() handles ESC 8
     ///                             ↓
     /// 6. Restores cursor_pos from buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
     /// ```
@@ -68,7 +68,7 @@ pub struct AnsiParserSupport {
 
     /// Active character set for ANSI escape sequence support.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
     /// character set switching via ESC ( B (ASCII) and ESC ( 0 (DEC graphics).
     /// When in Graphics mode, characters like 'q' are translated to box-drawing
     /// characters like '─' during the `print()` operation.
@@ -82,7 +82,7 @@ pub struct AnsiParserSupport {
 
     /// Auto-wrap mode (DECAWM) for ANSI escape sequence support.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to control
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to control
     /// line wrapping behavior when printing characters. This implements the VT100
     /// DECAWM (Auto Wrap Mode) specification.
     ///
@@ -120,7 +120,7 @@ pub struct AnsiParserSupport {
     /// This variable defines the **upper boundary** of the area where scrolling occurs.
     /// Rows above this boundary are part of the **static top region** and do not scroll.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
     /// DECSTBM (Set Top and Bottom Margins) functionality via ESC [ top ; bottom r.
     ///
     /// When `None`, the default top margin is row 1 (first row), making the
@@ -141,7 +141,7 @@ pub struct AnsiParserSupport {
     /// Rows below this boundary are part of the **static bottom region** and do not
     /// scroll.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] to implement
+    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
     /// DECSTBM (Set Top and Bottom Margins) functionality via ESC [ top ; bottom r.
     ///
     /// When `None`, the default bottom margin is the last row of the terminal,
@@ -193,7 +193,7 @@ impl Default for AnsiParserSupport {
 /// with both:
 /// 1. [`crate::RenderPipeline::paint()`]
 /// 2. ANSI escape sequences; for more details see
-///    [`crate::core::pty_mux::ansi_parser::AnsiToBufferProcessor`] and the
+///    [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] and the
 ///    [`OffscreenBuffer::apply_ansi_bytes()`].
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
