@@ -3,14 +3,11 @@
 //! Terminal state operations.
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{CharacterSet, PixelChar, Pos};
+use crate::{CharacterSet, Pos};
 
 /// Clear all buffer content.
 fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) {
-    let max_row = performer.ofs_buf.window_size.row_height;
-    for row in 0..max_row.as_usize() {
-        performer.ofs_buf.buffer[row].fill(PixelChar::Spacer);
-    }
+    performer.ofs_buf.clear();
 }
 
 /// Reset all SGR attributes to default state.

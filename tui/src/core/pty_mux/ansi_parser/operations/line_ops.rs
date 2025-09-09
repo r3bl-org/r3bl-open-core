@@ -4,16 +4,46 @@
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount, term_units::TermRow};
-use crate::{PixelChar, RowIndex, row};
+use crate::{RowIndex, len, row};
 
 /// Handle IL (Insert Line) - insert n blank lines at cursor position.
 /// Lines below cursor and within scroll region shift down.
 /// Lines scrolled off the bottom are lost.
+///
+/// # Visual Example (inserting 2 blank lines at cursor position)
+///
+/// ```text
+/// Before:        Row: 0-based
+/// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
+///              │  1  │ Line A                              │
+///              │  2  │ Line B  ← cursor (row 2, 0-based)   │ ← Insert 2 lines here
+///              │  3  │ Line C                              │
+///              │  4  │ Line D                              │
+///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
+///              ╰  5  │ Footer line (outside scroll region) │
+///                    └─────────────────────────────────────┘
+///
+/// After IL 2:
+/// max_height=6 ╮     ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤
+///              │  1  │ Line A                              │
+///              │  2  │ (blank line)  ← cursor stays here   │
+///              │  3  │ (blank line)                        │
+///              │  4  │ Line B                              │
+///              │     ├─────────────────────────────────────┤
+///              ╰  5  │ Footer line (outside scroll region) │
+///                    └─────────────────────────────────────┘
+///
+/// Result: 2 blank lines inserted, Line B-C-D shifted down, Line C-D lost beyond scroll_bottom
+/// ```
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let insert_lines_count = MovementCount::parse_as_row_height(params);
-    let current_row = performer.ofs_buf.my_pos.row_index;
+    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
+    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
 
-    for _ in 0..insert_lines_count.as_u16() {
+    for _ in 0..how_many.as_u16() {
         insert_line_at(performer, current_row);
     }
 }
@@ -21,11 +51,41 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Handle DL (Delete Line) - delete n lines starting at cursor position.
 /// Lines below cursor and within scroll region shift up.
 /// Blank lines are added at the bottom of the scroll region.
+///
+/// # Visual Example (deleting 2 lines at cursor position)
+///
+/// ```text
+/// Before:        Row: 0-based
+/// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤ ← scroll_top
+///              │  1  │ Line A                              │   (row 1, 0-based)
+///              │  2  │ Line B  ← cursor (row 2, 0-based)   │ ← Delete 2 lines here
+///              │  3  │ Line C                              │
+///              │  4  │ Line D                              │
+///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
+///                    └─────────────────────────────────────┘
+///
+/// After DL 2:
+/// max_height=6 ╮     ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤
+///              │  1  │ Line A                              │
+///              │  2  │ Line D  ← cursor stays here         │
+///              │  3  │ (blank line)                        │
+///              │  4  │ (blank line)                        │
+///              │     ├─────────────────────────────────────┤
+///              ╰  5  │ Footer line (outside scroll region) │
+///                    └─────────────────────────────────────┘
+///
+/// Result: Line B and C deleted, Line D shifted up, blank lines added at bottom
+/// ```
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let delete_lines_count = MovementCount::parse_as_row_height(params);
-    let current_row = performer.ofs_buf.my_pos.row_index;
+    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
+    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
 
-    for _ in 0..delete_lines_count.as_u16() {
+    for _ in 0..how_many.as_u16() {
         delete_line_at(performer, current_row);
     }
 }
@@ -33,8 +93,11 @@ pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Insert a single blank line at the specified row.
 /// Lines below shift down within the scroll region.
 /// The bottom line of the scroll region is lost.
-fn insert_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
-    let max_row = performer.ofs_buf.window_size.row_height;
+fn insert_line_at(
+    performer: &mut AnsiToOfsBufPerformer,
+    row_index: /* 0-based */ RowIndex,
+) {
+    let max_row = /* 1-based */ performer.ofs_buf.window_size.row_height;
 
     // Get top boundary of scroll region (or 0 if no region set).
     let maybe_scroll_region_top = performer.ofs_buf.ansi_parser_support.scroll_region_top;
@@ -57,28 +120,28 @@ fn insert_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
         return;
     }
 
-    // Shift lines down within the scroll region, from bottom to insertion point.
-    // Note: We can't use copy_within() here because PixelCharLine doesn't implement Copy
-    // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
-    let row_start = row_index.as_usize();
-    let row_end = scroll_bottom.as_usize();
+    // Use shift_lines_down to shift lines down and clear the newly inserted line
+    performer.ofs_buf.shift_lines_down(
+        {
+            let start = row_index;
+            let end = scroll_bottom + 1;
+            start..end
+        },
+        len(1),
+    );
 
-    for shift_row in (row_start + 1..=row_end).rev() {
-        if shift_row > row_start {
-            performer.ofs_buf.buffer[shift_row] =
-                performer.ofs_buf.buffer[shift_row - 1].clone();
-        }
-    }
-
-    // Clear the newly inserted line.
+    // Clear the newly inserted line (shift_lines_down fills with blanks at the top)
     clear_line(performer, row_index);
 }
 
 /// Delete a single line at the specified row.
 /// Lines below shift up within the scroll region.
 /// A blank line is added at the bottom of the scroll region.
-fn delete_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
-    let max_row = performer.ofs_buf.window_size.row_height;
+fn delete_line_at(
+    performer: &mut AnsiToOfsBufPerformer,
+    row_index: /* 0-based */ RowIndex,
+) {
+    let max_row = /* 1-based */ performer.ofs_buf.window_size.row_height;
 
     // Get top boundary of scroll region (or 0 if no region set).
     let maybe_scroll_region_top = performer.ofs_buf.ansi_parser_support.scroll_region_top;
@@ -101,22 +164,22 @@ fn delete_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
         return;
     }
 
-    // Shift lines up within the scroll region, from deletion point to bottom.
-    // Note: We can't use copy_within() here because PixelCharLine doesn't implement Copy
-    // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
-    let row_start = row_index.as_usize();
-    let row_end = scroll_bottom.as_usize();
+    // Use shift_lines_up to shift lines up and clear the bottom line
+    performer.ofs_buf.shift_lines_up(
+        {
+            let start = row_index;
+            let end = scroll_bottom + 1;
+            start..end
+        },
+        len(1),
+    );
 
-    for shift_row in row_start..row_end {
-        performer.ofs_buf.buffer[shift_row] =
-            performer.ofs_buf.buffer[shift_row + 1].clone();
-    }
-
-    // Clear the bottom line of the scroll region (new blank line).
+    // Clear the bottom line of the scroll region (shift_lines_up fills with blanks at the
+    // bottom)
     clear_line(performer, scroll_bottom);
 }
 
 /// Clear a line by filling it with blanks.
 fn clear_line(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
-    performer.ofs_buf.buffer[row_index.as_usize()].fill(PixelChar::Spacer);
+    performer.ofs_buf.clear_line(row_index);
 }

@@ -109,6 +109,10 @@
 //! [`Length`]: crate::Length
 //! [`dimens`]: crate::dimens
 
+use std::ops::Sub;
+
+use crate::{Length, len};
+
 /// Result of array-style bounds checking operations.
 ///
 /// Used with [`BoundsCheck::check_overflows`] to determine if an index can safely
@@ -184,11 +188,38 @@ pub trait UnitCompare {
 /// Each index type has a corresponding length type via [`LengthType`](Self::LengthType),
 /// enabling safe bounds checking operations in both directions.
 ///
-/// See the [module documentation](self) Type System section for details on
+/// See the [module documentation](self) "Type System" section for details on
 /// how index types relate to length types and the type safety guarantees.
 pub trait IndexMarker: UnitCompare {
     /// The corresponding length type for this index type.
+    ///
+    /// The constraint `LengthMarker<IndexType = Self>` creates a bidirectional
+    /// relationship: this ensures that the length type's `IndexType` points back to
+    /// this same index type, preventing type mismatches like `ColIndex` ↔
+    /// `RowHeight`.
     type LengthType: LengthMarker<IndexType = Self>;
+
+    /// Convert this index to the corresponding length type.
+    ///
+    /// This typically involves adding 1 to the index value since
+    /// indices are 0-based and lengths are 1-based.
+    ///
+    /// # Visual Example
+    ///
+    /// ```text
+    /// Index=5 (0-based) to length (1-based) conversion:
+    ///
+    ///                           index=5 (0-based)
+    ///                                 ↓
+    /// Index:      0   1   2   3   4   5   6   7   8   9
+    /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///           │   │   │   │   │   │   │   │   │   │   │
+    ///           └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    /// Length:     1   2   3   4   5   6   7   8   9   10
+    /// (1-based)                       ↑
+    ///                  convert_to_length() = 6 (1-based)
+    /// ```
+    fn convert_to_length(&self) -> Self::LengthType;
 
     /// Answers the question: "Does this index overflow this length?"
     ///
@@ -197,6 +228,24 @@ pub trait IndexMarker: UnitCompare {
     ///
     /// This is the inverse of [`LengthMarker::is_overflowed_by`] and provides
     /// a natural way to express bounds checking from the index's perspective.
+    ///
+    /// # Visual Example
+    ///
+    /// ```text
+    /// Checking if index overflows length:
+    ///
+    ///                           index=5 (0-based)   index=10 (0-based)
+    ///                                 ↓                   ↓
+    /// Index:      0   1   2   3   4   5   6   7   8   9 │ 10  11  12
+    /// (1-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┐
+    ///           │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │
+    ///           ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┤
+    ///           ├────────── within bounds ──────────────┼─ overflow ┘
+    ///           └────────── length=10 (1-based) ────────┘
+    ///
+    /// overflows(length=10) = true (index 10 overflows length 10)
+    /// overflows(length=5)  = false (index 5 within length 10)
+    /// ```
     ///
     /// # Examples
     /// ```
@@ -226,22 +275,61 @@ pub trait IndexMarker: UnitCompare {
 /// Each length type has a corresponding index type via [`IndexType`](Self::IndexType),
 /// enabling safe bounds checking operations.
 ///
-/// See the [module documentation](self) Type System section for details on
+/// See the [module documentation](self) "Type System" section for details on
 /// how length types relate to index types and the type safety guarantees.
 pub trait LengthMarker: UnitCompare {
     /// The corresponding index type for this length type.
-    type IndexType: IndexMarker;
+    ///
+    /// The constraint `IndexMarker<LengthType = Self>` creates a bidirectional
+    /// relationship: this ensures that the index type's `LengthType` points back to
+    /// this same length type, preventing type mismatches like `ColWidth` ↔
+    /// `RowIndex`.
+    type IndexType: IndexMarker<LengthType = Self>;
 
     /// Convert this length to the corresponding index type.
     ///
     /// This typically involves subtracting 1 from the length value since
     /// lengths are 1-based and indices are 0-based.
+    ///
+    /// # Visual Example
+    ///
+    /// ```text
+    /// Length=10 to index conversion:
+    ///           ┌────────── length=10 (1-based) ────────┐
+    /// Length:     1   2   3   4   5   6   7   8   9   10
+    /// (1-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///           │   │   │   │   │   │   │   │   │   │ ␩ │
+    ///           └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    /// Index:      0   1   2   3   4   5   6   7   8   9
+    /// (0-based)                                       ↑
+    ///                                         convert_to_index() = 9
+    /// ```
     fn convert_to_index(&self) -> Self::IndexType;
 
     /// Answers the question: "Does this length get overflowed by this index?"
     ///
     /// Check if the given index would overflow this length's bounds.
     /// Returns true if the index is greater than or equal to the length.
+    ///
+    /// # Visual Example
+    ///
+    /// ```text
+    /// Checking overflow for length=10:
+    ///
+    ///                                             boundary
+    ///                                                 │
+    /// Index:    0   1   2   3   4   5   6   7   8   9 │ 10  11  12
+    ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┐
+    ///         │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✗ │ ✗ │ ✗ │
+    ///         ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┤
+    ///         ├────────── valid indices ──────────────┼─ overflow ┘
+    ///         └────────── length=10 (1-based) ────────┘
+    ///
+    /// is_overflowed_by(5)  = false (within bounds)
+    /// is_overflowed_by(9)  = false (last valid index)
+    /// is_overflowed_by(10) = true (at boundary)
+    /// is_overflowed_by(11) = true (beyond boundary)
+    /// ```
     ///
     /// # Examples
     /// ```
@@ -261,6 +349,59 @@ pub trait LengthMarker: UnitCompare {
             return true;
         }
         index > self.convert_to_index()
+    }
+
+    /// Calculate the remaining space from the given index to the end of this length.
+    ///
+    /// Returns the number of units between the index and the boundary defined by this
+    /// length. For example, if this is a ColWidth of 10 and the index is at column 3,
+    /// this returns a Length of 7 (columns 3-9, inclusive).
+    ///
+    /// Returns Length(0) if the index is at or beyond the boundary.
+    ///
+    /// # Visual Example
+    ///
+    /// ```text
+    /// With max_width=10:
+    ///
+    ///                 index=3 (0-based)
+    ///                       ↓
+    /// Column:   0   1   2   3   4   5   6   7   8   9
+    ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///         │   │   │   │ × │ × │ × │ × │ × │ × │ × │
+    ///         ├───┴───┴───┼───┴───┴───┴───┴───┴───┴───┤
+    ///         │           └───── 7 chars remain ──────┤
+    ///         └────────── width=10 (1-based) ─────────┘
+    ///
+    /// remaining_from(3)  = 7 (chars from index 3 to 9)
+    /// remaining_from(9)  = 1 (only position 9 remains)
+    /// remaining_from(10) = 0 (at boundary, nothing remains)
+    /// ```
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{col, width, len};
+    ///
+    /// let max_width = width(10);
+    /// assert_eq!(max_width.remaining_from(col(3)), len(7));  // 7 columns remain
+    /// assert_eq!(max_width.remaining_from(col(10)), len(0)); // At boundary
+    /// assert_eq!(max_width.remaining_from(col(15)), len(0)); // Beyond boundary
+    /// ```
+    fn remaining_from(&self, index: Self::IndexType) -> Length
+    where
+        Self::IndexType: PartialOrd + Sub<Output = Self::IndexType> + Copy,
+        <Self::IndexType as IndexMarker>::LengthType: Into<Length>,
+    {
+        if self.is_overflowed_by(index) {
+            len(0)
+        } else {
+            // Get max index for this length
+            let max_index = self.convert_to_index();
+            // Calculate num of chars from cursor to boundary (as index difference)
+            let chars_remaining_as_index = max_index - index;
+            // Convert from 0-based index difference to 1-based length
+            chars_remaining_as_index.convert_to_length().into()
+        }
     }
 }
 
@@ -283,7 +424,7 @@ pub trait LengthMarker: UnitCompare {
 /// let height = RowHeight::new(5);
 /// assert_eq!(row_index.check_overflows(height), BoundsOverflowStatus::Overflowed);
 /// ```
-pub trait BoundsCheck<OtherType: LengthMarker>
+pub trait BoundsCheck<LengthType: LengthMarker>
 where
     Self: IndexMarker,
 {
@@ -293,7 +434,25 @@ where
     /// `BoundsOverflowStatus::Overflowed` if the index would exceed array bounds.
     ///
     /// See the [module documentation](self) for detailed explanation of bounds checking.
-    fn check_overflows(&self, max: OtherType) -> BoundsOverflowStatus;
+    ///
+    /// # Visual Example
+    ///
+    /// ```text
+    /// Array-style bounds checking:
+    ///
+    ///                           index=5 (0-based)   index=10 (0-based)
+    ///                                 ↓                   ↓
+    /// Index:      0   1   2   3   4   5   6   7   8   9 │ 10  11  12
+    /// (1-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┐
+    ///           │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │
+    ///           ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┤
+    ///           ├────────── within bounds ──────────────┼─ overflow ┘
+    ///           └────────── length=10 (1-based) ────────┘
+    ///
+    /// check_overflows(length=5)  = Within
+    /// check_overflows(length=10) = Overflowed
+    /// ```
+    fn check_overflows(&self, max: LengthType) -> BoundsOverflowStatus;
 
     /// Performs content position checking.
     ///
@@ -302,7 +461,29 @@ where
     ///
     /// See the [module documentation](self) for detailed explanation of content position
     /// checking.
-    fn check_content_position(&self, content_length: OtherType) -> ContentPositionStatus;
+    ///
+    /// # Visual Example
+    ///
+    /// ```text
+    /// Content position checking:
+    ///
+    /// Self
+    /// Index:      0   1   2   3   4   5   6   7   8   9   10  11
+    /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///           │ S │ W │ W │ W │ W │ W │ W │ W │ W │ W │ E │ B │
+    ///           ├─▲─┴─▲─┴───┴───┴───┴───┴───┴───┴───┴─▲─┴─▲─┼─▲─┘
+    ///           │ │   │                               │   │ │ │
+    ///           │Start│                               │  End│Beyond
+    ///           │     └────────── Within ─────────────┘     │
+    ///           └───────────── content_length=10 ───────────┘
+    ///
+    /// S = AtStart (index=0)
+    /// W = Within (1 ≤ index < 10)
+    /// E = AtEnd (index=10)
+    /// B = Beyond (index > 10)
+    /// ```
+    fn check_content_position(&self, content_length: LengthType)
+    -> ContentPositionStatus;
 }
 
 /// Generic implementation of [`BoundsCheck`] for any [`IndexMarker`] type with
@@ -312,12 +493,12 @@ where
 /// required marker traits, eliminating code duplication and ensuring consistent behavior.
 /// The trait system guarantees type safety by only allowing compatible index-length
 /// pairs.
-impl<I, L> BoundsCheck<L> for I
+impl<IndexType, LengthType> BoundsCheck<LengthType> for IndexType
 where
-    I: IndexMarker + PartialOrd + Copy,
-    L: LengthMarker<IndexType = I>,
+    IndexType: IndexMarker + PartialOrd + Copy,
+    LengthType: LengthMarker<IndexType = IndexType>,
 {
-    fn check_overflows(&self, length: L) -> BoundsOverflowStatus {
+    fn check_overflows(&self, length: LengthType) -> BoundsOverflowStatus {
         let this = *self;
         let other = length.convert_to_index();
         if this > other {
@@ -327,7 +508,10 @@ where
         }
     }
 
-    fn check_content_position(&self, content_length: L) -> ContentPositionStatus {
+    fn check_content_position(
+        &self,
+        content_length: LengthType,
+    ) -> ContentPositionStatus {
         let position = self.as_usize();
         let length = content_length.as_usize();
 
@@ -389,7 +573,7 @@ pub enum ContentPositionStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx, len};
+    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx};
 
     #[test]
     fn test_bounds_overflow_status_equality() {
@@ -748,5 +932,503 @@ mod tests {
             idx(10).check_content_position(content_length),
             ContentPositionStatus::Beyond
         );
+    }
+
+    #[test]
+    fn test_remaining_from() {
+        // Test basic cases with Length/Index
+        assert_eq!(
+            len(10).remaining_from(idx(3)),
+            len(7),
+            "Normal case: 7 chars remain from index 3 to 9"
+        );
+        assert_eq!(
+            len(10).remaining_from(idx(9)),
+            len(1),
+            "Edge case: only 1 char remains at last position"
+        );
+        assert_eq!(
+            len(10).remaining_from(idx(10)),
+            len(0),
+            "Boundary case: at boundary, nothing remains"
+        );
+        assert_eq!(
+            len(10).remaining_from(idx(15)),
+            len(0),
+            "Overflow case: beyond boundary, nothing remains"
+        );
+
+        // Test edge case: empty length
+        assert_eq!(
+            len(0).remaining_from(idx(0)),
+            len(0),
+            "Empty collection: no chars remain"
+        );
+        assert_eq!(
+            len(0).remaining_from(idx(5)),
+            len(0),
+            "Empty collection with overflow: no chars remain"
+        );
+
+        // Test with typed dimensions - ColWidth/ColIndex
+        let col_width = ColWidth::new(10);
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(3)),
+            len(7),
+            "ColWidth: 7 chars remain from col 3"
+        );
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(9)),
+            len(1),
+            "ColWidth: 1 char remains at last col"
+        );
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(10)),
+            len(0),
+            "ColWidth: at boundary"
+        );
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(15)),
+            len(0),
+            "ColWidth: beyond boundary"
+        );
+
+        // Test with typed dimensions - RowHeight/RowIndex
+        let row_height = RowHeight::new(5);
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(2)),
+            len(3),
+            "RowHeight: 3 rows remain from row 2"
+        );
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(4)),
+            len(1),
+            "RowHeight: 1 row remains at last row"
+        );
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(5)),
+            len(0),
+            "RowHeight: at boundary"
+        );
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(10)),
+            len(0),
+            "RowHeight: beyond boundary"
+        );
+
+        // Test single element case
+        assert_eq!(
+            len(1).remaining_from(idx(0)),
+            len(1),
+            "Single element: 1 char remains from start"
+        );
+        assert_eq!(
+            len(1).remaining_from(idx(1)),
+            len(0),
+            "Single element: at boundary"
+        );
+
+        // Test specific examples from documentation
+        let max_width = ColWidth::new(10);
+        assert_eq!(
+            max_width.remaining_from(ColIndex::new(3)),
+            len(7),
+            "Doc example: remaining_from(3) = 7"
+        );
+        assert_eq!(
+            max_width.remaining_from(ColIndex::new(9)),
+            len(1),
+            "Doc example: remaining_from(9) = 1"
+        );
+        assert_eq!(
+            max_width.remaining_from(ColIndex::new(10)),
+            len(0),
+            "Doc example: remaining_from(10) = 0"
+        );
+    }
+
+    #[test]
+    fn test_convert_to_length() {
+        // Test basic index to length conversion (0-based to 1-based)
+        assert_eq!(
+            idx(0).convert_to_length(),
+            len(1),
+            "Index 0 converts to length 1"
+        );
+        assert_eq!(
+            idx(5).convert_to_length(),
+            len(6),
+            "Index 5 converts to length 6"
+        );
+        assert_eq!(
+            idx(9).convert_to_length(),
+            len(10),
+            "Index 9 converts to length 10"
+        );
+        assert_eq!(
+            idx(100).convert_to_length(),
+            len(101),
+            "Index 100 converts to length 101"
+        );
+
+        // Test with typed dimensions - ColIndex to ColWidth
+        assert_eq!(
+            ColIndex::new(0).convert_to_length(),
+            ColWidth::new(1),
+            "ColIndex 0 to ColWidth 1"
+        );
+        assert_eq!(
+            ColIndex::new(5).convert_to_length(),
+            ColWidth::new(6),
+            "ColIndex 5 to ColWidth 6"
+        );
+        assert_eq!(
+            ColIndex::new(9).convert_to_length(),
+            ColWidth::new(10),
+            "ColIndex 9 to ColWidth 10"
+        );
+        assert_eq!(
+            ColIndex::new(999).convert_to_length(),
+            ColWidth::new(1000),
+            "ColIndex 999 to ColWidth 1000"
+        );
+
+        // Test with typed dimensions - RowIndex to RowHeight
+        assert_eq!(
+            RowIndex::new(0).convert_to_length(),
+            RowHeight::new(1),
+            "RowIndex 0 to RowHeight 1"
+        );
+        assert_eq!(
+            RowIndex::new(2).convert_to_length(),
+            RowHeight::new(3),
+            "RowIndex 2 to RowHeight 3"
+        );
+        assert_eq!(
+            RowIndex::new(4).convert_to_length(),
+            RowHeight::new(5),
+            "RowIndex 4 to RowHeight 5"
+        );
+        assert_eq!(
+            RowIndex::new(49).convert_to_length(),
+            RowHeight::new(50),
+            "RowIndex 49 to RowHeight 50"
+        );
+
+        // Test that the conversion is consistent - converting back should work
+        let original_index = idx(42);
+        let converted_length = original_index.convert_to_length();
+        let back_to_index = converted_length.convert_to_index();
+        assert_eq!(
+            back_to_index, original_index,
+            "Round-trip conversion should be consistent"
+        );
+
+        // Test with typed round-trip conversions
+        let col_index = ColIndex::new(7);
+        let col_width = col_index.convert_to_length();
+        let back_to_col_index = col_width.convert_to_index();
+        assert_eq!(
+            back_to_col_index, col_index,
+            "ColIndex round-trip should be consistent"
+        );
+
+        let row_index = RowIndex::new(3);
+        let row_height = row_index.convert_to_length();
+        let back_to_row_index = row_height.convert_to_index();
+        assert_eq!(
+            back_to_row_index, row_index,
+            "RowIndex round-trip should be consistent"
+        );
+    }
+
+    #[test]
+    fn test_convert_to_index() {
+        // Test basic length to index conversion (1-based to 0-based)
+        assert_eq!(
+            len(1).convert_to_index(),
+            idx(0),
+            "Length 1 converts to index 0"
+        );
+        assert_eq!(
+            len(6).convert_to_index(),
+            idx(5),
+            "Length 6 converts to index 5"
+        );
+        assert_eq!(
+            len(10).convert_to_index(),
+            idx(9),
+            "Length 10 converts to index 9"
+        );
+        assert_eq!(
+            len(101).convert_to_index(),
+            idx(100),
+            "Length 101 converts to index 100"
+        );
+
+        // Test with typed dimensions - ColWidth to ColIndex
+        assert_eq!(
+            ColWidth::new(1).convert_to_index(),
+            ColIndex::new(0),
+            "ColWidth 1 to ColIndex 0"
+        );
+        assert_eq!(
+            ColWidth::new(6).convert_to_index(),
+            ColIndex::new(5),
+            "ColWidth 6 to ColIndex 5"
+        );
+        assert_eq!(
+            ColWidth::new(10).convert_to_index(),
+            ColIndex::new(9),
+            "ColWidth 10 to ColIndex 9"
+        );
+        assert_eq!(
+            ColWidth::new(1000).convert_to_index(),
+            ColIndex::new(999),
+            "ColWidth 1000 to ColIndex 999"
+        );
+
+        // Test with typed dimensions - RowHeight to RowIndex
+        assert_eq!(
+            RowHeight::new(1).convert_to_index(),
+            RowIndex::new(0),
+            "RowHeight 1 to RowIndex 0"
+        );
+        assert_eq!(
+            RowHeight::new(3).convert_to_index(),
+            RowIndex::new(2),
+            "RowHeight 3 to RowIndex 2"
+        );
+        assert_eq!(
+            RowHeight::new(5).convert_to_index(),
+            RowIndex::new(4),
+            "RowHeight 5 to RowIndex 4"
+        );
+        assert_eq!(
+            RowHeight::new(50).convert_to_index(),
+            RowIndex::new(49),
+            "RowHeight 50 to RowIndex 49"
+        );
+
+        // Test that the conversion is consistent - converting back should work
+        let original_length = len(42);
+        let converted_index = original_length.convert_to_index();
+        let back_to_length = converted_index.convert_to_length();
+        assert_eq!(
+            back_to_length, original_length,
+            "Round-trip conversion should be consistent"
+        );
+
+        // Test with typed round-trip conversions
+        let col_width = ColWidth::new(8);
+        let col_index = col_width.convert_to_index();
+        let back_to_col_width = col_index.convert_to_length();
+        assert_eq!(
+            back_to_col_width, col_width,
+            "ColWidth round-trip should be consistent"
+        );
+
+        let row_height = RowHeight::new(4);
+        let row_index = row_height.convert_to_index();
+        let back_to_row_height = row_index.convert_to_length();
+        assert_eq!(
+            back_to_row_height, row_height,
+            "RowHeight round-trip should be consistent"
+        );
+
+        // Test edge case: Length 0 should convert to... well, this might not be
+        // implemented but if it is, it should be consistent with the type system
+        // Note: Length 0 might be a special case that needs separate handling
+    }
+
+    #[test]
+    fn test_as_usize() {
+        // Test basic index types conversion to usize
+        assert_eq!(idx(0).as_usize(), 0, "Index 0 as usize");
+        assert_eq!(idx(5).as_usize(), 5, "Index 5 as usize");
+        assert_eq!(idx(100).as_usize(), 100, "Index 100 as usize");
+        assert_eq!(idx(999).as_usize(), 999, "Index 999 as usize");
+
+        // Test basic length types conversion to usize
+        assert_eq!(len(1).as_usize(), 1, "Length 1 as usize");
+        assert_eq!(len(6).as_usize(), 6, "Length 6 as usize");
+        assert_eq!(len(10).as_usize(), 10, "Length 10 as usize");
+        assert_eq!(len(1000).as_usize(), 1000, "Length 1000 as usize");
+
+        // Test typed index conversions - ColIndex
+        assert_eq!(ColIndex::new(0).as_usize(), 0, "ColIndex 0 as usize");
+        assert_eq!(ColIndex::new(5).as_usize(), 5, "ColIndex 5 as usize");
+        assert_eq!(ColIndex::new(80).as_usize(), 80, "ColIndex 80 as usize");
+        assert_eq!(
+            ColIndex::new(1024).as_usize(),
+            1024,
+            "ColIndex 1024 as usize"
+        );
+
+        // Test typed index conversions - RowIndex
+        assert_eq!(RowIndex::new(0).as_usize(), 0, "RowIndex 0 as usize");
+        assert_eq!(RowIndex::new(3).as_usize(), 3, "RowIndex 3 as usize");
+        assert_eq!(RowIndex::new(25).as_usize(), 25, "RowIndex 25 as usize");
+        assert_eq!(RowIndex::new(768).as_usize(), 768, "RowIndex 768 as usize");
+
+        // Test typed length conversions - ColWidth
+        assert_eq!(ColWidth::new(1).as_usize(), 1, "ColWidth 1 as usize");
+        assert_eq!(ColWidth::new(10).as_usize(), 10, "ColWidth 10 as usize");
+        assert_eq!(ColWidth::new(80).as_usize(), 80, "ColWidth 80 as usize");
+        assert_eq!(
+            ColWidth::new(1920).as_usize(),
+            1920,
+            "ColWidth 1920 as usize"
+        );
+
+        // Test typed length conversions - RowHeight
+        assert_eq!(RowHeight::new(1).as_usize(), 1, "RowHeight 1 as usize");
+        assert_eq!(RowHeight::new(5).as_usize(), 5, "RowHeight 5 as usize");
+        assert_eq!(RowHeight::new(30).as_usize(), 30, "RowHeight 30 as usize");
+        assert_eq!(
+            RowHeight::new(1080).as_usize(),
+            1080,
+            "RowHeight 1080 as usize"
+        );
+
+        // Test edge cases
+        assert_eq!(len(0).as_usize(), 0, "Length 0 as usize");
+        assert_eq!(ColWidth::new(0).as_usize(), 0, "ColWidth 0 as usize");
+        assert_eq!(RowHeight::new(0).as_usize(), 0, "RowHeight 0 as usize");
+
+        // Test that as_usize preserves the underlying numeric value
+        for value in [0, 1, 5, 10, 42, 100, 999] {
+            assert_eq!(
+                idx(value).as_usize(),
+                value,
+                "Index {value} preserves value"
+            );
+            assert_eq!(
+                len(value).as_usize(),
+                value,
+                "Length {value} preserves value"
+            );
+            assert_eq!(
+                ColIndex::new(value).as_usize(),
+                value,
+                "ColIndex {value} preserves value"
+            );
+            assert_eq!(
+                ColWidth::new(value).as_usize(),
+                value,
+                "ColWidth {value} preserves value"
+            );
+            assert_eq!(
+                RowIndex::new(value).as_usize(),
+                value,
+                "RowIndex {value} preserves value"
+            );
+            assert_eq!(
+                RowHeight::new(value).as_usize(),
+                value,
+                "RowHeight {value} preserves value"
+            );
+        }
+    }
+
+    #[test]
+    fn test_as_u16() {
+        // Test basic index types conversion to u16
+        assert_eq!(idx(0).as_u16(), 0, "Index 0 as u16");
+        assert_eq!(idx(5).as_u16(), 5, "Index 5 as u16");
+        assert_eq!(idx(100).as_u16(), 100, "Index 100 as u16");
+        assert_eq!(idx(999).as_u16(), 999, "Index 999 as u16");
+
+        // Test basic length types conversion to u16
+        assert_eq!(len(1).as_u16(), 1, "Length 1 as u16");
+        assert_eq!(len(6).as_u16(), 6, "Length 6 as u16");
+        assert_eq!(len(10).as_u16(), 10, "Length 10 as u16");
+        assert_eq!(len(1000).as_u16(), 1000, "Length 1000 as u16");
+
+        // Test typed index conversions - ColIndex
+        assert_eq!(ColIndex::new(0).as_u16(), 0, "ColIndex 0 as u16");
+        assert_eq!(ColIndex::new(5).as_u16(), 5, "ColIndex 5 as u16");
+        assert_eq!(ColIndex::new(80).as_u16(), 80, "ColIndex 80 as u16");
+        assert_eq!(ColIndex::new(1024).as_u16(), 1024, "ColIndex 1024 as u16");
+
+        // Test typed index conversions - RowIndex
+        assert_eq!(RowIndex::new(0).as_u16(), 0, "RowIndex 0 as u16");
+        assert_eq!(RowIndex::new(3).as_u16(), 3, "RowIndex 3 as u16");
+        assert_eq!(RowIndex::new(25).as_u16(), 25, "RowIndex 25 as u16");
+        assert_eq!(RowIndex::new(768).as_u16(), 768, "RowIndex 768 as u16");
+
+        // Test typed length conversions - ColWidth
+        assert_eq!(ColWidth::new(1).as_u16(), 1, "ColWidth 1 as u16");
+        assert_eq!(ColWidth::new(10).as_u16(), 10, "ColWidth 10 as u16");
+        assert_eq!(ColWidth::new(80).as_u16(), 80, "ColWidth 80 as u16");
+        assert_eq!(ColWidth::new(1920).as_u16(), 1920, "ColWidth 1920 as u16");
+
+        // Test typed length conversions - RowHeight
+        assert_eq!(RowHeight::new(1).as_u16(), 1, "RowHeight 1 as u16");
+        assert_eq!(RowHeight::new(5).as_u16(), 5, "RowHeight 5 as u16");
+        assert_eq!(RowHeight::new(30).as_u16(), 30, "RowHeight 30 as u16");
+        assert_eq!(RowHeight::new(1080).as_u16(), 1080, "RowHeight 1080 as u16");
+
+        // Test edge cases
+        assert_eq!(len(0).as_u16(), 0, "Length 0 as u16");
+        assert_eq!(ColWidth::new(0).as_u16(), 0, "ColWidth 0 as u16");
+        assert_eq!(RowHeight::new(0).as_u16(), 0, "RowHeight 0 as u16");
+
+        // Test terminal-typical values (crossterm compatibility)
+        assert_eq!(ColWidth::new(80).as_u16(), 80, "Standard terminal width 80");
+        assert_eq!(ColWidth::new(120).as_u16(), 120, "Wide terminal width 120");
+        assert_eq!(
+            RowHeight::new(24).as_u16(),
+            24,
+            "Standard terminal height 24"
+        );
+        assert_eq!(RowHeight::new(50).as_u16(), 50, "Tall terminal height 50");
+
+        // Test u16 max boundary (65535)
+        assert_eq!(len(65535).as_u16(), 65535, "Length u16::MAX as u16");
+        assert_eq!(
+            ColWidth::new(65535).as_u16(),
+            65535,
+            "ColWidth u16::MAX as u16"
+        );
+        assert_eq!(
+            RowHeight::new(65535).as_u16(),
+            65535,
+            "RowHeight u16::MAX as u16"
+        );
+
+        // Test that as_u16 preserves the underlying numeric value for typical ranges
+        for value in [0, 1, 5, 10, 42, 80, 100, 120, 1024] {
+            assert_eq!(
+                idx(value).as_u16(),
+                value as u16,
+                "Index {value} preserves value"
+            );
+            assert_eq!(
+                len(value).as_u16(),
+                value as u16,
+                "Length {value} preserves value"
+            );
+            assert_eq!(
+                ColIndex::new(value).as_u16(),
+                value as u16,
+                "ColIndex {value} preserves value"
+            );
+            assert_eq!(
+                ColWidth::new(value).as_u16(),
+                value as u16,
+                "ColWidth {value} preserves value"
+            );
+            assert_eq!(
+                RowIndex::new(value).as_u16(),
+                value as u16,
+                "RowIndex {value} preserves value"
+            );
+            assert_eq!(
+                RowHeight::new(value).as_u16(),
+                value as u16,
+                "RowHeight {value} preserves value"
+            );
+        }
     }
 }

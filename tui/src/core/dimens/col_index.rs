@@ -3,7 +3,7 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{ChUnit, ColWidth, IndexMarker, UnitCompare,
+use crate::{ChUnit, ColWidth, IndexMarker, Length, UnitCompare,
             create_numeric_arithmetic_operators, usize, width};
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
@@ -178,6 +178,44 @@ mod dimension_arithmetic_operators {
             self_copy
         }
     }
+
+    impl Sub<Length> for ColIndex {
+        type Output = ColIndex;
+
+        fn sub(self, rhs: Length) -> Self::Output {
+            let mut self_copy = self;
+            self_copy.0 -= rhs.0;
+            self_copy
+        }
+    }
+
+    impl SubAssign<Length> for ColIndex {
+        fn sub_assign(&mut self, rhs: Length) { self.0 -= rhs.0; }
+    }
+
+    impl Add<Length> for ColIndex {
+        type Output = ColIndex;
+
+        fn add(self, rhs: Length) -> Self::Output {
+            let mut self_copy = self;
+            self_copy.0 += rhs.0;
+            self_copy
+        }
+    }
+
+    impl AddAssign<Length> for ColIndex {
+        fn add_assign(&mut self, rhs: Length) { self.0 += rhs.0; }
+    }
+
+    impl Mul<Length> for ColIndex {
+        type Output = ColIndex;
+
+        fn mul(self, rhs: Length) -> Self::Output {
+            let mut self_copy = self;
+            self_copy.0 *= rhs.0;
+            self_copy
+        }
+    }
 }
 
 mod numeric_arithmetic_operators {
@@ -200,6 +238,10 @@ mod bounds_check_trait_impls {
 
     impl IndexMarker for ColIndex {
         type LengthType = ColWidth;
+
+        fn convert_to_length(&self) -> Self::LengthType {
+            self.convert_to_width()
+        }
     }
 }
 
@@ -408,5 +450,95 @@ mod tests {
             col_idx -= -3i32;
             assert_eq!(col_idx, col(5)); // -3 becomes 0
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_length_arithmetic {
+    use super::*;
+    use crate::len;
+
+    #[test]
+    fn test_add_length() {
+        let col_idx = col(5);
+        let length = len(3);
+        let result = col_idx + length;
+        assert_eq!(result, col(8));
+    }
+
+    #[test]
+    fn test_sub_length() {
+        let col_idx = col(10);
+        let length = len(3);
+        let result = col_idx - length;
+        assert_eq!(result, col(7));
+    }
+
+    #[test]
+    fn test_mul_length() {
+        let col_idx = col(4);
+        let length = len(3);
+        let result = col_idx * length;
+        assert_eq!(result, col(12));
+    }
+
+    #[test]
+    fn test_add_assign_length() {
+        let mut col_idx = col(5);
+        let length = len(3);
+        col_idx += length;
+        assert_eq!(col_idx, col(8));
+    }
+
+    #[test]
+    fn test_sub_assign_length() {
+        let mut col_idx = col(10);
+        let length = len(3);
+        col_idx -= length;
+        assert_eq!(col_idx, col(7));
+    }
+
+    #[test]
+    fn test_sub_length_saturating() {
+        // Test subtraction that would go below zero (should saturate to 0)
+        let col_idx = col(5);
+        let length = len(10);
+        let result = col_idx - length;
+        assert_eq!(result, col(0));
+    }
+
+    #[test]
+    fn test_sub_assign_length_saturating() {
+        let mut col_idx = col(3);
+        let length = len(10);
+        col_idx -= length;
+        assert_eq!(col_idx, col(0));
+    }
+
+    #[test]
+    fn test_length_zero_operations() {
+        let col_idx = col(5);
+        let zero_length = len(0);
+
+        // Adding zero should not change value
+        assert_eq!(col_idx + zero_length, col(5));
+
+        // Subtracting zero should not change value
+        assert_eq!(col_idx - zero_length, col(5));
+
+        // Multiplying by zero should result in zero
+        assert_eq!(col_idx * zero_length, col(0));
+    }
+
+    #[test]
+    fn test_length_operations_consistency() {
+        // Verify operations work consistently with direct ChUnit operations
+        let col_idx = col(7);
+        let length = len(4);
+
+        // Test that Length operations give same result as ChUnit operations
+        assert_eq!(col_idx + length, col(*col_idx + *length));
+        assert_eq!(col_idx - length, col(*col_idx - *length));
+        assert_eq!(col_idx * length, col(*col_idx * *length));
     }
 }

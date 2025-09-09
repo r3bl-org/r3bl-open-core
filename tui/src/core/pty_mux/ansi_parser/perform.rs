@@ -79,12 +79,13 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         if current_row.check_overflows(row_max) == Within
             && current_col.check_overflows(col_max) == Within
         {
-            // Write character to buffer using public fields.
-            self.ofs_buf.buffer[current_row.as_usize()][current_col.as_usize()] =
+            self.ofs_buf.set_char(
+                current_row + current_col,
                 PixelChar::PlainText {
                     display_char, // Use the translated character
                     maybe_style: self.ofs_buf.ansi_parser_support.current_style,
-                };
+                },
+            );
 
             // Move cursor forward.
             let new_col: ColIndex = current_col + 1;

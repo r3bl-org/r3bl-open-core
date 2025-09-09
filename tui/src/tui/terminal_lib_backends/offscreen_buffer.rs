@@ -1,16 +1,17 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use std::{fmt::{self, Debug},
-          ops::{Deref, DerefMut}};
+          ops::{Deref, DerefMut, Range}};
 
 use diff_chunks::PixelCharDiffChunks;
 use smallvec::smallvec;
 
 use super::{FlushKind, RenderOps};
-use crate::{CachedMemorySize, ColWidth, GetMemSize, InlineVec, List, LockedOutputDevice,
-            MemoizedMemorySize, MemorySize, Pos, Size, TinyInlineString, TuiColor,
-            TuiStyle, col, core::pty_mux::ansi_parser::term_units::TermRow,
-            dim_underline, fg_green, fg_magenta, get_mem_size, inline_string, ok,
-            osc::OscEvent, row, tiny_inline_string};
+use crate::{CachedMemorySize, ColIndex, ColWidth, GetMemSize, InlineVec, Length, List,
+            LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, RowIndex, Size,
+            TinyInlineString, TuiColor, TuiStyle, col,
+            core::pty_mux::ansi_parser::term_units::TermRow, dim_underline, fg_green,
+            fg_magenta, get_mem_size, inline_string, ok, osc::OscEvent, row,
+            tiny_inline_string};
 
 /// Character set modes for terminal emulation.
 ///
@@ -269,7 +270,7 @@ pub mod diff_chunks {
     }
 }
 
-mod offscreen_buffer_impl {
+mod ofs_buf_impl_core {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -342,7 +343,7 @@ mod offscreen_buffer_impl {
 
         /// Invalidates and immediately recalculates the memory size cache.
         /// Call this when buffer content changes to ensure the cache is always valid.
-        fn invalidate_memory_size_calc_cache(&mut self) {
+        pub(super) fn invalidate_memory_size_calc_cache(&mut self) {
             self.invalidate_memory_size_cache();
             self.update_memory_size_cache(); // Force immediate recalculation to avoid "?" in telemetry
         }
@@ -405,6 +406,309 @@ mod offscreen_buffer_impl {
             }
             // Invalidate and recalculate cache when buffer is cleared.
             self.invalidate_memory_size_calc_cache();
+        }
+    }
+}
+
+/// Buffer manipulation methods - provides encapsulated access to buffer data
+mod ofs_buf_impl_buffer_manipulation_ops {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl OffscreenBuffer {
+        /// Get character at position, returns None if position is out of bounds.
+        #[must_use]
+        pub fn get_char(&self, pos: Pos) -> Option<PixelChar> {
+            let row_idx = pos.row_index.as_usize();
+            let col_idx = pos.col_index.as_usize();
+
+            if row_idx >= self.buffer.len() {
+                return None;
+            }
+
+            self.buffer.get(row_idx)?.get(col_idx).copied()
+        }
+
+        /// Set character at position. Automatically handles cache invalidation.
+        /// Returns true if the position was valid and the character was set.
+        pub fn set_char(&mut self, pos: Pos, char: PixelChar) -> bool {
+            let row_idx = pos.row_index.as_usize();
+            let col_idx = pos.col_index.as_usize();
+
+            if row_idx >= self.buffer.len() {
+                return false;
+            }
+
+            if let Some(target_char) = self
+                .buffer
+                .get_mut(row_idx)
+                .and_then(|row| row.get_mut(col_idx))
+            {
+                *target_char = char;
+                self.invalidate_memory_size_calc_cache();
+                true
+            } else {
+                false
+            }
+        }
+
+        /// Fill a range of characters in a line with the specified character.
+        /// Returns true if the operation was successful.
+        pub fn fill_char_range(
+            &mut self,
+            row: RowIndex,
+            col_range: Range<ColIndex>,
+            char: PixelChar,
+        ) -> bool {
+            let row_idx = row.as_usize();
+            if row_idx >= self.buffer.len() {
+                return false;
+            }
+
+            let start_col = col_range.start.as_usize();
+            let end_col = col_range.end.as_usize();
+
+            if let Some(line) = self.buffer.get_mut(row_idx) {
+                if start_col < line.len() && end_col <= line.len() && start_col <= end_col
+                {
+                    line[start_col..end_col].fill(char);
+                    self.invalidate_memory_size_calc_cache();
+                    return true;
+                }
+            }
+            false
+        }
+
+        /// Copy characters within a line from source range to destination position.
+        /// Returns true if the operation was successful.
+        pub fn copy_chars_within_line(
+            &mut self,
+            row: RowIndex,
+            source_range: Range<ColIndex>,
+            dest_start: ColIndex,
+        ) -> bool {
+            let row_idx = row.as_usize();
+            if row_idx >= self.buffer.len() {
+                return false;
+            }
+
+            let source_start = source_range.start.as_usize();
+            let source_end = source_range.end.as_usize();
+            let dest = dest_start.as_usize();
+
+            if let Some(line) = self.buffer.get_mut(row_idx) {
+                if source_start < line.len()
+                    && source_end <= line.len()
+                    && dest < line.len()
+                    && source_start <= source_end
+                {
+                    line.copy_within(source_start..source_end, dest);
+                    self.invalidate_memory_size_calc_cache();
+                    return true;
+                }
+            }
+            false
+        }
+    }
+}
+
+/// Line-level operations
+mod ofs_buf_impl_buffer_line_level_ops {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl OffscreenBuffer {
+        /// Clear an entire line by filling it with blank characters.
+        /// Returns true if the operation was successful.
+        pub fn clear_line(&mut self, row: RowIndex) -> bool {
+            let row_idx = row.as_usize();
+            if let Some(line) = self.buffer.get_mut(row_idx) {
+                line.fill(PixelChar::Spacer);
+                self.invalidate_memory_size_calc_cache();
+                true
+            } else {
+                false
+            }
+        }
+
+        /// Get a reference to a line at the specified row.
+        /// Returns None if the row is out of bounds.
+        #[must_use]
+        pub fn get_line(&self, row: RowIndex) -> Option<&PixelCharLine> {
+            self.buffer.get(row.as_usize())
+        }
+
+        /// Set an entire line at the specified row.
+        /// Returns true if the operation was successful.
+        pub fn set_line(&mut self, row: RowIndex, line: PixelCharLine) -> bool {
+            let row_idx = row.as_usize();
+            if let Some(target_line) = self.buffer.get_mut(row_idx) {
+                *target_line = line;
+                self.invalidate_memory_size_calc_cache();
+                true
+            } else {
+                false
+            }
+        }
+
+        /// Swap two lines in the buffer.
+        /// Returns true if both rows are valid and the swap was successful.
+        pub fn swap_lines(&mut self, row_1: RowIndex, row_2: RowIndex) -> bool {
+            let row_1_idx = row_1.as_usize();
+            let row_2_idx = row_2.as_usize();
+
+            if row_1_idx < self.buffer.len() && row_2_idx < self.buffer.len() {
+                self.buffer.swap(row_1_idx, row_2_idx);
+                self.invalidate_memory_size_calc_cache();
+                true
+            } else {
+                false
+            }
+        }
+
+        /// Shift lines up within a range by the specified amount.
+        /// Lines at the bottom of the range are filled with blank lines.
+        /// Returns true if the operation was successful.
+        pub fn shift_lines_up(
+            &mut self,
+            row_range: Range<RowIndex>,
+            shift_by: Length,
+        ) -> bool {
+            let start_idx = row_range.start.as_usize();
+            let end_idx = row_range.end.as_usize();
+            let shift_amount = shift_by.as_usize();
+
+            if start_idx >= self.buffer.len()
+                || end_idx > self.buffer.len()
+                || start_idx >= end_idx
+            {
+                return false;
+            }
+
+            // Shift lines up by cloning (use manual index management to avoid borrow
+            // checker issues)
+            for _ in 0..shift_amount {
+                for row_idx in start_idx..end_idx.saturating_sub(1) {
+                    let next_line = self.buffer[row_idx + 1].clone();
+                    self.buffer[row_idx] = next_line;
+                }
+
+                // Clear the bottom line
+                self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
+            }
+
+            self.invalidate_memory_size_calc_cache();
+            true
+        }
+
+        /// Shift lines down within a range by the specified amount.
+        /// Lines at the top of the range are filled with blank lines.
+        /// Returns true if the operation was successful.
+        pub fn shift_lines_down(
+            &mut self,
+            row_range: Range<RowIndex>,
+            shift_by: Length,
+        ) -> bool {
+            let start_idx = row_range.start.as_usize();
+            let end_idx = row_range.end.as_usize();
+            let shift_amount = shift_by.as_usize();
+
+            if start_idx >= self.buffer.len()
+                || end_idx > self.buffer.len()
+                || start_idx >= end_idx
+            {
+                return false;
+            }
+
+            // Shift lines down by cloning (work backwards to avoid overwriting)
+            for _ in 0..shift_amount {
+                for row_idx in (start_idx + 1..end_idx).rev() {
+                    let prev_line = self.buffer[row_idx - 1].clone();
+                    self.buffer[row_idx] = prev_line;
+                }
+
+                // Clear the top line
+                self.buffer[start_idx].fill(PixelChar::Spacer);
+            }
+
+            self.invalidate_memory_size_calc_cache();
+            true
+        }
+    }
+}
+
+/// Character shifting operations within lines
+mod ofs_buf_impl_buffer_shifting_ops {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl OffscreenBuffer {
+        /// Insert blank characters at cursor position (for ICH - Insert Character).
+        /// Characters at and after the cursor shift right by insert_count.
+        /// Characters that would shift beyond the line width are lost.
+        /// Returns true if the operation was successful.
+        pub fn insert_chars_at_cursor(
+            &mut self,
+            row: RowIndex,
+            cursor_col: ColIndex,
+            insert_count: Length,
+            max_col: ColWidth,
+        ) -> bool {
+            let row_idx = row.as_usize();
+            if row_idx >= self.buffer.len() {
+                return false;
+            }
+
+            let cursor_pos = cursor_col.as_usize();
+            let insert_amount = insert_count.as_usize();
+            let line_width = max_col.as_usize();
+
+            if let Some(line) = self.buffer.get_mut(row_idx) {
+                if cursor_pos < line_width && insert_amount > 0 {
+                    // Calculate how many chars we can actually insert
+                    let actual_insert = insert_amount.min(line_width - cursor_pos);
+
+                    // Shift characters right using copy_within
+                    let dest_start = cursor_pos + actual_insert;
+                    let source_end = line_width - actual_insert;
+
+                    if dest_start < line_width && cursor_pos < source_end {
+                        line.copy_within(cursor_pos..source_end, dest_start);
+                    }
+
+                    // Fill the cursor position with blanks
+                    let fill_end = (cursor_pos + actual_insert).min(line_width);
+                    line[cursor_pos..fill_end].fill(PixelChar::Spacer);
+
+                    self.invalidate_memory_size_calc_cache();
+                    return true;
+                }
+            }
+            false
+        }
+
+    }
+}
+
+/// Bulk operations
+mod ofs_buf_impl_buffer_bulk_ops {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl OffscreenBuffer {
+
+        /// Apply multiple character changes at once.
+        /// Returns the number of successful changes applied.
+        pub fn apply_changes(&mut self, changes: Vec<(Pos, PixelChar)>) -> usize {
+            let mut applied_count = 0;
+
+            for (pos, char) in changes {
+                if self.set_char(pos, char) {
+                    applied_count += 1;
+                }
+            }
+
+            applied_count
         }
     }
 }
@@ -1643,5 +1947,715 @@ pub mod test_fixtures_offscreen_buffer {
         for (i, expected_char) in expected_text.chars().enumerate() {
             assert_plain_char_at(ofs_buf, row, start_col + i, expected_char);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_buffer_manipulation {
+    use super::*;
+    use crate::{height, width};
+
+    fn create_test_buffer() -> OffscreenBuffer {
+        let size = width(5) + height(3);
+        OffscreenBuffer::new_empty(size)
+    }
+
+    fn create_test_char(ch: char) -> PixelChar {
+        PixelChar::PlainText {
+            display_char: ch,
+            maybe_style: None,
+        }
+    }
+
+    #[test]
+    fn test_get_char_valid_position() {
+        let mut buffer = create_test_buffer();
+        let pos = Pos::new((row(1), col(2)));
+        let test_char = create_test_char('A');
+
+        // Set a character first
+        buffer.set_char(pos, test_char);
+
+        // Then get it back
+        let retrieved = buffer.get_char(pos);
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap(), test_char);
+    }
+
+    #[test]
+    fn test_get_char_out_of_bounds() {
+        let buffer = create_test_buffer();
+
+        // Test row out of bounds
+        let invalid_pos1 = Pos::new((row(10), col(2)));
+        assert!(buffer.get_char(invalid_pos1).is_none());
+
+        // Test column out of bounds
+        let invalid_pos2 = Pos::new((row(1), col(10)));
+        assert!(buffer.get_char(invalid_pos2).is_none());
+
+        // Test both out of bounds
+        let invalid_pos3 = Pos::new((row(10), col(10)));
+        assert!(buffer.get_char(invalid_pos3).is_none());
+    }
+
+    #[test]
+    fn test_set_char_with_cache_invalidation() {
+        let mut buffer = create_test_buffer();
+        let pos = Pos::new((row(0), col(1)));
+        let test_char = create_test_char('B');
+
+        // Verify the character was set successfully
+        let result = buffer.set_char(pos, test_char);
+        assert!(result);
+
+        // Verify we can retrieve it
+        let retrieved = buffer.get_char(pos);
+        assert_eq!(retrieved.unwrap(), test_char);
+    }
+
+    #[test]
+    fn test_set_char_out_of_bounds() {
+        let mut buffer = create_test_buffer();
+        let test_char = create_test_char('C');
+
+        // Test row out of bounds
+        let invalid_pos1 = Pos::new((row(10), col(2)));
+        let result1 = buffer.set_char(invalid_pos1, test_char);
+        assert!(!result1);
+
+        // Test column out of bounds
+        let invalid_pos2 = Pos::new((row(1), col(10)));
+        let result2 = buffer.set_char(invalid_pos2, test_char);
+        assert!(!result2);
+    }
+
+    #[test]
+    fn test_fill_char_range() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+        let col_range = col(1)..col(4);
+        let fill_char = create_test_char('X');
+
+        // Fill the range
+        let result = buffer.fill_char_range(test_row, col_range.clone(), fill_char);
+        assert!(result);
+
+        // Verify all characters in range were filled
+        for col_idx in 1..4 {
+            let pos = Pos::new((test_row, col(col_idx)));
+            let retrieved = buffer.get_char(pos);
+            assert_eq!(retrieved.unwrap(), fill_char);
+        }
+
+        // Verify characters outside range were not affected
+        let outside_pos = Pos::new((test_row, col(0)));
+        let outside_char = buffer.get_char(outside_pos);
+        assert_ne!(outside_char.unwrap(), fill_char);
+    }
+
+    #[test]
+    fn test_fill_char_range_invalid() {
+        let mut buffer = create_test_buffer();
+        let fill_char = create_test_char('Y');
+
+        // Test with invalid row
+        let result1 = buffer.fill_char_range(row(10), col(0)..col(2), fill_char);
+        assert!(!result1);
+
+        // Test with invalid column range
+        let result2 = buffer.fill_char_range(row(0), col(3)..col(10), fill_char);
+        assert!(!result2);
+
+        // Test with backward range
+        let result3 = buffer.fill_char_range(row(0), col(3)..col(1), fill_char);
+        assert!(!result3);
+    }
+
+    #[test]
+    fn test_copy_chars_within_line() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(0);
+
+        // Set up source characters
+        buffer.set_char(Pos::new((test_row, col(1))), create_test_char('A'));
+        buffer.set_char(Pos::new((test_row, col(2))), create_test_char('B'));
+        buffer.set_char(Pos::new((test_row, col(3))), create_test_char('C'));
+
+        // Copy from columns 1-3 to column 0
+        let result = buffer.copy_chars_within_line(test_row, col(1)..col(3), col(0));
+        assert!(result);
+
+        // Verify the copy was successful
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(1)))).unwrap(),
+            create_test_char('B')
+        );
+
+        // Original positions should still have their values (since we didn't overwrite
+        // them)
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(2)))).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(3)))).unwrap(),
+            create_test_char('C')
+        );
+    }
+
+    #[test]
+    fn test_copy_chars_within_line_invalid() {
+        let mut buffer = create_test_buffer();
+
+        // Test with invalid row
+        let result1 = buffer.copy_chars_within_line(row(10), col(0)..col(2), col(3));
+        assert!(!result1);
+
+        // Test with invalid source range
+        let result2 = buffer.copy_chars_within_line(row(0), col(3)..col(10), col(0));
+        assert!(!result2);
+
+        // Test with invalid destination
+        let result3 = buffer.copy_chars_within_line(row(0), col(0)..col(2), col(10));
+        assert!(!result3);
+    }
+}
+
+#[cfg(test)]
+mod tests_line_operations {
+    use super::*;
+    use crate::{height, len, width};
+
+    fn create_test_buffer() -> OffscreenBuffer {
+        let size = width(4) + height(5);
+        OffscreenBuffer::new_empty(size)
+    }
+
+    fn create_test_char(ch: char) -> PixelChar {
+        PixelChar::PlainText {
+            display_char: ch,
+            maybe_style: None,
+        }
+    }
+
+    fn create_test_line(chars: &[char]) -> PixelCharLine {
+        let mut line = vec![PixelChar::Spacer; 4]; // Match buffer width
+        for (i, &ch) in chars.iter().enumerate().take(4) {
+            line[i] = create_test_char(ch);
+        }
+        PixelCharLine { pixel_chars: line }
+    }
+
+    #[test]
+    fn test_clear_line() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Fill the line with test characters first
+        for col_idx in 0..4 {
+            buffer.set_char(Pos::new((test_row, col(col_idx))), create_test_char('X'));
+        }
+
+        // Clear the line
+        let result = buffer.clear_line(test_row);
+        assert!(result);
+
+        // Verify all characters are now spacers
+        for col_idx in 0..4 {
+            let pos = Pos::new((test_row, col(col_idx)));
+            let char = buffer.get_char(pos).unwrap();
+            assert_eq!(char, PixelChar::Spacer);
+        }
+    }
+
+    #[test]
+    fn test_clear_line_invalid_row() {
+        let mut buffer = create_test_buffer();
+
+        // Try to clear an invalid row
+        let result = buffer.clear_line(row(10));
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_get_line() {
+        let buffer = create_test_buffer();
+
+        // Test valid row
+        let line = buffer.get_line(row(2));
+        assert!(line.is_some());
+        assert_eq!(line.unwrap().len(), 4); // Should match buffer width
+
+        // Test invalid row
+        let invalid_line = buffer.get_line(row(10));
+        assert!(invalid_line.is_none());
+    }
+
+    #[test]
+    fn test_set_line() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(2);
+        let test_line = create_test_line(&['A', 'B', 'C', 'D']);
+
+        // Set the line
+        let result = buffer.set_line(test_row, test_line.clone());
+        assert!(result);
+
+        // Verify the line was set correctly
+        let retrieved_line = buffer.get_line(test_row).unwrap();
+        assert_eq!(retrieved_line, &test_line);
+
+        // Verify individual characters
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(1)))).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(2)))).unwrap(),
+            create_test_char('C')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(3)))).unwrap(),
+            create_test_char('D')
+        );
+    }
+
+    #[test]
+    fn test_set_line_invalid_row() {
+        let mut buffer = create_test_buffer();
+        let test_line = create_test_line(&['X', 'Y', 'Z']);
+
+        // Try to set an invalid row
+        let result = buffer.set_line(row(10), test_line);
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_swap_lines() {
+        let mut buffer = create_test_buffer();
+        let row1 = row(0);
+        let row2 = row(3);
+
+        let line1 = create_test_line(&['1', '2', '3', '4']);
+        let line2 = create_test_line(&['A', 'B', 'C', 'D']);
+
+        // Set up the initial lines
+        buffer.set_line(row1, line1.clone());
+        buffer.set_line(row2, line2.clone());
+
+        // Swap the lines
+        let result = buffer.swap_lines(row1, row2);
+        assert!(result);
+
+        // Verify the swap was successful
+        let swapped_line1 = buffer.get_line(row1).unwrap();
+        let swapped_line2 = buffer.get_line(row2).unwrap();
+
+        assert_eq!(swapped_line1, &line2); // row1 now has line2's content
+        assert_eq!(swapped_line2, &line1); // row2 now has line1's content
+    }
+
+    #[test]
+    fn test_swap_lines_invalid() {
+        let mut buffer = create_test_buffer();
+
+        // Try to swap with invalid rows
+        let result1 = buffer.swap_lines(row(0), row(10));
+        assert!(!result1);
+
+        let result2 = buffer.swap_lines(row(10), row(0));
+        assert!(!result2);
+
+        let result3 = buffer.swap_lines(row(10), row(11));
+        assert!(!result3);
+    }
+
+    #[test]
+    fn test_shift_lines_up() {
+        let mut buffer = create_test_buffer();
+
+        // Set up initial lines
+        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+
+        // Shift lines 1-3 up by 1
+        let result = buffer.shift_lines_up(row(1)..row(4), len(1));
+        assert!(result);
+
+        // Verify the shift: line 2 content should now be at line 1, etc.
+        let line1 = buffer.get_line(row(1)).unwrap();
+        let line2 = buffer.get_line(row(2)).unwrap();
+        let line3 = buffer.get_line(row(3)).unwrap();
+
+        // Line 1 should now have what was line 2's content (all 'B' characters)
+        for col_idx in 0..4 {
+            assert_eq!(line1[col_idx], create_test_char('B'));
+        }
+
+        // Line 2 should now have what was line 3's content (all 'C' characters)
+        for col_idx in 0..4 {
+            assert_eq!(line2[col_idx], create_test_char('C'));
+        }
+
+        // Line 3 should be blank (all spacers)
+        for col_idx in 0..4 {
+            assert_eq!(line3[col_idx], PixelChar::Spacer);
+        }
+
+        // Additional verification using get_char method
+        assert_eq!(
+            buffer.get_char(Pos::new((row(1), col(0)))).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(2), col(0)))).unwrap(),
+            create_test_char('C')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(3), col(0)))).unwrap(),
+            PixelChar::Spacer
+        );
+    }
+
+    #[test]
+    fn test_shift_lines_down() {
+        let mut buffer = create_test_buffer();
+
+        // Set up initial lines
+        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+
+        // Shift lines 1-3 down by 1
+        let result = buffer.shift_lines_down(row(1)..row(4), len(1));
+        assert!(result);
+
+        // Verify the shift: line 1 content should now be at line 2, etc.
+        let line1 = buffer.get_line(row(1)).unwrap();
+        let line2 = buffer.get_line(row(2)).unwrap();
+        let line3 = buffer.get_line(row(3)).unwrap();
+
+        // Line 1 should now be blank (all spacers)
+        for col_idx in 0..4 {
+            assert_eq!(line1[col_idx], PixelChar::Spacer);
+        }
+
+        // Line 2 should now have what was line 1's content (all 'A' characters)
+        for col_idx in 0..4 {
+            assert_eq!(line2[col_idx], create_test_char('A'));
+        }
+
+        // Line 3 should now have what was line 2's content (all 'B' characters)
+        for col_idx in 0..4 {
+            assert_eq!(line3[col_idx], create_test_char('B'));
+        }
+
+        // Additional verification using get_char method
+        assert_eq!(
+            buffer.get_char(Pos::new((row(1), col(0)))).unwrap(),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(2), col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(3), col(0)))).unwrap(),
+            create_test_char('B')
+        );
+    }
+
+    #[test]
+    fn test_shift_lines_invalid_ranges() {
+        let mut buffer = create_test_buffer();
+
+        // Test invalid row ranges
+        let result1 = buffer.shift_lines_up(row(10)..row(12), len(1));
+        assert!(!result1);
+
+        let result2 = buffer.shift_lines_down(row(3)..row(1), len(1)); // Backward range
+        assert!(!result2);
+
+        let result3 = buffer.shift_lines_up(row(0)..row(10), len(1)); // End beyond buffer
+        assert!(!result3);
+    }
+}
+
+#[cfg(test)]
+mod tests_char_shifting {
+    use super::*;
+    use crate::{height, len, width};
+
+    fn create_test_buffer() -> OffscreenBuffer {
+        let size = width(6) + height(3);
+        OffscreenBuffer::new_empty(size)
+    }
+
+    fn create_test_char(ch: char) -> PixelChar {
+        PixelChar::PlainText {
+            display_char: ch,
+            maybe_style: None,
+        }
+    }
+
+    fn setup_line_with_chars(
+        buffer: &mut OffscreenBuffer,
+        test_row: RowIndex,
+        chars: &[char],
+    ) {
+        for (i, &ch) in chars.iter().enumerate() {
+            if i < 6 {
+                // Match buffer width
+                buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+            }
+        }
+    }
+
+    #[test]
+    fn test_insert_chars_at_cursor_basic() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Insert 2 blank characters at position 2 (before 'C')
+        let result = buffer.insert_chars_at_cursor(test_row, col(2), len(2), width(6));
+        assert!(result);
+
+        // Expected result: "AB  CD" (E and F are pushed out)
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(1)))).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(2)))).unwrap(),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(3)))).unwrap(),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(4)))).unwrap(),
+            create_test_char('C')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(5)))).unwrap(),
+            create_test_char('D')
+        );
+    }
+
+    #[test]
+    fn test_insert_chars_at_cursor_overflow() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(0);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Try to insert 10 characters at position 1 (more than remaining space)
+        let result = buffer.insert_chars_at_cursor(test_row, col(1), len(10), width(6));
+        assert!(result);
+
+        // Should insert as many as possible: "A     " (5 spaces, B-F pushed out)
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        for i in 1..6 {
+            assert_eq!(
+                buffer.get_char(Pos::new((test_row, col(i)))).unwrap(),
+                PixelChar::Spacer
+            );
+        }
+    }
+
+    #[test]
+    fn test_insert_chars_at_end_of_line() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Try to insert at the last position
+        let result = buffer.insert_chars_at_cursor(test_row, col(5), len(1), width(6));
+        assert!(result);
+
+        // Should insert one space, pushing F out: "ABCDE "
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(4)))).unwrap(),
+            create_test_char('E')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(5)))).unwrap(),
+            PixelChar::Spacer
+        );
+    }
+
+    #[test]
+    fn test_insert_chars_invalid_conditions() {
+        let mut buffer = create_test_buffer();
+
+        // Test with invalid row
+        let result1 = buffer.insert_chars_at_cursor(row(10), col(2), len(1), width(6));
+        assert!(!result1);
+
+        // Test with cursor position beyond line width
+        let result2 = buffer.insert_chars_at_cursor(row(0), col(10), len(1), width(6));
+        assert!(!result2);
+
+        // Test with zero insert count
+        let result3 = buffer.insert_chars_at_cursor(row(0), col(2), len(0), width(6));
+        assert!(!result3);
+    }
+
+}
+
+#[cfg(test)]
+mod tests_bulk_operations {
+    use super::*;
+    use crate::{height, width};
+
+    fn create_test_buffer() -> OffscreenBuffer {
+        let size = width(4) + height(4);
+        OffscreenBuffer::new_empty(size)
+    }
+
+    fn create_test_char(ch: char) -> PixelChar {
+        PixelChar::PlainText {
+            display_char: ch,
+            maybe_style: None,
+        }
+    }
+
+
+    #[test]
+    fn test_apply_changes_batch() {
+        let mut buffer = create_test_buffer();
+
+        let changes = vec![
+            (Pos::new((row(0), col(0))), create_test_char('A')),
+            (Pos::new((row(0), col(1))), create_test_char('B')),
+            (Pos::new((row(1), col(0))), create_test_char('C')),
+            (Pos::new((row(1), col(1))), create_test_char('D')),
+        ];
+
+        let applied_count = buffer.apply_changes(changes);
+        assert_eq!(applied_count, 4); // All changes should be applied successfully
+
+        // Verify all changes were applied
+        assert_eq!(
+            buffer.get_char(Pos::new((row(0), col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(0), col(1)))).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(1), col(0)))).unwrap(),
+            create_test_char('C')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(1), col(1)))).unwrap(),
+            create_test_char('D')
+        );
+    }
+
+    #[test]
+    fn test_apply_changes_with_invalid_positions() {
+        let mut buffer = create_test_buffer();
+
+        let changes = vec![
+            (Pos::new((row(0), col(0))), create_test_char('V')), // Valid
+            (Pos::new((row(10), col(0))), create_test_char('I')), // Invalid row
+            (Pos::new((row(0), col(10))), create_test_char('I')), // Invalid column
+            (Pos::new((row(2), col(2))), create_test_char('V')), // Valid
+        ];
+
+        let applied_count = buffer.apply_changes(changes);
+        assert_eq!(applied_count, 2); // Only 2 valid changes should be applied
+
+        // Verify valid changes were applied
+        assert_eq!(
+            buffer.get_char(Pos::new((row(0), col(0)))).unwrap(),
+            create_test_char('V')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((row(2), col(2)))).unwrap(),
+            create_test_char('V')
+        );
+    }
+
+    #[test]
+    fn test_apply_changes_empty_batch() {
+        let mut buffer = create_test_buffer();
+
+        let changes = vec![];
+        let applied_count = buffer.apply_changes(changes);
+        assert_eq!(applied_count, 0);
+    }
+
+    #[test]
+    fn test_apply_changes_large_batch() {
+        let mut buffer = create_test_buffer();
+
+        // Create a large batch of changes
+        let mut changes = vec![];
+        for r in 0..4 {
+            for c in 0..4 {
+                changes.push((Pos::new((row(r), col(c))), create_test_char('*')));
+            }
+        }
+
+        let applied_count = buffer.apply_changes(changes);
+        assert_eq!(applied_count, 16); // All 16 positions in 4x4 buffer
+
+        // Verify all positions were changed
+        for r in 0..4 {
+            for c in 0..4 {
+                assert_eq!(
+                    buffer.get_char(Pos::new((row(r), col(c)))).unwrap(),
+                    create_test_char('*')
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_apply_changes_overlapping() {
+        let mut buffer = create_test_buffer();
+
+        // Apply changes to same position multiple times
+        let changes = vec![
+            (Pos::new((row(1), col(1))), create_test_char('1')),
+            (Pos::new((row(1), col(1))), create_test_char('2')),
+            (Pos::new((row(1), col(1))), create_test_char('3')),
+        ];
+
+        let applied_count = buffer.apply_changes(changes);
+        assert_eq!(applied_count, 3); // All changes should be applied
+
+        // The last change should win
+        assert_eq!(
+            buffer.get_char(Pos::new((row(1), col(1)))).unwrap(),
+            create_test_char('3')
+        );
     }
 }

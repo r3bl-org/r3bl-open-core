@@ -5,14 +5,14 @@
 use super::{super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                     protocols::csi_codes::MovementCount, term_units::TermRow},
             cursor_ops};
-use crate::{PixelChar, row};
+use crate::{len, row};
 
 /// Move cursor down one line, scrolling the buffer if at bottom.
 /// Implements the ESC D (IND) escape sequence.
 /// Respects DECSTBM scroll region margins.
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
-    let max_row = performer.ofs_buf.window_size.row_height;
-    let current_row = performer.ofs_buf.my_pos.row_index;
+    let max_row = /* 1-based */ performer.ofs_buf.window_size.row_height;
+    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
 
     // Get bottom boundary of scroll region (or screen bottom if no region set).
     let maybe_scroll_region = performer.ofs_buf.ansi_parser_support.scroll_region_bottom;
@@ -37,7 +37,7 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 /// Implements the ESC M (RI) escape sequence.
 /// Respects DECSTBM scroll region margins.
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
-    let current_row = performer.ofs_buf.my_pos.row_index;
+    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
 
     // Get top boundary of scroll region (or 0 if no region set).
     let maybe_scroll_region = performer.ofs_buf.ansi_parser_support.scroll_region_top;
@@ -58,79 +58,147 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 /// Scroll buffer content up by one line (for ESC D at bottom).
 /// The top line is lost, and a new empty line appears at bottom.
 /// Respects DECSTBM scroll region margins.
+///
+/// # Visual Example (scrolling buffer up within scroll region)
+///
+/// ```text
+/// Before:        Row: 0-based
+/// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
+///              │  1  │ Line A (will be lost)               │ ← Top line lost
+///              │  2  │ Line B                              │
+///              │  3  │ Line C                              │
+///              │  4  │ Line D  ← cursor at scroll_bottom   │
+///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
+///              ╰  5  │ Footer line (outside scroll region) │
+///                    └─────────────────────────────────────┘
+///
+/// After scroll up:
+/// max_height=6 ╮     ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤
+///              │  1  │ Line B (moved up)                   │
+///              │  2  │ Line C (moved up)                   │
+///              │  3  │ Line D (moved up)                   │
+///              │  4  │ (blank line)  ← cursor stays here   │
+///              │     ├─────────────────────────────────────┤
+///              ╰  5  │ Footer line (outside scroll region) │
+///                    └─────────────────────────────────────┘
+///
+/// Result: Content scrolls up, Line A lost, blank line added at bottom
+/// ```
 pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
-    let max_row = performer.ofs_buf.window_size.row_height;
+    let max_row = /* 1-based */ performer.ofs_buf.window_size.row_height;
 
     // Get top boundary of scroll region (or 0 if no region set).
     let maybe_scroll_region_top = performer.ofs_buf.ansi_parser_support.scroll_region_top;
     let scroll_top = maybe_scroll_region_top
         .and_then(TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(0, |row| row.as_usize());
+        .map_or(
+            /* None */ row(0),
+            /* Some */ |row_index| row_index,
+        );
 
     // Get bottom boundary of scroll region (or screen bottom if no region set).
     let maybe_scroll_region_bottom =
         performer.ofs_buf.ansi_parser_support.scroll_region_bottom;
     let scroll_bottom = maybe_scroll_region_bottom
         .and_then(TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(max_row.convert_to_row_index().as_usize(), |row| {
-            row.as_usize()
-        });
+        .map_or(
+            /* None */ max_row.convert_to_row_index(),
+            /* Some */ |row| row,
+        );
 
-    // Shift lines up within the scroll region only.
-    // Note: We can't use copy_within() here because PixelCharLine doesn't implement Copy
-    // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
-    for row in scroll_top..scroll_bottom {
-        performer.ofs_buf.buffer[row] = performer.ofs_buf.buffer[row + 1].clone();
-    }
-
-    // Clear the bottom line of the scroll region.
-    performer.ofs_buf.buffer[scroll_bottom].fill(PixelChar::Spacer);
+    // Use shift_lines_up to shift lines up within the scroll region
+    performer.ofs_buf.shift_lines_up(
+        {
+            let start = scroll_top;
+            let end = scroll_bottom + 1;
+            start..end
+        },
+        len(1),
+    );
 }
 
 /// Scroll buffer content down by one line (for ESC M at top).
 /// The bottom line is lost, and a new empty line appears at top.
 /// Respects DECSTBM scroll region margins.
+///
+/// # Visual Example (scrolling buffer down within scroll region)
+///
+/// ```text
+/// Before:        Row: 0-based
+/// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
+///              │  1  │ Line A  ← cursor at scroll_top      │
+///              │  2  │ Line B                              │
+///              │  3  │ Line C                              │
+///              │  4  │ Line D                              │
+///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
+///              ╰  5  │ Footer line (outside scroll region) │
+///                    └─────────────────────────────────────┘
+///
+/// After scroll down:
+/// max_height=6 ╮     ┌─────────────────────────────────────┐
+/// (1-based)    │  0  │ Header line (outside scroll region) │
+///              │     ├─────────────────────────────────────┤
+///              │  1  │ (blank line)  ← cursor stays here   │
+///              │  2  │ Line A (moved down)                 │
+///              │  3  │ Line B (moved down)                 │
+///              │  4  │ Line C (moved down)                 │
+///              │     ├─────────────────────────────────────┤
+///              ╰  5  │ Footer line (outside scroll region) │
+///                    └─────────────────────────────────────┘
+///
+/// Result: Content scrolls down, Line D lost, blank line added at top
+/// ```
 pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
-    let max_row = performer.ofs_buf.window_size.row_height;
+    let max_row = /* 1-based */ performer.ofs_buf.window_size.row_height;
 
     // Get top boundary of scroll region (or 0 if no region set).
     let maybe_scroll_region_top = performer.ofs_buf.ansi_parser_support.scroll_region_top;
     let scroll_top = maybe_scroll_region_top
         .and_then(TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(0, |row| row.as_usize());
+        .map_or(
+            /* None */ row(0),
+            /* Some */ |row_index| row_index,
+        );
 
     // Get bottom boundary of scroll region (or screen bottom if no region set).
     let maybe_scroll_region_bottom =
         performer.ofs_buf.ansi_parser_support.scroll_region_bottom;
     let scroll_bottom = maybe_scroll_region_bottom
         .and_then(TermRow::to_zero_based) // Convert 1 to 0 based
-        .map_or(max_row.convert_to_row_index().as_usize(), |row| {
-            row.as_usize()
-        });
+        .map_or(
+            /* None */ max_row.convert_to_row_index(),
+            /* Some */ |row_index| row_index,
+        );
 
-    // Shift lines down within the scroll region only.
-    // Note: We can't use copy_within() here because PixelCharLine doesn't implement Copy
-    // (it contains heap-allocated data), unlike PixelChar used in char_ops.rs
-    for row in (scroll_top + 1..=scroll_bottom).rev() {
-        performer.ofs_buf.buffer[row] = performer.ofs_buf.buffer[row - 1].clone();
-    }
-
-    // Clear the new top line of the scroll region.
-    performer.ofs_buf.buffer[scroll_top].fill(PixelChar::Spacer);
+    // Use shift_lines_down to shift lines down within the scroll region
+    performer.ofs_buf.shift_lines_down(
+        {
+            let start = scroll_top;
+            let end = scroll_bottom + 1;
+            start..end
+        },
+        len(1),
+    );
 }
 
 /// Handle SU (Scroll Up) - scroll display up by n lines.
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let scroll_up_by = MovementCount::parse_as_row_height(params);
-    for _ in 0..scroll_up_by.as_u16() {
+    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
+    for _ in 0..how_many.as_u16() {
         scroll_buffer_up(performer);
     }
 }
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let scroll_down_by = MovementCount::parse_as_row_height(params);
-    for _ in 0..scroll_down_by.as_u16() {
+    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
+    for _ in 0..how_many.as_u16() {
         scroll_buffer_down(performer);
     }
 }
