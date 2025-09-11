@@ -1,6 +1,27 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Terminal state operations.
+//!
+//! # CSI Sequence Architecture
+//!
+//! ```text
+//! Application sends "ESC c" (reset terminal)
+//!         ↓
+//!     PTY Slave (escape sequence)
+//!         ↓
+//!     PTY Master (byte stream) <- in process_manager.rs
+//!         ↓
+//!     VTE Parser (parses ESC char pattern)
+//!         ↓
+//!     esc_dispatch() [THIS METHOD]
+//!         ↓
+//!     Handle terminal state operations:
+//!       - reset_terminal() for ESC c (RIS)
+//!       - save/restore cursor for ESC 7/8
+//!       - character set selection
+//!         ↓
+//!     Update OffscreenBuffer state
+//! ```
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::{CharacterSet, Pos};

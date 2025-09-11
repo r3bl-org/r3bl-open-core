@@ -1,6 +1,29 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Cursor movement operations.
+//!
+//! # CSI Sequence Architecture
+//!
+//! ```text
+//! Application sends "ESC[2A" (cursor up 2 lines)
+//!         ↓
+//!     PTY Slave (escape sequence)
+//!         ↓
+//!     PTY Master (byte stream) <- in process_manager.rs
+//!         ↓
+//!     VTE Parser (parses ESC[...char pattern)
+//!         ↓
+//!     csi_dispatch() [THIS METHOD]
+//!         ↓
+//!     Route to operations module:
+//!       - cursor_ops:: for movement (A,B,C,D,H)
+//!       - scroll_ops:: for scrolling (S,T)
+//!       - sgr_ops:: for styling (m)
+//!       - line_ops:: for lines (L,M)
+//!       - char_ops:: for chars (@,P,X)
+//!         ↓
+//!     Update OffscreenBuffer state
+//! ```
 
 use std::cmp::{max, min};
 

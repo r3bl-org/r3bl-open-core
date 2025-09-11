@@ -1,6 +1,30 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Device Status Report (DSR) operations.
+//!
+//! # CSI Sequence Architecture
+//!
+//! ```text
+//! Application sends "ESC[6n" (request cursor position)
+//!         ↓
+//!     PTY Slave (escape sequence)
+//!         ↓
+//!     PTY Master (byte stream) <- in process_manager.rs
+//!         ↓
+//!     VTE Parser (parses ESC[...char pattern)
+//!         ↓
+//!     csi_dispatch() [THIS METHOD]
+//!         ↓
+//!     Route to operations module:
+//!       - cursor_ops:: for movement (A,B,C,D,H)
+//!       - scroll_ops:: for scrolling (S,T)
+//!       - sgr_ops:: for styling (m)
+//!       - line_ops:: for lines (L,M)
+//!       - char_ops:: for chars (@,P,X)
+//!       - dsr_ops:: for device status (n)
+//!         ↓
+//!     Update OffscreenBuffer state
+//! ```
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::dsr_codes::DsrRequestType};

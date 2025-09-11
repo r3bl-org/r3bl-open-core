@@ -6,6 +6,56 @@
 //! specifications](https://vt100.net/docs/vt100-ug/chapter3.html)
 //! compliant. It provides support to parse ANSI escape sequences and update
 //! an [`crate::OffscreenBuffer`] accordingly.
+//!
+//! # PTY Output Processing Pipeline
+//!
+//! ```text
+//! Child Process (vim, bash, etc.)
+//!         ↓
+//!     PTY Slave (writes various sequence types)
+//!         ↓
+//!     PTY Master (byte stream) <- in process_manager.rs
+//!         ↓
+//!     VTE Parser (tokenizes & identifies sequence types)
+//!         ↓
+//!     Perform trait methods [THIS MODULE]
+//!         ↓
+//!     Update OffscreenBuffer state
+//! ```
+//!
+//! # Sequence Types & Dispatch Routing
+//!
+//! The VTE parser identifies different types of sequences and calls the appropriate
+//! method on this `Perform` implementation:
+//!
+//! | Sequence Type | Pattern        | Example           | Dispatch Method    | Purpose          |
+//! |---------------|----------------|-------------------|--------------------|------------------|
+//! | **Printable** | Regular chars  | `"Hello"`         | [`print()`]        | Display text     |
+//! | **Control**   | C0 bytes       | `\n`, `\t`, `\b`  | [`execute()`]      | Cursor control   |
+//! | **CSI**       | `ESC[...char`  | `ESC[2A`, `ESC[m` | [`csi_dispatch()`] | Complex commands |
+//! | **OSC**       | `ESC]...ST`    | `ESC]0;title`     | [`osc_dispatch()`] | OS integration   |
+//! | **ESC**       | `ESC char`     | `ESC c`, `ESC 7`  | [`esc_dispatch()`] | Simple commands  |
+//! | **DCS**       | `ESC P...ST`   | Ignored (stubs)   | [`hook()`]         | Device control   |
+//!
+//! # VTE Parser State Machine
+//!
+//! The [VTE parser](vte::Parser) uses a state machine to recognize sequence boundaries:
+//!
+//! - **Ground state**: Collects printable characters → calls [`print()`]
+//! - **Escape state**: After `ESC`, determines sequence type
+//! - **CSI state**: After `ESC[`, collects parameters → calls [`csi_dispatch()`]
+//! - **OSC state**: After `ESC]`, collects string → calls [`osc_dispatch()`]
+//! - **Control characters**: Immediate → calls [`execute()`]
+//!
+//! Each method contains detailed architecture diagrams showing the specific flow
+//! for that sequence type.
+//!
+//! [`print()`]: AnsiToOfsBufPerformer::print
+//! [`execute()`]: AnsiToOfsBufPerformer::execute
+//! [`csi_dispatch()`]: AnsiToOfsBufPerformer::csi_dispatch
+//! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
+//! [`esc_dispatch()`]: AnsiToOfsBufPerformer::esc_dispatch
+//! [`hook()`]: AnsiToOfsBufPerformer::hook
 
 use std::cmp::min;
 
@@ -26,6 +76,8 @@ use crate::{BoundsCheck,
 impl Perform for AnsiToOfsBufPerformer<'_> {
     /// Handle printable characters.
     ///
+    /// See [module docs](self) for complete processing pipeline overview.
+    ///
     /// ## Print Sequence Architecture
     ///
     /// ```text
@@ -33,7 +85,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///         ↓
     ///     PTY Slave (character stream)
     ///         ↓
-    ///     PTY Master (we read bytes)
+    ///     PTY Master (we read bytes) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (identifies printable chars)
     ///         ↓
@@ -111,6 +163,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
     /// Handle control characters (C0 set): backspace, tab, LF, CR.
     ///
+    /// See [module docs](self) for complete processing pipeline overview.
+    ///
     /// ## Control Character Architecture
     ///
     /// ```text
@@ -118,7 +172,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///         ↓
     ///     PTY Slave (control byte)
     ///         ↓
-    ///     PTY Master (raw byte stream)
+    ///     PTY Master (raw byte stream) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (identifies C0 control chars)
     ///         ↓
@@ -180,17 +234,19 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
     /// Handle CSI (Control Sequence Introducer) sequences.
     ///
+    /// See [module docs](self) for complete processing pipeline overview.
+    ///
     /// This method processes ANSI escape sequences that follow the pattern `ESC[...char`
     /// where `char` is the final dispatch character that determines the operation.
     ///
     /// ## CSI Sequence Architecture
     ///
     /// ```text
-    /// Application sends "ESC[2J" (clear screen)
+    /// Application sends "ESC[2A" (cursor up 2 lines)
     ///         ↓
     ///     PTY Slave (escape sequence)
     ///         ↓
-    ///     PTY Master (byte stream)
+    ///     PTY Master (byte stream) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (parses ESC[...char pattern)
     ///         ↓
@@ -414,6 +470,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
     /// Handle OSC (Operating System Command) sequences.
     ///
+    /// See [module docs](self) for complete processing pipeline overview.
+    ///
     /// ## OSC Sequence Architecture
     ///
     /// ```text
@@ -421,7 +479,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///         ↓
     ///     PTY Slave (OSC sequence)
     ///         ↓
-    ///     PTY Master (byte stream)
+    ///     PTY Master (byte stream) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (accumulates OSC params)
     ///         ↓
@@ -499,6 +557,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
     /// Handle escape sequences (not CSI or OSC).
     ///
+    /// See [module docs](self) for complete processing pipeline overview.
+    ///
     /// There's significant overlap between **CSI sequences** and direct **ESC
     /// sequences**, especially in managing the cursor state. This overlap exists
     /// because direct ESC sequences were the original way to handle many terminal
@@ -553,7 +613,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///         ↓
     ///     PTY Slave (writes ESC sequences)
     ///         ↓
-    ///     PTY Master (we read from here)
+    ///     PTY Master (we read from here) <- in process_manager.rs
     ///         ↓
     ///     VTE Parser (tokenizes sequences)
     ///         ↓
@@ -650,6 +710,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     }
 
     /// Hook for DCS (Device Control String) start.
+    ///
+    /// See [module docs](self) for complete processing pipeline overview.
     ///
     /// ## DCS Sequence Architecture (Not Implemented)
     ///
