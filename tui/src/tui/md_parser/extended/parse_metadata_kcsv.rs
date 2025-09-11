@@ -32,7 +32,7 @@ pub fn parse_csv_opt_eol<'a>(
     )
     .parse(input)?;
 
-    // If there is a newline, consume it along with any null padding that follows
+    // If there is a newline, consume it along with any null padding that follows.
     // to handle the ZeroCopyGapBuffer null padding invariant
     let remainder = trim_optional_leading_newline_and_nulls(remainder);
 
@@ -72,7 +72,7 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
             trimmed_acc.push(only_item);
         }
         _ => {
-            // More than one item:
+            // More than one item.
             // 1. 1st item must not be prefixed with a space.
             // 2. 2nd item onwards must be prefixed by at least 1 space, may have more.
             let mut my_iter = acc.iter();

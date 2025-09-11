@@ -468,13 +468,14 @@ mod ofs_buf_impl_buffer_manipulation_ops {
             let start_col = col_range.start.as_usize();
             let end_col = col_range.end.as_usize();
 
-            if let Some(line) = self.buffer.get_mut(row_idx) {
-                if start_col < line.len() && end_col <= line.len() && start_col <= end_col
-                {
-                    line[start_col..end_col].fill(char);
-                    self.invalidate_memory_size_calc_cache();
-                    return true;
-                }
+            if let Some(line) = self.buffer.get_mut(row_idx)
+                && start_col < line.len()
+                && end_col <= line.len()
+                && start_col <= end_col
+            {
+                line[start_col..end_col].fill(char);
+                self.invalidate_memory_size_calc_cache();
+                return true;
             }
             false
         }
@@ -496,16 +497,15 @@ mod ofs_buf_impl_buffer_manipulation_ops {
             let source_end = source_range.end.as_usize();
             let dest = dest_start.as_usize();
 
-            if let Some(line) = self.buffer.get_mut(row_idx) {
-                if source_start < line.len()
-                    && source_end <= line.len()
-                    && dest < line.len()
-                    && source_start <= source_end
-                {
-                    line.copy_within(source_start..source_end, dest);
-                    self.invalidate_memory_size_calc_cache();
-                    return true;
-                }
+            if let Some(line) = self.buffer.get_mut(row_idx)
+                && source_start < line.len()
+                && source_end <= line.len()
+                && dest < line.len()
+                && source_start <= source_end
+            {
+                line.copy_within(source_start..source_end, dest);
+                self.invalidate_memory_size_calc_cache();
+                return true;
             }
             false
         }
@@ -644,7 +644,7 @@ mod ofs_buf_impl_buffer_shifting_ops {
 
     impl OffscreenBuffer {
         /// Insert blank characters at cursor position (for ICH - Insert Character).
-        /// Characters at and after the cursor shift right by insert_count.
+        /// Characters at and after the cursor shift right by `insert_count`.
         /// Characters that would shift beyond the line width are lost.
         /// Returns true if the operation was successful.
         pub fn insert_chars_at_cursor(
@@ -663,30 +663,30 @@ mod ofs_buf_impl_buffer_shifting_ops {
             let insert_amount = insert_count.as_usize();
             let line_width = max_col.as_usize();
 
-            if let Some(line) = self.buffer.get_mut(row_idx) {
-                if cursor_pos < line_width && insert_amount > 0 {
-                    // Calculate how many chars we can actually insert
-                    let actual_insert = insert_amount.min(line_width - cursor_pos);
+            if let Some(line) = self.buffer.get_mut(row_idx)
+                && cursor_pos < line_width
+                && insert_amount > 0
+            {
+                // Calculate how many chars we can actually insert
+                let actual_insert = insert_amount.min(line_width - cursor_pos);
 
-                    // Shift characters right using copy_within
-                    let dest_start = cursor_pos + actual_insert;
-                    let source_end = line_width - actual_insert;
+                // Shift characters right using copy_within
+                let dest_start = cursor_pos + actual_insert;
+                let source_end = line_width - actual_insert;
 
-                    if dest_start < line_width && cursor_pos < source_end {
-                        line.copy_within(cursor_pos..source_end, dest_start);
-                    }
-
-                    // Fill the cursor position with blanks
-                    let fill_end = (cursor_pos + actual_insert).min(line_width);
-                    line[cursor_pos..fill_end].fill(PixelChar::Spacer);
-
-                    self.invalidate_memory_size_calc_cache();
-                    return true;
+                if dest_start < line_width && cursor_pos < source_end {
+                    line.copy_within(cursor_pos..source_end, dest_start);
                 }
+
+                // Fill the cursor position with blanks
+                let fill_end = (cursor_pos + actual_insert).min(line_width);
+                line[cursor_pos..fill_end].fill(PixelChar::Spacer);
+
+                self.invalidate_memory_size_calc_cache();
+                return true;
             }
             false
         }
-
     }
 }
 
@@ -696,7 +696,6 @@ mod ofs_buf_impl_buffer_bulk_ops {
     use super::*;
 
     impl OffscreenBuffer {
-
         /// Apply multiple character changes at once.
         /// Returns the number of successful changes applied.
         pub fn apply_changes(&mut self, changes: Vec<(Pos, PixelChar)>) -> usize {
@@ -2524,7 +2523,6 @@ mod tests_char_shifting {
         let result3 = buffer.insert_chars_at_cursor(row(0), col(2), len(0), width(6));
         assert!(!result3);
     }
-
 }
 
 #[cfg(test)]
@@ -2543,7 +2541,6 @@ mod tests_bulk_operations {
             maybe_style: None,
         }
     }
-
 
     #[test]
     fn test_apply_changes_batch() {

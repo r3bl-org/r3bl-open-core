@@ -272,7 +272,7 @@ mod tests {
         let result = sequence.write_to_buf(&mut buffer);
 
         assert!(result.is_ok());
-        assert_eq!(buffer.to_string(), "\x1b7");
+        assert_eq!(buffer, "\x1b7");
     }
 
     #[test]
@@ -282,7 +282,7 @@ mod tests {
         let result = sequence.write_to_buf(&mut buffer);
 
         assert!(result.is_ok());
-        assert_eq!(buffer.to_string(), "\x1b(B");
+        assert_eq!(buffer, "\x1b(B");
     }
 
     #[test]
@@ -292,14 +292,7 @@ mod tests {
         let result = sequence.write_to_buf(&mut buffer);
 
         assert!(result.is_ok());
-        assert_eq!(buffer.to_string(), "\x1b(0");
-    }
-
-    #[test]
-    fn test_esc_sequence_clone() {
-        let original = EscSequence::SaveCursor;
-        let cloned = original.clone();
-        assert_eq!(original, cloned);
+        assert_eq!(buffer, "\x1b(0");
     }
 
     #[test]
@@ -317,17 +310,6 @@ mod tests {
 
         assert_eq!(seq1, seq2);
         assert_ne!(seq1, seq3);
-    }
-
-    #[test]
-    fn test_esc_sequence_copy_trait() {
-        let sequence = EscSequence::IndexDown;
-        let copied = sequence; // This tests the Copy trait
-        let another_copy = sequence; // Should still work after first copy
-
-        assert_eq!(copied, another_copy);
-        assert_eq!(copied.to_string(), "\x1bD");
-        assert_eq!(another_copy.to_string(), "\x1bD");
     }
 
     #[test]
@@ -349,8 +331,7 @@ mod tests {
             // Each sequence should produce a unique output
             assert!(
                 outputs.insert(output.clone()),
-                "Duplicate output found: {}",
-                output
+                "Duplicate output found: {output}"
             );
         }
 
@@ -374,9 +355,7 @@ mod tests {
             let output = sequence.to_string();
             assert!(
                 output.starts_with('\x1b'),
-                "Sequence {:?} should start with ESC character, got: {:?}",
-                sequence,
-                output
+                "Sequence {sequence:?} should start with ESC character, got: {output:?}"
             );
         }
     }

@@ -1,5 +1,9 @@
 #!/usr/bin/env fish
-# This is a temporary fix for clippy nightly toolchain not working in Sept 2025
+# Use a nightly toolchain from one month ago to avoid issues with the latest nightly
 set -e RUSTFLAGS
-cargo +nightly-2025-09-01 clippy --all-targets
-# cargo +nightly-2025-09-01 clippy --all-targets 2>&1 | setclip
+
+# Calculate the date one month ago and format it as YYYY-MM-DD for the toolchain
+set one_month_ago (date -d "1 month ago" "+%Y-%m-%d")
+
+cargo +nightly-$one_month_ago clippy --all-targets
+# cargo +nightly-$one_month_ago clippy --all-targets 2>&1 | setclip

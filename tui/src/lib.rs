@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-// Enable benchmarking for nightly Rust
-#![cfg_attr(test, feature(test))]
 // You can get the unicode symbols for the drawings here:
 // - <https://symbl.cc/en/unicode/blocks/miscellaneous-symbols-and-arrows/>
 // - <https://symbl.cc/en/unicode/blocks/box-drawing/>
@@ -1020,6 +1018,9 @@
 //! Please report any issues to the [issue
 //! tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
 //! feature requests, feel free to add them there too 👍.
+
+// Enable benchmarking for nightly Rust
+#![cfg_attr(test, feature(test))]
 
 // Attach.
 pub mod core;

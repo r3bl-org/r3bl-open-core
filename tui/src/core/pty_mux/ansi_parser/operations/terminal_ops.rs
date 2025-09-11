@@ -6,9 +6,7 @@ use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::{CharacterSet, Pos};
 
 /// Clear all buffer content.
-fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.clear();
-}
+fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear(); }
 
 /// Reset all SGR attributes to default state.
 fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {

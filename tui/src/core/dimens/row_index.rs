@@ -201,9 +201,7 @@ mod bounds_check_trait_impls {
     impl IndexMarker for RowIndex {
         type LengthType = RowHeight;
 
-        fn convert_to_length(&self) -> Self::LengthType {
-            self.convert_to_height()
-        }
+        fn convert_to_length(&self) -> Self::LengthType { self.convert_to_height() }
     }
 }
 

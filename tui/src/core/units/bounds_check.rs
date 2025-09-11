@@ -75,7 +75,7 @@
 //! # Usage Examples
 //!
 //! ```
-//! use r3bl_tui::{BoundsCheck, ContentPositionStatus, idx, len};
+//! use r3bl_tui::{BoundsCheck, ContentPositionStatus, IndexMarker, LengthMarker, idx, len};
 //!
 //! let content_length = len(10);
 //! let cursor_pos = idx(8);
@@ -151,7 +151,7 @@ pub enum BoundsOverflowStatus {
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{idx, len};
+/// use r3bl_tui::{LengthMarker, idx, len};
 ///
 /// if len(10).is_overflowed_by(idx(5)) {
 ///     // Handle overflow case
@@ -246,7 +246,7 @@ pub trait IndexMarker: UnitCompare {
     ///
     /// # Examples
     /// ```
-    /// use r3bl_tui::{col, width};
+    /// use r3bl_tui::{IndexMarker, col, width};
     ///
     /// let index = col(10);
     /// let max_width = width(10);
@@ -329,7 +329,7 @@ pub trait LengthMarker: UnitCompare {
     ///
     /// # Examples
     /// ```
-    /// use r3bl_tui::{col, width};
+    /// use r3bl_tui::{LengthMarker, col, width};
     ///
     /// let max_col = width(10);
     /// assert!(!max_col.is_overflowed_by(col(5)));  // Within bounds
@@ -368,14 +368,14 @@ pub trait LengthMarker: UnitCompare {
     ///
     /// # Returns
     /// The number of units between the index and the boundary defined by this
-    /// length. For example, if this is a ColWidth of 10 and the index is at column 3,
+    /// length. For example, if this is a `ColWidth` of 10 and the index is at column 3,
     /// this returns a Length of 7 (columns 3-9, inclusive).
     ///
     /// Returns Length(0) if the index is at or beyond the boundary.
     ///
     /// # Examples
     /// ```
-    /// use r3bl_tui::{col, width, len};
+    /// use r3bl_tui::{LengthMarker, col, width, len};
     ///
     /// let max_width = width(10);
     /// assert_eq!(max_width.remaining_from(col(3)), len(7));  // 7 columns remain
@@ -450,6 +450,7 @@ pub trait LengthMarker: UnitCompare {
     /// let max_allowed = len(8);
     /// assert_eq!(equal_length.clamp_to(max_allowed), len(8));
     /// ```
+    #[must_use]
     fn clamp_to(&self, max_length: Self) -> Self
     where
         Self: Copy + Ord,
@@ -590,7 +591,7 @@ where
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{BoundsCheck, ContentPositionStatus, idx, len};
+/// use r3bl_tui::{BoundsCheck, ContentPositionStatus, LengthMarker, idx, len};
 ///
 /// let content_length = len(5);
 ///
@@ -1555,32 +1556,32 @@ mod tests {
         for value in [0, 1, 5, 10, 42, 80, 100, 120, 1024] {
             assert_eq!(
                 idx(value).as_u16(),
-                value as u16,
+                u16::try_from(value).unwrap(),
                 "Index {value} preserves value"
             );
             assert_eq!(
                 len(value).as_u16(),
-                value as u16,
+                u16::try_from(value).unwrap(),
                 "Length {value} preserves value"
             );
             assert_eq!(
                 ColIndex::new(value).as_u16(),
-                value as u16,
+                u16::try_from(value).unwrap(),
                 "ColIndex {value} preserves value"
             );
             assert_eq!(
                 ColWidth::new(value).as_u16(),
-                value as u16,
+                u16::try_from(value).unwrap(),
                 "ColWidth {value} preserves value"
             );
             assert_eq!(
                 RowIndex::new(value).as_u16(),
-                value as u16,
+                u16::try_from(value).unwrap(),
                 "RowIndex {value} preserves value"
             );
             assert_eq!(
                 RowHeight::new(value).as_u16(),
-                value as u16,
+                u16::try_from(value).unwrap(),
                 "RowHeight {value} preserves value"
             );
         }

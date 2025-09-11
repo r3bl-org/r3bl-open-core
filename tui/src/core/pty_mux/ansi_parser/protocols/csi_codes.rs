@@ -1180,13 +1180,5 @@ mod tests {
             assert!(debug_output.contains("col: 10"));
         }
 
-        #[test]
-        fn test_cursor_position_request_clone() {
-            let original = CursorPositionRequest { row: 3, col: 7 };
-            let cloned = original.clone();
-            assert_eq!(original, cloned);
-            assert_eq!(cloned.row, 3);
-            assert_eq!(cloned.col, 7);
-        }
     }
 }

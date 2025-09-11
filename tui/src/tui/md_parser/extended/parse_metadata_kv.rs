@@ -44,7 +44,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
         )));
     }
 
-    // If there is a newline, consume it along with any null padding that follows
+    // If there is a newline, consume it along with any null padding that follows.
     // to handle the ZeroCopyGapBuffer null padding invariant
     let remainder = trim_optional_leading_newline_and_nulls(remainder);
 

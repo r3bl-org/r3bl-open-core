@@ -118,14 +118,11 @@ mod seed_delta {
 // ColorChangeSpeed
 // ================================================================================================
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ColorChangeSpeed {
+    #[default]
     Rapid,
     Slow,
-}
-
-impl Default for ColorChangeSpeed {
-    fn default() -> Self { Self::Rapid }
 }
 
 impl Display for ColorChangeSpeed {

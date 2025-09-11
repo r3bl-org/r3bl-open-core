@@ -44,7 +44,7 @@ mod benchmarks {
 
     use crate::{ZeroCopyGapBuffer, md_parser::conformance_test_data::*, parse_markdown};
 
-    // Helper macro to reduce boilerplate in benchmarks
+    // Helper macro to reduce boilerplate in benchmarks.
     macro_rules! bench_parser {
         ($input:expr) => {{
             let gap_buffer = ZeroCopyGapBuffer::from($input);
@@ -53,7 +53,7 @@ mod benchmarks {
     }
 
     // =============================================================================
-    // Small valid input benchmarks
+    // Small valid input benchmarks.
     // =============================================================================
 
     #[bench]
@@ -204,7 +204,7 @@ mod benchmarks {
     }
 
     // =============================================================================
-    // Medium valid input benchmarks
+    // Medium valid input benchmarks.
     // =============================================================================
 
     #[bench]
@@ -355,7 +355,7 @@ mod benchmarks {
     }
 
     // =============================================================================
-    // Large valid input benchmarks
+    // Large valid input benchmarks.
     // =============================================================================
 
     #[bench]
@@ -373,7 +373,7 @@ mod benchmarks {
     }
 
     // =============================================================================
-    // Invalid input benchmarks
+    // Invalid input benchmarks.
     // =============================================================================
 
     #[bench]
@@ -391,7 +391,7 @@ mod benchmarks {
     }
 
     // =============================================================================
-    // Jumbo/Real world input benchmarks
+    // Jumbo/Real world input benchmarks.
     // =============================================================================
 
     #[bench]

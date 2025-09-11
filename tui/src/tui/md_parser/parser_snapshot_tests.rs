@@ -116,7 +116,7 @@ mod tests {
     }
 
     // =============================================================================
-    // Small valid input tests
+    // Small valid input tests.
     // =============================================================================
 
     #[test]
@@ -129,12 +129,12 @@ mod tests {
 
     #[test]
     fn test_small_only_newlines() {
-        // ONLY_NEWLINES = "\n\n\n"
+        // ONLY_NEWLINES = "\n\n\n".
         let gap_buffer = ZeroCopyGapBuffer::from(ONLY_NEWLINES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 3);
-        // Each newline becomes an empty Text element
+        // Each newline becomes an empty Text element.
         for element in doc.iter() {
             assert_text_element(element, &[]);
         }
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_small_single_line_no_newline() {
-        // SINGLE_LINE_NO_NEWLINE = "Hello World"
+        // SINGLE_LINE_NO_NEWLINE = "Hello World".
         let gap_buffer = ZeroCopyGapBuffer::from(SINGLE_LINE_NO_NEWLINE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_small_single_line_with_newline() {
-        // SINGLE_LINE_WITH_NEWLINE = "Hello World\n"
+        // SINGLE_LINE_WITH_NEWLINE = "Hello World\n".
         let gap_buffer = ZeroCopyGapBuffer::from(SINGLE_LINE_WITH_NEWLINE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_small_simple_inline_code() {
-        // SIMPLE_INLINE_CODE = "first\n`second`"
+        // SIMPLE_INLINE_CODE = "first\n`second`".
         let gap_buffer = ZeroCopyGapBuffer::from(SIMPLE_INLINE_CODE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -173,16 +173,16 @@ mod tests {
 
     #[test]
     fn test_small_inline_code_variations() {
-        // INLINE_CODE_VARIATIONS contains multiple inline code examples
+        // INLINE_CODE_VARIATIONS contains multiple inline code examples.
         let gap_buffer = ZeroCopyGapBuffer::from(INLINE_CODE_VARIATIONS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // This test data has multiple lines with inline code
+        // This test data has multiple lines with inline code.
         assert!(!doc.is_empty());
         for element in doc.iter() {
             match element {
                 MdElement::Text(fragments) => {
-                    // Verify inline code fragments exist
+                    // Verify inline code fragments exist.
                     let has_inline_code = fragments
                         .iter()
                         .any(|f| matches!(f, MdLineFragment::InlineCode(_)));
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_small_inline_code_with_unicode() {
-        // INLINE_CODE_WITH_UNICODE = "`code 🎯`"
+        // INLINE_CODE_WITH_UNICODE = "`code 🎯`".
         let gap_buffer = ZeroCopyGapBuffer::from(INLINE_CODE_WITH_UNICODE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_small_bold_text() {
-        // BOLD_TEXT = "This is *bold* text"
+        // BOLD_TEXT = "This is *bold* text".
         let gap_buffer = ZeroCopyGapBuffer::from(BOLD_TEXT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_small_italic_text() {
-        // ITALIC_TEXT = "This is _italic_ text"
+        // ITALIC_TEXT = "This is _italic_ text".
         let gap_buffer = ZeroCopyGapBuffer::from(ITALIC_TEXT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -242,12 +242,12 @@ mod tests {
 
     #[test]
     fn test_small_mixed_formatting() {
-        // MIXED_FORMATTING contains mixed bold, italic, and inline code
+        // MIXED_FORMATTING contains mixed bold, italic, and inline code.
         let gap_buffer = ZeroCopyGapBuffer::from(MIXED_FORMATTING);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert!(!doc.is_empty());
-        // Verify mixed formatting elements exist
+        // Verify mixed formatting elements exist.
         for element in doc.iter() {
             if let MdElement::Text(fragments) = element {
                 let has_formatting = fragments.iter().any(|f| {
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_small_links() {
-        // LINKS = "Check out [Rust](https://rust-lang.org) website"
+        // LINKS = "Check out [Rust](https://rust-lang.org) website".
         let gap_buffer = ZeroCopyGapBuffer::from(LINKS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -285,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_small_images() {
-        // IMAGES = "![Alt text](https://example.com/image.png)"
+        // IMAGES = "![Alt text](https://example.com/image.png)".
         let gap_buffer = ZeroCopyGapBuffer::from(IMAGES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_small_metadata_title() {
-        // METADATA_TITLE = "@title: My Document Title"
+        // METADATA_TITLE = "@title: My Document Title".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_TITLE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_small_metadata_tags() {
-        // METADATA_TAGS = "@tags: rust, programming, tutorial"
+        // METADATA_TAGS = "@tags: rust, programming, tutorial".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_TAGS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn test_small_metadata_authors() {
-        // METADATA_AUTHORS = "@authors: John Doe, Jane Smith"
+        // METADATA_AUTHORS = "@authors: John Doe, Jane Smith".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_AUTHORS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_small_metadata_date() {
-        // METADATA_DATE = "@date: 2025-01-01"
+        // METADATA_DATE = "@date: 2025-01-01".
         let gap_buffer = ZeroCopyGapBuffer::from(METADATA_DATE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -341,17 +341,17 @@ mod tests {
 
     #[test]
     fn test_small_special_characters() {
-        // SPECIAL_CHARACTERS contains special characters like
+        // SPECIAL_CHARACTERS contains special characters like.
         // !@#$%^&*()_+-=[]{}|;':",./<>?
         let gap_buffer = ZeroCopyGapBuffer::from(SPECIAL_CHARACTERS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert_doc_len(&doc, 1);
-        // Special characters should be preserved as plain text
+        // Special characters should be preserved as plain text.
         match &doc[0] {
             MdElement::Text(fragments) => {
                 assert!(!fragments.is_empty());
-                // All special characters should be in Plain fragments
+                // All special characters should be in Plain fragments.
                 for fragment in fragments.iter() {
                     assert!(matches!(fragment, MdLineFragment::Plain(_)));
                 }
@@ -362,20 +362,20 @@ mod tests {
 
     #[test]
     fn test_small_unicode_content() {
-        // UNICODE_CONTENT contains text with emojis
+        // UNICODE_CONTENT contains text with emojis.
         let gap_buffer = ZeroCopyGapBuffer::from(UNICODE_CONTENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
         assert!(!doc.is_empty());
-        // Unicode should be preserved in the parsed content
+        // Unicode should be preserved in the parsed content.
         for element in doc.iter() {
             if let MdElement::Text(fragments) = element {
-                // Check that unicode is preserved in fragments
+                // Check that unicode is preserved in fragments.
                 for fragment in fragments.iter() {
                     match fragment {
                         MdLineFragment::Plain(text)
                         | MdLineFragment::InlineCode(text) => {
-                            // Just verify text exists, don't assume all fragments have
+                            // Just verify text exists, don't assume all fragments have.
                             // unicode
                             let _ = text;
                         }
@@ -388,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_small_emoji_h1_simple() {
-        // EMOJI_H1_SIMPLE = "# Heading with emoji 😀"
+        // EMOJI_H1_SIMPLE = "# Heading with emoji 😀".
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_H1_SIMPLE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn test_small_emoji_h2_simple() {
-        // EMOJI_H2_SIMPLE = "## Subheading with emoji 😀"
+        // EMOJI_H2_SIMPLE = "## Subheading with emoji 😀".
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_H2_SIMPLE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
@@ -408,7 +408,7 @@ mod tests {
 
     #[test]
     fn test_small_emoji_multiple() {
-        // EMOJI_MULTIPLE = "# Multiple emojis 😀🚀📝"
+        // EMOJI_MULTIPLE = "# Multiple emojis 😀🚀📝".
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_MULTIPLE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");

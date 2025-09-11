@@ -239,9 +239,7 @@ mod bounds_check_trait_impls {
     impl IndexMarker for ColIndex {
         type LengthType = ColWidth;
 
-        fn convert_to_length(&self) -> Self::LengthType {
-            self.convert_to_width()
-        }
+        fn convert_to_length(&self) -> Self::LengthType { self.convert_to_width() }
     }
 }
 
