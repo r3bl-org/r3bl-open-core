@@ -11,12 +11,11 @@ resolver = "3"
 [workspace.metadata.unmaintained]
 ignore = ["gethostname", "objs", "home", "proc-macro-error", "wayland-commons"]
 
-##########################################################################################################################
-# ------------- RUSTC LINTS SECTION -------------                                                                        #
-# `cargo clippy` lint configuration for `rustc`.                                                                         #
-# https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html                                                  #
-# https://www.linkedin.com/posts/marcoieni_i-finally-found-some-time-to-review-all-the-activity-7307355034642452481-EVLZ #
-##########################################################################################################################
+# ┌───────────────────────────────────────────────────────────────────────┐
+# │                       RUSTC LINTS SECTION                             │
+# │ `cargo clippy` lint configuration for `rustc`.                        │
+# │ https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html │
+# └───────────────────────────────────────────────────────────────────────┘
 [workspace.lints.rust]
 ambiguous_negative_literals = "warn"
 closure_returning_async_block = "warn"
@@ -38,20 +37,20 @@ unsafe_attr_outside_unsafe = "warn"
 unused = "warn"
 unused_import_braces = "warn"
 
-#############################################################
-# ------------- CLIPPY LINTS SECTION -------------          #
-# `cargo clippy` lint configuration for `clippy`.           #
-# https://rust-lang.github.io/rust-clippy/master/index.html #
-#############################################################
+# ┌───────────────────────────────────────────────────────────┐
+# │                   CLIPPY LINTS SECTION                    │
+# │ `cargo clippy` lint configuration for `clippy`.           │
+# │ https://rust-lang.github.io/rust-clippy/master/index.html │
+# └───────────────────────────────────────────────────────────┘
 [workspace.lints.clippy]
-#----------------------------------------
-# Reasonable defaults for clippy lints. #
-#----------------------------------------
+# ╔══════════════════════════════════════╗
+# ║ Reasonable defaults for clippy lints ║
+# ╚══════════════════════════════════════╝
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
-#------------------------------------------------------------------------------
-# Explicitly set the level for each lint. This might be redundant with `all`. -
-#------------------------------------------------------------------------------
+# ╔════════════════════════════════════════════════════════════════════════╗
+# ║ Explicitly set the level for each lint (might be redundant with `all`) ║
+# ╚════════════════════════════════════════════════════════════════════════╝
 missing_errors_doc = "warn"
 too_many_lines = "warn"
 match_same_arms = "warn"
@@ -90,17 +89,19 @@ comparison_chain = "warn"
 elidable_lifetime_names = "warn"
 wildcard_imports = "warn"
 large_futures = "warn"
-#--------------------------------------------------------
-# Explicitly allow/suppress these lints to avoid noise. -
-#--------------------------------------------------------
+# ╔══════════════════════════════════════════════════════╗
+# ║ Explicitly allow/suppress these lints to avoid noise ║
+# ╚══════════════════════════════════════════════════════╝
 needless_pass_by_value = "allow"  # This triggers legitimate use of passing a Copy arg by value to a function.
 similar_names = "allow"  # This triggers legitimate variable names.
 single_match_else = "allow" # Rust 2024 changes if-let scope, so match on a single case is needed to retain the old behavior.
 
-##########################################################################################################################
-# ------------- RUSTC PROFILES SECTION -------------                                                                     #
-# `cargo build --profile profiling` and `cargo build --profile profiling-detailed` configuration for `rustc`.            #
-##########################################################################################################################
+# ┌──────────────────────────────────────────────────────────┐
+# │                    RUSTC PROFILES SECTION                │
+# │ `cargo build --profile profiling` and                    │
+# │ `cargo build --profile profiling-detailed` configuration │
+# │ for `rustc`.                                             │
+# └──────────────────────────────────────────────────────────┘
 [profile.profiling-detailed]
 inherits = "release"
 debug = true
@@ -108,3 +109,16 @@ strip = false
 lto = false
 codegen-units = 256
 opt-level = 2
+
+# ┌────────────────────────────────────────────────────────────────────────┐
+# │ Disable debug info in dev and test builds to speed up compilation.     │
+# │ https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey │
+# └────────────────────────────────────────────────────────────────────────┘
+[profile.release]
+debug = false
+
+[profile.dev]
+debug = false
+
+[profile.test]
+debug = false

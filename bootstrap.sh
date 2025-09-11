@@ -50,6 +50,7 @@ if ! command -v cargo &>/dev/null; then
 fi
 
 # Configure RUSTFLAGS for faster compilation on Linux
+# https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey-2025-results/
 if [[ "$OSTYPE" == "linux"* ]]; then
     if ! grep -q "RUSTFLAGS.*-Z threads=" "$HOME/.profile" 2>/dev/null; then
         echo "Configuring Rust parallel compiler for faster builds..."
@@ -163,7 +164,7 @@ if command -v npm &>/dev/null; then
         npm install -g @anthropic-ai/claude-code
         # Fix npm permissions
         sudo chown -R $USER:$(id -gn) $(npm -g config get prefix)
-        
+
         # Configure MCP servers for Claude
         if command -v claude &>/dev/null; then
             echo "Configuring Claude MCP servers..."
