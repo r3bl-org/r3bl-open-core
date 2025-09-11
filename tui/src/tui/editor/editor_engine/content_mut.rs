@@ -665,8 +665,6 @@ mod delete_selected_helper {
     /// This function extracts the parts of a line that should be kept when deleting a
     /// selected portion, then concatenates them to form the replacement line content.
     ///
-    /// # Visual Example
-    ///
     /// ```text
     /// Original line: "Hello [selected text] World"
     ///                      ^              ^

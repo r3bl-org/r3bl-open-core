@@ -2,8 +2,6 @@
 
 //! Character insertion, deletion, and erasure operations.
 
-use std::cmp::min;
-
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount};
 use crate::{LengthMarker, PixelChar, len};
@@ -12,7 +10,7 @@ use crate::{LengthMarker, PixelChar, len};
 /// Characters to the right of cursor shift left.
 /// Blank characters are inserted at the end of the line.
 ///
-/// # Visual Example (deleting 2 characters at cursor position)
+/// Example - Deleting 2 characters at cursor position
 ///
 /// ```text
 /// Before:
@@ -44,7 +42,7 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     }
 
     // Calculate how many characters we can actually delete
-    let how_many_clamped = min(how_many, max_width.remaining_from(cur_col));
+    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(cur_col));
 
     // Shift characters left to fill the gap using copy_within
     performer.ofs_buf.copy_chars_within_line(
@@ -73,7 +71,7 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Characters to the right of cursor shift right.
 /// Characters shifted beyond the right margin are lost.
 ///
-/// # Visual Example (inserting 2 blank characters at cursor position)
+/// Example - Inserting 2 blank characters at cursor position
 ///
 /// ```text
 /// Before:
@@ -105,7 +103,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     }
 
     // Calculate how many characters we can actually insert
-    let how_many_clamped = min(how_many, max_width.remaining_from(cur_col));
+    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(cur_col));
 
     // Use dedicated ICH method to insert characters at cursor
     performer.ofs_buf.insert_chars_at_cursor(
@@ -120,7 +118,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Characters are replaced with blanks, no shifting occurs.
 /// This is different from DCH which shifts characters left.
 ///
-/// # Visual Example (erasing 3 characters at cursor position)
+/// Example - Erasing 3 characters at cursor position
 ///
 /// ```text
 /// Before:
@@ -152,7 +150,7 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
     }
 
     // Calculate how many characters we can actually erase
-    let how_many_clamped = min(how_many, max_width.remaining_from(cur_col));
+    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(cur_col));
 
     // Use fill_char_range to erase characters
     performer.ofs_buf.fill_char_range(

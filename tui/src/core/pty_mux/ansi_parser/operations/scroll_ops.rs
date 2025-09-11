@@ -59,7 +59,7 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 /// The top line is lost, and a new empty line appears at bottom.
 /// Respects DECSTBM scroll region margins.
 ///
-/// # Visual Example (scrolling buffer up within scroll region)
+/// Example - scrolling buffer up within scroll region
 ///
 /// ```text
 /// Before:        Row: 0-based
@@ -125,7 +125,7 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
 /// The bottom line is lost, and a new empty line appears at top.
 /// Respects DECSTBM scroll region margins.
 ///
-/// # Visual Example (scrolling buffer down within scroll region)
+/// Example - Scrolling buffer down within scroll region
 ///
 /// ```text
 /// Before:        Row: 0-based

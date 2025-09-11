@@ -16,7 +16,7 @@ use crate::{BoundsCheck, BoundsOverflowStatus::Overflowed, ColIndex, Pos, RowInd
 /// Move cursor up by n lines.
 /// Respects DECSTBM scroll region margins.
 ///
-/// # Visual Example (moving cursor up by 2 lines with scroll region)
+/// Example - Moving cursor up by 2 lines with scroll region
 ///
 /// ```text
 /// Before:        Row: 0-based
@@ -95,7 +95,7 @@ pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Move cursor forward by n columns.
 ///
-/// # Visual Example (moving cursor forward by 3 columns)
+/// Example - Moving cursor forward by 3 columns
 ///
 /// ```text
 /// Before:

@@ -9,11 +9,11 @@ use crate::{ColWidth, LengthMarker, RowHeight, UnitCompare,
 
 /// Represents a length measurement in character units.
 ///
-/// A Length is a 1-based measurement (as opposed to 0-based indices) that represents
+/// A `Length` is a 1-based measurement (as opposed to 0-based indices) that represents
 /// the size or extent of something in the terminal UI, such as the width or height
 /// of a component. It wraps a [`ChUnit`] value.
 ///
-/// Length values can be created using the [`Length::new`] method, the [len] function,
+/// `Length` values can be created using the [`Length::new`] method, the [len] function,
 /// or by converting from various numeric types.
 ///
 /// # Examples

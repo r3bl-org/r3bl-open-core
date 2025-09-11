@@ -9,15 +9,15 @@ use crate::{IndexMarker, UnitCompare, create_numeric_arithmetic_operators};
 
 /// Represents an index position in character units.
 ///
-/// An Index is a 0-based measurement that represents a position within a component
+/// An `Index` is a 0-based measurement that represents a position within a component
 /// in the terminal UI, such as a row or column position. It wraps a [`ChUnit`] value.
 ///
-/// Index values can be created using the [`Index::new`] method, the [idx] function,
+/// `Index` values can be created using the [`Index::new`] method, the [idx] function,
 /// or by converting from various numeric types.
 ///
-/// The relationship between [Index] and [Length] is that:
-/// - A Length is 1-based (starts from 1)
-/// - An Index is 0-based (starts from 0)
+/// The relationship between [`Index`] and [`Length`] is that:
+/// - A `Length` is 1-based (starts from 1)
+/// - An `Index` is 0-based (starts from 0)
 /// - The last valid index in a component with length L is L-1
 ///
 /// # Examples
@@ -40,7 +40,7 @@ use crate::{IndexMarker, UnitCompare, create_numeric_arithmetic_operators};
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Index(pub ChUnit);
 
-/// Creates a new [Index] from a value that can be converted into an Index.
+/// Creates a new [`Index`] from a value that can be converted into an Index.
 ///
 /// This is a convenience function that is equivalent to calling [`Index::new`].
 ///
@@ -215,9 +215,7 @@ mod bounds_check_trait_impls {
     impl IndexMarker for Index {
         type LengthType = Length;
 
-        fn convert_to_length(&self) -> Self::LengthType {
-            self.convert_to_length()
-        }
+        fn convert_to_length(&self) -> Self::LengthType { self.convert_to_length() }
     }
 }
 

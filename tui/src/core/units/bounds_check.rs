@@ -109,7 +109,7 @@
 //! [`Length`]: crate::Length
 //! [`dimens`]: crate::dimens
 
-use std::ops::Sub;
+use std::{cmp::min, ops::Sub};
 
 use crate::{Length, len};
 
@@ -204,8 +204,6 @@ pub trait IndexMarker: UnitCompare {
     /// This typically involves adding 1 to the index value since
     /// indices are 0-based and lengths are 1-based.
     ///
-    /// # Visual Example
-    ///
     /// ```text
     /// Index=5 (0-based) to length (1-based) conversion:
     ///
@@ -224,12 +222,8 @@ pub trait IndexMarker: UnitCompare {
     /// Answers the question: "Does this index overflow this length?"
     ///
     /// Check if this index overflows the given length's bounds.
-    /// Returns true if the index is greater than or equal to the length.
-    ///
     /// This is the inverse of [`LengthMarker::is_overflowed_by`] and provides
     /// a natural way to express bounds checking from the index's perspective.
-    ///
-    /// # Visual Example
     ///
     /// ```text
     /// Checking if index overflows length:
@@ -246,6 +240,9 @@ pub trait IndexMarker: UnitCompare {
     /// overflows(length=10) = true (index 10 overflows length 10)
     /// overflows(length=5)  = false (index 5 within length 10)
     /// ```
+    ///
+    /// # Returns
+    /// true if the index is greater than or equal to the length.
     ///
     /// # Examples
     /// ```
@@ -291,8 +288,6 @@ pub trait LengthMarker: UnitCompare {
     /// This typically involves subtracting 1 from the length value since
     /// lengths are 1-based and indices are 0-based.
     ///
-    /// # Visual Example
-    ///
     /// ```text
     /// Length=10 to index conversion:
     ///           ┌────────── length=10 (1-based) ────────┐
@@ -309,13 +304,10 @@ pub trait LengthMarker: UnitCompare {
     /// Answers the question: "Does this length get overflowed by this index?"
     ///
     /// Check if the given index would overflow this length's bounds.
-    /// Returns true if the index is greater than or equal to the length.
     ///
-    /// # Visual Example
+    /// Example - Checking overflow for length=10
     ///
     /// ```text
-    /// Checking overflow for length=10:
-    ///
     ///                                             boundary
     ///                                                 │
     /// Index:    0   1   2   3   4   5   6   7   8   9 │ 10  11  12
@@ -330,6 +322,10 @@ pub trait LengthMarker: UnitCompare {
     /// is_overflowed_by(10) = true (at boundary)
     /// is_overflowed_by(11) = true (beyond boundary)
     /// ```
+    ///
+    /// # Returns
+    ///
+    /// Returns true if the index is greater than or equal to the length.
     ///
     /// # Examples
     /// ```
@@ -353,14 +349,6 @@ pub trait LengthMarker: UnitCompare {
 
     /// Calculate the remaining space from the given index to the end of this length.
     ///
-    /// Returns the number of units between the index and the boundary defined by this
-    /// length. For example, if this is a ColWidth of 10 and the index is at column 3,
-    /// this returns a Length of 7 (columns 3-9, inclusive).
-    ///
-    /// Returns Length(0) if the index is at or beyond the boundary.
-    ///
-    /// # Visual Example
-    ///
     /// ```text
     /// With max_width=10:
     ///
@@ -377,6 +365,13 @@ pub trait LengthMarker: UnitCompare {
     /// remaining_from(9)  = 1 (only position 9 remains)
     /// remaining_from(10) = 0 (at boundary, nothing remains)
     /// ```
+    ///
+    /// # Returns
+    /// The number of units between the index and the boundary defined by this
+    /// length. For example, if this is a ColWidth of 10 and the index is at column 3,
+    /// this returns a Length of 7 (columns 3-9, inclusive).
+    ///
+    /// Returns Length(0) if the index is at or beyond the boundary.
     ///
     /// # Examples
     /// ```
@@ -402,6 +397,64 @@ pub trait LengthMarker: UnitCompare {
             // Convert from 0-based index difference to 1-based length
             chars_remaining_as_index.convert_to_length().into()
         }
+    }
+
+    /// Clamps this length to a maximum value.
+    ///
+    /// ```text
+    /// Clamping operation with max_length=7:
+    ///
+    /// Case 1: length=5 (within bounds)
+    /// ┌───── length=5 ────┐
+    /// │ 1   2   3   4   5 │ 6   7 ← max_length boundary
+    /// ├───┬───┬───┬───┬───┼───┬───┤
+    /// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │   │   │
+    /// └───┴───┴───┴───┴───┴───┴───┘
+    ///
+    /// Result: clamp_to(5, max=7) = 5 (no change - within bounds)
+    ///
+    /// Case 2: length=10 (exceeds bounds)
+    /// ┌───────────── length=10 ───────────────┐
+    /// │ 1   2   3   4   5   6   7 │ 8   9   10 (trimmed)
+    /// ├───┬───┬───┬───┬───┬───┬───┼───┬───┬───┤
+    /// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │
+    /// └───┴───┴───┴───┴───┴───┴───┼───┴───┴───┘
+    ///                             └─ max_length=7 boundary
+    ///
+    /// Result: clamp_to(10, max=7) = 7 (clamped to maximum)
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// The smaller of this length or the maximum length provided.
+    /// This is commonly used when constraining operations to available space
+    /// or buffer boundaries.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use r3bl_tui::{LengthMarker, len};
+    ///
+    /// // Length within bounds - no change
+    /// let small_length = len(5);
+    /// let max_allowed = len(10);
+    /// assert_eq!(small_length.clamp_to(max_allowed), len(5));
+    ///
+    /// // Length exceeds bounds - gets clamped
+    /// let large_length = len(15);
+    /// let max_allowed = len(10);
+    /// assert_eq!(large_length.clamp_to(max_allowed), len(10));
+    ///
+    /// // Equal lengths - returns the same value
+    /// let equal_length = len(8);
+    /// let max_allowed = len(8);
+    /// assert_eq!(equal_length.clamp_to(max_allowed), len(8));
+    /// ```
+    fn clamp_to(&self, max_length: Self) -> Self
+    where
+        Self: Copy + Ord,
+    {
+        min(*self, max_length)
     }
 }
 
@@ -430,12 +483,7 @@ where
 {
     /// Performs array-style bounds checking.
     ///
-    /// Returns `BoundsOverflowStatus::Within` if the index can safely access content,
-    /// `BoundsOverflowStatus::Overflowed` if the index would exceed array bounds.
-    ///
     /// See the [module documentation](self) for detailed explanation of bounds checking.
-    ///
-    /// # Visual Example
     ///
     /// ```text
     /// Array-style bounds checking:
@@ -452,17 +500,16 @@ where
     /// check_overflows(length=5)  = Within
     /// check_overflows(length=10) = Overflowed
     /// ```
+    ///
+    /// # Returns
+    /// - [`BoundsOverflowStatus::Within`] if the index can safely access content,
+    /// - [`BoundsOverflowStatus::Overflowed`] if the index would exceed array bounds.
     fn check_overflows(&self, max: LengthType) -> BoundsOverflowStatus;
 
     /// Performs content position checking.
     ///
-    /// Returns `ContentPositionStatus` indicating whether the index is within content,
-    /// at a content boundary, or beyond content boundaries.
-    ///
     /// See the [module documentation](self) for detailed explanation of content position
     /// checking.
-    ///
-    /// # Visual Example
     ///
     /// ```text
     /// Content position checking:
@@ -482,6 +529,10 @@ where
     /// E = AtEnd (index=10)
     /// B = Beyond (index > 10)
     /// ```
+    ///
+    /// # Returns
+    /// [`ContentPositionStatus`] indicating whether the index is within content,
+    /// at a content boundary, or beyond content boundaries.
     fn check_content_position(&self, content_length: LengthType)
     -> ContentPositionStatus;
 }
@@ -1327,6 +1378,109 @@ mod tests {
                 RowHeight::new(value).as_usize(),
                 value,
                 "RowHeight {value} preserves value"
+            );
+        }
+    }
+
+    #[test]
+    fn test_clamp_to() {
+        // Test basic clamp operations with Length/Length
+        assert_eq!(
+            LengthMarker::clamp_to(&len(5), len(10)),
+            len(5),
+            "Length within bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&len(15), len(10)),
+            len(10),
+            "Length exceeds bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&len(8), len(8)),
+            len(8),
+            "Equal lengths - returns the same value"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&len(0), len(5)),
+            len(0),
+            "Zero length within bounds"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&len(0), len(0)),
+            len(0),
+            "Zero length with zero max"
+        );
+
+        // Test with typed length dimensions - ColWidth
+        let col_width_5 = ColWidth::new(5);
+        let col_width_10 = ColWidth::new(10);
+        let col_width_15 = ColWidth::new(15);
+
+        assert_eq!(
+            LengthMarker::clamp_to(&col_width_5, col_width_10),
+            col_width_5,
+            "ColWidth within bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&col_width_15, col_width_10),
+            col_width_10,
+            "ColWidth exceeds bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&col_width_10, col_width_10),
+            col_width_10,
+            "ColWidth equals bounds - returns max"
+        );
+
+        // Test with typed length dimensions - RowHeight
+        let row_height_3 = RowHeight::new(3);
+        let row_height_5 = RowHeight::new(5);
+        let row_height_7 = RowHeight::new(7);
+        let row_height_15 = RowHeight::new(15);
+        let row_height_20 = RowHeight::new(20);
+
+        assert_eq!(
+            LengthMarker::clamp_to(&row_height_3, row_height_15),
+            row_height_3,
+            "RowHeight within bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&row_height_7, row_height_5),
+            row_height_5,
+            "RowHeight exceeds smaller bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&row_height_20, row_height_15),
+            row_height_15,
+            "RowHeight exceeds larger bounds - gets clamped"
+        );
+
+        // Test edge cases
+        assert_eq!(
+            LengthMarker::clamp_to(&len(1), len(1)),
+            len(1),
+            "Single element case"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to(&len(100), len(1)),
+            len(1),
+            "Large value clamped to small max"
+        );
+
+        // Test that clamp_to always returns a value <= both inputs
+        let test_cases = [(5, 10), (10, 5), (0, 10), (10, 0), (7, 7), (100, 50)];
+        for (length_val, max_val) in test_cases {
+            let length = len(length_val);
+            let max_length = len(max_val);
+            let result = LengthMarker::clamp_to(&length, max_length);
+
+            assert!(
+                result.as_usize() <= length.as_usize(),
+                "clamp_to({length_val}, {max_val}) result should be <= original length"
+            );
+            assert!(
+                result.as_usize() <= max_length.as_usize(),
+                "clamp_to({length_val}, {max_val}) result should be <= max_length"
             );
         }
     }

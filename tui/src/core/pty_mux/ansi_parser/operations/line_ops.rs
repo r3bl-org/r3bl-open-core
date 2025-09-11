@@ -10,7 +10,7 @@ use crate::{RowIndex, len, row};
 /// Lines below cursor and within scroll region shift down.
 /// Lines scrolled off the bottom are lost.
 ///
-/// # Visual Example (inserting 2 blank lines at cursor position)
+/// Example - Inserting 2 blank lines at cursor position
 ///
 /// ```text
 /// Before:        Row: 0-based
@@ -52,7 +52,7 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Lines below cursor and within scroll region shift up.
 /// Blank lines are added at the bottom of the scroll region.
 ///
-/// # Visual Example (deleting 2 lines at cursor position)
+/// Example - Deleting 2 lines at cursor position
 ///
 /// ```text
 /// Before:        Row: 0-based
