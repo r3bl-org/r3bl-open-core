@@ -27,7 +27,6 @@
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount};
-use crate::{LengthMarker, PixelChar, len};
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
 /// Characters to the right of cursor shift left.
@@ -58,37 +57,10 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     let at = /* 0-based */ performer.ofs_buf.my_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
-    // Nothing to delete if cursor is at or beyond right margin
-    if max_width.is_overflowed_by(at) {
-        return;
-    }
-
-    // Calculate how many characters we can actually delete
-    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
-
-    // Copy characters from the right, overwriting the characters at cursor (this IS the
-    // deletion)
-    performer.ofs_buf.copy_chars_within_line(
-        at.row_index,
-        {
-            let start = at.col_index + how_many_clamped;
-            let end = max_width.convert_to_index() + len(1);
-            start..end
-        },
-        at.col_index,
-    );
-
-    // Clear the vacated space at the end (overwriting duplicates and filling with
-    // spacers)
-    performer.ofs_buf.fill_char_range(
-        at.row_index,
-        {
-            let start = max_width.convert_to_index() - how_many_clamped + len(1);
-            let end = max_width.convert_to_index() + len(1);
-            start..end
-        },
-        PixelChar::Spacer,
-    );
+    // Use dedicated DCH method to delete characters at cursor
+    performer
+        .ofs_buf
+        .delete_chars_at_cursor(at, how_many, max_width);
 }
 
 /// Handle ICH (Insert Character) - insert n blank characters at cursor position.
@@ -120,21 +92,10 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     let at = /* 0-based */ performer.ofs_buf.my_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
-    // Nothing to insert if cursor is at or beyond right margin
-    if max_width.is_overflowed_by(at) {
-        return;
-    }
-
-    // Calculate how many characters we can actually insert
-    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
-
     // Use dedicated ICH method to insert characters at cursor
-    performer.ofs_buf.insert_chars_at_cursor(
-        at.row_index,
-        at.col_index,
-        how_many_clamped,
-        max_width,
-    );
+    performer
+        .ofs_buf
+        .insert_chars_at_cursor(at, how_many, max_width);
 }
 
 /// Handle ECH (Erase Character) - erase n characters at cursor position.
@@ -145,7 +106,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// ```text
 /// Before:
-///           ╭────── max_width=10 (1-based) ─────╮
+///           ╭────── max_width=10 (1-based) ──────╮
 /// Column:   0   1   2   3   4   5   6   7   8   9
 ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
 /// Row:    │ A │ B │ C │ D │ E │ F │ G │ H │ I │ J │
@@ -166,22 +127,8 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
     let at = /* 0-based */ performer.ofs_buf.my_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
-    // Nothing to erase if cursor is at or beyond right margin
-    if max_width.is_overflowed_by(at) {
-        return;
-    }
-
-    // Calculate how many characters we can actually erase
-    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
-
-    // Use fill_char_range to erase characters
-    performer.ofs_buf.fill_char_range(
-        at.row_index,
-        {
-            let start = at.col_index;
-            let end = at.col_index + how_many_clamped;
-            start..end
-        },
-        PixelChar::Spacer,
-    );
+    // Use dedicated ECH method to erase characters at cursor
+    performer
+        .ofs_buf
+        .erase_chars_at_cursor(at, how_many, max_width);
 }

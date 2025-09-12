@@ -9,9 +9,12 @@ use super::{FlushKind, RenderOps};
 use crate::{CachedMemorySize, ColIndex, ColWidth, GetMemSize, InlineVec, Length, List,
             LockedOutputDevice, MemoizedMemorySize, MemorySize, Pos, RowIndex, Size,
             TinyInlineString, TuiColor, TuiStyle, col,
-            core::pty_mux::ansi_parser::term_units::TermRow, dim_underline, fg_green,
-            fg_magenta, get_mem_size, inline_string, ok, osc::OscEvent, row,
-            tiny_inline_string};
+            core::{pty_mux::ansi_parser::term_units::TermRow,
+                   units::bounds_check::LengthMarker},
+            dim_underline, fg_green, fg_magenta, get_mem_size, height, inline_string,
+            len, ok,
+            osc::OscEvent,
+            row, tiny_inline_string};
 
 /// Character set modes for terminal emulation.
 ///
@@ -644,42 +647,148 @@ mod ofs_buf_impl_buffer_shifting_ops {
 
     impl OffscreenBuffer {
         /// Insert blank characters at cursor position (for ICH - Insert Character).
-        /// Characters at and after the cursor shift right by `insert_count`.
+        /// Characters at and after the cursor shift right by `how_many`.
         /// Characters that would shift beyond the line width are lost.
         /// Returns true if the operation was successful.
         pub fn insert_chars_at_cursor(
             &mut self,
-            row: RowIndex,
-            cursor_col: ColIndex,
-            insert_count: Length,
-            max_col: ColWidth,
+            at: Pos,
+            how_many: Length,
+            max_width: ColWidth,
         ) -> bool {
-            let row_idx = row.as_usize();
-            if row_idx >= self.buffer.len() {
+            // Nothing to insert if cursor is at or beyond right margin
+            if max_width.is_overflowed_by(at) {
                 return false;
             }
 
-            let cursor_pos = cursor_col.as_usize();
-            let insert_amount = insert_count.as_usize();
-            let line_width = max_col.as_usize();
+            // Calculate how many characters we can actually insert
+            let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
-            if let Some(line) = self.buffer.get_mut(row_idx)
-                && cursor_pos < line_width
-                && insert_amount > 0
-            {
-                // Calculate how many chars we can actually insert
-                let actual_insert = insert_amount.min(line_width - cursor_pos);
+            // Exit early if nothing to insert
+            if how_many_clamped == len(0) {
+                return false;
+            }
 
+            let buffer_height = height(self.buffer.len());
+            if buffer_height.is_overflowed_by(at) {
+                return false;
+            }
+
+            let row_idx = at.row_index.as_usize();
+
+            let cursor_pos = at.col_index.as_usize();
+            let insert_amount = how_many_clamped.as_usize();
+            let line_width = max_width.as_usize();
+
+            if let Some(line) = self.buffer.get_mut(row_idx) {
                 // Copy characters to the right to make room for insertion
-                let dest_start = cursor_pos + actual_insert;
-                let source_end = line_width - actual_insert;
+                let dest_start = cursor_pos + insert_amount;
+                let source_end = line_width - insert_amount;
 
                 if dest_start < line_width && cursor_pos < source_end {
                     line.copy_within(cursor_pos..source_end, dest_start);
                 }
 
                 // Fill the cursor position with blanks
-                let fill_end = (cursor_pos + actual_insert).min(line_width);
+                let fill_end = (cursor_pos + insert_amount).min(line_width);
+                line[cursor_pos..fill_end].fill(PixelChar::Spacer);
+
+                self.invalidate_memory_size_calc_cache();
+                return true;
+            }
+            false
+        }
+
+        /// Delete characters at cursor position (for DCH - Delete Character).
+        /// Characters at and after the deletion point shift left by `how_many`.
+        /// Blank characters are inserted at the end of the line.
+        /// Returns true if the operation was successful.
+        pub fn delete_chars_at_cursor(
+            &mut self,
+            at: Pos,
+            how_many: Length,
+            max_width: ColWidth,
+        ) -> bool {
+            // Nothing to delete if cursor is at or beyond right margin
+            if max_width.is_overflowed_by(at) {
+                return false;
+            }
+
+            // Calculate how many characters we can actually delete
+            let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
+
+            // Exit early if nothing to delete
+            if how_many_clamped == len(0) {
+                return false;
+            }
+
+            let buffer_height = height(self.buffer.len());
+            if buffer_height.is_overflowed_by(at) {
+                return false;
+            }
+
+            // Copy characters from the right, overwriting the characters at cursor (this IS the
+            // deletion)
+            self.copy_chars_within_line(
+                at.row_index,
+                {
+                    let start = at.col_index + how_many_clamped;
+                    let end = max_width.convert_to_index() + len(1);
+                    start..end
+                },
+                at.col_index,
+            );
+
+            // Clear the vacated space at the end (overwriting duplicates and filling with
+            // spacers)
+            self.fill_char_range(
+                at.row_index,
+                {
+                    let start = max_width.convert_to_index() - how_many_clamped + len(1);
+                    let end = max_width.convert_to_index() + len(1);
+                    start..end
+                },
+                PixelChar::Spacer,
+            );
+
+            true
+        }
+
+        /// Erase characters at cursor position (for ECH - Erase Character).
+        /// Characters are replaced with blanks, no shifting occurs.
+        /// Returns true if the operation was successful.
+        pub fn erase_chars_at_cursor(
+            &mut self,
+            at: Pos,
+            how_many: Length,
+            max_width: ColWidth,
+        ) -> bool {
+            // Nothing to erase if cursor is at or beyond right margin
+            if max_width.is_overflowed_by(at) {
+                return false;
+            }
+
+            // Calculate how many characters we can actually erase
+            let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
+
+            // Exit early if nothing to erase
+            if how_many_clamped == len(0) {
+                return false;
+            }
+
+            let buffer_height = height(self.buffer.len());
+            if buffer_height.is_overflowed_by(at) {
+                return false;
+            }
+
+            let row_idx = at.row_index.as_usize();
+
+            let cursor_pos = at.col_index.as_usize();
+            let erase_amount = how_many_clamped.as_usize();
+
+            if let Some(line) = self.buffer.get_mut(row_idx) {
+                // Fill the range with blank characters
+                let fill_end = cursor_pos + erase_amount;
                 line[cursor_pos..fill_end].fill(PixelChar::Spacer);
 
                 self.invalidate_memory_size_calc_cache();
@@ -1039,7 +1148,7 @@ pub trait OffscreenBufferPaint {
 #[cfg(test)]
 mod tests {
     use super::{test_fixtures_offscreen_buffer::*, *};
-    use crate::{ANSIBasicColor, assert_eq2, height, new_style, tui_color,
+    use crate::{ANSIBasicColor, assert_eq2, new_style, tui_color,
                 tui_style_attrib::{Bold, Dim, Italic, Reverse, Underline},
                 tui_style_attribs, width};
 
@@ -1952,7 +2061,7 @@ pub mod test_fixtures_offscreen_buffer {
 #[cfg(test)]
 mod tests_buffer_manipulation {
     use super::*;
-    use crate::{height, width};
+    use crate::width;
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(5) + height(3);
@@ -2128,7 +2237,7 @@ mod tests_buffer_manipulation {
 #[cfg(test)]
 mod tests_line_operations {
     use super::*;
-    use crate::{height, len, width};
+    use crate::width;
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(4) + height(5);
@@ -2393,7 +2502,7 @@ mod tests_line_operations {
 #[cfg(test)]
 mod tests_char_shifting {
     use super::*;
-    use crate::{height, len, width};
+    use crate::width;
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(6) + height(3);
@@ -2429,7 +2538,7 @@ mod tests_char_shifting {
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
         // Insert 2 blank characters at position 2 (before 'C')
-        let result = buffer.insert_chars_at_cursor(test_row, col(2), len(2), width(6));
+        let result = buffer.insert_chars_at_cursor(test_row + col(2), len(2), width(6));
         assert!(result);
 
         // Expected result: "AB  CD" (E and F are pushed out)
@@ -2468,7 +2577,7 @@ mod tests_char_shifting {
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
         // Try to insert 10 characters at position 1 (more than remaining space)
-        let result = buffer.insert_chars_at_cursor(test_row, col(1), len(10), width(6));
+        let result = buffer.insert_chars_at_cursor(test_row + col(1), len(10), width(6));
         assert!(result);
 
         // Should insert as many as possible: "A     " (5 spaces, B-F pushed out)
@@ -2493,7 +2602,7 @@ mod tests_char_shifting {
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
         // Try to insert at the last position
-        let result = buffer.insert_chars_at_cursor(test_row, col(5), len(1), width(6));
+        let result = buffer.insert_chars_at_cursor(test_row + col(5), len(1), width(6));
         assert!(result);
 
         // Should insert one space, pushing F out: "ABCDE "
@@ -2512,23 +2621,532 @@ mod tests_char_shifting {
         let mut buffer = create_test_buffer();
 
         // Test with invalid row
-        let result1 = buffer.insert_chars_at_cursor(row(10), col(2), len(1), width(6));
+        let result1 = buffer.insert_chars_at_cursor(row(10) + col(2), len(1), width(6));
         assert!(!result1);
 
         // Test with cursor position beyond line width
-        let result2 = buffer.insert_chars_at_cursor(row(0), col(10), len(1), width(6));
+        let result2 = buffer.insert_chars_at_cursor(row(0) + col(10), len(1), width(6));
         assert!(!result2);
 
         // Test with zero insert count
-        let result3 = buffer.insert_chars_at_cursor(row(0), col(2), len(0), width(6));
+        let result3 = buffer.insert_chars_at_cursor(row(0) + col(2), len(0), width(6));
         assert!(!result3);
+    }
+
+    #[test]
+    fn test_delete_chars_at_cursor_basic() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Delete 2 characters at position 2 (delete 'C' and 'D')
+        let result = buffer.delete_chars_at_cursor(test_row + col(2), len(2), width(6));
+        assert!(result);
+
+        // Verify: "AB" + "EF" + "  " (CD deleted, EF shifted left, blanks at end)
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(1)))).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(2)))).unwrap(),
+            create_test_char('E')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(3)))).unwrap(),
+            create_test_char('F')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(4)))).unwrap(),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(5)))).unwrap(),
+            PixelChar::Spacer
+        );
+    }
+
+    #[test]
+    fn test_delete_chars_at_cursor_overflow() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(0);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Try to delete 10 characters at position 1 (more than remaining space)
+        let result = buffer.delete_chars_at_cursor(test_row + col(1), len(10), width(6));
+        assert!(result);
+
+        // Verify: "A" + "     " (BCDEF all deleted, 5 blanks at end)
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        for i in 1..6 {
+            assert_eq!(
+                buffer.get_char(Pos::new((test_row, col(i)))).unwrap(),
+                PixelChar::Spacer
+            );
+        }
+    }
+
+    #[test]
+    fn test_delete_chars_at_end_of_line() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Try to delete at the last position
+        let result = buffer.delete_chars_at_cursor(test_row + col(5), len(1), width(6));
+        assert!(result);
+
+        // Verify: "ABCDE " (F deleted, one blank at end)
+        for (i, expected_char) in ['A', 'B', 'C', 'D', 'E'].iter().enumerate() {
+            assert_eq!(
+                buffer.get_char(Pos::new((test_row, col(i)))).unwrap(),
+                create_test_char(*expected_char)
+            );
+        }
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(5)))).unwrap(),
+            PixelChar::Spacer
+        );
+    }
+
+    #[test]
+    fn test_delete_chars_invalid_conditions() {
+        let mut buffer = create_test_buffer();
+
+        // Test with invalid row
+        let result1 = buffer.delete_chars_at_cursor(row(10) + col(2), len(1), width(6));
+        assert!(!result1);
+
+        // Test with cursor position beyond line width
+        let result2 = buffer.delete_chars_at_cursor(row(0) + col(10), len(1), width(6));
+        assert!(!result2);
+
+        // Test with zero delete count
+        let result3 = buffer.delete_chars_at_cursor(row(0) + col(2), len(0), width(6));
+        assert!(!result3);
+    }
+
+    #[test]
+    fn test_erase_chars_at_cursor_basic() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Erase 3 characters at position 2 (erase 'C', 'D', 'E')
+        let result = buffer.erase_chars_at_cursor(test_row + col(2), len(3), width(6));
+        assert!(result);
+
+        // Verify: "AB" + "   " + "F" (CDE erased with blanks, F stays in place)
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(1)))).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(2)))).unwrap(),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(3)))).unwrap(),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(4)))).unwrap(),
+            PixelChar::Spacer
+        );
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(5)))).unwrap(),
+            create_test_char('F')
+        );
+    }
+
+    #[test]
+    fn test_erase_chars_at_cursor_overflow() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(0);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Try to erase 10 characters at position 1 (more than remaining space)
+        let result = buffer.erase_chars_at_cursor(test_row + col(1), len(10), width(6));
+        assert!(result);
+
+        // Verify: "A" + "     " (BCDEF all erased with blanks)
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(0)))).unwrap(),
+            create_test_char('A')
+        );
+        for i in 1..6 {
+            assert_eq!(
+                buffer.get_char(Pos::new((test_row, col(i)))).unwrap(),
+                PixelChar::Spacer
+            );
+        }
+    }
+
+    #[test]
+    fn test_erase_chars_at_end_of_line() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Set up initial line: "ABCDEF"
+        setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
+
+        // Try to erase at the last position
+        let result = buffer.erase_chars_at_cursor(test_row + col(5), len(1), width(6));
+        assert!(result);
+
+        // Verify: "ABCDE " (F erased with blank)
+        for (i, expected_char) in ['A', 'B', 'C', 'D', 'E'].iter().enumerate() {
+            assert_eq!(
+                buffer.get_char(Pos::new((test_row, col(i)))).unwrap(),
+                create_test_char(*expected_char)
+            );
+        }
+        assert_eq!(
+            buffer.get_char(Pos::new((test_row, col(5)))).unwrap(),
+            PixelChar::Spacer
+        );
+    }
+
+    #[test]
+    fn test_erase_chars_invalid_conditions() {
+        let mut buffer = create_test_buffer();
+
+        // Test with invalid row
+        let result1 = buffer.erase_chars_at_cursor(row(10) + col(2), len(1), width(6));
+        assert!(!result1);
+
+        // Test with cursor position beyond line width
+        let result2 = buffer.erase_chars_at_cursor(row(0) + col(10), len(1), width(6));
+        assert!(!result2);
+
+        // Test with zero erase count
+        let result3 = buffer.erase_chars_at_cursor(row(0) + col(2), len(0), width(6));
+        assert!(!result3);
+    }
+
+    #[test]
+    fn test_operations_at_line_start() {
+        let size = width(10) + height(3);
+        let mut buffer = OffscreenBuffer::new_empty(size);
+        let test_row = row(0);
+        
+        // Helper function to create test characters
+        fn create_test_char(ch: char) -> PixelChar {
+            PixelChar::PlainText {
+                display_char: ch,
+                maybe_style: None,
+            }
+        }
+        
+        // Set up initial line with characters: "ABCDEFGHIJ"
+        let chars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test delete at column 0 - should delete A,B and shift left
+        let result = buffer.delete_chars_at_cursor(test_row + col(0), len(2), width(10));
+        assert!(result);
+        
+        // Verify: C,D,E,F,G,H,I,J shifted left, blanks at end
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), create_test_char('C'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), create_test_char('D'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(7)))).unwrap(), create_test_char('J'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(8)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), PixelChar::Spacer);
+        
+        // Reset for insert test
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test insert at column 0 - should insert 2 blanks and shift right
+        let result = buffer.insert_chars_at_cursor(test_row + col(0), len(2), width(10));
+        assert!(result);
+        
+        // Verify: 2 blanks inserted at start, A-H shifted right, I,J lost
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(2)))).unwrap(), create_test_char('A'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), create_test_char('H'));
+        
+        // Reset for erase test
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test erase at column 0 - should erase A,B,C without shifting
+        let result = buffer.erase_chars_at_cursor(test_row + col(0), len(3), width(10));
+        assert!(result);
+        
+        // Verify: A,B,C erased (blanks), D-J remain in place
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(2)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(3)))).unwrap(), create_test_char('D'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), create_test_char('J'));
+    }
+
+    #[test]
+    fn test_single_char_operations() {
+        let size = width(5) + height(2);
+        let mut buffer = OffscreenBuffer::new_empty(size);
+        let test_row = row(0);
+        
+        // Helper function to create test characters
+        fn create_test_char(ch: char) -> PixelChar {
+            PixelChar::PlainText {
+                display_char: ch,
+                maybe_style: None,
+            }
+        }
+        
+        // Set up initial line with characters: "ABCDE"
+        let chars = ['A', 'B', 'C', 'D', 'E'];
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test single char delete at middle position (delete C)
+        let result = buffer.delete_chars_at_cursor(test_row + col(2), len(1), width(5));
+        assert!(result);
+        
+        // Verify: A,B remain, D,E shifted left, blank at end
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), create_test_char('A'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), create_test_char('B'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(2)))).unwrap(), create_test_char('D'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(3)))).unwrap(), create_test_char('E'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(4)))).unwrap(), PixelChar::Spacer);
+        
+        // Reset for insert test
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test single char insert at middle position (before C)
+        let result = buffer.insert_chars_at_cursor(test_row + col(2), len(1), width(5));
+        assert!(result);
+        
+        // Verify: A,B remain, blank inserted, C,D shifted right, E lost
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), create_test_char('A'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), create_test_char('B'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(2)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(3)))).unwrap(), create_test_char('C'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(4)))).unwrap(), create_test_char('D'));
+        
+        // Reset for erase test
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test single char erase at middle position (erase C)
+        let result = buffer.erase_chars_at_cursor(test_row + col(2), len(1), width(5));
+        assert!(result);
+        
+        // Verify: A,B remain, C erased (blank), D,E remain in place
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), create_test_char('A'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), create_test_char('B'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(2)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(3)))).unwrap(), create_test_char('D'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(4)))).unwrap(), create_test_char('E'));
+    }
+
+    #[test]
+    fn test_operations_on_empty_line() {
+        let size = width(8) + height(3);
+        let mut buffer = OffscreenBuffer::new_empty(size);
+        let test_row = row(0);
+        
+        // Helper function to create test characters
+        fn create_test_char(ch: char) -> PixelChar {
+            PixelChar::PlainText {
+                display_char: ch,
+                maybe_style: None,
+            }
+        }
+        
+        // Test delete on empty line (should succeed but do nothing)
+        let result = buffer.delete_chars_at_cursor(test_row + col(0), len(3), width(8));
+        assert!(result); // Should succeed on spacer-filled line
+        // Verify line remains empty
+        for i in 0..8 {
+            assert_eq!(buffer.get_char(Pos::new((test_row, col(i)))).unwrap(), PixelChar::Spacer);
+        }
+        
+        // Test insert on empty line at column 0
+        let result = buffer.insert_chars_at_cursor(test_row + col(0), len(3), width(8));
+        assert!(result);
+        // Verify 3 blanks were inserted (line now has length but no visible chars)
+        for i in 0..3 {
+            assert_eq!(buffer.get_char(Pos::new((test_row, col(i)))).unwrap(), PixelChar::Spacer);
+        }
+        
+        // Reset to empty line
+        buffer.buffer[test_row.as_usize()] = PixelCharLine::new_empty(width(8));
+        
+        // Test erase on empty line (should succeed but do nothing)
+        let result = buffer.erase_chars_at_cursor(test_row + col(0), len(2), width(8));
+        assert!(result); // Should succeed on spacer-filled line
+        // Verify line remains empty
+        for i in 0..8 {
+            assert_eq!(buffer.get_char(Pos::new((test_row, col(i)))).unwrap(), PixelChar::Spacer);
+        }
+        
+        // Test operations beyond line length on short line
+        let chars = ['A', 'B', 'C'];
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Try to delete at position beyond content length (but within width)
+        let result = buffer.delete_chars_at_cursor(test_row + col(5), len(1), width(8));
+        assert!(result); // Should succeed - position is within buffer width
+        // Verify original content unchanged
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), create_test_char('A'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), create_test_char('B'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(2)))).unwrap(), create_test_char('C'));
+        
+        // Try to insert at valid position within width but beyond content
+        let result = buffer.insert_chars_at_cursor(test_row + col(5), len(1), width(8));
+        assert!(result);
+        // Verify original content plus expanded line with blank
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(0)))).unwrap(), create_test_char('A'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(1)))).unwrap(), create_test_char('B'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(2)))).unwrap(), create_test_char('C'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(5)))).unwrap(), PixelChar::Spacer);
+    }
+
+    #[test]
+    fn test_exact_boundary_operations() {
+        let size = width(10) + height(3);
+        let mut buffer = OffscreenBuffer::new_empty(size);
+        let test_row = row(0);
+        
+        // Helper function to create test characters
+        fn create_test_char(ch: char) -> PixelChar {
+            PixelChar::PlainText {
+                display_char: ch,
+                maybe_style: None,
+            }
+        }
+        
+        // Set up line with exactly max width: "ABCDEFGHIJ"
+        let chars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test delete at exact right boundary (should do nothing)
+        let result = buffer.delete_chars_at_cursor(test_row + col(10), len(1), width(10));
+        assert!(!result); // Should fail - cursor is beyond valid position
+        // Verify line unchanged
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), create_test_char('J'));
+        
+        // Test delete at last valid position
+        let result = buffer.delete_chars_at_cursor(test_row + col(9), len(1), width(10));
+        assert!(result);
+        // Verify J deleted, blank at end
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(8)))).unwrap(), create_test_char('I'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), PixelChar::Spacer);
+        
+        // Reset for insert test
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test insert at exact right boundary (should do nothing)
+        let result = buffer.insert_chars_at_cursor(test_row + col(10), len(1), width(10));
+        assert!(!result); // Should fail - cursor is beyond valid position
+        // Verify line unchanged
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), create_test_char('J'));
+        
+        // Test insert at last valid position (should push rightmost char off)
+        let result = buffer.insert_chars_at_cursor(test_row + col(9), len(1), width(10));
+        assert!(result);
+        // Verify blank inserted at position 9, J pushed off
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(8)))).unwrap(), create_test_char('I'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), PixelChar::Spacer);
+        
+        // Reset for erase test
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Test erase at exact right boundary (should do nothing)
+        let result = buffer.erase_chars_at_cursor(test_row + col(10), len(1), width(10));
+        assert!(!result); // Should fail - cursor is beyond valid position
+        // Verify line unchanged
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), create_test_char('J'));
+        
+        // Test erase at last valid position
+        let result = buffer.erase_chars_at_cursor(test_row + col(9), len(1), width(10));
+        assert!(result);
+        // Verify J erased (blank), others remain
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(8)))).unwrap(), create_test_char('I'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), PixelChar::Spacer);
+        
+        // Test operations with count that would exceed boundary
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        
+        // Delete more chars than available from position 8 (only 2 chars: I,J)
+        let result = buffer.delete_chars_at_cursor(test_row + col(8), len(5), width(10));
+        assert!(result);
+        // Verify only 2 chars deleted, others remain, blanks at end
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(7)))).unwrap(), create_test_char('H'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(8)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), PixelChar::Spacer);
+        
+        // Reset and test insert with large count
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        let result = buffer.insert_chars_at_cursor(test_row + col(8), len(5), width(10));
+        assert!(result);
+        // Verify only 2 blanks inserted, I,J pushed off
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(7)))).unwrap(), create_test_char('H'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(8)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), PixelChar::Spacer);
+        
+        // Reset and test erase with large count
+        for (i, &ch) in chars.iter().enumerate() {
+            buffer.set_char(Pos::new((test_row, col(i))), create_test_char(ch));
+        }
+        let result = buffer.erase_chars_at_cursor(test_row + col(8), len(5), width(10));
+        assert!(result);
+        // Verify only 2 chars erased
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(7)))).unwrap(), create_test_char('H'));
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(8)))).unwrap(), PixelChar::Spacer);
+        assert_eq!(buffer.get_char(Pos::new((test_row, col(9)))).unwrap(), PixelChar::Spacer);
     }
 }
 
 #[cfg(test)]
 mod tests_bulk_operations {
     use super::*;
-    use crate::{height, width};
+    use crate::width;
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(4) + height(4);
