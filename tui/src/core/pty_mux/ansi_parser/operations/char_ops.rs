@@ -37,17 +37,17 @@ use crate::{LengthMarker, PixelChar, len};
 ///
 /// ```text
 /// Before:
-///           ╭────── max_width=10 (1-based) ─────╮
+///           ╭────── max_width=10 (1-based) ──────╮
 /// Column:   0   1   2   3   4   5   6   7   8   9
 ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │ c │ d │ E │ F │ G │   │   │   │
+/// Row:    │ A │ B │ c │ d │ E │ F │ G │ H │ I │ J │
 ///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
 ///                   ╰ cursor (col 2, 0-based)
 ///
 /// After DCH 2:
 /// Column:   0   1   2   3   4   5   6   7   8   9
 ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │ E │ F │ G │   │   │   │   │   │
+/// Row:    │ A │ B │ E │ F │ G │ H │ I │ J │   │   │
 ///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
 ///                   ╰ cursor (col 2, 0-based)
 ///
@@ -59,14 +59,15 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Nothing to delete if cursor is at or beyond right margin
-    if max_width.is_overflowed_by(at.col_index) {
+    if max_width.is_overflowed_by(at) {
         return;
     }
 
     // Calculate how many characters we can actually delete
-    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at.col_index));
+    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
-    // Shift characters left to fill the gap using copy_within
+    // Copy characters from the right, overwriting the characters at cursor (this IS the
+    // deletion)
     performer.ofs_buf.copy_chars_within_line(
         at.row_index,
         {
@@ -77,7 +78,8 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
         at.col_index,
     );
 
-    // Fill the end of the line with blank characters
+    // Clear the vacated space at the end (overwriting duplicates and filling with
+    // spacers)
     performer.ofs_buf.fill_char_range(
         at.row_index,
         {
@@ -119,12 +121,12 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Nothing to insert if cursor is at or beyond right margin
-    if max_width.is_overflowed_by(at.col_index) {
+    if max_width.is_overflowed_by(at) {
         return;
     }
 
     // Calculate how many characters we can actually insert
-    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at.col_index));
+    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
     // Use dedicated ICH method to insert characters at cursor
     performer.ofs_buf.insert_chars_at_cursor(
@@ -165,12 +167,12 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Nothing to erase if cursor is at or beyond right margin
-    if max_width.is_overflowed_by(at.col_index) {
+    if max_width.is_overflowed_by(at) {
         return;
     }
 
     // Calculate how many characters we can actually erase
-    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at.col_index));
+    let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
     // Use fill_char_range to erase characters
     performer.ofs_buf.fill_char_range(

@@ -255,10 +255,11 @@ pub trait IndexMarker: UnitCompare {
     /// let smaller_index = col(5);
     /// assert!(!smaller_index.overflows(max_width));  // Within bounds
     /// ```
-    fn overflows(&self, length: Self::LengthType) -> bool
+    fn overflows(&self, length_arg: impl Into<Self::LengthType>) -> bool
     where
         Self: PartialOrd + Sized + Copy,
     {
+        let length: Self::LengthType = length_arg.into();
         length.is_overflowed_by(*self)
     }
 }
@@ -329,17 +330,22 @@ pub trait LengthMarker: UnitCompare {
     ///
     /// # Examples
     /// ```
-    /// use r3bl_tui::{LengthMarker, col, width};
+    /// use r3bl_tui::{LengthMarker, col, row, width};
     ///
     /// let max_col = width(10);
     /// assert!(!max_col.is_overflowed_by(col(5)));  // Within bounds
     /// assert!(max_col.is_overflowed_by(col(10)));  // At boundary - overflows
     /// assert!(max_col.is_overflowed_by(col(15)));  // Beyond boundary
+    ///
+    /// // Pos (row + col) automatically converts to ColIndex
+    /// assert!(!max_col.is_overflowed_by(row(0) + col(5)));  // Pos converts to ColIndex
+    /// assert!(max_col.is_overflowed_by(row(2) + col(10)));  // Pos at boundary - overflows
     /// ```
-    fn is_overflowed_by(&self, index: Self::IndexType) -> bool
+    fn is_overflowed_by(&self, index_arg: impl Into<Self::IndexType>) -> bool
     where
         Self::IndexType: PartialOrd,
     {
+        let index: Self::IndexType = index_arg.into();
         // Special case: empty collection (length 0) has no valid indices
         if self.as_usize() == 0 {
             return true;
@@ -375,18 +381,23 @@ pub trait LengthMarker: UnitCompare {
     ///
     /// # Examples
     /// ```
-    /// use r3bl_tui::{LengthMarker, col, width, len};
+    /// use r3bl_tui::{LengthMarker, col, row, width, len};
     ///
     /// let max_width = width(10);
     /// assert_eq!(max_width.remaining_from(col(3)), len(7));  // 7 columns remain
     /// assert_eq!(max_width.remaining_from(col(10)), len(0)); // At boundary
     /// assert_eq!(max_width.remaining_from(col(15)), len(0)); // Beyond boundary
+    ///
+    /// // Pos (row + col) automatically converts to ColIndex
+    /// assert_eq!(max_width.remaining_from(row(0) + col(3)), len(7));  // Pos converts to ColIndex
+    /// assert_eq!(max_width.remaining_from(row(1) + col(10)), len(0)); // Pos at boundary
     /// ```
-    fn remaining_from(&self, index: Self::IndexType) -> Length
+    fn remaining_from(&self, index_arg: impl Into<Self::IndexType>) -> Length
     where
         Self::IndexType: PartialOrd + Sub<Output = Self::IndexType> + Copy,
         <Self::IndexType as IndexMarker>::LengthType: Into<Length>,
     {
+        let index: Self::IndexType = index_arg.into();
         if self.is_overflowed_by(index) {
             len(0)
         } else {
@@ -451,10 +462,11 @@ pub trait LengthMarker: UnitCompare {
     /// assert_eq!(equal_length.clamp_to(max_allowed), len(8));
     /// ```
     #[must_use]
-    fn clamp_to(&self, max_length: Self) -> Self
+    fn clamp_to(&self, max_length_arg: impl Into<Self>) -> Self
     where
         Self: Copy + Ord,
     {
+        let max_length: Self = max_length_arg.into();
         min(*self, max_length)
     }
 }

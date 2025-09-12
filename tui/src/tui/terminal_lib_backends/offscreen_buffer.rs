@@ -670,7 +670,7 @@ mod ofs_buf_impl_buffer_shifting_ops {
                 // Calculate how many chars we can actually insert
                 let actual_insert = insert_amount.min(line_width - cursor_pos);
 
-                // Shift characters right using copy_within
+                // Copy characters to the right to make room for insertion
                 let dest_start = cursor_pos + actual_insert;
                 let source_end = line_width - actual_insert;
 
