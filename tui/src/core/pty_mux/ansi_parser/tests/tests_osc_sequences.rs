@@ -4,7 +4,7 @@
 
 use super::tests_fixtures::*;
 use crate::{core::osc::{OscEvent, osc_codes::OscSequence},
-            offscreen_buffer::test_fixtures_offscreen_buffer::*};
+            offscreen_buffer::ofs_buf_test_fixtures::*};
 
 #[test]
 fn test_osc_title_sequences() {

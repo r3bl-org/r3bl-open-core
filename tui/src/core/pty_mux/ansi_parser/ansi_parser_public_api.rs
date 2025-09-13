@@ -220,7 +220,7 @@ mod tests {
                               term_units::{term_col, term_row},
                               tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c},
                 col,
-                offscreen_buffer::test_fixtures_offscreen_buffer::*,
+                offscreen_buffer::ofs_buf_test_fixtures::*,
                 row};
 
     #[test]

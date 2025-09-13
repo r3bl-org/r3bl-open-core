@@ -32,14 +32,7 @@ fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear
 /// Reset all SGR attributes to default state.
 fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.ansi_parser_support.current_style = None;
-    performer.ofs_buf.ansi_parser_support.attribs.bold = None;
-    performer.ofs_buf.ansi_parser_support.attribs.dim = None;
-    performer.ofs_buf.ansi_parser_support.attribs.italic = None;
-    performer.ofs_buf.ansi_parser_support.attribs.underline = None;
-    performer.ofs_buf.ansi_parser_support.attribs.blink = None;
-    performer.ofs_buf.ansi_parser_support.attribs.reverse = None;
-    performer.ofs_buf.ansi_parser_support.attribs.hidden = None;
-    performer.ofs_buf.ansi_parser_support.attribs.strikethrough = None;
+    performer.ofs_buf.ansi_parser_support.attribs.reset();
     performer.ofs_buf.ansi_parser_support.fg_color = None;
     performer.ofs_buf.ansi_parser_support.bg_color = None;
 }

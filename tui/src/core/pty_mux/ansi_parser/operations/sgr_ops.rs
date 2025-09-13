@@ -33,27 +33,30 @@ use crate::{TuiStyle, tui_style_attrib};
 
 /// Update the current `TuiStyle` based on SGR attributes.
 pub fn update_style(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.ansi_parser_support.current_style = Some(TuiStyle {
-        id: None,
-        attribs: performer.ofs_buf.ansi_parser_support.attribs,
-        computed: None,
-        color_fg: performer.ofs_buf.ansi_parser_support.fg_color,
-        color_bg: performer.ofs_buf.ansi_parser_support.bg_color,
-        padding: None,
-        lolcat: None,
-    });
+    let attribs = performer.ofs_buf.ansi_parser_support.attribs;
+    let fg_color = performer.ofs_buf.ansi_parser_support.fg_color;
+    let bg_color = performer.ofs_buf.ansi_parser_support.bg_color;
+
+    // If all attributes are None (after SGR reset), set current_style to None
+    // This ensures plain text has no styling
+    if attribs.is_none() && fg_color.is_none() && bg_color.is_none() {
+        performer.ofs_buf.ansi_parser_support.current_style = None;
+    } else {
+        performer.ofs_buf.ansi_parser_support.current_style = Some(TuiStyle {
+            id: None,
+            attribs,
+            computed: None,
+            color_fg: fg_color,
+            color_bg: bg_color,
+            padding: None,
+            lolcat: None,
+        });
+    }
 }
 
 /// Reset all SGR attributes to default state.
 fn reset_all_attributes(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.ansi_parser_support.attribs.bold = None;
-    performer.ofs_buf.ansi_parser_support.attribs.dim = None;
-    performer.ofs_buf.ansi_parser_support.attribs.italic = None;
-    performer.ofs_buf.ansi_parser_support.attribs.underline = None;
-    performer.ofs_buf.ansi_parser_support.attribs.blink = None;
-    performer.ofs_buf.ansi_parser_support.attribs.reverse = None;
-    performer.ofs_buf.ansi_parser_support.attribs.hidden = None;
-    performer.ofs_buf.ansi_parser_support.attribs.strikethrough = None;
+    performer.ofs_buf.ansi_parser_support.attribs.reset();
     performer.ofs_buf.ansi_parser_support.fg_color = None;
     performer.ofs_buf.ansi_parser_support.bg_color = None;
 }

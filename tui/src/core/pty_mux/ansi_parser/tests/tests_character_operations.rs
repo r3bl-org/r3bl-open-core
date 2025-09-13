@@ -6,7 +6,6 @@ use super::tests_fixtures::*;
 use crate::ansi_parser::protocols::csi_codes::CsiSequence;
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
-#[cfg(test)]
 fn create_alphabet_buffer() -> crate::OffscreenBuffer {
     let mut buf = create_test_offscreen_buffer_10r_by_10c();
     let alphabet = "ABCDEFGHIJ";

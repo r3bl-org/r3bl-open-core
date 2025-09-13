@@ -5,7 +5,7 @@
 use vte::Perform;
 
 use super::tests_fixtures::*;
-use crate::{AnsiToOfsBufPerformer, offscreen_buffer::test_fixtures_offscreen_buffer::*};
+use crate::{AnsiToOfsBufPerformer, offscreen_buffer::ofs_buf_test_fixtures::*};
 
 #[test]
 fn test_utf8_characters() {

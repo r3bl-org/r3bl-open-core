@@ -7,7 +7,7 @@ use vte::Perform;
 use super::tests_fixtures::*;
 use crate::{ANSIBasicColor, CharacterSet, SgrCode,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer, esc_codes},
-            offscreen_buffer::test_fixtures_offscreen_buffer::*,
+            offscreen_buffer::ofs_buf_test_fixtures::*,
             tui_style_attrib::{self}};
 
 /// Tests for SGR (Select Graphic Rendition) styling operations.
@@ -391,15 +391,8 @@ pub mod sgr_styling {
             "blink enabled",
         );
 
-        // Second char should not have blink
-        assert_styled_char_at(
-            &ofs_buf,
-            0,
-            1,
-            'B',
-            |style_from_buffer| style_from_buffer.attribs.blink.is_none(),
-            "blink reset",
-        );
+        // Second char should not have blink (should be plain text)
+        assert_plain_char_at(&ofs_buf, 0, 1, 'B');
     }
 }
 

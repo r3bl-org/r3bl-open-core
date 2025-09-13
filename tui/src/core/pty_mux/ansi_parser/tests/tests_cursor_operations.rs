@@ -15,7 +15,7 @@ use crate::{Pos,
                                       esc_codes},
                           term_units::{term_col, term_row}},
             col,
-            offscreen_buffer::test_fixtures_offscreen_buffer::*,
+            offscreen_buffer::ofs_buf_test_fixtures::*,
             row};
 
 /// Tests for absolute cursor positioning (CUP, HVP commands).

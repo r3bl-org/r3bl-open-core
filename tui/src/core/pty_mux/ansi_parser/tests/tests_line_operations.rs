@@ -9,7 +9,6 @@ use crate::{ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 
 /// Tests for Insert Line (IL) operations.
 pub mod insert_line {
-
     use super::*;
 
     #[test]

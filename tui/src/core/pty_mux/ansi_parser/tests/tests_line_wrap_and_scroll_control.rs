@@ -12,10 +12,10 @@ use crate::{ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           term_units::{term_col, term_row}},
             col,
             core::pty_mux::ansi_parser::esc_codes::RIS_RESET_TERMINAL,
-            offscreen_buffer::test_fixtures_offscreen_buffer::*,
+            offscreen_buffer::ofs_buf_test_fixtures::*,
             row};
 
-pub fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {
+fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {
     for r in 0..ofs_buf.window_size.row_height.as_usize() {
         let line_text = format!("Line-{r}");
         for (c, char) in line_text.chars().enumerate() {

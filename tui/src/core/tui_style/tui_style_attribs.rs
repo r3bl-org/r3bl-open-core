@@ -4,8 +4,76 @@ use core::fmt::Debug;
 use std::ops::{Add, AddAssign};
 
 /// Contains the visual style attributes that can be applied to text.
+///
 /// This struct is shared between `TuiStyle` (which adds id, computed, padding, lolcat)
 /// and `AnsiToOfsBufPerformer` (which uses these for ANSI sequence processing).
+///
+/// ## Usage Patterns
+///
+/// The struct uses a newtype pattern with `Option<T>` instead of `bool` for each
+/// attribute, allowing for flexible composition and combination of styles.
+///
+/// ### Single Attribute
+///
+/// ```rust
+/// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib};
+///
+/// // Create a single bold attribute
+/// let bold_attribs: TuiStyleAttribs = tui_style_attrib::Bold.into();
+///
+/// // Or using From trait
+/// let italic_attribs = TuiStyleAttribs::from(tui_style_attrib::Italic);
+/// ```
+///
+/// ### Combining Multiple Attributes with + Operator
+///
+/// ```rust
+/// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib::{Bold, Italic, Underline}};
+///
+/// // Combine two attributes
+/// let bold_italic: TuiStyleAttribs = Bold + Italic;
+///
+/// // Combine multiple attributes
+/// let complex_style = Bold + Italic + Underline;
+///
+/// // Add to existing attributes
+/// let mut style = TuiStyleAttribs::from(Bold);
+/// style = style + Italic;
+/// ```
+///
+/// ### Using the Helper Function
+///
+/// ```rust
+/// use r3bl_tui::{tui_style_attribs, tui_style_attrib::{Bold, Dim, Reverse}};
+///
+/// // More ergonomic for complex combinations
+/// let styled = tui_style_attribs(Bold + Dim + Reverse);
+///
+/// // Single attribute
+/// let simple = tui_style_attribs(Bold);
+/// ```
+///
+/// ### Using += Operator for Mutating
+///
+/// ```rust
+/// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib::{Bold, Italic}};
+///
+/// let mut attribs = TuiStyleAttribs::default();
+/// attribs += Bold;
+/// attribs += Italic;
+/// ```
+///
+/// ### Checking and Resetting State
+///
+/// ```rust
+/// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib::Bold};
+///
+/// let mut attribs = TuiStyleAttribs::from(Bold);
+/// assert!(!attribs.is_none()); // Has styling
+///
+/// attribs.reset();
+/// assert!(attribs.is_none()); // No styling
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default, Debug)]
 pub struct TuiStyleAttribs {
     // XMARK: Use of newtype pattern `Option<T>` instead of `bool`.
@@ -17,6 +85,63 @@ pub struct TuiStyleAttribs {
     pub reverse: Option<tui_style_attrib::Reverse>,
     pub hidden: Option<tui_style_attrib::Hidden>,
     pub strikethrough: Option<tui_style_attrib::Strikethrough>,
+}
+
+impl TuiStyleAttribs {
+    /// Returns `true` if all style attributes are `None` (i.e., the struct is in its
+    /// default state).
+    ///
+    /// This is useful for checking if any styling is actually applied.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib};
+    ///
+    /// let empty_attribs = TuiStyleAttribs::default();
+    /// assert!(empty_attribs.is_none());
+    ///
+    /// let styled_attribs = TuiStyleAttribs::from(tui_style_attrib::Bold);
+    /// assert!(!styled_attribs.is_none());
+    /// ```
+    #[must_use]
+    pub fn is_none(&self) -> bool {
+        self.bold.is_none()
+            && self.italic.is_none()
+            && self.dim.is_none()
+            && self.underline.is_none()
+            && self.blink.is_none()
+            && self.reverse.is_none()
+            && self.hidden.is_none()
+            && self.strikethrough.is_none()
+    }
+
+    /// Resets all style attributes to `None`, returning the struct to its default state.
+    ///
+    /// This is equivalent to creating a new `TuiStyleAttribs::default()` but operates
+    /// on an existing instance.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use r3bl_tui::{TuiStyleAttribs, tui_style_attrib};
+    ///
+    /// let mut attribs = TuiStyleAttribs::from(tui_style_attrib::Bold + tui_style_attrib::Italic);
+    /// assert!(!attribs.is_none());
+    ///
+    /// attribs.reset();
+    /// assert!(attribs.is_none());
+    /// ```
+    pub fn reset(&mut self) {
+        self.bold = None;
+        self.italic = None;
+        self.dim = None;
+        self.underline = None;
+        self.blink = None;
+        self.reverse = None;
+        self.hidden = None;
+        self.strikethrough = None;
+    }
 }
 
 pub mod tui_style_attrib {

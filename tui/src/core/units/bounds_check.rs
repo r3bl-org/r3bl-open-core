@@ -255,11 +255,11 @@ pub trait IndexMarker: UnitCompare {
     /// let smaller_index = col(5);
     /// assert!(!smaller_index.overflows(max_width));  // Within bounds
     /// ```
-    fn overflows(&self, length_arg: impl Into<Self::LengthType>) -> bool
+    fn overflows(&self, arg_length: impl Into<Self::LengthType>) -> bool
     where
         Self: PartialOrd + Sized + Copy,
     {
-        let length: Self::LengthType = length_arg.into();
+        let length: Self::LengthType = arg_length.into();
         length.is_overflowed_by(*self)
     }
 }
@@ -341,11 +341,11 @@ pub trait LengthMarker: UnitCompare {
     /// assert!(!max_col.is_overflowed_by(row(0) + col(5)));  // Pos converts to ColIndex
     /// assert!(max_col.is_overflowed_by(row(2) + col(10)));  // Pos at boundary - overflows
     /// ```
-    fn is_overflowed_by(&self, index_arg: impl Into<Self::IndexType>) -> bool
+    fn is_overflowed_by(&self, arg_index: impl Into<Self::IndexType>) -> bool
     where
         Self::IndexType: PartialOrd,
     {
-        let index: Self::IndexType = index_arg.into();
+        let index: Self::IndexType = arg_index.into();
         // Special case: empty collection (length 0) has no valid indices
         if self.as_usize() == 0 {
             return true;
@@ -392,12 +392,12 @@ pub trait LengthMarker: UnitCompare {
     /// assert_eq!(max_width.remaining_from(row(0) + col(3)), len(7));  // Pos converts to ColIndex
     /// assert_eq!(max_width.remaining_from(row(1) + col(10)), len(0)); // Pos at boundary
     /// ```
-    fn remaining_from(&self, index_arg: impl Into<Self::IndexType>) -> Length
+    fn remaining_from(&self, arg_index: impl Into<Self::IndexType>) -> Length
     where
         Self::IndexType: PartialOrd + Sub<Output = Self::IndexType> + Copy,
         <Self::IndexType as IndexMarker>::LengthType: Into<Length>,
     {
-        let index: Self::IndexType = index_arg.into();
+        let index: Self::IndexType = arg_index.into();
         if self.is_overflowed_by(index) {
             len(0)
         } else {
@@ -416,7 +416,7 @@ pub trait LengthMarker: UnitCompare {
     /// Clamping operation with max_length=7:
     ///
     /// Case 1: length=5 (within bounds)
-    /// ┌───── length=5 ────┐
+    /// ┌───── length=5 ─────┐
     /// │ 1   2   3   4   5 │ 6   7 ← max_length boundary
     /// ├───┬───┬───┬───┬───┼───┬───┤
     /// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │   │   │
@@ -425,7 +425,7 @@ pub trait LengthMarker: UnitCompare {
     /// Result: clamp_to(5, max=7) = 5 (no change - within bounds)
     ///
     /// Case 2: length=10 (exceeds bounds)
-    /// ┌───────────── length=10 ───────────────┐
+    /// ┌───────────── length=10 ──────────────┐
     /// │ 1   2   3   4   5   6   7 │ 8   9   10 (trimmed)
     /// ├───┬───┬───┬───┬───┬───┬───┼───┬───┬───┤
     /// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │
@@ -462,11 +462,11 @@ pub trait LengthMarker: UnitCompare {
     /// assert_eq!(equal_length.clamp_to(max_allowed), len(8));
     /// ```
     #[must_use]
-    fn clamp_to(&self, max_length_arg: impl Into<Self>) -> Self
+    fn clamp_to(&self, arg_max_length: impl Into<Self>) -> Self
     where
         Self: Copy + Ord,
     {
-        let max_length: Self = max_length_arg.into();
+        let max_length: Self = arg_max_length.into();
         min(*self, max_length)
     }
 }

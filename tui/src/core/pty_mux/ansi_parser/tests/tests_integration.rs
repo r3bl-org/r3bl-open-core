@@ -10,7 +10,7 @@ use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, TuiColor,
                           esc_codes::EscSequence,
                           term_units::{term_col, term_row}},
             height,
-            offscreen_buffer::test_fixtures_offscreen_buffer::*,
+            offscreen_buffer::ofs_buf_test_fixtures::*,
             tui_style_attrib, width};
 
 /// Create a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal size).
@@ -19,7 +19,7 @@ fn create_offscreen_buffer_24r_by_80c() -> OffscreenBuffer {
 }
 
 /// Tests for complex real-world ANSI sequences.
-pub mod full_sequences {
+mod full_sequences {
     use super::*;
 
     #[test]
@@ -117,7 +117,7 @@ pub mod full_sequences {
 }
 
 /// Tests for VTE parser integration.
-pub mod vte_parser {
+mod vte_parser {
     use super::*;
 
     #[test]

@@ -1179,6 +1179,5 @@ mod tests {
             assert!(debug_output.contains("row: 5"));
             assert!(debug_output.contains("col: 10"));
         }
-
     }
 }

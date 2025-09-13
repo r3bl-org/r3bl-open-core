@@ -40,9 +40,9 @@ impl<T, const N: usize> RingBuffer<T, N> for RingBufferHeap<T, N> {
         self.internal_storage.iter_mut().for_each(|x| *x = None);
     }
 
-    fn get(&self, index_arg: impl Into<Index>) -> Option<&T> {
+    fn get(&self, arg_index: impl Into<Index>) -> Option<&T> {
         let index = {
-            let it: Index = index_arg.into();
+            let it: Index = arg_index.into();
             it.as_usize()
         };
 
