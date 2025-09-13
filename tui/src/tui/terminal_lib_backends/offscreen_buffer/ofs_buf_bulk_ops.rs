@@ -29,7 +29,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bulk_ops {
     use super::*;
-    use crate::{col, height, row, width};
+    use crate::{col, height, row, width, TuiStyle};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(4) + height(4);
@@ -39,7 +39,7 @@ mod tests_bulk_ops {
     fn create_test_char(ch: char) -> PixelChar {
         PixelChar::PlainText {
             display_char: ch,
-            maybe_style: None,
+            style: TuiStyle::default(),
         }
     }
 

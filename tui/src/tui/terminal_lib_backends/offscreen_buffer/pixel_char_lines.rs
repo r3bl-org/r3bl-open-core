@@ -48,7 +48,7 @@ impl PixelCharLines {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PixelChar, height, width};
+    use crate::{PixelChar, TuiStyle, height, width};
 
     #[test]
     fn test_pixel_char_lines_new_empty() {
@@ -117,7 +117,7 @@ mod tests {
         // Test deref_mut functionality
         lines[0][0] = PixelChar::PlainText {
             display_char: 'A',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         lines[1][1] = PixelChar::Void;
 
@@ -183,7 +183,7 @@ mod tests {
 
         lines[0][0] = PixelChar::PlainText {
             display_char: 'X',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         lines[1][1] = PixelChar::Void;
 

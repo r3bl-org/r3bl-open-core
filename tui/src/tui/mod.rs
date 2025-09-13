@@ -39,6 +39,10 @@ pub const DEBUG_TUI_SHOW_PIPELINE_EXPANDED: bool = false;
 /// [`crate::queue_render_op`!] debugging output.
 pub const DEBUG_TUI_SHOW_TERMINAL_BACKEND: bool = false;
 
+/// Unicode replacement character used when a grapheme cluster cannot be converted to a single char.
+/// This character (�) is the standard fallback for invalid/undisplayable characters.
+pub const UNICODE_REPLACEMENT_CHAR: char = '�';
+
 // Attach sources.
 pub mod animator;
 pub mod cmd_line_args;

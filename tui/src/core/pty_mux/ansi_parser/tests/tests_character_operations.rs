@@ -4,6 +4,7 @@
 
 use super::tests_fixtures::*;
 use crate::ansi_parser::protocols::csi_codes::CsiSequence;
+use crate::TuiStyle;
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
 fn create_alphabet_buffer() -> crate::OffscreenBuffer {
@@ -12,7 +13,7 @@ fn create_alphabet_buffer() -> crate::OffscreenBuffer {
     for (i, ch) in alphabet.chars().enumerate() {
         buf.buffer[0][i] = crate::PixelChar::PlainText {
             display_char: ch,
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
     }
     buf

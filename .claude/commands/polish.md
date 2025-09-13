@@ -1,6 +1,6 @@
 # Rust code quality
 
-For the code in the `tui`,  `cmdr`, `analytics_schema/` folders (each of which contains a
+For the code in the `tui`, `cmdr`, `analytics_schema/` folders (each of which contains a
 crate), do the following:
 
 > If any cargo commands generate a ICE (Internal Compiler Error), then run `cargo clean` and try again.

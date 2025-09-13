@@ -921,7 +921,7 @@ mod tests {
             {
                 let PixelChar::PlainText {
                     display_char,
-                    maybe_style: _,
+                    style: _,
                 } = ofs_buf.buffer[4][7]
                 else {
                     panic!(
@@ -936,7 +936,7 @@ mod tests {
             {
                 let PixelChar::PlainText {
                     display_char,
-                    maybe_style: _,
+                    style: _,
                 } = ofs_buf.buffer[10][7]
                 else {
                     panic!(
@@ -954,10 +954,10 @@ mod tests {
                 assert_eq2!(
                     PixelChar::PlainText {
                         display_char: 'S',
-                        maybe_style: Some(TuiStyle {
+                        style: TuiStyle {
                             color_fg: Some(tui_color!(102, 0, 255)),
                             ..Default::default()
-                        }),
+                        },
                     },
                     ofs_buf.buffer[4][7].clone()
                 );
@@ -968,14 +968,14 @@ mod tests {
                 assert_eq2!(
                     PixelChar::PlainText {
                         display_char: 'H',
-                        maybe_style: Some(TuiStyle {
+                        style: TuiStyle {
                             id: None,
                             attribs: TuiStyleAttribs {
                                 dim: Some(tui_style_attrib::Dim),
                                 ..Default::default()
                             },
                             ..Default::default()
-                        }),
+                        },
                     },
                     ofs_buf.buffer[10][7].clone()
                 );

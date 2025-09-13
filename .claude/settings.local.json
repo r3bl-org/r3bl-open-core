@@ -72,7 +72,9 @@
       "WebSearch",
       "mcp__serena__read_file",
       "Read(//tmp/**)",
-      "WebFetch(domain:vt100.net)"
+      "WebFetch(domain:vt100.net)",
+      "Read(//home/nazmul/github/notes/files/scripts/systemd/**)",
+      "Read(//home/nazmul/github/notes/files/scripts/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

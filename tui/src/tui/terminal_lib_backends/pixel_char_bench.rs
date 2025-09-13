@@ -87,15 +87,15 @@ mod pixel_char_benchmarks {
             let ch = match i % 3 {
                 0 => PixelChar::PlainText {
                     display_char: ((i % 26) as u8 + b'a') as char,
-                    maybe_style: Some(TuiStyle {
+                    style: TuiStyle {
                         color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255))),
                         color_bg: Some(TuiColor::Rgb(RgbValue::from_u8(0, 0, 0))),
                         ..Default::default()
-                    }),
+                    },
                 },
                 1 => PixelChar::PlainText {
                     display_char: ' ',
-                    maybe_style: None,
+                    style: TuiStyle::default(),
                 },
                 _ => PixelChar::Spacer,
             };
@@ -113,7 +113,7 @@ mod pixel_char_benchmarks {
             for i in 0..80 {
                 let ch = PixelChar::PlainText {
                     display_char: ((i % 26) as u8 + b'a') as char,
-                    maybe_style: None,
+                    style: TuiStyle::default(),
                 };
                 line.push(ch);
             }
@@ -129,7 +129,7 @@ mod pixel_char_benchmarks {
             for i in 0..80 {
                 let ch = PixelChar::PlainText {
                     display_char: ((i % 26) as u8 + b'a') as char,
-                    maybe_style: None,
+                    style: TuiStyle::default(),
                 };
                 line.push(ch);
             }
@@ -145,7 +145,7 @@ mod pixel_char_benchmarks {
             for i in 0..80 {
                 let ch = PixelChar::PlainText {
                     display_char: ((i % 26) as u8 + b'a') as char,
-                    maybe_style: None,
+                    style: TuiStyle::default(),
                 };
                 line.push(ch);
             }
@@ -273,7 +273,7 @@ mod pixel_char_benchmarks {
             for i in 0..8 {
                 line.push(PixelChar::PlainText {
                     display_char: ((i % 26) as u8 + b'a') as char,
-                    maybe_style: None,
+                    style: TuiStyle::default(),
                 });
             }
             test::black_box(line)
@@ -288,7 +288,7 @@ mod pixel_char_benchmarks {
             for i in 0..8 {
                 line.push(PixelChar::PlainText {
                     display_char: ((i % 26) as u8 + b'a') as char,
-                    maybe_style: None,
+                    style: TuiStyle::default(),
                 });
             }
             test::black_box(line)

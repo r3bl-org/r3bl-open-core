@@ -128,7 +128,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_line_level_ops {
     use super::*;
-    use crate::{col, height, len, row, width};
+    use crate::{col, height, len, row, width, TuiStyle};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(4) + height(5);
@@ -138,7 +138,7 @@ mod tests_line_level_ops {
     fn create_test_char(ch: char) -> PixelChar {
         PixelChar::PlainText {
             display_char: ch,
-            maybe_style: None,
+            style: TuiStyle::default(),
         }
     }
 

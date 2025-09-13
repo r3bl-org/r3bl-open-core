@@ -6,8 +6,8 @@ use smallvec::{SmallVec, smallvec};
 use strum_macros::EnumCount;
 
 use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, GCStringOwned, InlineString,
-            InlineVec, PixelChar, SgrCode, TuiStyle, WriteToBuf, inline_string,
-            tui_color,
+            InlineVec, PixelChar, SPACER_GLYPH_CHAR, SgrCode, TuiStyle,
+            UNICODE_REPLACEMENT_CHAR, WriteToBuf, inline_string, tui_color,
             tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse, Strikethrough,
                                Underline}};
 
@@ -182,13 +182,11 @@ pub mod ansi_styled_text_impl {
 
             let mut acc = InlineString::with_capacity(self.text.len());
             for pixel_char in &ir_text {
-                if let PixelChar::PlainText {
-                    display_char,
-                    maybe_style: _,
-                } = pixel_char
-                {
-                    acc.push(*display_char);
-                }
+                let char_to_push = match pixel_char {
+                    PixelChar::PlainText { display_char, .. } => *display_char,
+                    PixelChar::Spacer | PixelChar::Void => SPACER_GLYPH_CHAR,
+                };
+                acc.push(char_to_push);
             }
 
             ASText {
@@ -234,10 +232,13 @@ pub mod ansi_styled_text_impl {
                     // For multi-char graphemes, use the first char or fallback to
                     // replacement char
                     let segment_str = item.get_str(&gc_string);
-                    let display_char = segment_str.chars().next().unwrap_or('�');
+                    let display_char = segment_str
+                        .chars()
+                        .next()
+                        .unwrap_or(UNICODE_REPLACEMENT_CHAR);
                     let pixel_char = PixelChar::PlainText {
                         display_char,
-                        maybe_style: maybe_tui_style,
+                        style: maybe_tui_style.unwrap_or_default(),
                     };
                     acc.push(pixel_char);
                 }
@@ -1235,35 +1236,35 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'H',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[1],
                 PixelChar::PlainText {
                     display_char: 'e',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[2],
                 PixelChar::PlainText {
                     display_char: 'l',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[3],
                 PixelChar::PlainText {
                     display_char: 'l',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1277,14 +1278,14 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'H',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[10],
                 PixelChar::PlainText {
                     display_char: 'd',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1301,14 +1302,14 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'W',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[4],
                 PixelChar::PlainText {
                     display_char: 'd',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1325,14 +1326,14 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'H',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1349,14 +1350,14 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'l',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[6],
                 PixelChar::PlainText {
                     display_char: 'r',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1385,14 +1386,14 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'T',
-                    maybe_style: None
+                    style: TuiStyle::default()
                 }
             );
             assert_eq!(
                 res[3],
                 PixelChar::PlainText {
                     display_char: 't',
-                    maybe_style: None
+                    style: TuiStyle::default()
                 }
             );
         }
@@ -1441,14 +1442,14 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'r',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[2],
                 PixelChar::PlainText {
                     display_char: 'd',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1465,7 +1466,7 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'W',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1486,14 +1487,14 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: '好',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
             assert_eq!(
                 res[1],
                 PixelChar::PlainText {
                     display_char: '世',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1508,7 +1509,7 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'H',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }
@@ -1523,7 +1524,7 @@ mod tests {
                 res[0],
                 PixelChar::PlainText {
                     display_char: 'H',
-                    maybe_style: Some(tui_style)
+                    style: tui_style
                 }
             );
         }

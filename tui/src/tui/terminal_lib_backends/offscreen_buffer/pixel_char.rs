@@ -16,7 +16,7 @@ pub enum PixelChar {
     Spacer,
     PlainText {
         display_char: char,
-        maybe_style: Option<TuiStyle>,
+        style: TuiStyle,
     },
 }
 
@@ -47,21 +47,18 @@ impl Debug for PixelChar {
             }
             PixelChar::PlainText {
                 display_char,
-                maybe_style,
+                style,
             } => {
-                match maybe_style {
-                    // Content + style.
-                    Some(style) => {
-                        write!(
-                            f,
-                            " {} '{display_char}'→{style: ^WIDTH$}",
-                            fg_magenta("P")
-                        )?;
-                    }
+                if style == &TuiStyle::default() {
                     // Content, no style.
-                    _ => {
-                        write!(f, " {} '{display_char}': ^WIDTH$", fg_magenta("P"))?;
-                    }
+                    write!(f, " {} '{display_char}': ^WIDTH$", fg_magenta("P"))?;
+                } else {
+                    // Content + style.
+                    write!(
+                        f,
+                        " {} '{display_char}'→{style: ^WIDTH$}",
+                        fg_magenta("P")
+                    )?;
                 }
             }
         }
@@ -105,16 +102,16 @@ mod tests {
         // Test PlainText with no style
         ofs_buf.buffer[0][1] = PixelChar::PlainText {
             display_char: 'a',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
 
         match &ofs_buf.buffer[0][1] {
             PixelChar::PlainText {
                 display_char,
-                maybe_style,
+                style,
             } => {
                 assert_eq!(*display_char, 'a');
-                assert!(maybe_style.is_none());
+                assert_eq!(*style, TuiStyle::default());
             }
             _ => panic!("Expected PlainText variant"),
         }
@@ -122,23 +119,20 @@ mod tests {
         // Test PlainText with style
         ofs_buf.buffer[0][2] = PixelChar::PlainText {
             display_char: 'b',
-            maybe_style: Some(new_style!(underline color_fg: {tui_color!(red)})),
+            style: new_style!(underline color_fg: {tui_color!(red)}),
         };
 
         match &ofs_buf.buffer[0][2] {
             PixelChar::PlainText {
                 display_char,
-                maybe_style,
+                style,
             } => {
                 assert_eq!(*display_char, 'b');
-                assert!(maybe_style.is_some());
-                if let Some(style) = maybe_style {
-                    assert_eq!(style.attribs, tui_style_attribs(Underline));
-                    assert_eq!(
-                        style.color_fg,
-                        Some(TuiColor::Basic(ANSIBasicColor::Red))
-                    );
-                }
+                assert_eq!(style.attribs, tui_style_attribs(Underline));
+                assert_eq!(
+                    style.color_fg,
+                    Some(TuiColor::Basic(ANSIBasicColor::Red))
+                );
             }
             _ => panic!("Expected styled PlainText variant"),
         }
@@ -150,16 +144,16 @@ mod tests {
         // Test space character with no style
         ofs_buf.buffer[1][1] = PixelChar::PlainText {
             display_char: ' ',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
 
         match &ofs_buf.buffer[1][1] {
             PixelChar::PlainText {
                 display_char,
-                maybe_style,
+                style,
             } => {
                 assert_eq!(*display_char, ' ');
-                assert!(maybe_style.is_none());
+                assert_eq!(*style, TuiStyle::default());
             }
             _ => panic!("Expected PlainText with space"),
         }
@@ -167,22 +161,19 @@ mod tests {
         // Test space character with style
         ofs_buf.buffer[1][2] = PixelChar::PlainText {
             display_char: ' ',
-            maybe_style: Some(new_style!(color_bg: {tui_color!(blue)})),
+            style: new_style!(color_bg: {tui_color!(blue)}),
         };
 
         match &ofs_buf.buffer[1][2] {
             PixelChar::PlainText {
                 display_char,
-                maybe_style,
+                style: actual_style,
             } => {
                 assert_eq!(*display_char, ' ');
-                assert!(maybe_style.is_some());
-                if let Some(style) = maybe_style {
-                    assert_eq!(
-                        style.color_bg,
-                        Some(TuiColor::Basic(ANSIBasicColor::Blue))
-                    );
-                }
+                assert_eq!(
+                    actual_style.color_bg,
+                    Some(TuiColor::Basic(ANSIBasicColor::Blue))
+                );
             }
             _ => panic!("Expected styled space"),
         }
@@ -194,11 +185,11 @@ mod tests {
         let spacer_char = PixelChar::Spacer;
         let plain_char = PixelChar::PlainText {
             display_char: 'x',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         let styled_char = PixelChar::PlainText {
             display_char: 'y',
-            maybe_style: Some(new_style!(color_fg: {tui_color!(green)})),
+            style: new_style!(color_fg: {tui_color!(green)}),
         };
 
         // All variants should have the same size since PixelChar is Copy
@@ -217,19 +208,19 @@ mod tests {
     fn test_pixel_char_equality() {
         let char1 = PixelChar::PlainText {
             display_char: 'a',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         let char2 = PixelChar::PlainText {
             display_char: 'a',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         let char3 = PixelChar::PlainText {
             display_char: 'b',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         let char4 = PixelChar::PlainText {
             display_char: 'a',
-            maybe_style: Some(new_style!(bold)),
+            style: new_style!(bold),
         };
 
         assert_eq!(char1, char2); // Same character, no style
@@ -247,7 +238,7 @@ mod tests {
     fn test_pixel_char_copy_clone() {
         let original = PixelChar::PlainText {
             display_char: 'z',
-            maybe_style: Some(new_style!(italic color_bg: {tui_color!(yellow)})),
+            style: new_style!(italic color_bg: {tui_color!(yellow)}),
         };
 
         // Test Copy trait

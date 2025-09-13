@@ -113,8 +113,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                         PixelChar::Spacer => (SPACER_GLYPH.to_string(), None),
                         PixelChar::PlainText {
                             display_char,
-                            maybe_style,
-                        } => (display_char.to_string(), *maybe_style),
+                            style,
+                        } => (display_char.to_string(), Some(*style)),
                     };
 
                 let is_style_same_as_prev = render_helper::style_eq(
@@ -192,13 +192,13 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 }
                 PixelChar::PlainText {
                     display_char,
-                    maybe_style,
+                    style,
                     ..
                 } => {
-                    it.push(RenderOp::ApplyColors(*maybe_style));
+                    it.push(RenderOp::ApplyColors(Some(*style)));
                     it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
                         InlineString::from_str(&display_char.to_string()),
-                        *maybe_style,
+                        Some(*style),
                     ));
                 }
             }

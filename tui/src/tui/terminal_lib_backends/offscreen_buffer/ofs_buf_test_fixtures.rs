@@ -49,8 +49,12 @@ pub fn assert_plain_char_at(
     match actual_pixel_char {
         PixelChar::PlainText {
             display_char,
-            maybe_style: None,
+            style,
         } => {
+            assert_eq!(
+                style, TuiStyle::default(),
+                "Expected default style at {pos:?}, but found styled text"
+            );
             assert_eq!(
                 display_char, expected_char,
                 "Expected '{expected_char}' at {pos:?}, but found '{display_char}'",
@@ -110,7 +114,7 @@ pub fn assert_styled_char_at<F>(
     match actual_pixel_char {
         PixelChar::PlainText {
             display_char,
-            maybe_style: Some(actual_style),
+            style: actual_style,
         } => {
             assert_eq!(
                 display_char, expected_char,
@@ -163,12 +167,18 @@ pub fn assert_empty_at(buffer: &OffscreenBuffer, row_idx: usize, col_idx: usize)
 
     // Check it's empty
     match actual_pixel_char {
-        PixelChar::Spacer
-        | PixelChar::PlainText {
+        PixelChar::Spacer => {
+            // This is what we expect
+        }
+        PixelChar::PlainText {
             display_char: ' ',
-            maybe_style: None,
+            style,
         } => {
-            // This is what we expect - either spacer or unstyled space
+            assert_eq!(
+                style, TuiStyle::default(),
+                "Expected default style for space at {pos:?}, but found styled space"
+            );
+            // This is what we expect - unstyled space
         }
         other => {
             panic!("Expected empty/spacer at {pos:?}, but found {other:?}",);

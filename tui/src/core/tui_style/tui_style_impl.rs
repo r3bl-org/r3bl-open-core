@@ -347,6 +347,18 @@ mod style_impl {
 
     impl TuiStyle {
         pub fn remove_bg_color(&mut self) { self.color_bg = None; }
+
+        /// Returns true if this style contains no styling information (all fields are None or empty).
+        /// This can be used to check if a style is equivalent to the default "no styling" state.
+        #[must_use]
+        pub fn is_empty(&self) -> bool {
+            self.color_fg.is_none()
+                && self.color_bg.is_none()
+                && self.attribs.is_none()
+                && self.computed.is_none()
+                && self.padding.is_none()
+                && self.lolcat.is_none()
+        }
     }
 }
 

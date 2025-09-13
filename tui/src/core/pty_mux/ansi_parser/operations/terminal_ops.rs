@@ -24,17 +24,14 @@
 //! ```
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{CharacterSet, Pos};
+use crate::{CharacterSet, Pos, TuiStyle};
 
 /// Clear all buffer content.
 fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear(); }
 
 /// Reset all SGR attributes to default state.
 fn reset_sgr_attributes(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.ansi_parser_support.current_style = None;
-    performer.ofs_buf.ansi_parser_support.attribs.reset();
-    performer.ofs_buf.ansi_parser_support.fg_color = None;
-    performer.ofs_buf.ansi_parser_support.bg_color = None;
+    performer.ofs_buf.ansi_parser_support.current_style = TuiStyle::default();
 }
 
 /// Reset terminal to initial state (ESC c).

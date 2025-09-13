@@ -2,7 +2,7 @@
 
 //! Test modules for ANSI parser implementation.
 
-use crate::{OffscreenBuffer, height, width};
+use crate::{OffscreenBuffer, TuiStyle, height, width};
 
 /// Create a test `OffscreenBuffer` with 10x10 dimensions.
 pub fn create_test_offscreen_buffer_10r_by_10c() -> OffscreenBuffer {
@@ -18,7 +18,7 @@ pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
             if c < cols {
                 buf.buffer[r][c] = crate::PixelChar::PlainText {
                     display_char: ch,
-                    maybe_style: None,
+                    style: TuiStyle::default(),
                 };
             }
         }

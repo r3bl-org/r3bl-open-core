@@ -27,6 +27,8 @@ For testing interactive terminal applications, use (they are both installed):
 After completing tasks, run:
 
 - `cargo check` - Fast typecheck
+- `cargo build` - Compile production code
+- `cargo test --no-run` - Compile test code
 - `cargo clippy --all-targets` / `cargo clippy --fix --allow-dirty` - Lint
 - `cargo doc --no-deps` - Fix doc errors
 - `cargo nextest run` - Tests

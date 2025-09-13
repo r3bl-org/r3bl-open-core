@@ -5,7 +5,7 @@
 use vte::Perform;
 
 use super::tests_fixtures::*;
-use crate::{AnsiToOfsBufPerformer, Pos, TuiStyleAttribs, col, row};
+use crate::{AnsiToOfsBufPerformer, Pos, TuiStyle, col, row};
 
 #[test]
 fn test_performer_creation() {
@@ -13,14 +13,7 @@ fn test_performer_creation() {
     {
         let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         assert_eq!(performer.ofs_buf.my_pos, Pos::default());
-        assert_eq!(
-            performer.ofs_buf.ansi_parser_support.attribs,
-            TuiStyleAttribs::default(),
-            "New performer should have default style attributes"
-        );
-        assert_eq!(performer.ofs_buf.ansi_parser_support.current_style, None);
-        assert_eq!(performer.ofs_buf.ansi_parser_support.fg_color, None);
-        assert_eq!(performer.ofs_buf.ansi_parser_support.bg_color, None);
+        assert_eq!(performer.ofs_buf.ansi_parser_support.current_style, TuiStyle::default());
         assert!(
             performer
                 .ofs_buf

@@ -211,7 +211,7 @@ impl DerefMut for PixelCharLine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::width;
+    use crate::{width, TuiStyle};
 
     #[test]
     fn test_pixel_char_line_new_empty() {
@@ -253,7 +253,7 @@ mod tests {
         // Test deref_mut functionality
         line[0] = PixelChar::PlainText {
             display_char: 'A',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         line[1] = PixelChar::Void;
 
@@ -284,7 +284,7 @@ mod tests {
         // Add some different pixel char types
         line[0] = PixelChar::PlainText {
             display_char: 'X',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
         line[1] = PixelChar::Void;
         line[2] = PixelChar::Spacer;
@@ -345,7 +345,7 @@ mod tests {
         let mut line = PixelCharLine::new_empty(width);
         line[0] = PixelChar::PlainText {
             display_char: 'Z',
-            maybe_style: None,
+            style: TuiStyle::default(),
         };
 
         let cloned = line.clone();
@@ -376,9 +376,9 @@ mod tests {
         assert!(debug_output.contains("void"));
         // Should contain individual indices, not ranges
         assert!(
-            debug_output.contains("0")
-                && debug_output.contains("2")
-                && debug_output.contains("4")
+            debug_output.contains('0')
+                && debug_output.contains('2')
+                && debug_output.contains('4')
         );
     }
 

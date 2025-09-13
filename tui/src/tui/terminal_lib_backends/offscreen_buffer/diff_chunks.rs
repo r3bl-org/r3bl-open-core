@@ -27,12 +27,12 @@ impl From<List<DiffChunk>> for PixelCharDiffChunks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, row};
+    use crate::{col, row, TuiStyle};
 
     fn create_test_pixel_char() -> PixelChar {
         PixelChar::PlainText {
             display_char: 'A',
-            maybe_style: None,
+            style: TuiStyle::default(),
         }
     }
 

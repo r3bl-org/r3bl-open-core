@@ -6,6 +6,7 @@
 use vte::Perform;
 
 use super::tests_fixtures::*;
+use crate::TuiStyle;
 use crate::{ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           csi_codes::{CsiSequence, PrivateModeType},
                           esc_codes,
@@ -21,7 +22,7 @@ fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {
         for (c, char) in line_text.chars().enumerate() {
             ofs_buf.buffer[r][c] = crate::PixelChar::PlainText {
                 display_char: char,
-                maybe_style: None,
+                style: TuiStyle::default(),
             };
         }
     }

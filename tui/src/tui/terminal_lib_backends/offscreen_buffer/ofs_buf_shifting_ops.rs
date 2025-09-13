@@ -230,7 +230,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_shifting_ops {
     use super::*;
-    use crate::{RowIndex, col, row, width};
+    use crate::{RowIndex, col, row, width, TuiStyle};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(6) + height(3);
@@ -240,7 +240,7 @@ mod tests_shifting_ops {
     fn create_test_char(ch: char) -> PixelChar {
         PixelChar::PlainText {
             display_char: ch,
-            maybe_style: None,
+            style: TuiStyle::default(),
         }
     }
 
@@ -579,7 +579,7 @@ mod tests_shifting_ops {
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
-                maybe_style: None,
+                style: TuiStyle::default(),
             }
         }
 
@@ -684,7 +684,7 @@ mod tests_shifting_ops {
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
-                maybe_style: None,
+                style: TuiStyle::default(),
             }
         }
 
@@ -793,7 +793,7 @@ mod tests_shifting_ops {
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
-                maybe_style: None,
+                style: TuiStyle::default(),
             }
         }
 
@@ -888,7 +888,7 @@ mod tests_shifting_ops {
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
-                maybe_style: None,
+                style: TuiStyle::default(),
             }
         }
 
@@ -953,7 +953,7 @@ mod tests_shifting_ops {
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
-                maybe_style: None,
+                style: TuiStyle::default(),
             }
         }
 
@@ -1018,7 +1018,7 @@ mod tests_shifting_ops {
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
-                maybe_style: None,
+                style: TuiStyle::default(),
             }
         }
 

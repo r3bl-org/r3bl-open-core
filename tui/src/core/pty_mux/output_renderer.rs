@@ -102,12 +102,12 @@ impl OutputRenderer {
         }
 
         // Write status text with appropriate style
-        let status_style = Some(TuiStyle {
+        let status_style = TuiStyle {
             attribs: tui_style_attribs(Bold),
             color_fg: Some(TuiColor::Basic(ANSIBasicColor::White)),
             color_bg: Some(TuiColor::Basic(ANSIBasicColor::Blue)),
             ..Default::default()
-        });
+        };
 
         for (col_idx, ch) in status_text.chars().enumerate() {
             if self.terminal_size.col_width.is_overflowed_by(col(col_idx)) {
@@ -115,7 +115,7 @@ impl OutputRenderer {
             }
             ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
                 display_char: ch,
-                maybe_style: status_style,
+                style: status_style,
             };
         }
     }

@@ -135,7 +135,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 current_row + current_col,
                 PixelChar::PlainText {
                     display_char, // Use the translated character
-                    maybe_style: self.ofs_buf.ansi_parser_support.current_style,
+                    style: self.ofs_buf.ansi_parser_support.current_style,
                 },
             );
 

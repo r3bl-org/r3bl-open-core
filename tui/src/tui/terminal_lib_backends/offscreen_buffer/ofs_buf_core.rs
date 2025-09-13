@@ -3,7 +3,7 @@
 use std::fmt::Debug;
 
 use super::super::{FlushKind, RenderOps};
-use crate::{core::pty_mux::ansi_parser::term_units::TermRow, osc::OscEvent, CachedMemorySize, GetMemSize, LockedOutputDevice, MemoizedMemorySize, Pos, Size, TuiColor, TuiStyle, TuiStyleAttribs};
+use crate::{core::pty_mux::ansi_parser::term_units::TermRow, osc::OscEvent, CachedMemorySize, GetMemSize, LockedOutputDevice, MemoizedMemorySize, Pos, Size, TuiColor, TuiStyle};
 
 /// Character set modes for terminal emulation.
 ///
@@ -91,16 +91,7 @@ pub struct AnsiParserSupport {
     pub auto_wrap_mode: bool,
 
     /// Complete computed style combining attributes and colors for efficient rendering
-    pub current_style: Option<TuiStyle>,
-
-    /// Text attributes (bold, italic, underline, etc.) from SGR sequences
-    pub attribs: TuiStyleAttribs,
-
-    /// Current foreground color from SGR color sequences
-    pub fg_color: Option<TuiColor>,
-
-    /// Current background color from SGR color sequences
-    pub bg_color: Option<TuiColor>,
+    pub current_style: TuiStyle,
 
     /// OSC events (hyperlinks, titles, etc.) accumulated during processing
     pub pending_osc_events: Vec<OscEvent>,
@@ -156,10 +147,7 @@ impl Default for AnsiParserSupport {
             cursor_pos_for_esc_save_and_restore: None,
             character_set: CharacterSet::default(),
             auto_wrap_mode: true, // DECAWM default: enabled (VT100 compliant)
-            current_style: None,
-            attribs: TuiStyleAttribs::default(),
-            fg_color: None,
-            bg_color: None,
+            current_style: TuiStyle::default(),
             pending_osc_events: Vec::new(),
             pending_dsr_responses: Vec::new(),
             scroll_region_top: None, // Default: no top margin (uses row 1)
@@ -423,7 +411,7 @@ mod tests {
     fn create_test_pixel_char(ch: char) -> PixelChar {
         PixelChar::PlainText {
             display_char: ch,
-            maybe_style: None,
+            style: TuiStyle::default(),
         }
     }
 

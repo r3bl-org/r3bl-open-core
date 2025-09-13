@@ -41,6 +41,7 @@ pub const CLOCK_TICK_GLYPH: &str = "↻"; // "↺"; //"✹"; //'❀'; //'✲';
 pub const STOP_GLYPH: &str = "∎";
 pub const TOP_UNDERLINE_GLYPH: &str = "‾";
 pub const SPACER_GLYPH: &str = " ";
+pub const SPACER_GLYPH_CHAR: char = ' ';
 pub const ELLIPSIS_GLYPH: &str = "…";
 pub const RENDER_GLYPH: &str = "◧";
 pub const PAINT_GLYPH: &str = "■";
