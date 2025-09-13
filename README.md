@@ -49,6 +49,7 @@ Table of contents:
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
   - [Key Commands](#key-commands)
   - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
+  - [Rust Toolchain Management](#rust-toolchain-management)
   - [Unified Script Architecture](#unified-script-architecture)
 - [Star History](#star-history)
 - [Archive](#archive)
@@ -448,6 +449,7 @@ Other commands:
 | `fish run.fish watch-all-tests` | Watch for file changes and run tests automatically              |
 | `fish run.fish run-examples`    | Run TUI examples interactively                                  |
 | `fish run.fish run-binaries`    | Run cmdr binaries (edi, giti, rc) interactively                 |
+| `fish run.fish update-toolchain` | Update Rust to month-old nightly toolchain with cleanup         |
 
 ### Build Cache (using sccache) Verification
 
@@ -478,6 +480,39 @@ cargo build  # or sccache --show-stats
 
 There is no need to restart the server, as it is designed to be "lazy". And running `cargo build` or
 `sccache --show-stats` will automatically start the server if it is stopped.
+
+### Rust Toolchain Management
+
+This project uses an intelligent Rust toolchain management strategy to balance access to recent language features with stability. The `update-toolchain` command maintains a month-old nightly toolchain, avoiding bleeding-edge instability while staying current with Rust development.
+
+```sh
+fish run.fish update-toolchain
+```
+
+**What it does:**
+- Calculates a nightly toolchain date from exactly 1 month ago
+- Updates `rust-toolchain.toml` to use this stable-but-recent nightly
+- Installs the target toolchain if not already present
+- Performs aggressive cleanup by removing all old nightly toolchains except:
+  - All stable toolchains (`stable-*`)
+  - The newly targeted month-old nightly
+- Logs all operations to `/home/nazmul/Downloads/rust-toolchain-update.log`
+
+**Benefits:**
+- **Stability**: Month-old nightlies have proven stability while providing recent features
+- **Disk space savings**: Aggressive cleanup removes accumulated old toolchains
+- **Consistency**: Ensures all developers use the same Rust version
+- **Automation ready**: Designed to run weekly via systemd timer for hands-off maintenance
+
+**Example output:**
+```text
+Target toolchain: nightly-2024-08-13
+✅ Successfully updated rust-toolchain.toml
+✅ Successfully installed/verified nightly-2024-08-13
+Removed 3 old toolchain(s)
+Toolchains directory size before cleanup: 2.1G
+Toolchains directory size after cleanup: 1.4G
+```
 
 ### Unified Script Architecture
 

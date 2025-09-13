@@ -74,6 +74,8 @@ function main
             audit-deps
         case unmaintained
             unmaintained
+        case update-toolchain
+            update-toolchain
         case help
             print-help all
         case build-server
@@ -127,6 +129,7 @@ function print-help
         echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
         echo "    "(set_color green)"unmaintained"(set_color normal)"         Check for unmaintained deps"
+        echo "    "(set_color green)"update-toolchain"(set_color normal)"     Update Rust to month-old nightly"
         echo "    "(set_color green)"build-server"(set_color normal)"         Remote build server - uses rsync"
         echo ""
         echo (set_color cyan --bold)"Watch commands:"(set_color normal)
@@ -368,6 +371,30 @@ function unmaintained
     cargo unmaintained --color always --fail-fast --tree --verbose
 end
 
+# Updates Rust toolchain to a month-old nightly version and cleans up old toolchains.
+#
+# This function runs the rust-toolchain-update.fish script which automatically:
+# - Updates rust-toolchain.toml to use a nightly version from 1 month ago
+# - Installs the target toolchain if not already present
+# - Removes all other nightly toolchains (keeping only stable + target nightly)
+# - Performs aggressive cleanup to save disk space
+#
+# The strategy avoids instability issues with bleeding-edge nightly builds
+# while still providing access to nightly features. The script is designed
+# to run weekly via systemd timer for automated maintenance.
+#
+# Features:
+# - Uses date from 1 month ago for stability
+# - Validates rust-toolchain.toml before updating
+# - Comprehensive logging to ~/Downloads/rust-toolchain-update.log
+# - Disk usage reporting before/after cleanup
+#
+# Usage:
+#   fish run.fish update-toolchain
+function update-toolchain
+    fish rust-toolchain-update.fish
+end
+
 function build
     cargo build
 end
@@ -376,7 +403,7 @@ function build-full
     install-cargo-tools
     cargo cache -r all
     cargo clean
-    cargo +nightly update
+    update-toolchain
     cargo build
 end
 
