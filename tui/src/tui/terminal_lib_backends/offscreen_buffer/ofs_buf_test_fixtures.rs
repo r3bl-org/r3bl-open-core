@@ -5,7 +5,7 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{OffscreenBuffer, PixelChar, TuiStyle, col, row};
+use crate::{OffscreenBuffer, PixelChar, SPACER_GLYPH_CHAR, TuiStyle, col, row};
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:
@@ -26,7 +26,7 @@ pub fn assert_plain_char_at(
     let pos = row(row_idx) + col(col_idx);
     let window_size = buffer.window_size;
 
-    // Check bounds
+    // Check bounds.
     assert!(
         pos.col_index <= window_size.col_width.convert_to_col_index(),
         "Column {} is out of bounds (width: {})",
@@ -40,19 +40,20 @@ pub fn assert_plain_char_at(
         window_size.row_height.as_usize()
     );
 
-    // Get the character
+    // Get the character.
     let actual_pixel_char = buffer
         .get_char(pos)
         .unwrap_or_else(|| panic!("No character found at position {pos:?}"));
 
-    // Check it's the expected plain character
+    // Check it's the expected plain character.
     match actual_pixel_char {
         PixelChar::PlainText {
             display_char,
             style,
         } => {
             assert_eq!(
-                style, TuiStyle::default(),
+                style,
+                TuiStyle::default(),
                 "Expected default style at {pos:?}, but found styled text"
             );
             assert_eq!(
@@ -91,7 +92,7 @@ pub fn assert_styled_char_at<F>(
     let pos = row(row_idx) + col(col_idx);
     let window_size = buffer.window_size;
 
-    // Check bounds
+    // Check bounds.
     assert!(
         pos.col_index <= window_size.col_width.convert_to_col_index(),
         "Column {} is out of bounds (width: {})",
@@ -105,12 +106,12 @@ pub fn assert_styled_char_at<F>(
         window_size.row_height.as_usize()
     );
 
-    // Get the character
+    // Get the character.
     let actual_pixel_char = buffer
         .get_char(pos)
         .unwrap_or_else(|| panic!("No character found at position {pos:?}"));
 
-    // Check it's the expected styled character
+    // Check it's the expected styled character.
     match actual_pixel_char {
         PixelChar::PlainText {
             display_char,
@@ -146,7 +147,7 @@ pub fn assert_empty_at(buffer: &OffscreenBuffer, row_idx: usize, col_idx: usize)
     let pos = row(row_idx) + col(col_idx);
     let window_size = buffer.window_size;
 
-    // Check bounds
+    // Check bounds.
     assert!(
         pos.col_index <= window_size.col_width.convert_to_col_index(),
         "Column {} is out of bounds (width: {})",
@@ -160,25 +161,26 @@ pub fn assert_empty_at(buffer: &OffscreenBuffer, row_idx: usize, col_idx: usize)
         window_size.row_height.as_usize()
     );
 
-    // Get the character
+    // Get the character.
     let actual_pixel_char = buffer
         .get_char(pos)
         .unwrap_or_else(|| panic!("No character found at position {pos:?}"));
 
-    // Check it's empty
+    // Check it's empty.
     match actual_pixel_char {
         PixelChar::Spacer => {
-            // This is what we expect
+            // This is what we expect.
         }
         PixelChar::PlainText {
-            display_char: ' ',
+            display_char: SPACER_GLYPH_CHAR,
             style,
         } => {
             assert_eq!(
-                style, TuiStyle::default(),
+                style,
+                TuiStyle::default(),
                 "Expected default style for space at {pos:?}, but found styled space"
             );
-            // This is what we expect - unstyled space
+            // This is what we expect - unstyled space.
         }
         other => {
             panic!("Expected empty/spacer at {pos:?}, but found {other:?}",);

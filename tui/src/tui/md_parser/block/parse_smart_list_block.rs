@@ -791,14 +791,14 @@ fn parse_multi_line_content<'a>(
     let output_lines: InlineVec<SmartListLineStr<'_>> = {
         let mut it = InlineVec::with_capacity(rest.len() + 1);
 
-        // Always include the first line
+        // Always include the first line.
         it.push(SmartListLineStr {
             indent,
             bullet_str: bullet,
             content: first_line_just_before_crlf,
         });
 
-        // Add any continuation lines
+        // Add any continuation lines.
         it.extend(rest.iter().map(
             // Skip "bullet's width" number of spaces at the start of the line.
             |(rest_line_content, _)| SmartListLineStr {
@@ -1063,7 +1063,7 @@ mod tests_parse_smart_list_content_lines {
 
     #[test]
     fn test_mixed_list_types_in_content() {
-        // Content that looks like list items but shouldn't be parsed as such
+        // Content that looks like list items but shouldn't be parsed as such.
         let input = "first line\n  - not a list item\n  1. also not a list item";
         let indent = 0;
         let bullet = "- ";
@@ -1096,7 +1096,7 @@ mod tests_parse_smart_list_content_lines {
     fn test_parse_smart_list_with_null_padding() {
         use crate::assert_eq2;
 
-        // Simple test with null padding right after list
+        // Simple test with null padding right after list.
         {
             let input = "- item\n\0\0\0rest";
             let (remainder, smart_list_ir) = parse_smart_list(input).unwrap();
@@ -1105,7 +1105,7 @@ mod tests_parse_smart_list_content_lines {
             assert_eq2!(smart_list_ir.bullet_kind, BulletKind::Unordered);
         }
 
-        // Test content line parsing with null padding
+        // Test content line parsing with null padding.
         {
             let input = "first line\n\0\0\0";
             let indent = 0;

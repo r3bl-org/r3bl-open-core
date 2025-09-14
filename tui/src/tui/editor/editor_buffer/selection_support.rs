@@ -157,8 +157,8 @@ pub fn handle_selection_multiline_caret_movement(
     match caret_vertical_movement_direction {
         // ```text
         // R ┌──────────┐
-        // 0 ❱C         │ ← Current caret
-        // 1 │P         │ ← Previous caret
+        // 0 ❱C         │ ← Current caret.
+        // 1 │P         │ ← Previous caret.
         //   └⮬─────────┘
         //   C0123456789
         // ```
@@ -179,8 +179,8 @@ pub fn handle_selection_multiline_caret_movement(
         }
         // ```text
         // R ┌──────────┐
-        // 0 │P         │ ← Previous caret
-        // 1 ❱C         │ ← Current caret
+        // 0 │P         │ ← Previous caret.
+        // 1 ❱C         │ ← Current caret.
         //   └⮬─────────┘
         //   C0123456789
         // ```
@@ -1053,13 +1053,13 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Hello world"]);
 
-        // Simulate selection from col 0 to col 5 on row 0
+        // Simulate selection from col 0 to col 5 on row 0.
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(5) + row(0));
 
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
 
-        // Verify selection was created
+        // Verify selection was created.
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
         let range = selection.unwrap();
@@ -1072,17 +1072,17 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Hello world example"]);
 
-        // First create a selection from col 0 to col 5
+        // First create a selection from col 0 to col 5.
         let prev1 = caret_scr_adj(col(0) + row(0));
         let curr1 = caret_scr_adj(col(5) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev1, curr1);
 
-        // Then extend it to col 10
+        // Then extend it to col 10.
         let prev2 = caret_scr_adj(col(5) + row(0));
         let curr2 = caret_scr_adj(col(10) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev2, curr2);
 
-        // Verify selection was extended
+        // Verify selection was extended.
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
         let range = selection.unwrap();
@@ -1095,7 +1095,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Hello world example"]);
 
-        // Create a selection from col 0 to col 10
+        // Create a selection from col 0 to col 10.
         let buffer_mut = buffer.get_mut(dummy_viewport());
         buffer_mut.inner.sel_list.insert(
             row(0),
@@ -1108,12 +1108,12 @@ mod tests {
         );
         drop(buffer_mut);
 
-        // Now shrink it by moving left from col 10 to col 5
+        // Now shrink it by moving left from col 10 to col 5.
         let prev = caret_scr_adj(col(10) + row(0));
         let curr = caret_scr_adj(col(5) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
 
-        // Verify selection was shrunk
+        // Verify selection was shrunk.
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
         let range = selection.unwrap();
@@ -1126,13 +1126,13 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2", "Line 3"]);
 
-        // Simulate selection from row 0 col 2 to row 2 col 3
+        // Simulate selection from row 0 col 2 to row 2 col 3.
         let prev = caret_scr_adj(col(2) + row(0));
         let curr = caret_scr_adj(col(3) + row(2));
 
         handle_selection_multiline_caret_movement(&mut buffer, prev, curr);
 
-        // Verify selections were created for all rows
+        // Verify selections were created for all rows.
         assert!(buffer.get_selection_list().get(row(0)).is_some());
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
@@ -1164,7 +1164,7 @@ mod tests {
 
         handle_selection_multiline_caret_movement(&mut buffer, prev, curr);
 
-        // Verify selections were created for all rows
+        // Verify selections were created for all rows.
         assert!(buffer.get_selection_list().get(row(0)).is_some());
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
@@ -1175,7 +1175,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["First line", "Second line", "Third line"]);
 
-        // First create a selection on row 1
+        // First create a selection on row 1.
         {
             let buffer_mut = buffer.get_mut(dummy_viewport());
             buffer_mut.inner.sel_list.insert(
@@ -1199,10 +1199,10 @@ mod tests {
             curr,
         );
 
-        // Verify selection was modified
+        // Verify selection was modified.
         let selection = buffer.get_selection_list().get(row(1));
         assert!(selection.is_some());
-        // Selection should now be from col 0 to col 8
+        // Selection should now be from col 0 to col 8.
         let range = selection.unwrap();
         assert_eq2!(range.start(), col(0));
         assert_eq2!(range.end(), col(8));
@@ -1213,7 +1213,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["First line", "Second line", "Third line"]);
 
-        // Try to call the function with different rows - it should do nothing
+        // Try to call the function with different rows - it should do nothing.
         let prev = caret_scr_adj(col(2) + row(1));
         let curr = caret_scr_adj(col(5) + row(2)); // Different row
 
@@ -1223,7 +1223,7 @@ mod tests {
             curr,
         );
 
-        // Verify no selections were created since rows are different
+        // Verify no selections were created since rows are different.
         assert!(buffer.get_selection_list().is_empty());
     }
 
@@ -1232,18 +1232,18 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2", "Line 3", "Line 4"]);
 
-        // Test downward selection
+        // Test downward selection.
         let prev_down = caret_scr_adj(col(2) + row(0));
         let curr_down = caret_scr_adj(col(4) + row(2));
 
         handle_selection_multiline_caret_movement(&mut buffer, prev_down, curr_down);
 
-        // Verify selections were created for downward movement
+        // Verify selections were created for downward movement.
         assert!(buffer.get_selection_list().get(row(0)).is_some());
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
 
-        // Clear and test upward selection
+        // Clear and test upward selection.
         buffer.clear_selection();
 
         let prev_up = caret_scr_adj(col(4) + row(3));
@@ -1251,7 +1251,7 @@ mod tests {
 
         handle_selection_multiline_caret_movement(&mut buffer, prev_up, curr_up);
 
-        // Verify selections were created for upward movement
+        // Verify selections were created for upward movement.
         assert!(buffer.get_selection_list().get(row(1)).is_some());
         assert!(buffer.get_selection_list().get(row(2)).is_some());
         assert!(buffer.get_selection_list().get(row(3)).is_some());
@@ -1262,14 +1262,14 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2"]);
 
-        // Create some selections
+        // Create some selections.
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(5) + row(0));
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
 
         assert!(!buffer.get_selection_list().is_empty());
 
-        // Clear selections
+        // Clear selections.
         buffer.clear_selection();
         assert!(buffer.get_selection_list().is_empty());
     }
@@ -1277,16 +1277,16 @@ mod tests {
     #[test]
     fn test_empty_buffer_selection() {
         let mut buffer = EditorBuffer::new_empty(None, None);
-        // Buffer has one empty line by default
+        // Buffer has one empty line by default.
 
-        // Try to create selection on the empty line - same position
+        // Try to create selection on the empty line - same position.
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(0) + row(0));
 
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
 
-        // A selection should still be created even for same position
-        // This is handled by the single_line_select_helper::create_new_range
+        // A selection should still be created even for same position.
+        // This is handled by the single_line_select_helper::create_new_range.
         assert!(!buffer.get_selection_list().is_empty());
     }
 
@@ -1299,18 +1299,18 @@ mod tests {
             "End",
         ]);
 
-        // Test selection that goes beyond line length
+        // Test selection that goes beyond line length.
         let prev = caret_scr_adj(col(0) + row(0));
         let curr = caret_scr_adj(col(10) + row(0)); // Beyond "Short" length
 
         handle_selection_single_line_caret_movement(&mut buffer, prev, curr);
 
-        // Selection should be created and clamped to actual line length
+        // Selection should be created and clamped to actual line length.
         let selection = buffer.get_selection_list().get(row(0));
         assert!(selection.is_some());
         let range = selection.unwrap();
         assert_eq2!(range.start(), col(0));
-        // The actual end will be determined by the helper function
+        // The actual end will be determined by the helper function.
         assert!(range.end() >= col(5)); // At least the length of "Short"
     }
 
@@ -1319,7 +1319,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Test line with multiple words"]);
 
-        // Create first selection from col 5 to 10
+        // Create first selection from col 5 to 10.
         {
             let buffer_mut = buffer.get_mut(dummy_viewport());
             buffer_mut.inner.sel_list.insert(
@@ -1333,7 +1333,7 @@ mod tests {
             );
         }
 
-        // Now create overlapping selection from col 8 to 15
+        // Now create overlapping selection from col 8 to 15.
         let prev = caret_scr_adj(col(8) + row(0));
         let curr = caret_scr_adj(col(15) + row(0));
 

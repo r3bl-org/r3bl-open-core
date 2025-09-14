@@ -385,11 +385,11 @@ mod print_text_with_attributes_helper {
                     if let (None, SPACER_GLYPH) = (maybe_style, seg_text) {
                         PixelChar::Spacer
                     } else {
-                        // Convert the segment text to a single char
+                        // Convert the segment text to a single char.
                         let display_char = if seg_text.chars().count() == 1 {
                             seg_text.chars().next().unwrap()
                         } else {
-                            // For multi-char segments, use the first char
+                            // For multi-char segments, use the first char.
                             seg_text.chars().next().unwrap_or(crate::UNICODE_REPLACEMENT_CHAR)
                         };
                         PixelChar::PlainText {
@@ -429,7 +429,7 @@ mod print_text_with_attributes_helper {
                     for _ in 0..num_of_extra_display_cols_to_inject_void_into {
                         // Make sure insertion_col_index is safe to access.
                         if line_copy.get(insertion_col_index + 1).is_some() {
-                            // Move insertion_col_index forward & inject a
+                            // Move insertion_col_index forward & inject a.
                             // PixelChar::Void.
                             insertion_col_index += 1;
                             line_copy[insertion_col_index] = PixelChar::Void;
@@ -817,7 +817,7 @@ mod tests {
             // Some(green) | bg: Some(blue) | padding: 0 }) 	8: ❯
             // 	9: ╳
             // row_index: [1]
-            // 	0: ╳..
+            // 	0: ╳.
             // 	9: ╳
 
             // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
@@ -904,7 +904,7 @@ mod tests {
         //       Some(green) | bg: Some(blue) | padding: 0 })     8: ❯
         //     9: ╳
         // row_index: [1]
-        //     0: ╳ ..
+        //     0: ╳ .
         //     9: ╳
 
         let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
@@ -1119,7 +1119,7 @@ mod bench_tests {
     mod clip_text_to_bounds_benchmarks {
         use super::{print_text_with_attributes_helper::clip_text_to_bounds, *};
 
-        // Old implementation for comparison
+        // Old implementation for comparison.
         fn clip_text_to_bounds_old(
             string: &str,
             display_col_index: usize,

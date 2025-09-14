@@ -75,11 +75,11 @@ mod pixel_char_benchmarks {
 
     use crate::{PixelChar, RgbValue, TuiColor, TuiStyle};
 
-    // Type aliases for clarity
+    // Type aliases for clarity.
     type PixelCharSmallVec = SmallVec<[PixelChar; 8]>;
     type PixelCharVec = Vec<PixelChar>;
 
-    // Helper to create test pixel chars
+    // Helper to create test pixel chars.
     #[allow(clippy::cast_possible_truncation)]
     fn create_test_pixel_chars(count: usize) -> Vec<PixelChar> {
         let mut chars = Vec::with_capacity(count);
@@ -159,11 +159,11 @@ mod pixel_char_benchmarks {
         let chars = create_test_pixel_chars(80);
         b.iter(|| {
             let mut line = PixelCharSmallVec::new();
-            // Initialize with spacers
+            // Initialize with spacers.
             for _ in 0..80 {
                 line.push(PixelChar::Spacer);
             }
-            // Random access pattern - update various positions
+            // Random access pattern - update various positions.
             for (i, ch) in chars.iter().enumerate() {
                 if i < line.len() {
                     line[i] = *ch;
@@ -178,11 +178,11 @@ mod pixel_char_benchmarks {
         let chars = create_test_pixel_chars(80);
         b.iter(|| {
             let mut line = PixelCharVec::new();
-            // Initialize with spacers
+            // Initialize with spacers.
             for _ in 0..80 {
                 line.push(PixelChar::Spacer);
             }
-            // Random access pattern - update various positions
+            // Random access pattern - update various positions.
             for (i, ch) in chars.iter().enumerate() {
                 if i < line.len() {
                     line[i] = *ch;
@@ -197,11 +197,11 @@ mod pixel_char_benchmarks {
         let chars = create_test_pixel_chars(80);
         b.iter(|| {
             let mut line = PixelCharVec::with_capacity(80);
-            // Initialize with spacers
+            // Initialize with spacers.
             for _ in 0..80 {
                 line.push(PixelChar::Spacer);
             }
-            // Random access pattern - update various positions
+            // Random access pattern - update various positions.
             for (i, ch) in chars.iter().enumerate() {
                 if i < line.len() {
                     line[i] = *ch;

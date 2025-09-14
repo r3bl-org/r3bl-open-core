@@ -438,7 +438,7 @@ mod syn_hi_r3bl_path {
         max_display_col_count: ColWidth,
     ) -> CommonResult<()> {
         throws!({
-            // Save some values that are needed later. But are copied here to avoid
+            // Save some values that are needed later. But are copied here to avoid.
             // multiple borrows.
             let box_pos = editor_engine.current_box.style_adjusted_origin_pos;
             let scr_ofs = editor_buffer.get_scr_ofs();
@@ -685,7 +685,7 @@ mod no_syn_hi_path {
         let scroll_offset_col_index = editor_buffer.get_scr_ofs().col_index;
 
         // Clip the content [scroll_offset.col_index .. max cols].
-        // Use the pre-computed segment data from GapBufferLine for efficient clipping
+        // Use the pre-computed segment data from GapBufferLine for efficient clipping.
         let line_trunc = line.info().clip_to_range(
             line.content(),
             scroll_offset_col_index,
@@ -717,15 +717,15 @@ mod tests {
         let mut buffer = EditorBuffer::default();
         let mut clipboard = TestClipboard::default();
 
-        // Add some content to create initial state
+        // Add some content to create initial state.
         buffer.content.lines.push_line("Hello World");
 
-        // Populate the AST cache
+        // Populate the AST cache.
         let test_ast: StyleUSSpanLines = List::new();
         engine.set_ast_cache(test_ast);
         assert!(!engine.ast_cache_is_empty());
 
-        // Apply undo event
+        // Apply undo event.
         let undo_event = InputEvent::Keyboard(
             key_press! { @char ModifierKeysMask::new().with_ctrl(), 'z' },
         );
@@ -737,12 +737,12 @@ mod tests {
         // Verify AST cache was cleared (after our fix)
         assert!(engine.ast_cache_is_empty());
 
-        // Set cache again and test redo
+        // Set cache again and test redo.
         let test_ast2: StyleUSSpanLines = List::new();
         engine.set_ast_cache(test_ast2);
         assert!(!engine.ast_cache_is_empty());
 
-        // Apply redo event
+        // Apply redo event.
         let redo_event = InputEvent::Keyboard(
             key_press! { @char ModifierKeysMask::new().with_ctrl(), 'y' },
         );
@@ -751,7 +751,7 @@ mod tests {
             apply_event(&mut buffer, &mut engine, redo_event, &mut clipboard).unwrap();
         assert!(matches!(result, EditorEngineApplyEventResult::Applied));
 
-        // Verify AST cache was cleared
+        // Verify AST cache was cleared.
         assert!(engine.ast_cache_is_empty());
     }
 
@@ -761,7 +761,7 @@ mod tests {
         let mut buffer = EditorBuffer::default();
         let mut clipboard = TestClipboard::default();
 
-        // Test InsertChar event
+        // Test InsertChar event.
         {
             let test_ast: StyleUSSpanLines = List::new();
             engine.set_ast_cache(test_ast);
@@ -776,7 +776,7 @@ mod tests {
             assert!(engine.ast_cache_is_empty());
         }
 
-        // Test Delete event
+        // Test Delete event.
         {
             let test_ast: StyleUSSpanLines = List::new();
             engine.set_ast_cache(test_ast);
@@ -792,7 +792,7 @@ mod tests {
             assert!(engine.ast_cache_is_empty());
         }
 
-        // Test Backspace event
+        // Test Backspace event.
         {
             buffer.content.lines.push_line("test");
             buffer.content.lines.set_line(row(0), "test");
@@ -827,7 +827,7 @@ mod tests {
         engine.set_ast_cache(test_ast);
         assert!(!engine.ast_cache_is_empty());
 
-        // Test arrow key navigation
+        // Test arrow key navigation.
         let nav_events = vec![
             InputEvent::Keyboard(key_press! { @special SpecialKey::Up }),
             InputEvent::Keyboard(key_press! { @special SpecialKey::Down }),
@@ -839,7 +839,7 @@ mod tests {
             let result =
                 apply_event(&mut buffer, &mut engine, event, &mut clipboard).unwrap();
             assert!(matches!(result, EditorEngineApplyEventResult::Applied));
-            // Navigation should NOT clear the AST cache
+            // Navigation should NOT clear the AST cache.
             assert!(!engine.ast_cache_is_empty());
         }
     }
@@ -853,14 +853,14 @@ mod tests {
         let mut buffer = EditorBuffer::default();
         let mut clipboard = TestClipboard::default();
 
-        // Try to insert a character in readonly mode
+        // Try to insert a character in readonly mode.
         let insert_event = InputEvent::Keyboard(key_press! { @char 'a' });
 
         let result =
             apply_event(&mut buffer, &mut engine, insert_event, &mut clipboard).unwrap();
         assert!(matches!(result, EditorEngineApplyEventResult::NotApplied));
 
-        // Navigation should still work
+        // Navigation should still work.
         let nav_event = InputEvent::Keyboard(key_press! { @special SpecialKey::Right });
 
         let result =

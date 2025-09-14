@@ -35,7 +35,7 @@ pub mod sgr_styling {
         //
         // Sequence: ESC[1m ESC[31m "RED" ESC[0m "NORM"
 
-        // Set bold+red, write "RED", reset all, write "NORM"
+        // Set bold+red, write "RED", reset all, write "NORM".
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         performer.apply_ansi_bytes(format!(
             "{bold}{fg_red}{text1}{reset_all}{text2}",
@@ -46,7 +46,7 @@ pub mod sgr_styling {
             text2 = NORM
         ));
 
-        // Verify "RED" has bold and red color
+        // Verify "RED" has bold and red color.
         for (col, expected_char) in RED.chars().enumerate() {
             assert_styled_char_at(
                 &ofs_buf,
@@ -64,12 +64,12 @@ pub mod sgr_styling {
         // Verify "NORM" has no styling (SGR 0 reset everything)
         assert_plain_text_at(&ofs_buf, 0, RED.len(), NORM);
 
-        // Verify empty cells after "NORM"
+        // Verify empty cells after "NORM".
         for col_idx in (RED.len() + NORM.len())..10 {
             assert_empty_at(&ofs_buf, 0, col_idx);
         }
 
-        // Verify final cursor position in ofs_buf.my_pos
+        // Verify final cursor position in ofs_buf.my_pos.
         assert_eq!(
             ofs_buf.my_pos,
             row(0) + col(RED.len() + NORM.len()),
@@ -105,7 +105,7 @@ pub mod sgr_styling {
             reset_bold_dim = SgrCode::ResetBoldDim
         ));
 
-        // Verify 'A' has bold, italic, and red
+        // Verify 'A' has bold, italic, and red.
         assert_styled_char_at(
             &ofs_buf,
             0,
@@ -132,12 +132,12 @@ pub mod sgr_styling {
             "italic dark-red (no bold)",
         );
 
-        // Verify empty cells after "AB"
+        // Verify empty cells after "AB".
         for col_idx in 2..10 {
             assert_empty_at(&ofs_buf, 0, col_idx);
         }
 
-        // Verify final cursor position in ofs_buf.my_pos
+        // Verify final cursor position in ofs_buf.my_pos.
         assert_eq!(
             ofs_buf.my_pos,
             row(0) + col(2),
@@ -168,7 +168,7 @@ pub mod sgr_styling {
         // Sequence: ESC[30mB ESC[31mR ESC[32mG ESC[37mW ESC[0m ESC[41mX ESC[42mY ESC[0m
         //           ESC[31mESC[44mZ ESC[0m
 
-        // Test various SGR color sequences through VTE parser
+        // Test various SGR color sequences through VTE parser.
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Test foreground colors: black, red, green, white, then background colors
@@ -184,7 +184,7 @@ pub mod sgr_styling {
                 rst = SgrCode::Reset,
             ));
 
-        // Verify colors in buffer
+        // Verify colors in buffer.
         assert_styled_char_at(
             &ofs_buf,
             0,
@@ -279,7 +279,7 @@ pub mod sgr_styling {
             text = "BLINK"
         ));
 
-        // Test each character in "BLINK" for the blink attribute
+        // Test each character in "BLINK" for the blink attribute.
         for (col, expected_char) in "BLINK".chars().enumerate() {
             assert_styled_char_at(
                 &ofs_buf,
@@ -306,7 +306,7 @@ pub mod sgr_styling {
             text = "RAPID"
         ));
 
-        // Test each character in "RAPID" for the blink attribute
+        // Test each character in "RAPID" for the blink attribute.
         for (col, expected_char) in "RAPID".chars().enumerate() {
             assert_styled_char_at(
                 &ofs_buf,
@@ -326,7 +326,7 @@ pub mod sgr_styling {
         let mut ofs_buf1 = create_test_offscreen_buffer_10r_by_10c();
         let mut ofs_buf2 = create_test_offscreen_buffer_10r_by_10c();
 
-        // Test that both SGR 5 and SGR 6 produce the same result
+        // Test that both SGR 5 and SGR 6 produce the same result.
         let mut performer1 = AnsiToOfsBufPerformer::new(&mut ofs_buf1);
         let mut performer2 = AnsiToOfsBufPerformer::new(&mut ofs_buf2);
 
@@ -341,7 +341,7 @@ pub mod sgr_styling {
             text = "A"
         ));
 
-        // Both should have blink attribute set
+        // Both should have blink attribute set.
         assert_styled_char_at(
             &ofs_buf1,
             0,
@@ -370,7 +370,7 @@ pub mod sgr_styling {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
-        // Set blink, write char, reset blink, write char
+        // Set blink, write char, reset blink, write char.
         performer.apply_ansi_bytes(format!(
             "{c1}{t1}{c2}{t2}",
             c1 = SgrCode::SlowBlink,
@@ -379,7 +379,7 @@ pub mod sgr_styling {
             t2 = "B"
         ));
 
-        // First char should have blink
+        // First char should have blink.
         assert_styled_char_at(
             &ofs_buf,
             0,
@@ -406,11 +406,11 @@ pub mod character_sets {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
-        // Start with ASCII mode and write 'q'
+        // Start with ASCII mode and write 'q'.
         performer.apply_ansi_bytes(esc_codes::EscSequence::SelectAscii.to_string());
         performer.print('q');
 
-        // Switch to DEC graphics mode
+        // Switch to DEC graphics mode.
         performer.apply_ansi_bytes(esc_codes::EscSequence::SelectDECGraphics.to_string());
 
         assert_eq!(
@@ -418,7 +418,7 @@ pub mod character_sets {
             CharacterSet::DECGraphics
         );
 
-        // Currently in DEC graphics mode
+        // Currently in DEC graphics mode.
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Write 'q' which should be translated to '─' (horizontal line)
@@ -427,19 +427,19 @@ pub mod character_sets {
         // Write 'x' which should be translated to '│' (vertical line)
         performer.print('x');
 
-        // Switch back to ASCII
+        // Switch back to ASCII.
         performer.apply_ansi_bytes(esc_codes::EscSequence::SelectAscii.to_string());
 
         // Write 'q' again (should be normal 'q')
         performer.print('q');
 
-        // Verify character set state after performer is dropped
+        // Verify character set state after performer is dropped.
         assert_eq!(
             ofs_buf.ansi_parser_support.character_set,
             CharacterSet::Ascii
         );
 
-        // Verify the characters
+        // Verify the characters.
         assert_plain_char_at(&ofs_buf, 0, 0, 'q'); // ASCII 'q'
         assert_plain_char_at(&ofs_buf, 0, 1, '─'); // DEC graphics 'q' -> horizontal line
         assert_plain_char_at(&ofs_buf, 0, 2, '│'); // DEC graphics 'x' -> vertical line

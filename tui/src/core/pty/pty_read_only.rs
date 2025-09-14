@@ -328,10 +328,10 @@ mod tests {
             loop {
                 tokio::select! {
                     result = &mut session.pinned_boxed_session_completion_handle => {
-                        // Process completed
+                        // Process completed.
                         let status = result.into_diagnostic()??;
 
-                        // Drain any remaining events
+                        // Drain any remaining events.
                         while let Ok(event) = session.output_evt_ch_rx_half.try_recv() {
                             events.push(event);
                         }
@@ -355,7 +355,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple_echo_command() -> miette::Result<()> {
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
         let session = PtyCommandBuilder::new("echo")
@@ -368,7 +368,7 @@ mod tests {
 
         assert!(status.success());
 
-        // Should have output and exit events
+        // Should have output and exit events.
         let output_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
@@ -388,10 +388,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_osc_sequence_with_printf() -> miette::Result<()> {
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Use printf to emit a known OSC sequence
+        // Use printf to emit a known OSC sequence.
         let session = PtyCommandBuilder::new("printf")
             .args([r"\x1b]9;4;1;50\x1b\\"])
             .cwd(temp_dir)
@@ -402,7 +402,7 @@ mod tests {
 
         assert!(status.success());
 
-        // Should have received the OSC event
+        // Should have received the OSC event.
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
@@ -418,10 +418,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_multiple_osc_sequences() -> miette::Result<()> {
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Emit multiple OSC sequences
+        // Emit multiple OSC sequences.
         let session = PtyCommandBuilder::new("printf")
             .args([r"\x1b]9;4;1;25\x1b\\\x1b]9;4;1;50\x1b\\\x1b]9;4;0;0\x1b\\"])
             .cwd(temp_dir)
@@ -454,16 +454,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_osc_with_mixed_output() -> miette::Result<()> {
-        // Mix regular output with OSC sequences
+        // Mix regular output with OSC sequences.
         // This test requires bash/sh with working printf escape sequences
         if cfg!(target_os = "windows") {
             return Ok(()); // Skip on Windows
         }
 
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Try using bash first, then sh
+        // Try using bash first, then sh.
         let config = PtyConfigOption::Osc + PtyConfigOption::Output;
         let session = PtyCommandBuilder::new("bash")
             .args([
@@ -493,7 +493,7 @@ mod tests {
             })
             .collect();
 
-        // If OSC sequences were parsed, verify they're correct
+        // If OSC sequences were parsed, verify they're correct.
         if !osc_events.is_empty() {
             assert_eq!(osc_events, vec![OscEvent::ProgressUpdate(50)]);
         }
@@ -503,16 +503,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_split_osc_sequence_simulation() -> miette::Result<()> {
-        // This test simulates a split sequence using shell commands
+        // This test simulates a split sequence using shell commands.
         // Note: This is platform-specific and may not work on all systems
         if cfg!(target_os = "windows") {
             return Ok(()); // Skip on Windows
         }
 
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Try using bash with better escape sequence handling
+        // Try using bash with better escape sequence handling.
         let session = PtyCommandBuilder::new("bash")
             .args(["-c", r"printf '\033]9;4;1;'; sleep 0.01; printf '75\033\\'"])
             .cwd(temp_dir)
@@ -521,7 +521,7 @@ mod tests {
         let (events, status) =
             collect_events_with_timeout(session, Duration::from_secs(5)).await?;
 
-        // Command should succeed
+        // Command should succeed.
         assert!(status.success());
 
         let osc_events: Vec<_> = events
@@ -532,10 +532,10 @@ mod tests {
             })
             .collect();
 
-        // This test may not produce OSC events on all systems due to printf limitations
-        // We just verify the command ran successfully
+        // This test may not produce OSC events on all systems due to printf limitations.
+        // We just verify the command ran successfully.
         if !osc_events.is_empty() {
-            // If we did get OSC events, they should be correct
+            // If we did get OSC events, they should be correct.
             assert_eq!(osc_events, vec![OscEvent::ProgressUpdate(75)]);
         }
 
@@ -544,10 +544,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_all_osc_event_types() -> miette::Result<()> {
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Test all four OSC event types
+        // Test all four OSC event types.
         let sequences = [
             (r"\x1b]9;4;0;0\x1b\\", OscEvent::ProgressCleared),
             (r"\x1b]9;4;1;42\x1b\\", OscEvent::ProgressUpdate(42)),
@@ -582,10 +582,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_command_failure() -> miette::Result<()> {
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Test that we properly handle command failures
+        // Test that we properly handle command failures.
         let session = PtyCommandBuilder::new("false")
             .cwd(temp_dir)
             .spawn_read_only(PtyConfigOption::NoCaptureOutput)?;
@@ -593,10 +593,10 @@ mod tests {
         let (events, status) =
             collect_events_with_timeout(session, Duration::from_secs(5)).await?;
 
-        // Command should fail
+        // Command should fail.
         assert!(!status.success());
 
-        // Should have an exit event
+        // Should have an exit event.
         let has_exit = events
             .iter()
             .any(|e| matches!(e, PtyReadOnlyOutputEvent::Exit(_)));
@@ -607,10 +607,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_capture_option() -> miette::Result<()> {
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Test that NoCaptureOutput doesn't capture anything
+        // Test that NoCaptureOutput doesn't capture anything.
         let session = PtyCommandBuilder::new("echo")
             .args(["test"])
             .cwd(temp_dir)
@@ -621,7 +621,7 @@ mod tests {
 
         assert!(status.success());
 
-        // Should only have exit event, no output
+        // Should only have exit event, no output.
         let output_events: Vec<_> = events
             .iter()
             .filter(|e| matches!(e, PtyReadOnlyOutputEvent::Output(_)))
@@ -636,7 +636,7 @@ mod tests {
     async fn test_create_reader_task_no_capture() {
         let (event_sender, mut event_receiver) = unbounded_channel();
 
-        // Create a mock reader that sends some data then EOF
+        // Create a mock reader that sends some data then EOF.
         let mock_data = b"test data";
         let reader = Box::new(std::io::Cursor::new(mock_data.to_vec()));
 
@@ -646,11 +646,11 @@ mod tests {
             PtyConfigOption::NoCaptureOutput,
         );
 
-        // Reader should complete successfully
+        // Reader should complete successfully.
         let result = tokio::time::timeout(Duration::from_millis(100), handle).await;
         assert!(result.is_ok());
 
-        // No events should be sent since capture is disabled
+        // No events should be sent since capture is disabled.
         assert!(event_receiver.try_recv().is_err());
     }
 
@@ -667,11 +667,11 @@ mod tests {
             PtyConfigOption::Output,
         );
 
-        // Wait for task to complete
+        // Wait for task to complete.
         let result = tokio::time::timeout(Duration::from_millis(100), handle).await;
         assert!(result.is_ok());
 
-        // Should receive output event
+        // Should receive output event.
         if let Ok(event) = event_receiver.try_recv() {
             match event {
                 PtyReadOnlyOutputEvent::Output(data) => assert_eq!(data, mock_data),
@@ -688,15 +688,15 @@ mod tests {
         let mock_data = b"\x1b]9;4;1;50\x1b\\";
         let reader = Box::new(std::io::Cursor::new(mock_data.to_vec()));
 
-        // This test now uses the new OSC-only test as the comprehensive one
-        // This version keeps the old behavior for backward compatibility
+        // This test now uses the new OSC-only test as the comprehensive one.
+        // This version keeps the old behavior for backward compatibility.
         let handle = spawn_blocking_controller_output_reader_task(
             reader,
             event_sender,
             PtyConfigOption::Osc,
         );
 
-        // Wait for task to complete
+        // Wait for task to complete.
         let result = tokio::time::timeout(Duration::from_millis(100), handle).await;
         assert!(result.is_ok());
 
@@ -712,7 +712,7 @@ mod tests {
             "Should have received at least one event"
         );
 
-        // Check that we received an OSC event (may also receive raw output due to default
+        // Check that we received an OSC event (may also receive raw output due to default.
         // behavior)
         let osc_events: Vec<_> = events
             .iter()
@@ -727,7 +727,7 @@ mod tests {
             "Should have received at least one OSC event"
         );
 
-        // Verify we got the correct OSC event
+        // Verify we got the correct OSC event.
         let has_correct_event = osc_events
             .iter()
             .any(|osc| matches!(osc, crate::OscEvent::ProgressUpdate(50)));
@@ -754,11 +754,11 @@ mod tests {
         let handle =
             spawn_blocking_controller_output_reader_task(reader, event_sender, config);
 
-        // Wait for task to complete
+        // Wait for task to complete.
         let result = tokio::time::timeout(Duration::from_millis(100), handle).await;
         assert!(result.is_ok());
 
-        // Collect all events - should only get OSC events, no raw output
+        // Collect all events - should only get OSC events, no raw output.
         let mut events = Vec::new();
         while let Ok(event) = event_receiver.try_recv() {
             events.push(event);
@@ -769,7 +769,7 @@ mod tests {
             "Should have received at least one event"
         );
 
-        // Should have OSC events but no output events
+        // Should have OSC events but no output events.
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
@@ -792,7 +792,7 @@ mod tests {
             "Should NOT have received output events (OSC-only capture)"
         );
 
-        // Verify we got the correct OSC event
+        // Verify we got the correct OSC event.
         let has_correct_event = osc_events
             .iter()
             .any(|osc| matches!(osc, crate::OscEvent::ProgressUpdate(75)));
@@ -811,17 +811,17 @@ mod tests {
         let mock_data = b"\x1b]9;4;1;25\x1b\\";
         let reader = Box::new(std::io::Cursor::new(mock_data.to_vec()));
 
-        // Create config with both output and OSC capture enabled
+        // Create config with both output and OSC capture enabled.
         let config = PtyConfigOption::Osc + PtyConfigOption::Output;
 
         let handle =
             spawn_blocking_controller_output_reader_task(reader, event_sender, config);
 
-        // Wait for task to complete
+        // Wait for task to complete.
         let result = tokio::time::timeout(Duration::from_millis(100), handle).await;
         assert!(result.is_ok());
 
-        // Collect all events - should get both raw output AND OSC events
+        // Collect all events - should get both raw output AND OSC events.
         let mut events = Vec::new();
         while let Ok(event) = event_receiver.try_recv() {
             events.push(event);
@@ -832,7 +832,7 @@ mod tests {
             "Should have received at least one event"
         );
 
-        // Should have both OSC events AND output events
+        // Should have both OSC events AND output events.
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {
@@ -855,7 +855,7 @@ mod tests {
             "Should have received output events (both capture enabled)"
         );
 
-        // Verify we got the correct OSC event
+        // Verify we got the correct OSC event.
         let has_correct_event = osc_events
             .iter()
             .any(|osc| matches!(osc, crate::OscEvent::ProgressUpdate(25)));

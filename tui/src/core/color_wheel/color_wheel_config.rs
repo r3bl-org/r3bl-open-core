@@ -84,7 +84,7 @@ impl ColorWheelConfig {
     }
 
     // Narrow down the given configs into a single one based on color_support (and global
-    // override)
+    // override).
     #[must_use]
     pub fn narrow_config_based_on_color_support(
         configs: &[ColorWheelConfig],

@@ -225,7 +225,7 @@ impl Spinner {
             &self.maybe_shared_writer,
         )?;
 
-        // Create a oneshot channel to signal when the task is complete
+        // Create a oneshot channel to signal when the task is complete.
         let (shutdown_complete_sender, shutdown_complete_receiver) =
             tokio::sync::oneshot::channel::<()>();
         self.maybe_shutdown_complete_rx = Some(shutdown_complete_receiver);
@@ -354,9 +354,9 @@ impl Spinner {
 
     /// Updates the interval message that's displayed during spinner animation.
     /// This can be called from another task/thread to update progress.
-    /// 
+    ///
     /// ANSI escape sequences are stripped from the message if present.
-    /// 
+    ///
     /// # Panics
     ///
     /// This will panic if the lock is poisoned, which can happen if a thread
@@ -364,7 +364,7 @@ impl Spinner {
     /// locks the mutex does not panic while holding the lock.
     pub fn update_message(&self, new_message: impl Into<InlineString>) {
         let msg = new_message.into();
-        // Strip ANSI codes if present
+        // Strip ANSI codes if present.
         let clean_msg = if contains_ansi_escape_sequence(&msg) {
             strip_ansi_escapes::strip_str(&msg).into()
         } else {
@@ -433,7 +433,7 @@ mod tests {
                     Ok(signal) => {
                         acc.push(signal);
                     }
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty | 
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty |
                          tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
                         break;
                     }
@@ -506,7 +506,7 @@ mod tests {
                     Ok(signal) => {
                         acc.push(signal);
                     }
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty | 
+                    Err(tokio::sync::mpsc::error::TryRecvError::Empty |
                          tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
                         break;
                     }
@@ -554,35 +554,35 @@ mod tests {
 
         let mut spinner = res_maybe_spinner.unwrap().unwrap();
 
-        // Let the spinner run for a bit with initial message
+        // Let the spinner run for a bit with initial message.
         tokio::time::sleep(QUANTUM).await;
 
-        // Update the message
+        // Update the message.
         spinner.update_message("updated message");
 
-        // Let it run with the updated message
+        // Let it run with the updated message.
         tokio::time::sleep(QUANTUM * 2).await;
 
         // Update with ANSI codes (should be stripped)
         spinner.update_message("\x1b[31mupdated with ansi\x1b[0m");
 
-        // Let it run with the ANSI-stripped message
+        // Let it run with the ANSI-stripped message.
         tokio::time::sleep(QUANTUM).await;
 
-        // Stop the spinner
+        // Stop the spinner.
         spinner.request_shutdown();
         spinner.await_shutdown().await;
 
-        // Verify that both messages appeared in the output
+        // Verify that both messages appeared in the output.
         let output_buffer_data = stdout_mock.get_copy_of_buffer_as_string_strip_ansi();
-        
-        // Should contain both the initial and updated messages
+
+        // Should contain both the initial and updated messages.
         assert!(output_buffer_data.contains("initial message"));
         assert!(output_buffer_data.contains("updated message"));
         assert!(output_buffer_data.contains("updated with ansi")); // ANSI should be stripped
         assert!(output_buffer_data.contains("final message"));
 
-        // Clean up line receiver
+        // Clean up line receiver.
         while line_receiver.try_recv().is_ok() {}
         drop(line_receiver);
     }

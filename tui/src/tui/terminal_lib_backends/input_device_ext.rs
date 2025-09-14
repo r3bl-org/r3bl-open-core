@@ -74,8 +74,8 @@ impl InputDeviceExt for InputDevice {
                         return Some(input_event);
                     }
                     // Conversion errors are expected in the following cases:
-                    // 1. Key Release/Repeat events (filtered in InputEvent::try_from)
-                    // 2. Paste events (not supported)
+                    // 1. Key Release/Repeat events (filtered in InputEvent::try_from).
+                    // 2. Paste events (not supported).
                     //
                     // These are normal occurrences, not bugs. We simply continue
                     // reading the next event. The TryFrom implementations handle

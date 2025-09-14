@@ -133,7 +133,7 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
             /* Some */ |row| row,
         );
 
-    // Use shift_lines_up to shift lines up within the scroll region
+    // Use shift_lines_up to shift lines up within the scroll region.
     performer.ofs_buf.shift_lines_up(
         {
             let start = scroll_top;
@@ -199,7 +199,7 @@ pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
             /* Some */ |row_index| row_index,
         );
 
-    // Use shift_lines_down to shift lines down within the scroll region
+    // Use shift_lines_down to shift lines down within the scroll region.
     performer.ofs_buf.shift_lines_down(
         {
             let start = scroll_top;

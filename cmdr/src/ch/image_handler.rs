@@ -54,7 +54,7 @@ pub fn parse_pasted_contents(
                     text_parts.push(content);
                 }
                 Err(_) => {
-                    // Skip malformed entries
+                    // Skip malformed entries.
                     tracing::warn!("Failed to parse pasted content entry, skipping");
                 }
             }
@@ -129,7 +129,7 @@ pub fn get_downloads_directory() -> CommonResult<PathBuf> {
     if let Some(downloads_dir) = dirs::download_dir() {
         Ok(downloads_dir)
     } else {
-        // Fallback to home directory if Downloads can't be found
+        // Fallback to home directory if Downloads can't be found.
         let home_dir = dirs::home_dir()
             .ok_or_else(|| miette::miette!("Could not determine home directory"))?;
         Ok(home_dir.join("Downloads"))
@@ -160,7 +160,7 @@ pub fn save_images_to_downloads(
 
     let downloads_dir = get_downloads_directory()?;
 
-    // Create Downloads directory if it doesn't exist
+    // Create Downloads directory if it doesn't exist.
     if !downloads_dir.exists() {
         std::fs::create_dir_all(&downloads_dir)
             .into_diagnostic()
@@ -169,7 +169,7 @@ pub fn save_images_to_downloads(
             })?;
     }
 
-    // Generate a single friendly ID for this batch of images
+    // Generate a single friendly ID for this batch of images.
     let friendly_id = friendly_random_id::generate_friendly_random_id();
     let mut saved_images = Vec::new();
 
@@ -183,7 +183,7 @@ pub fn save_images_to_downloads(
 
         let filepath = downloads_dir.join(&filename);
 
-        // Decode and save the image
+        // Decode and save the image.
         let image_data = decode_base64_image(&image.content)?;
 
         std::fs::write(&filepath, image_data)
@@ -225,7 +225,7 @@ mod tests {
         assert_eq!(extract_project_name("/"), "unknown-project"); // fallback
         assert_eq!(extract_project_name(""), "unknown-project"); // fallback
 
-        // Test Windows paths on Windows
+        // Test Windows paths on Windows.
         #[cfg(target_os = "windows")]
         {
             assert_eq!(
@@ -235,7 +235,7 @@ mod tests {
             assert_eq!(extract_project_name("C:\\"), "unknown-project");
         }
 
-        // Test Unix paths on Unix
+        // Test Unix paths on Unix.
         #[cfg(not(target_os = "windows"))]
         {
             assert_eq!(extract_project_name("/home/user/my-project"), "my-project");
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_decode_valid_base64_image() {
-        // Valid 1x1 PNG base64 data
+        // Valid 1x1 PNG base64 data.
         let valid_png_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
         let result = decode_base64_image(valid_png_base64);
         assert!(result.is_ok());
@@ -368,14 +368,14 @@ mod tests {
 
         use super::super::types::HistoryItem;
 
-        // Test with no images
+        // Test with no images.
         let history_item = HistoryItem {
             display: "No images here".to_string(),
             pasted_contents: json!({}),
         };
         assert_eq!(count_images_in_history_item(&history_item), 0);
 
-        // Test with single image
+        // Test with single image.
         let history_item = HistoryItem {
             display: "One image [Image #1]".to_string(),
             pasted_contents: json!({
@@ -389,7 +389,7 @@ mod tests {
         };
         assert_eq!(count_images_in_history_item(&history_item), 1);
 
-        // Test with multiple images
+        // Test with multiple images.
         let history_item = HistoryItem {
             display: "Multiple images [Image #1] [Image #2]".to_string(),
             pasted_contents: json!({

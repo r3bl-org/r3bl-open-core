@@ -57,7 +57,7 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     let at = /* 0-based */ performer.ofs_buf.my_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
-    // Use dedicated DCH method to delete characters at cursor
+    // Use dedicated DCH method to delete characters at cursor.
     performer
         .ofs_buf
         .delete_chars_at_cursor(at, how_many, max_width);
@@ -92,7 +92,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
     let at = /* 0-based */ performer.ofs_buf.my_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
-    // Use dedicated ICH method to insert characters at cursor
+    // Use dedicated ICH method to insert characters at cursor.
     performer
         .ofs_buf
         .insert_chars_at_cursor(at, how_many, max_width);
@@ -127,7 +127,7 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
     let at = /* 0-based */ performer.ofs_buf.my_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
-    // Use dedicated ECH method to erase characters at cursor
+    // Use dedicated ECH method to erase characters at cursor.
     performer
         .ofs_buf
         .erase_chars_at_cursor(at, how_many, max_width);

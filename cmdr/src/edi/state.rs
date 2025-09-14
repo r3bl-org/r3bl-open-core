@@ -330,7 +330,7 @@ mod impl_display {
         /// reporting, and it is expected to be fast, since it is called in a hot loop,
         /// on every render.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Build compact telemetry format
+            // Build compact telemetry format.
             write!(
                 f,
                 "State[editors={}, dialogs={}]",
@@ -338,7 +338,7 @@ mod impl_display {
                 self.dialog_buffers.len()
             )?;
 
-            // Add detailed buffer info if needed (with line breaks and indentation)
+            // Add detailed buffer info if needed (with line breaks and indentation).
             if !self.editor_buffers.is_empty() {
                 write!(f, "\n  editors=[")?;
                 for (i, (id, buffer)) in self.editor_buffers.iter().enumerate() {

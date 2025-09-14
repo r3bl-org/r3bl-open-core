@@ -69,19 +69,19 @@ fn map_language_to_extension(lang: &str) -> &str {
         "sql" => "sql",
         "makefile" => "makefile",
 
-        // Languages that fall back to JavaScript
+        // Languages that fall back to JavaScript.
         "javascript" | "typescript" | "ts" => "js",
 
-        // Languages that fall back to CSS
+        // Languages that fall back to CSS.
         "css" | "scss" | "sass" => "css",
 
-        // Languages that fall back to Java
+        // Languages that fall back to Java.
         "java" | "kotlin" | "kt" => "java",
 
-        // Languages that fall back to Rust
+        // Languages that fall back to Rust.
         "rust" | "toml" | "swift" => "rs",
 
-        // Languages that fall back to shell
+        // Languages that fall back to shell.
         "shell" | "bash" | "sh" | "dockerfile" => "sh",
 
         // Default: assume it's already a file extension
@@ -191,7 +191,7 @@ mod tests_simple_md_highlight {
         let syntax_set = get_cached_syntax_set();
         let theme = get_cached_theme();
 
-        // Prepare Markdown syntax highlighting.q
+        // Prepare Markdown syntax highlighting.
         let md_syntax = syntax_set.find_syntax_by_extension("md").unwrap();
         let mut highlight_lines = HighlightLines::new(md_syntax, theme);
 
@@ -564,11 +564,11 @@ mod tests_language_mapping {
 
     #[test]
     fn test_map_language_to_extension() {
-        // Test Rust mapping
+        // Test Rust mapping.
         assert_eq!(map_language_to_extension("rust"), "rs");
         assert_eq!(map_language_to_extension("rs"), "rs");
 
-        // Test JavaScript mapping
+        // Test JavaScript mapping.
         assert_eq!(map_language_to_extension("javascript"), "js");
         assert_eq!(map_language_to_extension("js"), "js");
 
@@ -576,7 +576,7 @@ mod tests_language_mapping {
         assert_eq!(map_language_to_extension("typescript"), "js");
         assert_eq!(map_language_to_extension("ts"), "js");
 
-        // Test Python mapping
+        // Test Python mapping.
         assert_eq!(map_language_to_extension("python"), "py");
         assert_eq!(map_language_to_extension("py"), "py");
 
@@ -594,7 +594,7 @@ mod tests_language_mapping {
         assert_eq!(map_language_to_extension("c#"), "cs");
         assert_eq!(map_language_to_extension("cs"), "cs");
 
-        // Test fallback mappings
+        // Test fallback mappings.
         assert_eq!(map_language_to_extension("toml"), "rs"); // Falls back to Rust
         assert_eq!(map_language_to_extension("scss"), "css"); // Falls back to CSS
         assert_eq!(map_language_to_extension("sass"), "css"); // Falls back to CSS
@@ -611,7 +611,7 @@ mod tests_language_mapping {
     fn test_try_get_syntax_ref_with_language_names() {
         let syntax_set = get_cached_syntax_set();
 
-        // Test that both "rust" and "rs" resolve to the same syntax
+        // Test that both "rust" and "rs" resolve to the same syntax.
         let rust_syntax = try_get_syntax_ref(syntax_set, "rust");
         let rs_syntax = try_get_syntax_ref(syntax_set, "rs");
 
@@ -619,12 +619,12 @@ mod tests_language_mapping {
         assert!(rs_syntax.is_some());
         assert_eq!(rust_syntax.unwrap().name, rs_syntax.unwrap().name);
 
-        // Test other common language mappings
+        // Test other common language mappings.
         assert!(try_get_syntax_ref(syntax_set, "javascript").is_some());
         assert!(try_get_syntax_ref(syntax_set, "python").is_some());
         assert!(try_get_syntax_ref(syntax_set, "golang").is_some());
 
-        // Test that unknown languages return None
+        // Test that unknown languages return None.
         assert!(try_get_syntax_ref(syntax_set, "unknown_language").is_none());
     }
 
@@ -640,7 +640,7 @@ mod tests_language_mapping {
             );
         }
 
-        // Test our mappings
+        // Test our mappings.
         let test_mappings = [
             ("rust", "rs"),
             ("javascript", "js"),

@@ -20,7 +20,7 @@ use r3bl_tui::{ansi::terminal_output,
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
 
-    // Initialize logging to log.txt
+    // Initialize logging to log.txt.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting Simple PTY Example");
 
@@ -30,12 +30,12 @@ async fn main() -> miette::Result<()> {
     println!("📝 Debug output will be written to log.txt");
     println!();
 
-    // Get terminal size
+    // Get terminal size.
     let terminal_size = get_size()?;
     let mut output_device = OutputDevice::new_stdout();
     let mut input_device = InputDevice::new_event_stream();
 
-    // Start raw mode
+    // Start raw mode.
     RawMode::start(
         terminal_size,
         lock_output_device_as_mut!(&output_device),
@@ -43,11 +43,11 @@ async fn main() -> miette::Result<()> {
     );
     tracing::debug!("Raw mode started");
 
-    // Clear screen and reset cursor
+    // Clear screen and reset cursor.
     terminal_output::clear_screen_and_home_cursor(&output_device);
     tracing::debug!("Screen cleared");
 
-    // Spawn htop process
+    // Spawn htop process.
     let pty_size = PtySize {
         rows: terminal_size.row_height.into(),
         cols: terminal_size.col_width.into(),
@@ -61,10 +61,10 @@ async fn main() -> miette::Result<()> {
 
     tracing::debug!("htop process started successfully");
 
-    // Run event loop
+    // Run event loop.
     let result = run_event_loop(session, &mut input_device, &mut output_device).await;
 
-    // Cleanup
+    // Cleanup.
     tracing::debug!("Starting cleanup");
     RawMode::end(
         terminal_size,
@@ -89,7 +89,7 @@ async fn run_event_loop(
 
     loop {
         tokio::select! {
-            // Handle PTY output - properly wait for data
+            // Handle PTY output - properly wait for data.
             Some(event) = session.output_event_receiver_half.recv() => {
                 match event {
                     PtyReadWriteOutputEvent::Output(data) => {
@@ -98,14 +98,14 @@ async fn run_event_loop(
                             tracing::debug!("PTY output #{}: {} bytes", output_count, data.len());
                         }
 
-                        // Debug: Log the actual bytes when we get small outputs (likely from key responses)
+                        // Debug: Log the actual bytes when we get small outputs (likely from key responses).
                         if data.len() < 1000 {
                             tracing::debug!("PTY output #{} content ({} bytes): {:?}",
                                 output_count, data.len(), String::from_utf8_lossy(&data));
                             tracing::debug!("PTY output #{} raw bytes: {:02x?}", output_count, &data[..data.len().min(100)]);
                         }
 
-                        // Write the PTY output to the output device
+                        // Write the PTY output to the output device.
                         let out = lock_output_device_as_mut!(output_device);
                         if let Err(e) = out.write_all(&data) {
                             tracing::error!("Failed to write to output device: {}", e);
@@ -122,13 +122,13 @@ async fn run_event_loop(
                 }
             }
 
-            // Handle user input
+            // Handle user input.
             Ok(event) = input_device.next() => {
                 let Ok(input_event) = InputEvent::try_from(event) else { continue };
 
                 match input_event {
                     InputEvent::Keyboard(key) => {
-                        // Check for Ctrl+Q to quit
+                        // Check for Ctrl+Q to quit.
                         if let KeyPress::WithModifiers {
                             key: Key::Character('q'),
                             mask: ModifierKeysMask {
@@ -138,26 +138,26 @@ async fn run_event_loop(
                             },
                         } = key {
                             tracing::debug!("Ctrl+Q pressed, starting shutdown");
-                            // First send Ctrl+C to terminate htop gracefully
+                            // First send Ctrl+C to terminate htop gracefully.
                             tracing::debug!("Sending Ctrl+C to htop");
                             let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::SendControl(ControlSequence::CtrlC, CursorKeyMode::default()));
-                            // Wait a moment for bash to exit
+                            // Wait a moment for bash to exit.
                             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                            // Send close to PTY
+                            // Send close to PTY.
                             tracing::debug!("Sending Close event to PTY");
                             let _unused = session.input_event_ch_tx_half.send(PtyInputEvent::Close);
-                            // Wait for session to close
+                            // Wait for session to close.
                             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                             tracing::debug!("Exiting event loop");
                             return Ok(());
                         }
 
-                        // Convert key to PTY input event and send
+                        // Convert key to PTY input event and send.
                         if let Some(event) = Option::<PtyInputEvent>::from(key) {
                             input_count += 1;
                             tracing::debug!("Input #{}: key={:?}, event={:?}", input_count, key, event);
 
-                            // Debug: Log the actual bytes being sent for arrow keys
+                            // Debug: Log the actual bytes being sent for arrow keys.
                             if let PtyInputEvent::SendControl(ref ctrl, ref mode) = event {
                                 tracing::debug!("Sending control bytes: {:02x?}", ctrl.to_bytes(*mode).as_ref());
                             }
@@ -172,7 +172,7 @@ async fn run_event_loop(
                         }
                     }
                     InputEvent::Resize(new_size) => {
-                        // Handle resize
+                        // Handle resize.
                         let pty_size = PtySize {
                             rows: new_size.row_height.0.value,
                             cols: new_size.col_width.0.value,

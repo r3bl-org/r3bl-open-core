@@ -57,7 +57,7 @@ mod tests_bulk_ops {
         let applied_count = buffer.apply_changes(changes);
         assert_eq!(applied_count, 4); // All changes should be applied successfully
 
-        // Verify all changes were applied
+        // Verify all changes were applied.
         assert_eq!(
             buffer.get_char(row(0) + col(0)).unwrap(),
             create_test_char('A')
@@ -90,7 +90,7 @@ mod tests_bulk_ops {
         let applied_count = buffer.apply_changes(changes);
         assert_eq!(applied_count, 2); // Only 2 valid changes should be applied
 
-        // Verify valid changes were applied
+        // Verify valid changes were applied.
         assert_eq!(
             buffer.get_char(row(0) + col(0)).unwrap(),
             create_test_char('V')
@@ -114,7 +114,7 @@ mod tests_bulk_ops {
     fn test_apply_changes_large_batch() {
         let mut buffer = create_test_buffer();
 
-        // Create a large batch of changes
+        // Create a large batch of changes.
         let mut changes = vec![];
         for r in 0..4 {
             for c in 0..4 {
@@ -125,7 +125,7 @@ mod tests_bulk_ops {
         let applied_count = buffer.apply_changes(changes);
         assert_eq!(applied_count, 16); // All 16 positions in 4x4 buffer
 
-        // Verify all positions were changed
+        // Verify all positions were changed.
         for r in 0..4 {
             for c in 0..4 {
                 assert_eq!(
@@ -140,7 +140,7 @@ mod tests_bulk_ops {
     fn test_apply_changes_overlapping() {
         let mut buffer = create_test_buffer();
 
-        // Apply changes to same position multiple times
+        // Apply changes to same position multiple times.
         let changes = vec![
             (row(1) + col(1), create_test_char('1')),
             (row(1) + col(1), create_test_char('2')),
@@ -150,7 +150,7 @@ mod tests_bulk_ops {
         let applied_count = buffer.apply_changes(changes);
         assert_eq!(applied_count, 3); // All changes should be applied
 
-        // The last change should win
+        // The last change should win.
         assert_eq!(
             buffer.get_char(row(1) + col(1)).unwrap(),
             create_test_char('3')

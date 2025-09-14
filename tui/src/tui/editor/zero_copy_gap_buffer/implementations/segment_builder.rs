@@ -144,13 +144,13 @@ impl ZeroCopyGapBuffer {
     pub fn rebuild_line_segments(&mut self, line_index: RowIndex) -> Result<()> {
         let line_idx = line_index.as_usize();
 
-        // Get line info for content extraction
+        // Get line info for content extraction.
         let line_info = self
             .get_line_info(line_idx)
             .ok_or_else(|| miette!("Line index {} out of bounds", line_idx))?;
 
-        // Extract content slice up to content_len boundary
-        // This ensures we don't read into null padding
+        // Extract content slice up to content_len boundary.
+        // This ensures we don't read into null padding.
         let content_slice = &self.buffer[line_info.content_range()];
 
         // Convert to string (UTF-8 invariants maintained by buffer)
@@ -172,14 +172,14 @@ impl ZeroCopyGapBuffer {
             unsafe { from_utf8_unchecked(content_slice) }
         };
 
-        // Build new segments using the segment builder
+        // Build new segments using the segment builder.
         let segments = build_segments_for_str(content_str);
 
-        // Calculate metadata from segments
+        // Calculate metadata from segments.
         let display_width = calculate_display_width(&segments);
         let grapheme_count = len(segments.len());
 
-        // Update line info with new metadata
+        // Update line info with new metadata.
         let line_info = self.get_line_info_mut(line_idx).ok_or_else(|| {
             miette!("Line {} not found when updating segments", line_idx)
         })?;
@@ -258,7 +258,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Rebuild segments for empty line
+        // Rebuild segments for empty line.
         buffer.rebuild_line_segments(row(0))?;
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -274,7 +274,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert ASCII text
+        // Insert ASCII text.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -290,7 +290,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert Unicode text with emoji
+        // Insert Unicode text with emoji.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hi 👋 😀")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -305,17 +305,17 @@ mod tests {
     fn test_rebuild_line_segments_batch() -> Result<()> {
         let mut buffer = ZeroCopyGapBuffer::new();
 
-        // Create multiple lines
+        // Create multiple lines.
         for i in 0..3 {
             buffer.add_line();
             let text = format!("Line {i}");
             buffer.insert_text_at_grapheme(row(i), seg_index(0), &text)?;
         }
 
-        // Rebuild all lines at once
+        // Rebuild all lines at once.
         buffer.rebuild_line_segments_batch(&[row(0), row(1), row(2)])?;
 
-        // Verify all lines were rebuilt correctly
+        // Verify all lines were rebuilt correctly.
         for i in 0..3 {
             let line_info = buffer.get_line_info(i).unwrap();
             assert_eq!(line_info.segments.len(), 6); // "Line X" = 6 chars
@@ -331,14 +331,14 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text that's shorter than line capacity
+        // Insert text that's shorter than line capacity.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Test")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
         let buffer_start = line_info.buffer_offset.as_usize();
         let capacity = line_info.capacity.as_usize();
 
-        // Verify null padding exists beyond content
+        // Verify null padding exists beyond content.
         for i in (buffer_start + 5)..(buffer_start + capacity) {
             assert_eq!(
                 buffer.buffer[i], b'\0',
@@ -346,7 +346,7 @@ mod tests {
             );
         }
 
-        // Rebuild segments - should only process "Test", not null padding
+        // Rebuild segments - should only process "Test", not null padding.
         buffer.rebuild_line_segments(row(0))?;
 
         let line_info = buffer.get_line_info(0).unwrap();
@@ -362,7 +362,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Try to rebuild non-existent line
+        // Try to rebuild non-existent line.
         let result = buffer.rebuild_line_segments(row(1));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("out of bounds"));
@@ -373,11 +373,11 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert and then delete some text
+        // Insert and then delete some text.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
         buffer.delete_grapheme_at(row(0), seg_index(1))?; // Delete 'e'
 
-        // Segments should be rebuilt automatically by delete, but let's verify
+        // Segments should be rebuilt automatically by delete, but let's verify.
         let line_info = buffer.get_line_info(0).unwrap();
         /* cspell:disable-next-line */
         assert_eq!(line_info.segments.len(), 4); // "Hllo" (after deleting 'e')
@@ -389,19 +389,19 @@ mod tests {
 
     #[test]
     fn test_emoji_append_segment_positioning() -> Result<()> {
-        // This test demonstrates the emoji positioning bug that was fixed
-        // The bug occurred when appending emoji to existing text
+        // This test demonstrates the emoji positioning bug that was fixed.
+        // The bug occurred when appending emoji to existing text.
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert all at once to show correct behavior
+        // Insert all at once to show correct behavior.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "abcab😃")?;
 
-        // Check the segments are positioned correctly
+        // Check the segments are positioned correctly.
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 6);
 
-        // The emoji should be at column 5
+        // The emoji should be at column 5.
         let emoji_seg = &line_info.segments[5];
         assert_eq!(
             emoji_seg.start_display_col_index,
@@ -419,19 +419,19 @@ mod tests {
     #[test]
     fn test_emoji_append_incremental_would_show_bug() -> Result<()> {
         // This test shows what happens with incremental insertion
-        // which may not use the append optimization
+        // which may not use the append optimization.
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // First insert "abcab"
+        // First insert "abcab".
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "abcab")?;
 
-        // Then append emoji separately
+        // Then append emoji separately.
         buffer.insert_text_at_grapheme(row(0), seg_index(5), "😃")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // The segments are positioned correctly
+        // The segments are positioned correctly.
         let emoji_seg = &line_info.segments[5];
         assert_eq!(emoji_seg.start_display_col_index, col(5));
 
@@ -441,7 +441,7 @@ mod tests {
         // In the editor, this gets corrected by subsequent operations.
 
         // For now, we just verify segments are correct, which is what matters
-        // for the backspace operation
+        // for the backspace operation.
         assert_eq!(line_info.segments.len(), 6);
 
         Ok(())
@@ -449,21 +449,21 @@ mod tests {
 
     #[test]
     fn test_incremental_append_segment_positions() -> Result<()> {
-        // Test that segments maintain correct positions during incremental appends
+        // Test that segments maintain correct positions during incremental appends.
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Build up text incrementally
+        // Build up text incrementally.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "a")?;
         buffer.insert_text_at_grapheme(row(0), seg_index(1), "b")?;
         buffer.insert_text_at_grapheme(row(0), seg_index(2), "😃")?;
         buffer.insert_text_at_grapheme(row(0), seg_index(3), "c")?;
 
-        // Verify final segment positions
+        // Verify final segment positions.
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.segments.len(), 4);
 
-        // Check each segment's position
+        // Check each segment's position.
         assert_eq!(line_info.segments[0].start_display_col_index, col(0)); // 'a'
         assert_eq!(line_info.segments[1].start_display_col_index, col(1)); // 'b'
         assert_eq!(line_info.segments[2].start_display_col_index, col(2)); // '😃'

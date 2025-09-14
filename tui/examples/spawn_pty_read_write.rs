@@ -36,12 +36,12 @@ const RESET: &str = "\x1b[0m";
 async fn run_python_repl_demo() -> miette::Result<()> {
     println!("{YELLOW}🐍 Starting Python REPL session...{RESET}\n");
 
-    // Start Python with unbuffered output for immediate feedback
+    // Start Python with unbuffered output for immediate feedback.
     let mut session = PtyCommandBuilder::new("python3")
         .args(["-u", "-i"]) // -u: unbuffered, -i: interactive
         .spawn_read_write(PtySize::default())?;
 
-    // Spawn a task to handle output
+    // Spawn a task to handle output.
     let output_handle = tokio::spawn(async move {
         let mut buffer = String::new();
 
@@ -51,7 +51,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
                     let text = String::from_utf8_lossy(&data);
                     buffer.push_str(&text);
 
-                    // Print output with color coding
+                    // Print output with color coding.
                     for line in text.lines() {
                         if line.starts_with(">>>") || line.starts_with("...") {
                             print!("{CYAN}{line}{RESET}");
@@ -74,10 +74,10 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         buffer
     });
 
-    // Wait a bit for Python to start
+    // Wait a bit for Python to start.
     sleep(Duration::from_millis(500)).await;
 
-    // Demo: Basic arithmetic
+    // Demo: Basic arithmetic.
     println!("{BLUE}📝 Sending: Basic arithmetic{RESET}");
     session
         .input_event_ch_tx_half
@@ -85,7 +85,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Demo: Variables and strings
+    // Demo: Variables and strings.
     println!("\n{BLUE}📝 Sending: Variable assignment{RESET}");
     session
         .input_event_ch_tx_half
@@ -102,7 +102,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Demo: Lists and loops
+    // Demo: Lists and loops.
     println!("\n{BLUE}📝 Sending: Create a list{RESET}");
     session
         .input_event_ch_tx_half
@@ -117,7 +117,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Demo: Functions
+    // Demo: Functions.
     println!("\n{BLUE}📝 Sending: Define a function{RESET}");
     session
         .input_event_ch_tx_half
@@ -144,7 +144,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Demo: Error handling
+    // Demo: Error handling.
     println!("\n{BLUE}📝 Sending: Intentional error to show error handling{RESET}");
     session
         .input_event_ch_tx_half
@@ -152,7 +152,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Demo: Import a module
+    // Demo: Import a module.
     println!("\n{BLUE}📝 Sending: Import a module{RESET}");
     session
         .input_event_ch_tx_half
@@ -167,7 +167,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Exit Python
+    // Exit Python.
     println!("\n{BLUE}📝 Sending: Exit command (Ctrl-D){RESET}");
     session
         .input_event_ch_tx_half
@@ -177,7 +177,7 @@ async fn run_python_repl_demo() -> miette::Result<()> {
         ))
         .unwrap();
 
-    // Wait for output task to complete
+    // Wait for output task to complete.
     let final_output = output_handle.await.into_diagnostic()?;
 
     println!(
@@ -196,12 +196,12 @@ async fn run_python_repl_demo() -> miette::Result<()> {
 async fn run_shell_demo() -> miette::Result<()> {
     println!("\n{YELLOW}🐚 Starting shell session demo...{RESET}\n");
 
-    // Start a shell session
+    // Start a shell session.
     let mut session = PtyCommandBuilder::new("sh")
         .args(["-i"]) // Interactive mode
         .spawn_read_write(PtySize::default())?;
 
-    // Spawn output handler
+    // Spawn output handler.
     let output_handle = tokio::spawn(async move {
         while let Some(event) = session.output_event_receiver_half.recv().await {
             match event {
@@ -217,10 +217,10 @@ async fn run_shell_demo() -> miette::Result<()> {
         }
     });
 
-    // Wait for shell to start
+    // Wait for shell to start.
     sleep(Duration::from_millis(500)).await;
 
-    // Demo: Basic commands
+    // Demo: Basic commands.
     println!("{BLUE}📝 Sending: pwd{RESET}");
     session
         .input_event_ch_tx_half
@@ -251,7 +251,7 @@ async fn run_shell_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Demo: Interrupt a long-running command
+    // Demo: Interrupt a long-running command.
     println!("\n{BLUE}📝 Sending: Start a long command and interrupt it{RESET}");
     session
         .input_event_ch_tx_half
@@ -271,7 +271,7 @@ async fn run_shell_demo() -> miette::Result<()> {
         .unwrap();
     sleep(Duration::from_millis(200)).await;
 
-    // Exit shell
+    // Exit shell.
     println!("\n{BLUE}📝 Sending: exit{RESET}");
     session
         .input_event_ch_tx_half
@@ -301,14 +301,14 @@ async fn main() -> miette::Result<()> {
     );
     println!("{CYAN}We'll demonstrate both Python REPL and shell interactions.{RESET}\n");
 
-    // Run Python REPL demo
+    // Run Python REPL demo.
     println!("{YELLOW}▶ Demo 1: Python REPL Interaction{RESET}");
     println!(
         "{YELLOW}═══════════════════════════════════════════════════════════{RESET}"
     );
     run_python_repl_demo().await?;
 
-    // Run shell demo
+    // Run shell demo.
     println!("\n{YELLOW}▶ Demo 2: Shell Session with Command Interruption{RESET}");
     println!(
         "{YELLOW}═══════════════════════════════════════════════════════════{RESET}"

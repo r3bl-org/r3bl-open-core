@@ -52,5 +52,5 @@ pub trait GraphemeStringOwnedExt: GraphemeString {
     fn segments_to_vec(&self) -> Vec<crate::Seg> { self.segments().to_vec() }
 }
 
-// Auto-implement the extension for all GraphemeString types
+// Auto-implement the extension for all GraphemeString types.
 impl<T: GraphemeString + ?Sized> GraphemeStringOwnedExt for T {}

@@ -293,7 +293,7 @@ pub mod manage_shared_writer_output {
                 let maybe_line_control_signal = line_control_channel_receiver.recv();
 
                 // Channel is open.
-                // if-let scope has changed in Rust 2024, so use match here and not if-let
+                // if-let scope has changed in Rust 2024, so use match here and not if-let.
                 #[allow(clippy::single_match_else)]
                 match maybe_line_control_signal.await {
                     Some(maybe_line_control_signal) => {
@@ -1064,23 +1064,23 @@ mod test_pause_and_resume_support {
 
     #[test]
     fn test_flush_internal_paused() {
-        // Create a mock `LineState` with initial data
+        // Create a mock `LineState` with initial data.
         let safe_line_state =
             Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
-        // Create a mock `SafePauseBuffer` with some paused lines
+        // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();
         pause_buffer.push("Paused line 1".into());
         pause_buffer.push("Paused line 2".into());
 
-        // Create a mock `SafeIsPausedBuffer` with the pause buffer
+        // Create a mock `SafeIsPausedBuffer` with the pause buffer.
         let safe_is_paused_buffer = Arc::new(Mutex::new(pause_buffer));
 
         let mut stdout_mock = StdoutMock::default();
 
         let line_state = safe_line_state.lock().unwrap();
 
-        // Call the `flush_internal` function
+        // Call the `flush_internal` function.
         let result = flush_internal(
             &safe_is_paused_buffer,
             LineStateLiveness::Paused,
@@ -1091,29 +1091,29 @@ mod test_pause_and_resume_support {
         // Assert that the function returns Ok(())
         assert!(result.is_ok());
 
-        // Assert that the mock terminal received the expected output
+        // Assert that the mock terminal received the expected output.
         assert_eq!(stdout_mock.get_copy_of_buffer_as_string_strip_ansi(), "");
     }
 
     #[test]
     fn test_flush_internal_not_paused() {
-        // Create a mock `LineState` with initial data
+        // Create a mock `LineState` with initial data.
         let safe_line_state =
             Arc::new(Mutex::new(LineState::new("> ".to_string(), (100, 100))));
 
-        // Create a mock `SafePauseBuffer` with some paused lines
+        // Create a mock `SafePauseBuffer` with some paused lines.
         let mut pause_buffer = PauseBuffer::new();
         pause_buffer.push("Paused line 1".into());
         pause_buffer.push("Paused line 2".into());
 
-        // Create a mock `SafeIsPausedBuffer` with the pause buffer
+        // Create a mock `SafeIsPausedBuffer` with the pause buffer.
         let safe_is_paused_buffer = Arc::new(Mutex::new(pause_buffer));
 
         let mut stdout_mock = StdoutMock::default();
 
         let line_state = safe_line_state.lock().unwrap();
 
-        // Call the `flush_internal` function
+        // Call the `flush_internal` function.
         let result = flush_internal(
             &safe_is_paused_buffer,
             LineStateLiveness::NotPaused,
@@ -1124,7 +1124,7 @@ mod test_pause_and_resume_support {
         // Assert that the function returns Ok(())
         assert!(result.is_ok());
 
-        // Assert that the mock terminal received the expected output
+        // Assert that the mock terminal received the expected output.
         assert_eq!(
             stdout_mock.get_copy_of_buffer_as_string_strip_ansi(),
             "Paused line 1Paused line 2\n> > "

@@ -42,7 +42,7 @@ pub mod telemetry_default_constants {
         match min_duration_filter {
             Some(min_filter) if min_filter.as_micros() > 0 => {
                 let micros = min_filter.as_micros().saturating_mul(5);
-                // Safely convert u128 to u64, clamping to u64::MAX if needed
+                // Safely convert u128 to u64, clamping to u64::MAX if needed.
                 let micros_u64 = u64::try_from(micros).unwrap_or(u64::MAX);
                 Duration::from_micros(micros_u64)
             }
@@ -438,17 +438,17 @@ mod calculator {
                 .max_by_key(|&(_, count)| count)
                 .map_or(TelemetryAtomHint::None, |(hint, _)| hint);
 
-            // Calculate percentage using integer arithmetic (avoiding floating point)
+            // Calculate percentage using integer arithmetic (avoiding floating point).
             let ring_buffer_len = **self.ring_buffer.len();
             let percent = if ring_buffer_len > 0 {
-                // Use checked multiplication to avoid overflow, similar to compress.rs
-                // Convert BucketCount to u16 for the calculation to avoid overflow
+                // Use checked multiplication to avoid overflow, similar to compress.rs.
+                // Convert BucketCount to u16 for the calculation to avoid overflow.
                 let max_count_u16 = max_count;
                 match max_count_u16.checked_mul(100) {
                     Some(product) => product / ring_buffer_len,
                     None => {
-                        // Overflow case: max_count is very large
-                        // Fallback calculation that avoids overflow
+                        // Overflow case: max_count is very large.
+                        // Fallback calculation that avoids overflow.
                         max_count_u16 / (ring_buffer_len / 100).max(1)
                     }
                 }
@@ -460,7 +460,7 @@ mod calculator {
             if max_key == 0 {
                 None
             } else {
-                // Calculate the representative duration for the most common bucket
+                // Calculate the representative duration for the most common bucket.
                 let max_key_u64 = u64::try_from(max_key).ok()?;
                 let range_micros_u64 = u64::try_from(range_micros).ok()?;
                 let representative_duration =
@@ -1245,14 +1245,14 @@ fn test_cluster_sensitivity_range_calculation() {
 
     // Test default case - should be 5x the default FILTER_MIN_RESPONSE_TIME (20μs * 5 =
     // 100μs) This demonstrates that our fix correctly calculates based on the actual
-    // filter value instead of using a hardcoded value
+    // filter value instead of using a hardcoded value.
     let opts_default: ResponseTimesRingBufferOptions = ().into();
     assert_eq!(
         opts_default.cluster_sensitivity_range,
         Duration::from_micros(100) // 20μs (FILTER_MIN_RESPONSE_TIME) * 5
     );
 
-    // Test custom filter - should be 5x the filter value
+    // Test custom filter - should be 5x the filter value.
     let custom_filter = Duration::from_micros(100);
     let opts_custom: ResponseTimesRingBufferOptions =
         (Duration::from_secs(1), custom_filter).into();
@@ -1261,7 +1261,7 @@ fn test_cluster_sensitivity_range_calculation() {
         Duration::from_micros(500) // 100 * 5
     );
 
-    // Test zero filter - should fall back to default (5x FILTER_MIN_RESPONSE_TIME)
+    // Test zero filter - should fall back to default (5x FILTER_MIN_RESPONSE_TIME).
     let opts_zero: ResponseTimesRingBufferOptions =
         (Duration::from_secs(1), Duration::from_micros(0)).into();
     assert_eq!(

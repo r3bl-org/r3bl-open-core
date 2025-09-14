@@ -36,15 +36,15 @@ fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
     let mut buffer = ZeroCopyGapBuffer::new();
 
     for line in lines {
-        // Add a new line to the buffer
+        // Add a new line to the buffer.
         let line_index = buffer.add_line();
 
-        // Get the text content from GCString
+        // Get the text content from GCString.
         let text = line.as_ref();
 
-        // Insert the text at the beginning of the line
+        // Insert the text at the beginning of the line.
         if !text.is_empty() {
-            // Use insert_at_grapheme which is the public API
+            // Use insert_at_grapheme which is the public API.
             let _unused = buffer.insert_text_at_grapheme(
                 line_index.into(),
                 SegIndex::from(0),
@@ -74,16 +74,16 @@ fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
 fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
     let mut buffer = ZeroCopyGapBuffer::new();
 
-    // Handle empty string case
+    // Handle empty string case.
     if text.is_empty() {
         return buffer;
     }
 
-    // Split by newlines, preserving empty lines
+    // Split by newlines, preserving empty lines.
     let lines: Vec<&str> = text.split(NEW_LINE_CHAR).collect();
 
-    // If the text ends with a newline, split will create an empty string at the end
-    // We should process all lines in that case
+    // If the text ends with a newline, split will create an empty string at the end.
+    // We should process all lines in that case.
     let num_lines_to_process = if text.ends_with(NEW_LINE_CHAR) {
         lines.len() - 1 // Skip the last empty element from split
     } else {
@@ -91,10 +91,10 @@ fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
     };
 
     for line_text in lines.iter().take(num_lines_to_process) {
-        // Add a new line to the buffer
+        // Add a new line to the buffer.
         let line_index = buffer.add_line();
 
-        // Insert the text content if not empty
+        // Insert the text content if not empty.
         if !line_text.is_empty() {
             let _unused = buffer.insert_text_at_grapheme(
                 line_index.into(),
@@ -107,7 +107,7 @@ fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
     buffer
 }
 
-// From trait implementations for more idiomatic Rust
+// From trait implementations for more idiomatic Rust.
 
 impl From<&str> for ZeroCopyGapBuffer {
     /// Convert a string slice into a `ZeroCopyGapBuffer`.
@@ -164,7 +164,7 @@ mod tests {
             Some("Hello, world!")
         );
 
-        // Check that the buffer has proper null padding
+        // Check that the buffer has proper null padding.
         let full_str = buffer.as_str();
         assert!(full_str.starts_with("Hello, world!\n"));
         assert!(full_str.contains(NULL_CHAR));
@@ -314,7 +314,7 @@ mod tests {
             Some("fn main() {}")
         );
 
-        // Verify null padding is present
+        // Verify null padding is present.
         let full_str = buffer.as_str();
         assert!(full_str.contains(NULL_CHAR));
     }

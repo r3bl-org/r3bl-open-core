@@ -126,14 +126,14 @@ mod addition {
     pub fn add_styles(lhs: TuiStyle, rhs: TuiStyle) -> TuiStyle {
         // other (if set) overrides new_style.
         fn apply_style_flag(new_style: &mut TuiStyle, other: &TuiStyle) {
-            // Apply color attributes
+            // Apply color attributes.
             if other.color_fg.is_some() {
                 new_style.color_fg = other.color_fg;
             }
             if other.color_bg.is_some() {
                 new_style.color_bg = other.color_bg;
             }
-            // Apply style attributes
+            // Apply style attributes.
             if other.attribs.bold.is_some() {
                 new_style.attribs.bold = other.attribs.bold;
             }
@@ -348,17 +348,6 @@ mod style_impl {
     impl TuiStyle {
         pub fn remove_bg_color(&mut self) { self.color_bg = None; }
 
-        /// Returns true if this style contains no styling information (all fields are None or empty).
-        /// This can be used to check if a style is equivalent to the default "no styling" state.
-        #[must_use]
-        pub fn is_empty(&self) -> bool {
-            self.color_fg.is_none()
-                && self.color_bg.is_none()
-                && self.attribs.is_none()
-                && self.computed.is_none()
-                && self.padding.is_none()
-                && self.lolcat.is_none()
-        }
     }
 }
 

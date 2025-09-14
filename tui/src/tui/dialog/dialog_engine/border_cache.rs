@@ -61,7 +61,7 @@ pub fn get_top_border_line(bounds_width: ColWidth) -> InlineString {
         cache.insert(key, text.clone());
         text
     } else {
-        // Fallback if cache lock fails
+        // Fallback if cache lock fails.
         create_top_border_line(bounds_width)
     }
 }
@@ -82,7 +82,7 @@ pub fn get_middle_border_line(bounds_width: ColWidth) -> InlineString {
         cache.insert(key, text.clone());
         text
     } else {
-        // Fallback if cache lock fails
+        // Fallback if cache lock fails.
         create_middle_border_line(bounds_width)
     }
 }
@@ -103,7 +103,7 @@ pub fn get_bottom_border_line(bounds_width: ColWidth) -> InlineString {
         cache.insert(key, text.clone());
         text
     } else {
-        // Fallback if cache lock fails
+        // Fallback if cache lock fails.
         create_bottom_border_line(bounds_width)
     }
 }
@@ -124,12 +124,12 @@ pub fn get_separator_line(bounds_width: ColWidth) -> InlineString {
         cache.insert(key, text.clone());
         text
     } else {
-        // Fallback if cache lock fails
+        // Fallback if cache lock fails.
         create_separator_line(bounds_width)
     }
 }
 
-// Helper functions to create border strings
+// Helper functions to create border strings.
 
 fn create_top_border_line(bounds_width: ColWidth) -> InlineString {
     let inner_width = usize(*bounds_width - ch(2));
@@ -198,12 +198,12 @@ mod tests {
         let border2 = get_top_border_line(test_width);
         assert_eq!(border1, border2);
 
-        // Test middle border
+        // Test middle border.
         let middle1 = get_middle_border_line(test_width);
         let middle2 = get_middle_border_line(test_width);
         assert_eq!(middle1, middle2);
 
-        // Test different widths produce different results
+        // Test different widths produce different results.
         let border_narrow = get_top_border_line(width(5));
         let border_wide = get_top_border_line(width(20));
         assert_ne!(border_narrow, border_wide);

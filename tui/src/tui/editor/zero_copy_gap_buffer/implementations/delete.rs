@@ -124,12 +124,12 @@ impl ZeroCopyGapBuffer {
         line_index: RowIndex,
         seg_index: SegIndex,
     ) -> Result<()> {
-        // Validate line index
+        // Validate line index.
         let line_info = self.get_line_info(line_index.as_usize()).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Validate segment index
+        // Validate segment index.
         if seg_index.as_usize() >= line_info.segments.len() {
             return Err(miette!(
                 "Segment index {} out of bounds for line with {} segments",
@@ -138,15 +138,15 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Get the segment to delete
+        // Get the segment to delete.
         let segment = &line_info.segments[seg_index.as_usize()];
         let delete_start = segment.start_byte_index;
         let delete_end = segment.end_byte_index;
 
-        // Perform the actual deletion
+        // Perform the actual deletion.
         self.delete_bytes_at_range(line_index, delete_start.into(), delete_end.into())?;
 
-        // Rebuild segments for this line
+        // Rebuild segments for this line.
         self.rebuild_line_segments(line_index)?;
 
         Ok(())
@@ -186,12 +186,12 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Validate line index
+        // Validate line index.
         let line_info = self.get_line_info(line_index.as_usize()).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Validate segment indices
+        // Validate segment indices.
         if end_seg.as_usize() > line_info.segments.len() {
             return Err(miette!(
                 "End segment index {} out of bounds for line with {} segments",
@@ -200,25 +200,25 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Get byte range to delete
+        // Get byte range to delete.
         let delete_start = if start_seg.as_usize() < line_info.segments.len() {
             line_info.segments[start_seg.as_usize()].start_byte_index
         } else {
-            // Start is at end of line
+            // Start is at end of line.
             ch(line_info.content_len.as_usize())
         };
 
         let delete_end = if end_seg.as_usize() < line_info.segments.len() {
             line_info.segments[end_seg.as_usize()].start_byte_index
         } else {
-            // End is at end of line
+            // End is at end of line.
             ch(line_info.content_len.as_usize())
         };
 
-        // Perform the actual deletion
+        // Perform the actual deletion.
         self.delete_bytes_at_range(line_index, delete_start.into(), delete_end.into())?;
 
-        // Rebuild segments for this line
+        // Rebuild segments for this line.
         self.rebuild_line_segments(line_index)?;
 
         Ok(())
@@ -259,7 +259,7 @@ impl ZeroCopyGapBuffer {
         let end_pos = end_byte.as_usize();
         let current_content_len = line_info.content_len.as_usize();
 
-        // Validate byte positions
+        // Validate byte positions.
         if start_pos > current_content_len || end_pos > current_content_len {
             return Err(miette!(
                 "Byte positions {}-{} exceed content length {}",
@@ -270,7 +270,7 @@ impl ZeroCopyGapBuffer {
         }
 
         if start_pos >= end_pos {
-            // Nothing to delete
+            // Nothing to delete.
             return Ok(());
         }
 
@@ -279,9 +279,9 @@ impl ZeroCopyGapBuffer {
         let delete_start = buffer_start + start_pos;
         let delete_end = buffer_start + end_pos;
 
-        // Shift content left to overwrite deleted portion
+        // Shift content left to overwrite deleted portion.
         if end_pos < current_content_len {
-            // Move content after deletion point
+            // Move content after deletion point.
             let move_from = delete_end;
             let move_to = delete_start;
             let move_len = current_content_len - end_pos;
@@ -292,20 +292,20 @@ impl ZeroCopyGapBuffer {
             }
         }
 
-        // New content length after deletion
+        // New content length after deletion.
         let new_content_len = current_content_len - delete_len;
 
-        // Place newline at new end position
+        // Place newline at new end position.
         self.buffer[buffer_start + new_content_len] = b'\n';
 
-        // Fill the freed space with null bytes
+        // Fill the freed space with null bytes.
         let null_start = buffer_start + new_content_len + 1;
         let null_end = buffer_start + current_content_len + 1;
         for i in null_start..null_end {
             self.buffer[i] = b'\0';
         }
 
-        // Update line metadata
+        // Update line metadata.
         let line_info_mut = self.get_line_info_mut(line_idx).ok_or_else(|| {
             miette!("Line {} not found when updating metadata", line_idx)
         })?;
@@ -315,7 +315,7 @@ impl ZeroCopyGapBuffer {
     }
 
     // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in
-    // implementations::segment_builder and is accessible directly on
+    // implementations::segment_builder and is accessible directly on.
     // [`ZeroCopyGapBuffer`]
 }
 
@@ -329,7 +329,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert initial text
+        // Insert initial text.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
             .unwrap();
@@ -349,7 +349,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert initial text
+        // Insert initial text.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello World!")
             .unwrap();
@@ -375,7 +375,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
-        // Delete first character
+        // Delete first character.
         buffer.delete_grapheme_at(row(0), seg_index(0)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
@@ -391,7 +391,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
-        // Delete last character
+        // Delete last character.
         buffer.delete_grapheme_at(row(0), seg_index(4)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
@@ -403,7 +403,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text with emoji
+        // Insert text with emoji.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello 😀 World")
             .unwrap();
@@ -423,7 +423,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text with compound grapheme cluster
+        // Insert text with compound grapheme cluster.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")
             .unwrap();
@@ -447,7 +447,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
-        // Delete all characters
+        // Delete all characters.
         buffer
             .delete_range(row(0), seg_index(0), seg_index(5))
             .unwrap();
@@ -469,12 +469,12 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
-        // Try to delete beyond the end
+        // Try to delete beyond the end.
         let result = buffer.delete_grapheme_at(row(0), seg_index(10));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("out of bounds"));
 
-        // Try to delete from invalid line
+        // Try to delete from invalid line.
         let result = buffer.delete_grapheme_at(row(5), seg_index(0));
         assert!(result.is_err());
 
@@ -494,7 +494,7 @@ mod tests {
             .unwrap();
         buffer.delete_grapheme_at(row(0), seg_index(2)).unwrap(); // Delete 'l'
 
-        // Check that the buffer is properly null-padded
+        // Check that the buffer is properly null-padded.
         let line_info = buffer.get_line_info(0).unwrap();
         let buffer_start = line_info.buffer_offset.as_usize();
         let content_len = line_info.content_len.as_usize();
@@ -502,7 +502,7 @@ mod tests {
         // Content should be "Helo\n"
         assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
 
-        // Everything after newline should be null
+        // Everything after newline should be null.
         for i in (buffer_start + content_len + 1)
             ..(buffer_start + line_info.capacity.as_usize())
         {
@@ -515,7 +515,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text with mixed Unicode
+        // Insert text with mixed Unicode.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "a😀b🌍c")
             .unwrap();

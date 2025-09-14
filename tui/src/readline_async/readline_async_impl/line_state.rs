@@ -290,7 +290,7 @@ impl LineState {
     ) -> Result<(), ReadlineError> {
         self.clear(term)?;
 
-        // If last written data was not newline, restore the cursor
+        // If last written data was not newline, restore the cursor.
         if !self.last_line_completed {
             // This cast is intentional to ensure that the last line length is
             // represented as a u16, which is the type expected by crossterm's
@@ -302,7 +302,7 @@ impl LineState {
                 .queue(cursor::MoveRight(last_line_length_u16))?;
         }
 
-        // Write data in a way that newlines also act as carriage returns
+        // Write data in a way that newlines also act as carriage returns.
         for line in data.split_inclusive(|b| *b == b'\n') {
             term.write_all(line)?;
             term.queue(cursor::MoveToColumn(0))?;
@@ -310,14 +310,14 @@ impl LineState {
 
         self.last_line_completed = data.ends_with(b"\n"); // Set whether data ends with newline
 
-        // If data does not end with newline, save the cursor and write newline for prompt
+        // If data does not end with newline, save the cursor and write newline for prompt.
         // Usually data does end in newline due to the buffering of SharedWriter, but
-        // sometimes it may not (i.e. if .flush() is called)
+        // sometimes it may not (i.e. if .flush() is called).
         if self.last_line_completed {
             self.last_line_length = 0;
         } else {
             self.last_line_length += data.len();
-            // Make sure that last_line_length wraps around when doing multiple writes
+            // Make sure that last_line_length wraps around when doing multiple writes.
             if self.last_line_length >= self.term_size.0 as usize {
                 self.last_line_length %= self.term_size.0 as usize;
                 writeln!(term)?;
@@ -498,7 +498,7 @@ mod apply_event_and_render_helper {
         Ok(Some(ReadlineEvent::Resized))
     }
 
-    // Control key handlers
+    // Control key handlers.
     fn handle_ctrl_d(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -576,7 +576,7 @@ mod apply_event_and_render_helper {
             .map(|(end, _)| end);
         // Calculate cursor movement to beginning of word being deleted.
         // Handles potential overflow by using checked conversion to isize.
-        // Calculate the change in cursor position, handling potential overflow
+        // Calculate the change in cursor position, handling potential overflow.
         let change = if start >= line_state.line_cursor_grapheme {
             // Moving forward (positive change)
             let diff = start - line_state.line_cursor_grapheme;
@@ -597,7 +597,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Move to beginning
+    // Move to beginning.
     #[cfg(feature = "emacs")]
     fn handle_ctrl_a(
         line_state: &mut LineState,
@@ -627,7 +627,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Move cursor left to previous word
+    // Move cursor left to previous word.
     fn handle_ctrl_left(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -647,7 +647,7 @@ mod apply_event_and_render_helper {
         {
             // Calculate cursor movement to beginning of word being deleted.
             // Handles potential overflow by using checked conversion to isize.
-            // Calculate the change in cursor position, handling potential overflow
+            // Calculate the change in cursor position, handling potential overflow.
             let change = if pos >= line_state.line_cursor_grapheme {
                 let diff = pos - line_state.line_cursor_grapheme;
                 isize::try_from(diff).unwrap_or(isize::MAX)
@@ -664,7 +664,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Move cursor right to next word
+    // Move cursor right to next word.
     fn handle_ctrl_right(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -681,7 +681,7 @@ mod apply_event_and_render_helper {
         {
             // Calculate cursor movement to beginning of word being deleted.
             // Handles potential overflow by using checked conversion to isize.
-            // Calculate the change in cursor position, handling potential overflow
+            // Calculate the change in cursor position, handling potential overflow.
             let change = if pos >= line_state.line_cursor_grapheme {
                 let diff = pos - line_state.line_cursor_grapheme;
                 isize::try_from(diff).unwrap_or(isize::MAX)
@@ -698,7 +698,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Regular key handlers
+    // Regular key handlers.
     fn handle_enter(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -734,7 +734,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Delete character from line
+    // Delete character from line.
     fn handle_delete(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -748,7 +748,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Move cursor left
+    // Move cursor left.
     fn handle_left(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -760,7 +760,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Move cursor right
+    // Move cursor right.
     fn handle_right(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -772,7 +772,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Move cursor home
+    // Move cursor home.
     fn handle_home(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -796,7 +796,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Search for next history item, replace line if found
+    // Search for next history item, replace line if found.
     fn handle_up(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -812,7 +812,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Search for next history item, replace line if found
+    // Search for next history item, replace line if found.
     fn handle_down(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -828,7 +828,7 @@ mod apply_event_and_render_helper {
         Ok(None)
     }
 
-    // Add character to line and output
+    // Add character to line and output.
     fn handle_char(
         line_state: &mut LineState,
         term: &mut dyn Write,

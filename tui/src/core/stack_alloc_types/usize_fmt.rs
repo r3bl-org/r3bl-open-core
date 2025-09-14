@@ -97,10 +97,10 @@ pub fn convert_to_string_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
 /// maximum value of [usize] can be represented with [`USIZE_FMT_MAX_DIGITS`] decimal
 /// digits.
 fn debug_assert_usize_fits_20_digits() {
-    // Calculate the maximum value of usize
+    // Calculate the maximum value of usize.
     let max_usize = usize::MAX;
 
-    // Calculate the number of digits needed
+    // Calculate the number of digits needed.
     let mut num_digits = 1; // At least one digit for 0
     let mut temp = max_usize;
     while temp >= 10 {

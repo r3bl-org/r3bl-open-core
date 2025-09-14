@@ -40,7 +40,7 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     fn test_ansi_to_tui_color() {
         // Note: Codes 0-7 are SGR attributes (bold, underline, etc), not colors
-        // They should not map to colors
+        // They should not map to colors.
         assert_eq!(ansi_to_tui_color(0), TuiColor::Reset);
         assert_eq!(ansi_to_tui_color(1), TuiColor::Reset);
         assert_eq!(ansi_to_tui_color(2), TuiColor::Reset);
@@ -169,7 +169,7 @@ mod tests {
             TuiColor::Basic(ANSIBasicColor::White)
         );
 
-        // Edge cases and invalid codes
+        // Edge cases and invalid codes.
         assert_eq!(ansi_to_tui_color(-1), TuiColor::Reset);
         assert_eq!(ansi_to_tui_color(8), TuiColor::Reset);
         assert_eq!(ansi_to_tui_color(29), TuiColor::Reset);

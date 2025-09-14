@@ -217,7 +217,7 @@ impl ProcessManager {
             if self.processes[i].session.is_none()
                 && let Err(e) = self.spawn_process(i)
             {
-                // Fail immediately if any process can't be started
+                // Fail immediately if any process can't be started.
                 miette::bail!(
                     "Failed to start process '{}' ({}): {}. Please ensure it's installed and in PATH.",
                     self.processes[i].name,
@@ -269,7 +269,7 @@ impl ProcessManager {
         let process = &mut self.processes[index];
         tracing::debug!("Spawning process: {} ({})", process.name, process.command);
 
-        // Reserve bottom row for status bar - PTY gets reduced height
+        // Reserve bottom row for status bar - PTY gets reduced height.
         let pty_size = PtySize {
             rows: self
                 .terminal_size
@@ -280,7 +280,7 @@ impl ProcessManager {
             pixel_height: 0,
         };
 
-        // Use existing PtyCommandBuilder with reduced size
+        // Use existing PtyCommandBuilder with reduced size.
         let session = PtyCommandBuilder::new(&process.command)
             .args(&process.args)
             .spawn_read_write(pty_size)?;
@@ -317,10 +317,10 @@ impl ProcessManager {
 
         for (i, process) in self.processes.iter_mut().enumerate() {
             if let Some(output) = process.try_get_output() {
-                // Update this process's virtual terminal buffer
+                // Update this process's virtual terminal buffer.
                 process.process_pty_output_and_update_buffer(output);
 
-                // Track if the active process had output
+                // Track if the active process had output.
                 if i == self.active_index {
                     active_had_output = true;
                 }
@@ -405,15 +405,15 @@ impl ProcessManager {
             buffer_size
         );
 
-        // Update all processes with new buffers and parsers
+        // Update all processes with new buffers and parsers.
         for (i, process) in self.processes.iter_mut().enumerate() {
-            // Create fresh buffer at new size
+            // Create fresh buffer at new size.
             process.ofs_buf = OffscreenBuffer::new_empty(buffer_size);
 
-            // Clear unrendered output flag since we're starting fresh
+            // Clear unrendered output flag since we're starting fresh.
             process.has_unrendered_output = false;
 
-            // Send resize event to PTY session
+            // Send resize event to PTY session.
             if let Some(session) = &process.session {
                 let _unused = session
                     .input_event_ch_tx_half
@@ -459,7 +459,7 @@ impl ProcessManager {
                 );
 
                 // CRITICAL SHUTDOWN PATTERN: Kill child process THEN send Close event
-                // 1. First, kill the child process to ensure immediate termination
+                // 1. First, kill the child process to ensure immediate termination.
                 match session.child_process_terminate_handle.kill() {
                     Ok(()) => tracing::debug!(
                         "Successfully killed child process for '{}'",
@@ -472,7 +472,7 @@ impl ProcessManager {
                     ),
                 }
 
-                // 2. Then, send Close event to stop input writer and signal EOF
+                // 2. Then, send Close event to stop input writer and signal EOF.
                 // Note: Close alone is insufficient - it only stops input, doesn't kill
                 // the process
                 match session.input_event_ch_tx_half.send(PtyInputEvent::Close) {
@@ -488,7 +488,7 @@ impl ProcessManager {
                 }
 
                 tracing::debug!("Dropping PTY session for process '{}'", process.name);
-                // Drop the session to clean up resources
+                // Drop the session to clean up resources.
                 drop(session);
                 tracing::debug!("PTY session dropped for process '{}'", process.name);
 

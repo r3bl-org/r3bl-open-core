@@ -186,7 +186,7 @@ pub struct SegStringOwned {
     pub start_at: ColIndex,
 }
 
-// GraphemeString trait implementation for GCStringOwned
+// GraphemeString trait implementation for GCStringOwned.
 impl GraphemeString for GCStringOwned {
     type SegmentIterator<'a> = std::iter::Copied<std::slice::Iter<'a, Seg>>;
     type StringSlice<'a> = CowInlineString<'a>;
@@ -277,12 +277,12 @@ impl GraphemeString for GCStringOwned {
     }
 }
 
-// GraphemeStringMut trait implementation for GCStringOwned
+// GraphemeStringMut trait implementation for GCStringOwned.
 impl GraphemeStringMut for GCStringOwned {
     type MutResult = GCStringOwned; // Returns new instances (immutable paradigm)
 
     fn insert_text(&mut self, col: ColIndex, text: &str) -> Option<Self::MutResult> {
-        // Create a new string with text inserted at the column
+        // Create a new string with text inserted at the column.
         let (new_string, _width) = self.insert_chunk_at_col(col, text);
         Some(GCStringOwned::new(new_string))
     }
@@ -292,17 +292,17 @@ impl GraphemeStringMut for GCStringOwned {
         start: ColIndex,
         end: ColIndex,
     ) -> Option<Self::MutResult> {
-        // Split at start position
+        // Split at start position.
         if let Some((left, _)) = self.split_at_display_col(start) {
             let left_string = GCStringOwned::new(left);
 
-            // Split at end position to get the part after
+            // Split at end position to get the part after.
             if let Some((_, right)) = self.split_at_display_col(end) {
-                // Combine left and right parts
+                // Combine left and right parts.
                 let combined = format!("{}{}", left_string.as_str(), right);
                 Some(GCStringOwned::new(combined))
             } else {
-                // Nothing after end, just return the left part
+                // Nothing after end, just return the left part.
                 Some(left_string)
             }
         } else {
@@ -316,16 +316,16 @@ impl GraphemeStringMut for GCStringOwned {
         end: ColIndex,
         text: &str,
     ) -> Option<Self::MutResult> {
-        // First delete the range
+        // First delete the range.
         self.delete_range(start, end).and_then(|deleted| {
-            // Then insert the new text at the start position
+            // Then insert the new text at the start position.
             let mut temp = deleted;
             temp.insert_text(start, text)
         })
     }
 
     fn truncate(&mut self, col: ColIndex) -> Option<Self::MutResult> {
-        // Split at the column and return the left part
+        // Split at the column and return the left part.
         if let Some((left, _)) = self.split_at_display_col(col) {
             Some(GCStringOwned::new(left))
         } else {

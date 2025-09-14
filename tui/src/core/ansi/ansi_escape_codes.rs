@@ -640,7 +640,7 @@ mod benchmarks {
         });
     }
 
-    // Benchmark to show lookup table approach speed
+    // Benchmark to show lookup table approach speed.
     #[bench]
     fn bench_lookup_table_direct(b: &mut Bencher) {
         const U8_STRINGS: [&str; 256] = [

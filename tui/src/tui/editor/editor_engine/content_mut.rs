@@ -68,10 +68,10 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
         return;
     }
 
-    // Get a single mutable reference to avoid multiple validations
+    // Get a single mutable reference to avoid multiple validations.
     let mut buffer_mut = buffer.get_mut(engine.viewport());
 
-    // Process all lines in a single transaction
+    // Process all lines in a single transaction.
     let line_count = lines.len();
 
     for (index, line_content) in lines.iter().enumerate() {
@@ -79,15 +79,15 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
             *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
         let row_index = current_caret_scr_adj.row_index;
 
-        // Insert the line content at current position
+        // Insert the line content at current position.
         if buffer_mut.inner.lines.get_line_content(row_index).is_some() {
-            // Insert into existing line - we need to use the trait methods
+            // Insert into existing line - we need to use the trait methods.
             if let Some(chunk_width) = buffer_mut.inner.lines.insert_at_col(
                 row_index,
                 current_caret_scr_adj.col_index,
                 line_content,
             ) {
-                // Update caret position
+                // Update caret position.
                 let new_line_display_width = buffer_mut
                     .inner
                     .lines
@@ -107,7 +107,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
             if buffer_mut.inner.lines.get_line_content(row_index).is_some() {
                 buffer_mut.inner.lines.set_line(row_index, line_content);
 
-                // Update caret position
+                // Update caret position.
                 let line_display_width = buffer_mut
                     .inner
                     .lines
@@ -126,10 +126,10 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
 
         // Insert newline between lines (but not after the last line)
         if index < line_count - 1 {
-            // Insert newline logic similar to insert_new_line_at_caret
+            // Insert newline logic similar to insert_new_line_at_caret.
             match locate_col_impl(&buffer_mut) {
                 ContentPositionStatus::AtEnd | ContentPositionStatus::Beyond => {
-                    // Insert new line at end
+                    // Insert new line at end.
                     let new_row_index = scroll_editor_content::inc_caret_row(
                         buffer_mut.inner.caret_raw,
                         buffer_mut.inner.scr_ofs,
@@ -144,7 +144,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                     buffer_mut.inner.lines.insert_line(new_row_index);
                 }
                 ContentPositionStatus::AtStart => {
-                    // Insert new line at start
+                    // Insert new line at start.
                     let cur_row_index = (*buffer_mut.inner.caret_raw
                         + *buffer_mut.inner.scr_ofs)
                         .row_index;
@@ -157,7 +157,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                     );
                 }
                 ContentPositionStatus::Within => {
-                    // Split line in middle
+                    // Split line in middle.
                     let caret_scr_adj =
                         *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
                     let row_index = caret_scr_adj.row_index.as_usize();
@@ -188,7 +188,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
         }
     }
 
-    // The EditorBufferMutWithDrop will perform validation once when it's dropped
+    // The EditorBufferMutWithDrop will perform validation once when it's dropped.
 }
 
 /// Helper function to locate caret position when we already have `buffer_mut`
@@ -245,7 +245,7 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
     multiline_disabled_check_early_return!(engine, @Nothing);
 
     if buffer.is_empty() {
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -281,7 +281,7 @@ mod insert_new_line_at_caret_helper {
     pub fn insert_new_line_at_end_of_current_line(args: EditorArgsMut<'_>) {
         let EditorArgsMut { buffer, engine } = args;
 
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -305,7 +305,7 @@ mod insert_new_line_at_caret_helper {
     pub fn insert_new_line_at_start_of_current_line(args: EditorArgsMut<'_>) {
         let EditorArgsMut { buffer, engine } = args;
 
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -314,7 +314,7 @@ mod insert_new_line_at_caret_helper {
             buffer_mut.inner.lines.insert_line(cur_row_index);
         }
 
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -395,13 +395,13 @@ mod delete_at_caret_helper {
     ) -> Option<()> {
         let caret_scr_adj = buffer.get_caret_scr_adj();
 
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let row_index = caret_scr_adj.row_index;
 
-            // Delete one character at the caret position
+            // Delete one character at the caret position.
             buffer_mut.inner.lines.delete_at_col(
                 row_index,
                 caret_scr_adj.col_index,
@@ -426,13 +426,13 @@ mod delete_at_caret_helper {
     ) -> Option<()> {
         let caret_scr_adj = buffer.get_caret_scr_adj();
 
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let row_index = caret_scr_adj.row_index;
 
-            // Merge the current line with the next line
+            // Merge the current line with the next line.
             buffer_mut.inner.lines.merge_with_next_line(row_index);
         }
 
@@ -481,14 +481,14 @@ mod backspace_at_caret_helper {
         delete_at_this_display_col: ColIndex,
         _segment_width: ColWidth,
     ) -> Option<()> {
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             let cur_row_index =
                 (*buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs).row_index;
 
-            // Delete the segment at the specified column
+            // Delete the segment at the specified column.
             buffer_mut.inner.lines.delete_at_col(
                 cur_row_index,
                 delete_at_this_display_col,
@@ -532,12 +532,12 @@ mod backspace_at_caret_helper {
         let prev_line_display_width =
             buffer.get_line_display_width_at_row_index(prev_row_index);
 
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
 
-            // Merge the previous line with the current line
+            // Merge the previous line with the current line.
             buffer_mut.inner.lines.merge_with_next_line(prev_row_index);
 
             let new_line_content_display_width = buffer_mut
@@ -580,11 +580,11 @@ pub fn delete_selected(
 
     let selection_map = buffer.get_selection_list().clone();
 
-    // Analyze selections and prepare deletion operations
+    // Analyze selections and prepare deletion operations.
     let (lines_to_remove, lines_to_replace) =
         delete_selected_helper::analyze_selections(buffer, &selection_map);
 
-    // Apply the deletions
+    // Apply the deletions.
     delete_selected_helper::apply_deletions(
         buffer,
         engine,
@@ -592,7 +592,7 @@ pub fn delete_selected(
         &lines_to_replace,
     );
 
-    // Restore caret position and clear selection
+    // Restore caret position and clear selection.
     delete_selected_helper::restore_caret_and_clear_selection(
         buffer,
         engine,
@@ -623,18 +623,18 @@ mod delete_selected_helper {
 
                 let (start_col_index, end_col_index) = selection_range.as_tuple();
 
-                // Check if entire line should be removed
+                // Check if entire line should be removed.
                 if should_remove_entire_line(start_col_index, end_col_index, line_width) {
                     vec_row_indices_to_remove.push(selected_row_index);
                     continue;
                 }
 
-                // Skip if selection range is empty
+                // Skip if selection range is empty.
                 if selection_range.start() == selection_range.end() {
                     continue;
                 }
 
-                // Prepare partial line replacement
+                // Prepare partial line replacement.
                 if let Some(remaining_text) = prepare_partial_line_replacement(
                     lines,
                     selected_row_index,
@@ -695,7 +695,7 @@ mod delete_selected_helper {
     ) -> Option<InlineString> {
         let line_with_info = lines.get_line(selected_row_index)?;
 
-        // Create selection ranges for the parts we want to keep
+        // Create selection ranges for the parts we want to keep.
         let keep_before_selection_range = SelectionRange::new(
             caret_scr_adj(col(0) + selected_row_index),
             caret_scr_adj(
@@ -731,12 +731,12 @@ mod delete_selected_helper {
         mut lines_to_remove: InlineVec<RowIndex>,
         lines_to_replace: &HashMap<RowIndex, InlineString>,
     ) {
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
 
-            // Replace lines, before removing them (to prevent indices from being
+            // Replace lines, before removing them (to prevent indices from being.
             // invalidated)
             for row_index in lines_to_replace.keys() {
                 let new_line_content = &lines_to_replace[row_index];
@@ -746,7 +746,7 @@ mod delete_selected_helper {
                     .set_line(*row_index, new_line_content);
             }
 
-            // Remove lines in inverse order, in order to preserve the validity of indices
+            // Remove lines in inverse order, in order to preserve the validity of indices.
             lines_to_remove.reverse();
             for row_index in lines_to_remove {
                 buffer_mut.inner.lines.remove_line(row_index);
@@ -760,19 +760,19 @@ mod delete_selected_helper {
         selection_map: &SelectionList,
         with: DeleteSelectionWith,
     ) {
-        // Restore caret position to start of selection range
+        // Restore caret position to start of selection range.
         let maybe_new_caret =
             selection_map.get_caret_at_start_of_range_scroll_adjusted(with);
 
         if let Some(new_caret_scr_adj) = maybe_new_caret {
-            // When buffer_mut goes out of scope, it will be dropped &
+            // When buffer_mut goes out of scope, it will be dropped &.
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
                 // Convert scroll adjusted caret to raw caret by applying scroll offset.
-                // Equivalent to: `let caret_raw = *new_caret_scr_adj -
-                // *buffer_mut.inner.scr_ofs;`
+                // Equivalent to:
+                // `let caret_raw = *new_caret_scr_adj - *buffer_mut.inner.scr_ofs;`
                 let caret_raw = new_caret_scr_adj + *buffer_mut.inner.scr_ofs;
                 *buffer_mut.inner.caret_raw = caret_raw;
             }
@@ -795,7 +795,7 @@ fn insert_into_existing_line(
     {
         let buffer_mut = buffer.get_mut(engine.viewport());
 
-        // Insert chunk at the specified position
+        // Insert chunk at the specified position.
         if let Some(chunk_display_width) = buffer_mut.inner.lines.insert_at_col(
             row_index,
             caret_scr_adj.col_index,
@@ -1410,7 +1410,7 @@ mod tests {
             "line3"
         );
 
-        // Caret should be at the end of the last line
+        // Caret should be at the end of the last line.
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(2)));
     }
 
@@ -1445,7 +1445,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // First insert some initial content
+        // First insert some initial content.
         buffer.init_with(vec!["existing content".to_string()]);
 
         // Move caret to middle of line (after "existing")
@@ -1453,7 +1453,7 @@ mod tests {
         buffer_mut.inner.caret_raw.col_index = col(8); // Position after "existing"
         drop(buffer_mut);
 
-        // Insert new lines
+        // Insert new lines.
         let lines = vec!["NEW1", "NEW2"];
         engine_internal_api::insert_str_batch_at_caret(
             EditorArgsMut {
@@ -1465,10 +1465,10 @@ mod tests {
 
         // The batch insert behavior when inserting in the middle of a line:
         // When inserting multiple lines in the middle of a line, it appears the behavior
-        // splits the line and inserts all new content together
+        // splits the line and inserts all new content together.
         assert_eq2!(buffer.get_lines().len().as_usize(), 2);
 
-        // First, let's check what we actually have
+        // First, let's check what we actually have.
         let lines = buffer.get_lines();
         if !lines.is_empty() {
             assert_eq2!(lines.get_line_content(row(0)).unwrap(), "existingNEW1");
@@ -1480,7 +1480,7 @@ mod tests {
 
     #[test]
     fn test_batch_vs_individual_insert_result_equivalence() {
-        // Test that batch insert produces same result as individual inserts
+        // Test that batch insert produces same result as individual inserts.
         let mut buffer1 = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine1 = mock_real_objects_for_editor::make_editor_engine();
 
@@ -1529,7 +1529,7 @@ mod tests {
             "third",
         );
 
-        // Both methods should produce identical results
+        // Both methods should produce identical results.
         assert_eq2!(buffer1.get_lines(), buffer2.get_lines());
         assert_eq2!(buffer1.get_caret_scr_adj(), buffer2.get_caret_scr_adj());
     }
@@ -1548,7 +1548,7 @@ mod tests {
             &lines,
         );
 
-        // Buffer should remain unchanged with one empty line
+        // Buffer should remain unchanged with one empty line.
         assert_eq2!(buffer.get_lines().len().as_usize(), 1);
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
@@ -1559,7 +1559,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Create a large batch of lines
+        // Create a large batch of lines.
         let lines: Vec<String> = (0..100).map(|i| format!("Line number {i}")).collect();
         let lines_refs: Vec<&str> = lines.iter().map(String::as_str).collect();
 
@@ -1581,7 +1581,7 @@ mod tests {
             "Line number 99"
         );
 
-        // Caret should be at the end of the last line
+        // Caret should be at the end of the last line.
         let last_line_len = "Line number 99".len();
         assert_eq2!(
             buffer.get_caret_scr_adj(),
@@ -1594,7 +1594,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Start with "abcab" and add emoji
+        // Start with "abcab" and add emoji.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1602,14 +1602,14 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Verify initial state
+        // Verify initial state.
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),
             "abcab😃"
         );
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0))); // 5 + 2 for emoji width
 
-        // Backspace should delete the emoji
+        // Backspace should delete the emoji.
         EditorEvent::apply_editor_event(
             &mut engine,
             &mut buffer,
@@ -1617,7 +1617,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Verify the emoji was deleted
+        // Verify the emoji was deleted.
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),
             "abcab"
@@ -1630,7 +1630,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Create line with emoji in middle: "Hello 😃 World"
+        // Create line with emoji in middle: "Hello 😃 World".
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1657,7 +1657,7 @@ mod tests {
         // Caret should be at position 8 (after emoji)
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(8) + row(0)));
 
-        // Backspace should delete the emoji
+        // Backspace should delete the emoji.
         EditorEvent::apply_editor_event(
             &mut engine,
             &mut buffer,
@@ -1678,7 +1678,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Create line with multiple emojis
+        // Create line with multiple emojis.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1686,10 +1686,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Each emoji has width 2, so total width is 6
+        // Each emoji has width 2, so total width is 6.
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
 
-        // First backspace deletes 🎉
+        // First backspace deletes 🎉.
         EditorEvent::apply_editor_event(
             &mut engine,
             &mut buffer,
@@ -1699,7 +1699,7 @@ mod tests {
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "👋😀");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(4) + row(0)));
 
-        // Second backspace deletes 😀
+        // Second backspace deletes 😀.
         EditorEvent::apply_editor_event(
             &mut engine,
             &mut buffer,
@@ -1709,7 +1709,7 @@ mod tests {
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "👋");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(0)));
 
-        // Third backspace deletes 👋
+        // Third backspace deletes 👋.
         EditorEvent::apply_editor_event(
             &mut engine,
             &mut buffer,
@@ -1725,7 +1725,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Mix of ASCII, emoji, and other Unicode
+        // Mix of ASCII, emoji, and other Unicode.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1779,7 +1779,7 @@ mod tests {
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
         // Test with family emoji (uses zero-width joiners)
-        // This is a single grapheme cluster despite being multiple codepoints
+        // This is a single grapheme cluster despite being multiple codepoints.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1787,7 +1787,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Move to before "end"
+        // Move to before "end".
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1799,7 +1799,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Backspace should delete the entire family emoji as one unit
+        // Backspace should delete the entire family emoji as one unit.
         EditorEvent::apply_editor_event(
             &mut engine,
             &mut buffer,
@@ -1818,7 +1818,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Create line with emoji
+        // Create line with emoji.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1826,9 +1826,9 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Move caret to position before emoji
+        // Move caret to position before emoji.
         for _ in 0..6 {
-            // "World" + 1 to get before emoji
+            // "World" + 1 to get before emoji.
             EditorEvent::apply_editor_event(
                 &mut engine,
                 &mut buffer,
@@ -1840,7 +1840,7 @@ mod tests {
         // Caret should be at position 5 (after "Hello")
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(5) + row(0)));
 
-        // Delete forward should remove the emoji
+        // Delete forward should remove the emoji.
         EditorEvent::apply_editor_event(
             &mut engine,
             &mut buffer,
@@ -1872,7 +1872,7 @@ mod tests {
         // Caret should be after emoji (at column 7 = 5 for "Hello" + 2 for emoji)
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0)));
 
-        // Backspace to delete emoji
+        // Backspace to delete emoji.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1880,7 +1880,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Verify emoji was deleted
+        // Verify emoji was deleted.
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),
             "Hello"
@@ -1912,10 +1912,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Caret should be at column 4
+        // Caret should be at column 4.
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(4) + row(0)));
 
-        // Backspace to delete emoji
+        // Backspace to delete emoji.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1923,7 +1923,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Verify emoji was deleted
+        // Verify emoji was deleted.
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "abcd");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(2) + row(0)));
     }
@@ -1941,10 +1941,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Each emoji has width 2, so total width is 6
+        // Each emoji has width 2, so total width is 6.
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(6) + row(0)));
 
-        // Backspace three times to delete all emojis
+        // Backspace three times to delete all emojis.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1956,7 +1956,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Verify all emojis were deleted
+        // Verify all emojis were deleted.
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "");
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(0)));
     }
@@ -1977,7 +1977,7 @@ mod tests {
         // Width: a=1, 😃=2, b=1, 世=2, 界=2, c=1 = total 9
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(9) + row(0)));
 
-        // Backspace to delete 'c'
+        // Backspace to delete 'c'.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -1989,7 +1989,7 @@ mod tests {
             "a😃b世界"
         );
 
-        // Backspace to delete '界'
+        // Backspace to delete '界'.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2001,7 +2001,7 @@ mod tests {
             "a😃b世"
         );
 
-        // Backspace to delete '世'
+        // Backspace to delete '世'.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2010,7 +2010,7 @@ mod tests {
         );
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃b");
 
-        // Backspace to delete 'b'
+        // Backspace to delete 'b'.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2019,7 +2019,7 @@ mod tests {
         );
         assert_eq2!(buffer.get_lines().get_line_content(row(0)).unwrap(), "a😃");
 
-        // Backspace to delete emoji
+        // Backspace to delete emoji.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2035,7 +2035,7 @@ mod tests {
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
-        // Insert two lines "😃Hello" and "World"
+        // Insert two lines "😃Hello" and "World".
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2047,7 +2047,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Move caret to beginning of second line
+        // Move caret to beginning of second line.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2055,10 +2055,10 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Caret should be at beginning of second line
+        // Caret should be at beginning of second line.
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(0) + row(1)));
 
-        // Backspace at beginning of line should merge with previous line
+        // Backspace at beginning of line should merge with previous line.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2066,7 +2066,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Lines should be merged
+        // Lines should be merged.
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),
             "😃HelloWorld"
@@ -2077,7 +2077,7 @@ mod tests {
 
     #[test]
     fn test_backspace_unicode_regression_abcab_emoji() {
-        // This is the exact regression test for the bug we fixed
+        // This is the exact regression test for the bug we fixed.
         let mut buffer = EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         let mut engine = mock_real_objects_for_editor::make_editor_engine();
 
@@ -2092,7 +2092,7 @@ mod tests {
         // Caret should be at column 7 (5 for "abcab" + 2 for emoji)
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(7) + row(0)));
 
-        // Backspace to delete emoji
+        // Backspace to delete emoji.
         EditorEvent::apply_editor_events::<(), ()>(
             &mut engine,
             &mut buffer,
@@ -2100,7 +2100,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Verify emoji was deleted correctly
+        // Verify emoji was deleted correctly.
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),
             "abcab"

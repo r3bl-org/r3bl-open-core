@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_parse_header_with_null_padding() {
-        // Heading with null padding after newline
+        // Heading with null padding after newline.
         assert_eq2!(
             parse_heading_in_single_line("# test\n\0\0\0"),
             Ok((
@@ -218,7 +218,7 @@ mod tests {
             ))
         );
 
-        // Heading without newline but with null after
+        // Heading without newline but with null after.
         assert_eq2!(
             parse_heading_in_single_line("# test\0\0\0"),
             Ok((

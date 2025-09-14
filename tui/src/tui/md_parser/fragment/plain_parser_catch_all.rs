@@ -85,7 +85,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
 
     if check_input_starts_with(input, &get_sp_char_set_2()).is_none() {
         // # Normal case:
-        // If the input does not start with any of the special characters above,
+        // If the input does not start with any of the special characters above
         // take till the first special character. And split the input there. This returns
         // the chunk until the first special character as [MdLineFragment::Plain],
         // and the remainder of the input gets a chance to be parsed by the
@@ -138,7 +138,7 @@ pub fn parse_fragment_plain_text_no_new_line(input: &str) -> IResult<&str, &str>
 
     // # Edge case -> Special case:
     // Check for single UNDERSCORE, STAR, BACK_TICK. until the first new line. This is
-    // to handle the case with
+    // to handle the case with.
     // [specialized_parser_delim_matchers::take_starts_with_delim_no_new_line()] where
     // there is no closing delim found.
     if let Some(special_str) = check_input_starts_with(input, &get_sp_char_set_1()) {
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_parse_plain_text_with_null_padding() {
-        // Plain text followed by null padding
+        // Plain text followed by null padding.
         {
             let input = "hello\0\0\0world";
             let (remainder, content) =
@@ -258,7 +258,7 @@ mod tests {
             assert_eq2!(remainder, "\0\0\0world");
         }
 
-        // Plain text with newline and null padding
+        // Plain text with newline and null padding.
         {
             let input = "hello\n\0\0\0world";
             let (remainder, content) =
@@ -267,7 +267,7 @@ mod tests {
             assert_eq2!(remainder, "\n\0\0\0world");
         }
 
-        // Plain text with null in middle
+        // Plain text with null in middle.
         {
             let input = "hello world\0\0\0";
             let (remainder, content) =

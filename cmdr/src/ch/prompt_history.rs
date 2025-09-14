@@ -14,7 +14,7 @@ use super::types::{ClaudeConfig, HistoryItem};
 /// Returns an error if the home directory cannot be determined
 pub fn get_claude_config_path() -> CommonResult<PathBuf> {
     if cfg!(target_os = "windows") {
-        // Try APPDATA first, then home directory
+        // Try APPDATA first, then home directory.
         if let Ok(appdata) = env::var("APPDATA") {
             let appdata_path = PathBuf::from(appdata).join(".claude.json");
             if appdata_path.exists() {
@@ -22,7 +22,7 @@ pub fn get_claude_config_path() -> CommonResult<PathBuf> {
             }
         }
 
-        // Fallback to home directory
+        // Fallback to home directory.
         if let Some(home_dir) = dirs::home_dir() {
             let home_path = home_dir.join(".claude.json");
             if home_path.exists() {
@@ -30,7 +30,7 @@ pub fn get_claude_config_path() -> CommonResult<PathBuf> {
             }
         }
 
-        // If neither exists, return the APPDATA path for error reporting
+        // If neither exists, return the APPDATA path for error reporting.
         if let Ok(appdata) = env::var("APPDATA") {
             Ok(PathBuf::from(appdata).join(".claude.json"))
         } else {
@@ -55,7 +55,7 @@ pub fn get_claude_config_path() -> CommonResult<PathBuf> {
 /// - Failed to read the configuration file
 /// - Failed to parse the JSON content
 pub fn read_claude_config() -> CommonResult<ClaudeConfig> {
-    // Check if we should use test data
+    // Check if we should use test data.
     if let Ok(test_file) = std::env::var("CH_USE_TEST_DATA") {
         let test_contents = match test_file.as_str() {
             "empty" => include_str!("test_data/.claude_empty.json"),
@@ -134,12 +134,12 @@ pub fn find_matching_project_path(
     config: &ClaudeConfig,
     current_path: &str,
 ) -> Option<String> {
-    // First try exact match
+    // First try exact match.
     if config.projects.contains_key(current_path) {
         return Some(current_path.to_string());
     }
 
-    // Try parent directories
+    // Try parent directories.
     let mut path = PathBuf::from(current_path);
     while let Some(parent) = path.parent() {
         let parent_str = parent.to_string_lossy().to_string();
@@ -168,7 +168,7 @@ pub fn get_prompts_for_current_project() -> CommonResult<(String, Vec<HistoryIte
     let config = read_claude_config()?;
     let current_path = get_current_project_path()?;
 
-    // Find the best matching project path
+    // Find the best matching project path.
     let result = match find_matching_project_path(&config, &current_path) {
         Some(project_path) => {
             let project = config.projects.get(&project_path).unwrap(); // Safe because find_matching_project_path ensures it exists
@@ -193,7 +193,7 @@ mod tests {
     fn create_test_config() -> ClaudeConfig {
         let mut projects = HashMap::new();
 
-        // Add a few test projects
+        // Add a few test projects.
         projects.insert(
             "/home/user/projects/app1".to_string(),
             Project {
@@ -231,7 +231,7 @@ mod tests {
     fn test_find_matching_project_path_exact_match() {
         let config = create_test_config();
 
-        // Test exact match
+        // Test exact match.
         let result = find_matching_project_path(&config, "/home/user/projects/app1");
         assert_eq!(result, Some("/home/user/projects/app1".to_string()));
 
@@ -243,7 +243,7 @@ mod tests {
     fn test_find_matching_project_path_parent_match() {
         let config = create_test_config();
 
-        // Test subdirectory matching (should find parent)
+        // Test subdirectory matching (should find parent).
         let result = find_matching_project_path(&config, "/home/user/projects/app1/src");
         assert_eq!(result, Some("/home/user/projects/app1".to_string()));
 
@@ -261,7 +261,7 @@ mod tests {
     fn test_find_matching_project_path_no_match() {
         let config = create_test_config();
 
-        // Test no match scenarios
+        // Test no match scenarios.
         let result = find_matching_project_path(&config, "/home/user/other_project");
         assert_eq!(result, None);
 
@@ -288,17 +288,17 @@ mod tests {
         projects.insert("/".to_string(), Project { history: vec![] });
         let config = ClaudeConfig { projects };
 
-        // Should find root for any path
+        // Should find root for any path.
         let result = find_matching_project_path(&config, "/home/user/any/deep/path");
         assert_eq!(result, Some("/".to_string()));
     }
 
     #[test]
     fn test_find_matching_project_path_with_real_filesystem() -> miette::Result<()> {
-        // Create a temporary directory structure for realistic testing
+        // Create a temporary directory structure for realistic testing.
         let temp_dir = try_create_temp_dir()?;
 
-        // Create a realistic project structure
+        // Create a realistic project structure.
         let project_root = temp_dir.join("my_project");
         let src_dir = project_root.join("src");
         let tests_dir = project_root.join("tests");
@@ -309,7 +309,7 @@ mod tests {
         try_mkdir(&tests_dir, MkdirOptions::CreateIntermediateDirectories)?;
         try_mkdir(&lib_dir, MkdirOptions::CreateIntermediateDirectories)?;
 
-        // Create config with the project root
+        // Create config with the project root.
         let mut projects = HashMap::new();
         projects.insert(
             project_root.to_string_lossy().to_string(),
@@ -317,11 +317,11 @@ mod tests {
         );
         let config = ClaudeConfig { projects };
 
-        // Test exact match
+        // Test exact match.
         let result = find_matching_project_path(&config, &project_root.to_string_lossy());
         assert_eq!(result, Some(project_root.to_string_lossy().to_string()));
 
-        // Test subdirectory matches
+        // Test subdirectory matches.
         let result = find_matching_project_path(&config, &src_dir.to_string_lossy());
         assert_eq!(result, Some(project_root.to_string_lossy().to_string()));
 
@@ -331,7 +331,7 @@ mod tests {
         let result = find_matching_project_path(&config, &tests_dir.to_string_lossy());
         assert_eq!(result, Some(project_root.to_string_lossy().to_string()));
 
-        // Test sibling directory (should not match)
+        // Test sibling directory (should not match).
         let sibling_dir = temp_dir.join("other_project");
         try_mkdir(&sibling_dir, MkdirOptions::CreateIntermediateDirectories)?;
 
@@ -345,7 +345,7 @@ mod tests {
     fn test_find_matching_project_path_multiple_nested_projects() -> miette::Result<()> {
         let temp_dir = try_create_temp_dir()?;
 
-        // Create nested project structure
+        // Create nested project structure.
         let workspace = temp_dir.join("workspace");
         let outer_project = workspace.join("outer_project");
         let inner_project = outer_project.join("nested_project");
@@ -356,7 +356,7 @@ mod tests {
         try_mkdir(&inner_project, MkdirOptions::CreateIntermediateDirectories)?;
         try_mkdir(&src_dir, MkdirOptions::CreateIntermediateDirectories)?;
 
-        // Create config with both projects
+        // Create config with both projects.
         let mut projects = HashMap::new();
         projects.insert(
             outer_project.to_string_lossy().to_string(),
@@ -368,16 +368,16 @@ mod tests {
         );
         let config = ClaudeConfig { projects };
 
-        // Should find the closest (most specific) match
+        // Should find the closest (most specific) match.
         let result = find_matching_project_path(&config, &src_dir.to_string_lossy());
         assert_eq!(result, Some(inner_project.to_string_lossy().to_string()));
 
-        // Should find exact match for inner project
+        // Should find exact match for inner project.
         let result =
             find_matching_project_path(&config, &inner_project.to_string_lossy());
         assert_eq!(result, Some(inner_project.to_string_lossy().to_string()));
 
-        // Should find exact match for outer project
+        // Should find exact match for outer project.
         let result =
             find_matching_project_path(&config, &outer_project.to_string_lossy());
         assert_eq!(result, Some(outer_project.to_string_lossy().to_string()));
@@ -389,15 +389,15 @@ mod tests {
     fn test_find_matching_project_path_edge_cases() {
         let config = create_test_config();
 
-        // Test empty path
+        // Test empty path.
         let result = find_matching_project_path(&config, "");
         assert_eq!(result, None);
 
-        // Test single character path
+        // Test single character path.
         let result = find_matching_project_path(&config, "/");
         assert_eq!(result, None);
 
-        // Test relative path (shouldn't match absolute project paths)
+        // Test relative path (shouldn't match absolute project paths).
         let result = find_matching_project_path(&config, "src/lib");
         assert_eq!(result, None);
     }

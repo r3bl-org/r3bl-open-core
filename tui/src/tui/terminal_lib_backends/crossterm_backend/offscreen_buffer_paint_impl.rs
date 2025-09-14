@@ -124,15 +124,15 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                 let is_at_end_of_line = ch(pixel_char_index) == (ch(line.len()) - ch(1));
                 let is_first_loop_iteration = row_index == 0 && pixel_char_index == 0;
 
-                // Deal w/: fg and bg colors | text attrib style | ANSI <-> PLAIN
+                // Deal w/: fg and bg colors | text attrib style | ANSI <-> PLAIN.
                 // switchover.
                 if !is_style_same_as_prev {
-                    // The style changed / render path has changed and something is
+                    // The style changed / render path has changed and something is.
                     // already in the buffer, so flush it!
                     render_helper::flush_all_buffers(&mut context);
                 }
 
-                // Deal w/: fg and bg colors | text attrib style
+                // Deal w/: fg and bg colors | text attrib style.
                 if is_first_loop_iteration || !is_style_same_as_prev {
                     context.render_ops.push(RenderOp::ResetColor);
                     if let Some(style) = pixel_char_style

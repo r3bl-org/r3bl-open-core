@@ -16,7 +16,7 @@ impl OffscreenBuffer {
     /// Characters that would shift beyond the line width are lost.
     /// Returns true if the operation was successful.
     ///
-    /// Example - Inserting 2 blank characters at cursor position
+    /// Example - Inserting 2 blank characters at cursor position.
     ///
     /// ```text
     /// Before:
@@ -34,7 +34,7 @@ impl OffscreenBuffer {
     ///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
     ///                   ╰ cursor (col 2, 0-based)
     ///
-    /// Result: 2 blanks inserted, C-D-E-F-G-H shifted right, I-J lost beyond margin
+    /// Result: 2 blanks inserted, C-D-E-F-G-H shifted right, I-J lost beyond margin.
     /// ```
     pub fn insert_chars_at_cursor(
         &mut self,
@@ -42,15 +42,15 @@ impl OffscreenBuffer {
         how_many: Length,
         max_width: ColWidth,
     ) -> bool {
-        // Nothing to insert if cursor is at or beyond right margin
+        // Nothing to insert if cursor is at or beyond right margin.
         if max_width.is_overflowed_by(at) {
             return false;
         }
 
-        // Calculate how many characters we can actually insert
+        // Calculate how many characters we can actually insert.
         let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
-        // Exit early if nothing to insert
+        // Exit early if nothing to insert.
         if how_many_clamped == len(0) {
             return false;
         }
@@ -67,7 +67,7 @@ impl OffscreenBuffer {
         let line_width = max_width.as_usize();
 
         if let Some(line) = self.buffer.get_mut(row_idx) {
-            // Copy characters to the right to make room for insertion
+            // Copy characters to the right to make room for insertion.
             let dest_start = cursor_pos + insert_amount;
             let source_end = line_width - insert_amount;
 
@@ -75,7 +75,7 @@ impl OffscreenBuffer {
                 line.copy_within(cursor_pos..source_end, dest_start);
             }
 
-            // Fill the cursor position with blanks
+            // Fill the cursor position with blanks.
             let fill_end = (cursor_pos + insert_amount).min(line_width);
             line[cursor_pos..fill_end].fill(PixelChar::Spacer);
 
@@ -90,7 +90,7 @@ impl OffscreenBuffer {
     /// Blank characters are inserted at the end of the line.
     /// Returns true if the operation was successful.
     ///
-    /// Example - Deleting 2 characters at cursor position
+    /// Example - Deleting 2 characters at cursor position.
     ///
     /// ```text
     /// Before:
@@ -108,7 +108,7 @@ impl OffscreenBuffer {
     ///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
     ///                   ╰ cursor (col 2, 0-based)
     ///
-    /// Result: c and d deleted, E-F-G-H-I-J shifted left, blanks filled at end
+    /// Result: c and d deleted, E-F-G-H-I-J shifted left, blanks filled at end.
     /// ```
     pub fn delete_chars_at_cursor(
         &mut self,
@@ -116,15 +116,15 @@ impl OffscreenBuffer {
         how_many: Length,
         max_width: ColWidth,
     ) -> bool {
-        // Nothing to delete if cursor is at or beyond right margin
+        // Nothing to delete if cursor is at or beyond right margin.
         if max_width.is_overflowed_by(at) {
             return false;
         }
 
-        // Calculate how many characters we can actually delete
+        // Calculate how many characters we can actually delete.
         let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
-        // Exit early if nothing to delete
+        // Exit early if nothing to delete.
         if how_many_clamped == len(0) {
             return false;
         }
@@ -146,7 +146,7 @@ impl OffscreenBuffer {
             at.col_index,
         );
 
-        // Clear the vacated space at the end (overwriting duplicates and filling with
+        // Clear the vacated space at the end (overwriting duplicates and filling with.
         // spacers)
         self.fill_char_range(
             at.row_index,
@@ -166,7 +166,7 @@ impl OffscreenBuffer {
     /// Characters are replaced with blanks, no shifting occurs.
     /// Returns true if the operation was successful.
     ///
-    /// Example - Erasing 3 characters at cursor position
+    /// Example - Erasing 3 characters at cursor position.
     ///
     /// ```text
     /// Before:
@@ -192,15 +192,15 @@ impl OffscreenBuffer {
         how_many: Length,
         max_width: ColWidth,
     ) -> bool {
-        // Nothing to erase if cursor is at or beyond right margin
+        // Nothing to erase if cursor is at or beyond right margin.
         if max_width.is_overflowed_by(at) {
             return false;
         }
 
-        // Calculate how many characters we can actually erase
+        // Calculate how many characters we can actually erase.
         let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
-        // Exit early if nothing to erase
+        // Exit early if nothing to erase.
         if how_many_clamped == len(0) {
             return false;
         }
@@ -216,7 +216,7 @@ impl OffscreenBuffer {
         let erase_amount = how_many_clamped.as_usize();
 
         if let Some(line) = self.buffer.get_mut(row_idx) {
-            // Fill the range with blank characters
+            // Fill the range with blank characters.
             let fill_end = cursor_pos + erase_amount;
             line[cursor_pos..fill_end].fill(PixelChar::Spacer);
 
@@ -251,7 +251,7 @@ mod tests_shifting_ops {
     ) {
         for (i, &ch) in chars.iter().enumerate() {
             if i < 6 {
-                // Match buffer width
+                // Match buffer width.
                 buffer.set_char(test_row + col(i), create_test_char(ch));
             }
         }
@@ -262,14 +262,14 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(1);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
-        // Insert 2 blank characters at position 2 (before 'C')
+        // Insert 2 blank characters at position 2 (before 'C').
         let result = buffer.insert_chars_at_cursor(test_row + col(2), len(2), width(6));
         assert!(result);
 
-        // Expected result: "AB  CD" (E and F are pushed out)
+        // Expected result: "AB  CD" (E and F are pushed out).
         assert_eq!(
             buffer.get_char(test_row + col(0)).unwrap(),
             create_test_char('A')
@@ -301,14 +301,14 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(0);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
-        // Try to insert 10 characters at position 1 (more than remaining space)
+        // Try to insert 10 characters at position 1 (more than remaining space).
         let result = buffer.insert_chars_at_cursor(test_row + col(1), len(10), width(6));
         assert!(result);
 
-        // Should insert as many as possible: "A     " (5 spaces, B-F pushed out)
+        // Should insert as many as possible: "A     " (5 spaces, B-F pushed out).
         assert_eq!(
             buffer.get_char(test_row + col(0)).unwrap(),
             create_test_char('A')
@@ -326,14 +326,14 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(1);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
-        // Try to insert at the last position
+        // Try to insert at the last position.
         let result = buffer.insert_chars_at_cursor(test_row + col(5), len(1), width(6));
         assert!(result);
 
-        // Should insert one space, pushing F out: "ABCDE "
+        // Should insert one space, pushing F out: "ABCDE ".
         assert_eq!(
             buffer.get_char(test_row + col(4)).unwrap(),
             create_test_char('E')
@@ -348,15 +348,15 @@ mod tests_shifting_ops {
     fn test_insert_chars_invalid_conditions() {
         let mut buffer = create_test_buffer();
 
-        // Test with invalid row
+        // Test with invalid row.
         let result1 = buffer.insert_chars_at_cursor(row(10) + col(2), len(1), width(6));
         assert!(!result1);
 
-        // Test with cursor position beyond line width
+        // Test with cursor position beyond line width.
         let result2 = buffer.insert_chars_at_cursor(row(0) + col(10), len(1), width(6));
         assert!(!result2);
 
-        // Test with zero insert count
+        // Test with zero insert count.
         let result3 = buffer.insert_chars_at_cursor(row(0) + col(2), len(0), width(6));
         assert!(!result3);
     }
@@ -366,14 +366,14 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(1);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
-        // Delete 2 characters at position 2 (delete 'C' and 'D')
+        // Delete 2 characters at position 2 (delete 'C' and 'D').
         let result = buffer.delete_chars_at_cursor(test_row + col(2), len(2), width(6));
         assert!(result);
 
-        // Verify: "AB" + "EF" + "  " (CD deleted, EF shifted left, blanks at end)
+        // Verify: "AB" + "EF" + "  " (CD deleted, EF shifted left, blanks at end).
         assert_eq!(
             buffer.get_char(test_row + col(0)).unwrap(),
             create_test_char('A')
@@ -405,7 +405,7 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(0);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
         // Try to delete 10 characters at position 1 (more than remaining space)
@@ -430,10 +430,10 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(1);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
-        // Try to delete at the last position
+        // Try to delete at the last position.
         let result = buffer.delete_chars_at_cursor(test_row + col(5), len(1), width(6));
         assert!(result);
 
@@ -454,15 +454,15 @@ mod tests_shifting_ops {
     fn test_delete_chars_invalid_conditions() {
         let mut buffer = create_test_buffer();
 
-        // Test with invalid row
+        // Test with invalid row.
         let result1 = buffer.delete_chars_at_cursor(row(10) + col(2), len(1), width(6));
         assert!(!result1);
 
-        // Test with cursor position beyond line width
+        // Test with cursor position beyond line width.
         let result2 = buffer.delete_chars_at_cursor(row(0) + col(10), len(1), width(6));
         assert!(!result2);
 
-        // Test with zero delete count
+        // Test with zero delete count.
         let result3 = buffer.delete_chars_at_cursor(row(0) + col(2), len(0), width(6));
         assert!(!result3);
     }
@@ -472,7 +472,7 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(1);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
         // Erase 3 characters at position 2 (erase 'C', 'D', 'E')
@@ -511,7 +511,7 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(0);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
         // Try to erase 10 characters at position 1 (more than remaining space)
@@ -536,10 +536,10 @@ mod tests_shifting_ops {
         let mut buffer = create_test_buffer();
         let test_row = row(1);
 
-        // Set up initial line: "ABCDEF"
+        // Set up initial line: "ABCDEF".
         setup_line_with_chars(&mut buffer, test_row, &['A', 'B', 'C', 'D', 'E', 'F']);
 
-        // Try to erase at the last position
+        // Try to erase at the last position.
         let result = buffer.erase_chars_at_cursor(test_row + col(5), len(1), width(6));
         assert!(result);
 
@@ -560,22 +560,22 @@ mod tests_shifting_ops {
     fn test_erase_chars_invalid_conditions() {
         let mut buffer = create_test_buffer();
 
-        // Test with invalid row
+        // Test with invalid row.
         let result1 = buffer.erase_chars_at_cursor(row(10) + col(2), len(1), width(6));
         assert!(!result1);
 
-        // Test with cursor position beyond line width
+        // Test with cursor position beyond line width.
         let result2 = buffer.erase_chars_at_cursor(row(0) + col(10), len(1), width(6));
         assert!(!result2);
 
-        // Test with zero erase count
+        // Test with zero erase count.
         let result3 = buffer.erase_chars_at_cursor(row(0) + col(2), len(0), width(6));
         assert!(!result3);
     }
 
     #[test]
     fn test_operations_at_line_start() {
-        // Helper function to create test characters
+        // Helper function to create test characters.
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
@@ -587,13 +587,13 @@ mod tests_shifting_ops {
         let mut buffer = OffscreenBuffer::new_empty(size);
         let test_row = row(0);
 
-        // Set up initial line with characters: "ABCDEFGHIJ"
+        // Set up initial line with characters: "ABCDEFGHIJ".
         let chars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
         for (i, &ch) in chars.iter().enumerate() {
             buffer.set_char(test_row + col(i), create_test_char(ch));
         }
 
-        // Test delete at column 0 - should delete A,B and shift left
+        // Test delete at column 0 - should delete A,B and shift left.
         let result = buffer.delete_chars_at_cursor(test_row + col(0), len(2), width(10));
         assert!(result);
 
@@ -619,12 +619,12 @@ mod tests_shifting_ops {
             PixelChar::Spacer
         );
 
-        // Reset for insert test
+        // Reset for insert test.
         for (i, &ch) in chars.iter().enumerate() {
             buffer.set_char(test_row + col(i), create_test_char(ch));
         }
 
-        // Test insert at column 0 - should insert 2 blanks and shift right
+        // Test insert at column 0 - should insert 2 blanks and shift right.
         let result = buffer.insert_chars_at_cursor(test_row + col(0), len(2), width(10));
         assert!(result);
 
@@ -646,12 +646,12 @@ mod tests_shifting_ops {
             create_test_char('H')
         );
 
-        // Reset for erase test
+        // Reset for erase test.
         for (i, &ch) in chars.iter().enumerate() {
             buffer.set_char(test_row + col(i), create_test_char(ch));
         }
 
-        // Test erase at column 0 - should erase A,B,C without shifting
+        // Test erase at column 0 - should erase A,B,C without shifting.
         let result = buffer.erase_chars_at_cursor(test_row + col(0), len(3), width(10));
         assert!(result);
 
@@ -680,7 +680,7 @@ mod tests_shifting_ops {
 
     #[test]
     fn test_single_char_operations() {
-        // Helper function to create test characters
+        // Helper function to create test characters.
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
@@ -692,7 +692,7 @@ mod tests_shifting_ops {
         let mut buffer = OffscreenBuffer::new_empty(size);
         let test_row = row(0);
 
-        // Set up initial line with characters: "ABCDE"
+        // Set up initial line with characters: "ABCDE".
         let chars = ['A', 'B', 'C', 'D', 'E'];
         for (i, &ch) in chars.iter().enumerate() {
             buffer.set_char(test_row + col(i), create_test_char(ch));
@@ -724,7 +724,7 @@ mod tests_shifting_ops {
             PixelChar::Spacer
         );
 
-        // Reset for insert test
+        // Reset for insert test.
         for (i, &ch) in chars.iter().enumerate() {
             buffer.set_char(test_row + col(i), create_test_char(ch));
         }
@@ -755,7 +755,7 @@ mod tests_shifting_ops {
             create_test_char('D')
         );
 
-        // Reset for erase test
+        // Reset for erase test.
         for (i, &ch) in chars.iter().enumerate() {
             buffer.set_char(test_row + col(i), create_test_char(ch));
         }
@@ -789,7 +789,7 @@ mod tests_shifting_ops {
 
     #[test]
     fn test_operations_on_empty_line() {
-        // Helper function to create test characters
+        // Helper function to create test characters.
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
@@ -804,7 +804,7 @@ mod tests_shifting_ops {
         // Test delete on empty line (should succeed but do nothing)
         let result = buffer.delete_chars_at_cursor(test_row + col(0), len(3), width(8));
         assert!(result); // Should succeed on spacer-filled line
-        // Verify line remains empty
+        // Verify line remains empty.
         for i in 0..8 {
             assert_eq!(
                 buffer.get_char(test_row + col(i)).unwrap(),
@@ -812,7 +812,7 @@ mod tests_shifting_ops {
             );
         }
 
-        // Test insert on empty line at column 0
+        // Test insert on empty line at column 0.
         let result = buffer.insert_chars_at_cursor(test_row + col(0), len(3), width(8));
         assert!(result);
         // Verify 3 blanks were inserted (line now has length but no visible chars)
@@ -823,13 +823,13 @@ mod tests_shifting_ops {
             );
         }
 
-        // Reset to empty line
+        // Reset to empty line.
         buffer.buffer[test_row.as_usize()] = PixelCharLine::new_empty(width(8));
 
         // Test erase on empty line (should succeed but do nothing)
         let result = buffer.erase_chars_at_cursor(test_row + col(0), len(2), width(8));
         assert!(result); // Should succeed on spacer-filled line
-        // Verify line remains empty
+        // Verify line remains empty.
         for i in 0..8 {
             assert_eq!(
                 buffer.get_char(test_row + col(i)).unwrap(),
@@ -837,7 +837,7 @@ mod tests_shifting_ops {
             );
         }
 
-        // Test operations beyond line length on short line
+        // Test operations beyond line length on short line.
         let chars = ['A', 'B', 'C'];
         for (i, &ch) in chars.iter().enumerate() {
             buffer.set_char(test_row + col(i), create_test_char(ch));
@@ -846,7 +846,7 @@ mod tests_shifting_ops {
         // Try to delete at position beyond content length (but within width)
         let result = buffer.delete_chars_at_cursor(test_row + col(5), len(1), width(8));
         assert!(result); // Should succeed - position is within buffer width
-        // Verify original content unchanged
+        // Verify original content unchanged.
         assert_eq!(
             buffer.get_char(test_row + col(0)).unwrap(),
             create_test_char('A')
@@ -860,10 +860,10 @@ mod tests_shifting_ops {
             create_test_char('C')
         );
 
-        // Try to insert at valid position within width but beyond content
+        // Try to insert at valid position within width but beyond content.
         let result = buffer.insert_chars_at_cursor(test_row + col(5), len(1), width(8));
         assert!(result);
-        // Verify original content plus expanded line with blank
+        // Verify original content plus expanded line with blank.
         assert_eq!(
             buffer.get_char(test_row + col(0)).unwrap(),
             create_test_char('A')
@@ -884,7 +884,7 @@ mod tests_shifting_ops {
 
     #[test]
     fn test_delete_at_exact_boundary() {
-        // Helper function to create test characters
+        // Helper function to create test characters.
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
@@ -909,16 +909,16 @@ mod tests_shifting_ops {
         // Test delete at exact right boundary (should do nothing)
         let result = buffer.delete_chars_at_cursor(test_row + col(10), len(1), width(10));
         assert!(!result); // Should fail - cursor is beyond valid position
-        // Verify line unchanged
+        // Verify line unchanged.
         assert_eq!(
             buffer.get_char(test_row + col(9)).unwrap(),
             create_test_char('J')
         );
 
-        // Test delete at last valid position
+        // Test delete at last valid position.
         let result = buffer.delete_chars_at_cursor(test_row + col(9), len(1), width(10));
         assert!(result);
-        // Verify J deleted, blank at end
+        // Verify J deleted, blank at end.
         assert_eq!(
             buffer.get_char(test_row + col(8)).unwrap(),
             create_test_char('I')
@@ -928,11 +928,11 @@ mod tests_shifting_ops {
             PixelChar::Spacer
         );
 
-        // Test delete with count exceeding available chars
+        // Test delete with count exceeding available chars.
         buffer = setup_buffer();
         let result = buffer.delete_chars_at_cursor(test_row + col(8), len(5), width(10));
         assert!(result);
-        // Verify only 2 chars deleted, others remain, blanks at end
+        // Verify only 2 chars deleted, others remain, blanks at end.
         assert_eq!(
             buffer.get_char(test_row + col(7)).unwrap(),
             create_test_char('H')
@@ -949,7 +949,7 @@ mod tests_shifting_ops {
 
     #[test]
     fn test_insert_at_exact_boundary() {
-        // Helper function to create test characters
+        // Helper function to create test characters.
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
@@ -974,7 +974,7 @@ mod tests_shifting_ops {
         // Test insert at exact right boundary (should do nothing)
         let result = buffer.insert_chars_at_cursor(test_row + col(10), len(1), width(10));
         assert!(!result); // Should fail - cursor is beyond valid position
-        // Verify line unchanged
+        // Verify line unchanged.
         assert_eq!(
             buffer.get_char(test_row + col(9)).unwrap(),
             create_test_char('J')
@@ -983,7 +983,7 @@ mod tests_shifting_ops {
         // Test insert at last valid position (should push rightmost char off)
         let result = buffer.insert_chars_at_cursor(test_row + col(9), len(1), width(10));
         assert!(result);
-        // Verify blank inserted at position 9, J pushed off
+        // Verify blank inserted at position 9, J pushed off.
         assert_eq!(
             buffer.get_char(test_row + col(8)).unwrap(),
             create_test_char('I')
@@ -993,11 +993,11 @@ mod tests_shifting_ops {
             PixelChar::Spacer
         );
 
-        // Test insert with large count
+        // Test insert with large count.
         buffer = setup_buffer();
         let result = buffer.insert_chars_at_cursor(test_row + col(8), len(5), width(10));
         assert!(result);
-        // Verify only 2 blanks inserted, I,J pushed off
+        // Verify only 2 blanks inserted, I,J pushed off.
         assert_eq!(
             buffer.get_char(test_row + col(7)).unwrap(),
             create_test_char('H')
@@ -1014,7 +1014,7 @@ mod tests_shifting_ops {
 
     #[test]
     fn test_erase_at_exact_boundary() {
-        // Helper function to create test characters
+        // Helper function to create test characters.
         fn create_test_char(ch: char) -> PixelChar {
             PixelChar::PlainText {
                 display_char: ch,
@@ -1039,13 +1039,13 @@ mod tests_shifting_ops {
         // Test erase at exact right boundary (should do nothing)
         let result = buffer.erase_chars_at_cursor(test_row + col(10), len(1), width(10));
         assert!(!result); // Should fail - cursor is beyond valid position
-        // Verify line unchanged
+        // Verify line unchanged.
         assert_eq!(
             buffer.get_char(test_row + col(9)).unwrap(),
             create_test_char('J')
         );
 
-        // Test erase at last valid position
+        // Test erase at last valid position.
         let result = buffer.erase_chars_at_cursor(test_row + col(9), len(1), width(10));
         assert!(result);
         // Verify J erased (blank), others remain
@@ -1058,11 +1058,11 @@ mod tests_shifting_ops {
             PixelChar::Spacer
         );
 
-        // Test erase with large count
+        // Test erase with large count.
         buffer = setup_buffer();
         let result = buffer.erase_chars_at_cursor(test_row + col(8), len(5), width(10));
         assert!(result);
-        // Verify only 2 chars erased
+        // Verify only 2 chars erased.
         assert_eq!(
             buffer.get_char(test_row + col(7)).unwrap(),
             create_test_char('H')

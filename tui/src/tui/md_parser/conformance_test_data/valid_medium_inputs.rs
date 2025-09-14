@@ -8,7 +8,7 @@
 //! - Code blocks with different languages
 //! - Mixed content and formatting patterns
 
-// Multi-line content
+// Multi-line content.
 pub const MULTIPLE_LINES: &str = "First line\nSecond line\nThird line";
 pub const HEADING_BASIC: &str = "# Main Heading\nSome content";
 pub const MULTIPLE_HEADINGS: &str = "# H1\n## H2\n### H3\nContent";
@@ -32,7 +32,7 @@ pub const CODE_BLOCK_RUST: &str =
 pub const CODE_BLOCK_NO_LANGUAGE: &str = "```\nSome code\nwithout language\n```";
 pub const EMPTY_CODE_BLOCK: &str = "```rust\n```";
 
-// Formatting patterns
+// Formatting patterns.
 pub const FORMATTING_EDGE_CASES: &str =
     "*start bold*\n_start italic_\n`start code`\nend *bold*\nend _italic_\nend `code`";
 pub const NESTED_FORMATTING: &str =
@@ -44,7 +44,7 @@ pub const EDGE_CASE_WHITESPACE_LINES: &str = "Line 1\n   \n\t\nLine 2";
 pub const EDGE_CASE_TRAILING_SPACES: &str =
     "Line with trailing spaces   \nAnother line  ";
 
-// Emoji positioning
+// Emoji positioning.
 pub const EMOJI_START_MIDDLE_END: &str =
     "# 😀 Emoji at start\n## Middle 😀 emoji\n### Emoji at end 😀";
 

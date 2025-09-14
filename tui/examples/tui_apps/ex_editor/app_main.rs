@@ -216,8 +216,8 @@ mod modal_dialogs {
                 // This code path should never execute, since to update the buffer given
                 // an id, it should have already existed in the first
                 // place, which is created by:
-                // 1. [Action::SimpleDialogComponentInitializeFocused].
-                // 2. [Action::AutocompleteDialogComponentInitializeFocused].
+                // 1. [Action::SimpleDialogComponentInitializeFocused]
+                // 2. [Action::AutocompleteDialogComponentInitializeFocused]
                 || {
                     let mut it = DialogBuffer::new_empty();
                     it.editor_buffer = EditorBuffer::new_empty(None, None);
@@ -423,7 +423,7 @@ mod modal_dialogs {
         // render.
         has_focus.try_set_modal_id(FlexBoxId::from(Id::AutocompleteDialog))?;
 
-        // Change the state so that it will trigger a render. This will show the title &
+        // Change the state so that it will trigger a render. This will show the title and
         // text on the next render.
         dialog_component_initialize_focused(
             state,

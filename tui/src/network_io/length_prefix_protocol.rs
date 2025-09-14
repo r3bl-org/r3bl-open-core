@@ -252,7 +252,7 @@ pub mod byte_io {
 
         // Ensure that the payload size is within the expected range.
         if size_of_payload > protocol_constants::MAX_PAYLOAD_SIZE {
-            // Adjust this threshold as needed
+            // Adjust this threshold as needed.
             miette::bail!("Payload size is too large")
         }
 

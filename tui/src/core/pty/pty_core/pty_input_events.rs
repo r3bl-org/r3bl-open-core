@@ -148,7 +148,7 @@ fn convert_modified_key(key: Key, modifiers: ModifierState) -> Option<PtyInputEv
 /// Algorithmically convert characters with modifiers
 fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyInputEvent {
     match modifiers {
-        // Ctrl-only combinations
+        // Ctrl-only combinations.
         ModifierState {
             ctrl: true,
             shift: false,
@@ -161,14 +161,14 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             shift: false,
             alt: true,
         } => {
-            // For ASCII characters, use ESC + char
+            // For ASCII characters, use ESC + char.
             if ch.is_ascii() {
                 PtyInputEvent::SendControl(
                     ControlSequence::RawSequence(vec![0x1B, ch as u8]),
                     CursorKeyMode::default(),
                 )
             } else {
-                // For non-ASCII, use CSI u sequences
+                // For non-ASCII, use CSI u sequences.
                 generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
             }
         }
@@ -179,17 +179,17 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             shift: true,
             alt: false,
         } if ch == ' ' => {
-            // Shift+Space typically sends regular space but some apps detect it via CSI u
+            // Shift+Space typically sends regular space but some apps detect it via CSI u.
             generate_csi_u_sequence(' ' as u32, modifiers.to_csi_modifier())
         }
 
-        // Alt+Shift combinations
+        // Alt+Shift combinations.
         ModifierState {
             ctrl: false,
             shift: true,
             alt: true,
         } => {
-            // For letters, send ESC + uppercase
+            // For letters, send ESC + uppercase.
             if ch.is_ascii_alphabetic() {
                 PtyInputEvent::SendControl(
                     ControlSequence::RawSequence(vec![
@@ -199,7 +199,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                     CursorKeyMode::default(),
                 )
             } else if ch.is_ascii() {
-                // For other ASCII chars, send ESC + char (shift is handled by the char
+                // For other ASCII chars, send ESC + char (shift is handled by the char.
                 // itself)
                 PtyInputEvent::SendControl(
                     ControlSequence::RawSequence(vec![0x1B, ch as u8]),
@@ -210,7 +210,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             }
         }
 
-        // Ctrl+Alt combinations
+        // Ctrl+Alt combinations.
         ModifierState {
             ctrl: true,
             shift: false,
@@ -222,7 +222,7 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
                     CursorKeyMode::default(),
                 )
             } else {
-                // Fallback to CSI u for unsupported combinations
+                // Fallback to CSI u for unsupported combinations.
                 generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier())
             }
         }
@@ -233,17 +233,17 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             shift: true,
             alt: false,
         } => {
-            // Handle uppercase letters specially
+            // Handle uppercase letters specially.
             let target_char = if ch.is_ascii_lowercase() {
                 ch.to_ascii_uppercase()
             } else {
                 ch
             };
-            // Use CSI u sequences for Ctrl+Shift combinations
+            // Use CSI u sequences for Ctrl+Shift combinations.
             generate_csi_u_sequence(target_char as u32, modifiers.to_csi_modifier())
         }
 
-        // Other combinations default to CSI u sequences
+        // Other combinations default to CSI u sequences.
         _ => generate_csi_u_sequence(ch as u32, modifiers.to_csi_modifier()),
     }
 }
@@ -291,7 +291,7 @@ fn convert_ctrl_letter(ch: char) -> PtyInputEvent {
 /// Convert Ctrl+symbol combinations (space, punctuation, etc.)
 fn convert_ctrl_symbol(ch: char) -> PtyInputEvent {
     match ch {
-        // Special cases for important symbols - multiple ways to send NUL
+        // Special cases for important symbols - multiple ways to send NUL.
         ' ' | '`' => PtyInputEvent::SendControl(
             ControlSequence::RawSequence(vec![0x00]),
             CursorKeyMode::default(),
@@ -317,7 +317,7 @@ fn convert_ctrl_symbol(ch: char) -> PtyInputEvent {
             CursorKeyMode::default(),
         ), // Ctrl+_ -> US
 
-        // Additional important symbols
+        // Additional important symbols.
         '-' => generate_csi_u_sequence('-' as u32, 5), // Ctrl+- (zoom out)
         '=' => generate_csi_u_sequence('=' as u32, 5), // Ctrl+= (zoom in)
         '+' => generate_csi_u_sequence('+' as u32, 5), // Ctrl++ (also zoom in)
@@ -361,7 +361,7 @@ fn convert_ctrl_number(ch: char) -> PtyInputEvent {
             ControlSequence::RawSequence(vec![0x7F]),
             CursorKeyMode::default(),
         ), // Ctrl+8 -> DEL
-        // For 0, 1, 9 use CSI u sequences as they don't have traditional control codes
+        // For 0, 1, 9 use CSI u sequences as they don't have traditional control codes.
         _ => generate_csi_u_sequence(ch as u32, 5),
     }
 }
@@ -378,7 +378,7 @@ fn convert_ctrl_character(ch: char) -> PtyInputEvent {
 /// Extended control code getter that handles more cases
 fn get_ctrl_code_extended(ch: char) -> Option<u8> {
     match ch {
-        // Lowercase letters
+        // Lowercase letters.
         c @ 'a'..='z' => Some((c as u8) - b'a' + 1),
         // Uppercase letters (same control codes as lowercase)
         c @ 'A'..='Z' => Some((c as u8) - b'A' + 1),
@@ -463,7 +463,7 @@ fn convert_special_key(
         };
     }
 
-    // Modified special keys - use CSI sequences algorithmically
+    // Modified special keys - use CSI sequences algorithmically.
     let (base_seq, key_code) = match special {
         SpecialKey::Up => ("A", 'A' as u32),
         SpecialKey::Down => ("B", 'B' as u32),
@@ -507,7 +507,7 @@ fn convert_function_key(
         FunctionKey::F12 => 12,
     };
 
-    // Plain function keys
+    // Plain function keys.
     if modifiers
         == (ModifierState {
             ctrl: false,
@@ -521,10 +521,10 @@ fn convert_function_key(
         ));
     }
 
-    // Modified function keys - use CSI sequences
+    // Modified function keys - use CSI sequences.
     let (base_seq, key_code) = match func_num {
         1..=4 => {
-            // F1-F4 use single letter sequences
+            // F1-F4 use single letter sequences.
             let letter = match func_num {
                 1 => 'P',
                 2 => 'Q',
@@ -535,7 +535,7 @@ fn convert_function_key(
             (letter.to_string(), letter as u32)
         }
         5..=12 => {
-            // F5-F12 use numeric sequences
+            // F5-F12 use numeric sequences.
             let seq_num = match func_num {
                 5 => 15,
                 6 => 17,
@@ -562,7 +562,7 @@ fn convert_function_key(
 /// Generate CSI sequence: ESC[key;modifier;letter or ESC[key;modifier~
 fn generate_csi_sequence(key_code: u32, modifier: u8, suffix: &str) -> PtyInputEvent {
     if modifier == 1 {
-        // No modifier - use simple sequence
+        // No modifier - use simple sequence.
         let seq = if suffix == "~" {
             format!("\x1B[{key_code}~")
         } else {
@@ -675,14 +675,14 @@ mod tests {
         use crate::tui::terminal_lib_backends::{Key, KeyPress, KeyState,
                                                 ModifierKeysMask, SpecialKey};
 
-        // Test regular character
+        // Test regular character.
         let key = KeyPress::Plain {
             key: Key::Character('a'),
         };
         let event = Option::<PtyInputEvent>::from(key);
         assert!(matches!(event, Some(PtyInputEvent::Write(bytes)) if bytes == b"a"));
 
-        // Test special keys
+        // Test special keys.
         let key = KeyPress::Plain {
             key: Key::SpecialKey(SpecialKey::Enter),
         };
@@ -702,7 +702,7 @@ mod tests {
             Some(PtyInputEvent::SendControl(ControlSequence::ArrowUp, _))
         ));
 
-        // Test function keys
+        // Test function keys.
         let key = KeyPress::Plain {
             key: Key::FunctionKey(crate::tui::terminal_lib_backends::FunctionKey::F2),
         };
@@ -736,7 +736,7 @@ mod tests {
             Some(PtyInputEvent::SendControl(ControlSequence::CtrlC, _))
         ));
 
-        // Test other Ctrl combinations
+        // Test other Ctrl combinations.
         let key = KeyPress::WithModifiers {
             key: Key::Character('x'),
             mask: ModifierKeysMask {
@@ -779,13 +779,13 @@ mod tests {
             let event = Option::<PtyInputEvent>::from(key);
 
             if let Some(raw_bytes) = expected_raw {
-                // Should be raw sequence
+                // Should be raw sequence.
                 assert!(
                     matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _)) if bytes == &raw_bytes),
                     "Ctrl+{digit} should produce raw sequence {raw_bytes:?}, got {event:?}"
                 );
             } else {
-                // Should be CSI u sequence
+                // Should be CSI u sequence.
                 assert!(
                     matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
                     if String::from_utf8_lossy(bytes).contains(expected_csi)),
@@ -797,7 +797,7 @@ mod tests {
 
     #[test]
     fn test_comprehensive_ctrl_symbols() {
-        // Test all important Ctrl+Symbol combinations
+        // Test all important Ctrl+Symbol combinations.
         let test_cases = [
             (' ', vec![0x00], ""), // Ctrl+Space -> NUL (autocomplete)
             ('[', vec![0x1B], ""), // Ctrl+[ -> ESC
@@ -819,7 +819,7 @@ mod tests {
             ('/', "47;5u"),  // Ctrl+/ (comment)
         ];
 
-        // Test raw sequence symbols
+        // Test raw sequence symbols.
         for (symbol, expected_bytes, _) in test_cases {
             let key = KeyPress::WithModifiers {
                 key: Key::Character(symbol),
@@ -836,7 +836,7 @@ mod tests {
             );
         }
 
-        // Test CSI u sequence symbols
+        // Test CSI u sequence symbols.
         for (symbol, expected_csi) in csi_test_cases {
             let key = KeyPress::WithModifiers {
                 key: Key::Character(symbol),
@@ -857,7 +857,7 @@ mod tests {
 
     #[test]
     fn test_comprehensive_alt_combinations() {
-        // Test Alt+Numbers
+        // Test Alt+Numbers.
         for digit in '0'..='9' {
             let key = KeyPress::WithModifiers {
                 key: Key::Character(digit),
@@ -875,7 +875,7 @@ mod tests {
             );
         }
 
-        // Test Alt+Letters
+        // Test Alt+Letters.
         for letter in ['a', 'z', 'A', 'Z'] {
             let key = KeyPress::WithModifiers {
                 key: Key::Character(letter),
@@ -893,7 +893,7 @@ mod tests {
             );
         }
 
-        // Test Alt+Symbols
+        // Test Alt+Symbols.
         for symbol in ['-', '=', '[', ']', ';', '\'', ',', '.', '/'] {
             let key = KeyPress::WithModifiers {
                 key: Key::Character(symbol),
@@ -914,7 +914,7 @@ mod tests {
 
     #[test]
     fn test_multi_modifier_combinations() {
-        // Test Ctrl+Shift combinations
+        // Test Ctrl+Shift combinations.
         let key = KeyPress::WithModifiers {
             key: Key::Character('t'),
             mask: ModifierKeysMask {
@@ -931,7 +931,7 @@ mod tests {
             "Ctrl+Shift+T should produce CSI u sequence, got {event:?}"
         );
 
-        // Test Ctrl+Alt combinations
+        // Test Ctrl+Alt combinations.
         let key = KeyPress::WithModifiers {
             key: Key::Character('a'),
             mask: ModifierKeysMask {
@@ -941,14 +941,14 @@ mod tests {
             },
         };
         let event = Option::<PtyInputEvent>::from(key);
-        // Should generate ESC + Ctrl+A
+        // Should generate ESC + Ctrl+A.
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if bytes == &[0x1B, 1]), // ESC + Ctrl+A (1)
             "Ctrl+Alt+A should produce ESC+CtrlA, got {event:?}"
         );
 
-        // Test Alt+Shift combinations
+        // Test Alt+Shift combinations.
         let key = KeyPress::WithModifiers {
             key: Key::Character('a'),
             mask: ModifierKeysMask {
@@ -958,7 +958,7 @@ mod tests {
             },
         };
         let event = Option::<PtyInputEvent>::from(key);
-        // Should generate ESC + uppercase 'A'
+        // Should generate ESC + uppercase 'A'.
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if bytes == &[0x1B, b'A']),
@@ -986,7 +986,7 @@ mod tests {
 
     #[test]
     fn test_modified_special_keys() {
-        // Test Ctrl+Arrow keys
+        // Test Ctrl+Arrow keys.
         let key = KeyPress::WithModifiers {
             key: Key::SpecialKey(SpecialKey::Up),
             mask: ModifierKeysMask {
@@ -1050,7 +1050,7 @@ mod tests {
             },
         };
         let event = Option::<PtyInputEvent>::from(key);
-        // F1 with Ctrl should generate ESC[1;5P
+        // F1 with Ctrl should generate ESC[1;5P.
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("1;5P")),
@@ -1067,7 +1067,7 @@ mod tests {
             },
         };
         let event = Option::<PtyInputEvent>::from(key);
-        // F5 with Shift should generate ESC[15;2~
+        // F5 with Shift should generate ESC[15;2~.
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("15;2~")),
@@ -1084,7 +1084,7 @@ mod tests {
             },
         };
         let event = Option::<PtyInputEvent>::from(key);
-        // F12 with Alt should generate ESC[24;3~
+        // F12 with Alt should generate ESC[24;3~.
         assert!(
             matches!(event, Some(PtyInputEvent::SendControl(ControlSequence::RawSequence(ref bytes), _))
             if String::from_utf8_lossy(bytes).contains("24;3~")),
@@ -1094,7 +1094,7 @@ mod tests {
 
     #[test]
     fn test_edge_cases_and_csi_validation() {
-        // Test shift-only for space
+        // Test shift-only for space.
         let key = KeyPress::WithModifiers {
             key: Key::Character(' '),
             mask: ModifierKeysMask {
@@ -1126,7 +1126,7 @@ mod tests {
             "Shift+X should produce CSI u sequence, got {event:?}"
         );
 
-        // Test uppercase letters with Ctrl
+        // Test uppercase letters with Ctrl.
         for (lower, upper) in [('a', 'A'), ('z', 'Z')] {
             let key_lower = KeyPress::WithModifiers {
                 key: Key::Character(lower),
@@ -1148,7 +1148,7 @@ mod tests {
             let event_lower = Option::<PtyInputEvent>::from(key_lower);
             let event_upper = Option::<PtyInputEvent>::from(key_upper);
 
-            // Both should produce the same result
+            // Both should produce the same result.
             assert_eq!(
                 format!("{event_lower:?}"),
                 format!("{event_upper:?}"),
@@ -1156,7 +1156,7 @@ mod tests {
             );
         }
 
-        // Test modifier calculation correctness
+        // Test modifier calculation correctness.
         let state = ModifierState {
             ctrl: true,
             shift: true,

@@ -95,17 +95,17 @@ macro_rules! create_numeric_arithmetic_operators {
         )*
     };
 
-    // Sub implementation for usize
+    // Sub implementation for usize.
     (@sub_impl $self:expr, $rhs:expr, $constructor:ident, usize) => {
         $constructor($self.as_usize().saturating_sub($rhs))
     };
 
-    // Sub implementation for u16
+    // Sub implementation for u16.
     (@sub_impl $self:expr, $rhs:expr, $constructor:ident, u16) => {
         $constructor($self.as_u16().saturating_sub($rhs))
     };
 
-    // Sub implementation for i32 (treat negative as 0)
+    // Sub implementation for i32 (treat negative as 0).
     (@sub_impl $self:expr, $rhs:expr, $constructor:ident, i32) => {
         {
             #[allow(clippy::cast_sign_loss)]
@@ -115,17 +115,17 @@ macro_rules! create_numeric_arithmetic_operators {
         }
     };
 
-    // Add implementation for usize
+    // Add implementation for usize.
     (@add_impl $self:expr, $rhs:expr, $constructor:ident, usize) => {
         $constructor($self.as_usize() + $rhs)
     };
 
-    // Add implementation for u16
+    // Add implementation for u16.
     (@add_impl $self:expr, $rhs:expr, $constructor:ident, u16) => {
         $constructor($self.as_u16() + $rhs)
     };
 
-    // Add implementation for i32 (treat negative as 0)
+    // Add implementation for i32 (treat negative as 0).
     (@add_impl $self:expr, $rhs:expr, $constructor:ident, i32) => {
         {
             #[allow(clippy::cast_sign_loss)]
@@ -141,7 +141,7 @@ mod tests {
     #![allow(unused_imports)]
     use super::*;
 
-    // Define a test type to validate the macro
+    // Define a test type to validate the macro.
     #[derive(Copy, Clone, PartialEq, Debug)]
     struct TestIndex(usize);
 
@@ -161,26 +161,26 @@ mod tests {
         fn from(value: u16) -> Self { TestIndex(value as usize) }
     }
 
-    // Use the macro to generate operations for our test type
+    // Use the macro to generate operations for our test type.
     create_numeric_arithmetic_operators!(TestIndex, test_index, [usize, u16, i32]);
 
     #[test]
     fn test_macro_generated_add_operations() {
         let index = TestIndex(10);
 
-        // Test Add<usize>
+        // Test Add<usize>.
         let result = index + 5usize;
         assert_eq!(result, TestIndex(15));
 
-        // Test Add<u16>
+        // Test Add<u16>.
         let result = index + 3u16;
         assert_eq!(result, TestIndex(13));
 
-        // Test Add<i32> with positive value
+        // Test Add<i32> with positive value.
         let result = index + 7i32;
         assert_eq!(result, TestIndex(17));
 
-        // Test Add<i32> with negative value (should become 0)
+        // Test Add<i32> with negative value (should become 0).
         let result = index + (-5i32);
         assert_eq!(result, TestIndex(10)); // -5 becomes 0
     }
@@ -189,40 +189,40 @@ mod tests {
     fn test_macro_generated_sub_operations() {
         let index = TestIndex(10);
 
-        // Test Sub<usize> with normal subtraction
+        // Test Sub<usize> with normal subtraction.
         let result = index - 3usize;
         assert_eq!(result, TestIndex(7));
 
-        // Test Sub<usize> with saturating subtraction (underflow)
+        // Test Sub<usize> with saturating subtraction (underflow).
         let result = TestIndex(3) - 10usize;
         assert_eq!(result, TestIndex(0)); // saturating_sub prevents underflow
 
-        // Test Sub<u16>
+        // Test Sub<u16>.
         let result = index - 2u16;
         assert_eq!(result, TestIndex(8));
 
-        // Test Sub<i32> with positive value
+        // Test Sub<i32> with positive value.
         let result = index - 4i32;
         assert_eq!(result, TestIndex(6));
 
-        // Test Sub<i32> with negative value (should become 0)
+        // Test Sub<i32> with negative value (should become 0).
         let result = index - (-5i32);
         assert_eq!(result, TestIndex(10)); // -5 becomes 0, so no change
     }
 
     #[test]
     fn test_macro_generated_assign_operations() {
-        // Test AddAssign
+        // Test AddAssign.
         let mut index = TestIndex(10);
         index += 5usize;
         assert_eq!(index, TestIndex(15));
 
-        // Test SubAssign
+        // Test SubAssign.
         let mut index = TestIndex(10);
         index -= 3usize;
         assert_eq!(index, TestIndex(7));
 
-        // Test SubAssign with underflow protection
+        // Test SubAssign. with underflow protection.
         let mut index = TestIndex(2);
         index -= 5usize;
         assert_eq!(index, TestIndex(0)); // saturating_sub prevents underflow

@@ -215,21 +215,21 @@ pub mod local_branch_ops {
     /// 1. The currently checked out branch.
     /// 2. List of other local branches (excluding the current one).
     async fn try_get_branch_info() -> ResultAndCommand<LocalBranchInfo> {
-        // Get all branches first
+        // Get all branches first.
         let (res, cmd) = try_execute_git_command_to_get_branches().await;
         let Ok(all_branches) = res else {
             let report = res.unwrap_err();
             return (Err(report), cmd);
         };
 
-        // Get current branch
+        // Get current branch.
         let (res, cmd) = try_get_current_branch_name().await;
         let Ok(current_branch) = res else {
             let report = res.unwrap_err();
             return (Err(report), cmd);
         };
 
-        // Filter out current branch from all branches to get other branches
+        // Filter out current branch from all branches to get other branches.
         let other_branches = all_branches
             .into_iter()
             .filter(|branch| branch != &current_branch)
@@ -544,7 +544,7 @@ mod tests {
                 .0;
             assert!(res.is_ok());
 
-            // Verify branches are deleted
+            // Verify branches are deleted.
             let (_, branch_info) = local_branch_ops::try_get_local_branches().await.0?;
 
             assert_eq!(
@@ -700,7 +700,7 @@ mod tests {
                 initial_branch,
             ) = helper_setup_git_repo_with_commit().await?;
 
-            // Create some branches
+            // Create some branches.
             let _unused: Vec<_> = command!(program => "git", args => "branch", "branch1")
                 .run()
                 .await?;
@@ -708,13 +708,13 @@ mod tests {
                 .run()
                 .await?;
 
-            // Get all branches
+            // Get all branches.
             let branches =
                 super::local_branch_ops::try_execute_git_command_to_get_branches()
                     .await
                     .0?;
 
-            // Verify all branches are listed
+            // Verify all branches are listed.
             assert!(branches.iter().any(|b| b == &initial_branch));
             assert!(branches.iter().any(|b| b == "branch1"));
             assert!(branches.iter().any(|b| b == "branch2"));
@@ -724,7 +724,7 @@ mod tests {
         })
     }
 
-    // XMARK: Process isolated test
+    // XMARK: Process isolated test.
 
     /// This function runs all the tests that change the current working directory
     /// sequentially. This ensures that the current working directory is
@@ -734,7 +734,7 @@ mod tests {
     /// This function is called by `test_all_git_functions_in_isolated_process()` to run
     /// the tests in an isolated process.
     async fn run_all_git_tests_sequentially_impl() -> miette::Result<()> {
-        // Run each test in sequence
+        // Run each test in sequence.
         test_try_is_working_directory_clean().await?;
         test_try_get_current_branch_name().await?;
         test_try_checkout_existing_local_branch().await?;
@@ -763,16 +763,16 @@ mod tests {
     #[tokio::test]
     async fn test_all_git_functions_in_isolated_process() {
         if std::env::var("ISOLATED_TEST_RUNNER").is_ok() {
-            // This is the actual test running in the isolated process
+            // This is the actual test running in the isolated process.
             if let Err(err) = run_all_git_tests_sequentially_impl().await {
                 eprintln!("Test failed with error: {err}");
                 std::process::exit(1);
             }
-            // If we reach here without errors, exit normally
+            // If we reach here without errors, exit normally.
             std::process::exit(0);
         }
 
-        // This is the test coordinator - spawn the actual test in a new process
+        // This is the test coordinator - spawn the actual test in a new process.
         let current_exe = std::env::current_exe().unwrap();
         let mut cmd = std::process::Command::new(&current_exe);
         cmd.env("ISOLATED_TEST_RUNNER", "1")
@@ -786,7 +786,7 @@ mod tests {
         let output = cmd.output().expect("Failed to run isolated test");
 
         // Check if the child process exited successfully or if there's a panic message in
-        // stderr
+        // stderr.
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
         if !output.status.success()

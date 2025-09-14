@@ -61,7 +61,7 @@ impl InputRouter {
                         tracing::debug!("Received F{} for process switching", fn_number);
 
                         // Only switch if the process index is valid for current process
-                        // count
+                        // count.
                         if process_index < process_manager.processes().len() {
                             let old_index = process_manager.active_index();
                             if old_index == process_index {
@@ -78,7 +78,7 @@ impl InputRouter {
                                     fn_number
                                 );
 
-                                // Show notification for process switching
+                                // Show notification for process switching.
                                 let process_name =
                                     &process_manager.processes()[process_index].command;
                                 show_notification(
@@ -86,7 +86,7 @@ impl InputRouter {
                                     &format!("Switching to {process_name}"),
                                 );
 
-                                // Clear the screen before switching
+                                // Clear the screen before switching.
                                 terminal_output::clear_screen_and_home_cursor(
                                     output_device,
                                 );
@@ -116,7 +116,7 @@ impl InputRouter {
                     } => {
                         tracing::debug!("Exit requested (Ctrl+Q)");
 
-                        // Show notification for exit
+                        // Show notification for exit.
                         show_notification("PTY Mux - Exit", "Exiting PTY Mux");
 
                         return Ok(true); // Exit requested
@@ -128,7 +128,7 @@ impl InputRouter {
                             &format!("Key pressed: {key:?}"),
                         );
 
-                        // Forward all other input to active PTY using proper conversion
+                        // Forward all other input to active PTY using proper conversion.
                         if let Some(pty_event) = Option::<PtyInputEvent>::from(key) {
                             tracing::debug!("Forwarding input to PTY: {:?}", pty_event);
                             process_manager.send_input(pty_event)?;
@@ -137,11 +137,11 @@ impl InputRouter {
                 }
             }
             InputEvent::Resize(new_size) => {
-                // Handle terminal resize - forward to all active PTYs
+                // Handle terminal resize - forward to all active PTYs.
                 Self::handle_resize(process_manager, new_size);
             }
             _ => {
-                // Other input events are ignored for now
+                // Other input events are ignored for now.
             }
         }
 
@@ -153,16 +153,16 @@ impl InputRouter {
         process_manager: &ProcessManager,
         osc: &mut OscController<'_>,
     ) -> miette::Result<()> {
-        // Check if the active process has set a custom terminal title
+        // Check if the active process has set a custom terminal title.
         let title = if let Some(custom_title) = process_manager.active_terminal_title() {
-            // Use the process's custom title
+            // Use the process's custom title.
             format!(
                 "PTYMux - {} - {}",
                 process_manager.active_name(),
                 custom_title
             )
         } else {
-            // Use default title with just process name
+            // Use default title with just process name.
             format!("PTYMux - {}", process_manager.active_name())
         };
         osc.set_title_and_tab(&title)?;
@@ -177,12 +177,12 @@ impl InputRouter {
         // Update manager's size (full terminal size)
         process_manager.handle_terminal_resize(new_size);
 
-        // Forward reduced size to all PTY sessions to reserve status bar space
+        // Forward reduced size to all PTY sessions to reserve status bar space.
         // Note: The process manager handles the actual PTY size conversion
-        // We just need to update the manager with the full terminal size
+        // We just need to update the manager with the full terminal size.
 
         // The process manager handles forwarding resize events to PTY sessions
-        // so we don't need to do it here explicitly
+        // so we don't need to do it here explicitly.
     }
 }
 

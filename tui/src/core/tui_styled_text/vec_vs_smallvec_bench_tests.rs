@@ -33,13 +33,13 @@ mod benchmarks {
 
     use crate::{TuiStyle, TuiStyledText, tui_styled_text};
 
-    // Type aliases for different configurations
+    // Type aliases for different configurations.
     type SmallVec32 = SmallVec<[TuiStyledText; 32]>;
     type SmallVec16 = SmallVec<[TuiStyledText; 16]>;
     type SmallVec8 = SmallVec<[TuiStyledText; 8]>;
     type RegularVec = Vec<TuiStyledText>;
 
-    // Helper to create test data
+    // Helper to create test data.
     fn create_styled_texts(count: usize) -> Vec<TuiStyledText> {
         (0..count)
             .map(|i| {
@@ -99,7 +99,7 @@ mod benchmarks {
         });
     }
 
-    // Small extend operations
+    // Small extend operations.
     #[bench]
     fn bench_small_smallvec32_extend(b: &mut Bencher) {
         let items = create_styled_texts(3);
@@ -178,7 +178,7 @@ mod benchmarks {
         });
     }
 
-    // Medium extend operations
+    // Medium extend operations.
     #[bench]
     fn bench_medium_smallvec32_extend(b: &mut Bencher) {
         let items = create_styled_texts(15);
@@ -257,7 +257,7 @@ mod benchmarks {
         });
     }
 
-    // Large extend operations
+    // Large extend operations.
     #[bench]
     fn bench_large_smallvec32_extend(b: &mut Bencher) {
         let items = create_styled_texts(50);
@@ -289,14 +289,14 @@ mod benchmarks {
     }
 
     // =============================================================================
-    // Realistic usage pattern benchmarks
+    // Realistic usage pattern benchmarks.
     // =============================================================================
 
     #[bench]
     fn bench_realistic_smallvec32_multiple_extends(b: &mut Bencher) {
         b.iter(|| {
             let mut vec: SmallVec32 = SmallVec::new();
-            // Simulate building up a collection with multiple extends
+            // Simulate building up a collection with multiple extends.
             vec.extend(create_styled_texts(5));
             vec.extend(create_styled_texts(8));
             vec.extend(create_styled_texts(12));
@@ -308,7 +308,7 @@ mod benchmarks {
     fn bench_realistic_smallvec8_multiple_extends(b: &mut Bencher) {
         b.iter(|| {
             let mut vec: SmallVec8 = SmallVec::new();
-            // Simulate building up a collection with multiple extends
+            // Simulate building up a collection with multiple extends.
             vec.extend(create_styled_texts(5));
             vec.extend(create_styled_texts(8));
             vec.extend(create_styled_texts(12));
@@ -320,7 +320,7 @@ mod benchmarks {
     fn bench_realistic_vec_multiple_extends(b: &mut Bencher) {
         b.iter(|| {
             let mut vec: RegularVec = Vec::new();
-            // Simulate building up a collection with multiple extends
+            // Simulate building up a collection with multiple extends.
             vec.extend(create_styled_texts(5));
             vec.extend(create_styled_texts(8));
             vec.extend(create_styled_texts(12));
@@ -328,7 +328,7 @@ mod benchmarks {
         });
     }
 
-    // Pre-allocation benchmarks
+    // Pre-allocation benchmarks.
     #[bench]
     fn bench_realistic_vec_with_capacity(b: &mut Bencher) {
         b.iter(|| {
@@ -349,7 +349,7 @@ mod benchmarks {
         b.iter(|| {
             let mut vec: SmallVec32 = SmallVec::new();
             vec.extend(create_styled_texts(50));
-            // Implicit drop at end of scope
+            // Implicit drop at end of scope.
         });
     }
 
@@ -358,7 +358,7 @@ mod benchmarks {
         b.iter(|| {
             let mut vec: SmallVec8 = SmallVec::new();
             vec.extend(create_styled_texts(50));
-            // Implicit drop at end of scope
+            // Implicit drop at end of scope.
         });
     }
 
@@ -367,7 +367,7 @@ mod benchmarks {
         b.iter(|| {
             let mut vec: RegularVec = Vec::new();
             vec.extend(create_styled_texts(50));
-            // Implicit drop at end of scope
+            // Implicit drop at end of scope.
         });
     }
 }

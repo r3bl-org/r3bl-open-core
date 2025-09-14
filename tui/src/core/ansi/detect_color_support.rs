@@ -67,7 +67,7 @@ pub mod global_color_support {
 
     /// Global override for color support detection.
     ///
-    /// This variable stores an explicit override value that takes precedence over all
+    /// This variable stores an explicit override value that takes precedence over all.
     /// automatic color detection logic. When set via [`set_override()`], the [`detect()`]
     /// function will always return this value instead of examining environment variables
     /// or using cached detection results.
@@ -83,13 +83,13 @@ pub mod global_color_support {
     /// - Debugging: Temporarily disable colors regardless of terminal capabilities
     ///
     /// # Thread Safety
-    /// Uses `AtomicI8` with `Release`/`Acquire` ordering to ensure thread-safe access
+    /// Uses `AtomicI8` with `Release`/`Acquire` ordering to ensure thread-safe access.
     /// across the application.
     static mut COLOR_SUPPORT_GLOBAL: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
 
     /// Cached result of automatic color support detection.
     ///
-    /// This variable stores the memoized result from
+    /// This variable stores the memoized result from.
     /// [`examine_env_vars_to_determine_color_support()`] to avoid repeatedly checking
     /// environment variables and terminal capabilities on every call to [`detect()`].
     ///
@@ -106,7 +106,7 @@ pub mod global_color_support {
     /// - Can be manually set via [`set_cached()`] for testing purposes
     ///
     /// # Performance Benefits
-    /// Eliminates expensive environment variable lookups and terminal capability
+    /// Eliminates expensive environment variable lookups and terminal capability.
     /// checks on subsequent calls, providing O(1) color support detection after
     /// the initial detection run.
     static mut COLOR_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
@@ -118,7 +118,7 @@ pub mod global_color_support {
     ///
     /// ## Performance-Critical Implementation
     ///
-    /// This function implements a three-tier detection strategy optimized for
+    /// This function implements a three-tier detection strategy optimized for.
     /// performance:
     ///
     /// 1. **Override Check**: If [`set_override`] was called, return that value
@@ -134,24 +134,24 @@ pub mod global_color_support {
     /// - Consumed ~24% of total execution time in flamegraph analysis
     /// - Caused noticeable lag during typing and editing
     ///
-    /// With caching, detection runs once per application lifetime, providing dramatic
+    /// With caching, detection runs once per application lifetime, providing dramatic.
     /// performance improvements for interactive applications.
     ///
     /// ## Thread Safety
     ///
-    /// Uses atomic operations with `Acquire`/`Release` ordering for thread-safe access
+    /// Uses atomic operations with `Acquire`/`Release` ordering for thread-safe access.
     /// across multiple threads without requiring external synchronization.
     #[must_use]
     pub fn detect() -> ColorSupport {
-        // First check for explicit override
+        // First check for explicit override.
         match try_get_override() {
             Ok(it) => it,
             Err(()) => {
-                // Check if we've already cached the detection result
+                // Check if we've already cached the detection result.
                 if let Ok(cached) = try_get_cached() {
                     cached
                 } else {
-                    // Not cached yet, so detect once and cache the result
+                    // Not cached yet, so detect once and cache the result.
                     let detected =
                         examine_env_vars_to_determine_color_support(Stream::Stdout);
                     set_cached(detected);
@@ -181,7 +181,7 @@ pub mod global_color_support {
         unsafe { COLOR_SUPPORT_GLOBAL.store(NOT_SET_VALUE, Ordering::Release) };
     }
 
-    /// Clear the cached color support detection result, forcing re-detection on next
+    /// Clear the cached color support detection result, forcing re-detection on next.
     /// call. This is useful for testing or when environment might have changed.
     #[allow(static_mut_refs)]
     pub fn clear_cache() {
@@ -225,12 +225,12 @@ pub mod global_color_support {
 
 /// # Terminal Hyperlink (OSC 8) Support Detection with Performance Optimization
 ///
-/// This module provides efficient hyperlink support detection for terminal applications
+/// This module provides efficient hyperlink support detection for terminal applications.
 /// with the same performance-critical caching strategy used for color detection.
 ///
 /// ## Blacklist Approach
 ///
-/// This implementation uses a blacklist approach where hyperlink support is assumed to be
+/// This implementation uses a blacklist approach where hyperlink support is assumed to be.
 /// available by default, and only disabled for terminals known to lack OSC 8 support.
 /// This approach is future-proof as most modern terminals (2018+) support OSC 8.
 pub mod global_hyperlink_support {
@@ -246,7 +246,7 @@ pub mod global_hyperlink_support {
 
     /// Cached result of hyperlink support detection.
     ///
-    /// Uses the same caching strategy as color support to avoid repeated expensive
+    /// Uses the same caching strategy as color support to avoid repeated expensive.
     /// environment variable lookups.
     static HYPERLINK_SUPPORT_CACHED: AtomicI8 = AtomicI8::new(NOT_SET_VALUE);
 
@@ -255,7 +255,7 @@ pub mod global_hyperlink_support {
     /// Detects hyperlink support with caching for performance.
     ///
     /// This is the primary entry point for hyperlink support detection.
-    /// It implements the same memoization strategy as color detection to prevent
+    /// It implements the same memoization strategy as color detection to prevent.
     /// performance bottlenecks.
     ///
     /// # Returns
@@ -263,17 +263,17 @@ pub mod global_hyperlink_support {
     /// - `HyperlinkSupport::NotSupported` - Terminal is known to lack OSC 8 support
     #[must_use]
     pub fn detect() -> HyperlinkSupport {
-        // Check for global override first
+        // Check for global override first.
         if let Ok(override_value) = try_get_override() {
             return override_value;
         }
 
-        // Check for cached value
+        // Check for cached value.
         if let Ok(cached_value) = try_get_cached() {
             return cached_value;
         }
 
-        // Perform detection and cache result
+        // Perform detection and cache result.
         let detected = examine_env_vars_to_determine_hyperlink_support();
         set_cached(detected);
         detected
@@ -281,7 +281,7 @@ pub mod global_hyperlink_support {
 
     /// Sets a global override for hyperlink support detection.
     ///
-    /// This allows applications to force enable/disable hyperlink support
+    /// This allows applications to force enable/disable hyperlink support.
     /// regardless of terminal detection.
     pub fn set_override(hyperlink_support: HyperlinkSupport) {
         let value = hyperlink_support as i8;
@@ -331,7 +331,7 @@ pub mod global_hyperlink_support {
 ///
 /// ## Blacklist Strategy
 ///
-/// This function implements a blacklist approach where hyperlink support is assumed
+/// This function implements a blacklist approach where hyperlink support is assumed.
 /// to be available by default, and only disabled for terminals known to lack support:
 ///
 /// - Apple Terminal (`TERM_PROGRAM=Apple_Terminal`)
@@ -347,23 +347,23 @@ pub mod global_hyperlink_support {
 ///
 /// ## Performance Note
 ///
-/// Like color detection, this function is expensive due to environment variable
+/// Like color detection, this function is expensive due to environment variable.
 /// lookups and should only be called through [`global_hyperlink_support::detect()`].
 #[must_use]
 pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
-    // Check for explicit opt-out
+    // Check for explicit opt-out.
     if env::var("NO_HYPERLINKS").is_ok() {
         return HyperlinkSupport::NotSupported;
     }
 
-    // Check for known unsupported terminals by TERM_PROGRAM
+    // Check for known unsupported terminals by TERM_PROGRAM.
     if let Ok(term_program) = env::var("TERM_PROGRAM")
         && term_program == "Apple_Terminal"
     {
         return HyperlinkSupport::NotSupported;
     }
 
-    // Check for known unsupported terminals by TERM
+    // Check for known unsupported terminals by TERM.
     if let Ok(term) = env::var("TERM") {
         // xterm (unless it's a modern variant with 256color support)
         if term == "xterm" || term.starts_with("xterm-") && !term.contains("256color") {
@@ -375,7 +375,7 @@ pub fn examine_env_vars_to_determine_hyperlink_support() -> HyperlinkSupport {
             return HyperlinkSupport::NotSupported;
         }
 
-        // Other known unsupported terminals
+        // Other known unsupported terminals.
         if term == "linux" || term == "screen" || term == "dumb" {
             return HyperlinkSupport::NotSupported;
         }
@@ -644,21 +644,21 @@ mod tests {
     #[test]
     #[serial]
     fn test_caching_behavior() {
-        // Clear any existing state
+        // Clear any existing state.
         global_color_support::clear_override();
         global_color_support::clear_cache();
 
-        // First call should detect and cache
+        // First call should detect and cache.
         let first_result = global_color_support::detect();
 
-        // Verify that cache now has a value
+        // Verify that cache now has a value.
         assert_eq!(global_color_support::try_get_cached(), Ok(first_result));
 
-        // Second call should return the same cached result
+        // Second call should return the same cached result.
         let second_result = global_color_support::detect();
         assert_eq!(first_result, second_result);
 
-        // Clear cache and verify it's cleared
+        // Clear cache and verify it's cleared.
         global_color_support::clear_cache();
         assert!(global_color_support::try_get_cached().is_err());
     }
@@ -678,7 +678,7 @@ mod tests {
         #[test]
         #[serial]
         fn test_no_hyperlinks_env_var() {
-            // Mock NO_HYPERLINKS environment variable
+            // Mock NO_HYPERLINKS environment variable.
             unsafe {
                 global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
                 std::env::set_var("NO_HYPERLINKS", "1");
@@ -691,7 +691,7 @@ mod tests {
         #[test]
         #[serial]
         fn test_apple_terminal_blacklist() {
-            // Mock Apple Terminal
+            // Mock Apple Terminal.
             unsafe {
                 global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
                 std::env::set_var("TERM_PROGRAM", "Apple_Terminal");
@@ -705,13 +705,13 @@ mod tests {
         #[serial]
         fn test_xterm_blacklist() {
             unsafe {
-                // Test basic xterm
+                // Test basic xterm.
                 global_hyperlink_support::clear_cache();
                 std::env::set_var("TERM", "xterm");
                 let result = examine_env_vars_to_determine_hyperlink_support();
                 assert_eq!(result, HyperlinkSupport::NotSupported);
 
-                // Test xterm without 256color
+                // Test xterm without 256color.
                 global_hyperlink_support::clear_cache();
                 std::env::set_var("TERM", "xterm-color");
                 let result = examine_env_vars_to_determine_hyperlink_support();
@@ -725,7 +725,7 @@ mod tests {
         #[serial]
         fn test_xterm_256color_supported() {
             unsafe {
-                // xterm with 256color should be supported
+                // xterm with 256color should be supported.
                 global_hyperlink_support::clear_cache(); // Clear cache for accurate testing
                 std::env::set_var("TERM", "xterm-256color");
                 let result = examine_env_vars_to_determine_hyperlink_support();
@@ -811,7 +811,7 @@ mod tests {
         #[test]
         #[serial]
         fn test_default_to_supported() {
-            // Clear environment variables to test default behavior
+            // Clear environment variables to test default behavior.
             unsafe {
                 std::env::remove_var("NO_HYPERLINKS");
                 std::env::remove_var("TERM_PROGRAM");
@@ -825,21 +825,21 @@ mod tests {
         #[test]
         #[serial]
         fn test_global_hyperlink_support_caching() {
-            // Clear any existing state
+            // Clear any existing state.
             global_hyperlink_support::clear_override();
             global_hyperlink_support::clear_cache();
 
-            // First call should detect and cache
+            // First call should detect and cache.
             let first_result = global_hyperlink_support::detect();
 
-            // Verify that cache now has a value
+            // Verify that cache now has a value.
             assert_eq!(global_hyperlink_support::try_get_cached(), Ok(first_result));
 
-            // Second call should return the same cached result
+            // Second call should return the same cached result.
             let second_result = global_hyperlink_support::detect();
             assert_eq!(first_result, second_result);
 
-            // Clear cache and verify it's cleared
+            // Clear cache and verify it's cleared.
             global_hyperlink_support::clear_cache();
             assert!(global_hyperlink_support::try_get_cached().is_err());
         }
@@ -847,7 +847,7 @@ mod tests {
         #[test]
         #[serial]
         fn test_global_hyperlink_support_override() {
-            // Test setting override to NotSupported
+            // Test setting override to NotSupported.
             global_hyperlink_support::set_override(HyperlinkSupport::NotSupported);
             assert_eq!(
                 global_hyperlink_support::try_get_override(),
@@ -858,7 +858,7 @@ mod tests {
                 HyperlinkSupport::NotSupported
             );
 
-            // Test setting override to Supported
+            // Test setting override to Supported.
             global_hyperlink_support::set_override(HyperlinkSupport::Supported);
             assert_eq!(
                 global_hyperlink_support::try_get_override(),
@@ -869,14 +869,14 @@ mod tests {
                 HyperlinkSupport::Supported
             );
 
-            // Test clearing override
+            // Test clearing override.
             global_hyperlink_support::clear_override();
             assert_eq!(global_hyperlink_support::try_get_override(), Err(()));
         }
 
         #[test]
         fn test_hyperlink_support_conversion() {
-            // Test i8 to HyperlinkSupport conversion
+            // Test i8 to HyperlinkSupport conversion.
             assert_eq!(
                 HyperlinkSupport::try_from(0),
                 Ok(HyperlinkSupport::NotSupported)
@@ -888,7 +888,7 @@ mod tests {
             assert_eq!(HyperlinkSupport::try_from(2), Err(()));
             assert_eq!(HyperlinkSupport::try_from(-1), Err(()));
 
-            // Test HyperlinkSupport to i8 conversion
+            // Test HyperlinkSupport to i8 conversion.
             assert_eq!(i8::from(HyperlinkSupport::NotSupported), 0);
             assert_eq!(i8::from(HyperlinkSupport::Supported), 1);
         }

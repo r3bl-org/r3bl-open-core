@@ -59,14 +59,14 @@ pub fn format_file_hyperlink(path: &Path) -> String {
     let uri = if path.is_absolute() {
         format!("file://{}", path.display())
     } else {
-        // For relative paths, convert to absolute first
+        // For relative paths, convert to absolute first.
         match std::env::current_dir().map(|cwd| cwd.join(path)) {
             Ok(abs_path) => format!("file://{}", abs_path.display()),
             Err(_) => format!("file://{}", path.display()), // Fallback
         }
     };
 
-    // URL encode special characters in the URI
+    // URL encode special characters in the URI.
     let encoded_uri = uri
         .chars()
         .map(|c| match c {
@@ -128,9 +128,9 @@ mod tests {
         let path = Path::new("/home/user/my document.txt");
         let result = format_file_hyperlink(path);
 
-        // URI should have URL-encoded spaces
+        // URI should have URL-encoded spaces.
         assert!(result.contains("file:///home/user/my%20document.txt"));
-        // Display text should keep original spaces
+        // Display text should keep original spaces.
         assert!(result.contains("/home/user/my document.txt"));
     }
 
@@ -139,11 +139,11 @@ mod tests {
         let path = Path::new("/home/user/file#with&special%chars?.txt");
         let result = format_file_hyperlink(path);
 
-        // URI should have URL-encoded special characters
+        // URI should have URL-encoded special characters.
         assert!(
             result.contains("file:///home/user/file%23with%26special%25chars%3F.txt")
         );
-        // Display text should keep original characters
+        // Display text should keep original characters.
         assert!(result.contains("/home/user/file#with&special%chars?.txt"));
     }
 
@@ -154,7 +154,7 @@ mod tests {
 
         // Should contain file:// URI (will be converted to absolute)
         assert!(result.starts_with("\x1b]8;;file://"));
-        // Display text should show the original relative path
+        // Display text should show the original relative path.
         assert!(result.contains("./relative/path.txt"));
     }
 

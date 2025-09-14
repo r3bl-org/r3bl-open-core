@@ -19,7 +19,7 @@ pub mod osc_controller;
 pub mod osc_event;
 pub mod osc_hyperlink;
 
-// Re-export main types and functions for convenience
+// Re-export main types and functions for convenience.
 pub use osc_buffer::*;
 pub use osc_controller::*;
 pub use osc_event::*;

@@ -32,8 +32,8 @@ pub fn parse_csv_opt_eol<'a>(
     )
     .parse(input)?;
 
-    // If there is a newline, consume it along with any null padding that follows.
-    // to handle the ZeroCopyGapBuffer null padding invariant
+    // If there is a newline, consume it along with any null padding that follows
+    // to handle the ZeroCopyGapBuffer null padding invariant.
     let remainder = trim_optional_leading_newline_and_nulls(remainder);
 
     // Special case: Early return when just a `@tags: ` or `@tags: \n` is found.

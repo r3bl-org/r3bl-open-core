@@ -32,7 +32,7 @@
 //! - `ESC]2;Window Title ESC\\` - Set window title only
 //! - `ESC]8;;https://example.com ESC\\Link Text ESC]8;; ESC\\` - Create hyperlink
 
-// Common OSC sequence components for sending outgoing sequences
+// Common OSC sequence components for sending outgoing sequences.
 
 /// Generic OSC sequence start: ESC ]
 pub const OSC_START: &str = "\x1b]";
@@ -65,7 +65,7 @@ pub const OSC2_SET_TITLE: &str = "\x1b]2;";
 /// Some terminals prefer this over the `STRING_TERMINATOR`
 pub const BELL_TERMINATOR: &str = "\x07";
 
-// OSC code numbers for parsing incoming sequences by the ANSI parser
+// OSC code numbers for parsing incoming sequences by the ANSI parser.
 
 /// OSC code 0: Set both window title and icon name
 pub const OSC_CODE_TITLE_AND_ICON: &str = "0";

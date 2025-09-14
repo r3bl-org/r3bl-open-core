@@ -53,7 +53,7 @@ pub const DECSC_SAVE_CURSOR: u8 = b'7';
 /// Restores the previously saved cursor position and SGR attributes
 pub const DECRC_RESTORE_CURSOR: u8 = b'8';
 
-// Scrolling Operations
+// Scrolling Operations.
 
 /// ESC D (IND): Index - move cursor down one line
 /// If at bottom of scroll region, scrolls the screen up
@@ -63,13 +63,13 @@ pub const IND_INDEX_DOWN: u8 = b'D';
 /// If at top of scroll region, scrolls the screen down
 pub const RI_REVERSE_INDEX_UP: u8 = b'M';
 
-// Terminal Control
+// Terminal Control.
 
 /// ESC c (RIS): Reset to Initial State
 /// Performs a full terminal reset, clearing the screen and resetting all modes
 pub const RIS_RESET_TERMINAL: u8 = b'c';
 
-// Character Set Selection Intermediates
+// Character Set Selection Intermediates.
 
 /// ESC ( - G0 character set designation intermediate
 /// Used before the final character to select character sets for G0
@@ -100,7 +100,7 @@ pub const CHARSET_UK: u8 = b'A';
 /// Used as: ESC ( <
 pub const CHARSET_DEC_SUPPLEMENTAL: u8 = b'<';
 
-// Miscellaneous ESC Sequences
+// Miscellaneous ESC Sequences.
 
 /// ESC E (NEL): Next Line
 /// Moves cursor to beginning of next line
@@ -123,7 +123,7 @@ pub const DECKPAM_APP_KEYPAD: u8 = b'=';
 pub const DECKPNM_NORMAL_KEYPAD: u8 = b'>';
 
 // C0 Control Characters (handled by execute() method)
-// These are not ESC sequences but basic control characters
+// These are not ESC sequences but basic control characters.
 
 /// Backspace control character (BS)
 /// Moves cursor one position to the left
@@ -145,7 +145,7 @@ pub const CARRIAGE_RETURN: u8 = b'\r';
 /// Used for calculating tab positions
 pub const TAB_STOP_WIDTH: usize = 8;
 
-// ESC sequence builder following the same pattern as SgrCode
+// ESC sequence builder following the same pattern as SgrCode.
 
 /// Builder for ESC (direct escape) sequences.
 /// Similar to `SgrCode` but for direct escape sequences.
@@ -328,14 +328,14 @@ mod tests {
 
         for sequence in &sequences {
             let output = sequence.to_string();
-            // Each sequence should produce a unique output
+            // Each sequence should produce a unique output.
             assert!(
                 outputs.insert(output.clone()),
                 "Duplicate output found: {output}"
             );
         }
 
-        // Should have 7 unique outputs
+        // Should have 7 unique outputs.
         assert_eq!(outputs.len(), 7);
     }
 
@@ -368,7 +368,7 @@ mod tests {
         let ascii_output = ascii_seq.to_string();
         let dec_graphics_output = dec_graphics_seq.to_string();
 
-        // Both should be ESC + ( + character
+        // Both should be ESC + ( + character.
         assert_eq!(ascii_output.len(), 3);
         assert_eq!(dec_graphics_output.len(), 3);
 

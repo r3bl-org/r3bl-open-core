@@ -94,13 +94,13 @@ impl LineMetadata {
     #[must_use]
     pub fn get_byte_pos(&self, seg_index: SegIndex) -> ByteIndex {
         if seg_index.as_usize() == 0 {
-            // Insert at beginning
+            // Insert at beginning.
             byte_index(0)
         } else if seg_index.as_usize() >= self.segments.len() {
             // Insert at end
             byte_index(self.content_len.as_usize())
         } else {
-            // Insert in middle - find the start of the target segment
+            // Insert in middle - find the start of the target segment.
             let segment = &self.segments[seg_index.as_usize()];
             byte_index(segment.start_byte_index.as_usize())
         }
@@ -145,7 +145,7 @@ impl LineMetadata {
     /// ```
     #[must_use]
     pub fn get_seg_index(&self, byte_pos: ByteIndex) -> SegIndex {
-        // Handle edge cases
+        // Handle edge cases.
         if byte_pos.as_usize() == 0 {
             return crate::seg_index(0);
         }
@@ -154,9 +154,9 @@ impl LineMetadata {
             return crate::seg_index(self.segments.len());
         }
 
-        // Binary search through segments to find the one containing byte_pos
+        // Binary search through segments to find the one containing byte_pos.
         // We could optimize this with binary search, but linear is fine for now
-        // since lines typically have few segments
+        // since lines typically have few segments.
         for segment in &self.segments {
             if byte_pos.as_usize() >= segment.start_byte_index.as_usize()
                 && byte_pos.as_usize() < segment.end_byte_index.as_usize()
@@ -166,14 +166,14 @@ impl LineMetadata {
         }
 
         // If we get here, byte_pos is between segments (shouldn't happen with valid
-        // UTF-8) Return the segment after the position
+        // UTF-8) Return the segment after the position.
         for segment in &self.segments {
             if byte_pos.as_usize() < segment.start_byte_index.as_usize() {
                 return segment.seg_index;
             }
         }
 
-        // Fallback to end of line
+        // Fallback to end of line.
         crate::seg_index(self.segments.len())
     }
 
@@ -216,18 +216,18 @@ impl LineMetadata {
     /// ```
     #[must_use]
     pub fn check_is_in_middle_of_grapheme(&self, col_index: ColIndex) -> Option<Seg> {
-        // Find the segment that contains or would contain this column index
+        // Find the segment that contains or would contain this column index.
         for seg in &self.segments {
             let seg_start = seg.start_display_col_index;
             let seg_end = seg_start + seg.display_width;
 
-            // Check if the column index falls within this segment
+            // Check if the column index falls within this segment.
             if col_index >= seg_start && col_index < seg_end {
-                // If it's not at the start of the segment, it's in the middle
+                // If it's not at the start of the segment, it's in the middle.
                 if col_index != seg_start {
                     return Some(*seg);
                 }
-                // If it is at the start, this is a valid cursor position
+                // If it is at the start, this is a valid cursor position.
                 return None;
             }
         }
@@ -261,7 +261,7 @@ impl LineMetadata {
         content: &str,
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
-        // Find the segment at the given column index
+        // Find the segment at the given column index.
         let target_col = col_index.as_usize();
 
         for segment in &self.segments {
@@ -269,7 +269,7 @@ impl LineMetadata {
             let seg_width = segment.display_width.as_usize();
 
             if target_col >= seg_start_col && target_col < seg_start_col + seg_width {
-                // Extract the segment's string content
+                // Extract the segment's string content.
                 let start_byte = segment.start_byte_index.as_usize();
                 let end_byte = segment.end_byte_index.as_usize();
                 let seg_content = &content[start_byte..end_byte];
@@ -293,14 +293,14 @@ impl LineMetadata {
         content: &str,
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
-        // Find the segment after the given column index
+        // Find the segment after the given column index.
         let target_col = col_index.as_usize();
 
         for segment in &self.segments {
             let seg_start_col = segment.start_display_col_index.as_usize();
 
             if seg_start_col > target_col {
-                // This is the first segment to the right
+                // This is the first segment to the right.
                 let start_byte = segment.start_byte_index.as_usize();
                 let end_byte = segment.end_byte_index.as_usize();
                 let seg_content = &content[start_byte..end_byte];
@@ -324,7 +324,7 @@ impl LineMetadata {
         content: &str,
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
-        // Find the segment before the given column index
+        // Find the segment before the given column index.
         let target_col = col_index.as_usize();
         let mut last_valid_segment: Option<&Seg> = None;
 
@@ -413,7 +413,7 @@ impl LineMetadata {
             return "";
         }
 
-        // Find the starting byte index by skipping display columns
+        // Find the starting byte index by skipping display columns.
         let string_start_byte_index = {
             let mut byte_index = 0;
             let mut skip_col_count = start_col_index;
@@ -421,19 +421,19 @@ impl LineMetadata {
             for seg in &self.segments {
                 let seg_display_width = seg.display_width;
 
-                // If we've skipped enough columns, stop here
+                // If we've skipped enough columns, stop here.
                 if *skip_col_count == ch(0) {
                     break;
                 }
 
-                // Skip this segment's width
+                // Skip this segment's width.
                 skip_col_count -= seg_display_width;
                 byte_index += seg.bytes_size.as_usize();
             }
             byte_index
         };
 
-        // Find the ending byte index by consuming available column width
+        // Find the ending byte index by consuming available column width.
         let string_end_byte_index = {
             let mut byte_index = 0;
             let mut avail_col_count = max_col_width;
@@ -444,15 +444,15 @@ impl LineMetadata {
 
                 // Are we still skipping columns to reach the start?
                 if *skip_col_count == ch(0) {
-                    // We're in the content area - check if we have room for this segment
+                    // We're in the content area - check if we have room for this segment.
                     if avail_col_count < seg_display_width {
-                        // This segment would exceed our width limit
+                        // This segment would exceed our width limit.
                         break;
                     }
                     byte_index += seg.bytes_size.as_usize();
                     avail_col_count -= seg_display_width;
                 } else {
-                    // Still skipping to reach start position
+                    // Still skipping to reach start position.
                     skip_col_count -= seg_display_width;
                     byte_index += seg.bytes_size.as_usize();
                 }
@@ -460,7 +460,7 @@ impl LineMetadata {
             byte_index
         };
 
-        // Ensure we don't go out of bounds
+        // Ensure we don't go out of bounds.
         let content_len = content.len();
         let start = string_start_byte_index.min(content_len);
         let end = string_end_byte_index.min(content_len);
@@ -482,14 +482,14 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert some text
+        // Insert some text.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // Test beginning position
+        // Test beginning position.
         assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
     }
 
@@ -498,7 +498,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert some text
+        // Insert some text.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
@@ -515,14 +515,14 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text with multi-byte characters
+        // Insert text with multi-byte characters.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "H😀llo")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // Test various positions
+        // Test various positions.
         assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0); // Before 'H'
         assert_eq!(line_info.get_byte_pos(seg_index(1)).as_usize(), 1); // Before '😀'
         assert_eq!(line_info.get_byte_pos(seg_index(2)).as_usize(), 5); // Before 'l' (emoji is 4 bytes)
@@ -538,7 +538,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // For empty line, any position should return 0
+        // For empty line, any position should return 0.
         assert_eq!(line_info.get_byte_pos(seg_index(0)).as_usize(), 0);
         assert_eq!(line_info.get_byte_pos(seg_index(1)).as_usize(), 0);
         assert_eq!(line_info.get_byte_pos(seg_index(100)).as_usize(), 0);
@@ -549,14 +549,14 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert some text
+        // Insert some text.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // Test beginning position
+        // Test beginning position.
         assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
     }
 
@@ -565,7 +565,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert some text
+        // Insert some text.
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello")
             .unwrap();
@@ -582,14 +582,14 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text with emoji: "H😀llo"
+        // Insert text with emoji: "H😀llo".
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "H😀llo")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // Test various byte positions
+        // Test various byte positions.
         assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0)); // Start of 'H'
         assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(1)); // Start of '😀'
         assert_eq!(line_info.get_seg_index(byte_index(2)), seg_index(1)); // Middle of '😀'
@@ -608,7 +608,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // For empty line, any position should return 0
+        // For empty line, any position should return 0.
         assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
         assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(0));
         assert_eq!(line_info.get_seg_index(byte_index(100)), seg_index(0));
@@ -619,14 +619,14 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text with various Unicode: "a👨‍👩‍👧‍👦b世界c"
+        // Insert text with various Unicode: "a👨‍👩‍👧‍👦b世界c".
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "a👨‍👩‍👧‍👦b世界c")
             .unwrap();
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // Test round-trip conversion for each segment
+        // Test round-trip conversion for each segment.
         for i in 0..line_info.segments.len() {
             let seg_idx = seg_index(i);
             let byte_pos = line_info.get_byte_pos(seg_idx);
@@ -646,7 +646,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert Unicode-rich content: "Hi📦XelLo🙏🏽Bye"
+        // Insert Unicode-rich content: "Hi📦XelLo🙏🏽Bye".
         // Display layout:
         // H(1) i(1) 📦(2) X(1) e(1) l(1) L(1) o(1) 🙏🏽(2) B(1) y(1) e(1) = 14 total width
         // Columns: 0    1   23     4    5   6   7   8   9A      B    C   D

@@ -181,7 +181,7 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
 
     let shared_writer = rl_ctx.clone_shared_writer();
 
-    // Start spinner with initial message
+    // Start spinner with initial message.
     let mut maybe_spinner = Spinner::try_start(
         "Starting installation...",
         "Installation complete!",
@@ -193,7 +193,7 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
     .await?;
 
     if let Some(ref spinner) = maybe_spinner {
-        // Simulate different phases of work with updated messages
+        // Simulate different phases of work with updated messages.
         let phases = [
             ("Downloading packages...", 1000),
             ("Verifying checksums...", 800),
@@ -207,7 +207,7 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
             spinner.update_message(message);
         }
 
-        // Demonstrate direct access to SafeInlineString field
+        // Demonstrate direct access to SafeInlineString field.
         // (alternative to using update_message() method)
         sleep(Duration::from_millis(500)).await;
         let safe_message: &SafeInlineString = &spinner.interval_message;
@@ -216,13 +216,13 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
 
         sleep(Duration::from_millis(800)).await;
 
-        // Test ANSI code stripping
+        // Test ANSI code stripping.
         spinner.update_message("\x1b[31mCleaning up (ANSI codes stripped)...\x1b[0m");
 
         sleep(Duration::from_millis(800)).await;
     }
 
-    // Stop spinner
+    // Stop spinner.
     if let Some(mut spinner) = maybe_spinner.take() {
         spinner.request_shutdown();
         spinner.await_shutdown().await;

@@ -101,7 +101,7 @@ mod tests {
                 );
             }
 
-            // "Ctrl + Alt + x"
+            // "Ctrl + Alt + x".
             {
                 let key_event = crossterm_keyevent!(
                   code: KeyCode::Char('x'),

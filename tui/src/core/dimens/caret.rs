@@ -215,7 +215,7 @@ mod tests {
             assert_eq!(*sac, pos_1);
         }
 
-        // Into CaretRaw, from ...
+        // Into CaretRaw, from.
         {
             let scr_ofs = scr_ofs(pos_2);
             let scr_adj_caret = caret_scr_adj(pos_1);
@@ -227,7 +227,7 @@ mod tests {
             assert_eq!(*raw_caret_2, *scr_adj_caret - *scr_ofs);
         }
 
-        // Into CaretScrAdj, from ...
+        // Into CaretScrAdj, from.
         {
             let raw_caret = caret_raw(pos_1);
             let scr_ofs = scr_ofs(pos_1);

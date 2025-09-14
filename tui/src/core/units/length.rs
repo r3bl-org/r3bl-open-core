@@ -177,7 +177,7 @@ mod numeric_arithmetic_operators {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
-    // Generate numeric operations using macro
+    // Generate numeric operations using macro.
     create_numeric_arithmetic_operators!(Length, len, [usize, u16, i32]);
 }
 
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn test_length_max_value() {
-        // Test with maximum u16 value
+        // Test with maximum u16 value.
         let max_length = Length::new(u16::MAX);
         assert_eq!(max_length.as_u16(), u16::MAX);
     }
@@ -321,14 +321,14 @@ mod tests {
         let zero_length = Length::new(0);
         assert_eq!(zero_length.0, ch(0));
 
-        // Converting zero length to index
+        // Converting zero length to index.
         let index = zero_length.convert_to_index();
         assert_eq!(index.0, ch(0)); // Should be 0 since we don't go below 0
     }
 
     #[test]
     fn test_length_interop_with_index() {
-        // Test interoperability with Index
+        // Test interoperability with Index.
         let length = Length::new(10);
         let index = idx(5);
 
@@ -343,13 +343,13 @@ mod tests {
 
     #[test]
     fn test_length_arithmetic_edge_cases() {
-        // Test addition near maximum value
+        // Test addition near maximum value.
         let max_length = Length::new(u16::MAX - 5);
         let small_length = Length::new(5);
         let result = max_length + small_length;
         assert_eq!(result, Length::new(u16::MAX));
 
-        // Test subtraction with zero
+        // Test subtraction with zero.
         let length = Length::new(5);
         let result = length - Length::new(5);
         assert_eq!(result, Length::new(0));
@@ -420,7 +420,7 @@ mod tests_col_width_conversion {
         let length = len(25);
         let width: ColWidth = length.into();
 
-        // Both should have the same underlying ChUnit value
+        // Both should have the same underlying ChUnit value.
         assert_eq!(length.0, width.0);
     }
 }
@@ -484,19 +484,19 @@ mod tests_row_height_conversion {
         let length = len(18);
         let height: RowHeight = length.into();
 
-        // Both should have the same underlying ChUnit value
+        // Both should have the same underlying ChUnit value.
         assert_eq!(length.0, height.0);
     }
 
     #[test]
     fn test_different_conversions_independence() {
-        // Verify that ColWidth and RowHeight conversions work independently
+        // Verify that ColWidth and RowHeight conversions work independently.
         let length = len(50);
 
         let width: ColWidth = length.into();
         let height: RowHeight = length.into();
 
-        // All three should have the same underlying value
+        // All three should have the same underlying value.
         assert_eq!(length.0, width.0);
         assert_eq!(length.0, height.0);
         assert_eq!(width.0, height.0);

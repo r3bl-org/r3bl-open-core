@@ -24,6 +24,6 @@ pub use pixel_char::*;
 pub use pixel_char_line::*;
 pub use pixel_char_lines::*;
 
-// Test fixtures (only available during testing)
+// Test fixtures (only available during testing).
 #[cfg(test)]
 pub mod ofs_buf_test_fixtures;

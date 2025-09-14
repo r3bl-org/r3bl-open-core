@@ -637,7 +637,7 @@ mod tests {
             std::process::exit(0);
         }
 
-        // This is the test coordinator - spawn the actual test in a new process
+        // This is the test coordinator - spawn the actual test in a new process.
         let current_exe = std::env::current_exe().unwrap();
         let mut cmd = std::process::Command::new(&current_exe);
         cmd.env("ISOLATED_TEST_RUNNER", "1")

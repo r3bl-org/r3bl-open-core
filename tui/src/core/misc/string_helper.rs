@@ -481,14 +481,14 @@ mod bench_tests {
 
     #[test]
     fn test_zero_copy_optimization() {
-        // Test that we get a borrowed reference when no processing is needed
+        // Test that we get a borrowed reference when no processing is needed.
         let text = "Hello, world!";
         let display_width = width(13); // Exact length, no padding
         let result = truncate_from_right(text, display_width, false);
 
         match result {
             CowInlineString::Borrowed(_) => {
-                // Good, zero-copy optimization is working
+                // Good, zero-copy optimization is working.
             }
             CowInlineString::Owned(_) => {
                 panic!("Expected borrowed reference for zero-copy optimization");

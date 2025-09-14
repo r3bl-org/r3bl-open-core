@@ -57,7 +57,7 @@ mod tests {
 
         assert_eq!(lines.lines.len(), 3);
 
-        // Check each line has correct width and is filled with spacers
+        // Check each line has correct width and is filled with spacers.
         for line in &lines.lines {
             assert_eq!(line.pixel_chars.len(), 4);
             for pixel_char in &line.pixel_chars {
@@ -91,7 +91,7 @@ mod tests {
 
         assert_eq!(lines.lines.len(), 3);
 
-        // Each line should be empty
+        // Each line should be empty.
         for line in &lines.lines {
             assert_eq!(line.pixel_chars.len(), 0);
             assert!(line.pixel_chars.is_empty());
@@ -103,7 +103,7 @@ mod tests {
         let size = height(2) + width(3);
         let lines = PixelCharLines::new_empty(size);
 
-        // Test deref functionality
+        // Test deref functionality.
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].pixel_chars.len(), 3);
         assert_eq!(lines[1].pixel_chars.len(), 3);
@@ -114,7 +114,7 @@ mod tests {
         let size = height(2) + width(2);
         let mut lines = PixelCharLines::new_empty(size);
 
-        // Test deref_mut functionality
+        // Test deref_mut functionality.
         lines[0][0] = PixelChar::PlainText {
             display_char: 'A',
             style: TuiStyle::default(),
@@ -141,7 +141,7 @@ mod tests {
         let mem_size = lines.get_mem_size();
         assert!(mem_size > 0);
 
-        // Larger buffer should have larger memory size
+        // Larger buffer should have larger memory size.
         let larger_size = height(10) + width(20);
         let larger_lines = PixelCharLines::new_empty(larger_size);
         let larger_mem_size = larger_lines.get_mem_size();
@@ -156,7 +156,7 @@ mod tests {
 
         let debug_output = format!("{lines:?}");
 
-        // Should contain debug representation
+        // Should contain debug representation.
         assert!(!debug_output.is_empty());
         assert!(debug_output.contains("PixelCharLines"));
     }
@@ -169,7 +169,7 @@ mod tests {
 
         assert_eq!(lines1, lines2);
 
-        // Modify one and test inequality
+        // Modify one and test inequality.
         let mut lines3 = PixelCharLines::new_empty(size);
         lines3[0][0] = PixelChar::Void;
 
@@ -190,7 +190,7 @@ mod tests {
         let cloned = lines.clone();
         assert_eq!(lines, cloned);
 
-        // Verify deep clone
+        // Verify deep clone.
         assert!(matches!(
             cloned[0][0],
             PixelChar::PlainText {
@@ -209,12 +209,12 @@ mod tests {
         let lines1 = PixelCharLines::new_empty(size);
         let lines2 = PixelCharLines::new_empty(size);
 
-        // Equal objects should have equal hashes
+        // Equal objects should have equal hashes.
         let mut map = HashMap::new();
         map.insert(lines1.clone(), "value1");
         map.insert(lines2, "value2");
 
-        // Since they're equal, the second insert should override the first
+        // Since they're equal, the second insert should override the first.
         assert_eq!(map.len(), 1);
         assert_eq!(map.get(&lines1), Some(&"value2"));
     }

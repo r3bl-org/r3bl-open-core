@@ -11,11 +11,11 @@ use crate::{core::pty_mux::ansi_parser::term_units::TermRow, osc::OscEvent, Cach
 /// ESC ( sequences that switch between ASCII and DEC line-drawing graphics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CharacterSet {
-    /// Normal ASCII character set (ESC ( B)
+    /// Normal ASCII character set (ESC ( B).
     #[default]
     Ascii,
-    /// DEC Special Graphics character set for line drawing (ESC ( 0)
-    /// Maps ASCII characters to box-drawing Unicode characters
+    /// DEC Special Graphics character set for line drawing (ESC ( 0).
+    /// Maps ASCII characters to box-drawing Unicode characters.
     DECGraphics,
 }
 
@@ -90,13 +90,13 @@ pub struct AnsiParserSupport {
     /// the cursor stays at the right margin and subsequent characters overwrite.
     pub auto_wrap_mode: bool,
 
-    /// Complete computed style combining attributes and colors for efficient rendering
+    /// Complete computed style combining attributes and colors for efficient rendering.
     pub current_style: TuiStyle,
 
-    /// OSC events (hyperlinks, titles, etc.) accumulated during processing
+    /// OSC events (hyperlinks, titles, etc.) accumulated during processing.
     pub pending_osc_events: Vec<OscEvent>,
 
-    /// DSR response events accumulated during processing - need to be sent back to PTY
+    /// DSR response events accumulated during processing - need to be sent back to PTY.
     pub pending_dsr_responses: Vec<crate::DsrRequestFromPtyEvent>,
 
     /// Top margin for the **scrollable region** (DECSTBM) - 1-based row number.
@@ -226,7 +226,7 @@ impl CachedMemorySize for OffscreenBuffer {
     }
 }
 
-// Forward declarations for types defined in their own modules
+// Forward declarations for types defined in their own modules.
 pub use super::{pixel_char::PixelChar, pixel_char_line::PixelCharLine,
                 pixel_char_lines::PixelCharLines};
 
@@ -257,7 +257,7 @@ pub trait OffscreenBufferPaint {
     );
 }
 
-// Core implementations moved from ofs_buf_core_impl.rs
+// Core implementations moved from ofs_buf_core_impl.rs.
 
 use std::{fmt::{self},
           ops::{Deref, DerefMut}};
@@ -287,7 +287,7 @@ impl DerefMut for OffscreenBuffer {
     /// field to ensure telemetry always shows accurate memory size instead of
     /// "?".
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // Invalidate and recalculate cache when buffer is accessed mutably
+        // Invalidate and recalculate cache when buffer is accessed mutably.
         self.invalidate_memory_size_calc_cache();
         &mut self.buffer
     }
@@ -435,7 +435,7 @@ mod tests {
         assert_eq!(buffer.window_size, size);
         assert_eq!(buffer.buffer.len(), 2);
 
-        // Check that all positions are initialized with spacers
+        // Check that all positions are initialized with spacers.
         for line in &buffer.buffer.lines {
             assert_eq!(line.len(), 3);
             for pixel_char in &line.pixel_chars {
@@ -443,7 +443,7 @@ mod tests {
             }
         }
 
-        // Check ANSI parser support is initialized
+        // Check ANSI parser support is initialized.
         assert!(matches!(
             buffer.ansi_parser_support.character_set,
             CharacterSet::Ascii
@@ -464,12 +464,12 @@ mod tests {
     fn test_offscreen_buffer_clear() {
         let mut buffer = create_test_buffer();
 
-        // Modify some characters
+        // Modify some characters.
         buffer.buffer[0][0] = create_test_pixel_char('A');
         buffer.buffer[1][2] = create_test_pixel_char('B');
         buffer.buffer[2][1] = PixelChar::Void;
 
-        // Verify characters were set
+        // Verify characters were set.
         assert!(matches!(
             buffer.buffer[0][0],
             PixelChar::PlainText {
@@ -486,10 +486,10 @@ mod tests {
         ));
         assert!(matches!(buffer.buffer[2][1], PixelChar::Void));
 
-        // Clear the buffer
+        // Clear the buffer.
         buffer.clear();
 
-        // Verify all characters are now spacers
+        // Verify all characters are now spacers.
         for line in &buffer.buffer.lines {
             for pixel_char in &line.pixel_chars {
                 assert!(matches!(pixel_char, PixelChar::Spacer));
@@ -501,17 +501,17 @@ mod tests {
     fn test_offscreen_buffer_clear_already_empty() {
         let mut buffer = create_test_buffer();
 
-        // Buffer should already be empty (all spacers)
+        // Buffer should already be empty (all spacers).
         for line in &buffer.buffer.lines {
             for pixel_char in &line.pixel_chars {
                 assert!(matches!(pixel_char, PixelChar::Spacer));
             }
         }
 
-        // Clear should not change anything
+        // Clear should not change anything.
         buffer.clear();
 
-        // Verify still all spacers
+        // Verify still all spacers.
         for line in &buffer.buffer.lines {
             for pixel_char in &line.pixel_chars {
                 assert!(matches!(pixel_char, PixelChar::Spacer));
@@ -525,8 +525,8 @@ mod tests {
         let buffer2 = create_test_buffer();
 
         let diff = buffer1.diff(&buffer2);
-        // The buffers should be identical, so diff should return None
-        // However, if Some is returned with an empty list, that's also acceptable
+        // The buffers should be identical, so diff should return None.
+        // However, if Some is returned with an empty list, that's also acceptable.
         match diff {
             None => {} // Expected case
             Some(chunks) => assert!(
@@ -550,7 +550,7 @@ mod tests {
         let buffer1 = create_test_buffer();
         let mut buffer2 = create_test_buffer();
 
-        // Make some changes to buffer2
+        // Make some changes to buffer2.
         buffer2.buffer[0][0] = create_test_pixel_char('A');
         buffer2.buffer[1][2] = create_test_pixel_char('B');
         buffer2.buffer[2][1] = PixelChar::Void;
@@ -561,7 +561,7 @@ mod tests {
         let diff_chunks = diff.unwrap();
         assert_eq!(diff_chunks.len(), 3);
 
-        // Check the diff contains the expected changes
+        // Check the diff contains the expected changes.
         let positions: Vec<Pos> = diff_chunks.iter().map(|(pos, _)| *pos).collect();
         assert!(positions.contains(&(row(0) + col(0))));
         assert!(positions.contains(&(row(1) + col(2))));
@@ -573,7 +573,7 @@ mod tests {
         let buffer1 = create_test_buffer();
         let mut buffer2 = create_test_buffer();
 
-        // Make a single change
+        // Make a single change.
         buffer2.buffer[1][1] = create_test_pixel_char('X');
 
         let diff = buffer1.diff(&buffer2);
@@ -600,7 +600,7 @@ mod tests {
         let mem_size = buffer.get_mem_size();
         assert!(mem_size > 0);
 
-        // Test cached memory size
+        // Test cached memory size.
         let cached_size = buffer.get_mem_size_cached();
         assert_eq!(mem_size, cached_size.size().unwrap());
     }
@@ -609,20 +609,20 @@ mod tests {
     fn test_offscreen_buffer_memory_size_cache_invalidation() {
         let mut buffer = create_test_buffer();
 
-        // Get initial memory size (should cache it)
+        // Get initial memory size (should cache it).
         let initial_size = buffer.get_mem_size_cached();
         assert!(initial_size.size().unwrap() > 0);
 
-        // Modify buffer (this should not affect the test directly, but shows usage)
+        // Modify buffer (this should not affect the test directly, but shows usage).
         buffer.buffer[0][0] = create_test_pixel_char('T');
 
-        // Invalidate cache
+        // Invalidate cache.
         buffer.invalidate_memory_size_calc_cache();
 
-        // Get memory size again (should recalculate)
+        // Get memory size again (should recalculate).
         let new_size = buffer.get_mem_size_cached();
 
-        // Size might be different due to the modification, but should still be positive
+        // Size might be different due to the modification, but should still be positive.
         assert!(new_size.size().unwrap() > 0);
     }
 
@@ -630,7 +630,7 @@ mod tests {
     fn test_offscreen_buffer_deref() {
         let buffer = create_test_buffer();
 
-        // Test deref functionality
+        // Test deref functionality.
         assert_eq!(buffer.len(), 3);
         assert_eq!(buffer[0].len(), 4);
         assert_eq!(buffer[1].len(), 4);
@@ -641,7 +641,7 @@ mod tests {
     fn test_offscreen_buffer_deref_mut() {
         let mut buffer = create_test_buffer();
 
-        // Test deref_mut functionality
+        // Test deref_mut functionality.
         buffer[0][0] = create_test_pixel_char('M');
         buffer[2][3] = PixelChar::Void;
 
@@ -661,9 +661,9 @@ mod tests {
 
         let debug_output = format!("{buffer:?}");
 
-        // Should contain some basic information
+        // Should contain some basic information.
         assert!(!debug_output.is_empty());
-        // Debug output should contain window_size information
+        // Debug output should contain window_size information.
         assert!(debug_output.contains("window_size"));
     }
 
@@ -676,7 +676,7 @@ mod tests {
         let chunks = PixelCharDiffChunks::from(list);
         let debug_output = format!("{chunks:?}");
 
-        // Should contain debug information
+        // Should contain debug information.
         assert!(!debug_output.is_empty());
         assert!(debug_output.contains('A') || debug_output.contains('B'));
     }
@@ -693,19 +693,19 @@ mod tests {
             assert_eq!(line.len(), 200);
         }
 
-        // Memory size should be significant
+        // Memory size should be significant.
         let mem_size = buffer.get_mem_size();
         assert!(mem_size > 1000); // Should be substantial for this size
     }
 
     #[test]
     fn test_offscreen_buffer_diff_performance() {
-        // Test diff with larger buffers to ensure it performs reasonably
+        // Test diff with larger buffers to ensure it performs reasonably.
         let size = height(50) + width(100);
         let buffer1 = OffscreenBuffer::new_empty(size);
         let mut buffer2 = OffscreenBuffer::new_empty(size);
 
-        // Make a few scattered changes
+        // Make a few scattered changes.
         buffer2.buffer[0][0] = create_test_pixel_char('1');
         buffer2.buffer[25][50] = create_test_pixel_char('2');
         buffer2.buffer[49][99] = create_test_pixel_char('3');
@@ -719,14 +719,14 @@ mod tests {
 
     #[test]
     fn test_character_set_enum() {
-        // Test that CharacterSet enum variants exist
+        // Test that CharacterSet enum variants exist.
         let ascii = CharacterSet::Ascii;
         let dec_graphics = CharacterSet::DECGraphics;
 
-        // They should be different
+        // They should be different.
         assert_ne!(ascii, dec_graphics);
 
-        // Test debug formatting
+        // Test debug formatting.
         let ascii_debug = format!("{ascii:?}");
         let dec_graphics_debug = format!("{dec_graphics:?}");
 

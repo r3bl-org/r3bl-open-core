@@ -610,7 +610,7 @@ pub struct CursorPositionRequest {
 
 impl From<(u16, u16)> for CursorPositionRequest {
     fn from((row_param, col_param): (u16, u16)) -> Self {
-        // Convert from 1-based VT100 coordinates to 0-based internal coordinates
+        // Convert from 1-based VT100 coordinates to 0-based internal coordinates.
         Self {
             row: row_param.saturating_sub(1),
             col: col_param.saturating_sub(1),
@@ -887,7 +887,7 @@ impl WriteToBuf for CsiSequence {
 mod tests {
     use super::*;
 
-    // Integration test helper - process CSI sequence and extract params
+    // Integration test helper - process CSI sequence and extract params.
     fn process_csi_sequence_and_test<F>(sequence: &str, test_fn: F)
     where
         F: Fn(&vte::Params),
@@ -925,7 +925,7 @@ mod tests {
                 }
             }
 
-            // Required by Perform trait but unused
+            // Required by Perform trait but unused.
             fn print(&mut self, _c: char) {}
             fn execute(&mut self, _byte: u8) {}
             fn hook(

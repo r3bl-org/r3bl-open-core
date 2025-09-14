@@ -21,7 +21,7 @@ pub mod insert_line {
         let sequence = format!("{move_cursor}{insert_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
-        // Verify lines have shifted down
+        // Verify lines have shifted down.
         assert_blank_line(&ofs_buf, 2); // New blank line at cursor
         assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
         assert_line_content(&ofs_buf, 1, "Line01"); // Line 1 unchanged
@@ -40,13 +40,13 @@ pub mod insert_line {
         let sequence = format!("{move_cursor}{insert_lines}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
-        // Verify lines have shifted down by 3
+        // Verify lines have shifted down by 3.
         assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
         assert_blank_line(&ofs_buf, 1); // New blank lines
         assert_blank_line(&ofs_buf, 2);
         assert_blank_line(&ofs_buf, 3);
         assert_line_content(&ofs_buf, 4, "Line01"); // Line 1 shifted to 4
-        // Lines 2, 3, 4 were lost
+        // Lines 2, 3, 4 were lost.
     }
 
     #[test]
@@ -69,7 +69,7 @@ pub mod insert_line {
         let sequence = format!("{move_cursor}{insert_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
-        // Verify only lines within margins are affected
+        // Verify only lines within margins are affected.
         assert_line_content(&ofs_buf, 0, "Line00"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 1, "Line01"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 2, "Line02"); // Top margin, unchanged
@@ -77,7 +77,7 @@ pub mod insert_line {
         assert_blank_line(&ofs_buf, 4); // Inserted blank line
         assert_line_content(&ofs_buf, 5, "Line04"); // Shifted within margins
         assert_line_content(&ofs_buf, 6, "Line05"); // Shifted within margins
-        // Line06 was lost at bottom of scroll region
+        // Line06 was lost at bottom of scroll region.
         assert_line_content(&ofs_buf, 7, "Line07"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 8, "Line08"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 9, "Line09"); // Outside margins, unchanged
@@ -98,7 +98,7 @@ pub mod insert_line {
         // Try to insert line: ESC[L (should be ignored)
         //         performer.csi_dispatch(&[], &[], false, 'L');
 
-        // Verify no changes occurred
+        // Verify no changes occurred.
         for r in 0..5 {
             assert_line_content(&ofs_buf, r, &format!("Line{r:02}"));
         }
@@ -122,7 +122,7 @@ pub mod delete_line {
         let sequence = format!("{move_cursor}{delete_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
-        // Verify lines have shifted up
+        // Verify lines have shifted up.
         assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
         assert_line_content(&ofs_buf, 1, "Line01"); // Line 1 unchanged
         assert_line_content(&ofs_buf, 2, "Line03"); // Line 3 shifted to 2
@@ -144,13 +144,13 @@ pub mod delete_line {
         let sequence = format!("{move_cursor}{delete_lines}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
-        // Verify lines have shifted up by 3
+        // Verify lines have shifted up by 3.
         assert_line_content(&ofs_buf, 0, "Line00"); // Line 0 unchanged
         assert_line_content(&ofs_buf, 1, "Line04"); // Line 4 shifted to 1
         assert_blank_line(&ofs_buf, 2); // New blank lines at bottom
         assert_blank_line(&ofs_buf, 3);
         assert_blank_line(&ofs_buf, 4);
-        // Lines 1, 2, 3 were deleted
+        // Lines 1, 2, 3 were deleted.
     }
 
     #[test]
@@ -173,7 +173,7 @@ pub mod delete_line {
         let sequence = format!("{move_cursor}{delete_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
 
-        // Verify only lines within margins are affected
+        // Verify only lines within margins are affected.
         assert_line_content(&ofs_buf, 0, "Line00"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 1, "Line01"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 2, "Line02"); // Top margin, unchanged
@@ -184,7 +184,7 @@ pub mod delete_line {
         assert_line_content(&ofs_buf, 7, "Line07"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 8, "Line08"); // Outside margins, unchanged
         assert_line_content(&ofs_buf, 9, "Line09"); // Outside margins, unchanged
-        // Line04 was deleted
+        // Line04 was deleted.
     }
 
     #[test]
@@ -204,7 +204,7 @@ pub mod delete_line {
         // Try to delete line: ESC[M (should be ignored)
         //         performer.csi_dispatch(&[], &[], false, 'M');
 
-        // Verify no changes occurred
+        // Verify no changes occurred.
         for r in 0..5 {
             assert_line_content(&ofs_buf, r, &format!("Line{r:02}"));
         }

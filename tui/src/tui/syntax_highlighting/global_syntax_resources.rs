@@ -89,11 +89,11 @@ mod tests {
     fn test_syntax_set_contains_expected_syntaxes() {
         let syntax_set = get_cached_syntax_set();
 
-        // Verify some common syntaxes are loaded
+        // Verify some common syntaxes are loaded.
         assert!(syntax_set.find_syntax_by_extension("rs").is_some());
         assert!(syntax_set.find_syntax_by_extension("md").is_some());
         // Note: syntect's load_defaults_newlines() might not include all extensions
-        // Just verify we have some syntaxes loaded
+        // Just verify we have some syntaxes loaded.
         assert!(!syntax_set.syntaxes().is_empty());
     }
 }
@@ -111,7 +111,7 @@ mod bench {
     #[bench]
     fn bench_create_syntax_set_uncached(b: &mut Bencher) {
         b.iter(|| {
-            // This is expensive - loads and deserializes all syntax definitions
+            // This is expensive - loads and deserializes all syntax definitions.
             let _syntax_set = SyntaxSet::load_defaults_newlines();
         });
     }
@@ -120,11 +120,11 @@ mod bench {
     /// This simulates the new optimized behavior
     #[bench]
     fn bench_get_cached_syntax_set(b: &mut Bencher) {
-        // Ensure the cache is initialized before benchmarking
+        // Ensure the cache is initialized before benchmarking.
         let _ = get_cached_syntax_set();
 
         b.iter(|| {
-            // This should be nearly free - just returns a reference
+            // This should be nearly free - just returns a reference.
             let _syntax_set = get_cached_syntax_set();
         });
     }
@@ -143,11 +143,11 @@ mod bench {
     /// This simulates the new optimized behavior
     #[bench]
     fn bench_get_cached_theme(b: &mut Bencher) {
-        // Ensure the cache is initialized before benchmarking
+        // Ensure the cache is initialized before benchmarking.
         let _ = get_cached_theme();
 
         b.iter(|| {
-            // This should be nearly free - just returns a reference
+            // This should be nearly free - just returns a reference.
             let _theme = get_cached_theme();
         });
     }
@@ -170,12 +170,12 @@ mod bench {
     /// This shows the performance benefit of caching for dialog-heavy applications
     #[bench]
     fn bench_multiple_editor_creation_cached(b: &mut Bencher) {
-        // Ensure the cache is initialized before benchmarking
+        // Ensure the cache is initialized before benchmarking.
         let _ = get_cached_syntax_set();
         let _ = get_cached_theme();
 
         b.iter(|| {
-            // Simulate creating 10 editors with cached resources
+            // Simulate creating 10 editors with cached resources.
             for _ in 0..10 {
                 let _syntax_set = get_cached_syntax_set();
                 let _theme = get_cached_theme();
@@ -187,15 +187,15 @@ mod bench {
     /// This demonstrates the one-time cost amortized over many accesses
     #[bench]
     fn bench_cache_warmup_and_access_pattern(b: &mut Bencher) {
-        // Clear the cache for this test (would need a test-only clear method)
-        // For now, this benchmark assumes a fresh start
+        // Clear the cache for this test (would need a test-only clear method).
+        // For now, this benchmark assumes a fresh start.
 
         b.iter(|| {
-            // First access pays the initialization cost
+            // First access pays the initialization cost.
             let _set1 = get_cached_syntax_set();
             let _theme1 = get_cached_theme();
 
-            // Subsequent accesses are essentially free
+            // Subsequent accesses are essentially free.
             for _ in 0..100 {
                 let _set = get_cached_syntax_set();
                 let _theme = get_cached_theme();

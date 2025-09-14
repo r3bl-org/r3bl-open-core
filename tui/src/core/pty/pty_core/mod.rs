@@ -23,7 +23,7 @@ pub mod pty_sessions;
 pub mod pty_types;
 pub mod pty_utils;
 
-// Re-export all public types and functions for convenience
+// Re-export all public types and functions for convenience.
 pub use pty_input_events::*;
 pub use pty_output_events::*;
 pub use pty_sessions::*;

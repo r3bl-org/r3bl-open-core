@@ -198,7 +198,7 @@ mod numeric_arithmetic_operators {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
-    // Generate numeric operations using macro
+    // Generate numeric operations using macro.
     create_numeric_arithmetic_operators!(Index, idx, [usize, u16, i32]);
 }
 
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_index_max_value() {
-        // Test with maximum u16 value
+        // Test with maximum u16 value.
         let max_index = idx(u16::MAX);
         assert_eq!(max_index.as_u16(), u16::MAX);
     }
@@ -449,7 +449,7 @@ mod tests {
         let length = index.convert_to_length();
         assert_eq!(length, len(1));
 
-        // Test with max value
+        // Test with max value.
         let max_index = idx(u16::MAX - 1); // Subtract 1 to avoid overflow when adding 1
         let length = max_index.convert_to_length();
         assert_eq!(length, len(u16::MAX));
@@ -457,13 +457,13 @@ mod tests {
 
     #[test]
     fn test_index_arithmetic_edge_cases() {
-        // Test addition near maximum value
+        // Test addition near maximum value.
         let max_index = idx(u16::MAX - 5);
         let small_index = idx(5);
         let result = max_index + small_index;
         assert_eq!(result, idx(u16::MAX));
 
-        // Test subtraction with zero
+        // Test subtraction with zero.
         let index = idx(5);
         let result = index - idx(5);
         assert_eq!(result, idx(0));
@@ -476,25 +476,25 @@ mod tests {
 
     #[test]
     fn test_index_with_length_operations_edge_cases() {
-        // Test addition with length near maximum
+        // Test addition with length near maximum.
         let max_index = idx(u16::MAX - 5);
         let length = len(5);
         let result = max_index + length;
         assert_eq!(result, idx(u16::MAX));
 
-        // Test subtraction with length
+        // Test subtraction with length.
         let index = idx(10);
         let length = len(5);
         let result = index - length;
         assert_eq!(result, idx(5));
 
-        // Test subtraction with length below zero
+        // Test subtraction with length below zero.
         let index = idx(5);
         let length = len(10);
         let result = index - length;
         assert_eq!(result, idx(0));
 
-        // Test multiplication with length
+        // Test multiplication with length.
         let index = idx(u16::MAX / 2);
         let length = len(2);
         let result = index * length;
@@ -503,17 +503,17 @@ mod tests {
 
     #[test]
     fn test_index_bounds_check_with_length() {
-        // Test index within bounds
+        // Test index within bounds.
         let index = idx(5);
         let length = len(10);
         assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
-        // Test index at boundary
+        // Test index at boundary.
         let index = idx(9);
         let length = len(10);
         assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
-        // Test index overflowing
+        // Test index overflowing.
         let index = idx(10);
         let length = len(10);
         assert_eq!(
@@ -521,7 +521,7 @@ mod tests {
             BoundsOverflowStatus::Overflowed
         );
 
-        // Test index far beyond bounds
+        // Test index far beyond bounds.
         let index = idx(20);
         let length = len(10);
         assert_eq!(
@@ -535,17 +535,17 @@ mod tests {
 
     #[test]
     fn test_index_bounds_check_edge_cases() {
-        // Test with zero length
+        // Test with zero length.
         let index = idx(0);
         let length = len(0);
         assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
-        // Test with zero index against zero length
+        // Test with zero index against zero length.
         let index = idx(0);
         let length = len(0);
         assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
-        // Test with non-zero index against zero length
+        // Test with non-zero index against zero length.
         let index = idx(1);
         let length = len(0);
         assert_eq!(
@@ -553,7 +553,7 @@ mod tests {
             BoundsOverflowStatus::Overflowed
         );
 
-        // Test with maximum values
+        // Test with maximum values.
         let index = idx(u16::MAX);
         let length = len(u16::MAX);
         assert_eq!(
@@ -561,7 +561,7 @@ mod tests {
             BoundsOverflowStatus::Overflowed
         );
 
-        // Test with maximum index against maximum length
+        // Test with maximum index against maximum length.
         let index = idx(u16::MAX - 1);
         let length = len(u16::MAX);
         assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
@@ -569,36 +569,36 @@ mod tests {
 
     #[test]
     fn test_full_interoperability() {
-        // Create an index and length
+        // Create an index and length.
         let index = idx(5);
         let length = len(10);
 
-        // Check if index is within bounds
+        // Check if index is within bounds.
         assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
 
-        // Convert index to length
+        // Convert index to length.
         let new_length = index.convert_to_length();
         assert_eq!(new_length, len(6));
 
-        // Convert length to index
+        // Convert length to index.
         let new_index = length.convert_to_index();
         assert_eq!(new_index, idx(9));
 
-        // Perform arithmetic with index and length
+        // Perform arithmetic with index and length.
         let result_index = index + length;
         assert_eq!(result_index, idx(15));
 
-        // Check if the new index is within bounds
+        // Check if the new index is within bounds.
         assert_eq!(
             result_index.check_overflows(length),
             BoundsOverflowStatus::Overflowed
         );
 
-        // Subtract length from index
+        // Subtract length from index.
         let result_index = result_index - length;
         assert_eq!(result_index, idx(5));
 
-        // Check if the new index is within bounds
+        // Check if the new index is within bounds.
         assert_eq!(
             result_index.check_overflows(length),
             BoundsOverflowStatus::Within

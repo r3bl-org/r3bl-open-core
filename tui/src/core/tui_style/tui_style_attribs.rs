@@ -201,7 +201,7 @@ impl Add for TuiStyleAttribs {
 
 macro_rules! impl_from_and_add_for_attrib {
     ($type:ty, $field:ident) => {
-        // From<$type> for TuiStyleAttribs
+        // From<$type> for TuiStyleAttribs.
         impl From<$type> for TuiStyleAttribs {
             fn from(val: $type) -> Self {
                 TuiStyleAttribs {
@@ -211,7 +211,7 @@ macro_rules! impl_from_and_add_for_attrib {
             }
         }
 
-        // TuiStyleAttribs + $type
+        // TuiStyleAttribs + $type.
         impl Add<$type> for TuiStyleAttribs {
             type Output = TuiStyleAttribs;
             fn add(mut self, rhs: $type) -> Self::Output {
@@ -236,12 +236,12 @@ macro_rules! define_attrib_operations {
     // Done
     () => {};
 
-    // Just one element left
+    // Just one element left.
     (($type:ty, $field:ident)) => {
         impl_from_and_add_for_attrib!($type, $field);
     };
 
-    // Multiple elements
+    // Multiple elements.
     (($type:ty, $field:ident), $(($rest_type:ty, $rest_field:ident)),+) => {
         impl_from_and_add_for_attrib!($type, $field);
 

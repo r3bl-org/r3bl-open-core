@@ -22,7 +22,7 @@ pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
                 };
             }
         }
-        // Fill remaining columns with spaces
+        // Fill remaining columns with spaces.
         for c in line_text.len()..cols {
             buf.buffer[r][c] = crate::PixelChar::Spacer;
         }

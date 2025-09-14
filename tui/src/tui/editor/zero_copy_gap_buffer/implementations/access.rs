@@ -119,7 +119,7 @@ impl ZeroCopyGapBuffer {
     /// operation)
     #[must_use]
     pub fn as_str(&self) -> &str {
-        // In debug builds, validate UTF-8
+        // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
         {
             use std::str::from_utf8;
@@ -164,11 +164,11 @@ impl ZeroCopyGapBuffer {
             return Some("");
         }
 
-        // Calculate actual start offset from line info
+        // Calculate actual start offset from line info.
         let start_info = self.get_line_info(line_range.start.as_usize())?;
         let start_offset = *start_info.buffer_offset;
 
-        // Calculate end offset
+        // Calculate end offset.
         let end_offset = if line_range.end.as_usize() < self.line_count().as_usize() {
             let end_info = self.get_line_info(line_range.end.as_usize())?;
             *end_info.buffer_offset
@@ -176,7 +176,7 @@ impl ZeroCopyGapBuffer {
             self.buffer.len()
         };
 
-        // In debug builds, validate UTF-8
+        // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
         {
             if let Err(e) = std::str::from_utf8(&self.buffer[start_offset..end_offset]) {
@@ -224,18 +224,18 @@ impl ZeroCopyGapBuffer {
     pub fn get_line_with_newline(&self, line_index: RowIndex) -> Option<&str> {
         let line_info = self.get_line_info(line_index.as_usize())?;
         let content_range = line_info.content_range();
-        // Include the newline if there's content
+        // Include the newline if there's content.
         let end = if line_info.content_len.as_usize() > 0 {
             content_range.end + 1 // +1 for newline
         } else {
             content_range.start + 1 // Just the newline for empty lines
         };
 
-        // Ensure we don't go past the line boundary
+        // Ensure we don't go past the line boundary.
         let end = end.min(content_range.start + line_info.capacity.as_usize());
         let range = content_range.start..end;
 
-        // In debug builds, validate UTF-8
+        // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
         {
             if let Err(e) = std::str::from_utf8(&self.buffer[range.clone()]) {
@@ -321,7 +321,7 @@ mod tests {
             buffer.add_line();
         }
 
-        // Get middle lines
+        // Get middle lines.
         let slice = buffer.get_line_slice(row(1)..row(4)).unwrap();
         assert_eq!(slice.len(), 3 * INITIAL_LINE_SIZE);
 
@@ -372,24 +372,24 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Get the line info first
+        // Get the line info first.
         let offset = {
             let line_info = buffer.get_line_info(0).unwrap();
             *line_info.buffer_offset
         };
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing
-        // This is only done in tests to verify our panic behavior
-        // Insert invalid UTF-8 sequence (0xFF is never valid in UTF-8)
+        // This is only done in tests to verify our panic behavior.
+        // Insert invalid UTF-8 sequence (0xFF is never valid in UTF-8).
         buffer.buffer[offset] = 0xFF;
         buffer.buffer[offset + 1] = 0xFF;
 
-        // Update line info
+        // Update line info.
         if let Some(line_info) = buffer.get_line_info_mut(0) {
             line_info.content_len = crate::len(2);
         }
 
-        // This should panic in debug mode
+        // This should panic in debug mode.
         let _ = buffer.as_str();
     }
 
@@ -400,21 +400,21 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Get the line info first
+        // Get the line info first.
         let offset = *buffer.get_line_info(0).unwrap().buffer_offset;
 
-        // SAFETY: We're intentionally creating invalid UTF-8 for testing
-        // Insert invalid UTF-8 sequence
+        // SAFETY: We're intentionally creating invalid UTF-8 for testing.
+        // Insert invalid UTF-8 sequence.
         // 0xC0 0x80 is an overlong encoding (invalid UTF-8)
         buffer.buffer[offset] = 0xC0;
         buffer.buffer[offset + 1] = 0x80;
 
-        // Update line info
+        // Update line info.
         if let Some(line_info) = buffer.get_line_info_mut(0) {
             line_info.content_len = crate::len(2);
         }
 
-        // This should panic in debug mode
+        // This should panic in debug mode.
         let _ = buffer.get_line_content(row(0));
     }
 
@@ -423,7 +423,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Empty line should just have newline
+        // Empty line should just have newline.
         let content = buffer.get_line_with_newline(row(0)).unwrap();
         assert_eq!(content, "\n");
 

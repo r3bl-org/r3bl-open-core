@@ -143,7 +143,7 @@ fn insert_line_at(
         return;
     }
 
-    // Use shift_lines_down to shift lines down and clear the newly inserted line
+    // Use shift_lines_down to shift lines down and clear the newly inserted line.
     performer.ofs_buf.shift_lines_down(
         {
             let start = row_index;
@@ -187,7 +187,7 @@ fn delete_line_at(
         return;
     }
 
-    // Use shift_lines_up to shift lines up and clear the bottom line
+    // Use shift_lines_up to shift lines up and clear the bottom line.
     performer.ofs_buf.shift_lines_up(
         {
             let start = row_index;
@@ -198,7 +198,7 @@ fn delete_line_at(
     );
 
     // Clear the bottom line of the scroll region (shift_lines_up fills with blanks at the
-    // bottom)
+    // bottom).
     clear_line(performer, scroll_bottom);
 }
 

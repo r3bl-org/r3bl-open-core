@@ -1019,7 +1019,7 @@
 //! tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
 //! feature requests, feel free to add them there too 👍.
 
-// Enable benchmarking for nightly Rust
+// Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]
 
 // Attach.

@@ -110,25 +110,25 @@ pub fn prompt_with_images_copied_msg(
     let image_text = if image_count == 1 { "image" } else { "images" };
     let separator = build_horizontal_separator();
 
-    // Build the image files list with optional hyperlinks
+    // Build the image files list with optional hyperlinks.
     let mut image_list = String::new();
     let hyperlink_support = global_hyperlink_support::detect();
 
     for (index, image_info) in saved_images.iter().enumerate() {
         let file_path_display = match hyperlink_support {
             HyperlinkSupport::Supported => {
-                // Create clickable hyperlink
+                // Create clickable hyperlink.
                 format_file_hyperlink(&image_info.filepath)
             }
             HyperlinkSupport::NotSupported => {
-                // Plain text fallback
+                // Plain text fallback.
                 image_info.filepath.display().to_string()
             }
         };
         writeln!(&mut image_list, "{}. {}", index + 1, file_path_display)
             .expect("Writing to String should never fail");
     }
-    // Remove trailing newline
+    // Remove trailing newline.
     if image_list.ends_with('\n') {
         image_list.pop();
     }

@@ -64,11 +64,11 @@ mod render_op_benchmarks {
 
     use crate::{AnsiValue, InlineString, Pos, RenderOp, RgbValue, TuiColor, TuiStyle, ch};
 
-    // Type aliases for clarity
+    // Type aliases for clarity.
     type RenderOpsSmallVec = SmallVec<[RenderOp; 8]>;
     type RenderOpsVec = Vec<RenderOp>;
 
-    // Helper to create a variety of RenderOps that simulate real usage
+    // Helper to create a variety of RenderOps that simulate real usage.
     fn create_test_render_ops() -> Vec<RenderOp> {
         vec![
             RenderOp::ClearScreen,
@@ -148,7 +148,7 @@ mod render_op_benchmarks {
     fn bench_smallvec_push_complex(b: &mut Bencher) {
         let base_ops = create_test_render_ops();
         let mut ops = Vec::new();
-        // Create 20 operations by repeating the base set
+        // Create 20 operations by repeating the base set.
         for _ in 0..3 {
             ops.extend_from_slice(&base_ops);
         }

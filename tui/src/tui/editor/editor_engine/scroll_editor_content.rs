@@ -196,7 +196,7 @@ pub fn dec_caret_col_by(
         }
         // Scroll active & Not at start of viewport.
         (HorizScr::Active, VpHorizLoc::NotAtStart) => {
-            // The line below used to be: `col_amt > caret_raw.col_index`
+            // The line below used to be: `col_amt > caret_raw.col_index`.
             let need_to_scroll_left =
                 caret_scroll_index::col_index_for_width(col_amt) > caret_raw.col_index;
 
@@ -332,7 +332,7 @@ pub fn change_caret_row_by(
             // Calculate how many rows we need to increment caret row by.
             let mut diff = desired_caret_adj_row - current_caret_adj_row;
 
-            // When buffer_mut goes out of scope, it will be dropped &
+            // When buffer_mut goes out of scope, it will be dropped &.
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
@@ -350,7 +350,7 @@ pub fn change_caret_row_by(
         CaretDirection::Up => {
             let mut diff = row_amt;
 
-            // When buffer_mut goes out of scope, it will be dropped & validation
+            // When buffer_mut goes out of scope, it will be dropped & validation.
             // performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
@@ -581,7 +581,7 @@ mod tests {
                 .get_string_at_col(row(0), display_col_index);
             assert_eq2!(result.unwrap().string.string, "🙏🏽");
 
-            // Press right 1 more time. The caret should correctly jump the width of "😀"
+            // Press right 1 more time. The caret should correctly jump the width of "😀".
             // from 68 to 70.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
@@ -620,7 +620,7 @@ mod tests {
             assert_eq2!(result.unwrap().string.string, "r");
         }
 
-        // Press right 1 more time. It should jump the jumbo emoji at the start of the
+        // Press right 1 more time. It should jump the jumbo emoji at the start of the.
         // line (and not just 1 character width). This moves the caret and the scroll
         // offset to make sure that the emoji at the start of the line can be displayed
         // properly.

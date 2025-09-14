@@ -118,7 +118,7 @@ pub fn parse_null_padded_line(input: &str) -> IResult<&str, &str> {
         terminated(
             // Take content (non-null, non-newline chars)
             is_not(NEWLINE_OR_NULL),
-            // Consume newline + null padding if present
+            // Consume newline + null padding if present.
             opt(
                 (
                     tag(NEW_LINE),
@@ -165,7 +165,7 @@ mod tests {
             assert_eq2!(remainder, "hello");
         }
 
-        // Newline with null padding
+        // Newline with null padding.
         {
             let input = "\n\0\0\0hello";
             let remainder = trim_optional_leading_newline_and_nulls(input);
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_parse_null_padded_line() {
-        // Line with newline and null padding
+        // Line with newline and null padding.
         {
             let input = "hello\n\0\0\0world";
             let (remainder, content) = parse_null_padded_line(input).unwrap();
@@ -197,7 +197,7 @@ mod tests {
             assert_eq2!(remainder, "world");
         }
 
-        // Line with just newline, no null padding
+        // Line with just newline, no null padding.
         {
             let input = "hello\nworld";
             let (remainder, content) = parse_null_padded_line(input).unwrap();
@@ -213,7 +213,7 @@ mod tests {
             assert_eq2!(remainder, "");
         }
 
-        // Empty line with null padding
+        // Empty line with null padding.
         {
             let input = "\n\0\0\0next";
             let (remainder, content) = parse_null_padded_line(input).unwrap();

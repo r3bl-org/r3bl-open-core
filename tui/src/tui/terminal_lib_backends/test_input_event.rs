@@ -85,7 +85,7 @@ mod tests {
             assert!(maybe_modifier_keys.is_some());
             assert!(maybe_modifier_keys.unwrap() == ModifierKeysMask::new().with_ctrl());
         }
-        // "Ctrl + Shift + X"
+        // "Ctrl + Shift + X".
         {
             let key_event = crossterm_keyevent! {
               code: KeyCode::Char('X'),
@@ -98,7 +98,7 @@ mod tests {
                     == (ModifierKeysMask::new().with_ctrl().with_shift())
             );
         }
-        // "Ctrl + Shift + Alt + X"
+        // "Ctrl + Shift + Alt + X".
         {
             let key_event = crossterm_keyevent! {
               code: KeyCode::Char('X'),
@@ -135,7 +135,7 @@ mod tests {
                 convert_key_event::copy_code_from_key_event(&key_event);
             assert_eq2!(maybe_non_modifier_keys.unwrap(), Key::Character('x'));
         }
-        // "Ctrl + Shift + x"
+        // "Ctrl + Shift + x".
         {
             let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),
@@ -145,7 +145,7 @@ mod tests {
                 convert_key_event::copy_code_from_key_event(&key_event);
             assert_eq2!(maybe_non_modifier_keys.unwrap(), Key::Character('x'));
         }
-        // "Ctrl + Shift + Alt + x"
+        // "Ctrl + Shift + Alt + x".
         {
             let key_event = crossterm_keyevent! {
               code: KeyCode::Char('x'),

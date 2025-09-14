@@ -21,14 +21,14 @@ pub fn load_id_from_file_or_generate_and_save_it() -> InlineString {
             let id_file_path =
                 config_folder::get_id_file_path(config_folder_path.clone());
 
-            // Create a new InlineString to store the contents
+            // Create a new InlineString to store the contents.
             let mut content = InlineString::new();
             let res_read_from_file = try_read_file_path_into_inline_string(
                 &mut content,
                 id_file_path.to_str().expect("Invalid path"),
             );
 
-            // Try to read the file directly into InlineString
+            // Try to read the file directly into InlineString.
             if let Ok(()) = res_read_from_file {
                 DEBUG_ANALYTICS_CLIENT_MOD.then(|| {
                     // % is Display, ? is Debug.

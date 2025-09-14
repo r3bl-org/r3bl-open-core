@@ -31,7 +31,7 @@ impl History {
 }
 
 impl History {
-    // Update history entries
+    // Update history entries.
     pub fn update(&mut self, maybe_line: Option<String>) {
         // Receive a new line.
         if let Some(line) = maybe_line {
@@ -47,7 +47,7 @@ impl History {
 
             // Check if already have enough entries.
             if self.entries.len() > self.max_size {
-                // Remove oldest entry
+                // Remove oldest entry.
                 self.entries.pop_back();
             }
         }
@@ -112,7 +112,7 @@ mod tests {
         assert!(history.entries.contains(&"test3".to_string()));
     }
 
-    // write tests for search_next and search_previous
+    // write tests for search_next and search_previous.
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_search_next() {

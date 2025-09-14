@@ -35,7 +35,7 @@ pub fn pty_to_std_exit_status(
     // Failure case: encode exit code properly
     let code = status.exit_code();
 
-    // Ensure we don't overflow when shifting for Unix wait status format
+    // Ensure we don't overflow when shifting for Unix wait status format.
     let wait_status = if code <= 255 {
         #[allow(clippy::cast_possible_wrap)]
         let code_i32 = code as i32;
@@ -48,7 +48,7 @@ pub fn pty_to_std_exit_status(
             code_i32
         }
     } else {
-        // If exit code is too large, clamp to 255 and encode
+        // If exit code is too large, clamp to 255 and encode.
         #[cfg(unix)]
         {
             255_i32 << 8

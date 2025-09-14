@@ -274,7 +274,7 @@ impl GraphemeString for GapBufferLine<'_> {
     /// Returns a string slice with lifetime tied to `self`. The anonymous lifetime
     /// `'_` ensures the returned slice cannot outlive the `GapBufferLine` instance.
     fn trunc_start_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
-        // Adapt GCStringOwned algorithm for starting from beginning
+        // Adapt GCStringOwned algorithm for starting from beginning.
         let mut skip_col_count = width;
         let mut string_start_byte_index = 0;
 
@@ -325,7 +325,7 @@ mod test_fixtures {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert Unicode-rich content: "Hello 👋 世界!"
+        // Insert Unicode-rich content: "Hello 👋 世界!".
         // This includes: ASCII, emoji, CJK characters, punctuation
         buffer
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello 👋 世界!")
@@ -349,7 +349,7 @@ mod tests_content_metadata_consistency {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Content byte length should match metadata
+        // Content byte length should match metadata.
         assert_eq!(line.content().len(), line.byte_len().as_usize());
         assert_eq!(line.content().len(), line.info().content_len.as_usize());
     }
@@ -359,7 +359,7 @@ mod tests_content_metadata_consistency {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Count graphemes manually and compare with metadata
+        // Count graphemes manually and compare with metadata.
         let manual_count = line.content().graphemes(true).count();
 
         assert_eq!(manual_count, line.grapheme_count().as_usize());
@@ -371,7 +371,7 @@ mod tests_content_metadata_consistency {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Display width should be consistent between facade and metadata
+        // Display width should be consistent between facade and metadata.
         assert_eq!(line.display_width(), line.info().display_width);
     }
 
@@ -380,11 +380,11 @@ mod tests_content_metadata_consistency {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Segments should match between facade and metadata
+        // Segments should match between facade and metadata.
         assert_eq!(line.segments().len(), line.info().segments.len());
         assert_eq!(line.segments(), &line.info().segments[..]);
 
-        // Number of segments should match grapheme count
+        // Number of segments should match grapheme count.
         assert_eq!(line.segments().len(), line.grapheme_count().as_usize());
     }
 
@@ -445,13 +445,13 @@ mod tests_empty_line_edge_cases {
         buffer.add_line();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // All get_string_at variants should return None for empty line
+        // All get_string_at variants should return None for empty line.
         assert_eq!(line.get_string_at(col(0)), None);
         assert_eq!(line.get_string_at_right_of(col(0)), None);
         assert_eq!(line.get_string_at_left_of(col(0)), None);
         assert_eq!(line.get_string_at_end(), None);
 
-        // Even with out-of-bounds indices
+        // Even with out-of-bounds indices.
         assert_eq!(line.get_string_at(col(10)), None);
         assert_eq!(line.get_string_at_right_of(col(10)), None);
         assert_eq!(line.get_string_at_left_of(col(10)), None);
@@ -463,7 +463,7 @@ mod tests_empty_line_edge_cases {
         buffer.add_line();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Should not be in middle of grapheme for empty line
+        // Should not be in middle of grapheme for empty line.
         assert_eq!(line.check_is_in_middle_of_grapheme(col(0)), None);
         assert_eq!(line.check_is_in_middle_of_grapheme(col(5)), None);
     }
@@ -476,17 +476,17 @@ mod tests_empty_line_edge_cases {
             .insert_text_at_grapheme(row(0), seg_index(0), "test")
             .unwrap();
 
-        // Verify line is not empty
+        // Verify line is not empty.
         let line = buffer.get_line(row(0)).unwrap();
         assert!(!line.is_empty());
         assert_eq!(line.grapheme_count(), len(4));
 
-        // Clear the line by deleting all 4 graphemes
+        // Clear the line by deleting all 4 graphemes.
         buffer
             .delete_range(row(0), seg_index(0), seg_index(4))
             .unwrap();
 
-        // Verify line is now empty
+        // Verify line is now empty.
         let line = buffer.get_line(row(0)).unwrap();
         assert!(line.is_empty());
         assert_eq!(line.grapheme_count(), len(0));
@@ -506,7 +506,7 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Convenience method should equal direct access
+        // Convenience method should equal direct access.
         assert_eq!(line.display_width(), line.info().display_width);
     }
 
@@ -515,7 +515,7 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Convenience method should equal direct access
+        // Convenience method should equal direct access.
         assert_eq!(line.grapheme_count(), line.info().grapheme_count);
     }
 
@@ -524,7 +524,7 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Convenience method should equal direct access
+        // Convenience method should equal direct access.
         assert_eq!(line.segments(), &line.info().segments[..]);
     }
 
@@ -533,7 +533,7 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Convenience method should equal direct access
+        // Convenience method should equal direct access.
         assert_eq!(line.byte_len(), line.info().content_len);
     }
 
@@ -542,11 +542,11 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Test various column positions
+        // Test various column positions.
         for col_idx in 0..=line.grapheme_count().as_usize() {
             let col = col(col_idx);
 
-            // Facade method should equal direct LineMetadata call
+            // Facade method should equal direct LineMetadata call.
             let facade_result = line.get_string_at(col);
             let direct_result = line.info().get_string_at(line.content(), col);
 
@@ -562,11 +562,11 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Test various column positions
+        // Test various column positions.
         for col_idx in 0..=line.grapheme_count().as_usize() {
             let col = col(col_idx);
 
-            // Facade method should equal direct LineMetadata call
+            // Facade method should equal direct LineMetadata call.
             let facade_result = line.get_string_at_right_of(col);
             let direct_result = line.info().get_string_at_right_of(line.content(), col);
 
@@ -582,11 +582,11 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Test various column positions
+        // Test various column positions.
         for col_idx in 0..=line.grapheme_count().as_usize() {
             let col = col(col_idx);
 
-            // Facade method should equal direct LineMetadata call
+            // Facade method should equal direct LineMetadata call.
             let facade_result = line.get_string_at_left_of(col);
             let direct_result = line.info().get_string_at_left_of(line.content(), col);
 
@@ -602,7 +602,7 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Facade method should equal direct LineMetadata call
+        // Facade method should equal direct LineMetadata call.
         let facade_result = line.get_string_at_end();
         let direct_result = line.info().get_string_at_end(line.content());
 
@@ -614,11 +614,11 @@ mod tests_access_pattern_equivalence {
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Test various column positions including middle of multi-width chars
+        // Test various column positions including middle of multi-width chars.
         for col_idx in 0..=(line.display_width().as_usize() + 2) {
             let col = col(col_idx);
 
-            // Facade method should equal direct LineMetadata call
+            // Facade method should equal direct LineMetadata call.
             let facade_result = line.check_is_in_middle_of_grapheme(col);
             let direct_result = line.info().check_is_in_middle_of_grapheme(col);
 
@@ -631,7 +631,7 @@ mod tests_access_pattern_equivalence {
 
     #[test]
     fn test_is_empty_equivalence() {
-        // Test with non-empty line
+        // Test with non-empty line.
         let buffer = create_test_buffer();
         let line = buffer.get_line(row(0)).unwrap();
 
@@ -641,7 +641,7 @@ mod tests_access_pattern_equivalence {
         assert_eq!(facade_result, direct_result);
         assert!(!facade_result); // Should not be empty
 
-        // Test with empty line
+        // Test with empty line.
         let mut empty_buffer = ZeroCopyGapBuffer::new();
         empty_buffer.add_line();
         let empty_line = empty_buffer.get_line(row(0)).unwrap();
@@ -665,12 +665,12 @@ mod tests_access_pattern_equivalence {
 
         let line = buffer.get_line(row(0)).unwrap();
 
-        // Test all accessor methods with complex Unicode
+        // Test all accessor methods with complex Unicode.
         assert_eq!(line.display_width(), line.info().display_width);
         assert_eq!(line.grapheme_count(), line.info().grapheme_count);
         assert_eq!(line.byte_len(), line.info().content_len);
 
-        // Test string access methods
+        // Test string access methods.
         for col_idx in 0..=line.grapheme_count().as_usize() {
             let col = col(col_idx);
 

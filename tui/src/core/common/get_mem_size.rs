@@ -185,15 +185,15 @@ mod tests {
 
     #[test]
     fn test_memory_size_display() {
-        // Test with known value
+        // Test with known value.
         let size = MemorySize::new(1024 * 1024); // 1MB
         assert_eq!(format!("{size}"), "1,024 KB");
 
-        // Test with unknown value
+        // Test with unknown value.
         let unknown = MemorySize::unknown();
         assert_eq!(format!("{unknown}"), "?");
 
-        // Test with default
+        // Test with default.
         let default = MemorySize::default();
         assert_eq!(format!("{default}"), "?");
     }

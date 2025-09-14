@@ -84,7 +84,7 @@ impl Default for CursorKeyMode {
 /// sequence generation for better terminal application compatibility.
 #[derive(Debug, Clone)]
 pub enum ControlSequence {
-    // Common control characters
+    // Common control characters.
     CtrlC, // SIGINT (interrupt)
     CtrlD, // EOF (end of file)
     CtrlZ, // SIGTSTP (suspend)
@@ -116,7 +116,7 @@ pub enum ControlSequence {
     // Function keys (F1-F12)
     F(u8), // F(1) for F1, F(2) for F2, etc.
 
-    // Raw escape sequence for advanced use cases
+    // Raw escape sequence for advanced use cases.
     RawSequence(Vec<u8>),
 }
 
@@ -183,7 +183,7 @@ impl ControlSequence {
                     10 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x31, 0x7E]), // ESC[21~
                     11 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x33, 0x7E]), // ESC[23~
                     12 => Cow::Borrowed(&[0x1B, 0x5B, 0x32, 0x34, 0x7E]), // ESC[24~
-                    // Unknown function keys
+                    // Unknown function keys.
                     _ => Cow::Borrowed(&[0x1B]), // Just ESC
                 }
             }
@@ -213,7 +213,7 @@ impl CursorModeDetector {
     /// Returns `Some(mode)` if a mode change sequence is detected, `None` otherwise.
     /// Maintains an internal buffer to handle sequences that span multiple reads.
     pub fn scan_for_mode_change(&mut self, data: &[u8]) -> Option<CursorKeyMode> {
-        // Add new data to buffer
+        // Add new data to buffer.
         self.buffer.extend_from_slice(data);
 
         // Look for application mode enable: ESC[?1h
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_control_sequence_arrow_keys_mode_aware() {
-        // Test Normal Mode
+        // Test Normal Mode.
         let normal_mode = CursorKeyMode::Normal;
         assert_eq!(
             *ControlSequence::ArrowUp.to_bytes(normal_mode),
@@ -344,7 +344,7 @@ mod tests {
             [0x1B, 0x5B, 0x44]
         ); // ESC[D
 
-        // Test Application Mode
+        // Test Application Mode.
         let app_mode = CursorKeyMode::Application;
         assert_eq!(
             *ControlSequence::ArrowUp.to_bytes(app_mode),
@@ -384,7 +384,7 @@ mod tests {
             [0x1B, 0x5B, 0x32, 0x34, 0x7E]
         );
 
-        // Test unknown function key
+        // Test unknown function key.
         assert_eq!(*ControlSequence::F(99).to_bytes(mode), [0x1B]);
     }
 
@@ -400,21 +400,21 @@ mod tests {
     fn test_cursor_mode_detector() {
         let mut detector = CursorModeDetector::new();
 
-        // Test application mode detection
+        // Test application mode detection.
         let app_mode_data = b"\x1B[?1h";
         assert_eq!(
             detector.scan_for_mode_change(app_mode_data),
             Some(CursorKeyMode::Application)
         );
 
-        // Test normal mode detection
+        // Test normal mode detection.
         let normal_mode_data = b"\x1B[?1l";
         assert_eq!(
             detector.scan_for_mode_change(normal_mode_data),
             Some(CursorKeyMode::Normal)
         );
 
-        // Test no mode change
+        // Test no mode change.
         let regular_data = b"Hello world";
         assert_eq!(detector.scan_for_mode_change(regular_data), None);
     }
@@ -423,7 +423,7 @@ mod tests {
     fn test_cursor_mode_detector_partial_sequences() {
         let mut detector = CursorModeDetector::new();
 
-        // Test partial sequence across multiple calls
+        // Test partial sequence across multiple calls.
         assert_eq!(detector.scan_for_mode_change(b"\x1B["), None);
         assert_eq!(detector.scan_for_mode_change(b"?1"), None);
         assert_eq!(
@@ -436,11 +436,11 @@ mod tests {
     fn test_cursor_mode_detector_buffer_management() {
         let mut detector = CursorModeDetector::new();
 
-        // Fill buffer with data that doesn't contain mode sequences
+        // Fill buffer with data that doesn't contain mode sequences.
         let large_data = vec![b'x'; 150];
         assert_eq!(detector.scan_for_mode_change(&large_data), None);
 
-        // Buffer should be trimmed to prevent memory growth
+        // Buffer should be trimmed to prevent memory growth.
         assert!(detector.buffer.len() <= 100);
     }
 }

@@ -88,7 +88,7 @@ mod tests {
     /// definitions.
     #[test]
     fn validate_pty_type_aliases_compile() {
-        // Verify type aliases exist and are correctly defined
+        // Verify type aliases exist and are correctly defined.
         #[allow(dead_code)]
         fn check_controller(_: Controller) {}
         #[allow(dead_code)]
@@ -96,6 +96,6 @@ mod tests {
         #[allow(dead_code)]
         fn check_controlled_child(_: ControlledChild) {}
 
-        // These are compile-time checks to ensure the types exist
+        // These are compile-time checks to ensure the types exist.
     }
 }

@@ -10,23 +10,25 @@ use crate::{AnsiToOfsBufPerformer, Pos, TuiStyle, col, row};
 #[test]
 fn test_performer_creation() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
-    {
-        let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
-        assert_eq!(performer.ofs_buf.my_pos, Pos::default());
-        assert_eq!(performer.ofs_buf.ansi_parser_support.current_style, TuiStyle::default());
-        assert!(
-            performer
-                .ofs_buf
-                .ansi_parser_support
-                .pending_osc_events
-                .is_empty()
-        );
-    }
 
+    let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
     assert_eq!(
-        ofs_buf.my_pos,
+        performer.ofs_buf.my_pos,
         Pos::default(),
-        "Buffer position should remain unchanged on performer creation"
+        "New performer should initialize cursor position to (0,0)"
+    );
+    assert_eq!(
+        performer.ofs_buf.ansi_parser_support.current_style,
+        TuiStyle::default(),
+        "New performer should initialize current_style to default"
+    );
+    assert!(
+        performer
+            .ofs_buf
+            .ansi_parser_support
+            .pending_osc_events
+            .is_empty(),
+        "New performer should initialize pending_osc_events to empty"
     );
 }
 
@@ -37,7 +39,7 @@ fn test_performer_creation() {
 fn test_state_persists_in_buffer_across_performer_lifecycles() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // First performer session
+    // First performer session.
     {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         performer.ofs_buf.my_pos = row(1) + col(5);
@@ -55,10 +57,10 @@ fn test_state_persists_in_buffer_across_performer_lifecycles() {
         "Buffer position should persist after performer goes out of scope"
     );
 
-    // Second performer session - should start with buffer's current position
+    // Second performer session - should start with buffer's current position.
     {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
-        // New performer should initialize with buffer's current cursor position
+        // New performer should initialize with buffer's current cursor position.
         assert_eq!(
             performer.ofs_buf.my_pos,
             row(1) + col(6),
@@ -80,7 +82,7 @@ fn test_state_persists_in_buffer_across_performer_lifecycles() {
         "Buffer position should persist after second performer goes out of scope"
     );
 
-    // Third performer session - should start with buffer's current position
+    // Third performer session - should start with buffer's current position.
     {
         let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         assert_eq!(

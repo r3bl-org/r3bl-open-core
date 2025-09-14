@@ -13,7 +13,7 @@ use crate::{AnsiToOfsBufPerformer, col, core::pty_mux::ansi_parser::esc_codes,
 fn test_control_characters() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // Test various control characters
+    // Test various control characters.
     let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
     // Print some text
@@ -21,7 +21,7 @@ fn test_control_characters() {
     performer.print('B');
     performer.print('C');
 
-    // Carriage return should move to start of line
+    // Carriage return should move to start of line.
     performer.execute(esc_codes::CARRIAGE_RETURN);
     assert_eq!(
         performer.ofs_buf.my_pos,
@@ -30,7 +30,7 @@ fn test_control_characters() {
     );
     performer.print('X'); // Should overwrite 'A'
 
-    // Line feed should move to next line, but same column
+    // Line feed should move to next line, but same column.
     performer.execute(esc_codes::LINE_FEED);
     assert_eq!(
         performer.ofs_buf.my_pos,
@@ -38,11 +38,11 @@ fn test_control_characters() {
         "Cursor should move to next row after LF, but same column"
     );
 
-    // Reset column for next test
+    // Reset column for next test.
     performer.ofs_buf.my_pos.col_index = col(0);
     performer.print('Y');
 
-    // Tab should advance cursor
+    // Tab should advance cursor.
     performer.execute(esc_codes::TAB);
     assert_eq!(
         performer.ofs_buf.my_pos,
@@ -51,7 +51,7 @@ fn test_control_characters() {
     );
     performer.print('Z');
 
-    // Backspace should move cursor back
+    // Backspace should move cursor back.
     performer.ofs_buf.my_pos.col_index = col(3);
     performer.print('M');
     performer.execute(esc_codes::BACKSPACE); // Backspace
@@ -67,14 +67,14 @@ fn test_control_characters() {
         "Cursor should move to col 4 after printing 'N', same row"
     );
 
-    // Verify final ofs_buf cursor position
+    // Verify final ofs_buf cursor position.
     assert_eq!(
         ofs_buf.my_pos,
         row(1) + col(4),
         "Final cursor position should be row 1, col 4"
     );
 
-    // Verify buffer contents
+    // Verify buffer contents.
     assert_plain_char_at(&ofs_buf, 0, 0, 'X'); // 'A' was overwritten by 'X' after CR
     assert_plain_char_at(&ofs_buf, 0, 1, 'B');
     assert_plain_char_at(&ofs_buf, 0, 2, 'C');

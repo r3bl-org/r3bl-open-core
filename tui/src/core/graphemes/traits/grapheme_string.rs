@@ -50,7 +50,7 @@ pub trait GraphemeString {
     /// Get the size in bytes
     fn byte_size(&self) -> ChUnit;
 
-    // Segment navigation
+    // Segment navigation.
 
     /// Get a segment by index
     fn get_seg(&self, index: SegIndex) -> Option<Seg>;
@@ -58,7 +58,7 @@ pub trait GraphemeString {
     /// Check if a column position falls in the middle of a grapheme cluster
     fn check_is_in_middle_of_grapheme(&self, col: ColIndex) -> Option<Seg>;
 
-    // Zero-copy segment content access
+    // Zero-copy segment content access.
 
     /// Get segment content at a specific column position
     fn get_seg_at(&self, col: ColIndex) -> Option<SegContent<'_>>;
@@ -72,7 +72,7 @@ pub trait GraphemeString {
     /// Get the last segment content
     fn get_seg_at_end(&self) -> Option<SegContent<'_>>;
 
-    // String operations using associated type
+    // String operations using associated type.
 
     /// Clip the string to a range defined by start column and width
     fn clip(&self, start_col: ColIndex, width: ColWidth) -> Self::StringSlice<'_>;
@@ -91,7 +91,7 @@ pub trait GraphemeString {
     /// Get an iterator over segments
     fn segments_iter(&self) -> Self::SegmentIterator<'_>;
 
-    // Additional methods
+    // Additional methods.
 
     /// Check if the string is empty
     fn is_empty(&self) -> bool;

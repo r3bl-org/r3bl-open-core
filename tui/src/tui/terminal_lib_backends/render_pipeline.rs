@@ -56,7 +56,7 @@ use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOps, ok,
 /// - <https://doc.rust-lang.org/std/collections/struct.HashMap.html#examples>
 #[macro_export]
 macro_rules! render_pipeline {
-    // No args. Returns a new
+    // No args. Returns a new default pipeline.
     () => {
         $crate::RenderPipeline::default()
     };

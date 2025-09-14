@@ -733,7 +733,7 @@ mod internal_impl {
                     render_bottom_border_line(ops, bounds_size, maybe_style, color_wheel);
                 }
                 LineType::Single => {
-                    // For single line dialogs, render as both top and bottom
+                    // For single line dialogs, render as both top and bottom.
                     render_top_border_line(ops, bounds_size, maybe_style, color_wheel);
                 }
             }

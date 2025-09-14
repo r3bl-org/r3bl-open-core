@@ -43,7 +43,7 @@ pub fn parse_fenced_code_block(input: &str) -> IResult<&str, List<CodeBlockLine<
         .parse(input)?;
 
     // Normal case: if there is a newline, consume it along with any null padding
-    // to handle the ZeroCopyGapBuffer null padding invariant
+    // to handle the ZeroCopyGapBuffer null padding invariant.
     let remainder = trim_optional_leading_newline_and_nulls(remainder);
 
     let acc = split_by_new_line(code);
@@ -111,13 +111,13 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
     let parser = alt((
         // CASE 1: Regular line with content followed by newline
         // Example: "hello world\n" -> "hello world"
-        // This handles the most common case where a line has text content
+        // This handles the most common case where a line has text content.
         terminated(
             // First part: capture all characters that are NOT newline or null
             // is_not(NEWLINE_OR_NULL) matches any sequence of chars except '\n' and '\0'
             map(is_not(NEWLINE_OR_NULL), |s: &str| s),
             // Second part: consume (but don't capture) the line ending
-            // This handles both the newline character and any null padding that follows
+            // This handles both the newline character and any null padding that follows.
             (
                 tag(NEW_LINE),
                 /* zero or more */ take_while(is(NULL_CHAR)),
@@ -127,21 +127,21 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
         // Example: "\n" -> ""
         // This is needed because is_not() in CASE 1 would fail on empty content
         map(
-            // Match a newline followed by any number of null chars
+            // Match a newline followed by any number of null chars.
             (
                 tag(NEW_LINE),
                 /* zero or more */ take_while(is(NULL_CHAR)),
             ),
-            // Transform the matched pattern into an empty string
+            // Transform the matched pattern into an empty string.
             |_| "",
         ),
         // CASE 3: Last line without trailing newline (at end of file)
         // Example: "last line" (at EOF) -> "last line"
-        // This handles the edge case where the file doesn't end with a newline
+        // This handles the edge case where the file doesn't end with a newline.
         terminated(
             // Match any characters except newline/null
             is_not(NEWLINE_OR_NULL),
-            // But only if we're at the end of the input
+            // But only if we're at the end of the input.
             eof,
         ),
     ));
@@ -395,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_parse_codeblock_with_null_padding() {
-        // Code block followed by null padding
+        // Code block followed by null padding.
         {
             let lang = "python";
             let code_lines = vec!["import foo", "bar()"];
@@ -408,7 +408,7 @@ mod tests {
             );
         }
 
-        // Code block with null padding and more content after
+        // Code block with null padding and more content after.
         {
             let lang = "bash";
             let code_lines = vec!["pip install foobar"];

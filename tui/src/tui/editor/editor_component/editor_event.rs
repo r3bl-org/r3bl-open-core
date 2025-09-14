@@ -356,21 +356,21 @@ impl EditorEvent {
         if normalized_text.contains(NEW_LINE_CHAR) {
             let lines: Vec<&str> = normalized_text.split(NEW_LINE_CHAR).collect();
 
-            // For multi-line operations, use the batched insert to avoid multiple
+            // For multi-line operations, use the batched insert to avoid multiple.
             // validations
             engine_internal_api::insert_str_batch_at_caret(
                 EditorArgsMut { engine, buffer },
                 &lines,
             );
         } else {
-            // Single line - insert directly
+            // Single line - insert directly.
             engine_internal_api::insert_str_at_caret(
                 EditorArgsMut { engine, buffer },
                 &normalized_text,
             );
         }
 
-        // Log paste operations for debugging
+        // Log paste operations for debugging.
         if is_paste {
             DEBUG_TUI_COPY_PASTE.then(|| {
                 tracing::debug! {
@@ -758,7 +758,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 1, col : 0]
-            // De-Select one character to right
+            // De-Select one character to right.
 
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
@@ -780,7 +780,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 1, col : 1]
-            // Select one character to left
+            // Select one character to left.
 
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
@@ -802,7 +802,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 1, col : 0]
-            // Move Selection Caret to one line upwards
+            // Move Selection Caret to one line upwards.
 
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
@@ -827,7 +827,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 0, col : 0]
-            // Move Selection Caret to one line downwards
+            // Move Selection Caret to one line downwards.
 
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
@@ -849,7 +849,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 1, col : 0]
-            // Move Caret to one char right and drop down selection
+            // Move Caret to one char right and drop down selection.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -869,7 +869,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 1, col : 1]
-            // Select by pressing PageUp
+            // Select by pressing PageUp.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -892,7 +892,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 0, col : 1]
-            // Select by pressing PageDown
+            // Select by pressing PageDown.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -922,7 +922,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 1, col : 2]
-            // Select by pressing All
+            // Select by pressing All.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -946,7 +946,7 @@ mod tests {
 
         {
             // Current Caret Position : [row : 1, col : 2]
-            // Select by pressing Esc
+            // Select by pressing Esc.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,

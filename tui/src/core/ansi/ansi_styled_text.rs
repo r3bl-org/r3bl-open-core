@@ -228,9 +228,9 @@ pub mod ansi_styled_text_impl {
                     InlineVec::with_capacity(self.text.len());
                 let gc_string = GCStringOwned::from(&self.text);
                 for item in &gc_string {
-                    // Convert the grapheme cluster to a single char
+                    // Convert the grapheme cluster to a single char.
                     // For multi-char graphemes, use the first char or fallback to
-                    // replacement char
+                    // replacement char.
                     let segment_str = item.get_str(&gc_string);
                     let display_char = segment_str
                         .chars()
@@ -1117,7 +1117,7 @@ mod tests {
     #[serial]
     #[test]
     fn test_convert_vec_ast_style_to_tui_style() {
-        // Test case 1: Mix of styles
+        // Test case 1: Mix of styles.
         let ast_styles_1: ASTextStyles = smallvec![
             ASTStyle::Bold,
             ASTStyle::Foreground(ASTColor::Ansi(196.into())), // Red
@@ -1135,7 +1135,7 @@ mod tests {
         let converted_tui_style_1: TuiStyle = ast_styles_1.into();
         assert_eq!(converted_tui_style_1, expected_tui_style_1);
 
-        // Test case 2: Only attributes
+        // Test case 2: Only attributes.
         let ast_styles_2: ASTextStyles = smallvec![
             ASTStyle::Dim,
             ASTStyle::Strikethrough,
@@ -1149,7 +1149,7 @@ mod tests {
         let converted_tui_style_2: TuiStyle = ast_styles_2.into();
         assert_eq!(converted_tui_style_2, expected_tui_style_2);
 
-        // Test case 3: Only colors
+        // Test case 3: Only colors.
         let ast_styles_3: ASTextStyles = smallvec![
             ASTStyle::Foreground(ASTColor::Ansi(34.into())), // Green
             ASTStyle::Background(ASTColor::Ansi(226.into())), // Yellow
@@ -1162,13 +1162,13 @@ mod tests {
         let converted_tui_style_3: TuiStyle = ast_styles_3.into();
         assert_eq!(converted_tui_style_3, expected_tui_style_3);
 
-        // Test case 4: Empty styles
+        // Test case 4: Empty styles.
         let ast_styles_4: ASTextStyles = smallvec![];
         let expected_tui_style_4 = TuiStyle::default();
         let converted_tui_style_4: TuiStyle = ast_styles_4.into();
         assert_eq!(converted_tui_style_4, expected_tui_style_4);
 
-        // Test case 5: Invert style
+        // Test case 5: Invert style.
         let ast_styles_5: ASTextStyles = smallvec![ASTStyle::Invert];
         let expected_tui_style_5 = TuiStyle {
             attribs: tui_style_attribs(Reverse),
@@ -1227,7 +1227,7 @@ mod tests {
             styles: ast_style_vec.clone(),
         };
 
-        // Test case 1: Using From<ColWidth>
+        // Test case 1: Using From<ColWidth>.
         {
             let col_width = width(5);
             let res: InlineVec<PixelChar> = styled_text.convert(col_width);
@@ -1269,7 +1269,7 @@ mod tests {
             );
         }
 
-        // Test case 2: Convert full text (None, None)
+        // Test case 2: Convert full text (None, None).
         {
             let res: InlineVec<PixelChar> =
                 styled_text.convert(ASTextConvertOptions::default());
@@ -1290,7 +1290,7 @@ mod tests {
             );
         }
 
-        // Test case 3: Convert partial text (start specified)
+        // Test case 3: Convert partial text (start specified).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(6)),
@@ -1314,7 +1314,7 @@ mod tests {
             );
         }
 
-        // Test case 4: Convert partial text (end specified)
+        // Test case 4: Convert partial text (end specified).
         {
             let opt = ASTextConvertOptions {
                 start: None,
@@ -1338,7 +1338,7 @@ mod tests {
             );
         }
 
-        // Test case 5: Convert partial text (start and end specified)
+        // Test case 5: Convert partial text (start and end specified).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(2)),
@@ -1362,7 +1362,7 @@ mod tests {
             );
         }
 
-        // Test case 6: Empty text
+        // Test case 6: Empty text.
         {
             let empty_text = ASText {
                 text: "".into(),
@@ -1373,7 +1373,7 @@ mod tests {
             assert!(res.is_empty());
         }
 
-        // Test case 7: No styles
+        // Test case 7: No styles.
         {
             let no_style_text = ASText {
                 text: "Test".into(),
@@ -1398,7 +1398,7 @@ mod tests {
             );
         }
 
-        // Test case 8: Invalid range (start > end)
+        // Test case 8: Invalid range (start > end).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(5)),
@@ -1408,7 +1408,7 @@ mod tests {
             assert!(res.is_empty());
         }
 
-        // Test case 9: Invalid range (start out of bounds)
+        // Test case 9: Invalid range (start out of bounds).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(11)),
@@ -1418,8 +1418,8 @@ mod tests {
             assert!(res.is_empty());
         }
 
-        // Test case 10: Invalid range (end out of bounds, but start is valid)
-        // The current implementation returns empty if end >= len()
+        // Test case 10: Invalid range (end out of bounds, but start is valid).
+        // The current implementation returns empty if end >= len().
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(8)),
@@ -1430,7 +1430,7 @@ mod tests {
             assert!(res.is_empty()); // convert returns empty for invalid end
         }
 
-        // Test case 10.1: Valid range, end is last index
+        // Test case 10.1: Valid range, end is last index.
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(8)),
@@ -1454,7 +1454,7 @@ mod tests {
             );
         }
 
-        // Test case 11: Single character range
+        // Test case 11: Single character range.
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(6)),
@@ -1471,7 +1471,7 @@ mod tests {
             );
         }
 
-        // Test case 12: Unicode characters
+        // Test case 12: Unicode characters.
         {
             let unicode_text = ASText {
                 text: "你好世界".into(), // "Hello World" in Chinese
@@ -1499,7 +1499,7 @@ mod tests {
             );
         }
 
-        // Test case 13: ColWidth(0)
+        // Test case 13: ColWidth(0).
         {
             let col_width_zero = width(0);
             let res: InlineVec<PixelChar> = styled_text.convert(col_width_zero);
@@ -1514,7 +1514,7 @@ mod tests {
             );
         }
 
-        // Test case 14: ColWidth(1)
+        // Test case 14: ColWidth(1).
         {
             let col_width_one = width(1);
             let res: InlineVec<PixelChar> = styled_text.convert(col_width_one);
@@ -1545,7 +1545,7 @@ mod tests {
             styles: ast_style_vec.clone(),
         };
 
-        // Test case 1: Using From<ColWidth>
+        // Test case 1: Using From<ColWidth>.
         {
             let col_width = width(4);
             let clipped_text = styled_text.clip(col_width);
@@ -1553,14 +1553,14 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 2: Clip full text (None, None)
+        // Test case 2: Clip full text (None, None).
         {
             let clipped_text = styled_text.clip(ASTextConvertOptions::default());
             assert_eq!(clipped_text.text, "Hello World");
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 3: Clip partial text (start specified)
+        // Test case 3: Clip partial text (start specified).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(6)),
@@ -1571,7 +1571,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 4: Clip partial text (end specified)
+        // Test case 4: Clip partial text (end specified).
         {
             let opt = ASTextConvertOptions {
                 start: None,
@@ -1582,7 +1582,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 5: Clip partial text (start and end specified)
+        // Test case 5: Clip partial text (start and end specified).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(2)),
@@ -1593,7 +1593,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 6: Empty text
+        // Test case 6: Empty text.
         {
             let empty_text = ASText {
                 text: "".into(),
@@ -1604,7 +1604,7 @@ mod tests {
             assert_eq!(clipped_text.styles, empty_text.styles);
         }
 
-        // Test case 7: No styles
+        // Test case 7: No styles.
         {
             let no_style_text = ASText {
                 text: "Test".into(),
@@ -1615,7 +1615,7 @@ mod tests {
             assert_eq!(clipped_text.styles, no_style_text.styles);
         }
 
-        // Test case 8: Invalid range (start > end)
+        // Test case 8: Invalid range (start > end).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(5)),
@@ -1626,7 +1626,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 9: Invalid range (start out of bounds)
+        // Test case 9: Invalid range (start out of bounds).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(11)),
@@ -1637,7 +1637,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 10: Invalid range (end out of bounds, but start is valid)
+        // Test case 10: Invalid range (end out of bounds, but start is valid).
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(8)),
@@ -1648,7 +1648,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 10.1: Valid range, end is last index
+        // Test case 10.1: Valid range, end is last index.
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(8)),
@@ -1659,7 +1659,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 11: Single character range
+        // Test case 11: Single character range.
         {
             let opt = ASTextConvertOptions {
                 start: Some(ColIndex::new(6)),
@@ -1670,7 +1670,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 12: Unicode characters
+        // Test case 12: Unicode characters.
         {
             let unicode_text = ASText {
                 text: "你好世界".into(), // "Hello World" in Chinese
@@ -1685,7 +1685,7 @@ mod tests {
             assert_eq!(clipped_text.styles, unicode_text.styles);
         }
 
-        // Test case 13: ColWidth(0)
+        // Test case 13: ColWidth(0).
         {
             let col_width_zero = width(0);
             let clipped_text = styled_text.clip(col_width_zero);
@@ -1693,7 +1693,7 @@ mod tests {
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
-        // Test case 14: ColWidth(1)
+        // Test case 14: ColWidth(1).
         {
             let col_width_one = width(1);
             let clipped_text = styled_text.clip(col_width_one);
@@ -1711,7 +1711,7 @@ mod bench_tests {
 
     use super::*;
 
-    // Benchmark data setup
+    // Benchmark data setup.
     fn simple_text() -> ASText {
         ASText {
             text: "Hello, World!".into(),
@@ -1781,7 +1781,7 @@ mod bench_tests {
         }
     }
 
-    // Display benchmarks
+    // Display benchmarks.
     #[bench]
     fn bench_display_simple_text(b: &mut Bencher) {
         let ast = simple_text();
@@ -1824,7 +1824,7 @@ mod bench_tests {
         b.iter(|| format!("{ast}"));
     }
 
-    // Benchmark creating styled text and displaying
+    // Benchmark creating styled text and displaying.
     #[bench]
     fn bench_create_and_display_fg_red(b: &mut Bencher) {
         b.iter(|| {
@@ -1843,7 +1843,7 @@ mod bench_tests {
         });
     }
 
-    // Benchmark multiple ASText in sequence (simulating real usage)
+    // Benchmark multiple ASText in sequence (simulating real usage).
     #[bench]
     fn bench_display_multiple_ast_sequence(b: &mut Bencher) {
         let texts = vec![

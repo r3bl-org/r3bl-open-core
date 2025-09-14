@@ -198,7 +198,7 @@ mod impl_display {
                 write!(f, "]")?;
             }
 
-            // Memory info is shown per-buffer in the EditorBuffer's Display impl
+            // Memory info is shown per-buffer in the EditorBuffer's Display impl.
 
             write!(f, "]")?;
 

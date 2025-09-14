@@ -44,7 +44,7 @@ async fn run_cargo_clean() -> miette::Result<()> {
         .args(["clean", "-q"])
         .spawn_read_only(PtyConfigOption::NoCaptureOutput)?;
 
-    // Wait for completion
+    // Wait for completion.
     tokio::select! {
         result = &mut session.pinned_boxed_session_completion_handle => {
             let status = result.into_diagnostic()??;
@@ -71,23 +71,23 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
     println!("{YELLOW}Starting Cargo build #{run_number} with OSC capture...");
     println!("{YELLOW}========================================{RESET}");
 
-    // Configure cargo build command with OSC sequences enabled
+    // Configure cargo build command with OSC sequences enabled.
     let mut session = PtyCommandBuilder::new("cargo")
         .args(["build"])
         .enable_osc_sequences()
         .spawn_read_only(PtyConfigOption::Osc)?;
 
-    // Track if we saw any progress updates
+    // Track if we saw any progress updates.
     let mut saw_progress = false;
 
-    // Handle events as they arrive until cargo completes
+    // Handle events as they arrive until cargo completes.
     loop {
         tokio::select! {
-            // Handle cargo build completion
+            // Handle cargo build completion.
             result = &mut session.pinned_boxed_session_completion_handle => {
                 let status = result.into_diagnostic()??;
 
-                // Print summary
+                // Print summary.
                 if saw_progress {
                     println!(
                         "{GREEN}✅ Build #{run_number} completed with progress tracking (status: {status:?}){RESET}"
@@ -99,7 +99,7 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                 }
                 break;
             }
-            // Handle incoming PTY events
+            // Handle incoming PTY events.
             Some(event) = session.output_evt_ch_rx_half.recv() => {
                 match event {
                     PtyReadOnlyOutputEvent::Osc(osc_event) => {
@@ -126,9 +126,9 @@ async fn run_build_with_osc_capture(run_number: u32) -> miette::Result<()> {
                         }
                     }
                     PtyReadOnlyOutputEvent::Exit(_) | PtyReadOnlyOutputEvent::Output(_) => {
-                        // Exit event will be handled by the handle completion above
-                        // Output events are not captured in this config
-                        // Unexpected exit and write errors should not occur in read-only mode
+                        // Exit event will be handled by the handle completion above.
+                        // Output events are not captured in this config. Unexpected exit
+                        // and write errors should not occur in read-only mode.
                     }
                 }
             }
@@ -149,15 +149,15 @@ async fn main() -> miette::Result<()> {
         {YELLOW}╚═══════════════════════════════════════════════════════════════╝{RESET}"
     );
 
-    // Step 1: Run cargo clean to ensure the following build generates OSC sequences
+    // Step 1: Run cargo clean to ensure the following build generates OSC sequences.
     println!("\n{YELLOW}▶ Step 1: Running cargo clean to ensure fresh build{RESET}");
     run_cargo_clean().await?;
 
-    // Step 2: Run cargo build - should generate OSC sequences
+    // Step 2: Run cargo build - should generate OSC sequences.
     println!("\n{YELLOW}▶ Step 2: First cargo build (expect progress updates){RESET}");
     run_build_with_osc_capture(1).await?;
 
-    // Step 3: Run cargo build again - should NOT generate OSC sequences (cached)
+    // Step 3: Run cargo build again - should NOT generate OSC sequences (cached).
     println!(
         "\n{YELLOW}▶ Step 3: Second cargo build (expect no progress - cached){RESET}"
     );

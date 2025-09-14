@@ -203,7 +203,7 @@ pub async fn show_exit_message(context: ExitContext) {
 }
 
 // XMARK: how to use long running potentially blocking synchronous code in Tokio, with
-// spinner
+// spinner.
 
 /// Extract meaningful progress information from rustup output.
 ///
@@ -223,10 +223,10 @@ fn extract_rustup_progress(output: &str) -> String {
 
     if let Some(last_line) = lines.last() {
         let trimmed = last_line.trim();
-        // Remove any common prefixes that are not informative
+        // Remove any common prefixes that are not informative.
         let cleaned = trimmed.strip_prefix("info: ").unwrap_or(trimmed);
 
-        // Truncate if too long for spinner display
+        // Truncate if too long for spinner display.
         if cleaned.len() > 50 {
             format!("{}...", &cleaned[..47])
         } else {
@@ -243,7 +243,7 @@ fn extract_rustup_progress(output: &str) -> String {
 /// can be used to show progress. This function captures that output and updates the
 /// spinner message with meaningful progress information.
 async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Error> {
-    // Use Output mode to capture rustup's output for progress display
+    // Use Output mode to capture rustup's output for progress display.
     let mut session = PtyCommandBuilder::new("rustup")
         .args(["toolchain", "install", "nightly", "--force"])
         .spawn_read_only(PtyConfigOption::Output)
@@ -252,13 +252,13 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
     loop {
         tokio::select! {
             _ = signal::ctrl_c() => {
-                // User pressed Ctrl+C
+                // User pressed Ctrl+C.
                 return Err(Error::new(ErrorKind::Interrupted, "Update cancelled by user"));
             }
             event = session.output_evt_ch_rx_half.recv() => {
                 match event {
                     Some(PtyReadOnlyOutputEvent::Output(data)) => {
-                        // Convert bytes to string and extract meaningful info
+                        // Convert bytes to string and extract meaningful info.
                         if let Ok(text) = std::str::from_utf8(&data) {
                             let progress_info = extract_rustup_progress(text);
                             if let Some(spinner) = spinner
@@ -271,7 +271,7 @@ async fn run_rustup_update(spinner: Option<&Spinner>) -> Result<ExitStatus, Erro
                         return Ok(pty_to_std_exit_status(status));
                     }
                     None => {
-                        // Channel closed unexpectedly
+                        // Channel closed unexpectedly.
                         return Err(Error::other("PTY session ended unexpectedly"));
                     }
                     _ => {} // Ignore other events
@@ -285,7 +285,7 @@ async fn run_cargo_install_with_progress(
     crate_name: &str,
     spinner: Option<&Spinner>,
 ) -> Result<ExitStatus, Error> {
-    // Use Osc mode to capture OSC progress sequences from cargo
+    // Use Osc mode to capture OSC progress sequences from cargo.
     let mut session = PtyCommandBuilder::new("cargo")
         .args(["+nightly", "install", crate_name])
         .spawn_read_only(PtyConfigOption::Osc)
@@ -294,7 +294,7 @@ async fn run_cargo_install_with_progress(
     loop {
         tokio::select! {
             _ = signal::ctrl_c() => {
-                // User pressed Ctrl+C
+                // User pressed Ctrl+C.
                 return Err(Error::new(ErrorKind::Interrupted,
                     "Installation cancelled by user"));
             }
@@ -307,7 +307,7 @@ async fn run_cargo_install_with_progress(
                         return Ok(pty_to_std_exit_status(status));
                     }
                     None => {
-                        // Channel closed unexpectedly
+                        // Channel closed unexpectedly.
                         return Err(Error::other("PTY session ended unexpectedly"));
                     }
                     _ => {} // Ignore Output events in Osc mode
@@ -338,7 +338,7 @@ fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>
             }
             OscEvent::Hyperlink { .. } | OscEvent::SetTitleAndTab(_) => {
                 // Hyperlinks and title/tab events aren't relevant for cargo install
-                // progress, so we ignore them here
+                // progress, so we ignore them here.
             }
         }
     }
@@ -347,7 +347,7 @@ fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>
 async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     let crate_name = get_self_crate_name();
 
-    // Setup spinner with initial message for rustup update
+    // Setup spinner with initial message for rustup update.
     let mut maybe_spinner = if let Ok(Some(spinner)) = Spinner::try_start(
         "Updating Rust toolchain...", // Initial message for rustup
         ui_str::upgrade_install::stop_msg(),
@@ -363,10 +363,10 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
         None
     };
 
-    // First: Run rustup update (spinner shows with output-based progress)
+    // First: Run rustup update (spinner shows with output-based progress).
     let rustup_result = run_rustup_update(maybe_spinner.as_ref()).await;
     if let Err(e) = rustup_result {
-        // Handle error, stop spinner
+        // Handle error, stop spinner.
         if let Some(mut spinner) = maybe_spinner.take() {
             spinner.request_shutdown();
             spinner.await_shutdown().await;
@@ -375,22 +375,22 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
         return;
     }
 
-    // Update spinner message for cargo install
+    // Update spinner message for cargo install.
     if let Some(ref spinner) = maybe_spinner {
         spinner.update_message(format!("Installing {crate_name}..."));
     }
 
-    // Second: Run cargo install with OSC progress tracking
+    // Second: Run cargo install with OSC progress tracking.
     let install_result =
         run_cargo_install_with_progress(crate_name, maybe_spinner.as_ref()).await;
 
-    // Stop spinner
+    // Stop spinner.
     if let Some(mut spinner) = maybe_spinner.take() {
         spinner.request_shutdown();
         spinner.await_shutdown().await;
     }
 
-    // Report result
+    // Report result.
     report_upgrade_install_result(install_result);
 }
 

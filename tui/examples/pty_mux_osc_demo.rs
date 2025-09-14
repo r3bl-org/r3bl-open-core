@@ -11,12 +11,12 @@ use r3bl_tui::{Size,
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
-    // Initialize tracing for debugging
+    // Initialize tracing for debugging.
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    // Get terminal size
+    // Get terminal size.
     let (cols, rows) = crossterm::terminal::size()
         .map_err(|e| miette::miette!("Failed to get terminal size: {}", e))?;
     let terminal_size = Size {
@@ -24,7 +24,7 @@ async fn main() -> miette::Result<()> {
         row_height: height(rows),
     };
 
-    // Create processes - one of them will emit OSC sequences
+    // Create processes - one of them will emit OSC sequences.
     let processes = vec![
         Process::new("bash", "bash", vec![], terminal_size),
         Process::new(
@@ -52,7 +52,7 @@ async fn main() -> miette::Result<()> {
         Process::new("htop", "htop", vec![], terminal_size),
     ];
 
-    // Create and run the multiplexer
+    // Create and run the multiplexer.
     let mux = PTYMux::builder().processes(processes).build()?;
 
     println!("PTY Mux OSC Demo");

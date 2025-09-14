@@ -65,8 +65,8 @@ use crate::md_parser_types::constants::{HEADING, LIST_SPACE_DISPLAY,
 /// performance in render loops and parsers.
 static SPACE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
     let mut cache = HashMap::new();
-    // Pre-populate cache for common space lengths (0 to 64 spaces)
-    // This covers most practical use cases for indentation, padding, and formatting
+    // Pre-populate cache for common space lengths (0 to 64 spaces).
+    // This covers most practical use cases for indentation, padding, and formatting.
     for i in 0..=64 {
         cache.insert(i, SPACE.repeat(i));
     }
@@ -78,7 +78,7 @@ static SPACE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 /// This is commonly used for TUI borders, separators, and decorations.
 static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
     let mut cache = HashMap::new();
-    // Pre-populate cache for common horizontal line lengths
+    // Pre-populate cache for common horizontal line lengths.
     for i in 0..=64 {
         cache.insert(i, LIST_SPACE_DISPLAY.repeat(i));
     }
@@ -140,8 +140,8 @@ pub static DYNAMIC_CACHE: LazyLock<Mutex<HashMap<(char, usize), String>>> =
 /// This is used for markdown heading formatting (e.g., "###" for H3).
 static HASH_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
     let mut cache = HashMap::new();
-    // Pre-populate cache for common heading levels (0 to 10)
-    // Markdown typically supports up to 6 levels, but we cache a bit more
+    // Pre-populate cache for common heading levels (0 to 10).
+    // Markdown typically supports up to 6 levels, but we cache a bit more.
     for i in 0..=10 {
         cache.insert(i, HEADING.repeat(i));
     }
@@ -161,7 +161,7 @@ fn get_cached_repeated_string(
     } else if count == 0 {
         Cow::Borrowed("")
     } else {
-        // Use dynamic cache for large counts
+        // Use dynamic cache for large counts.
         let mut cache = DYNAMIC_CACHE.lock().unwrap();
         let repeated_str = cache
             .entry((char_to_repeat, count))
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_cached_spaces() {
-        // Test various cached sizes
+        // Test various cached sizes.
         assert_eq!(get_spaces(0), "");
         assert_eq!(get_spaces(1), SPACE);
         assert_eq!(get_spaces(2), "  ");
@@ -267,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_large_space_count() {
-        // Test fallback for large counts
+        // Test fallback for large counts.
         let spaces100 = get_spaces(100);
         assert_eq!(spaces100.len(), 100);
         assert!(spaces100.chars().all(|c| c == SPACE_CHAR));
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn test_cache_consistency() {
-        // Verify that multiple calls return the same value
+        // Verify that multiple calls return the same value.
         let spaces1 = get_spaces(4);
         let spaces2 = get_spaces(4);
         assert_eq!(spaces1, spaces2);
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_cached_horiz_lines() {
-        // Test various cached sizes
+        // Test various cached sizes.
         assert_eq!(get_horiz_lines(0), "");
         assert_eq!(get_horiz_lines(1), LIST_SPACE_DISPLAY);
         assert_eq!(get_horiz_lines(2), "──");
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_large_horiz_line_count() {
-        // Test fallback for large counts
+        // Test fallback for large counts.
         let horiz_lines100 = get_horiz_lines(100);
         assert_eq!(horiz_lines100.chars().count(), 100);
         assert!(horiz_lines100.chars().all(|c| c == LIST_SPACE_DISPLAY_CHAR));
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_horiz_line_cache_consistency() {
-        // Verify that multiple calls return the same value
+        // Verify that multiple calls return the same value.
         let horiz_lines1 = get_horiz_lines(4);
         let horiz_lines2 = get_horiz_lines(4);
         assert_eq!(horiz_lines1, horiz_lines2);
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_cached_hashes() {
-        // Test various cached sizes
+        // Test various cached sizes.
         assert_eq!(get_hashes(0), "");
         assert_eq!(get_hashes(1), "#");
         assert_eq!(get_hashes(2), "##");
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_large_hash_count() {
-        // Test fallback for large counts
+        // Test fallback for large counts.
         let hashes15 = get_hashes(15);
         assert_eq!(hashes15.chars().count(), 15);
         assert!(hashes15.chars().all(|c| c == '#'));
@@ -341,7 +341,7 @@ mod tests {
 
     #[test]
     fn test_hash_cache_consistency() {
-        // Verify that multiple calls return the same value
+        // Verify that multiple calls return the same value.
         let hashes1 = get_hashes(3);
         let hashes2 = get_hashes(3);
         assert_eq!(hashes1, hashes2);
@@ -349,24 +349,24 @@ mod tests {
 
     #[test]
     fn test_dynamic_cache_persistence() {
-        // Test that dynamic cache actually caches values
+        // Test that dynamic cache actually caches values.
 
-        // First call to large count should populate dynamic cache
+        // First call to large count should populate dynamic cache.
         let spaces_100_first = get_spaces(100);
         let horiz_lines_100_first = get_horiz_lines(100);
         let hashes_20_first = get_hashes(20);
 
-        // Second call should return cached value
+        // Second call should return cached value.
         let spaces_100_second = get_spaces(100);
         let horiz_lines_100_second = get_horiz_lines(100);
         let hashes_20_second = get_hashes(20);
 
-        // Values should be equal
+        // Values should be equal.
         assert_eq!(spaces_100_first, spaces_100_second);
         assert_eq!(horiz_lines_100_first, horiz_lines_100_second);
         assert_eq!(hashes_20_first, hashes_20_second);
 
-        // Verify the cache contains these entries
+        // Verify the cache contains these entries.
         let cache = DYNAMIC_CACHE.lock().unwrap();
         assert!(cache.contains_key(&(SPACE_CHAR, 100)));
         assert!(cache.contains_key(&(LIST_SPACE_DISPLAY_CHAR, 100)));
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_dynamic_cache_different_counts() {
-        // Test that different counts are cached separately
+        // Test that different counts are cached separately.
         let spaces_70 = get_spaces(70);
         let spaces_80 = get_spaces(80);
         let spaces_90 = get_spaces(90);
@@ -384,7 +384,7 @@ mod tests {
         assert_eq!(spaces_80.len(), 80);
         assert_eq!(spaces_90.len(), 90);
 
-        // All should be in the dynamic cache
+        // All should be in the dynamic cache.
         let cache = DYNAMIC_CACHE.lock().unwrap();
         assert!(cache.contains_key(&(SPACE_CHAR, 70)));
         assert!(cache.contains_key(&(SPACE_CHAR, 80)));
@@ -395,11 +395,11 @@ mod tests {
     fn test_thread_safety() {
         use std::thread;
 
-        // Test concurrent access to dynamic cache
+        // Test concurrent access to dynamic cache.
         let handles: Vec<_> = (0..10)
             .map(|i| {
                 thread::spawn(move || {
-                    // Each thread accesses different large counts
+                    // Each thread accesses different large counts.
                     let base = 100 + i * 10;
                     let spaces = get_spaces(base);
                     let horiz_lines = get_horiz_lines(base);
@@ -412,12 +412,12 @@ mod tests {
             })
             .collect();
 
-        // Wait for all threads to complete
+        // Wait for all threads to complete.
         for handle in handles {
             handle.join().expect("Thread panicked");
         }
 
-        // Verify all entries are in the cache
+        // Verify all entries are in the cache.
         let cache = DYNAMIC_CACHE.lock().unwrap();
         for i in 0..10 {
             let base = 100 + i * 10;
@@ -429,31 +429,31 @@ mod tests {
 
     #[test]
     fn test_get_cached_repeated_string_directly() {
-        // Test the internal function directly
+        // Test the internal function directly.
 
-        // Create a static test cache
+        // Create a static test cache.
         static TEST_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
             let mut cache = HashMap::new();
             cache.insert(3, "xxx".to_string());
             cache
         });
 
-        // Test static cache hit
+        // Test static cache hit.
         let result = get_cached_repeated_string(3, &TEST_CACHE, 'x', "x");
         assert_eq!(result, "xxx");
         assert!(matches!(result, Cow::Borrowed(_)));
 
-        // Test zero count
+        // Test zero count.
         let result = get_cached_repeated_string(0, &TEST_CACHE, 'x', "x");
         assert_eq!(result, "");
         assert!(matches!(result, Cow::Borrowed(_)));
 
-        // Test dynamic cache fallback
+        // Test dynamic cache fallback.
         let result = get_cached_repeated_string(5, &TEST_CACHE, 'y', "y");
         assert_eq!(result, "yyyyy");
         assert!(matches!(result, Cow::Owned(_)));
 
-        // Verify it's in the dynamic cache
+        // Verify it's in the dynamic cache.
         let cache = DYNAMIC_CACHE.lock().unwrap();
         assert!(cache.contains_key(&('y', 5)));
     }

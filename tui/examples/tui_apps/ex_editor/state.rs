@@ -122,7 +122,7 @@ mod impl_display {
         /// reporting, and it is expected to be fast, since it is called in a hot loop,
         /// on every render.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Build compact telemetry format
+            // Build compact telemetry format.
             write!(
                 f,
                 "State[editors={}, dialogs={}]",

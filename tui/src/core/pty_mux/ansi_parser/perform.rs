@@ -191,7 +191,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// ## Tab Stop Example
     /// ```text
-    /// Tab stops at columns: 0, 8, 16, 24, 32...
+    /// Tab stops at columns: 0, 8, 16, 24, 32
     /// Cursor at col 5 + TAB → moves to col 8
     /// Cursor at col 12 + TAB → moves to col 16
     /// ```
@@ -204,7 +204,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                     self.ofs_buf.my_pos.col_index = current_col - 1;
                 }
             }
-            // Tab - move to next tab stop boundary
+            // Tab - move to next tab stop boundary.
             esc_codes::TAB => {
                 let current_col = self.ofs_buf.my_pos.col_index;
                 let current_tab_zone = current_col.as_usize() / esc_codes::TAB_STOP_WIDTH;
@@ -212,7 +212,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 let next_tab_col = next_tab_zone * esc_codes::TAB_STOP_WIDTH;
                 let max_col = self.ofs_buf.window_size.col_width;
 
-                // Clamp to max valid column index if it would overflow
+                // Clamp to max valid column index if it would overflow.
                 self.ofs_buf.my_pos.col_index =
                     col(min(next_tab_col, max_col.convert_to_col_index().as_usize()));
             }
@@ -302,7 +302,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ) {
         #[allow(clippy::match_same_arms)]
         match dispatch_char {
-            // Cursor movement operations
+            // Cursor movement operations.
             csi_codes::CUU_CURSOR_UP => cursor_ops::cursor_up(self, params),
             csi_codes::CUD_CURSOR_DOWN => cursor_ops::cursor_down(self, params),
             csi_codes::CUF_CURSOR_FORWARD => cursor_ops::cursor_forward(self, params),
@@ -318,33 +318,33 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             csi_codes::SCP_SAVE_CURSOR => cursor_ops::save_cursor_position(self),
             csi_codes::RCP_RESTORE_CURSOR => cursor_ops::restore_cursor_position(self),
 
-            // Scrolling operations
+            // Scrolling operations.
             csi_codes::SU_SCROLL_UP => scroll_ops::scroll_up(self, params),
             csi_codes::SD_SCROLL_DOWN => scroll_ops::scroll_down(self, params),
 
-            // Margin operations
+            // Margin operations.
             csi_codes::DECSTBM_SET_MARGINS => margin_ops::set_margins(self, params),
 
-            // Device status operations
+            // Device status operations.
             csi_codes::DSR_DEVICE_STATUS => dsr_ops::status_report(self, params),
 
             // Mode operations
             csi_codes::SM_SET_MODE => mode_ops::set_mode(self, params, intermediates),
             csi_codes::RM_RESET_MODE => mode_ops::reset_mode(self, params, intermediates),
 
-            // Graphics operations
+            // Graphics operations.
             csi_codes::SGR_SET_GRAPHICS => sgr_ops::set_graphics_rendition(self, params),
 
             // Line operations
             csi_codes::IL_INSERT_LINE => line_ops::insert_lines(self, params),
             csi_codes::DL_DELETE_LINE => line_ops::delete_lines(self, params),
 
-            // Character operations
+            // Character operations.
             csi_codes::DCH_DELETE_CHAR => char_ops::delete_chars(self, params),
             csi_codes::ICH_INSERT_CHAR => char_ops::insert_chars(self, params),
             csi_codes::ECH_ERASE_CHAR => char_ops::erase_chars(self, params),
 
-            // Additional cursor positioning
+            // Additional cursor positioning.
             csi_codes::VPA_VERTICAL_POSITION => {
                 cursor_ops::vertical_position_absolute(self, params);
             }
@@ -358,7 +358,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 );
             }
 
-            // Other unimplemented CSI sequences
+            // Other unimplemented CSI sequences.
             'I' => {
                 // CHT (Cursor Horizontal Tab) - Move cursor forward N tab stops
                 // Not needed: Tab handling is done via execute() with TAB character
@@ -459,10 +459,10 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 tracing::warn!("CSI z: DEC Rectangular Erase not implemented");
             }
 
-            // Any other unrecognized sequences
+            // Any other unrecognized sequences.
             _ => {
-                // Unknown CSI sequence - safely ignore
-                // Multiplexer passes through raw data, parent terminal handles unknowns
+                // Unknown CSI sequence - safely ignore.
+                // Multiplexer passes through raw data, parent terminal handles unknowns.
                 tracing::warn!("CSI {}: Unknown CSI sequence", dispatch_char);
             }
         }
@@ -535,7 +535,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // OSC 8: Hyperlink (format: OSC 8 ; params ; URI)
                 osc_codes::OSC_CODE_HYPERLINK if params.len() > 2 => {
                     if let Ok(uri) = std::str::from_utf8(params[2]) {
-                        // For now, just store the URI - display text would come from
+                        // For now, just store the URI - display text would come from.
                         // print chars
                         self.ofs_buf.ansi_parser_support.pending_osc_events.push(
                             OscEvent::Hyperlink {
@@ -547,9 +547,9 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                     }
                 }
                 // OSC 9;4: Progress sequences (already handled by OscBuffer in some
-                // contexts) We could handle them here too if needed
+                // contexts) We could handle them here too if needed.
                 _ => {
-                    // Ignore other OSC sequences for now
+                    // Ignore other OSC sequences for now.
                 }
             }
         }
@@ -658,16 +658,16 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     fn esc_dispatch(&mut self, intermediates: &[u8], _ignore: bool, byte: u8) {
         match byte {
             esc_codes::DECSC_SAVE_CURSOR => {
-                // DECSC - Save current cursor position
+                // DECSC - Save current cursor position.
                 // The cursor position is saved to persistent buffer state so it
-                // survives across multiple AnsiToOfsBufPerformer instances
+                // survives across multiple AnsiToOfsBufPerformer instances.
                 self.ofs_buf
                     .ansi_parser_support
                     .cursor_pos_for_esc_save_and_restore = Some(self.ofs_buf.my_pos);
             }
             esc_codes::DECRC_RESTORE_CURSOR => {
-                // DECRC - Restore saved cursor position
-                // Retrieves the previously saved position from buffer's persistent state
+                // DECRC - Restore saved cursor position.
+                // Retrieves the previously saved position from buffer's persistent state.
                 if let Some(saved_pos) = self
                     .ofs_buf
                     .ansi_parser_support
@@ -685,11 +685,11 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 scroll_ops::reverse_index_up(self);
             }
             esc_codes::RIS_RESET_TERMINAL => {
-                // RIS - Reset to Initial State
+                // RIS - Reset to Initial State.
                 terminal_ops::reset_terminal(self);
             }
             _ if intermediates == esc_codes::G0_CHARSET_INTERMEDIATE => {
-                // Character set selection G0
+                // Character set selection G0.
                 match byte {
                     esc_codes::CHARSET_ASCII => {
                         // Select ASCII character set (normal mode)
@@ -697,8 +697,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                             CharacterSet::Ascii;
                     }
                     esc_codes::CHARSET_DEC_GRAPHICS => {
-                        // Select DEC Special Graphics character set
-                        // This enables box-drawing characters
+                        // Select DEC Special Graphics character set.
+                        // This enables box-drawing characters.
                         self.ofs_buf.ansi_parser_support.character_set =
                             CharacterSet::DECGraphics;
                     }
@@ -732,7 +732,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// These are not needed for terminal multiplexing.
     fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _c: char) {
-        // Ignore DCS sequences
+        // Ignore DCS sequences.
     }
 
     /// Handle DCS data by continuing to receive bytes for an active DCS sequence started

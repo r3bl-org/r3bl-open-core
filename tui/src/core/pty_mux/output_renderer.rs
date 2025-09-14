@@ -70,16 +70,16 @@ impl OutputRenderer {
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
     ) -> miette::Result<()> {
-        // Get the active process's buffer
+        // Get the active process's buffer.
         let active_buffer = process_manager.get_active_buffer();
 
         // Clone the buffer for compositing (we don't modify the original)
         let mut composite_buffer = active_buffer.clone();
 
-        // Composite status bar into the last row
+        // Composite status bar into the last row.
         self.composite_status_bar_into_buffer(&mut composite_buffer, process_manager);
 
-        // Paint the composite buffer to terminal
+        // Paint the composite buffer to terminal.
         self.paint_buffer(&composite_buffer, output_device);
 
         Ok(())
@@ -96,12 +96,12 @@ impl OutputRenderer {
         let status_text = self.generate_status_text(process_manager);
         let last_row_idx = self.terminal_size.row_height.as_usize().saturating_sub(1);
 
-        // Clear status bar row
+        // Clear status bar row.
         for col_idx in 0..self.terminal_size.col_width.as_usize() {
             ofs_buf[last_row_idx][col_idx] = PixelChar::Spacer;
         }
 
-        // Write status text with appropriate style
+        // Write status text with appropriate style.
         let status_style = TuiStyle {
             attribs: tui_style_attribs(Bold),
             color_fg: Some(TuiColor::Basic(ANSIBasicColor::White)),
@@ -150,7 +150,7 @@ impl OutputRenderer {
                 format!(" {}:{}{} ", i + 1, status_indicator, process.name)
             };
 
-            // Check if we have space for this tab
+            // Check if we have space for this tab.
             let tab_width = tab_text.chars().count();
             let new_width = current_width + tab_width;
             if self
@@ -165,11 +165,11 @@ impl OutputRenderer {
             current_width += tab_width;
         }
 
-        // Show dynamic keyboard shortcuts based on process count
+        // Show dynamic keyboard shortcuts based on process count.
         let process_count = process_manager.processes().len();
         let shortcuts = Self::generate_shortcuts_text(process_count);
 
-        // Check if we have space for shortcuts
+        // Check if we have space for shortcuts.
         let shortcuts_width = shortcuts.chars().count();
         let total_width = current_width + shortcuts_width;
         if self
@@ -187,7 +187,7 @@ impl OutputRenderer {
     /// Generate keyboard shortcuts text based on the number of processes.
     fn generate_shortcuts_text(process_count: usize) -> String {
         if process_count <= 4 {
-            // For 1-4 processes, show explicit function keys
+            // For 1-4 processes, show explicit function keys.
             match process_count {
                 1 => "  F1: Switch | Ctrl+Q: Quit".to_string(),
                 2 => "  F1/F2: Switch | Ctrl+Q: Quit".to_string(),
@@ -196,7 +196,7 @@ impl OutputRenderer {
                 _ => "  Ctrl+Q: Quit".to_string(),
             }
         } else {
-            // For 5+ processes, show range notation
+            // For 5+ processes, show range notation.
             format!(
                 "  F1-F{}: Switch | Ctrl+Q: Quit",
                 std::cmp::min(process_count, 9)
@@ -214,7 +214,7 @@ impl OutputRenderer {
         output_device: &OutputDevice,
         process_manager: &ProcessManager,
     ) -> miette::Result<()> {
-        // With per-process buffers, just render from the active buffer
+        // With per-process buffers, just render from the active buffer.
         self.render_from_active_buffer(output_device, process_manager)
     }
 

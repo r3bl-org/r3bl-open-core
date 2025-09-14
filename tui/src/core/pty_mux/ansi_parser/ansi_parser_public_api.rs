@@ -202,7 +202,7 @@ impl OffscreenBuffer {
         let mut performer = AnsiToOfsBufPerformer::new(self);
         performer.apply_ansi_bytes(bytes.as_ref());
 
-        // Use std::mem::take to move events out and leave empty vectors
+        // Use std::mem::take to move events out and leave empty vectors.
         let osc_events =
             take(&mut performer.ofs_buf.ansi_parser_support.pending_osc_events);
         let pending_dsr_requests =
@@ -380,7 +380,7 @@ mod tests {
             _ => panic!("Expected SetTitleAndTab event"),
         }
 
-        // Second call with another OSC sequence
+        // Second call with another OSC sequence.
         let osc_title2 = "\x1b]0;Second Title\x07".to_string();
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&osc_title2);
 
@@ -401,7 +401,7 @@ mod tests {
             _ => panic!("Expected SetTitleAndTab event"),
         }
 
-        // Third call with no OSC sequences
+        // Third call with no OSC sequences.
         let plain_text = "Hello";
         let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
 
@@ -428,7 +428,7 @@ mod tests {
             crate::DsrRequestFromPtyEvent::TerminalStatus
         );
 
-        // Second call with cursor position request
+        // Second call with cursor position request.
         let dsr_cursor = "\x1b[6n".to_string();
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes(&dsr_cursor);
 
@@ -457,7 +457,7 @@ mod tests {
             }
         }
 
-        // Third call with no DSR requests
+        // Third call with no DSR requests.
         let plain_text = "Test";
         let (osc_events3, dsr_responses3) = ofs_buf.apply_ansi_bytes(plain_text);
 
@@ -473,7 +473,7 @@ mod tests {
     fn test_mixed_osc_and_dsr_events() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-        // Send a mix of OSC and DSR sequences in one call
+        // Send a mix of OSC and DSR sequences in one call.
         let mixed_sequence = format!(
             "{}{}{}",
             "\x1b]0;Mixed Title\x07", // OSC 0: Set title
@@ -483,7 +483,7 @@ mod tests {
 
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&mixed_sequence);
 
-        // Should get exactly one OSC event
+        // Should get exactly one OSC event.
         assert_eq!(osc_events.len(), 1, "should get one OSC event");
         match &osc_events[0] {
             crate::OscEvent::SetTitleAndTab(title) => {
@@ -492,7 +492,7 @@ mod tests {
             _ => panic!("Expected SetTitleAndTab event"),
         }
 
-        // Should get exactly two DSR responses
+        // Should get exactly two DSR responses.
         assert_eq!(dsr_responses.len(), 2, "should get two DSR responses");
         assert_eq!(
             dsr_responses[0],
@@ -508,7 +508,7 @@ mod tests {
             }
         }
 
-        // Verify both are drained on next call
+        // Verify both are drained on next call.
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("text");
         assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");
@@ -518,7 +518,7 @@ mod tests {
     fn test_multiple_osc_events_in_one_call() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-        // Send multiple OSC sequences in one call
+        // Send multiple OSC sequences in one call.
         let multi_osc = format!(
             "{}{}{}",
             "\x1b]0;Title One\x07", // OSC 0
@@ -531,7 +531,7 @@ mod tests {
         assert_eq!(osc_events.len(), 3, "should get three OSC events");
         assert_eq!(dsr_responses.len(), 0, "no DSR responses expected");
 
-        // All should be SetTitleAndTab events
+        // All should be SetTitleAndTab events.
         for event in &osc_events {
             match event {
                 crate::OscEvent::SetTitleAndTab(_) => {}
@@ -539,7 +539,7 @@ mod tests {
             }
         }
 
-        // Next call should have empty events
+        // Next call should have empty events.
         let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("normal text");
         assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
         assert_eq!(dsr_responses2.len(), 0, "DSR responses should be drained");

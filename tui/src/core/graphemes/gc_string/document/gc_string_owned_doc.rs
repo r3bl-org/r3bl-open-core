@@ -99,19 +99,19 @@ impl GraphemeString for GCStringOwnedRef<'_> {
     }
     fn get_seg_at_end(&self) -> Option<crate::SegContent<'_>> { self.0.get_seg_at_end() }
     fn clip(&self, start_col: ColIndex, width: crate::ColWidth) -> Self::StringSlice<'_> {
-        // Delegate to the GraphemeString implementation which returns CowInlineString
+        // Delegate to the GraphemeString implementation which returns CowInlineString.
         <GCStringOwned as GraphemeString>::clip(self.0, start_col, width)
     }
     fn trunc_end_to_fit(&self, width: crate::ColWidth) -> Self::StringSlice<'_> {
-        // Delegate to the GraphemeString implementation which returns CowInlineString
+        // Delegate to the GraphemeString implementation which returns CowInlineString.
         <GCStringOwned as GraphemeString>::trunc_end_to_fit(self.0, width)
     }
     fn trunc_end_by(&self, width: crate::ColWidth) -> Self::StringSlice<'_> {
-        // Delegate to the GraphemeString implementation which returns CowInlineString
+        // Delegate to the GraphemeString implementation which returns CowInlineString.
         <GCStringOwned as GraphemeString>::trunc_end_by(self.0, width)
     }
     fn trunc_start_by(&self, width: crate::ColWidth) -> Self::StringSlice<'_> {
-        // Delegate to the GraphemeString implementation which returns CowInlineString
+        // Delegate to the GraphemeString implementation which returns CowInlineString.
         <GCStringOwned as GraphemeString>::trunc_start_by(self.0, width)
     }
     fn segments_iter(&self) -> Self::SegmentIterator<'_> { self.0.segments_iter() }
@@ -188,7 +188,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
     fn remove_line(&mut self, row: RowIndex) -> bool {
         if row.as_usize() < self.lines.len() {
             self.lines.remove(row.as_usize());
-            // Ensure we always have at least one line
+            // Ensure we always have at least one line.
             if self.lines.is_empty() {
                 self.lines.push(GCStringOwned::new(""));
             }
@@ -220,7 +220,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             .get_mut(row.as_usize())
             .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
 
-        // Convert segment index to column index
+        // Convert segment index to column index.
         let col_index = if seg_index.as_usize() == 0 {
             col(0)
         } else if let Some(seg) = line.get_seg(seg_index) {
@@ -249,7 +249,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             .get_mut(row.as_usize())
             .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
 
-        // Convert segment indices to column indices
+        // Convert segment indices to column indices.
         let start_col = if let Some(seg) = line.get_seg(start_seg) {
             seg.start_display_col_index
         } else {
@@ -284,7 +284,7 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             let next_line = self.lines.remove(row.as_usize() + 1);
             let current_line = &mut self.lines[row.as_usize()];
 
-            // Append next line to current line
+            // Append next line to current line.
             let end_col = col(current_line.display_width().as_usize());
             if let Some(merged) = current_line.insert_text(end_col, next_line.as_str()) {
                 *current_line = merged;
@@ -305,12 +305,12 @@ impl GraphemeDocMut for GCStringOwnedDoc {
             .get_mut(row.as_usize())
             .ok_or_else(|| miette!("Invalid row index: {:?}", row))?;
 
-        // Use truncate to get the left part
+        // Use truncate to get the left part.
         if let Some(left_part) = line.truncate(col) {
-            // Get the content after the split point for the new line
+            // Get the content after the split point for the new line.
             let original_content = line.as_str().to_string();
             let right_content = if col.as_usize() < original_content.len() {
-                // Find the byte position for the column
+                // Find the byte position for the column.
                 let mut byte_pos = 0;
                 let mut col_count = 0;
                 for seg in line.segments_iter() {
@@ -325,15 +325,15 @@ impl GraphemeDocMut for GCStringOwnedDoc {
                 ""
             };
 
-            // Update current line to be the left part
+            // Update current line to be the left part.
             *line = left_part;
 
-            // Insert the right part as a new line
+            // Insert the right part as a new line.
             self.lines
                 .insert(row.as_usize() + 1, GCStringOwned::new(right_content));
             Ok(())
         } else {
-            // If truncate fails, just insert an empty line after
+            // If truncate fails, just insert an empty line after.
             self.lines
                 .insert(row.as_usize() + 1, GCStringOwned::new(""));
             Ok(())

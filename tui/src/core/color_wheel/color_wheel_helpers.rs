@@ -41,15 +41,15 @@ fn clamp(value: f64) -> u8 {
 /// The seed value determines the starting point in the color cycle.
 #[must_use]
 pub fn get_color_tuple(c: &ColorWheelControl) -> (u8, u8, u8) {
-    // Calculate the angle for the sine functions
+    // Calculate the angle for the sine functions.
     let i = *c.frequency * *c.seed / *c.spread;
 
-    // Calculate RGB components using sine waves offset by 120° (2π/3) each
-    // This creates a smooth transition through the color spectrum
+    // Calculate RGB components using sine waves offset by 120° (2π/3) each.
+    // This creates a smooth transition through the color spectrum.
     let red = i.sin() * 127.00 + 128.00;
     let green = (i + (std::f64::consts::PI * 2.00 / 3.00)).sin() * 127.00 + 128.00;
     let blue = (i + (std::f64::consts::PI * 4.00 / 3.00)).sin() * 127.00 + 128.00;
 
-    // Clamp values to valid RGB range (0-255)
+    // Clamp values to valid RGB range (0-255).
     (clamp(red), clamp(green), clamp(blue))
 }

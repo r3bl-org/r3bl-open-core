@@ -321,7 +321,7 @@ pub mod content_display_width {
             let caret_scr_adj = self.get_caret_raw() + self.get_scr_ofs();
             let row_index = caret_scr_adj.row_index;
 
-            // Use the concrete method directly for display width
+            // Use the concrete method directly for display width.
             if let Some(display_width) =
                 self.get_lines().get_line_display_width(row_index)
             {
@@ -337,7 +337,7 @@ pub mod content_display_width {
             &self,
             row_index: RowIndex,
         ) -> ColWidth {
-            // Use the concrete method directly for display width
+            // Use the concrete method directly for display width.
             if let Some(display_width) =
                 self.get_lines().get_line_display_width(row_index)
             {
@@ -367,7 +367,7 @@ pub mod content_near_caret {
             }
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
 
-            // Return the native GapBufferLine - let callers adapt if needed
+            // Return the native GapBufferLine - let callers adapt if needed.
             self.content.lines.get_line(row_index_scr_adj)
         }
 
@@ -380,7 +380,7 @@ pub mod content_near_caret {
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
 
             if let ContentPositionStatus::AtEnd = locate_col(self) {
-                // Use the efficient GapBufferLine approach directly
+                // Use the efficient GapBufferLine approach directly.
                 if let Some(line_with_info) =
                     self.content.lines.get_line(row_index_scr_adj)
                 {
@@ -454,7 +454,7 @@ pub mod content_near_caret {
                 return None;
             }
             let prev_row_index = row_index_scr_adj - row(1);
-            // Use the concrete method that delegates to get_line
+            // Use the concrete method that delegates to get_line.
             self.get_lines().get_line_content(prev_row_index)
         }
 
@@ -483,7 +483,7 @@ pub mod content_near_caret {
             }
             let caret_scr_adj_row_index = self.get_caret_scr_adj().row_index;
             let next_line_row_index = caret_scr_adj_row_index + 1;
-            // Use the concrete method that delegates to get_line
+            // Use the concrete method that delegates to get_line.
             self.get_lines().get_line_content(next_line_row_index)
         }
     }
@@ -520,7 +520,7 @@ pub mod access_and_mutate {
 
         #[must_use]
         pub fn line_at_row_index(&self, row_index: RowIndex) -> Option<&str> {
-            // Use the concrete method that delegates to get_line
+            // Use the concrete method that delegates to get_line.
             self.content.lines.get_line_content(row_index)
         }
 
@@ -867,11 +867,11 @@ mod test_memory_cache_invalidation {
     fn test_is_empty_and_len() {
         let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
 
-        // New buffer has one empty line, so it's not considered empty
+        // New buffer has one empty line, so it's not considered empty.
         assert!(!buffer.is_empty());
         assert_eq2!(buffer.len(), height(1));
 
-        // Add some content
+        // Add some content.
         buffer.init_with(vec!["line 1", "line 2", "line 3"]);
         assert!(!buffer.is_empty());
         assert_eq2!(buffer.len(), height(3));
@@ -884,13 +884,13 @@ mod test_memory_cache_invalidation {
 
     #[test]
     fn test_file_extension_functions() {
-        // Test with no extension
+        // Test with no extension.
         let buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         assert!(!buffer.has_file_extension());
         assert!(!buffer.is_file_extension_default());
         assert_eq2!(buffer.get_maybe_file_extension(), None);
 
-        // Test with default extension
+        // Test with default extension.
         let buffer: EditorBuffer =
             EditorBuffer::new_empty(Some(DEFAULT_SYN_HI_FILE_EXT), None);
         assert!(buffer.has_file_extension());
@@ -900,7 +900,7 @@ mod test_memory_cache_invalidation {
             Some(DEFAULT_SYN_HI_FILE_EXT)
         );
 
-        // Test with custom extension
+        // Test with custom extension.
         let buffer: EditorBuffer = EditorBuffer::new_empty(Some("rs"), None);
         assert!(buffer.has_file_extension());
         assert!(!buffer.is_file_extension_default());
@@ -914,7 +914,7 @@ mod test_memory_cache_invalidation {
         // Initially, cache should be empty (dirty)
         assert!(buffer.memory_size_calc_cache.get_cached().is_none());
 
-        // Populate the cache
+        // Populate the cache.
         buffer.upsert_memory_size_calc_cache();
         let initial_cache = buffer
             .memory_size_calc_cache
@@ -924,7 +924,7 @@ mod test_memory_cache_invalidation {
         assert!(initial_cache.size().is_some());
 
         // Note: invalidate_memory_size_calc_cache() actually invalidates AND recalculates
-        // So the cache will never be None after calling it
+        // So the cache will never be None after calling it.
         let size_before_invalidate = initial_cache.size().unwrap();
         buffer.invalidate_memory_size_calc_cache();
         let cache_after_invalidate = buffer
@@ -941,7 +941,7 @@ mod test_memory_cache_invalidation {
         let auto_populated = buffer.get_memory_size_calc_cached();
         assert!(auto_populated.size().is_some());
 
-        // Verify cache is now populated
+        // Verify cache is now populated.
         assert!(buffer.memory_size_calc_cache.get_cached().is_some());
     }
 
@@ -950,16 +950,16 @@ mod test_memory_cache_invalidation {
         let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
-        // Populate the cache
+        // Populate the cache.
         buffer.upsert_memory_size_calc_cache();
         assert!(buffer.memory_size_calc_cache.get_cached().is_some());
 
-        // get_mut should invalidate the cache when dropped
+        // get_mut should invalidate the cache when dropped.
         {
             let _buffer_mut = buffer.get_mut(engine.viewport());
         }
 
-        // Cache should be invalidated
+        // Cache should be invalidated.
         assert!(buffer.memory_size_calc_cache.get_cached().is_none());
     }
 
@@ -968,16 +968,16 @@ mod test_memory_cache_invalidation {
         let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
-        // Populate the cache
+        // Populate the cache.
         buffer.upsert_memory_size_calc_cache();
         assert!(buffer.get_memory_size_calc_cached().size().is_some());
 
-        // get_mut_no_drop should NOT invalidate the cache
+        // get_mut_no_drop should NOT invalidate the cache.
         {
             let _buffer_mut_no_drop = buffer.get_mut_no_drop(engine.viewport());
         }
 
-        // Cache should still be valid
+        // Cache should still be valid.
         assert!(buffer.get_memory_size_calc_cached().size().is_some());
     }
 
@@ -986,10 +986,10 @@ mod test_memory_cache_invalidation {
         let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
-        // Add some content and create a selection
+        // Add some content and create a selection.
         buffer.init_with(vec!["line 1", "line 2"]);
 
-        // Manually add a selection
+        // Manually add a selection.
         let buffer_mut = buffer.get_mut(engine.viewport());
         buffer_mut.inner.sel_list.insert(
             row(0),
@@ -1002,14 +1002,14 @@ mod test_memory_cache_invalidation {
         );
         drop(buffer_mut);
 
-        // Verify selection exists
+        // Verify selection exists.
         assert!(!buffer.get_selection_list().is_empty());
         assert_eq2!(buffer.get_selection_list().len(), 1);
 
         // Clear selection
         buffer.clear_selection();
 
-        // Verify selection is cleared
+        // Verify selection is cleared.
         assert!(buffer.get_selection_list().is_empty());
         assert_eq2!(buffer.get_selection_list().len(), 0);
     }
@@ -1019,11 +1019,11 @@ mod test_memory_cache_invalidation {
         let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
         let engine = EditorEngine::default();
 
-        // Initialize with some content
+        // Initialize with some content.
         buffer.init_with(vec!["initial"]);
         buffer.add(); // Add initial state to history
 
-        // Make a change using the proper mutation API
+        // Make a change using the proper mutation API.
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.lines.clear();
@@ -1031,21 +1031,21 @@ mod test_memory_cache_invalidation {
         }
         buffer.add(); // Add changed state to history
 
-        // Now history should have 2 versions
+        // Now history should have 2 versions.
         assert_eq2!(buffer.history.versions.len(), 2.into());
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),
             "changed"
         );
 
-        // Undo should go back to "initial"
+        // Undo should go back to "initial".
         buffer.undo();
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),
             "initial"
         );
 
-        // Redo should go forward to "changed"
+        // Redo should go forward to "changed".
         buffer.redo();
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),

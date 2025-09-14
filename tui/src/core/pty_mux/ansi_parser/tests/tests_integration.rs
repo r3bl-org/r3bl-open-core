@@ -29,7 +29,7 @@ mod full_sequences {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
-        // Simulate a vim-like sequence using proper builders
+        // Simulate a vim-like sequence using proper builders.
         let sequence = format!(
             "{clear_screen}{home_position}{reverse_video}{status_text}{reset_attrs}{save_cursor}{move_to_cmd}{prompt}{restore_cursor}{restored_text}",
             clear_screen = CsiSequence::EraseDisplay(2), // ESC[2J
@@ -46,8 +46,8 @@ mod full_sequences {
 
         performer.apply_ansi_bytes(sequence);
 
-        // Verify the sequence worked correctly
-        // Status line should be at top with reverse video
+        // Verify the sequence worked correctly.
+        // Status line should be at top with reverse video.
         assert_styled_char_at(
             &ofs_buf,
             0,
@@ -57,10 +57,10 @@ mod full_sequences {
             "reverse video status",
         );
 
-        // Command prompt should be at bottom
+        // Command prompt should be at bottom.
         assert_plain_char_at(&ofs_buf, 23, 0, ':');
 
-        // Content should be restored at saved position
+        // Content should be restored at saved position.
         assert_plain_text_at(&ofs_buf, 0, 12, "Hello World!");
     }
 
@@ -80,7 +80,7 @@ mod full_sequences {
         );
         performer.apply_ansi_bytes(sequence);
 
-        // Verify "Bold" with bold style
+        // Verify "Bold" with bold style.
         for (i, ch) in "Bold".chars().enumerate() {
             assert_styled_char_at(
                 &ofs_buf,
@@ -94,10 +94,10 @@ mod full_sequences {
             );
         }
 
-        // Verify space at position 4
+        // Verify space at position 4.
         assert_plain_char_at(&ofs_buf, 0, 4, ' ');
 
-        // Verify "Green" with green color
+        // Verify "Green" with green color.
         for (i, ch) in "Green".chars().enumerate() {
             assert_styled_char_at(
                 &ofs_buf,
@@ -124,10 +124,10 @@ mod vte_parser {
     fn test_vte_parser_integration() {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-        // Process ANSI sequences through VTE parser
+        // Process ANSI sequences through VTE parser.
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
-        // Print "Hello" with red foreground
+        // Print "Hello" with red foreground.
         let input = format!(
             "Hello{fg_red}R{reset}",
             fg_red = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
@@ -135,13 +135,13 @@ mod vte_parser {
         );
         performer.apply_ansi_bytes(&input);
 
-        // Verify cursor position after processing
+        // Verify cursor position after processing.
         assert_eq!(performer.ofs_buf.my_pos.col_index.as_usize(), 6);
 
-        // Verify "Hello" is in the buffer
+        // Verify "Hello" is in the buffer.
         assert_plain_text_at(&ofs_buf, 0, 0, "Hello");
 
-        // Verify 'R' has red color
+        // Verify 'R' has red color.
         assert_styled_char_at(
             &ofs_buf,
             0,
@@ -154,7 +154,7 @@ mod vte_parser {
             "red foreground",
         );
 
-        // Verify rest of line is empty
+        // Verify rest of line is empty.
         for col in 6..10 {
             assert_empty_at(&ofs_buf, 0, col);
         }

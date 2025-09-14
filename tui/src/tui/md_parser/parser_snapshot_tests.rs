@@ -419,16 +419,16 @@ mod tests {
     #[test]
     fn test_small_real_world_content() {
         // SMALL_REAL_WORLD_CONTENT is a complete document with metadata, headings, lists,
-        // code blocks
+        // code blocks.
         let gap_buffer = ZeroCopyGapBuffer::from(SMALL_REAL_WORLD_CONTENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
 
         // Should have multiple elements including metadata, headings, text, lists, and
-        // code blocks
+        // code blocks.
         assert!(doc.len() > 5, "Expected complex document structure");
 
-        // Verify document has various element types
+        // Verify document has various element types.
         let has_title = doc.iter().any(|e| matches!(e, MdElement::Title(_)));
         let has_tags = doc.iter().any(|e| matches!(e, MdElement::Tags(_)));
         let has_heading = doc.iter().any(|e| matches!(e, MdElement::Heading(_)));
@@ -444,18 +444,18 @@ mod tests {
 
     #[test]
     fn test_small_ex_editor_content() {
-        // EX_EDITOR_CONTENT is a complex document with various markdown features
+        // EX_EDITOR_CONTENT is a complex document with various markdown features.
         let gap_buffer = ZeroCopyGapBuffer::from(EX_EDITOR_CONTENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
 
-        // Should be a complex document
+        // Should be a complex document.
         assert!(
             doc.len() > 10,
             "Expected complex document with many elements"
         );
 
-        // Verify presence of various markdown features
+        // Verify presence of various markdown features.
         let mut has_metadata = false;
         let mut has_emoji_heading = false;
         let mut has_nested_list = false;
@@ -476,7 +476,7 @@ mod tests {
                     if *indent > 0 {
                         has_nested_list = true;
                     }
-                    // Check for checkboxes in list items
+                    // Check for checkboxes in list items.
                     for line in lines.iter() {
                         if line
                             .iter()
@@ -499,16 +499,16 @@ mod tests {
     }
 
     // =============================================================================
-    // Medium valid input tests
+    // Medium valid input tests.
     // =============================================================================
 
     #[test]
     fn test_medium_multiple_lines() {
-        // MULTIPLE_LINES contains multiple lines of text
+        // MULTIPLE_LINES contains multiple lines of text.
         let gap_buffer = ZeroCopyGapBuffer::from(MULTIPLE_LINES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have multiple text elements
+        // Should have multiple text elements.
         assert!(doc.len() > 1, "Expected multiple lines");
         for element in doc.iter() {
             assert!(
@@ -534,7 +534,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(MULTIPLE_HEADINGS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have multiple headings
+        // Should have multiple headings.
         let heading_count = doc
             .iter()
             .filter(|e| matches!(e, MdElement::Heading(_)))
@@ -547,19 +547,19 @@ mod tests {
 
     #[test]
     fn test_medium_all_heading_levels() {
-        // ALL_HEADING_LEVELS contains headings from H1 to H6
+        // ALL_HEADING_LEVELS contains headings from H1 to H6.
         let gap_buffer = ZeroCopyGapBuffer::from(ALL_HEADING_LEVELS);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
 
-        // Should have at least 6 headings
+        // Should have at least 6 headings.
         let heading_count = doc
             .iter()
             .filter(|e| matches!(e, MdElement::Heading(_)))
             .count();
         assert!(heading_count >= 6, "Expected at least 6 headings");
 
-        // Verify heading levels 1-6 are present
+        // Verify heading levels 1-6 are present.
         for level in 1..=6 {
             let has_level = doc.iter().any(|e| {
                 matches!(e, MdElement::Heading(HeadingData { level: l, .. }) if l.level == level)
@@ -573,7 +573,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(UNORDERED_LIST_SIMPLE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have unordered list items
+        // Should have unordered list items.
         let has_unordered_list = doc
             .iter()
             .any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Unordered, _))));
@@ -585,7 +585,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(ORDERED_LIST_SIMPLE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have ordered list items
+        // Should have ordered list items.
         let has_ordered_list = doc
             .iter()
             .any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
@@ -609,19 +609,19 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(NESTED_ORDERED_LIST);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have nested ordered lists
+        // Should have nested ordered lists.
         let has_nested_ordered = doc.iter().any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), indent)) if *indent > 0));
         assert!(has_nested_ordered, "Expected nested ordered list");
     }
 
     #[test]
     fn test_medium_checkboxes() {
-        // CHECKBOXES contains checked and unchecked checkboxes in lists
+        // CHECKBOXES contains checked and unchecked checkboxes in lists.
         let gap_buffer = ZeroCopyGapBuffer::from(CHECKBOXES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
 
-        // Find lists with checkboxes
+        // Find lists with checkboxes.
         let mut found_checked = false;
         let mut found_unchecked = false;
 
@@ -648,7 +648,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(MIXED_LIST_TYPES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have both ordered and unordered lists
+        // Should have both ordered and unordered lists.
         let has_ordered = doc
             .iter()
             .any(|e| matches!(e, MdElement::SmartList((_, BulletKind::Ordered(_), _))));
@@ -663,7 +663,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(CODE_BLOCK_BASH);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have bash code block
+        // Should have bash code block.
         let has_bash_code = doc.iter().any(|e| {
             matches!(e, MdElement::CodeBlock(lines) if lines.iter().any(|l| l.language == Some("bash")))
         });
@@ -672,28 +672,28 @@ mod tests {
 
     #[test]
     fn test_medium_code_block_rust() {
-        // CODE_BLOCK_RUST contains a Rust code block
+        // CODE_BLOCK_RUST contains a Rust code block.
         let gap_buffer = ZeroCopyGapBuffer::from(CODE_BLOCK_RUST);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
 
-        // Find the code block
+        // Find the code block.
         let code_block = doc.iter().find(|e| matches!(e, MdElement::CodeBlock(_)));
         assert!(code_block.is_some(), "Expected a code block");
 
         if let Some(MdElement::CodeBlock(lines)) = code_block {
-            // Should have start tag, content, and end tag
+            // Should have start tag, content, and end tag.
             assert!(lines.len() >= 3, "Code block should have at least 3 lines");
 
-            // Check language is Rust
+            // Check language is Rust.
             assert_eq!(lines[0].language, Some("rust"));
             assert_eq!(lines[0].content, CodeBlockLineContent::StartTag);
 
-            // Last line should be end tag
+            // Last line should be end tag.
             let last = &lines[lines.len() - 1];
             assert_eq!(last.content, CodeBlockLineContent::EndTag);
 
-            // Middle lines should be code content
+            // Middle lines should be code content.
             for i in 1..lines.len() - 1 {
                 assert!(matches!(lines[i].content, CodeBlockLineContent::Text(_)));
             }
@@ -705,7 +705,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(CODE_BLOCK_NO_LANGUAGE);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should have code block without language
+        // Should have code block without language.
         let has_plain_code = doc.iter().any(|e| {
             matches!(e, MdElement::CodeBlock(lines) if lines.iter().any(|l| l.language.is_none()))
         });
@@ -729,7 +729,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(FORMATTING_EDGE_CASES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should handle edge cases gracefully
+        // Should handle edge cases gracefully.
         assert!(!doc.is_empty(), "Document should not be empty");
     }
 
@@ -738,7 +738,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(NESTED_FORMATTING);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should handle nested formatting
+        // Should handle nested formatting.
         let has_formatting = doc.iter().any(|e| {
             matches!(e, MdElement::Text(fragments) if fragments.iter().any(|f|
                 matches!(f, MdLineFragment::Bold(_) | MdLineFragment::Italic(_) | MdLineFragment::InlineCode(_))
@@ -752,7 +752,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(EDGE_CASE_EMPTY_LINES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should handle empty lines correctly
+        // Should handle empty lines correctly.
         assert!(!doc.is_empty(), "Document should parse empty lines");
     }
 
@@ -761,7 +761,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(EDGE_CASE_WHITESPACE_LINES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should handle whitespace lines correctly
+        // Should handle whitespace lines correctly.
         assert!(!doc.is_empty(), "Document should parse whitespace lines");
     }
 
@@ -770,7 +770,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(EDGE_CASE_TRAILING_SPACES);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should handle trailing spaces correctly
+        // Should handle trailing spaces correctly.
         assert!(
             !doc.is_empty(),
             "Document should parse with trailing spaces"
@@ -782,7 +782,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(EMOJI_START_MIDDLE_END);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Should handle emojis in various positions
+        // Should handle emojis in various positions.
         let has_emoji_content = doc.iter().any(|e| match e {
             MdElement::Text(fragments) => fragments.iter().any(|f| match f {
                 MdLineFragment::Plain(text) => text.chars().any(|c| c as u32 > 127),
@@ -799,7 +799,7 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(BLOG_POST_DOCUMENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Blog post should have various elements
+        // Blog post should have various elements.
         assert!(doc.len() > 5, "Blog post should have multiple elements");
         let has_heading = doc.iter().any(|e| matches!(e, MdElement::Heading(_)));
         let has_text = doc.iter().any(|e| matches!(e, MdElement::Text(_)));
@@ -810,7 +810,7 @@ mod tests {
     }
 
     // =============================================================================
-    // Large valid input tests
+    // Large valid input tests.
     // =============================================================================
 
     #[test]
@@ -818,9 +818,9 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(COMPLEX_NESTED_DOCUMENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Complex document should have many varied elements
+        // Complex document should have many varied elements.
         assert!(doc.len() > 10, "Complex document should have many elements");
-        // Verify variety of content types
+        // Verify variety of content types.
         let element_types = [
             doc.iter().any(|e| matches!(e, MdElement::Heading(_))),
             doc.iter().any(|e| matches!(e, MdElement::SmartList(_))),
@@ -838,9 +838,9 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(TUTORIAL_DOCUMENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Tutorial should have structured content
+        // Tutorial should have structured content.
         assert!(doc.len() > 10, "Tutorial should have substantial content");
-        // Should have sections with headings
+        // Should have sections with headings.
         let heading_count = doc
             .iter()
             .filter(|e| matches!(e, MdElement::Heading(_)))
@@ -849,14 +849,14 @@ mod tests {
     }
 
     // =============================================================================
-    // Invalid input tests
+    // Invalid input tests.
     // =============================================================================
 
     #[test]
     fn test_invalid_malformed_syntax() {
         let gap_buffer = ZeroCopyGapBuffer::from(MALFORMED_SYNTAX);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
-        // Malformed syntax should still parse something
+        // Malformed syntax should still parse something.
         assert!(
             remainder.is_empty() || !doc.is_empty(),
             "Parser should handle malformed syntax gracefully"
@@ -867,7 +867,7 @@ mod tests {
     fn test_invalid_unclosed_formatting() {
         let gap_buffer = ZeroCopyGapBuffer::from(UNCLOSED_FORMATTING);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
-        // Unclosed formatting should still parse
+        // Unclosed formatting should still parse.
         assert!(
             remainder.is_empty() || !doc.is_empty(),
             "Parser should handle unclosed formatting gracefully"
@@ -883,10 +883,10 @@ mod tests {
         let gap_buffer = ZeroCopyGapBuffer::from(REAL_WORLD_EDITOR_CONTENT);
         let (remainder, doc) = parse_markdown(&gap_buffer).unwrap();
         assert_eq!(remainder, "");
-        // Real world content should be substantial and varied
+        // Real world content should be substantial and varied.
         assert!(doc.len() > 20, "Real world document should be large");
 
-        // Should have all major element types
+        // Should have all major element types.
         let has_metadata = doc.iter().any(|e| {
             matches!(
                 e,

@@ -454,7 +454,7 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
             keypress_handler_helper::handle_space_key_multi_select(state)
         }
 
-        // Default behavior on Space
+        // Default behavior on Space.
         InputEvent::Keyboard(KeyPress::Plain {
             key: Key::Character(SPACE_CHAR),
         }) => keypress_handler_helper::handle_space_key_default(),

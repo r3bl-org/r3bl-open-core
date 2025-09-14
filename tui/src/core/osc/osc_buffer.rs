@@ -148,7 +148,7 @@ mod tests {
     fn test_multiple_sequences() {
         let mut buffer = OscBuffer::new();
 
-        // Multiple sequences in one buffer
+        // Multiple sequences in one buffer.
         let input = b"\x1b]9;4;1;25\x1b\\\x1b]9;4;1;50\x1b\\\x1b]9;4;0;0\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(
@@ -165,7 +165,7 @@ mod tests {
     fn test_sequences_with_text_between() {
         let mut buffer = OscBuffer::new();
 
-        // OSC sequences with regular text interleaved
+        // OSC sequences with regular text interleaved.
         let input =
             b"Building...\x1b]9;4;1;30\x1b\\Compiling crate...\x1b]9;4;1;60\x1b\\Done!";
         let events = buffer.append_and_extract(input, input.len());
@@ -174,7 +174,7 @@ mod tests {
             vec![OscEvent::ProgressUpdate(30), OscEvent::ProgressUpdate(60)]
         );
 
-        // Verify remaining text is preserved in buffer
+        // Verify remaining text is preserved in buffer.
         assert!(buffer.data.contains("Done!"));
     }
 
@@ -182,12 +182,12 @@ mod tests {
     fn test_split_sequence_across_buffers() {
         let mut buffer = OscBuffer::new();
 
-        // First part of sequence
+        // First part of sequence.
         let input1 = b"\x1b]9;4;1;";
         let events1 = buffer.append_and_extract(input1, input1.len());
         assert_eq!(events1, vec![]); // No complete sequence yet
 
-        // Second part of sequence
+        // Second part of sequence.
         let input2 = b"75\x1b\\";
         let events2 = buffer.append_and_extract(input2, input2.len());
         assert_eq!(events2, vec![OscEvent::ProgressUpdate(75)]);
@@ -197,10 +197,10 @@ mod tests {
     fn test_complex_split_scenarios() {
         let mut buffer = OscBuffer::new();
 
-        // Split at different points
+        // Split at different points.
         let parts: [&[u8]; 4] = [b"\x1b]9", b";4;1;", b"42", b"\x1b\\"];
 
-        // Feed parts one by one
+        // Feed parts one by one.
         assert_eq!(buffer.append_and_extract(parts[0], parts[0].len()), vec![]);
         assert_eq!(buffer.append_and_extract(parts[1], parts[1].len()), vec![]);
         assert_eq!(buffer.append_and_extract(parts[2], parts[2].len()), vec![]);
@@ -214,17 +214,17 @@ mod tests {
     fn test_invalid_sequences() {
         let mut buffer = OscBuffer::new();
 
-        // Missing progress value
+        // Missing progress value.
         let input = b"\x1b]9;4;1\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![]); // Should gracefully ignore
 
-        // Non-numeric progress value
+        // Non-numeric progress value.
         let input = b"\x1b]9;4;1;abc\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![]); // Should gracefully ignore
 
-        // Unknown state value
+        // Unknown state value.
         let input = b"\x1b]9;4;99;50\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![]); // Should gracefully ignore
@@ -234,13 +234,13 @@ mod tests {
     fn test_malformed_terminators() {
         let mut buffer = OscBuffer::new();
 
-        // Missing terminator - sequence should remain in buffer
+        // Missing terminator - sequence should remain in buffer.
         let input = b"\x1b]9;4;1;50";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![]);
         assert!(buffer.data.contains("9;4;1;50")); // Data should still be in buffer
 
-        // Now add terminator
+        // Now add terminator.
         let input2 = b"\x1b\\";
         let events2 = buffer.append_and_extract(input2, input2.len());
         assert_eq!(events2, vec![OscEvent::ProgressUpdate(50)]);
@@ -250,12 +250,12 @@ mod tests {
     fn test_out_of_range_values() {
         let mut buffer = OscBuffer::new();
 
-        // Progress > 100 should be clamped to 100
+        // Progress > 100 should be clamped to 100.
         let input = b"\x1b]9;4;1;150\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![OscEvent::ProgressUpdate(100)]);
 
-        // Negative progress should be clamped to 0
+        // Negative progress should be clamped to 0.
         let input = b"\x1b]9;4;1;-50\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![OscEvent::ProgressUpdate(0)]);
@@ -266,11 +266,11 @@ mod tests {
         let mut buffer = OscBuffer::new();
 
         // Nested/interleaved starts (second start before first completes)
-        // This creates an invalid sequence since the first one is missing its terminator
+        // This creates an invalid sequence since the first one is missing its terminator.
         let input = b"\x1b]9;4;1;25\x1b]9;4;1;50\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
-        // The parser should gracefully handle this malformed input
-        // Since the first sequence is incomplete, nothing should be parsed
+        // The parser should gracefully handle this malformed input.
+        // Since the first sequence is incomplete, nothing should be parsed.
         assert_eq!(events, vec![]);
     }
 
@@ -278,7 +278,7 @@ mod tests {
     fn test_buffer_with_unicode() {
         let mut buffer = OscBuffer::new();
 
-        // OSC sequences with Unicode text around them
+        // OSC sequences with Unicode text around them.
         let input = "🚀 Building...\x1b]9;4;1;50\x1b\\✨ Done!".as_bytes();
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![OscEvent::ProgressUpdate(50)]);
@@ -289,7 +289,7 @@ mod tests {
     fn test_rapid_sequence_updates() {
         let mut buffer = OscBuffer::new();
 
-        // Simulate rapid progress updates
+        // Simulate rapid progress updates.
         let mut all_events = Vec::new();
         for i in (0..=100).step_by(10) {
             let input = format!("\x1b]9;4;1;{i}\x1b\\");
@@ -310,7 +310,7 @@ mod tests {
         let events = buffer.append_and_extract(b"", 0);
         assert_eq!(events, vec![]);
 
-        // Just regular text, no OSC
+        // Just regular text, no OSC.
         let input = b"Just regular text";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![]);
@@ -321,27 +321,27 @@ mod tests {
     fn test_partial_sequence_with_corruption() {
         let mut buffer = OscBuffer::new();
 
-        // Add partial sequence
+        // Add partial sequence.
         let partial = b"\x1b]9;4;1;33";
         buffer.append_and_extract(partial, partial.len());
         assert!(buffer.data.contains("\x1b]9;4;1;33"));
 
-        // Add unrelated text - this will corrupt the sequence
+        // Add unrelated text - this will corrupt the sequence.
         let text = b"some text";
         buffer.append_and_extract(text, text.len());
 
         // The buffer now contains: "\x1b]9;4;1;33some text"
-        // This is not a valid OSC sequence due to the text in between
+        // This is not a valid OSC sequence due to the text in between.
 
-        // Complete the sequence - but it's now invalid due to the text in between
+        // Complete the sequence - but it's now invalid due to the text in between.
         let terminator = b"\x1b\\";
         let events = buffer.append_and_extract(terminator, terminator.len());
 
         // The parser finds "\x1b]9;4;" but "1;33some text" is not valid params
-        // So it gracefully ignores the malformed sequence and extracts it
+        // So it gracefully ignores the malformed sequence and extracts it.
         assert_eq!(events, vec![]);
 
-        // After extraction attempt, buffer should be empty since the malformed
+        // After extraction attempt, buffer should be empty since the malformed.
         // sequence was removed
         assert_eq!(buffer.data, "");
     }
@@ -350,18 +350,18 @@ mod tests {
     fn test_partial_sequence_clean() {
         let mut buffer = OscBuffer::new();
 
-        // Add partial sequence without corruption
+        // Add partial sequence without corruption.
         let partial = b"\x1b]9;4;1;33";
         buffer.append_and_extract(partial, partial.len());
 
-        // Complete the sequence properly
+        // Complete the sequence properly.
         let terminator = b"\x1b\\";
         let events = buffer.append_and_extract(terminator, terminator.len());
 
-        // Should parse correctly
+        // Should parse correctly.
         assert_eq!(events, vec![OscEvent::ProgressUpdate(33)]);
 
-        // Buffer should be empty after successful extraction
+        // Buffer should be empty after successful extraction.
         assert_eq!(buffer.data, "");
     }
 
@@ -369,7 +369,7 @@ mod tests {
     fn test_decimal_progress_values() {
         let mut buffer = OscBuffer::new();
 
-        // Test decimal values get truncated to integers
+        // Test decimal values get truncated to integers.
         let input = b"\x1b]9;4;1;33.7\x1b\\";
         let events = buffer.append_and_extract(input, input.len());
         assert_eq!(events, vec![OscEvent::ProgressUpdate(33)]);

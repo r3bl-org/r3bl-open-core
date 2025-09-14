@@ -9,7 +9,7 @@ use crate::ansi_parser::protocols::csi_codes::CsiSequence;
 fn test_basic_delete_char_integration() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // Write simpler text to test delete char
+    // Write simpler text to test delete char.
     let text = "ABCDEF";
     let _write_result = ofs_buf.apply_ansi_bytes(text);
 
@@ -27,11 +27,11 @@ fn test_basic_delete_char_integration() {
 fn test_basic_insert_char_integration() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // Write some text and test insert char
+    // Write some text and test insert char.
     let text = "HELLO";
     let _write_result = ofs_buf.apply_ansi_bytes(text);
 
-    // Move cursor to position 3 and insert a blank character
+    // Move cursor to position 3 and insert a blank character.
     let move_cursor = CsiSequence::CursorHorizontalAbsolute(3);
     let insert_char = CsiSequence::InsertChar(1);
     let sequence = format!("{move_cursor}{insert_char}");
@@ -53,7 +53,7 @@ fn test_basic_insert_char_integration() {
 fn test_basic_erase_char_integration() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // Write some text and test erase char
+    // Write some text and test erase char.
     let text = "HELLO";
     let _write_result = ofs_buf.apply_ansi_bytes(text);
 
@@ -79,7 +79,7 @@ fn test_basic_erase_char_integration() {
 fn test_basic_vpa_integration() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // Move to specific position and use VPA
+    // Move to specific position and use VPA.
     let move_cursor = CsiSequence::CursorPosition {
         row: crate::ansi_parser::term_units::term_row(5),
         col: crate::ansi_parser::term_units::term_col(7),

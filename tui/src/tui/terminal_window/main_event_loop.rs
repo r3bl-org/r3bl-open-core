@@ -145,13 +145,13 @@ where
         output_device: OutputDevice,
         app: &mut BoxedSafeApp<S, AS>,
     ) -> CommonResult<Self> {
-        // Create communication channel
+        // Create communication channel.
         let (main_thread_channel_sender, main_thread_channel_receiver) =
             mpsc::channel::<TerminalWindowMainThreadSignal<AS>>(
                 DefaultSize::MainThreadSignalChannelBufferSize.into(),
             );
 
-        // Initialize global data
+        // Initialize global data.
         let global_data = GlobalData::try_to_create_instance(
             main_thread_channel_sender,
             state,
@@ -160,7 +160,7 @@ where
             OffscreenBufferPool::new(initial_size),
         )?;
 
-        // Initialize other components
+        // Initialize other components.
         let component_registry_map = ComponentRegistryMap::default();
         let has_focus = HasFocus::default();
         let telemetry = Telemetry::new((
@@ -176,7 +176,7 @@ where
             telemetry,
         };
 
-        // Initialize the app and perform first render
+        // Initialize the app and perform first render.
         event_loop_state.initialize_app_and_render(app, &output_device)?;
 
         Ok(event_loop_state)
@@ -195,7 +195,7 @@ where
             output_device.is_mock,
         );
 
-        // Initialize app and render
+        // Initialize app and render.
         let telemetry = &mut self.telemetry;
         telemetry_record!(
             @telemetry: telemetry,
@@ -297,7 +297,7 @@ where
     // Main event loop
     loop {
         tokio::select! {
-            // Handle signals from the app
+            // Handle signals from the app.
             maybe_signal = event_loop_state.main_thread_channel_receiver.recv() => {
                 if let Some(signal) = maybe_signal
                     && handle_main_thread_signal(
@@ -311,7 +311,7 @@ where
                     }
             }
 
-            // Handle input events
+            // Handle input events.
             maybe_input_event = input_device.next_input_event() => {
                 if let Some(input_event) = maybe_input_event {
                     handle_input_event(
@@ -322,7 +322,7 @@ where
                         &output_device,
                     );
                 } else {
-                    // No more events, exit loop
+                    // No more events, exit loop.
                     break;
                 }
             }
@@ -331,7 +331,7 @@ where
         event_loop_state.log_telemetry_info();
     }
 
-    // Cleanup and return results
+    // Cleanup and return results.
     event_loop_state.log_shutdown_info();
     Ok((event_loop_state.global_data, input_device, output_device))
 }
@@ -453,7 +453,7 @@ fn handle_input_event<S, AS>(
 {
     log_input_event_if_enabled(&input_event);
 
-    // Handle resize events specially
+    // Handle resize events specially.
     if let InputEvent::Resize(new_size) = input_event {
         handle_resize_event(new_size, event_loop_state, app, output_device);
     }
@@ -909,7 +909,7 @@ mod tests {
 
         // println!(
         //     "global_data.offscreen_buffer: {:?}",
-        //     global_data.maybe_saved_ofs_buf
+        //     global_data.maybe_saved_ofs_buf.
         // );
 
         let ofs_buf = global_data.maybe_saved_ofs_buf.unwrap();

@@ -46,8 +46,8 @@ impl<'a> OscController<'a> {
     pub fn send_event(&mut self, event: OscEvent) -> miette::Result<()> {
         match event {
             OscEvent::SetTitleAndTab(text) => self.set_title_and_tab(&text),
-            // For other events, we would need to implement their formatting
-            // For now, we'll focus on the title setting functionality
+            // For other events, we would need to implement their formatting.
+            // For now, we'll focus on the title setting functionality.
             _ => Ok(()), // Ignore other events for now
         }
     }

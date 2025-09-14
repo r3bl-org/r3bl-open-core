@@ -14,7 +14,7 @@ fn test_osc_title_sequences() {
     let sequence1 = OscSequence::SetTitleAndIcon("Test Title".to_string()).to_string();
     let (osc_events1, dsr_responses1) = ofs_buf.apply_ansi_bytes(sequence1);
 
-    // Should get one OSC event
+    // Should get one OSC event.
     assert_eq!(osc_events1.len(), 1);
     assert_eq!(dsr_responses1.len(), 0);
 
@@ -45,7 +45,7 @@ fn test_osc_title_sequences() {
 fn test_osc_hyperlink() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // Test OSC 8 hyperlink
+    // Test OSC 8 hyperlink.
     let hyperlink_start = OscSequence::HyperlinkStart {
         uri: "https://example.com".to_string(),
         id: None,
@@ -65,10 +65,10 @@ fn test_osc_hyperlink() {
         _ => panic!("Expected Hyperlink event"),
     }
 
-    // Verify text was written
+    // Verify text was written.
     assert_plain_text_at(&ofs_buf, 0, 0, "Link Text");
 
-    // Verify events are drained on next call
+    // Verify events are drained on next call.
     let (osc_events2, dsr_responses2) = ofs_buf.apply_ansi_bytes("more text");
     assert_eq!(osc_events2.len(), 0, "OSC events should be drained");
     assert_eq!(dsr_responses2.len(), 0, "DSR responses should be empty");

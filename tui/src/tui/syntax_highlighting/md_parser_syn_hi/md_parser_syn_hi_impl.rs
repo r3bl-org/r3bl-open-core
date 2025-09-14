@@ -131,16 +131,16 @@ mod tests_try_parse_and_highlight {
                 fg_cyan(style_us_span_lines.pretty_print_debug())
             );
 
-            // The parser creates separate lines for each input line
+            // The parser creates separate lines for each input line.
             assert_eq2!(2, style_us_span_lines.len());
 
-            // Check the first line contains "Hello"
+            // Check the first line contains "Hello".
             let line_0 = &style_us_span_lines[0];
             assert_eq2!(line_0.len(), 1);
             let span_0 = &line_0[0];
             assert_eq2!(span_0.text_gcs.as_ref(), "Hello");
 
-            // Check the second line contains "World"
+            // Check the second line contains "World".
             let line_1 = &style_us_span_lines[1];
             assert_eq2!(line_1.len(), 1);
             let span_1 = &line_1[0];
@@ -1207,7 +1207,7 @@ mod tests_style_us_span_lines_from {
                     color_bg: {tui_color!(red)}
                 );
 
-                // Construct ordered list elements directly
+                // Construct ordered list elements directly.
                 let ol_block_1 = MdElement::SmartList((
                     list![list![
                         MdLineFragment::OrderedListBullet {
@@ -1279,7 +1279,7 @@ mod tests_style_us_span_lines_from {
                     color_bg: {tui_color!(red)}
                 );
 
-                // Construct unordered list elements directly
+                // Construct unordered list elements directly.
                 let ul_block_0 = MdElement::SmartList((
                     list![list![
                         MdLineFragment::UnorderedListBullet {

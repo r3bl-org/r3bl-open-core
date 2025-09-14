@@ -31,7 +31,7 @@ pub fn clear_screen_and_home_cursor(output_device: &OutputDevice) {
 /// * `col` - Column position (1-indexed, where 1 is left)
 pub fn move_cursor_to(output_device: &OutputDevice, row: u16, col: u16) {
     let out = lock_output_device_as_mut!(output_device);
-    // Convert to 0-indexed for crossterm
+    // Convert to 0-indexed for crossterm.
     let _unused = out.execute(MoveTo(col.saturating_sub(1), row.saturating_sub(1)));
 }
 

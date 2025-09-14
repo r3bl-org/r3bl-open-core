@@ -55,11 +55,11 @@ use r3bl_tui::{core::{get_size,
 async fn main() -> miette::Result<()> {
     set_mimalloc_in_main!();
 
-    // Initialize logging to log.txt
+    // Initialize logging to log.txt.
     try_initialize_logging_global(tracing_core::LevelFilter::DEBUG).ok();
     tracing::debug!("Starting PTYMux Example");
 
-    // Check if running in interactive terminal
+    // Check if running in interactive terminal.
     if is_fully_interactive_terminal() == TTYResult::IsNotInteractive {
         eprintln!("❌ This example requires an interactive terminal to run.");
         eprintln!(
@@ -86,7 +86,7 @@ async fn main() -> miette::Result<()> {
     println!("📝 Debug output will be written to log.txt");
     println!();
 
-    // Get terminal size for process creation
+    // Get terminal size for process creation.
     let terminal_size = get_size()?;
 
     // Mixed process types demonstrating universal compatibility:
@@ -116,7 +116,7 @@ async fn main() -> miette::Result<()> {
         processes.len()
     );
 
-    // Build and run multiplexer using the pty_mux module
+    // Build and run multiplexer using the pty_mux module.
     let multiplexer = PTYMux::builder().processes(processes).build()?;
 
     println!("▶️  Starting multiplexer event loop...");
@@ -124,19 +124,19 @@ async fn main() -> miette::Result<()> {
     println!("   Press F1-F4 to switch processes, Ctrl+Q to quit");
     println!();
 
-    // Run the multiplexer event loop
+    // Run the multiplexer event loop.
     tracing::debug!("About to start multiplexer.run()");
     let run_result = multiplexer.run().await;
     tracing::debug!("multiplexer.run() completed with result: {:?}", run_result);
 
-    // Check for any errors from the run
+    // Check for any errors from the run.
     run_result?;
 
     println!("👋 PTYMux session ended. Goodbye!");
 
     tracing::debug!("Main function completing successfully");
 
-    // Allow a brief moment for any final cleanup
+    // Allow a brief moment for any final cleanup.
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     Ok(())

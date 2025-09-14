@@ -67,7 +67,7 @@ mod tests {
 
         let chunks = PixelCharDiffChunks::from(list);
 
-        // Test deref functionality
+        // Test deref functionality.
         assert_eq!(chunks.len(), 2);
         assert_eq!(chunks[0].0, pos1);
         assert_eq!(chunks[1].0, pos2);
@@ -109,11 +109,11 @@ mod tests {
     fn test_pixel_char_diff_chunks_empty_operations() {
         let chunks = PixelCharDiffChunks::default();
 
-        // Test operations on empty chunks
+        // Test operations on empty chunks.
         assert!(chunks.is_empty());
         assert_eq!(chunks.len(), 0);
 
-        // Clone empty chunks
+        // Clone empty chunks.
         let cloned = chunks.clone();
         assert_eq!(chunks, cloned);
     }

@@ -238,7 +238,7 @@ mod tests {
         let width = width(3);
         let line = PixelCharLine::new_empty(width);
 
-        // Test deref functionality
+        // Test deref functionality.
         assert_eq!(line.len(), 3);
         assert_eq!(line[0], PixelChar::Spacer);
         assert_eq!(line[1], PixelChar::Spacer);
@@ -250,7 +250,7 @@ mod tests {
         let width = width(2);
         let mut line = PixelCharLine::new_empty(width);
 
-        // Test deref_mut functionality
+        // Test deref_mut functionality.
         line[0] = PixelChar::PlainText {
             display_char: 'A',
             style: TuiStyle::default(),
@@ -281,7 +281,7 @@ mod tests {
         let width = width(3);
         let mut line = PixelCharLine::new_empty(width);
 
-        // Add some different pixel char types
+        // Add some different pixel char types.
         line[0] = PixelChar::PlainText {
             display_char: 'X',
             style: TuiStyle::default(),
@@ -291,7 +291,7 @@ mod tests {
 
         let debug_output = format!("{line:?}");
 
-        // Check that debug output contains expected elements
+        // Check that debug output contains expected elements.
         assert!(debug_output.contains("000")); // Index
         assert!(debug_output.contains("001")); // Index
         assert!(debug_output.contains("002")); // Index
@@ -304,7 +304,7 @@ mod tests {
         let width = width(3);
         let mut line = PixelCharLine::new_empty(width);
 
-        // Fill with voids
+        // Fill with voids.
         for pixel_char in &mut line.pixel_chars {
             *pixel_char = PixelChar::Void;
         }
@@ -332,7 +332,7 @@ mod tests {
 
         assert_eq!(line1, line2);
 
-        // Modify one line
+        // Modify one line.
         let mut line3 = PixelCharLine::new_empty(width);
         line3[0] = PixelChar::Void;
 
@@ -351,7 +351,7 @@ mod tests {
         let cloned = line.clone();
         assert_eq!(line, cloned);
 
-        // Verify deep clone
+        // Verify deep clone.
         assert!(matches!(
             cloned[0],
             PixelChar::PlainText {
@@ -363,18 +363,18 @@ mod tests {
 
     #[test]
     fn test_fmt_impl_index_values_single_values() {
-        // Test the helper function indirectly through debug formatting
+        // Test the helper function indirectly through debug formatting.
         let width = width(5);
         let mut line = PixelCharLine::new_empty(width);
 
-        // Set non-consecutive void positions
+        // Set non-consecutive void positions.
         line[0] = PixelChar::Void;
         line[2] = PixelChar::Void;
         line[4] = PixelChar::Void;
 
         let debug_output = format!("{line:?}");
         assert!(debug_output.contains("void"));
-        // Should contain individual indices, not ranges
+        // Should contain individual indices, not ranges.
         assert!(
             debug_output.contains('0')
                 && debug_output.contains('2')
@@ -384,11 +384,11 @@ mod tests {
 
     #[test]
     fn test_fmt_impl_index_values_ranges() {
-        // Test the helper function with consecutive ranges
+        // Test the helper function with consecutive ranges.
         let width = width(6);
         let mut line = PixelCharLine::new_empty(width);
 
-        // Set consecutive void positions
+        // Set consecutive void positions.
         line[1] = PixelChar::Void;
         line[2] = PixelChar::Void;
         line[3] = PixelChar::Void;

@@ -124,7 +124,7 @@ impl ZeroCopyGapBuffer {
         seg_index: SegIndex,
         text: &str,
     ) -> Result<()> {
-        // Validate line index and get the byte position
+        // Validate line index and get the byte position.
         let byte_pos = {
             let line_info =
                 self.get_line_info(line_index.as_usize()).ok_or_else(|| {
@@ -133,10 +133,10 @@ impl ZeroCopyGapBuffer {
             line_info.get_byte_pos(seg_index)
         };
 
-        // Perform the actual insertion
+        // Perform the actual insertion.
         self.insert_text_at_byte_pos(line_index, byte_pos, text)?;
 
-        // Rebuild line segments after insertion
+        // Rebuild line segments after insertion.
         self.rebuild_line_segments(line_index)?;
 
         Ok(())
@@ -170,7 +170,7 @@ impl ZeroCopyGapBuffer {
         let text_bytes = text.as_bytes();
         let text_len = text_bytes.len();
 
-        // Get line info and validate position
+        // Get line info and validate position.
         let line_idx = line_index.as_usize();
         let line_info = self
             .get_line_info(line_idx)
@@ -179,7 +179,7 @@ impl ZeroCopyGapBuffer {
         let byte_position = byte_pos.as_usize();
         let current_content_len = line_info.content_len.as_usize();
 
-        // Validate byte position
+        // Validate byte position.
         if byte_position > current_content_len {
             return Err(miette!(
                 "Byte position {} exceeds content length {}",
@@ -188,12 +188,12 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Check if we need to extend the line capacity
+        // Check if we need to extend the line capacity.
         let new_content_len = current_content_len + text_len;
         let required_capacity = new_content_len + 1; // +1 for newline
 
         if required_capacity > line_info.capacity.as_usize() {
-            // Extend the line capacity
+            // Extend the line capacity.
             self.extend_line_capacity(line_index);
 
             // Re-check after extension (might need multiple extensions for large text)
@@ -201,7 +201,7 @@ impl ZeroCopyGapBuffer {
                 miette!("Line {} disappeared after extension", line_idx)
             })?;
             if required_capacity > line_info.capacity.as_usize() {
-                // Calculate how many pages we need
+                // Calculate how many pages we need.
                 let pages_needed = (required_capacity - line_info.capacity.as_usize())
                     .div_ceil(LINE_PAGE_SIZE);
                 for _ in 0..pages_needed {
@@ -210,16 +210,16 @@ impl ZeroCopyGapBuffer {
             }
         }
 
-        // Get updated line info after potential capacity extension
+        // Get updated line info after potential capacity extension.
         let line_info = self.get_line_info(line_idx).ok_or_else(|| {
             miette!("Line {} not found after capacity extension", line_idx)
         })?;
         let buffer_start = line_info.buffer_offset.as_usize();
         let insert_pos = buffer_start + byte_position;
 
-        // Shift existing content to make room
+        // Shift existing content to make room.
         if byte_position < current_content_len {
-            // Need to move content to the right
+            // Need to move content to the right.
             let move_from = insert_pos;
             let move_to = insert_pos + text_len;
             let move_len = current_content_len - byte_position;
@@ -229,29 +229,29 @@ impl ZeroCopyGapBuffer {
                 self.buffer[move_to + i] = self.buffer[move_from + i];
             }
 
-            // Clear the gap left behind by the move
+            // Clear the gap left behind by the move.
             for i in move_from..move_from + text_len {
                 self.buffer[i] = b'\0';
             }
         } else {
-            // Inserting at end, just move the newline
+            // Inserting at end, just move the newline.
             self.buffer[insert_pos + text_len] = b'\n';
         }
 
-        // Copy the new text into the buffer
+        // Copy the new text into the buffer.
         self.buffer[insert_pos..insert_pos + text_len].copy_from_slice(text_bytes);
 
-        // Update line metadata
+        // Update line metadata.
         let line_info_mut = self.get_line_info_mut(line_idx).ok_or_else(|| {
             miette!("Line {} not found when updating metadata", line_idx)
         })?;
         line_info_mut.content_len = len(new_content_len);
 
-        // Ensure remainder of line capacity is null-padded
+        // Ensure remainder of line capacity is null-padded.
         let line_end = buffer_start + new_content_len + 1; // +1 for newline
         let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
         if line_end < capacity_end {
-            // Fill unused capacity with null bytes
+            // Fill unused capacity with null bytes.
             for i in line_end..capacity_end {
                 self.buffer[i] = b'\0';
             }
@@ -278,7 +278,7 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Use the internal method that properly shifts buffer content
+        // Use the internal method that properly shifts buffer content.
         self.insert_line_with_buffer_shift(line_idx);
 
         Ok(())
@@ -295,16 +295,16 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text at the beginning
+        // Insert text at the beginning.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
-        // Verify the content
+        // Verify the content.
         let content = buffer
             .get_line_content(row(0))
             .ok_or_else(|| miette!("Failed to get line content"))?;
         assert_eq!(content, "Hello");
 
-        // Verify segments were rebuilt
+        // Verify segments were rebuilt.
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
@@ -319,10 +319,10 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // First insert some text
+        // First insert some text.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
-        // Then insert at the end
+        // Then insert at the end.
         buffer.insert_text_at_grapheme(row(0), seg_index(5), " World")?;
 
         let content = buffer
@@ -343,10 +343,10 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert initial text
+        // Insert initial text.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Heo")?;
 
-        // Insert in the middle
+        // Insert in the middle.
         buffer.insert_text_at_grapheme(row(0), seg_index(2), "ll")?;
 
         let content = buffer
@@ -375,7 +375,7 @@ mod tests {
             .ok_or_else(|| miette!("Failed to get line info"))?;
         assert_eq!(line_info.grapheme_count, len(7)); // "Hello " = 6 + emoji = 1
 
-        // Insert more text after emoji
+        // Insert more text after emoji.
         buffer.insert_text_at_grapheme(row(0), seg_index(7), " World")?;
 
         let content = buffer
@@ -391,7 +391,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Create a string that will require line extension
+        // Create a string that will require line extension.
         let long_text = "A".repeat(300);
 
         buffer.insert_text_at_grapheme(row(0), seg_index(0), &long_text)?;
@@ -416,11 +416,11 @@ mod tests {
         buffer.add_line();
         buffer.add_line();
 
-        // Add content to lines
+        // Add content to lines.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Line 1")?;
         buffer.insert_text_at_grapheme(row(1), seg_index(0), "Line 2")?;
 
-        // Insert empty line in middle
+        // Insert empty line in middle.
         buffer.insert_empty_line(row(1))?;
 
         assert_eq!(buffer.line_count(), len(3));
@@ -464,7 +464,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert text with compound grapheme clusters
+        // Insert text with compound grapheme clusters.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")?;
 
         let content = buffer
@@ -475,7 +475,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        // The family emoji is 1 grapheme cluster despite being multiple code points
+        // The family emoji is 1 grapheme cluster despite being multiple code points.
         assert_eq!(line_info.grapheme_count, len(8)); // 1 + space + 6 letters
 
         Ok(())
@@ -486,7 +486,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert some text
+        // Insert some text.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
         let line_info = buffer
@@ -496,14 +496,14 @@ mod tests {
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
-        // Verify content and newline
+        // Verify content and newline.
         assert_eq!(
             &buffer.buffer[buffer_start..buffer_start + content_len],
             b"Hello"
         );
         assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
 
-        // Verify unused capacity is null-padded
+        // Verify unused capacity is null-padded.
         let unused_start = buffer_start + content_len + 1; // after content + newline
         for i in unused_start..(buffer_start + capacity) {
             assert_eq!(
@@ -521,7 +521,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Insert initial text
+        // Insert initial text.
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Heo")?;
 
         // Insert in the middle (this will shift existing content)
@@ -534,14 +534,14 @@ mod tests {
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
-        // Verify final content
+        // Verify final content.
         assert_eq!(
             &buffer.buffer[buffer_start..buffer_start + content_len],
             b"Hello"
         );
         assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
 
-        // Verify unused capacity is still null-padded after content shifting
+        // Verify unused capacity is still null-padded after content shifting.
         let unused_start = buffer_start + content_len + 1;
         for i in unused_start..(buffer_start + capacity) {
             assert_eq!(
@@ -559,7 +559,7 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Create text that will cause line extension
+        // Create text that will cause line extension.
         let long_text = "A".repeat(300);
         buffer.insert_text_at_grapheme(row(0), seg_index(0), &long_text)?;
 
@@ -570,17 +570,17 @@ mod tests {
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
-        // Verify the line was extended
+        // Verify the line was extended.
         assert!(capacity > crate::INITIAL_LINE_SIZE);
 
-        // Verify content and newline
+        // Verify content and newline.
         assert_eq!(
             &buffer.buffer[buffer_start..buffer_start + content_len],
             long_text.as_bytes()
         );
         assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
 
-        // Verify unused capacity in extended line is null-padded
+        // Verify unused capacity in extended line is null-padded.
         let unused_start = buffer_start + content_len + 1;
         for i in unused_start..(buffer_start + capacity) {
             assert_eq!(
@@ -614,7 +614,7 @@ mod benches {
             buffer
                 .insert_text_at_grapheme(row(0), seg_index(0), black_box("Hello"))
                 .unwrap();
-            // Clear content for next iteration
+            // Clear content for next iteration.
             buffer
                 .delete_range(row(0), seg_index(0), seg_index(5))
                 .unwrap();
@@ -638,7 +638,7 @@ mod benches {
                     black_box(" more"),
                 )
                 .unwrap();
-            // Clear added content
+            // Clear added content.
             buffer
                 .delete_range(
                     row(0),
@@ -689,7 +689,7 @@ mod benches {
 
         b.iter(|| {
             buffer.insert_empty_line(row(0)).unwrap();
-            // Remove for next iteration
+            // Remove for next iteration.
             buffer.remove_line(row(0));
         });
     }
@@ -707,7 +707,7 @@ mod benches {
             buffer
                 .insert_text_at_grapheme(row(0), seg_index(6), black_box("Beautiful "))
                 .unwrap();
-            // Remove inserted text
+            // Remove inserted text.
             buffer
                 .delete_range(row(0), seg_index(6), seg_index(16))
                 .unwrap();
@@ -716,11 +716,11 @@ mod benches {
 
     #[bench]
     fn bench_insert_at_end_with_optimization(b: &mut Bencher) {
-        // This tests the real-world scenario with our optimization
+        // This tests the real-world scenario with our optimization.
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Start with a realistic line
+        // Start with a realistic line.
         buffer
             .insert_text_at_grapheme(
                 row(0),
@@ -741,7 +741,7 @@ mod benches {
                 )
                 .unwrap();
 
-            // Delete it to reset for next iteration
+            // Delete it to reset for next iteration.
             buffer
                 .delete_grapheme_at(row(0), seg_index(end_idx.as_usize()))
                 .unwrap();

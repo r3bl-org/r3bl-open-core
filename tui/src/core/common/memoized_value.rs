@@ -11,7 +11,7 @@
 
 use std::fmt::Display;
 
-// Re-export memory size types from get_mem_size module
+// Re-export memory size types from get_mem_size module.
 pub use crate::{MemoizedMemorySize, MemorySize};
 
 /// Memoized value calculation for performance optimization.
@@ -144,7 +144,7 @@ mod tests {
         assert!(!cache.is_dirty());
         assert_eq!(*counter.borrow(), 0); // Display not called yet
 
-        // Verify the value is cached
+        // Verify the value is cached.
         let cached = cache.get_cached().unwrap();
         assert_eq!(cached.value, "test");
     }
@@ -155,10 +155,10 @@ mod tests {
         let counter = Rc::new(RefCell::new(0));
         let counter_clone = counter.clone();
 
-        // First upsert
+        // First upsert.
         cache.upsert(|| TestValue::with_shared_counter("test1", counter_clone.clone()));
 
-        // Second upsert should not recalculate
+        // Second upsert should not recalculate.
         cache.upsert(|| TestValue::with_shared_counter("test2", counter_clone));
 
         let cached = cache.get_cached().unwrap();
@@ -208,7 +208,7 @@ mod tests {
         let counter = Rc::new(RefCell::new(0));
         let counter_clone = counter.clone();
 
-        // First call
+        // First call.
         let result1_value = cache
             .get_or_insert_with(|| {
                 TestValue::with_shared_counter("test1", counter_clone.clone())
@@ -216,7 +216,7 @@ mod tests {
             .value
             .clone();
 
-        // Second call should return the same cached value
+        // Second call should return the same cached value.
         let result2_value = cache
             .get_or_insert_with(|| TestValue::with_shared_counter("test2", counter_clone))
             .value
@@ -231,14 +231,14 @@ mod tests {
         let mut cache = MemoizedValue::new();
         let counter = Rc::new(RefCell::new(0));
 
-        // Initially dirty
+        // Initially dirty.
         assert!(cache.is_dirty());
 
-        // After upsert, should be clean
+        // After upsert, should be clean.
         cache.upsert(|| TestValue::with_shared_counter("test", counter));
         assert!(!cache.is_dirty());
 
-        // After invalidate, should be dirty again
+        // After invalidate, should be dirty again.
         cache.invalidate();
         assert!(cache.is_dirty());
     }
@@ -264,15 +264,15 @@ mod tests {
         let mut cache2 = MemoizedValue::new();
         let counter = Rc::new(RefCell::new(0));
 
-        // Both empty and dirty - should be equal
+        // Both empty and dirty - should be equal.
         assert_eq!(cache1, cache2);
 
-        // Both have same value - should be equal
+        // Both have same value - should be equal.
         cache1.upsert(|| TestValue::with_shared_counter("test", counter.clone()));
         cache2.upsert(|| TestValue::with_shared_counter("test", counter));
         assert_eq!(cache1, cache2);
 
-        // One is dirty, other is not - should not be equal
+        // One is dirty, other is not - should not be equal.
         cache1.invalidate();
         assert_ne!(cache1, cache2);
     }
@@ -306,7 +306,7 @@ mod tests {
         assert_eq!(result, "Hello, World!");
         assert_eq!(*call_count.borrow(), 1);
 
-        // Second call should not increment the counter
+        // Second call should not increment the counter.
         let result2 = cache.get_or_insert_with(|| {
             *call_count_clone.borrow_mut() += 1;
             "Should not be called".to_string()
@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(cache.get_cached(), Some(&42));
         assert_eq!(*calculation_calls.borrow(), 1);
 
-        // Upsert again - should not recalculate
+        // Upsert again - should not recalculate.
         cache.upsert(|| {
             *calculation_calls_clone.borrow_mut() += 1;
             99

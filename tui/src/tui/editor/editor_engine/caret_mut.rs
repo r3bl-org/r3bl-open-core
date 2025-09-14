@@ -17,7 +17,7 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
         RowContentPositionStatus::OnFirstRow => {
             // Do nothing if the caret (scroll adjusted) is at the top.
             if buffer.get_caret_scr_adj().col_index != col(0) {
-                // When buffer_mut goes out of scope, it will be dropped &
+                // When buffer_mut goes out of scope, it will be dropped and
                 // validation performed.
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
@@ -33,7 +33,7 @@ pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectM
         | RowContentPositionStatus::OnMiddleRow
         | RowContentPositionStatus::BeyondBuffer => {
             {
-                // When buffer_mut goes out of scope, it will be dropped &
+                // When buffer_mut goes out of scope, it will be dropped and
                 // validation performed.
                 {
                     // There is a line above the caret.
@@ -101,7 +101,7 @@ pub fn down(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Selec
     let maybe_prev_caret = sel_mod.get_caret_scr_adj(buffer);
 
     if buffer.next_line_below_caret_to_string().is_some() {
-        // When buffer_mut goes out of scope, it will be dropped &
+        // When buffer_mut goes out of scope, it will be dropped and
         // validation performed.
         {
             // There is a line below the caret.
@@ -181,7 +181,7 @@ pub fn to_start_of_line(
             }
         }
         SelectMode::Disabled => {
-            // When buffer_mut goes out of scope, it will be dropped &
+            // When buffer_mut goes out of scope, it will be dropped and
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
@@ -218,7 +218,7 @@ pub fn to_end_of_line(
                 buffer.get_caret_scr_adj().row_index,
             );
 
-            // When buffer_mut goes out of scope, it will be dropped &
+            // When buffer_mut goes out of scope, it will be dropped and
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
@@ -305,7 +305,7 @@ pub fn right(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: Sele
             right_helper::right_at_end(buffer, engine);
         }
         ContentPositionStatus::Beyond => {
-            // Treat beyond as at end
+            // Treat beyond as at end.
             right_helper::right_at_end(buffer, engine);
         }
     }
@@ -362,7 +362,7 @@ mod right_helper {
                             );
                         }
                         if move_left_by_amt > width(0) {
-                            // When buffer_mut goes out of scope, it will be dropped &
+                            // When buffer_mut goes out of scope, it will be dropped and
                             // validation performed.
                             {
                                 let buffer_mut = buffer.get_mut(engine.viewport());
@@ -376,7 +376,7 @@ mod right_helper {
                         }
                     }
                     ContainsWideSegments::No => {
-                        // When buffer_mut goes out of scope, it will be dropped &
+                        // When buffer_mut goes out of scope, it will be dropped and
                         // validation performed.
                         {
                             let buffer_mut = buffer.get_mut(engine.viewport());
@@ -394,7 +394,7 @@ mod right_helper {
             }
 
             None => {
-                // When buffer_mut goes out of scope, it will be dropped &
+                // When buffer_mut goes out of scope, it will be dropped and
                 // validation performed.
                 {
                     let buffer_mut = buffer.get_mut(engine.viewport());
@@ -418,7 +418,7 @@ mod right_helper {
             // If there is a line below the caret, move the caret to the start of
             // the next line.
 
-            // When buffer_mut goes out of scope, it will be dropped &
+            // When buffer_mut goes out of scope, it will be dropped and
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
@@ -481,7 +481,7 @@ pub fn left(
             left_helper::left_in_middle(buffer, editor);
         }
         ContentPositionStatus::Beyond => {
-            // Treat beyond as at end
+            // Treat beyond as at end.
             left_helper::left_at_end(buffer, editor);
         }
     }
@@ -508,7 +508,7 @@ mod left_helper {
             // If there is a line above the caret, move the caret to the end of
             // the previous line.
 
-            // When buffer_mut goes out of scope, it will be dropped &
+            // When buffer_mut goes out of scope, it will be dropped and
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(editor.viewport());
@@ -525,7 +525,7 @@ mod left_helper {
 
     pub fn left_at_end(buffer: &mut EditorBuffer, editor: &mut EditorEngine) {
         if let Some(seg_slice) = buffer.string_at_end_of_line_at_caret_scr_adj() {
-            // When buffer_mut goes out of scope, it will be dropped &
+            // When buffer_mut goes out of scope, it will be dropped and
             // validation performed.
             {
                 let buffer_mut = buffer.get_mut(editor.viewport());

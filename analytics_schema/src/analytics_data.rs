@@ -198,7 +198,7 @@ mod tests {
         record.events.push(event.into());
         assert_eq!(record.events.len(), 1);
 
-        // Add another event
+        // Add another event.
         let event2 = AnalyticsEventNoTimestamp {
             proxy_user_id: String::new(),
             proxy_machine_id: "sleepy_cat_34".to_string(),
@@ -281,7 +281,7 @@ mod tests {
         }
         .into();
 
-        // Add a small delay to ensure different timestamps
+        // Add a small delay to ensure different timestamps.
         std::thread::sleep(std::time::Duration::from_millis(1));
 
         let event2: AnalyticsEvent = AnalyticsEventNoTimestamp {
@@ -304,13 +304,13 @@ mod tests {
         };
         record.events.push(event.into());
 
-        // Test JSON serialization
+        // Test JSON serialization.
         let json = serde_json::to_string(&record).expect("Failed to serialize");
         assert!(!json.is_empty());
         assert!(json.contains("test_machine"));
         assert!(json.contains("test_action"));
 
-        // Test deserialization
+        // Test deserialization.
         let deserialized: AnalyticsRecord =
             serde_json::from_str(&json).expect("Failed to deserialize");
         assert_eq!(deserialized.events.len(), 1);
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_privacy_user_id_empty() {
-        // Test that we maintain privacy by keeping user_id empty
+        // Test that we maintain privacy by keeping user_id empty.
         let event = AnalyticsEventNoTimestamp {
             proxy_user_id: String::new(),
             proxy_machine_id: "privacy_test".to_string(),
@@ -352,10 +352,10 @@ mod tests {
 
     #[test]
     fn test_tiny_vec_efficiency() {
-        // Test that small collections use inline storage
+        // Test that small collections use inline storage.
         let mut record = AnalyticsRecord::default();
 
-        // Add events up to the inline capacity
+        // Add events up to the inline capacity.
         for i in 0..crate::DEFAULT_TINY_VEC_SIZE {
             let event = AnalyticsEventNoTimestamp {
                 proxy_user_id: String::new(),
@@ -367,7 +367,7 @@ mod tests {
 
         assert_eq!(record.events.len(), crate::DEFAULT_TINY_VEC_SIZE);
 
-        // Verify we can still access all events
+        // Verify we can still access all events.
         for (i, event) in record.events.iter().enumerate() {
             assert_eq!(event.proxy_machine_id, format!("machine_{i}"));
             assert_eq!(event.action, format!("action_{i}"));

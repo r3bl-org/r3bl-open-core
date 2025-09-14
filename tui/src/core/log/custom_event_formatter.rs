@@ -230,9 +230,9 @@ mod heading_cache {
     impl Hash for HeadingCacheKey {
         fn hash<H: Hasher>(&self, state: &mut H) {
             self.text.hash(state);
-            // Hash the style if present
+            // Hash the style if present.
             if let Some(style) = &self.style {
-                // Hash all style attributes
+                // Hash all style attributes.
                 style.id.hash(state);
                 style.color_fg.hash(state);
                 style.color_bg.hash(state);
@@ -378,7 +378,7 @@ mod helpers {
         );
         line_width_used += GCStringOwned::from(&timestamp_str).width();
 
-        // Span context width
+        // Span context width.
         if let Some(scope) = ctx.lookup_current() {
             let scope_str = inline_string!("[{}] ", scope.name());
             line_width_used += GCStringOwned::from(&scope_str).width();
@@ -407,7 +407,7 @@ mod helpers {
     ) -> fmt::Result {
         let spacer_display_width = GCStringOwned::from(spacer).width();
 
-        // Write heading line
+        // Write heading line.
         let heading = remove_escaped_quotes(heading);
         let line_1_width = {
             let it = max_display_width - line_width_used - spacer_display_width;
@@ -420,7 +420,7 @@ mod helpers {
             heading = truncated_heading.as_ref()
         );
 
-        // Check cache for colorized heading
+        // Check cache for colorized heading.
         let style = Some(new_style!(bold));
         let cache_key = super::heading_cache::HeadingCacheKey::new(&line_1_text, style);
 
@@ -435,13 +435,13 @@ mod helpers {
                 colorized
             }
         } else {
-            // Cache lock failed, compute without caching
+            // Cache lock failed, compute without caching.
             ColorWheel::lolcat_into_string(&line_1_text, style)
         };
 
         writeln!(f, "{line_1_text_fmt}")?;
 
-        // Write body lines
+        // Write body lines.
         if !body.is_empty() {
             let body_text = remove_escaped_quotes(body);
             let wrapped_lines = wrap(&body_text, text_wrap_options);

@@ -41,7 +41,7 @@ pub mod valid_large_inputs;
 pub mod valid_medium_inputs;
 pub mod valid_small_inputs;
 
-// Re-export all constants for easy access
+// Re-export all constants for easy access.
 pub use invalid_inputs::*;
 pub use valid_jumbo_inputs::*;
 pub use valid_large_inputs::*;

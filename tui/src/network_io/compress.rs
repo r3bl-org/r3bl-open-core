@@ -82,7 +82,7 @@ fn calculate_compression_stats(
     uncompressed_size: usize,
     compressed_size: usize,
 ) -> (usize, usize, usize, usize, usize, usize) {
-    // Convert to kilobytes using integer division, with remainder for precision
+    // Convert to kilobytes using integer division, with remainder for precision.
     let uncompressed_kb = uncompressed_size / 1000;
     let uncompressed_remainder = uncompressed_size % 1000;
     let compressed_kb = compressed_size / 1000;
@@ -90,11 +90,11 @@ fn calculate_compression_stats(
 
     // Calculate compression ratio as percentage (avoiding division by zero and overflow)
     let (ratio_percent, ratio_remainder) = if uncompressed_size > 0 {
-        // Use checked multiplication to avoid overflow
+        // Use checked multiplication to avoid overflow.
         match compressed_size.checked_mul(100) {
             Some(product) => {
                 let percent = product / uncompressed_size;
-                // Calculate remainder using checked multiplication for precision
+                // Calculate remainder using checked multiplication for precision.
                 let remainder = match compressed_size.checked_mul(10000) {
                     Some(product_10k) => (product_10k / uncompressed_size) % 100,
                     None => 0, // Overflow case, just use 0 for remainder
@@ -103,7 +103,7 @@ fn calculate_compression_stats(
             }
             None => {
                 // Overflow case: compressed_size is very large
-                // Fallback to a simple calculation that avoids overflow
+                // Fallback to a simple calculation that avoids overflow.
                 (compressed_size / (uncompressed_size / 100).max(1), 0)
             }
         }
@@ -182,7 +182,7 @@ mod tests {
         assert_eq!(compressed_remainder, 123);
 
         // Calculate expected ratio: (123 * 100) / 456 = 26.97...
-        // Integer division gives us 26
+        // Integer division gives us 26.
         assert_eq!(ratio_percent, 26);
         // For remainder: ((123 * 10000) / 456) % 100
         // = (1230000 / 456) % 100 = 2697 % 100 = 97
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_calculate_compression_stats_precision() {
-        // Test precision with specific values that test remainder calculations
+        // Test precision with specific values that test remainder calculations.
         let (
             uncompressed_kb,
             uncompressed_remainder,
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn test_calculate_compression_stats_exact_kilobytes() {
-        // Test with exact kilobyte values
+        // Test with exact kilobyte values.
         let (
             uncompressed_kb,
             uncompressed_remainder,
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_calculate_compression_stats_fractional_ratio() {
-        // Test a case that produces a fractional ratio
+        // Test a case that produces a fractional ratio.
         let (
             uncompressed_kb,
             uncompressed_remainder,
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_log_compression_stats_does_not_panic() {
-        // Test that the logging function doesn't panic with various inputs
+        // Test that the logging function doesn't panic with various inputs.
         // We can't easily test the actual log output without complex setup,
         // but we can ensure it doesn't crash.
         log_compression_stats("Test", 1000, 500);

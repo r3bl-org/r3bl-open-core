@@ -109,7 +109,7 @@ mod tests {
         assert_eq2!(segments.len(), 5);
         assert_eq2!(calculate_display_width(&segments), width(5));
 
-        // Check first segment 'H'
+        // Check first segment 'H'.
         let seg = &segments[0];
         assert_eq2!(seg.start_byte_index, ch(0));
         assert_eq2!(seg.end_byte_index, ch(1));
@@ -125,7 +125,7 @@ mod tests {
         assert_eq2!(segments.len(), 3);
         assert_eq2!(calculate_display_width(&segments), width(4)); // H(1) + 😀(2) + !(1)
 
-        // Check emoji segment
+        // Check emoji segment.
         let emoji_seg = &segments[1];
         assert_eq2!(emoji_seg.start_byte_index, ch(1));
         assert_eq2!(emoji_seg.end_byte_index, ch(5)); // 4 bytes
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_build_segments_combining_chars() {
-        // Using composed form to avoid clippy warning
+        // Using composed form to avoid clippy warning.
         let input = "café"; // é is composed
         let segments = build_segments_for_str(input);
 
@@ -207,7 +207,7 @@ mod benches {
 
     #[bench]
     fn bench_build_segments_unicode_complex(b: &mut Bencher) {
-        // Complex grapheme clusters with skin tone modifiers
+        // Complex grapheme clusters with skin tone modifiers.
         let input = "👨🏾‍🤝‍👨🏿 Family: 👨‍👩‍👧‍👦 Emoji: 🙏🏽 Flag: 🏳️‍🌈";
         b.iter(|| {
             black_box(build_segments_for_str(black_box(input)));

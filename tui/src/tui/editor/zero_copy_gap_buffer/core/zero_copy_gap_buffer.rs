@@ -88,13 +88,13 @@ impl ZeroCopyGapBuffer {
     ///                     ↑ All content shifted →
     /// ```
     pub fn insert_line_with_buffer_shift(&mut self, line_idx: usize) {
-        // If inserting at the end, just add a new line
+        // If inserting at the end, just add a new line.
         if line_idx == self.line_count.as_usize() {
             self.add_line();
             return;
         }
 
-        // Calculate where the new line should be inserted in the buffer
+        // Calculate where the new line should be inserted in the buffer.
         let insert_offset = if line_idx == 0 {
             byte_index(0)
         } else {
@@ -102,29 +102,29 @@ impl ZeroCopyGapBuffer {
             byte_index(*prev_line.buffer_offset + prev_line.capacity.as_usize())
         };
 
-        // Extend buffer by INITIAL_LINE_SIZE bytes
+        // Extend buffer by INITIAL_LINE_SIZE bytes.
         let old_buffer_len = self.buffer.len();
         self.buffer
             .resize(old_buffer_len + INITIAL_LINE_SIZE, b'\0');
 
-        // Shift all subsequent buffer content down
+        // Shift all subsequent buffer content down.
         let shift_start = *insert_offset;
         let shift_amount = INITIAL_LINE_SIZE;
 
-        // Move content from back to front to avoid overwriting
+        // Move content from back to front to avoid overwriting.
         for i in (shift_start..old_buffer_len).rev() {
             self.buffer[i + shift_amount] = self.buffer[i];
         }
 
-        // Clear the newly created space
+        // Clear the newly created space.
         for i in shift_start..shift_start + INITIAL_LINE_SIZE {
             self.buffer[i] = b'\0';
         }
 
-        // Add newline character for the empty line
+        // Add newline character for the empty line.
         self.buffer[shift_start] = b'\n';
 
-        // Create line metadata for the new line
+        // Create line metadata for the new line.
         let new_line_info = LineMetadata {
             buffer_offset: insert_offset,
             content_len: len(0),
@@ -134,10 +134,10 @@ impl ZeroCopyGapBuffer {
             grapheme_count: len(0),
         };
 
-        // Insert the new line metadata at the correct position
+        // Insert the new line metadata at the correct position.
         self.lines.insert(line_idx, new_line_info);
 
-        // Update buffer offsets for all subsequent lines
+        // Update buffer offsets for all subsequent lines.
         for i in (line_idx + 1)..self.lines.len() {
             self.lines[i].buffer_offset =
                 byte_index(*self.lines[i].buffer_offset + shift_amount);
@@ -168,7 +168,7 @@ impl ZeroCopyGapBuffer {
     pub fn add_line(&mut self) -> usize {
         let line_index = self.line_count.as_usize();
 
-        // Calculate where this line starts in the buffer
+        // Calculate where this line starts in the buffer.
         let buffer_offset = if line_index == 0 {
             byte_index(0)
         } else {
@@ -183,7 +183,7 @@ impl ZeroCopyGapBuffer {
         // Add the newline character at the start (empty line)
         self.buffer[*buffer_offset] = b'\n';
 
-        // Create line metadata
+        // Create line metadata.
         self.lines.push(LineMetadata {
             buffer_offset,
             content_len: len(0),
@@ -229,22 +229,22 @@ impl ZeroCopyGapBuffer {
         let removed_start = *removed_line.buffer_offset;
         let removed_size = removed_line.capacity.as_usize();
 
-        // Remove from metadata
+        // Remove from metadata.
         self.lines.remove(line_index.as_usize());
 
-        // Shift buffer contents
+        // Shift buffer contents.
         let shift_start = removed_start + removed_size;
         let buffer_len = self.buffer.len();
 
-        // Move all subsequent bytes up
+        // Move all subsequent bytes up.
         for i in shift_start..buffer_len {
             self.buffer[i - removed_size] = self.buffer[i];
         }
 
-        // Truncate the buffer
+        // Truncate the buffer.
         self.buffer.truncate(buffer_len - removed_size);
 
-        // Update buffer offsets for remaining lines
+        // Update buffer offsets for remaining lines.
         for line in self.lines.iter_mut().skip(line_index.as_usize()) {
             line.buffer_offset = byte_index(*line.buffer_offset - removed_size);
         }
@@ -264,7 +264,7 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn can_insert(&self, line_index: RowIndex, additional_bytes: usize) -> bool {
         if let Some(line_info) = self.get_line_info(line_index.as_usize()) {
-            // Need space for content + newline
+            // Need space for content + newline.
             line_info.content_len.as_usize() + additional_bytes
                 < line_info.capacity.as_usize()
         } else {
@@ -283,27 +283,27 @@ impl ZeroCopyGapBuffer {
         let old_capacity = line_info.capacity.as_usize();
         let new_capacity = old_capacity + LINE_PAGE_SIZE;
 
-        // Calculate how much to shift subsequent content
+        // Calculate how much to shift subsequent content.
         let shift_amount = LINE_PAGE_SIZE;
         let insert_pos = line_start + old_capacity;
 
-        // Extend buffer to accommodate new capacity
+        // Extend buffer to accommodate new capacity.
         self.buffer.resize(self.buffer.len() + shift_amount, b'\0');
 
-        // Shift all subsequent content to the right
+        // Shift all subsequent content to the right.
         for i in (insert_pos..self.buffer.len() - shift_amount).rev() {
             self.buffer[i + shift_amount] = self.buffer[i];
         }
 
-        // Fill the newly allocated space with nulls
+        // Fill the newly allocated space with nulls.
         for i in insert_pos..insert_pos + shift_amount {
             self.buffer[i] = b'\0';
         }
 
-        // Update line capacity
+        // Update line capacity.
         self.lines[line_index.as_usize()].capacity = len(new_capacity);
 
-        // Update buffer offsets for subsequent lines
+        // Update buffer offsets for subsequent lines.
         for line in self.lines.iter_mut().skip(line_index.as_usize() + 1) {
             line.buffer_offset = byte_index(*line.buffer_offset + shift_amount);
         }
@@ -434,7 +434,7 @@ impl GraphemeDocMut for ZeroCopyGapBuffer {
     fn merge_lines(&mut self, row: RowIndex) -> miette::Result<Self::DocMutResult> {
         // Since ZeroCopyGapBuffer doesn't have a built-in merge_lines method,
         // we'll implement it by copying content from the next line to current line
-        // and then removing the next line
+        // and then removing the next line.
         if row.as_usize() + 1 >= self.line_count().as_usize() {
             return Err(miette::miette!(
                 "Cannot merge: no line after row {}",
@@ -442,23 +442,23 @@ impl GraphemeDocMut for ZeroCopyGapBuffer {
             ));
         }
 
-        // Get content from the next line
+        // Get content from the next line.
         let next_line_content = self
             .get_line(crate::row(row.as_usize() + 1))
             .map(|line| line.content().to_string())
             .ok_or_else(|| miette::miette!("Failed to get next line content"))?;
 
-        // Append to current line
+        // Append to current line.
         let current_line = self
             .get_line(row)
             .ok_or_else(|| miette::miette!("Failed to get current line"))?;
         let end_seg_count = current_line.segment_count();
 
-        // Insert the next line's content at the end of current line
+        // Insert the next line's content at the end of current line.
         self.insert_text_at_grapheme(row, end_seg_count.into(), &next_line_content)
             .map_err(|e| miette::miette!("{}", e))?;
 
-        // Remove the next line
+        // Remove the next line.
         self.remove_line(crate::row(row.as_usize() + 1));
 
         Ok(())
@@ -469,16 +469,16 @@ impl GraphemeDocMut for ZeroCopyGapBuffer {
         row: RowIndex,
         col: ColIndex,
     ) -> miette::Result<Self::DocMutResult> {
-        // Use the existing split_line_at_col method
+        // Use the existing split_line_at_col method.
         let right_content = self.split_line_at_col(row, col).ok_or_else(|| {
             miette::miette!("Failed to split line at column {}", col.as_usize())
         })?;
 
-        // Insert a new line after the current one
+        // Insert a new line after the current one.
         self.insert_empty_line(crate::row(row.as_usize() + 1))
             .map_err(|e| miette::miette!("{}", e))?;
 
-        // Insert the right content into the new line
+        // Insert the right content into the new line.
         self.insert_text_at_grapheme(
             crate::row(row.as_usize() + 1),
             SegIndex::from(0),
@@ -566,16 +566,16 @@ mod tests {
         buffer.add_line();
         buffer.add_line();
 
-        // Extend the middle line
+        // Extend the middle line.
         buffer.extend_line_capacity(row(1));
 
         let line1_offset_before = *buffer.get_line_info(2).unwrap().buffer_offset;
 
-        // Remove the extended middle line
+        // Remove the extended middle line.
         assert!(buffer.remove_line(row(1)));
         assert_eq!(buffer.line_count(), len(2));
 
-        // Check that the third line's offset was updated correctly
+        // Check that the third line's offset was updated correctly.
         let line1_offset_after = *buffer.get_line_info(1).unwrap().buffer_offset;
         assert_eq!(line1_offset_after, INITIAL_LINE_SIZE);
         // The extended line had size INITIAL_LINE_SIZE + LINE_PAGE_SIZE = 512
@@ -594,10 +594,10 @@ mod tests {
         let buffer_start = *line_info.buffer_offset;
         let capacity = line_info.capacity.as_usize();
 
-        // Check that newline is at position 0
+        // Check that newline is at position 0.
         assert_eq!(buffer.buffer[buffer_start], b'\n');
 
-        // Check that the rest of the line capacity is null-padded
+        // Check that the rest of the line capacity is null-padded.
         for i in (buffer_start + 1)..(buffer_start + capacity) {
             assert_eq!(
                 buffer.buffer[i], b'\0',
@@ -612,17 +612,17 @@ mod tests {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
-        // Extend the line capacity
+        // Extend the line capacity.
         buffer.extend_line_capacity(row(0));
 
         let line_info = buffer.get_line_info(0).unwrap();
         let buffer_start = *line_info.buffer_offset;
         let capacity = line_info.capacity.as_usize();
 
-        // Check that newline is still at position 0
+        // Check that newline is still at position 0.
         assert_eq!(buffer.buffer[buffer_start], b'\n');
 
-        // Check that the entire extended capacity is null-padded
+        // Check that the entire extended capacity is null-padded.
         for i in (buffer_start + 1)..(buffer_start + capacity) {
             assert_eq!(
                 buffer.buffer[i], b'\0',
@@ -641,7 +641,7 @@ mod tests {
         buffer.add_line();
         buffer.add_line();
 
-        // Record original offsets
+        // Record original offsets.
         let line0_offset = *buffer.get_line_info(0).unwrap().buffer_offset;
         let line1_offset = *buffer.get_line_info(1).unwrap().buffer_offset;
         let line2_offset = *buffer.get_line_info(2).unwrap().buffer_offset;
@@ -653,7 +653,7 @@ mod tests {
         // Test insertion at beginning (should shift all lines)
         buffer.insert_line_with_buffer_shift(0);
 
-        // Check that all lines were shifted
+        // Check that all lines were shifted.
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
         assert_eq!(
             *buffer.get_line_info(1).unwrap().buffer_offset,
@@ -694,7 +694,7 @@ mod tests {
         buffer.insert_line_with_buffer_shift(5);
         let buffer_len_after = buffer.buffer.len();
 
-        // Only one line was added at the end
+        // Only one line was added at the end.
         assert_eq!(buffer_len_after - buffer_len_before, INITIAL_LINE_SIZE);
     }
 
@@ -710,7 +710,7 @@ mod tests {
         // Test deletion at beginning (should shift all subsequent lines up)
         assert!(buffer.remove_line(row(0)));
 
-        // Check that all lines were shifted up
+        // Check that all lines were shifted up.
         assert_eq!(*buffer.get_line_info(0).unwrap().buffer_offset, 0);
         assert_eq!(
             *buffer.get_line_info(1).unwrap().buffer_offset,
@@ -744,7 +744,7 @@ mod tests {
         assert!(buffer.remove_line(row(last_idx)));
         let buffer_len_after = buffer.buffer.len();
 
-        // Buffer was truncated by one line
+        // Buffer was truncated by one line.
         assert_eq!(buffer_len_before - buffer_len_after, INITIAL_LINE_SIZE);
     }
 }
@@ -766,7 +766,7 @@ mod benches {
         b.iter(|| {
             let idx = buffer.add_line();
             black_box(idx);
-            // Reset for next iteration
+            // Reset for next iteration.
             buffer.clear();
         });
     }
@@ -791,10 +791,10 @@ mod benches {
             for _ in 0..10 {
                 buffer.add_line();
             }
-            // Remove middle line
+            // Remove middle line.
             buffer.remove_line(row(5));
             black_box(buffer.line_count());
-            // Reset for next iteration
+            // Reset for next iteration.
             buffer.clear();
         });
     }
@@ -807,7 +807,7 @@ mod benches {
             buffer.add_line();
             buffer.extend_line_capacity(row(0));
             black_box(buffer.get_line_info(0).unwrap().capacity);
-            // Reset for next iteration
+            // Reset for next iteration.
             buffer.clear();
         });
     }

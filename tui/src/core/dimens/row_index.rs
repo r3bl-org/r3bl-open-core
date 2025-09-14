@@ -184,7 +184,7 @@ mod numeric_arithmetic_operators {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
-    // Generate numeric operations using macro
+    // Generate numeric operations using macro.
     create_numeric_arithmetic_operators!(RowIndex, row, [usize, u16, i32]);
 }
 

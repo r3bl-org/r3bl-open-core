@@ -222,7 +222,7 @@ mod numeric_arithmetic_operators {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
-    // Generate numeric operations using macro
+    // Generate numeric operations using macro.
     create_numeric_arithmetic_operators!(ColIndex, col, [usize, u16, i32]);
 }
 
@@ -498,7 +498,7 @@ mod tests_length_arithmetic {
 
     #[test]
     fn test_sub_length_saturating() {
-        // Test subtraction that would go below zero (should saturate to 0)
+        // Test subtraction that would go below zero (should saturate to 0).
         let col_idx = col(5);
         let length = len(10);
         let result = col_idx - length;
@@ -518,23 +518,23 @@ mod tests_length_arithmetic {
         let col_idx = col(5);
         let zero_length = len(0);
 
-        // Adding zero should not change value
+        // Adding zero should not change value.
         assert_eq!(col_idx + zero_length, col(5));
 
-        // Subtracting zero should not change value
+        // Subtracting zero should not change value.
         assert_eq!(col_idx - zero_length, col(5));
 
-        // Multiplying by zero should result in zero
+        // Multiplying by zero should result in zero.
         assert_eq!(col_idx * zero_length, col(0));
     }
 
     #[test]
     fn test_length_operations_consistency() {
-        // Verify operations work consistently with direct ChUnit operations
+        // Verify operations work consistently with direct ChUnit operations.
         let col_idx = col(7);
         let length = len(4);
 
-        // Test that Length operations give same result as ChUnit operations
+        // Test that Length operations give same result as ChUnit operations.
         assert_eq!(col_idx + length, col(*col_idx + *length));
         assert_eq!(col_idx - length, col(*col_idx - *length));
         assert_eq!(col_idx * length, col(*col_idx * *length));

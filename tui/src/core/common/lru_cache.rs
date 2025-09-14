@@ -142,7 +142,7 @@ where
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
         self.access_counter += 1;
 
-        // If at capacity and key doesn't exist, remove LRU entry
+        // If at capacity and key doesn't exist, remove LRU entry.
         if self.map.len() >= self.capacity
             && !self.map.contains_key(&key)
             && let Some(lru_key) = self
@@ -232,17 +232,17 @@ mod tests {
     fn test_basic_operations() {
         let mut cache = LruCache::new(3);
 
-        // Test insert and get
+        // Test insert and get.
         assert_eq!(cache.insert("a".to_string(), 1), None);
         assert_eq!(cache.get(&"a".to_string()), Some(&1));
         assert_eq!(cache.len(), 1);
 
-        // Test update
+        // Test update.
         assert_eq!(cache.insert("a".to_string(), 2), Some(1));
         assert_eq!(cache.get(&"a".to_string()), Some(&2));
         assert_eq!(cache.len(), 1);
 
-        // Test multiple inserts
+        // Test multiple inserts.
         cache.insert("b".to_string(), 3);
         cache.insert("c".to_string(), 4);
         assert_eq!(cache.len(), 3);
@@ -253,16 +253,16 @@ mod tests {
     fn test_lru_eviction() {
         let mut cache = LruCache::new(3);
 
-        // Fill cache
+        // Fill cache.
         cache.insert("a".to_string(), 1);
         cache.insert("b".to_string(), 2);
         cache.insert("c".to_string(), 3);
 
-        // Access "a" and "b" to make them more recent
+        // Access "a" and "b" to make them more recent.
         cache.get(&"a".to_string());
         cache.get(&"b".to_string());
 
-        // Insert "d" - should evict "c" (least recently used)
+        // Insert "d" - should evict "c" (least recently used).
         cache.insert("d".to_string(), 4);
 
         assert_eq!(cache.get(&"a".to_string()), Some(&1));
@@ -277,7 +277,7 @@ mod tests {
 
         cache.insert("key".to_string(), vec![1, 2, 3]);
 
-        // Modify value through get_mut
+        // Modify value through get_mut.
         if let Some(val) = cache.get_mut(&"key".to_string()) {
             val.push(4);
         }
@@ -329,13 +329,13 @@ mod tests {
     fn test_thread_safe_cache() {
         let cache = new_threadsafe_lru_cache(10);
 
-        // Insert in one thread
+        // Insert in one thread.
         {
             let mut cache_guard = cache.lock().unwrap();
             cache_guard.insert("key".to_string(), 42);
         }
 
-        // Read in another context
+        // Read in another context.
         {
             let mut cache_guard = cache.lock().unwrap();
             assert_eq!(cache_guard.get(&"key".to_string()), Some(&42));

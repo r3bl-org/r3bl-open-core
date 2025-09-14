@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_last_write_wins_capture_flags() {
-        // Enable both, then disable
+        // Enable both, then disable.
         let config = PtyConfigOption::Osc
             + PtyConfigOption::Output
             + PtyConfigOption::NoCaptureOutput;

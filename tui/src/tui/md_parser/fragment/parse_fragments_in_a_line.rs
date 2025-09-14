@@ -46,7 +46,7 @@ use crate::{CheckboxParsePolicy, DEBUG_MD_PARSER, MdLineFragment, fg_green, fg_r
 /// the tests in this file.
 ///
 /// # Null Padding Invariant
-/// 
+///
 /// This parser expects input where lines end with `\n` followed by zero or more `\0` characters,
 /// as provided by `ZeroCopyGapBuffer::as_str()`. All the sub-parsers called by this function
 /// handle null padding correctly.

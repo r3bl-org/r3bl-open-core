@@ -112,7 +112,7 @@ async fn main() -> miette::Result<()> {
         shared_writer,
     } = terminal_async_constructor::new(pid).await?;
 
-    // Create 2 tasks, join on them:
+    // Create 2 tasks, join on them.
     // 1. monitor the output from the child process.
     // 2. monitor the input from the user (and relay it to the child process).
     let monitor_handle = monitor_child_output::spawn(
@@ -123,7 +123,7 @@ async fn main() -> miette::Result<()> {
     );
 
     let _unused = join!(
-        // Wait for the monitor task
+        // Wait for the monitor task.
         monitor_handle,
         // Current thread.
         monitor_user_input_and_send_to_child::start_event_loop(

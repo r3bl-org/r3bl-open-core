@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_editor_engine_new() {
-        // Test default construction
+        // Test default construction.
         let engine = EditorEngine::default();
         assert_eq2!(engine.config_options.multiline_mode, LineMode::MultiLine);
         assert_eq2!(
@@ -126,7 +126,7 @@ mod tests {
         assert_eq2!(engine.config_options.edit_mode, EditMode::ReadWrite);
         assert!(engine.ast_cache.is_none());
 
-        // Test custom configuration
+        // Test custom configuration.
         let custom_config = EditorEngineConfig {
             multiline_mode: LineMode::SingleLine,
             syntax_highlight: SyntaxHighlightMode::Disable,
@@ -140,10 +140,10 @@ mod tests {
     fn test_viewport() {
         let mut engine = EditorEngine::default();
 
-        // Default viewport should be empty
+        // Default viewport should be empty.
         assert_eq2!(engine.viewport(), Size::default());
 
-        // Set a custom viewport
+        // Set a custom viewport.
         engine.current_box.style_adjusted_bounds_size = width(100) + height(50);
         assert_eq2!(engine.viewport(), width(100) + height(50));
     }
@@ -154,11 +154,11 @@ mod tests {
 
         let mut engine = EditorEngine::default();
 
-        // Initially cache should be empty
+        // Initially cache should be empty.
         assert!(engine.ast_cache_is_empty());
         assert!(engine.get_ast_cache().is_none());
 
-        // Set cache - create empty StyleUSSpanLines for testing
+        // Set cache - create empty StyleUSSpanLines for testing.
         let test_ast: StyleUSSpanLines = List::new();
         engine.set_ast_cache(test_ast.clone());
         assert!(!engine.ast_cache_is_empty());
@@ -180,17 +180,17 @@ mod tests {
 
     #[test]
     fn test_config_enums() {
-        // Test EditMode variants
+        // Test EditMode variants.
         assert_eq2!(EditMode::ReadOnly, EditMode::ReadOnly);
         assert_eq2!(EditMode::ReadWrite, EditMode::ReadWrite);
         assert!(EditMode::ReadOnly != EditMode::ReadWrite);
 
-        // Test LineMode variants
+        // Test LineMode variants.
         assert_eq2!(LineMode::SingleLine, LineMode::SingleLine);
         assert_eq2!(LineMode::MultiLine, LineMode::MultiLine);
         assert!(LineMode::SingleLine != LineMode::MultiLine);
 
-        // Test SyntaxHighlightMode variants
+        // Test SyntaxHighlightMode variants.
         assert_eq2!(SyntaxHighlightMode::Enable, SyntaxHighlightMode::Enable);
         assert_eq2!(SyntaxHighlightMode::Disable, SyntaxHighlightMode::Disable);
         assert!(SyntaxHighlightMode::Enable != SyntaxHighlightMode::Disable);
@@ -198,11 +198,11 @@ mod tests {
 
     #[test]
     fn test_syntax_set_and_theme_are_cached() {
-        // Create two engines and verify they share the same syntax_set and theme
+        // Create two engines and verify they share the same syntax_set and theme.
         let engine1 = EditorEngine::default();
         let engine2 = EditorEngine::default();
 
-        // Since these are static references, they should point to the same memory
+        // Since these are static references, they should point to the same memory.
         assert!(std::ptr::eq(engine1.syntax_set, engine2.syntax_set));
         assert!(std::ptr::eq(engine1.theme, engine2.theme));
     }

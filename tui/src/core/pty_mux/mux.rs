@@ -106,7 +106,7 @@ impl PTYMux {
     ///
     /// Returns an error if terminal setup, process management, or event handling fails.
     pub async fn run(mut self) -> miette::Result<()> {
-        // Start raw mode using existing RawMode
+        // Start raw mode using existing RawMode.
         RawMode::start(
             self.terminal_size,
             lock_output_device_as_mut!(&self.output_device),
@@ -114,23 +114,23 @@ impl PTYMux {
         );
         tracing::debug!("Raw mode started");
 
-        // Set initial terminal title using OSC controller
+        // Set initial terminal title using OSC controller.
         {
             let mut osc = OscController::new(&self.output_device);
             osc.set_title_and_tab("PTYMux Example - Starting")?;
         }
 
-        // Start all processes at startup
+        // Start all processes at startup.
         tracing::debug!("Starting all processes");
         self.process_manager.start_all_processes()?;
 
-        // Clear screen before showing first process
+        // Clear screen before showing first process.
         terminal_output::clear_screen_and_home_cursor(&self.output_device);
 
-        // Trigger initial process switch to show first process
+        // Trigger initial process switch to show first process.
         self.process_manager.switch_to(0);
 
-        // Render initial status bar
+        // Render initial status bar.
         self.output_renderer
             .render_initial_status_bar(&self.output_device, &self.process_manager)?;
 
@@ -139,7 +139,7 @@ impl PTYMux {
         let result = self.run_event_loop().await;
         tracing::debug!("Main event loop exited with result: {:?}", result);
 
-        // Always cleanup regardless of error
+        // Always cleanup regardless of error.
         self.cleanup_terminal();
 
         result
@@ -147,17 +147,17 @@ impl PTYMux {
 
     /// Main event loop that handles input and output events.
     async fn run_event_loop(&mut self) -> miette::Result<()> {
-        // Create a periodic timer for status bar updates
+        // Create a periodic timer for status bar updates.
         let mut status_bar_interval =
             tokio::time::interval(tokio::time::Duration::from_millis(500));
 
-        // Create a fast timer for polling PTY output
+        // Create a fast timer for polling PTY output.
         let mut output_poll_interval =
             tokio::time::interval(tokio::time::Duration::from_millis(10));
 
         'main_loop: loop {
             tokio::select! {
-                // Poll ALL processes and update their virtual terminal buffers
+                // Poll ALL processes and update their virtual terminal buffers.
                 _ = output_poll_interval.tick() => {
                     // **Core of per-process virtual terminal architecture**:
                     // Poll ALL processes continuously (every 10ms), not just the active one.
@@ -167,23 +167,23 @@ impl PTYMux {
 
                     // **Selective rendering optimization**:
                     // Only render when the currently visible process has new output.
-                    // All other processes continue updating their virtual terminals
+                    // All other processes continue updating their virtual terminals.
                     // in the background, ready for instant switching.
                     if active_had_output {
-                        // Get the active process's virtual terminal and render it
+                        // Get the active process's virtual terminal and render it.
                         self.output_renderer.render_from_active_buffer(
                             &self.output_device,
                             &self.process_manager
                         )?;
 
-                        // Clear the "needs rendering" flag for the active process
+                        // Clear the "needs rendering" flag for the active process.
                         self.process_manager.mark_active_as_rendered();
                     }
                 }
 
-                // Handle user input using existing InputDevice
+                // Handle user input using existing InputDevice.
                 Ok(event) = self.input_device.next() => {
-                    // Convert crossterm event to InputEvent - handle conversion error gracefully
+                    // Convert crossterm event to InputEvent - handle conversion error gracefully.
                     tracing::debug!("Received input event: {:?}", event);
                     let Ok(input_event) = InputEvent::try_from(event.clone()) else {
                         tracing::warn!("Failed to convert input event: {:?}", event);
@@ -195,10 +195,10 @@ impl PTYMux {
                         show_notification("PTY Mux - Input Event", &format!("Input event received: {input_event:?}"));
                     }
 
-                    // Create OSC controller for this input handling
+                    // Create OSC controller for this input handling.
                     let mut osc = OscController::new(&self.output_device);
 
-                    // Handle input events using the input router
+                    // Handle input events using the input router.
                     tracing::debug!("Handling input event: {:?}", input_event);
                     let should_exit = self.input_router.handle_input(
                         input_event,
@@ -213,7 +213,7 @@ impl PTYMux {
                     }
                 }
 
-                // Periodic status bar updates - ensures status bar is visible even when idle
+                // Periodic status bar updates - ensures status bar is visible even when idle.
                 _ = status_bar_interval.tick() => {
                     self.output_renderer.render_initial_status_bar(&self.output_device, &self.process_manager)?;
                 }
@@ -251,17 +251,17 @@ impl PTYMux {
         let start_time = std::time::Instant::now();
         tracing::debug!("Starting cleanup - terminal size: {:?}", self.terminal_size);
 
-        // First, kill all running processes
+        // First, kill all running processes.
         tracing::debug!("Step 1: Shutting down process manager");
         self.process_manager.shutdown_all_processes();
         tracing::debug!("Step 1 completed in {:?}", start_time.elapsed());
 
-        // Give processes a short time to terminate gracefully, then force exit
+        // Give processes a short time to terminate gracefully, then force exit.
         tracing::debug!("Step 2: Waiting 100ms for processes to terminate gracefully");
         std::thread::sleep(std::time::Duration::from_millis(100));
         tracing::debug!("Step 2 completed in {:?}", start_time.elapsed());
 
-        // Force flush any pending output
+        // Force flush any pending output.
         tracing::debug!("Step 3: Flushing pending output");
         match lock_output_device_as_mut!(&self.output_device).flush() {
             Ok(()) => tracing::debug!("Step 3: Output flush successful"),
@@ -274,7 +274,7 @@ impl PTYMux {
         terminal_output::clear_screen_and_home_cursor(&self.output_device);
         tracing::debug!("Step 4 completed in {:?}", start_time.elapsed());
 
-        // Force flush after escape sequences
+        // Force flush after escape sequences.
         tracing::debug!("Step 5: Final output flush after escape sequences");
         match lock_output_device_as_mut!(&self.output_device).flush() {
             Ok(()) => tracing::debug!("Step 5: Final flush successful"),
@@ -298,8 +298,8 @@ impl PTYMux {
             tracing::warn!("Cleanup took longer than expected: {:?}", total_time);
         }
 
-        // If cleanup took too long, there might be zombie processes
-        // Force exit to prevent hanging
+        // If cleanup took too long, there might be zombie processes.
+        // Force exit to prevent hanging.
         if total_time > std::time::Duration::from_millis(1000) {
             tracing::error!("Cleanup took over 1 second, forcing exit to prevent hang");
             std::process::exit(0);

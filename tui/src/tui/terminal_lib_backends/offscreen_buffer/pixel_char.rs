@@ -25,7 +25,7 @@ pub const VOID_CHAR: char = '❯';
 
 impl GetMemSize for PixelChar {
     fn get_mem_size(&self) -> usize {
-        // Since PixelChar is now Copy, its size is fixed
+        // Since PixelChar is now Copy, its size is fixed.
         std::mem::size_of::<PixelChar>()
     }
 }
@@ -81,11 +81,11 @@ mod tests {
 
     #[test]
     fn test_default_pixel_char() {
-        // Test PixelChar::default()
+        // Test PixelChar::default().
         let default_char = PixelChar::default();
         assert!(matches!(default_char, PixelChar::Spacer));
 
-        // Test that new buffer uses default
+        // Test that new buffer uses default.
         let window_size = width(1) + height(1);
         let ofs_buf = OffscreenBuffer::new_empty(window_size);
         assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
@@ -93,13 +93,13 @@ mod tests {
 
     #[test]
     fn test_pixel_char_variants() {
-        // Test different PixelChar variants and their behavior
+        // Test different PixelChar variants and their behavior.
         let mut ofs_buf = create_test_buffer();
 
-        // Test Spacer variant (default)
+        // Test Spacer variant (default).
         assert!(matches!(ofs_buf.buffer[0][0], PixelChar::Spacer));
 
-        // Test PlainText with no style
+        // Test PlainText with no style.
         ofs_buf.buffer[0][1] = PixelChar::PlainText {
             display_char: 'a',
             style: TuiStyle::default(),
@@ -116,7 +116,7 @@ mod tests {
             _ => panic!("Expected PlainText variant"),
         }
 
-        // Test PlainText with style
+        // Test PlainText with style.
         ofs_buf.buffer[0][2] = PixelChar::PlainText {
             display_char: 'b',
             style: new_style!(underline color_fg: {tui_color!(red)}),
@@ -137,11 +137,11 @@ mod tests {
             _ => panic!("Expected styled PlainText variant"),
         }
 
-        // Test Void variant
+        // Test Void variant.
         ofs_buf.buffer[1][0] = PixelChar::Void;
         assert!(matches!(ofs_buf.buffer[1][0], PixelChar::Void));
 
-        // Test space character with no style
+        // Test space character with no style.
         ofs_buf.buffer[1][1] = PixelChar::PlainText {
             display_char: ' ',
             style: TuiStyle::default(),
@@ -158,7 +158,7 @@ mod tests {
             _ => panic!("Expected PlainText with space"),
         }
 
-        // Test space character with style
+        // Test space character with style.
         ofs_buf.buffer[1][2] = PixelChar::PlainText {
             display_char: ' ',
             style: new_style!(color_bg: {tui_color!(blue)}),
@@ -192,7 +192,7 @@ mod tests {
             style: new_style!(color_fg: {tui_color!(green)}),
         };
 
-        // All variants should have the same size since PixelChar is Copy
+        // All variants should have the same size since PixelChar is Copy.
         let void_size = void_char.get_mem_size();
         let spacer_size = spacer_char.get_mem_size();
         let plain_size = plain_char.get_mem_size();
@@ -241,16 +241,16 @@ mod tests {
             style: new_style!(italic color_bg: {tui_color!(yellow)}),
         };
 
-        // Test Copy trait
+        // Test Copy trait.
         let copied = original;
         assert_eq!(original, copied);
 
-        // Test Clone trait
+        // Test Clone trait.
         let cloned = original;
         assert_eq!(original, cloned);
 
-        // Modify copied/cloned shouldn't affect original (they're independent)
-        // Since PixelChar is Copy, assignment creates a new independent value
+        // Modify copied/cloned shouldn't affect original (they're independent).
+        // Since PixelChar is Copy, assignment creates a new independent value.
         let modified = PixelChar::Spacer;
         assert_ne!(original, modified);
         assert_eq!(original, copied); // original copy unchanged

@@ -21,20 +21,20 @@ fn test_dsr_status_report() {
     );
     let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
 
-    // Should not produce OSC events
+    // Should not produce OSC events.
     assert_eq!(osc_events.len(), 0, "no OSC events expected");
 
-    // Should produce exactly one DSR response
+    // Should produce exactly one DSR response.
     assert_eq!(dsr_responses.len(), 1, "expected one DSR response");
 
-    // Check the response is a status report
+    // Check the response is a status report.
     assert_eq!(
         dsr_responses[0],
         DsrRequestFromPtyEvent::TerminalStatus,
         "expected status report response"
     );
 
-    // Verify the response bytes are correct
+    // Verify the response bytes are correct.
     let response_bytes = dsr_responses[0].to_string().into_bytes();
     assert_eq!(
         response_bytes,
@@ -57,13 +57,13 @@ fn test_dsr_cursor_position_report() {
     );
     let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
 
-    // Should not produce OSC events
+    // Should not produce OSC events.
     assert_eq!(osc_events.len(), 0, "no OSC events expected");
 
-    // Should produce exactly one DSR response
+    // Should produce exactly one DSR response.
     assert_eq!(dsr_responses.len(), 1, "expected one DSR response");
 
-    // Check the response is a cursor position report with correct 1-based position
+    // Check the response is a cursor position report with correct 1-based position.
     assert_eq!(
         dsr_responses[0],
         DsrRequestFromPtyEvent::CursorPosition {
@@ -73,7 +73,7 @@ fn test_dsr_cursor_position_report() {
         "expected cursor position report at (4, 6) in 1-based coordinates"
     );
 
-    // Verify the response bytes are correct
+    // Verify the response bytes are correct.
     let response_bytes = dsr_responses[0].to_string().into_bytes();
     let expected_bytes = dsr_cursor_position_response(term_row(4), term_col(6));
     assert_eq!(
@@ -107,7 +107,7 @@ fn test_dsr_cursor_position_at_origin() {
         "expected cursor position report at (1, 1) for origin"
     );
 
-    // Verify the response bytes
+    // Verify the response bytes.
     let response_bytes = dsr_responses[0].to_string().into_bytes();
     let expected_bytes = dsr_cursor_position_response(term_row(1), term_col(1));
     assert_eq!(
@@ -128,7 +128,7 @@ fn test_dsr_unknown_request() {
     );
     let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(&dsr_request);
 
-    // Should not produce any events for unknown DSR requests
+    // Should not produce any events for unknown DSR requests.
     assert_eq!(osc_events.len(), 0, "no OSC events expected");
     assert_eq!(
         dsr_responses.len(),
@@ -144,7 +144,7 @@ fn test_multiple_dsr_requests() {
     // Move cursor to (2, 3)
     ofs_buf.my_pos = row(2) + col(3);
 
-    // Send multiple DSR requests in one sequence
+    // Send multiple DSR requests in one sequence.
     let dsr_requests = format!(
         "{}{}{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus), /* Status report */
@@ -156,7 +156,7 @@ fn test_multiple_dsr_requests() {
     // Should produce exactly two DSR responses (status and cursor position)
     assert_eq!(dsr_responses.len(), 2, "expected two DSR responses");
 
-    // Check the responses
+    // Check the responses.
     assert_eq!(dsr_responses[0], DsrRequestFromPtyEvent::TerminalStatus);
     assert_eq!(
         dsr_responses[1],
@@ -171,7 +171,7 @@ fn test_multiple_dsr_requests() {
 fn test_dsr_events_are_cleared_after_processing() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
-    // First DSR request
+    // First DSR request.
     let dsr_request = format!(
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestStatus)
@@ -179,7 +179,7 @@ fn test_dsr_events_are_cleared_after_processing() {
     let (_, dsr_responses1) = ofs_buf.apply_ansi_bytes(&dsr_request);
     assert_eq!(dsr_responses1.len(), 1, "expected one DSR response");
 
-    // Second call without any DSR request
+    // Second call without any DSR request.
     let plain_text = "Hello";
     let (_, dsr_responses2) = ofs_buf.apply_ansi_bytes(plain_text);
     assert_eq!(
@@ -188,7 +188,7 @@ fn test_dsr_events_are_cleared_after_processing() {
         "DSR responses should be cleared after each apply_ansi_bytes call"
     );
 
-    // Third DSR request
+    // Third DSR request.
     let dsr_request = format!(
         "{}",
         CsiSequence::DeviceStatusReport(DsrRequestType::RequestCursorPosition)

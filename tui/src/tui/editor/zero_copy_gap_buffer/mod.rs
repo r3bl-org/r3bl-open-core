@@ -268,16 +268,16 @@
 //! While this adds some overhead to each edit operation, it ensures correctness
 //! for all Unicode text, including emojis, combining characters, and complex scripts.
 
-// Core implementation modules
+// Core implementation modules.
 mod core;
 
-// Specialized algorithms and optimizations
+// Specialized algorithms and optimizations.
 mod implementations;
 
-// Adapters for converting to ZeroCopyGapBuffer
+// Adapters for converting to ZeroCopyGapBuffer.
 mod adapters;
 
-// Re-export core types and constants
+// Re-export core types and constants.
 pub use core::*;
 
 // Note: implementation modules extend [`ZeroCopyGapBuffer`] through inherent method

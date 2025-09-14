@@ -401,11 +401,11 @@ pub trait LengthMarker: UnitCompare {
         if self.is_overflowed_by(index) {
             len(0)
         } else {
-            // Get max index for this length
+            // Get max index for this length.
             let max_index = self.convert_to_index();
             // Calculate num of chars from cursor to boundary (as index difference)
             let chars_remaining_as_index = max_index - index;
-            // Convert from 0-based index difference to 1-based length
+            // Convert from 0-based index difference to 1-based length.
             chars_remaining_as_index.convert_to_length().into()
         }
     }
@@ -731,7 +731,7 @@ mod tests {
             "Empty collection edge case"
         );
 
-        // Test with typed dimensions
+        // Test with typed dimensions.
         assert!(
             !ColWidth::new(10).is_overflowed_by(ColIndex::new(5)),
             "Typed indices within bounds"
@@ -749,7 +749,7 @@ mod tests {
             "Row indices at boundary"
         );
 
-        // Verify method matches existing check_overflows behavior
+        // Verify method matches existing check_overflows behavior.
         let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
         for (index_val, length_val) in test_cases {
             let index = idx(index_val);
@@ -770,7 +770,7 @@ mod tests {
         assert!(idx(5).overflows(len(3)), "Beyond bounds");
         assert!(idx(0).overflows(len(0)), "Empty collection edge case");
 
-        // Test with typed dimensions
+        // Test with typed dimensions.
         assert!(
             !ColIndex::new(5).overflows(ColWidth::new(10)),
             "Typed indices within bounds"
@@ -800,7 +800,7 @@ mod tests {
             );
         }
 
-        // Test with specific typed combinations
+        // Test with specific typed combinations.
         let col_cases = [(0, 5), (4, 5), (5, 5), (6, 5)];
         for (index_val, width_val) in col_cases {
             let col_index = ColIndex::new(index_val);
@@ -863,7 +863,7 @@ mod tests {
 
     #[test]
     fn test_check_content_position_edge_cases() {
-        // Zero-length content - AtStart takes precedence
+        // Zero-length content - AtStart takes precedence.
         let zero_length = len(0);
         assert_eq!(
             idx(0).check_content_position(zero_length),
@@ -874,7 +874,7 @@ mod tests {
             ContentPositionStatus::Beyond
         );
 
-        // Single element content
+        // Single element content.
         let single_length = len(1);
         assert_eq!(
             idx(0).check_content_position(single_length),
@@ -938,14 +938,14 @@ mod tests {
     fn test_position_status_empty_content_precedence() {
         use super::*;
 
-        // Test that AtStart takes precedence over AtEnd for empty content
+        // Test that AtStart takes precedence over AtEnd for empty content.
         let empty_length = len(0);
         assert_eq!(
             idx(0).check_content_position(empty_length),
             ContentPositionStatus::AtStart
         );
 
-        // Test with typed indices too
+        // Test with typed indices too.
 
         let empty_col_width = ColWidth::new(0);
         assert_eq!(
@@ -962,7 +962,7 @@ mod tests {
 
     #[test]
     fn test_position_status_comprehensive() {
-        // Test all combinations for a length-3 content
+        // Test all combinations for a length-3 content.
         let content_length = len(3);
 
         // AtStart: index == 0
@@ -1080,7 +1080,7 @@ mod tests {
             "RowHeight: beyond boundary"
         );
 
-        // Test single element case
+        // Test single element case.
         assert_eq!(
             len(1).remaining_from(idx(0)),
             len(1),
@@ -1092,7 +1092,7 @@ mod tests {
             "Single element: at boundary"
         );
 
-        // Test specific examples from documentation
+        // Test specific examples from documentation.
         let max_width = ColWidth::new(10);
         assert_eq!(
             max_width.remaining_from(ColIndex::new(3)),
@@ -1135,7 +1135,7 @@ mod tests {
             "Index 100 converts to length 101"
         );
 
-        // Test with typed dimensions - ColIndex to ColWidth
+        // Test with typed dimensions - ColIndex to ColWidth.
         assert_eq!(
             ColIndex::new(0).convert_to_length(),
             ColWidth::new(1),
@@ -1157,7 +1157,7 @@ mod tests {
             "ColIndex 999 to ColWidth 1000"
         );
 
-        // Test with typed dimensions - RowIndex to RowHeight
+        // Test with typed dimensions - RowIndex to RowHeight.
         assert_eq!(
             RowIndex::new(0).convert_to_length(),
             RowHeight::new(1),
@@ -1179,7 +1179,7 @@ mod tests {
             "RowIndex 49 to RowHeight 50"
         );
 
-        // Test that the conversion is consistent - converting back should work
+        // Test that the conversion is consistent - converting back should work.
         let original_index = idx(42);
         let converted_length = original_index.convert_to_length();
         let back_to_index = converted_length.convert_to_index();
@@ -1188,7 +1188,7 @@ mod tests {
             "Round-trip conversion should be consistent"
         );
 
-        // Test with typed round-trip conversions
+        // Test with typed round-trip conversions.
         let col_index = ColIndex::new(7);
         let col_width = col_index.convert_to_length();
         let back_to_col_index = col_width.convert_to_index();
@@ -1230,7 +1230,7 @@ mod tests {
             "Length 101 converts to index 100"
         );
 
-        // Test with typed dimensions - ColWidth to ColIndex
+        // Test with typed dimensions - ColWidth to ColIndex.
         assert_eq!(
             ColWidth::new(1).convert_to_index(),
             ColIndex::new(0),
@@ -1252,7 +1252,7 @@ mod tests {
             "ColWidth 1000 to ColIndex 999"
         );
 
-        // Test with typed dimensions - RowHeight to RowIndex
+        // Test with typed dimensions - RowHeight to RowIndex.
         assert_eq!(
             RowHeight::new(1).convert_to_index(),
             RowIndex::new(0),
@@ -1274,7 +1274,7 @@ mod tests {
             "RowHeight 50 to RowIndex 49"
         );
 
-        // Test that the conversion is consistent - converting back should work
+        // Test that the conversion is consistent - converting back should work.
         let original_length = len(42);
         let converted_index = original_length.convert_to_index();
         let back_to_length = converted_index.convert_to_length();
@@ -1283,7 +1283,7 @@ mod tests {
             "Round-trip conversion should be consistent"
         );
 
-        // Test with typed round-trip conversions
+        // Test with typed round-trip conversions.
         let col_width = ColWidth::new(8);
         let col_index = col_width.convert_to_index();
         let back_to_col_width = col_index.convert_to_length();
@@ -1301,25 +1301,25 @@ mod tests {
         );
 
         // Test edge case: Length 0 should convert to... well, this might not be
-        // implemented but if it is, it should be consistent with the type system
+        // implemented but if it is, it should be consistent with the type system.
         // Note: Length 0 might be a special case that needs separate handling
     }
 
     #[test]
     fn test_as_usize() {
-        // Test basic index types conversion to usize
+        // Test basic index types conversion to usize.
         assert_eq!(idx(0).as_usize(), 0, "Index 0 as usize");
         assert_eq!(idx(5).as_usize(), 5, "Index 5 as usize");
         assert_eq!(idx(100).as_usize(), 100, "Index 100 as usize");
         assert_eq!(idx(999).as_usize(), 999, "Index 999 as usize");
 
-        // Test basic length types conversion to usize
+        // Test basic length types conversion to usize.
         assert_eq!(len(1).as_usize(), 1, "Length 1 as usize");
         assert_eq!(len(6).as_usize(), 6, "Length 6 as usize");
         assert_eq!(len(10).as_usize(), 10, "Length 10 as usize");
         assert_eq!(len(1000).as_usize(), 1000, "Length 1000 as usize");
 
-        // Test typed index conversions - ColIndex
+        // Test typed index conversions - ColIndex.
         assert_eq!(ColIndex::new(0).as_usize(), 0, "ColIndex 0 as usize");
         assert_eq!(ColIndex::new(5).as_usize(), 5, "ColIndex 5 as usize");
         assert_eq!(ColIndex::new(80).as_usize(), 80, "ColIndex 80 as usize");
@@ -1329,13 +1329,13 @@ mod tests {
             "ColIndex 1024 as usize"
         );
 
-        // Test typed index conversions - RowIndex
+        // Test typed index conversions - RowIndex.
         assert_eq!(RowIndex::new(0).as_usize(), 0, "RowIndex 0 as usize");
         assert_eq!(RowIndex::new(3).as_usize(), 3, "RowIndex 3 as usize");
         assert_eq!(RowIndex::new(25).as_usize(), 25, "RowIndex 25 as usize");
         assert_eq!(RowIndex::new(768).as_usize(), 768, "RowIndex 768 as usize");
 
-        // Test typed length conversions - ColWidth
+        // Test typed length conversions - ColWidth.
         assert_eq!(ColWidth::new(1).as_usize(), 1, "ColWidth 1 as usize");
         assert_eq!(ColWidth::new(10).as_usize(), 10, "ColWidth 10 as usize");
         assert_eq!(ColWidth::new(80).as_usize(), 80, "ColWidth 80 as usize");
@@ -1345,7 +1345,7 @@ mod tests {
             "ColWidth 1920 as usize"
         );
 
-        // Test typed length conversions - RowHeight
+        // Test typed length conversions - RowHeight.
         assert_eq!(RowHeight::new(1).as_usize(), 1, "RowHeight 1 as usize");
         assert_eq!(RowHeight::new(5).as_usize(), 5, "RowHeight 5 as usize");
         assert_eq!(RowHeight::new(30).as_usize(), 30, "RowHeight 30 as usize");
@@ -1360,7 +1360,7 @@ mod tests {
         assert_eq!(ColWidth::new(0).as_usize(), 0, "ColWidth 0 as usize");
         assert_eq!(RowHeight::new(0).as_usize(), 0, "RowHeight 0 as usize");
 
-        // Test that as_usize preserves the underlying numeric value
+        // Test that as_usize preserves the underlying numeric value.
         for value in [0, 1, 5, 10, 42, 100, 999] {
             assert_eq!(
                 idx(value).as_usize(),
@@ -1424,7 +1424,7 @@ mod tests {
             "Zero length with zero max"
         );
 
-        // Test with typed length dimensions - ColWidth
+        // Test with typed length dimensions - ColWidth.
         let col_width_5 = ColWidth::new(5);
         let col_width_10 = ColWidth::new(10);
         let col_width_15 = ColWidth::new(15);
@@ -1445,7 +1445,7 @@ mod tests {
             "ColWidth equals bounds - returns max"
         );
 
-        // Test with typed length dimensions - RowHeight
+        // Test with typed length dimensions - RowHeight.
         let row_height_3 = RowHeight::new(3);
         let row_height_5 = RowHeight::new(5);
         let row_height_7 = RowHeight::new(7);
@@ -1480,7 +1480,7 @@ mod tests {
             "Large value clamped to small max"
         );
 
-        // Test that clamp_to always returns a value <= both inputs
+        // Test that clamp_to always returns a value <= both inputs.
         let test_cases = [(5, 10), (10, 5), (0, 10), (10, 0), (7, 7), (100, 50)];
         for (length_val, max_val) in test_cases {
             let length = len(length_val);
@@ -1500,37 +1500,37 @@ mod tests {
 
     #[test]
     fn test_as_u16() {
-        // Test basic index types conversion to u16
+        // Test basic index types conversion to u16.
         assert_eq!(idx(0).as_u16(), 0, "Index 0 as u16");
         assert_eq!(idx(5).as_u16(), 5, "Index 5 as u16");
         assert_eq!(idx(100).as_u16(), 100, "Index 100 as u16");
         assert_eq!(idx(999).as_u16(), 999, "Index 999 as u16");
 
-        // Test basic length types conversion to u16
+        // Test basic length types conversion to u16.
         assert_eq!(len(1).as_u16(), 1, "Length 1 as u16");
         assert_eq!(len(6).as_u16(), 6, "Length 6 as u16");
         assert_eq!(len(10).as_u16(), 10, "Length 10 as u16");
         assert_eq!(len(1000).as_u16(), 1000, "Length 1000 as u16");
 
-        // Test typed index conversions - ColIndex
+        // Test typed index conversions - ColIndex.
         assert_eq!(ColIndex::new(0).as_u16(), 0, "ColIndex 0 as u16");
         assert_eq!(ColIndex::new(5).as_u16(), 5, "ColIndex 5 as u16");
         assert_eq!(ColIndex::new(80).as_u16(), 80, "ColIndex 80 as u16");
         assert_eq!(ColIndex::new(1024).as_u16(), 1024, "ColIndex 1024 as u16");
 
-        // Test typed index conversions - RowIndex
+        // Test typed index conversions - RowIndex.
         assert_eq!(RowIndex::new(0).as_u16(), 0, "RowIndex 0 as u16");
         assert_eq!(RowIndex::new(3).as_u16(), 3, "RowIndex 3 as u16");
         assert_eq!(RowIndex::new(25).as_u16(), 25, "RowIndex 25 as u16");
         assert_eq!(RowIndex::new(768).as_u16(), 768, "RowIndex 768 as u16");
 
-        // Test typed length conversions - ColWidth
+        // Test typed length conversions - ColWidth.
         assert_eq!(ColWidth::new(1).as_u16(), 1, "ColWidth 1 as u16");
         assert_eq!(ColWidth::new(10).as_u16(), 10, "ColWidth 10 as u16");
         assert_eq!(ColWidth::new(80).as_u16(), 80, "ColWidth 80 as u16");
         assert_eq!(ColWidth::new(1920).as_u16(), 1920, "ColWidth 1920 as u16");
 
-        // Test typed length conversions - RowHeight
+        // Test typed length conversions - RowHeight.
         assert_eq!(RowHeight::new(1).as_u16(), 1, "RowHeight 1 as u16");
         assert_eq!(RowHeight::new(5).as_u16(), 5, "RowHeight 5 as u16");
         assert_eq!(RowHeight::new(30).as_u16(), 30, "RowHeight 30 as u16");
@@ -1564,7 +1564,7 @@ mod tests {
             "RowHeight u16::MAX as u16"
         );
 
-        // Test that as_u16 preserves the underlying numeric value for typical ranges
+        // Test that as_u16 preserves the underlying numeric value for typical ranges.
         for value in [0, 1, 5, 10, 42, 80, 100, 120, 1024] {
             assert_eq!(
                 idx(value).as_u16(),

@@ -176,7 +176,7 @@ impl PtyCommandBuilder {
             input_evt_ch_rx_half,
         ) = tokio::sync::mpsc::unbounded_channel::<PtyInputEvent>();
 
-        // Build the command, ensuring CWD is set
+        // Build the command, ensuring CWD is set.
         let command = self.build()?;
 
         // Create PTY pair: controller (master) for bidirectional I/O, controlled
@@ -189,7 +189,7 @@ impl PtyCommandBuilder {
         let mut controlled_child: ControlledChild =
             spawn_command_in_pty(&controlled, command)?;
 
-        // Clone the killer handle before moving the child into the completion task
+        // Clone the killer handle before moving the child into the completion task.
         let child_process_terminate_handle = controlled_child.clone_killer();
 
         // [🛫 SPAWN 0] Spawn the main orchestration task. This is returned to your
@@ -351,7 +351,7 @@ fn spawn_async_to_sync_bridge_task(
     tokio::spawn(async move {
         while let Some(input) = input_evt_ch_rx_half.recv().await {
             if input_evt_bridge_sync_tx_half.send(input).is_err() {
-                // input writer task has exited
+                // input writer task has exited.
                 break;
             }
         }
@@ -545,8 +545,8 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
             // This is a synchronous blocking read operation.
             match controller_reader.read(&mut read_buffer) {
                 Ok(0) => {
-                    // EOF - PTY closed normally
-                    // We don't have the actual exit status here, just send UnexpectedExit
+                    // EOF - PTY closed normally.
+                    // We don't have the actual exit status here, just send UnexpectedExit.
                     let _unused = output_evt_ch_tx_half.send(
                         PtyReadWriteOutputEvent::UnexpectedExit(
                             "PTY closed (EOF)".to_string(),
@@ -555,7 +555,7 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
                     break;
                 }
                 Err(e) => {
-                    // Error reading - PTY closed or error
+                    // Error reading - PTY closed or error.
                     let _unused = output_evt_ch_tx_half.send(
                         PtyReadWriteOutputEvent::UnexpectedExit(format!(
                             "Read error: {e}"
@@ -566,7 +566,7 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
                 Ok(n) => {
                     let data = &read_buffer[..n];
 
-                    // Check for cursor mode changes BEFORE sending raw data
+                    // Check for cursor mode changes BEFORE sending raw data.
                     if let Some(new_mode) = mode_detector.scan_for_mode_change(data) {
                         let _unused = output_evt_ch_tx_half
                             .send(PtyReadWriteOutputEvent::CursorModeChange(new_mode));
@@ -614,22 +614,22 @@ mod tests {
     /// due to limited PTY resources or system configuration. This is expected behavior.
     #[test]
     fn test_all_pty_read_write_in_isolated_process() {
-        // Skip PTY tests in known problematic environments
+        // Skip PTY tests in known problematic environments.
         if is_ci::uncached() {
             println!(
                 "Skipping PTY tests in CI environment due to PTY resource limitations"
             );
             return;
         }
-        // Check if we're running a single specific test
+        // Check if we're running a single specific test.
         if let Ok(test_name) = std::env::var("ISOLATED_PTY_SINGLE_TEST") {
-            // This is a single test running in an isolated process
+            // This is a single test running in an isolated process.
             run_single_pty_test_by_name(&test_name);
-            // If we reach here without errors, exit normally
+            // If we reach here without errors, exit normally.
             std::process::exit(0);
         }
 
-        // This is the test coordinator - run each test in its own isolated process
+        // This is the test coordinator - run each test in its own isolated process.
         let tests = vec![
             "test_simple_command_lifecycle",
             "test_cat_with_input",
@@ -675,7 +675,7 @@ mod tests {
                 "PTY tests can be sensitive to system resources, configuration, and CI environments."
             );
 
-            // If more than half the tests fail, then there's likely a real issue
+            // If more than half the tests fail, then there's likely a real issue.
             if failed_tests.len() > tests.len() / 2 {
                 panic!(
                     "Too many PTY tests failed ({}/{}). This indicates a serious PTY system issue.",
@@ -690,7 +690,7 @@ mod tests {
             }
         }
 
-        // Print success message for visibility
+        // Print success message for visibility.
         println!("All PTY read-write tests completed successfully in isolated processes");
     }
 
@@ -714,11 +714,11 @@ mod tests {
     /// This is called when we're in the isolated process mode for a specific test.
     #[allow(clippy::missing_errors_doc)]
     fn run_single_pty_test_by_name(test_name: &str) {
-        // Create a Tokio runtime for running the async test
+        // Create a Tokio runtime for running the async test.
         let runtime = tokio::runtime::Runtime::new()
             .expect("Failed to create Tokio runtime for PTY test");
 
-        // Run the specific test
+        // Run the specific test.
         runtime.block_on(async {
             let result = match test_name {
                 "test_simple_command_lifecycle" => test_simple_command_lifecycle().await,
@@ -749,7 +749,7 @@ mod tests {
     async fn test_simple_command_lifecycle() -> miette::Result<()> {
         use tokio::time::timeout;
 
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
         let mut session = PtyCommandBuilder::new("echo")
@@ -758,14 +758,14 @@ mod tests {
             .spawn_read_write(PtySize::default())
             .unwrap();
 
-        // Give the echo command more time to start and produce output
+        // Give the echo command more time to start and produce output.
         tokio::time::sleep(Duration::from_millis(50)).await;
 
         let mut output = String::new();
         let mut events_received = Vec::new();
         let mut saw_exit = false;
 
-        // Add timeout to prevent hanging
+        // Add timeout to prevent hanging.
         let result = timeout(Duration::from_secs(10), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
                 match &event {
@@ -816,7 +816,7 @@ mod tests {
     async fn test_cat_with_input() -> miette::Result<()> {
         use tokio::time::timeout;
 
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
         let mut session = PtyCommandBuilder::new("cat")
@@ -830,7 +830,7 @@ mod tests {
             .send(PtyInputEvent::WriteLine("test input".into()))
             .unwrap();
 
-        // Send EOF to make cat exit
+        // Send EOF to make cat exit.
         session
             .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(
@@ -894,17 +894,17 @@ mod tests {
     async fn test_shell_calculation() -> miette::Result<()> {
         use tokio::time::timeout;
 
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
-        // Use sh for calculation - POSIX compliant and always available on Unix
+        // Use sh for calculation - POSIX compliant and always available on Unix.
         let mut session = PtyCommandBuilder::new("sh")
             .args(["-c", "echo $((2+3)); echo 'Hello from Shell'"])
             .cwd(temp_dir)
             .spawn_read_write(PtySize::default())
             .unwrap();
 
-        // Collect output with timeout
+        // Collect output with timeout.
         let mut output = String::new();
         let mut events_received = Vec::new();
         let mut saw_exit = false;
@@ -944,7 +944,7 @@ mod tests {
             "Should see exit event. Events received: {events_received:?}, Output: '{output}'"
         );
 
-        // Verify we got expected output
+        // Verify we got expected output.
         assert!(
             output.contains('5'),
             "Should see result of 2+3. Events received: {events_received:?}, Full output was: '{output}'"
@@ -967,7 +967,7 @@ mod tests {
             .spawn_read_write(PtySize::default())
             .unwrap();
 
-        // Give the command more time to start and produce output
+        // Give the command more time to start and produce output.
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         // Collect output
@@ -1029,7 +1029,7 @@ mod tests {
             .spawn_read_write(PtySize::default())
             .unwrap();
 
-        // Test various control characters with delays for PTY processing
+        // Test various control characters with delays for PTY processing.
         session
             .input_event_ch_tx_half
             .send(PtyInputEvent::WriteLine("Test line".into()))
@@ -1037,7 +1037,7 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(10)).await;
 
-        // Check if the session is still alive before sending
+        // Check if the session is still alive before sending.
         if session
             .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(
@@ -1046,7 +1046,7 @@ mod tests {
             ))
             .is_err()
         {
-            // Session ended early, check output
+            // Session ended early, check output.
             let mut output = String::new();
             while let Some(event) = session.output_event_receiver_half.recv().await {
                 match event {
@@ -1098,10 +1098,10 @@ mod tests {
             ))
             .unwrap();
 
-        // Allow time for all output to be processed before EOF
+        // Allow time for all output to be processed before EOF.
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // Send EOF to exit
+        // Send EOF to exit.
         session
             .input_event_ch_tx_half
             .send(PtyInputEvent::SendControl(
@@ -1112,7 +1112,7 @@ mod tests {
 
         let mut output = String::new();
 
-        // Add timeout to prevent hanging
+        // Add timeout to prevent hanging.
         let result = timeout(Duration::from_secs(5), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
                 match event {
@@ -1146,13 +1146,13 @@ mod tests {
     async fn test_raw_escape_sequences() -> miette::Result<()> {
         use tokio::time::timeout;
 
-        // Skip this test in CI environments due to terminal emulation differences
+        // Skip this test in CI environments due to terminal emulation differences.
         if is_ci::uncached() {
             eprintln!("Skipping test_raw_escape_sequences in CI environment");
             return Ok(());
         }
 
-        // Create a temporary directory for the test
+        // Create a temporary directory for the test.
         let temp_dir = std::env::temp_dir();
 
         let mut session = PtyCommandBuilder::new("cat")
@@ -1160,7 +1160,7 @@ mod tests {
             .spawn_read_write(PtySize::default())
             .unwrap();
 
-        // Send some text with ANSI color codes using raw sequences
+        // Send some text with ANSI color codes using raw sequences.
         let red_text = b"\x1b[31mRed Text\x1b[0m";
         session
             .input_event_ch_tx_half
@@ -1174,10 +1174,10 @@ mod tests {
             ))
             .unwrap();
 
-        // Add a delay to ensure the first line is processed
+        // Add a delay to ensure the first line is processed.
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // Send using RawSequence variant
+        // Send using RawSequence variant.
         let blue_seq = vec![0x1b, b'[', b'3', b'4', b'm']; // Blue color
         session
             .input_event_ch_tx_half
@@ -1191,7 +1191,7 @@ mod tests {
             .send(PtyInputEvent::Write(b"Blue Text".to_vec()))
             .unwrap();
 
-        // Send reset sequence after blue text
+        // Send reset sequence after blue text.
         let reset_seq = vec![0x1b, b'[', b'0', b'm']; // Reset color
         session
             .input_event_ch_tx_half
@@ -1209,7 +1209,7 @@ mod tests {
             ))
             .unwrap();
 
-        // Add a delay to ensure all input is processed before EOF
+        // Add a delay to ensure all input is processed before EOF.
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         // EOF to exit
@@ -1257,7 +1257,7 @@ mod tests {
             "Should see exit event. Events received: {events_received:?}, Output: '{output_str}'"
         );
 
-        // Check we got the ANSI sequences back
+        // Check we got the ANSI sequences back.
         assert!(
             output_str.contains("Red Text"),
             "Output should contain 'Red Text'. Events received: {events_received:?}, Full output was: '{output_str}'"
@@ -1266,8 +1266,8 @@ mod tests {
             output_str.contains("Blue Text"),
             "Output should contain 'Blue Text'. Events received: {events_received:?}, Full output was: '{output_str}'"
         );
-        // The actual ANSI codes might be echoed back
-        // Note: cat may not preserve exact ANSI sequences depending on terminal settings
+        // The actual ANSI codes might be echoed back.
+        // Note: cat may not preserve exact ANSI sequences depending on terminal settings.
 
         Ok(())
     }
@@ -1348,7 +1348,7 @@ mod tests {
 
         println!("Starting htop integration test...");
 
-        // Check if htop is installed - FAIL if not installed
+        // Check if htop is installed - FAIL if not installed.
         let htop_check = Command::new("which")
             .arg("htop")
             .output()
@@ -1377,7 +1377,7 @@ mod tests {
 
         println!("htop launched successfully, waiting for initialization...");
 
-        // Wait for htop to fully initialize with timeout
+        // Wait for htop to fully initialize with timeout.
         tokio::time::sleep(Duration::from_millis(1000)).await;
 
         // Phase 1: Capture initial output - ASSERT htop is running properly
@@ -1399,7 +1399,7 @@ mod tests {
             initial_output.chars().take(100).collect::<String>()
         );
 
-        // Look for typical htop content indicators
+        // Look for typical htop content indicators.
         let htop_indicators = initial_output.contains("Tasks:")
             || initial_output.contains("Load average:")
             || initial_output.contains("Memory:")
@@ -1426,7 +1426,7 @@ mod tests {
 
         assert!(send_result.is_ok(), "Failed to send arrow down key");
 
-        // Brief wait for UI response
+        // Brief wait for UI response.
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         let after_arrow = timeout(Duration::from_secs(2), async {
@@ -1505,7 +1505,7 @@ mod tests {
             "Both cursor modes (Normal and Application) should work. Only {mode_success_count} succeeded"
         );
 
-        // Capture baseline before F2 for comparison
+        // Capture baseline before F2 for comparison.
         println!("Capturing normal display before F2...");
         let before_f2 = timeout(Duration::from_secs(2), async {
             capture_output_snapshot(&mut session, Duration::from_millis(300)).await
@@ -1525,7 +1525,7 @@ mod tests {
 
         assert!(f2_result.is_ok(), "Failed to send F2 key");
 
-        // Wait for setup menu to appear
+        // Wait for setup menu to appear.
         tokio::time::sleep(Duration::from_millis(400)).await;
 
         let setup_output = timeout(Duration::from_secs(2), async {
@@ -1560,7 +1560,7 @@ mod tests {
             setup_output.chars().take(200).collect::<String>()
         );
 
-        // Exit setup menu with Escape
+        // Exit setup menu with Escape.
         println!("Exiting setup menu with Escape...");
         let escape_result =
             session
@@ -1582,7 +1582,7 @@ mod tests {
 
         assert!(quit_result.is_ok(), "Failed to send quit command");
 
-        // Wait for exit with timeout
+        // Wait for exit with timeout.
         let exit_result = timeout(Duration::from_secs(2), async {
             while let Some(event) = session.output_event_receiver_half.recv().await {
                 if let PtyReadWriteOutputEvent::Exit(status) = event {
@@ -1597,7 +1597,7 @@ mod tests {
         match exit_result {
             Ok(Ok(status)) => {
                 println!("✓ htop exited cleanly with status: {status:?}");
-                // For most cases, htop should exit with success
+                // For most cases, htop should exit with success.
                 if !status.success() {
                     println!(
                         "⚠ htop exited with non-zero status, but this may be acceptable in test environments"
@@ -1608,7 +1608,7 @@ mod tests {
                 println!(
                     "⚠ htop did not exit gracefully within timeout - applying force termination"
                 );
-                // Try Ctrl+C as fallback
+                // Try Ctrl+C as fallback.
                 let ctrl_c_result =
                     session
                         .input_event_ch_tx_half
@@ -1626,7 +1626,7 @@ mod tests {
             }
         }
 
-        // Final validation - ensure all phases produced meaningful output
+        // Final validation - ensure all phases produced meaningful output.
         println!("All phases completed - validating overall test success...");
 
         assert!(
@@ -1678,22 +1678,22 @@ mod tests {
         let handle =
             create_controller_input_writer_task(controller, input_receiver, event_sender);
 
-        // Send write command
+        // Send write command.
         let test_data = b"test input";
         input_sender
             .send(PtyInputEvent::Write(test_data.to_vec()))
             .unwrap();
 
-        // Send close to terminate task
+        // Send close to terminate task.
         input_sender.send(PtyInputEvent::Close).unwrap();
 
-        // Give a bit of time for the close event to be processed
+        // Give a bit of time for the close event to be processed.
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Drop sender to close the channel
+        // Drop sender to close the channel.
         drop(input_sender);
 
-        // Task should complete successfully
+        // Task should complete successfully.
         let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
@@ -1708,21 +1708,21 @@ mod tests {
         let handle =
             create_controller_input_writer_task(controller, input_receiver, event_sender);
 
-        // Send write line command
+        // Send write line command.
         input_sender
             .send(PtyInputEvent::WriteLine("test line".to_string()))
             .unwrap();
 
-        // Send close to terminate task
+        // Send close to terminate task.
         input_sender.send(PtyInputEvent::Close).unwrap();
 
-        // Give a bit of time for the close event to be processed
+        // Give a bit of time for the close event to be processed.
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Drop sender to close the channel
+        // Drop sender to close the channel.
         drop(input_sender);
 
-        // Task should complete successfully
+        // Task should complete successfully.
         let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
@@ -1737,7 +1737,7 @@ mod tests {
         let handle =
             create_controller_input_writer_task(controller, input_receiver, event_sender);
 
-        // Send control character
+        // Send control character.
         input_sender
             .send(PtyInputEvent::SendControl(
                 ControlSequence::CtrlC,
@@ -1745,16 +1745,16 @@ mod tests {
             ))
             .unwrap();
 
-        // Send close to terminate task
+        // Send close to terminate task.
         input_sender.send(PtyInputEvent::Close).unwrap();
 
-        // Give a bit of time for the close event to be processed
+        // Give a bit of time for the close event to be processed.
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Drop sender to close the channel
+        // Drop sender to close the channel.
         drop(input_sender);
 
-        // Task should complete successfully
+        // Task should complete successfully.
         let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
@@ -1769,7 +1769,7 @@ mod tests {
         let handle =
             create_controller_input_writer_task(controller, input_receiver, event_sender);
 
-        // Send resize command
+        // Send resize command.
         let new_size = PtySize {
             rows: 40,
             cols: 120,
@@ -1778,16 +1778,16 @@ mod tests {
         };
         input_sender.send(PtyInputEvent::Resize(new_size)).unwrap();
 
-        // Send close to terminate task
+        // Send close to terminate task.
         input_sender.send(PtyInputEvent::Close).unwrap();
 
-        // Give a bit of time for the close event to be processed
+        // Give a bit of time for the close event to be processed.
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Drop sender to close the channel
+        // Drop sender to close the channel.
         drop(input_sender);
 
-        // Task should complete successfully
+        // Task should complete successfully.
         let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
@@ -1802,19 +1802,19 @@ mod tests {
         let handle =
             create_controller_input_writer_task(controller, input_receiver, event_sender);
 
-        // Send flush command
+        // Send flush command.
         input_sender.send(PtyInputEvent::Flush).unwrap();
 
-        // Send close to terminate task
+        // Send close to terminate task.
         input_sender.send(PtyInputEvent::Close).unwrap();
 
-        // Give a bit of time for the close event to be processed
+        // Give a bit of time for the close event to be processed.
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Drop sender to close the channel
+        // Drop sender to close the channel.
         drop(input_sender);
 
-        // Task should complete successfully
+        // Task should complete successfully.
         let result = tokio::time::timeout(Duration::from_millis(2000), handle).await;
         assert!(result.is_ok(), "Task timed out");
     }
@@ -1829,10 +1829,10 @@ mod tests {
         let handle =
             create_controller_input_writer_task(controller, input_receiver, event_sender);
 
-        // Drop sender to disconnect channel
+        // Drop sender to disconnect channel.
         drop(input_sender);
 
-        // Task should complete successfully when channel disconnects
+        // Task should complete successfully when channel disconnects.
         let result = tokio::time::timeout(Duration::from_millis(500), handle).await;
         assert!(result.is_ok());
     }

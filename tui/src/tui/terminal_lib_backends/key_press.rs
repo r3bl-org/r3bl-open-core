@@ -337,9 +337,9 @@ pub mod convert_key_event {
 
         // We only process Press events and filter out Release and Repeat events.
         // This ensures consistent behavior across different terminals:
-        // - Most Unix terminals only send Press events
-        // - Windows terminals send both Press and Release events for each key press
-        // - Some terminals with Kitty keyboard protocol support may send Repeat events
+        // - Most Unix terminals only send Press events.
+        // - Windows terminals send both Press and Release events for each key press.
+        // - Some terminals with Kitty keyboard protocol support may send Repeat events.
         //
         // When a non-Press event is encountered, we return Err(()) which signals to
         // InputDeviceExt::next_input_event() to continue reading the next event.
@@ -351,7 +351,7 @@ pub mod convert_key_event {
                 process_key_event(key_event)
             }
             _ => {
-                // Filter out Release and Repeat events
+                // Filter out Release and Repeat events.
                 Err(())
             }
         }
@@ -410,7 +410,7 @@ pub mod convert_key_event {
             KC::Esc => Key::SpecialKey(SpecialKey::Esc).into(),
             KC::F(fn_key) => match_fn_key(fn_key),
             KC::Char(character) => Key::Character(character).into(),
-            // New "enhanced" keys since crossterm 0.25.0
+            // New "enhanced" keys since crossterm 0.25.0.
             KC::CapsLock => Key::KittyKeyboardProtocol(Enhanced::SpecialKeyExt(
                 SpecialKeyExt::CapsLock,
             ))

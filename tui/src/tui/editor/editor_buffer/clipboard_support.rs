@@ -40,7 +40,7 @@ pub fn copy_to_clipboard(
         if let Some(sel_range) = sel_list.get(row_index)
             && let Some(line_with_info) = lines.get_line(row_index)
         {
-            // Use the new zero-copy clip_to_range_str method
+            // Use the new zero-copy clip_to_range_str method.
             let sel_text = sel_range.clip_to_range_str(line_with_info);
             vec_str.push(sel_text);
         }
@@ -76,7 +76,7 @@ mod tests {
         // Row Index : 1 , Column Length : 12
         buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
         let mut test_clipboard = TestClipboard::default();
-        // Single Line copying
+        // Single Line copying.
         {
             // Current Caret Position : [row : 0, col : 0]
             EditorEvent::apply_editor_events::<(), ()>(
@@ -87,7 +87,7 @@ mod tests {
             );
             // Current Caret Position : [row : 0, col : 12]
 
-            // Copying the contents from Selection
+            // Copying the contents from Selection.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -98,7 +98,7 @@ mod tests {
             assert_eq2!(content, "abc r3bl xyz".to_string());
         }
 
-        // Multi-line Copying
+        // Multi-line Copying.
         {
             // Current Caret Position : [row : 0, col : 12]
             EditorEvent::apply_editor_events::<(), ()>(
@@ -109,7 +109,7 @@ mod tests {
             );
             // Current Caret Position : [row : 1, col : 12]
 
-            // Copying the contents from Selection
+            // Copying the contents from Selection.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -133,7 +133,7 @@ mod tests {
         // Row Index : 1 , Column Length : 12
         buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
 
-        // Single Line Pasting
+        // Single Line Pasting.
         {
             let mut test_clipboard = TestClipboard {
                 content: "copied text ".to_string(),
@@ -162,7 +162,7 @@ mod tests {
             );
         }
 
-        // Multi-line Pasting
+        // Multi-line Pasting.
         {
             // Current Caret Position : [row : 0, col : 4]
             let mut test_clipboard = TestClipboard {
@@ -198,7 +198,7 @@ mod tests {
         // Row Index : 1 , Column Length : 12
         buffer.init_with(["abc r3bl xyz", "pqr rust uvw"]);
 
-        // Single Line cutting
+        // Single Line cutting.
         {
             let mut test_clipboard = TestClipboard::default();
 
@@ -211,7 +211,7 @@ mod tests {
             );
             // Current Caret Position : [row : 0, col : 12]
 
-            // Cutting the contents from Selection and pasting to clipboard
+            // Cutting the contents from Selection and pasting to clipboard.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
@@ -232,7 +232,7 @@ mod tests {
             );
         }
 
-        // Multi-line Cutting
+        // Multi-line Cutting.
         {
             let mut test_clipboard = TestClipboard::default();
 
@@ -259,7 +259,7 @@ mod tests {
             );
             // Current Caret Position : [row : 0, col : 4]
 
-            // Cutting the contents from Selection and pasting to clipboard
+            // Cutting the contents from Selection and pasting to clipboard.
             EditorEvent::apply_editor_events::<(), ()>(
                 &mut engine,
                 &mut buffer,
