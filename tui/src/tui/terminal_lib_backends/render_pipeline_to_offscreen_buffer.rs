@@ -18,7 +18,7 @@ impl RenderPipeline {
         window_size: Size,
         ofs_buf: &mut OffscreenBuffer, /* Pass in the locked buffer. */
     ) {
-        let mut local_data = RenderOpsLocalData::default();
+        let mut render_local_data = RenderOpsLocalData::default();
 
         for z_order in &ZOrder::get_render_order() {
             if let Some(render_ops_vec) = self.get(z_order) {
@@ -28,7 +28,7 @@ impl RenderPipeline {
                             render_op,
                             window_size,
                             ofs_buf,
-                            &mut local_data,
+                            &mut render_local_data,
                         );
                     }
                 }
@@ -49,7 +49,7 @@ pub fn process_render_op(
     render_op: &RenderOp,
     window_size: Size,
     ofs_buf: &mut OffscreenBuffer,
-    local_data: &mut RenderOpsLocalData,
+    render_local_data: &mut RenderOpsLocalData,
 ) {
     match render_op {
         // Don't process these.
@@ -59,28 +59,28 @@ pub fn process_render_op(
             ofs_buf.clear();
         }
         RenderOp::MoveCursorPositionAbs(new_abs_pos) => {
-            ofs_buf.my_pos =
-                sanitize_and_save_abs_pos(*new_abs_pos, window_size, local_data);
+            ofs_buf.cursor_pos =
+                sanitize_and_save_abs_pos(*new_abs_pos, window_size, render_local_data);
         }
         RenderOp::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
-            ofs_buf.my_pos =
-                sanitize_and_save_abs_pos(new_abs_pos, window_size, local_data);
+            ofs_buf.cursor_pos =
+                sanitize_and_save_abs_pos(new_abs_pos, window_size, render_local_data);
         }
         RenderOp::SetFgColor(fg_color_ref) => {
-            ofs_buf.my_fg_color = Some(*fg_color_ref);
+            render_local_data.fg_color = Some(*fg_color_ref);
         }
         RenderOp::SetBgColor(bg_color_ref) => {
-            ofs_buf.my_bg_color = Some(*bg_color_ref);
+            render_local_data.bg_color = Some(*bg_color_ref);
         }
         RenderOp::ResetColor => {
-            ofs_buf.my_fg_color = None;
-            ofs_buf.my_bg_color = None;
+            render_local_data.fg_color = None;
+            render_local_data.bg_color = None;
         }
         RenderOp::ApplyColors(maybe_style_ref) => {
             if let Some(style_ref) = maybe_style_ref {
-                ofs_buf.my_fg_color = style_ref.color_fg;
-                ofs_buf.my_bg_color = style_ref.color_bg;
+                render_local_data.fg_color = style_ref.color_fg;
+                render_local_data.bg_color = style_ref.color_bg;
             }
         }
         RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
@@ -95,10 +95,11 @@ pub fn process_render_op(
                 maybe_style_ref.as_ref(),
                 ofs_buf,
                 None,
+                render_local_data,
             );
             if let Ok(new_pos) = result_new_pos {
-                ofs_buf.my_pos =
-                    sanitize_and_save_abs_pos(new_pos, window_size, local_data);
+                ofs_buf.cursor_pos =
+                    sanitize_and_save_abs_pos(new_pos, window_size, render_local_data);
             }
         }
     }
@@ -165,10 +166,11 @@ pub fn print_text_with_attributes(
     maybe_style_ref: Option<&TuiStyle>,
     ofs_buf: &mut OffscreenBuffer,
     maybe_max_display_col_count: Option<ColWidth>,
+    render_local_data: &RenderOpsLocalData,
 ) -> CommonResult<Pos> {
     // Get col and row index from `my_pos`.
-    let display_col_index = usize(ofs_buf.my_pos.col_index);
-    let display_row_index = usize(ofs_buf.my_pos.row_index);
+    let display_col_index = usize(ofs_buf.cursor_pos.col_index);
+    let display_row_index = usize(ofs_buf.cursor_pos.row_index);
 
     // Clip text to bounds using helper function.
     let text_gcs = print_text_with_attributes_helper::clip_text_to_bounds(
@@ -218,7 +220,7 @@ pub fn print_text_with_attributes(
 
     // Compose style using helper function.
     let maybe_style =
-        print_text_with_attributes_helper::compose_style(maybe_style_ref, ofs_buf);
+        print_text_with_attributes_helper::compose_style(maybe_style_ref, render_local_data);
 
     DEBUG_TUI_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
@@ -266,7 +268,7 @@ pub fn print_text_with_attributes(
 
     // Mimic what stdout does and move the position.col_index forward by the width of
     // the text that was added to display.
-    let new_pos = ofs_buf.my_pos.add_col(already_inserted_display_width);
+    let new_pos = ofs_buf.cursor_pos.add_col(already_inserted_display_width);
 
     // Replace the line in `my_offscreen_buffer` with the new line.
     ofs_buf.buffer[display_row_index] = line_copy;
@@ -337,22 +339,22 @@ mod print_text_with_attributes_helper {
         truncated_str.into()
     }
 
-    /// Composes the final style by merging provided style with buffer colors.
+    /// Composes the final style by merging provided style with local colors.
     pub fn compose_style(
         maybe_style_ref: Option<&TuiStyle>,
-        ofs_buf: &OffscreenBuffer,
+        render_local_data: &RenderOpsLocalData,
     ) -> Option<TuiStyle> {
         if let Some(maybe_style) = maybe_style_ref {
             // We get the attributes from `maybe_style_ref`.
             let mut it = *maybe_style;
-            // We get the colors from `my_fg_color` and `my_bg_color`.
-            it.color_fg = ofs_buf.my_fg_color;
-            it.color_bg = ofs_buf.my_bg_color;
+            // We get the colors from local render data.
+            it.color_fg = render_local_data.fg_color;
+            it.color_bg = render_local_data.bg_color;
             Some(it)
-        } else if ofs_buf.my_fg_color.is_some() || ofs_buf.my_bg_color.is_some() {
+        } else if render_local_data.fg_color.is_some() || render_local_data.bg_color.is_some() {
             Some(TuiStyle {
-                color_fg: ofs_buf.my_fg_color,
-                color_bg: ofs_buf.my_bg_color,
+                color_fg: render_local_data.fg_color,
+                color_bg: render_local_data.bg_color,
                 ..Default::default()
             })
         } else {
@@ -500,9 +502,10 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold italic color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.my_pos = col(0) + row(0);
-            ofs_buf.my_fg_color = Some(tui_color!(green));
-            ofs_buf.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.cursor_pos = col(0) + row(0);
+            let mut render_local_data = RenderOpsLocalData::default();
+            render_local_data.fg_color = Some(tui_color!(green));
+            render_local_data.bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -510,6 +513,7 @@ mod tests {
                 maybe_style.as_ref(),
                 &mut ofs_buf,
                 maybe_max_display_col_count,
+                &render_local_data,
             )
             .ok();
 
@@ -559,9 +563,10 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.my_pos = col(0) + row(0);
-            ofs_buf.my_fg_color = Some(tui_color!(green));
-            ofs_buf.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.cursor_pos = col(0) + row(0);
+            let mut render_local_data = RenderOpsLocalData::default();
+            render_local_data.fg_color = Some(tui_color!(green));
+            render_local_data.bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -569,6 +574,7 @@ mod tests {
                 maybe_style.as_ref(),
                 &mut ofs_buf,
                 maybe_max_display_col_count,
+                &render_local_data,
             )
             .ok();
 
@@ -618,9 +624,10 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.my_pos = col(0) + row(0);
-            ofs_buf.my_fg_color = Some(tui_color!(green));
-            ofs_buf.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.cursor_pos = col(0) + row(0);
+            let mut render_local_data = RenderOpsLocalData::default();
+            render_local_data.fg_color = Some(tui_color!(green));
+            render_local_data.bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -628,6 +635,7 @@ mod tests {
                 maybe_style.as_ref(),
                 &mut ofs_buf,
                 maybe_max_display_col_count,
+                &render_local_data,
             )
             .ok();
 
@@ -678,9 +686,10 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.my_pos = col(0) + row(0);
-            ofs_buf.my_fg_color = Some(tui_color!(green));
-            ofs_buf.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.cursor_pos = col(0) + row(0);
+            let mut render_local_data = RenderOpsLocalData::default();
+            render_local_data.fg_color = Some(tui_color!(green));
+            render_local_data.bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -688,6 +697,7 @@ mod tests {
                 maybe_style.as_ref(),
                 &mut ofs_buf,
                 maybe_max_display_col_count,
+                &render_local_data,
             )
             .ok();
 
@@ -729,9 +739,10 @@ mod tests {
             let maybe_style = Some(
                 new_style!( dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.my_pos = col(0) + row(0);
-            ofs_buf.my_fg_color = Some(tui_color!(green));
-            ofs_buf.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.cursor_pos = col(0) + row(0);
+            let mut render_local_data = RenderOpsLocalData::default();
+            render_local_data.fg_color = Some(tui_color!(green));
+            render_local_data.bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -739,6 +750,7 @@ mod tests {
                 maybe_style.as_ref(),
                 &mut ofs_buf,
                 maybe_max_display_col_count,
+                &render_local_data,
             )
             .ok();
 
@@ -788,9 +800,10 @@ mod tests {
             let maybe_style = Some(
                 new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
             );
-            ofs_buf.my_pos = col(0) + row(0);
-            ofs_buf.my_fg_color = Some(tui_color!(green));
-            ofs_buf.my_bg_color = Some(tui_color!(blue));
+            ofs_buf.cursor_pos = col(0) + row(0);
+            let mut render_local_data = RenderOpsLocalData::default();
+            render_local_data.fg_color = Some(tui_color!(green));
+            render_local_data.bg_color = Some(tui_color!(blue));
             let maybe_max_display_col_count = Some(width(10));
 
             print_text_with_attributes(
@@ -798,6 +811,7 @@ mod tests {
                 maybe_style.as_ref(),
                 &mut ofs_buf,
                 maybe_max_display_col_count,
+                &render_local_data,
             )
             .ok();
 

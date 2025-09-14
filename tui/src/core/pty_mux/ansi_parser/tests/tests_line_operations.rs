@@ -93,7 +93,7 @@ pub mod insert_line {
         performer.ofs_buf.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
 
         // Move cursor to row 0 (outside margins)
-        performer.ofs_buf.my_pos = row(0) + col(0);
+        performer.ofs_buf.cursor_pos = row(0) + col(0);
 
         // Try to insert line: ESC[L (should be ignored)
         //         performer.csi_dispatch(&[], &[], false, 'L');
@@ -199,7 +199,7 @@ pub mod delete_line {
             Some(crate::ansi_parser::term_units::term_row(4));
 
         // Move cursor to row 4 (outside margins)
-        performer.ofs_buf.my_pos = row(4) + col(0);
+        performer.ofs_buf.cursor_pos = row(4) + col(0);
 
         // Try to delete line: ESC[M (should be ignored)
         //         performer.csi_dispatch(&[], &[], false, 'M');

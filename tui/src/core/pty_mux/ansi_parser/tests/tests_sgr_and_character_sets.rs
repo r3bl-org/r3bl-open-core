@@ -71,7 +71,7 @@ pub mod sgr_styling {
 
         // Verify final cursor position in ofs_buf.my_pos.
         assert_eq!(
-            ofs_buf.my_pos,
+            ofs_buf.cursor_pos,
             row(0) + col(RED.len() + NORM.len()),
             "final cursor position after writing RED and NORM should be at row 0, col 7",
         );
@@ -139,7 +139,7 @@ pub mod sgr_styling {
 
         // Verify final cursor position in ofs_buf.my_pos.
         assert_eq!(
-            ofs_buf.my_pos,
+            ofs_buf.cursor_pos,
             row(0) + col(2),
             "final cursor position after writing AB should be at row 0, col 2",
         );

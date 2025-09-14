@@ -2,8 +2,9 @@
 
 use std::fmt::Debug;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub enum ZOrder {
+    #[default]
     Normal,
     High,
     Glass,
@@ -18,6 +19,3 @@ impl ZOrder {
     }
 }
 
-impl Default for ZOrder {
-    fn default() -> Self { Self::Normal }
-}

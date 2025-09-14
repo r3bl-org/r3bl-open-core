@@ -41,7 +41,7 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
     clear_buffer(performer);
 
     // Reset cursor to home position.
-    performer.ofs_buf.my_pos = Pos::default();
+    performer.ofs_buf.cursor_pos = Pos::default();
 
     // Clear saved cursor state.
     performer

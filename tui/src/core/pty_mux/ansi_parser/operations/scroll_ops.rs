@@ -35,7 +35,7 @@ use crate::{len, row};
 /// Respects DECSTBM scroll region margins.
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
     let max_row = /* 1-based */ performer.ofs_buf.window_size.row_height;
-    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
+    let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;
 
     // Get bottom boundary of scroll region (or screen bottom if no region set).
     let maybe_scroll_region = performer.ofs_buf.ansi_parser_support.scroll_region_bottom;
@@ -60,7 +60,7 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 /// Implements the ESC M (RI) escape sequence.
 /// Respects DECSTBM scroll region margins.
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
-    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
+    let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;
 
     // Get top boundary of scroll region (or 0 if no region set).
     let maybe_scroll_region = performer.ofs_buf.ansi_parser_support.scroll_region_top;

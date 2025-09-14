@@ -29,7 +29,7 @@ mod impl_trait_paint_render_op {
             skip_flush: &mut bool,
             command_ref: &RenderOp,
             window_size: Size,
-            local_data: &mut RenderOpsLocalData,
+            render_local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
             is_mock: bool,
         ) {
@@ -53,7 +53,7 @@ mod impl_trait_paint_render_op {
                     RenderOpImplCrossterm::move_cursor_position_abs(
                         *abs_pos,
                         window_size,
-                        local_data,
+                        render_local_data,
                         locked_output_device,
                     );
                 }
@@ -62,7 +62,7 @@ mod impl_trait_paint_render_op {
                         *box_origin_pos,
                         *content_rel_pos,
                         window_size,
-                        local_data,
+                        render_local_data,
                         locked_output_device,
                     );
                 }
@@ -93,7 +93,7 @@ mod impl_trait_paint_render_op {
                         text,
                         *maybe_style,
                         window_size,
-                        local_data,
+                        render_local_data,
                         locked_output_device,
                     );
                 }
@@ -136,14 +136,14 @@ mod impl_self {
             box_origin_pos: Pos,
             content_rel_pos: Pos,
             window_size: Size,
-            local_data: &mut RenderOpsLocalData,
+            render_local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
             let new_abs_pos = box_origin_pos + content_rel_pos;
             Self::move_cursor_position_abs(
                 new_abs_pos,
                 window_size,
-                local_data,
+                render_local_data,
                 locked_output_device,
             );
         }
@@ -151,13 +151,13 @@ mod impl_self {
         pub fn move_cursor_position_abs(
             abs_pos: Pos,
             window_size: Size,
-            local_data: &mut RenderOpsLocalData,
+            render_local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
             let Pos {
                 col_index,
                 row_index,
-            } = sanitize_and_save_abs_pos(abs_pos, window_size, local_data);
+            } = sanitize_and_save_abs_pos(abs_pos, window_size, render_local_data);
 
             let col = col_index.as_u16();
             let row = row_index.as_u16();
@@ -254,7 +254,7 @@ mod impl_self {
             text_arg: &str,
             maybe_style: Option<TuiStyle>,
             window_size: Size,
-            local_data: &mut RenderOpsLocalData,
+            render_local_data: &mut RenderOpsLocalData,
             locked_output_device: LockedOutputDevice<'_>,
         ) {
             use perform_paint::{PaintArgs, paint_style_and_text};
@@ -273,7 +273,7 @@ mod impl_self {
             paint_style_and_text(
                 &mut paint_args,
                 needs_reset,
-                local_data,
+                render_local_data,
                 locked_output_device,
             );
         }
@@ -353,7 +353,7 @@ mod perform_paint {
     pub fn paint_style_and_text(
         paint_args: &mut PaintArgs<'_>,
         mut needs_reset: Cow<'_, bool>,
-        local_data: &mut RenderOpsLocalData,
+        render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
         let PaintArgs { maybe_style, .. } = paint_args;
@@ -370,7 +370,7 @@ mod perform_paint {
             });
         }
 
-        paint_text(paint_args, local_data, locked_output_device);
+        paint_text(paint_args, render_local_data, locked_output_device);
 
         if *needs_reset {
             queue_render_op!(
@@ -383,7 +383,7 @@ mod perform_paint {
 
     pub fn paint_text(
         paint_args: &PaintArgs<'_>,
-        local_data: &mut RenderOpsLocalData,
+        render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
     ) {
         let PaintArgs {
@@ -398,12 +398,12 @@ mod perform_paint {
 
         // Update cursor position after paint.
         let cursor_pos_copy = {
-            let mut copy = local_data.cursor_pos;
+            let mut copy = render_local_data.cursor_pos;
             let text_display_width = GCStringOwned::from(text.as_ref()).width();
             *copy.col_index += *text_display_width;
             copy
         };
-        sanitize_and_save_abs_pos(cursor_pos_copy, *window_size, local_data);
+        sanitize_and_save_abs_pos(cursor_pos_copy, *window_size, render_local_data);
     }
 }
 

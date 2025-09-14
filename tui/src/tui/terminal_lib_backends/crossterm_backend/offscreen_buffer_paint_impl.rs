@@ -300,7 +300,7 @@ mod render_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ColWidth, assert_eq2, height, new_style,
+    use crate::{ColWidth, RenderOpsLocalData, assert_eq2, height, new_style,
                 offscreen_buffer_paint_impl::render_helper::style_eq,
                 render_pipeline_to_offscreen_buffer::print_text_with_attributes,
                 tui_color, width};
@@ -319,15 +319,17 @@ mod tests {
         let maybe_style = Some(
             new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
         );
-        ofs_buf.my_pos = col(0) + row(0);
-        ofs_buf.my_fg_color = Some(tui_color!(green));
-        ofs_buf.my_bg_color = Some(tui_color!(blue));
+        ofs_buf.cursor_pos = col(0) + row(0);
+        let mut render_local_data = RenderOpsLocalData::default();
+        render_local_data.fg_color = Some(tui_color!(green));
+        render_local_data.bg_color = Some(tui_color!(blue));
         let maybe_max_display_col_count: Option<ColWidth> = Some(width(10));
         print_text_with_attributes(
             text,
             maybe_style.as_ref(),
             &mut ofs_buf,
             maybe_max_display_col_count,
+            &render_local_data,
         )
         .ok();
         ofs_buf

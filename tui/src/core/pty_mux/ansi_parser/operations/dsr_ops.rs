@@ -48,8 +48,8 @@ pub fn status_report(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params
         DsrRequestType::RequestCursorPosition => {
             // Cursor position report - respond with ESC[row;colR.
             // Convert 0-based internal position to 1-based terminal position.
-            let row = performer.ofs_buf.my_pos.row_index.into();
-            let col = performer.ofs_buf.my_pos.col_index.into();
+            let row = performer.ofs_buf.cursor_pos.row_index.into();
+            let col = performer.ofs_buf.cursor_pos.col_index.into();
             performer
                 .ofs_buf
                 .ansi_parser_support

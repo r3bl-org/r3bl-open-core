@@ -54,7 +54,7 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 /// ```
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-    let at = /* 0-based */ performer.ofs_buf.my_pos;
+    let at = /* 0-based */ performer.ofs_buf.cursor_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Use dedicated DCH method to delete characters at cursor.
@@ -89,7 +89,7 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// ```
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-    let at = /* 0-based */ performer.ofs_buf.my_pos;
+    let at = /* 0-based */ performer.ofs_buf.cursor_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Use dedicated ICH method to insert characters at cursor.
@@ -124,7 +124,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// ```
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-    let at = /* 0-based */ performer.ofs_buf.my_pos;
+    let at = /* 0-based */ performer.ofs_buf.cursor_pos;
     let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Use dedicated ECH method to erase characters at cursor.

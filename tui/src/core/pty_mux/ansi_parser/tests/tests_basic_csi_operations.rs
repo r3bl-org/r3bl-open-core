@@ -89,5 +89,5 @@ fn test_basic_vpa_integration() {
     let _result = ofs_buf.apply_ansi_bytes(sequence);
 
     // Should be at row 2 (0-based), column 6 (0-based)
-    assert_eq!(ofs_buf.my_pos, crate::row(2) + crate::col(6));
+    assert_eq!(ofs_buf.cursor_pos, crate::row(2) + crate::col(6));
 }

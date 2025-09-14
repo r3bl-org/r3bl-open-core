@@ -253,7 +253,7 @@ mod tests {
 
         // Verify cursor position is updated correctly.
         assert_eq!(
-            ofs_buf.my_pos,
+            ofs_buf.cursor_pos,
             row(0) + col(TEXT.len()),
             "cursor should be at end of text"
         );
@@ -309,7 +309,7 @@ mod tests {
 
         // Verify cursor position is updated correctly.
         assert_eq!(
-            ofs_buf.my_pos,
+            ofs_buf.cursor_pos,
             row(0) + col(TEXT.len()),
             "cursor should be at end of text"
         );
@@ -350,7 +350,7 @@ mod tests {
 
         // Verify cursor position after all operations.
         assert_eq!(
-            ofs_buf.my_pos,
+            ofs_buf.cursor_pos,
             row(0) + col(5),
             "cursor should be at (0,5) after writing 'D'"
         );
@@ -589,7 +589,7 @@ mod tests {
 
         // Cursor wraps from (7,10) to (8,0).
         assert_eq!(
-            ofs_buf.my_pos,
+            ofs_buf.cursor_pos,
             row(8) + col(0),
             "cursor should be at (8,0) wrapping after 'End'"
         );

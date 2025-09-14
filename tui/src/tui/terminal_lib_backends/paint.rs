@@ -14,7 +14,7 @@ pub trait PaintRenderOp {
         skip_flush: &mut bool,
         render_op: &RenderOp,
         window_size: Size,
-        local_data: &mut RenderOpsLocalData,
+        render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     );
@@ -161,7 +161,7 @@ pub fn paint<S, AS>(
 pub fn sanitize_and_save_abs_pos(
     orig_abs_pos: Pos,
     window_size: Size,
-    local_data: &mut RenderOpsLocalData,
+    render_local_data: &mut RenderOpsLocalData,
 ) -> Pos {
     let Size {
         col_width: window_width,
@@ -187,7 +187,7 @@ pub fn sanitize_and_save_abs_pos(
         .min(window_height.convert_to_row_index());
 
     // Save the cursor position to local data.
-    local_data.cursor_pos = sanitized_abs_pos;
+    render_local_data.cursor_pos = sanitized_abs_pos;
 
     debug(orig_abs_pos, sanitized_abs_pos);
 

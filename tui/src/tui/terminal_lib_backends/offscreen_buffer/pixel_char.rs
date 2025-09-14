@@ -10,9 +10,10 @@ use std::fmt::{self, Debug};
 
 use crate::{GetMemSize, TuiStyle, fg_magenta, ok};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PixelChar {
     Void,
+    #[default]
     Spacer,
     PlainText {
         display_char: char,
@@ -30,9 +31,6 @@ impl GetMemSize for PixelChar {
     }
 }
 
-impl Default for PixelChar {
-    fn default() -> Self { Self::Spacer }
-}
 
 impl Debug for PixelChar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

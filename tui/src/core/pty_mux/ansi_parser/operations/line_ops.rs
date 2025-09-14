@@ -64,7 +64,7 @@ use crate::{RowIndex, len, row};
 /// ```
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
-    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
+    let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;
 
     for _ in 0..how_many.as_u16() {
         insert_line_at(performer, current_row);
@@ -106,7 +106,7 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// ```
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
-    let current_row = /* 0-based */ performer.ofs_buf.my_pos.row_index;
+    let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;
 
     for _ in 0..how_many.as_u16() {
         delete_line_at(performer, current_row);

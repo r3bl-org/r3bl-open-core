@@ -24,7 +24,7 @@ fn test_control_characters() {
     // Carriage return should move to start of line.
     performer.execute(esc_codes::CARRIAGE_RETURN);
     assert_eq!(
-        performer.ofs_buf.my_pos,
+        performer.ofs_buf.cursor_pos,
         row(0) + col(0),
         "Cursor should be at start of line after CR"
     );
@@ -33,43 +33,43 @@ fn test_control_characters() {
     // Line feed should move to next line, but same column.
     performer.execute(esc_codes::LINE_FEED);
     assert_eq!(
-        performer.ofs_buf.my_pos,
+        performer.ofs_buf.cursor_pos,
         row(1) + col(1),
         "Cursor should move to next row after LF, but same column"
     );
 
     // Reset column for next test.
-    performer.ofs_buf.my_pos.col_index = col(0);
+    performer.ofs_buf.cursor_pos.col_index = col(0);
     performer.print('Y');
 
     // Tab should advance cursor.
     performer.execute(esc_codes::TAB);
     assert_eq!(
-        performer.ofs_buf.my_pos,
+        performer.ofs_buf.cursor_pos,
         row(1) + col(8),
         "Cursor should move to col 8 after tab"
     );
     performer.print('Z');
 
     // Backspace should move cursor back.
-    performer.ofs_buf.my_pos.col_index = col(3);
+    performer.ofs_buf.cursor_pos.col_index = col(3);
     performer.print('M');
     performer.execute(esc_codes::BACKSPACE); // Backspace
     assert_eq!(
-        performer.ofs_buf.my_pos,
+        performer.ofs_buf.cursor_pos,
         row(1) + col(3),
         "Cursor should move back one column after BS, to col 3"
     );
     performer.print('N'); // Should overwrite 'M' at col 3
     assert_eq!(
-        performer.ofs_buf.my_pos,
+        performer.ofs_buf.cursor_pos,
         row(1) + col(4),
         "Cursor should move to col 4 after printing 'N', same row"
     );
 
     // Verify final ofs_buf cursor position.
     assert_eq!(
-        ofs_buf.my_pos,
+        ofs_buf.cursor_pos,
         row(1) + col(4),
         "Final cursor position should be row 1, col 4"
     );

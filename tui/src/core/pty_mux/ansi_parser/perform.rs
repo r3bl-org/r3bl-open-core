@@ -124,8 +124,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
         let row_max = self.ofs_buf.window_size.row_height;
         let col_max = self.ofs_buf.window_size.col_width;
-        let current_row = self.ofs_buf.my_pos.row_index;
-        let current_col = self.ofs_buf.my_pos.col_index;
+        let current_row = self.ofs_buf.cursor_pos.row_index;
+        let current_col = self.ofs_buf.cursor_pos.col_index;
 
         // Only write if within bounds.
         if current_row.check_overflows(row_max) == Within
@@ -146,17 +146,17 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             if new_col.check_overflows(col_max) == Overflowed {
                 if self.ofs_buf.ansi_parser_support.auto_wrap_mode {
                     // DECAWM enabled: wrap to next line (default behavior)
-                    self.ofs_buf.my_pos.col_index = col(0);
+                    self.ofs_buf.cursor_pos.col_index = col(0);
                     let next_row: RowIndex = current_row + 1;
                     if next_row.check_overflows(row_max) == Within {
-                        self.ofs_buf.my_pos.row_index = next_row;
+                        self.ofs_buf.cursor_pos.row_index = next_row;
                     }
                 } else {
                     // DECAWM disabled: stay at right margin (clamp cursor position)
-                    self.ofs_buf.my_pos.col_index = col_max.convert_to_col_index();
+                    self.ofs_buf.cursor_pos.col_index = col_max.convert_to_col_index();
                 }
             } else {
-                self.ofs_buf.my_pos.col_index = new_col;
+                self.ofs_buf.cursor_pos.col_index = new_col;
             }
         }
     }
@@ -199,34 +199,34 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         match byte {
             // Backspace
             esc_codes::BACKSPACE => {
-                let current_col = self.ofs_buf.my_pos.col_index;
+                let current_col = self.ofs_buf.cursor_pos.col_index;
                 if current_col > col(0) {
-                    self.ofs_buf.my_pos.col_index = current_col - 1;
+                    self.ofs_buf.cursor_pos.col_index = current_col - 1;
                 }
             }
             // Tab - move to next tab stop boundary.
             esc_codes::TAB => {
-                let current_col = self.ofs_buf.my_pos.col_index;
+                let current_col = self.ofs_buf.cursor_pos.col_index;
                 let current_tab_zone = current_col.as_usize() / esc_codes::TAB_STOP_WIDTH;
                 let next_tab_zone = current_tab_zone + 1;
                 let next_tab_col = next_tab_zone * esc_codes::TAB_STOP_WIDTH;
                 let max_col = self.ofs_buf.window_size.col_width;
 
                 // Clamp to max valid column index if it would overflow.
-                self.ofs_buf.my_pos.col_index =
+                self.ofs_buf.cursor_pos.col_index =
                     col(min(next_tab_col, max_col.convert_to_col_index().as_usize()));
             }
             // Line feed (newline)
             esc_codes::LINE_FEED => {
                 let max_row = self.ofs_buf.window_size.row_height;
-                let next_row: RowIndex = self.ofs_buf.my_pos.row_index + 1;
+                let next_row: RowIndex = self.ofs_buf.cursor_pos.row_index + 1;
                 if next_row.check_overflows(max_row) == Within {
-                    self.ofs_buf.my_pos.row_index = next_row;
+                    self.ofs_buf.cursor_pos.row_index = next_row;
                 }
             }
             // Carriage return
             esc_codes::CARRIAGE_RETURN => {
-                self.ofs_buf.my_pos.col_index = col(0);
+                self.ofs_buf.cursor_pos.col_index = col(0);
             }
             _ => {}
         }
@@ -663,7 +663,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // survives across multiple AnsiToOfsBufPerformer instances.
                 self.ofs_buf
                     .ansi_parser_support
-                    .cursor_pos_for_esc_save_and_restore = Some(self.ofs_buf.my_pos);
+                    .cursor_pos_for_esc_save_and_restore = Some(self.ofs_buf.cursor_pos);
             }
             esc_codes::DECRC_RESTORE_CURSOR => {
                 // DECRC - Restore saved cursor position.
@@ -673,7 +673,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                     .ansi_parser_support
                     .cursor_pos_for_esc_save_and_restore
                 {
-                    self.ofs_buf.my_pos = saved_pos;
+                    self.ofs_buf.cursor_pos = saved_pos;
                 }
             }
             esc_codes::IND_INDEX_DOWN => {

@@ -105,9 +105,26 @@ pub enum InputEvent {
     BracketedPaste(String),
 }
 
+/// Represents terminal window focus state changes.
+///
+/// Focus events are triggered when the terminal application gains or loses focus,
+/// which can be useful for pausing/resuming operations or updating the UI state.
+///
+/// # Examples
+///
+/// ```rust
+/// use r3bl_tui::FocusEvent;
+///
+/// match focus_event {
+///     FocusEvent::Gained => println!("Application has focus"),
+///     FocusEvent::Lost => println!("Application lost focus"),
+/// }
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusEvent {
+    /// The terminal application has gained focus (user switched to it).
     Gained,
+    /// The terminal application has lost focus (user switched away).
     Lost,
 }
 

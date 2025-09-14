@@ -71,7 +71,7 @@ pub mod auto_wrap {
         // Verify cursor is at (r:1,c:0) - wrapped to next line after hitting right
         // boundary
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(1) + col(0),
             "Cursor should be at (r:1,c:0) after printing 10 characters"
         );
@@ -81,7 +81,7 @@ pub mod auto_wrap {
 
         // Verify cursor wrapped to next line.
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(1) + col(1),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
@@ -135,7 +135,7 @@ pub mod auto_wrap {
 
         // Verify cursor stays at right margin.
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(0) + col(9),
             "Cursor should stay at (r:0,c:9) without wrapping"
         );
@@ -173,7 +173,7 @@ pub mod auto_wrap {
 
         // Verify wrapping occurred.
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(1) + col(1),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
@@ -221,7 +221,7 @@ pub mod auto_wrap {
 
         // Now cursor should be at (r:1,c:0) after wrapping
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(1) + col(0),
             "Cursor should be at (r:1,c:0) after printing 10 characters"
         );
@@ -232,7 +232,7 @@ pub mod auto_wrap {
         performer.apply_ansi_bytes(sequence);
 
         // Move to end of line 2 and test clamping.
-        performer.ofs_buf.my_pos = row(2) + col(9);
+        performer.ofs_buf.cursor_pos = row(2) + col(9);
         performer.print('X'); // At boundary
         performer.print('Y'); // Should clamp to (r:2,c:9) and overwrite 'X'
 
@@ -242,13 +242,13 @@ pub mod auto_wrap {
         performer.apply_ansi_bytes(sequence);
 
         // Move to a new position and test wrapping again.
-        performer.ofs_buf.my_pos = row(2) + col(9);
+        performer.ofs_buf.cursor_pos = row(2) + col(9);
         performer.print('A');
         performer.print('B'); // Should wrap to row 3
 
         // Verify final cursor position.
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(3) + col(1),
             "Cursor should be at (r:3,c:1) after wrapping"
         );
@@ -298,7 +298,7 @@ pub mod line_wrapping {
 
         // Verify cursor wrapped to next line.
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(1) + col(1),
             "Cursor should be at (r:1,c:1) after wrapping"
         );
@@ -342,7 +342,7 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         // Move cursor to the last row.
-        performer.ofs_buf.my_pos.row_index = row(9);
+        performer.ofs_buf.cursor_pos.row_index = row(9);
 
         // Execute Index (ESC D)
         performer.esc_dispatch(&[], false, esc_codes::IND_INDEX_DOWN);
@@ -377,7 +377,7 @@ pub mod scrolling {
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
         // Move cursor to the first row.
-        performer.ofs_buf.my_pos.row_index = row(0);
+        performer.ofs_buf.cursor_pos.row_index = row(0);
 
         // Execute Reverse Index (ESC M)
         performer.esc_dispatch(&[], false, esc_codes::RI_REVERSE_INDEX_UP);
@@ -538,12 +538,12 @@ pub mod scrolling {
         // Row 7: │Line-7│
 
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
-        performer.ofs_buf.my_pos = row(5) + col(0);
+        performer.ofs_buf.cursor_pos = row(5) + col(0);
 
         // Execute Index (ESC D) - should just move cursor down
         performer.esc_dispatch(&[], false, esc_codes::IND_INDEX_DOWN);
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(6) + col(0),
             "Cursor should move down"
         );
@@ -552,7 +552,7 @@ pub mod scrolling {
         // Execute Reverse Index (ESC M) - should just move cursor up
         performer.esc_dispatch(&[], false, esc_codes::RI_REVERSE_INDEX_UP);
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(5) + col(0),
             "Cursor should move up"
         );
@@ -609,39 +609,39 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Test ESC D (Index) at bottom - cursor should remain at bottom
-        performer.ofs_buf.my_pos = row(9) + col(5);
+        performer.ofs_buf.cursor_pos = row(9) + col(5);
         performer.esc_dispatch(&[], false, esc_codes::IND_INDEX_DOWN);
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(9) + col(5),
             "Cursor should remain at bottom after ESC D scroll"
         );
 
         // Test ESC M (Reverse Index) at top - cursor should remain at top
-        performer.ofs_buf.my_pos = row(0) + col(3);
+        performer.ofs_buf.cursor_pos = row(0) + col(3);
         performer.esc_dispatch(&[], false, esc_codes::RI_REVERSE_INDEX_UP);
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(0) + col(3),
             "Cursor should remain at top after ESC M scroll"
         );
 
         // Test CSI S (Scroll Up) - cursor position should be unchanged
-        performer.ofs_buf.my_pos = row(4) + col(7);
+        performer.ofs_buf.cursor_pos = row(4) + col(7);
         let sequence = CsiSequence::ScrollUp(2).to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(4) + col(7),
             "Cursor position should be unchanged after CSI S scroll"
         );
 
         // Test CSI T (Scroll Down) - cursor position should be unchanged
-        performer.ofs_buf.my_pos = row(6) + col(2);
+        performer.ofs_buf.cursor_pos = row(6) + col(2);
         let sequence = CsiSequence::ScrollDown(1).to_string();
         performer.apply_ansi_bytes(sequence);
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(6) + col(2),
             "Cursor position should be unchanged after CSI T scroll"
         );
@@ -721,14 +721,14 @@ pub mod line_wrap_scroll_interaction {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Fill the last line except for the last character.
-        performer.ofs_buf.my_pos = row(9) + col(0);
+        performer.ofs_buf.cursor_pos = row(9) + col(0);
         for c in "ABCDEFGHI".chars() {
             performer.print(c);
         }
 
         // Verify cursor is at the last position.
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(9) + col(9),
             "Cursor should be at last position (9,9)"
         );
@@ -743,7 +743,7 @@ pub mod line_wrap_scroll_interaction {
         // J gets written at (9,9), cursor tries to advance but wraps to (9,0)
         // since we're at the bottom row.
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(9) + col(0),
             "Cursor should wrap to (9,0) after printing J"
         );
@@ -764,7 +764,7 @@ pub mod line_wrap_scroll_interaction {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Position cursor on row 5 (not the last row).
-        performer.ofs_buf.my_pos = row(5) + col(9);
+        performer.ofs_buf.cursor_pos = row(5) + col(9);
 
         // Print character that should wrap.
         performer.print('X');
@@ -772,7 +772,7 @@ pub mod line_wrap_scroll_interaction {
         // The print method writes the char, advances cursor, then handles wrap.
         // So X gets written at (5,9), cursor advances to (6,0)
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(6) + col(0),
             "Cursor should wrap to next line (6,0) after printing"
         );
@@ -796,7 +796,7 @@ pub mod line_wrap_scroll_interaction {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Position at bottom line, leave room for some characters.
-        performer.ofs_buf.my_pos = row(9) + col(7);
+        performer.ofs_buf.cursor_pos = row(9) + col(7);
 
         // Print characters that fill and wrap the line.
         performer.print('A'); // written at (9,7), cursor to (9,8)
@@ -805,7 +805,7 @@ pub mod line_wrap_scroll_interaction {
 
         // After wrap, cursor should be at (9,0)
         assert_eq!(
-            performer.ofs_buf.my_pos,
+            performer.ofs_buf.cursor_pos,
             row(9) + col(0),
             "Should wrap to column 0 after printing C"
         );
@@ -962,12 +962,12 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos);
-        assert_eq!(performer.ofs_buf.my_pos.row_index.as_usize(), 2); // 0-based row 2
+        assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 2); // 0-based row 2
 
         // Try to move cursor up - should be clamped to scroll region top.
         let cursor_up = CsiSequence::CursorUp(5).to_string();
         performer.apply_ansi_bytes(cursor_up);
-        assert_eq!(performer.ofs_buf.my_pos.row_index.as_usize(), 2); // Still at top margin
+        assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 2); // Still at top margin
 
         // Move cursor to bottom of scroll region.
         let cursor_pos_bottom = CsiSequence::CursorPosition {
@@ -976,12 +976,12 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos_bottom);
-        assert_eq!(performer.ofs_buf.my_pos.row_index.as_usize(), 6); // 0-based row 6
+        assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 6); // 0-based row 6
 
         // Try to move cursor down - should be clamped to scroll region bottom.
         let cursor_down = CsiSequence::CursorDown(5).to_string();
         performer.apply_ansi_bytes(cursor_down);
-        assert_eq!(performer.ofs_buf.my_pos.row_index.as_usize(), 6); // Still at bottom margin
+        assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 6); // Still at bottom margin
     }
 
     #[test]
@@ -1004,7 +1004,7 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_above);
-        assert_eq!(performer.ofs_buf.my_pos.row_index.as_usize(), 2); // Clamped to top margin
+        assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 2); // Clamped to top margin
 
         // Try to position cursor below scroll region.
         let cursor_below = CsiSequence::CursorPosition {
@@ -1013,7 +1013,7 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_below);
-        assert_eq!(performer.ofs_buf.my_pos.row_index.as_usize(), 6); // Clamped to bottom margin
+        assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 6); // Clamped to bottom margin
 
         // Position within scroll region should work normally.
         let cursor_within = CsiSequence::CursorPosition {
@@ -1022,7 +1022,7 @@ pub mod decstbm_scroll_margins {
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_within);
-        assert_eq!(performer.ofs_buf.my_pos.row_index.as_usize(), 4); // 0-based row 4
+        assert_eq!(performer.ofs_buf.cursor_pos.row_index.as_usize(), 4); // 0-based row 4
     }
 
     #[test]

@@ -32,12 +32,39 @@
 //! - Sodium:
 //!   - repo: <https://github.com/redox-os/sodium>
 
+/// Terminal library backend selection for the TUI system.
+///
+/// R3BL TUI supports multiple terminal manipulation libraries, allowing users to choose
+/// the backend that best fits their needs. Currently supported backends include:
+///
+/// - **Crossterm**: Cross-platform terminal library (default and recommended)
+/// - **Termion**: Unix-specific terminal library with minimal overhead
+///
+/// # Example
+///
+/// ```rust
+/// use r3bl_tui::TerminalLibBackend;
+///
+/// let backend = TerminalLibBackend::Crossterm;
+/// match backend {
+///     TerminalLibBackend::Crossterm => println!("Using Crossterm backend"),
+///     TerminalLibBackend::Termion => println!("Using Termion backend"),
+/// }
+/// ```
 #[derive(Debug)]
 pub enum TerminalLibBackend {
+    /// Crossterm backend - cross-platform terminal library supporting Windows, macOS, and Linux.
+    /// This is the default and recommended backend for most applications.
     Crossterm,
+    /// Termion backend - Unix-specific terminal library with minimal overhead.
+    /// Only available on Unix-like systems (Linux, macOS).
     Termion,
 }
 
+/// The default terminal library backend used by R3BL TUI.
+///
+/// This constant defines which terminal backend is used throughout the TUI system.
+/// Currently set to [`TerminalLibBackend::Crossterm`] for maximum compatibility.
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 
 // Attach source files.

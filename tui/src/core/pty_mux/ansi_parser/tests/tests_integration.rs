@@ -136,7 +136,7 @@ mod vte_parser {
         performer.apply_ansi_bytes(&input);
 
         // Verify cursor position after processing.
-        assert_eq!(performer.ofs_buf.my_pos.col_index.as_usize(), 6);
+        assert_eq!(performer.ofs_buf.cursor_pos.col_index.as_usize(), 6);
 
         // Verify "Hello" is in the buffer.
         assert_plain_text_at(&ofs_buf, 0, 0, "Hello");

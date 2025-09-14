@@ -7,17 +7,56 @@ use crate::{CrosstermDebugFormatRenderOp, InlineString, InlineVec, LockedOutputD
             PaintRenderOp, Pos, RenderOpImplCrossterm, Size, TerminalLibBackend,
             TuiColor, TuiStyle, ok};
 
-/// Here's an example. Refer to [`RenderOps`] for more details.
+/// Convenient macro for creating and manipulating [`RenderOps`] collections.
+///
+/// This macro provides three main operations:
+/// - `@new`: Create a new `RenderOps` with optional initial operations
+/// - `@add_to`: Add operations to an existing `RenderOps`
+/// - `@render_styled_texts_into`: Render styled text collections into operations
+///
+/// # Examples
+///
+/// ## Creating new RenderOps
 ///
 /// ```
 /// use r3bl_tui::*;
 ///
+/// // Create empty RenderOps
+/// let empty_ops = render_ops!();
+///
+/// // Create RenderOps with initial operations
 /// let mut render_ops = render_ops!(
 ///   @new
 ///   RenderOp::ClearScreen, RenderOp::ResetColor
 /// );
 /// let len = render_ops.len();
 /// let iter = render_ops.iter();
+/// ```
+///
+/// ## Adding to existing RenderOps
+///
+/// ```
+/// use r3bl_tui::*;
+///
+/// let mut ops = RenderOps::default();
+/// render_ops!(
+///   @add_to ops =>
+///   RenderOp::MoveCursorPositionAbs(Pos::default()),
+///   RenderOp::ResetColor
+/// );
+/// ```
+///
+/// ## Rendering styled texts
+///
+/// ```
+/// use r3bl_tui::*;
+///
+/// let mut ops = RenderOps::default();
+/// let styled_texts = vec![/* styled text data */];
+/// render_ops!(
+///   @render_styled_texts_into ops =>
+///   styled_texts
+/// );
 /// ```
 #[macro_export]
 macro_rules! render_ops {
@@ -143,16 +182,53 @@ impl Default for RenderOps {
     }
 }
 
+/// Local state tracking for render operations optimization.
+///
+/// Maintains the last known terminal state to avoid sending redundant
+/// escape sequences when the state hasn't changed. This significantly
+/// reduces the amount of data sent to the terminal.
 #[derive(Default, Debug)]
 pub struct RenderOpsLocalData {
+    /// Current cursor position in the terminal.
+    ///
+    /// Used to determine if cursor movement commands need to be sent
+    /// when rendering at a new position.
     pub cursor_pos: Pos,
+
+    /// Last known foreground color.
+    ///
+    /// Tracks the current foreground color to avoid sending redundant
+    /// color escape sequences when the color hasn't changed.
+    pub fg_color: Option<TuiColor>,
+
+    /// Last known background color.
+    ///
+    /// Tracks the current background color to avoid sending redundant
+    /// color escape sequences when the color hasn't changed.
+    pub bg_color: Option<TuiColor>,
 }
 
+/// Implementation details for [`RenderOps`] functionality.
+///
+/// This module contains the core implementation of render operation execution,
+/// including methods for processing operation lists, routing to backend implementations,
+/// and providing convenient trait implementations for common operations.
 pub mod render_ops_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
     impl RenderOps {
+        /// Executes all render operations in the collection sequentially.
+        ///
+        /// This method processes each [`RenderOp`] in the list, maintaining local state
+        /// for optimization and routing each operation to the appropriate backend
+        /// implementation based on the configured terminal library.
+        ///
+        /// # Parameters
+        /// - `skip_flush`: Mutable reference to control flush behavior
+        /// - `window_size`: Current terminal window dimensions
+        /// - `locked_output_device`: Locked terminal output for thread-safe writing
+        /// - `is_mock`: Whether this is a mock execution for testing
         pub fn execute_all(
             &self,
             skip_flush: &mut bool,
@@ -160,10 +236,10 @@ pub mod render_ops_impl {
             locked_output_device: LockedOutputDevice<'_>,
             is_mock: bool,
         ) {
-            let mut local_data = RenderOpsLocalData::default();
+            let mut render_local_data = RenderOpsLocalData::default();
             for render_op in &self.list {
                 RenderOps::route_paint_render_op_to_backend(
-                    &mut local_data,
+                    &mut render_local_data,
                     skip_flush,
                     render_op,
                     window_size,
@@ -173,8 +249,21 @@ pub mod render_ops_impl {
             }
         }
 
+        /// Routes a single render operation to the appropriate backend implementation.
+        ///
+        /// This method acts as a dispatcher, selecting the correct terminal library
+        /// backend (currently Crossterm) and delegating the actual rendering work
+        /// to the backend-specific implementation.
+        ///
+        /// # Parameters
+        /// - `render_local_data`: Mutable state for render optimization
+        /// - `skip_flush`: Mutable reference to control flush behavior
+        /// - `render_op`: The specific operation to execute
+        /// - `window_size`: Current terminal window dimensions
+        /// - `locked_output_device`: Locked terminal output for thread-safe writing
+        /// - `is_mock`: Whether this is a mock execution for testing
         pub fn route_paint_render_op_to_backend(
-            local_data: &mut RenderOpsLocalData,
+            render_local_data: &mut RenderOpsLocalData,
             skip_flush: &mut bool,
             render_op: &RenderOp,
             window_size: Size,
@@ -187,7 +276,7 @@ pub mod render_ops_impl {
                         skip_flush,
                         render_op,
                         window_size,
-                        local_data,
+                        render_local_data,
                         locked_output_device,
                         is_mock,
                     );
@@ -237,10 +326,20 @@ pub mod render_ops_impl {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Default)]
 pub enum RenderOp {
+    /// Enables terminal raw mode for direct control over input/output.
+    ///
+    /// Raw mode disables line buffering and special character processing,
+    /// allowing the application to receive keystrokes immediately and
+    /// handle all terminal control sequences directly.
     EnterRawMode,
 
+    /// Exits terminal raw mode and restores normal terminal behavior.
+    ///
+    /// This restores line buffering and standard terminal input processing.
+    /// Should always be called before application exit to avoid leaving
+    /// the terminal in an unusable state.
     ExitRawMode,
 
     /// This is always painted on top. [Pos] is the absolute column and row on the
@@ -257,6 +356,11 @@ pub enum RenderOp {
         /* relative position */ Pos,
     ),
 
+    /// Clears the entire terminal screen and positions cursor at top-left.
+    ///
+    /// This operation erases all visible content on the terminal screen
+    /// and resets the cursor to position (0, 0). Useful for initializing
+    /// a clean display state before rendering new content.
     ClearScreen,
 
     /// Directly set the fg color for crossterm w/out using [`TuiStyle`].
@@ -265,6 +369,11 @@ pub enum RenderOp {
     /// Directly set the bg color for crossterm w/out using [`TuiStyle`].
     SetBgColor(TuiColor),
 
+    /// Resets terminal colors to their default values.
+    ///
+    /// This clears any previously set foreground and background colors,
+    /// returning the terminal to its default color scheme. Essential for
+    /// ensuring clean color state between different rendering operations.
     ResetColor,
 
     /// Translate [`TuiStyle`] into fg and bg colors for crossterm. Note that this does
@@ -292,17 +401,23 @@ pub enum RenderOp {
     /// padding.
     CompositorNoClipTruncPaintTextWithAttributes(InlineString, Option<TuiStyle>),
 
-    /// For [Default] impl.
+    /// No-operation render operation that does nothing when executed for `Default` impl.
+    ///
+    /// Used as a placeholder or default value in situations where a [`RenderOp`] is
+    /// required but no actual rendering should occur. Safe to include in operation lists
+    /// as it has no side effects.
+    #[default]
     Noop,
 }
 
+/// Core trait implementations for [`RenderOp`].
+///
+/// This module provides essential trait implementations for render operations,
+/// including default values and debug formatting functionality.
 mod render_op_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl Default for RenderOp {
-        fn default() -> Self { Self::Noop }
-    }
 
     impl Debug for RenderOp {
         /// When [`crate::RenderPipeline`] is printed as debug, each [`RenderOp`] is
@@ -319,6 +434,10 @@ mod render_op_impl {
     }
 }
 
+/// Flush trait implementation for [`RenderOp`].
+///
+/// This module implements the [`Flush`] trait for render operations,
+/// providing methods to flush terminal output and clear before flushing.
 mod render_op_impl_trait_flush {
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -350,12 +469,30 @@ pub enum FlushKind {
     ClearBeforeFlush,
 }
 
+/// Trait for controlling terminal output flushing behavior.
+///
+/// This trait provides methods to flush pending terminal output and optionally
+/// clear the terminal before flushing. Essential for ensuring that render
+/// operations are actually displayed on the terminal.
 pub trait Flush {
+    /// Flushes pending output to the terminal.
+    ///
+    /// This method ensures that all buffered terminal output is written
+    /// and displayed immediately.
     fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>);
 
+    /// Clears the terminal before flushing output.
+    ///
+    /// This method first clears the terminal screen, then flushes any
+    /// pending output. Useful for ensuring a clean display state.
     fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>);
 }
 
+/// Trait for formatting [`RenderOp`] instances in debug output.
+///
+/// This trait abstracts debug formatting logic, allowing different
+/// terminal backends to provide their own specialized debug representations
+/// of render operations.
 pub trait DebugFormatRenderOp {
     /// Formats the `RenderOp` for debug output.
     ///

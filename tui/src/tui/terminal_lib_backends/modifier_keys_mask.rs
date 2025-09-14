@@ -17,16 +17,55 @@ pub struct ModifierKeysMask {
     pub alt_key_state: KeyState,
 }
 
+/// Represents the state of a keyboard modifier key (Shift, Ctrl, Alt).
+///
+/// This enum is used to track whether a modifier key is currently pressed
+/// or not, providing a cleaner alternative to bitflags for modifier state.
+///
+/// # Examples
+///
+/// ```rust
+/// use r3bl_tui::KeyState;
+///
+/// let shift_down = KeyState::Pressed;
+/// let ctrl_up = KeyState::NotPressed;
+///
+/// // Default state is NotPressed
+/// assert_eq!(KeyState::default(), KeyState::NotPressed);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum KeyState {
+    /// The modifier key is currently being held down.
     Pressed,
+    /// The modifier key is not currently pressed (default state).
     #[default]
     NotPressed,
 }
 
+/// Result type for modifier key matching operations.
+///
+/// This enum provides a semantic alternative to boolean values when
+/// checking if modifier key combinations match expected patterns.
+///
+/// # Examples
+///
+/// ```rust
+/// use r3bl_tui::{MatchResult, ModifierKeysMask};
+/// use crossterm::event::KeyModifiers;
+///
+/// let mask = ModifierKeysMask::new().with_ctrl();
+/// let result = mask.matches(KeyModifiers::CONTROL);
+///
+/// match result {
+///     MatchResult::Matches => println!("Ctrl key is pressed"),
+///     MatchResult::DoesNotMatch => println!("Ctrl key is not pressed"),
+/// }
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MatchResult {
+    /// The modifier key combination matches the expected pattern.
     Matches,
+    /// The modifier key combination does not match the expected pattern.
     DoesNotMatch,
 }
 

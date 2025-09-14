@@ -3,7 +3,9 @@
 use std::fmt::Debug;
 
 use super::super::{FlushKind, RenderOps};
-use crate::{core::pty_mux::ansi_parser::term_units::TermRow, osc::OscEvent, CachedMemorySize, GetMemSize, LockedOutputDevice, MemoizedMemorySize, Pos, Size, TuiColor, TuiStyle};
+use crate::{CachedMemorySize, GetMemSize, LockedOutputDevice, MemoizedMemorySize, Pos,
+            Size, TuiStyle, core::pty_mux::ansi_parser::term_units::TermRow,
+            osc::OscEvent};
 
 /// Character set modes for terminal emulation.
 ///
@@ -21,15 +23,16 @@ pub enum CharacterSet {
 
 /// Support structure for ANSI escape sequence parsing and terminal state management.
 ///
-/// This struct groups together all fields related to [`ANSI parser`] functionality that
-/// need to be maintained by the [`OffscreenBuffer`] for proper terminal emulation.
+/// This struct groups together all fields related to [`ANSI parser performer`]
+/// functionality that need to be maintained by the [`OffscreenBuffer`] for proper
+/// terminal emulation.
 ///
-/// One field missing from here is [`OffscreenBuffer::my_pos`] which tracks the current
-/// cursor position. This is because `my_pos` is used by multiple subsystems and is the
-/// primary cursor position tracker for the entire offscreen buffer system.
+/// One field missing from here is [`OffscreenBuffer::cursor_pos`] which tracks the
+/// current cursor position. This is because `cursor_pos` is used by multiple subsystems
+/// and is the primary cursor position tracker for the entire offscreen buffer system.
 ///
-/// [`ANSI parser`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
-/// [`OffscreenBuffer::my_pos`]: crate::offscreen_buffer::OffscreenBuffer::my_pos
+/// [`ANSI parser performer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
+/// [`OffscreenBuffer::cursor_pos`]: OffscreenBuffer::cursor_pos
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnsiParserSupport {
     /// Temporary cursor position storage for DECSC/DECRC escape sequences only.
@@ -37,9 +40,9 @@ pub struct AnsiParserSupport {
     /// This field is ONLY used for ESC 7 (DECSC) save and ESC 8 (DECRC) restore
     /// operations, as well as their CSI equivalents (CSI s and CSI u). It does NOT
     /// track the current cursor position - that's stored in
-    /// [`OffscreenBuffer::my_pos`].
+    /// [`OffscreenBuffer::cursor_pos`].
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
+    /// Used by [`AnsiToOfsBufPerformer`] to implement
     /// the DECSC (ESC 7) and DECRC (ESC 8) escape sequences for saving and restoring
     /// cursor position.
     ///
@@ -57,11 +60,13 @@ pub struct AnsiParserSupport {
     ///                             ↓
     /// 6. Restores cursor_pos from buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
     /// ```
+    ///
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
     pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
 
     /// Active character set for ANSI escape sequence support.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
+    /// Used by [`AnsiToOfsBufPerformer`] to implement
     /// character set switching via ESC ( B (ASCII) and ESC ( 0 (DEC graphics).
     /// When in Graphics mode, characters like 'q' are translated to box-drawing
     /// characters like '─' during the `print()` operation.
@@ -71,11 +76,13 @@ pub struct AnsiParserSupport {
     /// ASCII Mode (ESC ( B):   'q' → 'q' (literal)
     /// Graphics Mode (ESC ( 0): 'q' → '─' (horizontal line)
     /// ```
+    ///
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
     pub character_set: CharacterSet,
 
     /// Auto-wrap mode (DECAWM) for ANSI escape sequence support.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to control
+    /// Used by [`AnsiToOfsBufPerformer`] to control
     /// line wrapping behavior when printing characters. This implements the VT100
     /// DECAWM (Auto Wrap Mode) specification.
     ///
@@ -88,6 +95,8 @@ pub struct AnsiParserSupport {
     /// When enabled (default), characters that would exceed the right margin
     /// automatically wrap to the beginning of the next line. When disabled,
     /// the cursor stays at the right margin and subsequent characters overwrite.
+    ///
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
     pub auto_wrap_mode: bool,
 
     /// Complete computed style combining attributes and colors for efficient rendering.
@@ -104,8 +113,8 @@ pub struct AnsiParserSupport {
     /// This variable defines the **upper boundary** of the area where scrolling occurs.
     /// Rows above this boundary are part of the **static top region** and do not scroll.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
-    /// DECSTBM (Set Top and Bottom Margins) functionality via ESC [ top ; bottom r.
+    /// Used by [`AnsiToOfsBufPerformer`] to implement DECSTBM (Set Top and Bottom
+    /// Margins) functionality via ESC [ top ; bottom r.
     ///
     /// When `None`, the default top margin is row 1 (first row), making the
     /// entire terminal screen the scrollable region.
@@ -117,6 +126,8 @@ pub struct AnsiParserSupport {
     /// ESC [ 5 ; 20 r   - Set scrolling region from row 5 to row 20
     /// ESC [ r          - Reset to full screen (clears both margins)
     /// ```
+    ///
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
     pub scroll_region_top: Option<TermRow>,
 
     /// Bottom margin for the **scrollable region** (DECSTBM) - 1-based row number.
@@ -125,8 +136,8 @@ pub struct AnsiParserSupport {
     /// Rows below this boundary are part of the **static bottom region** and do not
     /// scroll.
     ///
-    /// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to implement
-    /// DECSTBM (Set Top and Bottom Margins) functionality via ESC [ top ; bottom r.
+    /// Used by [`AnsiToOfsBufPerformer`] to implement DECSTBM (Set Top and Bottom
+    /// Margins) functionality via ESC [ top ; bottom r.
     ///
     /// When `None`, the default bottom margin is the last row of the terminal,
     /// making the entire terminal screen the scrollable region.
@@ -137,6 +148,8 @@ pub struct AnsiParserSupport {
     /// - Scrolling commands (ESC D, ESC M, CSI S, CSI T) only affect the region
     /// - Cursor movement is constrained to the region boundaries
     /// - Content outside the region remains unchanged during scrolling
+    ///
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
     pub scroll_region_bottom: Option<TermRow>,
 }
 
@@ -178,8 +191,12 @@ impl Default for AnsiParserSupport {
 ///    [`OffscreenBuffer::apply_ansi_bytes()`].
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
+    // The actual 2D grid of pixel characters representing the terminal screen.
     pub buffer: PixelCharLines,
+
+    // Size of the terminal window in rows and columns (1-based).
     pub window_size: Size,
+
     /// The current active cursor position in the buffer.
     ///
     /// This is the primary cursor position tracker for the entire offscreen buffer
@@ -191,17 +208,20 @@ pub struct OffscreenBuffer {
     ///   sequence processing
     /// - **Terminal emulation**: Tracks where the next character should be rendered
     ///
-    /// Note: This is different from
-    /// `ansi_parser_support.cursor_pos_for_esc_save_and_restore` which is only used
-    /// for DECSC/DECRC (ESC 7/8) save/restore operations.
-    pub my_pos: Pos,
-    pub my_fg_color: Option<TuiColor>,
-    pub my_bg_color: Option<TuiColor>,
+    /// Note: This is different from [`cursor_pos_for_esc_save_and_restore`] which is
+    /// only used for DECSC/DECRC (ESC 7/8) save/restore operations.
+    ///
+    /// [`cursor_pos_for_esc_save_and_restore`]: AnsiParserSupport::cursor_pos_for_esc_save_and_restore
+    pub cursor_pos: Pos,
+
     /// Memoized memory size calculation for performance.
     /// This avoids expensive recalculation in
-    /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`]
+    /// [`log_telemetry_info`]
     /// which is called in a hot loop on every render.
+    ///
+    /// [`log_telemetry_info`]: crate::main_event_loop::EventLoopState::log_telemetry_info()
     pub(super) memory_size_calc_cache: MemoizedMemorySize,
+
     /// ANSI parser support fields grouped together for better organization.
     pub ansi_parser_support: AnsiParserSupport,
 }
@@ -213,8 +233,6 @@ impl GetMemSize for OffscreenBuffer {
         self.buffer.get_mem_size()
             + std::mem::size_of::<Size>()
             + std::mem::size_of::<Pos>()
-            + std::mem::size_of::<Option<TuiColor>>()
-            + std::mem::size_of::<Option<TuiColor>>()
     }
 }
 
@@ -369,9 +387,7 @@ impl OffscreenBuffer {
         let mut buffer = Self {
             buffer: PixelCharLines::new_empty(window_size),
             window_size,
-            my_pos: Pos::default(),
-            my_fg_color: None,
-            my_bg_color: None,
+            cursor_pos: Pos::default(),
             memory_size_calc_cache: crate::MemoizedMemorySize::default(),
             ansi_parser_support: super::AnsiParserSupport::default(),
         };

@@ -140,7 +140,7 @@ impl Process {
                 "Process '{}' updated buffer with {} bytes, cursor at {:?}",
                 self.name,
                 output.len(),
-                self.ofs_buf.my_pos
+                self.ofs_buf.cursor_pos
             );
         }
     }
