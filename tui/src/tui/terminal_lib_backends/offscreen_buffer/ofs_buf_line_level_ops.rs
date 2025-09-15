@@ -58,6 +58,71 @@ impl OffscreenBuffer {
     /// Shift lines up within a range by the specified amount.
     /// Lines at the bottom of the range are filled with blank lines.
     /// Returns true if the operation was successful.
+    ///
+    /// Used by ANSI DL (Delete Line) and SU (Scroll Up) operations.
+    ///
+    /// For scrolling operations, this is also used to scroll buffer content up.
+    /// The top line is lost, and a new empty line appears at bottom.
+    ///
+    /// Example - scrolling buffer up within scroll region (via `shift_lines_up`)
+    ///
+    /// ```text
+    /// Before:        Row: 0-based
+    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
+    ///              │  1  │ Line A (will be lost)               │ ← Top line lost
+    ///              │  2  │ Line B                              │
+    ///              │  3  │ Line C                              │
+    ///              │  4  │ Line D  ← cursor at scroll_bottom   │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// After scroll up:
+    /// max_height=6 ╮     ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤
+    ///              │  1  │ Line B (moved up)                   │
+    ///              │  2  │ Line C (moved up)                   │
+    ///              │  3  │ Line D (moved up)                   │
+    ///              │  4  │ (blank line)  ← cursor stays here   │
+    ///              │     ├─────────────────────────────────────┤
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// Result: Content scrolls up, Line A lost, blank line added at bottom
+    /// ```
+    ///
+    /// Example - Deleting 2 lines at cursor position (via `shift_lines_up`)
+    ///
+    /// ```text
+    /// Before:        Row: 0-based
+    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top
+    ///              │  1  │ Line A                              │   (row 1, 0-based)
+    ///              │  2  │ Line B  ← cursor (row 2, 0-based)   │ ← Delete 2 lines here
+    ///              │  3  │ Line C                              │
+    ///              │  4  │ Line D                              │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
+    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// After shift_lines_up(2..5, 2):
+    /// max_height=6 ╮     ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤
+    ///              │  1  │ Line A                              │
+    ///              │  2  │ Line D  ← cursor stays here         │
+    ///              │  3  │ (blank line)                        │
+    ///              │  4  │ (blank line)                        │
+    ///              │     ├─────────────────────────────────────┤
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// Result: Line B and C deleted, Line D shifted up, blank lines added at bottom
+    /// ```
     pub fn shift_lines_up(
         &mut self,
         row_range: Range<RowIndex>,
@@ -93,6 +158,71 @@ impl OffscreenBuffer {
     /// Shift lines down within a range by the specified amount.
     /// Lines at the top of the range are filled with blank lines.
     /// Returns true if the operation was successful.
+    ///
+    /// Used by ANSI IL (Insert Line) and SD (Scroll Down) operations.
+    ///
+    /// For scrolling operations, this is also used to scroll buffer content down.
+    /// The bottom line is lost, and a new empty line appears at top.
+    ///
+    /// Example - Scrolling buffer down within scroll region (via `shift_lines_down`)
+    ///
+    /// ```text
+    /// Before:        Row: 0-based
+    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
+    ///              │  1  │ Line A  ← cursor at scroll_top      │
+    ///              │  2  │ Line B                              │
+    ///              │  3  │ Line C                              │
+    ///              │  4  │ Line D                              │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// After scroll down:
+    /// max_height=6 ╮     ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤
+    ///              │  1  │ (blank line)  ← cursor stays here   │
+    ///              │  2  │ Line A (moved down)                 │
+    ///              │  3  │ Line B (moved down)                 │
+    ///              │  4  │ Line C (moved down)                 │
+    ///              │     ├─────────────────────────────────────┤
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// Result: Content scrolls down, Line D lost, blank line added at top
+    /// ```
+    ///
+    /// Example - Inserting 2 blank lines at cursor position (via `shift_lines_down`)
+    ///
+    /// ```text
+    /// Before:        Row: 0-based
+    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
+    ///              │  1  │ Line A                              │
+    ///              │  2  │ Line B  ← cursor (row 2, 0-based)   │ ← Insert 2 lines here
+    ///              │  3  │ Line C                              │
+    ///              │  4  │ Line D                              │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// After shift_lines_down(2..5, 2):
+    /// max_height=6 ╮     ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Header line (outside scroll region) │
+    ///              │     ├─────────────────────────────────────┤
+    ///              │  1  │ Line A                              │
+    ///              │  2  │ (blank line)  ← cursor stays here   │
+    ///              │  3  │ (blank line)                        │
+    ///              │  4  │ Line B                              │
+    ///              │     ├─────────────────────────────────────┤
+    ///              ╰  5  │ Footer line (outside scroll region) │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// Result: 2 blank lines inserted, Line B-C-D shifted down, Line C-D lost beyond scroll_bottom
+    /// ```
     pub fn shift_lines_down(
         &mut self,
         row_range: Range<RowIndex>,

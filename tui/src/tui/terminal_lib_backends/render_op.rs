@@ -16,7 +16,7 @@ use crate::{CrosstermDebugFormatRenderOp, InlineString, InlineVec, LockedOutputD
 ///
 /// # Examples
 ///
-/// ## Creating new RenderOps
+/// ## Creating new `RenderOps`
 ///
 /// ```
 /// use r3bl_tui::*;
@@ -33,7 +33,7 @@ use crate::{CrosstermDebugFormatRenderOp, InlineString, InlineVec, LockedOutputD
 /// let iter = render_ops.iter();
 /// ```
 ///
-/// ## Adding to existing RenderOps
+/// ## Adding to existing `RenderOps`
 ///
 /// ```
 /// use r3bl_tui::*;
@@ -52,7 +52,7 @@ use crate::{CrosstermDebugFormatRenderOp, InlineString, InlineVec, LockedOutputD
 /// use r3bl_tui::*;
 ///
 /// let mut ops = RenderOps::default();
-/// let styled_texts = vec![/* styled text data */];
+/// let styled_texts = TuiStyledTexts::default();
 /// render_ops!(
 ///   @render_styled_texts_into ops =>
 ///   styled_texts

@@ -115,6 +115,7 @@ pub enum InputEvent {
 /// ```rust
 /// use r3bl_tui::FocusEvent;
 ///
+/// let focus_event = FocusEvent::Gained;
 /// match focus_event {
 ///     FocusEvent::Gained => println!("Application has focus"),
 ///     FocusEvent::Lost => println!("Application lost focus"),

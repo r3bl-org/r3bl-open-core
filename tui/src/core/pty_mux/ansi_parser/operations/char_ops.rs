@@ -29,106 +29,37 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount};
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
-/// Characters to the right of cursor shift left.
-/// Blank characters are inserted at the end of the line.
-///
-/// Example - Deleting 2 characters at cursor position
-///
-/// ```text
-/// Before:
-///           ╭────── max_width=10 (1-based) ──────╮
-/// Column:   0   1   2   3   4   5   6   7   8   9
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │ c │ d │ E │ F │ G │ H │ I │ J │
-///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
-///                   ╰ cursor (col 2, 0-based)
-///
-/// After DCH 2:
-/// Column:   0   1   2   3   4   5   6   7   8   9
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │ E │ F │ G │ H │ I │ J │   │   │
-///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
-///                   ╰ cursor (col 2, 0-based)
-///
-/// Result: C and D deleted, E-F-G shifted left, blanks filled at end
-/// ```
+/// Characters to the right of cursor shift left, blanks are inserted at line end.
+/// See `OffscreenBuffer::delete_chars_at_cursor` for detailed behavior and examples.
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-    let at = /* 0-based */ performer.ofs_buf.cursor_pos;
-    let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Use dedicated DCH method to delete characters at cursor.
     performer
         .ofs_buf
-        .delete_chars_at_cursor(at, how_many, max_width);
+        .delete_chars_at_cursor(how_many);
 }
 
 /// Handle ICH (Insert Character) - insert n blank characters at cursor position.
-/// Characters to the right of cursor shift right.
-/// Characters shifted beyond the right margin are lost.
-///
-/// Example - Inserting 2 blank characters at cursor position
-///
-/// ```text
-/// Before:
-///           ╭────── max_width=10 (1-based) ─────╮
-/// Column:   0   1   2   3   4   5   6   7   8   9
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │ C │ D │ E │ F │ G │ H │ I │ J │
-///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
-///                   ╰ cursor (col 2, 0-based)
-///
-/// After ICH 2:
-/// Column:   0   1   2   3   4   5   6   7   8   9
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │   │   │ C │ D │ E │ F │ G │ H │
-///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
-///                   ╰ cursor (col 2, 0-based)
-///
-/// Result: 2 blanks inserted, C-D-E-F-G-H shifted right, I-J lost beyond margin
-/// ```
+/// Characters to the right of cursor shift right, characters beyond margin are lost.
+/// See `OffscreenBuffer::insert_chars_at_cursor` for detailed behavior and examples.
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-    let at = /* 0-based */ performer.ofs_buf.cursor_pos;
-    let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Use dedicated ICH method to insert characters at cursor.
     performer
         .ofs_buf
-        .insert_chars_at_cursor(at, how_many, max_width);
+        .insert_chars_at_cursor(how_many);
 }
 
 /// Handle ECH (Erase Character) - erase n characters at cursor position.
-/// Characters are replaced with blanks, no shifting occurs.
-/// This is different from DCH which shifts characters left.
-///
-/// Example - Erasing 3 characters at cursor position
-///
-/// ```text
-/// Before:
-///           ╭────── max_width=10 (1-based) ──────╮
-/// Column:   0   1   2   3   4   5   6   7   8   9
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │ C │ D │ E │ F │ G │ H │ I │ J │
-///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
-///                   ╰ cursor (col 2, 0-based)
-///
-/// After ECH 3:
-/// Column:   0   1   2   3   4   5   6   7   8   9
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-/// Row:    │ A │ B │   │   │   │ F │ G │ H │ I │ J │
-///         └───┴───┴─▲─┴───┴───┴───┴───┴───┴───┴───┘
-///                   ╰ cursor (col 2, 0-based)
-///
-/// Result: C, D, E replaced with blanks, F-G-H-I-J remain in place (no shifting)
-/// ```
+/// Characters are replaced with blanks, no shifting occurs (unlike DCH).
+/// See `OffscreenBuffer::erase_chars_at_cursor` for detailed behavior and examples.
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-    let at = /* 0-based */ performer.ofs_buf.cursor_pos;
-    let max_width = /* 1-based */ performer.ofs_buf.window_size.col_width;
 
     // Use dedicated ECH method to erase characters at cursor.
     performer
         .ofs_buf
-        .erase_chars_at_cursor(at, how_many, max_width);
+        .erase_chars_at_cursor(how_many);
 }

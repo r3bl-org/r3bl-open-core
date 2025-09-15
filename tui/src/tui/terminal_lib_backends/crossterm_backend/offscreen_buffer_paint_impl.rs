@@ -320,9 +320,11 @@ mod tests {
             new_style!(dim bold color_fg:{tui_color!(cyan)} color_bg:{tui_color!(cyan)}),
         );
         ofs_buf.cursor_pos = col(0) + row(0);
-        let mut render_local_data = RenderOpsLocalData::default();
-        render_local_data.fg_color = Some(tui_color!(green));
-        render_local_data.bg_color = Some(tui_color!(blue));
+        let render_local_data = RenderOpsLocalData {
+            fg_color: Some(tui_color!(green)),
+            bg_color: Some(tui_color!(blue)),
+            ..Default::default()
+        };
         let maybe_max_display_col_count: Option<ColWidth> = Some(width(10));
         print_text_with_attributes(
             text,

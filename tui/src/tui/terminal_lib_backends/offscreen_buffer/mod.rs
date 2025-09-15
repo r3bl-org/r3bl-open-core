@@ -8,11 +8,14 @@
 
 // Attach.
 pub mod diff_chunks;
+pub mod ofs_buf_ansi_bounds_check_ops;
+pub mod ofs_buf_ansi_cursor_ops;
+pub mod ofs_buf_ansi_scroll_vert_ops;
+pub mod ofs_buf_ansi_shift_horiz_ops;
 pub mod ofs_buf_bulk_ops;
 pub mod ofs_buf_char_ops;
 pub mod ofs_buf_core;
 pub mod ofs_buf_line_level_ops;
-pub mod ofs_buf_shifting_ops;
 pub mod pixel_char;
 pub mod pixel_char_line;
 pub mod pixel_char_lines;
