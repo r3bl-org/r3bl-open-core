@@ -13,7 +13,7 @@
 //!         ↓
 //!     VTE Parser (parses ESC[...char pattern)
 //!         ↓
-//!     csi_dispatch() [THIS METHOD]
+//!     csi_dispatch() [routes to modules below]
 //!         ↓
 //!     Route to operations module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
@@ -21,7 +21,7 @@
 //!       - sgr_ops:: for styling (m)
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
-//!       - mode_ops:: for modes (h,l)
+//!       - mode_ops:: for modes (h,l) <- [THIS MODULE]
 //!         ↓
 //!     Update OffscreenBuffer state
 //! ```

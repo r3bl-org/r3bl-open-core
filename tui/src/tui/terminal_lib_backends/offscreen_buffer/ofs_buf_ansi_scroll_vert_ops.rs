@@ -133,7 +133,8 @@ impl OffscreenBuffer {
     /// Scroll buffer content down by one line (for ESC M at top).
     /// The bottom line is lost, and a new empty line appears at top.
     /// Respects DECSTBM scroll region margins.
-    /// See [`crate::OffscreenBuffer::shift_lines_down`] for detailed behavior and examples.
+    /// See [`crate::OffscreenBuffer::shift_lines_down`] for detailed behavior and
+    /// examples.
     pub fn scroll_buffer_down(&mut self) {
         // Get scroll region boundaries using helper methods.
         let scroll_top = self.get_scroll_top_boundary();

@@ -31,7 +31,6 @@ impl GetMemSize for PixelChar {
     }
 }
 
-
 impl Debug for PixelChar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const WIDTH: usize = 16;
@@ -52,11 +51,7 @@ impl Debug for PixelChar {
                     write!(f, " {} '{display_char}': ^WIDTH$", fg_magenta("P"))?;
                 } else {
                     // Content + style.
-                    write!(
-                        f,
-                        " {} '{display_char}'→{style: ^WIDTH$}",
-                        fg_magenta("P")
-                    )?;
+                    write!(f, " {} '{display_char}'→{style: ^WIDTH$}", fg_magenta("P"))?;
                 }
             }
         }
@@ -127,10 +122,7 @@ mod tests {
             } => {
                 assert_eq!(*display_char, 'b');
                 assert_eq!(style.attribs, tui_style_attribs(Underline));
-                assert_eq!(
-                    style.color_fg,
-                    Some(TuiColor::Basic(ANSIBasicColor::Red))
-                );
+                assert_eq!(style.color_fg, Some(TuiColor::Basic(ANSIBasicColor::Red)));
             }
             _ => panic!("Expected styled PlainText variant"),
         }

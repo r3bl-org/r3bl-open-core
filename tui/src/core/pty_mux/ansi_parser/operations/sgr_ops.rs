@@ -13,12 +13,12 @@
 //!         ↓
 //!     VTE Parser (parses ESC[...char pattern)
 //!         ↓
-//!     csi_dispatch() [THIS METHOD]
+//!     csi_dispatch() [routes to modules below]
 //!         ↓
 //!     Route to operations module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
-//!       - sgr_ops:: for styling (m)
+//!       - sgr_ops:: for styling (m) <- [THIS MODULE]
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
@@ -59,19 +59,28 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
             set_style_field!(performer, attribs.italic = Some(tui_style_attrib::Italic));
         }
         csi_codes::SGR_UNDERLINE => {
-            set_style_field!(performer, attribs.underline = Some(tui_style_attrib::Underline));
+            set_style_field!(
+                performer,
+                attribs.underline = Some(tui_style_attrib::Underline)
+            );
         }
         csi_codes::SGR_BLINK | csi_codes::SGR_RAPID_BLINK => {
             set_style_field!(performer, attribs.blink = Some(tui_style_attrib::Blink));
         }
         csi_codes::SGR_REVERSE => {
-            set_style_field!(performer, attribs.reverse = Some(tui_style_attrib::Reverse));
+            set_style_field!(
+                performer,
+                attribs.reverse = Some(tui_style_attrib::Reverse)
+            );
         }
         csi_codes::SGR_HIDDEN => {
             set_style_field!(performer, attribs.hidden = Some(tui_style_attrib::Hidden));
         }
         csi_codes::SGR_STRIKETHROUGH => {
-            set_style_field!(performer, attribs.strikethrough = Some(tui_style_attrib::Strikethrough));
+            set_style_field!(
+                performer,
+                attribs.strikethrough = Some(tui_style_attrib::Strikethrough)
+            );
         }
         csi_codes::SGR_RESET_BOLD_DIM => {
             let style = &mut performer.ofs_buf.ansi_parser_support.current_style;

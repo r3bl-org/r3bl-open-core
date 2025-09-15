@@ -179,7 +179,8 @@ fn convert_character_with_modifiers(ch: char, modifiers: ModifierState) -> PtyIn
             shift: true,
             alt: false,
         } if ch == ' ' => {
-            // Shift+Space typically sends regular space but some apps detect it via CSI u.
+            // Shift+Space typically sends regular space but some apps detect it via CSI
+            // u.
             generate_csi_u_sequence(' ' as u32, modifiers.to_csi_modifier())
         }
 

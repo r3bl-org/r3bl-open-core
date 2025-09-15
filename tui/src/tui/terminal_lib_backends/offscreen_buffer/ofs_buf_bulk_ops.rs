@@ -29,7 +29,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bulk_ops {
     use super::*;
-    use crate::{col, height, row, width, TuiStyle};
+    use crate::{TuiStyle, col, height, row, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(4) + height(4);

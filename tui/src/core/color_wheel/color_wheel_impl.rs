@@ -386,7 +386,8 @@ mod color_wheel_cache {
             hashing_helpers::hash_color_wheel_config(&config1, &mut hasher1);
             hashing_helpers::hash_color_wheel_config(&config2, &mut hasher2);
 
-            // This is expected behavior - -0.0 and 0.0 have different bit representations.
+            // This is expected behavior - -0.0 and 0.0 have different bit
+            // representations.
             assert_ne!(hasher1.finish(), hasher2.finish());
         }
 

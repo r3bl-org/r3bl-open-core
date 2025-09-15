@@ -211,7 +211,7 @@ impl DerefMut for PixelCharLine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{width, TuiStyle};
+    use crate::{TuiStyle, width};
 
     #[test]
     fn test_pixel_char_line_new_empty() {

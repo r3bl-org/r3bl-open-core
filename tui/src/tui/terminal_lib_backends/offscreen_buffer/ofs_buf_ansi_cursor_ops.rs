@@ -10,7 +10,11 @@ use std::cmp::min;
 
 #[allow(clippy::wildcard_imports)]
 use super::*;
-use crate::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, col};
+use crate::{BoundsCheck, ColIndex, ColWidth, Pos, RowHeight, RowIndex, col};
+
+/// Standard terminal tab stop width (8 columns).
+/// Used for calculating tab positions in terminal emulation.
+const TAB_STOP_WIDTH: usize = 8;
 
 impl OffscreenBuffer {
     /// Move cursor up by n lines.
@@ -174,6 +178,43 @@ impl OffscreenBuffer {
         // Update only the row, preserve column.
         self.cursor_pos.row_index = new_row;
     }
+
+    /// Handle backspace control character (0x08).
+    /// Moves cursor left one position if not at leftmost column.
+    pub fn handle_backspace(&mut self) {
+        let current_col = self.cursor_pos.col_index;
+        if current_col > col(0) {
+            self.cursor_pos.col_index = current_col - 1;
+        }
+    }
+
+    /// Handle tab control character (0x09).
+    /// Moves cursor to next 8-column tab stop boundary.
+    pub fn handle_tab(&mut self) {
+        let current_col = self.cursor_pos.col_index;
+        let current_tab_zone = current_col.as_usize() / TAB_STOP_WIDTH;
+        let next_tab_zone = current_tab_zone + 1;
+        let next_tab_col = next_tab_zone * TAB_STOP_WIDTH;
+        let max_col = self.window_size.col_width;
+
+        // Clamp to max valid column index if it would overflow.
+        self.cursor_pos.col_index =
+            col(min(next_tab_col, max_col.convert_to_col_index().as_usize()));
+    }
+
+    /// Handle line feed control character (0x0A).
+    /// Moves cursor down one line if not at bottom boundary.
+    pub fn handle_line_feed(&mut self) {
+        let max_row = self.window_size.row_height;
+        let next_row: RowIndex = self.cursor_pos.row_index + 1;
+        if next_row.check_overflows(max_row) == crate::BoundsOverflowStatus::Within {
+            self.cursor_pos.row_index = next_row;
+        }
+    }
+
+    /// Handle carriage return control character (0x0D).
+    /// Moves cursor to start of current line (column 0).
+    pub fn handle_carriage_return(&mut self) { self.cursor_pos.col_index = col(0); }
 }
 
 #[cfg(test)]

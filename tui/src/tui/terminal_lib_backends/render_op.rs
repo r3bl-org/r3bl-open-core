@@ -418,7 +418,6 @@ mod render_op_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-
     impl Debug for RenderOp {
         /// When [`crate::RenderPipeline`] is printed as debug, each [`RenderOp`] is
         /// printed using this method. Also [`crate::queue_render_op`!] does not

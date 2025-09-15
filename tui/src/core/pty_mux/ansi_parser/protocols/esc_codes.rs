@@ -141,10 +141,6 @@ pub const LINE_FEED: u8 = b'\n';
 /// Moves cursor to beginning of current line
 pub const CARRIAGE_RETURN: u8 = b'\r';
 
-/// Standard terminal tab stop width (8 columns)
-/// Used for calculating tab positions
-pub const TAB_STOP_WIDTH: usize = 8;
-
 // ESC sequence builder following the same pattern as SgrCode.
 
 /// Builder for ESC (direct escape) sequences.

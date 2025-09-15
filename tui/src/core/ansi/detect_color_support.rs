@@ -230,8 +230,8 @@ pub mod global_color_support {
 ///
 /// ## Blacklist Approach
 ///
-/// This implementation uses a blacklist approach where hyperlink support is assumed to be.
-/// available by default, and only disabled for terminals known to lack OSC 8 support.
+/// This implementation uses a blacklist approach where hyperlink support is assumed to
+/// be. available by default, and only disabled for terminals known to lack OSC 8 support.
 /// This approach is future-proof as most modern terminals (2018+) support OSC 8.
 pub mod global_hyperlink_support {
     use super::{AtomicI8, HyperlinkSupport, Ordering,

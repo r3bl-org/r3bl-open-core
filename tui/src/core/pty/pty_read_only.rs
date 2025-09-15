@@ -712,8 +712,8 @@ mod tests {
             "Should have received at least one event"
         );
 
-        // Check that we received an OSC event (may also receive raw output due to default.
-        // behavior)
+        // Check that we received an OSC event (may also receive raw output due to
+        // default. behavior)
         let osc_events: Vec<_> = events
             .iter()
             .filter_map(|e| match e {

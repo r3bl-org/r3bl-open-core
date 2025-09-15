@@ -219,8 +219,10 @@ pub fn print_text_with_attributes(
     let insertion_col_index = display_col_index;
 
     // Compose style using helper function.
-    let maybe_style =
-        print_text_with_attributes_helper::compose_style(maybe_style_ref, render_local_data);
+    let maybe_style = print_text_with_attributes_helper::compose_style(
+        maybe_style_ref,
+        render_local_data,
+    );
 
     DEBUG_TUI_COMPOSITOR.then(|| {
         // % is Display, ? is Debug.
@@ -351,7 +353,9 @@ mod print_text_with_attributes_helper {
             it.color_fg = render_local_data.fg_color;
             it.color_bg = render_local_data.bg_color;
             Some(it)
-        } else if render_local_data.fg_color.is_some() || render_local_data.bg_color.is_some() {
+        } else if render_local_data.fg_color.is_some()
+            || render_local_data.bg_color.is_some()
+        {
             Some(TuiStyle {
                 color_fg: render_local_data.fg_color,
                 color_bg: render_local_data.bg_color,
@@ -392,7 +396,10 @@ mod print_text_with_attributes_helper {
                             seg_text.chars().next().unwrap()
                         } else {
                             // For multi-char segments, use the first char.
-                            seg_text.chars().next().unwrap_or(crate::UNICODE_REPLACEMENT_CHAR)
+                            seg_text
+                                .chars()
+                                .next()
+                                .unwrap_or(crate::UNICODE_REPLACEMENT_CHAR)
                         };
                         PixelChar::PlainText {
                             display_char,
@@ -525,32 +532,28 @@ mod tests {
                 ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
-                    style:
-                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    style:
-                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
-                    style:
-                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][9],
                 PixelChar::PlainText {
                     display_char: '5',
-                    style:
-                        new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold italic color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
         }
@@ -588,24 +591,21 @@ mod tests {
                 ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
@@ -651,32 +651,28 @@ mod tests {
                 ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][9],
                 PixelChar::PlainText {
                     display_char: '5',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
         }
@@ -715,24 +711,21 @@ mod tests {
                 ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Spacer);
@@ -770,32 +763,28 @@ mod tests {
                 ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][8],
                 PixelChar::PlainText {
                     display_char: '😃',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(ofs_buf.buffer[0][9], PixelChar::Void);
@@ -852,32 +841,28 @@ mod tests {
                 ofs_buf.buffer[0][0],
                 PixelChar::PlainText {
                     display_char: 'h',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][4],
                 PixelChar::PlainText {
                     display_char: 'o',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][5],
                 PixelChar::PlainText {
                     display_char: '1',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][7],
                 PixelChar::PlainText {
                     display_char: '😃',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
@@ -942,16 +927,14 @@ mod tests {
             ofs_buf.buffer[0][0],
             PixelChar::PlainText {
                 display_char: 'h',
-                style:
-                    new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
             }
         );
         assert_eq2!(
             ofs_buf.buffer[0][7],
             PixelChar::PlainText {
                 display_char: '😃',
-                style:
-                    new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
             }
         );
         assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
@@ -1041,16 +1024,14 @@ mod tests {
                 ofs_buf.buffer[0][2],
                 PixelChar::PlainText {
                     display_char: 'h',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[0][7],
                 PixelChar::PlainText {
                     display_char: '😃',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(ofs_buf.buffer[0][8], PixelChar::Void);
@@ -1067,16 +1048,14 @@ mod tests {
                 ofs_buf.buffer[1][4],
                 PixelChar::PlainText {
                     display_char: 'w',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(
                 ofs_buf.buffer[1][8],
                 PixelChar::PlainText {
                     display_char: 'd',
-                    style:
-                        new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
+                    style: new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)}),
                 }
             );
             assert_eq2!(ofs_buf.buffer[1][9], PixelChar::Spacer);

@@ -27,7 +27,7 @@ impl From<List<DiffChunk>> for PixelCharDiffChunks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, row, TuiStyle};
+    use crate::{TuiStyle, col, row};
 
     fn create_test_pixel_char() -> PixelChar {
         PixelChar::PlainText {

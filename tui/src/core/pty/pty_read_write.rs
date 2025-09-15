@@ -546,7 +546,8 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
             match controller_reader.read(&mut read_buffer) {
                 Ok(0) => {
                     // EOF - PTY closed normally.
-                    // We don't have the actual exit status here, just send UnexpectedExit.
+                    // We don't have the actual exit status here, just send
+                    // UnexpectedExit.
                     let _unused = output_evt_ch_tx_half.send(
                         PtyReadWriteOutputEvent::UnexpectedExit(
                             "PTY closed (EOF)".to_string(),

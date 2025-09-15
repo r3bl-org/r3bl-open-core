@@ -347,7 +347,6 @@ mod style_impl {
 
     impl TuiStyle {
         pub fn remove_bg_color(&mut self) { self.color_bg = None; }
-
     }
 }
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Terminal state operations.
+//! Terminal state operations for ESC sequences.
 //!
-//! # CSI Sequence Architecture
+//! # ESC Sequence Architecture
 //!
 //! ```text
 //! Application sends "ESC c" (reset terminal)
@@ -13,18 +13,21 @@
 //!         ↓
 //!     VTE Parser (parses ESC char pattern)
 //!         ↓
-//!     esc_dispatch() [THIS METHOD]
+//!     esc_dispatch() [calls functions in this module]
 //!         ↓
-//!     Handle terminal state operations:
+//!     terminal_ops functions:
 //!       - reset_terminal() for ESC c (RIS)
-//!       - save/restore cursor for ESC 7/8
-//!       - character set selection
+//!       - select_ascii_character_set() for ESC ( B
+//!       - select_dec_graphics_character_set() for ESC ( 0
 //!         ↓
 //!     Update OffscreenBuffer state
 //! ```
+//!
+//! Note: Cursor save/restore ESC sequences (ESC 7/8) are handled by `cursor_ops`
+//! functions to maintain consistency with CSI equivalents (CSI s/u).
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
-use crate::{CharacterSet, Pos, TuiStyle};
+use crate::{Pos, TuiStyle};
 
 /// Clear all buffer content.
 fn clear_buffer(performer: &mut AnsiToOfsBufPerformer) { performer.ofs_buf.clear(); }
@@ -50,7 +53,7 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
         .cursor_pos_for_esc_save_and_restore = None;
 
     // Reset to ASCII character set.
-    performer.ofs_buf.ansi_parser_support.character_set = CharacterSet::Ascii;
+    select_ascii_character_set(performer);
 
     // Clear DECSTBM scroll region margins.
     performer.ofs_buf.ansi_parser_support.scroll_region_top = None;
@@ -58,4 +61,16 @@ pub fn reset_terminal(performer: &mut AnsiToOfsBufPerformer) {
 
     // Clear any SGR attributes.
     reset_sgr_attributes(performer);
+}
+
+/// Select ASCII character set (ESC ( B).
+/// Switches to normal ASCII character set for standard text rendering.
+pub fn select_ascii_character_set(performer: &mut AnsiToOfsBufPerformer) {
+    performer.ofs_buf.select_ascii_character_set();
+}
+
+/// Select DEC Special Graphics character set (ESC ( 0).
+/// Switches to DEC Special Graphics character set for box-drawing characters.
+pub fn select_dec_graphics_character_set(performer: &mut AnsiToOfsBufPerformer) {
+    performer.ofs_buf.select_dec_graphics_character_set();
 }

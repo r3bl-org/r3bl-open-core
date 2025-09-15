@@ -7,16 +7,15 @@ use vte::Perform;
 use super::tests_fixtures::*;
 use crate::{Pos,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                          operations::cursor_ops,
                           protocols::{csi_codes::{CSI_PARAM_SEPARATOR, CSI_START,
                                                   CsiSequence,
                                                   csi_test_helpers::{csi_seq_cursor_pos,
                                                                      csi_seq_cursor_pos_alt}},
                                       esc_codes},
                           term_units::{term_col, term_row}},
-            col,
+            col, height,
             offscreen_buffer::ofs_buf_test_fixtures::*,
-            row};
+            row, width};
 
 /// Tests for absolute cursor positioning (CUP, HVP commands).
 pub mod positioning {
@@ -348,7 +347,7 @@ pub mod movement {
         );
 
         // 2. Move up 2 rows and write 'B'.
-        cursor_ops::cursor_up_by_n(&mut performer, row(2));
+        performer.ofs_buf.cursor_up(height(2));
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(3) + col(4),
@@ -363,7 +362,7 @@ pub mod movement {
         );
 
         // 3. Try to move up beyond boundary.
-        cursor_ops::cursor_up_by_n(&mut performer, row(10));
+        performer.ofs_buf.cursor_up(height(10));
         assert_eq!(performer.ofs_buf.cursor_pos.row_index, row(0)); // Should stop at row 0
         assert_eq!(
             performer.ofs_buf.cursor_pos,
@@ -416,7 +415,7 @@ pub mod movement {
         );
 
         // 2. Move down 3 rows and write another character.
-        cursor_ops::cursor_down_by_n(&mut performer, row(3));
+        performer.ofs_buf.cursor_down(height(3));
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(5) + col(5),
@@ -425,7 +424,7 @@ pub mod movement {
         performer.print('Y');
 
         // 3. Try to move down beyond boundary.
-        cursor_ops::cursor_down_by_n(&mut performer, row(10));
+        performer.ofs_buf.cursor_down(height(10));
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(9) + col(6),
@@ -466,12 +465,12 @@ pub mod movement {
         performer.print('L');
 
         // 2. Move forward 2 columns and write another character.
-        cursor_ops::cursor_forward_by_n(&mut performer, col(2));
+        performer.ofs_buf.cursor_forward(width(2));
         assert_eq!(performer.ofs_buf.cursor_pos.col_index, col(6)); // Should be at column 6
         performer.print('M');
 
         // 3. Try to move forward beyond boundary.
-        cursor_ops::cursor_forward_by_n(&mut performer, col(10));
+        performer.ofs_buf.cursor_forward(width(10));
         assert_eq!(performer.ofs_buf.cursor_pos.col_index, col(9)); // Should stop at column 9
         performer.print('N');
 
@@ -513,7 +512,7 @@ pub mod movement {
         );
 
         // 2. Move backward 3 columns and write another character.
-        cursor_ops::cursor_backward_by_n(&mut performer, col(3));
+        performer.ofs_buf.cursor_backward(width(3));
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(6) + col(5),
@@ -527,7 +526,7 @@ pub mod movement {
         );
 
         // 3. Try to move backward beyond boundary.
-        cursor_ops::cursor_backward_by_n(&mut performer, col(10));
+        performer.ofs_buf.cursor_backward(width(10));
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(6) + col(0),

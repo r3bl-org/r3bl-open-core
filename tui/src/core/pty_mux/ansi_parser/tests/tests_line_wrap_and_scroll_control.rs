@@ -6,8 +6,8 @@
 use vte::Perform;
 
 use super::tests_fixtures::*;
-use crate::TuiStyle;
-use crate::{ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
+use crate::{TuiStyle,
+            ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           csi_codes::{CsiSequence, PrivateModeType},
                           esc_codes,
                           term_units::{term_col, term_row}},

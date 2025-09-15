@@ -53,8 +53,8 @@
 /// ```
 #[derive(Debug)]
 pub enum TerminalLibBackend {
-    /// Crossterm backend - cross-platform terminal library supporting Windows, macOS, and Linux.
-    /// This is the default and recommended backend for most applications.
+    /// Crossterm backend - cross-platform terminal library supporting Windows, macOS, and
+    /// Linux. This is the default and recommended backend for most applications.
     Crossterm,
     /// Termion backend - Unix-specific terminal library with minimal overhead.
     /// Only available on Unix-like systems (Linux, macOS).

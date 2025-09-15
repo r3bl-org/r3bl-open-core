@@ -13,13 +13,13 @@
 //!         ↓
 //!     VTE Parser (parses ESC[...char pattern)
 //!         ↓
-//!     csi_dispatch() [THIS METHOD]
+//!     csi_dispatch() [routes to modules below]
 //!         ↓
 //!     Route to operations module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
-//!       - line_ops:: for lines (L,M)
+//!       - line_ops:: for lines (L,M) <- [THIS MODULE]
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
 //!     Update OffscreenBuffer state
@@ -44,7 +44,7 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Handle DL (Delete Line) - delete n lines starting at cursor position.
 /// Lines below cursor and within scroll region shift up.
 /// Blank lines are added at the bottom of the scroll region.
-/// 
+///
 /// See `OffscreenBuffer::shift_lines_up` for detailed behavior and examples.
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);

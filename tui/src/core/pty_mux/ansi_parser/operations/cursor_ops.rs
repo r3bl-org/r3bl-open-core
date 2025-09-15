@@ -13,10 +13,10 @@
 //!         ↓
 //!     VTE Parser (parses ESC[...char pattern)
 //!         ↓
-//!     csi_dispatch() [THIS METHOD]
+//!     csi_dispatch() [routes to modules below]
 //!         ↓
 //!     Route to operations module:
-//!       - cursor_ops:: for movement (A,B,C,D,H)
+//!       - cursor_ops:: for movement (A,B,C,D,H) <- [THIS MODULE]
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
 //!       - line_ops:: for lines (L,M)
@@ -25,14 +25,12 @@
 //!     Update OffscreenBuffer state
 //! ```
 
-use std::cmp::{max, min};
-
 use vte::Params;
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::{AbsolutePosition, CursorPositionRequest,
                                           MovementCount}};
-use crate::{ColIndex, RowIndex, col, row};
+use crate::{col, row};
 
 /// Move cursor up by n lines.
 /// Respects DECSTBM scroll region margins.
@@ -74,55 +72,6 @@ pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
         row(/* 1-based ANSI */ request.row),
         col(/* 1-based ANSI */ request.col),
     );
-}
-
-// Internal helper functions for use by other modules (with direct u16 parameters).
-
-/// Internal helper: Move cursor up by n lines (direct parameter).
-pub fn cursor_up_by_n(performer: &mut AnsiToOfsBufPerformer, n: RowIndex) {
-    let how_many = max(n.as_u16(), 1); // Ensure at least 1 movement
-    let current_row = performer.ofs_buf.cursor_pos.row_index;
-
-    // Get top boundary of scroll region (or 0 if no region set).
-    let scroll_top_boundary = performer.ofs_buf.get_scroll_top_boundary();
-
-    // Move cursor up but don't go above scroll region boundary.
-    let new_row = max(
-        current_row.as_u16().saturating_sub(how_many),
-        scroll_top_boundary.into(),
-    );
-    performer.ofs_buf.cursor_pos.row_index = row(new_row);
-}
-
-/// Internal helper: Move cursor down by n lines (direct parameter).
-pub fn cursor_down_by_n(performer: &mut AnsiToOfsBufPerformer, n: RowIndex) {
-    let how_many = max(n.as_u16(), 1); // Ensure at least 1 movement
-    let current_row = performer.ofs_buf.cursor_pos.row_index;
-
-    // Get bottom boundary of scroll region (or screen bottom if no region set).
-    let scroll_bottom_boundary = performer.ofs_buf.get_scroll_bottom_boundary();
-
-    // Move cursor down but don't go below scroll region boundary.
-    let new_row = min(
-        current_row.as_u16() + how_many,
-        scroll_bottom_boundary.into(),
-    );
-    performer.ofs_buf.cursor_pos.row_index = row(new_row);
-}
-
-/// Internal helper: Move cursor forward by n columns (direct parameter).
-pub fn cursor_forward_by_n(performer: &mut AnsiToOfsBufPerformer, n: ColIndex) {
-    let how_many = max(n.as_u16(), 1);
-    let new_col = performer.ofs_buf.cursor_pos.col_index + how_many;
-    // Clamp to max_col-1 if it would overflow.
-    performer.ofs_buf.cursor_pos.col_index = performer.ofs_buf.clamp_column(new_col);
-}
-
-/// Internal helper: Move cursor backward by n columns (direct parameter).
-pub fn cursor_backward_by_n(performer: &mut AnsiToOfsBufPerformer, n: ColIndex) {
-    let how_many = max(n.as_u16(), 1);
-    let current_col = performer.ofs_buf.cursor_pos.col_index;
-    performer.ofs_buf.cursor_pos.col_index = current_col - how_many;
 }
 
 /// Handle CNL (Cursor Next Line) - move cursor to beginning of line n lines down.

@@ -3,8 +3,7 @@
 //! Tests for character insertion, deletion, and erasure operations (ICH/DCH/ECH).
 
 use super::tests_fixtures::*;
-use crate::ansi_parser::protocols::csi_codes::CsiSequence;
-use crate::TuiStyle;
+use crate::{TuiStyle, ansi_parser::protocols::csi_codes::CsiSequence};
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
 fn create_alphabet_buffer() -> crate::OffscreenBuffer {

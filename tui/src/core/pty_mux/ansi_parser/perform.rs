@@ -57,8 +57,6 @@
 //! [`esc_dispatch()`]: AnsiToOfsBufPerformer::esc_dispatch
 //! [`hook()`]: AnsiToOfsBufPerformer::hook
 
-use std::cmp::min;
-
 use vte::{Params, Perform};
 
 // Import the operation modules.
@@ -67,10 +65,7 @@ use super::operations::{char_ops, cursor_ops, dsr_ops, line_ops, margin_ops, mod
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
             protocols::{csi_codes::{self},
                         esc_codes}};
-use crate::{BoundsCheck,
-            BoundsOverflowStatus::{Overflowed, Within},
-            CharacterSet, ColIndex, PixelChar, RowIndex, col,
-            core::osc::{OscEvent, osc_codes}};
+use crate::core::osc::{OscEvent, osc_codes};
 
 /// Internal methods for `AnsiToOfsBufPerformer` to implement [`Perform`] trait.
 impl Perform for AnsiToOfsBufPerformer<'_> {
@@ -115,51 +110,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///   print('A') → writes at col 9, cursor moves to col 10
     ///   print('B') → overwrites at col 10, cursor stays at col 10
     /// ```
-    fn print(&mut self, ch: char) {
-        // Apply character set translation if in graphics mode.
-        let display_char = match self.ofs_buf.ansi_parser_support.character_set {
-            CharacterSet::DECGraphics => translate_dec_graphics(ch),
-            CharacterSet::Ascii => ch,
-        };
-
-        let row_max = self.ofs_buf.window_size.row_height;
-        let col_max = self.ofs_buf.window_size.col_width;
-        let current_row = self.ofs_buf.cursor_pos.row_index;
-        let current_col = self.ofs_buf.cursor_pos.col_index;
-
-        // Only write if within bounds.
-        if current_row.check_overflows(row_max) == Within
-            && current_col.check_overflows(col_max) == Within
-        {
-            self.ofs_buf.set_char(
-                current_row + current_col,
-                PixelChar::PlainText {
-                    display_char, // Use the translated character
-                    style: self.ofs_buf.ansi_parser_support.current_style,
-                },
-            );
-
-            // Move cursor forward.
-            let new_col: ColIndex = current_col + 1;
-
-            // Handle line wrap based on DECAWM (Auto Wrap Mode).
-            if new_col.check_overflows(col_max) == Overflowed {
-                if self.ofs_buf.ansi_parser_support.auto_wrap_mode {
-                    // DECAWM enabled: wrap to next line (default behavior)
-                    self.ofs_buf.cursor_pos.col_index = col(0);
-                    let next_row: RowIndex = current_row + 1;
-                    if next_row.check_overflows(row_max) == Within {
-                        self.ofs_buf.cursor_pos.row_index = next_row;
-                    }
-                } else {
-                    // DECAWM disabled: stay at right margin (clamp cursor position)
-                    self.ofs_buf.cursor_pos.col_index = col_max.convert_to_col_index();
-                }
-            } else {
-                self.ofs_buf.cursor_pos.col_index = new_col;
-            }
-        }
-    }
+    fn print(&mut self, ch: char) { self.ofs_buf.print_char(ch); }
 
     /// Handle control characters (C0 set): backspace, tab, LF, CR.
     ///
@@ -197,36 +148,17 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// ```
     fn execute(&mut self, byte: u8) {
         match byte {
-            // Backspace
             esc_codes::BACKSPACE => {
-                let current_col = self.ofs_buf.cursor_pos.col_index;
-                if current_col > col(0) {
-                    self.ofs_buf.cursor_pos.col_index = current_col - 1;
-                }
+                self.ofs_buf.handle_backspace();
             }
-            // Tab - move to next tab stop boundary.
             esc_codes::TAB => {
-                let current_col = self.ofs_buf.cursor_pos.col_index;
-                let current_tab_zone = current_col.as_usize() / esc_codes::TAB_STOP_WIDTH;
-                let next_tab_zone = current_tab_zone + 1;
-                let next_tab_col = next_tab_zone * esc_codes::TAB_STOP_WIDTH;
-                let max_col = self.ofs_buf.window_size.col_width;
-
-                // Clamp to max valid column index if it would overflow.
-                self.ofs_buf.cursor_pos.col_index =
-                    col(min(next_tab_col, max_col.convert_to_col_index().as_usize()));
+                self.ofs_buf.handle_tab();
             }
-            // Line feed (newline)
             esc_codes::LINE_FEED => {
-                let max_row = self.ofs_buf.window_size.row_height;
-                let next_row: RowIndex = self.ofs_buf.cursor_pos.row_index + 1;
-                if next_row.check_overflows(max_row) == Within {
-                    self.ofs_buf.cursor_pos.row_index = next_row;
-                }
+                self.ofs_buf.handle_line_feed();
             }
-            // Carriage return
             esc_codes::CARRIAGE_RETURN => {
-                self.ofs_buf.cursor_pos.col_index = col(0);
+                self.ofs_buf.handle_carriage_return();
             }
             _ => {}
         }
@@ -659,29 +591,18 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         match byte {
             esc_codes::DECSC_SAVE_CURSOR => {
                 // DECSC - Save current cursor position.
-                // The cursor position is saved to persistent buffer state so it
-                // survives across multiple AnsiToOfsBufPerformer instances.
-                self.ofs_buf
-                    .ansi_parser_support
-                    .cursor_pos_for_esc_save_and_restore = Some(self.ofs_buf.cursor_pos);
+                cursor_ops::save_cursor_position(self);
             }
             esc_codes::DECRC_RESTORE_CURSOR => {
                 // DECRC - Restore saved cursor position.
-                // Retrieves the previously saved position from buffer's persistent state.
-                if let Some(saved_pos) = self
-                    .ofs_buf
-                    .ansi_parser_support
-                    .cursor_pos_for_esc_save_and_restore
-                {
-                    self.ofs_buf.cursor_pos = saved_pos;
-                }
+                cursor_ops::restore_cursor_position(self);
             }
             esc_codes::IND_INDEX_DOWN => {
-                // IND - Index (move down one line, scroll if at bottom)
+                // IND - Index (move down one line, scroll if at bottom).
                 scroll_ops::index_down(self);
             }
             esc_codes::RI_REVERSE_INDEX_UP => {
-                // RI - Reverse Index (move up one line, scroll if at top)
+                // RI - Reverse Index (move up one line, scroll if at top).
                 scroll_ops::reverse_index_up(self);
             }
             esc_codes::RIS_RESET_TERMINAL => {
@@ -692,15 +613,13 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 // Character set selection G0.
                 match byte {
                     esc_codes::CHARSET_ASCII => {
-                        // Select ASCII character set (normal mode)
-                        self.ofs_buf.ansi_parser_support.character_set =
-                            CharacterSet::Ascii;
+                        // Select ASCII character set (normal mode).
+                        terminal_ops::select_ascii_character_set(self);
                     }
                     esc_codes::CHARSET_DEC_GRAPHICS => {
                         // Select DEC Special Graphics character set.
                         // This enables box-drawing characters.
-                        self.ofs_buf.ansi_parser_support.character_set =
-                            CharacterSet::DECGraphics;
+                        terminal_ops::select_dec_graphics_character_set(self);
                     }
                     _ => {}
                 }
@@ -751,25 +670,5 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// multiplexer, this simply completes the ignored sequence.
     fn unhook(&mut self) {
         // Ignore DCS end.
-    }
-}
-
-/// Translate DEC Special Graphics characters to Unicode box-drawing characters.
-/// Used when `character_set` is `DECGraphics` (after ESC ( 0).
-#[must_use]
-fn translate_dec_graphics(c: char) -> char {
-    match c {
-        'j' => '┘', // Lower right corner.
-        'k' => '┐', // Upper right corner.
-        'l' => '┌', // Upper left corner.
-        'm' => '└', // Lower left corner.
-        'n' => '┼', // Crossing lines.
-        'q' => '─', // Horizontal line.
-        't' => '├', // Left "T".
-        'u' => '┤', // Right "T".
-        'v' => '┴', // Bottom "T".
-        'w' => '┬', // Top "T".
-        'x' => '│', // Vertical line.
-        _ => c,     // Pass through unmapped characters.
     }
 }

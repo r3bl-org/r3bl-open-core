@@ -746,7 +746,8 @@ mod delete_selected_helper {
                     .set_line(*row_index, new_line_content);
             }
 
-            // Remove lines in inverse order, in order to preserve the validity of indices.
+            // Remove lines in inverse order, in order to preserve the validity of
+            // indices.
             lines_to_remove.reverse();
             for row_index in lines_to_remove {
                 buffer_mut.inner.lines.remove_line(row_index);

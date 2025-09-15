@@ -9,6 +9,7 @@
 // Attach.
 pub mod diff_chunks;
 pub mod ofs_buf_ansi_bounds_check_ops;
+pub mod ofs_buf_ansi_char_set_ops;
 pub mod ofs_buf_ansi_cursor_ops;
 pub mod ofs_buf_ansi_scroll_vert_ops;
 pub mod ofs_buf_ansi_shift_horiz_ops;

@@ -36,10 +36,7 @@ impl OffscreenBuffer {
     ///
     /// Result: 2 blanks inserted, C-D-E-F-G-H shifted right, I-J lost beyond margin.
     /// ```
-    pub fn insert_chars_at_cursor(
-        &mut self,
-        how_many: Length,
-    ) -> bool {
+    pub fn insert_chars_at_cursor(&mut self, how_many: Length) -> bool {
         let at = self.cursor_pos;
         let max_width = self.window_size.col_width;
 
@@ -111,10 +108,7 @@ impl OffscreenBuffer {
     ///
     /// Result: c and d deleted, E-F-G-H-I-J shifted left, blanks filled at end.
     /// ```
-    pub fn delete_chars_at_cursor(
-        &mut self,
-        how_many: Length,
-    ) -> bool {
+    pub fn delete_chars_at_cursor(&mut self, how_many: Length) -> bool {
         let at = self.cursor_pos;
         let max_width = self.window_size.col_width;
 
@@ -188,10 +182,7 @@ impl OffscreenBuffer {
     ///
     /// Result: C, D, E replaced with blanks, F-G-H-I-J remain in place (no shifting)
     /// ```
-    pub fn erase_chars_at_cursor(
-        &mut self,
-        how_many: Length,
-    ) -> bool {
+    pub fn erase_chars_at_cursor(&mut self, how_many: Length) -> bool {
         let at = self.cursor_pos;
         let max_width = self.window_size.col_width;
 
@@ -233,7 +224,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_shifting_ops {
     use super::*;
-    use crate::{RowIndex, col, row, width, TuiStyle};
+    use crate::{RowIndex, TuiStyle, col, row, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(6) + height(3);
