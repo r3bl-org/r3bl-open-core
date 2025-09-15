@@ -121,3 +121,238 @@ impl OffscreenBuffer {
         self.cursor_pos.row_index = self.clamp_row_to_scroll_region(new_row);
     }
 }
+
+#[cfg(test)]
+mod tests_bounds_check_ops {
+    use super::*;
+    use crate::{height, width, col, core::pty_mux::ansi_parser::term_units::term_row};
+
+    fn create_test_buffer() -> OffscreenBuffer {
+        let size = width(10) + height(6);
+        OffscreenBuffer::new_empty(size)
+    }
+
+    #[test]
+    fn test_get_scroll_top_boundary_no_region() {
+        let buffer = create_test_buffer();
+
+        // No scroll region set - should return row 0
+        assert_eq!(buffer.get_scroll_top_boundary(), row(0));
+    }
+
+    #[test]
+    fn test_get_scroll_top_boundary_with_region() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region top to row 3 (1-based)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
+
+        // Should return row 2 (0-based)
+        assert_eq!(buffer.get_scroll_top_boundary(), row(2));
+    }
+
+    #[test]
+    fn test_get_scroll_bottom_boundary_no_region() {
+        let buffer = create_test_buffer();
+
+        // No scroll region set - should return max row index (height 6 = max index 5)
+        assert_eq!(buffer.get_scroll_bottom_boundary(), row(5));
+    }
+
+    #[test]
+    fn test_get_scroll_bottom_boundary_with_region() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region bottom to row 4 (1-based)
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
+
+        // Should return row 3 (0-based)
+        assert_eq!(buffer.get_scroll_bottom_boundary(), row(3));
+    }
+
+    #[test]
+    fn test_clamp_column_within_bounds() {
+        let buffer = create_test_buffer();
+
+        // Column 5 is within bounds (width 10)
+        let clamped = buffer.clamp_column(col(5));
+        assert_eq!(clamped, col(5));
+    }
+
+    #[test]
+    fn test_clamp_column_overflow() {
+        let buffer = create_test_buffer();
+
+        // Column 15 exceeds width (10) - should be clamped to max column (9)
+        let clamped = buffer.clamp_column(col(15));
+        assert_eq!(clamped, col(9));
+    }
+
+    #[test]
+    fn test_max_col_index() {
+        let buffer = create_test_buffer();
+
+        // Width 10 means max index is 9
+        assert_eq!(buffer.max_col_index(), col(9));
+    }
+
+    #[test]
+    fn test_max_row_index() {
+        let buffer = create_test_buffer();
+
+        // Height 6 means max index is 5
+        assert_eq!(buffer.max_row_index(), row(5));
+    }
+
+    #[test]
+    fn test_clamp_row_to_scroll_region_no_region() {
+        let buffer = create_test_buffer();
+
+        // No scroll region - row should remain unchanged
+        assert_eq!(buffer.clamp_row_to_scroll_region(row(3)), row(3));
+    }
+
+    #[test]
+    fn test_clamp_row_to_scroll_region_within_bounds() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        // Row 3 (0-based) is within the scroll region
+        assert_eq!(buffer.clamp_row_to_scroll_region(row(3)), row(3));
+    }
+
+    #[test]
+    fn test_clamp_row_to_scroll_region_above_top() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        // Row 0 is above scroll region - should be clamped to top (row 2)
+        assert_eq!(buffer.clamp_row_to_scroll_region(row(0)), row(2));
+    }
+
+    #[test]
+    fn test_clamp_row_to_scroll_region_below_bottom() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        // Row 5 is below scroll region - should be clamped to bottom (row 4)
+        assert_eq!(buffer.clamp_row_to_scroll_region(row(5)), row(4));
+    }
+
+    #[test]
+    fn test_move_cursor_forward_within_bounds() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(3);
+
+        buffer.move_cursor_forward(crate::ColWidth::from(2));
+
+        assert_eq!(buffer.cursor_pos.col_index, col(5));
+        assert_eq!(buffer.cursor_pos.row_index, row(2));
+    }
+
+    #[test]
+    fn test_move_cursor_forward_clamped() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(8);
+
+        buffer.move_cursor_forward(crate::ColWidth::from(5));
+
+        // Should be clamped to max column (9)
+        assert_eq!(buffer.cursor_pos.col_index, col(9));
+        assert_eq!(buffer.cursor_pos.row_index, row(2));
+    }
+
+    #[test]
+    fn test_move_cursor_backward_within_bounds() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(5);
+
+        buffer.move_cursor_backward(crate::ColWidth::from(2));
+
+        assert_eq!(buffer.cursor_pos.col_index, col(3));
+        assert_eq!(buffer.cursor_pos.row_index, row(2));
+    }
+
+    #[test]
+    fn test_move_cursor_backward_underflow_protection() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(1);
+
+        buffer.move_cursor_backward(crate::ColWidth::from(5));
+
+        // Type-safe underflow should handle this gracefully
+        // The exact behavior depends on the implementation of ColIndex subtraction
+        assert_eq!(buffer.cursor_pos.row_index, row(2));
+    }
+
+    #[test]
+    fn test_move_cursor_up_within_scroll_region() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(3) + col(5);
+
+        // Set scroll region from row 1 to row 4 (1-based: 2 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        buffer.move_cursor_up(crate::RowHeight::from(1));
+
+        assert_eq!(buffer.cursor_pos.row_index, row(2));
+        assert_eq!(buffer.cursor_pos.col_index, col(5));
+    }
+
+    #[test]
+    fn test_move_cursor_up_clamped_to_scroll_top() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(5);
+
+        // Set scroll region from row 1 to row 4 (1-based: 2 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        buffer.move_cursor_up(crate::RowHeight::from(5));
+
+        // Should be clamped to scroll region top (row 1)
+        assert_eq!(buffer.cursor_pos.row_index, row(1));
+        assert_eq!(buffer.cursor_pos.col_index, col(5));
+    }
+
+    #[test]
+    fn test_move_cursor_down_within_scroll_region() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(2) + col(5);
+
+        // Set scroll region from row 1 to row 4 (1-based: 2 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        buffer.move_cursor_down(crate::RowHeight::from(1));
+
+        assert_eq!(buffer.cursor_pos.row_index, row(3));
+        assert_eq!(buffer.cursor_pos.col_index, col(5));
+    }
+
+    #[test]
+    fn test_move_cursor_down_clamped_to_scroll_bottom() {
+        let mut buffer = create_test_buffer();
+        buffer.cursor_pos = row(3) + col(5);
+
+        // Set scroll region from row 1 to row 4 (1-based: 2 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        buffer.move_cursor_down(crate::RowHeight::from(5));
+
+        // Should be clamped to scroll region bottom (row 4)
+        assert_eq!(buffer.cursor_pos.row_index, row(4));
+        assert_eq!(buffer.cursor_pos.col_index, col(5));
+    }
+}

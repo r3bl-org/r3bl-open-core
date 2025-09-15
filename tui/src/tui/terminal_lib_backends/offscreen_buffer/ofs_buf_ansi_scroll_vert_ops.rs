@@ -229,3 +229,183 @@ impl OffscreenBuffer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_scroll_vert_ops {
+    use super::*;
+    use crate::{height, width, row, col, ofs_buf_test_fixtures::assert_plain_char_at, core::pty_mux::ansi_parser::term_units::term_row};
+
+    fn create_test_buffer() -> OffscreenBuffer {
+        let size = width(10) + height(6);
+        OffscreenBuffer::new_empty(size)
+    }
+
+    fn fill_buffer_with_test_content(buffer: &mut OffscreenBuffer) {
+        // Fill buffer with identifiable content:
+        // Row 0: "0000000000"
+        // Row 1: "1111111111"
+        // Row 2: "2222222222"
+        // Row 3: "3333333333"
+        // Row 4: "4444444444"
+        // Row 5: "5555555555"
+        for row_idx in 0..6 {
+            for col_idx in 0..10 {
+                buffer.cursor_pos = row(row_idx) + col(col_idx);
+                buffer.print_char(char::from_digit(row_idx as u32, 10).unwrap());
+            }
+        }
+        buffer.cursor_pos = row(0) + col(0);
+    }
+
+    #[test]
+    fn test_index_down_within_scroll_region() {
+        let mut buffer = create_test_buffer();
+        fill_buffer_with_test_content(&mut buffer);
+
+        // Position cursor at row 2, col 5
+        buffer.cursor_pos = row(2) + col(5);
+
+        buffer.index_down();
+
+        // Cursor should move down one row
+        assert_eq!(buffer.cursor_pos.row_index, row(3));
+        assert_eq!(buffer.cursor_pos.col_index, col(5));
+
+        // Content should remain unchanged
+        assert_plain_char_at(&buffer, 2, 0, '2');
+        assert_plain_char_at(&buffer, 3, 0, '3');
+    }
+
+    #[test]
+    fn test_index_down_at_scroll_bottom_triggers_scroll() {
+        let mut buffer = create_test_buffer();
+        fill_buffer_with_test_content(&mut buffer);
+
+        // Position cursor at bottom row (row 5)
+        buffer.cursor_pos = row(5) + col(3);
+
+        buffer.index_down();
+
+        // Cursor should stay at bottom row
+        assert_eq!(buffer.cursor_pos.row_index, row(5));
+        assert_eq!(buffer.cursor_pos.col_index, col(3));
+
+        // Buffer should have scrolled up - top line lost, new blank line at bottom
+        assert_plain_char_at(&buffer, 0, 0, '1'); // Row 1 moved to row 0
+        assert_plain_char_at(&buffer, 1, 0, '2'); // Row 2 moved to row 1
+        assert_plain_char_at(&buffer, 4, 0, '5'); // Row 5 moved to row 4
+
+        // New blank line at bottom (row 5) should be empty
+        let bottom_char = buffer.get_char(row(5) + col(0));
+        assert!(bottom_char.is_none() || matches!(bottom_char, Some(crate::PixelChar::Spacer)));
+    }
+
+    #[test]
+    fn test_reverse_index_up_within_scroll_region() {
+        let mut buffer = create_test_buffer();
+        fill_buffer_with_test_content(&mut buffer);
+
+        // Position cursor at row 3, col 2
+        buffer.cursor_pos = row(3) + col(2);
+
+        buffer.reverse_index_up();
+
+        // Cursor should move up one row
+        assert_eq!(buffer.cursor_pos.row_index, row(2));
+        assert_eq!(buffer.cursor_pos.col_index, col(2));
+
+        // Content should remain unchanged
+        assert_plain_char_at(&buffer, 2, 0, '2');
+        assert_plain_char_at(&buffer, 3, 0, '3');
+    }
+
+    #[test]
+    fn test_reverse_index_up_at_scroll_top_triggers_scroll() {
+        let mut buffer = create_test_buffer();
+        fill_buffer_with_test_content(&mut buffer);
+
+        // Position cursor at top row (row 0)
+        buffer.cursor_pos = row(0) + col(7);
+
+        buffer.reverse_index_up();
+
+        // Cursor should stay at top row
+        assert_eq!(buffer.cursor_pos.row_index, row(0));
+        assert_eq!(buffer.cursor_pos.col_index, col(7));
+
+        // Buffer should have scrolled down - bottom line lost, new blank line at top
+        // New blank line at top (row 0) should be empty
+        let top_char = buffer.get_char(row(0) + col(0));
+        assert!(top_char.is_none() || matches!(top_char, Some(crate::PixelChar::Spacer)));
+
+        assert_plain_char_at(&buffer, 1, 0, '0'); // Row 0 moved to row 1
+        assert_plain_char_at(&buffer, 2, 0, '1'); // Row 1 moved to row 2
+        assert_plain_char_at(&buffer, 5, 0, '4'); // Row 4 moved to row 5
+    }
+
+    #[test]
+    fn test_scroll_up_multiple_lines() {
+        let mut buffer = create_test_buffer();
+        fill_buffer_with_test_content(&mut buffer);
+
+        buffer.scroll_up(RowHeight::from(2));
+
+        // Top 2 lines should be lost, content shifted up
+        assert_plain_char_at(&buffer, 0, 0, '2'); // Row 2 moved to row 0
+        assert_plain_char_at(&buffer, 1, 0, '3'); // Row 3 moved to row 1
+        assert_plain_char_at(&buffer, 2, 0, '4'); // Row 4 moved to row 2
+        assert_plain_char_at(&buffer, 3, 0, '5'); // Row 5 moved to row 3
+
+        // Bottom 2 lines should be blank
+        let blank_line_1 = buffer.get_char(row(4) + col(0));
+        let blank_line_2 = buffer.get_char(row(5) + col(0));
+        assert!(blank_line_1.is_none() || matches!(blank_line_1, Some(crate::PixelChar::Spacer)));
+        assert!(blank_line_2.is_none() || matches!(blank_line_2, Some(crate::PixelChar::Spacer)));
+    }
+
+    #[test]
+    fn test_scroll_down_multiple_lines() {
+        let mut buffer = create_test_buffer();
+        fill_buffer_with_test_content(&mut buffer);
+
+        buffer.scroll_down(RowHeight::from(2));
+
+        // Top 2 lines should be blank
+        let blank_line_1 = buffer.get_char(row(0) + col(0));
+        let blank_line_2 = buffer.get_char(row(1) + col(0));
+        assert!(blank_line_1.is_none() || matches!(blank_line_1, Some(crate::PixelChar::Spacer)));
+        assert!(blank_line_2.is_none() || matches!(blank_line_2, Some(crate::PixelChar::Spacer)));
+
+        // Content should be shifted down
+        assert_plain_char_at(&buffer, 2, 0, '0'); // Row 0 moved to row 2
+        assert_plain_char_at(&buffer, 3, 0, '1'); // Row 1 moved to row 3
+        assert_plain_char_at(&buffer, 4, 0, '2'); // Row 2 moved to row 4
+        assert_plain_char_at(&buffer, 5, 0, '3'); // Row 3 moved to row 5
+    }
+
+    #[test]
+    fn test_scroll_region_boundaries() {
+        let mut buffer = create_test_buffer();
+        fill_buffer_with_test_content(&mut buffer);
+
+        // Set up scroll region from row 1 to row 4
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        // Position cursor at scroll region bottom
+        buffer.cursor_pos = row(4) + col(0);
+
+        buffer.index_down();
+
+        // Only content within scroll region should have moved
+        assert_plain_char_at(&buffer, 0, 0, '0'); // Row 0 unchanged (outside region)
+        assert_plain_char_at(&buffer, 1, 0, '2'); // Row 2 moved to row 1
+        assert_plain_char_at(&buffer, 2, 0, '3'); // Row 3 moved to row 2
+        assert_plain_char_at(&buffer, 3, 0, '4'); // Row 4 moved to row 3
+        assert_plain_char_at(&buffer, 5, 0, '5'); // Row 5 unchanged (outside region)
+
+        // New blank line should appear at row 4
+        let blank_char = buffer.get_char(row(4) + col(0));
+        assert!(blank_char.is_none() || matches!(blank_char, Some(crate::PixelChar::Spacer)));
+    }
+}

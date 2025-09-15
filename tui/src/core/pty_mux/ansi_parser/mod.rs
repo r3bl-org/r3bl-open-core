@@ -21,6 +21,6 @@ pub use param_utils::*;
 pub use protocols::*;
 pub use term_units::*;
 
-// Test modules.
+// Integration test modules.
 #[cfg(test)]
-mod tests;
+mod ansi_integration_tests;

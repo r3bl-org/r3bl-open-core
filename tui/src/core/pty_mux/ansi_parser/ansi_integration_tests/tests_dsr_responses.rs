@@ -7,7 +7,7 @@ use crate::{DsrRequestFromPtyEvent, col,
                                                      dsr_codes::{DSR_STATUS_OK_FULL_RESPONSE,
                                                                  DsrRequestType,
                                                                  dsr_test_helpers::dsr_cursor_position_response}},
-                                         tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c},
+                                         ansi_integration_tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c},
             row, term_col, term_row};
 
 #[test]

@@ -218,7 +218,7 @@ mod tests {
                 ansi_parser::{protocols::csi_codes::{self,
                                                      csi_test_helpers::csi_seq_cursor_pos},
                               term_units::{term_col, term_row},
-                              tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c},
+                              ansi_integration_tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c},
                 col,
                 offscreen_buffer::ofs_buf_test_fixtures::*,
                 row};
