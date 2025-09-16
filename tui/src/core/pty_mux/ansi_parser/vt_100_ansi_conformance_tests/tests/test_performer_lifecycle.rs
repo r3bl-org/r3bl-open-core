@@ -4,7 +4,7 @@
 
 use vte::Perform;
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{AnsiToOfsBufPerformer, Pos, TuiStyle, col, row};
 
 #[test]

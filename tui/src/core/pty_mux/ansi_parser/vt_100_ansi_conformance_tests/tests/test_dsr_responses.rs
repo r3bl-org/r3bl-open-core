@@ -3,12 +3,13 @@
 //! Tests for Device Status Report (DSR) response generation.
 
 use crate::{DsrRequestFromPtyEvent, col,
-            core::pty_mux::ansi_parser::{protocols::{csi_codes::CsiSequence,
+            core::pty_mux::ansi_parser::protocols::{csi_codes::CsiSequence,
                                                      dsr_codes::{DSR_STATUS_OK_FULL_RESPONSE,
                                                                  DsrRequestType,
                                                                  dsr_test_helpers::dsr_cursor_position_response}},
-                                         ansi_integration_tests::tests_fixtures::create_test_offscreen_buffer_10r_by_10c},
             row, term_col, term_row};
+
+use super::super::test_fixtures::create_test_offscreen_buffer_10r_by_10c;
 
 #[test]
 fn test_dsr_status_report() {

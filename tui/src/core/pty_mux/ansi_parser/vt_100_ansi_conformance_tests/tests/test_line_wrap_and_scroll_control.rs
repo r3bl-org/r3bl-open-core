@@ -5,7 +5,7 @@
 
 use vte::Perform;
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{TuiStyle,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           csi_codes::{CsiSequence, PrivateModeType},

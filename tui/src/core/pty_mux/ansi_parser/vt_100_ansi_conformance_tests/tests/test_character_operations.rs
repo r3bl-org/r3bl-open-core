@@ -2,7 +2,7 @@
 
 //! Tests for character insertion, deletion, and erasure operations (ICH/DCH/ECH).
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{TuiStyle, ansi_parser::protocols::csi_codes::CsiSequence};
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.

@@ -348,6 +348,34 @@
 //! | `fish run.fish watch-clippy`               | Watch files, run clippy             |
 //! | `fish run.fish docs`                       | Generate documentation               |
 //!
+//! ### VT100 ANSI Conformance Testing
+//!
+//! The TUI library includes comprehensive VT100/ANSI escape sequence conformance tests
+//! that validate the terminal emulation pipeline:
+//!
+//! ```bash
+//! # Run all VT100 ANSI conformance tests
+//! cargo test vt_100_ansi_conformance_tests
+//!
+//! # Run specific conformance test categories
+//! cargo test test_real_world_scenarios    # vim, emacs, tmux patterns
+//! cargo test test_cursor_operations        # cursor positioning & movement
+//! cargo test test_sgr_and_character_sets   # text styling & colors
+//! ```
+//!
+//! **Testing Architecture Features:**
+//! - **Type-safe sequence builders**: Uses `CsiSequence`, `EscSequence`, and `SgrCode`
+//!   builders instead of hardcoded escape strings
+//! - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
+//!   with authentic 80x25 terminal dimensions
+//! - **VT100 specification compliance**: Comprehensive coverage of ANSI escape sequences
+//!   with proper bounds checking and edge case handling
+//! - **Conformance data modules**: Organized sequence patterns for different terminal
+//!   applications and use cases
+//!
+//! The conformance tests ensure the ANSI parser correctly processes sequences from
+//! real terminal applications and maintains compatibility with VT100 specifications.
+//!
 //! For complete development setup and all available commands, see the
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 //!

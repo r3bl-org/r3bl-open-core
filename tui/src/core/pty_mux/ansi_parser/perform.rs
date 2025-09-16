@@ -294,22 +294,25 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'I' => {
                 // CHT (Cursor Horizontal Tab) - Move cursor forward N tab stops
                 // Not needed: Tab handling is done via execute() with TAB character
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI I: Cursor Horizontal Tab not implemented");
             }
             'Z' => {
                 // CBT (Cursor Backward Tab) - Move cursor backward N tab stops
                 // Not needed: Reverse tab rarely used, complex tab stop tracking required
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI Z: Cursor Backward Tab not implemented");
             }
             'g' => {
                 // TBC (Tab Clear) - Clear tab stops (0=current, 3=all)
                 // Not needed: Tab stops are application-specific, TUI apps manage their
-                // own
+                // own. See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI g: Tab Clear not implemented");
             }
             'a' => {
                 // HPR (Horizontal Position Relative) - Same as CUF (Cursor Forward)
                 // Not needed: CUF already implemented, this is redundant
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!(
                     "CSI a: Horizontal Position Relative not implemented (use CUF instead)"
                 );
@@ -317,6 +320,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'e' => {
                 // VPR (Vertical Position Relative) - Same as CUD (Cursor Down)
                 // Not needed: CUD already implemented, this is redundant
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!(
                     "CSI e: Vertical Position Relative not implemented (use CUD instead)"
                 );
@@ -324,6 +328,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             '`' => {
                 // HPA (Horizontal Position Absolute) - Same as CHA
                 // Not needed: CHA already implemented, this is redundant
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!(
                     "CSI `: Horizontal Position Absolute not implemented (use CHA instead)"
                 );
@@ -331,37 +336,43 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'U' => {
                 // NP (Next Page) - Move to next page in page memory
                 // Not needed: Page memory not supported in multiplexer
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI U: Next Page not supported in multiplexer");
             }
             'V' => {
                 // PP (Preceding Page) - Move to previous page in page memory
                 // Not needed: Page memory not supported in multiplexer
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI V: Preceding Page not supported in multiplexer");
             }
             '~' => {
                 // DECLL (DEC Load LEDs) - Set keyboard LED indicators
                 // Not needed: Hardware control not applicable in multiplexer
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI ~: DEC Load LEDs not supported in multiplexer");
             }
             '}' => {
                 // DECIC (DEC Insert Column) - Insert blank columns at cursor
                 // Not needed: Column insertion rarely used, complex for TUI apps
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI }}: DEC Insert Column not implemented");
             }
             '|' => {
                 // DECDC (DEC Delete Column) - Delete columns at cursor
                 // Not needed: Column deletion rarely used, complex for TUI apps
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI |: DEC Delete Column not implemented");
             }
             't' => {
                 // Window manipulation (resize, move, iconify, etc.)
                 // Not needed: Window ops handled by terminal emulator, not multiplexer
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI t: Window manipulation not supported in multiplexer");
             }
             'c' => {
                 // DA (Device Attributes) - Request terminal type/capabilities
                 // Not needed: Multiplexer doesn't respond to queries, parent terminal
-                // does
+                // does. See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!(
                     "CSI c: Device Attributes query not supported in multiplexer"
                 );
@@ -369,11 +380,13 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'q' => {
                 // DECSCUSR (Set Cursor Style) - Change cursor shape/blink
                 // Not needed: Cursor rendering handled by terminal emulator
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI q: Set Cursor Style not supported in multiplexer");
             }
             'p' => {
                 // Various DEC private sequences (DECRQM, etc.)
                 // Not needed: Private mode requests handled by parent terminal
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!(
                     "CSI p: DEC private sequences not supported in multiplexer"
                 );
@@ -381,6 +394,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'x' => {
                 // DECREQTPARM (Request Terminal Parameters) - Request terminal settings
                 // Not needed: Terminal parameters managed by parent emulator
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!(
                     "CSI x: Request Terminal Parameters not supported in multiplexer"
                 );
@@ -388,6 +402,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'z' => {
                 // DECERA/DECSERA (DEC Erase/Selective Erase Rectangular Area)
                 // Not needed: Rectangular operations complex, rarely used
+                // See [mod-level docs](crate::ansi_parser) for rationale
                 tracing::warn!("CSI z: DEC Rectangular Erase not implemented");
             }
 

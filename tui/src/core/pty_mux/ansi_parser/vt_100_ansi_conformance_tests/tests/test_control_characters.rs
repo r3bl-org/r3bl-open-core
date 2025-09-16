@@ -4,7 +4,7 @@
 
 use vte::Perform;
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{AnsiToOfsBufPerformer, col, core::pty_mux::ansi_parser::esc_codes,
             offscreen_buffer::ofs_buf_test_fixtures::*, row};
 

@@ -2,7 +2,22 @@
 
 //! Cursor movement operations.
 //!
-//! # CSI Sequence Architecture
+//! # Architecture Overview
+//!
+//! ```text
+//! ╭─────────────────╮    ╭──────────────╮    ╭─────────────────╮    ╭──────────────╮
+//! │ Child Process   │───▶│ PTY Master   │───▶│ VTE Parser      │───▶│ OffscreenBuf │
+//! │ (vim, bash...)  │    │ (byte stream)│    │ (state machine) │    │ (terminal    │
+//! ╰─────────────────╯    ╰──────────────╯    ╰─────────────────╯    │  buffer)     │
+//!                                                     │             ╰──────────────╯
+//!                                                     ▼
+//!                                            ╭─────────────────╮
+//!                                            │ Perform Trait   │
+//!                                            │ Implementation  │
+//!                                            ╰─────────────────╯
+//! ```
+//!
+//! # CSI Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC[2A" (cursor up 2 lines)

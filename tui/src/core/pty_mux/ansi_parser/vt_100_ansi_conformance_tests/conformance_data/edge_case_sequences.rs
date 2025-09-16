@@ -1,0 +1,142 @@
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+//! Edge case and stress test sequences for robustness validation.
+//!
+//! This module provides challenging sequences including malformed input,
+//! boundary conditions, and complex nested sequences that stress-test
+//! the ANSI parser's error handling and performance characteristics.
+//!
+//! ## Edge Case Categories
+//!
+//! - Buffer overflow scenarios
+//! - Rapid state changes
+//! - Malformed sequences
+//! - Performance stress tests
+//! - Boundary condition validation
+
+use crate::ansi_parser::protocols::csi_codes::CsiSequence;
+use crate::ansi_parser::term_units::{term_col, term_row};
+use crate::{ANSIBasicColor, SgrCode};
+
+/// Generate a very long text sequence to test buffer handling.
+///
+/// **Edge Case**: Tests parser performance with large text blocks
+/// and ensures proper memory management under stress.
+pub fn long_text_sequence() -> String {
+    format!("{}{}{}{}",
+        // Move to start
+        CsiSequence::CursorPosition {
+            row: term_row(1),
+            col: term_col(1)
+        },
+        // Large text block (reduced from 10000 to fit tests)
+        "A".repeat(200),
+        "\n",
+        "B".repeat(200)
+    )
+}
+
+/// Generate rapid style changes to test state management.
+///
+/// **Edge Case**: Tests parser's ability to handle rapid SGR transitions
+/// without state corruption or performance degradation.
+pub fn rapid_style_changes() -> String {
+    let mut sequence = String::new();
+
+    // Rapid color cycling using type-safe builders
+    let colors = [
+        ANSIBasicColor::Red,
+        ANSIBasicColor::Green,
+        ANSIBasicColor::Blue,
+        ANSIBasicColor::Yellow,
+        ANSIBasicColor::Magenta,
+        ANSIBasicColor::Cyan,
+    ];
+
+    for (i, color) in colors.iter().enumerate() {
+        sequence.push_str(&format!("{}{}{}",
+            SgrCode::ForegroundBasic(*color),
+            SgrCode::Bold,
+            char::from(b'A' + i as u8)
+        ));
+        sequence.push_str(&SgrCode::Reset.to_string());
+    }
+
+    sequence
+}
+
+/// Generate sequences with invalid parameters to test error handling.
+///
+/// **Edge Case**: Tests parser robustness against malformed sequences
+/// and ensures graceful degradation.
+pub fn malformed_sequences() -> String {
+    format!("{}{}{}{}{}{}",
+        // Valid sequence for comparison
+        CsiSequence::CursorPosition {
+            row: term_row(1),
+            col: term_col(1)
+        },
+        "Valid text\n",
+        // Sequences with out-of-range parameters
+        "\x1b[999;999H",  // Position far beyond buffer
+        "OOB test\n",
+        "\x1b[0;0H",      // Zero position (should default to 1,1)
+        "Zero test"
+    )
+}
+
+/// Generate deeply nested escape sequences.
+///
+/// **Edge Case**: Tests parser's handling of complex sequence combinations
+/// and ensures proper state machine operation.
+pub fn nested_escape_sequences() -> String {
+    format!("{}{}{}{}{}{}{}{}{}{}{}",
+        // Save cursor
+        CsiSequence::SaveCursor,
+        // Set colors and move
+        SgrCode::ForegroundBasic(ANSIBasicColor::Red),
+        SgrCode::BackgroundBasic(ANSIBasicColor::Blue),
+        CsiSequence::CursorPosition {
+            row: term_row(5),
+            col: term_col(5)
+        },
+        "Nested",
+        // Restore and move again
+        CsiSequence::RestoreCursor,
+        CsiSequence::CursorPosition {
+            row: term_row(2),
+            col: term_col(2)
+        },
+        SgrCode::Reset,
+        SgrCode::Bold,
+        "Complex",
+        SgrCode::Reset
+    )
+}
+
+/// Generate boundary condition tests for cursor positioning.
+///
+/// **Edge Case**: Tests behavior at buffer boundaries and ensures
+/// proper bounds checking and clamping.
+pub fn boundary_cursor_tests() -> String {
+    format!("{}{}{}{}{}{}",
+        // Test upper-left boundary
+        CsiSequence::CursorPosition {
+            row: term_row(1),
+            col: term_col(1)
+        },
+        "UL",
+        // Test lower-right boundary (within 10x10 buffer)
+        CsiSequence::CursorPosition {
+            row: term_row(10),
+            col: term_col(8) // Leave room for 2-char text
+        },
+        "LR",
+        // Test beyond boundaries (should clamp)
+        CsiSequence::CursorPosition {
+            row: term_row(15),
+            col: term_col(15)
+        },
+        "XX"
+    )
+}

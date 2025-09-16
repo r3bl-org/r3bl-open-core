@@ -4,7 +4,7 @@
 
 use vte::Perform;
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{Pos,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           protocols::{csi_codes::{CSI_PARAM_SEPARATOR, CSI_START,

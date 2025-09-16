@@ -2,7 +2,22 @@
 
 //! Style/Graphics Rendition operations.
 //!
-//! # CSI Sequence Architecture
+//! # Architecture Overview
+//!
+//! ```text
+//! ╭─────────────────╮    ╭──────────────╮    ╭─────────────────╮    ╭──────────────╮
+//! │ Child Process   │───▶│ PTY Master   │───▶│ VTE Parser      │───▶│ OffscreenBuf │
+//! │ (vim, bash...)  │    │ (byte stream)│    │ (state machine) │    │ (terminal    │
+//! ╰─────────────────╯    ╰──────────────╯    ╰─────────────────╯    │  buffer)     │
+//!                                                     │             ╰──────────────╯
+//!                                                     ▼
+//!                                            ╭─────────────────╮
+//!                                            │ Perform Trait   │
+//!                                            │ Implementation  │
+//!                                            ╰─────────────────╯
+//! ```
+//!
+//! # CSI Sequence Processing Flow
 //!
 //! ```text
 //! Application sends "ESC[1;31m" (bold red text)

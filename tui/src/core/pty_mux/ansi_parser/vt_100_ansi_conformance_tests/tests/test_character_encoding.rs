@@ -4,7 +4,7 @@
 
 use vte::Perform;
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{AnsiToOfsBufPerformer, offscreen_buffer::ofs_buf_test_fixtures::*};
 
 #[test]

@@ -2,7 +2,7 @@
 
 //! Integration tests for complex ANSI sequences and VTE parser integration.
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, TuiColor,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           csi_codes::{CsiSequence,

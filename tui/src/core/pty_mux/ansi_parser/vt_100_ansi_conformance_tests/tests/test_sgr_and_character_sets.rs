@@ -4,7 +4,7 @@
 
 use vte::Perform;
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{ANSIBasicColor, CharacterSet, SgrCode,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer, esc_codes},
             offscreen_buffer::ofs_buf_test_fixtures::*,

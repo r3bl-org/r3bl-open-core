@@ -2,7 +2,7 @@
 
 //! Tests for line insertion and deletion operations (IL/DL).
 
-use super::tests_fixtures::*;
+use super::super::test_fixtures::*;
 use crate::{ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           protocols::csi_codes::CsiSequence, term_units::term_row},
             col, row, term_col};
@@ -96,7 +96,8 @@ pub mod insert_line {
         performer.ofs_buf.cursor_pos = row(0) + col(0);
 
         // Try to insert line: ESC[L (should be ignored)
-        //         performer.csi_dispatch(&[], &[], false, 'L');
+        let insert_line_sequence = format!("{}", CsiSequence::InsertLine(1));
+        let _result = ofs_buf.apply_ansi_bytes(insert_line_sequence);
 
         // Verify no changes occurred.
         for r in 0..5 {
@@ -194,15 +195,16 @@ pub mod delete_line {
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
         performer.ofs_buf.ansi_parser_support.scroll_region_top =
-            Some(crate::ansi_parser::term_units::term_row(2));
+            Some(term_row(2));
         performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
-            Some(crate::ansi_parser::term_units::term_row(4));
+            Some(term_row(4));
 
         // Move cursor to row 4 (outside margins)
         performer.ofs_buf.cursor_pos = row(4) + col(0);
 
         // Try to delete line: ESC[M (should be ignored)
-        //         performer.csi_dispatch(&[], &[], false, 'M');
+        let delete_line_sequence = format!("{}", CsiSequence::DeleteLine(1));
+        let _result = ofs_buf.apply_ansi_bytes(delete_line_sequence);
 
         // Verify no changes occurred.
         for r in 0..5 {
