@@ -214,7 +214,7 @@ impl OffscreenBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ANSIBasicColor, SgrCode, TuiColor,
+    use crate::{ANSIBasicColor, SgrCode,
                 ansi_parser::{protocols::csi_codes::{self,
                                                      csi_test_helpers::csi_seq_cursor_pos},
                               term_units::{term_col, term_row},
@@ -299,9 +299,8 @@ mod tests {
                 0,
                 col,
                 expected_char,
-                |style_from_buffer| {
-                    style_from_buffer.color_fg
-                        == Some(TuiColor::Basic(ANSIBasicColor::Red))
+                |style_from_buf| {
+                    style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into()
                 },
                 "red foreground",
             );

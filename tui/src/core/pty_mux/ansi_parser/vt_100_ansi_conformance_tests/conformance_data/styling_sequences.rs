@@ -12,10 +12,7 @@
 //! - Color Support: ANSI X3.64 Standard
 //! - Text Attributes: VT100 User Guide Appendix C
 
-use crate::{
-    ANSIBasicColor,
-    SgrCode,
-};
+use crate::{ANSIBasicColor, SgrCode};
 
 /// Apply bold formatting to text.
 ///
@@ -23,53 +20,13 @@ use crate::{
 ///
 /// # Arguments
 /// * `text` - Text to format with bold styling
+#[must_use]
 pub fn bold_text(text: &str) -> String {
-    format!("{}{}{}",
+    format!(
+        "{}{}{}",
         SgrCode::Bold,
         text,
         SgrCode::ResetBoldDim // Reset only bold, preserve other attributes
-    )
-}
-
-/// Apply italic formatting to text.
-///
-/// **ANSI Spec**: ESC[3m (Italic)
-///
-/// # Arguments
-/// * `text` - Text to format with italic styling
-pub fn italic_text(text: &str) -> String {
-    format!("{}{}{}",
-        SgrCode::Italic,
-        text,
-        SgrCode::ResetItalic
-    )
-}
-
-/// Apply underline formatting to text.
-///
-/// **ANSI Spec**: ESC[4m (Underline)
-///
-/// # Arguments
-/// * `text` - Text to format with underline styling
-pub fn underline_text(text: &str) -> String {
-    format!("{}{}{}",
-        SgrCode::Underline,
-        text,
-        SgrCode::ResetUnderline
-    )
-}
-
-/// Apply strikethrough formatting to text.
-///
-/// **ANSI Spec**: ESC[9m (Strikethrough)
-///
-/// # Arguments
-/// * `text` - Text to format with strikethrough styling
-pub fn strikethrough_text(text: &str) -> String {
-    format!("{}{}{}",
-        SgrCode::Strikethrough,
-        text,
-        SgrCode::ResetStrikethrough
     )
 }
 
@@ -81,12 +38,9 @@ pub fn strikethrough_text(text: &str) -> String {
 ///
 /// # Arguments
 /// * `text` - Text to format with reverse video
+#[must_use]
 pub fn reverse_text(text: &str) -> String {
-    format!("{}{}{}",
-        SgrCode::Invert,
-        text,
-        SgrCode::ResetInvert
-    )
+    format!("{}{}{}", SgrCode::Invert, text, SgrCode::ResetInvert)
 }
 
 /// Set foreground color for text.
@@ -96,24 +50,11 @@ pub fn reverse_text(text: &str) -> String {
 /// # Arguments
 /// * `color` - Basic ANSI color to apply
 /// * `text` - Text to colorize
+#[must_use]
 pub fn colored_text(color: ANSIBasicColor, text: &str) -> String {
-    format!("{}{}{}",
+    format!(
+        "{}{}{}",
         SgrCode::ForegroundBasic(color),
-        text,
-        SgrCode::Reset
-    )
-}
-
-/// Set background color for text.
-///
-/// **ANSI Spec**: ESC[4{color}m (Background Color)
-///
-/// # Arguments
-/// * `color` - Basic ANSI color to apply as background
-/// * `text` - Text with colored background
-pub fn background_colored_text(color: ANSIBasicColor, text: &str) -> String {
-    format!("{}{}{}",
-        SgrCode::BackgroundBasic(color),
         text,
         SgrCode::Reset
     )
@@ -131,6 +72,7 @@ pub fn background_colored_text(color: ANSIBasicColor, text: &str) -> String {
 /// * `italic` - Apply italic formatting
 /// * `fg_color` - Optional foreground color
 /// * `bg_color` - Optional background color
+#[must_use]
 pub fn multi_style_text(
     text: &str,
     bold: bool,
@@ -140,7 +82,7 @@ pub fn multi_style_text(
 ) -> String {
     let mut sequence = String::new();
 
-    // Apply styles
+    // Apply styles.
     if bold {
         sequence.push_str(&SgrCode::Bold.to_string());
     }
@@ -154,10 +96,10 @@ pub fn multi_style_text(
         sequence.push_str(&SgrCode::BackgroundBasic(color).to_string());
     }
 
-    // Add text
+    // Add text.
     sequence.push_str(text);
 
-    // Reset all formatting
+    // Reset all formatting.
     sequence.push_str(&SgrCode::Reset.to_string());
 
     sequence
@@ -169,6 +111,7 @@ pub fn multi_style_text(
 ///
 /// # Arguments
 /// * `text` - Text to colorize (each character gets a different color)
+#[must_use]
 pub fn rainbow_text(text: &str) -> String {
     let colors = [
         ANSIBasicColor::Red,
@@ -195,8 +138,10 @@ pub fn rainbow_text(text: &str) -> String {
 ///
 /// Demonstrates that partial resets preserve other attributes while
 /// clearing specific ones.
+#[must_use]
 pub fn partial_reset_test() -> String {
-    format!("{}{}{}{}{}{}{}",
+    format!(
+        "{}{}{}{}{}{}{}",
         SgrCode::Bold,
         SgrCode::Italic,
         SgrCode::ForegroundBasic(ANSIBasicColor::Red),
@@ -205,73 +150,4 @@ pub fn partial_reset_test() -> String {
         " Italic+Red",
         SgrCode::Reset // Reset everything
     )
-}
-
-/// Test color palette coverage.
-///
-/// Creates a sequence that displays all basic ANSI colors for
-/// comprehensive color support testing.
-pub fn color_palette_test() -> String {
-    let mut sequence = String::new();
-
-    // Test all basic foreground colors
-    sequence.push_str("Foreground: ");
-    for color in [
-        ANSIBasicColor::Black,
-        ANSIBasicColor::DarkRed,
-        ANSIBasicColor::DarkGreen,
-        ANSIBasicColor::DarkYellow,
-        ANSIBasicColor::DarkBlue,
-        ANSIBasicColor::DarkMagenta,
-        ANSIBasicColor::DarkCyan,
-        ANSIBasicColor::Gray,
-        ANSIBasicColor::DarkGray,
-        ANSIBasicColor::Red,
-        ANSIBasicColor::Green,
-        ANSIBasicColor::Yellow,
-        ANSIBasicColor::Blue,
-        ANSIBasicColor::Magenta,
-        ANSIBasicColor::Cyan,
-        ANSIBasicColor::White,
-    ] {
-        sequence.push_str(&colored_text(color, "██"));
-    }
-
-    sequence.push_str(&SgrCode::Reset.to_string());
-    sequence.push('\n');
-
-    // Test all basic background colors
-    sequence.push_str("Background: ");
-    for color in [
-        ANSIBasicColor::Black,
-        ANSIBasicColor::DarkRed,
-        ANSIBasicColor::DarkGreen,
-        ANSIBasicColor::DarkYellow,
-        ANSIBasicColor::DarkBlue,
-        ANSIBasicColor::DarkMagenta,
-        ANSIBasicColor::DarkCyan,
-        ANSIBasicColor::Gray,
-        ANSIBasicColor::DarkGray,
-        ANSIBasicColor::Red,
-        ANSIBasicColor::Green,
-        ANSIBasicColor::Yellow,
-        ANSIBasicColor::Blue,
-        ANSIBasicColor::Magenta,
-        ANSIBasicColor::Cyan,
-        ANSIBasicColor::White,
-    ] {
-        sequence.push_str(&background_colored_text(color, "  "));
-    }
-
-    sequence.push_str(&SgrCode::Reset.to_string());
-    sequence
-}
-
-/// Complete reset of all SGR attributes.
-///
-/// **ANSI Spec**: ESC[0m (Reset All Attributes)
-///
-/// Returns terminal text formatting to default state.
-pub fn reset_all_styles() -> String {
-    SgrCode::Reset.to_string()
 }

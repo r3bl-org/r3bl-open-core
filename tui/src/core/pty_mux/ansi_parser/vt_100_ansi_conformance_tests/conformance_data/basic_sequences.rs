@@ -12,13 +12,9 @@
 //! - Cursor positioning: VT100 User Guide Section 3.3.1
 //! - Basic movement: VT100 User Guide Section 3.3.2
 
-use crate::ansi_parser::{
-    protocols::{
-        csi_codes::CsiSequence,
-        esc_codes::EscSequence,
-    },
-    term_units::{term_col, term_row},
-};
+use crate::{ansi_parser::{protocols::csi_codes::CsiSequence,
+                          term_units::{term_col, term_row}},
+            len, LengthMarker};
 
 /// Clear entire screen and return cursor to home position (1,1).
 ///
@@ -33,13 +29,15 @@ use crate::ansi_parser::{
 /// ofs_buf.apply_ansi_bytes(sequence);
 /// // Screen is cleared and cursor at top-left
 /// ```
+#[must_use]
 pub fn clear_and_home() -> String {
-    format!("{}{}",
+    format!(
+        "{}{}",
         CsiSequence::EraseDisplay(2), // Clear entire screen
         CsiSequence::CursorPosition {
             row: term_row(1),
             col: term_col(1)
-        } // Move to home position
+        }  // Move to home position
     )
 }
 
@@ -54,54 +52,15 @@ pub fn clear_and_home() -> String {
 /// * `row` - Target row (1-based, VT100 convention)
 /// * `col` - Target column (1-based, VT100 convention)
 /// * `text` - Text to print at the specified position
+#[must_use]
 pub fn move_and_print(row: u16, col: u16, text: &str) -> String {
-    format!("{}{}",
+    format!(
+        "{}{}",
         CsiSequence::CursorPosition {
             row: term_row(row),
             col: term_col(col)
         },
         text
-    )
-}
-
-/// Move cursor to beginning of current line.
-///
-/// **VT100 Spec**: ESC[G or ESC[1G (Cursor Horizontal Absolute)
-///
-/// Equivalent to pressing Home key in most terminal applications.
-pub fn move_to_line_start() -> String {
-    CsiSequence::CursorHorizontalAbsolute(1).to_string()
-}
-
-/// Move cursor to specific column on current line.
-///
-/// **VT100 Spec**: ESC[{col}G (Cursor Horizontal Absolute)
-///
-/// # Arguments
-/// * `col` - Target column (1-based, VT100 convention)
-pub fn move_to_column(col: u16) -> String {
-    CsiSequence::CursorHorizontalAbsolute(col).to_string()
-}
-
-/// Erase from cursor to end of current line.
-///
-/// **VT100 Spec**: ESC[K or ESC[0K (Erase Line)
-///
-/// Common pattern for clearing partial line content while preserving
-/// text before the cursor position.
-pub fn clear_to_end_of_line() -> String {
-    CsiSequence::EraseLine(0).to_string()
-}
-
-/// Erase entire current line and move cursor to beginning.
-///
-/// **VT100 Spec**: ESC[2K (Erase Line) + ESC[G (Cursor Horizontal Absolute)
-///
-/// Useful for completely replacing line content.
-pub fn clear_entire_line() -> String {
-    format!("{}{}",
-        CsiSequence::EraseLine(2), // Clear entire line
-        CsiSequence::CursorHorizontalAbsolute(1) // Move to start of line
     )
 }
 
@@ -112,21 +71,8 @@ pub fn clear_entire_line() -> String {
 ///
 /// # Arguments
 /// * `text` - Text to insert at current cursor position
-pub fn insert_text(text: &str) -> String {
-    text.to_string()
-}
-
-/// Create a series of repeated characters.
-///
-/// Useful for creating test patterns, borders, or filling areas
-/// with specific characters.
-///
-/// # Arguments
-/// * `ch` - Character to repeat
-/// * `count` - Number of repetitions
-pub fn repeat_char(ch: char, count: usize) -> String {
-    ch.to_string().repeat(count)
-}
+#[must_use]
+pub fn insert_text(text: &str) -> String { text.to_string() }
 
 /// Move to column and delete characters.
 ///
@@ -137,10 +83,13 @@ pub fn repeat_char(ch: char, count: usize) -> String {
 /// # Arguments
 /// * `col` - Target column (1-based, VT100 convention)
 /// * `count` - Number of characters to delete
+#[must_use]
 pub fn move_and_delete_chars(col: u16, count: usize) -> String {
-    format!("{}{}",
+    let delete_count = len(count).clamp_to(u16::MAX).as_u16();
+    format!(
+        "{}{}",
         CsiSequence::CursorHorizontalAbsolute(col),
-        CsiSequence::DeleteChar(count as u16)
+        CsiSequence::DeleteChar(delete_count)
     )
 }
 
@@ -153,10 +102,13 @@ pub fn move_and_delete_chars(col: u16, count: usize) -> String {
 /// # Arguments
 /// * `col` - Target column (1-based, VT100 convention)
 /// * `count` - Number of blank characters to insert
+#[must_use]
 pub fn move_and_insert_chars(col: u16, count: usize) -> String {
-    format!("{}{}",
+    let insert_count = len(count).clamp_to(u16::MAX).as_u16();
+    format!(
+        "{}{}",
         CsiSequence::CursorHorizontalAbsolute(col),
-        CsiSequence::InsertChar(count as u16)
+        CsiSequence::InsertChar(insert_count)
     )
 }
 
@@ -169,9 +121,12 @@ pub fn move_and_insert_chars(col: u16, count: usize) -> String {
 /// # Arguments
 /// * `col` - Target column (1-based, VT100 convention)
 /// * `count` - Number of characters to erase (replace with spaces)
+#[must_use]
 pub fn move_and_erase_chars(col: u16, count: usize) -> String {
-    format!("{}{}",
+    let erase_count = len(count).clamp_to(u16::MAX).as_u16();
+    format!(
+        "{}{}",
         CsiSequence::CursorHorizontalAbsolute(col),
-        CsiSequence::EraseChar(count as u16)
+        CsiSequence::EraseChar(erase_count)
     )
 }

@@ -39,7 +39,7 @@ use crate::ansi_parser::{protocols::csi_codes::CsiSequence,
 pub mod malformed_csi_sequences {
     use super::*;
 
-    /// Note: Using type-safe CsiSequence builders (not raw bytes) because we're testing
+    /// Note: Using type-safe `CsiSequence` builders (not raw bytes) because we're testing
     /// bounds clamping behavior with valid sequences that have out-of-bounds parameters.
     /// This differs from malformed sequence tests which need raw bytes for invalid
     /// syntax.
@@ -295,7 +295,7 @@ pub mod invalid_character_handling {
 pub mod boundary_edge_cases {
     use super::*;
 
-    /// Note: Using type-safe CsiSequence builders (not raw bytes) because we're
+    /// Note: Using type-safe `CsiSequence` builders (not raw bytes) because we're
     /// testing VT100 specification compliance with valid sequences that have
     /// edge-case parameters. Type-safe builders ensure proper sequence
     /// formatting while testing semantic behavior.
@@ -359,18 +359,16 @@ pub mod boundary_edge_cases {
             ));
 
             // Apply the zero-parameter movement command
-            let _result = ofs_buf.apply_ansi_bytes(format!("{}", movement_cmd));
+            let _result = ofs_buf.apply_ansi_bytes(movement_cmd.to_string());
 
             // Per VT100 spec: parameter 0 is treated as 1 (minimum movement)
             assert_eq!(
                 ofs_buf.cursor_pos.row_index, expected_row,
-                "VT100 spec: {} should move by 1 (row)",
-                description
+                "VT100 spec: {description} should move by 1 (row)"
             );
             assert_eq!(
                 ofs_buf.cursor_pos.col_index, expected_col,
-                "VT100 spec: {} should move by 1 (col)",
-                description
+                "VT100 spec: {description} should move by 1 (col)"
             );
         }
     }

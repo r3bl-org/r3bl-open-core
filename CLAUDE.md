@@ -20,8 +20,8 @@ Use these tools to lookup documentation and APIs:
 Throughout the implementation, use the type-safe bounds checking utilities from `tui/src/core/units/bounds_check.rs`:
 - Instead of using `usize` or `u16` for indices, try using `IndexMarker` which is 0-based
 - Instead of using `usize` or `u16` for lengths, try using `LengthMarker` which is 1-based
-- Use `IndexMarker::overflows()` instead of raw `<` comparisons
-- Use `LengthMarker::is_overflowed_by()` for inverse checks
+- Use `IndexMarker::overflows()` instead of raw `<` or `>` comparisons between 0/1-based values
+- Use `LengthMarker::is_overflowed_by()` for inverse checks, and `IndexMarker::is_overflowed_by()` similarly
 - Use `LengthMarker::clamp_to()` for clamping operations
 - Leverage `convert_to_index()` and `convert_to_length()` for type conversions
 - Use `clamp_to()` to ensure indices and lengths stay within valid bounds and `remaining_from()` to compute available space

@@ -5,16 +5,19 @@
 use crate::{OffscreenBuffer, TuiStyle, height, width};
 
 /// Create a test `OffscreenBuffer` with 10x10 dimensions.
+#[must_use]
 pub fn create_test_offscreen_buffer_10r_by_10c() -> OffscreenBuffer {
     OffscreenBuffer::new_empty(height(10) + width(10))
 }
 
 /// Create a test `OffscreenBuffer` with 20x20 dimensions for larger test scenarios.
+#[must_use]
 pub fn create_test_offscreen_buffer_20r_by_20c() -> OffscreenBuffer {
     OffscreenBuffer::new_empty(height(20) + width(20))
 }
 
 /// Create a test buffer with numbered lines for easier test verification.
+#[must_use]
 pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
     let mut buf = OffscreenBuffer::new_empty(height(rows) + width(cols));
     for r in 0..rows {
@@ -36,6 +39,9 @@ pub fn create_numbered_buffer(rows: usize, cols: usize) -> OffscreenBuffer {
 }
 
 /// Helper to verify line content matches expected text.
+///
+/// # Panics
+/// Panics if `row` is out of bounds for the buffer.
 pub fn assert_line_content(buf: &OffscreenBuffer, row: usize, expected: &str) {
     let actual: String = buf.buffer[row]
         .iter()
@@ -53,6 +59,9 @@ pub fn assert_line_content(buf: &OffscreenBuffer, row: usize, expected: &str) {
 }
 
 /// Helper to verify a line contains only blank/space characters.
+///
+/// # Panics
+/// Panics if `row` is out of bounds for the buffer.
 pub fn assert_blank_line(buf: &OffscreenBuffer, row: usize) {
     let is_blank = buf.buffer[row]
         .iter()

@@ -98,6 +98,24 @@
 //! - Tutorial on nom parsing on [developerlife.com](https://developerlife.com/2023/02/20/guide-to-nom-parsing/).
 //! - Video on nom parsing on [YouTube developerlife.com channel](https://youtu.be/v3tMwr_ysPg).
 //!
+//! ## Testing Infrastructure
+//!
+//! The markdown parser includes a comprehensive test suite with conformance test data
+//! organized by complexity and content type. The [`mod@conformance_test_data`] module
+//! provides test inputs ranging from simple single-line markdown to complex real-world
+//! documents.
+//!
+//! ### Test Data Organization
+//!
+//! - **Invalid inputs**: Edge cases and malformed syntax for error handling validation
+//! - **Valid small inputs**: Simple formatting and single-line markdown
+//! - **Valid medium inputs**: Multi-paragraph content and structured documents
+//! - **Valid large inputs**: Complex nested structures and advanced features
+//! - **Valid jumbo inputs**: Real-world files and comprehensive documents
+//!
+//! The test data is used by both performance benchmarks and snapshot tests to ensure
+//! parser reliability and performance across diverse markdown content.
+//!
 //! ## Architecture and parsing order
 //!
 //! This diagram showcases the order in which the parsers are called and how they are
@@ -213,7 +231,7 @@ pub mod parse_markdown;
 pub mod single_line;
 
 // Test modules
-#[cfg(test)]
+#[cfg(any(test, doc))]
 pub mod conformance_test_data;
 #[cfg(test)]
 pub mod parser_bench_tests;

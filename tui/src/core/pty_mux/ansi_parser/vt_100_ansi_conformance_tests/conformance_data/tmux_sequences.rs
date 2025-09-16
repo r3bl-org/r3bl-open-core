@@ -13,22 +13,24 @@
 //! - Window indicators show activity and current status
 //! - Copy mode uses reverse video for selection
 
-use crate::ansi_parser::protocols::csi_codes::CsiSequence;
-use crate::ansi_parser::term_units::{term_col, term_row};
-use crate::{ANSIBasicColor, SgrCode};
+use crate::{ANSIBasicColor, SgrCode,
+            ansi_parser::{protocols::csi_codes::CsiSequence,
+                          term_units::{term_col, term_row}}};
 
 /// Generate tmux-style status bar display.
 ///
 /// **Tmux Convention**: Status bar shows session info, window list, and system info
 /// with distinctive green background and configurable format.
+#[must_use]
 pub fn tmux_status_bar() -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        // Move to bottom line
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        // Move to bottom line.
         CsiSequence::CursorPosition {
             row: term_row(25),
             col: term_col(1)
         },
-        // Green background for status bar
+        // Green background for status bar.
         SgrCode::BackgroundBasic(ANSIBasicColor::Green),
         SgrCode::ForegroundBasic(ANSIBasicColor::Black),
         "[",
@@ -38,17 +40,17 @@ pub fn tmux_status_bar() -> String {
         SgrCode::BackgroundBasic(ANSIBasicColor::Green),
         SgrCode::ForegroundBasic(ANSIBasicColor::Black),
         "] ",
-        // Current window indicator
+        // Current window indicator.
         SgrCode::Invert,
         "0:zsh",
         SgrCode::Reset,
         SgrCode::BackgroundBasic(ANSIBasicColor::Green),
         SgrCode::ForegroundBasic(ANSIBasicColor::Black),
         " 1:vim 2:git",
-        // Right side with time/host
+        // Right side with time/host.
         " \"r3bl-host\" 15:30:45",
         SgrCode::Reset,
-        // Clear to end of line
+        // Clear to end of line.
         CsiSequence::EraseLine(0)
     )
 }
@@ -57,29 +59,31 @@ pub fn tmux_status_bar() -> String {
 ///
 /// **Tmux Convention**: Panes are separated by borders using line drawing characters
 /// and each pane maintains its own cursor position.
+#[must_use]
 pub fn tmux_pane_split_horizontal() -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        // Clear screen
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        // Clear screen.
         CsiSequence::EraseDisplay(2),
-        // Draw top pane content
+        // Draw top pane content.
         CsiSequence::CursorPosition {
             row: term_row(1),
             col: term_col(1)
         },
         "Top pane content",
-        // Draw horizontal border
+        // Draw horizontal border.
         CsiSequence::CursorPosition {
             row: term_row(5),
             col: term_col(1)
         },
         "─".repeat(10),
-        // Draw bottom pane content
+        // Draw bottom pane content.
         CsiSequence::CursorPosition {
             row: term_row(6),
             col: term_col(1)
         },
         "Bottom pane",
-        // Show pane indicators
+        // Show pane indicators.
         CsiSequence::CursorPosition {
             row: term_row(5),
             col: term_col(1)
@@ -101,18 +105,25 @@ pub fn tmux_pane_split_horizontal() -> String {
 ///
 /// **Tmux Convention**: Copy mode uses reverse video to highlight selected text
 /// and shows copy mode indicator in status.
-pub fn tmux_copy_mode_selection(start_row: u16, start_col: u16, _end_row: u16, _end_col: u16) -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}",
-        // Move to selection start
+#[must_use]
+pub fn tmux_copy_mode_selection(
+    start_row: u16,
+    start_col: u16,
+    _end_row: u16,
+    _end_col: u16,
+) -> String {
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}",
+        // Move to selection start.
         CsiSequence::CursorPosition {
             row: term_row(start_row),
             col: term_col(start_col)
         },
-        // Start reverse video for selection
+        // Start reverse video for selection.
         SgrCode::Invert,
         "selected",
         SgrCode::Reset,
-        // Show copy mode indicator in status
+        // Show copy mode indicator in status.
         CsiSequence::CursorPosition {
             row: term_row(10),
             col: term_col(1)
@@ -121,7 +132,7 @@ pub fn tmux_copy_mode_selection(start_row: u16, start_col: u16, _end_row: u16, _
         SgrCode::ForegroundBasic(ANSIBasicColor::Black),
         "[Copy Mode]",
         SgrCode::Reset,
-        // Clear to end of status line
+        // Clear to end of status line.
         CsiSequence::EraseLine(0)
     )
 }
@@ -130,9 +141,11 @@ pub fn tmux_copy_mode_selection(start_row: u16, start_col: u16, _end_row: u16, _
 ///
 /// Shows session list with current session highlighted,
 /// simulating tmux's session management interface.
+#[must_use]
 pub fn tmux_session_list() -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        // Clear screen and show session list
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        // Clear screen. and show session list
         CsiSequence::EraseDisplay(2),
         CsiSequence::CursorPosition {
             row: term_row(1),
@@ -147,7 +160,7 @@ pub fn tmux_session_list() -> String {
         "  main: 2 windows",
         SgrCode::Reset,
         "\n",
-        // Other sessions
+        // Other sessions.
         "  work: 1 window\n",
         SgrCode::ForegroundBasic(ANSIBasicColor::DarkGray),
         "  old: 0 windows",

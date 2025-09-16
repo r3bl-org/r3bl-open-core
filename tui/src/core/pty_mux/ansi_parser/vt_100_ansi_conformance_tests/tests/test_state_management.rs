@@ -9,9 +9,9 @@
 //! - Scroll region effects on cursor save/restore
 
 use super::super::test_fixtures::*;
-use crate::{ansi_parser::{protocols::csi_codes::{CsiSequence, PrivateModeType},
-                          term_units::{term_row, term_col}},
-            ANSIBasicColor, SgrCode, TuiStyle};
+use crate::{ANSIBasicColor, SgrCode,
+            ansi_parser::{protocols::csi_codes::{CsiSequence, PrivateModeType},
+                          term_units::{term_col, term_row}}};
 
 /// Tests for cursor save/restore with active SGR styling attributes.
 pub mod cursor_save_restore_with_attributes {
@@ -22,14 +22,18 @@ pub mod cursor_save_restore_with_attributes {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Move cursor to specific position
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(3),
-            col: term_col(5)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(3),
+                col: term_col(5)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Set some SGR attributes
-        let style_sequence = format!("{}{}{}",
+        let style_sequence = format!(
+            "{}{}{}",
             SgrCode::Bold,
             SgrCode::ForegroundBasic(ANSIBasicColor::Red),
             SgrCode::BackgroundBasic(ANSIBasicColor::Blue)
@@ -41,13 +45,17 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf.apply_ansi_bytes(save_sequence);
 
         // Move cursor and change attributes
-        let move_sequence2 = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(7),
-            col: term_col(8)
-        });
+        let move_sequence2 = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(7),
+                col: term_col(8)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence2);
 
-        let style_sequence2 = format!("{}{}",
+        let style_sequence2 = format!(
+            "{}{}",
             SgrCode::Reset,
             SgrCode::ForegroundBasic(ANSIBasicColor::Green)
         );
@@ -63,7 +71,10 @@ pub mod cursor_save_restore_with_attributes {
         // Attributes should remain as they were changed (not restored)
         // Current style should be green foreground from the change above
         let current_style = ofs_buf.ansi_parser_support.current_style;
-        assert_eq!(current_style.color_fg, Some(crate::TuiColor::Basic(ANSIBasicColor::Green)));
+        assert_eq!(
+            current_style.color_fg,
+            Some(crate::TuiColor::Basic(ANSIBasicColor::Green))
+        );
     }
 
     #[test]
@@ -75,10 +86,13 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf.apply_ansi_bytes(save1_sequence);
 
         // Move to position 1
-        let move1_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(2),
-            col: term_col(3)
-        });
+        let move1_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(2),
+                col: term_col(3)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move1_sequence);
 
         // Second save at position 1
@@ -86,10 +100,13 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf.apply_ansi_bytes(save2_sequence);
 
         // Move to position 2
-        let move2_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(7)
-        });
+        let move2_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(5),
+                col: term_col(7)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move2_sequence);
 
         // Restore should go to most recently saved position (position 1)
@@ -104,10 +121,13 @@ pub mod cursor_save_restore_with_attributes {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Position cursor and set initial style
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(2),
-            col: term_col(4)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(2),
+                col: term_col(4)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         let initial_style = format!("{}", SgrCode::Bold);
@@ -118,7 +138,8 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf.apply_ansi_bytes(save_sequence);
 
         // Move and do complex styling
-        let move_and_style = format!("{}{}{}{}Text",
+        let move_and_style = format!(
+            "{}{}{}{}Text",
             CsiSequence::CursorPosition {
                 row: term_row(5),
                 col: term_col(1)
@@ -142,8 +163,14 @@ pub mod cursor_save_restore_with_attributes {
         // Should be written with the complex styling (red on yellow, underlined)
         let char_at_restore_pos = &ofs_buf.buffer[1][3];
         if let crate::PixelChar::PlainText { style, .. } = char_at_restore_pos {
-            assert_eq!(style.color_fg, Some(crate::TuiColor::Basic(ANSIBasicColor::Red)));
-            assert_eq!(style.color_bg, Some(crate::TuiColor::Basic(ANSIBasicColor::Yellow)));
+            assert_eq!(
+                style.color_fg,
+                Some(crate::TuiColor::Basic(ANSIBasicColor::Red))
+            );
+            assert_eq!(
+                style.color_bg,
+                Some(crate::TuiColor::Basic(ANSIBasicColor::Yellow))
+            );
             assert!(style.attribs.underline.is_some());
         } else {
             panic!("Expected PlainText with styling");
@@ -168,7 +195,8 @@ pub mod character_set_state_management {
                   crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::DECGraphics);
 
         // Perform cursor save/restore operations
-        let cursor_ops = format!("{}{}{}",
+        let cursor_ops = format!(
+            "{}{}{}",
             CsiSequence::SaveCursor,
             CsiSequence::CursorPosition {
                 row: term_row(3),
@@ -203,7 +231,8 @@ pub mod character_set_state_management {
                   crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::Ascii);
 
         // Switch to DEC Graphics and disable auto-wrap
-        let combined_sequence = format!("{}{}",
+        let combined_sequence = format!(
+            "{}{}",
             "\x1b(0", // DEC Graphics
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap)
         );
@@ -215,7 +244,8 @@ pub mod character_set_state_management {
         assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
 
         // Change modes but keep character set
-        let mode_change = format!("{}",
+        let mode_change = format!(
+            "{}",
             CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap)
         );
         let _result = ofs_buf.apply_ansi_bytes(mode_change);
@@ -243,17 +273,23 @@ pub mod scroll_region_state_interactions {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 3-7)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(3)),
+                bottom: Some(term_row(7))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor within scroll region
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(6)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(5),
+                col: term_col(6)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Save cursor
@@ -261,17 +297,23 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf.apply_ansi_bytes(save_sequence);
 
         // Move outside scroll region
-        let move_outside = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(2)
-        });
+        let move_outside = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(1),
+                col: term_col(2)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_outside);
 
         // Change scroll region
-        let new_margins = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(2)),
-            bottom: Some(term_row(8))
-        });
+        let new_margins = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(2)),
+                bottom: Some(term_row(8))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(new_margins);
 
         // Restore cursor (should restore to absolute position)
@@ -282,10 +324,14 @@ pub mod scroll_region_state_interactions {
         assert_eq!(ofs_buf.cursor_pos, crate::row(4) + crate::col(5)); // 0-based
 
         // Verify scroll region changed
-        assert_eq!(ofs_buf.ansi_parser_support.scroll_region_top,
-                  Some(term_row(2)));
-        assert_eq!(ofs_buf.ansi_parser_support.scroll_region_bottom,
-                  Some(term_row(8)));
+        assert_eq!(
+            ofs_buf.ansi_parser_support.scroll_region_top,
+            Some(term_row(2))
+        );
+        assert_eq!(
+            ofs_buf.ansi_parser_support.scroll_region_bottom,
+            Some(term_row(8))
+        );
     }
 
     #[test]
@@ -293,7 +339,8 @@ pub mod scroll_region_state_interactions {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set initial scroll region and position cursor
-        let setup_sequence = format!("{}{}{}",
+        let setup_sequence = format!(
+            "{}{}{}",
             CsiSequence::SetScrollingMargins {
                 top: Some(term_row(4)),
                 bottom: Some(term_row(8))
@@ -307,10 +354,13 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf.apply_ansi_bytes(setup_sequence);
 
         // Reset scroll region (ESC [ r with no parameters)
-        let reset_margins = format!("{}", CsiSequence::SetScrollingMargins {
-            top: None,
-            bottom: None
-        });
+        let reset_margins = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: None,
+                bottom: None
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(reset_margins);
 
         // Verify scroll region reset
@@ -318,10 +368,13 @@ pub mod scroll_region_state_interactions {
         assert_eq!(ofs_buf.ansi_parser_support.scroll_region_bottom, None);
 
         // Move cursor somewhere else
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(2),
-            col: term_col(8)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(2),
+                col: term_col(8)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Restore cursor (should still work with reset scroll region)
@@ -342,7 +395,8 @@ pub mod complex_state_combinations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set up complex state: scroll region + DEC graphics + auto-wrap off + styling
-        let complex_setup = format!("{}{}{}{}{}{}",
+        let complex_setup = format!(
+            "{}{}{}{}{}{}",
             CsiSequence::SetScrollingMargins {
                 top: Some(term_row(2)),
                 bottom: Some(term_row(8))
@@ -363,7 +417,8 @@ pub mod complex_state_combinations {
         let _result = ofs_buf.apply_ansi_bytes(save_sequence);
 
         // Modify all states
-        let state_changes = format!("{}{}{}{}{}",
+        let state_changes = format!(
+            "{}{}{}{}{}",
             CsiSequence::SetScrollingMargins {
                 top: Some(term_row(1)),
                 bottom: Some(term_row(10))
@@ -386,8 +441,10 @@ pub mod complex_state_combinations {
         assert_eq!(ofs_buf.cursor_pos, crate::row(4) + crate::col(3)); // 0-based
 
         // Verify other states changed (not restored)
-        assert_eq!(ofs_buf.ansi_parser_support.scroll_region_top,
-                  Some(term_row(1)));
+        assert_eq!(
+            ofs_buf.ansi_parser_support.scroll_region_top,
+            Some(term_row(1))
+        );
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
                   crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::Ascii);
         assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
@@ -398,7 +455,8 @@ pub mod complex_state_combinations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set up initial state
-        let initial_state = format!("{}{}{}",
+        let initial_state = format!(
+            "{}{}{}",
             "\x1b(0", // DEC Graphics
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap),
             SgrCode::Bold
@@ -406,7 +464,8 @@ pub mod complex_state_combinations {
         let _result = ofs_buf.apply_ansi_bytes(initial_state);
 
         // Perform various buffer operations
-        let buffer_ops = format!("{}{}{}{}{}",
+        let buffer_ops = format!(
+            "{}{}{}{}{}",
             "Text1 ",
             CsiSequence::CursorPosition {
                 row: term_row(2),
@@ -424,6 +483,13 @@ pub mod complex_state_combinations {
         assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
 
         // Current style should still have bold
-        assert!(ofs_buf.ansi_parser_support.current_style.attribs.bold.is_some());
+        assert!(
+            ofs_buf
+                .ansi_parser_support
+                .current_style
+                .attribs
+                .bold
+                .is_some()
+        );
     }
 }

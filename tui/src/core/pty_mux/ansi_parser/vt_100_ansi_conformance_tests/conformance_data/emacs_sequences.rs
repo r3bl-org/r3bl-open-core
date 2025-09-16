@@ -12,22 +12,24 @@
 //! - Uses different status indicators than vim
 //! - Often employs more conservative styling
 
-use crate::ansi_parser::protocols::csi_codes::CsiSequence;
-use crate::ansi_parser::term_units::{term_col, term_row};
-use crate::{ANSIBasicColor, SgrCode};
+use crate::{ANSIBasicColor, SgrCode,
+            ansi_parser::{protocols::csi_codes::CsiSequence,
+                          term_units::{term_col, term_row}}};
 
 /// Generate Emacs-style mode line display.
 ///
 /// **Emacs Convention**: Mode line appears at bottom with distinctive formatting
 /// and shows buffer information, major mode, and other status indicators.
+#[must_use]
 pub fn emacs_mode_line() -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        // Move to bottom line
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        // Move to bottom line.
         CsiSequence::CursorPosition {
             row: term_row(25),
             col: term_col(1)
         },
-        // Cyan background for mode line
+        // Cyan background for mode line.
         SgrCode::BackgroundBasic(ANSIBasicColor::Cyan),
         SgrCode::ForegroundBasic(ANSIBasicColor::Black),
         "-UUU:",
@@ -43,7 +45,7 @@ pub fn emacs_mode_line() -> String {
         SgrCode::ForegroundBasic(ANSIBasicColor::Black),
         "  L1  C1  All (2,15) [Git:main] 15:30",
         SgrCode::Reset,
-        // Clear to end of line
+        // Clear to end of line.
         CsiSequence::EraseLine(0)
     )
 }
@@ -51,16 +53,18 @@ pub fn emacs_mode_line() -> String {
 /// Generate Emacs-style minibuffer prompt.
 ///
 /// **Emacs Convention**: Minibuffer appears at bottom for commands and input
+#[must_use]
 pub fn emacs_minibuffer_prompt(prompt: &str) -> String {
-    format!("{}{}{}{}{}",
-        // Move to bottom line
+    format!(
+        "{}{}{}{}{}",
+        // Move to bottom line.
         CsiSequence::CursorPosition {
             row: term_row(10),
             col: term_col(1)
         },
-        // Clear the line first
+        // Clear the line first.
         CsiSequence::EraseLine(2),
-        // Bold prompt
+        // Bold prompt.
         SgrCode::Bold,
         prompt,
         SgrCode::Reset
@@ -71,24 +75,26 @@ pub fn emacs_minibuffer_prompt(prompt: &str) -> String {
 ///
 /// Shows multiple buffers with switching indicators,
 /// simulating M-x list-buffers functionality.
+#[must_use]
 pub fn emacs_buffer_list() -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}{}{}",
-        // Clear screen and move to top
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}",
+        // Clear screen and move to top.
         CsiSequence::EraseDisplay(2),
         CsiSequence::CursorPosition {
             row: term_row(1),
             col: term_col(1)
         },
-        // Header
+        // Header.
         SgrCode::Bold,
         " MR Buffer",
         SgrCode::Reset,
         "\n",
-        // Active buffer
+        // Active buffer.
         " *  main.rs\n",
-        // Background buffer
+        // Background buffer.
         "    README.md\n",
-        // Modified buffer
+        // Modified buffer.
         SgrCode::ForegroundBasic(ANSIBasicColor::Red),
         " %* config.toml",
         SgrCode::Reset,

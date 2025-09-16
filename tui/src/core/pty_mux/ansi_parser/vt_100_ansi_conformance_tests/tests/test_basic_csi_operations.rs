@@ -3,13 +3,10 @@
 //! Basic CSI operation tests using conformance data sequences.
 //!
 //! This module demonstrates the new testing approach using type-safe sequence
-//! builders from the conformance_data module instead of hardcoded format strings.
+//! builders from the `conformance_data` module instead of hardcoded format strings.
 
-use super::super::{
-    conformance_data::{basic_sequences, cursor_sequences},
-    test_fixtures::*,
-};
-use crate::ansi_parser::protocols::csi_codes::CsiSequence;
+use super::super::{conformance_data::{basic_sequences, cursor_sequences},
+                   test_fixtures::*};
 
 #[test]
 fn test_basic_delete_char_integration() {

@@ -14,17 +14,10 @@
 //! styling patterns, and efficient screen updates that stress-test terminal
 //! parsers and buffer management.
 
-use crate::{
-    ANSIBasicColor,
-    SgrCode,
-    ansi_parser::{
-        protocols::{
-            csi_codes::CsiSequence,
-            esc_codes::EscSequence,
-        },
-        term_units::{term_col, term_row},
-    },
-};
+use crate::{ANSIBasicColor, SgrCode,
+            ansi_parser::{protocols::{csi_codes::CsiSequence, esc_codes::EscSequence},
+                          term_units::{term_col, term_row}},
+            height, LengthMarker};
 
 /// Vim status line pattern with mode indicator.
 ///
@@ -40,15 +33,17 @@ use crate::{
 /// # Arguments
 /// * `mode` - Mode string to display (e.g., "INSERT", "VISUAL", "NORMAL")
 /// * `status_row` - Row for status line (typically bottom row of terminal)
+#[must_use]
 pub fn vim_status_line(mode: &str, status_row: u16) -> String {
-    format!("{}{}{}{}{}{}",
+    format!(
+        "{}{}{}-- {} --{}{}",
         EscSequence::SaveCursor,
         CsiSequence::CursorPosition {
             row: term_row(status_row),
             col: term_col(1)
         },
         SgrCode::Invert, // Reverse video for highlighting
-        format!("-- {} --", mode),
+        mode,
         SgrCode::Reset,
         EscSequence::RestoreCursor
     )
@@ -70,32 +65,40 @@ pub fn vim_status_line(mode: &str, status_row: u16) -> String {
 /// * `start_col` - Starting column of selection (1-based)
 /// * `end_row` - Ending row of selection (1-based)
 /// * `end_col` - Ending column of selection (1-based)
-pub fn vim_visual_selection(start_row: u16, start_col: u16,
-                           end_row: u16, end_col: u16) -> String {
+#[must_use]
+pub fn vim_visual_selection(
+    start_row: u16,
+    start_col: u16,
+    end_row: u16,
+    end_col: u16,
+) -> String {
     let mut sequence = String::new();
 
     for row in start_row..=end_row {
         let (col_start, col_end) = if row == start_row && row == end_row {
-            // Single line selection
+            // Single line selection.
             (start_col, end_col)
         } else if row == start_row {
-            // First line of multi-line selection
+            // First line of multi-line selection.
             (start_col, 80) // Assume 80-column terminal
         } else if row == end_row {
-            // Last line of multi-line selection
+            // Last line of multi-line selection.
             (1, end_col)
         } else {
-            // Middle lines of multi-line selection
+            // Middle lines of multi-line selection.
             (1, 80)
         };
 
-        // Move to start of selection on this line
-        sequence.push_str(&CsiSequence::CursorPosition {
-            row: term_row(row),
-            col: term_col(col_start)
-        }.to_string());
+        // Move to start of selection on this line.
+        sequence.push_str(
+            &CsiSequence::CursorPosition {
+                row: term_row(row),
+                col: term_col(col_start),
+            }
+            .to_string(),
+        );
 
-        // Apply selection highlighting
+        // Apply selection highlighting.
         sequence.push_str(&SgrCode::BackgroundBasic(ANSIBasicColor::Blue).to_string());
 
         // Fill the selected area (simplified - would normally preserve existing text)
@@ -103,7 +106,7 @@ pub fn vim_visual_selection(start_row: u16, start_col: u16,
         sequence.push_str(&" ".repeat(selection_width as usize));
     }
 
-    // Reset styling
+    // Reset styling.
     sequence.push_str(&SgrCode::Reset.to_string());
     sequence
 }
@@ -116,8 +119,10 @@ pub fn vim_visual_selection(start_row: u16, start_col: u16,
 /// # Arguments
 /// * `command_char` - Command character (`:`, `/`, `?`)
 /// * `command_row` - Row for command line (typically bottom row)
+#[must_use]
 pub fn vim_command_line(command_char: char, command_row: u16) -> String {
-    format!("{}{}{}",
+    format!(
+        "{}{}{}",
         EscSequence::SaveCursor,
         CsiSequence::CursorPosition {
             row: term_row(command_row),
@@ -136,13 +141,15 @@ pub fn vim_command_line(command_char: char, command_row: u16) -> String {
 /// 1. Clear entire screen
 /// 2. Position cursor at home
 /// 3. Optionally display content
+#[must_use]
 pub fn vim_clear_and_redraw() -> String {
-    format!("{}{}",
+    format!(
+        "{}{}",
         CsiSequence::EraseDisplay(2), // Clear screen
         CsiSequence::CursorPosition {
             row: term_row(1),
             col: term_col(1)
-        } // Home cursor
+        }  // Home cursor
     )
 }
 
@@ -155,14 +162,17 @@ pub fn vim_clear_and_redraw() -> String {
 /// * `line_num` - Line number to display
 /// * `line_row` - Row where line number appears
 /// * `content` - Line content to display after number
+#[must_use]
 pub fn vim_line_with_number(line_num: u16, line_row: u16, content: &str) -> String {
-    format!("{}{}{}{}{}{}",
+    format!(
+        "{}{}{:4} {}{}{}",
         CsiSequence::CursorPosition {
             row: term_row(line_row),
             col: term_col(1)
         },
         SgrCode::ForegroundBasic(ANSIBasicColor::Yellow), // Dim line numbers
-        format!("{:4} ", line_num), // Right-aligned 4-digit line number
+        line_num,                                         /* Right-aligned 4-digit
+                                                           * line number */
         SgrCode::Reset,
         content,
         SgrCode::Reset
@@ -178,8 +188,10 @@ pub fn vim_line_with_number(line_num: u16, line_row: u16, content: &str) -> Stri
 /// * `row` - Row containing the match
 /// * `col` - Column where match starts
 /// * `match_text` - Text that matches the search
+#[must_use]
 pub fn vim_search_highlight(row: u16, col: u16, match_text: &str) -> String {
-    format!("{}{}{}{}{}",
+    format!(
+        "{}{}{}{}{}",
         CsiSequence::CursorPosition {
             row: term_row(row),
             col: term_col(col)
@@ -199,8 +211,10 @@ pub fn vim_search_highlight(row: u16, col: u16, match_text: &str) -> String {
 /// # Arguments
 /// * `error_msg` - Error message to display
 /// * `error_row` - Row for error display (typically bottom row)
+#[must_use]
 pub fn vim_error_message(error_msg: &str, error_row: u16) -> String {
-    format!("{}{}{}{}{}{}{}",
+    format!(
+        "{}{}{}{}{}{}{}",
         EscSequence::SaveCursor,
         CsiSequence::CursorPosition {
             row: term_row(error_row),
@@ -222,19 +236,24 @@ pub fn vim_error_message(error_msg: &str, error_row: u16) -> String {
 /// # Arguments
 /// * `completions` - List of completion options
 /// * `start_row` - Row to start displaying completions
+#[must_use]
 pub fn vim_completion_menu(completions: &[&str], start_row: u16) -> String {
     let mut sequence = String::new();
 
     sequence.push_str(&EscSequence::SaveCursor.to_string());
 
-    // Display each completion option
+    // Display each completion option.
     for (i, completion) in completions.iter().enumerate() {
-        sequence.push_str(&CsiSequence::CursorPosition {
-            row: term_row(start_row + i as u16),
-            col: term_col(1)
-        }.to_string());
+        let row_offset = height(i).clamp_to(u16::MAX).as_u16();
+        sequence.push_str(
+            &CsiSequence::CursorPosition {
+                row: term_row(start_row + row_offset),
+                col: term_col(1),
+            }
+            .to_string(),
+        );
 
-        // Highlight first option
+        // Highlight first option.
         if i == 0 {
             sequence.push_str(&SgrCode::Invert.to_string());
         }
@@ -257,23 +276,25 @@ pub fn vim_completion_menu(completions: &[&str], start_row: u16) -> String {
 ///
 /// This creates a sample of syntax-highlighted code to test
 /// multiple color changes in sequence.
+#[must_use]
 pub fn vim_syntax_highlighting() -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        // Keyword in blue
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        // Keyword in blue.
         SgrCode::ForegroundBasic(ANSIBasicColor::Blue),
         SgrCode::Bold,
         "fn",
         SgrCode::Reset,
         " ",
-        // Function name in default color
+        // Function name in default color.
         "main",
         "() {\n    ",
-        // String in green
+        // String in green.
         SgrCode::ForegroundBasic(ANSIBasicColor::Green),
         "\"Hello, World!\"",
         SgrCode::Reset,
         ";\n    ",
-        // Comment in gray
+        // Comment in gray.
         SgrCode::ForegroundBasic(ANSIBasicColor::DarkGray),
         "// This is a comment",
         SgrCode::Reset,

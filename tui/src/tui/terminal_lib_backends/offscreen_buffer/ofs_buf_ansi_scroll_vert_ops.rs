@@ -233,7 +233,8 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_scroll_vert_ops {
     use super::*;
-    use crate::{height, width, row, col, ofs_buf_test_fixtures::assert_plain_char_at, core::pty_mux::ansi_parser::term_units::term_row};
+    use crate::{col, core::pty_mux::ansi_parser::term_units::term_row, height, idx,
+                ofs_buf_test_fixtures::assert_plain_char_at, row, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);
@@ -251,7 +252,8 @@ mod tests_scroll_vert_ops {
         for row_idx in 0..6 {
             for col_idx in 0..10 {
                 buffer.cursor_pos = row(row_idx) + col(col_idx);
-                buffer.print_char(char::from_digit(row_idx as u32, 10).unwrap());
+                let index = idx(row_idx);
+                buffer.print_char(char::from_digit(index.as_u32(), 10).unwrap());
             }
         }
         buffer.cursor_pos = row(0) + col(0);
@@ -297,7 +299,10 @@ mod tests_scroll_vert_ops {
 
         // New blank line at bottom (row 5) should be empty
         let bottom_char = buffer.get_char(row(5) + col(0));
-        assert!(bottom_char.is_none() || matches!(bottom_char, Some(crate::PixelChar::Spacer)));
+        assert!(
+            bottom_char.is_none()
+                || matches!(bottom_char, Some(crate::PixelChar::Spacer))
+        );
     }
 
     #[test]
@@ -359,8 +364,14 @@ mod tests_scroll_vert_ops {
         // Bottom 2 lines should be blank
         let blank_line_1 = buffer.get_char(row(4) + col(0));
         let blank_line_2 = buffer.get_char(row(5) + col(0));
-        assert!(blank_line_1.is_none() || matches!(blank_line_1, Some(crate::PixelChar::Spacer)));
-        assert!(blank_line_2.is_none() || matches!(blank_line_2, Some(crate::PixelChar::Spacer)));
+        assert!(
+            blank_line_1.is_none()
+                || matches!(blank_line_1, Some(crate::PixelChar::Spacer))
+        );
+        assert!(
+            blank_line_2.is_none()
+                || matches!(blank_line_2, Some(crate::PixelChar::Spacer))
+        );
     }
 
     #[test]
@@ -373,8 +384,14 @@ mod tests_scroll_vert_ops {
         // Top 2 lines should be blank
         let blank_line_1 = buffer.get_char(row(0) + col(0));
         let blank_line_2 = buffer.get_char(row(1) + col(0));
-        assert!(blank_line_1.is_none() || matches!(blank_line_1, Some(crate::PixelChar::Spacer)));
-        assert!(blank_line_2.is_none() || matches!(blank_line_2, Some(crate::PixelChar::Spacer)));
+        assert!(
+            blank_line_1.is_none()
+                || matches!(blank_line_1, Some(crate::PixelChar::Spacer))
+        );
+        assert!(
+            blank_line_2.is_none()
+                || matches!(blank_line_2, Some(crate::PixelChar::Spacer))
+        );
 
         // Content should be shifted down
         assert_plain_char_at(&buffer, 2, 0, '0'); // Row 0 moved to row 2
@@ -406,6 +423,8 @@ mod tests_scroll_vert_ops {
 
         // New blank line should appear at row 4
         let blank_char = buffer.get_char(row(4) + col(0));
-        assert!(blank_char.is_none() || matches!(blank_char, Some(crate::PixelChar::Spacer)));
+        assert!(
+            blank_char.is_none() || matches!(blank_char, Some(crate::PixelChar::Spacer))
+        );
     }
 }

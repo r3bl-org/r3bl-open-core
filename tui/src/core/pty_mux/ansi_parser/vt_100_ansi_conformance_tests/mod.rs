@@ -63,7 +63,8 @@
 //!
 //! ## Type-Safe Sequence Construction
 //!
-//! Instead of error-prone hardcoded escape strings, tests use compile-time validated builders:
+//! Instead of error-prone hardcoded escape strings, tests use compile-time validated
+//! builders:
 //!
 //! ```rust,ignore
 //! // ❌ Hardcoded sequences (brittle, unclear intent)
@@ -83,7 +84,7 @@
 //! Each conformance data module includes specification references:
 //! - **VT100 User Guide**: Section references for command behavior
 //! - **ANSI X3.64**: Standard compliance notes
-//! - **XTerm Control Sequences**: Extended sequence support
+//! - **`XTerm` Control Sequences**: Extended sequence support
 //!
 //! ## Running Conformance Tests
 //!
@@ -136,11 +137,11 @@
 //! }, "status line reverse video");
 //! ```
 
-#[cfg(test)]
+#[cfg(any(test, doc))]
 pub mod conformance_data;
 
-#[cfg(test)]
+#[cfg(any(test, doc))]
 pub mod test_fixtures; // Re-export existing test fixtures
 
-#[cfg(test)]
-mod tests;
+#[cfg(any(test, doc))]
+pub mod tests;

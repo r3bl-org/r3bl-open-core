@@ -14,17 +14,19 @@
 //! - Performance stress tests
 //! - Boundary condition validation
 
-use crate::ansi_parser::protocols::csi_codes::CsiSequence;
-use crate::ansi_parser::term_units::{term_col, term_row};
-use crate::{ANSIBasicColor, SgrCode};
+use crate::{ANSIBasicColor, SgrCode,
+            ansi_parser::{protocols::csi_codes::CsiSequence,
+                          term_units::{term_col, term_row}}};
 
 /// Generate a very long text sequence to test buffer handling.
 ///
 /// **Edge Case**: Tests parser performance with large text blocks
 /// and ensures proper memory management under stress.
+#[must_use]
 pub fn long_text_sequence() -> String {
-    format!("{}{}{}{}",
-        // Move to start
+    format!(
+        "{}{}{}{}",
+        // Move to start.
         CsiSequence::CursorPosition {
             row: term_row(1),
             col: term_col(1)
@@ -40,10 +42,11 @@ pub fn long_text_sequence() -> String {
 ///
 /// **Edge Case**: Tests parser's ability to handle rapid SGR transitions
 /// without state corruption or performance degradation.
+#[must_use]
 pub fn rapid_style_changes() -> String {
     let mut sequence = String::new();
 
-    // Rapid color cycling using type-safe builders
+    // Rapid color cycling using type-safe builders.
     let colors = [
         ANSIBasicColor::Red,
         ANSIBasicColor::Green,
@@ -54,12 +57,13 @@ pub fn rapid_style_changes() -> String {
     ];
 
     for (i, color) in colors.iter().enumerate() {
-        sequence.push_str(&format!("{}{}{}",
+        sequence.push_str(&format!(
+            "{}{}{}{}",
             SgrCode::ForegroundBasic(*color),
             SgrCode::Bold,
-            char::from(b'A' + i as u8)
+            char::from(b'A' + u8::try_from(i.min(25)).unwrap_or(25)),
+            SgrCode::Reset
         ));
-        sequence.push_str(&SgrCode::Reset.to_string());
     }
 
     sequence
@@ -69,18 +73,20 @@ pub fn rapid_style_changes() -> String {
 ///
 /// **Edge Case**: Tests parser robustness against malformed sequences
 /// and ensures graceful degradation.
+#[must_use]
 pub fn malformed_sequences() -> String {
-    format!("{}{}{}{}{}{}",
-        // Valid sequence for comparison
+    format!(
+        "{}{}{}{}{}{}",
+        // Valid sequence for comparison.
         CsiSequence::CursorPosition {
             row: term_row(1),
             col: term_col(1)
         },
         "Valid text\n",
-        // Sequences with out-of-range parameters
-        "\x1b[999;999H",  // Position far beyond buffer
+        // Sequences with out-of-range parameters.
+        "\x1b[999;999H", // Position far beyond buffer
         "OOB test\n",
-        "\x1b[0;0H",      // Zero position (should default to 1,1)
+        "\x1b[0;0H", // Zero position (should default to 1,1)
         "Zero test"
     )
 }
@@ -89,11 +95,13 @@ pub fn malformed_sequences() -> String {
 ///
 /// **Edge Case**: Tests parser's handling of complex sequence combinations
 /// and ensures proper state machine operation.
+#[must_use]
 pub fn nested_escape_sequences() -> String {
-    format!("{}{}{}{}{}{}{}{}{}{}{}",
-        // Save cursor
+    format!(
+        "{}{}{}{}{}{}{}{}{}{}{}",
+        // Save cursor.
         CsiSequence::SaveCursor,
-        // Set colors and move
+        // Set colors and move.
         SgrCode::ForegroundBasic(ANSIBasicColor::Red),
         SgrCode::BackgroundBasic(ANSIBasicColor::Blue),
         CsiSequence::CursorPosition {
@@ -101,7 +109,7 @@ pub fn nested_escape_sequences() -> String {
             col: term_col(5)
         },
         "Nested",
-        // Restore and move again
+        // Restore and move again.
         CsiSequence::RestoreCursor,
         CsiSequence::CursorPosition {
             row: term_row(2),
@@ -118,9 +126,11 @@ pub fn nested_escape_sequences() -> String {
 ///
 /// **Edge Case**: Tests behavior at buffer boundaries and ensures
 /// proper bounds checking and clamping.
+#[must_use]
 pub fn boundary_cursor_tests() -> String {
-    format!("{}{}{}{}{}{}",
-        // Test upper-left boundary
+    format!(
+        "{}{}{}{}{}{}",
+        // Test upper-left boundary.
         CsiSequence::CursorPosition {
             row: term_row(1),
             col: term_col(1)

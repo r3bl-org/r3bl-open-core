@@ -125,7 +125,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bounds_check_ops {
     use super::*;
-    use crate::{height, width, col, core::pty_mux::ansi_parser::term_units::term_row};
+    use crate::{col, core::pty_mux::ansi_parser::term_units::term_row, height, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);

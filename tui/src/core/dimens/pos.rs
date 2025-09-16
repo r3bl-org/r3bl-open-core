@@ -3,7 +3,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
-use crate::{ColIndex, ColWidth, RowHeight, RowIndex, Size, ch};
+use crate::{ColIndex, ColWidth, RowHeight, RowIndex, Size, ch, col, row, IndexMarker, LengthMarker};
 
 // Type aliases for better code readability.
 
@@ -767,5 +767,86 @@ mod tests {
         let c: ColIndex = pos.into();
         assert_eq!(c, col(2));
         assert_eq!(r, row(1));
+    }
+
+    #[test]
+    fn test_bounds_clamping_semantic() {
+        // This test explicitly documents that bounds methods clamp to the "after last" position
+        // (index == length), not the last valid index (index == length - 1).
+        // This is essential for cursor positioning in text editors.
+
+        // Test 1: clip_col_to_bounds with overflow
+        {
+            let mut pos = row(0) + col(10);  // Start at col 10
+            let max_width = width(5);        // Maximum width is 5
+
+            pos.clip_col_to_bounds(max_width);
+
+            // CRITICAL: We expect col(5), NOT col(4)!
+            // col(5) is the "after last" position for width(5)
+            assert_eq!(*pos.col_index, ch(5),
+                      "clip_col_to_bounds should clamp to position equal to width (after last), not width-1");
+        }
+
+        // Test 2: add_col_with_bounds with overflow
+        {
+            let mut pos = row(0) + col(2);   // Start at col 2
+            let max_width = width(4);        // Maximum width is 4
+
+            // Adding 5 to col(2) = col(7), which exceeds width(4)
+            pos.add_col_with_bounds(width(5), max_width);
+
+            assert_eq!(*pos.col_index, ch(4),
+                      "add_col_with_bounds should clamp to position equal to width when overflow occurs");
+        }
+
+        // Test 3: add_row_with_bounds with overflow
+        {
+            let mut pos = row(1) + col(0);   // Start at row 1
+            let max_height = height(3);      // Maximum height is 3
+
+            // Adding 5 to row(1) = row(6), which exceeds height(3)
+            pos.add_row_with_bounds(height(5), max_height);
+
+            assert_eq!(*pos.row_index, ch(3),
+                      "add_row_with_bounds should clamp to position equal to height when overflow occurs");
+        }
+
+        // Test 4: Verify exact boundary behavior
+        {
+            let mut pos = row(0) + col(3);
+            let max_width = width(3);
+
+            // col(3) == width(3), so this is exactly at the "after last" position
+            pos.clip_col_to_bounds(max_width);
+            assert_eq!(*pos.col_index, ch(3),
+                      "Position exactly at width should remain unchanged");
+
+            // But col(4) > width(3), so it should clamp to 3
+            pos.col_index = col(4);
+            pos.clip_col_to_bounds(max_width);
+            assert_eq!(*pos.col_index, ch(3),
+                      "Position beyond width should clamp to width value");
+        }
+
+        // Test 5: Edge case with zero width
+        {
+            let mut pos = row(0) + col(5);
+            let zero_width = width(0);
+
+            pos.clip_col_to_bounds(zero_width);
+            assert_eq!(*pos.col_index, ch(0),
+                      "Zero width should clamp any position to 0");
+        }
+
+        // Test 6: No clamping when within bounds
+        {
+            let mut pos = row(0) + col(2);
+            let max_width = width(5);
+
+            pos.clip_col_to_bounds(max_width);
+            assert_eq!(*pos.col_index, ch(2),
+                      "Position within bounds should remain unchanged");
+        }
     }
 }

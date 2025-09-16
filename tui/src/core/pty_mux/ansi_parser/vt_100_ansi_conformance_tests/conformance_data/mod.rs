@@ -4,8 +4,8 @@
 //!
 //! This module provides type-safe, reusable sequence builder functions organized by
 //! functionality. Each module contains functions that generate ANSI sequences using
-//! the codebase's sequence builders (`CsiSequence`, `EscSequence`, `SgrCode`, etc.) rather
-//! than hardcoded escape strings.
+//! the codebase's sequence builders (`CsiSequence`, `EscSequence`, `SgrCode`, etc.)
+//! rather than hardcoded escape strings.
 //!
 //! # Design Philosophy
 //!
@@ -179,18 +179,10 @@
 pub mod basic_sequences;
 pub mod cursor_sequences;
 pub mod display_sequences;
-pub mod styling_sequences;
-pub mod vim_sequences;
-pub mod emacs_sequences;
-pub mod tmux_sequences;
 pub mod edge_case_sequences;
+pub mod emacs_sequences;
+pub mod styling_sequences;
+pub mod tmux_sequences;
+pub mod vim_sequences;
 
-// Re-export all public functions for easier access
-pub use basic_sequences::*;
-pub use cursor_sequences::*;
-pub use display_sequences::*;
-pub use styling_sequences::*;
-pub use vim_sequences::*;
-pub use emacs_sequences::*;
-pub use tmux_sequences::*;
-pub use edge_case_sequences::*;
+// Re-export public functions that are actually used.

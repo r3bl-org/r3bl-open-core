@@ -3,7 +3,7 @@
 //! Test modules for VT100 ANSI conformance validation.
 //!
 //! This module organizes conformance tests by functionality, using the
-//! sequence builders from the conformance_data module to create readable,
+//! sequence builders from the `conformance_data` module to create readable,
 //! maintainable tests that validate against VT100/ANSI specifications.
 
 #[cfg(test)]

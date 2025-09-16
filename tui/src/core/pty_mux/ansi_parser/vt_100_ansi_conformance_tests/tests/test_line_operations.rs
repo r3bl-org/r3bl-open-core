@@ -194,10 +194,8 @@ pub mod delete_line {
         let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
-        performer.ofs_buf.ansi_parser_support.scroll_region_top =
-            Some(term_row(2));
-        performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
-            Some(term_row(4));
+        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(2));
+        performer.ofs_buf.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
 
         // Move cursor to row 4 (outside margins)
         performer.ofs_buf.cursor_pos = row(4) + col(0);

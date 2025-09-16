@@ -3,21 +3,15 @@
 //! Real-world scenario tests using conformance data sequences.
 //!
 //! This module demonstrates the new testing approach using type-safe sequence
-//! builders from the conformance_data module. These tests validate complex
+//! builders from the `conformance_data` module. These tests validate complex
 //! sequences that mirror actual terminal application behavior.
 
-use super::super::{
-    conformance_data::{
-        basic_sequences,
-        cursor_sequences,
-        styling_sequences,
-        vim_sequences,
-        emacs_sequences,
-        tmux_sequences,
-    },
-    test_fixtures::*,
-};
-use crate::{ANSIBasicColor, offscreen_buffer::ofs_buf_test_fixtures::*};
+use std::cmp::min;
+
+use super::super::conformance_data::{basic_sequences, cursor_sequences, emacs_sequences,
+                                     styling_sequences, tmux_sequences, vim_sequences};
+use crate::{ANSIBasicColor, PixelChar, offscreen_buffer::ofs_buf_test_fixtures::*,
+            tui_style_attrib};
 
 /// Create a realistic terminal buffer for real-world scenario testing.
 /// Uses standard 80x25 dimensions typical of actual terminal usage.
@@ -59,18 +53,16 @@ fn test_terminal_initialization_pattern() {
     // Compose multiple operations into a single sequence
     let clear_sequence = basic_sequences::clear_and_home();
     let welcome_sequence = basic_sequences::move_and_print(1, 1, "Welcome!");
-    let styled_text = styling_sequences::colored_text(
-        ANSIBasicColor::Green,
-        "Ready for input"
-    );
+    let styled_text =
+        styling_sequences::colored_text(ANSIBasicColor::Green, "Ready for input");
     let position_cursor = cursor_sequences::move_to_position(3, 1);
 
     // Apply sequences in order
-    ofs_buf.apply_ansi_bytes(clear_sequence);
-    ofs_buf.apply_ansi_bytes(welcome_sequence);
-    ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
-    ofs_buf.apply_ansi_bytes(styled_text);
-    ofs_buf.apply_ansi_bytes(position_cursor);
+    let _unused = ofs_buf.apply_ansi_bytes(clear_sequence);
+    let _unused = ofs_buf.apply_ansi_bytes(welcome_sequence);
+    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
+    let _unused = ofs_buf.apply_ansi_bytes(styled_text);
+    let _unused = ofs_buf.apply_ansi_bytes(position_cursor);
 
     // Verify final state
     assert_plain_text_at(&ofs_buf, 0, 0, "Welcome!");
@@ -79,8 +71,8 @@ fn test_terminal_initialization_pattern() {
         1,
         0,
         'R',
-        |style| style.color_fg == Some(ANSIBasicColor::Green.into()),
-        "green text color"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Green.into(),
+        "green text color",
     );
 
     // Verify cursor position
@@ -98,18 +90,18 @@ fn test_cursor_save_restore_variants() {
     // Test ESC variant (legacy) - using shorter text to fit in 10-column buffer
     let esc_pattern = cursor_sequences::save_do_restore(
         &basic_sequences::move_and_print(3, 3, "ESC"),
-        true // Use ESC 7/8
+        true, // Use ESC 7/8
     );
 
     // Test CSI variant (modern) - using shorter text to fit in 10-column buffer
     let csi_pattern = cursor_sequences::save_do_restore(
         &basic_sequences::move_and_print(5, 5, "CSI"),
-        false // Use CSI s/u
+        false, // Use CSI s/u
     );
 
     // Apply both patterns
-    ofs_buf.apply_ansi_bytes(esc_pattern);
-    ofs_buf.apply_ansi_bytes(csi_pattern);
+    let _unused = ofs_buf.apply_ansi_bytes(esc_pattern);
+    let _unused = ofs_buf.apply_ansi_bytes(csi_pattern);
 
     // Both should work identically
     assert_plain_text_at(&ofs_buf, 2, 2, "ESC");
@@ -130,18 +122,18 @@ fn test_complex_styling_patterns() {
     // Test multiple style application
     let multi_style = styling_sequences::multi_style_text(
         "Bold+Red",
-        true, // bold
-        false, // not italic
+        true,                      // bold
+        false,                     // not italic
         Some(ANSIBasicColor::Red), // red foreground
-        None // no background
+        None,                      // no background
     );
 
     // Test partial reset functionality
     let partial_reset = styling_sequences::partial_reset_test();
 
-    ofs_buf.apply_ansi_bytes(multi_style);
-    ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
-    ofs_buf.apply_ansi_bytes(partial_reset);
+    let _unused = ofs_buf.apply_ansi_bytes(multi_style);
+    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
+    let _unused = ofs_buf.apply_ansi_bytes(partial_reset);
 
     // Verify bold red text
     assert_styled_char_at(
@@ -149,11 +141,11 @@ fn test_complex_styling_patterns() {
         0,
         0,
         'B',
-        |style| {
-            style.color_fg == Some(ANSIBasicColor::Red.into()) &&
-            matches!(style.attribs.bold, Some(crate::tui_style_attrib::Bold))
+        |style_from_buf| {
+            style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into()
+                && style_from_buf.attribs == tui_style_attrib::Bold.into()
         },
-        "bold red text"
+        "bold red text",
     );
 
     // The partial reset test should demonstrate SGR state transitions
@@ -169,7 +161,7 @@ fn test_rainbow_color_pattern() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     let rainbow = styling_sequences::rainbow_text("RAINBOW");
-    ofs_buf.apply_ansi_bytes(rainbow);
+    let _unused = ofs_buf.apply_ansi_bytes(rainbow);
 
     // Verify each character has a different color
     // This test demonstrates the pattern - full implementation would
@@ -179,24 +171,24 @@ fn test_rainbow_color_pattern() {
         0,
         0,
         'R',
-        |style| style.color_fg == Some(ANSIBasicColor::Red.into()),
-        "red color on R"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into(),
+        "red color on R",
     );
     assert_styled_char_at(
         &ofs_buf,
         0,
         1,
         'A',
-        |style| style.color_fg == Some(ANSIBasicColor::Yellow.into()),
-        "yellow color on A"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Yellow.into(),
+        "yellow color on A",
     );
     assert_styled_char_at(
         &ofs_buf,
         0,
         2,
         'I',
-        |style| style.color_fg == Some(ANSIBasicColor::Green.into()),
-        "green color on I"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Green.into(),
+        "green color on I",
     );
     // ... additional character verification
 }
@@ -210,7 +202,7 @@ fn test_cursor_box_drawing_pattern() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     let box_pattern = cursor_sequences::draw_box_outline(2, 2, 6, 4);
-    ofs_buf.apply_ansi_bytes(box_pattern);
+    let _unused = ofs_buf.apply_ansi_bytes(box_pattern);
 
     // Verify box corners and edges are drawn correctly
     // This tests precise cursor positioning and movement sequences
@@ -239,11 +231,11 @@ fn test_vim_syntax_highlighting_pattern() {
         0,
         0,
         'f',
-        |style| {
-            style.color_fg == Some(ANSIBasicColor::Blue.into()) &&
-            matches!(style.attribs.bold, Some(crate::tui_style_attrib::Bold))
+        |style_from_buf| {
+            style_from_buf.color_fg.unwrap() == ANSIBasicColor::Blue.into()
+                && style_from_buf.attribs == tui_style_attrib::Bold.into()
         },
-        "blue bold keyword"
+        "blue bold keyword",
     );
 }
 
@@ -265,8 +257,8 @@ fn test_vim_error_message_pattern() {
         24,
         0,
         'E',
-        |style| style.color_fg == Some(ANSIBasicColor::Red.into()),
-        "red error message"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into(),
+        "red error message",
     );
 }
 
@@ -288,8 +280,8 @@ fn test_emacs_mode_line_pattern() {
         24,
         0,
         '-',
-        |style| style.color_bg == Some(ANSIBasicColor::Cyan.into()),
-        "cyan background mode line"
+        |style_from_buf| style_from_buf.color_bg.unwrap() == ANSIBasicColor::Cyan.into(),
+        "cyan background mode line",
     );
 }
 
@@ -311,8 +303,8 @@ fn test_tmux_status_bar_pattern() {
         24,
         0,
         '[',
-        |style| style.color_bg == Some(ANSIBasicColor::Green.into()),
-        "green background status bar"
+        |style_from_buf| style_from_buf.color_bg.unwrap() == ANSIBasicColor::Green.into(),
+        "green background status bar",
     );
 }
 
@@ -325,25 +317,25 @@ fn test_text_editor_workflow() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     // Clear screen and start fresh
-    ofs_buf.apply_ansi_bytes(basic_sequences::clear_and_home());
+    let _unused = ofs_buf.apply_ansi_bytes(basic_sequences::clear_and_home());
 
     // Type the first line of code with syntax highlighting
     let line1 = basic_sequences::move_and_print(1, 1, "def ");
     let function_name = styling_sequences::bold_text("main");
     let parentheses = basic_sequences::insert_text("():");
 
-    ofs_buf.apply_ansi_bytes(line1);
-    ofs_buf.apply_ansi_bytes(function_name);
-    ofs_buf.apply_ansi_bytes(parentheses);
+    let _unused = ofs_buf.apply_ansi_bytes(line1);
+    let _unused = ofs_buf.apply_ansi_bytes(function_name);
+    let _unused = ofs_buf.apply_ansi_bytes(parentheses);
 
     // Move to next line and add indented content
     let line2_pos = cursor_sequences::move_to_position(2, 5); // Indent 4 spaces
     let print_stmt = styling_sequences::colored_text(ANSIBasicColor::Blue, "print");
     let string_content = basic_sequences::insert_text("(\"Hello World!\")");
 
-    ofs_buf.apply_ansi_bytes(line2_pos);
-    ofs_buf.apply_ansi_bytes(print_stmt);
-    ofs_buf.apply_ansi_bytes(string_content);
+    let _unused = ofs_buf.apply_ansi_bytes(line2_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(print_stmt);
+    let _unused = ofs_buf.apply_ansi_bytes(string_content);
 
     // Verify the editor content
     assert_plain_text_at(&ofs_buf, 0, 0, "def ");
@@ -352,8 +344,8 @@ fn test_text_editor_workflow() {
         0,
         4,
         'm', // First letter of "main"
-        |style| matches!(style.attribs.bold, Some(_)),
-        "bold function name"
+        |style_from_buf| style_from_buf.attribs == tui_style_attrib::Bold.into(),
+        "bold function name",
     );
     assert_plain_text_at(&ofs_buf, 0, 8, "():");
     assert_styled_char_at(
@@ -361,8 +353,8 @@ fn test_text_editor_workflow() {
         1,
         4,
         'p', // First letter of "print"
-        |style| style.color_fg == Some(ANSIBasicColor::Blue.into()),
-        "blue print statement"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Blue.into(),
+        "blue print statement",
     );
 
     // Cursor should be at end of second line
@@ -382,34 +374,35 @@ fn test_shell_prompt_workflow() {
     let prompt = styling_sequences::colored_text(ANSIBasicColor::Green, "user@host");
     let separator = styling_sequences::colored_text(ANSIBasicColor::Blue, ":~$ ");
 
-    ofs_buf.apply_ansi_bytes(prompt);
-    ofs_buf.apply_ansi_bytes(separator);
+    let _unused = ofs_buf.apply_ansi_bytes(prompt);
+    let _unused = ofs_buf.apply_ansi_bytes(separator);
 
     // User starts typing a command
     let partial_command = basic_sequences::insert_text("ls -l");
-    ofs_buf.apply_ansi_bytes(partial_command);
+    let _unused = ofs_buf.apply_ansi_bytes(partial_command);
 
     // Simulate backspace editing - move cursor left and delete
     let backspace_pos = cursor_sequences::move_left(1); // Move back 1 char
     let delete_char = basic_sequences::move_and_delete_chars(
-        ofs_buf.cursor_pos.col_index.as_usize() as u16 - 1, 1
+        ofs_buf.cursor_pos.col_index.as_u16().saturating_sub(1),
+        1,
     );
     let new_char = basic_sequences::insert_text("a");
 
-    ofs_buf.apply_ansi_bytes(backspace_pos);
-    ofs_buf.apply_ansi_bytes(delete_char);
-    ofs_buf.apply_ansi_bytes(new_char);
+    let _unused = ofs_buf.apply_ansi_bytes(backspace_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(delete_char);
+    let _unused = ofs_buf.apply_ansi_bytes(new_char);
 
     // Simulate pressing Enter (move to next line)
     let enter_key = cursor_sequences::next_line();
-    ofs_buf.apply_ansi_bytes(enter_key);
+    let _unused = ofs_buf.apply_ansi_bytes(enter_key);
 
     // Display command output with different colors
     let directory = styling_sequences::colored_text(ANSIBasicColor::Cyan, "drwxr-xr-x");
     let filename = basic_sequences::insert_text(" 5 user user 4096 Dec 25 file.txt");
 
-    ofs_buf.apply_ansi_bytes(directory);
-    ofs_buf.apply_ansi_bytes(filename);
+    let _unused = ofs_buf.apply_ansi_bytes(directory);
+    let _unused = ofs_buf.apply_ansi_bytes(filename);
 
     // Verify prompt formatting
     assert_styled_char_at(
@@ -417,8 +410,8 @@ fn test_shell_prompt_workflow() {
         0,
         0,
         'u', // First letter of "user@host"
-        |style| style.color_fg == Some(ANSIBasicColor::Green.into()),
-        "green username"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Green.into(),
+        "green username",
     );
 
     assert_styled_char_at(
@@ -426,8 +419,8 @@ fn test_shell_prompt_workflow() {
         0,
         9, // Position of colon
         ':',
-        |style| style.color_fg == Some(ANSIBasicColor::Blue.into()),
-        "blue prompt separator"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Blue.into(),
+        "blue prompt separator",
     );
 
     // Verify command was correctly modified to "ls -la"
@@ -437,28 +430,36 @@ fn test_shell_prompt_workflow() {
 
     // Extract characters around where command should be
     let mut command_chars = Vec::new();
-    for i in 12..std::cmp::min(18, row.len()) {
-        if let crate::PixelChar::PlainText { display_char, .. } = row[i] {
+    for i in 12..min(18, row.len()) {
+        if let PixelChar::PlainText { display_char, .. } = row[i] {
             command_chars.push(display_char);
         }
     }
 
     // Just verify we have some command text
-    assert!(!command_chars.is_empty(), "Expected command text to be present");
+    assert!(
+        !command_chars.is_empty(),
+        "Expected command text to be present"
+    );
 
     // Verify output formatting (may be on a different row due to text flow)
     // Just check that we have some cyan styled text somewhere in the buffer
     let mut found_cyan_text = false;
-    for row_idx in 0..std::cmp::min(5, ofs_buf.buffer.len()) {
-        for col_idx in 0..std::cmp::min(20, ofs_buf.buffer[row_idx].len()) {
-            if let crate::PixelChar::PlainText { display_char: _, style } = ofs_buf.buffer[row_idx][col_idx] {
-                if style.color_fg == Some(ANSIBasicColor::Cyan.into()) {
-                    found_cyan_text = true;
-                    break;
-                }
+    for row_idx in 0..min(5, ofs_buf.buffer.len()) {
+        for col_idx in 0..min(20, ofs_buf.buffer[row_idx].len()) {
+            if let PixelChar::PlainText {
+                display_char: _,
+                style,
+            } = ofs_buf.buffer[row_idx][col_idx]
+                && style.color_fg == Some(ANSIBasicColor::Cyan.into())
+            {
+                found_cyan_text = true;
+                break;
             }
         }
-        if found_cyan_text { break; }
+        if found_cyan_text {
+            break;
+        }
     }
     assert!(found_cyan_text, "Expected cyan colored text to be present");
 }
@@ -472,34 +473,34 @@ fn test_log_viewer_color_coding() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     // Clear screen and set up log viewer
-    ofs_buf.apply_ansi_bytes(basic_sequences::clear_and_home());
+    let _unused = ofs_buf.apply_ansi_bytes(basic_sequences::clear_and_home());
 
     // Header line with reverse video
     let header = styling_sequences::reverse_text("Application Logs - Live View");
-    ofs_buf.apply_ansi_bytes(header);
-    ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
+    let _unused = ofs_buf.apply_ansi_bytes(header);
+    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
 
     // Different log levels with appropriate colors
     let info_log = styling_sequences::colored_text(ANSIBasicColor::Cyan, "[INFO]");
     let info_msg = basic_sequences::insert_text(" Server started on port 8080");
 
-    ofs_buf.apply_ansi_bytes(info_log);
-    ofs_buf.apply_ansi_bytes(info_msg);
-    ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(3, 1));
+    let _unused = ofs_buf.apply_ansi_bytes(info_log);
+    let _unused = ofs_buf.apply_ansi_bytes(info_msg);
+    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(3, 1));
 
     let warn_log = styling_sequences::colored_text(ANSIBasicColor::Yellow, "[WARN]");
     let warn_msg = basic_sequences::insert_text(" High memory usage detected");
 
-    ofs_buf.apply_ansi_bytes(warn_log);
-    ofs_buf.apply_ansi_bytes(warn_msg);
-    ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(4, 1));
+    let _unused = ofs_buf.apply_ansi_bytes(warn_log);
+    let _unused = ofs_buf.apply_ansi_bytes(warn_msg);
+    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(4, 1));
 
     // Error log with both color and bold
     let error_log = styling_sequences::colored_text(ANSIBasicColor::Red, "[ERROR]");
     let error_msg = basic_sequences::insert_text(" Database connection failed");
 
-    ofs_buf.apply_ansi_bytes(error_log);
-    ofs_buf.apply_ansi_bytes(error_msg);
+    let _unused = ofs_buf.apply_ansi_bytes(error_log);
+    let _unused = ofs_buf.apply_ansi_bytes(error_msg);
 
     // Verify header is reverse video
     assert_styled_char_at(
@@ -507,8 +508,8 @@ fn test_log_viewer_color_coding() {
         0,
         0,
         'A',
-        |style| matches!(style.attribs.reverse, Some(_)),
-        "reverse video header"
+        |style_from_buf| style_from_buf.attribs.reverse.is_some(),
+        "reverse video header",
     );
 
     // Verify log level colors
@@ -517,8 +518,8 @@ fn test_log_viewer_color_coding() {
         1,
         1, // Position of 'I' in "[INFO]"
         'I',
-        |style| style.color_fg == Some(ANSIBasicColor::Cyan.into()),
-        "cyan info level"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Cyan.into(),
+        "cyan info level",
     );
 
     assert_styled_char_at(
@@ -526,8 +527,8 @@ fn test_log_viewer_color_coding() {
         2,
         1, // Position of 'W' in "[WARN]"
         'W',
-        |style| style.color_fg == Some(ANSIBasicColor::Yellow.into()),
-        "yellow warning level"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Yellow.into(),
+        "yellow warning level",
     );
 
     assert_styled_char_at(
@@ -535,8 +536,8 @@ fn test_log_viewer_color_coding() {
         3,
         1, // Position of 'E' in "[ERROR]"
         'E',
-        |style| style.color_fg == Some(ANSIBasicColor::Red.into()),
-        "red error level"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into(),
+        "red error level",
     );
 }
 
@@ -549,34 +550,34 @@ fn test_interface_drawing_with_cursor_ops() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     // Clear and draw a simple text-based interface
-    ofs_buf.apply_ansi_bytes(basic_sequences::clear_and_home());
+    let _unused = ofs_buf.apply_ansi_bytes(basic_sequences::clear_and_home());
 
     // Draw a header box using cursor movement (adjust size for buffer)
     let box_sequence = cursor_sequences::draw_box_outline(2, 2, 15, 4);
-    ofs_buf.apply_ansi_bytes(box_sequence);
+    let _unused = ofs_buf.apply_ansi_bytes(box_sequence);
 
     // Add title inside the box
     let title_pos = cursor_sequences::move_to_position(3, 8);
     let title = styling_sequences::bold_text("Settings Menu");
-    ofs_buf.apply_ansi_bytes(title_pos);
-    ofs_buf.apply_ansi_bytes(title);
+    let _unused = ofs_buf.apply_ansi_bytes(title_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(title);
 
     // Add menu options with cursor positioning
     let option1_pos = cursor_sequences::move_to_position(5, 4);
     let option1 = basic_sequences::insert_text("1. Display Settings");
-    ofs_buf.apply_ansi_bytes(option1_pos);
-    ofs_buf.apply_ansi_bytes(option1);
+    let _unused = ofs_buf.apply_ansi_bytes(option1_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(option1);
 
     let option2_pos = cursor_sequences::move_to_position(6, 4);
     let option2 = basic_sequences::insert_text("2. Audio Settings");
-    ofs_buf.apply_ansi_bytes(option2_pos);
-    ofs_buf.apply_ansi_bytes(option2);
+    let _unused = ofs_buf.apply_ansi_bytes(option2_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(option2);
 
     // Highlight selected option
     let highlight_pos = cursor_sequences::move_to_position(7, 4);
     let selected = styling_sequences::reverse_text("3. Network Settings");
-    ofs_buf.apply_ansi_bytes(highlight_pos);
-    ofs_buf.apply_ansi_bytes(selected);
+    let _unused = ofs_buf.apply_ansi_bytes(highlight_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(selected);
 
     // Test save/restore cursor for status bar
     let save_cursor = cursor_sequences::save_cursor_csi();
@@ -584,26 +585,32 @@ fn test_interface_drawing_with_cursor_ops() {
     let status = styling_sequences::colored_text(ANSIBasicColor::Green, "Ready");
     let restore_cursor = cursor_sequences::restore_cursor_csi();
 
-    ofs_buf.apply_ansi_bytes(save_cursor);
-    ofs_buf.apply_ansi_bytes(status_pos);
-    ofs_buf.apply_ansi_bytes(status);
-    ofs_buf.apply_ansi_bytes(restore_cursor);
+    let _unused = ofs_buf.apply_ansi_bytes(save_cursor);
+    let _unused = ofs_buf.apply_ansi_bytes(status_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(status);
+    let _unused = ofs_buf.apply_ansi_bytes(restore_cursor);
 
     // Verify box drawing was attempted (may not be exactly at expected coordinates)
     // Just check that some characters were drawn by the box sequence
     let mut found_box_chars = false;
-    for row_idx in 0..std::cmp::min(10, ofs_buf.buffer.len()) {
-        for col_idx in 0..std::cmp::min(20, ofs_buf.buffer[row_idx].len()) {
-            if let crate::PixelChar::PlainText { display_char, .. } = ofs_buf.buffer[row_idx][col_idx] {
-                if display_char == '+' || display_char == '-' || display_char == '|' {
-                    found_box_chars = true;
-                    break;
-                }
+    for row_idx in 0..min(10, ofs_buf.buffer.len()) {
+        for col_idx in 0..min(20, ofs_buf.buffer[row_idx].len()) {
+            if let PixelChar::PlainText { display_char, .. } =
+                ofs_buf.buffer[row_idx][col_idx]
+                && (display_char == '+' || display_char == '-' || display_char == '|')
+            {
+                found_box_chars = true;
+                break;
             }
         }
-        if found_box_chars { break; }
+        if found_box_chars {
+            break;
+        }
     }
-    assert!(found_box_chars, "Expected box drawing characters to be present");
+    assert!(
+        found_box_chars,
+        "Expected box drawing characters to be present"
+    );
 
     // Verify title is bold
     assert_styled_char_at(
@@ -611,8 +618,8 @@ fn test_interface_drawing_with_cursor_ops() {
         2,
         7,
         'S', // First letter of "Settings"
-        |style| matches!(style.attribs.bold, Some(_)),
-        "bold menu title"
+        |style_from_buf| style_from_buf.attribs.bold.is_some(),
+        "bold menu title",
     );
 
     // Verify highlighted option
@@ -621,8 +628,8 @@ fn test_interface_drawing_with_cursor_ops() {
         6,
         3,
         '3',
-        |style| matches!(style.attribs.reverse, Some(_)),
-        "reverse selected option"
+        |style_from_buf| style_from_buf.attribs.reverse.is_some(),
+        "reverse selected option",
     );
 
     // Verify status bar
@@ -631,55 +638,55 @@ fn test_interface_drawing_with_cursor_ops() {
         24,
         0,
         'R', // First letter of "Ready"
-        |style| style.color_fg == Some(ANSIBasicColor::Green.into()),
-        "green status text"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Green.into(),
+        "green status text",
     );
 }
 
 /// Test practical vim editing patterns using vim sequence functions.
 ///
 /// Demonstrates real vim editor scenarios using the actual
-/// vim_sequences conformance data functions.
+/// `vim_sequences` conformance data functions.
 #[test]
 fn test_practical_vim_editing_patterns() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     // Clear screen and set up vim-like interface
-    ofs_buf.apply_ansi_bytes(vim_sequences::vim_clear_and_redraw());
+    let _unused = ofs_buf.apply_ansi_bytes(vim_sequences::vim_clear_and_redraw());
 
     // Display file content with line numbers
     let line1 = vim_sequences::vim_line_with_number(1, 1, "#!/bin/bash");
     let line2 = vim_sequences::vim_line_with_number(2, 2, "");
     let line3 = vim_sequences::vim_line_with_number(3, 3, "echo \"Hello World!\"");
 
-    ofs_buf.apply_ansi_bytes(line1);
-    ofs_buf.apply_ansi_bytes(line2);
-    ofs_buf.apply_ansi_bytes(line3);
+    let _unused = ofs_buf.apply_ansi_bytes(line1);
+    let _unused = ofs_buf.apply_ansi_bytes(line2);
+    let _unused = ofs_buf.apply_ansi_bytes(line3);
 
     // Show command line mode
     let command_line = vim_sequences::vim_command_line(':', 25);
-    ofs_buf.apply_ansi_bytes(command_line);
+    let _unused = ofs_buf.apply_ansi_bytes(command_line);
 
     // Add syntax highlighting to the echo command
     let highlight_pos = cursor_sequences::move_to_position(3, 14); // Position of "echo"
     let highlighted_echo = styling_sequences::colored_text(ANSIBasicColor::Blue, "echo");
-    ofs_buf.apply_ansi_bytes(cursor_sequences::save_cursor_csi());
-    ofs_buf.apply_ansi_bytes(highlight_pos);
-    ofs_buf.apply_ansi_bytes(highlighted_echo);
-    ofs_buf.apply_ansi_bytes(cursor_sequences::restore_cursor_csi());
+    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::save_cursor_csi());
+    let _unused = ofs_buf.apply_ansi_bytes(highlight_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(highlighted_echo);
+    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::restore_cursor_csi());
 
     // Show search highlighting
     let search_highlight = vim_sequences::vim_search_highlight(1, 3, "bin");
-    ofs_buf.apply_ansi_bytes(search_highlight);
+    let _unused = ofs_buf.apply_ansi_bytes(search_highlight);
 
     // Verify line numbers are displayed (may have styling from vim functions)
     // Just check that the characters are present, regardless of styling
     let first_char = match ofs_buf.buffer[0][0] {
-        crate::PixelChar::PlainText { display_char, .. } => display_char,
+        PixelChar::PlainText { display_char, .. } => display_char,
         _ => ' ',
     };
     let third_line_char = match ofs_buf.buffer[2][0] {
-        crate::PixelChar::PlainText { display_char, .. } => display_char,
+        PixelChar::PlainText { display_char, .. } => display_char,
         _ => ' ',
     };
     // Note: The vim sequence functions may not place content exactly as expected
@@ -687,14 +694,15 @@ fn test_practical_vim_editing_patterns() {
     assert_ne!(first_char, '\0'); // Some character was placed
     assert_ne!(third_line_char, '\0'); // Some character was placed
 
-    // Verify file content (may have styling from vim functions, so just check characters exist)
+    // Verify file content (may have styling from vim functions, so just check characters
+    // exist)
     let row0 = &ofs_buf.buffer[0];
     let row2 = &ofs_buf.buffer[2];
 
     // Extract text from row 0 starting at column 2
     let mut row0_text = String::new();
-    for i in 2..std::cmp::min(15, row0.len()) {
-        if let crate::PixelChar::PlainText { display_char, .. } = row0[i] {
+    for i in 2..min(15, row0.len()) {
+        if let PixelChar::PlainText { display_char, .. } = row0[i] {
             row0_text.push(display_char);
         } else {
             row0_text.push(' ');
@@ -703,17 +711,20 @@ fn test_practical_vim_editing_patterns() {
 
     // Extract text from row 2 starting at column 2
     let mut row2_text = String::new();
-    for i in 2..std::cmp::min(15, row2.len()) {
-        if let crate::PixelChar::PlainText { display_char, .. } = row2[i] {
+    for i in 2..min(15, row2.len()) {
+        if let PixelChar::PlainText { display_char, .. } = row2[i] {
             row2_text.push(display_char);
         } else {
             row2_text.push(' ');
         }
     }
 
-    // Just verify some text is present (vim functions may not position exactly as expected)
-    assert!(!row0_text.trim().is_empty() || !row2_text.trim().is_empty(),
-            "Expected some file content to be present");
+    // Just verify some text is present (vim functions may not position exactly as
+    // expected)
+    assert!(
+        !row0_text.trim().is_empty() || !row2_text.trim().is_empty(),
+        "Expected some file content to be present"
+    );
 
     // Verify command line mode indicator
     assert_plain_char_at(&ofs_buf, 24, 0, ':');
@@ -724,8 +735,8 @@ fn test_practical_vim_editing_patterns() {
         2,
         13, // Position where "echo" was highlighted
         'e',
-        |style| style.color_fg == Some(ANSIBasicColor::Blue.into()),
-        "blue echo command"
+        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Blue.into(),
+        "blue echo command",
     );
 }
 
@@ -739,31 +750,31 @@ fn test_text_manipulation_operations() {
 
     // Start with some initial text
     let initial_text = basic_sequences::move_and_print(1, 1, "The quick fox jumps");
-    ofs_buf.apply_ansi_bytes(initial_text);
+    let _unused = ofs_buf.apply_ansi_bytes(initial_text);
 
     // Insert "brown " before "fox" using character insertion
     let insert_pos = cursor_sequences::move_to_position(1, 11); // Before "fox"
     let insert_chars = basic_sequences::move_and_insert_chars(10, 6); // Insert 6 chars
     let brown_text = basic_sequences::insert_text("brown ");
 
-    ofs_buf.apply_ansi_bytes(insert_pos);
-    ofs_buf.apply_ansi_bytes(insert_chars);
-    ofs_buf.apply_ansi_bytes(brown_text);
+    let _unused = ofs_buf.apply_ansi_bytes(insert_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(insert_chars);
+    let _unused = ofs_buf.apply_ansi_bytes(brown_text);
 
     // Move to end and add more text
     let end_pos = cursor_sequences::move_to_position(1, 25);
     let over_text = basic_sequences::insert_text(" over the lazy dog");
 
-    ofs_buf.apply_ansi_bytes(end_pos);
-    ofs_buf.apply_ansi_bytes(over_text);
+    let _unused = ofs_buf.apply_ansi_bytes(end_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(over_text);
 
     // Verify the complete sentence was built correctly
     // Character insertion operations may not work as expected - verify actual result
     let first_row = &ofs_buf.buffer[0];
     let mut actual_text = String::new();
-    for i in 0..std::cmp::min(40, first_row.len()) {
+    for i in 0..min(40, first_row.len()) {
         let ch = match first_row[i] {
-            crate::PixelChar::PlainText { display_char, .. } => display_char,
+            PixelChar::PlainText { display_char, .. } => display_char,
             _ => ' ',
         };
         actual_text.push(ch);
@@ -778,20 +789,20 @@ fn test_text_manipulation_operations() {
     let delete_pos = cursor_sequences::move_to_position(1, 17); // Before "jumps"
     let delete_chars = basic_sequences::move_and_delete_chars(16, 6); // Delete "jumps "
 
-    ofs_buf.apply_ansi_bytes(delete_pos);
-    ofs_buf.apply_ansi_bytes(delete_chars);
+    let _unused = ofs_buf.apply_ansi_bytes(delete_pos);
+    let _unused = ofs_buf.apply_ansi_bytes(delete_chars);
 
     // Insert replacement text
     let replacement = basic_sequences::insert_text("leaps");
-    ofs_buf.apply_ansi_bytes(replacement);
+    let _unused = ofs_buf.apply_ansi_bytes(replacement);
 
     // Verify that text editing operations were applied
     // The exact result may differ based on how character operations work
     let final_row = &ofs_buf.buffer[0];
     let mut final_text = String::new();
-    for i in 0..std::cmp::min(40, final_row.len()) {
+    for i in 0..min(40, final_row.len()) {
         let ch = match final_row[i] {
-            crate::PixelChar::PlainText { display_char, .. } => display_char,
+            PixelChar::PlainText { display_char, .. } => display_char,
             _ => ' ',
         };
         final_text.push(ch);

@@ -49,7 +49,7 @@
 //!
 //! ## Intentionally Unimplemented VT100 Features
 //!
-//! PTY_MUX is designed as a **modern terminal multiplexer** focused on multiplexing
+//! `PTY_MUX` is designed as a **modern terminal multiplexer** focused on multiplexing
 //! contemporary TUI applications, interactive shells, and command-line tools. As such,
 //! certain legacy VT100 features that are primarily used by mainframe terminals and
 //! very old applications are intentionally **not implemented**:
@@ -70,13 +70,16 @@
 //! ### Design Rationale
 //!
 //! These features were omitted because:
-//! 1. **Modern applications don't use them** - bash, vim, tmux, ncurses apps work without them
+//! 1. **Modern applications don't use them** - bash, vim, tmux, ncurses apps work without
+//!    them
 //! 2. **Legacy mainframe focus** - Primarily used by IBM terminals and EBCDIC systems
-//! 3. **Complexity vs utility** - Implementation complexity outweighs benefit for target use cases
-//! 4. **Alternative implementations exist** - Applications needing full VT100 emulation should use xterm, iTerm2, etc.
+//! 3. **Complexity vs utility** - Implementation complexity outweighs benefit for target
+//!    use cases
+//! 4. **Alternative implementations exist** - Applications needing full VT100 emulation
+//!    should use xterm, iTerm2, etc.
 //!
-//! PTY_MUX implements the **80% of VT100 features that 99% of modern applications use**,
-//! providing excellent compatibility for contemporary terminal applications while
+//! `PTY_MUX` implements the **80% of VT100 features that 99% of modern applications
+//! use**, providing excellent compatibility for contemporary terminal applications while
 //! maintaining implementation simplicity and focus.
 //!
 //! # Testing Infrastructure
@@ -89,6 +92,8 @@
 //! compile-time validation and clear semantic intent:
 //!
 //! ```rust
+//! use r3bl_tui::{ANSIBasicColor, SgrCode};
+//!
 //! // ❌ Hardcoded escape sequences (error-prone)
 //! let sequence = "\x1b[31mHello\x1b[0m";
 //!
@@ -101,7 +106,7 @@
 //!
 //! ## Conformance Test Categories
 //!
-//! - **[`vt_100_ansi_conformance_tests`]**: Comprehensive VT100 standard compliance
+//! - **[`mod@vt_100_ansi_conformance_tests`]**: Comprehensive VT100 standard compliance
 //! - **Real-world scenarios**: vim, emacs, tmux terminal application patterns
 //! - **Edge cases**: Malformed sequences, boundary conditions, stress testing
 //! - **Performance validation**: Large text blocks, rapid style changes
@@ -121,10 +126,10 @@
 //! # Usage Example
 //!
 //! ```rust
-//! use r3bl_tui::*;
+//! use r3bl_tui::{*, height, width};
 //!
 //! // Create terminal buffer
-//! let mut buffer = OffscreenBuffer::new_empty(size!(24, 80));
+//! let mut buffer = OffscreenBuffer::new_empty(height(24) + width(80));
 //!
 //! // Process ANSI sequences from PTY
 //! let pty_output = b"\x1b[31mRed text\x1b[0m\x1b[2;3HPositioned text";
@@ -159,5 +164,5 @@ pub use protocols::*;
 pub use term_units::*;
 
 // VT100 ANSI conformance test modules.
-#[cfg(test)]
-mod vt_100_ansi_conformance_tests;
+#[cfg(any(test, doc))]
+pub mod vt_100_ansi_conformance_tests;

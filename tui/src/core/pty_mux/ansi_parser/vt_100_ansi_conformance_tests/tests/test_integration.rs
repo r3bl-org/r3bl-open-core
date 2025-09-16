@@ -3,7 +3,7 @@
 //! Integration tests for complex ANSI sequences and VTE parser integration.
 
 use super::super::test_fixtures::*;
-use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, TuiColor,
+use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           csi_codes::{CsiSequence,
                                       csi_test_helpers::csi_seq_cursor_pos},
@@ -53,7 +53,7 @@ mod full_sequences {
             0,
             0,
             '-',
-            |style| matches!(style.attribs.reverse, Some(tui_style_attrib::Reverse)),
+            |style_from_buf| style_from_buf.attribs == tui_style_attrib::Reverse.into(),
             "reverse video status",
         );
 
@@ -87,8 +87,8 @@ mod full_sequences {
                 0,
                 i,
                 ch,
-                |style_from_buffer| {
-                    matches!(style_from_buffer.attribs.bold, Some(tui_style_attrib::Bold))
+                |style_from_buf| {
+                    style_from_buf.attribs == tui_style_attrib::Bold.into()
                 },
                 "bold style",
             );
@@ -104,11 +104,8 @@ mod full_sequences {
                 0,
                 5 + i,
                 ch,
-                |style_from_buffer| {
-                    matches!(
-                        style_from_buffer.color_fg,
-                        Some(TuiColor::Basic(ANSIBasicColor::DarkGreen))
-                    )
+                |style_from_buf| {
+                    style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkGreen.into()
                 },
                 "green foreground",
             );
@@ -148,8 +145,7 @@ mod vte_parser {
             5,
             'R',
             |style_from_buffer| {
-                style_from_buffer.color_fg
-                    == Some(TuiColor::Basic(ANSIBasicColor::DarkRed))
+                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "red foreground",
         );

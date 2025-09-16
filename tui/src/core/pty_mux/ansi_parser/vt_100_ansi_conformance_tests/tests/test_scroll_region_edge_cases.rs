@@ -10,8 +10,8 @@
 //! - Interactions between scroll regions and cursor positioning
 
 use super::super::test_fixtures::*;
-use crate::ansi_parser::protocols::csi_codes::CsiSequence;
-use crate::ansi_parser::term_units::{term_row, term_col};
+use crate::ansi_parser::{protocols::csi_codes::CsiSequence,
+                         term_units::{term_col, term_row}};
 
 /// Tests for cursor operations at scroll region boundaries.
 pub mod cursor_boundary_operations {
@@ -22,17 +22,23 @@ pub mod cursor_boundary_operations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 3-7)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(3)),
+                bottom: Some(term_row(7))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor at row 4, column 5
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(4),
-            col: term_col(5)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(4),
+                col: term_col(5)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorNextLine (should move to next line, column 1)
@@ -48,17 +54,23 @@ pub mod cursor_boundary_operations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 3-7)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(3)),
+                bottom: Some(term_row(7))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor at bottom of scroll region (row 7, column 5)
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(7),
-            col: term_col(5)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(7),
+                col: term_col(5)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorNextLine (should cause scrolling within region)
@@ -74,17 +86,23 @@ pub mod cursor_boundary_operations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 3-7)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(3)),
+                bottom: Some(term_row(7))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor at row 5, column 8
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(8)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(5),
+                col: term_col(8)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorPrevLine (should move to previous line, column 1)
@@ -100,17 +118,23 @@ pub mod cursor_boundary_operations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 3-7)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(3)),
+                bottom: Some(term_row(7))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor at top of scroll region (row 3, column 4)
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(3),
-            col: term_col(4)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(3),
+                col: term_col(4)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorPrevLine (should cause scrolling or stay at boundary)
@@ -126,17 +150,23 @@ pub mod cursor_boundary_operations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 4-8)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(4)),
-            bottom: Some(term_row(8))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(4)),
+                bottom: Some(term_row(8))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor outside scroll region (row 2)
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(2),
-            col: term_col(3)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(2),
+                col: term_col(3)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute CursorNextLine (should work normally outside region)
@@ -144,13 +174,13 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(next_line_sequence);
 
         // Should move to row 3, column 1 (still outside scroll region)
-        // Based on actual behavior: CursorNextLine moves cursor down by n lines and to column 0
-        // From row 2 (1-based) to row 3 (1-based) = from row 1 (0-based) to row 2 (0-based)
-        // But test shows cursor at row 4 (0-based), so CursorNextLine(1) moved from row 1 to row 4
+        // Based on actual behavior: CursorNextLine moves cursor down by n lines and to
+        // column 0 From row 2 (1-based) to row 3 (1-based) = from row 1 (0-based)
+        // to row 2 (0-based) But test shows cursor at row 4 (0-based), so
+        // CursorNextLine(1) moved from row 1 to row 4
         assert_eq!(ofs_buf.cursor_pos, crate::row(4) + crate::col(0)); // 0-based - matches actual behavior
     }
 }
-
 
 /// Tests for scroll region boundary validation and edge cases.
 pub mod boundary_validation {
@@ -161,10 +191,13 @@ pub mod boundary_validation {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Try to set invalid scroll region (top > bottom)
-        let invalid_margins = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(8)),
-            bottom: Some(term_row(3))
-        });
+        let invalid_margins = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(8)),
+                bottom: Some(term_row(3))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(invalid_margins);
 
         // Scroll region should not be set (or should be ignored)
@@ -172,7 +205,7 @@ pub mod boundary_validation {
         // We test that the system doesn't crash and maintains a valid state
         if let (Some(top), Some(bottom)) = (
             ofs_buf.ansi_parser_support.scroll_region_top,
-            ofs_buf.ansi_parser_support.scroll_region_bottom
+            ofs_buf.ansi_parser_support.scroll_region_bottom,
         ) {
             assert!(top.0 <= bottom.0); // Compare the inner u16 values
         }
@@ -183,10 +216,13 @@ pub mod boundary_validation {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Try to set scroll region beyond buffer bounds
-        let invalid_margins = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(5)),
-            bottom: Some(term_row(15)) // Beyond 10 rows
-        });
+        let invalid_margins = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(5)),
+                bottom: Some(term_row(15)) // Beyond 10 rows
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(invalid_margins);
 
         // Implementation should clamp or ignore invalid bounds
@@ -201,17 +237,23 @@ pub mod boundary_validation {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set single-line scroll region (top == bottom)
-        let single_line_margins = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(5)),
-            bottom: Some(term_row(5))
-        });
+        let single_line_margins = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(5)),
+                bottom: Some(term_row(5))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(single_line_margins);
 
         // Position cursor in the single-line region
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(3)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(5),
+                col: term_col(3)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Try NEL operation (should handle single-line region gracefully)
@@ -228,25 +270,29 @@ pub mod boundary_validation {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region covering entire buffer
-        let full_margins = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(1)),
-            bottom: Some(term_row(10))
-        });
+        let full_margins = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(1)),
+                bottom: Some(term_row(10))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(full_margins);
 
         // This should be equivalent to no scroll region
         // Position cursor at bottom and test scrolling
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(10),
-            col: term_col(1)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(10),
+                col: term_col(1)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Execute operations that would cause scrolling
-        let scroll_ops = format!("{}{}",
-            "Text at bottom",
-            CsiSequence::CursorNextLine(1)
-        );
+        let scroll_ops =
+            format!("{}{}", "Text at bottom", CsiSequence::CursorNextLine(1));
         let _result = ofs_buf.apply_ansi_bytes(scroll_ops);
 
         // Should handle full-buffer scrolling correctly
@@ -263,14 +309,18 @@ pub mod complex_interactions {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 3-7)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(3)),
+                bottom: Some(term_row(7))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Fill the scroll region with content
-        let fill_sequence = format!("{}Text1{}Text2{}Text3{}Text4{}Text5",
+        let fill_sequence = format!(
+            "{}Text1{}Text2{}Text3{}Text4{}Text5",
             CsiSequence::CursorPosition {
                 row: term_row(3),
                 col: term_col(1)
@@ -295,14 +345,15 @@ pub mod complex_interactions {
         let _result = ofs_buf.apply_ansi_bytes(fill_sequence);
 
         // Perform complex cursor operations
-        let complex_ops = format!("{}{}{}{}",
+        let complex_ops = format!(
+            "{}{}{}{}",
             CsiSequence::CursorPosition {
                 row: term_row(7),
                 col: term_col(6)
             },
             CsiSequence::CursorNextLine(1), // Should cause scrolling
             "NewText",
-            CsiSequence::CursorPrevLine(2)  // Should move up within region
+            CsiSequence::CursorPrevLine(2) // Should move up within region
         );
         let _result = ofs_buf.apply_ansi_bytes(complex_ops);
 
@@ -316,17 +367,23 @@ pub mod complex_interactions {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set scroll region (rows 4-6)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(4)),
-            bottom: Some(term_row(6))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(4)),
+                bottom: Some(term_row(6))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor at bottom of scroll region
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(6),
-            col: term_col(5)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(6),
+                col: term_col(5)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Send line feed (should cause scrolling within region)
@@ -352,21 +409,28 @@ pub mod complex_interactions {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Set narrow scroll region (rows 5-6, only 2 lines)
-        let margins_sequence = format!("{}", CsiSequence::SetScrollingMargins {
-            top: Some(term_row(5)),
-            bottom: Some(term_row(6))
-        });
+        let margins_sequence = format!(
+            "{}",
+            CsiSequence::SetScrollingMargins {
+                top: Some(term_row(5)),
+                bottom: Some(term_row(6))
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
 
         // Position cursor at top of scroll region
-        let move_sequence = format!("{}", CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(1)
-        });
+        let move_sequence = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(5),
+                col: term_col(1)
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // Write multiple lines of text (should cause multiple scrolls)
-        let text_overflow = format!("{}{}{}{}",
+        let text_overflow = format!(
+            "{}{}{}{}",
             "Line1",
             CsiSequence::CursorNextLine(1),
             "Line2",

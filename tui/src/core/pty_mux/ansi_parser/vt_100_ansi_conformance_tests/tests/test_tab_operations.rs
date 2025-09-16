@@ -10,7 +10,7 @@
 //! - CBT (Cursor Backward Tab) - CSI Z (placeholder for future implementation)
 
 use super::super::test_fixtures::*;
-use crate::ansi_parser::term_units::{term_row, term_col};
+use crate::ansi_parser::term_units::{term_col, term_row};
 
 /// Tests for basic TAB character (0x09) functionality.
 /// The current implementation uses fixed 8-column tab stops.
@@ -36,10 +36,13 @@ pub mod basic_tab_operations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Move cursor to column 3
-        let move_sequence = format!("{}", crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(4) // 1-based column 4 = 0-based column 3
-        });
+        let move_sequence = format!(
+            "{}",
+            crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+                row: term_row(1),
+                col: term_col(4) // 1-based column 4 = 0-based column 3
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
         assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(3));
 
@@ -55,10 +58,13 @@ pub mod basic_tab_operations {
         let mut ofs_buf = create_test_offscreen_buffer_20r_by_20c();
 
         // Move cursor to column 8 (already at a tab stop)
-        let move_sequence = format!("{}", crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(9) // 1-based column 9 = 0-based column 8
-        });
+        let move_sequence = format!(
+            "{}",
+            crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+                row: term_row(1),
+                col: term_col(9) // 1-based column 9 = 0-based column 8
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
         assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(8));
 
@@ -90,17 +96,21 @@ pub mod basic_tab_operations {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Move cursor to column 9 (near right margin)
-        let move_sequence = format!("{}", crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(10) // 1-based column 10 = 0-based column 9
-        });
+        let move_sequence = format!(
+            "{}",
+            crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+                row: term_row(1),
+                col: term_col(10) // 1-based column 10 = 0-based column 9
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
         assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(9));
 
         // Send TAB character
         let _result = ofs_buf.apply_ansi_bytes("\t");
 
-        // Should clamp to rightmost column (next tab stop would be 16, but buffer is only 10 wide)
+        // Should clamp to rightmost column (next tab stop would be 16, but buffer is only
+        // 10 wide)
         assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(9)); // Stays at max valid column
     }
 
@@ -111,7 +121,8 @@ pub mod basic_tab_operations {
         // Write some text, then tab, then more text
         let _result = ofs_buf.apply_ansi_bytes("ABC\tDEF");
 
-        // Check cursor position (ABC = 3 chars, tab moves to column 8, DEF = 3 more chars)
+        // Check cursor position (ABC = 3 chars, tab moves to column 8, DEF = 3 more
+        // chars)
         assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(11)); // 8 + 3 = 11
 
         // Verify the text placement
@@ -148,10 +159,13 @@ pub mod basic_tab_operations {
 
         for (start_col, expected_col) in test_positions {
             // Reset position
-            let move_sequence = format!("{}", crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-                row: term_row(1),
-                col: term_col(start_col + 1) // Convert to 1-based
-            });
+            let move_sequence = format!(
+                "{}",
+                crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+                    row: term_row(1),
+                    col: term_col(start_col + 1) // Convert to 1-based
+                }
+            );
             let _result = ofs_buf.apply_ansi_bytes(move_sequence);
             assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(start_col));
 
@@ -159,13 +173,17 @@ pub mod basic_tab_operations {
             let _result = ofs_buf.apply_ansi_bytes("\t");
 
             // Verify expected position
-            assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(expected_col),
-                      "Tab from column {} should move to column {}, but cursor is at column {}",
-                      start_col, expected_col, ofs_buf.cursor_pos.col_index.as_usize());
+            assert_eq!(
+                ofs_buf.cursor_pos.col_index,
+                crate::col(expected_col),
+                "Tab from column {} should move to column {}, but cursor is at column {}",
+                start_col,
+                expected_col,
+                ofs_buf.cursor_pos.col_index.as_usize()
+            );
         }
     }
 }
-
 
 /// Tests for tab operations with edge cases and boundary conditions.
 pub mod tab_edge_cases {
@@ -176,10 +194,13 @@ pub mod tab_edge_cases {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Move to last column
-        let move_sequence = format!("{}", crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(10) // 1-based column 10 = 0-based column 9
-        });
+        let move_sequence = format!(
+            "{}",
+            crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+                row: term_row(1),
+                col: term_col(10) // 1-based column 10 = 0-based column 9
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // TAB from last column should not move cursor beyond buffer bounds
@@ -194,16 +215,22 @@ pub mod tab_edge_cases {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Disable auto-wrap mode
-        let disable_wrap = format!("{}", crate::ansi_parser::protocols::csi_codes::CsiSequence::DisablePrivateMode(
-            crate::ansi_parser::protocols::csi_codes::PrivateModeType::AutoWrap
-        ));
+        let disable_wrap = format!(
+            "{}",
+            crate::ansi_parser::protocols::csi_codes::CsiSequence::DisablePrivateMode(
+                crate::ansi_parser::protocols::csi_codes::PrivateModeType::AutoWrap
+            )
+        );
         let _result = ofs_buf.apply_ansi_bytes(disable_wrap);
 
         // Move near right edge and tab
-        let move_sequence = format!("{}", crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(7) // 1-based column 7 = 0-based column 6
-        });
+        let move_sequence = format!(
+            "{}",
+            crate::ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+                row: term_row(1),
+                col: term_col(7) // 1-based column 7 = 0-based column 6
+            }
+        );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
         // TAB should move to next tab stop, but clamp to buffer width
@@ -222,7 +249,8 @@ pub mod tab_edge_cases {
         let _result = ofs_buf.apply_ansi_bytes(mixed_sequence);
 
         // Verify final cursor position
-        // "AB" (cols 0-1) → TAB (col 8) → "CD" (cols 8-9) → CR (col 0) → LF (next line) → TAB (col 8) → "EF" (cols 8-9)
+        // "AB" (cols 0-1) → TAB (col 8) → "CD" (cols 8-9) → CR (col 0) → LF (next line) →
+        // TAB (col 8) → "EF" (cols 8-9)
         assert_eq!(ofs_buf.cursor_pos.row_index, crate::row(1)); // Second row
         assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(10)); // After "EF" at tab position
 

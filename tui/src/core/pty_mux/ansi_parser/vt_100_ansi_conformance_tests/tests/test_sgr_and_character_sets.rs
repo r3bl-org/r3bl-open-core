@@ -54,7 +54,7 @@ pub mod sgr_styling {
                 col,
                 expected_char,
                 |style_from_buffer| {
-                    style_from_buffer.color_fg == Some(ANSIBasicColor::Red.into())
+                    style_from_buffer.color_fg.unwrap() == ANSIBasicColor::Red.into()
                         && style_from_buffer.attribs == tui_style_attrib::Bold.into()
                 },
                 "bold red text",
@@ -114,7 +114,7 @@ pub mod sgr_styling {
             |style_from_buffer| {
                 style_from_buffer.attribs
                     == tui_style_attrib::Bold + tui_style_attrib::Italic
-                    && style_from_buffer.color_fg == Some(ANSIBasicColor::DarkRed.into())
+                    && style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "bold italic dark-red",
         );
@@ -127,7 +127,7 @@ pub mod sgr_styling {
             'B',
             |style_from_buffer| {
                 style_from_buffer.attribs == tui_style_attrib::Italic.into()
-                    && style_from_buffer.color_fg == Some(ANSIBasicColor::DarkRed.into())
+                    && style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "italic dark-red (no bold)",
         );
@@ -385,8 +385,8 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buffer| {
-                style_from_buffer.attribs.blink == tui_style_attrib::Blink.into()
+            |style_from_buf| {
+                style_from_buf.attribs.blink.is_some()
             },
             "blink enabled",
         );
