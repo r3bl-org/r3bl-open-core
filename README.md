@@ -480,6 +480,43 @@ Choose the workflow that matches your current needs:
 
 **Note:** We use [`cargo-nextest`](https://nexte.st/) for running tests as it's significantly faster than `cargo test`. However, nextest does not run doctests (tests in documentation comments). To run doctests, use `cargo test --doc` separately.
 
+### Status Monitoring Scripts
+
+For developers who want ultra-minimal status monitoring, this project includes two bash scripts designed for integration with the [GNOME Executor extension](https://extensions.gnome.org/extension/2932/executor/). These scripts provide at-a-glance status indicators in your GNOME top bar.
+
+**Quick Status Scripts:**
+
+| Script | Purpose | Success Output | Failure Output |
+| ------ | ------- | -------------- | -------------- |
+| `test-status-one-line.bash` | Run tests and show emoji status | ` 🧪✔️` | ` 🧪❌` |
+| `doc-status-one-line.bash` | Build docs and show emoji status | ` 📚✔️` | ` 📚❌` |
+
+**Key Features:**
+- **Single-line output**: Perfect for status bars and monitoring systems
+- **Emoji-only status**: Universal visual language requiring no text parsing
+- **Silent operation**: All cargo output is suppressed, only status emoji appears
+- **Directory-independent**: Scripts work from anywhere by changing to project directory
+- **Fast execution**: Optimized for quick status checks without verbose output
+
+**Usage Examples:**
+```sh
+# Quick test status check
+./test-status-one-line.bash
+# Output: " 🧪✔️"
+
+# Quick documentation build check
+./doc-status-one-line.bash
+# Output: " 📚✔️"
+```
+
+**Integration with Development Workflow:**
+- **Complements Bacon**: While bacon provides rich interactive feedback, these scripts offer minimal monitoring
+- **CI/CD friendly**: Perfect for automated pipelines requiring simple pass/fail status
+- **GNOME integration**: Designed specifically for desktop environment status bar integration
+- **Background monitoring**: Ideal for continuous status monitoring without interrupting workflow
+
+These scripts provide the same underlying functionality as the bacon workflows but with radically different output designed for external consumption rather than developer interaction.
+
 ### Build Cache (using sccache) Verification
 
 This project uses [sccache](https://github.com/mozilla/sccache) to speed up Rust compilation by
