@@ -50,22 +50,49 @@
 //! Each method contains detailed architecture diagrams showing the specific flow
 //! for that sequence type.
 //!
+//! # Design Architecture
+//!
+//! The [`AnsiToOfsBufPerformer`] is deliberately designed as a **thin shim** that delegates
+//! all operations to dedicated methods in [`OffscreenBuffer`]. This design pattern is
+//! consistently implemented throughout the module:
+//!
+//! - The performer contains minimal logic and acts purely as a translation layer
+//! - ANSI sequence parameters are parsed and translated into appropriate [`OffscreenBuffer`] method calls
+//! - All actual terminal buffer operations (cursor movement, scrolling, text rendering) are
+//!   implemented in [`OffscreenBuffer`] methods
+//! - This separation ensures clear boundaries between ANSI protocol handling and buffer management
+//!
+//! This thin shim pattern provides clean separation of concerns: the performer handles
+//! ANSI/VT protocol specifics while [`OffscreenBuffer`] handles terminal buffer semantics.
+//!
 //! [`print()`]: AnsiToOfsBufPerformer::print
 //! [`execute()`]: AnsiToOfsBufPerformer::execute
 //! [`csi_dispatch()`]: AnsiToOfsBufPerformer::csi_dispatch
 //! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
 //! [`esc_dispatch()`]: AnsiToOfsBufPerformer::esc_dispatch
 //! [`hook()`]: AnsiToOfsBufPerformer::hook
+//!
+//! # Testing Strategy
+//!
+//! This module uses a delegation-based testing approach that differs from the codebase norm:
+//! - The operations in this module are thin wrappers that delegate to [`OffscreenBuffer`] methods
+//! - [`OffscreenBuffer`] methods have comprehensive unit tests (following codebase convention)
+//! - VT100 conformance tests in [`vt_100_ansi_conformance_tests`] verify end-to-end behavior
+//!
+//! This approach avoids redundant testing while ensuring both unit-level correctness
+//! (in [`OffscreenBuffer`]) and system-level behavior (in conformance tests).
+//!
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
 
 use vte::{Params, Perform};
 
 // Import the operation modules.
-use super::operations::{char_ops, cursor_ops, dsr_ops, line_ops, margin_ops, mode_ops,
-                        scroll_ops, sgr_ops, terminal_ops};
+use super::operations::{char_ops, control_ops, cursor_ops, dsr_ops, line_ops, margin_ops,
+                        mode_ops, osc_ops, scroll_ops, sgr_ops, terminal_ops};
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
             protocols::{csi_codes::{self},
                         esc_codes}};
-use crate::core::osc::{OscEvent, osc_codes};
 
 /// Internal methods for `AnsiToOfsBufPerformer` to implement [`Perform`] trait.
 impl Perform for AnsiToOfsBufPerformer<'_> {
@@ -110,7 +137,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///   print('A') → writes at col 9, cursor moves to col 10
     ///   print('B') → overwrites at col 10, cursor stays at col 10
     /// ```
-    fn print(&mut self, ch: char) { self.ofs_buf.print_char(ch); }
+    fn print(&mut self, ch: char) { char_ops::print_char(self, ch); }
 
     /// Handle control characters (C0 set): backspace, tab, LF, CR.
     ///
@@ -149,16 +176,16 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     fn execute(&mut self, byte: u8) {
         match byte {
             esc_codes::BACKSPACE => {
-                self.ofs_buf.handle_backspace();
+                control_ops::handle_backspace(self);
             }
             esc_codes::TAB => {
-                self.ofs_buf.handle_tab();
+                control_ops::handle_tab(self);
             }
             esc_codes::LINE_FEED => {
-                self.ofs_buf.handle_line_feed();
+                control_ops::handle_line_feed(self);
             }
             esc_codes::CARRIAGE_RETURN => {
-                self.ofs_buf.handle_carriage_return();
+                control_ops::handle_carriage_return(self);
             }
             _ => {}
         }
@@ -456,50 +483,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///   ↓
     /// Pushes SetTitleAndTab event
     /// ```
-    fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
-        if params.is_empty() {
-            return;
-        }
-
-        // Parse the OSC code (first parameter)
-        if let Ok(code) = std::str::from_utf8(params[0]) {
-            match code {
-                // OSC 0: Set both window title and icon name
-                // OSC 1: Set icon name only (we treat same as title)
-                // OSC 2: Set window title only
-                osc_codes::OSC_CODE_TITLE_AND_ICON
-                | osc_codes::OSC_CODE_ICON
-                | osc_codes::OSC_CODE_TITLE
-                    if params.len() > 1 =>
-                {
-                    if let Ok(title) = std::str::from_utf8(params[1]) {
-                        self.ofs_buf
-                            .ansi_parser_support
-                            .pending_osc_events
-                            .push(OscEvent::SetTitleAndTab(title.to_string()));
-                    }
-                }
-                // OSC 8: Hyperlink (format: OSC 8 ; params ; URI)
-                osc_codes::OSC_CODE_HYPERLINK if params.len() > 2 => {
-                    if let Ok(uri) = std::str::from_utf8(params[2]) {
-                        // For now, just store the URI - display text would come from.
-                        // print chars
-                        self.ofs_buf.ansi_parser_support.pending_osc_events.push(
-                            OscEvent::Hyperlink {
-                                uri: uri.to_string(),
-                                text: String::new(), /* Text is handled separately via
-                                                      * print() */
-                            },
-                        );
-                    }
-                }
-                // OSC 9;4: Progress sequences (already handled by OscBuffer in some
-                // contexts) We could handle them here too if needed.
-                _ => {
-                    // Ignore other OSC sequences for now.
-                }
-            }
-        }
+    fn osc_dispatch(&mut self, params: &[&[u8]], bell_terminated: bool) {
+        osc_ops::dispatch_osc(self, params, bell_terminated);
     }
 
     /// Handle escape sequences (not CSI or OSC).

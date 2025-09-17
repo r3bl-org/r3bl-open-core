@@ -34,9 +34,9 @@
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
-//!       - line_ops:: for lines (L,M)
-//!       - char_ops:: for chars (@,P,X) <- [THIS MODULE]
-//!         ↓
+//!       - line_ops:: for lines (L,M)      ╭───────────╮
+//!       - char_ops:: for chars (@,P,X) <- │THIS MODULE│
+//!         ↓                               ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
 
@@ -48,8 +48,6 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 /// See `OffscreenBuffer::delete_chars_at_cursor` for detailed behavior and examples.
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-
-    // Use dedicated DCH method to delete characters at cursor.
     performer.ofs_buf.delete_chars_at_cursor(how_many);
 }
 
@@ -58,8 +56,6 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// See `OffscreenBuffer::insert_chars_at_cursor` for detailed behavior and examples.
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-
-    // Use dedicated ICH method to insert characters at cursor.
     performer.ofs_buf.insert_chars_at_cursor(how_many);
 }
 
@@ -68,7 +64,13 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// See `OffscreenBuffer::erase_chars_at_cursor` for detailed behavior and examples.
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-
-    // Use dedicated ECH method to erase characters at cursor.
     performer.ofs_buf.erase_chars_at_cursor(how_many);
+}
+
+/// Handle printable character printing - display character at cursor position.
+/// Character set translation applied if DEC graphics mode is active.
+/// Cursor advances with automatic line wrapping based on DECAWM mode.
+/// See `OffscreenBuffer::print_char` for detailed behavior and examples.
+pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
+    performer.ofs_buf.print_char(ch);
 }

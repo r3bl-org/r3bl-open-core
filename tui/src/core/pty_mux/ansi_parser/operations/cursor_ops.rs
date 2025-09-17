@@ -30,9 +30,9 @@
 //!         ↓
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
-//!     Route to operations module:
-//!       - cursor_ops:: for movement (A,B,C,D,H) <- [THIS MODULE]
-//!       - scroll_ops:: for scrolling (S,T)
+//!     Route to operations module:                  ╭───────────╮
+//!       - cursor_ops:: for movement (A,B,C,D,H) <- │THIS MODULE│
+//!       - scroll_ops:: for scrolling (S,T)         ╰───────────╯
 //!       - sgr_ops:: for styling (m)
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
@@ -51,7 +51,6 @@ use crate::{col, row};
 /// Respects DECSTBM scroll region margins.
 /// See `OffscreenBuffer::cursor_up` for detailed behavior and examples.
 pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    // Extract movement count (guaranteed >= 1 by VT100 spec).
     let how_many = MovementCount::parse_as_row_height(params);
     performer.ofs_buf.cursor_up(how_many);
 }
@@ -60,7 +59,6 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// Respects DECSTBM scroll region margins.
 /// See `OffscreenBuffer::cursor_down` for detailed behavior and examples.
 pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    // Extract movement count (guaranteed >= 1 by VT100 spec).
     let how_many = MovementCount::parse_as_row_height(params);
     performer.ofs_buf.cursor_down(how_many);
 }

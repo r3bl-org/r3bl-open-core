@@ -32,9 +32,9 @@
 //!         ↓
 //!     Route to operations module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
-//!       - scroll_ops:: for scrolling (S,T)
-//!       - sgr_ops:: for styling (m) <- [THIS MODULE]
-//!       - line_ops:: for lines (L,M)
+//!       - scroll_ops:: for scrolling (S,T) ╭───────────╮
+//!       - sgr_ops:: for styling (m) <----- │THIS MODULE│
+//!       - line_ops:: for lines (L,M)       ╰───────────╯
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓
 //!     Update OffscreenBuffer state

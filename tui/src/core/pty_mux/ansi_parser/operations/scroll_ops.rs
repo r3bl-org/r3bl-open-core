@@ -31,9 +31,9 @@
 //!     csi_dispatch() [routes to modules below]
 //!         ↓
 //!     Route to operations module:
-//!       - cursor_ops:: for movement (A,B,C,D,H)
-//!       - scroll_ops:: for scrolling (S,T) <- [THIS MODULE]
-//!       - sgr_ops:: for styling (m)
+//!       - cursor_ops:: for movement (A,B,C,D,H) ╭───────────╮
+//!       - scroll_ops:: for scrolling (S,T) <--- │THIS MODULE│
+//!       - sgr_ops:: for styling (m)             ╰───────────╯
 //!       - line_ops:: for lines (L,M)
 //!       - char_ops:: for chars (@,P,X)
 //!         ↓

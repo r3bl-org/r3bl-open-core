@@ -9,10 +9,9 @@ use super::super::test_fixtures::*;
 use crate::{TuiStyle,
             ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                           csi_codes::{CsiSequence, PrivateModeType},
-                          esc_codes,
+                          esc_codes::{self, EscSequence},
                           term_units::{term_col, term_row}},
             col,
-            core::pty_mux::ansi_parser::esc_codes::RIS_RESET_TERMINAL,
             offscreen_buffer::ofs_buf_test_fixtures::*,
             row};
 
@@ -570,7 +569,8 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Send CSI sequence with explicit default parameter 1.
-        performer.apply_ansi_bytes("\x1b[1S");
+        let scroll_up_sequence = format!("{}", CsiSequence::ScrollUp(1));
+        performer.apply_ansi_bytes(scroll_up_sequence.as_bytes());
 
         // After scrolling up by 1, Line-1 should be at row 0.
         assert_plain_text_at(performer.ofs_buf, 0, 0, "Line-1");
@@ -589,7 +589,8 @@ pub mod scrolling {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Send CSI sequence with explicit default parameter 1.
-        performer.apply_ansi_bytes("\x1b[1T");
+        let scroll_down_sequence = format!("{}", CsiSequence::ScrollDown(1));
+        performer.apply_ansi_bytes(scroll_down_sequence.as_bytes());
 
         // After scrolling down by 1, top row should be empty.
         assert_empty_at(performer.ofs_buf, 0, 0);
@@ -1048,7 +1049,8 @@ pub mod decstbm_scroll_margins {
         performer.apply_ansi_bytes(cursor_pos);
 
         // Send ESC D (Index) - should scroll the region up
-        performer.apply_ansi_bytes("\x1bD");
+        let index_down_sequence = format!("{}", EscSequence::IndexDown);
+        performer.apply_ansi_bytes(index_down_sequence.as_bytes());
 
         // Content outside scroll region should be unchanged.
         assert_plain_text_at(performer.ofs_buf, 0, 0, "Line-0"); // Above region
@@ -1068,7 +1070,8 @@ pub mod decstbm_scroll_margins {
         performer.apply_ansi_bytes(cursor_pos_top);
 
         // Send ESC M (Reverse Index) - should scroll the region down
-        performer.apply_ansi_bytes("\x1bM");
+        let reverse_index_sequence = format!("{}", EscSequence::ReverseIndex);
+        performer.apply_ansi_bytes(reverse_index_sequence.as_bytes());
 
         // Top of scroll region should be cleared.
         assert_empty_at(performer.ofs_buf, 2, 0); // Top row cleared
@@ -1096,7 +1099,7 @@ pub mod decstbm_scroll_margins {
         );
 
         // Reset terminal with ESC c.
-        let reset_sequence = format!("\x1b{}", RIS_RESET_TERMINAL as char);
+        let reset_sequence = format!("{}", EscSequence::ResetTerminal);
         performer.apply_ansi_bytes(reset_sequence);
 
         // Margins should be cleared.

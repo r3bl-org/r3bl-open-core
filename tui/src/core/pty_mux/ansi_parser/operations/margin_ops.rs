@@ -35,9 +35,9 @@
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
 //!       - line_ops:: for lines (L,M)
-//!       - char_ops:: for chars (@,P,X)
-//!       - margin_ops:: for margins (r) <- [THIS MODULE]
-//!         ↓
+//!       - char_ops:: for chars (@,P,X)    ╭───────────╮
+//!       - margin_ops:: for margins (r) <- │THIS MODULE│
+//!         ↓                               ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
 
