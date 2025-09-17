@@ -14,6 +14,8 @@
 //! - Performance stress tests
 //! - Boundary condition validation
 
+use std::fmt::Write;
+
 use crate::{ANSIBasicColor, SgrCode,
             ansi_parser::{protocols::csi_codes::CsiSequence,
                           term_units::{term_col, term_row}}};
@@ -57,13 +59,15 @@ pub fn rapid_style_changes() -> String {
     ];
 
     for (i, color) in colors.iter().enumerate() {
-        sequence.push_str(&format!(
+        write!(
+            sequence,
             "{}{}{}{}",
             SgrCode::ForegroundBasic(*color),
             SgrCode::Bold,
             char::from(b'A' + u8::try_from(i.min(25)).unwrap_or(25)),
             SgrCode::Reset
-        ));
+        )
+        .expect("Writing to String should never fail");
     }
 
     sequence

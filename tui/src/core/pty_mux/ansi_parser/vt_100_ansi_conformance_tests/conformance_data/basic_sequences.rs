@@ -12,9 +12,10 @@
 //! - Cursor positioning: VT100 User Guide Section 3.3.1
 //! - Basic movement: VT100 User Guide Section 3.3.2
 
-use crate::{ansi_parser::{protocols::csi_codes::CsiSequence,
+use crate::{LengthMarker,
+            ansi_parser::{protocols::csi_codes::CsiSequence,
                           term_units::{term_col, term_row}},
-            len, LengthMarker};
+            len};
 
 /// Clear entire screen and return cursor to home position (1,1).
 ///

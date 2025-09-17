@@ -158,7 +158,9 @@ mod render_cache_impl_block {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RenderOp, assert_eq2, col, height, render_ops, row, scr_ofs, width};
+    use crate::{RenderOp, assert_eq2, col,
+                editor::editor_test_fixtures::mock_real_objects_for_editor, height,
+                render_ops, row, scr_ofs, width};
 
     /// Fake `render_ops` to be used in the tests.
     fn get_render_ops_og() -> RenderOps {
@@ -441,7 +443,7 @@ mod tests {
     #[test]
     fn test_content_change_invalidates_cache() {
         let buffer = &mut EditorBuffer::default();
-        let engine = &mut EditorEngine::default();
+        let engine = &mut mock_real_objects_for_editor::make_editor_engine();
         let has_focus = &mut HasFocus::default();
 
         // Change in content should invalidate the cache.

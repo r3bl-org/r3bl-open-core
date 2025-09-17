@@ -10,7 +10,8 @@ use std::cmp::min;
 
 #[allow(clippy::wildcard_imports)]
 use super::*;
-use crate::{BoundsCheck, ColIndex, ColWidth, Pos, RowHeight, RowIndex, col, IndexMarker};
+use crate::{BoundsCheck, ColIndex, ColWidth, IndexMarker, Pos, RowHeight, RowIndex, col,
+            core::units::bounds_check::LengthMarker};
 
 /// Standard terminal tab stop width (8 columns).
 /// Used for calculating tab positions in terminal emulation.
@@ -200,7 +201,7 @@ impl OffscreenBuffer {
         // Clamp to max valid column index if it would overflow.
         let next_col_index = col(next_tab_col);
         self.cursor_pos.col_index = if next_col_index.overflows(max_col) {
-            max_col.convert_to_col_index()
+            max_col.convert_to_index()
         } else {
             next_col_index
         };

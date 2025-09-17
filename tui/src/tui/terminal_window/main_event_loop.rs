@@ -1236,7 +1236,7 @@ mod tests {
 
     mod text_fixture_status_bar {
         use super::*;
-        use crate::{Size, tui_styled_texts};
+        use crate::{LengthMarker, Size, tui_styled_texts};
 
         /// Shows helpful messages at the bottom row of the screen.
         pub fn create_status_bar_message(pipeline: &mut RenderPipeline, size: Size) {
@@ -1251,7 +1251,7 @@ mod tests {
 
             let display_width = styled_texts.display_width();
             let col_center = *(size.col_width - display_width) / ch(2);
-            let row_bottom = size.row_height.convert_to_row_index();
+            let row_bottom = size.row_height.convert_to_index();
             let center = col(col_center) + row_bottom;
 
             let mut render_ops = render_ops!();

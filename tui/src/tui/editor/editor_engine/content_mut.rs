@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
-use crate::{CaretScrAdj, ColIndex, ColWidth, ContentPositionStatus, EditorArgsMut,
-            EditorBuffer, EditorEngine, InlineString, InlineVec, RowIndex,
-            SelectionList, SelectionRange, Width, ZeroCopyGapBuffer,
-            caret_locate::locate_col, caret_scr_adj, caret_scroll_index, col,
-            empty_check_early_return, len, multiline_disabled_check_early_return, row,
+use crate::{AfterLastPosition, CaretScrAdj, ColIndex, ColWidth, ContentPositionStatus,
+            EditorArgsMut, EditorBuffer, EditorEngine, InlineString, InlineVec,
+            RowIndex, SelectionList, SelectionRange, Width, ZeroCopyGapBuffer,
+            caret_locate::locate_col, caret_scr_adj, col, empty_check_early_return, len,
+            multiline_disabled_check_early_return, row,
             validate_buffer_mut::EditorBufferMutWithDrop, width};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
@@ -203,7 +203,7 @@ fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> ContentPositionS
             ContentPositionStatus::Beyond
         } else if col_index == col(0) {
             ContentPositionStatus::AtStart
-        } else if col_index >= caret_scroll_index::col_index_for_width(line_width) {
+        } else if col_index >= line_width.to_after_last_position() {
             ContentPositionStatus::AtEnd
         } else {
             ContentPositionStatus::Within
@@ -554,8 +554,8 @@ mod backspace_at_caret_helper {
             scroll_editor_content::set_caret_col_to(
                 // This caret col index goes 1 past the end of the line width, ie:
                 // - `prev_line_display_width` which is the same as:
-                // - `prev_line_display_width.convert_to_col_index() /*-1*/ + 1`
-                caret_scroll_index::col_index_for_width(prev_line_display_width),
+                // - `prev_line_display_width.convert_to_index() /*-1*/ + 1`
+                prev_line_display_width.to_after_last_position(),
                 buffer_mut.inner.caret_raw,
                 buffer_mut.inner.scr_ofs,
                 buffer_mut.inner.vp.col_width,
@@ -655,8 +655,7 @@ mod delete_selected_helper {
         end_col_index: ColIndex,
         line_width: Width,
     ) -> bool {
-        start_col_index == col(0)
-            && end_col_index == caret_scroll_index::col_index_for_width(line_width)
+        start_col_index == col(0) && end_col_index == line_width.to_after_last_position()
     }
 
     /// Prepares the replacement text for a line that has a partial selection to be
@@ -707,7 +706,7 @@ mod delete_selected_helper {
         );
         let keep_after_selection_range = SelectionRange::new(
             caret_scr_adj(end_col_index + selected_row_index),
-            caret_scr_adj(col(line_width.as_usize()) + selected_row_index),
+            caret_scr_adj(line_width.to_after_last_position() + selected_row_index),
         );
 
         let keep_before_selected_str =

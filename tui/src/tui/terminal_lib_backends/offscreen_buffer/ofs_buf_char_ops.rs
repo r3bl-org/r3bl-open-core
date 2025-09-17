@@ -5,7 +5,8 @@ use std::ops::Range;
 use super::{OffscreenBuffer, PixelChar};
 use crate::{BoundsCheck,
             BoundsOverflowStatus::{Overflowed, Within},
-            CharacterSet, ColIndex, Pos, RowIndex, col};
+            CharacterSet, ColIndex, Pos, RowIndex, col,
+            core::units::bounds_check::LengthMarker};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
@@ -161,7 +162,7 @@ impl OffscreenBuffer {
                     }
                 } else {
                     // DECAWM disabled: stay at right margin (clamp cursor position)
-                    self.cursor_pos.col_index = col_max.convert_to_col_index();
+                    self.cursor_pos.col_index = col_max.convert_to_index();
                 }
             } else {
                 self.cursor_pos.col_index = new_col;

@@ -179,7 +179,9 @@ fn test_rainbow_color_pattern() {
         0,
         1,
         'A',
-        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Yellow.into(),
+        |style_from_buf| {
+            style_from_buf.color_fg.unwrap() == ANSIBasicColor::Yellow.into()
+        },
         "yellow color on A",
     );
     assert_styled_char_at(
@@ -508,7 +510,7 @@ fn test_log_viewer_color_coding() {
         0,
         0,
         'A',
-        |style_from_buf| style_from_buf.attribs.reverse.is_some(),
+        |style_from_buf| style_from_buf.attribs == tui_style_attrib::Reverse.into(),
         "reverse video header",
     );
 
@@ -527,7 +529,9 @@ fn test_log_viewer_color_coding() {
         2,
         1, // Position of 'W' in "[WARN]"
         'W',
-        |style_from_buf| style_from_buf.color_fg.unwrap() == ANSIBasicColor::Yellow.into(),
+        |style_from_buf| {
+            style_from_buf.color_fg.unwrap() == ANSIBasicColor::Yellow.into()
+        },
         "yellow warning level",
     );
 
@@ -618,7 +622,7 @@ fn test_interface_drawing_with_cursor_ops() {
         2,
         7,
         'S', // First letter of "Settings"
-        |style_from_buf| style_from_buf.attribs.bold.is_some(),
+        |style_from_buf| style_from_buf.attribs == tui_style_attrib::Bold.into(),
         "bold menu title",
     );
 
@@ -628,7 +632,7 @@ fn test_interface_drawing_with_cursor_ops() {
         6,
         3,
         '3',
-        |style_from_buf| style_from_buf.attribs.reverse.is_some(),
+        |style_from_buf| style_from_buf.attribs == tui_style_attrib::Reverse.into(),
         "reverse selected option",
     );
 

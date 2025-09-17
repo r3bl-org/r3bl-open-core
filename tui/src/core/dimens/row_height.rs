@@ -1,45 +1,48 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::Debug,
+use std::{fmt::{Debug, Formatter},
           ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
 
 use crate::{ChUnit, LengthMarker, RowIndex, UnitCompare, ch,
-            create_numeric_arithmetic_operators, row};
+            create_numeric_arithmetic_operators};
 
 /// Height is row count, i.e., the number of rows that a UI component occupies.
 ///
-/// This is one part of a [`crate::Size`] and is different from the [`crate::RowIndex`]
-/// (position).
+/// This is one part of a [`Size`] and is different from the [`RowIndex`] (position).
 ///
-/// You can use the [`crate::height()`] to create a new instance.
+/// You can use the [`height()`] to create a new instance.
 ///
 /// # Working with row index
+/// You can't safely add or subtract a [`RowIndex`] from this [`Height`]; since without
+/// knowing your specific use case ahead of time, it isn't possible to provide a default
+/// implementation without leading to unintended consequences. You can do the reverse
+/// safely.
 ///
-/// You can't safely add or subtract a [`crate::RowIndex`] from this `Height`; since
-/// without knowing your specific use case ahead of time, it isn't possible to provide a
-/// default implementation without leading to unintended consequences. You can do the
-/// reverse safely.
-///
-/// To add or subtract a [`crate::RowIndex`] from this `Height`, you can call
-/// [`Self::convert_to_row_index()`] and apply whatever logic makes sense for your use
+/// To add or subtract a [`RowIndex`] from this [`Height`], you can call
+/// [`Self::convert_to_index()`] and apply whatever logic makes sense for your use
 /// case.
 ///
 /// There is a special case for scrolling vertically and clips rendering output to max
-/// display rows which is handled by
-/// `r3bl_tui::caret_scroll_index::scroll_row_index_for_height()`.
+/// display rows which is handled by the [`AfterLastPosition`] trait method
+/// [`to_after_last_position()`].
 ///
 /// # Examples
-///
 /// ```
 /// use r3bl_tui::{RowHeight, height};
 /// let height = height(5);
 /// let height = RowHeight::new(5);
 /// ```
+///
+/// [`Height`]: crate::RowHeight
+/// [`RowIndex`]: crate::RowIndex
+/// [`Size`]: crate::Size
+/// [`AfterLastPosition`]: crate::AfterLastPosition
+/// [`to_after_last_position()`]: crate::AfterLastPosition::to_after_last_position
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct RowHeight(pub ChUnit);
 
 impl Debug for RowHeight {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "RowHeight({:?})", self.0)
     }
 }
@@ -52,17 +55,6 @@ mod impl_core {
 
     impl RowHeight {
         pub fn new(arg_row_height: impl Into<RowHeight>) -> Self { arg_row_height.into() }
-
-        /// Subtract 1 from the row index to get the height, `row index = height - 1`.
-        ///
-        /// The following expressions are equivalent:
-        /// - `row index >= height`
-        /// - `row index > height - 1` (which is this function)
-        ///
-        /// The following holds true:
-        /// - `last row index == height - 1` (which is this function)
-        #[must_use]
-        pub fn convert_to_row_index(&self) -> RowIndex { row(self.0 - ch(1)) }
 
         #[must_use]
         pub fn as_u16(&self) -> u16 { self.0.into() }
@@ -174,14 +166,13 @@ mod bounds_check_trait_impls {
 
     impl LengthMarker for RowHeight {
         type IndexType = RowIndex;
-
-        fn convert_to_index(&self) -> Self::IndexType { self.convert_to_row_index() }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::row;
 
     #[test]
     fn test_height_new() {
@@ -234,8 +225,8 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_row_index() {
-        assert_eq!(height(10).convert_to_row_index(), row(9));
+    fn test_convert_to_index() {
+        assert_eq!(height(10).convert_to_index(), row(9));
     }
 
     #[test]

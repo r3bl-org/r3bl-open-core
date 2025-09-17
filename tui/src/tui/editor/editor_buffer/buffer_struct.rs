@@ -307,12 +307,13 @@ pub mod versions {
 pub mod content_display_width {
     #[allow(clippy::wildcard_imports)]
     use super::*;
+    use crate::core::units::bounds_check::LengthMarker;
 
     impl EditorBuffer {
         #[must_use]
         pub fn get_max_row_index(&self) -> RowIndex {
             // Subtract 1 from the height to get the last row index.
-            height(self.get_lines().len().as_usize()).convert_to_row_index()
+            height(self.get_lines().len().as_usize()).convert_to_index()
         }
 
         /// Get line display with at caret's scroll adjusted row index.

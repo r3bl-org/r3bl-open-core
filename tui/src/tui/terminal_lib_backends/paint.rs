@@ -6,7 +6,8 @@ use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
             LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
             OffscreenBufferPaintImplCrossterm, Pos, Size, TERMINAL_LIB_BACKEND,
-            TerminalLibBackend, diff_chunks::PixelCharDiffChunks};
+            TerminalLibBackend, core::units::bounds_check::LengthMarker,
+            diff_chunks::PixelCharDiffChunks};
 
 pub trait PaintRenderOp {
     fn paint(
@@ -176,7 +177,7 @@ pub fn sanitize_and_save_abs_pos(
     // }
     sanitized_abs_pos.col_index = sanitized_abs_pos
         .col_index
-        .min(window_width.convert_to_col_index());
+        .min(window_width.convert_to_index());
 
     // Equivalent code:
     // if *orig_abs_pos.row_index >= *window_height {
@@ -184,7 +185,7 @@ pub fn sanitize_and_save_abs_pos(
     // }
     sanitized_abs_pos.row_index = sanitized_abs_pos
         .row_index
-        .min(window_height.convert_to_row_index());
+        .min(window_height.convert_to_index());
 
     // Save the cursor position to local data.
     render_local_data.cursor_pos = sanitized_abs_pos;

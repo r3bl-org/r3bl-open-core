@@ -9,8 +9,9 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                EditorComponent, EditorEngineConfig, EventPropagation, FlexBoxId,
                GCStringOwned, GlobalData, GradientGenerationPolicy, HasFocus,
                InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement,
-               LolcatBuilder, ModifierKeysMask, PerformPositioningAndSizing, RenderOp,
-               RenderPipeline, SPACER_GLYPH, Size, Surface, SurfaceProps, SurfaceRender,
+               LengthMarker, LolcatBuilder, ModifierKeysMask,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
+               Size, Surface, SurfaceProps, SurfaceRender,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,
                TuiStylesheet, ZOrder, box_end, box_start, col, glyphs, height,
                inline_string, new_style, render_component_in_current_box, render_ops,
@@ -456,7 +457,7 @@ mod hud {
         };
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index() - row(1); /* 1 row above bottom */
+        let row_idx = size.row_height.convert_to_index() - row(1); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();
@@ -545,7 +546,7 @@ mod status_bar {
 
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index(); /* Bottom row */
+        let row_idx = size.row_height.convert_to_index(); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();

@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::buffer_struct::EditorBuffer;
-use crate::{BoundsCheck, ColIndex, ColWidth, ContentPositionStatus, RowHeight, RowIndex,
-            col, row};
+use crate::{BoundsCheck, ContentPositionStatus};
 
 /// Represents the position of a row within a buffer.
 ///
@@ -46,7 +45,7 @@ pub enum RowContentPositionStatus {
 }
 
 /// Locate the col position using [`BoundsCheck::check_content_position`] method on
-/// [`ColIndex`].
+/// column indices.
 ///
 /// ```text
 /// R ┌──────────┐
@@ -116,7 +115,7 @@ pub fn locate_row(buffer: &EditorBuffer) -> RowContentPositionStatus {
     let buffer_line_count = buffer.get_lines().len().as_usize();
 
     if buffer_line_count == 0 {
-        // Empty buffer: treat as on first row
+        // Empty buffer: treat as on first row.
         RowContentPositionStatus::OnFirstRow
     } else if row_index.as_usize() >= buffer_line_count {
         // Beyond buffer bounds.
@@ -191,63 +190,10 @@ pub fn row_is_at_bottom(buffer: &EditorBuffer) -> bool {
     locate_row(buffer) == RowContentPositionStatus::OnLastRow
 }
 
-pub mod caret_scroll_index {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    /// This is the same number as the given width, just in different "unit". The caret
-    /// max index which is the scroll index goes 1 past the end of the given width's
-    /// index.
-    ///
-    /// Equivalent to:
-    /// ```text
-    /// col_amt_index = col_amt - 1;
-    /// scroll_past_col_amt_index = col_amt_index + 1;
-    /// ```
-    ///
-    /// Here's an example:
-    /// ```text
-    /// R ┌──────────┐
-    /// 0 ❱hello░    │
-    ///   └─────⮬────┘
-    ///   C0123456789
-    /// ```
-    #[must_use]
-    pub fn col_index_for_width(col_amt: ColWidth) -> ColIndex {
-        col_amt.convert_to_col_index() /* -1 */ + col(1) /* +1 */
-    }
-
-    /// This is the same number as the given height, just in different "unit". The caret
-    /// max index which is the scroll index goes 1 past the end of the given height's
-    /// index.
-    #[must_use]
-    pub fn row_index_for_height(row_amt: RowHeight) -> RowIndex {
-        row_amt.convert_to_row_index() /* -1 */ + row(1) /* +1 */
-    }
-
-    #[test]
-    fn test_scroll_col_index_for_width() {
-        use crate::width;
-
-        let width = width(5);
-        let scroll_col_index = col_index_for_width(width);
-        assert_eq!(*scroll_col_index, *width);
-    }
-
-    #[test]
-    fn test_scroll_row_index_for_height() {
-        use crate::height;
-
-        let height = height(5);
-        let scroll_row_index = row_index_for_height(height);
-        assert_eq!(*scroll_row_index, *height);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{EditorEngine, EditorEngineConfig, assert_eq2};
+    use crate::{AfterLastPosition, EditorEngine, EditorEngineConfig, assert_eq2, col, row};
 
     #[test]
     fn test_locate_col_at_start() {
@@ -277,8 +223,7 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index =
-                caret_scroll_index::col_index_for_width(line_width);
+            buffer_mut.inner.caret_raw.col_index = line_width.to_after_last_position();
         }
 
         let location = locate_col(&buffer);
@@ -340,8 +285,7 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index =
-                caret_scroll_index::col_index_for_width(line_width);
+            buffer_mut.inner.caret_raw.col_index = line_width.to_after_last_position();
         }
         let location = locate_col(&buffer);
         assert_eq2!(location, ContentPositionStatus::AtEnd);
@@ -460,8 +404,7 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index =
-                caret_scroll_index::col_index_for_width(line_width);
+            buffer_mut.inner.caret_raw.col_index = line_width.to_after_last_position();
         }
         let location = locate_col(&buffer);
         assert_eq2!(location, ContentPositionStatus::AtEnd);

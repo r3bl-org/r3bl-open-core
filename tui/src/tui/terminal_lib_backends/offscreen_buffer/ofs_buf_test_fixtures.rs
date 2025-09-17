@@ -5,7 +5,8 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{OffscreenBuffer, PixelChar, SPACER_GLYPH_CHAR, TuiStyle, col, row};
+use crate::{OffscreenBuffer, PixelChar, SPACER_GLYPH_CHAR, TuiStyle, col,
+            core::units::bounds_check::LengthMarker, row};
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:
@@ -28,13 +29,13 @@ pub fn assert_plain_char_at(
 
     // Check bounds.
     assert!(
-        pos.col_index <= window_size.col_width.convert_to_col_index(),
+        pos.col_index <= window_size.col_width.convert_to_index(),
         "Column {} is out of bounds (width: {})",
         pos.col_index.as_usize(),
         window_size.col_width.as_usize()
     );
     assert!(
-        pos.row_index <= window_size.row_height.convert_to_row_index(),
+        pos.row_index <= window_size.row_height.convert_to_index(),
         "Row {} is out of bounds (height: {})",
         pos.row_index.as_usize(),
         window_size.row_height.as_usize()
@@ -94,13 +95,13 @@ pub fn assert_styled_char_at<F>(
 
     // Check bounds.
     assert!(
-        pos.col_index <= window_size.col_width.convert_to_col_index(),
+        pos.col_index <= window_size.col_width.convert_to_index(),
         "Column {} is out of bounds (width: {})",
         pos.col_index.as_usize(),
         window_size.col_width.as_usize()
     );
     assert!(
-        pos.row_index <= window_size.row_height.convert_to_row_index(),
+        pos.row_index <= window_size.row_height.convert_to_index(),
         "Row {} is out of bounds (height: {})",
         pos.row_index.as_usize(),
         window_size.row_height.as_usize()
@@ -149,13 +150,13 @@ pub fn assert_empty_at(buffer: &OffscreenBuffer, row_idx: usize, col_idx: usize)
 
     // Check bounds.
     assert!(
-        pos.col_index <= window_size.col_width.convert_to_col_index(),
+        pos.col_index <= window_size.col_width.convert_to_index(),
         "Column {} is out of bounds (width: {})",
         pos.col_index.as_usize(),
         window_size.col_width.as_usize()
     );
     assert!(
-        pos.row_index <= window_size.row_height.convert_to_row_index(),
+        pos.row_index <= window_size.row_height.convert_to_index(),
         "Row {} is out of bounds (height: {})",
         pos.row_index.as_usize(),
         window_size.row_height.as_usize()

@@ -6,15 +6,15 @@ use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
                EditorBuffer, EditorComponent, EditorEngineConfig, EventPropagation,
                FlexBox, FlexBoxId, GCStringOwned, GlobalData, HasEditorBuffers,
                HasFocus, InlineString, InputEvent, ItemsOwned, Key, KeyPress,
-               LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
-               PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
-               Size, Surface, SurfaceProps, SurfaceRender, SyntaxHighlightMode,
-               TerminalWindowMainThreadSignal, TuiStylesheet, ZOrder, box_end,
-               box_start, col, get_tui_style, glyphs, height, inline_string, new_style,
-               ok, render_component_in_current_box, render_component_in_given_box,
-               render_ops, render_tui_styled_texts_into, req_size_pc, row, send_signal,
-               surface, throws, throws_with_return, tui_color, tui_styled_text,
-               tui_styled_texts, tui_stylesheet, width};
+               LayoutDirection, LayoutManagement, LengthMarker, LineMode,
+               ModifierKeysMask, PerformPositioningAndSizing, RenderOp, RenderPipeline,
+               SPACER_GLYPH, Size, Surface, SurfaceProps, SurfaceRender,
+               SyntaxHighlightMode, TerminalWindowMainThreadSignal, TuiStylesheet,
+               ZOrder, box_end, box_start, col, get_tui_style, glyphs, height,
+               inline_string, new_style, ok, render_component_in_current_box,
+               render_component_in_given_box, render_ops, render_tui_styled_texts_into,
+               req_size_pc, row, send_signal, surface, throws, throws_with_return,
+               tui_color, tui_styled_text, tui_styled_texts, tui_stylesheet, width};
 use tokio::sync::mpsc::Sender;
 
 use super::{AppSignal, State};
@@ -800,7 +800,7 @@ mod hud {
         };
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index() - row(1); /* 1 row above bottom */
+        let row_idx = size.row_height.convert_to_index() - row(1); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();
@@ -875,7 +875,7 @@ mod status_bar {
 
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index(); /* Bottom row */
+        let row_idx = size.row_height.convert_to_index(); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();

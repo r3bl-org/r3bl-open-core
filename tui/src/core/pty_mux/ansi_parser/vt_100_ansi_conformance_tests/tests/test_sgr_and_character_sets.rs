@@ -53,9 +53,9 @@ pub mod sgr_styling {
                 0,
                 col,
                 expected_char,
-                |style_from_buffer| {
-                    style_from_buffer.color_fg.unwrap() == ANSIBasicColor::Red.into()
-                        && style_from_buffer.attribs == tui_style_attrib::Bold.into()
+                |style_from_buf| {
+                    style_from_buf.color_fg.unwrap() == ANSIBasicColor::Red.into()
+                        && style_from_buf.attribs == tui_style_attrib::Bold.into()
                 },
                 "bold red text",
             );
@@ -111,10 +111,10 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buffer| {
-                style_from_buffer.attribs
+            |style_from_buf| {
+                style_from_buf.attribs
                     == tui_style_attrib::Bold + tui_style_attrib::Italic
-                    && style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+                    && style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "bold italic dark-red",
         );
@@ -125,9 +125,9 @@ pub mod sgr_styling {
             0,
             1,
             'B',
-            |style_from_buffer| {
-                style_from_buffer.attribs == tui_style_attrib::Italic.into()
-                    && style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+            |style_from_buf| {
+                style_from_buf.attribs == tui_style_attrib::Italic.into()
+                    && style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "italic dark-red (no bold)",
         );
@@ -190,8 +190,8 @@ pub mod sgr_styling {
             0,
             0,
             'B',
-            |style_from_buffer| {
-                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::Black.into()
+            |style_from_buf| {
+                style_from_buf.color_fg.unwrap() == ANSIBasicColor::Black.into()
             },
             "black foreground",
         );
@@ -201,8 +201,8 @@ pub mod sgr_styling {
             0,
             1,
             'R',
-            |style_from_buffer| {
-                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+            |style_from_buf| {
+                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "red foreground",
         );
@@ -212,8 +212,8 @@ pub mod sgr_styling {
             0,
             2,
             'G',
-            |style_from_buffer| {
-                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkGreen.into()
+            |style_from_buf| {
+                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkGreen.into()
             },
             "green foreground",
         );
@@ -223,8 +223,8 @@ pub mod sgr_styling {
             0,
             3,
             'W',
-            |style_from_buffer| {
-                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::White.into()
+            |style_from_buf| {
+                style_from_buf.color_fg.unwrap() == ANSIBasicColor::White.into()
             },
             "white foreground",
         );
@@ -236,8 +236,8 @@ pub mod sgr_styling {
             0,
             5,
             'X',
-            |style_from_buffer| {
-                style_from_buffer.color_bg.unwrap() == ANSIBasicColor::DarkRed.into()
+            |style_from_buf| {
+                style_from_buf.color_bg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "red background",
         );
@@ -247,8 +247,8 @@ pub mod sgr_styling {
             0,
             6,
             'Y',
-            |style_from_buffer| {
-                style_from_buffer.color_bg.unwrap() == ANSIBasicColor::DarkGreen.into()
+            |style_from_buf| {
+                style_from_buf.color_bg.unwrap() == ANSIBasicColor::DarkGreen.into()
             },
             "green background",
         );
@@ -258,10 +258,9 @@ pub mod sgr_styling {
             0,
             7,
             'Z',
-            |style_from_buffer| {
-                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
-                    && style_from_buffer.color_bg.unwrap()
-                        == ANSIBasicColor::DarkBlue.into()
+            |style_from_buf| {
+                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+                    && style_from_buf.color_bg.unwrap() == ANSIBasicColor::DarkBlue.into()
             },
             "red on blue",
         );
@@ -286,9 +285,7 @@ pub mod sgr_styling {
                 0,
                 col,
                 expected_char,
-                |style_from_buffer| {
-                    style_from_buffer.attribs == tui_style_attrib::Blink.into()
-                },
+                |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
                 "slow blink",
             );
         }
@@ -313,9 +310,7 @@ pub mod sgr_styling {
                 0,
                 col,
                 expected_char,
-                |style_from_buffer| {
-                    style_from_buffer.attribs == tui_style_attrib::Blink.into()
-                },
+                |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
                 "rapid blink",
             );
         }
@@ -347,9 +342,7 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buffer| {
-                style_from_buffer.attribs == tui_style_attrib::Blink.into()
-            },
+            |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
             "slow blink should work",
         );
 
@@ -358,9 +351,7 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buffer| {
-                style_from_buffer.attribs == tui_style_attrib::Blink.into()
-            },
+            |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
             "rapid blink should work equivalently",
         );
     }
@@ -385,9 +376,7 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buf| {
-                style_from_buf.attribs.blink.is_some()
-            },
+            |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
             "blink enabled",
         );
 

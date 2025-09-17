@@ -10,7 +10,7 @@ use super::*;
 use crate::{BoundsOverflowStatus::Overflowed,
             ColIndex, ColWidth, RowHeight, RowIndex,
             core::{pty_mux::ansi_parser::term_units::TermRow,
-                   units::bounds_check::BoundsCheck},
+                   units::bounds_check::{BoundsCheck, LengthMarker}},
             row};
 
 impl OffscreenBuffer {
@@ -34,7 +34,7 @@ impl OffscreenBuffer {
             .scroll_region_bottom
             .and_then(TermRow::to_zero_based) // Convert 1 to 0 based
             .map_or(
-                /* None */ self.window_size.row_height.convert_to_row_index(),
+                /* None */ self.window_size.row_height.convert_to_index(),
                 /* Some */ Into::into,
             )
     }
@@ -46,7 +46,7 @@ impl OffscreenBuffer {
     #[must_use]
     pub fn clamp_column(&self, max_col: ColIndex) -> ColIndex {
         if max_col.check_overflows(self.window_size.col_width) == Overflowed {
-            self.window_size.col_width.convert_to_col_index()
+            self.window_size.col_width.convert_to_index()
         } else {
             max_col
         }
@@ -57,7 +57,7 @@ impl OffscreenBuffer {
     /// This converts the 1-based column width to the maximum valid 0-based index.
     #[must_use]
     pub fn max_col_index(&self) -> ColIndex {
-        self.window_size.col_width.convert_to_col_index()
+        self.window_size.col_width.convert_to_index()
     }
 
     /// Clamp a row to stay within the scroll region boundaries.
@@ -83,7 +83,7 @@ impl OffscreenBuffer {
     /// This converts the 1-based row height to the maximum valid 0-based index.
     #[must_use]
     pub fn max_row_index(&self) -> RowIndex {
-        self.window_size.row_height.convert_to_row_index()
+        self.window_size.row_height.convert_to_index()
     }
 
     /// Move cursor forward, clamping to screen width.

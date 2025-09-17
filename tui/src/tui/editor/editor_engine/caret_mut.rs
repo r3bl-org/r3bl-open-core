@@ -1,9 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{SelectMode, scroll_editor_content};
-use crate::{CaretDirection, ContainsWideSegments, ContentPositionStatus, EditorArgsMut,
-            EditorBuffer, EditorEngine, SegStringOwned,
+use crate::{AfterLastPosition, CaretDirection, ContainsWideSegments,
+            ContentPositionStatus, EditorArgsMut, EditorBuffer, EditorEngine,
+            SegStringOwned,
             caret_locate::{self, RowContentPositionStatus, locate_col},
-            caret_mut, caret_scr_adj, caret_scroll_index, col, empty_check_early_return,
+            caret_mut, caret_scr_adj, col, empty_check_early_return,
             multiline_disabled_check_early_return, row, width};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
@@ -226,8 +227,8 @@ pub fn to_end_of_line(
                 scroll_editor_content::set_caret_col_to(
                     // This caret col index goes 1 past the end of the line width, ie:
                     // - `line_display_width` which is the same as:
-                    // - `line_display_width.convert_to_col_index() /*-1*/ + 1`
-                    caret_scroll_index::col_index_for_width(line_display_width),
+                    // - `line_display_width.convert_to_index() /*-1*/ + 1`
+                    line_display_width.to_after_last_position(),
                     buffer_mut.inner.caret_raw,
                     buffer_mut.inner.scr_ofs,
                     buffer_mut.inner.vp.col_width,
@@ -249,8 +250,8 @@ pub fn select_all(buffer: &mut EditorBuffer, sel_mod: SelectMode) {
 
         // This caret col index goes 1 past the end of the line width, ie:
         // - `last_line_display_width` which is the same as:
-        // - `last_line_display_width.convert_to_col_index() /*-1*/ + 1`
-        caret_scroll_index::col_index_for_width(last_line_display_width)
+        // - `last_line_display_width.convert_to_index() /*-1*/ + 1`
+        last_line_display_width.to_after_last_position()
     };
 
     buffer.clear_selection();

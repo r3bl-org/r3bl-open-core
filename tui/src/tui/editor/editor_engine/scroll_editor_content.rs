@@ -10,9 +10,9 @@
 use std::cmp::Ordering;
 
 use super::{SelectMode, caret_mut};
-use crate::{BoundsCheck, BoundsOverflowStatus, CaretDirection, CaretRaw, ColIndex,
-            ColWidth, EditorArgsMut, EditorBuffer, LengthMarker, RowHeight, RowIndex,
-            ScrOfs, caret_scroll_index, ch, col, height, row, width};
+use crate::{AfterLastPosition, BoundsCheck, BoundsOverflowStatus, CaretDirection,
+            CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, LengthMarker,
+            RowHeight, RowIndex, ScrOfs, ch, col, height, row, width};
 
 /// # Scrolling not active
 ///
@@ -198,7 +198,7 @@ pub fn dec_caret_col_by(
         (HorizScr::Active, VpHorizLoc::NotAtStart) => {
             // The line below used to be: `col_amt > caret_raw.col_index`.
             let need_to_scroll_left =
-                caret_scroll_index::col_index_for_width(col_amt) > caret_raw.col_index;
+                col_amt.to_after_last_position() > caret_raw.col_index;
 
             // Move caret left by col_amt.
             caret_raw.col_index -= col_amt;
@@ -210,7 +210,7 @@ pub fn dec_caret_col_by(
                     // Due to scroll reasons, the `lhs` is the same value as the
                     // `col_amt`, ie, it goes past the viewport width. See the
                     // `scroll_col_index_for_width()` for more details.
-                    let lhs = caret_scroll_index::col_index_for_width(col_amt);
+                    let lhs = col_amt.to_after_last_position();
                     let rhs = caret_raw.col_index;
                     lhs - rhs
                 };

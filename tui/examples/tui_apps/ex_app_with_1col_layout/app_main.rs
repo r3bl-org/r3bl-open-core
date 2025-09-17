@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
-               InputEvent, LayoutDirection, LayoutManagement,
+               InputEvent, LayoutDirection, LayoutManagement, LengthMarker,
                PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
                Size, Surface, SurfaceProps, SurfaceRender, TuiStylesheet, ZOrder,
                box_end, box_start, ch, col, height, new_style,
@@ -263,7 +263,7 @@ mod hud {
         };
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index() - row(1); /* 1 row above bottom */
+        let row_idx = size.row_height.convert_to_index() - row(1); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();
@@ -318,7 +318,7 @@ mod status_bar {
 
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_row_index(); /* Bottom row */
+        let row_idx = size.row_height.convert_to_index(); /* Bottom row */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();

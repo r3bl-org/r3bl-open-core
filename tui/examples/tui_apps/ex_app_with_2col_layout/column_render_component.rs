@@ -2,8 +2,8 @@
 use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
-               GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, Pos,
-               RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
+               GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress,
+               LengthMarker, Pos, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
                glyphs, inline_string, render_ops, render_pipeline, row, send_signal,
                throws_with_return};
@@ -206,7 +206,7 @@ mod column_render_component_impl_component_trait {
                 {
                     *row_index += 1;
                     col_index =
-                        (line_2_trunc_gcs.display_width / ch(2)).convert_to_col_index();
+                        (line_2_trunc_gcs.display_width / ch(2)).convert_to_index();
                     render_ops! {
                         @add_to render_ops =>
                         RenderOp::ResetColor,

@@ -3,37 +3,41 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch, col,
+use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch,
             create_numeric_arithmetic_operators};
 
 /// Width is column count, i.e., the number of columns that a UI component occupies.
 ///
-/// This is one part of a [`crate::Size`] and is different from the [`crate::ColIndex`]
-/// (position).
+/// This is one part of a [`Size`] and is different from the [`ColIndex`] (position).
 ///
-/// You can use the [`crate::width()`] to create a new instance.
+/// You can use the [`width()`] to create a new instance.
 ///
 /// # Working with col index
+/// You can't safely add or subtract a [`ColIndex`] from this `Width`; since without
+/// knowing your specific use case ahead of time, it isn't possible to provide a default
+/// implementation without leading to unintended consequences. You can do the reverse
+/// safely.
 ///
-/// You can't safely add or subtract a [`crate::ColIndex`] from this `Width`; since
-/// without knowing your specific use case ahead of time, it isn't possible to provide a
-/// default implementation without leading to unintended consequences. You can do the
-/// reverse safely.
-///
-/// To add or subtract a [`crate::ColIndex`] from this `Width`, you can call
-/// [`Self::convert_to_col_index()`] and apply whatever logic makes sense for your use
+/// To add or subtract a [`ColIndex`] from this [`Width`], you can call
+/// [`Self::convert_to_index()`] and apply whatever logic makes sense for your use
 /// case.
 ///
 /// There is a special case for scrolling horizontally, and creates a selection range,
-/// which is handled by `r3bl_tui::caret_scroll_index::scroll_col_index_for_width()`.
+/// which is handled by the `AfterLastPosition` trait method `to_after_last_position()`.
 ///
 /// # Examples
-///
 /// ```
 /// use r3bl_tui::{ColWidth, width};
 /// let width = width(5);
 /// let width = ColWidth::new(5);
 /// ```
+///
+/// [`Width`]: crate::ColWidth
+/// [`Height`]: crate::RowHeight
+/// [`RowIndex`]: crate::RowIndex
+/// [`Size`]: crate::Size
+/// [`AfterLastPosition`]: crate::AfterLastPosition
+/// [`to_after_last_position()`]: crate::AfterLastPosition::to_after_last_position
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColWidth(pub ChUnit);
 
@@ -51,17 +55,6 @@ mod impl_core {
 
     impl ColWidth {
         pub fn new(arg_col_width: impl Into<ColWidth>) -> Self { arg_col_width.into() }
-
-        /// Subtract 1 from the col index to get the width, i.e.: `col index = width - 1`.
-        ///
-        /// The following is equivalent:
-        /// - col index >= width
-        /// - col index > width - 1 (which is this function)
-        ///
-        /// The following holds true:
-        /// - last col index == width - 1 (which is this function)
-        #[must_use]
-        pub fn convert_to_col_index(&self) -> ColIndex { col(self.0 - ch(1)) }
 
         #[must_use]
         pub fn as_u16(&self) -> u16 { self.0.into() }
@@ -177,14 +170,13 @@ mod bounds_check_trait_impls {
 
     impl LengthMarker for ColWidth {
         type IndexType = ColIndex;
-
-        fn convert_to_index(&self) -> Self::IndexType { self.convert_to_col_index() }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::col;
 
     #[test]
     fn test_width_new() {
@@ -247,8 +239,8 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_col_index() {
-        assert_eq!(width(5).convert_to_col_index(), col(4));
+    fn test_convert_to_index() {
+        assert_eq!(width(5).convert_to_index(), col(4));
     }
 
     #[test]

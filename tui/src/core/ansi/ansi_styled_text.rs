@@ -143,6 +143,7 @@ macro_rules! ast_lines {
 pub mod ansi_styled_text_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
+    use crate::core::units::bounds_check::LengthMarker;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct ASTextConvertOptions {
@@ -154,7 +155,7 @@ pub mod ansi_styled_text_impl {
         fn from(col_width: ColWidth) -> Self {
             Self {
                 start: Some(0.into()),
-                end: Some(col_width.convert_to_col_index()),
+                end: Some(col_width.convert_to_index()),
             }
         }
     }

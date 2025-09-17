@@ -482,6 +482,7 @@ mod internal_impl {
     mod render_results_panel_inner {
         #[allow(clippy::wildcard_imports)]
         use super::*;
+        use crate::core::units::bounds_check::LengthMarker;
 
         pub fn paint_results(
             ops: &mut RenderOps,
@@ -527,7 +528,7 @@ mod internal_impl {
                     // This is calculated relative to the end of the string (not the
                     // start!). So it's backwards.
                     let rhs_start_index = (text_display_width - postfix_len)
-                        .convert_to_col_index()
+                        .convert_to_index()
                         + col(1) /* skip one segment right */;
                     let rhs_str = text_gcs.clip(rhs_start_index, text_display_width);
 

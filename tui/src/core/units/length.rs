@@ -193,8 +193,6 @@ mod bounds_check_trait_impls {
 
     impl LengthMarker for Length {
         type IndexType = Index;
-
-        fn convert_to_index(&self) -> Self::IndexType { self.convert_to_index() }
     }
 }
 

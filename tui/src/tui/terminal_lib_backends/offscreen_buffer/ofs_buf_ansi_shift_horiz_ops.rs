@@ -136,7 +136,7 @@ impl OffscreenBuffer {
             at.row_index,
             {
                 let start = at.col_index + how_many_clamped;
-                let end = max_width.convert_to_col_index() + len(1);
+                let end = max_width.convert_to_index() + len(1);
                 start..end
             },
             at.col_index,
@@ -147,8 +147,8 @@ impl OffscreenBuffer {
         self.fill_char_range(
             at.row_index,
             {
-                let start = max_width.convert_to_col_index() - how_many_clamped + len(1);
-                let end = max_width.convert_to_col_index() + len(1);
+                let start = max_width.convert_to_index() - how_many_clamped + len(1);
+                let end = max_width.convert_to_index() + len(1);
                 start..end
             },
             PixelChar::Spacer,

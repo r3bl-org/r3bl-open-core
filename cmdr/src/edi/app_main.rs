@@ -6,9 +6,9 @@ use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelCo
                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasEditorBuffers, HasFocus, InputEvent, Key,
-               KeyPress, LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
-               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
-               SurfaceProps, SurfaceRender, SyntaxHighlightMode,
+               KeyPress, LayoutDirection, LayoutManagement, LengthMarker, LineMode,
+               ModifierKeysMask, PerformPositioningAndSizing, RenderOp, RenderPipeline,
+               Size, Surface, SurfaceProps, SurfaceRender, SyntaxHighlightMode,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,
                ZOrder, box_end, box_start, col, fg_green, fg_magenta, fg_red, glyphs,
                height, inline_string, new_style, render_component_in_current_box,
@@ -675,7 +675,7 @@ mod status_bar {
 
         let display_width = styled_texts.display_width();
         let col_center = *(size.col_width - display_width) / 2;
-        let row_bottom = size.row_height.convert_to_row_index();
+        let row_bottom = size.row_height.convert_to_index();
         let center = col(col_center) + row_bottom;
 
         let mut render_ops = render_ops!();

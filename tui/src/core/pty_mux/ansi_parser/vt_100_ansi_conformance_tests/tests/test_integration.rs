@@ -87,9 +87,7 @@ mod full_sequences {
                 0,
                 i,
                 ch,
-                |style_from_buf| {
-                    style_from_buf.attribs == tui_style_attrib::Bold.into()
-                },
+                |style_from_buf| style_from_buf.attribs == tui_style_attrib::Bold.into(),
                 "bold style",
             );
         }
@@ -144,8 +142,8 @@ mod vte_parser {
             0,
             5,
             'R',
-            |style_from_buffer| {
-                style_from_buffer.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
+            |style_from_buf| {
+                style_from_buf.color_fg.unwrap() == ANSIBasicColor::DarkRed.into()
             },
             "red foreground",
         );

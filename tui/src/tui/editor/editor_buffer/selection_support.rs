@@ -3,11 +3,11 @@
 use std::cmp::{self, Ordering};
 
 use super::selection_list::RowLocationInSelectionList;
-use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
-            ChUnitPrimitiveType, ColIndex, DEBUG_TUI_COPY_PASTE, DirectionChangeResult,
-            EditorBuffer, RowIndex, SelectionRange, Size, caret_scr_adj,
-            caret_scroll_index, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta,
-            fg_red, fg_yellow, height, inline_string, row, underline, width};
+use crate::{AfterLastPosition, CaretLocationInRange, CaretMovementDirection,
+            CaretScrAdj, ChUnitPrimitiveType, ColIndex, DEBUG_TUI_COPY_PASTE,
+            DirectionChangeResult, EditorBuffer, RowIndex, SelectionRange, Size,
+            caret_scr_adj, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
+            fg_yellow, height, inline_string, row, underline, width};
 
 /// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
 /// viewport to be passed in (from the [`crate::EditorEngine`]). However, in this module,
@@ -270,9 +270,8 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
                         // For selection, go one col index past the end of the line,
                         // since selection range is not inclusive of the end index.
                         let line_info = line_with_info.info();
-                        let end_col_index = caret_scroll_index::col_index_for_width(
-                            line_info.display_width,
-                        );
+                        let end_col_index =
+                            line_info.display_width.to_after_last_position();
                         caret_scr_adj(end_col_index + row_index)
                     };
                     buffer_mut.inner.sel_list.insert(
@@ -763,7 +762,7 @@ mod multiline_select_helper {
                 let end = {
                     // Go one col index past the end of the width, since selection range
                     // is not inclusive of end index.
-                    let col_index = caret_scroll_index::col_index_for_width(end_col);
+                    let col_index = end_col.to_after_last_position();
                     caret_scr_adj(col_index + first_row_index)
                 };
                 (start, end).into()
@@ -821,8 +820,7 @@ mod multiline_select_helper {
                 let end = {
                     // Go one col index past the end of the width, since selection range
                     // is not inclusive of end index.
-                    let end_col =
-                        caret_scroll_index::col_index_for_width(first_line_width);
+                    let end_col = first_line_width.to_after_last_position();
                     caret_scr_adj(end_col + first.row_index)
                 };
                 let new_first_row_range = (start, end).into();
@@ -876,8 +874,7 @@ mod multiline_select_helper {
                     // Go one col index past the end of the width, since selection range
                     // is not inclusive of end index.
                     caret_scr_adj(
-                        caret_scroll_index::col_index_for_width(first_line_width)
-                            + first.row_index,
+                        first_line_width.to_after_last_position() + first.row_index,
                     )
                 };
                 let updated_first_row_range = (start, end).into();
@@ -895,10 +892,7 @@ mod multiline_select_helper {
                     let end = {
                         // Go one col index past the end of the width, since selection
                         // range is not inclusive of end index.
-                        caret_scr_adj(
-                            caret_scroll_index::col_index_for_width(end_col)
-                                + first.row_index,
-                        )
+                        caret_scr_adj(end_col.to_after_last_position() + first.row_index)
                     };
                     (start, end).into()
                 };
