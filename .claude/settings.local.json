@@ -74,7 +74,8 @@
       "Read(//tmp/**)",
       "WebFetch(domain:vt100.net)",
       "Read(//home/nazmul/github/notes/files/scripts/systemd/**)",
-      "Read(//home/nazmul/github/notes/files/scripts/**)"
+      "Read(//home/nazmul/github/notes/files/scripts/**)",
+      "WebFetch(domain:nexte.st)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

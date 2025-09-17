@@ -451,6 +451,35 @@ Other commands:
 | `fish run.fish run-binaries`    | Run cmdr binaries (edi, giti, rc) interactively                 |
 | `fish run.fish update-toolchain` | Update Rust to month-old nightly toolchain with cleanup         |
 
+### Bacon Development Tools
+
+This project includes [bacon](https://dystroy.org/bacon/) configuration for background code checking and testing. Bacon provides real-time feedback on code changes with two distinct workflows:
+
+**Interactive Workflow (Rich TUI with details):**
+- Full terminal UI with detailed output
+- Ctrl+click on errors and warnings to jump directly to source code (via OSC hyperlinks)
+- Perfect for active debugging and development
+
+**Background Workflow (Silent monitoring):**
+- Minimal output - just success/failure status
+- Answers simple yes/no questions like "do tests pass?" or "do docs build?"
+- Ideal for background monitoring while focusing on other tasks
+
+**Bacon commands:**
+
+| Command | Workflow | Description |
+| ------- | -------- | ----------- |
+| `bacon nextest` | Interactive | Rich TUI test runner with clickable errors, detailed output, and real-time updates |
+| `bacon nextest --headless --summary` | Background | Silent test runner providing only pass/fail status |
+| `bacon doc` | Interactive | Documentation builder with detailed output and error navigation |
+| `bacon doc --headless --summary` | Background | Silent doc builder answering "did docs generate?" with minimal output |
+
+Choose the workflow that matches your current needs:
+- Use **interactive** when actively debugging or wanting detailed feedback
+- Use **background** for continuous monitoring, CI/CD pipelines, or when you just need to know if things work
+
+**Note:** We use [`cargo-nextest`](https://nexte.st/) for running tests as it's significantly faster than `cargo test`. However, nextest does not run doctests (tests in documentation comments). To run doctests, use `cargo test --doc` separately.
+
 ### Build Cache (using sccache) Verification
 
 This project uses [sccache](https://github.com/mozilla/sccache) to speed up Rust compilation by
