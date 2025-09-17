@@ -77,7 +77,6 @@ impl OffscreenBuffer {
             let fill_end = (cursor_pos + insert_amount).min(line_width);
             line[cursor_pos..fill_end].fill(PixelChar::Spacer);
 
-            self.invalidate_memory_size_calc_cache();
             return true;
         }
         false
@@ -154,7 +153,6 @@ impl OffscreenBuffer {
             PixelChar::Spacer,
         );
 
-        self.invalidate_memory_size_calc_cache();
         true
     }
 
@@ -214,7 +212,6 @@ impl OffscreenBuffer {
             let fill_end = cursor_pos + erase_amount;
             line[cursor_pos..fill_end].fill(PixelChar::Spacer);
 
-            self.invalidate_memory_size_calc_cache();
             return true;
         }
         false

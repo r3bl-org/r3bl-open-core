@@ -9,7 +9,7 @@ use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagati
             MainEventLoopFuture};
 use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             CommonResult, ComponentRegistryMap, DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY,
-            DefaultSize, DefaultTiming, Flush, FlushKind, GCStringOwned, GlobalData,
+            DefaultSize, DefaultTiming, Flush, FlushKind, GCStringOwned, GetMemSize, GlobalData,
             GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt, InputEvent,
             LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice, RawMode,
             RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
@@ -267,7 +267,7 @@ where
             if let Some(ref mut offscreen_buffer) = self.global_data.maybe_saved_ofs_buf {
                 let mem_used = inline_string!(
                     "mem used: {size}",
-                    size = offscreen_buffer.get_mem_size_cached()
+                    size = offscreen_buffer.get_mem_size()
                 );
                 // % is Display, ? is Debug.
                 tracing::info!(

@@ -39,7 +39,6 @@ impl OffscreenBuffer {
             .and_then(|row| row.get_mut(col_idx))
         {
             *target_char = char;
-            self.invalidate_memory_size_calc_cache();
             true
         } else {
             false
@@ -68,7 +67,6 @@ impl OffscreenBuffer {
             && start_col <= end_col
         {
             line[start_col..end_col].fill(char);
-            self.invalidate_memory_size_calc_cache();
             return true;
         }
         false
@@ -98,7 +96,6 @@ impl OffscreenBuffer {
             && source_start <= source_end
         {
             line.copy_within(source_start..source_end, dest);
-            self.invalidate_memory_size_calc_cache();
             return true;
         }
         false

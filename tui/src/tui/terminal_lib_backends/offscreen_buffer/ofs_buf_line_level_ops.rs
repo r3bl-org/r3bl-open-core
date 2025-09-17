@@ -13,7 +13,6 @@ impl OffscreenBuffer {
         let row_idx = row.as_usize();
         if let Some(line) = self.buffer.get_mut(row_idx) {
             line.fill(PixelChar::Spacer);
-            self.invalidate_memory_size_calc_cache();
             true
         } else {
             false
@@ -33,7 +32,6 @@ impl OffscreenBuffer {
         let row_idx = row.as_usize();
         if let Some(target_line) = self.buffer.get_mut(row_idx) {
             *target_line = line;
-            self.invalidate_memory_size_calc_cache();
             true
         } else {
             false
@@ -48,7 +46,6 @@ impl OffscreenBuffer {
 
         if row_1_idx < self.buffer.len() && row_2_idx < self.buffer.len() {
             self.buffer.swap(row_1_idx, row_2_idx);
-            self.invalidate_memory_size_calc_cache();
             true
         } else {
             false
@@ -151,7 +148,6 @@ impl OffscreenBuffer {
             self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
         }
 
-        self.invalidate_memory_size_calc_cache();
         true
     }
 
@@ -250,7 +246,6 @@ impl OffscreenBuffer {
             self.buffer[start_idx].fill(PixelChar::Spacer);
         }
 
-        self.invalidate_memory_size_calc_cache();
         true
     }
 }

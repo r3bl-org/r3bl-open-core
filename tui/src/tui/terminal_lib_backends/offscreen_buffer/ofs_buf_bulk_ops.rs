@@ -21,7 +21,6 @@ impl OffscreenBuffer {
             }
         }
 
-        self.invalidate_memory_size_calc_cache();
         applied_count
     }
 }

@@ -3,9 +3,8 @@
 use std::fmt::Debug;
 
 use super::super::{FlushKind, RenderOps};
-use crate::{CachedMemorySize, GetMemSize, LockedOutputDevice, MemoizedMemorySize, Pos,
-            Size, TuiStyle, core::pty_mux::ansi_parser::term_units::TermRow,
-            osc::OscEvent};
+use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TuiStyle,
+            core::pty_mux::ansi_parser::term_units::TermRow, osc::OscEvent};
 
 /// Character set modes for terminal emulation.
 ///
@@ -214,34 +213,24 @@ pub struct OffscreenBuffer {
     /// [`cursor_pos_for_esc_save_and_restore`]: AnsiParserSupport::cursor_pos_for_esc_save_and_restore
     pub cursor_pos: Pos,
 
-    /// Memoized memory size calculation for performance.
-    /// This avoids expensive recalculation in
-    /// [`log_telemetry_info`]
-    /// which is called in a hot loop on every render.
+    /// Pre-calculated memory size of this buffer.
+    /// Since the buffer has fixed dimensions and each cell is a fixed-size enum,
+    /// this value is calculated once at creation and never changes.
+    ///
+    /// Used in [`log_telemetry_info`] which is called in a hot loop on every render.
     ///
     /// [`log_telemetry_info`]: crate::main_event_loop::EventLoopState::log_telemetry_info()
-    pub(super) memory_size_calc_cache: MemoizedMemorySize,
+    memory_size: MemorySize,
 
     /// ANSI parser support fields grouped together for better organization.
     pub ansi_parser_support: AnsiParserSupport,
 }
 
 impl GetMemSize for OffscreenBuffer {
-    /// This is the actual calculation, but should rarely be called directly.
-    /// Use [`Self::get_mem_size_cached()`] for performance-critical code.
-    fn get_mem_size(&self) -> usize {
-        self.buffer.get_mem_size()
-            + std::mem::size_of::<Size>()
-            + std::mem::size_of::<Pos>()
-    }
-}
-
-impl CachedMemorySize for OffscreenBuffer {
-    fn memory_size_cache(&self) -> &MemoizedMemorySize { &self.memory_size_calc_cache }
-
-    fn memory_size_cache_mut(&mut self) -> &mut MemoizedMemorySize {
-        &mut self.memory_size_calc_cache
-    }
+    /// Returns the pre-calculated memory size of this buffer.
+    /// Since buffer dimensions are fixed and cells are fixed-size enums,
+    /// this value was calculated once at creation and never changes.
+    fn get_mem_size(&self) -> usize { self.memory_size.size().unwrap_or(0) }
 }
 
 // Forward declarations for types defined in their own modules.
@@ -281,7 +270,7 @@ use std::{fmt::{self},
           ops::{Deref, DerefMut}};
 
 use super::PixelCharDiffChunks;
-use crate::{List, MemorySize, col, fg_green, inline_string, ok, row};
+use crate::{List, col, fg_green, inline_string, ok, row};
 
 impl Debug for PixelCharDiffChunks {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -301,14 +290,11 @@ impl Deref for OffscreenBuffer {
 impl DerefMut for OffscreenBuffer {
     /// Returns a mutable reference to the buffer.
     ///
-    /// **Important**: This invalidates and recalculates the `memory_size_calc_cache`
-    /// field to ensure telemetry always shows accurate memory size instead of
-    /// "?".
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        // Invalidate and recalculate cache when buffer is accessed mutably.
-        self.invalidate_memory_size_calc_cache();
-        &mut self.buffer
-    }
+    /// Code like the following will call this method:
+    /// - `self.buffer[row][col] = something`
+    /// - `self.buffer.get_mut(row)`
+    /// - Any operation that goes through the `&mut self.buffer` dereference
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.buffer }
 }
 
 impl Debug for OffscreenBuffer {
@@ -340,21 +326,6 @@ impl Debug for OffscreenBuffer {
 }
 
 impl OffscreenBuffer {
-    /// Gets the cached memory size value, recalculating if necessary.
-    /// This is used in
-    /// [`crate::main_event_loop::EventLoopState::log_telemetry_info()`] for
-    /// performance-critical telemetry logging. The expensive memory calculation is
-    /// only performed if the cache is invalid or empty.
-    #[must_use]
-    pub fn get_mem_size_cached(&mut self) -> MemorySize { self.get_cached_memory_size() }
-
-    /// Invalidates and immediately recalculates the memory size cache.
-    /// Call this when buffer content changes to ensure the cache is always valid.
-    pub(super) fn invalidate_memory_size_calc_cache(&mut self) {
-        self.invalidate_memory_size_cache();
-        self.update_memory_size_cache(); // Force immediate recalculation to avoid "?" in telemetry
-    }
-
     /// Checks for differences between self and other. Returns a list of positions and
     /// pixel chars if there are differences (from other).
     #[must_use]
@@ -384,20 +355,23 @@ impl OffscreenBuffer {
     #[must_use]
     pub fn new_empty(arg_window_size: impl Into<Size>) -> Self {
         let window_size = arg_window_size.into();
-        let mut buffer = Self {
-            buffer: PixelCharLines::new_empty(window_size),
+        let buffer = PixelCharLines::new_empty(window_size);
+
+        // Calculate memory size once - it will never change since buffer dimensions are
+        // fixed
+        let memory_size = MemorySize::new(
+            buffer.get_mem_size()
+                + std::mem::size_of::<Size>()
+                + std::mem::size_of::<Pos>(),
+        );
+
+        Self {
+            buffer,
             window_size,
             cursor_pos: Pos::default(),
-            memory_size_calc_cache: crate::MemoizedMemorySize::default(),
+            memory_size,
             ansi_parser_support: super::AnsiParserSupport::default(),
-        };
-        // Explicitly calculate and cache the initial memory size.
-        // We know the cache is empty (invariant), so directly populate it.
-        let size = buffer.get_mem_size();
-        buffer
-            .memory_size_calc_cache
-            .upsert(|| MemorySize::new(size));
-        buffer
+        }
     }
 
     // Make sure each line is full of empty chars.
@@ -409,8 +383,6 @@ impl OffscreenBuffer {
                 }
             }
         }
-        // Invalidate and recalculate cache when buffer is cleared.
-        self.invalidate_memory_size_calc_cache();
     }
 }
 
@@ -611,35 +583,14 @@ mod tests {
 
     #[test]
     fn test_offscreen_buffer_memory_size() {
-        let mut buffer = create_test_buffer();
+        let buffer = create_test_buffer();
 
         let mem_size = buffer.get_mem_size();
         assert!(mem_size > 0);
 
-        // Test cached memory size.
-        let cached_size = buffer.get_mem_size_cached();
-        assert_eq!(mem_size, cached_size.size().unwrap());
-    }
-
-    #[test]
-    fn test_offscreen_buffer_memory_size_cache_invalidation() {
-        let mut buffer = create_test_buffer();
-
-        // Get initial memory size (should cache it).
-        let initial_size = buffer.get_mem_size_cached();
-        assert!(initial_size.size().unwrap() > 0);
-
-        // Modify buffer (this should not affect the test directly, but shows usage).
-        buffer.buffer[0][0] = create_test_pixel_char('T');
-
-        // Invalidate cache.
-        buffer.invalidate_memory_size_calc_cache();
-
-        // Get memory size again (should recalculate).
-        let new_size = buffer.get_mem_size_cached();
-
-        // Size might be different due to the modification, but should still be positive.
-        assert!(new_size.size().unwrap() > 0);
+        // Test that get_mem_size returns the same value consistently.
+        let size2 = buffer.get_mem_size();
+        assert_eq!(mem_size, size2);
     }
 
     #[test]
