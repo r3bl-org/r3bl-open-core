@@ -75,7 +75,7 @@
 //! mapping:
 //!
 //! ```text
-//! vt100_ansi_parser/operations/     offscreen_buffer/vt100_ansi_impl/
+//! vt_100_ansi_parser/operations/     offscreen_buffer/vt100_ansi_impl/
 //! ├── char_ops.rs         →         ├── char_ops.rs         (print_char, ICH, DCH, ECH)
 //! ├── control_ops.rs      →         ├── control_ops.rs      (BS, TAB, LF, CR)
 //! ├── cursor_ops.rs       →         ├── cursor_ops.rs       (movement, positioning)

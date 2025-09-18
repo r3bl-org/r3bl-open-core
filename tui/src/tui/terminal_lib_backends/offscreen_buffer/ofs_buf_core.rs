@@ -4,11 +4,11 @@ use std::fmt::Debug;
 
 use super::super::{FlushKind, RenderOps};
 use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TuiStyle,
-            core::pty_mux::vt100_ansi_parser::term_units::TermRow, osc::OscEvent};
+            core::pty_mux::vt_100_ansi_parser::term_units::TermRow, osc::OscEvent};
 
 /// Character set modes for terminal emulation.
 ///
-/// Used by [`crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer`] to handle
+/// Used by [`crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer`] to handle
 /// ESC ( sequences that switch between ASCII and DEC line-drawing graphics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CharacterSet {
@@ -30,7 +30,7 @@ pub enum CharacterSet {
 /// current cursor position. This is because `cursor_pos` is used by multiple subsystems
 /// and is the primary cursor position tracker for the entire offscreen buffer system.
 ///
-/// [`ANSI parser performer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
+/// [`ANSI parser performer`]: crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer
 /// [`OffscreenBuffer::cursor_pos`]: OffscreenBuffer::cursor_pos
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnsiParserSupport {
@@ -60,7 +60,7 @@ pub struct AnsiParserSupport {
     /// 6. Restores cursor_pos from buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
     /// ```
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer
     pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
 
     /// Active character set for ANSI escape sequence support.
@@ -76,7 +76,7 @@ pub struct AnsiParserSupport {
     /// Graphics Mode (ESC ( 0): 'q' → '─' (horizontal line)
     /// ```
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer
     pub character_set: CharacterSet,
 
     /// Auto-wrap mode (DECAWM) for ANSI escape sequence support.
@@ -95,7 +95,7 @@ pub struct AnsiParserSupport {
     /// automatically wrap to the beginning of the next line. When disabled,
     /// the cursor stays at the right margin and subsequent characters overwrite.
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer
     pub auto_wrap_mode: bool,
 
     /// Complete computed style combining attributes and colors for efficient rendering.
@@ -126,7 +126,7 @@ pub struct AnsiParserSupport {
     /// ESC [ r          - Reset to full screen (clears both margins)
     /// ```
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer
     pub scroll_region_top: Option<TermRow>,
 
     /// Bottom margin for the **scrollable region** (DECSTBM) - 1-based row number.
@@ -148,7 +148,7 @@ pub struct AnsiParserSupport {
     /// - Cursor movement is constrained to the region boundaries
     /// - Content outside the region remains unchanged during scrolling
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer
     pub scroll_region_bottom: Option<TermRow>,
 }
 

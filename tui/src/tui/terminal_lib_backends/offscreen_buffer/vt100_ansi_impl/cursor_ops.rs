@@ -174,7 +174,6 @@ impl OffscreenBuffer {
         // Update only the row, preserve column.
         self.cursor_pos.row_index = new_row;
     }
-
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@
 //! Line manipulation operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements line-level operations that correspond to ANSI line
-//! sequences handled by the `vt100_ansi_parser::operations::line_ops` module. These
+//! sequences handled by the `vt_100_ansi_parser::operations::line_ops` module. These
 //! include:
 //!
 //! - **IL** (Insert Lines) - `shift_lines_down`
@@ -13,16 +13,235 @@
 //! All operations maintain VT100 compliance and handle proper line manipulation
 //! within scroll regions as specified in VT100 documentation.
 
+use std::ops::Range;
+
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
+use crate::{Length, RowIndex};
 
 impl OffscreenBuffer {
-    // TODO: Move line manipulation operations from existing files here
-    // These methods currently exist in ofs_buf_line_level_ops.rs and should be moved here
-    // to provide a clean mapping from vt100_ansi_parser::operations::line_ops
+    /// Clear an entire line by filling it with blank characters.
+    /// Returns true if the operation was successful.
+    pub fn clear_line(&mut self, row: RowIndex) -> bool {
+        let row_idx = row.as_usize();
+        if let Some(line) = self.buffer.get_mut(row_idx) {
+            line.fill(PixelChar::Spacer);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Shift lines up within a range by the specified amount.
+    /// Lines at the bottom of the range are filled with blank lines.
+    /// Returns true if the operation was successful.
+    ///
+    /// Used by ANSI DL (Delete Line) and SU (Scroll Up) operations.
+    pub fn shift_lines_up(
+        &mut self,
+        row_range: Range<RowIndex>,
+        shift_by: Length,
+    ) -> bool {
+        let start_idx = row_range.start.as_usize();
+        let end_idx = row_range.end.as_usize();
+        let shift_amount = shift_by.as_usize();
+
+        if start_idx >= self.buffer.len()
+            || end_idx > self.buffer.len()
+            || start_idx >= end_idx
+        {
+            return false;
+        }
+
+        // Shift lines up by cloning (use manual index management to avoid borrow
+        // checker issues).
+        for _ in 0..shift_amount {
+            for row_idx in start_idx..end_idx.saturating_sub(1) {
+                let next_line = self.buffer[row_idx + 1].clone();
+                self.buffer[row_idx] = next_line;
+            }
+
+            // Clear the bottom line.
+            self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
+        }
+
+        true
+    }
+
+    /// Shift lines down within a range by the specified amount.
+    /// Lines at the top of the range are filled with blank lines.
+    /// Returns true if the operation was successful.
+    ///
+    /// Used by ANSI IL (Insert Line) and SD (Scroll Down) operations.
+    ///
+    /// For scrolling operations, this is also used to scroll buffer content down.
+    /// The bottom line is lost, and a new empty line appears at top.
+    pub fn shift_lines_down(
+        &mut self,
+        row_range: Range<RowIndex>,
+        shift_by: Length,
+    ) -> bool {
+        let start_idx = row_range.start.as_usize();
+        let end_idx = row_range.end.as_usize();
+        let shift_amount = shift_by.as_usize();
+
+        if start_idx >= self.buffer.len()
+            || end_idx > self.buffer.len()
+            || start_idx >= end_idx
+        {
+            return false;
+        }
+
+        // Shift lines down by cloning (work backwards to avoid overwriting).
+        for _ in 0..shift_amount {
+            for row_idx in (start_idx + 1..end_idx).rev() {
+                let prev_line = self.buffer[row_idx - 1].clone();
+                self.buffer[row_idx] = prev_line;
+            }
+
+            // Clear the top line.
+            self.buffer[start_idx].fill(PixelChar::Spacer);
+        }
+
+        true
+    }
 }
 
 #[cfg(test)]
 mod tests_line_ops {
-    // TODO: Add comprehensive tests for line manipulation operations.
+    use super::*;
+    use crate::{col, height, len,
+                ofs_buf_test_fixtures::{create_plain_test_char,
+                                        create_test_buffer_with_size,
+                                        create_test_line_with_chars},
+                row, width};
+
+    fn create_test_buffer() -> OffscreenBuffer {
+        create_test_buffer_with_size(width(4), height(5))
+    }
+
+    fn create_test_char(ch: char) -> PixelChar { create_plain_test_char(ch) }
+
+    fn create_test_line(chars: &[char]) -> PixelCharLine {
+        create_test_line_with_chars(width(4), chars)
+    }
+
+    #[test]
+    fn test_clear_line() {
+        let mut buffer = create_test_buffer();
+        let test_row = row(1);
+
+        // Fill the line with test characters first.
+        for col_idx in 0..4 {
+            buffer.set_char(test_row + col(col_idx), create_test_char('X'));
+        }
+
+        // Clear the line.
+        let result = buffer.clear_line(test_row);
+        assert!(result);
+
+        // Verify all characters are now spacers.
+        for col_idx in 0..4 {
+            let pos = test_row + col(col_idx);
+            let char = buffer.get_char(pos).unwrap();
+            assert_eq!(char, PixelChar::Spacer);
+        }
+    }
+
+    #[test]
+    fn test_clear_line_out_of_bounds() {
+        let mut buffer = create_test_buffer();
+        let result = buffer.clear_line(row(10)); // Out of bounds
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_shift_lines_up() {
+        let mut buffer = create_test_buffer();
+
+        // Set up initial lines.
+        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+
+        // Shift lines 1-3 up by 1.
+        let result = buffer.shift_lines_up(row(1)..row(4), len(1));
+        assert!(result);
+
+        // Verify the shift: line 2 content should now be at line 1, etc.
+        let line1 = buffer.get_line(row(1)).unwrap();
+        let line2 = buffer.get_line(row(2)).unwrap();
+        let line3 = buffer.get_line(row(3)).unwrap();
+
+        // Line 1 should now have what was line 2's content (all 'B' characters).
+        for col_idx in 0..4 {
+            assert_eq!(line1[col_idx], create_test_char('B'));
+        }
+
+        // Line 2 should now have what was line 3's content (all 'C' characters).
+        for col_idx in 0..4 {
+            assert_eq!(line2[col_idx], create_test_char('C'));
+        }
+
+        // Line 3 should be blank (all spacers).
+        for col_idx in 0..4 {
+            assert_eq!(line3[col_idx], PixelChar::Spacer);
+        }
+
+        // Additional verification using get_char method.
+        assert_eq!(
+            buffer.get_char(row(1) + col(0)).unwrap(),
+            create_test_char('B')
+        );
+        assert_eq!(
+            buffer.get_char(row(2) + col(0)).unwrap(),
+            create_test_char('C')
+        );
+        assert_eq!(buffer.get_char(row(3) + col(0)).unwrap(), PixelChar::Spacer);
+    }
+
+    #[test]
+    fn test_shift_lines_down() {
+        let mut buffer = create_test_buffer();
+
+        // Set up initial lines.
+        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+
+        // Shift lines 1-3 down by 1.
+        let result = buffer.shift_lines_down(row(1)..row(4), len(1));
+        assert!(result);
+
+        // Verify the shift: line 1 content should now be at line 2, etc.
+        let line1 = buffer.get_line(row(1)).unwrap();
+        let line2 = buffer.get_line(row(2)).unwrap();
+        let line3 = buffer.get_line(row(3)).unwrap();
+
+        // Line 1 should now be blank (all spacers).
+        for col_idx in 0..4 {
+            assert_eq!(line1[col_idx], PixelChar::Spacer);
+        }
+
+        // Line 2 should now have what was line 1's content (all 'A' characters).
+        for col_idx in 0..4 {
+            assert_eq!(line2[col_idx], create_test_char('A'));
+        }
+
+        // Line 3 should now have what was line 2's content (all 'B' characters).
+        for col_idx in 0..4 {
+            assert_eq!(line3[col_idx], create_test_char('B'));
+        }
+
+        // Additional verification using get_char method.
+        assert_eq!(buffer.get_char(row(1) + col(0)).unwrap(), PixelChar::Spacer);
+        assert_eq!(
+            buffer.get_char(row(2) + col(0)).unwrap(),
+            create_test_char('A')
+        );
+        assert_eq!(
+            buffer.get_char(row(3) + col(0)).unwrap(),
+            create_test_char('B')
+        );
+    }
 }

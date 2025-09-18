@@ -3,7 +3,7 @@
 //! Control character operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements control character handling that corresponds to ANSI control
-//! sequences handled by the `vt100_ansi_parser::operations::control_ops` module. These
+//! sequences handled by the `vt_100_ansi_parser::operations::control_ops` module. These
 //! include:
 //!
 //! - **BS** (Backspace) - `handle_backspace`
@@ -17,7 +17,8 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use super::TAB_STOP_WIDTH;
-use crate::{BoundsCheck, RowIndex, col, core::units::bounds_check::{IndexMarker, LengthMarker}};
+use crate::{BoundsCheck, RowIndex, col,
+            core::units::bounds_check::{IndexMarker, LengthMarker}};
 
 impl OffscreenBuffer {
     /// Handle backspace control character (0x08).

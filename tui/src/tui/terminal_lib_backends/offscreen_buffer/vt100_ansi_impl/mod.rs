@@ -3,27 +3,32 @@
 //! VT100/ANSI terminal operation implementations for `OffscreenBuffer`.
 //!
 //! This module contains the actual implementations of VT100 and ANSI escape sequence
-//! operations that are delegated from the `vt100_ansi_parser::operations` module. The
-//! structure mirrors `vt100_ansi_parser/operations/` to provide a clear 1:1 mapping
+//! operations that are delegated from the `vt_100_ansi_parser::operations` module. The
+//! structure mirrors `vt_100_ansi_parser/operations/` to provide a clear 1:1 mapping
 //! between the parser shim layer and the implementation layer.
 //!
 //! # Architecture
 //!
 //! ```text
-//! vt100_ansi_parser/operations/char_ops.rs     (shim - minimal logic)
+//! vt_100_ansi_parser/operations/char_ops.rs     (shim - minimal logic)
 //!           ↓ delegates to
 //! vt100_ansi_impl/char_ops.rs           (implementation - full logic)
 //! ```
 //!
 //! # Module Organization
 //!
-//! Each file corresponds directly to a file in `vt100_ansi_parser/operations/`:
+//! Each file corresponds directly to a file in `vt_100_ansi_parser/operations/`:
 //!
 //! - [`char_ops`] - Character operations (`print_char`, ICH, DCH, ECH)
 //! - [`control_ops`] - Control character handling (BS, TAB, LF, CR)
 //! - [`cursor_ops`] - Cursor movement operations
+//! - [`dsr_ops`] - Device Status Report operations
 //! - [`line_ops`] - Line manipulation operations
+//! - [`margin_ops`] - Scroll margin operations (DECSTBM)
+//! - [`mode_ops`] - Mode setting operations (SM/RM)
+//! - [`osc_ops`] - Operating System Command operations
 //! - [`scroll_ops`] - Scrolling operations
+//! - [`sgr_ops`] - Select Graphic Rendition operations (styling)
 //! - [`terminal_ops`] - Terminal state operations (reset, clear, charset)
 //! - [`bounds_check`] - Bounds checking utilities
 //!
@@ -42,9 +47,14 @@ pub mod bounds_check;
 pub mod char_ops;
 pub mod control_ops;
 pub mod cursor_ops;
+pub mod dsr_ops;
 pub mod line_ops;
+pub mod margin_ops;
+pub mod mode_ops;
+pub mod osc_ops;
 pub mod scroll_ops;
+pub mod sgr_ops;
 pub mod terminal_ops;
 
 // Note: Individual modules are typically accessed directly by their respective
-// vt100_ansi_parser operation files. No re-exports needed here.
+// vt_100_ansi_parser operation files. No re-exports needed here.

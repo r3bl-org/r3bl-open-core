@@ -1,24 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::Range;
-
-use super::{OffscreenBuffer, PixelChar, PixelCharLine};
-use crate::{Length, RowIndex};
+use super::{OffscreenBuffer, PixelCharLine};
+use crate::RowIndex;
 
 /// Line-level operations.
 impl OffscreenBuffer {
-    /// Clear an entire line by filling it with blank characters.
-    /// Returns true if the operation was successful.
-    pub fn clear_line(&mut self, row: RowIndex) -> bool {
-        let row_idx = row.as_usize();
-        if let Some(line) = self.buffer.get_mut(row_idx) {
-            line.fill(PixelChar::Spacer);
-            true
-        } else {
-            false
-        }
-    }
-
     /// Get a reference to a line at the specified row.
     /// Returns None if the row is out of bounds.
     #[must_use]
@@ -51,209 +37,12 @@ impl OffscreenBuffer {
             false
         }
     }
-
-    /// Shift lines up within a range by the specified amount.
-    /// Lines at the bottom of the range are filled with blank lines.
-    /// Returns true if the operation was successful.
-    ///
-    /// Used by ANSI DL (Delete Line) and SU (Scroll Up) operations.
-    ///
-    /// For scrolling operations, this is also used to scroll buffer content up.
-    /// The top line is lost, and a new empty line appears at bottom.
-    ///
-    /// Example - scrolling buffer up within scroll region (via `shift_lines_up`)
-    ///
-    /// ```text
-    /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A (will be lost)               │ ← Top line lost
-    ///              │  2  │ Line B                              │
-    ///              │  3  │ Line C                              │
-    ///              │  4  │ Line D  ← cursor at scroll_bottom   │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// After scroll up:
-    /// max_height=6 ╮     ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤
-    ///              │  1  │ Line B (moved up)                   │
-    ///              │  2  │ Line C (moved up)                   │
-    ///              │  3  │ Line D (moved up)                   │
-    ///              │  4  │ (blank line)  ← cursor stays here   │
-    ///              │     ├─────────────────────────────────────┤
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// Result: Content scrolls up, Line A lost, blank line added at bottom
-    /// ```
-    ///
-    /// Example - Deleting 2 lines at cursor position (via `shift_lines_up`)
-    ///
-    /// ```text
-    /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top
-    ///              │  1  │ Line A                              │   (row 1, 0-based)
-    ///              │  2  │ Line B  ← cursor (row 2, 0-based)   │ ← Delete 2 lines here
-    ///              │  3  │ Line C                              │
-    ///              │  4  │ Line D                              │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom
-    ///              ╰  5  │ Footer line (outside scroll region) │   (row 4, 0-based)
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// After shift_lines_up(2..5, 2):
-    /// max_height=6 ╮     ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤
-    ///              │  1  │ Line A                              │
-    ///              │  2  │ Line D  ← cursor stays here         │
-    ///              │  3  │ (blank line)                        │
-    ///              │  4  │ (blank line)                        │
-    ///              │     ├─────────────────────────────────────┤
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// Result: Line B and C deleted, Line D shifted up, blank lines added at bottom
-    /// ```
-    pub fn shift_lines_up(
-        &mut self,
-        row_range: Range<RowIndex>,
-        shift_by: Length,
-    ) -> bool {
-        let start_idx = row_range.start.as_usize();
-        let end_idx = row_range.end.as_usize();
-        let shift_amount = shift_by.as_usize();
-
-        if start_idx >= self.buffer.len()
-            || end_idx > self.buffer.len()
-            || start_idx >= end_idx
-        {
-            return false;
-        }
-
-        // Shift lines up by cloning (use manual index management to avoid borrow
-        // checker issues)
-        for _ in 0..shift_amount {
-            for row_idx in start_idx..end_idx.saturating_sub(1) {
-                let next_line = self.buffer[row_idx + 1].clone();
-                self.buffer[row_idx] = next_line;
-            }
-
-            // Clear the bottom line.
-            self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
-        }
-
-        true
-    }
-
-    /// Shift lines down within a range by the specified amount.
-    /// Lines at the top of the range are filled with blank lines.
-    /// Returns true if the operation was successful.
-    ///
-    /// Used by ANSI IL (Insert Line) and SD (Scroll Down) operations.
-    ///
-    /// For scrolling operations, this is also used to scroll buffer content down.
-    /// The bottom line is lost, and a new empty line appears at top.
-    ///
-    /// Example - Scrolling buffer down within scroll region (via `shift_lines_down`)
-    ///
-    /// ```text
-    /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A  ← cursor at scroll_top      │
-    ///              │  2  │ Line B                              │
-    ///              │  3  │ Line C                              │
-    ///              │  4  │ Line D                              │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// After scroll down:
-    /// max_height=6 ╮     ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤
-    ///              │  1  │ (blank line)  ← cursor stays here   │
-    ///              │  2  │ Line A (moved down)                 │
-    ///              │  3  │ Line B (moved down)                 │
-    ///              │  4  │ Line C (moved down)                 │
-    ///              │     ├─────────────────────────────────────┤
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// Result: Content scrolls down, Line D lost, blank line added at top
-    /// ```
-    ///
-    /// Example - Inserting 2 blank lines at cursor position (via `shift_lines_down`)
-    ///
-    /// ```text
-    /// Before:        Row: 0-based
-    /// max_height=6 ╮  ▼  ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_top (row 1, 0-based)
-    ///              │  1  │ Line A                              │
-    ///              │  2  │ Line B  ← cursor (row 2, 0-based)   │ ← Insert 2 lines here
-    ///              │  3  │ Line C                              │
-    ///              │  4  │ Line D                              │
-    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom (row 4, 0-based)
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// After shift_lines_down(2..5, 2):
-    /// max_height=6 ╮     ┌─────────────────────────────────────┐
-    /// (1-based)    │  0  │ Header line (outside scroll region) │
-    ///              │     ├─────────────────────────────────────┤
-    ///              │  1  │ Line A                              │
-    ///              │  2  │ (blank line)  ← cursor stays here   │
-    ///              │  3  │ (blank line)                        │
-    ///              │  4  │ Line B                              │
-    ///              │     ├─────────────────────────────────────┤
-    ///              ╰  5  │ Footer line (outside scroll region) │
-    ///                    └─────────────────────────────────────┘
-    ///
-    /// Result: 2 blank lines inserted, Line B-C-D shifted down, Line C-D lost beyond scroll_bottom
-    /// ```
-    pub fn shift_lines_down(
-        &mut self,
-        row_range: Range<RowIndex>,
-        shift_by: Length,
-    ) -> bool {
-        let start_idx = row_range.start.as_usize();
-        let end_idx = row_range.end.as_usize();
-        let shift_amount = shift_by.as_usize();
-
-        if start_idx >= self.buffer.len()
-            || end_idx > self.buffer.len()
-            || start_idx >= end_idx
-        {
-            return false;
-        }
-
-        // Shift lines down by cloning (work backwards to avoid overwriting).
-        for _ in 0..shift_amount {
-            for row_idx in (start_idx + 1..end_idx).rev() {
-                let prev_line = self.buffer[row_idx - 1].clone();
-                self.buffer[row_idx] = prev_line;
-            }
-
-            // Clear the top line.
-            self.buffer[start_idx].fill(PixelChar::Spacer);
-        }
-
-        true
-    }
 }
 
 #[cfg(test)]
 mod tests_line_level_ops {
     use super::*;
-    use crate::{TuiStyle, col, height, len, row, width};
+    use crate::{PixelChar, TuiStyle, col, height, len, row, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(4) + height(5);

@@ -9,7 +9,7 @@
 use super::super::*;
 use crate::{BoundsOverflowStatus::Overflowed,
             ColIndex, ColWidth, RowHeight, RowIndex,
-            core::{pty_mux::vt100_ansi_parser::term_units::TermRow,
+            core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
                    units::bounds_check::{BoundsCheck, LengthMarker}},
             row};
 
@@ -125,7 +125,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bounds_check_ops {
     use super::*;
-    use crate::{col, core::pty_mux::vt100_ansi_parser::term_units::term_row, height,
+    use crate::{col, core::pty_mux::vt_100_ansi_parser::term_units::term_row, height,
                 width};
 
     fn create_test_buffer() -> OffscreenBuffer {

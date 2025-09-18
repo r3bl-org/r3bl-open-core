@@ -5,8 +5,8 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{OffscreenBuffer, PixelChar, SPACER_GLYPH_CHAR, TuiStyle, col,
-            core::units::bounds_check::LengthMarker, row};
+use crate::{Height, OffscreenBuffer, PixelChar, PixelCharLine, SPACER_GLYPH_CHAR,
+            TuiStyle, Width, col, core::units::bounds_check::LengthMarker, row};
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:
@@ -205,4 +205,42 @@ pub fn assert_plain_text_at(
     for (index, expected_char) in expected_text.chars().enumerate() {
         assert_plain_char_at(buffer, start_row, start_col + index, expected_char);
     }
+}
+
+/// Create a test buffer with specified dimensions.
+/// This provides a common way to create buffers for testing while allowing
+/// each test module to specify the size that makes sense for their tests.
+#[cfg(test)]
+#[must_use]
+pub fn create_test_buffer_with_size(
+    buffer_width: Width,
+    buffer_height: Height,
+) -> OffscreenBuffer {
+    OffscreenBuffer::new_empty(buffer_width + buffer_height)
+}
+
+/// Create a plain text `PixelChar` with default styling.
+/// This is the most common character type used in tests and provides
+/// a consistent way to create test characters across modules.
+#[cfg(test)]
+#[must_use]
+pub fn create_plain_test_char(ch: char) -> PixelChar {
+    PixelChar::PlainText {
+        display_char: ch,
+        style: TuiStyle::default(),
+    }
+}
+
+/// Create a test line filled with the specified characters.
+/// Creates a `PixelCharLine` with the given width, filling it with the provided
+/// characters (repeating if necessary) or padding with Spacers if not enough
+/// characters are provided.
+#[cfg(test)]
+#[must_use]
+pub fn create_test_line_with_chars(line_width: Width, chars: &[char]) -> PixelCharLine {
+    let mut line = vec![PixelChar::Spacer; line_width.as_usize()];
+    for (i, &ch) in chars.iter().enumerate().take(line_width.as_usize()) {
+        line[i] = create_plain_test_char(ch);
+    }
+    PixelCharLine { pixel_chars: line }
 }

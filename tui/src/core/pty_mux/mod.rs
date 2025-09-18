@@ -73,7 +73,7 @@
 //! ```
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`ANSI Parser`]: crate::vt100_ansi_parser::AnsiToOfsBufPerformer
+//! [`ANSI Parser`]: crate::vt_100_ansi_parser::AnsiToOfsBufPerformer
 //! [`PTY Session`]: crate::PtyReadWriteSession
 
 // Attach.
@@ -81,11 +81,11 @@ pub mod input_router;
 pub mod mux;
 pub mod output_renderer;
 pub mod process_manager;
-pub mod vt100_ansi_parser;
+pub mod vt_100_ansi_parser;
 
 // Re-export.
 pub use input_router::*;
 pub use mux::*;
 pub use output_renderer::*;
 pub use process_manager::*;
-pub use vt100_ansi_parser::*;
+pub use vt_100_ansi_parser::*;
