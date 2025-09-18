@@ -11,6 +11,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper OSC event
 //! queueing for later transmission to the rendering layer.
+//!
+//! This module implements the business logic for OSC operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`osc_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_osc_ops`] - Full ANSI pipeline testing
+//!
+//! [`osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::osc_ops
+//! [`test_osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_osc_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -52,12 +64,12 @@ mod tests_osc_ops {
     fn test_handle_title_and_icon() {
         let mut buffer = create_test_buffer();
 
-        // Initially no pending OSC events
+        // Initially no pending OSC events.
         assert!(buffer.ansi_parser_support.pending_osc_events.is_empty());
 
         buffer.handle_title_and_icon("My Window Title");
 
-        // Should have one SetTitleAndTab event
+        // Should have one SetTitleAndTab event.
         assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 1);
         if let OscEvent::SetTitleAndTab(title) =
             &buffer.ansi_parser_support.pending_osc_events[0]
@@ -74,7 +86,7 @@ mod tests_osc_ops {
 
         buffer.handle_hyperlink("https://example.com");
 
-        // Should have one Hyperlink event
+        // Should have one Hyperlink event.
         assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 1);
         if let OscEvent::Hyperlink { uri, text } =
             &buffer.ansi_parser_support.pending_osc_events[0]
@@ -94,10 +106,10 @@ mod tests_osc_ops {
         buffer.handle_hyperlink("https://link1.com");
         buffer.handle_title_and_icon("Title 2");
 
-        // Should have three events queued
+        // Should have three events queued.
         assert_eq!(buffer.ansi_parser_support.pending_osc_events.len(), 3);
 
-        // Check order is preserved
+        // Check order is preserved.
         assert!(matches!(
             buffer.ansi_parser_support.pending_osc_events[0],
             OscEvent::SetTitleAndTab(_)

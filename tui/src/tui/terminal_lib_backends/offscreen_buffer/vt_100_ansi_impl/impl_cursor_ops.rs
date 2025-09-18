@@ -5,6 +5,18 @@
 //! This module provides methods for moving the cursor position within the buffer,
 //! handling boundary conditions, scroll regions, and cursor state management
 //! as required by ANSI terminal emulation standards.
+//!
+//! This module implements the business logic for cursor operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`cursor_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_cursor_ops`] - Full ANSI pipeline testing
+//!
+//! [`cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::cursor_ops
+//! [`test_cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_cursor_ops
 
 use std::cmp::min;
 
@@ -236,7 +248,7 @@ mod tests_cursor_ops {
 
         buffer.cursor_forward(crate::ColWidth::from(5));
 
-        // Should be clamped to max column (9 for 0-based, width 10)
+        // Should be clamped to max column (9 for 0-based, width 10).
         assert_eq!(buffer.cursor_pos.col_index, col(9));
     }
 

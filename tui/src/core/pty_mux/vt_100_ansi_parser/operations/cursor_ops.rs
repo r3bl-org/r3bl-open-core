@@ -2,6 +2,17 @@
 
 //! Cursor movement operations.
 //!
+//! This module acts as a thin shim layer that delegates to the actual implementation.
+//! See the [module-level documentation](super::super) for details on the shim → impl → test
+//! architecture and naming conventions.
+//!
+//! **Related Files:**
+//! - **Implementation**: [`impl_cursor_ops`] - Business logic with unit tests
+//! - **Integration Tests**: [`test_cursor_ops`] - Full pipeline testing via public API
+//!
+//! [`impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_cursor_ops
+//! [`test_cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_cursor_ops
+//!
 //! # Architecture Overview
 //!
 //! ```text

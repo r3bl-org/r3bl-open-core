@@ -22,6 +22,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper style state
 //! management for terminal text rendering.
+//!
+//! This module implements the business logic for SGR operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`sgr_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_sgr_ops`] - Full ANSI pipeline testing
+//!
+//! [`sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::sgr_ops
+//! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_sgr_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

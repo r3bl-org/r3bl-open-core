@@ -46,8 +46,12 @@ Table of contents:
 - [Quick Start](#quick-start)
   - [Automated Setup (Recommended)](#automated-setup-recommended)
   - [Manual Setup](#manual-setup)
+- [IDE Setup and Extensions](#ide-setup-and-extensions)
+  - [R3BL VSCode Extensions](#r3bl-vscode-extensions)
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
   - [Key Commands](#key-commands)
+  - [Bacon Development Tools](#bacon-development-tools)
+  - [Status Monitoring Scripts](#status-monitoring-scripts)
   - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
   - [Rust Toolchain Management](#rust-toolchain-management)
   - [Unified Script Architecture](#unified-script-architecture)
@@ -380,6 +384,49 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Install development tools
 fish run.fish install-cargo-tools
 ```
+
+## IDE Setup and Extensions
+
+### R3BL VSCode Extensions
+
+For an optimal development experience with r3bl-open-core, we provide a custom VSCode extension pack specifically designed for Rust development. This extension pack is not available on the VSCode marketplace and must be installed manually.
+
+**What's included:**
+
+- **R3BL Theme** - A carefully crafted dark theme optimized for Rust and Markdown development
+- **Auto Insert Copyright** - Automatically inserts copyright headers in new files
+- **Semantic Configuration** - Enhanced Rust syntax highlighting with additional semantic tokens
+- **Extension Pack** - Bundles all R3BL extensions for easy installation
+
+**Benefits for r3bl-open-core development:**
+
+- Zero manual configuration required
+- Enhanced semantic highlighting for better code readability
+- Automatic copyright header insertion following project standards
+- Seamless integration with rust-analyzer
+- Optimized color scheme for the r3bl codebase
+
+**Installation:**
+
+```sh
+# Clone the extension repository
+git clone https://github.com/r3bl-org/r3bl-vscode-extensions.git
+cd r3bl-vscode-extensions
+
+# Install extensions (works with both VSCode and VSCode Insiders)
+./install.sh
+```
+
+**Prerequisites:**
+- VSCode or VSCode Insiders installed
+- Bash shell (for running install.sh)
+
+**Post-installation:**
+1. Restart VSCode
+2. Select the R3BL Theme: `Ctrl+Shift+P` → "Preferences: Color Theme" → "R3BL Theme"
+3. Configure copyright settings if needed
+
+The extensions work seamlessly with the existing development tools mentioned in this guide, including rust-analyzer and bacon.
 
 ## Build the workspace and run tests
 

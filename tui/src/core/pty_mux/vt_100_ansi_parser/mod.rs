@@ -68,13 +68,13 @@
 //!
 //! ## The IDE Search Problem (and Our Solution)
 //!
-//! **Problem**: When searching for "char_ops" in a large codebase, IDEs typically
+//! **Problem**: When searching for "`char_ops`" in a large codebase, IDEs typically
 //! return many unrelated results, making it difficult to navigate between related
 //! files.
 //!
 //! **Solution**: Our naming convention creates a searchable, hierarchical namespace:
 //!
-//! When you search for "char_ops" in your IDE, you'll see:
+//! When you search for "`char_ops`" in your IDE, you'll see:
 //! - `char_ops.rs` - The parser shim (clean, minimal delegation)
 //! - `impl_char_ops.rs` - The full implementation
 //! - `test_char_ops.rs` - The test files

@@ -5,6 +5,9 @@
 //! This module organizes all the different types of ANSI operations into
 //! logical groups for better maintainability and discoverability.
 //!
+//! For the complete architecture overview, including the shim → impl → test design
+//! pattern and testing philosophy, see the [module-level documentation](super).
+//!
 //! # Design Architecture
 //!
 //! The operation modules in this directory follow a consistent **thin shim pattern**:
@@ -82,10 +85,22 @@
 //! in our three-layer architecture. This creates a searchable hierarchy when combined
 //! with `impl_` prefixed implementations and `test_` prefixed tests.
 //!
-//! When you search for any operation (e.g., "char_ops") in your IDE, you'll see:
-//! - `char_ops.rs` (this directory) - The shim layer for protocol translation
-//! - `impl_char_ops.rs` (implementation) - The business logic layer
-//! - `test_char_ops.rs` (tests) - The validation layer
+//! When you search for any operation (e.g., "`char_ops`") in your IDE, you'll see:
+//! - [`char_ops.rs`] (this directory) - The shim layer for protocol translation
+//! - [`impl_char_ops.rs`] (implementation) - The business logic layer
+//! - [`test_char_ops.rs`] (tests) - The validation layer
+//!
+//! This same pattern applies to all operation types:
+//! - [`control_ops.rs`] / [`impl_control_ops.rs`] / [`test_control_ops.rs`]
+//! - [`cursor_ops.rs`] / [`impl_cursor_ops.rs`] / [`test_cursor_ops.rs`]
+//! - [`dsr_ops.rs`] / [`impl_dsr_ops.rs`] / [`test_dsr_ops.rs`]
+//! - [`line_ops.rs`] / [`impl_line_ops.rs`] / [`test_line_ops.rs`]
+//! - [`margin_ops.rs`] / [`impl_margin_ops.rs`] / [`test_margin_ops.rs`]
+//! - [`mode_ops.rs`] / [`impl_mode_ops.rs`] / [`test_mode_ops.rs`]
+//! - [`osc_ops.rs`] / [`impl_osc_ops.rs`] / [`test_osc_ops.rs`]
+//! - [`scroll_ops.rs`] / [`impl_scroll_ops.rs`] / [`test_scroll_ops.rs`]
+//! - [`sgr_ops.rs`] / [`impl_sgr_ops.rs`] / [`test_sgr_ops.rs`]
+//! - [`terminal_ops.rs`] / [`impl_terminal_ops.rs`] / [`test_terminal_ops.rs`]
 //!
 //! See the [main module documentation](super) for the complete explanation of this
 //! architectural pattern and its benefits for IDE navigation.
@@ -93,6 +108,39 @@
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
+//! [`char_ops.rs`]: char_ops
+//! [`impl_char_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
+//! [`test_char_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_char_ops
+//! [`control_ops.rs`]: control_ops
+//! [`impl_control_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_control_ops
+//! [`test_control_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_control_ops
+//! [`cursor_ops.rs`]: cursor_ops
+//! [`impl_cursor_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_cursor_ops
+//! [`test_cursor_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_cursor_ops
+//! [`dsr_ops.rs`]: dsr_ops
+//! [`impl_dsr_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_dsr_ops
+//! [`test_dsr_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_dsr_ops
+//! [`line_ops.rs`]: line_ops
+//! [`impl_line_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_line_ops
+//! [`test_line_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_line_ops
+//! [`margin_ops.rs`]: margin_ops
+//! [`impl_margin_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_margin_ops
+//! [`test_margin_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_margin_ops
+//! [`mode_ops.rs`]: mode_ops
+//! [`impl_mode_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_mode_ops
+//! [`test_mode_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_mode_ops
+//! [`osc_ops.rs`]: osc_ops
+//! [`impl_osc_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_osc_ops
+//! [`test_osc_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_osc_ops
+//! [`scroll_ops.rs`]: scroll_ops
+//! [`impl_scroll_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_scroll_ops
+//! [`test_scroll_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_scroll_ops
+//! [`sgr_ops.rs`]: sgr_ops
+//! [`impl_sgr_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_sgr_ops
+//! [`test_sgr_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_sgr_ops
+//! [`terminal_ops.rs`]: terminal_ops
+//! [`impl_terminal_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_terminal_ops
+//! [`test_terminal_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_terminal_ops
 
 pub mod char_ops;
 pub mod control_ops;

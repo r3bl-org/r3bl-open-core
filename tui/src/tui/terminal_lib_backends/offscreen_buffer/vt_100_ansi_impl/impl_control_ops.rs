@@ -13,6 +13,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper cursor positioning
 //! and scrolling as specified in VT100 documentation.
+//!
+//! This module implements the business logic for control operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`control_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_control_ops`] - Full ANSI pipeline testing
+//!
+//! [`control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::control_ops
+//! [`test_control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_control_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -91,7 +103,7 @@ mod tests_control_ops {
 
         buffer.handle_backspace();
 
-        // Should not move when already at leftmost column
+        // Should not move when already at leftmost column.
         assert_eq!(buffer.cursor_pos.row_index, row(2));
         assert_eq!(buffer.cursor_pos.col_index, col(0));
     }
@@ -103,7 +115,7 @@ mod tests_control_ops {
 
         buffer.handle_tab();
 
-        // Should move to next 8-column tab stop (column 8)
+        // Should move to next 8-column tab stop (column 8).
         assert_eq!(buffer.cursor_pos.row_index, row(1));
         assert_eq!(buffer.cursor_pos.col_index, col(8));
     }
@@ -115,7 +127,7 @@ mod tests_control_ops {
 
         buffer.handle_tab();
 
-        // Should move to next tab stop, but clamp to window width (10 cols = index 9 max)
+        // Should move to next tab stop, but clamp to window width (10 cols = index 9 max).
         assert_eq!(buffer.cursor_pos.row_index, row(1));
         assert_eq!(buffer.cursor_pos.col_index, col(9)); // max index for width 10
     }
@@ -127,7 +139,7 @@ mod tests_control_ops {
 
         buffer.handle_tab();
 
-        // Should clamp to window boundary
+        // Should clamp to window boundary.
         assert_eq!(buffer.cursor_pos.row_index, row(1));
         assert_eq!(buffer.cursor_pos.col_index, col(9)); // stays at max valid index
     }
@@ -150,7 +162,7 @@ mod tests_control_ops {
 
         buffer.handle_line_feed();
 
-        // Should not move when at bottom
+        // Should not move when at bottom.
         assert_eq!(buffer.cursor_pos.row_index, row(5));
         assert_eq!(buffer.cursor_pos.col_index, col(3));
     }
@@ -173,7 +185,7 @@ mod tests_control_ops {
 
         buffer.handle_carriage_return();
 
-        // Should work correctly when already at start
+        // Should work correctly when already at start.
         assert_eq!(buffer.cursor_pos.row_index, row(3));
         assert_eq!(buffer.cursor_pos.col_index, col(0));
     }

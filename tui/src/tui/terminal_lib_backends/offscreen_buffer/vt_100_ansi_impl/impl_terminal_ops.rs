@@ -5,6 +5,18 @@
 //! This module provides methods for selecting different character sets
 //! as required by ANSI terminal emulation standards, particularly for
 //! ESC ( B (ASCII) and ESC ( 0 (DEC Special Graphics) sequences.
+//!
+//! This module implements the business logic for terminal operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`terminal_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_terminal_ops`] - Full ANSI pipeline testing
+//!
+//! [`terminal_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::terminal_ops
+//! [`test_terminal_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_terminal_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

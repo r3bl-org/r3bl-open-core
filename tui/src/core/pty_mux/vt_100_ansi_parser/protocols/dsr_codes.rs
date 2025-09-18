@@ -228,7 +228,7 @@ mod dsr_request_from_pty_event_impl {
 }
 
 /// Test helper functions for DSR sequences.
-#[cfg(test)]
+#[cfg(any(test, doc))]
 pub mod dsr_test_helpers {
     use super::*;
 

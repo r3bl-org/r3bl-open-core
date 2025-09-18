@@ -2,6 +2,17 @@
 
 //! OSC (Operating System Command) sequence operations.
 //!
+//! This module acts as a thin shim layer that delegates to the actual implementation.
+//! See the [module-level documentation](super::super) for details on the shim → impl → test
+//! architecture and naming conventions.
+//!
+//! **Related Files:**
+//! - **Implementation**: [`impl_osc_ops`] - Business logic with unit tests
+//! - **Integration Tests**: [`test_osc_ops`] - Full pipeline testing via public API
+//!
+//! [`impl_osc_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_osc_ops
+//! [`test_osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_osc_ops
+//!
 //! # Architecture Overview
 //!
 //! ```text
@@ -63,12 +74,12 @@ pub fn dispatch_osc(
         return;
     }
 
-    // Parse the OSC code (first parameter)
+    // Parse the OSC code (first parameter).
     if let Ok(code) = std::str::from_utf8(params[0]) {
         match code {
-            // OSC 0: Set both window title and icon name
-            // OSC 1: Set icon name only (we treat same as title)
-            // OSC 2: Set window title only
+            // OSC 0: Set both window title and icon name.
+            // OSC 1: Set icon name only (we treat same as title).
+            // OSC 2: Set window title only.
             osc_codes::OSC_CODE_TITLE_AND_ICON
             | osc_codes::OSC_CODE_ICON
             | osc_codes::OSC_CODE_TITLE
@@ -78,7 +89,7 @@ pub fn dispatch_osc(
                     handle_title_and_icon(performer, title);
                 }
             }
-            // OSC 8: Hyperlink (format: OSC 8 ; params ; URI)
+            // OSC 8: Hyperlink (format: OSC 8 ; params ; URI).
             osc_codes::OSC_CODE_HYPERLINK if params.len() > 2 => {
                 if let Ok(uri) = std::str::from_utf8(params[2]) {
                     handle_hyperlink(performer, uri);

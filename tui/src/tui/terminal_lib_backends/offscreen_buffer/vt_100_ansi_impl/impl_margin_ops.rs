@@ -11,6 +11,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper scroll region
 //! boundaries for terminal operations.
+//!
+//! This module implements the business logic for margin operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`margin_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_margin_ops`] - Full ANSI pipeline testing
+//!
+//! [`margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::margin_ops
+//! [`test_margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_margin_ops
 
 use std::cmp::min;
 
@@ -74,13 +86,13 @@ mod tests_margin_ops {
     fn test_reset_scroll_margins() {
         let mut buffer = create_test_buffer();
 
-        // Set some margins first
+        // Set some margins first.
         buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
         buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
 
         buffer.reset_scroll_margins();
 
-        // Should be reset to None
+        // Should be reset to None.
         assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
         assert!(buffer.ansi_parser_support.scroll_region_bottom.is_none());
     }
@@ -92,7 +104,7 @@ mod tests_margin_ops {
         let result = buffer.set_scroll_margins(term_row(2), term_row(4));
         assert!(result);
 
-        // Check that margins were set
+        // Check that margins were set.
         assert_eq!(
             buffer.ansi_parser_support.scroll_region_top,
             Some(term_row(2))
@@ -110,7 +122,7 @@ mod tests_margin_ops {
         let result = buffer.set_scroll_margins(term_row(4), term_row(2));
         assert!(!result);
 
-        // Margins should remain unchanged (None)
+        // Margins should remain unchanged. (None).
         assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
         assert!(buffer.ansi_parser_support.scroll_region_bottom.is_none());
     }
@@ -119,11 +131,11 @@ mod tests_margin_ops {
     fn test_set_scroll_margins_bottom_exceeds_buffer() {
         let mut buffer = create_test_buffer();
 
-        // Try to set bottom margin beyond buffer height (buffer height is 6)
+        // Try to set bottom margin beyond buffer height (buffer height is 6).
         let result = buffer.set_scroll_margins(term_row(2), term_row(10));
         assert!(result); // Should succeed with clamping
 
-        // Bottom should be clamped to buffer height
+        // Bottom should be clamped to buffer height.
         assert_eq!(
             buffer.ansi_parser_support.scroll_region_top,
             Some(term_row(2))
@@ -141,7 +153,7 @@ mod tests_margin_ops {
         let result = buffer.set_scroll_margins(term_row(3), term_row(3));
         assert!(!result); // Should fail - no room for content
 
-        // Margins should remain unchanged
+        // Margins should remain unchanged.
         assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
         assert!(buffer.ansi_parser_support.scroll_region_bottom.is_none());
     }

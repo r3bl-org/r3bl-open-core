@@ -20,7 +20,7 @@
 //! All implementation files in this module use the `impl_` prefix. This deliberate
 //! naming convention creates a searchable namespace that distinguishes implementations
 //! from their corresponding shim layers and tests. When searching for any operation
-//! (e.g., "char_ops"), developers can easily identify:
+//! (e.g., "`char_ops`"), developers can easily identify:
 //! - The shim (no prefix): Protocol translation
 //! - The implementation (`impl_` prefix): Business logic
 //! - The tests (`test_` prefix): Validation
@@ -95,6 +95,13 @@
 //! 2. **Shim**: [`operations::char_ops`] - Parameter translation (no direct tests)
 //! 3. **Integration**: [`test_char_ops`] - Full ANSI sequence testing
 //!
+//! ## Complete Navigation Map
+//!
+//! All operation types follow the same three-layer pattern. From any implementation file,
+//! you can navigate to its corresponding shim and test layers using the links in this
+//! documentation, or by using IDE search with the operation name (e.g., search for `char_ops`
+//! to find all related files).
+//!
 //! # VT100 Compliance
 //!
 //! These implementations follow VT100 terminal specifications and are tested for
@@ -105,6 +112,20 @@
 //! [`operations::char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
 //! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_char_ops
 //! [parser module docs]: crate::core::pty_mux::vt_100_ansi_parser
+//!
+//! // Implementation layer hyperlinks (this module)
+//! [`impl_char_ops`]: impl_char_ops
+//! [`impl_control_ops`]: impl_control_ops
+//! [`impl_cursor_ops`]: impl_cursor_ops
+//! [`impl_dsr_ops`]: impl_dsr_ops
+//! [`impl_line_ops`]: impl_line_ops
+//! [`impl_margin_ops`]: impl_margin_ops
+//! [`impl_mode_ops`]: impl_mode_ops
+//! [`impl_osc_ops`]: impl_osc_ops
+//! [`impl_scroll_ops`]: impl_scroll_ops
+//! [`impl_sgr_ops`]: impl_sgr_ops
+//! [`impl_terminal_ops`]: impl_terminal_ops
+//! [`ansi_bounds_check_helper`]: ansi_bounds_check_helper
 
 /// Standard terminal tab stop width (8 columns).
 /// Used for calculating tab positions in VT100 terminal emulation.

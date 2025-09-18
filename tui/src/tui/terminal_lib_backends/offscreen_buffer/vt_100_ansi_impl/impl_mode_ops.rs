@@ -11,6 +11,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper mode state
 //! management for terminal operations.
+//!
+//! This module implements the business logic for mode operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`mode_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_mode_ops`] - Full ANSI pipeline testing
+//!
+//! [`mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::mode_ops
+//! [`test_mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_mode_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -38,7 +50,7 @@ mod tests_mode_ops {
     fn test_set_auto_wrap_mode_enabled() {
         let mut buffer = create_test_buffer();
 
-        // Initially should be enabled by default
+        // Initially should be enabled by default.
         assert!(buffer.ansi_parser_support.auto_wrap_mode);
 
         buffer.set_auto_wrap_mode(true);
@@ -57,15 +69,15 @@ mod tests_mode_ops {
     fn test_toggle_auto_wrap_mode() {
         let mut buffer = create_test_buffer();
 
-        // Start enabled
+        // Start enabled.
         buffer.set_auto_wrap_mode(true);
         assert!(buffer.ansi_parser_support.auto_wrap_mode);
 
-        // Disable
+        // Disable.
         buffer.set_auto_wrap_mode(false);
         assert!(!buffer.ansi_parser_support.auto_wrap_mode);
 
-        // Enable again
+        // Enable again.
         buffer.set_auto_wrap_mode(true);
         assert!(buffer.ansi_parser_support.auto_wrap_mode);
     }

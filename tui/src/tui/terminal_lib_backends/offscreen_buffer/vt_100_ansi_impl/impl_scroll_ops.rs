@@ -6,6 +6,18 @@
 //! including index operations (IND/RI) and scroll operations (SU/SD).
 //! These operations respect DECSTBM scroll region margins and handle
 //! cursor positioning as required by ANSI terminal emulation standards.
+//!
+//! This module implements the business logic for scroll operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`scroll_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_scroll_ops`] - Full ANSI pipeline testing
+//!
+//! [`scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::scroll_ops
+//! [`test_scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_scroll_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

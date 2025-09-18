@@ -11,6 +11,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper response
 //! queueing for later transmission back to the PTY.
+//!
+//! This module implements the business logic for DSR operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`dsr_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_dsr_ops`] - Full ANSI pipeline testing
+//!
+//! [`dsr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::dsr_ops
+//! [`test_dsr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_dsr_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -30,7 +42,7 @@ impl OffscreenBuffer {
     /// Queues a response with current cursor position (ESC[row;colR).
     /// Converts 0-based internal position to 1-based terminal position.
     pub fn handle_cursor_position_request(&mut self) {
-        // Convert 0-based internal position to 1-based terminal position
+        // Convert 0-based internal position to 1-based terminal position.
         let row: TermRow = (self.cursor_pos.row_index.as_u16() + 1).into();
         let col: TermCol = (self.cursor_pos.col_index.as_u16() + 1).into();
         self.ansi_parser_support
@@ -53,12 +65,12 @@ mod tests_dsr_ops {
     fn test_handle_status_report_request() {
         let mut buffer = create_test_buffer();
 
-        // Initially no pending responses
+        // Initially no pending responses.
         assert!(buffer.ansi_parser_support.pending_dsr_responses.is_empty());
 
         buffer.handle_status_report_request();
 
-        // Should have one terminal status response
+        // Should have one terminal status response.
         assert_eq!(buffer.ansi_parser_support.pending_dsr_responses.len(), 1);
         assert!(matches!(
             buffer.ansi_parser_support.pending_dsr_responses[0],
@@ -73,7 +85,7 @@ mod tests_dsr_ops {
 
         buffer.handle_cursor_position_request();
 
-        // Should have one cursor position response
+        // Should have one cursor position response.
         assert_eq!(buffer.ansi_parser_support.pending_dsr_responses.len(), 1);
         if let DsrRequestFromPtyEvent::CursorPosition { row, col } =
             &buffer.ansi_parser_support.pending_dsr_responses[0]
@@ -93,7 +105,7 @@ mod tests_dsr_ops {
         buffer.handle_status_report_request();
         buffer.handle_cursor_position_request();
 
-        // Should have both responses queued
+        // Should have both responses queued.
         assert_eq!(buffer.ansi_parser_support.pending_dsr_responses.len(), 2);
         assert!(matches!(
             buffer.ansi_parser_support.pending_dsr_responses[0],

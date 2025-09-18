@@ -2,6 +2,17 @@
 
 //! Mode setting operations (SM/RM).
 //!
+//! This module acts as a thin shim layer that delegates to the actual implementation.
+//! See the [module-level documentation](super::super) for details on the shim → impl → test
+//! architecture and naming conventions.
+//!
+//! **Related Files:**
+//! - **Implementation**: [`impl_mode_ops`] - Business logic with unit tests
+//! - **Integration Tests**: [`test_mode_ops`] - Full pipeline testing via public API
+//!
+//! [`impl_mode_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_mode_ops
+//! [`test_mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_mode_ops
+//!
 //! # Architecture Overview
 //!
 //! ```text

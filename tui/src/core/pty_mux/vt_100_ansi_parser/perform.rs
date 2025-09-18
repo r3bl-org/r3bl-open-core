@@ -119,6 +119,9 @@
 //! This approach avoids redundant testing while ensuring both unit-level correctness
 //! (in [`OffscreenBuffer`]) and system-level behavior (in conformance tests).
 //!
+//! See the [module-level documentation](super) for more details on the
+//! architecture and testing strategy.
+//!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
 

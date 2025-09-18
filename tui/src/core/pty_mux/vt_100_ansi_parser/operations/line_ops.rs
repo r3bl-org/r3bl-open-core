@@ -2,6 +2,17 @@
 
 //! Line insertion and deletion operations.
 //!
+//! This module acts as a thin shim layer that delegates to the actual implementation.
+//! See the [module-level documentation](super::super) for details on the shim → impl → test
+//! architecture and naming conventions.
+//!
+//! **Related Files:**
+//! - **Implementation**: [`impl_line_ops`] - Business logic with unit tests
+//! - **Integration Tests**: [`test_line_ops`] - Full pipeline testing via public API
+//!
+//! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_line_ops
+//! [`test_line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_line_ops
+//!
 //! # Architecture Overview
 //!
 //! ```text
@@ -96,7 +107,7 @@ fn insert_line_at(
         len(1),
     );
 
-    // Clear the newly inserted line (shift_lines_down fills with blanks at the top)
+    // Clear the newly inserted line (shift_lines_down fills with blanks at the top).
     clear_line(performer, row_index);
 }
 

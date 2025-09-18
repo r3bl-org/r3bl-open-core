@@ -25,7 +25,8 @@
 //! When working on any test file, you can easily navigate to its corresponding:
 //! - **Shim Layer**: [`operations`] - The delegation layer being tested indirectly
 //! - **Implementation Layer**: [`vt_100_ansi_impl`] - The business logic being tested
-//! - **Parent Documentation**: See [conformance tests] for the integration testing philosophy
+//! - **Parent Documentation**: See [conformance tests] for the integration testing
+//!   philosophy
 //!
 //! For example, when working on character operations:
 //! 1. **Integration**: [`test_char_ops`] - Tests using [`apply_ansi_bytes`] public API
@@ -45,38 +46,35 @@
 #[cfg(any(test, doc))]
 pub mod test_char_ops;
 
-#[cfg(test)]
-mod test_control_ops;
+#[cfg(any(test, doc))]
+pub mod test_control_ops;
 
-#[cfg(test)]
-mod test_cursor_ops;
+#[cfg(any(test, doc))]
+pub mod test_cursor_ops;
 
-#[cfg(test)]
-mod test_dsr_ops;
+#[cfg(any(test, doc))]
+pub mod test_dsr_ops;
 
-#[cfg(test)]
-mod test_line_ops;
+#[cfg(any(test, doc))]
+pub mod test_line_ops;
 
-#[cfg(test)]
-mod test_margin_ops;
+#[cfg(any(test, doc))]
+pub mod test_margin_ops;
 
-#[cfg(test)]
-mod test_mode_ops;
+#[cfg(any(test, doc))]
+pub mod test_mode_ops;
 
-#[cfg(test)]
-mod test_osc_ops;
+#[cfg(any(test, doc))]
+pub mod test_osc_ops;
 
-#[cfg(test)]
-mod test_scroll_ops_regions;
+#[cfg(any(test, doc))]
+pub mod test_scroll_ops;
 
-#[cfg(test)]
-mod test_scroll_ops_wrap;
+#[cfg(any(test, doc))]
+pub mod test_sgr_ops;
 
-#[cfg(test)]
-mod test_sgr_ops;
-
-#[cfg(test)]
-mod test_terminal_ops;
+#[cfg(any(test, doc))]
+pub mod test_terminal_ops;
 
 // === PROTOCOL TESTS ===
 // These test ANSI/VT100 protocol parsing and sequence handling.

@@ -12,6 +12,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper line manipulation
 //! within scroll regions as specified in VT100 documentation.
+//!
+//! This module implements the business logic for line operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`line_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_line_ops`] - Full ANSI pipeline testing
+//!
+//! [`line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::line_ops
+//! [`test_line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_line_ops
 
 use std::ops::Range;
 

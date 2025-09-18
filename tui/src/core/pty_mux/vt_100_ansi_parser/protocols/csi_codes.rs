@@ -479,11 +479,11 @@ pub enum MarginRequest {
 
 impl From<(Option<u16>, Option<u16>)> for MarginRequest {
     fn from((maybe_top, maybe_bottom): (Option<u16>, Option<u16>)) -> Self {
-        // VT100 spec: missing params or zero params mean reset to full screen
+        // VT100 spec: missing params or zero params mean reset to full screen.
         match (maybe_top, maybe_bottom) {
             (None | Some(0), None) | (Some(0), Some(0)) => Self::Reset,
             _ => {
-                // Convert to 1-based terminal coordinates (VT100 spec uses 1-based)
+                // Convert to 1-based terminal coordinates (VT100 spec uses 1-based).
                 let top_row = maybe_top.map_or(1, |v| max(v, 1));
                 let bottom_row = maybe_bottom.unwrap_or(24); // Default bottom
                 Self::SetRegion {
@@ -627,7 +627,7 @@ impl From<&vte::Params> for CursorPositionRequest {
 }
 
 /// Test helper functions for CSI sequences.
-#[cfg(test)]
+#[cfg(any(test, doc))]
 pub mod csi_test_helpers {
     use super::CsiSequence;
 
@@ -635,18 +635,6 @@ pub mod csi_test_helpers {
     ///
     /// # Panics
     /// Panics if the provided position is not a `CsiSequence::CursorPosition`.
-    ///
-    /// # Examples
-    /// ```
-    /// use r3bl_tui::vt_100_ansi_parser::csi_codes::csi_test_helpers::csi_seq_cursor_pos;
-    /// use r3bl_tui::vt_100_ansi_parser::term_units::{term_row, term_col};
-    ///
-    /// // Instead of:
-    /// // CsiSequence::CursorPosition { row: term_row(2), col: term_col(3) }
-    ///
-    /// // You can write:
-    /// let seq = csi_seq_cursor_pos(term_row(2) + term_col(3));
-    /// ```
     #[must_use]
     pub fn csi_seq_cursor_pos(position: CsiSequence) -> CsiSequence {
         match position {
@@ -660,18 +648,6 @@ pub mod csi_test_helpers {
     /// # Panics
     /// Panics if the provided position is not a `CsiSequence::CursorPosition` or
     /// `CursorPositionAlt`.
-    ///
-    /// # Examples
-    /// ```
-    /// use r3bl_tui::vt_100_ansi_parser::csi_codes::csi_test_helpers::csi_seq_cursor_pos_alt;
-    /// use r3bl_tui::vt_100_ansi_parser::term_units::{term_row, term_col};
-    ///
-    /// // Instead of:
-    /// // CsiSequence::CursorPositionAlt { row: term_row(3), col: term_col(7) }
-    ///
-    /// // You can write:
-    /// let seq = csi_seq_cursor_pos_alt(term_row(3) + term_col(7));
-    /// ```
     #[must_use]
     pub fn csi_seq_cursor_pos_alt(position: CsiSequence) -> CsiSequence {
         match position {
