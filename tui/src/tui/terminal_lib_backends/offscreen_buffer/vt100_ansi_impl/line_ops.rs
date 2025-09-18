@@ -110,11 +110,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_line_ops {
     use super::*;
-    use crate::{col, height, len,
-                ofs_buf_test_fixtures::{create_plain_test_char,
+    use crate::{col, height, len, row,
+                test_fixtures_ofs_buf::{create_plain_test_char,
                                         create_test_buffer_with_size,
                                         create_test_line_with_chars},
-                row, width};
+                width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         create_test_buffer_with_size(width(4), height(5))

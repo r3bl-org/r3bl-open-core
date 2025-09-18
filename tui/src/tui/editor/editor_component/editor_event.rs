@@ -583,7 +583,7 @@ mod tests {
                 EditorEngine, EditorEngineConfig, EditorEvent, LineMode,
                 SelectionAction, assert_eq2, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard, col,
-                editor::editor_test_fixtures::mock_real_objects_for_editor,
+                editor::test_fixtures_editor::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, row};
 
     #[test]

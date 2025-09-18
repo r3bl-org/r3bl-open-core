@@ -6,7 +6,7 @@
 //! builders from the `conformance_data` module instead of hardcoded format strings.
 
 use super::super::{conformance_data::{basic_sequences, cursor_sequences},
-                   test_fixtures::*};
+                   test_fixtures_vt_100_ansi_conformance::*};
 
 #[test]
 fn test_basic_delete_char_integration() {

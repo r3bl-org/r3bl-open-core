@@ -4,9 +4,9 @@
 
 use vte::Perform;
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{AnsiToOfsBufPerformer, col, core::pty_mux::vt_100_ansi_parser::esc_codes,
-            offscreen_buffer::ofs_buf_test_fixtures::*, row};
+            offscreen_buffer::test_fixtures_ofs_buf::*, row};
 
 /// Tests for C0 control characters (CR, LF, Tab, Backspace, etc.).
 #[test]

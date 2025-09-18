@@ -132,7 +132,7 @@ mod tests {
     use crate::{DEFAULT_SYN_HI_FILE_EXT, DeleteSelectionWith, EditorBuffer, SelectMode,
                 assert_eq2, caret_raw,
                 clipboard_service::clipboard_test_fixtures::TestClipboard, col,
-                editor::editor_test_fixtures::mock_real_objects_for_editor,
+                editor::test_fixtures_editor::mock_real_objects_for_editor,
                 editor_engine::engine_internal_api, len, row};
 
     #[test]

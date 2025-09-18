@@ -159,7 +159,7 @@ mod render_cache_impl_block {
 mod tests {
     use super::*;
     use crate::{RenderOp, assert_eq2, col,
-                editor::editor_test_fixtures::mock_real_objects_for_editor, height,
+                editor::test_fixtures_editor::mock_real_objects_for_editor, height,
                 render_ops, row, scr_ofs, width};
 
     /// Fake `render_ops` to be used in the tests.

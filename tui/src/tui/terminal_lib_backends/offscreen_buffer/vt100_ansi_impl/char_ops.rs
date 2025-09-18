@@ -300,10 +300,10 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_shifting_ops {
     use super::*;
-    use crate::{TuiStyle,
-                ofs_buf_test_fixtures::{create_plain_test_char,
+    use crate::{TuiStyle, row,
+                test_fixtures_ofs_buf::{create_plain_test_char,
                                         create_test_buffer_with_size},
-                row, width};
+                width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         create_test_buffer_with_size(width(6), height(3))
@@ -955,7 +955,7 @@ mod tests_shifting_ops {
 #[cfg(test)]
 mod tests_print_char {
     use super::*;
-    use crate::{ofs_buf_test_fixtures::create_test_buffer_with_size, row, width};
+    use crate::{row, test_fixtures_ofs_buf::create_test_buffer_with_size, width};
 
     #[test]
     fn test_print_char_basic() {

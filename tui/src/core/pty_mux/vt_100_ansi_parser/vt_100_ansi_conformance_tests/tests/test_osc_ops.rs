@@ -2,9 +2,9 @@
 
 //! Tests for OSC (Operating System Command) sequences.
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{core::osc::{OscEvent, osc_codes::OscSequence},
-            offscreen_buffer::ofs_buf_test_fixtures::*};
+            offscreen_buffer::test_fixtures_ofs_buf::*};
 
 #[test]
 fn test_osc_title_sequences() {

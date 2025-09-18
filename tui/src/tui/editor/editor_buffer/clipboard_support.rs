@@ -65,7 +65,7 @@ mod tests {
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEvent,
                 SelectionAction, assert_eq2,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
-                editor::editor_test_fixtures::mock_real_objects_for_editor};
+                editor::test_fixtures_editor::mock_real_objects_for_editor};
 
     #[test]
     fn test_copy() {

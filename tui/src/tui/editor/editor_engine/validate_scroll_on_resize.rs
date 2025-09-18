@@ -189,7 +189,7 @@ mod tests {
     use super::*;
     use crate::{DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, EditorEngine, EditorEngineConfig,
                 LineMode, caret_raw, col,
-                editor::editor_test_fixtures::mock_real_objects_for_editor, height, row,
+                editor::test_fixtures_editor::mock_real_objects_for_editor, height, row,
                 scr_ofs, width};
 
     #[test]

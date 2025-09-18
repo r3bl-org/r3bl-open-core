@@ -8,7 +8,7 @@
 //! - Mode state interactions with cursor operations
 //! - Scroll region effects on cursor save/restore
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, SgrCode,
             vt_100_ansi_parser::{protocols::csi_codes::{CsiSequence, PrivateModeType},
                                  term_units::{term_col, term_row}}};

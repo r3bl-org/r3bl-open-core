@@ -4,8 +4,8 @@
 
 use vte::Perform;
 
-use super::super::test_fixtures::*;
-use crate::{AnsiToOfsBufPerformer, offscreen_buffer::ofs_buf_test_fixtures::*};
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
+use crate::{AnsiToOfsBufPerformer, offscreen_buffer::test_fixtures_ofs_buf::*};
 
 #[test]
 fn test_utf8_characters() {

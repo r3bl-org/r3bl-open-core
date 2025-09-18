@@ -4,10 +4,9 @@
 //!
 //! This module organizes conformance tests by functionality and architectural layer:
 //! - Operations tests (test_*_ops.rs) - Test operations modules directly
-//! - Protocol tests (protocol_*.rs) - Test ANSI/VT100 protocol parsing
-//! - System tests (system_*.rs) - Test system components and lifecycle
-//! - Integration tests (integration_*.rs) - Test cross-cutting scenarios
-//! - Utilities (util_*.rs) - Test utilities and fixtures
+//! - Protocol tests (test_protocol_*.rs) - Test ANSI/VT100 protocol parsing
+//! - System tests (test_system_*.rs) - Test system components and lifecycle
+//! - Integration tests (test_integration_*.rs) - Test cross-cutting scenarios
 
 // === OPERATIONS TESTS ===
 // These test files map 1:1 with operations/ modules
@@ -52,37 +51,31 @@ mod test_terminal_ops;
 // These test ANSI/VT100 protocol parsing and sequence handling
 
 #[cfg(test)]
-mod protocol_csi_basic;
+mod test_protocol_csi_basic;
 
 #[cfg(test)]
-mod protocol_char_encoding;
+mod test_protocol_char_encoding;
 
 #[cfg(test)]
-mod protocol_control_chars;
+mod test_protocol_control_chars;
 
 // === SYSTEM TESTS ===
 // These test system components and lifecycle management
 
 #[cfg(test)]
-mod system_error_handling;
+mod test_system_error_handling;
 
 #[cfg(test)]
-mod system_performer_lifecycle;
+mod test_system_performer_lifecycle;
 
 #[cfg(test)]
-mod system_state_management;
+mod test_system_state_management;
 
 // === INTEGRATION TESTS ===
 // These test cross-cutting scenarios and real-world use cases
 
 #[cfg(test)]
-mod integration_basic;
+mod test_integration_basic;
 
 #[cfg(test)]
-mod integration_real_world;
-
-// === UTILITIES ===
-// Test utilities and fixtures
-
-#[cfg(test)]
-mod util_fixtures;
+mod test_integration_real_world;

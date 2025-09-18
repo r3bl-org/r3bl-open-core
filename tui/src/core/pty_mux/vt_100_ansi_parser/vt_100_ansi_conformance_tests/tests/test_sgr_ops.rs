@@ -4,9 +4,9 @@
 
 use vte::Perform;
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, CharacterSet, SgrCode,
-            offscreen_buffer::ofs_buf_test_fixtures::*,
+            offscreen_buffer::test_fixtures_ofs_buf::*,
             tui_style_attrib::{self},
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                  esc_codes}};

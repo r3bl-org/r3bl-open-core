@@ -9,7 +9,7 @@ pub mod mock_real_objects_for_dialog {
     use crate::{DefaultSize, DialogBuffer, DialogEngine, FlexBoxId, GlobalData,
                 HasDialogBuffers, OffscreenBufferPool, OutputDevice, OutputDeviceExt,
                 Size, SpinnerHelper, core::test_fixtures::StdoutMock,
-                editor::editor_test_fixtures::mock_real_objects_for_editor,
+                editor::test_fixtures_editor::mock_real_objects_for_editor,
                 telemetry::telemetry_sizing::TelemetryReportLineStorage};
 
     #[must_use]

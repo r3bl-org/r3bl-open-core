@@ -2,7 +2,7 @@
 
 //! Tests for line insertion and deletion operations (IL/DL).
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{col, row, term_col,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                  protocols::csi_codes::CsiSequence,

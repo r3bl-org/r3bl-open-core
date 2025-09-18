@@ -235,10 +235,10 @@ mod tests_scroll_vert_ops {
     use super::*;
     use crate::{col,
                 core::pty_mux::vt_100_ansi_parser::term_units::term_row,
-                height, idx,
-                ofs_buf_test_fixtures::{assert_plain_char_at,
+                height, idx, row,
+                test_fixtures_ofs_buf::{assert_plain_char_at,
                                         create_test_buffer_with_size},
-                row, width};
+                width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         create_test_buffer_with_size(width(10), height(6))

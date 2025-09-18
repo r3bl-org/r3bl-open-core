@@ -7,7 +7,7 @@
 //! - Future IRM (Insert/Replace Mode) - CSI 4 h/l (placeholder tests)
 //! - Future DECOM (Origin Mode) - CSI ? 6 h/l (placeholder tests)
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::vt_100_ansi_parser::{protocols::csi_codes::{CsiSequence, PrivateModeType},
                                 term_units::{term_col, term_row}};
 

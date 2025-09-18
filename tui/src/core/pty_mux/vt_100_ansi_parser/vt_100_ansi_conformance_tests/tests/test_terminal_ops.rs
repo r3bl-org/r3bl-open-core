@@ -8,7 +8,7 @@
 //! - Terminal state reset and initialization
 //! - Character set switching and translation
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{CharacterSet, ColIndex, Pos, RowIndex, TuiStyle, ch,
             vt_100_ansi_parser::protocols::esc_codes::EscSequence};
 

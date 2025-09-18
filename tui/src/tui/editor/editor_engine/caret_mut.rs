@@ -563,7 +563,7 @@ mod tests {
                 assert_eq2, caret_raw, caret_scr_adj,
                 clipboard_service::clipboard_test_fixtures::TestClipboard,
                 col,
-                editor::editor_test_fixtures::{assert, mock_real_objects_for_editor},
+                editor::test_fixtures_editor::{assert, mock_real_objects_for_editor},
                 editor_engine::engine_internal_api,
                 height, row};
 

@@ -2,7 +2,7 @@
 
 //! Tests for Device Status Report (DSR) response generation.
 
-use super::super::test_fixtures::create_test_offscreen_buffer_10r_by_10c;
+use super::super::test_fixtures_vt_100_ansi_conformance::create_test_offscreen_buffer_10r_by_10c;
 use crate::{DsrRequestFromPtyEvent, col,
             core::pty_mux::vt_100_ansi_parser::protocols::{csi_codes::CsiSequence,
                                                     dsr_codes::{DSR_STATUS_OK_FULL_RESPONSE,

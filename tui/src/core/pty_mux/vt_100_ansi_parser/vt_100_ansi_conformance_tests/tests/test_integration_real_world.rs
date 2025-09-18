@@ -10,7 +10,7 @@ use std::cmp::min;
 
 use super::super::conformance_data::{basic_sequences, cursor_sequences, emacs_sequences,
                                      styling_sequences, tmux_sequences, vim_sequences};
-use crate::{ANSIBasicColor, PixelChar, offscreen_buffer::ofs_buf_test_fixtures::*,
+use crate::{ANSIBasicColor, PixelChar, offscreen_buffer::test_fixtures_ofs_buf::*,
             tui_style_attrib};
 
 /// Create a realistic terminal buffer for real-world scenario testing.

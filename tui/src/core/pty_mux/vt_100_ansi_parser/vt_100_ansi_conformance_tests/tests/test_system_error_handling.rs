@@ -31,7 +31,7 @@
 //! - Mixed valid/invalid sequence combinations
 //! - Buffer overflow and performance stress scenarios
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                 term_units::{term_col, term_row}};
 

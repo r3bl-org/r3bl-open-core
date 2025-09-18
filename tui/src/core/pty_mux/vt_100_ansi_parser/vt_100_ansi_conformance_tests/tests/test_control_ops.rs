@@ -9,7 +9,7 @@
 //! - CHT (Cursor Horizontal Tab) - CSI I (placeholder for future implementation)
 //! - CBT (Cursor Backward Tab) - CSI Z (placeholder for future implementation)
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::vt_100_ansi_parser::term_units::{term_col, term_row};
 
 /// Tests for basic TAB character (0x09) functionality.

@@ -9,7 +9,7 @@
 //! - Boundary testing for invalid scroll region parameters
 //! - Interactions between scroll regions and cursor positioning
 
-use super::super::test_fixtures::*;
+use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                 term_units::{term_col, term_row}};
 

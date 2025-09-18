@@ -141,7 +141,7 @@
 pub mod conformance_data;
 
 #[cfg(any(test, doc))]
-pub mod test_fixtures; // Re-export existing test fixtures
+pub mod test_fixtures_vt_100_ansi_conformance; // Re-export existing test fixtures
 
 #[cfg(any(test, doc))]
 pub mod tests;
