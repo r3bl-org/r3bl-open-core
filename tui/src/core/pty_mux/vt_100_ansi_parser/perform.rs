@@ -75,13 +75,13 @@
 //! clear organization and predictable code navigation:
 //!
 //! ```text
-//! vt_100_ansi_parser/operations/     offscreen_buffer/vt100_ansi_impl/
-//! ├── char_ops.rs         →         ├── char_ops.rs
-//! ├── control_ops.rs      →         ├── control_ops.rs
-//! ├── cursor_ops.rs       →         ├── cursor_ops.rs
-//! ├── line_ops.rs         →         ├── line_ops.rs
-//! ├── scroll_ops.rs       →         ├── scroll_ops.rs
-//! ├── terminal_ops.rs     →         ├── terminal_ops.rs
+//! vt_100_ansi_parser/operations/     offscreen_buffer/vt_100_ansi_impl/
+//! ├── char_ops.rs         →         ├── impl_char_ops.rs
+//! ├── control_ops.rs      →         ├── impl_control_ops.rs
+//! ├── cursor_ops.rs       →         ├── impl_cursor_ops.rs
+//! ├── line_ops.rs         →         ├── impl_line_ops.rs
+//! ├── scroll_ops.rs       →         ├── impl_scroll_ops.rs
+//! ├── terminal_ops.rs     →         ├── impl_terminal_ops.rs
 //! └── sgr_ops.rs          →         (inline in perform.rs)
 //! ```
 //!
@@ -324,14 +324,14 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             // Device status operations.
             csi_codes::DSR_DEVICE_STATUS => dsr_ops::status_report(self, params),
 
-            // Mode operations
+            // Mode operations.
             csi_codes::SM_SET_MODE => mode_ops::set_mode(self, params, intermediates),
             csi_codes::RM_RESET_MODE => mode_ops::reset_mode(self, params, intermediates),
 
             // Graphics operations.
             csi_codes::SGR_SET_GRAPHICS => sgr_ops::set_graphics_rendition(self, params),
 
-            // Line operations
+            // Line operations.
             csi_codes::IL_INSERT_LINE => line_ops::insert_lines(self, params),
             csi_codes::DL_DELETE_LINE => line_ops::delete_lines(self, params),
 
@@ -345,7 +345,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
                 cursor_ops::vertical_position_absolute(self, params);
             }
 
-            // Display control operations (explicitly ignored)
+            // Display control operations (explicitly ignored).
             csi_codes::ED_ERASE_DISPLAY | csi_codes::EL_ERASE_LINE => {
                 // Clear screen/line - ignore, TUI apps will repaint themselves
                 tracing::warn!(
@@ -357,7 +357,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             // Other unimplemented CSI sequences.
             'I' => {
                 // CHT (Cursor Horizontal Tab) - Move cursor forward N tab stops
-                // Not needed: Tab handling is done via execute() with TAB character
+                // Not needed: Tab handling is done via execute() with TAB character.
                 // See [mod-level docs](crate::vt_100_ansi_parser) for rationale
                 tracing::warn!("CSI I: Cursor Horizontal Tab not implemented");
             }
@@ -399,19 +399,19 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             }
             'U' => {
                 // NP (Next Page) - Move to next page in page memory
-                // Not needed: Page memory not supported in multiplexer
+                // Not needed: Page memory not supported in multiplexer.
                 // See [mod-level docs](crate::vt_100_ansi_parser) for rationale
                 tracing::warn!("CSI U: Next Page not supported in multiplexer");
             }
             'V' => {
                 // PP (Preceding Page) - Move to previous page in page memory
-                // Not needed: Page memory not supported in multiplexer
+                // Not needed: Page memory not supported in multiplexer.
                 // See [mod-level docs](crate::vt_100_ansi_parser) for rationale
                 tracing::warn!("CSI V: Preceding Page not supported in multiplexer");
             }
             '~' => {
                 // DECLL (DEC Load LEDs) - Set keyboard LED indicators
-                // Not needed: Hardware control not applicable in multiplexer
+                // Not needed: Hardware control not applicable in multiplexer.
                 // See [mod-level docs](crate::vt_100_ansi_parser) for rationale
                 tracing::warn!("CSI ~: DEC Load LEDs not supported in multiplexer");
             }
@@ -443,13 +443,13 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             }
             'q' => {
                 // DECSCUSR (Set Cursor Style) - Change cursor shape/blink
-                // Not needed: Cursor rendering handled by terminal emulator
+                // Not needed: Cursor rendering handled by terminal emulator.
                 // See [mod-level docs](crate::vt_100_ansi_parser) for rationale
                 tracing::warn!("CSI q: Set Cursor Style not supported in multiplexer");
             }
             'p' => {
                 // Various DEC private sequences (DECRQM, etc.)
-                // Not needed: Private mode requests handled by parent terminal
+                // Not needed: Private mode requests handled by parent terminal.
                 // See [mod-level docs](crate::vt_100_ansi_parser) for rationale
                 tracing::warn!(
                     "CSI p: DEC private sequences not supported in multiplexer"
@@ -457,7 +457,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             }
             'x' => {
                 // DECREQTPARM (Request Terminal Parameters) - Request terminal settings
-                // Not needed: Terminal parameters managed by parent emulator
+                // Not needed: Terminal parameters managed by parent emulator.
                 // See [mod-level docs](crate::vt_100_ansi_parser) for rationale
                 tracing::warn!(
                     "CSI x: Request Terminal Parameters not supported in multiplexer"
@@ -697,7 +697,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// This method receives the actual data payload of a DCS sequence. For terminal
     /// multiplexing, DCS sequences are not processed, so this data is ignored.
     fn put(&mut self, _byte: u8) {
-        // Ignore DCS data
+        // Ignore DCS data.
     }
 
     /// Hook for DCS - ends the DCS sequence, signaling that all data has been received.

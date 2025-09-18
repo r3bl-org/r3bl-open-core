@@ -33,6 +33,79 @@
 //! - **[`operations`]**: Modular operation handlers (cursor, SGR, scrolling, etc.)
 //! - **[`term_units`]**: Type-safe terminal coordinate system
 //!
+//! # Code Organization and Naming Convention
+//!
+//! This module follows a deliberate three-layer architecture with a specific naming
+//! pattern that solves the IDE search problem and creates clear code boundaries:
+//!
+//! ## The Three-Layer Architecture
+//!
+//! ```text
+//! ┌────────────────────────────────────────────────────────────────┐
+//! │                     Layer 1: SHIM (no prefix)                  │
+//! │  vt_100_ansi_parser/operations/char_ops.rs                     │
+//! │  • Thin delegation layer                                       │
+//! │  • Parameter parsing and translation                           │
+//! │  • Minimal logic, maximum clarity                              │
+//! └────────────────────────────────────────────────────────────────┘
+//!                               ↓ delegates to
+//! ┌────────────────────────────────────────────────────────────────┐
+//! │                  Layer 2: IMPLEMENTATION (impl_ prefix)        │
+//! │  offscreen_buffer/vt_100_ansi_impl/impl_char_ops.rs            │
+//! │  • Full business logic                                         │
+//! │  • Buffer manipulation                                         │
+//! │  • VT100 compliance implementation                             │
+//! └────────────────────────────────────────────────────────────────┘
+//!                               ↓ tested by
+//! ┌────────────────────────────────────────────────────────────────┐
+//! │                     Layer 3: TESTS (test_ prefix)              │
+//! │  vt_100_ansi_conformance_tests/tests/test_char_ops.rs          │
+//! │  • Comprehensive test coverage                                 │
+//! │  • VT100 conformance validation                                │
+//! │  • Real-world scenario testing                                 │
+//! └────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## The IDE Search Problem (and Our Solution)
+//!
+//! **Problem**: When searching for "char_ops" in a large codebase, IDEs typically
+//! return many unrelated results, making it difficult to navigate between related
+//! files.
+//!
+//! **Solution**: Our naming convention creates a searchable, hierarchical namespace:
+//!
+//! When you search for "char_ops" in your IDE, you'll see:
+//! - `char_ops.rs` - The parser shim (clean, minimal delegation)
+//! - `impl_char_ops.rs` - The full implementation
+//! - `test_char_ops.rs` - The test files
+//!
+//! This predictable pattern means developers can quickly jump between:
+//! - The protocol definition (shim)
+//! - The implementation details (impl)
+//! - The test specifications (test)
+//!
+//! ## Benefits of This Architecture
+//!
+//! 1. **Clear Separation of Concerns**: Protocol handling vs. business logic
+//! 2. **Predictable Navigation**: Consistent naming across all operations
+//! 3. **Reduced Cognitive Load**: Know exactly where to look for each aspect
+//! 4. **Maintainability**: Changes to protocol don't affect implementation
+//! 5. **Testability**: Each layer can be tested independently
+//!
+//! ## File Naming Rules
+//!
+//! | Layer | Prefix | Example | Purpose |
+//! |-------|--------|---------|---------|
+//! | Shim | (none) | `char_ops.rs` | Protocol translation |
+//! | Implementation | `impl_` | `impl_char_ops.rs` | Business logic |
+//! | Test | `test_` | `test_char_ops.rs` | Validation |
+//!
+//! This pattern is consistently applied across all operation types:
+//! - Character operations (`char_ops` → `impl_char_ops` → `test_char_ops`)
+//! - Cursor operations (`cursor_ops` → `impl_cursor_ops` → `test_cursor_ops`)
+//! - Terminal operations (`terminal_ops` → `impl_terminal_ops` → `test_terminal_ops`)
+//! - And all others...
+//!
 //! # VT100 Specification Compliance
 //!
 //! This parser implements VT100 terminal compatibility as documented in:
@@ -82,6 +155,74 @@
 //! use**, providing excellent compatibility for contemporary terminal applications while
 //! maintaining implementation simplicity and focus.
 //!
+//! # Testing Philosophy and Architecture
+//!
+//! This module employs a **deliberate three-layer testing strategy** that perfectly
+//! aligns with the shim → impl → test architecture:
+//!
+//! ## Testing Strategy Overview
+//!
+//! ```text
+//! ┌────────────────────────────────────────────────────────────────────────────┐
+//! │                        LAYER 1: SHIM (no tests)                            │
+//! │  operations/char_ops.rs                                                    │
+//! │  • Pure delegation, no business logic                                      │
+//! │  • No direct unit tests (intentional!)                                     │
+//! │  • Tested indirectly via integration tests                                 │
+//! └────────────────────────────────────────────────────────────────────────────┘
+//!                                     ↓ delegates to
+//! ┌────────────────────────────────────────────────────────────────────────────┐
+//! │                    LAYER 2: IMPLEMENTATION (unit tests)                    │
+//! │  vt_100_ansi_impl/impl_char_ops.rs                                         │
+//! │  • Full business logic and buffer manipulation                             │
+//! │  • Comprehensive unit tests (#[test] functions)                            │
+//! │  • Tests isolated logic without ANSI parsing                               │
+//! └────────────────────────────────────────────────────────────────────────────┘
+//!                                     ↓ tested by
+//! ┌────────────────────────────────────────────────────────────────────────────┐
+//! │                    LAYER 3: INTEGRATION TESTS (full pipeline)              │
+//! │  vt_100_ansi_conformance_tests/tests/test_char_ops.rs                      │
+//! │  • Tests complete ANSI sequence → buffer update pipeline                   │
+//! │  • Uses public API (apply_ansi_bytes) for real-world scenarios             │
+//! │  • VT100 conformance validation                                            │
+//! └────────────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Why Shims Have No Direct Tests
+//!
+//! The **intentional absence** of unit tests in the shim layer (operations modules) is a
+//! deliberate architectural decision:
+//!
+//! 1. **Pure Delegation**: Shims contain no business logic, only parameter translation
+//! 2. **No Risk**: Minimal code means minimal risk of bugs
+//! 3. **Integration Coverage**: Conformance tests exercise the complete pipeline
+//!    including shims
+//! 4. **Avoid Redundancy**: Testing delegation would duplicate impl layer unit tests
+//!
+//! ## Testing Layer Relationships
+//!
+//! ```text
+//! apply_ansi_bytes("ESC[2P")
+//!         ↓
+//! VTE Parser → shim (char_ops::delete_chars) → impl (delete_chars_at_cursor) → buffer
+//!                     ↑                                    ↑                      ↑
+//!                NO TESTS                         UNIT TESTS              INTEGRATION TESTS
+//!            (intentional!)                    (#[test] fns)           (conformance tests)
+//! ```
+//!
+//! ## Navigation Between Testing Layers
+//!
+//! The three layers are tightly coupled and designed for seamless navigation:
+//! - **Shim Layer**: [`operations`] - Parameter translation and delegation
+//! - **Implementation Layer**: [`vt_100_ansi_impl`] - Business logic with unit tests
+//! - **Integration Tests**: [`vt_100_ansi_conformance_tests`] - Full pipeline validation
+//!
+//! When working on any operation (e.g., character operations), you can easily jump
+//! between:
+//! 1. The protocol interface ([`operations::char_ops`])
+//! 2. The implementation ([`vt_100_ansi_impl::impl_char_ops`])
+//! 3. The integration tests ([`vt_100_ansi_conformance_tests::tests::test_char_ops`])
+//!
 //! # Testing Infrastructure
 //!
 //! The module includes comprehensive conformance testing to ensure VT100 compatibility:
@@ -118,7 +259,7 @@
 //! cargo test vt_100_ansi_conformance_tests
 //!
 //! # Specific test categories
-//! cargo test test_real_world_scenarios     # vim, emacs, tmux patterns
+//! cargo test test_real_world_scenarios      # vim, emacs, tmux patterns
 //! cargo test test_cursor_operations         # cursor positioning
 //! cargo test test_sgr_and_character_sets    # text styling & colors
 //! ```
@@ -146,6 +287,10 @@
 //! - **Memory efficient**: Sequences are processed as they arrive, no buffering overhead
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
+//! [`vt_100_ansi_impl::impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
+//! [`operations::char_ops`]: operations::char_ops
+//! [`vt_100_ansi_conformance_tests::tests::test_char_ops`]: vt_100_ansi_conformance_tests::tests::test_char_ops
 
 // Attach.
 pub mod ansi_parser_public_api;

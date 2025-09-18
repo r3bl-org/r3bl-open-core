@@ -76,7 +76,7 @@ mod tests_char_set_ops {
     fn test_select_ascii_character_set() {
         let mut buffer = create_test_buffer();
 
-        // Start with DEC graphics character set
+        // Start with DEC graphics character set.
         buffer.ansi_parser_support.character_set = CharacterSet::DECGraphics;
 
         buffer.select_ascii_character_set();
@@ -91,7 +91,7 @@ mod tests_char_set_ops {
     fn test_select_dec_graphics_character_set() {
         let mut buffer = create_test_buffer();
 
-        // Start with ASCII character set (default)
+        // Start with ASCII character set (default).
         buffer.ansi_parser_support.character_set = CharacterSet::Ascii;
 
         buffer.select_dec_graphics_character_set();
@@ -104,7 +104,7 @@ mod tests_char_set_ops {
 
     #[test]
     fn test_translate_dec_graphics_corners() {
-        // Test corner characters
+        // Test corner characters.
         assert_eq!(OffscreenBuffer::translate_dec_graphics('j'), '┘'); // Lower right
         assert_eq!(OffscreenBuffer::translate_dec_graphics('k'), '┐'); // Upper right
         assert_eq!(OffscreenBuffer::translate_dec_graphics('l'), '┌'); // Upper left
@@ -113,7 +113,7 @@ mod tests_char_set_ops {
 
     #[test]
     fn test_translate_dec_graphics_lines() {
-        // Test line characters
+        // Test line characters.
         assert_eq!(OffscreenBuffer::translate_dec_graphics('q'), '─'); // Horizontal line
         assert_eq!(OffscreenBuffer::translate_dec_graphics('x'), '│'); // Vertical line
         assert_eq!(OffscreenBuffer::translate_dec_graphics('n'), '┼'); // Crossing lines
@@ -121,7 +121,7 @@ mod tests_char_set_ops {
 
     #[test]
     fn test_translate_dec_graphics_tees() {
-        // Test T-junction characters
+        // Test T-junction characters.
         assert_eq!(OffscreenBuffer::translate_dec_graphics('t'), '├'); // Left "T"
         assert_eq!(OffscreenBuffer::translate_dec_graphics('u'), '┤'); // Right "T"
         assert_eq!(OffscreenBuffer::translate_dec_graphics('v'), '┴'); // Bottom "T"
@@ -130,7 +130,7 @@ mod tests_char_set_ops {
 
     #[test]
     fn test_translate_dec_graphics_unmapped_characters() {
-        // Test that unmapped characters pass through unchanged
+        // Test that unmapped characters pass through unchanged.
         assert_eq!(OffscreenBuffer::translate_dec_graphics('a'), 'a');
         assert_eq!(OffscreenBuffer::translate_dec_graphics('Z'), 'Z');
         assert_eq!(OffscreenBuffer::translate_dec_graphics('1'), '1');
@@ -140,7 +140,7 @@ mod tests_char_set_ops {
 
     #[test]
     fn test_translate_dec_graphics_complete_mapping() {
-        // Test all mapped characters at once to ensure completeness
+        // Test all mapped characters at once to ensure completeness.
         let mappings = [
             ('j', '┘'),
             ('k', '┐'),
@@ -168,20 +168,20 @@ mod tests_char_set_ops {
     fn test_character_set_state_persistence() {
         let mut buffer = create_test_buffer();
 
-        // Verify initial state is ASCII (default)
+        // Verify initial state is ASCII (default).
         assert_eq!(
             buffer.ansi_parser_support.character_set,
             CharacterSet::Ascii
         );
 
-        // Switch to DEC graphics and verify persistence
+        // Switch to DEC graphics and verify persistence.
         buffer.select_dec_graphics_character_set();
         assert_eq!(
             buffer.ansi_parser_support.character_set,
             CharacterSet::DECGraphics
         );
 
-        // Switch back to ASCII and verify persistence
+        // Switch back to ASCII and verify persistence.
         buffer.select_ascii_character_set();
         assert_eq!(
             buffer.ansi_parser_support.character_set,

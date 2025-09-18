@@ -14,6 +14,18 @@
 //!
 //! All operations maintain VT100 compliance and handle proper character shifting,
 //! bounds checking, and cursor positioning as specified in VT100 documentation.
+//!
+//! This module implements the business logic for character operations delegated from
+//! the parser shim. The `impl_` prefix follows our naming convention for searchable
+//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! for the complete three-layer architecture.
+//!
+//! **Related Files:**
+//! - **Shim**: [`char_ops`] - Parameter translation and delegation (no direct tests)
+//! - **Integration Tests**: [`test_char_ops`] - Full ANSI pipeline testing
+//!
+//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
+//! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_char_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

@@ -175,7 +175,7 @@ mod tests_bounds_check_ops {
     fn test_clamp_column_within_bounds() {
         let buffer = create_test_buffer();
 
-        // Column 5 is within bounds (width 10)
+        // Column 5 is within bounds (width 10).
         let clamped = buffer.clamp_column(col(5));
         assert_eq!(clamped, col(5));
     }
@@ -193,7 +193,7 @@ mod tests_bounds_check_ops {
     fn test_max_col_index() {
         let buffer = create_test_buffer();
 
-        // Width 10 means max index is 9
+        // Width 10 means max index is 9.
         assert_eq!(buffer.max_col_index(), col(9));
     }
 
@@ -201,7 +201,7 @@ mod tests_bounds_check_ops {
     fn test_max_row_index() {
         let buffer = create_test_buffer();
 
-        // Height 6 means max index is 5
+        // Height 6 means max index is 5.
         assert_eq!(buffer.max_row_index(), row(5));
     }
 
@@ -267,7 +267,7 @@ mod tests_bounds_check_ops {
 
         buffer.move_cursor_forward(crate::ColWidth::from(5));
 
-        // Should be clamped to max column (9)
+        // Should be clamped to max column (9).
         assert_eq!(buffer.cursor_pos.col_index, col(9));
         assert_eq!(buffer.cursor_pos.row_index, row(2));
     }
@@ -291,7 +291,7 @@ mod tests_bounds_check_ops {
         buffer.move_cursor_backward(crate::ColWidth::from(5));
 
         // Type-safe underflow should handle this gracefully
-        // The exact behavior depends on the implementation of ColIndex subtraction
+        // The exact behavior depends on the implementation of ColIndex subtraction.
         assert_eq!(buffer.cursor_pos.row_index, row(2));
     }
 

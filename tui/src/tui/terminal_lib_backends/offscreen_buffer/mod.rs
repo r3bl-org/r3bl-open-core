@@ -31,7 +31,7 @@
 //!
 //! ## 1. ANSI/VT100 Terminal Emulation
 //!
-//! - **Parser Integration**: Processes escape sequences via [`vt100_ansi_impl`]
+//! - **Parser Integration**: Processes escape sequences via [`vt_100_ansi_impl`]
 //!   implementations
 //! - **State Management**: Maintains cursor position, character sets, scrolling regions
 //! - **Protocol Compliance**: Full VT100 specification compliance with conformance tests
@@ -75,14 +75,14 @@
 //! mapping:
 //!
 //! ```text
-//! vt_100_ansi_parser/operations/     offscreen_buffer/vt100_ansi_impl/
-//! ├── char_ops.rs         →         ├── char_ops.rs         (print_char, ICH, DCH, ECH)
-//! ├── control_ops.rs      →         ├── control_ops.rs      (BS, TAB, LF, CR)
-//! ├── cursor_ops.rs       →         ├── cursor_ops.rs       (movement, positioning)
-//! ├── line_ops.rs         →         ├── line_ops.rs         (insert/delete lines)
-//! ├── scroll_ops.rs       →         ├── scroll_ops.rs       (scrolling, regions)
-//! ├── terminal_ops.rs     →         ├── terminal_ops.rs     (reset, clear, charset)
-//! └── bounds_check.rs     →         └── bounds_check.rs     (safety utilities)
+//! vt_100_ansi_parser/operations/     offscreen_buffer/vt_100_ansi_impl/
+//! ├── char_ops.rs         →         ├── impl_char_ops.rs    (print_char, ICH, DCH, ECH)
+//! ├── control_ops.rs      →         ├── impl_control_ops.rs (BS, TAB, LF, CR)
+//! ├── cursor_ops.rs       →         ├── impl_cursor_ops.rs  (movement, positioning)
+//! ├── line_ops.rs         →         ├── impl_line_ops.rs    (insert/delete lines)
+//! ├── scroll_ops.rs       →         ├── impl_scroll_ops.rs  (scrolling, regions)
+//! ├── terminal_ops.rs     →         ├── impl_terminal_ops.rs(reset, clear, charset)
+//! └── bounds_check.rs     →         └── ansi_bounds_check_helper.rs (safety utilities)
 //! ```
 //!
 //! This 1:1 mapping provides:
@@ -103,7 +103,7 @@ pub mod ofs_buf_line_level_ops;
 pub mod pixel_char;
 pub mod pixel_char_line;
 pub mod pixel_char_lines;
-pub mod vt100_ansi_impl;
+pub mod vt_100_ansi_impl;
 
 // Re-export all implementations.
 pub use diff_chunks::*;

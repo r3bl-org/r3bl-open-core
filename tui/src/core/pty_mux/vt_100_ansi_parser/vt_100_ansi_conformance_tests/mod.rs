@@ -9,21 +9,74 @@
 //!
 //! # Testing Philosophy
 //!
-//! These tests validate the complete ANSI sequence processing pipeline:
+//! This module provides **integration tests** that validate the complete ANSI sequence
+//! processing pipeline using the public API. This is a key component of the three-layer
+//! testing strategy:
+//!
+//! ## Integration Testing Role
 //!
 //! ```text
-//! ANSI Sequences → VTE Parser → Perform Trait → OffscreenBuffer Updates
+//! ANSI Bytes → apply_ansi_bytes() → VTE Parser → Shim → Implementation → Buffer Updates
+//!      ↑                                                                        ↑
+//!  Test Input                                                            Test Assertions
+//! ```
+//!
+//! These conformance tests **intentionally** test the entire pipeline using
+//! [`OffscreenBuffer::apply_ansi_bytes`], not individual shim or implementation
+//! functions. This approach:
+//!
+//! 1. **Tests Real-World Usage**: Uses the same public API that production code uses
+//! 2. **Validates Complete Pipeline**: Ensures ANSI parsing → shim → impl → buffer works
+//!    together
+//! 3. **Complements Unit Tests**: While [`vt_100_ansi_impl`] files have unit tests, these
+//!    test the integrated system
+//! 4. **Replaces Shim Tests**: Since [`operations`] shims are pure delegation, these
+//!    tests provide their coverage
+//!
+//! ## Testing Strategy Relationship
+//!
+//! This integration testing layer works in concert with unit testing:
+//!
+//! ```text
+//! ┌────────────────────────────────────────────────────────────────────────────┐
+//! │                    INTEGRATION TESTS (this module)                         │
+//! │  • Uses apply_ansi_bytes() public API                                      │
+//! │  • Tests complete ANSI sequence → buffer update pipeline                   │
+//! │  • Provides coverage for operations/* shims                                │
+//! └────────────────────────────────────────────────────────────────────────────┘
+//!                                     ↕ complements
+//! ┌────────────────────────────────────────────────────────────────────────────┐
+//! │                        UNIT TESTS (vt_100_ansi_impl)                       │
+//! │  • Direct method calls to implementation functions                         │
+//! │  • Tests isolated buffer manipulation logic                                │
+//! │  • Fast execution, precise error diagnosis                                 │
+//! └────────────────────────────────────────────────────────────────────────────┘
 //! ```
 //!
 //! The conformance approach ensures compatibility with real-world terminal applications
 //! by testing patterns extracted from actual usage scenarios rather than isolated
 //! sequence fragments.
 //!
+//! ## Navigation to Related Layers
+//!
+//! When working with any test file, you can navigate to its related implementation
+//! layers:
+//! - **Shim Layer**: [`operations`] - The delegation layer being tested indirectly
+//! - **Implementation Layer**: [`vt_100_ansi_impl`] - The business logic being tested
+//! - **Testing Philosophy**: See [parser module docs] for the complete three-layer
+//!   strategy
+//!
+//! For example, when working on [`test_char_ops`]:
+//! 1. **Integration Tests**: [`test_char_ops`] (this module) - Full ANSI sequence testing
+//! 2. **Shim**: [`operations::char_ops`] - Parameter translation (tested indirectly here)
+//! 3. **Implementation**: [`impl_char_ops`] - Buffer logic (has separate unit tests)
+//!
 //! ## Test Organization
 //!
 //! - **[`conformance_data`]/**: Reusable sequence builder functions organized by category
 //! - **[`tests`]/**: Test modules that validate sequence processing behavior
-//! - **[`test_fixtures`].rs**: Shared test utilities and helper functions
+//! - **[`test_fixtures_vt_100_ansi_conformance`]**: Shared test utilities and helper
+//!   functions
 //!
 //! ## Conformance Data Modules
 //!
@@ -136,6 +189,14 @@
 //!     matches!(style.attribs.invert, Some(_))
 //! }, "status line reverse video");
 //! ```
+//!
+//! [`operations`]: super::operations
+//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
+//! [`operations::char_ops`]: super::operations::char_ops
+//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
+//! [`test_char_ops`]: tests::test_char_ops
+//! [parser module docs]: super
+//! [`OffscreenBuffer::apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
 
 #[cfg(any(test, doc))]
 pub mod conformance_data;

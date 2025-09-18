@@ -1,6 +1,19 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Tests for character insertion, deletion, and erasure operations (ICH/DCH/ECH).
+//!
+//! Tests the complete pipeline from ANSI sequences through the shim to implementation
+//! using the public [`apply_ansi_bytes`] API. This provides integration testing coverage
+//! for the [`char_ops`] shim layer. The `test_` prefix follows our naming convention.
+//! See [parser module docs](super::super) for the complete testing philosophy.
+//!
+//! **Related Files:**
+//! - **Shim**: [`char_ops`] - Parameter translation (tested indirectly by this module)
+//! - **Implementation**: [`impl_char_ops`] - Business logic (has separate unit tests)
+//!
+//! [`apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
+//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
+//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{TuiStyle, vt_100_ansi_parser::protocols::csi_codes::CsiSequence};

@@ -24,20 +24,75 @@
 //!
 //! # Testing Strategy
 //!
-//! The operation modules in this directory intentionally do not have direct unit tests,
-//! which diverges from the codebase norm. This is because:
+//! The operation modules in this directory **intentionally do not have direct unit
+//! tests**. This is a deliberate architectural decision that diverges from the codebase
+//! norm for excellent reasons:
 //!
-//! 1. These operations are thin delegation layers with minimal logic
-//! 2. They primarily translate ANSI parameters into [`OffscreenBuffer`] method calls
-//! 3. The underlying [`OffscreenBuffer`] methods have comprehensive unit tests
-//! 4. The VT100 conformance tests in [`vt_100_ansi_conformance_tests`] verify the
-//!    complete ANSI processing pipeline
+//! ## Why No Direct Tests?
+//!
+//! 1. **Pure Delegation**: These operations are thin delegation layers with no business
+//!    logic
+//! 2. **Parameter Translation Only**: They primarily translate ANSI parameters into
+//!    [`OffscreenBuffer`] method calls
+//! 3. **Minimal Risk**: Code simplicity means minimal risk of bugs
+//! 4. **Comprehensive Coverage**: Testing is handled by two complementary layers:
+//!    - **Unit Tests**: The underlying [`OffscreenBuffer`] methods have comprehensive
+//!      unit tests
+//!    - **Integration Tests**: The VT100 conformance tests in
+//!      [`vt_100_ansi_conformance_tests`] verify the complete ANSI processing pipeline
+//!
+//! ## Testing Philosophy
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────┐
+//! │ Shim Layer (operations/*)                               │
+//! │ • NO DIRECT TESTS (by design)                           │
+//! │ • Pure delegation, no business logic                    │
+//! └────────────────────┬────────────────────────────────────┘
+//!                      │ delegates to
+//!                      ▼
+//! ┌─────────────────────────────────────────────────────────┐
+//! │ Implementation Layer (vt_100_ansi_impl/impl_*)          │
+//! │ • UNIT TESTS: #[test] functions                         │
+//! │ • Contains all business logic                           │
+//! └─────────────────────────────────────────────────────────┘
+//!
+//! ┌─────────────────────────────────────────────────────────┐
+//! │ Conformance Tests (vt_100_ansi_conformance_tests/*)     │
+//! │ • INTEGRATION TESTS: Full pipeline validation           │
+//! │ • Tests: Shim → Implementation → Buffer                 │
+//! └─────────────────────────────────────────────────────────┘
+//! ```
 //!
 //! This approach avoids redundant testing while ensuring both unit-level correctness
-//! (in [`OffscreenBuffer`]) and system-level behavior (in conformance tests).
+//! and system-level behavior validation.
+//!
+//! ## Navigation to Related Testing Layers
+//!
+//! When working with any operation module, you can navigate to its related testing
+//! layers:
+//! - **Implementation with Unit Tests**: [`vt_100_ansi_impl`] module
+//! - **Integration Tests**: [`vt_100_ansi_conformance_tests`] module
+//! - **Complete Testing Philosophy**: See the [main module documentation](super) for the
+//!   full three-layer testing strategy
+//!
+//! # Naming Convention
+//!
+//! Files in this directory intentionally have no prefix, serving as the "shim" layer
+//! in our three-layer architecture. This creates a searchable hierarchy when combined
+//! with `impl_` prefixed implementations and `test_` prefixed tests.
+//!
+//! When you search for any operation (e.g., "char_ops") in your IDE, you'll see:
+//! - `char_ops.rs` (this directory) - The shim layer for protocol translation
+//! - `impl_char_ops.rs` (implementation) - The business logic layer
+//! - `test_char_ops.rs` (tests) - The validation layer
+//!
+//! See the [main module documentation](super) for the complete explanation of this
+//! architectural pattern and its benefits for IDE navigation.
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
+//! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
 
 pub mod char_ops;
 pub mod control_ops;

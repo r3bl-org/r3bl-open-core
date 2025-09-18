@@ -45,7 +45,7 @@ use vte::Params;
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer, protocols::csi_codes};
 // Import the StyleAttribute enum from the implementation module.
 // This will be available once we update the mod.rs file.
-use crate::tui::terminal_lib_backends::offscreen_buffer::vt100_ansi_impl::sgr_ops::StyleAttribute;
+use crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_sgr_ops::StyleAttribute;
 
 /// Reset all SGR attributes to default state.
 fn reset_all_attributes(performer: &mut AnsiToOfsBufPerformer) {
