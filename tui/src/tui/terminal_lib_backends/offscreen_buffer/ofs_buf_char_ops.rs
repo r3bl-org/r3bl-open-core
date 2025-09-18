@@ -3,10 +3,7 @@
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelChar};
-use crate::{BoundsCheck,
-            BoundsOverflowStatus::{Overflowed, Within},
-            CharacterSet, ColIndex, Pos, RowIndex, col,
-            core::units::bounds_check::LengthMarker};
+use crate::{ColIndex, Pos, RowIndex};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
@@ -100,78 +97,12 @@ impl OffscreenBuffer {
         }
         false
     }
-
-    /// Handle printable characters with character set translation, bounds checking, and
-    /// line wrapping.
-    ///
-    /// This method consolidates all character printing logic including:
-    /// - DEC graphics character translation
-    /// - Bounds checking
-    /// - Character writing to buffer
-    /// - DECAWM (Auto Wrap Mode) line wrap handling
-    ///
-    /// # Arguments
-    /// * `ch` - The character to print
-    ///
-    /// # Behavior
-    /// 1. Applies character set translation if in graphics mode
-    /// 2. Writes character to buffer at current cursor position (if within bounds)
-    /// 3. Advances cursor, handling line wrap based on DECAWM mode
-    ///
-    /// # Line Wrapping
-    /// - **DECAWM enabled** (default): wraps to next line when reaching right margin
-    /// - **DECAWM disabled**: cursor stays at right margin, new chars overwrite
-    pub fn print_char(&mut self, ch: char) {
-        // Apply character set translation if in graphics mode.
-        let display_char = match self.ansi_parser_support.character_set {
-            CharacterSet::DECGraphics => Self::translate_dec_graphics(ch),
-            CharacterSet::Ascii => ch,
-        };
-
-        let row_max = self.window_size.row_height;
-        let col_max = self.window_size.col_width;
-        let current_row = self.cursor_pos.row_index;
-        let current_col = self.cursor_pos.col_index;
-
-        // Only write if within bounds.
-        if current_row.check_overflows(row_max) == Within
-            && current_col.check_overflows(col_max) == Within
-        {
-            self.set_char(
-                current_row + current_col,
-                PixelChar::PlainText {
-                    display_char, // Use the translated character
-                    style: self.ansi_parser_support.current_style,
-                },
-            );
-
-            // Move cursor forward.
-            let new_col: ColIndex = current_col + 1;
-
-            // Handle line wrap based on DECAWM (Auto Wrap Mode).
-            if new_col.check_overflows(col_max) == Overflowed {
-                if self.ansi_parser_support.auto_wrap_mode {
-                    // DECAWM enabled: wrap to next line (default behavior)
-                    self.cursor_pos.col_index = col(0);
-                    let next_row: RowIndex = current_row + 1;
-                    if next_row.check_overflows(row_max) == Within {
-                        self.cursor_pos.row_index = next_row;
-                    }
-                } else {
-                    // DECAWM disabled: stay at right margin (clamp cursor position)
-                    self.cursor_pos.col_index = col_max.convert_to_index();
-                }
-            } else {
-                self.cursor_pos.col_index = new_col;
-            }
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests_char_ops {
     use super::*;
-    use crate::{TuiStyle, height, row, width};
+    use crate::{TuiStyle, col, height, row, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(5) + height(3);

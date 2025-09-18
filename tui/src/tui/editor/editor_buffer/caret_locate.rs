@@ -193,7 +193,8 @@ pub fn row_is_at_bottom(buffer: &EditorBuffer) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{AfterLastPosition, EditorEngine, EditorEngineConfig, assert_eq2, col, row};
+    use crate::{AfterLastPosition, EditorEngine, EditorEngineConfig, assert_eq2, col,
+                row};
 
     #[test]
     fn test_locate_col_at_start() {

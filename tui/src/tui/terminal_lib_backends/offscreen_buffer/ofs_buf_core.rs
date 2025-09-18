@@ -4,11 +4,11 @@ use std::fmt::Debug;
 
 use super::super::{FlushKind, RenderOps};
 use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TuiStyle,
-            core::pty_mux::ansi_parser::term_units::TermRow, osc::OscEvent};
+            core::pty_mux::vt100_ansi_parser::term_units::TermRow, osc::OscEvent};
 
 /// Character set modes for terminal emulation.
 ///
-/// Used by [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] to handle
+/// Used by [`crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer`] to handle
 /// ESC ( sequences that switch between ASCII and DEC line-drawing graphics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CharacterSet {
@@ -30,7 +30,7 @@ pub enum CharacterSet {
 /// current cursor position. This is because `cursor_pos` is used by multiple subsystems
 /// and is the primary cursor position tracker for the entire offscreen buffer system.
 ///
-/// [`ANSI parser performer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
+/// [`ANSI parser performer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
 /// [`OffscreenBuffer::cursor_pos`]: OffscreenBuffer::cursor_pos
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnsiParserSupport {
@@ -60,7 +60,7 @@ pub struct AnsiParserSupport {
     /// 6. Restores cursor_pos from buffer.ansi_parser_support.cursor_pos_for_esc_save_and_restore
     /// ```
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
     pub cursor_pos_for_esc_save_and_restore: Option<Pos>,
 
     /// Active character set for ANSI escape sequence support.
@@ -76,7 +76,7 @@ pub struct AnsiParserSupport {
     /// Graphics Mode (ESC ( 0): 'q' → '─' (horizontal line)
     /// ```
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
     pub character_set: CharacterSet,
 
     /// Auto-wrap mode (DECAWM) for ANSI escape sequence support.
@@ -95,7 +95,7 @@ pub struct AnsiParserSupport {
     /// automatically wrap to the beginning of the next line. When disabled,
     /// the cursor stays at the right margin and subsequent characters overwrite.
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
     pub auto_wrap_mode: bool,
 
     /// Complete computed style combining attributes and colors for efficient rendering.
@@ -126,7 +126,7 @@ pub struct AnsiParserSupport {
     /// ESC [ r          - Reset to full screen (clears both margins)
     /// ```
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
     pub scroll_region_top: Option<TermRow>,
 
     /// Bottom margin for the **scrollable region** (DECSTBM) - 1-based row number.
@@ -148,7 +148,7 @@ pub struct AnsiParserSupport {
     /// - Cursor movement is constrained to the region boundaries
     /// - Content outside the region remains unchanged during scrolling
     ///
-    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer
+    /// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt100_ansi_parser::AnsiToOfsBufPerformer
     pub scroll_region_bottom: Option<TermRow>,
 }
 
@@ -168,26 +168,29 @@ impl Default for AnsiParserSupport {
     }
 }
 
-/// Represents a grid of cells where the row/column index maps to the terminal screen.
+/// Core terminal screen buffer structure with VT100/ANSI support.
 ///
-/// This works regardless of the size of each cell. Cells can contain emoji who's display
-/// width is greater than one. This complicates things since a "😃" takes up 2 display
-/// widths.
+/// For comprehensive architectural overview and integration details, see the
+/// [module documentation](super).
 ///
-/// Let's say one cell has a "😃" in it. The cell's display width is 2. The cell's byte
-/// size is 4. The next cell after it will have to contain nothing or void.
+/// This struct represents the main terminal screen buffer as a 2D grid where each
+/// cell maps directly to a terminal screen position. It handles variable-width
+/// characters (like emoji) using [`PixelChar::Void`] placeholders.
 ///
-/// Why? This is because the col & row indices of the grid map to display col & row
-/// indices of the terminal screen. By inserting a [`PixelChar::Void`] pixel char in the
-/// next cell, we signal the rendering logic to skip it since it has already been painted.
-/// And this is different than a [`PixelChar::Spacer`] which has to be painted!
+/// ## Key Features
 ///
-/// This is a very flexible representation of a terminal screen buffer, which can work
-/// with both:
-/// 1. [`crate::RenderPipeline::paint()`]
-/// 2. ANSI escape sequences; for more details see
-///    [`crate::core::pty_mux::ansi_parser::AnsiToOfsBufPerformer`] and the
-///    [`OffscreenBuffer::apply_ansi_bytes()`].
+/// - **Dual Integration**: Works with both render pipeline and ANSI terminal emulation
+/// - **Variable-Width Support**: Proper handling of emoji and Unicode characters
+/// - **VT100 Compliance**: Full terminal specification compliance
+/// - **Performance Optimized**: Pre-calculated memory sizes and efficient operations
+///
+/// ## Field Organization
+///
+/// The struct is organized into logical groups:
+/// - **Core Buffer**: The 2D grid and window dimensions
+/// - **Cursor Management**: Primary cursor position for all subsystems
+/// - **ANSI Support**: Terminal state for escape sequence processing
+/// - **Performance**: Pre-calculated memory usage tracking
 #[derive(Clone, PartialEq)]
 pub struct OffscreenBuffer {
     // The actual 2D grid of pixel characters representing the terminal screen.
@@ -358,7 +361,7 @@ impl OffscreenBuffer {
         let buffer = PixelCharLines::new_empty(window_size);
 
         // Calculate memory size once - it will never change since buffer dimensions are
-        // fixed
+        // fixed.
         let memory_size = MemorySize::new(
             buffer.get_mem_size()
                 + std::mem::size_of::<Size>()
