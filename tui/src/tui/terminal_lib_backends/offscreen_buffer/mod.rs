@@ -100,6 +100,7 @@ pub mod ofs_buf_bulk_ops;
 pub mod ofs_buf_char_ops;
 pub mod ofs_buf_core;
 pub mod ofs_buf_line_level_ops;
+pub mod ofs_buf_range_validation;
 pub mod pixel_char;
 pub mod pixel_char_line;
 pub mod pixel_char_lines;

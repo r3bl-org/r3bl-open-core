@@ -3,19 +3,22 @@
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelChar};
-use crate::{ColIndex, Pos, RowIndex};
+use crate::{ColIndex, Pos, RowIndex, BoundsCheck, LengthMarker, core::units::bounds_check::RangeValidation};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
     /// Get character at position, returns None if position is out of bounds.
     #[must_use]
     pub fn get_char(&self, pos: Pos) -> Option<PixelChar> {
-        let row_idx = pos.row_index.as_usize();
-        let col_idx = pos.col_index.as_usize();
-
-        if row_idx >= self.buffer.len() {
+        // Use type-safe bounds checking before converting to usize
+        let buffer_height = crate::height(self.buffer.len());
+        if buffer_height.is_overflowed_by(pos) {
             return None;
         }
+
+        // Convert to usize only at Vec access boundary
+        let row_idx = pos.row_index.as_usize();
+        let col_idx = pos.col_index.as_usize();
 
         self.buffer.get(row_idx)?.get(col_idx).copied()
     }
@@ -23,12 +26,15 @@ impl OffscreenBuffer {
     /// Set character at position. Automatically handles cache invalidation.
     /// Returns true if the position was valid and the character was set.
     pub fn set_char(&mut self, pos: Pos, char: PixelChar) -> bool {
-        let row_idx = pos.row_index.as_usize();
-        let col_idx = pos.col_index.as_usize();
-
-        if row_idx >= self.buffer.len() {
+        // Use type-safe bounds checking before converting to usize
+        let buffer_height = crate::height(self.buffer.len());
+        if buffer_height.is_overflowed_by(pos) {
             return false;
         }
+
+        // Convert to usize only at Vec access boundary
+        let row_idx = pos.row_index.as_usize();
+        let col_idx = pos.col_index.as_usize();
 
         if let Some(target_char) = self
             .buffer
@@ -50,23 +56,13 @@ impl OffscreenBuffer {
         col_range: Range<ColIndex>,
         char: PixelChar,
     ) -> bool {
-        let row_idx = row.as_usize();
-        if row_idx >= self.buffer.len() {
-            return false;
-        }
-
-        let start_col = col_range.start.as_usize();
-        let end_col = col_range.end.as_usize();
-
-        if let Some(line) = self.buffer.get_mut(row_idx)
-            && start_col < line.len()
-            && end_col <= line.len()
-            && start_col <= end_col
-        {
+        // Use type-safe range validation for both row and column bounds
+        if let Some((start_col, end_col, line)) = self.validate_col_range_mut(row, col_range) {
             line[start_col..end_col].fill(char);
-            return true;
+            true
+        } else {
+            false
         }
-        false
     }
 
     /// Copy characters within a line from source range to destination position.
@@ -77,25 +73,35 @@ impl OffscreenBuffer {
         source_range: Range<ColIndex>,
         dest_start: ColIndex,
     ) -> bool {
-        let row_idx = row.as_usize();
-        if row_idx >= self.buffer.len() {
+        // Use type-safe row bounds checking first
+        let buffer_height = crate::height(self.buffer.len());
+        if row.check_overflows(buffer_height) != crate::BoundsOverflowStatus::Within {
             return false;
         }
 
-        let source_start = source_range.start.as_usize();
-        let source_end = source_range.end.as_usize();
-        let dest = dest_start.as_usize();
+        let row_idx = row.as_usize();
+        if let Some(line) = self.buffer.get_mut(row_idx) {
+            let line_width = crate::width(line.len());
 
-        if let Some(line) = self.buffer.get_mut(row_idx)
-            && source_start < line.len()
-            && source_end <= line.len()
-            && dest < line.len()
-            && source_start <= source_end
-        {
+            // Validate source range using our type-safe validation
+            if !source_range.is_valid_for(line_width) {
+                return false;
+            }
+
+            // Validate destination position
+            if dest_start.check_overflows(line_width) != crate::BoundsOverflowStatus::Within {
+                return false;
+            }
+
+            let source_start = source_range.start.as_usize();
+            let source_end = source_range.end.as_usize();
+            let dest = dest_start.as_usize();
+
             line.copy_within(source_start..source_end, dest);
-            return true;
+            true
+        } else {
+            false
         }
-        false
     }
 }
 

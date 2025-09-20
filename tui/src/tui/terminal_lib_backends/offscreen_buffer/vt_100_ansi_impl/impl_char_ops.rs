@@ -83,23 +83,30 @@ impl OffscreenBuffer {
             return false;
         }
 
-        let row_idx = at.row_index.as_usize();
+        // Keep type-safe values as long as possible
+        let cursor_col = at.col_index;
+        let dest_start_col = cursor_col + how_many_clamped;
 
-        let cursor_pos = at.col_index.as_usize();
-        let insert_amount = how_many_clamped.as_usize();
-        let line_width = max_width.as_usize();
+        // Use type-safe operations for source range calculation
+        let source_end_col = max_width.convert_to_index() - how_many_clamped + crate::len(1);
+
+        // Convert to usize only at Vec access boundary
+        let row_idx = at.row_index.as_usize();
 
         if let Some(line) = self.buffer.get_mut(row_idx) {
             // Copy characters to the right to make room for insertion.
-            let dest_start = cursor_pos + insert_amount;
-            let source_end = line_width - insert_amount;
+            let dest_start = dest_start_col.as_usize();
+            let source_end = source_end_col.as_usize();
+            let cursor_pos = cursor_col.as_usize();
+            let line_width = max_width.as_usize();
 
             if dest_start < line_width && cursor_pos < source_end {
                 line.copy_within(cursor_pos..source_end, dest_start);
             }
 
-            // Fill the cursor position with blanks.
-            let fill_end = (cursor_pos + insert_amount).min(line_width);
+            // Fill the cursor position with blanks using type-safe calculation
+            let fill_end_col = cursor_col + how_many_clamped;
+            let fill_end = fill_end_col.as_usize().min(line_width);
             line[cursor_pos..fill_end].fill(PixelChar::Spacer);
 
             return true;
@@ -227,19 +234,10 @@ impl OffscreenBuffer {
             return false;
         }
 
-        let row_idx = at.row_index.as_usize();
-
-        let cursor_pos = at.col_index.as_usize();
-        let erase_amount = how_many_clamped.as_usize();
-
-        if let Some(line) = self.buffer.get_mut(row_idx) {
-            // Fill the range with blank characters.
-            let fill_end = cursor_pos + erase_amount;
-            line[cursor_pos..fill_end].fill(PixelChar::Spacer);
-
-            return true;
-        }
-        false
+        // Use type-safe range filling instead of manual buffer access
+        let cursor_col = at.col_index;
+        let fill_end_col = cursor_col + how_many_clamped;
+        self.fill_char_range(at.row_index, cursor_col..fill_end_col, PixelChar::Spacer)
     }
 
     /// Handle printable characters with character set translation, bounds checking, and

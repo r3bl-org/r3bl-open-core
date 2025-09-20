@@ -54,16 +54,9 @@ impl OffscreenBuffer {
         row_range: Range<RowIndex>,
         shift_by: Length,
     ) -> bool {
-        let start_idx = row_range.start.as_usize();
-        let end_idx = row_range.end.as_usize();
-        let shift_amount = shift_by.as_usize();
-
-        if start_idx >= self.buffer.len()
-            || end_idx > self.buffer.len()
-            || start_idx >= end_idx
-        {
-            return false;
-        }
+        // Use type-safe range validation
+        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range) {
+            let shift_amount = shift_by.as_usize();
 
         // Shift lines up by cloning (use manual index management to avoid borrow
         // checker issues).
@@ -77,7 +70,10 @@ impl OffscreenBuffer {
             self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
         }
 
-        true
+            true
+        } else {
+            false
+        }
     }
 
     /// Shift lines down within a range by the specified amount.
@@ -93,16 +89,9 @@ impl OffscreenBuffer {
         row_range: Range<RowIndex>,
         shift_by: Length,
     ) -> bool {
-        let start_idx = row_range.start.as_usize();
-        let end_idx = row_range.end.as_usize();
-        let shift_amount = shift_by.as_usize();
-
-        if start_idx >= self.buffer.len()
-            || end_idx > self.buffer.len()
-            || start_idx >= end_idx
-        {
-            return false;
-        }
+        // Use type-safe range validation
+        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range) {
+            let shift_amount = shift_by.as_usize();
 
         // Shift lines down by cloning (work backwards to avoid overwriting).
         for _ in 0..shift_amount {
@@ -115,7 +104,10 @@ impl OffscreenBuffer {
             self.buffer[start_idx].fill(PixelChar::Spacer);
         }
 
-        true
+            true
+        } else {
+            false
+        }
     }
 }
 

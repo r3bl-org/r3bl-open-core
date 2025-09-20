@@ -46,13 +46,18 @@ impl OffscreenBuffer {
     /// Moves cursor to next 8-column tab stop boundary.
     pub fn handle_tab(&mut self) {
         let current_col = self.cursor_pos.col_index;
-        let current_tab_zone = current_col.as_usize() / TAB_STOP_WIDTH;
-        let next_tab_zone = current_tab_zone + 1;
-        let next_tab_col = next_tab_zone * TAB_STOP_WIDTH;
         let max_col = self.window_size.col_width;
 
-        // Clamp to max valid column index if it would overflow.
-        let next_col_index = col(next_tab_col);
+        // Calculate next tab stop using type-safe operations
+        let current_col_usize = current_col.as_usize(); // Convert only for division
+        let current_tab_zone = current_col_usize / TAB_STOP_WIDTH;
+        let next_tab_zone = current_tab_zone + 1;
+        let next_tab_col_usize = next_tab_zone * TAB_STOP_WIDTH;
+
+        // Convert back to type-safe column index
+        let next_col_index = crate::col(next_tab_col_usize);
+
+        // Use type-safe overflow checking and clamping
         self.cursor_pos.col_index = if next_col_index.overflows(max_col) {
             max_col.convert_to_index()
         } else {
