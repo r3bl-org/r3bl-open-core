@@ -54,20 +54,20 @@
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount};
 
-/// Handle DCH (Delete Character) - delete n characters at cursor position.
-/// Characters to the right of cursor shift left, blanks are inserted at line end.
-/// See `OffscreenBuffer::delete_chars_at_cursor` for detailed behavior and examples.
-pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = /* 1-based */ MovementCount::parse_as_length(params);
-    performer.ofs_buf.delete_chars_at_cursor(how_many);
-}
-
 /// Handle ICH (Insert Character) - insert n blank characters at cursor position.
 /// Characters to the right of cursor shift right, characters beyond margin are lost.
 /// See `OffscreenBuffer::insert_chars_at_cursor` for detailed behavior and examples.
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_length(params);
     performer.ofs_buf.insert_chars_at_cursor(how_many);
+}
+
+/// Handle DCH (Delete Character) - delete n characters at cursor position.
+/// Characters to the right of cursor shift left, blanks are inserted at line end.
+/// See `OffscreenBuffer::delete_chars_at_cursor` for detailed behavior and examples.
+pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+    let how_many = /* 1-based */ MovementCount::parse_as_length(params);
+    performer.ofs_buf.delete_chars_at_cursor(how_many);
 }
 
 /// Handle ECH (Erase Character) - erase n characters at cursor position.

@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Index, InlineVec, Length, idx, len};
+use crate::{Index, InlineVec, Length, UnitCompare, idx, len};
 
 /// There are two implementations of this trait:
 /// - [`super::RingBufferStack`] which uses a fixed-size array on the stack.
@@ -14,7 +14,7 @@ pub trait RingBuffer<T, const N: usize> {
 
     fn get(&self, arg_index: impl Into<Index>) -> Option<&T>;
 
-    fn is_empty(&self) -> bool { self.len() == len(0) }
+    fn is_empty(&self) -> bool { self.len().is_zero() }
 
     fn first(&self) -> Option<&T> { self.get(idx(0)) }
 

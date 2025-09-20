@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::buffer_struct::EditorBuffer;
-use crate::{BoundsCheck, ContentPositionStatus};
+use crate::{BoundsCheck, ContentPositionStatus, UnitCompare};
 
 /// Represents the position of a row within a buffer.
 ///
@@ -125,7 +125,7 @@ pub fn locate_row(buffer: &EditorBuffer) -> RowContentPositionStatus {
         RowContentPositionStatus::OnFirstRow
     } else {
         // Multiple lines (2+)
-        if row_index.as_usize() == 0 {
+        if row_index.is_zero() {
             RowContentPositionStatus::OnFirstRow
         } else if row_index.as_usize() == buffer_line_count - 1 {
             RowContentPositionStatus::OnLastRow

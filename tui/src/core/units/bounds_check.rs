@@ -177,6 +177,9 @@ pub trait UnitCompare: From<usize> + From<u16> {
     /// Convert the unit to a u16 value for crossterm compatibility and other terminal and
     /// pty based operations.
     fn as_u16(&self) -> u16;
+
+    /// Check if the unit value is zero.
+    fn is_zero(&self) -> bool { self.as_usize() == 0 }
 }
 
 /// Marker trait for index-type units (0-based position indicators).
@@ -1768,5 +1771,136 @@ mod tests {
             ColIndex::new(0),
             "Zero width should give position 0, not -1 or error"
         );
+    }
+
+    #[test]
+    fn test_is_zero() {
+        // Test basic index types - zero values
+        assert!(idx(0).is_zero(), "Index 0 should be zero");
+        assert!(!idx(1).is_zero(), "Index 1 should not be zero");
+        assert!(!idx(5).is_zero(), "Index 5 should not be zero");
+        assert!(!idx(100).is_zero(), "Index 100 should not be zero");
+
+        // Test basic length types - zero and non-zero values
+        assert!(len(0).is_zero(), "Length 0 should be zero");
+        assert!(!len(1).is_zero(), "Length 1 should not be zero");
+        assert!(!len(5).is_zero(), "Length 5 should not be zero");
+        assert!(!len(100).is_zero(), "Length 100 should not be zero");
+
+        // Test typed index types - ColIndex
+        assert!(ColIndex::new(0).is_zero(), "ColIndex 0 should be zero");
+        assert!(!ColIndex::new(1).is_zero(), "ColIndex 1 should not be zero");
+        assert!(
+            !ColIndex::new(10).is_zero(),
+            "ColIndex 10 should not be zero"
+        );
+        assert!(
+            !ColIndex::new(80).is_zero(),
+            "ColIndex 80 should not be zero"
+        );
+
+        // Test typed index types - RowIndex
+        assert!(RowIndex::new(0).is_zero(), "RowIndex 0 should be zero");
+        assert!(!RowIndex::new(1).is_zero(), "RowIndex 1 should not be zero");
+        assert!(!RowIndex::new(5).is_zero(), "RowIndex 5 should not be zero");
+        assert!(
+            !RowIndex::new(25).is_zero(),
+            "RowIndex 25 should not be zero"
+        );
+
+        // Test typed length types - ColWidth
+        assert!(ColWidth::new(0).is_zero(), "ColWidth 0 should be zero");
+        assert!(!ColWidth::new(1).is_zero(), "ColWidth 1 should not be zero");
+        assert!(
+            !ColWidth::new(10).is_zero(),
+            "ColWidth 10 should not be zero"
+        );
+        assert!(
+            !ColWidth::new(80).is_zero(),
+            "ColWidth 80 should not be zero"
+        );
+        assert!(
+            !ColWidth::new(120).is_zero(),
+            "ColWidth 120 should not be zero"
+        );
+
+        // Test typed length types - RowHeight
+        assert!(RowHeight::new(0).is_zero(), "RowHeight 0 should be zero");
+        assert!(
+            !RowHeight::new(1).is_zero(),
+            "RowHeight 1 should not be zero"
+        );
+        assert!(
+            !RowHeight::new(5).is_zero(),
+            "RowHeight 5 should not be zero"
+        );
+        assert!(
+            !RowHeight::new(24).is_zero(),
+            "RowHeight 24 should not be zero"
+        );
+        assert!(
+            !RowHeight::new(50).is_zero(),
+            "RowHeight 50 should not be zero"
+        );
+
+        // Test edge cases and boundary values
+        assert!(
+            !idx(usize::MAX).is_zero(),
+            "Index usize::MAX should not be zero"
+        );
+        assert!(
+            !len(usize::MAX).is_zero(),
+            "Length usize::MAX should not be zero"
+        );
+        assert!(
+            !ColIndex::new(u16::MAX as usize).is_zero(),
+            "ColIndex u16::MAX should not be zero"
+        );
+        assert!(
+            !RowIndex::new(u16::MAX as usize).is_zero(),
+            "RowIndex u16::MAX should not be zero"
+        );
+        assert!(
+            !ColWidth::new(u16::MAX as usize).is_zero(),
+            "ColWidth u16::MAX should not be zero"
+        );
+        assert!(
+            !RowHeight::new(u16::MAX as usize).is_zero(),
+            "RowHeight u16::MAX should not be zero"
+        );
+
+        // Test consistency with as_usize() == 0 (the implementation)
+        for value in [0, 1, 5, 10, 42, 100, 999] {
+            assert_eq!(
+                idx(value).is_zero(),
+                idx(value).as_usize() == 0,
+                "Index {value} is_zero should match as_usize() == 0"
+            );
+            assert_eq!(
+                len(value).is_zero(),
+                len(value).as_usize() == 0,
+                "Length {value} is_zero should match as_usize() == 0"
+            );
+            assert_eq!(
+                ColIndex::new(value).is_zero(),
+                ColIndex::new(value).as_usize() == 0,
+                "ColIndex {value} is_zero should match as_usize() == 0"
+            );
+            assert_eq!(
+                ColWidth::new(value).is_zero(),
+                ColWidth::new(value).as_usize() == 0,
+                "ColWidth {value} is_zero should match as_usize() == 0"
+            );
+            assert_eq!(
+                RowIndex::new(value).is_zero(),
+                RowIndex::new(value).as_usize() == 0,
+                "RowIndex {value} is_zero should match as_usize() == 0"
+            );
+            assert_eq!(
+                RowHeight::new(value).is_zero(),
+                RowHeight::new(value).as_usize() == 0,
+                "RowHeight {value} is_zero should match as_usize() == 0"
+            );
+        }
     }
 }

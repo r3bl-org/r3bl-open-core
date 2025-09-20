@@ -14,7 +14,7 @@
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GapBufferLine, Length,
-            RowIndex, SegIndex, byte_index, row, seg_index, width};
+            RowIndex, SegIndex, UnitCompare, byte_index, row, seg_index, width};
 
 impl ZeroCopyGapBuffer {
     // Line access methods.
@@ -25,7 +25,7 @@ impl ZeroCopyGapBuffer {
 
     /// Check if the storage is empty (has no lines).
     #[must_use]
-    pub fn is_empty(&self) -> bool { self.line_count().as_usize() == 0 }
+    pub fn is_empty(&self) -> bool { self.line_count().is_zero() }
 
     /// Get line content and metadata.
     ///

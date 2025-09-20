@@ -31,7 +31,7 @@
 use super::super::*;
 use crate::{BoundsCheck,
             BoundsOverflowStatus::{Overflowed, Within},
-            ColIndex, Length, RowIndex, col,
+            ColIndex, Length, RowIndex, UnitCompare, col,
             core::units::bounds_check::LengthMarker,
             height, len};
 
@@ -74,7 +74,7 @@ impl OffscreenBuffer {
         let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
         // Exit early if nothing to insert.
-        if how_many_clamped == len(0) {
+        if how_many_clamped.is_zero() {
             return false;
         }
 
@@ -145,7 +145,7 @@ impl OffscreenBuffer {
         let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
         // Exit early if nothing to delete.
-        if how_many_clamped == len(0) {
+        if how_many_clamped.is_zero() {
             return false;
         }
 
@@ -218,7 +218,7 @@ impl OffscreenBuffer {
         let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
 
         // Exit early if nothing to erase.
-        if how_many_clamped == len(0) {
+        if how_many_clamped.is_zero() {
             return false;
         }
 

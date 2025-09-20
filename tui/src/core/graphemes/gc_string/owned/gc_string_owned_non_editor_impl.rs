@@ -284,7 +284,8 @@ pub mod trunc_start {
 
 /// Methods for easily padding grapheme cluster segments for common TUI use cases.
 mod pad {
-    use super::{ColWidth, GCStringOwned, InlineString, pad_fmt, width};
+    use super::{ColWidth, GCStringOwned, InlineString, pad_fmt};
+    use crate::UnitCompare;
 
     impl GCStringOwned {
         /// Returns a new [`InlineString`] that is the result of padding `self.string` to
@@ -324,7 +325,7 @@ mod pad {
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
-            if pad_count > width(0) {
+            if !pad_count.is_zero() {
                 let mut acc = InlineString::from(self_str);
                 pad_fmt!(fmt: acc, pad_str: pad_str, repeat_count: **pad_count);
                 acc
@@ -343,7 +344,7 @@ mod pad {
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
-            if pad_count > width(0) {
+            if !pad_count.is_zero() {
                 let mut acc = InlineString::new();
                 pad_fmt!(fmt: acc, pad_str: pad_str, repeat_count: **pad_count);
                 acc.push_str(self_str);

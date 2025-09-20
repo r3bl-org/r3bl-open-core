@@ -2,10 +2,10 @@
 use super::{SelectMode, scroll_editor_content};
 use crate::{AfterLastPosition, CaretDirection, ContainsWideSegments,
             ContentPositionStatus, EditorArgsMut, EditorBuffer, EditorEngine,
-            SegStringOwned,
+            SegStringOwned, UnitCompare,
             caret_locate::{self, RowContentPositionStatus, locate_col},
             caret_mut, caret_scr_adj, col, empty_check_early_return,
-            multiline_disabled_check_early_return, row, width};
+            multiline_disabled_check_early_return, row};
 
 pub fn up(buffer: &mut EditorBuffer, engine: &mut EditorEngine, sel_mod: SelectMode) {
     empty_check_early_return!(buffer, @Nothing);
@@ -362,7 +362,7 @@ mod right_helper {
                                 buffer_mut.inner.vp.col_width,
                             );
                         }
-                        if move_left_by_amt > width(0) {
+                        if !move_left_by_amt.is_zero() {
                             // When buffer_mut goes out of scope, it will be dropped and
                             // validation performed.
                             {

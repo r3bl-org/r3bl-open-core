@@ -12,7 +12,7 @@ use std::cmp::Ordering;
 use super::{SelectMode, caret_mut};
 use crate::{AfterLastPosition, BoundsCheck, BoundsOverflowStatus, CaretDirection,
             CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, LengthMarker,
-            RowHeight, RowIndex, ScrOfs, ch, col, height, row, width};
+            RowHeight, RowIndex, ScrOfs, UnitCompare, ch, col, height, row, width};
 
 /// # Scrolling not active
 ///
@@ -355,7 +355,7 @@ pub fn change_caret_row_by(
             {
                 let buffer_mut = buffer.get_mut(engine.viewport());
 
-                while diff > height(0) {
+                while !diff.is_zero() {
                     dec_caret_row(buffer_mut.inner.caret_raw, buffer_mut.inner.scr_ofs);
                     diff -= height(1);
                     let row_index = {

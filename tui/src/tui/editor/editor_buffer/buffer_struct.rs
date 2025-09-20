@@ -6,7 +6,7 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, ContentPositionStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegStringOwned,
-            Size, TinyInlineString, ZeroCopyGapBuffer, caret_locate::locate_col,
+            Size, TinyInlineString, UnitCompare, ZeroCopyGapBuffer, caret_locate::locate_col,
             format_as_kilobytes_with_commas, glyphs, height, inline_string, ok, row,
             validate_buffer_mut::EditorBufferMutNoDrop, width, with_mut};
 
@@ -358,7 +358,7 @@ pub mod content_near_caret {
     impl EditorBuffer {
         #[must_use]
         pub fn line_at_caret_is_empty(&self) -> bool {
-            self.get_line_display_width_at_caret_scr_adj() == width(0)
+            self.get_line_display_width_at_caret_scr_adj().is_zero()
         }
 
         #[must_use]

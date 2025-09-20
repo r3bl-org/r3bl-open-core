@@ -3,7 +3,7 @@
 use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
 
-use crate::{Index, Length, idx};
+use crate::{Index, Length, UnitCompare, idx};
 
 /// The current index in the history buffer.
 ///
@@ -46,7 +46,7 @@ impl CurIndexLoc {
     /// Determine the location of the current index in the history buffer.
     #[must_use]
     pub fn locate(cur_index: &CurIndex, versions_len: Length) -> CurIndexLoc {
-        if versions_len.as_usize() == 0 {
+        if versions_len.is_zero() {
             // Is empty.
             return CurIndexLoc::EmptyHistory;
         }

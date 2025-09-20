@@ -7,7 +7,7 @@
 
 use super::LineMetadata;
 use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, GraphemeString, Length,
-            Seg, SegContent, SegIndex, SegStringOwned, SegWidth, ch, len, width};
+            Seg, SegContent, SegIndex, SegStringOwned, SegWidth, UnitCompare, ch, width};
 
 /// A line from the gap buffer containing both content and metadata.
 ///
@@ -97,7 +97,7 @@ impl<'a> GapBufferLine<'a> {
 
     /// Check if the line is empty.
     #[must_use]
-    pub fn is_empty(&self) -> bool { self.info.grapheme_count == len(0) }
+    pub fn is_empty(&self) -> bool { self.info.grapheme_count.is_zero() }
 
     /// Get content length in bytes.
     #[must_use]
@@ -499,7 +499,7 @@ mod tests_empty_line_edge_cases {
 #[cfg(test)]
 mod tests_access_pattern_equivalence {
     use super::test_fixtures::create_test_buffer;
-    use crate::{ZeroCopyGapBuffer, col, len, row, seg_index};
+    use crate::{ZeroCopyGapBuffer, UnitCompare, col, row, seg_index};
 
     #[test]
     fn test_display_width_equivalence() {
@@ -636,7 +636,7 @@ mod tests_access_pattern_equivalence {
         let line = buffer.get_line(row(0)).unwrap();
 
         let facade_result = line.is_empty();
-        let direct_result = line.info().grapheme_count == len(0);
+        let direct_result = line.info().grapheme_count.is_zero();
 
         assert_eq!(facade_result, direct_result);
         assert!(!facade_result); // Should not be empty
@@ -647,7 +647,7 @@ mod tests_access_pattern_equivalence {
         let empty_line = empty_buffer.get_line(row(0)).unwrap();
 
         let empty_facade_result = empty_line.is_empty();
-        let empty_direct_result = empty_line.info().grapheme_count == len(0);
+        let empty_direct_result = empty_line.info().grapheme_count.is_zero();
 
         assert_eq!(empty_facade_result, empty_direct_result);
         assert!(empty_facade_result); // Should be empty

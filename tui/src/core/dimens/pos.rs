@@ -4,7 +4,7 @@ use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
 use crate::{AfterLastPosition, ColIndex, ColWidth, IndexMarker, RowHeight, RowIndex,
-            Size, ch, col, row};
+            Size, UnitCompare, ch, col, row};
 
 // Type aliases for better code readability.
 
@@ -382,7 +382,7 @@ mod api {
             let new_row_index = self.row_index + value;
             self.row_index = if new_row_index.overflows(max) {
                 // Handle zero height edge case: clamp to position 0
-                if max.as_usize() == 0 {
+                if max.is_zero() {
                     row(0)
                 } else {
                     max.to_after_last_position() // Allow "after last row" position
@@ -448,7 +448,7 @@ mod api {
             let new_col_index = self.col_index + value;
             self.col_index = if new_col_index.overflows(max) {
                 // Handle zero width edge case: clamp to position 0
-                if max.as_usize() == 0 {
+                if max.is_zero() {
                     col(0)
                 } else {
                     max.to_after_last_position() // Allow "after last character" position
@@ -463,7 +463,7 @@ mod api {
             let max: ColWidth = arg_max_col_width.into();
             if self.col_index.overflows(max) {
                 // Handle zero width edge case: clamp to position 0
-                if max.as_usize() == 0 {
+                if max.is_zero() {
                     self.col_index = col(0);
                 } else {
                     self.col_index = max.to_after_last_position(); // Allow "after last character" position
