@@ -26,8 +26,9 @@
 //! - The tests (`test_` prefix): Validation
 //!
 //! This naming pattern solves the IDE search problem by creating a predictable hierarchy
-//! that makes code navigation efficient and intuitive. See [parser module documentation](crate::core::pty_mux::vt_100_ansi_parser)
-//! for the complete architectural pattern explanation.
+//! that makes code navigation efficient and intuitive. See [parser module
+//! documentation](crate::core::pty_mux::vt_100_ansi_parser) for the complete
+//! architectural pattern explanation.
 //!
 //! # Module Organization
 //!
@@ -86,9 +87,12 @@
 //! ## Navigation Between Testing Layers
 //!
 //! When working on any implementation file, you can navigate to its related layers:
-//! - **Shim Layer**: [`operations`] - The delegation layer that calls these implementations
-//! - **Integration Tests**: [`vt_100_ansi_conformance_tests`] - Tests the complete ANSI pipeline
-//! - **Testing Philosophy**: See [parser module docs] for the complete three-layer strategy
+//! - **Shim Layer**: [`operations`] - The delegation layer that calls these
+//!   implementations
+//! - **Integration Tests**: [`vt_100_ansi_conformance_tests`] - Tests the complete ANSI
+//!   pipeline
+//! - **Testing Philosophy**: See [parser module docs] for the complete three-layer
+//!   strategy
 //!
 //! For example, when working on character operations:
 //! 1. **Implementation**: [`impl_char_ops`] (this module) - Unit tests for buffer logic
@@ -99,8 +103,8 @@
 //!
 //! All operation types follow the same three-layer pattern. From any implementation file,
 //! you can navigate to its corresponding shim and test layers using the links in this
-//! documentation, or by using IDE search with the operation name (e.g., search for `char_ops`
-//! to find all related files).
+//! documentation, or by using IDE search with the operation name (e.g., search for
+//! `char_ops` to find all related files).
 //!
 //! # VT100 Compliance
 //!
@@ -114,18 +118,18 @@
 //! [parser module docs]: crate::core::pty_mux::vt_100_ansi_parser
 //!
 //! // Implementation layer hyperlinks (this module)
-//! [`impl_char_ops`]: impl_char_ops
-//! [`impl_control_ops`]: impl_control_ops
-//! [`impl_cursor_ops`]: impl_cursor_ops
-//! [`impl_dsr_ops`]: impl_dsr_ops
-//! [`impl_line_ops`]: impl_line_ops
-//! [`impl_margin_ops`]: impl_margin_ops
-//! [`impl_mode_ops`]: impl_mode_ops
-//! [`impl_osc_ops`]: impl_osc_ops
-//! [`impl_scroll_ops`]: impl_scroll_ops
-//! [`impl_sgr_ops`]: impl_sgr_ops
-//! [`impl_terminal_ops`]: impl_terminal_ops
-//! [`ansi_bounds_check_helper`]: ansi_bounds_check_helper
+//! [`impl_char_ops`]: `impl_char_ops`
+//! [`impl_control_ops`]: `impl_control_ops`
+//! [`impl_cursor_ops`]: `impl_cursor_ops`
+//! [`impl_dsr_ops`]: `impl_dsr_ops`
+//! [`impl_line_ops`]: `impl_line_ops`
+//! [`impl_margin_ops`]: `impl_margin_ops`
+//! [`impl_mode_ops`]: `impl_mode_ops`
+//! [`impl_osc_ops`]: `impl_osc_ops`
+//! [`impl_scroll_ops`]: `impl_scroll_ops`
+//! [`impl_sgr_ops`]: `impl_sgr_ops`
+//! [`impl_terminal_ops`]: `impl_terminal_ops`
+//! [`ansi_bounds_check_helper`]: `ansi_bounds_check_helper`
 
 /// Standard terminal tab stop width (8 columns).
 /// Used for calculating tab positions in VT100 terminal emulation.

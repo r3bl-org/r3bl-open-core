@@ -499,7 +499,7 @@ mod tests_empty_line_edge_cases {
 #[cfg(test)]
 mod tests_access_pattern_equivalence {
     use super::test_fixtures::create_test_buffer;
-    use crate::{ZeroCopyGapBuffer, UnitCompare, col, row, seg_index};
+    use crate::{UnitCompare, ZeroCopyGapBuffer, col, row, seg_index};
 
     #[test]
     fn test_display_width_equivalence() {

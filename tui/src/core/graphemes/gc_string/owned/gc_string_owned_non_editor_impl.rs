@@ -19,7 +19,7 @@ use std::ops::Add;
 
 use super::GCStringOwned;
 use crate::{ByteIndex, ColIndex, ColWidth, InlineString, SegIndex, ch, pad_fmt,
-            seg_index, usize, width};
+            seg_index, usize};
 
 /// Convert between different types of indices. This unifies the API so that different
 /// index types are all converted into [`SegIndex`] for use with this struct. Here's the
@@ -325,12 +325,12 @@ mod pad {
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
-            if !pad_count.is_zero() {
+            if pad_count.is_zero() {
+                self_str.into()
+            } else {
                 let mut acc = InlineString::from(self_str);
                 pad_fmt!(fmt: acc, pad_str: pad_str, repeat_count: **pad_count);
                 acc
-            } else {
-                self_str.into()
             }
         }
 
@@ -344,13 +344,13 @@ mod pad {
             let pad_count = max_display_width - self.display_width;
             let self_str = self.string.as_str();
 
-            if !pad_count.is_zero() {
+            if pad_count.is_zero() {
+                self_str.into()
+            } else {
                 let mut acc = InlineString::new();
                 pad_fmt!(fmt: acc, pad_str: pad_str, repeat_count: **pad_count);
                 acc.push_str(self_str);
                 acc
-            } else {
-                self_str.into()
             }
         }
 

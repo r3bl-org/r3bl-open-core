@@ -3,7 +3,8 @@
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelChar};
-use crate::{ColIndex, Pos, RowIndex, BoundsCheck, LengthMarker, core::units::bounds_check::RangeValidation};
+use crate::{BoundsCheck, ColIndex, LengthMarker, Pos, RowIndex,
+            core::units::bounds_check::RangeValidation};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
@@ -57,7 +58,9 @@ impl OffscreenBuffer {
         char: PixelChar,
     ) -> bool {
         // Use type-safe range validation for both row and column bounds
-        if let Some((start_col, end_col, line)) = self.validate_col_range_mut(row, col_range) {
+        if let Some((start_col, end_col, line)) =
+            self.validate_col_range_mut(row, col_range)
+        {
             line[start_col..end_col].fill(char);
             true
         } else {
@@ -89,7 +92,9 @@ impl OffscreenBuffer {
             }
 
             // Validate destination position
-            if dest_start.check_overflows(line_width) != crate::BoundsOverflowStatus::Within {
+            if dest_start.check_overflows(line_width)
+                != crate::BoundsOverflowStatus::Within
+            {
                 return false;
             }
 

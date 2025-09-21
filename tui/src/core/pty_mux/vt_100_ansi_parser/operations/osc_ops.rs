@@ -3,8 +3,8 @@
 //! OSC (Operating System Command) sequence operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! See the [module-level documentation](super::super) for details on the shim → impl → test
-//! architecture and naming conventions.
+//! See the [module-level documentation](super::super) for details on the "shim → impl →
+//! test" architecture and naming conventions.
 //!
 //! **Related Files:**
 //! - **Implementation**: [`impl_osc_ops`] - Business logic with unit tests

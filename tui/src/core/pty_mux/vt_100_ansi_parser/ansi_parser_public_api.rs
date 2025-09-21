@@ -4,10 +4,10 @@
 //!
 //! # Entry Point
 //!
-//! **[`apply_ansi_bytes`]** is the main entry point for processing ANSI sequences from PTY output.
-//! This method is called by the PTY multiplexer after receiving bytes from a child process
-//! (like vim, bash, etc.) and updates the [`OffscreenBuffer`]'s display content, cursor position,
-//! and text styles accordingly.
+//! **[`apply_ansi_bytes`]** is the main entry point for processing ANSI sequences from
+//! PTY output. This method is called by the PTY multiplexer after receiving bytes from a
+//! child process (like vim, bash, etc.) and updates the [`OffscreenBuffer`]'s display
+//! content, cursor position, and text styles accordingly.
 //!
 //! ```rust
 //! use r3bl_tui::{*, height, width};
@@ -22,10 +22,13 @@
 //! // Buffer now contains styled text, events contain any OSC/DSR commands
 //! ```
 //!
-//! **Returns:** OSC events (window titles, etc.) and DSR responses (terminal status queries)
+//! # Returns
+//!
+//! OSC events (window titles, etc.) and DSR responses (terminal status queries).
 //!
 //! For implementation details, architecture patterns, and testing strategy, see the
-//! [module-level documentation](super) which covers the shim → impl → test design pattern.
+//! [module-level documentation](super) which covers the shim → impl → test design
+//! pattern.
 //!
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer

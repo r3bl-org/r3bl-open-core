@@ -88,7 +88,8 @@ impl OffscreenBuffer {
         let dest_start_col = cursor_col + how_many_clamped;
 
         // Use type-safe operations for source range calculation
-        let source_end_col = max_width.convert_to_index() - how_many_clamped + crate::len(1);
+        let source_end_col =
+            max_width.convert_to_index() - how_many_clamped + crate::len(1);
 
         // Convert to usize only at Vec access boundary
         let row_idx = at.row_index.as_usize();

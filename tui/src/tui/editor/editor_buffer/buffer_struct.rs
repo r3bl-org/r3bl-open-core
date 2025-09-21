@@ -6,9 +6,10 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, ContentPositionStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegStringOwned,
-            Size, TinyInlineString, UnitCompare, ZeroCopyGapBuffer, caret_locate::locate_col,
-            format_as_kilobytes_with_commas, glyphs, height, inline_string, ok, row,
-            validate_buffer_mut::EditorBufferMutNoDrop, width, with_mut};
+            Size, TinyInlineString, UnitCompare, ZeroCopyGapBuffer,
+            caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs, height,
+            inline_string, ok, row, validate_buffer_mut::EditorBufferMutNoDrop, width,
+            with_mut};
 
 /// Stores the data for a single editor buffer using [`ZeroCopyGapBuffer`] for efficient
 /// text storage.

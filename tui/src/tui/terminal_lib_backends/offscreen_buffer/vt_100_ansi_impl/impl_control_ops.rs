@@ -132,7 +132,8 @@ mod tests_control_ops {
 
         buffer.handle_tab();
 
-        // Should move to next tab stop, but clamp to window width (10 cols = index 9 max).
+        // Should move to next tab stop, but clamp to window width (10 cols = index 9
+        // max).
         assert_eq!(buffer.cursor_pos.row_index, row(1));
         assert_eq!(buffer.cursor_pos.col_index, col(9)); // max index for width 10
     }

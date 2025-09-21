@@ -55,20 +55,21 @@ impl OffscreenBuffer {
         shift_by: Length,
     ) -> bool {
         // Use type-safe range validation
-        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range) {
+        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range)
+        {
             let shift_amount = shift_by.as_usize();
 
-        // Shift lines up by cloning (use manual index management to avoid borrow
-        // checker issues).
-        for _ in 0..shift_amount {
-            for row_idx in start_idx..end_idx.saturating_sub(1) {
-                let next_line = self.buffer[row_idx + 1].clone();
-                self.buffer[row_idx] = next_line;
-            }
+            // Shift lines up by cloning (use manual index management to avoid borrow
+            // checker issues).
+            for _ in 0..shift_amount {
+                for row_idx in start_idx..end_idx.saturating_sub(1) {
+                    let next_line = self.buffer[row_idx + 1].clone();
+                    self.buffer[row_idx] = next_line;
+                }
 
-            // Clear the bottom line.
-            self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
-        }
+                // Clear the bottom line.
+                self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
+            }
 
             true
         } else {
@@ -90,19 +91,20 @@ impl OffscreenBuffer {
         shift_by: Length,
     ) -> bool {
         // Use type-safe range validation
-        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range) {
+        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range)
+        {
             let shift_amount = shift_by.as_usize();
 
-        // Shift lines down by cloning (work backwards to avoid overwriting).
-        for _ in 0..shift_amount {
-            for row_idx in (start_idx + 1..end_idx).rev() {
-                let prev_line = self.buffer[row_idx - 1].clone();
-                self.buffer[row_idx] = prev_line;
-            }
+            // Shift lines down by cloning (work backwards to avoid overwriting).
+            for _ in 0..shift_amount {
+                for row_idx in (start_idx + 1..end_idx).rev() {
+                    let prev_line = self.buffer[row_idx - 1].clone();
+                    self.buffer[row_idx] = prev_line;
+                }
 
-            // Clear the top line.
-            self.buffer[start_idx].fill(PixelChar::Spacer);
-        }
+                // Clear the top line.
+                self.buffer[start_idx].fill(PixelChar::Spacer);
+            }
 
             true
         } else {
