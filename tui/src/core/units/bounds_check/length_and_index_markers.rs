@@ -15,7 +15,7 @@
 
 use std::{cmp::min, ops::Sub};
 
-use crate::{Length, len};
+use crate::{ArrayAccessBoundsStatus, Length, len};
 
 /// Core trait for unit comparison operations.
 ///
@@ -101,13 +101,35 @@ pub trait IndexMarker: UnitCompare {
     /// # Returns
     /// true if the index is greater than or equal to the length.
     ///
+    /// # See Also
+    /// For detailed status information with pattern matching capabilities, use
+    /// [`crate::BoundsCheck::check_array_access_bounds()`] which returns a
+    /// [`crate::ArrayAccessBoundsStatus`] enum. This method is a convenience wrapper
+    /// designed for simple boolean conditions.
+    ///
+    /// Both methods are semantically equivalent:
+    /// - `index.overflows(length)` returns `bool`
+    /// - `index.check_array_access_bounds(length) == ArrayAccessBoundsStatus::Overflowed`
+    ///   returns `bool`
+    ///
     /// # Examples
     /// ```
-    /// use r3bl_tui::{IndexMarker, col, width};
+    /// use r3bl_tui::{IndexMarker, BoundsCheck, ArrayAccessBoundsStatus, col, width};
     ///
     /// let index = col(10);
     /// let max_width = width(10);
-    /// assert!(index.overflows(max_width));  // At boundary - overflows
+    ///
+    /// // Simple boolean check - use this method:
+    /// if index.overflows(max_width) {
+    ///     println!("Index out of bounds");
+    /// }
+    ///
+    /// // For pattern matching - use check_array_access_bounds():
+    /// match index.check_array_access_bounds(max_width) {
+    ///     ArrayAccessBoundsStatus::Within => println!("Safe to access"),
+    ///     ArrayAccessBoundsStatus::Overflowed => println!("Index out of bounds"),
+    ///     ArrayAccessBoundsStatus::Underflowed => println!("Index underflowed"),
+    /// }
     ///
     /// let smaller_index = col(5);
     /// assert!(!smaller_index.overflows(max_width));  // Within bounds
@@ -118,6 +140,88 @@ pub trait IndexMarker: UnitCompare {
     {
         let length: Self::LengthType = arg_length.into();
         length.is_overflowed_by(*self)
+    }
+
+    /// Check if this index underflows (goes below) the given minimum bound.
+    ///
+    /// This is useful for checking if a position would go negative or below
+    /// a starting position when moving backwards, such as in scrolling logic.
+    ///
+    /// ```text
+    /// Checking if index underflows minimum:
+    ///
+    ///           min_bound=3
+    ///                ↓
+    /// Index:   0   1   2   3   4   5   6   7   8   9
+    ///        ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///        │ × │ × │ × │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │
+    ///        ├───┴───┴───┼───┴───┴───┴───┴───┴───┴───┤
+    ///        └ underflow ┼──── valid range ──────────┘
+    ///
+    /// underflows(min=3) for index=2  = true  (below minimum)
+    /// underflows(min=3) for index=3  = false (at minimum, valid)
+    /// underflows(min=3) for index=5  = false (above minimum)
+    /// ```
+    ///
+    /// # Returns
+    /// Returns true if this index is less than the minimum bound.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{IndexMarker, col, row};
+    ///
+    /// let min_col = col(3);
+    /// assert!(col(0).underflows(min_col));  // 0 < 3
+    /// assert!(col(2).underflows(min_col));  // 2 < 3
+    /// assert!(!col(3).underflows(min_col)); // 3 == 3 (at boundary)
+    /// assert!(!col(5).underflows(min_col)); // 5 > 3
+    /// ```
+    fn underflows(&self, min_bound: impl Into<Self>) -> bool
+    where
+        Self: PartialOrd + Sized,
+    {
+        let min: Self = min_bound.into();
+        *self < min
+    }
+
+    /// Check bounds against both minimum and maximum values.
+    ///
+    /// This provides comprehensive bounds checking that can detect underflow,
+    /// valid positions, and overflow in a single operation.
+    ///
+    /// # Returns
+    /// - [`crate::ArrayAccessBoundsStatus::Underflowed`] if index < min
+    /// - [`crate::ArrayAccessBoundsStatus::Within`] if min <= index < max_length
+    /// - [`crate::ArrayAccessBoundsStatus::Overflowed`] if index >= max_length
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{IndexMarker, ArrayAccessBoundsStatus, col, width};
+    ///
+    /// let min_col = col(2);
+    /// let max_width = width(8);
+    ///
+    /// assert_eq!(col(1).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Underflowed);
+    /// assert_eq!(col(5).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(col(8).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Overflowed);
+    /// ```
+    fn check_bounds_range(
+        &self,
+        arg_min: impl Into<Self>,
+        max: Self::LengthType,
+    ) -> ArrayAccessBoundsStatus
+    where
+        Self: PartialOrd + Sized + Copy,
+    {
+        let min_bound: Self = arg_min.into();
+
+        if *self < min_bound {
+            ArrayAccessBoundsStatus::Underflowed
+        } else if self.overflows(max) {
+            ArrayAccessBoundsStatus::Overflowed
+        } else {
+            ArrayAccessBoundsStatus::Within
+        }
     }
 }
 
@@ -335,7 +439,7 @@ pub trait LengthMarker: UnitCompare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BoundsCheck, BoundsOverflowStatus, ColIndex, ColWidth, RowHeight,
+    use crate::{ArrayAccessBoundsStatus, BoundsCheck, ColIndex, ColWidth, RowHeight,
                 RowIndex, idx, len};
 
     mod overflow_operations_tests {
@@ -377,10 +481,93 @@ mod tests {
                 let length = len(length_val);
                 assert_eq!(
                     length.is_overflowed_by(index),
-                    index.check_overflows(length) == BoundsOverflowStatus::Overflowed,
+                    index.check_array_access_bounds(length)
+                        == ArrayAccessBoundsStatus::Overflowed,
                     "New method should match existing behavior for index {index_val} and length {length_val}"
                 );
             }
+        }
+
+        #[test]
+        fn test_underflows() {
+            use crate::{col, row};
+
+            // Test column underflow
+            let min_col = col(3);
+            assert!(col(0).underflows(min_col)); // 0 < 3
+            assert!(col(2).underflows(min_col)); // 2 < 3
+            assert!(!col(3).underflows(min_col)); // 3 == 3 (at boundary)
+            assert!(!col(5).underflows(min_col)); // 5 > 3
+
+            // Test row underflow
+            let min_row = row(5);
+            assert!(row(4).underflows(min_row)); // 4 < 5
+            assert!(!row(5).underflows(min_row)); // 5 == 5
+            assert!(!row(10).underflows(min_row)); // 10 > 5
+
+            // Test with Index/Length
+            let min_index = idx(7);
+            assert!(idx(3).underflows(min_index)); // 3 < 7
+            assert!(idx(6).underflows(min_index)); // 6 < 7
+            assert!(!idx(7).underflows(min_index)); // 7 == 7
+            assert!(!idx(10).underflows(min_index)); // 10 > 7
+        }
+
+        #[test]
+        fn test_check_bounds_range() {
+            use crate::{ArrayAccessBoundsStatus, col, width};
+
+            let min_col = col(2);
+            let max_width = width(8);
+
+            // Test underflow
+            assert_eq!(
+                col(0).check_bounds_range(min_col, max_width),
+                ArrayAccessBoundsStatus::Underflowed
+            );
+            assert_eq!(
+                col(1).check_bounds_range(min_col, max_width),
+                ArrayAccessBoundsStatus::Underflowed
+            );
+
+            // Test within bounds
+            assert_eq!(
+                col(2).check_bounds_range(min_col, max_width),
+                ArrayAccessBoundsStatus::Within
+            );
+            assert_eq!(
+                col(5).check_bounds_range(min_col, max_width),
+                ArrayAccessBoundsStatus::Within
+            );
+            assert_eq!(
+                col(7).check_bounds_range(min_col, max_width),
+                ArrayAccessBoundsStatus::Within
+            );
+
+            // Test overflow
+            assert_eq!(
+                col(8).check_bounds_range(min_col, max_width),
+                ArrayAccessBoundsStatus::Overflowed
+            );
+            assert_eq!(
+                col(10).check_bounds_range(min_col, max_width),
+                ArrayAccessBoundsStatus::Overflowed
+            );
+
+            // Test edge cases with zero minimum
+            let min_zero = col(0);
+            assert_eq!(
+                col(0).check_bounds_range(min_zero, max_width),
+                ArrayAccessBoundsStatus::Within
+            );
+            assert_eq!(
+                col(7).check_bounds_range(min_zero, max_width),
+                ArrayAccessBoundsStatus::Within
+            );
+            assert_eq!(
+                col(8).check_bounds_range(min_zero, max_width),
+                ArrayAccessBoundsStatus::Overflowed
+            );
         }
 
         #[test]

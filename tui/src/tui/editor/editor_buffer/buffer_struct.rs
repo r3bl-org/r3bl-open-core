@@ -2,7 +2,7 @@
 use std::fmt::{Debug, Display, Formatter, Result};
 
 use super::{SelectionList, history::EditorHistory, render_cache::RenderCache};
-use crate::{CaretRaw, CaretScrAdj, ColWidth, ContentPositionStatus,
+use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegStringOwned,
@@ -381,7 +381,7 @@ pub mod content_near_caret {
 
             let row_index_scr_adj = self.get_caret_scr_adj().row_index;
 
-            if let ContentPositionStatus::AtEnd = locate_col(self) {
+            if let CursorPositionBoundsStatus::AtEnd = locate_col(self) {
                 // Use the efficient GapBufferLine approach directly.
                 if let Some(line_with_info) =
                     self.content.lines.get_line(row_index_scr_adj)
@@ -406,7 +406,7 @@ pub mod content_near_caret {
             if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
                 match locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    ContentPositionStatus::AtEnd => line_with_info
+                    CursorPositionBoundsStatus::AtEnd => line_with_info
                         .info()
                         .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.
@@ -432,7 +432,7 @@ pub mod content_near_caret {
             if let Some(line_with_info) = self.content.lines.get_line(row_index_scr_adj) {
                 match locate_col(self) {
                     // Caret is at end of line, past the last character.
-                    ContentPositionStatus::AtEnd => line_with_info
+                    CursorPositionBoundsStatus::AtEnd => line_with_info
                         .info()
                         .get_string_at_end(line_with_info.content()),
                     // Caret is not at end of line.

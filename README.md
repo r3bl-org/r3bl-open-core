@@ -54,6 +54,7 @@ Table of contents:
   - [Status Monitoring Scripts](#status-monitoring-scripts)
   - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
   - [Rust Toolchain Management](#rust-toolchain-management)
+    - [Testing Toolchain Installation Progress](#testing-toolchain-installation-progress)
   - [Unified Script Architecture](#unified-script-architecture)
 - [Star History](#star-history)
 - [Archive](#archive)
@@ -626,6 +627,17 @@ Removed 3 old toolchain(s)
 Toolchains directory size before cleanup: 2.1G
 Toolchains directory size after cleanup: 1.4G
 ```
+
+#### Testing Toolchain Installation Progress
+
+For developers working on the cmdr upgrade check feature:
+
+- **`remove_toolchains.sh`** - Removes ALL Rust toolchains (⚠️ DESTRUCTIVE)
+  - Purpose: Test the upgrade progress display in `edi` and `giti`
+  - Creates a clean slate to see full rustup installation progress
+  - Usage: `./remove_toolchains.sh` then `cargo run --bin edi`
+  - Recovery: `rustup toolchain install stable && rustup default stable`
+  - See: `cmdr/src/analytics_client/upgrade_check.rs` for implementation details
 
 ### Unified Script Architecture
 

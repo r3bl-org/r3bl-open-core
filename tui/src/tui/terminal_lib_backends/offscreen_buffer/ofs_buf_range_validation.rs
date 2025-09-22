@@ -8,7 +8,7 @@
 //!
 //! ## Features
 //!
-//! - **Type-safe validation**: Uses the [`RangeValidation`] trait for correct exclusive
+//! - **Type-safe validation**: Uses the [`RangeBoundary`] trait for correct exclusive
 //!   range semantics
 //! - **No `unwrap()` calls**: All validation returns `Option` for safe access
 //! - **Immutable and mutable variants**: Support for both read-only and write operations
@@ -40,12 +40,13 @@
 //! // }
 //! ```
 //!
-//! [`RangeValidation`]: crate::core::units::bounds_check::RangeValidation
+//! [`RangeBoundary`]: crate::core::units::bounds_check::RangeBoundary
 
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelCharLine};
-use crate::{ColIndex, RowIndex, core::units::bounds_check::RangeValidation, width};
+use crate::{ColIndex, RowIndex, core::units::bounds_check::RangeBoundary
+            };
 
 impl OffscreenBuffer {
     /// Validate a row range and return immutable access to the buffer lines.
@@ -88,8 +89,7 @@ impl OffscreenBuffer {
         &self,
         row_range: Range<RowIndex>,
     ) -> Option<(usize, usize, &[PixelCharLine])> {
-        let buffer_height = crate::height(self.buffer.len());
-        if !row_range.is_valid_for(buffer_height) {
+        if !row_range.is_valid(self.buffer.len()) {
             return None;
         }
 
@@ -138,8 +138,7 @@ impl OffscreenBuffer {
         &mut self,
         row_range: Range<RowIndex>,
     ) -> Option<(usize, usize, &mut [PixelCharLine])> {
-        let buffer_height = crate::height(self.buffer.len());
-        if !row_range.is_valid_for(buffer_height) {
+        if !row_range.is_valid(self.buffer.len()) {
             return None;
         }
 
@@ -194,8 +193,7 @@ impl OffscreenBuffer {
     ) -> Option<(usize, usize, &PixelCharLine)> {
         let row_idx = row.as_usize();
         self.buffer.get(row_idx).and_then(|line| {
-            let line_width = width(line.len());
-            if col_range.is_valid_for(line_width) {
+            if col_range.is_valid(line.len()) {
                 let start_idx = col_range.start.as_usize();
                 let end_idx = col_range.end.as_usize();
                 Some((start_idx, end_idx, line))
@@ -246,8 +244,7 @@ impl OffscreenBuffer {
     ) -> Option<(usize, usize, &mut PixelCharLine)> {
         let row_idx = row.as_usize();
         self.buffer.get_mut(row_idx).and_then(|line| {
-            let line_width = width(line.len());
-            if col_range.is_valid_for(line_width) {
+            if col_range.is_valid(line.len()) {
                 let start_idx = col_range.start.as_usize();
                 let end_idx = col_range.end.as_usize();
                 Some((start_idx, end_idx, line))
@@ -261,8 +258,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_range_validation {
     use super::*;
-    use crate::{PixelChar, col, height, row,
-                test_fixtures_ofs_buf::create_test_buffer_with_size};
+    use crate::{PixelChar, col, row, test_fixtures_ofs_buf::create_test_buffer_with_size, width, height};
 
     fn create_test_buffer() -> OffscreenBuffer {
         create_test_buffer_with_size(width(5), height(4))
@@ -306,8 +302,8 @@ mod tests_range_validation {
         assert!(buffer.validate_row_range(row(0)..row(5)).is_none());
         assert!(buffer.validate_row_range(row(5)..row(6)).is_none());
 
-        // Empty ranges
-        assert!(buffer.validate_row_range(row(2)..row(2)).is_none());
+        // Empty ranges are now valid (should return Some)
+        assert!(buffer.validate_row_range(row(2)..row(2)).is_some());
 
         // Inverted ranges
         assert!(buffer.validate_row_range(row(3)..row(1)).is_none());
@@ -337,7 +333,7 @@ mod tests_range_validation {
 
         // Same validation rules as immutable version
         assert!(buffer.validate_row_range_mut(row(0)..row(5)).is_none());
-        assert!(buffer.validate_row_range_mut(row(2)..row(2)).is_none());
+        assert!(buffer.validate_row_range_mut(row(2)..row(2)).is_some());
         assert!(buffer.validate_row_range_mut(row(3)..row(1)).is_none());
     }
 
@@ -382,7 +378,7 @@ mod tests_range_validation {
         assert!(buffer.validate_col_range(row(0), col(3)..col(7)).is_none());
 
         // Empty ranges
-        assert!(buffer.validate_col_range(row(0), col(2)..col(2)).is_none());
+        assert!(buffer.validate_col_range(row(0), col(2)..col(2)).is_some());
 
         // Inverted ranges
         assert!(buffer.validate_col_range(row(0), col(4)..col(1)).is_none());
@@ -422,7 +418,7 @@ mod tests_range_validation {
         assert!(
             buffer
                 .validate_col_range_mut(row(0), col(2)..col(2))
-                .is_none()
+                .is_some()
         );
         assert!(
             buffer
@@ -470,10 +466,9 @@ mod tests_range_validation {
 
                 // Use our own buffer reference to validate column range
                 // (we can't use the mutable reference from validate_col_range_mut here)
-                let line_width = width(line.len());
                 let col_range = col(2)..col(4);
 
-                if col_range.is_valid_for(line_width) {
+                if col_range.is_valid(line.len()) {
                     let start_idx = col_range.start.as_usize();
                     let end_idx = col_range.end.as_usize();
                     line[start_idx..end_idx].fill(PixelChar::Spacer);

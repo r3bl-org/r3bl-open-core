@@ -3,8 +3,8 @@
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelChar};
-use crate::{BoundsCheck, ColIndex, LengthMarker, Pos, RowIndex,
-            core::units::bounds_check::RangeValidation};
+use crate::{ArrayAccessBoundsStatus, BoundsCheck, ColIndex, LengthMarker, Pos, RowIndex,
+            core::units::bounds_check::RangeBoundary, width};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
@@ -78,22 +78,21 @@ impl OffscreenBuffer {
     ) -> bool {
         // Use type-safe row bounds checking first
         let buffer_height = crate::height(self.buffer.len());
-        if row.check_overflows(buffer_height) != crate::BoundsOverflowStatus::Within {
+        if row.check_array_access_bounds(buffer_height) != ArrayAccessBoundsStatus::Within
+        {
             return false;
         }
 
         let row_idx = row.as_usize();
         if let Some(line) = self.buffer.get_mut(row_idx) {
-            let line_width = crate::width(line.len());
-
             // Validate source range using our type-safe validation
-            if !source_range.is_valid_for(line_width) {
+            if !source_range.is_valid(line.len()) {
                 return false;
             }
 
             // Validate destination position
-            if dest_start.check_overflows(line_width)
-                != crate::BoundsOverflowStatus::Within
+            if dest_start.check_array_access_bounds(width(line.len()))
+                != ArrayAccessBoundsStatus::Within
             {
                 return false;
             }
@@ -113,7 +112,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_char_ops {
     use super::*;
-    use crate::{TuiStyle, col, height, row, width};
+    use crate::{TuiStyle, col, height, row};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(5) + height(3);

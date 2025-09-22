@@ -3,61 +3,68 @@
 //! Status enums for bounds checking operations.
 //!
 //! This module provides the result types for bounds checking operations:
-//! - [`BoundsOverflowStatus`] - Results for array-style bounds checking
-//! - [`ContentPositionStatus`] - Results for content position checking
+//! - [`ArrayAccessBoundsStatus`] - Results for array access bounds checking (underflow, within, overflow)
+//! - [`CursorPositionBoundsStatus`] - Results for cursor position bounds checking
 //!
 //! See the [`bounds_check` module documentation](crate::core::units::bounds_check) for
 //! details on the different bounds checking paradigms.
 
-/// Result of array-style bounds checking operations.
+/// Result of array access bounds checking operations.
 ///
-/// Used with [`crate::BoundsCheck::check_overflows`] to determine if an index can safely
-/// access array content. See the [module documentation](crate::core::units::bounds_check)
+/// Used with [`crate::BoundsCheck::check_array_access_bounds`] to determine if an index is
+/// within valid bounds for accessing array elements, has underflowed (gone below minimum),
+/// or overflowed (exceeded maximum). See the [module documentation](crate::core::units::bounds_check)
 /// for details on the bounds checking paradigms.
 ///
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{BoundsCheck, BoundsOverflowStatus, idx, len};
+/// use r3bl_tui::{BoundsCheck, ArrayAccessBoundsStatus, idx, len};
 ///
 /// let index = idx(5);
 /// let length = len(10);
-/// assert_eq!(index.check_overflows(length), BoundsOverflowStatus::Within);
+/// assert_eq!(index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Within);
 ///
 /// let large_index = idx(10);
-/// assert_eq!(large_index.check_overflows(length), BoundsOverflowStatus::Overflowed);
+/// assert_eq!(large_index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Overflowed);
 /// ```
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum BoundsOverflowStatus {
-    /// Indicates that an index is within the bounds of a length.
+pub enum ArrayAccessBoundsStatus {
+    /// Index has underflowed (below minimum bounds).
+    /// Used when checking against a minimum bound and the index falls below it.
+    Underflowed,
+
+    /// Index is within valid bounds.
     Within,
-    /// Indicates that an index has overflowed the bounds of a length.
+
+    /// Index has overflowed (exceeded maximum bounds).
     Overflowed,
 }
 
-/// Result of content position checking operations.
+
+/// Result of cursor position bounds checking operations.
 ///
-/// Used with [`crate::BoundsCheck::check_content_position`] to determine the relationship
+/// Used with [`crate::BoundsCheck::check_cursor_position_bounds`] to determine the relationship
 /// between an index and content boundaries. Essential for text editing and cursor
 /// positioning where distinguishing between "at end" and "beyond" is crucial.
 ///
 /// See the [module documentation](crate::core::units::bounds_check) for details on
-/// content position checking vs array-style bounds checking.
+/// cursor position checking vs array-style bounds checking.
 ///
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{BoundsCheck, ContentPositionStatus, idx, len};
+/// use r3bl_tui::{BoundsCheck, CursorPositionBoundsStatus, idx, len};
 ///
 /// let content = len(5);
 ///
-/// assert_eq!(idx(0).check_content_position(content), ContentPositionStatus::AtStart);
-/// assert_eq!(idx(3).check_content_position(content), ContentPositionStatus::Within);
-/// assert_eq!(idx(5).check_content_position(content), ContentPositionStatus::AtEnd);
-/// assert_eq!(idx(7).check_content_position(content), ContentPositionStatus::Beyond);
+/// assert_eq!(idx(0).check_cursor_position_bounds(content), CursorPositionBoundsStatus::AtStart);
+/// assert_eq!(idx(3).check_cursor_position_bounds(content), CursorPositionBoundsStatus::Within);
+/// assert_eq!(idx(5).check_cursor_position_bounds(content), CursorPositionBoundsStatus::AtEnd);
+/// assert_eq!(idx(7).check_cursor_position_bounds(content), CursorPositionBoundsStatus::Beyond);
 /// ```
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ContentPositionStatus {
+pub enum CursorPositionBoundsStatus {
     /// Index is at the start of content (`index == 0`). For empty content, this takes
     /// precedence over `AtEnd`.
     AtStart,
@@ -78,153 +85,152 @@ mod tests {
     use super::*;
     use crate::{BoundsCheck, ColIndex, ColWidth, RowHeight, RowIndex, idx, len};
 
-    mod bounds_overflow_status_tests {
+    mod array_access_bounds_status_tests {
         use super::*;
 
         #[test]
-        fn test_bounds_overflow_status_equality() {
-            assert_eq!(BoundsOverflowStatus::Within, BoundsOverflowStatus::Within);
-            assert_eq!(
-                BoundsOverflowStatus::Overflowed,
-                BoundsOverflowStatus::Overflowed
-            );
-            assert_ne!(
-                BoundsOverflowStatus::Within,
-                BoundsOverflowStatus::Overflowed
-            );
+        fn test_array_access_bounds_status_equality() {
+            assert_eq!(ArrayAccessBoundsStatus::Within, ArrayAccessBoundsStatus::Within);
+            assert_eq!(ArrayAccessBoundsStatus::Overflowed, ArrayAccessBoundsStatus::Overflowed);
+            assert_eq!(ArrayAccessBoundsStatus::Underflowed, ArrayAccessBoundsStatus::Underflowed);
+            assert_ne!(ArrayAccessBoundsStatus::Within, ArrayAccessBoundsStatus::Overflowed);
+            assert_ne!(ArrayAccessBoundsStatus::Within, ArrayAccessBoundsStatus::Underflowed);
+            assert_ne!(ArrayAccessBoundsStatus::Overflowed, ArrayAccessBoundsStatus::Underflowed);
         }
 
         #[test]
-        fn test_bounds_overflow_status_copy() {
-            let status1 = BoundsOverflowStatus::Within;
+        fn test_array_access_bounds_status_copy() {
+            let status1 = ArrayAccessBoundsStatus::Within;
             let status2 = status1;
             assert_eq!(status1, status2);
 
-            let status3 = BoundsOverflowStatus::Overflowed;
+            let status3 = ArrayAccessBoundsStatus::Overflowed;
             let status4 = status3;
             assert_eq!(status3, status4);
+
+            let status5 = ArrayAccessBoundsStatus::Underflowed;
+            let status6 = status5;
+            assert_eq!(status5, status6);
         }
 
         #[test]
-        fn test_bounds_overflow_status_debug() {
-            assert_eq!(format!("{:?}", BoundsOverflowStatus::Within), "Within");
-            assert_eq!(
-                format!("{:?}", BoundsOverflowStatus::Overflowed),
-                "Overflowed"
-            );
+        fn test_array_access_bounds_status_debug() {
+            assert_eq!(format!("{:?}", ArrayAccessBoundsStatus::Within), "Within");
+            assert_eq!(format!("{:?}", ArrayAccessBoundsStatus::Overflowed), "Overflowed");
+            assert_eq!(format!("{:?}", ArrayAccessBoundsStatus::Underflowed), "Underflowed");
         }
     }
 
-    mod content_position_status_tests {
+    mod cursor_position_bounds_status_tests {
         use super::*;
 
         #[test]
-        fn test_position_status_equality() {
+        fn test_cursor_position_bounds_status_equality() {
             assert_eq!(
-                ContentPositionStatus::AtStart,
-                ContentPositionStatus::AtStart
+                CursorPositionBoundsStatus::AtStart,
+                CursorPositionBoundsStatus::AtStart
             );
-            assert_eq!(ContentPositionStatus::Within, ContentPositionStatus::Within);
-            assert_eq!(ContentPositionStatus::AtEnd, ContentPositionStatus::AtEnd);
-            assert_eq!(ContentPositionStatus::Beyond, ContentPositionStatus::Beyond);
+            assert_eq!(CursorPositionBoundsStatus::Within, CursorPositionBoundsStatus::Within);
+            assert_eq!(CursorPositionBoundsStatus::AtEnd, CursorPositionBoundsStatus::AtEnd);
+            assert_eq!(CursorPositionBoundsStatus::Beyond, CursorPositionBoundsStatus::Beyond);
             assert_ne!(
-                ContentPositionStatus::AtStart,
-                ContentPositionStatus::Within
+                CursorPositionBoundsStatus::AtStart,
+                CursorPositionBoundsStatus::Within
             );
-            assert_ne!(ContentPositionStatus::Within, ContentPositionStatus::AtEnd);
-            assert_ne!(ContentPositionStatus::AtEnd, ContentPositionStatus::Beyond);
+            assert_ne!(CursorPositionBoundsStatus::Within, CursorPositionBoundsStatus::AtEnd);
+            assert_ne!(CursorPositionBoundsStatus::AtEnd, CursorPositionBoundsStatus::Beyond);
             assert_ne!(
-                ContentPositionStatus::AtStart,
-                ContentPositionStatus::Beyond
+                CursorPositionBoundsStatus::AtStart,
+                CursorPositionBoundsStatus::Beyond
             );
         }
 
         #[test]
-        fn test_position_status_copy() {
-            let status1 = ContentPositionStatus::AtStart;
+        fn test_cursor_position_bounds_status_copy() {
+            let status1 = CursorPositionBoundsStatus::AtStart;
             let status2 = status1;
             assert_eq!(status1, status2);
 
-            let status3 = ContentPositionStatus::Within;
+            let status3 = CursorPositionBoundsStatus::Within;
             let status4 = status3;
             assert_eq!(status3, status4);
 
-            let status5 = ContentPositionStatus::AtEnd;
+            let status5 = CursorPositionBoundsStatus::AtEnd;
             let status6 = status5;
             assert_eq!(status5, status6);
 
-            let status7 = ContentPositionStatus::Beyond;
+            let status7 = CursorPositionBoundsStatus::Beyond;
             let status8 = status7;
             assert_eq!(status7, status8);
         }
 
         #[test]
-        fn test_position_status_debug() {
-            assert_eq!(format!("{:?}", ContentPositionStatus::AtStart), "AtStart");
-            assert_eq!(format!("{:?}", ContentPositionStatus::Within), "Within");
-            assert_eq!(format!("{:?}", ContentPositionStatus::AtEnd), "AtEnd");
-            assert_eq!(format!("{:?}", ContentPositionStatus::Beyond), "Beyond");
+        fn test_cursor_position_bounds_status_debug() {
+            assert_eq!(format!("{:?}", CursorPositionBoundsStatus::AtStart), "AtStart");
+            assert_eq!(format!("{:?}", CursorPositionBoundsStatus::Within), "Within");
+            assert_eq!(format!("{:?}", CursorPositionBoundsStatus::AtEnd), "AtEnd");
+            assert_eq!(format!("{:?}", CursorPositionBoundsStatus::Beyond), "Beyond");
         }
 
         #[test]
-        fn test_position_status_empty_content_precedence() {
+        fn test_cursor_position_bounds_status_empty_content_precedence() {
             // Test that AtStart takes precedence over AtEnd for empty content.
             let empty_length = len(0);
             assert_eq!(
-                idx(0).check_content_position(empty_length),
-                ContentPositionStatus::AtStart
+                idx(0).check_cursor_position_bounds(empty_length),
+                CursorPositionBoundsStatus::AtStart
             );
 
             // Test with typed indices too.
 
             let empty_col_width = ColWidth::new(0);
             assert_eq!(
-                ColIndex::new(0).check_content_position(empty_col_width),
-                ContentPositionStatus::AtStart
+                ColIndex::new(0).check_cursor_position_bounds(empty_col_width),
+                CursorPositionBoundsStatus::AtStart
             );
 
             let empty_row_height = RowHeight::new(0);
             assert_eq!(
-                RowIndex::new(0).check_content_position(empty_row_height),
-                ContentPositionStatus::AtStart
+                RowIndex::new(0).check_cursor_position_bounds(empty_row_height),
+                CursorPositionBoundsStatus::AtStart
             );
         }
 
         #[test]
-        fn test_position_status_comprehensive() {
+        fn test_cursor_position_bounds_status_comprehensive() {
             // Test all combinations for a length-3 content.
             let content_length = len(3);
 
             // AtStart: index == 0
             assert_eq!(
-                idx(0).check_content_position(content_length),
-                ContentPositionStatus::AtStart
+                idx(0).check_cursor_position_bounds(content_length),
+                CursorPositionBoundsStatus::AtStart
             );
 
             // Within: 0 < index < length
             assert_eq!(
-                idx(1).check_content_position(content_length),
-                ContentPositionStatus::Within
+                idx(1).check_cursor_position_bounds(content_length),
+                CursorPositionBoundsStatus::Within
             );
             assert_eq!(
-                idx(2).check_content_position(content_length),
-                ContentPositionStatus::Within
+                idx(2).check_cursor_position_bounds(content_length),
+                CursorPositionBoundsStatus::Within
             );
 
             // AtEnd: index == length && index > 0
             assert_eq!(
-                idx(3).check_content_position(content_length),
-                ContentPositionStatus::AtEnd
+                idx(3).check_cursor_position_bounds(content_length),
+                CursorPositionBoundsStatus::AtEnd
             );
 
             // Beyond: index > length
             assert_eq!(
-                idx(4).check_content_position(content_length),
-                ContentPositionStatus::Beyond
+                idx(4).check_cursor_position_bounds(content_length),
+                CursorPositionBoundsStatus::Beyond
             );
             assert_eq!(
-                idx(10).check_content_position(content_length),
-                ContentPositionStatus::Beyond
+                idx(10).check_cursor_position_bounds(content_length),
+                CursorPositionBoundsStatus::Beyond
             );
         }
     }

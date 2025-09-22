@@ -12,8 +12,7 @@
 //! The unifying traits in this module are designed to provide:
 //!
 //! - **Future extensibility**: If additional document storage types are added beyond
-//!   [`crate::ZeroCopyGapBuffer`] and [`crate::GCStringOwnedDoc`], they can implement
-//!   these traits for seamless integration.
+//!   [`crate::ZeroCopyGapBuffer`], they can implement these traits for seamless integration.
 //!
 //! - **Generic document operations**: New code can work with document-like structures
 //!   generically through the [`GraphemeDoc`] and [`GraphemeDocMut`] traits, without being

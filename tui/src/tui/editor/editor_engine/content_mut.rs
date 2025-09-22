@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
-use crate::{AfterLastPosition, CaretScrAdj, ColIndex, ColWidth, ContentPositionStatus,
+use crate::{EOLCursorPosition, CaretScrAdj, ColIndex, ColWidth, CursorPositionBoundsStatus,
             EditorArgsMut, EditorBuffer, EditorEngine, InlineString, InlineVec,
             RowIndex, SelectionList, SelectionRange, Width, ZeroCopyGapBuffer,
             caret_locate::locate_col, caret_scr_adj, col, empty_check_early_return, len,
@@ -128,7 +128,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
         if index < line_count - 1 {
             // Insert newline logic similar to insert_new_line_at_caret.
             match locate_col_impl(&buffer_mut) {
-                ContentPositionStatus::AtEnd | ContentPositionStatus::Beyond => {
+                CursorPositionBoundsStatus::AtEnd | CursorPositionBoundsStatus::Beyond => {
                     // Insert new line at end.
                     let new_row_index = scroll_editor_content::inc_caret_row(
                         buffer_mut.inner.caret_raw,
@@ -143,7 +143,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
 
                     buffer_mut.inner.lines.insert_line(new_row_index);
                 }
-                ContentPositionStatus::AtStart => {
+                CursorPositionBoundsStatus::AtStart => {
                     // Insert new line at start.
                     let cur_row_index = (*buffer_mut.inner.caret_raw
                         + *buffer_mut.inner.scr_ofs)
@@ -156,7 +156,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                         buffer_mut.inner.vp.row_height,
                     );
                 }
-                ContentPositionStatus::Within => {
+                CursorPositionBoundsStatus::Within => {
                     // Split line in middle.
                     let caret_scr_adj =
                         *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
@@ -192,7 +192,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
 }
 
 /// Helper function to locate caret position when we already have `buffer_mut`
-fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> ContentPositionStatus {
+fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> CursorPositionBoundsStatus {
     let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
     let row_index = caret_scr_adj.row_index;
 
@@ -200,16 +200,16 @@ fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> ContentPositionS
         let col_index = caret_scr_adj.col_index;
 
         if col_index.as_usize() > line_width.as_usize() {
-            ContentPositionStatus::Beyond
+            CursorPositionBoundsStatus::Beyond
         } else if col_index == col(0) {
-            ContentPositionStatus::AtStart
-        } else if col_index >= line_width.to_after_last_position() {
-            ContentPositionStatus::AtEnd
+            CursorPositionBoundsStatus::AtStart
+        } else if col_index >= line_width.eol_cursor_position() {
+            CursorPositionBoundsStatus::AtEnd
         } else {
-            ContentPositionStatus::Within
+            CursorPositionBoundsStatus::Within
         }
     } else {
-        ContentPositionStatus::AtEnd
+        CursorPositionBoundsStatus::AtEnd
     }
 }
 
@@ -255,17 +255,17 @@ pub fn insert_new_line_at_caret(args: EditorArgsMut<'_>) {
     }
 
     match locate_col(buffer) {
-        ContentPositionStatus::AtEnd | ContentPositionStatus::Beyond => {
+        CursorPositionBoundsStatus::AtEnd | CursorPositionBoundsStatus::Beyond => {
             insert_new_line_at_caret_helper::insert_new_line_at_end_of_current_line(
                 EditorArgsMut { engine, buffer },
             );
         }
-        ContentPositionStatus::AtStart => {
+        CursorPositionBoundsStatus::AtStart => {
             insert_new_line_at_caret_helper::insert_new_line_at_start_of_current_line(
                 EditorArgsMut { engine, buffer },
             );
         }
-        ContentPositionStatus::Within => {
+        CursorPositionBoundsStatus::Within => {
             insert_new_line_at_caret_helper::insert_new_line_at_middle_of_current_line(
                 EditorArgsMut { engine, buffer },
             );
@@ -555,7 +555,7 @@ mod backspace_at_caret_helper {
                 // This caret col index goes 1 past the end of the line width, ie:
                 // - `prev_line_display_width` which is the same as:
                 // - `prev_line_display_width.convert_to_index() /*-1*/ + 1`
-                prev_line_display_width.to_after_last_position(),
+                prev_line_display_width.eol_cursor_position(),
                 buffer_mut.inner.caret_raw,
                 buffer_mut.inner.scr_ofs,
                 buffer_mut.inner.vp.col_width,
@@ -655,7 +655,7 @@ mod delete_selected_helper {
         end_col_index: ColIndex,
         line_width: Width,
     ) -> bool {
-        start_col_index == col(0) && end_col_index == line_width.to_after_last_position()
+        start_col_index == col(0) && end_col_index == line_width.eol_cursor_position()
     }
 
     /// Prepares the replacement text for a line that has a partial selection to be
@@ -706,7 +706,7 @@ mod delete_selected_helper {
         );
         let keep_after_selection_range = SelectionRange::new(
             caret_scr_adj(end_col_index + selected_row_index),
-            caret_scr_adj(line_width.to_after_last_position() + selected_row_index),
+            caret_scr_adj(line_width.eol_cursor_position() + selected_row_index),
         );
 
         let keep_before_selected_str =

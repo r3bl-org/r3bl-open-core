@@ -1,8 +1,27 @@
 #!/bin/bash
 
-# This is primarily for use with `cmdr/src/analytics_client/upgrade_check.rs`:
-# 1. Script to remove all rustup toolchains for testing upgrade progress.
-# 2. This ensures rustup toolchain install will show meaningful output.
+# ⚠️ WARNING: DESTRUCTIVE TESTING UTILITY ⚠️
+# This script REMOVES ALL Rust toolchains from your system!
+#
+# Purpose: Testing utility for cmdr's upgrade check feature (cmdr/src/analytics_client/upgrade_check.rs)
+#
+# Use Case: When developing/testing the upgrade progress display in cmdr apps (edi, giti),
+# you need to see the full rustup installation progress. This script creates a clean slate
+# by removing all toolchains, so when you run `cargo run --bin edi` or `cargo run --bin giti`,
+# you'll see:
+#   - Full rustup download progress
+#   - Installation messages
+#   - Compilation progress percentages
+#
+# Usage:
+#   ./remove_toolchains.sh    # Removes ALL toolchains
+#
+# Recovery after testing:
+#   rustup toolchain install stable
+#   rustup default stable
+#   # Or use: fish run.fish update-toolchain
+#
+# Note: This is a manual testing tool, not invoked by any code.
 
 set -e  # Exit on any error
 

@@ -10,9 +10,10 @@
 use std::cmp::Ordering;
 
 use super::{SelectMode, caret_mut};
-use crate::{AfterLastPosition, BoundsCheck, BoundsOverflowStatus, CaretDirection,
+use crate::{CaretDirection,
             CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, LengthMarker,
-            RowHeight, RowIndex, ScrOfs, UnitCompare, ch, col, height, row, width};
+            RowHeight, RowIndex, ScrOfs, UnitCompare, ch, col, height, row, width,
+            core::units::bounds_check::IndexMarker};
 
 /// # Scrolling not active
 ///
@@ -99,9 +100,7 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     let caret_scr_adj = buffer.get_caret_scr_adj();
     let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
 
-    if caret_scr_adj.col_index.check_overflows(line_display_width)
-        == BoundsOverflowStatus::Overflowed
-    {
+    if caret_scr_adj.col_index.overflows(line_display_width) {
         caret_mut::to_end_of_line(buffer, engine, SelectMode::Disabled);
     }
 }
@@ -196,24 +195,23 @@ pub fn dec_caret_col_by(
         }
         // Scroll active & Not at start of viewport.
         (HorizScr::Active, VpHorizLoc::NotAtStart) => {
-            // The line below used to be: `col_amt > caret_raw.col_index`.
-            let need_to_scroll_left =
-                col_amt.to_after_last_position() > caret_raw.col_index;
+            // Define the "safe zone" - positions where the caret can move left
+            // without requiring viewport scroll adjustment.
+            // Safe zone: [col_amt, ∞) - if caret is at or beyond col_amt, no scroll needed
+            let safe_zone_start = col_amt.convert_to_index();
+
+            // Check if caret would underflow the safe zone (go below the minimum safe position)
+            let need_to_scroll_left = caret_raw.col_index.underflows(safe_zone_start);
 
             // Move caret left by col_amt.
             caret_raw.col_index -= col_amt;
 
             // Adjust scroll_offset if needed.
             if need_to_scroll_left {
-                // Move scroll left by diff.
-                scr_ofs.col_index -= {
-                    // Due to scroll reasons, the `lhs` is the same value as the
-                    // `col_amt`, ie, it goes past the viewport width. See the
-                    // `scroll_col_index_for_width()` for more details.
-                    let lhs = col_amt.to_after_last_position();
-                    let rhs = caret_raw.col_index;
-                    lhs - rhs
-                };
+                // Calculate how much to scroll left to keep caret visible
+                // Original caret position was less than col_amt, so we scroll by the difference
+                let scroll_adjustment = safe_zone_start - caret_raw.col_index;
+                scr_ofs.col_index -= scroll_adjustment;
             }
         }
     }
@@ -410,13 +408,10 @@ pub fn inc_caret_row(
     scroll_offset: &mut ScrOfs,
     viewport_height: RowHeight,
 ) -> RowIndex {
-    match caret.row_index.check_overflows(viewport_height) {
-        BoundsOverflowStatus::Overflowed => {
-            scroll_offset.row_index += row(1); // Activate vertical scroll.
-        }
-        BoundsOverflowStatus::Within => {
-            caret.row_index += row(1); // Scroll inactive & Not at bottom of viewport.
-        }
+    if caret.row_index.overflows(viewport_height) {
+        scroll_offset.row_index += row(1); // Activate vertical scroll.
+    } else {
+        caret.row_index += row(1); // Scroll inactive & Not at bottom of viewport.
     }
 
     (*caret + *scroll_offset).row_index

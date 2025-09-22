@@ -23,7 +23,7 @@ use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch,
 /// case.
 ///
 /// There is a special case for scrolling horizontally, and creates a selection range,
-/// which is handled by the `AfterLastPosition` trait method `to_after_last_position()`.
+/// which is handled by the [`EOLCursorPosition`] trait method [`eol_cursor_position()`].
 ///
 /// # Examples
 /// ```
@@ -36,8 +36,8 @@ use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch,
 /// [`Height`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`Size`]: crate::Size
-/// [`AfterLastPosition`]: crate::AfterLastPosition
-/// [`to_after_last_position()`]: crate::AfterLastPosition::to_after_last_position
+/// [`EOLCursorPosition`]: crate::EOLCursorPosition
+/// [`eol_cursor_position()`]: crate::EOLCursorPosition::eol_cursor_position
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColWidth(pub ChUnit);
 

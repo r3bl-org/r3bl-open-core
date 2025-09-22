@@ -9,13 +9,13 @@ use crate::{ColIndex, GraphemeString, Length, RowIndex, SegIndex};
 /// Multi-line document trait for read-only operations.
 ///
 /// This trait abstracts over different multi-line document implementations,
-/// such as `GCStringOwnedDoc` (owned lines) and `ZeroCopyGapBuffer` (zero-copy lines).
+/// primarily `ZeroCopyGapBuffer` (zero-copy lines) and potentially future document types.
 pub trait GraphemeDoc {
     /// The type of line returned by this document.
     ///
     /// Each implementation returns an appropriate line type:
-    /// - `GCStringOwnedDoc` returns `GCStringOwnedRef<'a>` (a reference wrapper)
     /// - `ZeroCopyGapBuffer` returns `GapBufferLine<'a>` (zero-copy view)
+    /// - Future implementations may return other types that implement `GraphemeString`
     ///
     /// The lifetime parameter `'a` represents the lifetime of the line reference.
     /// The constraint `Self: 'a` ensures that lines cannot outlive the document
@@ -51,7 +51,7 @@ pub trait GraphemeDoc {
 
     /// Get the entire document as a string.
     /// Returns `Cow<str>` for flexibility - borrowed for `ZeroCopyGapBuffer`,
-    /// owned for `GCStringOwnedDoc`.
+    /// or owned for implementations that need to construct the string.
     fn as_str(&self) -> Cow<'_, str>;
 
     /// Get the entire document as bytes.

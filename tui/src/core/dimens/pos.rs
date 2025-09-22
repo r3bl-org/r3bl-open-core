@@ -3,7 +3,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
-use crate::{AfterLastPosition, ColIndex, ColWidth, IndexMarker, RowHeight, RowIndex,
+use crate::{EOLCursorPosition, ColIndex, ColWidth, IndexMarker, RowHeight, RowIndex,
             Size, UnitCompare, ch, col, row};
 
 // Type aliases for better code readability.
@@ -385,7 +385,7 @@ mod api {
                 if max.is_zero() {
                     row(0)
                 } else {
-                    max.to_after_last_position() // Allow "after last row" position
+                    max.eol_cursor_position() // Allow "after last row" position
                 }
             } else {
                 new_row_index
@@ -451,7 +451,7 @@ mod api {
                 if max.is_zero() {
                     col(0)
                 } else {
-                    max.to_after_last_position() // Allow "after last character" position
+                    max.eol_cursor_position() // Allow "after last character" position
                 }
             } else {
                 new_col_index
@@ -466,7 +466,7 @@ mod api {
                 if max.is_zero() {
                     self.col_index = col(0);
                 } else {
-                    self.col_index = max.to_after_last_position(); // Allow "after last character" position
+                    self.col_index = max.eol_cursor_position(); // Allow "after last character" position
                 }
             }
         }

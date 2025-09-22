@@ -10,7 +10,8 @@ use std::borrow::Cow;
 
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
 use crate::{ColIndex, GraphemeDoc, GraphemeDocMut, Length, RowIndex, SegIndex,
-            SegmentArray, byte_index, len, row};
+            SegmentArray, byte_index, len, row,
+            core::units::bounds_check::IndexMarker};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -221,7 +222,7 @@ impl ZeroCopyGapBuffer {
     /// All buffer offsets for subsequent lines are updated to maintain the invariant
     /// that lines are ordered by their buffer offsets.
     pub fn remove_line(&mut self, line_index: RowIndex) -> bool {
-        if line_index.as_usize() >= self.line_count.as_usize() {
+        if line_index.overflows(self.line_count) {
             return false;
         }
 
@@ -274,7 +275,7 @@ impl ZeroCopyGapBuffer {
 
     /// Extend the capacity of a line by `LINE_PAGE_SIZE`
     pub fn extend_line_capacity(&mut self, line_index: RowIndex) {
-        if line_index.as_usize() >= self.line_count.as_usize() {
+        if line_index.overflows(self.line_count) {
             return;
         }
 

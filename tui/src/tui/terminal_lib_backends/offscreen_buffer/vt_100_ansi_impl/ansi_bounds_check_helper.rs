@@ -7,7 +7,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{BoundsOverflowStatus::Overflowed,
+use crate::{ArrayAccessBoundsStatus::Overflowed,
             ColIndex, ColWidth, RowHeight, RowIndex,
             core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
                    units::bounds_check::{BoundsCheck, LengthMarker}},
@@ -45,7 +45,7 @@ impl OffscreenBuffer {
     /// within the terminal width, using type-safe overflow checking.
     #[must_use]
     pub fn clamp_column(&self, max_col: ColIndex) -> ColIndex {
-        if max_col.check_overflows(self.window_size.col_width) == Overflowed {
+        if max_col.check_array_access_bounds(self.window_size.col_width) == Overflowed {
             self.window_size.col_width.convert_to_index()
         } else {
             max_col

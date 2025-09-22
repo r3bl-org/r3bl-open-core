@@ -104,7 +104,8 @@
 use std::{ops::Range, str::from_utf8_unchecked};
 
 use super::super::ZeroCopyGapBuffer;
-use crate::RowIndex;
+use crate::{RowIndex,
+            core::units::bounds_check::{IndexMarker, RangeBoundary}};
 
 impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice
@@ -153,10 +154,8 @@ impl ZeroCopyGapBuffer {
     /// In debug builds, panics if the line slice contains invalid UTF-8
     #[must_use]
     pub fn get_line_slice(&self, line_range: Range<RowIndex>) -> Option<&str> {
-        // Check bounds
-        if line_range.start.as_usize() >= self.line_count().as_usize()
-            || line_range.end.as_usize() > self.line_count().as_usize()
-        {
+        // Check bounds using type-safe range validation.
+        if !line_range.is_valid(self.line_count()) {
             return None;
         }
 
@@ -168,8 +167,8 @@ impl ZeroCopyGapBuffer {
         let start_info = self.get_line_info(line_range.start.as_usize())?;
         let start_offset = *start_info.buffer_offset;
 
-        // Calculate end offset.
-        let end_offset = if line_range.end.as_usize() < self.line_count().as_usize() {
+        // Calculate end offset using type-safe bounds checking.
+        let end_offset = if !line_range.end.overflows(self.line_count()) {
             let end_info = self.get_line_info(line_range.end.as_usize())?;
             *end_info.buffer_offset
         } else {
@@ -231,8 +230,13 @@ impl ZeroCopyGapBuffer {
             content_range.start + 1 // Just the newline for empty lines
         };
 
-        // Ensure we don't go past the line boundary.
-        let end = end.min(content_range.start + line_info.capacity.as_usize());
+        // Ensure we don't go past the line boundary using explicit bounds checking.
+        let line_boundary = content_range.start + line_info.capacity.as_usize();
+        let end = if end <= line_boundary {
+            end
+        } else {
+            line_boundary
+        };
         let range = content_range.start..end;
 
         // In debug builds, validate UTF-8.
@@ -268,7 +272,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{row, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
+    use crate::{len, row, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
 
     #[test]
     fn test_as_str_empty() {
@@ -386,7 +390,7 @@ mod tests {
 
         // Update line info.
         if let Some(line_info) = buffer.get_line_info_mut(0) {
-            line_info.content_len = crate::len(2);
+            line_info.content_len = len(2);
         }
 
         // This should panic in debug mode.

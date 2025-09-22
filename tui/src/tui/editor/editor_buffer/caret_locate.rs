@@ -1,13 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::buffer_struct::EditorBuffer;
-use crate::{BoundsCheck, ContentPositionStatus, UnitCompare};
+use crate::{BoundsCheck, CursorPositionBoundsStatus, UnitCompare};
 
 /// Represents the position of a row within a buffer.
 ///
-/// ## Why this exists separately from [`ContentPositionStatus`]
+/// ## Why this exists separately from [`CursorPositionBoundsStatus`]
 ///
-/// [`ContentPositionStatus`] is designed for cursor/content positions where the index can
+/// [`CursorPositionBoundsStatus`] is designed for cursor/content positions where the index can
 /// be one position *after* the last element (for insertion). For example, in a string
 /// of length 5, position 5 is valid and means "after the last character".
 ///
@@ -25,7 +25,7 @@ use crate::{BoundsCheck, ContentPositionStatus, UnitCompare};
 ///
 /// [`OnFirstRow`]: RowContentPositionStatus::OnFirstRow
 /// [`OnLastRow`]: RowContentPositionStatus::OnLastRow
-/// [`AtEnd`]: ContentPositionStatus::AtEnd
+/// [`AtEnd`]: CursorPositionBoundsStatus::AtEnd
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum RowContentPositionStatus {
     /// On the first row (row index 0).
@@ -44,7 +44,7 @@ pub enum RowContentPositionStatus {
     BeyondBuffer,
 }
 
-/// Locate the col position using [`BoundsCheck::check_content_position`] method on
+/// Locate the col position using [`BoundsCheck::check_cursor_position_bounds`] method on
 /// column indices.
 ///
 /// ```text
@@ -68,20 +68,20 @@ pub enum RowContentPositionStatus {
 ///   C0123456789
 /// ```
 #[must_use]
-pub fn locate_col(editor_buffer: &EditorBuffer) -> ContentPositionStatus {
+pub fn locate_col(editor_buffer: &EditorBuffer) -> CursorPositionBoundsStatus {
     if let Some(_line) = editor_buffer.line_at_caret_scr_adj() {
         let col_index = editor_buffer.get_caret_scr_adj().col_index;
         let line_display_width = editor_buffer.get_line_display_width_at_caret_scr_adj();
-        col_index.check_content_position(line_display_width)
+        col_index.check_cursor_position_bounds(line_display_width)
     } else {
         // No line available - treat as at start.
-        ContentPositionStatus::AtStart
+        CursorPositionBoundsStatus::AtStart
     }
 }
 
 /// Locate the row position in the buffer.
 ///
-/// Returns [`RowContentPositionStatus`] instead of [`ContentPositionStatus`] because row
+/// Returns [`RowContentPositionStatus`] instead of [`CursorPositionBoundsStatus`] because row
 /// positions have different semantics than cursor positions (see
 /// [`RowContentPositionStatus`] documentation).
 ///
@@ -145,7 +145,7 @@ pub fn locate_row(buffer: &EditorBuffer) -> RowContentPositionStatus {
 /// ```
 #[must_use]
 pub fn col_is_at_start(buffer: &EditorBuffer) -> bool {
-    locate_col(buffer) == ContentPositionStatus::AtStart
+    locate_col(buffer) == CursorPositionBoundsStatus::AtStart
 }
 
 /// Helper function to check if column is at the end of line.
@@ -158,7 +158,7 @@ pub fn col_is_at_start(buffer: &EditorBuffer) -> bool {
 /// ```
 #[must_use]
 pub fn col_is_at_end(buffer: &EditorBuffer) -> bool {
-    locate_col(buffer) == ContentPositionStatus::AtEnd
+    locate_col(buffer) == CursorPositionBoundsStatus::AtEnd
 }
 
 /// Helper function to check if row is at the top of buffer.
@@ -193,7 +193,7 @@ pub fn row_is_at_bottom(buffer: &EditorBuffer) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{AfterLastPosition, EditorEngine, EditorEngineConfig, assert_eq2, col,
+    use crate::{EOLCursorPosition, EditorEngine, EditorEngineConfig, assert_eq2, col,
                 row};
 
     #[test]
@@ -210,7 +210,7 @@ mod tests {
         }
 
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::AtStart);
+        assert_eq2!(location, CursorPositionBoundsStatus::AtStart);
     }
 
     #[test]
@@ -224,11 +224,11 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index = line_width.to_after_last_position();
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
         }
 
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::AtEnd);
+        assert_eq2!(location, CursorPositionBoundsStatus::AtEnd);
     }
 
     #[test]
@@ -245,7 +245,7 @@ mod tests {
         }
 
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::Within);
+        assert_eq2!(location, CursorPositionBoundsStatus::Within);
     }
 
     #[test]
@@ -263,7 +263,7 @@ mod tests {
 
         let location = locate_col(&buffer);
         // Empty line: col 0 is both start and end, implementation treats this as AtStart
-        assert_eq2!(location, ContentPositionStatus::AtStart);
+        assert_eq2!(location, CursorPositionBoundsStatus::AtStart);
     }
 
     #[test]
@@ -279,17 +279,17 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(6); // Right before emoji
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::Within);
+        assert_eq2!(location, CursorPositionBoundsStatus::Within);
 
         // Test at end with Unicode.
         let line_width = buffer.get_lines().get_line_display_width(row(0)).unwrap();
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index = line_width.to_after_last_position();
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::AtEnd);
+        assert_eq2!(location, CursorPositionBoundsStatus::AtEnd);
     }
 
     #[test]
@@ -382,7 +382,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::AtStart);
+        assert_eq2!(location, CursorPositionBoundsStatus::AtStart);
 
         // Test not at start.
         {
@@ -391,7 +391,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(5);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::Within);
+        assert_eq2!(location, CursorPositionBoundsStatus::Within);
     }
 
     #[test]
@@ -405,10 +405,10 @@ mod tests {
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(0);
-            buffer_mut.inner.caret_raw.col_index = line_width.to_after_last_position();
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::AtEnd);
+        assert_eq2!(location, CursorPositionBoundsStatus::AtEnd);
 
         // Test not at end.
         {
@@ -417,7 +417,7 @@ mod tests {
             buffer_mut.inner.caret_raw.col_index = col(2);
         }
         let location = locate_col(&buffer);
-        assert_eq2!(location, ContentPositionStatus::Within);
+        assert_eq2!(location, CursorPositionBoundsStatus::Within);
     }
 
     #[test]
@@ -499,6 +499,6 @@ mod tests {
         // The caret is at the start of the visible area, but not the start of the line.
         let location = locate_col(&buffer);
         // Scroll adjusted position is col 5, which is in the middle of the line.
-        assert_eq2!(location, ContentPositionStatus::Within);
+        assert_eq2!(location, CursorPositionBoundsStatus::Within);
     }
 }

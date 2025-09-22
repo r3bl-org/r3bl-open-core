@@ -25,6 +25,7 @@ Throughout the implementation, use the type-safe bounds checking utilities from 
 - Use `LengthMarker::clamp_to()` for clamping operations
 - Leverage `convert_to_index()` and `convert_to_length()` for type conversions
 - Use `clamp_to()` to ensure indices and lengths stay within valid bounds and `remaining_from()` to compute available space
+- Use `range_ext::RangeValidation` for validating ranges instead of manually comparing start and end values as `usize`
 
 # Testing interactive terminal applications
 

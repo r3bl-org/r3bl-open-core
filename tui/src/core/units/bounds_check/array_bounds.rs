@@ -13,11 +13,11 @@
 //! for details on the different bounds checking paradigms.
 
 use super::{length_and_index_markers::{IndexMarker, LengthMarker},
-            result_enums::{BoundsOverflowStatus, ContentPositionStatus}};
+            result_enums::{ArrayAccessBoundsStatus, CursorPositionBoundsStatus}};
 
 /// Core trait for index bounds validation in TUI applications.
 ///
-/// Provides both array-style bounds checking and content position checking.
+/// Provides both array-style bounds checking and cursor position checking.
 /// See the [`bounds_check` module documentation](crate::core::units::bounds_check)
 /// for detailed explanations of both paradigms.
 ///
@@ -29,17 +29,17 @@ use super::{length_and_index_markers::{IndexMarker, LengthMarker},
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{BoundsCheck, BoundsOverflowStatus, RowIndex, RowHeight};
+/// use r3bl_tui::{BoundsCheck, ArrayAccessBoundsStatus, RowIndex, RowHeight};
 ///
 /// let row_index = RowIndex::new(5);
 /// let height = RowHeight::new(5);
-/// assert_eq!(row_index.check_overflows(height), BoundsOverflowStatus::Overflowed);
+/// assert_eq!(row_index.check_array_access_bounds(height), ArrayAccessBoundsStatus::Overflowed);
 /// ```
 pub trait BoundsCheck<LengthType: LengthMarker>
 where
     Self: IndexMarker,
 {
-    /// Performs array-style bounds checking.
+    /// Performs comprehensive bounds checking.
     ///
     /// See the [`bounds_check` module documentation](crate::core::units::bounds_check)
     /// for detailed explanation of bounds checking.
@@ -56,22 +56,47 @@ where
     ///           ├────────── within bounds ──────────────┼─ overflow ┘
     ///           └────────── length=10 (1-based) ────────┘
     ///
-    /// check_overflows(length=5)  = Within
-    /// check_overflows(length=10) = Overflowed
+    /// check_bounds(length=5)  = Within
+    /// check_bounds(length=10) = Overflowed
     /// ```
     ///
     /// # Returns
-    /// - [`BoundsOverflowStatus::Within`] if the index can safely access content,
-    /// - [`BoundsOverflowStatus::Overflowed`] if the index would exceed array bounds.
-    fn check_overflows(&self, max: LengthType) -> BoundsOverflowStatus;
-
-    /// Performs content position checking.
+    /// - [`ArrayAccessBoundsStatus::Within`] if the index can safely access content,
+    /// - [`ArrayAccessBoundsStatus::Overflowed`] if the index would exceed array bounds.
     ///
-    /// See the [`bounds_check` module documentation](crate::core::units::bounds_check)
-    /// for detailed explanation of content position checking.
+    /// # See Also
+    /// For simple boolean overflow checking, use [`crate::IndexMarker::overflows()`]
+    /// which returns a `bool` instead of an enum. This method is designed for cases
+    /// where you need to pattern match on the result or explicitly handle the status
+    /// information.
+    ///
+    /// ```rust
+    /// use r3bl_tui::{BoundsCheck, ArrayAccessBoundsStatus, IndexMarker, idx, len};
+    ///
+    /// let index = idx(5);
+    /// let length = len(10);
+    ///
+    /// // For pattern matching or explicit status handling:
+    /// match index.check_array_access_bounds(length) {
+    ///     ArrayAccessBoundsStatus::Within => println!("Safe to access"),
+    ///     ArrayAccessBoundsStatus::Overflowed => println!("Out of bounds"),
+    ///     ArrayAccessBoundsStatus::Underflowed => println!("Below minimum"),
+    /// }
+    ///
+    /// // For simple boolean checks:
+    /// if !index.overflows(length) {
+    ///     println!("Safe to access");
+    /// }
+    /// ```
+    fn check_array_access_bounds(&self, max: LengthType) -> ArrayAccessBoundsStatus;
+
+    /// Performs cursor position bounds checking.
+    ///
+    /// See the [`bounds_check` module documentation] for detailed explanation of cursor
+    /// position checking.
     ///
     /// ```text
-    /// Content position checking:
+    /// Cursor position checking:
     ///
     /// Self
     /// Index:      0   1   2   3   4   5   6   7   8   9   10  11
@@ -90,10 +115,14 @@ where
     /// ```
     ///
     /// # Returns
-    /// [`ContentPositionStatus`] indicating whether the index is within content,
+    /// [`CursorPositionBoundsStatus`] indicating whether the index is within content,
     /// at a content boundary, or beyond content boundaries.
-    fn check_content_position(&self, content_length: LengthType)
-    -> ContentPositionStatus;
+    ///
+    /// [`bounds_check` module documentation]: mod@crate::core::units::bounds_check
+    fn check_cursor_position_bounds(
+        &self,
+        content_length: LengthType,
+    ) -> CursorPositionBoundsStatus;
 }
 
 /// Generic implementation of [`BoundsCheck`] for any [`IndexMarker`] type with
@@ -108,31 +137,34 @@ where
     IndexType: IndexMarker + PartialOrd + Copy,
     LengthType: LengthMarker<IndexType = IndexType>,
 {
-    fn check_overflows(&self, length: LengthType) -> BoundsOverflowStatus {
+    fn check_array_access_bounds(&self, length: LengthType) -> ArrayAccessBoundsStatus {
         let this = *self;
         let other = length.convert_to_index();
+
+        // For now, we only check overflow since indices are typically unsigned.
+        // Future versions might add underflow checking for signed scenarios.
         if this > other {
-            BoundsOverflowStatus::Overflowed
+            ArrayAccessBoundsStatus::Overflowed
         } else {
-            BoundsOverflowStatus::Within
+            ArrayAccessBoundsStatus::Within
         }
     }
 
-    fn check_content_position(
+    fn check_cursor_position_bounds(
         &self,
         content_length: LengthType,
-    ) -> ContentPositionStatus {
+    ) -> CursorPositionBoundsStatus {
         let position = self.as_usize();
         let length = content_length.as_usize();
 
         if position > length {
-            ContentPositionStatus::Beyond
+            CursorPositionBoundsStatus::Beyond
         } else if position == 0 {
-            ContentPositionStatus::AtStart
+            CursorPositionBoundsStatus::AtStart
         } else if position == length {
-            ContentPositionStatus::AtEnd
+            CursorPositionBoundsStatus::AtEnd
         } else {
-            ContentPositionStatus::Within
+            CursorPositionBoundsStatus::Within
         }
     }
 }
@@ -143,109 +175,109 @@ mod tests {
     use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx, len};
 
     #[test]
-    fn test_check_content_position_basic() {
+    fn test_check_cursor_position_bounds_basic() {
         let content_length = len(5);
 
         // At start
         assert_eq!(
-            idx(0).check_content_position(content_length),
-            ContentPositionStatus::AtStart
+            idx(0).check_cursor_position_bounds(content_length),
+            CursorPositionBoundsStatus::AtStart
         );
 
         // Within content
         assert_eq!(
-            idx(2).check_content_position(content_length),
-            ContentPositionStatus::Within
+            idx(2).check_cursor_position_bounds(content_length),
+            CursorPositionBoundsStatus::Within
         );
         assert_eq!(
-            idx(4).check_content_position(content_length),
-            ContentPositionStatus::Within
+            idx(4).check_cursor_position_bounds(content_length),
+            CursorPositionBoundsStatus::Within
         );
 
         // At end boundary
         assert_eq!(
-            idx(5).check_content_position(content_length),
-            ContentPositionStatus::AtEnd
+            idx(5).check_cursor_position_bounds(content_length),
+            CursorPositionBoundsStatus::AtEnd
         );
 
         // Beyond content
         assert_eq!(
-            idx(6).check_content_position(content_length),
-            ContentPositionStatus::Beyond
+            idx(6).check_cursor_position_bounds(content_length),
+            CursorPositionBoundsStatus::Beyond
         );
         assert_eq!(
-            idx(10).check_content_position(content_length),
-            ContentPositionStatus::Beyond
+            idx(10).check_cursor_position_bounds(content_length),
+            CursorPositionBoundsStatus::Beyond
         );
     }
 
     #[test]
-    fn test_check_content_position_edge_cases() {
+    fn test_check_cursor_position_bounds_edge_cases() {
         // Zero-length content - AtStart takes precedence.
         let zero_length = len(0);
         assert_eq!(
-            idx(0).check_content_position(zero_length),
-            ContentPositionStatus::AtStart
+            idx(0).check_cursor_position_bounds(zero_length),
+            CursorPositionBoundsStatus::AtStart
         );
         assert_eq!(
-            idx(1).check_content_position(zero_length),
-            ContentPositionStatus::Beyond
+            idx(1).check_cursor_position_bounds(zero_length),
+            CursorPositionBoundsStatus::Beyond
         );
 
         // Single element content.
         let single_length = len(1);
         assert_eq!(
-            idx(0).check_content_position(single_length),
-            ContentPositionStatus::AtStart
+            idx(0).check_cursor_position_bounds(single_length),
+            CursorPositionBoundsStatus::AtStart
         );
         assert_eq!(
-            idx(1).check_content_position(single_length),
-            ContentPositionStatus::AtEnd
+            idx(1).check_cursor_position_bounds(single_length),
+            CursorPositionBoundsStatus::AtEnd
         );
         assert_eq!(
-            idx(2).check_content_position(single_length),
-            ContentPositionStatus::Beyond
+            idx(2).check_cursor_position_bounds(single_length),
+            CursorPositionBoundsStatus::Beyond
         );
     }
 
     #[test]
-    fn test_check_content_position_with_typed_indices() {
+    fn test_check_cursor_position_bounds_with_typed_indices() {
         // Test with ColIndex/ColWidth
         let col_width = ColWidth::new(3);
         assert_eq!(
-            ColIndex::new(0).check_content_position(col_width),
-            ContentPositionStatus::AtStart
+            ColIndex::new(0).check_cursor_position_bounds(col_width),
+            CursorPositionBoundsStatus::AtStart
         );
         assert_eq!(
-            ColIndex::new(2).check_content_position(col_width),
-            ContentPositionStatus::Within
+            ColIndex::new(2).check_cursor_position_bounds(col_width),
+            CursorPositionBoundsStatus::Within
         );
         assert_eq!(
-            ColIndex::new(3).check_content_position(col_width),
-            ContentPositionStatus::AtEnd
+            ColIndex::new(3).check_cursor_position_bounds(col_width),
+            CursorPositionBoundsStatus::AtEnd
         );
         assert_eq!(
-            ColIndex::new(4).check_content_position(col_width),
-            ContentPositionStatus::Beyond
+            ColIndex::new(4).check_cursor_position_bounds(col_width),
+            CursorPositionBoundsStatus::Beyond
         );
 
         // Test with RowIndex/RowHeight
         let row_height = RowHeight::new(2);
         assert_eq!(
-            RowIndex::new(0).check_content_position(row_height),
-            ContentPositionStatus::AtStart
+            RowIndex::new(0).check_cursor_position_bounds(row_height),
+            CursorPositionBoundsStatus::AtStart
         );
         assert_eq!(
-            RowIndex::new(1).check_content_position(row_height),
-            ContentPositionStatus::Within
+            RowIndex::new(1).check_cursor_position_bounds(row_height),
+            CursorPositionBoundsStatus::Within
         );
         assert_eq!(
-            RowIndex::new(2).check_content_position(row_height),
-            ContentPositionStatus::AtEnd
+            RowIndex::new(2).check_cursor_position_bounds(row_height),
+            CursorPositionBoundsStatus::AtEnd
         );
         assert_eq!(
-            RowIndex::new(3).check_content_position(row_height),
-            ContentPositionStatus::Beyond
+            RowIndex::new(3).check_cursor_position_bounds(row_height),
+            CursorPositionBoundsStatus::Beyond
         );
     }
 }

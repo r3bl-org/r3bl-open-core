@@ -23,8 +23,8 @@ use crate::{ChUnit, LengthMarker, RowIndex, UnitCompare, ch,
 /// case.
 ///
 /// There is a special case for scrolling vertically and clips rendering output to max
-/// display rows which is handled by the [`AfterLastPosition`] trait method
-/// [`to_after_last_position()`].
+/// display rows which is handled by the [`EOLCursorPosition`] trait method
+/// [`eol_cursor_position()`].
 ///
 /// # Examples
 /// ```
@@ -36,8 +36,8 @@ use crate::{ChUnit, LengthMarker, RowIndex, UnitCompare, ch,
 /// [`Height`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`Size`]: crate::Size
-/// [`AfterLastPosition`]: crate::AfterLastPosition
-/// [`to_after_last_position()`]: crate::AfterLastPosition::to_after_last_position
+/// [`EOLCursorPosition`]: crate::EOLCursorPosition
+/// [`eol_cursor_position()`]: crate::EOLCursorPosition::eol_cursor_position
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct RowHeight(pub ChUnit);
 

@@ -30,7 +30,7 @@
 //! for operations that don't modify content (e.g., viewport resizing).
 
 use super::scroll_editor_content;
-use crate::{AfterLastPosition, BoundsCheck, CaretRaw, ColWidth, ContentPositionStatus,
+use crate::{EOLCursorPosition, BoundsCheck, CaretRaw, ColWidth, CursorPositionBoundsStatus,
             MemoizedMemorySize, ScrOfs, SelectionList, Size, ZeroCopyGapBuffer, width};
 
 /// Mutable access to editor buffer fields using concrete `ZeroCopyGapBuffer` storage.
@@ -238,16 +238,16 @@ fn adjust_caret_col_if_not_in_bounds_of_line(
     };
 
     // Make sure that the col_index is within the bounds of the given line width.
-    // Use ContentPositionStatus for semantic caret positioning bounds checking.
+    // Use CursorPositionBoundsStatus for semantic caret positioning bounds checking.
     let current_col = editor_buffer_mut.inner.caret_raw.col_index;
-    let new_caret_col_index = match current_col.check_content_position(row_width) {
+    let new_caret_col_index = match current_col.check_cursor_position_bounds(row_width) {
         // Valid: cursor at start, on existing content, or after last character
-        ContentPositionStatus::AtStart
-        | ContentPositionStatus::Within
-        | ContentPositionStatus::AtEnd => current_col,
-        ContentPositionStatus::Beyond => {
+        CursorPositionBoundsStatus::AtStart
+        | CursorPositionBoundsStatus::Within
+        | CursorPositionBoundsStatus::AtEnd => current_col,
+        CursorPositionBoundsStatus::Beyond => {
             // Invalid: clamp to end position (allows cursor after last character)
-            row_width.to_after_last_position() // Use trait for "after last char" position
+            row_width.eol_cursor_position() // Use trait for "after last char" position
         }
     };
 

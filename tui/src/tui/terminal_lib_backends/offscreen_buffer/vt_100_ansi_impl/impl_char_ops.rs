@@ -29,10 +29,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{BoundsCheck,
-            BoundsOverflowStatus::{Overflowed, Within},
-            ColIndex, Length, RowIndex, UnitCompare, col,
-            core::units::bounds_check::LengthMarker,
+use crate::{ColIndex, Length, RowIndex, UnitCompare, col,
+            core::units::bounds_check::{EOLCursorPosition, IndexMarker, LengthMarker, RangeBoundary},
             height, len};
 
 impl OffscreenBuffer {
@@ -83,32 +81,39 @@ impl OffscreenBuffer {
             return false;
         }
 
-        // Keep type-safe values as long as possible
+        // Keep type-safe values as long as possible.
         let cursor_col = at.col_index;
         let dest_start_col = cursor_col + how_many_clamped;
 
-        // Use type-safe operations for source range calculation
-        let source_end_col =
-            max_width.convert_to_index() - how_many_clamped + crate::len(1);
+        // Calculate the end of the source range for copying.
+        // We need to copy from cursor position up to (but not including) the position
+        // that would overflow when shifted right by how_many_clamped.
+        // This is: last_valid_index - shift_amount + 1 (for exclusive range)
+        let source_end_col = max_width.convert_to_index() - how_many_clamped + len(1);
 
-        // Convert to usize only at Vec access boundary
-        let row_idx = at.row_index.as_usize();
-
-        if let Some(line) = self.buffer.get_mut(row_idx) {
+        // Convert to usize only when accessing the buffer.
+        if let Some(line) = self.buffer.get_mut(at.row_index.as_usize()) {
             // Copy characters to the right to make room for insertion.
-            let dest_start = dest_start_col.as_usize();
-            let source_end = source_end_col.as_usize();
-            let cursor_pos = cursor_col.as_usize();
-            let line_width = max_width.as_usize();
+            // Use type-safe validation for bounds checking.
+            let source_range = cursor_col..source_end_col;
 
-            if dest_start < line_width && cursor_pos < source_end {
-                line.copy_within(cursor_pos..source_end, dest_start);
+            // Type-safe checks:
+            // 1. Destination must be within bounds.
+            // 2. Source range must be valid (non-empty and within bounds).
+            if !dest_start_col.overflows(max_width)
+                && source_range.is_valid(max_width)
+            {
+                line.copy_within(
+                    source_range.start.as_usize()..source_range.end.as_usize(),
+                    dest_start_col.as_usize(),
+                );
             }
 
-            // Fill the cursor position with blanks using type-safe calculation
+            // Fill the cursor position with blanks using type-safe range clamping.
             let fill_end_col = cursor_col + how_many_clamped;
-            let fill_end = fill_end_col.as_usize().min(line_width);
-            line[cursor_pos..fill_end].fill(PixelChar::Spacer);
+            let fill_range = (cursor_col..fill_end_col).clamp_range_to(max_width);
+            line[fill_range.start.as_usize()..fill_range.end.as_usize()]
+                .fill(PixelChar::Spacer);
 
             return true;
         }
@@ -163,26 +168,22 @@ impl OffscreenBuffer {
         }
 
         // Copy characters from the right, overwriting the characters at cursor (this IS
-        // the deletion).
+        // the deletion). Use EOLCursorPosition for the exclusive end.
+        let source_start = at.col_index + how_many_clamped;
+        let source_end = max_width.eol_cursor_position();
         self.copy_chars_within_line(
             at.row_index,
-            {
-                let start = at.col_index + how_many_clamped;
-                let end = max_width.convert_to_index() + len(1);
-                start..end
-            },
+            source_start..source_end,
             at.col_index,
         );
 
         // Clear the vacated space at the end (overwriting duplicates and filling with
-        // spacers).
+        // spacers). Use type-safe range calculation.
+        let fill_start = max_width.convert_to_index() - how_many_clamped + len(1);
+        let fill_end = max_width.eol_cursor_position();
         self.fill_char_range(
             at.row_index,
-            {
-                let start = max_width.convert_to_index() - how_many_clamped + len(1);
-                let end = max_width.convert_to_index() + len(1);
-                start..end
-            },
+            fill_start..fill_end,
             PixelChar::Spacer,
         );
 
@@ -235,10 +236,11 @@ impl OffscreenBuffer {
             return false;
         }
 
-        // Use type-safe range filling instead of manual buffer access
+        // Use type-safe range clamping for consistent patterns.
         let cursor_col = at.col_index;
         let fill_end_col = cursor_col + how_many_clamped;
-        self.fill_char_range(at.row_index, cursor_col..fill_end_col, PixelChar::Spacer)
+        let erase_range = (cursor_col..fill_end_col).clamp_range_to(max_width);
+        self.fill_char_range(at.row_index, erase_range, PixelChar::Spacer)
     }
 
     /// Handle printable characters with character set translation, bounds checking, and
@@ -274,8 +276,7 @@ impl OffscreenBuffer {
         let current_col = self.cursor_pos.col_index;
 
         // Only write if within bounds.
-        if current_row.check_overflows(row_max) == Within
-            && current_col.check_overflows(col_max) == Within
+        if !current_row.overflows(row_max) && !current_col.overflows(col_max)
         {
             self.set_char(
                 current_row + current_col,
@@ -289,12 +290,12 @@ impl OffscreenBuffer {
             let new_col: ColIndex = current_col + 1;
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
-            if new_col.check_overflows(col_max) == Overflowed {
+            if new_col.overflows(col_max) {
                 if self.ansi_parser_support.auto_wrap_mode {
                     // DECAWM enabled: wrap to next line (default behavior).
                     self.cursor_pos.col_index = col(0);
                     let next_row: RowIndex = current_row + 1;
-                    if next_row.check_overflows(row_max) == Within {
+                    if !next_row.overflows(row_max) {
                         self.cursor_pos.row_index = next_row;
                     }
                 } else {

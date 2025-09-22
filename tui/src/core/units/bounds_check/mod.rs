@@ -10,16 +10,16 @@
 //!
 //! The module implements two distinct paradigms for bounds checking:
 //!
-//! ## Array-Style Bounds Checking (`check_overflows`)
+//! ## Array Access Bounds Checking (`check_array_access_bounds`)
 //!
 //! Traditional array bounds checking where an index is valid if it's less than the
-//! maximum length. Returns [`Within`](BoundsOverflowStatus::Within) for safe access or
-//! [`Overflowed`](BoundsOverflowStatus::Overflowed) when bounds are exceeded.
+//! maximum length. Returns [`Within`](ArrayAccessBoundsStatus::Within) for safe access or
+//! [`Overflowed`](ArrayAccessBoundsStatus::Overflowed) when bounds are exceeded.
 //!
-//! ## Content Position Checking (`check_content_position`)
+//! ## Cursor Position Bounds Checking (`check_cursor_position_bounds`)
 //!
-//! Content-aware position checking essential for text editing and cursor positioning.
-//! Returns [`ContentPositionStatus`] variants indicating the relationship between an
+//! Cursor-aware position checking essential for text editing and cursor positioning.
+//! Returns [`CursorPositionBoundsStatus`] variants indicating the relationship between an
 //! index and content boundaries, including start, within, end, and beyond positions.
 //!
 //! # Type System
@@ -53,8 +53,8 @@
 //! # Key Components
 //!
 //! - [`BoundsCheck`] trait: Core functionality for both checking paradigms
-//! - [`BoundsOverflowStatus`] enum: Results for array-style bounds checking
-//! - [`ContentPositionStatus`] enum: Results for content position checking
+//! - [`ArrayAccessBoundsStatus`] enum: Results for array-style bounds checking
+//! - [`CursorPositionBoundsStatus`] enum: Results for cursor position checking
 //! - [`LengthMarker::is_overflowed_by`] method: Convenient overflow checking from length
 //!   perspective ("Does this length get overflowed by this index?")
 //! - [`IndexMarker::overflows`] method: Convenient overflow checking from index
@@ -75,17 +75,17 @@
 //! # Usage Examples
 //!
 //! ```
-//! use r3bl_tui::{BoundsCheck, ContentPositionStatus, IndexMarker, LengthMarker, idx, len};
+//! use r3bl_tui::{BoundsCheck, CursorPositionBoundsStatus, IndexMarker, LengthMarker, idx, len};
 //!
 //! let content_length = len(10);
 //! let cursor_pos = idx(8);
 //!
-//! // Content position checking for text editing
-//! match cursor_pos.check_content_position(content_length) {
-//!     ContentPositionStatus::AtStart => println!("Cursor at start"),
-//!     ContentPositionStatus::Within => println!("Cursor on content"),
-//!     ContentPositionStatus::AtEnd => println!("Cursor at end"),
-//!     ContentPositionStatus::Beyond => println!("Invalid position"),
+//! // Cursor position checking for text editing
+//! match cursor_pos.check_cursor_position_bounds(content_length) {
+//!     CursorPositionBoundsStatus::AtStart => println!("Cursor at start"),
+//!     CursorPositionBoundsStatus::Within => println!("Cursor on content"),
+//!     CursorPositionBoundsStatus::AtEnd => println!("Cursor at end"),
+//!     CursorPositionBoundsStatus::Beyond => println!("Invalid position"),
 //! }
 //!
 //! // Array-style overflow checking - two equivalent approaches:
@@ -110,15 +110,13 @@
 //! [`dimens`]: crate::dimens
 
 // Attach.
-pub mod bounds_check_core;
-pub mod content_position_ext;
+pub mod array_bounds;
+pub mod cursor_bounds;
 pub mod length_and_index_markers;
-pub mod range_ext;
 pub mod result_enums;
 
 // Re-export.
-pub use bounds_check_core::*;
-pub use content_position_ext::*;
+pub use array_bounds::*;
+pub use cursor_bounds::*;
 pub use length_and_index_markers::*;
-pub use range_ext::*;
 pub use result_enums::*;

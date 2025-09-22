@@ -5,7 +5,7 @@
 //! API.
 use syntect::easy::HighlightLines;
 
-use crate::{AfterLastPosition, ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE,
+use crate::{EOLCursorPosition, ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE,
             DEBUG_TUI_MOD, DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode,
             EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine, HasFocus,
             InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp, RenderOps,
@@ -480,7 +480,7 @@ mod syn_hi_r3bl_path {
                 let row_index = row(row_index);
 
                 // Clip the content to max rows.
-                if row_index > max_display_row_count.to_after_last_position() {
+                if row_index > max_display_row_count.eol_cursor_position() {
                     break;
                 }
 
@@ -519,7 +519,7 @@ mod syn_hi_syntect_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index > max_display_row_count.to_after_last_position() {
+            if row_index > max_display_row_count.eol_cursor_position() {
                 break;
             }
 
@@ -633,7 +633,7 @@ mod no_syn_hi_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index > max_display_row_count.to_after_last_position() {
+            if row_index > max_display_row_count.eol_cursor_position() {
                 break;
             }
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AfterLastPosition, EditorArgsMut, ch};
+use crate::{EOLCursorPosition, EditorArgsMut, ch};
 
 // Unicode glyphs links (for the ASCII diagrams):
 // - https://symbl.cc/en/unicode/blocks/box-drawing/
@@ -65,7 +65,7 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     let EditorArgsMut { buffer, engine } = args;
     let vp = engine.viewport();
     let vp_height = vp.row_height;
-    let max_row = buffer.len().to_after_last_position();
+    let max_row = buffer.len().eol_cursor_position();
 
     // Make sure that caret row can't go past the bottom of the buffer.
     {
