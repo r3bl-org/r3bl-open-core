@@ -6,9 +6,13 @@
 //! sequences handled by the `vt_100_ansi_parser::operations::line_ops` module. These
 //! include:
 //!
-//! - **IL** (Insert Lines) - `shift_lines_down`
-//! - **DL** (Delete Lines) - `shift_lines_up`
-//! - **EL** (Erase Line) - `clear_line`
+//! - **IL** (Insert Lines) - [`shift_lines_down`]
+//! - **DL** (Delete Lines) - [`shift_lines_up`]
+//! - **EL** (Erase Line) - [`clear_line`]
+//!
+//! [`shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
+//! [`shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
+//! [`clear_line`]: crate::OffscreenBuffer::clear_line
 //!
 //! All operations maintain VT100 compliance and handle proper line manipulation
 //! within scroll regions as specified in VT100 documentation.

@@ -34,8 +34,10 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! Note: Cursor save/restore ESC sequences (ESC 7/8) are handled by `cursor_ops`
+//! Note: Cursor save/restore ESC sequences (ESC 7/8) are handled by [`cursor_ops`]
 //! functions to maintain consistency with CSI equivalents (CSI s/u).
+//!
+//! [`cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::cursor_ops
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 use crate::{Pos, TuiStyle};

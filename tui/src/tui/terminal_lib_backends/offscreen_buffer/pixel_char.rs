@@ -1,8 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Implementation of `PixelChar` enum and its methods.
+//! Implementation of [`PixelChar`] enum and its methods.
 //!
-//! `PixelChar` represents a single character cell in the offscreen buffer.
+//! [`PixelChar`] represents a single character cell in the offscreen buffer.
+//!
+//! [`PixelChar`]: crate::PixelChar
 //! It can be a void (invisible), spacer (empty but visible), or plain text
 //! with optional styling information.
 

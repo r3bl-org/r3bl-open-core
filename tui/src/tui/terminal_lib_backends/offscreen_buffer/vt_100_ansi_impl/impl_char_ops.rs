@@ -6,11 +6,16 @@
 //! sequences handled by the `vt_100_ansi_parser/operations/char_ops.rs` shim. These
 //! include:
 //!
-//! - **ICH** (Insert Character) - `insert_chars_at_cursor`
-//! - **DCH** (Delete Character) - `delete_chars_at_cursor`
-//! - **ECH** (Erase Character) - `erase_chars_at_cursor`
-//! - **Print Character** - `print_char` (printable character handling with VT100
+//! - **ICH** (Insert Character) - [`insert_chars_at_cursor`]
+//! - **DCH** (Delete Character) - [`delete_chars_at_cursor`]
+//! - **ECH** (Erase Character) - [`erase_chars_at_cursor`]
+//! - **Print Character** - [`print_char`] (printable character handling with VT100
 //!   features)
+//!
+//! [`insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
+//! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
+//! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
+//! [`print_char`]: crate::OffscreenBuffer::print_char
 //!
 //! All operations maintain VT100 compliance and handle proper character shifting,
 //! bounds checking, and cursor positioning as specified in VT100 documentation.

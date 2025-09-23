@@ -1,9 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Implementation of `PixelCharLines` struct and its methods.
+//! Implementation of [`PixelCharLines`] struct and its methods.
 //!
-//! `PixelCharLines` represents a collection of `PixelCharLine` objects,
+//! [`PixelCharLines`] represents a collection of [`PixelCharLine`] objects,
 //! used to store multiple lines of text in the offscreen buffer.
+//!
+//! [`PixelCharLines`]: crate::PixelCharLines
+//! [`PixelCharLine`]: crate::PixelCharLine
 
 use std::ops::{Deref, DerefMut};
 

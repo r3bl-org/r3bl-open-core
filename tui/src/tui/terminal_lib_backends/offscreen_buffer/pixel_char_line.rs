@@ -1,8 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Implementation of `PixelCharLine` struct and its methods.
+//! Implementation of [`PixelCharLine`] struct and its methods.
 //!
-//! `PixelCharLine` represents a single row of pixels/characters in the offscreen buffer.
+//! [`PixelCharLine`] represents a single row of pixels/characters in the offscreen buffer.
+//!
+//! [`PixelCharLine`]: crate::PixelCharLine
 //! Each line can contain various types of pixel characters including plain text,
 //! spacers, and void characters.
 

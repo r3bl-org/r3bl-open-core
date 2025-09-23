@@ -6,8 +6,11 @@
 //! sequences handled by the `vt_100_ansi_parser::operations::dsr_ops` module. These
 //! include:
 //!
-//! - **DSR 5** (Device Status Report) - `handle_status_report_request`
-//! - **DSR 6** (Cursor Position Report) - `handle_cursor_position_request`
+//! - **DSR 5** (Device Status Report) - [`handle_status_report_request`]
+//! - **DSR 6** (Cursor Position Report) - [`handle_cursor_position_request`]
+//!
+//! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
+//! [`handle_cursor_position_request`]: crate::OffscreenBuffer::handle_cursor_position_request
 //!
 //! All operations maintain VT100 compliance and handle proper response
 //! queueing for later transmission back to the PTY.

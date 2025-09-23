@@ -60,7 +60,9 @@ use crate::{col, row};
 
 /// Move cursor up by n lines.
 /// Respects DECSTBM scroll region margins.
-/// See `OffscreenBuffer::cursor_up` for detailed behavior and examples.
+/// See [`OffscreenBuffer::cursor_up`] for detailed behavior and examples.
+///
+/// [`OffscreenBuffer::cursor_up`]: crate::OffscreenBuffer::cursor_up
 pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = MovementCount::parse_as_row_height(params);
     performer.ofs_buf.cursor_up(how_many);
@@ -68,21 +70,27 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Move cursor down by n lines.
 /// Respects DECSTBM scroll region margins.
-/// See `OffscreenBuffer::cursor_down` for detailed behavior and examples.
+/// See [`OffscreenBuffer::cursor_down`] for detailed behavior and examples.
+///
+/// [`OffscreenBuffer::cursor_down`]: crate::OffscreenBuffer::cursor_down
 pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = MovementCount::parse_as_row_height(params);
     performer.ofs_buf.cursor_down(how_many);
 }
 
 /// Move cursor forward by n columns.
-/// See `OffscreenBuffer::cursor_forward` for detailed behavior and examples.
+/// See [`OffscreenBuffer::cursor_forward`] for detailed behavior and examples.
+///
+/// [`OffscreenBuffer::cursor_forward`]: crate::OffscreenBuffer::cursor_forward
 pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = MovementCount::parse_as_col_width(params);
     performer.ofs_buf.cursor_forward(how_many);
 }
 
 /// Move cursor backward by n columns.
-/// See `OffscreenBuffer::cursor_backward` for detailed behavior and examples.
+/// See [`OffscreenBuffer::cursor_backward`] for detailed behavior and examples.
+///
+/// [`OffscreenBuffer::cursor_backward`]: crate::OffscreenBuffer::cursor_backward
 pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let how_many = MovementCount::parse_as_col_width(params);
     performer.ofs_buf.cursor_backward(how_many);

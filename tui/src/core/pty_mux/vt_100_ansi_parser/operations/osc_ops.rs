@@ -106,7 +106,9 @@ pub fn dispatch_osc(
 
 /// Handle OSC title and icon sequences (OSC 0, 1, 2).
 /// Sets window title and/or icon name.
-/// Queues `SetTitleAndTab` event for later processing by output renderer.
+/// Queues [`SetTitleAndTab`] event for later processing by output renderer.
+///
+/// [`SetTitleAndTab`]: crate::OscEvent::SetTitleAndTab
 pub fn handle_title_and_icon(performer: &mut AnsiToOfsBufPerformer, title: &str) {
     performer.ofs_buf.handle_title_and_icon(title);
 }

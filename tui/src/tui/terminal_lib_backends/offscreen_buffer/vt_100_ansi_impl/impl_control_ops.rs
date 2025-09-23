@@ -6,10 +6,15 @@
 //! sequences handled by the `vt_100_ansi_parser::operations::control_ops` module. These
 //! include:
 //!
-//! - **BS** (Backspace) - `handle_backspace`
-//! - **TAB** (Tab) - `handle_tab`
-//! - **LF** (Line Feed) - `handle_line_feed`
-//! - **CR** (Carriage Return) - `handle_carriage_return`
+//! - **BS** (Backspace) - [`handle_backspace`]
+//! - **TAB** (Tab) - [`handle_tab`]
+//! - **LF** (Line Feed) - [`handle_line_feed`]
+//! - **CR** (Carriage Return) - [`handle_carriage_return`]
+//!
+//! [`handle_backspace`]: crate::OffscreenBuffer::handle_backspace
+//! [`handle_tab`]: crate::OffscreenBuffer::handle_tab
+//! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
+//! [`handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
 //!
 //! All operations maintain VT100 compliance and handle proper cursor positioning
 //! and scrolling as specified in VT100 documentation.

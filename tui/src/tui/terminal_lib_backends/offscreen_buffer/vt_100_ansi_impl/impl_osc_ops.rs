@@ -6,8 +6,11 @@
 //! sequences handled by the `vt_100_ansi_parser::operations::osc_ops` module. These
 //! include:
 //!
-//! - **OSC 0/1/2** (Set Title/Icon) - `handle_title_and_icon`
-//! - **OSC 8** (Hyperlinks) - `handle_hyperlink`
+//! - **OSC 0/1/2** (Set Title/Icon) - [`handle_title_and_icon`]
+//! - **OSC 8** (Hyperlinks) - [`handle_hyperlink`]
+//!
+//! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
+//! [`handle_hyperlink`]: crate::OffscreenBuffer::handle_hyperlink
 //!
 //! All operations maintain VT100 compliance and handle proper OSC event
 //! queueing for later transmission to the rendering layer.

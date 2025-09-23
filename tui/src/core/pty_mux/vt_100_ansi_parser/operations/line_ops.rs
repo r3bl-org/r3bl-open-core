@@ -57,7 +57,9 @@ use crate::{RowIndex, len};
 
 /// Handle IL (Insert Line) - insert n blank lines at cursor position.
 /// Lines below cursor and within scroll region shift down.
-/// See `OffscreenBuffer::shift_lines_down` for detailed behavior and examples.
+/// See [`OffscreenBuffer::shift_lines_down`] for detailed behavior and examples.
+///
+/// [`OffscreenBuffer::shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
     let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;
@@ -71,7 +73,9 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Lines below cursor and within scroll region shift up.
 /// Blank lines are added at the bottom of the scroll region.
 ///
-/// See `OffscreenBuffer::shift_lines_up` for detailed behavior and examples.
+/// See [`OffscreenBuffer::shift_lines_up`] for detailed behavior and examples.
+///
+/// [`OffscreenBuffer::shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
     let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;

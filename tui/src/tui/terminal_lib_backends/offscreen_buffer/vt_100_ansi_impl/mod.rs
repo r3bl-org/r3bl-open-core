@@ -104,7 +104,9 @@
 //! All operation types follow the same three-layer pattern. From any implementation file,
 //! you can navigate to its corresponding shim and test layers using the links in this
 //! documentation, or by using IDE search with the operation name (e.g., search for
-//! `char_ops` to find all related files).
+//! [`char_ops`] to find all related files).
+//!
+//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
 //!
 //! # VT100 Compliance
 //!

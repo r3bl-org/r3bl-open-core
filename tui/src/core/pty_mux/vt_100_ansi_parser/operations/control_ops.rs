@@ -64,28 +64,36 @@ use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 
 /// Handle BS (Backspace) - move cursor left one position.
 /// If cursor is at start of line, behavior depends on terminal settings.
-/// See `OffscreenBuffer::handle_backspace` for detailed behavior.
+/// See [`OffscreenBuffer::handle_backspace`] for detailed behavior.
+///
+/// [`OffscreenBuffer::handle_backspace`]: crate::OffscreenBuffer::handle_backspace
 pub fn handle_backspace(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.handle_backspace();
 }
 
 /// Handle TAB (Horizontal Tab) - move cursor to next tab stop.
 /// Tab stops are typically at columns 0, 8, 16, 24, 32, etc.
-/// See `OffscreenBuffer::handle_tab` for detailed behavior and examples.
+/// See [`OffscreenBuffer::handle_tab`] for detailed behavior and examples.
+///
+/// [`OffscreenBuffer::handle_tab`]: crate::OffscreenBuffer::handle_tab
 pub fn handle_tab(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.handle_tab();
 }
 
 /// Handle LF (Line Feed) - move cursor down one line.
 /// Cursor column position remains unchanged.
-/// See `OffscreenBuffer::handle_line_feed` for detailed behavior.
+/// See [`OffscreenBuffer::handle_line_feed`] for detailed behavior.
+///
+/// [`OffscreenBuffer::handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
 pub fn handle_line_feed(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.handle_line_feed();
 }
 
 /// Handle CR (Carriage Return) - move cursor to start of current line.
 /// Cursor row position remains unchanged.
-/// See `OffscreenBuffer::handle_carriage_return` for detailed behavior.
+/// See [`OffscreenBuffer::handle_carriage_return`] for detailed behavior.
+///
+/// [`OffscreenBuffer::handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
 pub fn handle_carriage_return(performer: &mut AnsiToOfsBufPerformer) {
     performer.ofs_buf.handle_carriage_return();
 }

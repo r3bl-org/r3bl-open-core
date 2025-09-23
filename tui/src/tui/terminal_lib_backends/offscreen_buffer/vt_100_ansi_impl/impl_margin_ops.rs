@@ -6,8 +6,11 @@
 //! sequences handled by the `vt_100_ansi_parser::operations::margin_ops` module. These
 //! include:
 //!
-//! - **DECSTBM** (Set Top and Bottom Margins) - `set_scroll_margins`
-//! - **Reset margins** - `reset_scroll_margins`
+//! - **DECSTBM** (Set Top and Bottom Margins) - [`set_scroll_margins`]
+//! - **Reset margins** - [`reset_scroll_margins`]
+//!
+//! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
+//! [`reset_scroll_margins`]: crate::OffscreenBuffer::reset_scroll_margins
 //!
 //! All operations maintain VT100 compliance and handle proper scroll region
 //! boundaries for terminal operations.

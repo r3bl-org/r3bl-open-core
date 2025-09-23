@@ -6,8 +6,10 @@
 //! sequences handled by the `vt_100_ansi_parser::operations::mode_ops` module. These
 //! include:
 //!
-//! - **SM h** (Set Mode) - `set_auto_wrap_mode`
-//! - **RM l** (Reset Mode) - `reset_auto_wrap_mode`
+//! - **SM h** (Set Mode) - [`set_auto_wrap_mode`] (enabled=true)
+//! - **RM l** (Reset Mode) - [`set_auto_wrap_mode`] (enabled=false)
+//!
+//! [`set_auto_wrap_mode`]: crate::OffscreenBuffer::set_auto_wrap_mode
 //!
 //! All operations maintain VT100 compliance and handle proper mode state
 //! management for terminal operations.

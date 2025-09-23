@@ -219,7 +219,9 @@ pub fn create_test_buffer_with_size(
     OffscreenBuffer::new_empty(buffer_width + buffer_height)
 }
 
-/// Create a plain text `PixelChar` with default styling.
+/// Create a plain text [`PixelChar`] with default styling.
+///
+/// [`PixelChar`]: crate::PixelChar
 /// This is the most common character type used in tests and provides
 /// a consistent way to create test characters across modules.
 #[cfg(test)]
@@ -232,7 +234,9 @@ pub fn create_plain_test_char(ch: char) -> PixelChar {
 }
 
 /// Create a test line filled with the specified characters.
-/// Creates a `PixelCharLine` with the given width, filling it with the provided
+/// Creates a [`PixelCharLine`] with the given width, filling it with the provided
+///
+/// [`PixelCharLine`]: crate::PixelCharLine
 /// characters (repeating if necessary) or padding with Spacers if not enough
 /// characters are provided.
 #[cfg(test)]
