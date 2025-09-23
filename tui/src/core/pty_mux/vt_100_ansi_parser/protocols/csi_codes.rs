@@ -518,7 +518,7 @@ impl MovementCount {
     /// # Returns
     /// [`Length`] type for type-safe usage with the bounds checking system.
     #[must_use]
-    pub fn parse_as_length(params: &vte::Params) -> Length {
+    pub fn parse_as_length_non_zero(params: &vte::Params) -> Length {
         let count = params.extract_nth_non_zero(0);
         len(count)
     }
@@ -530,19 +530,19 @@ impl MovementCount {
     /// # Returns
     /// [`RowHeight`] type for type-safe usage with the bounds checking system.
     #[must_use]
-    pub fn parse_as_row_height(params: &vte::Params) -> RowHeight {
+    pub fn parse_as_row_height_non_zero(params: &vte::Params) -> RowHeight {
         let count = params.extract_nth_non_zero(0);
         height(count)
     }
 
-    /// Parse VT100 movement parameters as a `[ColWidth]` for horizontal operations.
+    /// Parse VT100 movement parameters as a [`ColWidth`] for horizontal operations.
     ///
     /// VT100 specification: missing parameters or zero parameters default to 1.
     ///
     /// # Returns
     /// [`ColWidth`] type for type-safe usage with the bounds checking system.
     #[must_use]
-    pub fn parse_as_col_width(params: &vte::Params) -> ColWidth {
+    pub fn parse_as_col_width_non_zero(params: &vte::Params) -> ColWidth {
         let count = params.extract_nth_non_zero(0);
         width(count)
     }
@@ -576,7 +576,7 @@ impl AbsolutePosition {
     /// # Returns
     /// [`RowIndex`] with 0-based position ready for use in buffer operations.
     #[must_use]
-    pub fn parse_as_row_index(params: &vte::Params) -> RowIndex {
+    pub fn parse_as_row_index_non_zero_to_index_type(params: &vte::Params) -> RowIndex {
         let position = params.extract_nth_non_zero(0); // Gets 1-based position
         row(position.saturating_sub(1)) // Convert to 0-based
     }
@@ -590,7 +590,7 @@ impl AbsolutePosition {
     /// # Returns
     /// [`ColIndex`] with 0-based position ready for use in buffer operations.
     #[must_use]
-    pub fn parse_as_col_index(params: &vte::Params) -> ColIndex {
+    pub fn parse_as_col_index_non_zero_to_index_type(params: &vte::Params) -> ColIndex {
         let position = params.extract_nth_non_zero(0); // Gets 1-based position
         col(position.saturating_sub(1)) // Convert to 0-based
     }
@@ -930,57 +930,57 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_parse_as_length_with_valid_value() {
+        fn test_parse_as_length_non_zero_with_valid_value() {
             process_csi_sequence_and_test("\x1b[5A", |params| {
-                let result = MovementCount::parse_as_length(params);
+                let result = MovementCount::parse_as_length_non_zero(params);
                 assert_eq!(result.as_usize(), 5);
             });
         }
 
         #[test]
-        fn test_parse_as_length_with_missing_params() {
+        fn test_parse_as_length_non_zero_with_missing_params() {
             process_csi_sequence_and_test("\x1b[A", |params| {
-                let result = MovementCount::parse_as_length(params);
+                let result = MovementCount::parse_as_length_non_zero(params);
                 assert_eq!(result.as_usize(), 1); // Should default to 1
             });
         }
 
         #[test]
-        fn test_parse_as_length_with_zero_param() {
+        fn test_parse_as_length_non_zero_with_zero_param() {
             process_csi_sequence_and_test("\x1b[0A", |params| {
-                let result = MovementCount::parse_as_length(params);
+                let result = MovementCount::parse_as_length_non_zero(params);
                 assert_eq!(result.as_usize(), 1); // Zero should become 1
             });
         }
 
         #[test]
-        fn test_parse_as_row_height_with_valid_value() {
+        fn test_parse_as_row_height_non_zero_with_valid_value() {
             process_csi_sequence_and_test("\x1b[10A", |params| {
-                let result = MovementCount::parse_as_row_height(params);
+                let result = MovementCount::parse_as_row_height_non_zero(params);
                 assert_eq!(result.as_u16(), 10);
             });
         }
 
         #[test]
-        fn test_parse_as_row_height_with_missing_params() {
+        fn test_parse_as_row_height_non_zero_with_missing_params() {
             process_csi_sequence_and_test("\x1b[A", |params| {
-                let result = MovementCount::parse_as_row_height(params);
+                let result = MovementCount::parse_as_row_height_non_zero(params);
                 assert_eq!(result.as_u16(), 1); // Should default to 1
             });
         }
 
         #[test]
-        fn test_parse_as_col_width_with_valid_value() {
+        fn test_parse_as_col_width_non_zero_with_valid_value() {
             process_csi_sequence_and_test("\x1b[25C", |params| {
-                let result = MovementCount::parse_as_col_width(params);
+                let result = MovementCount::parse_as_col_width_non_zero(params);
                 assert_eq!(result.as_u16(), 25);
             });
         }
 
         #[test]
-        fn test_parse_as_col_width_with_missing_params() {
+        fn test_parse_as_col_width_non_zero_with_missing_params() {
             process_csi_sequence_and_test("\x1b[C", |params| {
-                let result = MovementCount::parse_as_col_width(params);
+                let result = MovementCount::parse_as_col_width_non_zero(params);
                 assert_eq!(result.as_u16(), 1); // Should default to 1
             });
         }
@@ -1014,67 +1014,67 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_parse_as_row_index_with_valid_value() {
+        fn test_parse_as_row_index_non_zero_to_index_type_with_valid_value() {
             process_csi_sequence_and_test("\x1b[5d", |params| {
                 // VPA command
-                let result = AbsolutePosition::parse_as_row_index(params);
+                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 4); // Should be 0-based (5-1=4)
             });
         }
 
         #[test]
-        fn test_parse_as_row_index_with_missing_params() {
+        fn test_parse_as_row_index_non_zero_to_index_type_with_missing_params() {
             process_csi_sequence_and_test("\x1b[d", |params| {
-                let result = AbsolutePosition::parse_as_row_index(params);
+                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Missing param defaults to 1, then 1-1=0
             });
         }
 
         #[test]
-        fn test_parse_as_row_index_with_zero() {
+        fn test_parse_as_row_index_non_zero_to_index_type_with_zero() {
             process_csi_sequence_and_test("\x1b[0d", |params| {
-                let result = AbsolutePosition::parse_as_row_index(params);
+                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Zero becomes 1, then 1-1=0
             });
         }
 
         #[test]
-        fn test_parse_as_row_index_with_one() {
+        fn test_parse_as_row_index_non_zero_to_index_type_with_one() {
             process_csi_sequence_and_test("\x1b[1d", |params| {
-                let result = AbsolutePosition::parse_as_row_index(params);
+                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Should be 0-based (1-1=0)
             });
         }
 
         #[test]
-        fn test_parse_as_col_index_with_valid_value() {
+        fn test_parse_as_col_index_non_zero_to_index_type_with_valid_value() {
             process_csi_sequence_and_test("\x1b[10G", |params| {
                 // CHA command
-                let result = AbsolutePosition::parse_as_col_index(params);
+                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 9); // Should be 0-based (10-1=9)
             });
         }
 
         #[test]
-        fn test_parse_as_col_index_with_missing_params() {
+        fn test_parse_as_col_index_non_zero_to_index_type_with_missing_params() {
             process_csi_sequence_and_test("\x1b[G", |params| {
-                let result = AbsolutePosition::parse_as_col_index(params);
+                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Missing param defaults to 1, then 1-1=0
             });
         }
 
         #[test]
-        fn test_parse_as_col_index_with_zero() {
+        fn test_parse_as_col_index_non_zero_to_index_type_with_zero() {
             process_csi_sequence_and_test("\x1b[0G", |params| {
-                let result = AbsolutePosition::parse_as_col_index(params);
+                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Zero becomes 1, then 1-1=0
             });
         }
 
         #[test]
-        fn test_parse_as_col_index_large_value() {
+        fn test_parse_as_col_index_non_zero_to_index_type_large_value() {
             process_csi_sequence_and_test("\x1b[100G", |params| {
-                let result = AbsolutePosition::parse_as_col_index(params);
+                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 99); // Should be 0-based (100-1=99)
             });
         }

@@ -58,7 +58,7 @@ impl OffscreenBuffer {
     /// Result: Buffer scrolled up, cursor stays at scroll region bottom
     /// ```
     pub fn index_down(&mut self) {
-        let current_row = /* 0-based */ self.cursor_pos.row_index;
+        let current_row = self.cursor_pos.row_index;
 
         // Get bottom boundary of scroll region using helper method.
         let scroll_bottom_boundary = self.get_scroll_bottom_boundary();
@@ -107,7 +107,7 @@ impl OffscreenBuffer {
     /// Result: Buffer scrolled down, cursor stays at scroll region top
     /// ```
     pub fn reverse_index_up(&mut self) {
-        let current_row = /* 0-based */ self.cursor_pos.row_index;
+        let current_row = self.cursor_pos.row_index;
 
         // Get top boundary of scroll region using helper method.
         let scroll_top_boundary = self.get_scroll_top_boundary();

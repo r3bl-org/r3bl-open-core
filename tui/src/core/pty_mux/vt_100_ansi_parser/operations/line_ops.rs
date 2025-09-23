@@ -61,8 +61,8 @@ use crate::{RowIndex, len};
 ///
 /// [`OffscreenBuffer::shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
-    let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;
+    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let current_row = performer.ofs_buf.cursor_pos.row_index;
 
     for _ in 0..how_many.as_u16() {
         insert_line_at(performer, current_row);
@@ -77,8 +77,8 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// [`OffscreenBuffer::shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
-    let current_row = /* 0-based */ performer.ofs_buf.cursor_pos.row_index;
+    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let current_row = performer.ofs_buf.cursor_pos.row_index;
 
     for _ in 0..how_many.as_u16() {
         delete_line_at(performer, current_row);
@@ -88,10 +88,7 @@ pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// Insert a single blank line at the specified row.
 /// Lines below shift down within the scroll region.
 /// The bottom line of the scroll region is lost.
-fn insert_line_at(
-    performer: &mut AnsiToOfsBufPerformer,
-    row_index: /* 0-based */ RowIndex,
-) {
+fn insert_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
     // Get scroll region boundaries using helper methods.
     let scroll_top = performer.ofs_buf.get_scroll_top_boundary();
     let scroll_bottom = performer.ofs_buf.get_scroll_bottom_boundary();
@@ -118,10 +115,7 @@ fn insert_line_at(
 /// Delete a single line at the specified row.
 /// Lines below shift up within the scroll region.
 /// A blank line is added at the bottom of the scroll region.
-fn delete_line_at(
-    performer: &mut AnsiToOfsBufPerformer,
-    row_index: /* 0-based */ RowIndex,
-) {
+fn delete_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
     // Get scroll region boundaries using helper methods.
     let scroll_top = performer.ofs_buf.get_scroll_top_boundary();
     let scroll_bottom = performer.ofs_buf.get_scroll_bottom_boundary();

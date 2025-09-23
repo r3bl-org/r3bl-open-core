@@ -89,13 +89,13 @@ pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
 /// Handle SU (Scroll Up) - scroll display up by n lines.
 /// See [`crate::OffscreenBuffer::scroll_up`] for detailed behavior and examples.
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
+    let how_many = MovementCount::parse_as_row_height_non_zero(params);
     performer.ofs_buf.scroll_up(how_many);
 }
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
 /// See [`crate::OffscreenBuffer::scroll_down`] for detailed behavior and examples.
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = /* 1-based */ MovementCount::parse_as_row_height(params);
+    let how_many = MovementCount::parse_as_row_height_non_zero(params);
     performer.ofs_buf.scroll_down(how_many);
 }
