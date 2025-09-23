@@ -10,10 +10,9 @@
 use std::cmp::Ordering;
 
 use super::{SelectMode, caret_mut};
-use crate::{CaretDirection,
-            CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, LengthMarker,
-            RowHeight, RowIndex, ScrOfs, UnitCompare, ch, col, height, row, width,
-            core::units::bounds_check::IndexMarker};
+use crate::{CaretDirection, CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer,
+            LengthMarker, RowHeight, RowIndex, ScrOfs, UnitCompare, ch, col,
+            core::units::bounds_check::IndexMarker, height, row, width};
 
 /// # Scrolling not active
 ///
@@ -197,10 +196,12 @@ pub fn dec_caret_col_by(
         (HorizScr::Active, VpHorizLoc::NotAtStart) => {
             // Define the "safe zone" - positions where the caret can move left
             // without requiring viewport scroll adjustment.
-            // Safe zone: [col_amt, ∞) - if caret is at or beyond col_amt, no scroll needed
+            // Safe zone: [col_amt, ∞) - if caret is at or beyond col_amt, no scroll
+            // needed.
             let safe_zone_start = col_amt.convert_to_index();
 
-            // Check if caret would underflow the safe zone (go below the minimum safe position)
+            // Check if caret would underflow the safe zone (go below the minimum safe
+            // position).
             let need_to_scroll_left = caret_raw.col_index.underflows(safe_zone_start);
 
             // Move caret left by col_amt.
@@ -208,8 +209,9 @@ pub fn dec_caret_col_by(
 
             // Adjust scroll_offset if needed.
             if need_to_scroll_left {
-                // Calculate how much to scroll left to keep caret visible
-                // Original caret position was less than col_amt, so we scroll by the difference
+                // Calculate how much to scroll left to keep caret visible.
+                // Original caret position was less than col_amt, so we scroll by the
+                // difference.
                 let scroll_adjustment = safe_zone_start - caret_raw.col_index;
                 scr_ofs.col_index -= scroll_adjustment;
             }

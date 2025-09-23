@@ -224,7 +224,7 @@ mod tests {
     use std::hash::{DefaultHasher, Hasher};
 
     use super::*;
-    use crate::{BoundsCheck, ArrayAccessBoundsStatus, len};
+    use crate::{ArrayAccessBoundsStatus, BoundsCheck, len};
 
     #[test]
     fn test_index_new() {
@@ -506,12 +506,18 @@ mod tests {
         // Test index within bounds.
         let index = idx(5);
         let length = len(10);
-        assert_eq!(index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Within);
+        assert_eq!(
+            index.check_array_access_bounds(length),
+            ArrayAccessBoundsStatus::Within
+        );
 
         // Test index at boundary.
         let index = idx(9);
         let length = len(10);
-        assert_eq!(index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Within);
+        assert_eq!(
+            index.check_array_access_bounds(length),
+            ArrayAccessBoundsStatus::Within
+        );
 
         // Test index overflowing.
         let index = idx(10);
@@ -538,12 +544,18 @@ mod tests {
         // Test with zero length.
         let index = idx(0);
         let length = len(0);
-        assert_eq!(index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Within);
+        assert_eq!(
+            index.check_array_access_bounds(length),
+            ArrayAccessBoundsStatus::Within
+        );
 
         // Test with zero index against zero length.
         let index = idx(0);
         let length = len(0);
-        assert_eq!(index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Within);
+        assert_eq!(
+            index.check_array_access_bounds(length),
+            ArrayAccessBoundsStatus::Within
+        );
 
         // Test with non-zero index against zero length.
         let index = idx(1);
@@ -564,7 +576,10 @@ mod tests {
         // Test with maximum index against maximum length.
         let index = idx(u16::MAX - 1);
         let length = len(u16::MAX);
-        assert_eq!(index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Within);
+        assert_eq!(
+            index.check_array_access_bounds(length),
+            ArrayAccessBoundsStatus::Within
+        );
     }
 
     #[test]
@@ -574,7 +589,10 @@ mod tests {
         let length = len(10);
 
         // Check if index is within bounds.
-        assert_eq!(index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Within);
+        assert_eq!(
+            index.check_array_access_bounds(length),
+            ArrayAccessBoundsStatus::Within
+        );
 
         // Convert index to length.
         let new_length = index.convert_to_length();

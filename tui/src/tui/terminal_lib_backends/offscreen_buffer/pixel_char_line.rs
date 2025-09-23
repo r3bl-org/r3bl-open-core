@@ -2,7 +2,8 @@
 
 //! Implementation of [`PixelCharLine`] struct and its methods.
 //!
-//! [`PixelCharLine`] represents a single row of pixels/characters in the offscreen buffer.
+//! [`PixelCharLine`] represents a single row of pixels/characters in the offscreen
+//! buffer.
 //!
 //! [`PixelCharLine`]: crate::PixelCharLine
 //! Each line can contain various types of pixel characters including plain text,

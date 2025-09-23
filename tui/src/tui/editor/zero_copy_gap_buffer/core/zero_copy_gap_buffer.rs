@@ -10,8 +10,7 @@ use std::borrow::Cow;
 
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
 use crate::{ColIndex, GraphemeDoc, GraphemeDocMut, Length, RowIndex, SegIndex,
-            SegmentArray, byte_index, len, row,
-            core::units::bounds_check::IndexMarker};
+            SegmentArray, byte_index, core::units::bounds_check::IndexMarker, len, row};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]

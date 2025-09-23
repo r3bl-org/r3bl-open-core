@@ -3,7 +3,8 @@
 //! End-of-line cursor positioning utilities for text editing and range operations.
 //!
 //! This module provides unified traits for handling cursor positioning semantics where
-//! cursors can be placed at the end-of-line position (index == length). This is essential for:
+//! cursors can be placed at the end-of-line position (index == length). This is essential
+//! for:
 //! - Cursor positioning after the last character in text editing
 //! - Range operations with exclusive end semantics (e.g., 0..10 for buffer length 10)
 //! - Text editor interactions where cursors naturally sit after content
@@ -72,7 +73,8 @@ pub trait EOLCursorPosition: LengthMarker {
     /// Check if a cursor position is valid for this line/buffer.
     ///
     /// Returns true for positions in the range [0, length] (inclusive of EOL position).
-    /// This allows cursors to be positioned anywhere from the start to after the last character.
+    /// This allows cursors to be positioned anywhere from the start to after the last
+    /// character.
     fn is_valid_cursor_position(&self, pos: Self::IndexType) -> bool;
 
     /// Clamp a cursor position to valid bounds for this line/buffer.

@@ -9,8 +9,9 @@
 //! [`IndexMarker`] and any length type implementing [`LengthMarker`], ensuring
 //! type safety and eliminating code duplication.
 //!
-//! See the [`bounds_check` module documentation](crate::core::units::bounds_check)
-//! for details on the different bounds checking paradigms.
+//! See the [module documentation] for details on the different bounds checking paradigms.
+//!
+//! [module documentation]: mod@crate::core::units::bounds_check
 
 use super::{length_and_index_markers::{IndexMarker, LengthMarker},
             result_enums::{ArrayAccessBoundsStatus, CursorPositionBoundsStatus}};
@@ -18,8 +19,9 @@ use super::{length_and_index_markers::{IndexMarker, LengthMarker},
 /// Core trait for index bounds validation in TUI applications.
 ///
 /// Provides both array-style bounds checking and cursor position checking.
-/// See the [`bounds_check` module documentation](crate::core::units::bounds_check)
-/// for detailed explanations of both paradigms.
+/// See the [module documentation] for detailed explanations of both paradigms.
+///
+/// [module documentation]: mod@crate::core::units::bounds_check
 ///
 /// This trait is generic over length types that implement `LengthMarker`,
 /// and can only be implemented by index types that implement `IndexMarker`.
@@ -41,8 +43,9 @@ where
 {
     /// Performs comprehensive bounds checking.
     ///
-    /// See the [`bounds_check` module documentation](crate::core::units::bounds_check)
-    /// for detailed explanation of bounds checking.
+    /// See the [module documentation] for detailed explanation of bounds checking.
+    ///
+    /// [module documentation]: mod@crate::core::units::bounds_check
     ///
     /// ```text
     /// Array-style bounds checking:
@@ -65,10 +68,12 @@ where
     /// - [`ArrayAccessBoundsStatus::Overflowed`] if the index would exceed array bounds.
     ///
     /// # See Also
-    /// For simple boolean overflow checking, use [`crate::IndexMarker::overflows()`]
+    /// For simple boolean overflow checking, use [`overflows`]
     /// which returns a `bool` instead of an enum. This method is designed for cases
     /// where you need to pattern match on the result or explicitly handle the status
     /// information.
+    ///
+    /// [`overflows`]: crate::IndexMarker::overflows
     ///
     /// ```rust
     /// use r3bl_tui::{BoundsCheck, ArrayAccessBoundsStatus, IndexMarker, idx, len};

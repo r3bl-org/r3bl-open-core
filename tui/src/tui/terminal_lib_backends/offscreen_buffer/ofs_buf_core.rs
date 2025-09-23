@@ -8,8 +8,10 @@ use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TuiStyle,
 
 /// Character set modes for terminal emulation.
 ///
-/// Used by [`crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer`] to handle
+/// Used by [`AnsiToOfsBufPerformer`] to handle
 /// ESC ( sequences that switch between ASCII and DEC line-drawing graphics.
+///
+/// [`AnsiToOfsBufPerformer`]: crate::core::pty_mux::vt_100_ansi_parser::AnsiToOfsBufPerformer
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CharacterSet {
     /// Normal ASCII character set (ESC ( B).

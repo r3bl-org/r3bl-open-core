@@ -3,18 +3,23 @@
 //! Status enums for bounds checking operations.
 //!
 //! This module provides the result types for bounds checking operations:
-//! - [`ArrayAccessBoundsStatus`] - Results for array access bounds checking (underflow, within, overflow)
+//! - [`ArrayAccessBoundsStatus`] - Results for array access bounds checking (underflow,
+//!   within, overflow)
 //! - [`CursorPositionBoundsStatus`] - Results for cursor position bounds checking
 //!
-//! See the [`bounds_check` module documentation](crate::core::units::bounds_check) for
-//! details on the different bounds checking paradigms.
+//! See the [module documentation] for details on the different bounds checking paradigms.
+//!
+//! [module documentation]: mod@crate::core::units::bounds_check
 
 /// Result of array access bounds checking operations.
 ///
-/// Used with [`crate::BoundsCheck::check_array_access_bounds`] to determine if an index is
-/// within valid bounds for accessing array elements, has underflowed (gone below minimum),
-/// or overflowed (exceeded maximum). See the [module documentation](crate::core::units::bounds_check)
-/// for details on the bounds checking paradigms.
+/// Used with [`check_array_access_bounds`] to determine if an index
+/// is within valid bounds for accessing array elements, has underflowed (gone below
+/// minimum), or overflowed (exceeded maximum). See the [module documentation] for details on the bounds checking
+/// paradigms.
+///
+/// [`check_array_access_bounds`]: crate::BoundsCheck::check_array_access_bounds
+/// [module documentation]: mod@crate::core::units::bounds_check
 ///
 /// # Examples
 ///
@@ -41,15 +46,17 @@ pub enum ArrayAccessBoundsStatus {
     Overflowed,
 }
 
-
 /// Result of cursor position bounds checking operations.
 ///
-/// Used with [`crate::BoundsCheck::check_cursor_position_bounds`] to determine the relationship
-/// between an index and content boundaries. Essential for text editing and cursor
-/// positioning where distinguishing between "at end" and "beyond" is crucial.
+/// Used with [`check_cursor_position_bounds`] to determine the
+/// relationship between an index and content boundaries. Essential for text editing and
+/// cursor positioning where distinguishing between "at end" and "beyond" is crucial.
 ///
-/// See the [module documentation](crate::core::units::bounds_check) for details on
+/// See the [module documentation] for details on
 /// cursor position checking vs array-style bounds checking.
+///
+/// [`check_cursor_position_bounds`]: crate::BoundsCheck::check_cursor_position_bounds
+/// [module documentation]: mod@crate::core::units::bounds_check
 ///
 /// # Examples
 ///
@@ -90,12 +97,30 @@ mod tests {
 
         #[test]
         fn test_array_access_bounds_status_equality() {
-            assert_eq!(ArrayAccessBoundsStatus::Within, ArrayAccessBoundsStatus::Within);
-            assert_eq!(ArrayAccessBoundsStatus::Overflowed, ArrayAccessBoundsStatus::Overflowed);
-            assert_eq!(ArrayAccessBoundsStatus::Underflowed, ArrayAccessBoundsStatus::Underflowed);
-            assert_ne!(ArrayAccessBoundsStatus::Within, ArrayAccessBoundsStatus::Overflowed);
-            assert_ne!(ArrayAccessBoundsStatus::Within, ArrayAccessBoundsStatus::Underflowed);
-            assert_ne!(ArrayAccessBoundsStatus::Overflowed, ArrayAccessBoundsStatus::Underflowed);
+            assert_eq!(
+                ArrayAccessBoundsStatus::Within,
+                ArrayAccessBoundsStatus::Within
+            );
+            assert_eq!(
+                ArrayAccessBoundsStatus::Overflowed,
+                ArrayAccessBoundsStatus::Overflowed
+            );
+            assert_eq!(
+                ArrayAccessBoundsStatus::Underflowed,
+                ArrayAccessBoundsStatus::Underflowed
+            );
+            assert_ne!(
+                ArrayAccessBoundsStatus::Within,
+                ArrayAccessBoundsStatus::Overflowed
+            );
+            assert_ne!(
+                ArrayAccessBoundsStatus::Within,
+                ArrayAccessBoundsStatus::Underflowed
+            );
+            assert_ne!(
+                ArrayAccessBoundsStatus::Overflowed,
+                ArrayAccessBoundsStatus::Underflowed
+            );
         }
 
         #[test]
@@ -116,8 +141,14 @@ mod tests {
         #[test]
         fn test_array_access_bounds_status_debug() {
             assert_eq!(format!("{:?}", ArrayAccessBoundsStatus::Within), "Within");
-            assert_eq!(format!("{:?}", ArrayAccessBoundsStatus::Overflowed), "Overflowed");
-            assert_eq!(format!("{:?}", ArrayAccessBoundsStatus::Underflowed), "Underflowed");
+            assert_eq!(
+                format!("{:?}", ArrayAccessBoundsStatus::Overflowed),
+                "Overflowed"
+            );
+            assert_eq!(
+                format!("{:?}", ArrayAccessBoundsStatus::Underflowed),
+                "Underflowed"
+            );
         }
     }
 
@@ -130,15 +161,30 @@ mod tests {
                 CursorPositionBoundsStatus::AtStart,
                 CursorPositionBoundsStatus::AtStart
             );
-            assert_eq!(CursorPositionBoundsStatus::Within, CursorPositionBoundsStatus::Within);
-            assert_eq!(CursorPositionBoundsStatus::AtEnd, CursorPositionBoundsStatus::AtEnd);
-            assert_eq!(CursorPositionBoundsStatus::Beyond, CursorPositionBoundsStatus::Beyond);
+            assert_eq!(
+                CursorPositionBoundsStatus::Within,
+                CursorPositionBoundsStatus::Within
+            );
+            assert_eq!(
+                CursorPositionBoundsStatus::AtEnd,
+                CursorPositionBoundsStatus::AtEnd
+            );
+            assert_eq!(
+                CursorPositionBoundsStatus::Beyond,
+                CursorPositionBoundsStatus::Beyond
+            );
             assert_ne!(
                 CursorPositionBoundsStatus::AtStart,
                 CursorPositionBoundsStatus::Within
             );
-            assert_ne!(CursorPositionBoundsStatus::Within, CursorPositionBoundsStatus::AtEnd);
-            assert_ne!(CursorPositionBoundsStatus::AtEnd, CursorPositionBoundsStatus::Beyond);
+            assert_ne!(
+                CursorPositionBoundsStatus::Within,
+                CursorPositionBoundsStatus::AtEnd
+            );
+            assert_ne!(
+                CursorPositionBoundsStatus::AtEnd,
+                CursorPositionBoundsStatus::Beyond
+            );
             assert_ne!(
                 CursorPositionBoundsStatus::AtStart,
                 CursorPositionBoundsStatus::Beyond
@@ -166,10 +212,19 @@ mod tests {
 
         #[test]
         fn test_cursor_position_bounds_status_debug() {
-            assert_eq!(format!("{:?}", CursorPositionBoundsStatus::AtStart), "AtStart");
-            assert_eq!(format!("{:?}", CursorPositionBoundsStatus::Within), "Within");
+            assert_eq!(
+                format!("{:?}", CursorPositionBoundsStatus::AtStart),
+                "AtStart"
+            );
+            assert_eq!(
+                format!("{:?}", CursorPositionBoundsStatus::Within),
+                "Within"
+            );
             assert_eq!(format!("{:?}", CursorPositionBoundsStatus::AtEnd), "AtEnd");
-            assert_eq!(format!("{:?}", CursorPositionBoundsStatus::Beyond), "Beyond");
+            assert_eq!(
+                format!("{:?}", CursorPositionBoundsStatus::Beyond),
+                "Beyond"
+            );
         }
 
         #[test]

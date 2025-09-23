@@ -10,8 +10,9 @@
 //! These traits work together to provide type safety and prevent incorrect
 //! comparisons between incompatible types (e.g., row vs column indices).
 //!
-//! See the [`bounds_check` module documentation](crate::core::units::bounds_check)
-//! for details on the type system and safety guarantees.
+//! See the [module documentation] for details on the type system and safety guarantees.
+//!
+//! [module documentation]: mod@crate::core::units::bounds_check
 
 use std::{cmp::min, ops::Sub};
 
@@ -44,9 +45,11 @@ pub trait UnitCompare: From<usize> + From<u16> {
 /// Each index type has a corresponding length type via [`LengthType`](Self::LengthType),
 /// enabling safe bounds checking operations in both directions.
 ///
-/// See the [module documentation](crate::core::units::bounds_check) "Type System"
+/// See the [module documentation] "Type System"
 /// section for details on how index types relate to length types and the type safety
 /// guarantees.
+///
+/// [module documentation]: mod@crate::core::units::bounds_check
 pub trait IndexMarker: UnitCompare {
     /// The corresponding length type for this index type.
     ///
@@ -103,9 +106,12 @@ pub trait IndexMarker: UnitCompare {
     ///
     /// # See Also
     /// For detailed status information with pattern matching capabilities, use
-    /// [`crate::BoundsCheck::check_array_access_bounds()`] which returns a
-    /// [`crate::ArrayAccessBoundsStatus`] enum. This method is a convenience wrapper
+    /// [`check_array_access_bounds`] which returns a
+    /// [`ArrayAccessBoundsStatus`] enum. This method is a convenience wrapper
     /// designed for simple boolean conditions.
+    ///
+    /// [`check_array_access_bounds`]: crate::BoundsCheck::check_array_access_bounds
+    /// [`ArrayAccessBoundsStatus`]: crate::ArrayAccessBoundsStatus
     ///
     /// Both methods are semantically equivalent:
     /// - `index.overflows(length)` returns `bool`
@@ -190,9 +196,13 @@ pub trait IndexMarker: UnitCompare {
     /// valid positions, and overflow in a single operation.
     ///
     /// # Returns
-    /// - [`crate::ArrayAccessBoundsStatus::Underflowed`] if index < min
-    /// - [`crate::ArrayAccessBoundsStatus::Within`] if min <= index < max_length
-    /// - [`crate::ArrayAccessBoundsStatus::Overflowed`] if index >= max_length
+    /// - [`ArrayAccessBoundsStatus::Underflowed`] if index < min
+    /// - [`ArrayAccessBoundsStatus::Within`] if min <= index < max_length
+    /// - [`ArrayAccessBoundsStatus::Overflowed`] if index >= max_length
+    ///
+    /// [`ArrayAccessBoundsStatus::Underflowed`]: crate::ArrayAccessBoundsStatus::Underflowed
+    /// [`ArrayAccessBoundsStatus::Within`]: crate::ArrayAccessBoundsStatus::Within
+    /// [`ArrayAccessBoundsStatus::Overflowed`]: crate::ArrayAccessBoundsStatus::Overflowed
     ///
     /// # Examples
     /// ```

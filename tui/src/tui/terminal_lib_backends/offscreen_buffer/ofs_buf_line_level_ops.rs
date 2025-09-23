@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{OffscreenBuffer, PixelCharLine};
-use crate::RowIndex;
+use crate::{RowIndex, row};
 
 /// Line-level operations.
 impl OffscreenBuffer {
@@ -16,33 +16,44 @@ impl OffscreenBuffer {
     /// Returns true if the operation was successful.
     pub fn set_line(&mut self, row: RowIndex, line: PixelCharLine) -> bool {
         let row_idx = row.as_usize();
-        if let Some(target_line) = self.buffer.get_mut(row_idx) {
-            *target_line = line;
-            true
-        } else {
-            false
-        }
+        let Some(target_line) = self.buffer.get_mut(row_idx) else {
+            return false;
+        };
+        *target_line = line;
+        true
     }
 
     /// Swap two lines in the buffer.
     /// Returns true if both rows are valid and the swap was successful.
     pub fn swap_lines(&mut self, row_1: RowIndex, row_2: RowIndex) -> bool {
+        // Use type-safe validation for both rows.
+        let range_1 = row_1..row(row_1.as_usize() + 1);
+        let range_2 = row_2..row(row_2.as_usize() + 1);
+
+        // Validate both rows exist using lightweight validation-only methods.
+        if !self.is_row_range_valid(range_1) || !self.is_row_range_valid(range_2) {
+            return false;
+        }
+
+        // Safe to perform swap - both rows have been validated.
         let row_1_idx = row_1.as_usize();
         let row_2_idx = row_2.as_usize();
 
-        if row_1_idx < self.buffer.len() && row_2_idx < self.buffer.len() {
-            self.buffer.swap(row_1_idx, row_2_idx);
-            true
-        } else {
-            false
-        }
+        // Debug assertion to verify indices are still valid.
+        debug_assert!(
+            row_1_idx < self.buffer.len() && row_2_idx < self.buffer.len(),
+            "Row indices became invalid between validation and swap: {row_1:?}, {row_2:?}"
+        );
+
+        self.buffer.swap(row_1_idx, row_2_idx);
+        true
     }
 }
 
 #[cfg(test)]
 mod tests_line_level_ops {
     use super::*;
-    use crate::{PixelChar, TuiStyle, col, height, len, row, width};
+    use crate::{PixelChar, TuiStyle, col, height, len, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(4) + height(5);

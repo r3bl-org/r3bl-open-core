@@ -12,15 +12,20 @@
 //! The unifying traits in this module are designed to provide:
 //!
 //! - **Future extensibility**: If additional document storage types are added beyond
-//!   [`crate::ZeroCopyGapBuffer`], they can implement these traits for seamless integration.
+//!   [`ZeroCopyGapBuffer`], they can implement these traits for seamless
+//!   integration.
+//!
+//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 //!
 //! - **Generic document operations**: New code can work with document-like structures
 //!   generically through the [`GraphemeDoc`] and [`GraphemeDocMut`] traits, without being
 //!   tied to specific implementations.
 //!
 //! - **Cross-implementation interoperability**: Enables potential interoperability
-//!   between [`crate::ZeroCopyGapBuffer`] and [`Vec<GCStringOwned>`] if needed, allowing
+//!   between [`ZeroCopyGapBuffer`] and [`Vec<GCStringOwned>`] if needed, allowing
 //!   code to work with either storage format.
+//!
+//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 //!
 //! ## Core Traits
 //!
@@ -30,10 +35,12 @@
 //!
 //! ## Implementation Status
 //!
-//! Currently, the editor codebase primarily uses [`crate::ZeroCopyGapBuffer`] as a
+//! Currently, the editor codebase primarily uses [`ZeroCopyGapBuffer`] as a
 //! concrete type for performance and type safety reasons. These traits provide an
 //! abstraction layer for future flexibility without requiring immediate migration of
 //! existing code.
+//!
+//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
 
 // Attach
 pub mod grapheme_doc;

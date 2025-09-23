@@ -3,8 +3,7 @@
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelChar};
-use crate::{ArrayAccessBoundsStatus, BoundsCheck, ColIndex, LengthMarker, Pos, RowIndex,
-            core::units::bounds_check::RangeBoundary, width};
+use crate::{ColIndex, LengthMarker, Pos, RowIndex, row};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
@@ -27,26 +26,28 @@ impl OffscreenBuffer {
     /// Set character at position. Automatically handles cache invalidation.
     /// Returns true if the position was valid and the character was set.
     pub fn set_char(&mut self, pos: Pos, char: PixelChar) -> bool {
-        // Use type-safe bounds checking before converting to usize
-        let buffer_height = crate::height(self.buffer.len());
-        if buffer_height.is_overflowed_by(pos) {
+        // Use type-safe row validation via validation helpers
+        let row_range = pos.row_index..row(pos.row_index.as_usize() + 1);
+        let Some((_, _, lines)) = self.validate_row_range_mut(row_range) else {
+            return false;
+        };
+
+        // Validate column within the selected line
+        let col_idx = pos.col_index.as_usize();
+        if col_idx >= lines[0].len() {
             return false;
         }
 
-        // Convert to usize only at Vec access boundary
-        let row_idx = pos.row_index.as_usize();
-        let col_idx = pos.col_index.as_usize();
+        // Safe assignment - both row and column have been validated.
+        lines[0][col_idx] = char;
 
-        if let Some(target_char) = self
-            .buffer
-            .get_mut(row_idx)
-            .and_then(|row| row.get_mut(col_idx))
-        {
-            *target_char = char;
-            true
-        } else {
-            false
-        }
+        // Debug assertion to verify the character was actually set.
+        debug_assert_eq!(
+            lines[0][col_idx], char,
+            "Character assignment failed at position {pos:?}"
+        );
+
+        true
     }
 
     /// Fill a range of characters in a line with the specified character.
@@ -58,14 +59,13 @@ impl OffscreenBuffer {
         char: PixelChar,
     ) -> bool {
         // Use type-safe range validation for both row and column bounds
-        if let Some((start_col, end_col, line)) =
+        let Some((start_col, end_col, line)) =
             self.validate_col_range_mut(row, col_range)
-        {
-            line[start_col..end_col].fill(char);
-            true
-        } else {
-            false
-        }
+        else {
+            return false;
+        };
+        line[start_col..end_col].fill(char);
+        true
     }
 
     /// Copy characters within a line from source range to destination position.
@@ -76,43 +76,28 @@ impl OffscreenBuffer {
         source_range: Range<ColIndex>,
         dest_start: ColIndex,
     ) -> bool {
-        // Use type-safe row bounds checking first
-        let buffer_height = crate::height(self.buffer.len());
-        if row.check_array_access_bounds(buffer_height) != ArrayAccessBoundsStatus::Within
-        {
+        // Use the same validation pattern as fill_char_range
+        let Some((source_start, source_end, line)) =
+            self.validate_col_range_mut(row, source_range)
+        else {
+            return false;
+        };
+
+        // Validate destination position is within line bounds
+        if dest_start.as_usize() >= line.len() {
             return false;
         }
 
-        let row_idx = row.as_usize();
-        if let Some(line) = self.buffer.get_mut(row_idx) {
-            // Validate source range using our type-safe validation
-            if !source_range.is_valid(line.len()) {
-                return false;
-            }
-
-            // Validate destination position
-            if dest_start.check_array_access_bounds(width(line.len()))
-                != ArrayAccessBoundsStatus::Within
-            {
-                return false;
-            }
-
-            let source_start = source_range.start.as_usize();
-            let source_end = source_range.end.as_usize();
-            let dest = dest_start.as_usize();
-
-            line.copy_within(source_start..source_end, dest);
-            true
-        } else {
-            false
-        }
+        // Perform the copy operation
+        line.copy_within(source_start..source_end, dest_start.as_usize());
+        true
     }
 }
 
 #[cfg(test)]
 mod tests_char_ops {
     use super::*;
-    use crate::{TuiStyle, col, height, row};
+    use crate::{TuiStyle, col, height, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(5) + height(3);

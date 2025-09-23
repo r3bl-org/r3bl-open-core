@@ -3,9 +3,9 @@
 use std::cmp::{self, Ordering};
 
 use super::selection_list::RowLocationInSelectionList;
-use crate::{EOLCursorPosition, CaretLocationInRange, CaretMovementDirection,
-            CaretScrAdj, ChUnitPrimitiveType, ColIndex, DEBUG_TUI_COPY_PASTE,
-            DirectionChangeResult, EditorBuffer, RowIndex, SelectionRange, Size,
+use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
+            ChUnitPrimitiveType, ColIndex, DEBUG_TUI_COPY_PASTE, DirectionChangeResult,
+            EOLCursorPosition, EditorBuffer, RowIndex, SelectionRange, Size,
             caret_scr_adj, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
             fg_yellow, height, inline_string, row, underline, width};
 
@@ -270,8 +270,7 @@ pub fn handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document(
                         // For selection, go one col index past the end of the line,
                         // since selection range is not inclusive of the end index.
                         let line_info = line_with_info.info();
-                        let end_col_index =
-                            line_info.display_width.eol_cursor_position();
+                        let end_col_index = line_info.display_width.eol_cursor_position();
                         caret_scr_adj(end_col_index + row_index)
                     };
                     buffer_mut.inner.sel_list.insert(

@@ -55,23 +55,18 @@ impl OffscreenBuffer {
         // Validate margins against buffer height.
         let clamped_bottom = min(bottom_value, buffer_height);
 
-        if top_value < clamped_bottom && clamped_bottom <= buffer_height {
-            self.ansi_parser_support.scroll_region_top = Some(top);
-            self.ansi_parser_support.scroll_region_bottom = Some(
-                crate::core::pty_mux::vt_100_ansi_parser::term_units::term_row(
-                    clamped_bottom,
-                ),
-            );
-            true
-        } else {
+        if !(top_value < clamped_bottom && clamped_bottom <= buffer_height) {
             tracing::warn!(
                 "Invalid scroll margins: top={}, bottom={}, buffer_height={}",
                 top_value,
                 bottom_value,
                 buffer_height
             );
-            false
+            return false;
         }
+        self.ansi_parser_support.scroll_region_top = Some(top);
+        self.ansi_parser_support.scroll_region_bottom = Some(clamped_bottom.into());
+        true
     }
 }
 

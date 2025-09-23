@@ -30,8 +30,9 @@
 //! for operations that don't modify content (e.g., viewport resizing).
 
 use super::scroll_editor_content;
-use crate::{EOLCursorPosition, BoundsCheck, CaretRaw, ColWidth, CursorPositionBoundsStatus,
-            MemoizedMemorySize, ScrOfs, SelectionList, Size, ZeroCopyGapBuffer, width};
+use crate::{BoundsCheck, CaretRaw, ColWidth, CursorPositionBoundsStatus,
+            EOLCursorPosition, MemoizedMemorySize, ScrOfs, SelectionList, Size,
+            ZeroCopyGapBuffer, width};
 
 /// Mutable access to editor buffer fields using concrete `ZeroCopyGapBuffer` storage.
 #[derive(Debug)]

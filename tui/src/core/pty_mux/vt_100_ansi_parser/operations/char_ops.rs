@@ -61,7 +61,12 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 /// [`OffscreenBuffer::insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_length_non_zero(params);
-    performer.ofs_buf.insert_chars_at_cursor(how_many);
+    let success = performer.ofs_buf.insert_chars_at_cursor(how_many);
+    debug_assert!(
+        success,
+        "Failed to insert {:?} chars at cursor position {:?}",
+        how_many, performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
@@ -71,7 +76,12 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// [`OffscreenBuffer::delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_length_non_zero(params);
-    performer.ofs_buf.delete_chars_at_cursor(how_many);
+    let success = performer.ofs_buf.delete_chars_at_cursor(how_many);
+    debug_assert!(
+        success,
+        "Failed to delete {:?} chars at cursor position {:?}",
+        how_many, performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Handle ECH (Erase Character) - erase n characters at cursor position.

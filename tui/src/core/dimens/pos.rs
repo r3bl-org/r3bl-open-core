@@ -3,7 +3,7 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
-use crate::{EOLCursorPosition, ColIndex, ColWidth, IndexMarker, RowHeight, RowIndex,
+use crate::{ColIndex, ColWidth, EOLCursorPosition, IndexMarker, RowHeight, RowIndex,
             Size, UnitCompare, ch, col, row};
 
 // Type aliases for better code readability.
@@ -16,9 +16,10 @@ pub type Col = ColIndex;
 /// respectively. This ensures that it isn't possible to use a `col` when you intended to
 /// use a `row` and vice versa.
 ///
-/// Also [`crate::ScrOfs`] is a "newtype" built around `Pos`, since a scroll offset is
+/// Also [`ScrOfs`] is a "newtype" built around `Pos`, since a scroll offset is
 /// just a position after all, but semantically it is used for different reasons in the
 /// API. It is used to declare a different intention on how `Pos` is used.
+///
 ///
 /// Here is a visual representation of how position and sizing work for the layout
 /// engine.
@@ -40,8 +41,8 @@ pub type Col = ColIndex;
 /// # The many ways to create one
 ///
 /// This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
-/// allow for easy conversion between [`crate::ChUnit`] and [`RowIndex`]/[`ColIndex`].
-/// - You can use [`crate::pos()`] function and pass it a [`RowIndex`] and [`ColIndex`]
+/// allow for easy conversion between [`ChUnit`] and [`RowIndex`]/[`ColIndex`].
+/// - You can use [`pos()`] function and pass it a [`RowIndex`] and [`ColIndex`]
 ///   tuple, or pass a sequence of them with the [Add] `+` operator.
 /// - Just using the [Add] `+` operator:
 ///     - You can use [Add] to convert: [`RowIndex`] + [`ColIndex`], into: a `Pos`.
@@ -82,6 +83,10 @@ pub type Col = ColIndex;
 /// assert_eq!(*pos_diff.row_index, ch(2));
 /// assert_eq!(*pos_diff.col_index, ch(4));
 /// ```
+///
+/// [`ScrOfs`]: crate::ScrOfs
+/// [`ChUnit`]: crate::ChUnit
+/// [`pos()`]: crate::pos()
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Pos {
     /// Row index, 0-based.
@@ -417,7 +422,9 @@ mod api {
 
         /// Increment col index by `col_amt`, while making sure it will never exceed
         /// `max_col_amt`. This function is not concerned with scrolling or
-        /// [`crate::ScrOfs`].
+        /// [`ScrOfs`].
+        ///
+        /// [`ScrOfs`]: crate::ScrOfs
         ///
         /// Note that a caret is allowed to "go past" the end of the max index, so max
         /// index + 1 is a valid position.

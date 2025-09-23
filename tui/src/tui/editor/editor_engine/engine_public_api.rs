@@ -5,8 +5,8 @@
 //! API.
 use syntect::easy::HighlightLines;
 
-use crate::{EOLCursorPosition, ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE,
-            DEBUG_TUI_MOD, DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode,
+use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
+            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EOLCursorPosition, EditMode,
             EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine, HasFocus,
             InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp, RenderOps,
             RenderPipeline, RowHeight, RowIndex, ScrollOffsetColLocationInRange,

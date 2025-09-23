@@ -7,9 +7,9 @@ use crate::{BoundsCheck, CursorPositionBoundsStatus, UnitCompare};
 ///
 /// ## Why this exists separately from [`CursorPositionBoundsStatus`]
 ///
-/// [`CursorPositionBoundsStatus`] is designed for cursor/content positions where the index can
-/// be one position *after* the last element (for insertion). For example, in a string
-/// of length 5, position 5 is valid and means "after the last character".
+/// [`CursorPositionBoundsStatus`] is designed for cursor/content positions where the
+/// index can be one position *after* the last element (for insertion). For example, in a
+/// string of length 5, position 5 is valid and means "after the last character".
 ///
 /// Row positions have different semantics: you are ON a specific row, not between rows.
 /// Being on row 2 in a 3-row buffer means you're ON the last row, not after it.
@@ -81,8 +81,8 @@ pub fn locate_col(editor_buffer: &EditorBuffer) -> CursorPositionBoundsStatus {
 
 /// Locate the row position in the buffer.
 ///
-/// Returns [`RowContentPositionStatus`] instead of [`CursorPositionBoundsStatus`] because row
-/// positions have different semantics than cursor positions (see
+/// Returns [`RowContentPositionStatus`] instead of [`CursorPositionBoundsStatus`] because
+/// row positions have different semantics than cursor positions (see
 /// [`RowContentPositionStatus`] documentation).
 ///
 /// ```text

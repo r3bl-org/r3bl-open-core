@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{SelectMode, scroll_editor_content};
-use crate::{EOLCursorPosition, CaretDirection, ContainsWideSegments,
-            CursorPositionBoundsStatus, EditorArgsMut, EditorBuffer, EditorEngine,
+use crate::{CaretDirection, ContainsWideSegments, CursorPositionBoundsStatus,
+            EOLCursorPosition, EditorArgsMut, EditorBuffer, EditorEngine,
             SegStringOwned, UnitCompare,
             caret_locate::{self, RowContentPositionStatus, locate_col},
             caret_mut, caret_scr_adj, col, empty_check_early_return,

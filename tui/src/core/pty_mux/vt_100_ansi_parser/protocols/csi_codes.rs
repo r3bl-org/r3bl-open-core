@@ -1017,7 +1017,8 @@ mod tests {
         fn test_parse_as_row_index_non_zero_to_index_type_with_valid_value() {
             process_csi_sequence_and_test("\x1b[5d", |params| {
                 // VPA command
-                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 4); // Should be 0-based (5-1=4)
             });
         }
@@ -1025,7 +1026,8 @@ mod tests {
         #[test]
         fn test_parse_as_row_index_non_zero_to_index_type_with_missing_params() {
             process_csi_sequence_and_test("\x1b[d", |params| {
-                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Missing param defaults to 1, then 1-1=0
             });
         }
@@ -1033,7 +1035,8 @@ mod tests {
         #[test]
         fn test_parse_as_row_index_non_zero_to_index_type_with_zero() {
             process_csi_sequence_and_test("\x1b[0d", |params| {
-                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Zero becomes 1, then 1-1=0
             });
         }
@@ -1041,7 +1044,8 @@ mod tests {
         #[test]
         fn test_parse_as_row_index_non_zero_to_index_type_with_one() {
             process_csi_sequence_and_test("\x1b[1d", |params| {
-                let result = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Should be 0-based (1-1=0)
             });
         }
@@ -1050,7 +1054,8 @@ mod tests {
         fn test_parse_as_col_index_non_zero_to_index_type_with_valid_value() {
             process_csi_sequence_and_test("\x1b[10G", |params| {
                 // CHA command
-                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 9); // Should be 0-based (10-1=9)
             });
         }
@@ -1058,7 +1063,8 @@ mod tests {
         #[test]
         fn test_parse_as_col_index_non_zero_to_index_type_with_missing_params() {
             process_csi_sequence_and_test("\x1b[G", |params| {
-                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Missing param defaults to 1, then 1-1=0
             });
         }
@@ -1066,7 +1072,8 @@ mod tests {
         #[test]
         fn test_parse_as_col_index_non_zero_to_index_type_with_zero() {
             process_csi_sequence_and_test("\x1b[0G", |params| {
-                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 0); // Zero becomes 1, then 1-1=0
             });
         }
@@ -1074,7 +1081,8 @@ mod tests {
         #[test]
         fn test_parse_as_col_index_non_zero_to_index_type_large_value() {
             process_csi_sequence_and_test("\x1b[100G", |params| {
-                let result = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
+                let result =
+                    AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
                 assert_eq!(result.as_u16(), 99); // Should be 0-based (100-1=99)
             });
         }

@@ -7,10 +7,15 @@ use crate::{ChUnit, IndexMarker, RowHeight, UnitCompare,
             create_numeric_arithmetic_operators, height, usize};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
-/// This is one part of a [`crate::Pos`] position and is different from
-/// [`crate::RowHeight`], which is one part of a [`crate::Size`].
+/// This is one part of a [`Pos`] position and is different from
+/// [`RowHeight`], which is one part of a [`Size`].
 ///
-/// You can use the [`crate::row()`] to create a new instance.
+/// You can use the [`row()`] to create a new instance.
+///
+/// [`Pos`]: crate::Pos
+/// [`RowHeight`]: crate::RowHeight
+/// [`Size`]: crate::Size
+/// [`row()`]: crate::row
 ///
 /// # Examples
 ///

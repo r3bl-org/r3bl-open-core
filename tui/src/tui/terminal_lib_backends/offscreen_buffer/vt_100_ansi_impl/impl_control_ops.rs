@@ -34,7 +34,8 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use super::TAB_STOP_WIDTH;
-use crate::{ArrayAccessBoundsStatus, BoundsCheck, RowIndex, col, core::units::bounds_check::{IndexMarker, LengthMarker}};
+use crate::{ArrayAccessBoundsStatus, BoundsCheck, RowIndex, col,
+            core::units::bounds_check::{IndexMarker, LengthMarker}};
 
 impl OffscreenBuffer {
     /// Handle backspace control character (0x08).
@@ -74,7 +75,8 @@ impl OffscreenBuffer {
     pub fn handle_line_feed(&mut self) {
         let max_row = self.window_size.row_height;
         let next_row: RowIndex = self.cursor_pos.row_index + 1;
-        if next_row.check_array_access_bounds(max_row) == ArrayAccessBoundsStatus::Within {
+        if next_row.check_array_access_bounds(max_row) == ArrayAccessBoundsStatus::Within
+        {
             self.cursor_pos.row_index = next_row;
         }
     }

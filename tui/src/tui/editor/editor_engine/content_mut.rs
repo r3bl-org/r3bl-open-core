@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
-use crate::{EOLCursorPosition, CaretScrAdj, ColIndex, ColWidth, CursorPositionBoundsStatus,
-            EditorArgsMut, EditorBuffer, EditorEngine, InlineString, InlineVec,
-            RowIndex, SelectionList, SelectionRange, Width, ZeroCopyGapBuffer,
-            caret_locate::locate_col, caret_scr_adj, col, empty_check_early_return, len,
-            multiline_disabled_check_early_return, row,
+use crate::{CaretScrAdj, ColIndex, ColWidth, CursorPositionBoundsStatus,
+            EOLCursorPosition, EditorArgsMut, EditorBuffer, EditorEngine, InlineString,
+            InlineVec, RowIndex, SelectionList, SelectionRange, Width,
+            ZeroCopyGapBuffer, caret_locate::locate_col, caret_scr_adj, col,
+            empty_check_early_return, len, multiline_disabled_check_early_return, row,
             validate_buffer_mut::EditorBufferMutWithDrop, width};
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
@@ -128,7 +128,8 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
         if index < line_count - 1 {
             // Insert newline logic similar to insert_new_line_at_caret.
             match locate_col_impl(&buffer_mut) {
-                CursorPositionBoundsStatus::AtEnd | CursorPositionBoundsStatus::Beyond => {
+                CursorPositionBoundsStatus::AtEnd
+                | CursorPositionBoundsStatus::Beyond => {
                     // Insert new line at end.
                     let new_row_index = scroll_editor_content::inc_caret_row(
                         buffer_mut.inner.caret_raw,
@@ -192,7 +193,9 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
 }
 
 /// Helper function to locate caret position when we already have `buffer_mut`
-fn locate_col_impl(buffer_mut: &EditorBufferMutWithDrop<'_>) -> CursorPositionBoundsStatus {
+fn locate_col_impl(
+    buffer_mut: &EditorBufferMutWithDrop<'_>,
+) -> CursorPositionBoundsStatus {
     let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
     let row_index = caret_scr_adj.row_index;
 

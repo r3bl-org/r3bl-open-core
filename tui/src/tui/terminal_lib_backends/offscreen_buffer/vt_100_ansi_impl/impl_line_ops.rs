@@ -39,13 +39,23 @@ impl OffscreenBuffer {
     /// Clear an entire line by filling it with blank characters.
     /// Returns true if the operation was successful.
     pub fn clear_line(&mut self, row: RowIndex) -> bool {
-        let row_idx = row.as_usize();
-        if let Some(line) = self.buffer.get_mut(row_idx) {
-            line.fill(PixelChar::Spacer);
-            true
-        } else {
-            false
-        }
+        // Use type-safe row validation via validation helpers.
+        let next_row = RowIndex::from(row.as_usize() + 1);
+        let row_range = row..next_row;
+        let Some((_, _, lines)) = self.validate_row_range_mut(row_range) else {
+            return false;
+        };
+
+        // Safe to clear the validated line.
+        lines[0].fill(PixelChar::Spacer);
+
+        // Debug assertion to verify the line was actually cleared.
+        debug_assert!(
+            lines[0].iter().all(|ch| *ch == PixelChar::Spacer),
+            "Line clear operation failed at row {row:?}"
+        );
+
+        true
     }
 
     /// Shift lines up within a range by the specified amount.
@@ -53,32 +63,35 @@ impl OffscreenBuffer {
     /// Returns true if the operation was successful.
     ///
     /// Used by ANSI DL (Delete Line) and SU (Scroll Up) operations.
+    ///
+    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     pub fn shift_lines_up(
         &mut self,
         row_range: Range<RowIndex>,
         shift_by: Length,
     ) -> bool {
-        // Use type-safe range validation
-        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range)
-        {
-            let shift_amount = shift_by.as_usize();
+        // Use lightweight validation-only method without creating unused slice
+        if !self.is_row_range_valid(row_range.clone()) {
+            return false;
+        }
 
-            // Shift lines up by cloning (use manual index management to avoid borrow
-            // checker issues).
-            for _ in 0..shift_amount {
-                for row_idx in start_idx..end_idx.saturating_sub(1) {
-                    let next_line = self.buffer[row_idx + 1].clone();
-                    self.buffer[row_idx] = next_line;
-                }
+        let start_idx = row_range.start.as_usize();
+        let end_idx = row_range.end.as_usize();
 
-                // Clear the bottom line.
-                self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
+        // Shift lines up by cloning (use manual index management to avoid borrow
+        // checker issues).
+        for _ in 0..shift_by.as_usize() {
+            for row_idx in start_idx..end_idx.saturating_sub(1) {
+                let next_line = self.buffer[row_idx + 1].clone();
+                self.buffer[row_idx] = next_line;
             }
 
-            true
-        } else {
-            false
+            // Clear the bottom line.
+            self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
         }
+
+        true
     }
 
     /// Shift lines down within a range by the specified amount.
@@ -89,31 +102,34 @@ impl OffscreenBuffer {
     ///
     /// For scrolling operations, this is also used to scroll buffer content down.
     /// The bottom line is lost, and a new empty line appears at top.
+    ///
+    /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
+    /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
     pub fn shift_lines_down(
         &mut self,
         row_range: Range<RowIndex>,
         shift_by: Length,
     ) -> bool {
-        // Use type-safe range validation
-        if let Some((start_idx, end_idx, _lines)) = self.validate_row_range_mut(row_range)
-        {
-            let shift_amount = shift_by.as_usize();
+        // Use lightweight validation-only method without creating unused slice
+        if !self.is_row_range_valid(row_range.clone()) {
+            return false;
+        }
 
-            // Shift lines down by cloning (work backwards to avoid overwriting).
-            for _ in 0..shift_amount {
-                for row_idx in (start_idx + 1..end_idx).rev() {
-                    let prev_line = self.buffer[row_idx - 1].clone();
-                    self.buffer[row_idx] = prev_line;
-                }
+        let start_idx = row_range.start.as_usize();
+        let end_idx = row_range.end.as_usize();
 
-                // Clear the top line.
-                self.buffer[start_idx].fill(PixelChar::Spacer);
+        // Shift lines down by cloning (work backwards to avoid overwriting).
+        for _ in 0..shift_by.as_usize() {
+            for row_idx in (start_idx + 1..end_idx).rev() {
+                let prev_line = self.buffer[row_idx - 1].clone();
+                self.buffer[row_idx] = prev_line;
             }
 
-            true
-        } else {
-            false
+            // Clear the top line.
+            self.buffer[start_idx].fill(PixelChar::Spacer);
         }
+
+        true
     }
 }
 

@@ -35,7 +35,8 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{ColIndex, Length, RowIndex, UnitCompare, col,
-            core::units::bounds_check::{EOLCursorPosition, IndexMarker, LengthMarker, RangeBoundary},
+            core::units::bounds_check::{EOLCursorPosition, IndexMarker, LengthMarker,
+                                        RangeBoundary},
             height, len};
 
 impl OffscreenBuffer {
@@ -86,43 +87,37 @@ impl OffscreenBuffer {
             return false;
         }
 
-        // Keep type-safe values as long as possible.
-        let cursor_col = at.col_index;
-        let dest_start_col = cursor_col + how_many_clamped;
+        let Some(line) = self.buffer.get_mut(at.row_index.as_usize()) else {
+            return false;
+        };
 
+        // Copy characters to the right to make room for insertion.
         // Calculate the end of the source range for copying.
         // We need to copy from cursor position up to (but not including) the position
         // that would overflow when shifted right by how_many_clamped.
         // This is: last_valid_index - shift_amount + 1 (for exclusive range)
-        let source_end_col = max_width.convert_to_index() - how_many_clamped + len(1);
+        let source_end = max_width.convert_to_index() - how_many_clamped + len(1);
+        let copy_source_range = (at.col_index..source_end).clamp_range_to(max_width);
 
-        // Convert to usize only when accessing the buffer.
-        if let Some(line) = self.buffer.get_mut(at.row_index.as_usize()) {
-            // Copy characters to the right to make room for insertion.
-            // Use type-safe validation for bounds checking.
-            let source_range = cursor_col..source_end_col;
-
-            // Type-safe checks:
-            // 1. Destination must be within bounds.
-            // 2. Source range must be valid (non-empty and within bounds).
-            if !dest_start_col.overflows(max_width)
-                && source_range.is_valid(max_width)
-            {
-                line.copy_within(
-                    source_range.start.as_usize()..source_range.end.as_usize(),
-                    dest_start_col.as_usize(),
-                );
-            }
-
-            // Fill the cursor position with blanks using type-safe range clamping.
-            let fill_end_col = cursor_col + how_many_clamped;
-            let fill_range = (cursor_col..fill_end_col).clamp_range_to(max_width);
-            line[fill_range.start.as_usize()..fill_range.end.as_usize()]
-                .fill(PixelChar::Spacer);
-
-            return true;
+        // Type-safe checks:
+        // 1. Destination must be within bounds.
+        // 2. Source range must not be empty (clamp_range_to ensures validity).
+        let copy_dest_start_col = at.col_index + how_many_clamped;
+        if !copy_dest_start_col.overflows(max_width) && !copy_source_range.is_empty() {
+            // Convert to usize only when accessing the buffer.
+            line.copy_within(
+                copy_source_range.start.as_usize()..copy_source_range.end.as_usize(),
+                copy_dest_start_col.as_usize(),
+            );
         }
-        false
+
+        // Fill the cursor position with blanks using type-safe range clamping.
+        let fill_end_col = copy_dest_start_col;
+        let fill_range = (at.col_index..fill_end_col).clamp_range_to(max_width);
+        line[fill_range.start.as_usize()..fill_range.end.as_usize()]
+            .fill(PixelChar::Spacer);
+
+        true
     }
 
     /// Delete characters at cursor position (for DCH - Delete Character).
@@ -176,20 +171,31 @@ impl OffscreenBuffer {
         // the deletion). Use EOLCursorPosition for the exclusive end.
         let source_start = at.col_index + how_many_clamped;
         let source_end = max_width.eol_cursor_position();
-        self.copy_chars_within_line(
+        let copy_success = self.copy_chars_within_line(
             at.row_index,
             source_start..source_end,
             at.col_index,
+        );
+        debug_assert!(
+            copy_success || source_start >= source_end,
+            "Failed to copy chars within line during delete_chars_at_cursor at row {:?}, source range: {:?}..{:?}",
+            at.row_index,
+            source_start,
+            source_end
         );
 
         // Clear the vacated space at the end (overwriting duplicates and filling with
         // spacers). Use type-safe range calculation.
         let fill_start = max_width.convert_to_index() - how_many_clamped + len(1);
         let fill_end = max_width.eol_cursor_position();
-        self.fill_char_range(
+        let fill_success =
+            self.fill_char_range(at.row_index, fill_start..fill_end, PixelChar::Spacer);
+        debug_assert!(
+            fill_success || fill_start >= fill_end,
+            "Failed to fill char range during delete_chars_at_cursor at row {:?}, fill range: {:?}..{:?}",
             at.row_index,
-            fill_start..fill_end,
-            PixelChar::Spacer,
+            fill_start,
+            fill_end
         );
 
         true
@@ -281,8 +287,7 @@ impl OffscreenBuffer {
         let current_col = self.cursor_pos.col_index;
 
         // Only write if within bounds.
-        if !current_row.overflows(row_max) && !current_col.overflows(col_max)
-        {
+        if !current_row.overflows(row_max) && !current_col.overflows(col_max) {
             self.set_char(
                 current_row + current_col,
                 PixelChar::PlainText {
