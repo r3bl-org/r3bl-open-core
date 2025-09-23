@@ -34,7 +34,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use super::TAB_STOP_WIDTH;
-use crate::{ArrayAccessBoundsStatus, BoundsCheck, RowIndex, col,
+use crate::{ArrayAccessBoundsStatus, BoundsCheck, RowIndex, UnitCompare, col,
             core::units::bounds_check::{IndexMarker, LengthMarker}};
 
 impl OffscreenBuffer {
@@ -42,7 +42,7 @@ impl OffscreenBuffer {
     /// Moves cursor left one position if not at leftmost column.
     pub fn handle_backspace(&mut self) {
         let current_col = self.cursor_pos.col_index;
-        if current_col > col(0) {
+        if !current_col.is_zero() {
             self.cursor_pos.col_index = current_col - 1;
         }
     }

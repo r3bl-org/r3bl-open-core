@@ -27,11 +27,10 @@
 //! [`margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::margin_ops
 //! [`test_margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_margin_ops
 
-use std::cmp::min;
-
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::core::pty_mux::vt_100_ansi_parser::term_units::TermRow;
+use crate::{core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
+                   units::bounds_check::LengthMarker}};
 
 impl OffscreenBuffer {
     /// Reset scroll margins to full screen (no restrictions).
@@ -48,16 +47,18 @@ impl OffscreenBuffer {
     ///
     /// Returns true if the margins were set successfully.
     pub fn set_scroll_margins(&mut self, top: TermRow, bottom: TermRow) -> bool {
-        let buffer_height: u16 = self.window_size.row_height.into();
+        let buffer_height = self.window_size.row_height;
         let top_value = top.as_u16();
         let bottom_value = bottom.as_u16();
 
-        // Validate margins against buffer height.
-        let clamped_bottom = min(bottom_value, buffer_height);
+        // Use type-safe bounds checking: convert TermRow to RowHeight for clamping.
+        let bottom_as_height = crate::RowHeight::from(bottom_value);
+        let clamped_bottom_height = bottom_as_height.clamp_to(buffer_height);
+        let clamped_bottom_raw = clamped_bottom_height.into();
 
-        if !(top_value < clamped_bottom && clamped_bottom <= buffer_height) {
+        if !(top_value < clamped_bottom_raw && clamped_bottom_raw <= buffer_height.into()) {
             tracing::warn!(
-                "Invalid scroll margins: top={}, bottom={}, buffer_height={}",
+                "Invalid scroll margins: top={}, bottom={}, buffer_height={:?}",
                 top_value,
                 bottom_value,
                 buffer_height
@@ -65,7 +66,7 @@ impl OffscreenBuffer {
             return false;
         }
         self.ansi_parser_support.scroll_region_top = Some(top);
-        self.ansi_parser_support.scroll_region_bottom = Some(clamped_bottom.into());
+        self.ansi_parser_support.scroll_region_bottom = Some(clamped_bottom_raw.into());
         true
     }
 }

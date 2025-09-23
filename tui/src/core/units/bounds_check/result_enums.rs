@@ -15,11 +15,8 @@
 ///
 /// Used with [`check_array_access_bounds`] to determine if an index
 /// is within valid bounds for accessing array elements, has underflowed (gone below
-/// minimum), or overflowed (exceeded maximum). See the [module documentation] for details on the bounds checking
-/// paradigms.
-///
-/// [`check_array_access_bounds`]: crate::BoundsCheck::check_array_access_bounds
-/// [module documentation]: mod@crate::core::units::bounds_check
+/// minimum), or overflowed (exceeded maximum). See the [module documentation] for details
+/// on the bounds checking paradigms.
 ///
 /// # Examples
 ///
@@ -33,6 +30,9 @@
 /// let large_index = idx(10);
 /// assert_eq!(large_index.check_array_access_bounds(length), ArrayAccessBoundsStatus::Overflowed);
 /// ```
+///
+/// [`check_array_access_bounds`]: crate::BoundsCheck::check_array_access_bounds
+/// [module documentation]: mod@crate::core::units::bounds_check
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ArrayAccessBoundsStatus {
     /// Index has underflowed (below minimum bounds).
@@ -48,15 +48,12 @@ pub enum ArrayAccessBoundsStatus {
 
 /// Result of cursor position bounds checking operations.
 ///
-/// Used with [`check_cursor_position_bounds`] to determine the
-/// relationship between an index and content boundaries. Essential for text editing and
-/// cursor positioning where distinguishing between "at end" and "beyond" is crucial.
+/// Used with [`check_cursor_position_bounds`] to determine the relationship between an
+/// index and content boundaries. Essential for text editing and cursor positioning where
+/// distinguishing between "at end" and "beyond" is crucial.
 ///
-/// See the [module documentation] for details on
-/// cursor position checking vs array-style bounds checking.
-///
-/// [`check_cursor_position_bounds`]: crate::BoundsCheck::check_cursor_position_bounds
-/// [module documentation]: mod@crate::core::units::bounds_check
+/// See the [module documentation] for details on cursor position checking vs array-style
+/// bounds checking.
 ///
 /// # Examples
 ///
@@ -70,6 +67,9 @@ pub enum ArrayAccessBoundsStatus {
 /// assert_eq!(idx(5).check_cursor_position_bounds(content), CursorPositionBoundsStatus::AtEnd);
 /// assert_eq!(idx(7).check_cursor_position_bounds(content), CursorPositionBoundsStatus::Beyond);
 /// ```
+///
+/// [`check_cursor_position_bounds`]: crate::BoundsCheck::check_cursor_position_bounds
+/// [module documentation]: mod@crate::core::units::bounds_check
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CursorPositionBoundsStatus {
     /// Index is at the start of content (`index == 0`). For empty content, this takes

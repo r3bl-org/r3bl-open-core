@@ -18,11 +18,10 @@
 //! [`cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::cursor_ops
 //! [`test_cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_cursor_ops
 
-use std::cmp::min;
-
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, col};
+use crate::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, col,
+            core::units::bounds_check::IndexMarker};
 
 impl OffscreenBuffer {
     /// Move cursor up by n lines.
@@ -63,11 +62,7 @@ impl OffscreenBuffer {
 
         // Move cursor up but don't go above scroll region boundary.
         let potential_new_row = current_row - how_many;
-        let new_row = if potential_new_row < scroll_top_boundary {
-            scroll_top_boundary
-        } else {
-            potential_new_row
-        };
+        let new_row = potential_new_row.clamp(scroll_top_boundary, current_row);
         self.cursor_pos.row_index = new_row;
     }
 
@@ -79,11 +74,7 @@ impl OffscreenBuffer {
 
         // Move cursor down but don't go below scroll region boundary.
         let potential_new_row = current_row + how_many;
-        let new_row = if potential_new_row > scroll_bottom_boundary {
-            scroll_bottom_boundary
-        } else {
-            potential_new_row
-        };
+        let new_row = potential_new_row.clamp(current_row, scroll_bottom_boundary);
         self.cursor_pos.row_index = new_row;
     }
 
@@ -111,7 +102,7 @@ impl OffscreenBuffer {
     /// ```
     pub fn cursor_forward(&mut self, how_many: ColWidth) {
         let new_col = self.cursor_pos.col_index + how_many;
-        self.cursor_pos.col_index = self.clamp_column(new_col);
+        self.cursor_pos.col_index = new_col.clamp_to(self.window_size.col_width);
     }
 
     /// Move cursor backward by n columns.
@@ -127,16 +118,10 @@ impl OffscreenBuffer {
         let scroll_bottom_boundary = self.get_scroll_bottom_boundary();
 
         // Clamp row to scroll region boundaries.
-        let clamped_row = if row < scroll_top_boundary {
-            scroll_top_boundary
-        } else if row > scroll_bottom_boundary {
-            scroll_bottom_boundary
-        } else {
-            row
-        };
+        let clamped_row = row.clamp(scroll_top_boundary, scroll_bottom_boundary);
 
         // Clamp column to screen width.
-        let new_col = min(col, self.max_col_index());
+        let new_col = col.clamp_to(self.window_size.col_width);
 
         self.cursor_pos = Pos {
             row_index: clamped_row,
@@ -156,12 +141,7 @@ impl OffscreenBuffer {
     /// Move cursor to specific column on current line.
     pub fn cursor_to_column(&mut self, target_col: ColIndex) {
         // Convert from 1-based to 0-based, clamp to buffer width.
-        let max_col_index = self.max_col_index();
-        self.cursor_pos.col_index = if target_col > max_col_index {
-            max_col_index
-        } else {
-            target_col
-        };
+        self.cursor_pos.col_index = target_col.clamp_to(self.window_size.col_width);
     }
 
     /// Save current cursor position for later restoration.
@@ -182,10 +162,12 @@ impl OffscreenBuffer {
     /// Move cursor to specific row on current column.
     pub fn cursor_to_row(&mut self, target_row: RowIndex) {
         // Clamp to valid range (conversion from 1-based to 0-based already done).
-        let new_row = min(target_row, self.max_row_index());
+        let new_row = target_row.clamp_to(self.window_size.row_height);
         // Update only the row, preserve column.
         self.cursor_pos.row_index = new_row;
     }
+
+
 }
 
 #[cfg(test)]

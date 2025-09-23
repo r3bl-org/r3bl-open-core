@@ -45,7 +45,7 @@
 //! - [`impl_scroll_ops`] - Scrolling operations
 //! - [`impl_sgr_ops`] - Select Graphic Rendition operations (styling)
 //! - [`impl_terminal_ops`] - Terminal state operations (reset, clear, charset)
-//! - [`ansi_bounds_check_helper`] - ANSI-specific bounds checking utilities
+//! - [`ansi_scroll_helper`] - ANSI scroll region helper utilities
 //!
 //! # Testing Approach
 //!
@@ -131,7 +131,7 @@
 //! [`impl_scroll_ops`]: `impl_scroll_ops`
 //! [`impl_sgr_ops`]: `impl_sgr_ops`
 //! [`impl_terminal_ops`]: `impl_terminal_ops`
-//! [`ansi_bounds_check_helper`]: `ansi_bounds_check_helper`
+//! [`ansi_scroll_helper`]: `ansi_scroll_helper`
 
 /// Standard terminal tab stop width (8 columns).
 /// Used for calculating tab positions in VT100 terminal emulation.
@@ -139,7 +139,7 @@
 pub const TAB_STOP_WIDTH: usize = 8;
 
 // Attach modules.
-pub mod ansi_bounds_check_helper;
+pub mod ansi_scroll_helper;
 pub mod impl_char_ops;
 pub mod impl_control_ops;
 pub mod impl_cursor_ops;

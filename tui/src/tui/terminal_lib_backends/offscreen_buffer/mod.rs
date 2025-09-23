@@ -82,7 +82,7 @@
 //! ├── line_ops.rs         →         ├── impl_line_ops.rs    (insert/delete lines)
 //! ├── scroll_ops.rs       →         ├── impl_scroll_ops.rs  (scrolling, regions)
 //! ├── terminal_ops.rs     →         ├── impl_terminal_ops.rs(reset, clear, charset)
-//! └── bounds_check.rs     →         └── ansi_bounds_check_helper.rs (safety utilities)
+//! └── bounds_check.rs     →         └── ansi_scroll_helper.rs (scroll region utilities)
 //! ```
 //!
 //! This 1:1 mapping provides:

@@ -20,7 +20,6 @@ pub type Col = ColIndex;
 /// just a position after all, but semantically it is used for different reasons in the
 /// API. It is used to declare a different intention on how `Pos` is used.
 ///
-///
 /// Here is a visual representation of how position and sizing work for the layout
 /// engine.
 ///
@@ -42,8 +41,8 @@ pub type Col = ColIndex;
 ///
 /// This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
 /// allow for easy conversion between [`ChUnit`] and [`RowIndex`]/[`ColIndex`].
-/// - You can use [`pos()`] function and pass it a [`RowIndex`] and [`ColIndex`]
-///   tuple, or pass a sequence of them with the [Add] `+` operator.
+/// - You can use [`pos()`] function and pass it a [`RowIndex`] and [`ColIndex`] tuple, or
+///   pass a sequence of them with the [Add] `+` operator.
 /// - Just using the [Add] `+` operator:
 ///     - You can use [Add] to convert: [`RowIndex`] + [`ColIndex`], into: a `Pos`.
 ///     - You can use [Add] to convert: [`ColIndex`] + [`RowIndex`], into: a `Pos`.
@@ -424,8 +423,6 @@ mod api {
         /// `max_col_amt`. This function is not concerned with scrolling or
         /// [`ScrOfs`].
         ///
-        /// [`ScrOfs`]: crate::ScrOfs
-        ///
         /// Note that a caret is allowed to "go past" the end of the max index, so max
         /// index + 1 is a valid position.
         ///
@@ -436,15 +433,17 @@ mod api {
         ///
         /// ```text
         /// R ┌──────────┐
-        /// 0 ▸hello░   │
-        ///   └─────▴───┘
+        /// 0 ▸hello░    │
+        ///   └─────▴────┘
         ///   C0123456789
         /// ```
         ///
         /// Keep in mind these dynamics change when introducing scrolling, but this struct
         /// does not take scrolling into account. See
-        /// [r3bl_tui::tui::editor_engine::scroll_editor_buffer](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/tui/editor/editor_engine/editor_engine_internal_api.rs)
-        /// for that.
+        /// [`r3bl_tui::tui::editor_engine::scroll_editor_buffer`] for that.
+        ///
+        /// [`ScrOfs`]: crate::ScrOfs
+        /// [`r3bl_tui::tui::editor_engine::scroll_editor_buffer`](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/tui/editor/editor_engine/editor_engine_internal_api.rs)
         pub fn add_col_with_bounds(
             &mut self,
             arg_col_width: impl Into<ColWidth>,

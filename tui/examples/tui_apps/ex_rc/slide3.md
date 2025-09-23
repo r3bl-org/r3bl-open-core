@@ -52,7 +52,7 @@ struggle:
 1. 🤝 life is a struggle, choose wisely who want to struggle with (I don’t struggle alone, since I find
    strength in people who empower me)
 2. 🤔 pick the battles you want to fight, since you can’t fight them all
-3. 🗑️  don’t be afraid to let go, because the fear of letting go is often greater than actually letting
+3. 🗑️ don’t be afraid to let go, because the fear of letting go is often greater than actually letting
    go.
 
 ### 🔥 To fighting the good fight!

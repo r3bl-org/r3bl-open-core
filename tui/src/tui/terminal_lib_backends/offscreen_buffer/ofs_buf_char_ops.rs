@@ -10,13 +10,13 @@ impl OffscreenBuffer {
     /// Get character at position, returns None if position is out of bounds.
     #[must_use]
     pub fn get_char(&self, pos: Pos) -> Option<PixelChar> {
-        // Use type-safe bounds checking before converting to usize
+        // Use type-safe bounds checking before converting to usize.
         let buffer_height = crate::height(self.buffer.len());
         if buffer_height.is_overflowed_by(pos) {
             return None;
         }
 
-        // Convert to usize only at Vec access boundary
+        // Convert to usize only at Vec access boundary.
         let row_idx = pos.row_index.as_usize();
         let col_idx = pos.col_index.as_usize();
 
@@ -32,13 +32,14 @@ impl OffscreenBuffer {
             return false;
         };
 
-        // Validate column within the selected line
-        let col_idx = pos.col_index.as_usize();
-        if col_idx >= lines[0].len() {
+        // Validate column within the selected line using type-safe bounds checking.
+        let line_width = crate::width(lines[0].len());
+        if line_width.is_overflowed_by(pos.col_index) {
             return false;
         }
 
         // Safe assignment - both row and column have been validated.
+        let col_idx = pos.col_index.as_usize();
         lines[0][col_idx] = char;
 
         // Debug assertion to verify the character was actually set.
@@ -58,12 +59,13 @@ impl OffscreenBuffer {
         col_range: Range<ColIndex>,
         char: PixelChar,
     ) -> bool {
-        // Use type-safe range validation for both row and column bounds
+        // Use type-safe range validation for both row and column bounds.
         let Some((start_col, end_col, line)) =
             self.validate_col_range_mut(row, col_range)
         else {
             return false;
         };
+
         line[start_col..end_col].fill(char);
         true
     }
@@ -76,19 +78,21 @@ impl OffscreenBuffer {
         source_range: Range<ColIndex>,
         dest_start: ColIndex,
     ) -> bool {
-        // Use the same validation pattern as fill_char_range
+        // Use type-safe range validation for both row and column bounds.
         let Some((source_start, source_end, line)) =
             self.validate_col_range_mut(row, source_range)
         else {
             return false;
         };
 
-        // Validate destination position is within line bounds
-        if dest_start.as_usize() >= line.len() {
+        // Validate destination position is within line bounds using type-safe bounds
+        // checking.
+        let line_width = crate::width(line.len());
+        if line_width.is_overflowed_by(dest_start) {
             return false;
         }
 
-        // Perform the copy operation
+        // Perform the copy operation.
         line.copy_within(source_start..source_end, dest_start.as_usize());
         true
     }

@@ -21,8 +21,6 @@ use super::{length_and_index_markers::{IndexMarker, LengthMarker},
 /// Provides both array-style bounds checking and cursor position checking.
 /// See the [module documentation] for detailed explanations of both paradigms.
 ///
-/// [module documentation]: mod@crate::core::units::bounds_check
-///
 /// This trait is generic over length types that implement `LengthMarker`,
 /// and can only be implemented by index types that implement `IndexMarker`.
 /// This ensures type safety and prevents incorrect comparisons between incompatible
@@ -37,6 +35,8 @@ use super::{length_and_index_markers::{IndexMarker, LengthMarker},
 /// let height = RowHeight::new(5);
 /// assert_eq!(row_index.check_array_access_bounds(height), ArrayAccessBoundsStatus::Overflowed);
 /// ```
+///
+/// [module documentation]: mod@crate::core::units::bounds_check
 pub trait BoundsCheck<LengthType: LengthMarker>
 where
     Self: IndexMarker,
@@ -44,8 +44,6 @@ where
     /// Performs comprehensive bounds checking.
     ///
     /// See the [module documentation] for detailed explanation of bounds checking.
-    ///
-    /// [module documentation]: mod@crate::core::units::bounds_check
     ///
     /// ```text
     /// Array-style bounds checking:
@@ -73,8 +71,6 @@ where
     /// where you need to pattern match on the result or explicitly handle the status
     /// information.
     ///
-    /// [`overflows`]: crate::IndexMarker::overflows
-    ///
     /// ```rust
     /// use r3bl_tui::{BoundsCheck, ArrayAccessBoundsStatus, IndexMarker, idx, len};
     ///
@@ -93,6 +89,9 @@ where
     ///     println!("Safe to access");
     /// }
     /// ```
+    ///
+    /// [module documentation]: mod@crate::core::units::bounds_check
+    /// [`overflows`]: crate::IndexMarker::overflows
     fn check_array_access_bounds(&self, max: LengthType) -> ArrayAccessBoundsStatus;
 
     /// Performs cursor position bounds checking.

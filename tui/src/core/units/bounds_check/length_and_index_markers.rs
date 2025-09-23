@@ -110,9 +110,6 @@ pub trait IndexMarker: UnitCompare {
     /// [`ArrayAccessBoundsStatus`] enum. This method is a convenience wrapper
     /// designed for simple boolean conditions.
     ///
-    /// [`check_array_access_bounds`]: crate::BoundsCheck::check_array_access_bounds
-    /// [`ArrayAccessBoundsStatus`]: crate::ArrayAccessBoundsStatus
-    ///
     /// Both methods are semantically equivalent:
     /// - `index.overflows(length)` returns `bool`
     /// - `index.check_array_access_bounds(length) == ArrayAccessBoundsStatus::Overflowed`
@@ -140,6 +137,9 @@ pub trait IndexMarker: UnitCompare {
     /// let smaller_index = col(5);
     /// assert!(!smaller_index.overflows(max_width));  // Within bounds
     /// ```
+    ///
+    /// [`check_array_access_bounds`]: crate::BoundsCheck::check_array_access_bounds
+    /// [`ArrayAccessBoundsStatus`]: crate::ArrayAccessBoundsStatus
     fn overflows(&self, arg_length: impl Into<Self::LengthType>) -> bool
     where
         Self: PartialOrd + Sized + Copy,
@@ -200,10 +200,6 @@ pub trait IndexMarker: UnitCompare {
     /// - [`ArrayAccessBoundsStatus::Within`] if min <= index < max_length
     /// - [`ArrayAccessBoundsStatus::Overflowed`] if index >= max_length
     ///
-    /// [`ArrayAccessBoundsStatus::Underflowed`]: crate::ArrayAccessBoundsStatus::Underflowed
-    /// [`ArrayAccessBoundsStatus::Within`]: crate::ArrayAccessBoundsStatus::Within
-    /// [`ArrayAccessBoundsStatus::Overflowed`]: crate::ArrayAccessBoundsStatus::Overflowed
-    ///
     /// # Examples
     /// ```
     /// use r3bl_tui::{IndexMarker, ArrayAccessBoundsStatus, col, width};
@@ -215,6 +211,10 @@ pub trait IndexMarker: UnitCompare {
     /// assert_eq!(col(5).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Within);
     /// assert_eq!(col(8).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Overflowed);
     /// ```
+    ///
+    /// [`ArrayAccessBoundsStatus::Underflowed`]: crate::ArrayAccessBoundsStatus::Underflowed
+    /// [`ArrayAccessBoundsStatus::Within`]: crate::ArrayAccessBoundsStatus::Within
+    /// [`ArrayAccessBoundsStatus::Overflowed`]: crate::ArrayAccessBoundsStatus::Overflowed
     fn check_bounds_range(
         &self,
         arg_min: impl Into<Self>,
@@ -231,6 +231,64 @@ pub trait IndexMarker: UnitCompare {
             ArrayAccessBoundsStatus::Overflowed
         } else {
             ArrayAccessBoundsStatus::Within
+        }
+    }
+
+    /// Clamp this index to stay within the bounds defined by max_length.
+    ///
+    /// Returns the index unchanged if within bounds, or the maximum valid index
+    /// if it would overflow. This method provides a convenient way to ensure
+    /// indices stay within valid array/buffer boundaries.
+    ///
+    /// ```text
+    /// Clamping operation with max_length=10:
+    ///
+    ///                           index=5 (within bounds)   index=15 (overflows)
+    ///                                 ↓                         ↓
+    /// Index:      0   1   2   3   4   5   6   7   8   9 │ 10  11  12  13  14  15
+    /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┬───┬───┬───┐
+    ///           │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │ × │ × │ × │
+    ///           ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┴───┴───┴───┤
+    ///           ├────────── valid indices ──────────────┼───── overflow ────────┘
+    ///           └────────── length=10 (1-based) ────────┘
+    ///
+    /// clamp_to(index=5, max=10)  = 5 (unchanged - within bounds)
+    /// clamp_to(index=15, max=10) = 9 (clamped to max valid index)
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// The index unchanged if it's within bounds, or the maximum valid index
+    /// (length - 1) if the index would overflow the bounds.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{IndexMarker, col, width};
+    ///
+    /// let max_width = width(10);
+    ///
+    /// // Index within bounds - returned unchanged
+    /// assert_eq!(col(5).clamp_to(max_width), col(5));
+    ///
+    /// // Index at boundary - returned unchanged (9 is valid for width 10)
+    /// assert_eq!(col(9).clamp_to(max_width), col(9));
+    ///
+    /// // Index overflows - clamped to maximum valid index
+    /// assert_eq!(col(15).clamp_to(max_width), col(9));
+    ///
+    /// // Zero index - always valid
+    /// assert_eq!(col(0).clamp_to(max_width), col(0));
+    /// ```
+    #[must_use]
+    fn clamp_to(&self, max_length: Self::LengthType) -> Self
+    where
+        Self: Copy + Sized + PartialOrd,
+        Self::LengthType: Copy,
+    {
+        if self.overflows(max_length) {
+            max_length.convert_to_index()
+        } else {
+            *self
         }
     }
 }
