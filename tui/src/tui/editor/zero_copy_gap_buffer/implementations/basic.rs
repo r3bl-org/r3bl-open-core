@@ -13,8 +13,10 @@
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GapBufferLine, Length,
-            RowIndex, SegIndex, UnitCompare, byte_index, row, seg_index, width};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GapBufferLine, IndexMarker,
+            Length, RowIndex, SegIndex, UnitCompare, byte_index,
+            core::units::{idx, len},
+            row, seg_index, width};
 
 impl ZeroCopyGapBuffer {
     // Line access methods.
@@ -249,7 +251,9 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn find_row_containing_byte(&self, byte_index: ByteIndex) -> Option<RowIndex> {
         // Early bounds check for performance optimization.
-        if byte_index.as_usize() >= self.buffer.len() {
+        let byte_idx = idx(byte_index);
+        let buffer_length = len(self.buffer.len());
+        if byte_idx.overflows(buffer_length) {
             return None;
         }
 
@@ -365,7 +369,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, len};
+    use crate::col;
 
     #[test]
     fn test_basic_line_operations() {

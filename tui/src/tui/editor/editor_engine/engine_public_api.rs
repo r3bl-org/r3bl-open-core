@@ -6,12 +6,12 @@
 use syntect::easy::HighlightLines;
 
 use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode,
-            EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine, HasFocus,
-            IndexMarker, InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp, RenderOps,
-            RenderPipeline, RowHeight, RowIndex, ScrollOffsetColLocationInRange,
-            SegStringOwned, SelectionRange, Size, SpecialKey, StyleUSSpanLines,
-            SyntaxHighlightMode, ZOrder, caret_scr_adj,
+            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
+            EditorEvent, FlexBox, GapBufferLine, HasFocus, IndexMarker, InputEvent, Key,
+            PrettyPrintDebug, RenderArgs, RenderOp, RenderOps, RenderPipeline,
+            RowHeight, RowIndex, ScrollOffsetColLocationInRange, SegStringOwned,
+            SelectionRange, Size, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
+            ZOrder, caret_scr_adj,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
             height, inline_string, new_style,

@@ -2,7 +2,7 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::ChUnit;
+use crate::{ChUnit, Index};
 
 /// Represents a byte index inside of the underlying [`crate::InlineString`] of
 /// [`crate::GCStringOwned`].
@@ -33,4 +33,8 @@ impl From<usize> for ByteIndex {
 
 impl From<ChUnit> for ByteIndex {
     fn from(it: ChUnit) -> Self { Self(crate::usize(it)) }
+}
+
+impl From<ByteIndex> for Index {
+    fn from(it: ByteIndex) -> Self { Self::from(it.0) }
 }

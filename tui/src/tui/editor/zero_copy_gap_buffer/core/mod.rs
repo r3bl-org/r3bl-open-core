@@ -22,3 +22,6 @@ pub const INITIAL_LINE_SIZE: usize = 256;
 
 /// Page size for extending lines (bytes added when line overflows)
 pub const LINE_PAGE_SIZE: usize = 256;
+
+/// Null byte used for padding unused buffer capacity
+pub const NULL_BYTE: u8 = b'\0';

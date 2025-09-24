@@ -3,7 +3,7 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{ChUnit, IndexMarker, RowHeight, UnitCompare,
+use crate::{ChUnit, Index, IndexMarker, RowHeight, UnitCompare,
             create_numeric_arithmetic_operators, height, usize};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
@@ -96,6 +96,10 @@ mod impl_from_numeric {
 
     impl From<RowIndex> for u16 {
         fn from(row: RowIndex) -> Self { row.as_u16() }
+    }
+
+    impl From<Index> for RowIndex {
+        fn from(index: Index) -> Self { RowIndex(index.0) }
     }
 }
 

@@ -251,7 +251,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, row, seg_index, width};
+    use crate::{NULL_BYTE, col, row, seg_index, width};
 
     #[test]
     fn test_rebuild_line_segments_empty_line() -> Result<()> {
@@ -341,7 +341,7 @@ mod tests {
         // Verify null padding exists beyond content.
         for i in (buffer_start + 5)..(buffer_start + capacity) {
             assert_eq!(
-                buffer.buffer[i], b'\0',
+                buffer.buffer[i], NULL_BYTE,
                 "Expected null padding at position {i}"
             );
         }

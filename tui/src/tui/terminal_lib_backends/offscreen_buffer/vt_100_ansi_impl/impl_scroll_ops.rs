@@ -21,8 +21,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{RowHeight, len,
-            core::units::bounds_check::IndexMarker};
+use crate::{RowHeight, core::units::bounds_check::IndexMarker, len};
 
 impl OffscreenBuffer {
     /// Move cursor down one line, scrolling the buffer if at bottom.
@@ -65,12 +64,12 @@ impl OffscreenBuffer {
         let scroll_bottom_boundary = self.get_scroll_bottom_boundary();
 
         // Check if we're at the bottom of the scroll region.
-        if !current_row.underflows(scroll_bottom_boundary) {
-            // At scroll region bottom - scroll buffer content up by one line.
-            self.scroll_buffer_up();
-        } else {
+        if current_row.underflows(scroll_bottom_boundary) {
             // Not at scroll region bottom - just move cursor down.
             self.cursor_down(RowHeight::from(1));
+        } else {
+            // At scroll region bottom - scroll buffer content up by one line.
+            self.scroll_buffer_up();
         }
     }
 
@@ -114,12 +113,12 @@ impl OffscreenBuffer {
         let scroll_top_boundary = self.get_scroll_top_boundary();
 
         // Check if we're at the top of the scroll region.
-        if !scroll_top_boundary.underflows(current_row) {
-            // At scroll region top - scroll buffer content down by one line.
-            self.scroll_buffer_down();
-        } else {
+        if scroll_top_boundary.underflows(current_row) {
             // Not at scroll region top - just move cursor up.
             self.cursor_up(RowHeight::from(1));
+        } else {
+            // At scroll region top - scroll buffer content down by one line.
+            self.scroll_buffer_down();
         }
     }
 

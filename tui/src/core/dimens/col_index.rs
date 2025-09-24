@@ -8,8 +8,8 @@ use crate::{ChUnit, ColWidth, IndexMarker, Length, UnitCompare,
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
 /// column.
-/// - This is one part of a [`Pos`] (position), and is different from
-///   [`ColWidth`], which is one part of a [`Size`].
+/// - This is one part of a [`Pos`] (position), and is different from [`ColWidth`], which
+///   is one part of a [`Size`].
 /// - You can use the [`col()`] to create a new instance.
 ///
 /// [`Pos`]: crate::Pos

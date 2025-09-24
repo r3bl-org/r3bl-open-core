@@ -17,15 +17,32 @@ Use these tools to lookup documentation and APIs:
 
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
 
-Throughout the implementation, use the type-safe bounds checking utilities from `tui/src/core/units/bounds_check.rs`:
+Throughout the implementation, use the type-safe bounds checking utilities from
+`tui/src/core/units/bounds_check.rs` which have 2 main patterns: "array access bounds checking, and
+"cursor positioning bounds checking". Make sure to use the `cursor_bounds.rs` utilities for cursor
+positioning related tasks, and `array_bounds.rs` utilities for array access related tasks.
+
+For both patterns:
+
 - Instead of using `usize` or `u16` for indices, try using `IndexMarker` which is 0-based
 - Instead of using `usize` or `u16` for lengths, try using `LengthMarker` which is 1-based
+
+For "array access bounds checking" pattern:
+
 - Use `IndexMarker::overflows()` instead of raw `<` or `>` comparisons between 0/1-based values
-- Use `LengthMarker::is_overflowed_by()` for inverse checks, and `IndexMarker::is_overflowed_by()` similarly
+- Use `LengthMarker::is_overflowed_by()` for inverse checks, and `IndexMarker::is_overflowed_by()`
+  similarly
 - Use `LengthMarker::clamp_to()` for clamping operations
 - Leverage `convert_to_index()` and `convert_to_length()` for type conversions
-- Use `clamp_to()` to ensure indices and lengths stay within valid bounds and `remaining_from()` to compute available space
-- Use `range_ext::RangeValidation` for validating ranges instead of manually comparing start and end values as `usize`
+- Use `clamp_to()` to ensure indices and lengths stay within valid bounds and `remaining_from()` to
+  compute available space
+- Use `range_ext::RangeValidation` for validating ranges instead of manually comparing start and end
+  values as `usize`
+
+For "cursor positioning bounds checking" pattern:
+
+- Use `check_cursor_position_bounds` instead of `overflows` since line_index == line_count() which
+  is valid for insertions (can insert at the end), while still preventing indices beyond that point
 
 # Testing interactive terminal applications
 

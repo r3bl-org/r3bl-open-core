@@ -102,7 +102,8 @@ impl OffscreenBuffer {
     /// ```
     pub fn cursor_forward(&mut self, how_many: ColWidth) {
         let new_col = self.cursor_pos.col_index + how_many;
-        self.cursor_pos.col_index = new_col.clamp_to_max_length(self.window_size.col_width);
+        self.cursor_pos.col_index =
+            new_col.clamp_to_max_length(self.window_size.col_width);
     }
 
     /// Move cursor backward by n columns.
@@ -141,7 +142,8 @@ impl OffscreenBuffer {
     /// Move cursor to specific column on current line.
     pub fn cursor_to_column(&mut self, target_col: ColIndex) {
         // Convert from 1-based to 0-based, clamp to buffer width.
-        self.cursor_pos.col_index = target_col.clamp_to_max_length(self.window_size.col_width);
+        self.cursor_pos.col_index =
+            target_col.clamp_to_max_length(self.window_size.col_width);
     }
 
     /// Save current cursor position for later restoration.

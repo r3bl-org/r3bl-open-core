@@ -7,8 +7,10 @@
 //! showing process information and keyboard shortcuts.
 
 use super::ProcessManager;
-use crate::{ANSIBasicColor, FlushKind, LengthMarker, OffscreenBuffer, OutputDevice,
-            PixelChar, Size, TuiColor, TuiStyle, col, lock_output_device_as_mut,
+use crate::{ANSIBasicColor, FlushKind, IndexMarker, LengthMarker, OffscreenBuffer,
+            OutputDevice, PixelChar, Size, TuiColor, TuiStyle, col,
+            core::units::{idx, len},
+            lock_output_device_as_mut,
             tui::terminal_lib_backends::{OffscreenBufferPaint,
                                          OffscreenBufferPaintImplCrossterm},
             tui_style_attrib::Bold,
@@ -197,10 +199,11 @@ impl OutputRenderer {
             }
         } else {
             // For 5+ processes, show range notation.
-            format!(
-                "  F1-F{}: Switch | Ctrl+Q: Quit",
-                std::cmp::min(process_count, 9)
-            )
+            format!("  F1-F{}: Switch | Ctrl+Q: Quit", {
+                let process_idx = idx(process_count);
+                let max_display = len(9);
+                process_idx.clamp_to_max_length(max_display).as_usize()
+            })
         }
     }
 

@@ -1021,12 +1021,18 @@ mod color_wheel_navigation {
         direction: &mut ColorWheelDirection,
         gradient_len: usize,
     ) -> Option<TuiColor> {
+        use crate::{IndexMarker,
+                    core::units::{idx, len}};
+
         match *direction {
             ColorWheelDirection::Forward => {
                 *index += 1;
 
                 // Hit the end of the gradient, reverse direction.
-                if *index == ch(gradient_len) {
+                let current_idx = idx(usize(*index));
+                let gradient_length = len(gradient_len);
+                if current_idx.overflows(gradient_length) {
+                    // We've reached the end, reverse direction
                     *direction = ColorWheelDirection::Reverse;
                     *index -= 2;
                 }
@@ -1035,7 +1041,9 @@ mod color_wheel_navigation {
                 *index -= 1;
 
                 // Hit the start of the gradient, forward direction.
-                if *index == ch(0) {
+                let current_idx = idx(usize(*index));
+                let zero_idx = idx(0);
+                if current_idx == zero_idx {
                     *direction = ColorWheelDirection::Forward;
                 }
             }

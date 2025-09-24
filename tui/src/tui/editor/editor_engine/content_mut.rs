@@ -61,6 +61,7 @@ pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
 /// # Arguments
 /// * `args` - Contains mutable references to the editor buffer and engine
 /// * `lines` - Vector of string slices to insert, with newlines added between them
+#[allow(clippy::too_many_lines)]
 pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
     let EditorArgsMut { buffer, engine } = args;
 

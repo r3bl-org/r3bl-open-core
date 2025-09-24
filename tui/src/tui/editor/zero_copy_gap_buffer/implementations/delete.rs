@@ -98,7 +98,7 @@
 use miette::{Result, miette};
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, RowIndex, SegIndex, ch, len};
+use crate::{ByteIndex, NULL_BYTE, RowIndex, SegIndex, ch, len};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -302,7 +302,7 @@ impl ZeroCopyGapBuffer {
         let null_start = buffer_start + new_content_len + 1;
         let null_end = buffer_start + current_content_len + 1;
         for i in null_start..null_end {
-            self.buffer[i] = b'\0';
+            self.buffer[i] = NULL_BYTE;
         }
 
         // Update line metadata.
@@ -506,7 +506,7 @@ mod tests {
         for i in (buffer_start + content_len + 1)
             ..(buffer_start + line_info.capacity.as_usize())
         {
-            assert_eq!(buffer.buffer[i], b'\0', "Byte at {i} should be null");
+            assert_eq!(buffer.buffer[i], NULL_BYTE, "Byte at {i} should be null");
         }
     }
 

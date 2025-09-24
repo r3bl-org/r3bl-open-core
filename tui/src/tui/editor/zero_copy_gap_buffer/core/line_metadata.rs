@@ -6,8 +6,9 @@
 //! for a single line in the gap buffer, including buffer position, capacity,
 //! grapheme segments, and display information.
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, Length, Seg, SegIndex,
-            SegStringOwned, SegmentArray, byte_index, ch};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length, Seg,
+            SegIndex, SegStringOwned, SegmentArray, byte_index, ch,
+            core::units::{idx, len}};
 
 /// Metadata for a single line in the buffer
 #[derive(Debug, Clone, PartialEq)]
@@ -96,13 +97,17 @@ impl LineMetadata {
         if seg_index.as_usize() == 0 {
             // Insert at beginning.
             byte_index(0)
-        } else if seg_index.as_usize() >= self.segments.len() {
-            // Insert at end
-            byte_index(self.content_len.as_usize())
         } else {
-            // Insert in middle - find the start of the target segment.
-            let segment = &self.segments[seg_index.as_usize()];
-            byte_index(segment.start_byte_index.as_usize())
+            let seg_idx = idx(seg_index.as_usize());
+            let segments_length = len(self.segments.len());
+            if seg_idx.overflows(segments_length) {
+                // Insert at end
+                byte_index(self.content_len.as_usize())
+            } else {
+                // Insert in middle - find the start of the target segment.
+                let segment = &self.segments[seg_index.as_usize()];
+                byte_index(segment.start_byte_index.as_usize())
+            }
         }
     }
 
@@ -150,7 +155,9 @@ impl LineMetadata {
             return crate::seg_index(0);
         }
 
-        if byte_pos.as_usize() >= self.content_len.as_usize() {
+        let byte_pos_idx = idx(byte_pos.as_usize());
+        let content_length = len(self.content_len.as_usize());
+        if byte_pos_idx.overflows(content_length) {
             return crate::seg_index(self.segments.len());
         }
 

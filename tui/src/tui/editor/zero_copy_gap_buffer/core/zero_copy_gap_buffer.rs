@@ -9,8 +9,7 @@
 use std::borrow::Cow;
 
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
-use crate::{ColIndex, GraphemeDoc, GraphemeDocMut, Length, RowIndex, SegIndex,
-            SegmentArray, byte_index, core::units::bounds_check::IndexMarker, len, row};
+use crate::{ColIndex, GraphemeDoc, GraphemeDocMut, Length, NULL_BYTE, RowIndex, SegIndex, SegmentArray, byte_index, core::units::bounds_check::IndexMarker, len, row};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -53,18 +52,30 @@ impl ZeroCopyGapBuffer {
 
     /// Get line metadata by index
     #[must_use]
-    pub fn get_line_info(&self, line_index: usize) -> Option<&LineMetadata> {
-        self.lines.get(line_index)
+    pub fn get_line_info(
+        &self,
+        arg_line_index: impl Into<RowIndex>,
+    ) -> Option<&LineMetadata> {
+        let line_index: RowIndex = arg_line_index.into();
+        self.lines.get(line_index.as_usize())
     }
 
     /// Get mutable line metadata by index
-    pub fn get_line_info_mut(&mut self, line_index: usize) -> Option<&mut LineMetadata> {
-        self.lines.get_mut(line_index)
+    pub fn get_line_info_mut(
+        &mut self,
+        arg_line_index: impl Into<RowIndex>,
+    ) -> Option<&mut LineMetadata> {
+        let line_index: RowIndex = arg_line_index.into();
+        self.lines.get_mut(line_index.as_usize())
     }
 
     /// Swap two lines in the buffer metadata
     /// This only swaps the [`LineMetadata`] entries, not the actual buffer content
-    pub fn swap_lines(&mut self, i: usize, j: usize) { self.lines.swap(i, j); }
+    pub fn swap_lines(&mut self, arg_i: impl Into<RowIndex>, arg_j: impl Into<RowIndex>) {
+        let i: RowIndex = arg_i.into();
+        let j: RowIndex = arg_j.into();
+        self.lines.swap(i.as_usize(), j.as_usize());
+    }
 
     /// Insert a new empty line at the specified position with proper buffer shifting
     ///
@@ -87,7 +98,10 @@ impl ZeroCopyGapBuffer {
     /// [Line 0: 256 bytes][New Line: 256 bytes][Line 1: 256 bytes][Line 2: 256 bytes]
     ///                     ↑ All content shifted →
     /// ```
-    pub fn insert_line_with_buffer_shift(&mut self, line_idx: usize) {
+    pub fn insert_line_with_buffer_shift(&mut self, arg_line_index: impl Into<RowIndex>) {
+        let line_index: RowIndex = arg_line_index.into();
+        let line_idx = line_index.as_usize();
+
         // If inserting at the end, just add a new line.
         if line_idx == self.line_count.as_usize() {
             self.add_line();
@@ -105,7 +119,7 @@ impl ZeroCopyGapBuffer {
         // Extend buffer by INITIAL_LINE_SIZE bytes.
         let old_buffer_len = self.buffer.len();
         self.buffer
-            .resize(old_buffer_len + INITIAL_LINE_SIZE, b'\0');
+            .resize(old_buffer_len + INITIAL_LINE_SIZE, NULL_BYTE);
 
         // Shift all subsequent buffer content down.
         let shift_start = *insert_offset;
@@ -118,7 +132,7 @@ impl ZeroCopyGapBuffer {
 
         // Clear the newly created space.
         for i in shift_start..shift_start + INITIAL_LINE_SIZE {
-            self.buffer[i] = b'\0';
+            self.buffer[i] = NULL_BYTE;
         }
 
         // Add newline character for the empty line.
@@ -178,7 +192,7 @@ impl ZeroCopyGapBuffer {
 
         // Extend buffer by INITIAL_LINE_SIZE bytes, all initialized to '\0'
         self.buffer
-            .resize(self.buffer.len() + INITIAL_LINE_SIZE, b'\0');
+            .resize(self.buffer.len() + INITIAL_LINE_SIZE, NULL_BYTE);
 
         // Add the newline character at the start (empty line)
         self.buffer[*buffer_offset] = b'\n';
@@ -263,7 +277,7 @@ impl ZeroCopyGapBuffer {
     /// Check if a line can accommodate additional bytes without reallocation
     #[must_use]
     pub fn can_insert(&self, line_index: RowIndex, additional_bytes: usize) -> bool {
-        if let Some(line_info) = self.get_line_info(line_index.as_usize()) {
+        if let Some(line_info) = self.get_line_info(line_index) {
             // Need space for content + newline.
             line_info.content_len.as_usize() + additional_bytes
                 < line_info.capacity.as_usize()
@@ -288,7 +302,7 @@ impl ZeroCopyGapBuffer {
         let insert_pos = line_start + old_capacity;
 
         // Extend buffer to accommodate new capacity.
-        self.buffer.resize(self.buffer.len() + shift_amount, b'\0');
+        self.buffer.resize(self.buffer.len() + shift_amount, NULL_BYTE);
 
         // Shift all subsequent content to the right.
         for i in (insert_pos..self.buffer.len() - shift_amount).rev() {
@@ -297,7 +311,7 @@ impl ZeroCopyGapBuffer {
 
         // Fill the newly allocated space with nulls.
         for i in insert_pos..insert_pos + shift_amount {
-            self.buffer[i] = b'\0';
+            self.buffer[i] = NULL_BYTE;
         }
 
         // Update line capacity.
@@ -600,7 +614,7 @@ mod tests {
         // Check that the rest of the line capacity is null-padded.
         for i in (buffer_start + 1)..(buffer_start + capacity) {
             assert_eq!(
-                buffer.buffer[i], b'\0',
+                buffer.buffer[i], NULL_BYTE,
                 "Buffer position {} should be null-padded but found: {:?}",
                 i, buffer.buffer[i]
             );
@@ -625,7 +639,7 @@ mod tests {
         // Check that the entire extended capacity is null-padded.
         for i in (buffer_start + 1)..(buffer_start + capacity) {
             assert_eq!(
-                buffer.buffer[i], b'\0',
+                buffer.buffer[i], NULL_BYTE,
                 "Extended buffer position {} should be null-padded but found: {:?}",
                 i, buffer.buffer[i]
             );

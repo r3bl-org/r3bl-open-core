@@ -4,14 +4,18 @@ use std::collections::VecDeque;
 
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use crate::HISTORY_SIZE_MAX;
+use crate::{
+    core::units::{Index, idx, len},
+    IndexMarker,
+    HISTORY_SIZE_MAX,
+};
 
 #[derive(Debug)]
 pub struct History {
     pub entries: VecDeque<String>,
     pub max_size: usize,
     pub sender: UnboundedSender<String>,
-    current_position: Option<usize>,
+    current_position: Option<Index>,
 }
 
 impl History {
@@ -56,12 +60,14 @@ impl History {
     // Find next history that matches a given string from an index.
     pub fn search_next(&mut self) -> Option<&str> {
         if let Some(index) = &mut self.current_position {
-            if *index < self.entries.len() - 1 {
-                *index += 1;
+            let entries_length = len(self.entries.len());
+            let next_index: Index = *index + 1;
+            if !next_index.overflows(entries_length) {
+                *index = next_index;
             }
-            Some(&self.entries[*index])
+            Some(&self.entries[index.as_usize()])
         } else if !self.entries.is_empty() {
-            self.current_position = Some(0);
+            self.current_position = Some(idx(0));
             Some(&self.entries[0])
         } else {
             None
@@ -71,12 +77,12 @@ impl History {
     // Find previous history item that matches a given string from an index.
     pub fn search_previous(&mut self) -> Option<&str> {
         if let Some(index) = &mut self.current_position {
-            if *index == 0 {
+            if *index == idx(0) {
                 self.current_position = None;
                 return Some("");
             }
             *index -= 1;
-            Some(&self.entries[*index])
+            Some(&self.entries[index.as_usize()])
         } else {
             None
         }

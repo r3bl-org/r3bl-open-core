@@ -9,7 +9,16 @@ use crossterm::{cursor,
                 QueueableCommand};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ok, MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength};
+use crate::{
+    core::units::idx,
+    IndexMarker,
+    ok,
+    MemoizedLenMap,
+    ReadlineError,
+    ReadlineEvent,
+    SafeHistory,
+    StringLength,
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
@@ -132,7 +141,14 @@ impl LineState {
 
     /// Move from a position on the line to the start.
     fn move_to_beginning(&self, term: &mut dyn Write, from: u16) -> io::Result<()> {
-        let move_up = self.line_height(from.saturating_sub(1));
+        let from_index = idx(usize::from(from));
+        let one_idx = idx(1);
+        let prev_pos = if one_idx.overflows(from_index.convert_to_length()) {
+            0
+        } else {
+            from - 1
+        };
+        let move_up = self.line_height(prev_pos);
         term.queue(cursor::MoveToColumn(0))?;
         if move_up != 0 {
             term.queue(cursor::MoveUp(move_up))?;
@@ -143,7 +159,14 @@ impl LineState {
 
     /// Move from the start of the line to some position.
     fn move_from_beginning(&self, term: &mut dyn Write, to: u16) -> io::Result<()> {
-        let line_height = self.line_height(to.saturating_sub(1));
+        let to_index = idx(usize::from(to));
+        let one_idx = idx(1);
+        let prev_pos = if one_idx.overflows(to_index.convert_to_length()) {
+            0
+        } else {
+            to - 1
+        };
+        let line_height = self.line_height(prev_pos);
         let line_remaining_len = to % self.term_size.0; // Get the remaining length
         if line_height != 0 {
             term.queue(cursor::MoveDown(line_height))?;
@@ -166,14 +189,19 @@ impl LineState {
             #[allow(clippy::cast_sign_loss)]
             let change_usize = change as usize;
 
-            self.line_cursor_grapheme =
-                usize::min(self.line_cursor_grapheme + change_usize, count);
+            let new_position = idx(self.line_cursor_grapheme + change_usize);
+            let count_length = idx(count).convert_to_length();
+            self.line_cursor_grapheme = new_position.clamp_to_max_length(count_length).as_usize();
         } else {
             // Use unsigned_abs() to convert negative change to positive amount to
             // subtract.
-            self.line_cursor_grapheme = self
-                .line_cursor_grapheme
-                .saturating_sub(change.unsigned_abs());
+            let change_idx = idx(change.unsigned_abs());
+            let current_idx = idx(self.line_cursor_grapheme);
+            self.line_cursor_grapheme = if change_idx.overflows(current_idx.convert_to_length()) {
+                0
+            } else {
+                self.line_cursor_grapheme - change.unsigned_abs()
+            };
         }
 
         let (pos, str) = self.current_grapheme().unwrap_or((0, ""));

@@ -5,7 +5,7 @@ use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
 use super::{ChUnit, Length, ch};
-use crate::{IndexMarker, UnitCompare, create_numeric_arithmetic_operators};
+use crate::{IndexMarker, RowIndex, UnitCompare, create_numeric_arithmetic_operators};
 
 /// Represents an index position in character units.
 ///
@@ -105,6 +105,10 @@ mod impl_from_numeric {
 
     impl From<i32> for Index {
         fn from(val: i32) -> Self { Index(val.into()) }
+    }
+
+    impl From<RowIndex> for Index {
+        fn from(row: RowIndex) -> Self { Index(row.0) }
     }
 }
 

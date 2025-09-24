@@ -108,7 +108,7 @@ use crate::{RowIndex,
             core::units::bounds_check::{IndexMarker, RangeBoundary}};
 
 impl ZeroCopyGapBuffer {
-    /// Get the entire buffer as a string slice
+    /// Get the entire buffer as a string slice.
     ///
     /// This method provides zero-copy access to the buffer contents as a `&str`. It uses
     /// `unsafe` code with [`from_utf8_unchecked()`] instead of
@@ -117,7 +117,7 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Panics
     /// Panics if the buffer contains invalid UTF-8 (should not happen in normal
-    /// operation)
+    /// operation).
     #[must_use]
     pub fn as_str(&self) -> &str {
         // In debug builds, validate UTF-8.
@@ -164,15 +164,15 @@ impl ZeroCopyGapBuffer {
         }
 
         // Calculate actual start offset from line info.
-        let start_info = self.get_line_info(line_range.start.as_usize())?;
+        let start_info = self.get_line_info(line_range.start)?;
         let start_offset = *start_info.buffer_offset;
 
         // Calculate end offset using type-safe bounds checking.
-        let end_offset = if !line_range.end.overflows(self.line_count()) {
-            let end_info = self.get_line_info(line_range.end.as_usize())?;
-            *end_info.buffer_offset
-        } else {
+        let end_offset = if line_range.end.overflows(self.line_count()) {
             self.buffer.len()
+        } else {
+            let end_info = self.get_line_info(line_range.end)?;
+            *end_info.buffer_offset
         };
 
         // In debug builds, validate UTF-8.
@@ -197,7 +197,7 @@ impl ZeroCopyGapBuffer {
     /// This is useful for debugging and testing
     #[must_use]
     pub fn get_line_raw(&self, line_index: RowIndex) -> Option<&[u8]> {
-        let line_info = self.get_line_info(line_index.as_usize())?;
+        let line_info = self.get_line_info(line_index)?;
         let start = *line_info.buffer_offset;
         let end = start + line_info.capacity.as_usize();
         Some(&self.buffer[start..end])
@@ -221,7 +221,7 @@ impl ZeroCopyGapBuffer {
     /// In debug builds, panics if the line with newline contains invalid UTF-8
     #[must_use]
     pub fn get_line_with_newline(&self, line_index: RowIndex) -> Option<&str> {
-        let line_info = self.get_line_info(line_index.as_usize())?;
+        let line_info = self.get_line_info(line_index)?;
         let content_range = line_info.content_range();
         // Include the newline if there's content.
         let end = if line_info.content_len.as_usize() > 0 {
@@ -272,7 +272,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{len, row, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
+    use crate::{NULL_BYTE, len, row, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
 
     #[test]
     fn test_as_str_empty() {
@@ -299,7 +299,7 @@ mod tests {
         let bytes = buffer.as_bytes();
         assert_eq!(bytes.len(), INITIAL_LINE_SIZE);
         assert_eq!(bytes[0], b'\n');
-        assert!(bytes[1..].iter().all(|&b| b == b'\0'));
+        assert!(bytes[1..].iter().all(|&b| b == NULL_BYTE));
     }
 
     #[test]
@@ -356,7 +356,7 @@ mod tests {
         let raw = buffer.get_line_raw(row(0)).unwrap();
         assert_eq!(raw.len(), INITIAL_LINE_SIZE);
         assert_eq!(raw[0], b'\n');
-        assert!(raw[1..].iter().all(|&b| b == b'\0'));
+        assert!(raw[1..].iter().all(|&b| b == NULL_BYTE));
     }
 
     #[test]

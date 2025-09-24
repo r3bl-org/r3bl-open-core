@@ -87,7 +87,7 @@ pub trait EOLCursorPosition: LengthMarker {
 /// Blanket implementation for all types that implement `LengthMarker`.
 ///
 /// This provides consistent EOL cursor positioning for all length types
-/// (Length, ColWidth, RowHeight) without code duplication.
+/// (Length, `ColWidth`, `RowHeight`) without code duplication.
 impl<T: LengthMarker> EOLCursorPosition for T
 where
     T: Copy,
@@ -219,6 +219,7 @@ pub trait RangeBoundary {
     /// # Returns
     ///
     /// A new range that is guaranteed to be valid for the given buffer length.
+    #[must_use]
     fn clamp_range_to(self, buffer_length: Self::LengthType) -> Self;
 }
 

@@ -27,8 +27,8 @@
 //! - This API uses the `impl Into<struct>` pattern and [Add] `+` operator overloading to
 //!   allow for easy construction of [Size] by [`ColWidth`] with [`RowHeight`] in any
 //!   order.
-//! - You can use the [`size()`] to create a [Size] struct. This function can take
-//!   a sequence of [Add]ed [`ColWidth`] and [`RowHeight`] in any order, or tuples of them
+//! - You can use the [`size()`] to create a [Size] struct. This function can take a
+//!   sequence of [Add]ed [`ColWidth`] and [`RowHeight`] in any order, or tuples of them
 //!   in any order.
 //! - Just using the [Add] `+` operator ([`RowHeight`] and [`ColWidth`] can be in any
 //!   order):

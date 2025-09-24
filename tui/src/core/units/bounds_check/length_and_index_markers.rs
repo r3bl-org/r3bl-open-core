@@ -209,8 +209,8 @@ pub trait IndexMarker: UnitCompare {
     ///
     /// # Returns
     /// - [`ArrayAccessBoundsStatus::Underflowed`] if index < min
-    /// - [`ArrayAccessBoundsStatus::Within`] if min <= index < max_length
-    /// - [`ArrayAccessBoundsStatus::Overflowed`] if index >= max_length
+    /// - [`ArrayAccessBoundsStatus::Within`] if min <= index < `max_length`
+    /// - [`ArrayAccessBoundsStatus::Overflowed`] if index >= `max_length`
     ///
     /// # Examples
     /// ```
@@ -773,6 +773,7 @@ mod overflow_operations_tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_index_clamp_to_max_length() {
         use crate::{col, height, row, width};
 
@@ -1047,9 +1048,10 @@ mod overflow_operations_tests {
 #[cfg(test)]
 mod clamping_tests {
     use super::*;
-    use crate::idx;
+    use crate::{height, idx, width};
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_index_clamp_to_max_length() {
         use crate::{col, height, row, width};
 
@@ -1310,6 +1312,8 @@ mod clamping_tests {
 
     #[test]
     fn test_clamp_to_max_length() {
+        use super::*;
+
         // Test basic clamp operations with Length/Length.
         assert_eq!(
             LengthMarker::clamp_to_max(&len(5), len(10)),
@@ -1333,7 +1337,6 @@ mod clamping_tests {
         );
 
         // Test with typed dimensions
-        use crate::{height, width};
         assert_eq!(
             LengthMarker::clamp_to_max(&width(15), width(10)),
             width(10),

@@ -12,14 +12,13 @@
 //! The unifying traits in this module are designed to provide:
 //!
 //! - **Future extensibility**: If additional document storage types are added beyond
-//!   [`ZeroCopyGapBuffer`], they can implement these traits for seamless
-//!   integration.
+//!   [`ZeroCopyGapBuffer`], they can implement these traits for seamless integration.
 //! - **Generic document operations**: New code can work with document-like structures
 //!   generically through the [`GraphemeDoc`] and [`GraphemeDocMut`] traits, without being
 //!   tied to specific implementations.
 //! - **Cross-implementation interoperability**: Enables potential interoperability
-//!   between [`ZeroCopyGapBuffer`] and [`Vec<GCStringOwned>`] if needed, allowing
-//!   code to work with either storage format.
+//!   between [`ZeroCopyGapBuffer`] and [`Vec<GCStringOwned>`] if needed, allowing code to
+//!   work with either storage format.
 //!
 //! ## Core Traits
 //!

@@ -96,7 +96,8 @@
 use miette::{Result, miette};
 
 use super::super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{ByteIndex, RowIndex, SegIndex, len};
+use crate::{BoundsCheck, ByteIndex, CursorPositionBoundsStatus, IndexMarker,
+            LengthMarker, NULL_BYTE, RowIndex, SegIndex, UnitCompare, height, idx, len};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line
@@ -168,42 +169,45 @@ impl ZeroCopyGapBuffer {
         text: &str,
     ) -> Result<()> {
         let text_bytes = text.as_bytes();
-        let text_len = text_bytes.len();
+        let text_len = len(text_bytes.len());
 
         // Get line info and validate position.
-        let line_idx = line_index.as_usize();
-        let line_info = self
-            .get_line_info(line_idx)
-            .ok_or_else(|| miette!("Line index {} out of bounds", line_idx))?;
+        let line_info = self.get_line_info(line_index).ok_or_else(|| {
+            miette!("Line index {} out of bounds", line_index.as_usize())
+        })?;
 
-        let byte_position = byte_pos.as_usize();
-        let current_content_len = line_info.content_len.as_usize();
-
-        // Validate byte position.
-        if byte_position > current_content_len {
+        // Validate byte position using cursor position bounds checking.
+        // For insertion, we allow inserting at position equal to content length (at the
+        // end of the line).
+        let byte_pos_idx = idx(byte_pos);
+        if byte_pos_idx.check_cursor_position_bounds(line_info.content_len)
+            == CursorPositionBoundsStatus::Beyond
+        {
             return Err(miette!(
                 "Byte position {} exceeds content length {}",
-                byte_position,
-                current_content_len
+                byte_pos.as_usize(),
+                line_info.content_len.as_usize()
             ));
         }
 
         // Check if we need to extend the line capacity.
+        let current_content_len = line_info.content_len;
         let new_content_len = current_content_len + text_len;
-        let required_capacity = new_content_len + 1; // +1 for newline
+        let required_capacity = new_content_len + len(1); // +1 for newline
 
-        if required_capacity > line_info.capacity.as_usize() {
+        if required_capacity > line_info.capacity {
             // Extend the line capacity.
             self.extend_line_capacity(line_index);
 
             // Re-check after extension (might need multiple extensions for large text)
-            let line_info = self.get_line_info(line_idx).ok_or_else(|| {
-                miette!("Line {} disappeared after extension", line_idx)
+            let line_info = self.get_line_info(line_index).ok_or_else(|| {
+                miette!("Line {} disappeared after extension", line_index.as_usize())
             })?;
-            if required_capacity > line_info.capacity.as_usize() {
+            if required_capacity > line_info.capacity {
                 // Calculate how many pages we need.
-                let pages_needed = (required_capacity - line_info.capacity.as_usize())
-                    .div_ceil(LINE_PAGE_SIZE);
+                let pages_needed = (required_capacity.as_usize()
+                    - line_info.capacity.as_usize())
+                .div_ceil(LINE_PAGE_SIZE);
                 for _ in 0..pages_needed {
                     self.extend_line_capacity(line_index);
                 }
@@ -211,49 +215,64 @@ impl ZeroCopyGapBuffer {
         }
 
         // Get updated line info after potential capacity extension.
-        let line_info = self.get_line_info(line_idx).ok_or_else(|| {
-            miette!("Line {} not found after capacity extension", line_idx)
+        let line_info = self.get_line_info(line_index).ok_or_else(|| {
+            miette!(
+                "Line {} not found after capacity extension",
+                line_index.as_usize()
+            )
         })?;
         let buffer_start = line_info.buffer_offset.as_usize();
+        let line_content_len = line_info.content_len; // Keep for type-safe operations
+        let byte_position = byte_pos.as_usize(); // Convert only when needed for buffer indexing
         let insert_pos = buffer_start + byte_position;
 
         // Shift existing content to make room.
-        if byte_position < current_content_len {
+        if byte_pos_idx.overflows(line_content_len) {
+            // Inserting at end, just move the newline.
+            self.buffer[insert_pos + text_len.as_usize()] = b'\n';
+        } else {
             // Need to move content to the right.
             let move_from = insert_pos;
-            let move_to = insert_pos + text_len;
-            let move_len = current_content_len - byte_position;
+            let move_to = insert_pos + text_len.as_usize();
+            let move_len = line_content_len.remaining_from(byte_pos_idx).as_usize();
 
-            // Move content (including the newline)
+            // Move content (including the newline).
             for i in (0..=move_len).rev() {
                 self.buffer[move_to + i] = self.buffer[move_from + i];
             }
 
             // Clear the gap left behind by the move.
-            for i in move_from..move_from + text_len {
-                self.buffer[i] = b'\0';
+            for i in move_from..move_from + text_len.as_usize() {
+                self.buffer[i] = NULL_BYTE;
             }
-        } else {
-            // Inserting at end, just move the newline.
-            self.buffer[insert_pos + text_len] = b'\n';
         }
 
         // Copy the new text into the buffer.
-        self.buffer[insert_pos..insert_pos + text_len].copy_from_slice(text_bytes);
+        self.buffer[insert_pos..insert_pos + text_len.as_usize()]
+            .copy_from_slice(text_bytes);
 
         // Update line metadata.
-        let line_info_mut = self.get_line_info_mut(line_idx).ok_or_else(|| {
-            miette!("Line {} not found when updating metadata", line_idx)
+        let line_info_mut = self.get_line_info_mut(line_index).ok_or_else(|| {
+            miette!(
+                "Line {} not found when updating metadata",
+                line_index.as_usize()
+            )
         })?;
-        line_info_mut.content_len = len(new_content_len);
+        let new_content_len = current_content_len + text_len;
+        line_info_mut.content_len = new_content_len;
 
         // Ensure remainder of line capacity is null-padded.
-        let line_end = buffer_start + new_content_len + 1; // +1 for newline
-        let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
-        if line_end < capacity_end {
-            // Fill unused capacity with null bytes.
+        let line_end_length = new_content_len + len(1); // +1 for newline
+        let remaining_capacity = line_info_mut.capacity - line_end_length;
+
+        // null-pad if there's remaining capacity.
+        if !remaining_capacity.is_zero() {
+            let line_end = buffer_start + line_end_length.as_usize();
+            let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
+
+            // Fill unused capacity with null bytes
             for i in line_end..capacity_end {
-                self.buffer[i] = b'\0';
+                self.buffer[i] = NULL_BYTE;
             }
         }
 
@@ -268,18 +287,21 @@ impl ZeroCopyGapBuffer {
     /// # Errors
     /// Returns an error if the line index exceeds the current line count
     pub fn insert_empty_line(&mut self, line_index: RowIndex) -> Result<()> {
-        let line_idx = line_index.as_usize();
-
-        if line_idx > self.line_count().as_usize() {
+        // Use cursor position bounds checking for insertion operations.
+        // This allows insertion at index == line_count (append at end).
+        let row_height = height(self.line_count().as_usize());
+        if line_index.check_cursor_position_bounds(row_height)
+            == CursorPositionBoundsStatus::Beyond
+        {
             return Err(miette!(
                 "Cannot insert line at index {}, only {} lines exist",
-                line_idx,
+                line_index.as_usize(),
                 self.line_count().as_usize()
             ));
         }
 
         // Use the internal method that properly shifts buffer content.
-        self.insert_line_with_buffer_shift(line_idx);
+        self.insert_line_with_buffer_shift(line_index);
 
         Ok(())
     }
@@ -507,7 +529,7 @@ mod tests {
         let unused_start = buffer_start + content_len + 1; // after content + newline
         for i in unused_start..(buffer_start + capacity) {
             assert_eq!(
-                buffer.buffer[i], b'\0',
+                buffer.buffer[i], NULL_BYTE,
                 "Unused buffer position {} should be null-padded after insertion but found: {:?}",
                 i, buffer.buffer[i]
             );
@@ -545,7 +567,7 @@ mod tests {
         let unused_start = buffer_start + content_len + 1;
         for i in unused_start..(buffer_start + capacity) {
             assert_eq!(
-                buffer.buffer[i], b'\0',
+                buffer.buffer[i], NULL_BYTE,
                 "Unused buffer position {} should be null-padded after middle insertion but found: {:?}",
                 i, buffer.buffer[i]
             );
@@ -584,7 +606,7 @@ mod tests {
         let unused_start = buffer_start + content_len + 1;
         for i in unused_start..(buffer_start + capacity) {
             assert_eq!(
-                buffer.buffer[i], b'\0',
+                buffer.buffer[i], NULL_BYTE,
                 "Extended unused buffer position {} should be null-padded but found: {:?}",
                 i, buffer.buffer[i]
             );
