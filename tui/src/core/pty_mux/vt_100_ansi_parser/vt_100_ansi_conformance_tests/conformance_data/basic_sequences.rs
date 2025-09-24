@@ -85,7 +85,7 @@ pub fn insert_text(text: &str) -> String { text.to_string() }
 /// * `count` - Number of characters to delete
 #[must_use]
 pub fn move_and_delete_chars(col: u16, count: usize) -> String {
-    let delete_count = len(count).clamp_to(u16::MAX).as_u16();
+    let delete_count = len(count).clamp_to_max(u16::MAX).as_u16();
     format!(
         "{}{}",
         CsiSequence::CursorHorizontalAbsolute(col),
@@ -104,7 +104,7 @@ pub fn move_and_delete_chars(col: u16, count: usize) -> String {
 /// * `count` - Number of blank characters to insert
 #[must_use]
 pub fn move_and_insert_chars(col: u16, count: usize) -> String {
-    let insert_count = len(count).clamp_to(u16::MAX).as_u16();
+    let insert_count = len(count).clamp_to_max(u16::MAX).as_u16();
     format!(
         "{}{}",
         CsiSequence::CursorHorizontalAbsolute(col),
@@ -123,7 +123,7 @@ pub fn move_and_insert_chars(col: u16, count: usize) -> String {
 /// * `count` - Number of characters to erase (replace with spaces)
 #[must_use]
 pub fn move_and_erase_chars(col: u16, count: usize) -> String {
-    let erase_count = len(count).clamp_to(u16::MAX).as_u16();
+    let erase_count = len(count).clamp_to_max(u16::MAX).as_u16();
     format!(
         "{}{}",
         CsiSequence::CursorHorizontalAbsolute(col),

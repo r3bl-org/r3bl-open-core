@@ -29,8 +29,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
-                   units::bounds_check::LengthMarker}};
+use crate::core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
+                  units::bounds_check::LengthMarker};
 
 impl OffscreenBuffer {
     /// Reset scroll margins to full screen (no restrictions).
@@ -53,10 +53,11 @@ impl OffscreenBuffer {
 
         // Use type-safe bounds checking: convert TermRow to RowHeight for clamping.
         let bottom_as_height = crate::RowHeight::from(bottom_value);
-        let clamped_bottom_height = bottom_as_height.clamp_to(buffer_height);
+        let clamped_bottom_height = bottom_as_height.clamp_to_max(buffer_height);
         let clamped_bottom_raw = clamped_bottom_height.into();
 
-        if !(top_value < clamped_bottom_raw && clamped_bottom_raw <= buffer_height.into()) {
+        if !(top_value < clamped_bottom_raw && clamped_bottom_raw <= buffer_height.into())
+        {
             tracing::warn!(
                 "Invalid scroll margins: top={}, bottom={}, buffer_height={:?}",
                 top_value,

@@ -102,7 +102,7 @@ impl OffscreenBuffer {
     /// ```
     pub fn cursor_forward(&mut self, how_many: ColWidth) {
         let new_col = self.cursor_pos.col_index + how_many;
-        self.cursor_pos.col_index = new_col.clamp_to(self.window_size.col_width);
+        self.cursor_pos.col_index = new_col.clamp_to_max_length(self.window_size.col_width);
     }
 
     /// Move cursor backward by n columns.
@@ -121,7 +121,7 @@ impl OffscreenBuffer {
         let clamped_row = row.clamp(scroll_top_boundary, scroll_bottom_boundary);
 
         // Clamp column to screen width.
-        let new_col = col.clamp_to(self.window_size.col_width);
+        let new_col = col.clamp_to_max_length(self.window_size.col_width);
 
         self.cursor_pos = Pos {
             row_index: clamped_row,
@@ -141,7 +141,7 @@ impl OffscreenBuffer {
     /// Move cursor to specific column on current line.
     pub fn cursor_to_column(&mut self, target_col: ColIndex) {
         // Convert from 1-based to 0-based, clamp to buffer width.
-        self.cursor_pos.col_index = target_col.clamp_to(self.window_size.col_width);
+        self.cursor_pos.col_index = target_col.clamp_to_max_length(self.window_size.col_width);
     }
 
     /// Save current cursor position for later restoration.
@@ -162,12 +162,10 @@ impl OffscreenBuffer {
     /// Move cursor to specific row on current column.
     pub fn cursor_to_row(&mut self, target_row: RowIndex) {
         // Clamp to valid range (conversion from 1-based to 0-based already done).
-        let new_row = target_row.clamp_to(self.window_size.row_height);
+        let new_row = target_row.clamp_to_max_length(self.window_size.row_height);
         // Update only the row, preserve column.
         self.cursor_pos.row_index = new_row;
     }
-
-
 }
 
 #[cfg(test)]

@@ -75,7 +75,7 @@ impl OffscreenBuffer {
         }
 
         // Calculate how many characters we can actually insert.
-        let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
+        let how_many_clamped = how_many.clamp_to_max(max_width.remaining_from(at));
 
         // Exit early if nothing to insert.
         if how_many_clamped.is_zero() {
@@ -155,7 +155,7 @@ impl OffscreenBuffer {
         }
 
         // Calculate how many characters we can actually delete.
-        let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
+        let how_many_clamped = how_many.clamp_to_max(max_width.remaining_from(at));
 
         // Exit early if nothing to delete.
         if how_many_clamped.is_zero() {
@@ -235,7 +235,7 @@ impl OffscreenBuffer {
         }
 
         // Calculate how many characters we can actually erase.
-        let how_many_clamped = how_many.clamp_to(max_width.remaining_from(at));
+        let how_many_clamped = how_many.clamp_to_max(max_width.remaining_from(at));
 
         // Exit early if nothing to erase.
         if how_many_clamped.is_zero() {

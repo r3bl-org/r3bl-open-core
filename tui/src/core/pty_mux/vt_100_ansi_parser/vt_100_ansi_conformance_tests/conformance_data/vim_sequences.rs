@@ -244,7 +244,7 @@ pub fn vim_completion_menu(completions: &[&str], start_row: u16) -> String {
 
     // Display each completion option.
     for (i, completion) in completions.iter().enumerate() {
-        let row_offset = height(i).clamp_to(u16::MAX).as_u16();
+        let row_offset = height(i).clamp_to_max(u16::MAX).as_u16();
         sequence.push_str(
             &CsiSequence::CursorPosition {
                 row: term_row(start_row + row_offset),

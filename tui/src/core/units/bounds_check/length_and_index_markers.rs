@@ -49,6 +49,18 @@ pub trait UnitCompare: From<usize> + From<u16> {
 /// section for details on how index types relate to length types and the type safety
 /// guarantees.
 ///
+/// ## Method Parameter Types Explained
+///
+/// The clamp methods have carefully chosen parameter types to reflect real-world usage:
+///
+/// - **`clamp_to_max_length(max_length: LengthType)`**: Takes a **length** because upper
+///   bounds are naturally expressed as container sizes ("How many items are there?")
+/// - **`clamp_to_min_index(min_bound: Self)`**: Takes an **index** because lower bounds
+///   are naturally expressed as minimum positions ("What's the lowest position allowed?")
+///
+/// This asymmetry makes the API more ergonomic by matching how these operations are
+/// typically used in practice.
+///
 /// [module documentation]: mod@crate::core::units::bounds_check
 pub trait IndexMarker: UnitCompare {
     /// The corresponding length type for this index type.
@@ -234,7 +246,12 @@ pub trait IndexMarker: UnitCompare {
         }
     }
 
-    /// Clamp this index to stay within the bounds defined by max_length.
+    /// Clamp this index to stay within the bounds defined by a container length.
+    ///
+    /// **Why this method takes a `LengthType` parameter:**
+    /// Upper bounds are naturally expressed as container sizes (how many items exist).
+    /// This contrasts with `clamp_to_min_index()` which takes an index parameter,
+    /// since lower bounds are naturally expressed as minimum positions.
     ///
     /// Returns the index unchanged if within bounds, or the maximum valid index
     /// if it would overflow. This method provides a convenient way to ensure
@@ -243,8 +260,8 @@ pub trait IndexMarker: UnitCompare {
     /// ```text
     /// Clamping operation with max_length=10:
     ///
-    ///                           index=5 (within bounds)   index=15 (overflows)
-    ///                                 ↓                         ↓
+    ///                           index=5 (within bounds)     index=15 (overflows)
+    ///                                 ↓                                       ↓
     /// Index:      0   1   2   3   4   5   6   7   8   9 │ 10  11  12  13  14  15
     /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┬───┬───┬───┐
     ///           │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │ × │ × │ × │
@@ -252,8 +269,8 @@ pub trait IndexMarker: UnitCompare {
     ///           ├────────── valid indices ──────────────┼───── overflow ────────┘
     ///           └────────── length=10 (1-based) ────────┘
     ///
-    /// clamp_to(index=5, max=10)  = 5 (unchanged - within bounds)
-    /// clamp_to(index=15, max=10) = 9 (clamped to max valid index)
+    /// clamp_to_max_length(index=5, max_length=10)  = 5 (unchanged - within bounds)
+    /// clamp_to_max_length(index=15, max_length=10) = 9 (clamped to max valid index)
     /// ```
     ///
     /// # Returns
@@ -268,19 +285,19 @@ pub trait IndexMarker: UnitCompare {
     /// let max_width = width(10);
     ///
     /// // Index within bounds - returned unchanged
-    /// assert_eq!(col(5).clamp_to(max_width), col(5));
+    /// assert_eq!(col(5).clamp_to_max_length(max_width), col(5));
     ///
     /// // Index at boundary - returned unchanged (9 is valid for width 10)
-    /// assert_eq!(col(9).clamp_to(max_width), col(9));
+    /// assert_eq!(col(9).clamp_to_max_length(max_width), col(9));
     ///
     /// // Index overflows - clamped to maximum valid index
-    /// assert_eq!(col(15).clamp_to(max_width), col(9));
+    /// assert_eq!(col(15).clamp_to_max_length(max_width), col(9));
     ///
     /// // Zero index - always valid
-    /// assert_eq!(col(0).clamp_to(max_width), col(0));
+    /// assert_eq!(col(0).clamp_to_max_length(max_width), col(0));
     /// ```
     #[must_use]
-    fn clamp_to(&self, max_length: Self::LengthType) -> Self
+    fn clamp_to_max_length(&self, max_length: Self::LengthType) -> Self
     where
         Self: Copy + Sized + PartialOrd,
         Self::LengthType: Copy,
@@ -290,6 +307,65 @@ pub trait IndexMarker: UnitCompare {
         } else {
             *self
         }
+    }
+
+    /// Ensures this index is at least the given minimum bound.
+    ///
+    /// **Why this method takes an index (`Self`) parameter:**
+    /// Lower bounds are naturally expressed as minimum positions (index-to-index).
+    /// This contrasts with `clamp_to_max_length()` which takes a length parameter,
+    /// since upper bounds are naturally expressed as container sizes.
+    ///
+    /// Returns the minimum bound if this index is less than it,
+    /// otherwise returns self unchanged. This is useful for ensuring
+    /// indices don't go below a starting position, such as in scrolling logic.
+    ///
+    /// ```text
+    /// Clamping operation with min_bound=3:
+    ///
+    ///                 min_bound=3
+    ///    current index=2   │   current index=7
+    ///                  ↓   ↓               ↓
+    /// Index:   0   1   2   3   4   5   6   7   8   9
+    ///        ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///        │ × │ × │ × │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │
+    ///        ├───┴───┴───┼───┴───┴───┴───┴───┴───┴───┤
+    ///        └ underflow ┼──── valid range ──────────┘
+    ///
+    /// clamp_to_min_index(index=2, min_index=3) = 3 (clamped up to minimum)
+    /// clamp_to_min_index(index=7, min_index=3) = 7 (unchanged - above minimum)
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// The larger of this index or the minimum bound. This ensures the result
+    /// is never below the minimum bound.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{IndexMarker, col, row};
+    ///
+    /// let min_col = col(3);
+    ///
+    /// // Index below minimum - clamped up
+    /// assert_eq!(col(1).clamp_to_min_index(min_col), col(3));
+    ///
+    /// // Index above minimum - unchanged
+    /// assert_eq!(col(5).clamp_to_min_index(min_col), col(5));
+    ///
+    /// // Index at minimum - unchanged
+    /// assert_eq!(col(3).clamp_to_min_index(min_col), col(3));
+    ///
+    /// // Zero index below minimum - clamped up
+    /// assert_eq!(col(0).clamp_to_min_index(min_col), col(3));
+    /// ```
+    #[must_use]
+    fn clamp_to_min_index(&self, min_bound: impl Into<Self>) -> Self
+    where
+        Self: Ord + Copy,
+    {
+        let min: Self = min_bound.into();
+        (*self).max(min)
     }
 }
 
@@ -455,7 +531,7 @@ pub trait LengthMarker: UnitCompare {
     /// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │   │   │
     /// └───┴───┴───┴───┴───┴───┴───┘
     ///
-    /// Result: clamp_to(5, max=7) = 5 (no change - within bounds)
+    /// Result: clamp_to_max_length(5, max=7) = 5 (no change - within bounds)
     ///
     /// Case 2: length=10 (exceeds bounds)
     /// ┌───────────── length=10 ──────────────┐
@@ -465,7 +541,7 @@ pub trait LengthMarker: UnitCompare {
     /// └───┴───┴───┴───┴───┴───┴───┼───┴───┴───┘
     ///                             └─ max_length=7 boundary
     ///
-    /// Result: clamp_to(10, max=7) = 7 (clamped to maximum)
+    /// Result: clamp_to_max_length(10, max=7) = 7 (clamped to maximum)
     /// ```
     ///
     /// # Returns
@@ -482,20 +558,20 @@ pub trait LengthMarker: UnitCompare {
     /// // Length within bounds - no change
     /// let small_length = len(5);
     /// let max_allowed = len(10);
-    /// assert_eq!(small_length.clamp_to(max_allowed), len(5));
+    /// assert_eq!(small_length.clamp_to_max(max_allowed), len(5));
     ///
     /// // Length exceeds bounds - gets clamped
     /// let large_length = len(15);
     /// let max_allowed = len(10);
-    /// assert_eq!(large_length.clamp_to(max_allowed), len(10));
+    /// assert_eq!(large_length.clamp_to_max(max_allowed), len(10));
     ///
     /// // Equal lengths - returns the same value
     /// let equal_length = len(8);
     /// let max_allowed = len(8);
-    /// assert_eq!(equal_length.clamp_to(max_allowed), len(8));
+    /// assert_eq!(equal_length.clamp_to_max(max_allowed), len(8));
     /// ```
     #[must_use]
-    fn clamp_to(&self, arg_max_length: impl Into<Self>) -> Self
+    fn clamp_to_max(&self, arg_max_length: impl Into<Self>) -> Self
     where
         Self: Copy + Ord,
     {
@@ -505,940 +581,1535 @@ pub trait LengthMarker: UnitCompare {
 }
 
 #[cfg(test)]
-mod tests {
+mod overflow_operations_tests {
     use super::*;
-    use crate::{ArrayAccessBoundsStatus, BoundsCheck, ColIndex, ColWidth, RowHeight,
-                RowIndex, idx, len};
+    use crate::{BoundsCheck, ColIndex, ColWidth, RowHeight, RowIndex, idx};
 
-    mod overflow_operations_tests {
-        use super::*;
+    #[test]
+    fn test_is_overflowed_by() {
+        // Test basic cases with Index/Length.
+        assert!(!len(3).is_overflowed_by(idx(1)), "Within bounds");
+        assert!(len(3).is_overflowed_by(idx(3)), "At boundary");
+        assert!(len(3).is_overflowed_by(idx(5)), "Beyond bounds");
+        assert!(
+            len(0).is_overflowed_by(idx(0)),
+            "Empty collection edge case"
+        );
 
-        #[test]
-        fn test_is_overflowed_by() {
-            // Test basic cases with Index/Length.
-            assert!(!len(3).is_overflowed_by(idx(1)), "Within bounds");
-            assert!(len(3).is_overflowed_by(idx(3)), "At boundary");
-            assert!(len(3).is_overflowed_by(idx(5)), "Beyond bounds");
+        // Test with typed dimensions.
+        assert!(
+            !ColWidth::new(10).is_overflowed_by(ColIndex::new(5)),
+            "Typed indices within bounds"
+        );
+        assert!(
+            ColWidth::new(10).is_overflowed_by(ColIndex::new(10)),
+            "Typed indices at boundary"
+        );
+        assert!(
+            !RowHeight::new(5).is_overflowed_by(RowIndex::new(3)),
+            "Row indices within bounds"
+        );
+        assert!(
+            RowHeight::new(5).is_overflowed_by(RowIndex::new(5)),
+            "Row indices at boundary"
+        );
+
+        // Verify method matches existing check_overflows behavior.
+        let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
+        for (index_val, length_val) in test_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+            assert_eq!(
+                length.is_overflowed_by(index),
+                index.check_array_access_bounds(length)
+                    == ArrayAccessBoundsStatus::Overflowed,
+                "New method should match existing behavior for index {index_val} and length {length_val}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_underflows() {
+        use crate::{col, row};
+
+        // Test column underflow
+        let min_col = col(3);
+        assert!(col(0).underflows(min_col)); // 0 < 3
+        assert!(col(2).underflows(min_col)); // 2 < 3
+        assert!(!col(3).underflows(min_col)); // 3 == 3 (at boundary)
+        assert!(!col(5).underflows(min_col)); // 5 > 3
+
+        // Test row underflow
+        let min_row = row(5);
+        assert!(row(4).underflows(min_row)); // 4 < 5
+        assert!(!row(5).underflows(min_row)); // 5 == 5
+        assert!(!row(10).underflows(min_row)); // 10 > 5
+
+        // Test with Index/Length
+        let min_index = idx(7);
+        assert!(idx(3).underflows(min_index)); // 3 < 7
+        assert!(idx(6).underflows(min_index)); // 6 < 7
+        assert!(!idx(7).underflows(min_index)); // 7 == 7
+        assert!(!idx(10).underflows(min_index)); // 10 > 7
+    }
+
+    #[test]
+    fn test_check_bounds_range() {
+        use crate::{ArrayAccessBoundsStatus, col, width};
+
+        let min_col = col(2);
+        let max_width = width(8);
+
+        // Test underflow
+        assert_eq!(
+            col(0).check_bounds_range(min_col, max_width),
+            ArrayAccessBoundsStatus::Underflowed
+        );
+        assert_eq!(
+            col(1).check_bounds_range(min_col, max_width),
+            ArrayAccessBoundsStatus::Underflowed
+        );
+
+        // Test within bounds
+        assert_eq!(
+            col(2).check_bounds_range(min_col, max_width),
+            ArrayAccessBoundsStatus::Within
+        );
+        assert_eq!(
+            col(5).check_bounds_range(min_col, max_width),
+            ArrayAccessBoundsStatus::Within
+        );
+        assert_eq!(
+            col(7).check_bounds_range(min_col, max_width),
+            ArrayAccessBoundsStatus::Within
+        );
+
+        // Test overflow
+        assert_eq!(
+            col(8).check_bounds_range(min_col, max_width),
+            ArrayAccessBoundsStatus::Overflowed
+        );
+        assert_eq!(
+            col(10).check_bounds_range(min_col, max_width),
+            ArrayAccessBoundsStatus::Overflowed
+        );
+
+        // Test edge cases with zero minimum
+        let min_zero = col(0);
+        assert_eq!(
+            col(0).check_bounds_range(min_zero, max_width),
+            ArrayAccessBoundsStatus::Within
+        );
+        assert_eq!(
+            col(7).check_bounds_range(min_zero, max_width),
+            ArrayAccessBoundsStatus::Within
+        );
+        assert_eq!(
+            col(8).check_bounds_range(min_zero, max_width),
+            ArrayAccessBoundsStatus::Overflowed
+        );
+    }
+
+    #[test]
+    fn test_overflows() {
+        // Test basic cases with Index/Length - should mirror is_overflowed_by results
+        assert!(!idx(1).overflows(len(3)), "Within bounds");
+        assert!(idx(3).overflows(len(3)), "At boundary");
+        assert!(idx(5).overflows(len(3)), "Beyond bounds");
+        assert!(idx(0).overflows(len(0)), "Empty collection edge case");
+
+        // Test with typed dimensions.
+        assert!(
+            !ColIndex::new(5).overflows(ColWidth::new(10)),
+            "Typed indices within bounds"
+        );
+        assert!(
+            ColIndex::new(10).overflows(ColWidth::new(10)),
+            "Typed indices at boundary"
+        );
+        assert!(
+            !RowIndex::new(3).overflows(RowHeight::new(5)),
+            "Row indices within bounds"
+        );
+        assert!(
+            RowIndex::new(5).overflows(RowHeight::new(5)),
+            "Row indices at boundary"
+        );
+
+        // Verify method matches is_overflowed_by behavior (inverse relationship)
+        let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
+        for (index_val, length_val) in test_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+            assert_eq!(
+                index.overflows(length),
+                length.is_overflowed_by(index),
+                "overflows() should match is_overflowed_by() for index {index_val} and length {length_val}"
+            );
+        }
+
+        // Test with specific typed combinations.
+        let col_cases = [(0, 5), (4, 5), (5, 5), (6, 5)];
+        for (index_val, width_val) in col_cases {
+            let col_index = ColIndex::new(index_val);
+            let col_width = ColWidth::new(width_val);
+            assert_eq!(
+                col_index.overflows(col_width),
+                col_width.is_overflowed_by(col_index),
+                "ColIndex::overflows should match ColWidth::is_overflowed_by for index {index_val} and width {width_val}"
+            );
+        }
+
+        let row_cases = [(0, 3), (2, 3), (3, 3), (4, 3)];
+        for (index_val, height_val) in row_cases {
+            let row_index = RowIndex::new(index_val);
+            let row_height = RowHeight::new(height_val);
+            assert_eq!(
+                row_index.overflows(row_height),
+                row_height.is_overflowed_by(row_index),
+                "RowIndex::overflows should match RowHeight::is_overflowed_by for index {index_val} and height {height_val}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_index_clamp_to_max_length() {
+        use crate::{col, height, row, width};
+
+        // Test basic Index/Length clamping scenarios
+        assert_eq!(
+            idx(5).clamp_to_max_length(len(10)),
+            idx(5),
+            "Index within bounds - returned unchanged"
+        );
+        assert_eq!(
+            idx(9).clamp_to_max_length(len(10)),
+            idx(9),
+            "Index at max valid position - returned unchanged"
+        );
+        assert_eq!(
+            idx(15).clamp_to_max_length(len(10)),
+            idx(9),
+            "Index overflows - clamped to max valid index (length-1)"
+        );
+        assert_eq!(
+            idx(0).clamp_to_max_length(len(10)),
+            idx(0),
+            "Zero index - always valid"
+        );
+
+        // Test with ColIndex/ColWidth typed dimensions
+        assert_eq!(
+            col(5).clamp_to_max_length(width(10)),
+            col(5),
+            "ColIndex within bounds - returned unchanged"
+        );
+        assert_eq!(
+            col(9).clamp_to_max_length(width(10)),
+            col(9),
+            "ColIndex at boundary - returned unchanged (9 is valid for width 10)"
+        );
+        assert_eq!(
+            col(10).clamp_to_max_length(width(10)),
+            col(9),
+            "ColIndex at boundary - clamped to max valid index"
+        );
+        assert_eq!(
+            col(15).clamp_to_max_length(width(10)),
+            col(9),
+            "ColIndex overflows - clamped to max valid index"
+        );
+        assert_eq!(
+            col(0).clamp_to_max_length(width(10)),
+            col(0),
+            "ColIndex zero - always valid"
+        );
+
+        // Test with RowIndex/RowHeight typed dimensions
+        assert_eq!(
+            row(3).clamp_to_max_length(height(5)),
+            row(3),
+            "RowIndex within bounds - returned unchanged"
+        );
+        assert_eq!(
+            row(4).clamp_to_max_length(height(5)),
+            row(4),
+            "RowIndex at max valid position - returned unchanged"
+        );
+        assert_eq!(
+            row(5).clamp_to_max_length(height(5)),
+            row(4),
+            "RowIndex at boundary - clamped to max valid index"
+        );
+        assert_eq!(
+            row(8).clamp_to_max_length(height(5)),
+            row(4),
+            "RowIndex overflows - clamped to max valid index"
+        );
+
+        // Test edge case: empty collection (length 0)
+        assert_eq!(
+            idx(0).clamp_to_max_length(len(0)),
+            idx(0),
+            "Empty collection edge case - index 0 should remain 0"
+        );
+        assert_eq!(
+            idx(5).clamp_to_max_length(len(0)),
+            idx(0),
+            "Empty collection with overflow - should clamp to 0"
+        );
+
+        // Test single element case (length 1)
+        assert_eq!(
+            idx(0).clamp_to_max_length(len(1)),
+            idx(0),
+            "Single element case - index 0 valid"
+        );
+        assert_eq!(
+            idx(1).clamp_to_max_length(len(1)),
+            idx(0),
+            "Single element case - index 1 clamped to 0"
+        );
+
+        // Property test: result should always be <= max valid index
+        let test_cases = [(5, 10), (10, 10), (15, 10), (0, 5), (100, 20)];
+        for (index_val, length_val) in test_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+            let result = index.clamp_to_max_length(length);
+            let max_valid_index = if length_val > 0 { length_val - 1 } else { 0 };
+
             assert!(
-                len(0).is_overflowed_by(idx(0)),
-                "Empty collection edge case"
+                result.as_usize() <= max_valid_index,
+                "clamp_to_max_length({index_val}, {length_val}) = {} should be <= {max_valid_index}",
+                result.as_usize()
             );
 
-            // Test with typed dimensions.
-            assert!(
-                !ColWidth::new(10).is_overflowed_by(ColIndex::new(5)),
-                "Typed indices within bounds"
-            );
-            assert!(
-                ColWidth::new(10).is_overflowed_by(ColIndex::new(10)),
-                "Typed indices at boundary"
-            );
-            assert!(
-                !RowHeight::new(5).is_overflowed_by(RowIndex::new(3)),
-                "Row indices within bounds"
-            );
-            assert!(
-                RowHeight::new(5).is_overflowed_by(RowIndex::new(5)),
-                "Row indices at boundary"
-            );
-
-            // Verify method matches existing check_overflows behavior.
-            let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
-            for (index_val, length_val) in test_cases {
-                let index = idx(index_val);
-                let length = len(length_val);
+            // If within bounds, should return original value
+            if index_val < length_val {
                 assert_eq!(
-                    length.is_overflowed_by(index),
-                    index.check_array_access_bounds(length)
-                        == ArrayAccessBoundsStatus::Overflowed,
-                    "New method should match existing behavior for index {index_val} and length {length_val}"
+                    result, index,
+                    "clamp_to_max_length({index_val}, {length_val}) should preserve value when within bounds"
                 );
             }
         }
 
-        #[test]
-        fn test_underflows() {
-            use crate::{col, row};
+        // Test with large values
+        assert_eq!(
+            col(999).clamp_to_max_length(width(10)),
+            col(9),
+            "Large index value clamped to small max"
+        );
 
-            // Test column underflow
-            let min_col = col(3);
-            assert!(col(0).underflows(min_col)); // 0 < 3
-            assert!(col(2).underflows(min_col)); // 2 < 3
-            assert!(!col(3).underflows(min_col)); // 3 == 3 (at boundary)
-            assert!(!col(5).underflows(min_col)); // 5 > 3
+        // Test consistency: clamp_to_max should match overflows() behavior
+        let consistency_cases = [(5, 10), (9, 10), (10, 10), (15, 10)];
+        for (index_val, length_val) in consistency_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+            let clamped = index.clamp_to_max_length(length);
+            let overflows = index.overflows(length);
 
-            // Test row underflow
-            let min_row = row(5);
-            assert!(row(4).underflows(min_row)); // 4 < 5
-            assert!(!row(5).underflows(min_row)); // 5 == 5
-            assert!(!row(10).underflows(min_row)); // 10 > 5
-
-            // Test with Index/Length
-            let min_index = idx(7);
-            assert!(idx(3).underflows(min_index)); // 3 < 7
-            assert!(idx(6).underflows(min_index)); // 6 < 7
-            assert!(!idx(7).underflows(min_index)); // 7 == 7
-            assert!(!idx(10).underflows(min_index)); // 10 > 7
-        }
-
-        #[test]
-        fn test_check_bounds_range() {
-            use crate::{ArrayAccessBoundsStatus, col, width};
-
-            let min_col = col(2);
-            let max_width = width(8);
-
-            // Test underflow
-            assert_eq!(
-                col(0).check_bounds_range(min_col, max_width),
-                ArrayAccessBoundsStatus::Underflowed
-            );
-            assert_eq!(
-                col(1).check_bounds_range(min_col, max_width),
-                ArrayAccessBoundsStatus::Underflowed
-            );
-
-            // Test within bounds
-            assert_eq!(
-                col(2).check_bounds_range(min_col, max_width),
-                ArrayAccessBoundsStatus::Within
-            );
-            assert_eq!(
-                col(5).check_bounds_range(min_col, max_width),
-                ArrayAccessBoundsStatus::Within
-            );
-            assert_eq!(
-                col(7).check_bounds_range(min_col, max_width),
-                ArrayAccessBoundsStatus::Within
-            );
-
-            // Test overflow
-            assert_eq!(
-                col(8).check_bounds_range(min_col, max_width),
-                ArrayAccessBoundsStatus::Overflowed
-            );
-            assert_eq!(
-                col(10).check_bounds_range(min_col, max_width),
-                ArrayAccessBoundsStatus::Overflowed
-            );
-
-            // Test edge cases with zero minimum
-            let min_zero = col(0);
-            assert_eq!(
-                col(0).check_bounds_range(min_zero, max_width),
-                ArrayAccessBoundsStatus::Within
-            );
-            assert_eq!(
-                col(7).check_bounds_range(min_zero, max_width),
-                ArrayAccessBoundsStatus::Within
-            );
-            assert_eq!(
-                col(8).check_bounds_range(min_zero, max_width),
-                ArrayAccessBoundsStatus::Overflowed
-            );
-        }
-
-        #[test]
-        fn test_overflows() {
-            // Test basic cases with Index/Length - should mirror is_overflowed_by results
-            assert!(!idx(1).overflows(len(3)), "Within bounds");
-            assert!(idx(3).overflows(len(3)), "At boundary");
-            assert!(idx(5).overflows(len(3)), "Beyond bounds");
-            assert!(idx(0).overflows(len(0)), "Empty collection edge case");
-
-            // Test with typed dimensions.
-            assert!(
-                !ColIndex::new(5).overflows(ColWidth::new(10)),
-                "Typed indices within bounds"
-            );
-            assert!(
-                ColIndex::new(10).overflows(ColWidth::new(10)),
-                "Typed indices at boundary"
-            );
-            assert!(
-                !RowIndex::new(3).overflows(RowHeight::new(5)),
-                "Row indices within bounds"
-            );
-            assert!(
-                RowIndex::new(5).overflows(RowHeight::new(5)),
-                "Row indices at boundary"
-            );
-
-            // Verify method matches is_overflowed_by behavior (inverse relationship)
-            let test_cases = [(0, 1), (1, 1), (5, 10), (10, 10)];
-            for (index_val, length_val) in test_cases {
-                let index = idx(index_val);
-                let length = len(length_val);
+            if overflows {
+                // If it overflows, clamp_to_max should return max valid index
                 assert_eq!(
-                    index.overflows(length),
-                    length.is_overflowed_by(index),
-                    "overflows() should match is_overflowed_by() for index {index_val} and length {length_val}"
+                    clamped,
+                    length.convert_to_index(),
+                    "When index overflows, clamp_to_max should return max valid index"
                 );
-            }
-
-            // Test with specific typed combinations.
-            let col_cases = [(0, 5), (4, 5), (5, 5), (6, 5)];
-            for (index_val, width_val) in col_cases {
-                let col_index = ColIndex::new(index_val);
-                let col_width = ColWidth::new(width_val);
+            } else {
+                // If it doesn't overflow, clamp_to_max should return original
                 assert_eq!(
-                    col_index.overflows(col_width),
-                    col_width.is_overflowed_by(col_index),
-                    "ColIndex::overflows should match ColWidth::is_overflowed_by for index {index_val} and width {width_val}"
-                );
-            }
-
-            let row_cases = [(0, 3), (2, 3), (3, 3), (4, 3)];
-            for (index_val, height_val) in row_cases {
-                let row_index = RowIndex::new(index_val);
-                let row_height = RowHeight::new(height_val);
-                assert_eq!(
-                    row_index.overflows(row_height),
-                    row_height.is_overflowed_by(row_index),
-                    "RowIndex::overflows should match RowHeight::is_overflowed_by for index {index_val} and height {height_val}"
+                    clamped, index,
+                    "When index doesn't overflow, clamp_to_max should preserve value"
                 );
             }
         }
     }
 
-    mod length_operations_tests {
-        use super::*;
+    #[test]
+    fn test_index_clamp_to_min_index() {
+        use crate::{col, row};
 
-        #[test]
-        fn test_remaining_from() {
-            // Test basic cases with Length/Index.
-            assert_eq!(
-                len(10).remaining_from(idx(3)),
-                len(7),
-                "Normal case: 7 chars remain from index 3 to 9"
-            );
-            assert_eq!(
-                len(10).remaining_from(idx(9)),
-                len(1),
-                "Edge case: only 1 char remains at last position"
-            );
-            assert_eq!(
-                len(10).remaining_from(idx(10)),
-                len(0),
-                "Boundary case: at boundary, nothing remains"
-            );
-            assert_eq!(
-                len(10).remaining_from(idx(15)),
-                len(0),
-                "Overflow case: beyond boundary, nothing remains"
-            );
+        // Test basic Index clamping to minimum
+        assert_eq!(
+            idx(2).clamp_to_min_index(idx(5)),
+            idx(5),
+            "Index below minimum - clamped up to minimum"
+        );
+        assert_eq!(
+            idx(7).clamp_to_min_index(idx(5)),
+            idx(7),
+            "Index above minimum - returned unchanged"
+        );
+        assert_eq!(
+            idx(5).clamp_to_min_index(idx(5)),
+            idx(5),
+            "Index at minimum - returned unchanged"
+        );
+        assert_eq!(
+            idx(0).clamp_to_min_index(idx(3)),
+            idx(3),
+            "Zero index below minimum - clamped up"
+        );
 
-            // Test edge case: empty length.
-            assert_eq!(
-                len(0).remaining_from(idx(0)),
-                len(0),
-                "Empty collection: no chars remain"
-            );
-            assert_eq!(
-                len(0).remaining_from(idx(5)),
-                len(0),
-                "Empty collection with overflow: no chars remain"
-            );
+        // Test with ColIndex typed dimensions
+        assert_eq!(
+            col(1).clamp_to_min_index(col(3)),
+            col(3),
+            "ColIndex below minimum - clamped up"
+        );
+        assert_eq!(
+            col(5).clamp_to_min_index(col(3)),
+            col(5),
+            "ColIndex above minimum - unchanged"
+        );
+        assert_eq!(
+            col(3).clamp_to_min_index(col(3)),
+            col(3),
+            "ColIndex at minimum - unchanged"
+        );
+        assert_eq!(
+            col(0).clamp_to_min_index(col(2)),
+            col(2),
+            "ColIndex zero below minimum - clamped up"
+        );
 
-            // Test with typed dimensions - ColWidth/ColIndex.
-            let col_width = ColWidth::new(10);
-            assert_eq!(
-                col_width.remaining_from(ColIndex::new(3)),
-                len(7),
-                "ColWidth: 7 chars remain from col 3"
-            );
-            assert_eq!(
-                col_width.remaining_from(ColIndex::new(9)),
-                len(1),
-                "ColWidth: 1 char remains at last col"
-            );
-            assert_eq!(
-                col_width.remaining_from(ColIndex::new(10)),
-                len(0),
-                "ColWidth: at boundary"
-            );
-            assert_eq!(
-                col_width.remaining_from(ColIndex::new(15)),
-                len(0),
-                "ColWidth: beyond boundary"
-            );
+        // Test with RowIndex typed dimensions
+        assert_eq!(
+            row(2).clamp_to_min_index(row(4)),
+            row(4),
+            "RowIndex below minimum - clamped up"
+        );
+        assert_eq!(
+            row(6).clamp_to_min_index(row(4)),
+            row(6),
+            "RowIndex above minimum - unchanged"
+        );
+        assert_eq!(
+            row(4).clamp_to_min_index(row(4)),
+            row(4),
+            "RowIndex at minimum - unchanged"
+        );
 
-            // Test with typed dimensions - RowHeight/RowIndex.
-            let row_height = RowHeight::new(5);
-            assert_eq!(
-                row_height.remaining_from(RowIndex::new(2)),
-                len(3),
-                "RowHeight: 3 rows remain from row 2"
-            );
-            assert_eq!(
-                row_height.remaining_from(RowIndex::new(4)),
-                len(1),
-                "RowHeight: 1 row remains at last row"
-            );
-            assert_eq!(
-                row_height.remaining_from(RowIndex::new(5)),
-                len(0),
-                "RowHeight: at boundary"
-            );
-            assert_eq!(
-                row_height.remaining_from(RowIndex::new(10)),
-                len(0),
-                "RowHeight: beyond boundary"
-            );
+        // Test edge cases
+        assert_eq!(
+            idx(0).clamp_to_min_index(idx(0)),
+            idx(0),
+            "Zero index with zero minimum"
+        );
+        assert_eq!(
+            idx(10).clamp_to_min_index(idx(0)),
+            idx(10),
+            "Any index with zero minimum should be unchanged"
+        );
 
-            // Test single element case.
-            assert_eq!(
-                len(1).remaining_from(idx(0)),
-                len(1),
-                "Single element: 1 char remains from start"
-            );
-            assert_eq!(
-                len(1).remaining_from(idx(1)),
-                len(0),
-                "Single element: at boundary"
+        // Property test: result should always be >= minimum
+        let test_cases = [(2, 5), (5, 5), (7, 5), (0, 3), (10, 1)];
+        for (index_val, min_val) in test_cases {
+            let index = idx(index_val);
+            let min_bound = idx(min_val);
+            let result = index.clamp_to_min_index(min_bound);
+
+            assert!(
+                result.as_usize() >= min_bound.as_usize(),
+                "clamp_to_min_index({index_val}, {min_val}) = {} should be >= {min_val}",
+                result.as_usize()
             );
 
-            // Test specific examples from documentation.
-            let max_width = ColWidth::new(10);
+            // If above minimum, should return original value
+            if index_val >= min_val {
+                assert_eq!(
+                    result, index,
+                    "clamp_to_min_index({index_val}, {min_val}) should preserve value when above minimum"
+                );
+            } else {
+                assert_eq!(
+                    result, min_bound,
+                    "clamp_to_min_index({index_val}, {min_val}) should return minimum when below"
+                );
+            }
+        }
+
+        // Test with large values
+        assert_eq!(
+            col(0).clamp_to_min_index(col(100)),
+            col(100),
+            "Small index clamped to large minimum"
+        );
+        assert_eq!(
+            col(200).clamp_to_min_index(col(100)),
+            col(200),
+            "Large index unchanged when above minimum"
+        );
+    }
+}
+
+#[cfg(test)]
+mod clamping_tests {
+    use super::*;
+    use crate::idx;
+
+    #[test]
+    fn test_index_clamp_to_max_length() {
+        use crate::{col, height, row, width};
+
+        // Test basic Index/Length clamping scenarios
+        assert_eq!(
+            idx(5).clamp_to_max_length(len(10)),
+            idx(5),
+            "Index within bounds - returned unchanged"
+        );
+        assert_eq!(
+            idx(9).clamp_to_max_length(len(10)),
+            idx(9),
+            "Index at max valid position - returned unchanged"
+        );
+        assert_eq!(
+            idx(15).clamp_to_max_length(len(10)),
+            idx(9),
+            "Index overflows - clamped to max valid index (length-1)"
+        );
+        assert_eq!(
+            idx(0).clamp_to_max_length(len(10)),
+            idx(0),
+            "Zero index - always valid"
+        );
+
+        // Test with ColIndex/ColWidth typed dimensions
+        assert_eq!(
+            col(5).clamp_to_max_length(width(10)),
+            col(5),
+            "ColIndex within bounds - returned unchanged"
+        );
+        assert_eq!(
+            col(9).clamp_to_max_length(width(10)),
+            col(9),
+            "ColIndex at boundary - returned unchanged (9 is valid for width 10)"
+        );
+        assert_eq!(
+            col(10).clamp_to_max_length(width(10)),
+            col(9),
+            "ColIndex at boundary - clamped to max valid index"
+        );
+        assert_eq!(
+            col(15).clamp_to_max_length(width(10)),
+            col(9),
+            "ColIndex overflows - clamped to max valid index"
+        );
+        assert_eq!(
+            col(0).clamp_to_max_length(width(10)),
+            col(0),
+            "ColIndex zero - always valid"
+        );
+
+        // Test with RowIndex/RowHeight typed dimensions
+        assert_eq!(
+            row(3).clamp_to_max_length(height(5)),
+            row(3),
+            "RowIndex within bounds - returned unchanged"
+        );
+        assert_eq!(
+            row(4).clamp_to_max_length(height(5)),
+            row(4),
+            "RowIndex at max valid position - returned unchanged"
+        );
+        assert_eq!(
+            row(5).clamp_to_max_length(height(5)),
+            row(4),
+            "RowIndex at boundary - clamped to max valid index"
+        );
+        assert_eq!(
+            row(8).clamp_to_max_length(height(5)),
+            row(4),
+            "RowIndex overflows - clamped to max valid index"
+        );
+
+        // Test edge case: empty collection (length 0)
+        assert_eq!(
+            idx(0).clamp_to_max_length(len(0)),
+            idx(0),
+            "Empty collection edge case - index 0 should remain 0"
+        );
+        assert_eq!(
+            idx(5).clamp_to_max_length(len(0)),
+            idx(0),
+            "Empty collection with overflow - should clamp to 0"
+        );
+
+        // Test single element case (length 1)
+        assert_eq!(
+            idx(0).clamp_to_max_length(len(1)),
+            idx(0),
+            "Single element case - index 0 valid"
+        );
+        assert_eq!(
+            idx(1).clamp_to_max_length(len(1)),
+            idx(0),
+            "Single element case - index 1 clamped to 0"
+        );
+
+        // Property test: result should always be <= max valid index
+        let test_cases = [(5, 10), (10, 10), (15, 10), (0, 5), (100, 20)];
+        for (index_val, length_val) in test_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+            let result = index.clamp_to_max_length(length);
+            let max_valid_index = if length_val > 0 { length_val - 1 } else { 0 };
+
+            assert!(
+                result.as_usize() <= max_valid_index,
+                "clamp_to_max_length({index_val}, {length_val}) = {} should be <= {max_valid_index}",
+                result.as_usize()
+            );
+
+            // If within bounds, should return original value
+            if index_val < length_val {
+                assert_eq!(
+                    result, index,
+                    "clamp_to_max_length({index_val}, {length_val}) should preserve value when within bounds"
+                );
+            }
+        }
+
+        // Test with large values
+        assert_eq!(
+            col(999).clamp_to_max_length(width(10)),
+            col(9),
+            "Large index value clamped to small max"
+        );
+
+        // Test consistency: clamp_to_max should match overflows() behavior
+        let consistency_cases = [(5, 10), (9, 10), (10, 10), (15, 10)];
+        for (index_val, length_val) in consistency_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+            let clamped = index.clamp_to_max_length(length);
+            let overflows = index.overflows(length);
+
+            if overflows {
+                // If it overflows, clamp_to_max should return max valid index
+                assert_eq!(
+                    clamped,
+                    length.convert_to_index(),
+                    "When index overflows, clamp_to_max should return max valid index"
+                );
+            } else {
+                // If it doesn't overflow, clamp_to_max should return original
+                assert_eq!(
+                    clamped, index,
+                    "When index doesn't overflow, clamp_to_max should preserve value"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_index_clamp_to_min_index() {
+        use crate::{col, row};
+
+        // Test basic Index clamping to minimum
+        assert_eq!(
+            idx(5).clamp_to_min_index(idx(3)),
+            idx(5),
+            "Index above minimum - returned unchanged"
+        );
+        assert_eq!(
+            idx(3).clamp_to_min_index(idx(3)),
+            idx(3),
+            "Index equals minimum - returned unchanged"
+        );
+        assert_eq!(
+            idx(1).clamp_to_min_index(idx(3)),
+            idx(3),
+            "Index below minimum - clamped to minimum"
+        );
+        assert_eq!(
+            idx(0).clamp_to_min_index(idx(0)),
+            idx(0),
+            "Zero index with zero minimum - no change"
+        );
+
+        // Test with ColIndex typed dimensions
+        assert_eq!(
+            col(10).clamp_to_min_index(col(5)),
+            col(10),
+            "ColIndex above minimum - returned unchanged"
+        );
+        assert_eq!(
+            col(5).clamp_to_min_index(col(5)),
+            col(5),
+            "ColIndex equals minimum - returned unchanged"
+        );
+        assert_eq!(
+            col(2).clamp_to_min_index(col(5)),
+            col(5),
+            "ColIndex below minimum - clamped to minimum"
+        );
+        assert_eq!(
+            col(0).clamp_to_min_index(col(3)),
+            col(3),
+            "ColIndex zero below minimum - clamped to minimum"
+        );
+
+        // Test with RowIndex typed dimensions
+        assert_eq!(
+            row(8).clamp_to_min_index(row(5)),
+            row(8),
+            "RowIndex above minimum - returned unchanged"
+        );
+        assert_eq!(
+            row(5).clamp_to_min_index(row(5)),
+            row(5),
+            "RowIndex equals minimum - returned unchanged"
+        );
+        assert_eq!(
+            row(3).clamp_to_min_index(row(5)),
+            row(5),
+            "RowIndex below minimum - clamped to minimum"
+        );
+
+        // Property test: result should always be >= minimum
+        let test_cases = [(0, 3), (2, 3), (3, 3), (5, 3), (10, 8)];
+        for (index_val, min_val) in test_cases {
+            let index = idx(index_val);
+            let min_bound = idx(min_val);
+            let result = index.clamp_to_min_index(min_bound);
+
+            assert!(
+                result.as_usize() >= min_val,
+                "clamp_to_min_index({index_val}, {min_val}) = {} should be >= {min_val}",
+                result.as_usize()
+            );
+
+            // If above minimum, should return original value
+            if index_val >= min_val {
+                assert_eq!(
+                    result, index,
+                    "clamp_to_min_index({index_val}, {min_val}) should preserve value when above minimum"
+                );
+            } else {
+                assert_eq!(
+                    result, min_bound,
+                    "clamp_to_min_index({index_val}, {min_val}) should return minimum when below"
+                );
+            }
+        }
+
+        // Test with large values
+        assert_eq!(
+            col(0).clamp_to_min_index(col(100)),
+            col(100),
+            "Small index clamped to large minimum"
+        );
+        assert_eq!(
+            col(200).clamp_to_min_index(col(100)),
+            col(200),
+            "Large index unchanged when above minimum"
+        );
+    }
+
+    #[test]
+    fn test_clamp_to_max_length() {
+        // Test basic clamp operations with Length/Length.
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(5), len(10)),
+            len(5),
+            "Length within bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(15), len(10)),
+            len(10),
+            "Length exceeds bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(8), len(8)),
+            len(8),
+            "Length equals bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(0), len(5)),
+            len(0),
+            "Zero length - no change"
+        );
+
+        // Test with typed dimensions
+        use crate::{height, width};
+        assert_eq!(
+            LengthMarker::clamp_to_max(&width(15), width(10)),
+            width(10),
+            "ColWidth exceeds bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&height(8), height(12)),
+            height(8),
+            "RowHeight within bounds - no change"
+        );
+
+        // Property test: result should always be <= max
+        let test_cases = [(5, 10), (10, 10), (15, 10), (0, 5)];
+        for (length_val, max_val) in test_cases {
+            let length = len(length_val);
+            let max = len(max_val);
+            let result = LengthMarker::clamp_to_max(&length, max);
+
+            assert!(
+                result.as_usize() <= max_val,
+                "clamp_to_max({length_val}, {max_val}) = {} should be <= {max_val}",
+                result.as_usize()
+            );
+
+            // If within bounds, should return original value
+            if length_val <= max_val {
+                assert_eq!(
+                    result, length,
+                    "clamp_to_max({length_val}, {max_val}) should preserve value when within bounds"
+                );
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod length_operations_tests {
+    use super::*;
+    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx};
+
+    #[test]
+    fn test_remaining_from() {
+        // Test basic cases with Length/Index.
+        assert_eq!(
+            len(10).remaining_from(idx(3)),
+            len(7),
+            "Normal case: 7 chars remain from index 3 to 9"
+        );
+        assert_eq!(
+            len(10).remaining_from(idx(9)),
+            len(1),
+            "Edge case: only 1 char remains at last position"
+        );
+        assert_eq!(
+            len(10).remaining_from(idx(10)),
+            len(0),
+            "Boundary case: at boundary, nothing remains"
+        );
+        assert_eq!(
+            len(10).remaining_from(idx(15)),
+            len(0),
+            "Overflow case: beyond boundary, nothing remains"
+        );
+
+        // Test edge case: empty length.
+        assert_eq!(
+            len(0).remaining_from(idx(0)),
+            len(0),
+            "Empty collection: no chars remain"
+        );
+        assert_eq!(
+            len(0).remaining_from(idx(5)),
+            len(0),
+            "Empty collection with overflow: no chars remain"
+        );
+
+        // Test with typed dimensions - ColWidth/ColIndex.
+        let col_width = ColWidth::new(10);
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(3)),
+            len(7),
+            "ColWidth: 7 chars remain from col 3"
+        );
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(9)),
+            len(1),
+            "ColWidth: 1 char remains at last col"
+        );
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(10)),
+            len(0),
+            "ColWidth: at boundary"
+        );
+        assert_eq!(
+            col_width.remaining_from(ColIndex::new(15)),
+            len(0),
+            "ColWidth: beyond boundary"
+        );
+
+        // Test with typed dimensions - RowHeight/RowIndex.
+        let row_height = RowHeight::new(5);
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(2)),
+            len(3),
+            "RowHeight: 3 rows remain from row 2"
+        );
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(4)),
+            len(1),
+            "RowHeight: 1 row remains at last row"
+        );
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(5)),
+            len(0),
+            "RowHeight: at boundary"
+        );
+        assert_eq!(
+            row_height.remaining_from(RowIndex::new(10)),
+            len(0),
+            "RowHeight: beyond boundary"
+        );
+
+        // Test single element case.
+        assert_eq!(
+            len(1).remaining_from(idx(0)),
+            len(1),
+            "Single element: 1 char remains from start"
+        );
+        assert_eq!(
+            len(1).remaining_from(idx(1)),
+            len(0),
+            "Single element: at boundary"
+        );
+
+        // Test specific examples from documentation.
+        let max_width = ColWidth::new(10);
+        assert_eq!(
+            max_width.remaining_from(ColIndex::new(3)),
+            len(7),
+            "Doc example: remaining_from(3) = 7"
+        );
+        assert_eq!(
+            max_width.remaining_from(ColIndex::new(9)),
+            len(1),
+            "Doc example: remaining_from(9) = 1"
+        );
+        assert_eq!(
+            max_width.remaining_from(ColIndex::new(10)),
+            len(0),
+            "Doc example: remaining_from(10) = 0"
+        );
+    }
+}
+
+#[cfg(test)]
+mod conversion_tests {
+    use super::*;
+    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx};
+
+    #[test]
+    fn test_convert_to_length() {
+        // Test basic index to length conversion (0-based to 1-based).
+        assert_eq!(
+            idx(0).convert_to_length(),
+            len(1),
+            "Index 0 converts to length 1"
+        );
+        assert_eq!(
+            idx(5).convert_to_length(),
+            len(6),
+            "Index 5 converts to length 6"
+        );
+        assert_eq!(
+            idx(9).convert_to_length(),
+            len(10),
+            "Index 9 converts to length 10"
+        );
+        assert_eq!(
+            idx(100).convert_to_length(),
+            len(101),
+            "Index 100 converts to length 101"
+        );
+
+        // Test with typed dimensions - ColIndex to ColWidth.
+        assert_eq!(
+            ColIndex::new(0).convert_to_length(),
+            ColWidth::new(1),
+            "ColIndex 0 to ColWidth 1"
+        );
+        assert_eq!(
+            ColIndex::new(5).convert_to_length(),
+            ColWidth::new(6),
+            "ColIndex 5 to ColWidth 6"
+        );
+        assert_eq!(
+            ColIndex::new(9).convert_to_length(),
+            ColWidth::new(10),
+            "ColIndex 9 to ColWidth 10"
+        );
+        assert_eq!(
+            ColIndex::new(999).convert_to_length(),
+            ColWidth::new(1000),
+            "ColIndex 999 to ColWidth 1000"
+        );
+
+        // Test with typed dimensions - RowIndex to RowHeight.
+        assert_eq!(
+            RowIndex::new(0).convert_to_length(),
+            RowHeight::new(1),
+            "RowIndex 0 to RowHeight 1"
+        );
+        assert_eq!(
+            RowIndex::new(2).convert_to_length(),
+            RowHeight::new(3),
+            "RowIndex 2 to RowHeight 3"
+        );
+        assert_eq!(
+            RowIndex::new(4).convert_to_length(),
+            RowHeight::new(5),
+            "RowIndex 4 to RowHeight 5"
+        );
+        assert_eq!(
+            RowIndex::new(49).convert_to_length(),
+            RowHeight::new(50),
+            "RowIndex 49 to RowHeight 50"
+        );
+
+        // Test that the conversion is consistent - converting back should work.
+        let original_index = idx(42);
+        let converted_length = original_index.convert_to_length();
+        let back_to_index = converted_length.convert_to_index();
+        assert_eq!(
+            back_to_index, original_index,
+            "Round-trip conversion should be consistent"
+        );
+
+        // Test with typed round-trip conversions.
+        let col_index = ColIndex::new(7);
+        let col_width = col_index.convert_to_length();
+        let back_to_col_index = col_width.convert_to_index();
+        assert_eq!(
+            back_to_col_index, col_index,
+            "ColIndex round-trip should be consistent"
+        );
+
+        let row_index = RowIndex::new(3);
+        let row_height = row_index.convert_to_length();
+        let back_to_row_index = row_height.convert_to_index();
+        assert_eq!(
+            back_to_row_index, row_index,
+            "RowIndex round-trip should be consistent"
+        );
+    }
+
+    #[test]
+    fn test_convert_to_index() {
+        // Test basic length to index conversion (1-based to 0-based).
+        assert_eq!(
+            len(1).convert_to_index(),
+            idx(0),
+            "Length 1 converts to index 0"
+        );
+        assert_eq!(
+            len(6).convert_to_index(),
+            idx(5),
+            "Length 6 converts to index 5"
+        );
+        assert_eq!(
+            len(10).convert_to_index(),
+            idx(9),
+            "Length 10 converts to index 9"
+        );
+        assert_eq!(
+            len(101).convert_to_index(),
+            idx(100),
+            "Length 101 converts to index 100"
+        );
+
+        // Test with typed dimensions - ColWidth to ColIndex.
+        assert_eq!(
+            ColWidth::new(1).convert_to_index(),
+            ColIndex::new(0),
+            "ColWidth 1 to ColIndex 0"
+        );
+        assert_eq!(
+            ColWidth::new(6).convert_to_index(),
+            ColIndex::new(5),
+            "ColWidth 6 to ColIndex 5"
+        );
+        assert_eq!(
+            ColWidth::new(10).convert_to_index(),
+            ColIndex::new(9),
+            "ColWidth 10 to ColIndex 9"
+        );
+        assert_eq!(
+            ColWidth::new(1000).convert_to_index(),
+            ColIndex::new(999),
+            "ColWidth 1000 to ColIndex 999"
+        );
+
+        // Test with typed dimensions - RowHeight to RowIndex.
+        assert_eq!(
+            RowHeight::new(1).convert_to_index(),
+            RowIndex::new(0),
+            "RowHeight 1 to RowIndex 0"
+        );
+        assert_eq!(
+            RowHeight::new(3).convert_to_index(),
+            RowIndex::new(2),
+            "RowHeight 3 to RowIndex 2"
+        );
+        assert_eq!(
+            RowHeight::new(5).convert_to_index(),
+            RowIndex::new(4),
+            "RowHeight 5 to RowIndex 4"
+        );
+        assert_eq!(
+            RowHeight::new(50).convert_to_index(),
+            RowIndex::new(49),
+            "RowHeight 50 to RowIndex 49"
+        );
+
+        // Test that the conversion is consistent - converting back should work.
+        let original_length = len(42);
+        let converted_index = original_length.convert_to_index();
+        let back_to_length = converted_index.convert_to_length();
+        assert_eq!(
+            back_to_length, original_length,
+            "Round-trip conversion should be consistent"
+        );
+
+        // Test with typed round-trip conversions.
+        let col_width = ColWidth::new(8);
+        let col_index = col_width.convert_to_index();
+        let back_to_col_width = col_index.convert_to_length();
+        assert_eq!(
+            back_to_col_width, col_width,
+            "ColWidth round-trip should be consistent"
+        );
+
+        let row_height = RowHeight::new(4);
+        let row_index = row_height.convert_to_index();
+        let back_to_row_height = row_index.convert_to_length();
+        assert_eq!(
+            back_to_row_height, row_height,
+            "RowHeight round-trip should be consistent"
+        );
+
+        // Test edge case: Length 0 should convert to... well, this might not be
+        // implemented but if it is, it should be consistent with the type system.
+        // Note: Length 0 might be a special case that needs separate handling.
+    }
+
+    #[test]
+    fn test_as_usize() {
+        // Test basic index types conversion to usize.
+        assert_eq!(idx(0).as_usize(), 0, "Index 0 as usize");
+        assert_eq!(idx(5).as_usize(), 5, "Index 5 as usize");
+        assert_eq!(idx(100).as_usize(), 100, "Index 100 as usize");
+        assert_eq!(idx(999).as_usize(), 999, "Index 999 as usize");
+
+        // Test basic length types conversion to usize.
+        assert_eq!(len(1).as_usize(), 1, "Length 1 as usize");
+        assert_eq!(len(6).as_usize(), 6, "Length 6 as usize");
+        assert_eq!(len(10).as_usize(), 10, "Length 10 as usize");
+        assert_eq!(len(1000).as_usize(), 1000, "Length 1000 as usize");
+
+        // Test typed index conversions - ColIndex.
+        assert_eq!(ColIndex::new(0).as_usize(), 0, "ColIndex 0 as usize");
+        assert_eq!(ColIndex::new(5).as_usize(), 5, "ColIndex 5 as usize");
+        assert_eq!(ColIndex::new(80).as_usize(), 80, "ColIndex 80 as usize");
+        assert_eq!(
+            ColIndex::new(1024).as_usize(),
+            1024,
+            "ColIndex 1024 as usize"
+        );
+
+        // Test typed index conversions - RowIndex.
+        assert_eq!(RowIndex::new(0).as_usize(), 0, "RowIndex 0 as usize");
+        assert_eq!(RowIndex::new(3).as_usize(), 3, "RowIndex 3 as usize");
+        assert_eq!(RowIndex::new(25).as_usize(), 25, "RowIndex 25 as usize");
+        assert_eq!(RowIndex::new(768).as_usize(), 768, "RowIndex 768 as usize");
+
+        // Test typed length conversions - ColWidth.
+        assert_eq!(ColWidth::new(1).as_usize(), 1, "ColWidth 1 as usize");
+        assert_eq!(ColWidth::new(10).as_usize(), 10, "ColWidth 10 as usize");
+        assert_eq!(ColWidth::new(80).as_usize(), 80, "ColWidth 80 as usize");
+        assert_eq!(
+            ColWidth::new(1920).as_usize(),
+            1920,
+            "ColWidth 1920 as usize"
+        );
+
+        // Test typed length conversions - RowHeight.
+        assert_eq!(RowHeight::new(1).as_usize(), 1, "RowHeight 1 as usize");
+        assert_eq!(RowHeight::new(5).as_usize(), 5, "RowHeight 5 as usize");
+        assert_eq!(RowHeight::new(30).as_usize(), 30, "RowHeight 30 as usize");
+        assert_eq!(
+            RowHeight::new(1080).as_usize(),
+            1080,
+            "RowHeight 1080 as usize"
+        );
+
+        // Test edge cases.
+        assert_eq!(len(0).as_usize(), 0, "Length 0 as usize");
+        assert_eq!(ColWidth::new(0).as_usize(), 0, "ColWidth 0 as usize");
+        assert_eq!(RowHeight::new(0).as_usize(), 0, "RowHeight 0 as usize");
+
+        // Test that as_usize preserves the underlying numeric value.
+        for value in [0, 1, 5, 10, 42, 100, 999] {
             assert_eq!(
-                max_width.remaining_from(ColIndex::new(3)),
-                len(7),
-                "Doc example: remaining_from(3) = 7"
+                idx(value).as_usize(),
+                value,
+                "Index {value} preserves value"
             );
             assert_eq!(
-                max_width.remaining_from(ColIndex::new(9)),
-                len(1),
-                "Doc example: remaining_from(9) = 1"
+                len(value).as_usize(),
+                value,
+                "Length {value} preserves value"
             );
             assert_eq!(
-                max_width.remaining_from(ColIndex::new(10)),
-                len(0),
-                "Doc example: remaining_from(10) = 0"
+                ColIndex::new(value).as_usize(),
+                value,
+                "ColIndex {value} preserves value"
+            );
+            assert_eq!(
+                ColWidth::new(value).as_usize(),
+                value,
+                "ColWidth {value} preserves value"
+            );
+            assert_eq!(
+                RowIndex::new(value).as_usize(),
+                value,
+                "RowIndex {value} preserves value"
+            );
+            assert_eq!(
+                RowHeight::new(value).as_usize(),
+                value,
+                "RowHeight {value} preserves value"
             );
         }
     }
 
-    mod conversion_tests {
-        use super::*;
+    #[test]
+    fn test_clamp_to_max_length() {
+        // Test basic clamp operations with Length/Length.
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(5), len(10)),
+            len(5),
+            "Length within bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(15), len(10)),
+            len(10),
+            "Length exceeds bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(8), len(8)),
+            len(8),
+            "Equal lengths - returns the same value"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(0), len(5)),
+            len(0),
+            "Zero length within bounds"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(0), len(0)),
+            len(0),
+            "Zero length with zero max"
+        );
 
-        #[test]
-        fn test_convert_to_length() {
-            // Test basic index to length conversion (0-based to 1-based).
-            assert_eq!(
-                idx(0).convert_to_length(),
-                len(1),
-                "Index 0 converts to length 1"
-            );
-            assert_eq!(
-                idx(5).convert_to_length(),
-                len(6),
-                "Index 5 converts to length 6"
-            );
-            assert_eq!(
-                idx(9).convert_to_length(),
-                len(10),
-                "Index 9 converts to length 10"
-            );
-            assert_eq!(
-                idx(100).convert_to_length(),
-                len(101),
-                "Index 100 converts to length 101"
-            );
+        // Test with typed length dimensions - ColWidth.
+        let col_width_5 = ColWidth::new(5);
+        let col_width_10 = ColWidth::new(10);
+        let col_width_15 = ColWidth::new(15);
 
-            // Test with typed dimensions - ColIndex to ColWidth.
-            assert_eq!(
-                ColIndex::new(0).convert_to_length(),
-                ColWidth::new(1),
-                "ColIndex 0 to ColWidth 1"
-            );
-            assert_eq!(
-                ColIndex::new(5).convert_to_length(),
-                ColWidth::new(6),
-                "ColIndex 5 to ColWidth 6"
-            );
-            assert_eq!(
-                ColIndex::new(9).convert_to_length(),
-                ColWidth::new(10),
-                "ColIndex 9 to ColWidth 10"
-            );
-            assert_eq!(
-                ColIndex::new(999).convert_to_length(),
-                ColWidth::new(1000),
-                "ColIndex 999 to ColWidth 1000"
-            );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&col_width_5, col_width_10),
+            col_width_5,
+            "ColWidth within bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&col_width_15, col_width_10),
+            col_width_10,
+            "ColWidth exceeds bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&col_width_10, col_width_10),
+            col_width_10,
+            "ColWidth equals bounds - returns max"
+        );
 
-            // Test with typed dimensions - RowIndex to RowHeight.
-            assert_eq!(
-                RowIndex::new(0).convert_to_length(),
-                RowHeight::new(1),
-                "RowIndex 0 to RowHeight 1"
-            );
-            assert_eq!(
-                RowIndex::new(2).convert_to_length(),
-                RowHeight::new(3),
-                "RowIndex 2 to RowHeight 3"
-            );
-            assert_eq!(
-                RowIndex::new(4).convert_to_length(),
-                RowHeight::new(5),
-                "RowIndex 4 to RowHeight 5"
-            );
-            assert_eq!(
-                RowIndex::new(49).convert_to_length(),
-                RowHeight::new(50),
-                "RowIndex 49 to RowHeight 50"
-            );
+        // Test with typed length dimensions - RowHeight.
+        let row_height_3 = RowHeight::new(3);
+        let row_height_5 = RowHeight::new(5);
+        let row_height_7 = RowHeight::new(7);
+        let row_height_15 = RowHeight::new(15);
+        let row_height_20 = RowHeight::new(20);
 
-            // Test that the conversion is consistent - converting back should work.
-            let original_index = idx(42);
-            let converted_length = original_index.convert_to_length();
-            let back_to_index = converted_length.convert_to_index();
-            assert_eq!(
-                back_to_index, original_index,
-                "Round-trip conversion should be consistent"
-            );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&row_height_3, row_height_15),
+            row_height_3,
+            "RowHeight within bounds - no change"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&row_height_7, row_height_5),
+            row_height_5,
+            "RowHeight exceeds smaller bounds - gets clamped"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&row_height_20, row_height_15),
+            row_height_15,
+            "RowHeight exceeds larger bounds - gets clamped"
+        );
 
-            // Test with typed round-trip conversions.
-            let col_index = ColIndex::new(7);
-            let col_width = col_index.convert_to_length();
-            let back_to_col_index = col_width.convert_to_index();
-            assert_eq!(
-                back_to_col_index, col_index,
-                "ColIndex round-trip should be consistent"
-            );
+        // Test edge cases.
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(1), len(1)),
+            len(1),
+            "Single element case"
+        );
+        assert_eq!(
+            LengthMarker::clamp_to_max(&len(100), len(1)),
+            len(1),
+            "Large value clamped to small max"
+        );
 
-            let row_index = RowIndex::new(3);
-            let row_height = row_index.convert_to_length();
-            let back_to_row_index = row_height.convert_to_index();
-            assert_eq!(
-                back_to_row_index, row_index,
-                "RowIndex round-trip should be consistent"
+        // Test that clamp_to always returns a value <= both inputs.
+        let test_cases = [(5, 10), (10, 5), (0, 10), (10, 0), (7, 7), (100, 50)];
+        for (length_val, max_val) in test_cases {
+            let length = len(length_val);
+            let max_length = len(max_val);
+            let result = LengthMarker::clamp_to_max(&length, max_length);
+
+            assert!(
+                result.as_usize() <= length.as_usize(),
+                "clamp_to_max_length({length_val}, {max_val}) result should be <= original length"
+            );
+            assert!(
+                result.as_usize() <= max_length.as_usize(),
+                "clamp_to_max_length({length_val}, {max_val}) result should be <= max_length"
             );
         }
+    }
 
-        #[test]
-        fn test_convert_to_index() {
-            // Test basic length to index conversion (1-based to 0-based).
-            assert_eq!(
-                len(1).convert_to_index(),
-                idx(0),
-                "Length 1 converts to index 0"
-            );
-            assert_eq!(
-                len(6).convert_to_index(),
-                idx(5),
-                "Length 6 converts to index 5"
-            );
-            assert_eq!(
-                len(10).convert_to_index(),
-                idx(9),
-                "Length 10 converts to index 9"
-            );
-            assert_eq!(
-                len(101).convert_to_index(),
-                idx(100),
-                "Length 101 converts to index 100"
-            );
+    #[test]
+    fn test_as_u16() {
+        // Test basic index types conversion to u16.
+        assert_eq!(idx(0).as_u16(), 0, "Index 0 as u16");
+        assert_eq!(idx(5).as_u16(), 5, "Index 5 as u16");
+        assert_eq!(idx(100).as_u16(), 100, "Index 100 as u16");
+        assert_eq!(idx(999).as_u16(), 999, "Index 999 as u16");
 
-            // Test with typed dimensions - ColWidth to ColIndex.
-            assert_eq!(
-                ColWidth::new(1).convert_to_index(),
-                ColIndex::new(0),
-                "ColWidth 1 to ColIndex 0"
-            );
-            assert_eq!(
-                ColWidth::new(6).convert_to_index(),
-                ColIndex::new(5),
-                "ColWidth 6 to ColIndex 5"
-            );
-            assert_eq!(
-                ColWidth::new(10).convert_to_index(),
-                ColIndex::new(9),
-                "ColWidth 10 to ColIndex 9"
-            );
-            assert_eq!(
-                ColWidth::new(1000).convert_to_index(),
-                ColIndex::new(999),
-                "ColWidth 1000 to ColIndex 999"
-            );
+        // Test basic length types conversion to u16.
+        assert_eq!(len(1).as_u16(), 1, "Length 1 as u16");
+        assert_eq!(len(6).as_u16(), 6, "Length 6 as u16");
+        assert_eq!(len(10).as_u16(), 10, "Length 10 as u16");
+        assert_eq!(len(1000).as_u16(), 1000, "Length 1000 as u16");
 
-            // Test with typed dimensions - RowHeight to RowIndex.
-            assert_eq!(
-                RowHeight::new(1).convert_to_index(),
-                RowIndex::new(0),
-                "RowHeight 1 to RowIndex 0"
-            );
-            assert_eq!(
-                RowHeight::new(3).convert_to_index(),
-                RowIndex::new(2),
-                "RowHeight 3 to RowIndex 2"
-            );
-            assert_eq!(
-                RowHeight::new(5).convert_to_index(),
-                RowIndex::new(4),
-                "RowHeight 5 to RowIndex 4"
-            );
-            assert_eq!(
-                RowHeight::new(50).convert_to_index(),
-                RowIndex::new(49),
-                "RowHeight 50 to RowIndex 49"
-            );
+        // Test typed index conversions - ColIndex.
+        assert_eq!(ColIndex::new(0).as_u16(), 0, "ColIndex 0 as u16");
+        assert_eq!(ColIndex::new(5).as_u16(), 5, "ColIndex 5 as u16");
+        assert_eq!(ColIndex::new(80).as_u16(), 80, "ColIndex 80 as u16");
+        assert_eq!(ColIndex::new(1024).as_u16(), 1024, "ColIndex 1024 as u16");
 
-            // Test that the conversion is consistent - converting back should work.
-            let original_length = len(42);
-            let converted_index = original_length.convert_to_index();
-            let back_to_length = converted_index.convert_to_length();
-            assert_eq!(
-                back_to_length, original_length,
-                "Round-trip conversion should be consistent"
-            );
+        // Test typed index conversions - RowIndex.
+        assert_eq!(RowIndex::new(0).as_u16(), 0, "RowIndex 0 as u16");
+        assert_eq!(RowIndex::new(3).as_u16(), 3, "RowIndex 3 as u16");
+        assert_eq!(RowIndex::new(25).as_u16(), 25, "RowIndex 25 as u16");
+        assert_eq!(RowIndex::new(768).as_u16(), 768, "RowIndex 768 as u16");
 
-            // Test with typed round-trip conversions.
-            let col_width = ColWidth::new(8);
-            let col_index = col_width.convert_to_index();
-            let back_to_col_width = col_index.convert_to_length();
-            assert_eq!(
-                back_to_col_width, col_width,
-                "ColWidth round-trip should be consistent"
-            );
+        // Test typed length conversions - ColWidth.
+        assert_eq!(ColWidth::new(1).as_u16(), 1, "ColWidth 1 as u16");
+        assert_eq!(ColWidth::new(10).as_u16(), 10, "ColWidth 10 as u16");
+        assert_eq!(ColWidth::new(80).as_u16(), 80, "ColWidth 80 as u16");
+        assert_eq!(ColWidth::new(1920).as_u16(), 1920, "ColWidth 1920 as u16");
 
-            let row_height = RowHeight::new(4);
-            let row_index = row_height.convert_to_index();
-            let back_to_row_height = row_index.convert_to_length();
-            assert_eq!(
-                back_to_row_height, row_height,
-                "RowHeight round-trip should be consistent"
-            );
+        // Test typed length conversions - RowHeight.
+        assert_eq!(RowHeight::new(1).as_u16(), 1, "RowHeight 1 as u16");
+        assert_eq!(RowHeight::new(5).as_u16(), 5, "RowHeight 5 as u16");
+        assert_eq!(RowHeight::new(30).as_u16(), 30, "RowHeight 30 as u16");
+        assert_eq!(RowHeight::new(1080).as_u16(), 1080, "RowHeight 1080 as u16");
 
-            // Test edge case: Length 0 should convert to... well, this might not be
-            // implemented but if it is, it should be consistent with the type system.
-            // Note: Length 0 might be a special case that needs separate handling.
+        // Test edge cases.
+        assert_eq!(len(0).as_u16(), 0, "Length 0 as u16");
+        assert_eq!(ColWidth::new(0).as_u16(), 0, "ColWidth 0 as u16");
+        assert_eq!(RowHeight::new(0).as_u16(), 0, "RowHeight 0 as u16");
+
+        // Test terminal-typical values (crossterm compatibility).
+        assert_eq!(ColWidth::new(80).as_u16(), 80, "Standard terminal width 80");
+        assert_eq!(ColWidth::new(120).as_u16(), 120, "Wide terminal width 120");
+        assert_eq!(
+            RowHeight::new(24).as_u16(),
+            24,
+            "Standard terminal height 24"
+        );
+        assert_eq!(RowHeight::new(50).as_u16(), 50, "Tall terminal height 50");
+
+        // Test u16 max boundary (65535).
+        assert_eq!(len(65535).as_u16(), 65535, "Length u16::MAX as u16");
+        assert_eq!(
+            ColWidth::new(65535).as_u16(),
+            65535,
+            "ColWidth u16::MAX as u16"
+        );
+        assert_eq!(
+            RowHeight::new(65535).as_u16(),
+            65535,
+            "RowHeight u16::MAX as u16"
+        );
+
+        // Test that as_u16 preserves the underlying numeric value for typical ranges.
+        for value in [0, 1, 5, 10, 42, 80, 100, 120, 1024] {
+            assert_eq!(
+                idx(value).as_u16(),
+                u16::try_from(value).unwrap(),
+                "Index {value} preserves value"
+            );
+            assert_eq!(
+                len(value).as_u16(),
+                u16::try_from(value).unwrap(),
+                "Length {value} preserves value"
+            );
+            assert_eq!(
+                ColIndex::new(value).as_u16(),
+                u16::try_from(value).unwrap(),
+                "ColIndex {value} preserves value"
+            );
+            assert_eq!(
+                ColWidth::new(value).as_u16(),
+                u16::try_from(value).unwrap(),
+                "ColWidth {value} preserves value"
+            );
+            assert_eq!(
+                RowIndex::new(value).as_u16(),
+                u16::try_from(value).unwrap(),
+                "RowIndex {value} preserves value"
+            );
+            assert_eq!(
+                RowHeight::new(value).as_u16(),
+                u16::try_from(value).unwrap(),
+                "RowHeight {value} preserves value"
+            );
         }
+    }
 
-        #[test]
-        fn test_as_usize() {
-            // Test basic index types conversion to usize.
-            assert_eq!(idx(0).as_usize(), 0, "Index 0 as usize");
-            assert_eq!(idx(5).as_usize(), 5, "Index 5 as usize");
-            assert_eq!(idx(100).as_usize(), 100, "Index 100 as usize");
-            assert_eq!(idx(999).as_usize(), 999, "Index 999 as usize");
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn test_is_zero() {
+        // Test basic index types - zero values.
+        assert!(idx(0).is_zero(), "Index 0 should be zero");
+        assert!(!idx(1).is_zero(), "Index 1 should not be zero");
+        assert!(!idx(5).is_zero(), "Index 5 should not be zero");
+        assert!(!idx(100).is_zero(), "Index 100 should not be zero");
 
-            // Test basic length types conversion to usize.
-            assert_eq!(len(1).as_usize(), 1, "Length 1 as usize");
-            assert_eq!(len(6).as_usize(), 6, "Length 6 as usize");
-            assert_eq!(len(10).as_usize(), 10, "Length 10 as usize");
-            assert_eq!(len(1000).as_usize(), 1000, "Length 1000 as usize");
+        // Test basic length types - zero and non-zero values.
+        assert!(len(0).is_zero(), "Length 0 should be zero");
+        assert!(!len(1).is_zero(), "Length 1 should not be zero");
+        assert!(!len(5).is_zero(), "Length 5 should not be zero");
+        assert!(!len(100).is_zero(), "Length 100 should not be zero");
 
-            // Test typed index conversions - ColIndex.
-            assert_eq!(ColIndex::new(0).as_usize(), 0, "ColIndex 0 as usize");
-            assert_eq!(ColIndex::new(5).as_usize(), 5, "ColIndex 5 as usize");
-            assert_eq!(ColIndex::new(80).as_usize(), 80, "ColIndex 80 as usize");
+        // Test typed index types - ColIndex.
+        assert!(ColIndex::new(0).is_zero(), "ColIndex 0 should be zero");
+        assert!(!ColIndex::new(1).is_zero(), "ColIndex 1 should not be zero");
+        assert!(
+            !ColIndex::new(10).is_zero(),
+            "ColIndex 10 should not be zero"
+        );
+        assert!(
+            !ColIndex::new(80).is_zero(),
+            "ColIndex 80 should not be zero"
+        );
+
+        // Test typed index types - RowIndex.
+        assert!(RowIndex::new(0).is_zero(), "RowIndex 0 should be zero");
+        assert!(!RowIndex::new(1).is_zero(), "RowIndex 1 should not be zero");
+        assert!(!RowIndex::new(5).is_zero(), "RowIndex 5 should not be zero");
+        assert!(
+            !RowIndex::new(25).is_zero(),
+            "RowIndex 25 should not be zero"
+        );
+
+        // Test typed length types - ColWidth.
+        assert!(ColWidth::new(0).is_zero(), "ColWidth 0 should be zero");
+        assert!(!ColWidth::new(1).is_zero(), "ColWidth 1 should not be zero");
+        assert!(
+            !ColWidth::new(10).is_zero(),
+            "ColWidth 10 should not be zero"
+        );
+        assert!(
+            !ColWidth::new(80).is_zero(),
+            "ColWidth 80 should not be zero"
+        );
+        assert!(
+            !ColWidth::new(120).is_zero(),
+            "ColWidth 120 should not be zero"
+        );
+
+        // Test typed length types - RowHeight.
+        assert!(RowHeight::new(0).is_zero(), "RowHeight 0 should be zero");
+        assert!(
+            !RowHeight::new(1).is_zero(),
+            "RowHeight 1 should not be zero"
+        );
+        assert!(
+            !RowHeight::new(5).is_zero(),
+            "RowHeight 5 should not be zero"
+        );
+        assert!(
+            !RowHeight::new(24).is_zero(),
+            "RowHeight 24 should not be zero"
+        );
+        assert!(
+            !RowHeight::new(50).is_zero(),
+            "RowHeight 50 should not be zero"
+        );
+
+        // Test edge cases and boundary values.
+        assert!(
+            !idx(usize::MAX).is_zero(),
+            "Index usize::MAX should not be zero"
+        );
+        assert!(
+            !len(usize::MAX).is_zero(),
+            "Length usize::MAX should not be zero"
+        );
+        assert!(
+            !ColIndex::new(u16::MAX as usize).is_zero(),
+            "ColIndex u16::MAX should not be zero"
+        );
+        assert!(
+            !RowIndex::new(u16::MAX as usize).is_zero(),
+            "RowIndex u16::MAX should not be zero"
+        );
+        assert!(
+            !ColWidth::new(u16::MAX as usize).is_zero(),
+            "ColWidth u16::MAX should not be zero"
+        );
+        assert!(
+            !RowHeight::new(u16::MAX as usize).is_zero(),
+            "RowHeight u16::MAX should not be zero"
+        );
+
+        // Test consistency with as_usize() == 0 (the implementation).
+        for value in [0, 1, 5, 10, 42, 100, 999] {
             assert_eq!(
-                ColIndex::new(1024).as_usize(),
-                1024,
-                "ColIndex 1024 as usize"
-            );
-
-            // Test typed index conversions - RowIndex.
-            assert_eq!(RowIndex::new(0).as_usize(), 0, "RowIndex 0 as usize");
-            assert_eq!(RowIndex::new(3).as_usize(), 3, "RowIndex 3 as usize");
-            assert_eq!(RowIndex::new(25).as_usize(), 25, "RowIndex 25 as usize");
-            assert_eq!(RowIndex::new(768).as_usize(), 768, "RowIndex 768 as usize");
-
-            // Test typed length conversions - ColWidth.
-            assert_eq!(ColWidth::new(1).as_usize(), 1, "ColWidth 1 as usize");
-            assert_eq!(ColWidth::new(10).as_usize(), 10, "ColWidth 10 as usize");
-            assert_eq!(ColWidth::new(80).as_usize(), 80, "ColWidth 80 as usize");
-            assert_eq!(
-                ColWidth::new(1920).as_usize(),
-                1920,
-                "ColWidth 1920 as usize"
-            );
-
-            // Test typed length conversions - RowHeight.
-            assert_eq!(RowHeight::new(1).as_usize(), 1, "RowHeight 1 as usize");
-            assert_eq!(RowHeight::new(5).as_usize(), 5, "RowHeight 5 as usize");
-            assert_eq!(RowHeight::new(30).as_usize(), 30, "RowHeight 30 as usize");
-            assert_eq!(
-                RowHeight::new(1080).as_usize(),
-                1080,
-                "RowHeight 1080 as usize"
-            );
-
-            // Test edge cases.
-            assert_eq!(len(0).as_usize(), 0, "Length 0 as usize");
-            assert_eq!(ColWidth::new(0).as_usize(), 0, "ColWidth 0 as usize");
-            assert_eq!(RowHeight::new(0).as_usize(), 0, "RowHeight 0 as usize");
-
-            // Test that as_usize preserves the underlying numeric value.
-            for value in [0, 1, 5, 10, 42, 100, 999] {
-                assert_eq!(
-                    idx(value).as_usize(),
-                    value,
-                    "Index {value} preserves value"
-                );
-                assert_eq!(
-                    len(value).as_usize(),
-                    value,
-                    "Length {value} preserves value"
-                );
-                assert_eq!(
-                    ColIndex::new(value).as_usize(),
-                    value,
-                    "ColIndex {value} preserves value"
-                );
-                assert_eq!(
-                    ColWidth::new(value).as_usize(),
-                    value,
-                    "ColWidth {value} preserves value"
-                );
-                assert_eq!(
-                    RowIndex::new(value).as_usize(),
-                    value,
-                    "RowIndex {value} preserves value"
-                );
-                assert_eq!(
-                    RowHeight::new(value).as_usize(),
-                    value,
-                    "RowHeight {value} preserves value"
-                );
-            }
-        }
-
-        #[test]
-        fn test_clamp_to() {
-            // Test basic clamp operations with Length/Length.
-            assert_eq!(
-                LengthMarker::clamp_to(&len(5), len(10)),
-                len(5),
-                "Length within bounds - no change"
-            );
-            assert_eq!(
-                LengthMarker::clamp_to(&len(15), len(10)),
-                len(10),
-                "Length exceeds bounds - gets clamped"
-            );
-            assert_eq!(
-                LengthMarker::clamp_to(&len(8), len(8)),
-                len(8),
-                "Equal lengths - returns the same value"
+                idx(value).is_zero(),
+                idx(value).as_usize() == 0,
+                "Index {value} is_zero should match as_usize() == 0"
             );
             assert_eq!(
-                LengthMarker::clamp_to(&len(0), len(5)),
-                len(0),
-                "Zero length within bounds"
+                len(value).is_zero(),
+                len(value).as_usize() == 0,
+                "Length {value} is_zero should match as_usize() == 0"
             );
             assert_eq!(
-                LengthMarker::clamp_to(&len(0), len(0)),
-                len(0),
-                "Zero length with zero max"
-            );
-
-            // Test with typed length dimensions - ColWidth.
-            let col_width_5 = ColWidth::new(5);
-            let col_width_10 = ColWidth::new(10);
-            let col_width_15 = ColWidth::new(15);
-
-            assert_eq!(
-                LengthMarker::clamp_to(&col_width_5, col_width_10),
-                col_width_5,
-                "ColWidth within bounds - no change"
+                ColIndex::new(value).is_zero(),
+                ColIndex::new(value).as_usize() == 0,
+                "ColIndex {value} is_zero should match as_usize() == 0"
             );
             assert_eq!(
-                LengthMarker::clamp_to(&col_width_15, col_width_10),
-                col_width_10,
-                "ColWidth exceeds bounds - gets clamped"
+                ColWidth::new(value).is_zero(),
+                ColWidth::new(value).as_usize() == 0,
+                "ColWidth {value} is_zero should match as_usize() == 0"
             );
             assert_eq!(
-                LengthMarker::clamp_to(&col_width_10, col_width_10),
-                col_width_10,
-                "ColWidth equals bounds - returns max"
-            );
-
-            // Test with typed length dimensions - RowHeight.
-            let row_height_3 = RowHeight::new(3);
-            let row_height_5 = RowHeight::new(5);
-            let row_height_7 = RowHeight::new(7);
-            let row_height_15 = RowHeight::new(15);
-            let row_height_20 = RowHeight::new(20);
-
-            assert_eq!(
-                LengthMarker::clamp_to(&row_height_3, row_height_15),
-                row_height_3,
-                "RowHeight within bounds - no change"
+                RowIndex::new(value).is_zero(),
+                RowIndex::new(value).as_usize() == 0,
+                "RowIndex {value} is_zero should match as_usize() == 0"
             );
             assert_eq!(
-                LengthMarker::clamp_to(&row_height_7, row_height_5),
-                row_height_5,
-                "RowHeight exceeds smaller bounds - gets clamped"
+                RowHeight::new(value).is_zero(),
+                RowHeight::new(value).as_usize() == 0,
+                "RowHeight {value} is_zero should match as_usize() == 0"
             );
-            assert_eq!(
-                LengthMarker::clamp_to(&row_height_20, row_height_15),
-                row_height_15,
-                "RowHeight exceeds larger bounds - gets clamped"
-            );
-
-            // Test edge cases.
-            assert_eq!(
-                LengthMarker::clamp_to(&len(1), len(1)),
-                len(1),
-                "Single element case"
-            );
-            assert_eq!(
-                LengthMarker::clamp_to(&len(100), len(1)),
-                len(1),
-                "Large value clamped to small max"
-            );
-
-            // Test that clamp_to always returns a value <= both inputs.
-            let test_cases = [(5, 10), (10, 5), (0, 10), (10, 0), (7, 7), (100, 50)];
-            for (length_val, max_val) in test_cases {
-                let length = len(length_val);
-                let max_length = len(max_val);
-                let result = LengthMarker::clamp_to(&length, max_length);
-
-                assert!(
-                    result.as_usize() <= length.as_usize(),
-                    "clamp_to({length_val}, {max_val}) result should be <= original length"
-                );
-                assert!(
-                    result.as_usize() <= max_length.as_usize(),
-                    "clamp_to({length_val}, {max_val}) result should be <= max_length"
-                );
-            }
-        }
-
-        #[test]
-        fn test_as_u16() {
-            // Test basic index types conversion to u16.
-            assert_eq!(idx(0).as_u16(), 0, "Index 0 as u16");
-            assert_eq!(idx(5).as_u16(), 5, "Index 5 as u16");
-            assert_eq!(idx(100).as_u16(), 100, "Index 100 as u16");
-            assert_eq!(idx(999).as_u16(), 999, "Index 999 as u16");
-
-            // Test basic length types conversion to u16.
-            assert_eq!(len(1).as_u16(), 1, "Length 1 as u16");
-            assert_eq!(len(6).as_u16(), 6, "Length 6 as u16");
-            assert_eq!(len(10).as_u16(), 10, "Length 10 as u16");
-            assert_eq!(len(1000).as_u16(), 1000, "Length 1000 as u16");
-
-            // Test typed index conversions - ColIndex.
-            assert_eq!(ColIndex::new(0).as_u16(), 0, "ColIndex 0 as u16");
-            assert_eq!(ColIndex::new(5).as_u16(), 5, "ColIndex 5 as u16");
-            assert_eq!(ColIndex::new(80).as_u16(), 80, "ColIndex 80 as u16");
-            assert_eq!(ColIndex::new(1024).as_u16(), 1024, "ColIndex 1024 as u16");
-
-            // Test typed index conversions - RowIndex.
-            assert_eq!(RowIndex::new(0).as_u16(), 0, "RowIndex 0 as u16");
-            assert_eq!(RowIndex::new(3).as_u16(), 3, "RowIndex 3 as u16");
-            assert_eq!(RowIndex::new(25).as_u16(), 25, "RowIndex 25 as u16");
-            assert_eq!(RowIndex::new(768).as_u16(), 768, "RowIndex 768 as u16");
-
-            // Test typed length conversions - ColWidth.
-            assert_eq!(ColWidth::new(1).as_u16(), 1, "ColWidth 1 as u16");
-            assert_eq!(ColWidth::new(10).as_u16(), 10, "ColWidth 10 as u16");
-            assert_eq!(ColWidth::new(80).as_u16(), 80, "ColWidth 80 as u16");
-            assert_eq!(ColWidth::new(1920).as_u16(), 1920, "ColWidth 1920 as u16");
-
-            // Test typed length conversions - RowHeight.
-            assert_eq!(RowHeight::new(1).as_u16(), 1, "RowHeight 1 as u16");
-            assert_eq!(RowHeight::new(5).as_u16(), 5, "RowHeight 5 as u16");
-            assert_eq!(RowHeight::new(30).as_u16(), 30, "RowHeight 30 as u16");
-            assert_eq!(RowHeight::new(1080).as_u16(), 1080, "RowHeight 1080 as u16");
-
-            // Test edge cases.
-            assert_eq!(len(0).as_u16(), 0, "Length 0 as u16");
-            assert_eq!(ColWidth::new(0).as_u16(), 0, "ColWidth 0 as u16");
-            assert_eq!(RowHeight::new(0).as_u16(), 0, "RowHeight 0 as u16");
-
-            // Test terminal-typical values (crossterm compatibility).
-            assert_eq!(ColWidth::new(80).as_u16(), 80, "Standard terminal width 80");
-            assert_eq!(ColWidth::new(120).as_u16(), 120, "Wide terminal width 120");
-            assert_eq!(
-                RowHeight::new(24).as_u16(),
-                24,
-                "Standard terminal height 24"
-            );
-            assert_eq!(RowHeight::new(50).as_u16(), 50, "Tall terminal height 50");
-
-            // Test u16 max boundary (65535).
-            assert_eq!(len(65535).as_u16(), 65535, "Length u16::MAX as u16");
-            assert_eq!(
-                ColWidth::new(65535).as_u16(),
-                65535,
-                "ColWidth u16::MAX as u16"
-            );
-            assert_eq!(
-                RowHeight::new(65535).as_u16(),
-                65535,
-                "RowHeight u16::MAX as u16"
-            );
-
-            // Test that as_u16 preserves the underlying numeric value for typical ranges.
-            for value in [0, 1, 5, 10, 42, 80, 100, 120, 1024] {
-                assert_eq!(
-                    idx(value).as_u16(),
-                    u16::try_from(value).unwrap(),
-                    "Index {value} preserves value"
-                );
-                assert_eq!(
-                    len(value).as_u16(),
-                    u16::try_from(value).unwrap(),
-                    "Length {value} preserves value"
-                );
-                assert_eq!(
-                    ColIndex::new(value).as_u16(),
-                    u16::try_from(value).unwrap(),
-                    "ColIndex {value} preserves value"
-                );
-                assert_eq!(
-                    ColWidth::new(value).as_u16(),
-                    u16::try_from(value).unwrap(),
-                    "ColWidth {value} preserves value"
-                );
-                assert_eq!(
-                    RowIndex::new(value).as_u16(),
-                    u16::try_from(value).unwrap(),
-                    "RowIndex {value} preserves value"
-                );
-                assert_eq!(
-                    RowHeight::new(value).as_u16(),
-                    u16::try_from(value).unwrap(),
-                    "RowHeight {value} preserves value"
-                );
-            }
-        }
-
-        #[test]
-        #[allow(clippy::too_many_lines)]
-        fn test_is_zero() {
-            // Test basic index types - zero values.
-            assert!(idx(0).is_zero(), "Index 0 should be zero");
-            assert!(!idx(1).is_zero(), "Index 1 should not be zero");
-            assert!(!idx(5).is_zero(), "Index 5 should not be zero");
-            assert!(!idx(100).is_zero(), "Index 100 should not be zero");
-
-            // Test basic length types - zero and non-zero values.
-            assert!(len(0).is_zero(), "Length 0 should be zero");
-            assert!(!len(1).is_zero(), "Length 1 should not be zero");
-            assert!(!len(5).is_zero(), "Length 5 should not be zero");
-            assert!(!len(100).is_zero(), "Length 100 should not be zero");
-
-            // Test typed index types - ColIndex.
-            assert!(ColIndex::new(0).is_zero(), "ColIndex 0 should be zero");
-            assert!(!ColIndex::new(1).is_zero(), "ColIndex 1 should not be zero");
-            assert!(
-                !ColIndex::new(10).is_zero(),
-                "ColIndex 10 should not be zero"
-            );
-            assert!(
-                !ColIndex::new(80).is_zero(),
-                "ColIndex 80 should not be zero"
-            );
-
-            // Test typed index types - RowIndex.
-            assert!(RowIndex::new(0).is_zero(), "RowIndex 0 should be zero");
-            assert!(!RowIndex::new(1).is_zero(), "RowIndex 1 should not be zero");
-            assert!(!RowIndex::new(5).is_zero(), "RowIndex 5 should not be zero");
-            assert!(
-                !RowIndex::new(25).is_zero(),
-                "RowIndex 25 should not be zero"
-            );
-
-            // Test typed length types - ColWidth.
-            assert!(ColWidth::new(0).is_zero(), "ColWidth 0 should be zero");
-            assert!(!ColWidth::new(1).is_zero(), "ColWidth 1 should not be zero");
-            assert!(
-                !ColWidth::new(10).is_zero(),
-                "ColWidth 10 should not be zero"
-            );
-            assert!(
-                !ColWidth::new(80).is_zero(),
-                "ColWidth 80 should not be zero"
-            );
-            assert!(
-                !ColWidth::new(120).is_zero(),
-                "ColWidth 120 should not be zero"
-            );
-
-            // Test typed length types - RowHeight.
-            assert!(RowHeight::new(0).is_zero(), "RowHeight 0 should be zero");
-            assert!(
-                !RowHeight::new(1).is_zero(),
-                "RowHeight 1 should not be zero"
-            );
-            assert!(
-                !RowHeight::new(5).is_zero(),
-                "RowHeight 5 should not be zero"
-            );
-            assert!(
-                !RowHeight::new(24).is_zero(),
-                "RowHeight 24 should not be zero"
-            );
-            assert!(
-                !RowHeight::new(50).is_zero(),
-                "RowHeight 50 should not be zero"
-            );
-
-            // Test edge cases and boundary values.
-            assert!(
-                !idx(usize::MAX).is_zero(),
-                "Index usize::MAX should not be zero"
-            );
-            assert!(
-                !len(usize::MAX).is_zero(),
-                "Length usize::MAX should not be zero"
-            );
-            assert!(
-                !ColIndex::new(u16::MAX as usize).is_zero(),
-                "ColIndex u16::MAX should not be zero"
-            );
-            assert!(
-                !RowIndex::new(u16::MAX as usize).is_zero(),
-                "RowIndex u16::MAX should not be zero"
-            );
-            assert!(
-                !ColWidth::new(u16::MAX as usize).is_zero(),
-                "ColWidth u16::MAX should not be zero"
-            );
-            assert!(
-                !RowHeight::new(u16::MAX as usize).is_zero(),
-                "RowHeight u16::MAX should not be zero"
-            );
-
-            // Test consistency with as_usize() == 0 (the implementation).
-            for value in [0, 1, 5, 10, 42, 100, 999] {
-                assert_eq!(
-                    idx(value).is_zero(),
-                    idx(value).as_usize() == 0,
-                    "Index {value} is_zero should match as_usize() == 0"
-                );
-                assert_eq!(
-                    len(value).is_zero(),
-                    len(value).as_usize() == 0,
-                    "Length {value} is_zero should match as_usize() == 0"
-                );
-                assert_eq!(
-                    ColIndex::new(value).is_zero(),
-                    ColIndex::new(value).as_usize() == 0,
-                    "ColIndex {value} is_zero should match as_usize() == 0"
-                );
-                assert_eq!(
-                    ColWidth::new(value).is_zero(),
-                    ColWidth::new(value).as_usize() == 0,
-                    "ColWidth {value} is_zero should match as_usize() == 0"
-                );
-                assert_eq!(
-                    RowIndex::new(value).is_zero(),
-                    RowIndex::new(value).as_usize() == 0,
-                    "RowIndex {value} is_zero should match as_usize() == 0"
-                );
-                assert_eq!(
-                    RowHeight::new(value).is_zero(),
-                    RowHeight::new(value).as_usize() == 0,
-                    "RowHeight {value} is_zero should match as_usize() == 0"
-                );
-            }
         }
     }
 }

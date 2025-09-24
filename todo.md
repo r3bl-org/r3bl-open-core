@@ -5,6 +5,7 @@
 
 - [x] [`task_ring_buffer_enhance`](docs/done/task_ring_buffer_enhance.md)
 - [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
+- [⌛] [`task_seg_byte_index_impl_indexmarker`](docs/task_seg_byte_index_impl_indexmarker.md)
 - [⌛] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)
 - [ ] extend `main_event_loop.rs` to support OSC output to terminal emulator (main window)
   - via `GlobalData::main_thread_channel_sender` -> add a variant to `TerminalWindowMainThreadSignal`

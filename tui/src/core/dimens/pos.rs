@@ -440,10 +440,10 @@ mod api {
         ///
         /// Keep in mind these dynamics change when introducing scrolling, but this struct
         /// does not take scrolling into account. See
-        /// [`r3bl_tui::tui::editor_engine::scroll_editor_buffer`] for that.
+        /// [`scroll_editor_content`] for that.
         ///
         /// [`ScrOfs`]: crate::ScrOfs
-        /// [`r3bl_tui::tui::editor_engine::scroll_editor_buffer`](https://github.com/r3bl-org/r3bl-open-core/blob/main/tui/src/tui/editor/editor_engine/editor_engine_internal_api.rs)
+        /// [`scroll_editor_content`]: crate::tui::editor::editor_engine::scroll_editor_content
         pub fn add_col_with_bounds(
             &mut self,
             arg_col_width: impl Into<ColWidth>,
