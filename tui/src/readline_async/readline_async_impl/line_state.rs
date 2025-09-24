@@ -10,14 +10,7 @@ use crossterm::{cursor,
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
-    core::units::idx,
-    IndexMarker,
-    ok,
-    MemoizedLenMap,
-    ReadlineError,
-    ReadlineEvent,
-    SafeHistory,
-    StringLength,
+    IndexMarker, LINE_FEED_BYTE, MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength, core::units::idx, ok
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -331,7 +324,7 @@ impl LineState {
         }
 
         // Write data in a way that newlines also act as carriage returns.
-        for line in data.split_inclusive(|b| *b == b'\n') {
+        for line in data.split_inclusive(|b| *b == LINE_FEED_BYTE) {
             term.write_all(line)?;
             term.queue(cursor::MoveToColumn(0))?;
         }

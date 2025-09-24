@@ -99,8 +99,9 @@ use miette::{Result, miette};
 
 use std::ops::Range;
 
-use super::super::ZeroCopyGapBuffer;
-use crate::{ByteOffset, IndexMarker, LengthMarker, NULL_BYTE, RangeBoundary, RowIndex,
+use super::ZeroCopyGapBuffer;
+use crate::{LINE_FEED_BYTE, NULL_BYTE};
+use crate::{ByteOffset, IndexMarker, LengthMarker, RangeBoundary, RowIndex,
             SegIndex, byte_index, idx, len, seg_width};
 
 impl ZeroCopyGapBuffer {
@@ -124,11 +125,13 @@ impl ZeroCopyGapBuffer {
     /// - Segment rebuilding fails
     pub fn delete_grapheme_at(
         &mut self,
-        line_index: RowIndex,
-        seg_index: SegIndex,
+        arg_line_index: impl Into<RowIndex>,
+        arg_seg_index: impl Into<SegIndex>,
     ) -> Result<()> {
+        let line_index: RowIndex = arg_line_index.into();
+        let seg_index: SegIndex = arg_seg_index.into();
         // Validate line index.
-        let line_info = self.get_line_info(line_index.as_usize()).ok_or_else(|| {
+        let line_info = self.get_line_info(line_index).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
@@ -148,7 +151,7 @@ impl ZeroCopyGapBuffer {
         let delete_end = segment.end_byte_index;
 
         // Perform the actual deletion.
-        self.delete_bytes_at_range(line_index, delete_start.into(), delete_end.into())?;
+        self.delete_bytes_at_range(line_index, delete_start, delete_end)?;
 
         // Rebuild segments for this line.
         self.rebuild_line_segments(line_index)?;
@@ -177,17 +180,20 @@ impl ZeroCopyGapBuffer {
     /// - Segment rebuilding fails
     pub fn delete_range(
         &mut self,
-        line_index: RowIndex,
-        start_seg: SegIndex,
-        end_seg: SegIndex,
+        arg_line_index: impl Into<RowIndex>,
+        arg_start_seg: impl Into<SegIndex>,
+        arg_end_seg: impl Into<SegIndex>,
     ) -> Result<()> {
+        let line_index: RowIndex = arg_line_index.into();
+        let start_seg: SegIndex = arg_start_seg.into();
+        let end_seg: SegIndex = arg_end_seg.into();
         // Validate line index.
-        let line_info = self.get_line_info(line_index.as_usize()).ok_or_else(|| {
+        let line_info = self.get_line_info(line_index).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
         // Validate range using sophisticated range validation.
-        let delete_range: Range<crate::Index> = idx(start_seg.as_usize())..idx(end_seg.as_usize());
+        let delete_range: Range<crate::Index> = idx(start_seg)..idx(end_seg);
         let segments_count = len(line_info.segments.len());
 
         if !delete_range.is_valid(segments_count) {
@@ -218,7 +224,7 @@ impl ZeroCopyGapBuffer {
         };
 
         // Perform the actual deletion.
-        self.delete_bytes_at_range(line_index, delete_start.into(), delete_end.into())?;
+        self.delete_bytes_at_range(line_index, delete_start, delete_end)?;
 
         // Rebuild segments for this line.
         self.rebuild_line_segments(line_index)?;
@@ -248,18 +254,21 @@ impl ZeroCopyGapBuffer {
     /// - The byte positions exceed the content length
     pub fn delete_bytes_at_range(
         &mut self,
-        line_index: RowIndex,
-        start_offset: ByteOffset,
-        end_offset: ByteOffset,
+        arg_line_index: impl Into<RowIndex>,
+        arg_start_ofs: impl Into<ByteOffset>,
+        arg_end_ofs: impl Into<ByteOffset>,
     ) -> Result<()> {
+        let line_index: RowIndex = arg_line_index.into();
+        let start_ofs: ByteOffset = arg_start_ofs.into();
+        let end_ofs: ByteOffset = arg_end_ofs.into();
         // Get line info and validate line index.
         let line_info = self.get_line_info(line_index).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
         // Convert offsets to indices and create range for comprehensive bounds checking.
-        let start_idx = idx(start_offset);
-        let end_idx = idx(end_offset);
+        let start_idx = idx(start_ofs);
+        let end_idx = idx(end_ofs);
         let delete_range: Range<crate::Index> = start_idx..end_idx;
 
         // Use type-safe range validation from bounds_check module.
@@ -272,23 +281,23 @@ impl ZeroCopyGapBuffer {
                 // Range is invalid due to out-of-bounds positions.
                 return Err(miette!(
                     "Byte range {}-{} exceeds content length {}",
-                    start_offset.as_usize(),
-                    end_offset.as_usize(),
+                    start_ofs.as_usize(),
+                    end_ofs.as_usize(),
                     line_info.content_len.as_usize()
                 ));
             }
         }
 
         // Extract values needed for buffer operations before mutable operations.
-        let num_deleted_chars = len((end_offset - start_offset).as_usize());
-        let delete_start = line_info.buffer_position + start_offset;
+        let num_deleted_chars = len((end_ofs - start_ofs).as_usize());
+        let delete_start = line_info.buffer_pos + start_ofs;
         let current_content_len = line_info.content_len;
-        let buffer_position = line_info.buffer_position;
+        let buffer_pos = line_info.buffer_pos;
 
         // Shift content left to overwrite deleted portion.
         if !end_idx.overflows(current_content_len) {
             // Content remains after deletion - need to shift
-            let move_from = (buffer_position + end_offset).as_usize();
+            let move_from = (buffer_pos + end_ofs).as_usize();
             let move_to = delete_start.as_usize();
             let remaining_content = current_content_len.remaining_from(end_idx);
             let move_len = remaining_content.as_usize();
@@ -303,12 +312,12 @@ impl ZeroCopyGapBuffer {
         let new_content_len = current_content_len - num_deleted_chars;
 
         // Place newline at new end position.
-        let newline_pos = buffer_position.as_usize() + new_content_len.as_usize();
-        self.buffer[newline_pos] = b'\n';
+        let newline_pos = buffer_pos.as_usize() + new_content_len.as_usize();
+        self.buffer[newline_pos] = LINE_FEED_BYTE;
 
         // Fill the freed space with null bytes.
         let null_start = newline_pos + 1;
-        let null_end = buffer_position.as_usize() + current_content_len.as_usize() + 1;
+        let null_end = buffer_pos.as_usize() + current_content_len.as_usize() + 1;
         for i in null_start..null_end {
             self.buffer[i] = NULL_BYTE;
         }
@@ -510,11 +519,11 @@ mod tests {
 
         // Check that the buffer is properly null-padded.
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = line_info.buffer_position.as_usize();
+        let buffer_start = line_info.buffer_pos.as_usize();
         let content_len = line_info.content_len.as_usize();
 
         // Content should be "Helo\n"
-        assert_eq!(buffer.buffer[buffer_start + content_len], b'\n');
+        assert_eq!(buffer.buffer[buffer_start + content_len], LINE_FEED_BYTE);
 
         // Everything after newline should be null.
         for i in (buffer_start + content_len + 1)

@@ -14,7 +14,7 @@ use crate::{ByteIndex, ByteOffset, ColIndex, ColWidth, GCStringOwned, IndexMarke
 #[derive(Debug, Clone, PartialEq)]
 pub struct LineMetadata {
     /// Where this line starts in the buffer
-    pub buffer_position: ByteIndex,
+    pub buffer_pos: ByteIndex,
 
     /// Actual content length in bytes (before '\n')
     pub content_len: Length,
@@ -56,7 +56,7 @@ impl LineMetadata {
     /// ```
     #[must_use]
     pub fn content_range(&self) -> std::ops::Range<usize> {
-        let start = self.buffer_position.as_usize();
+        let start = self.buffer_pos.as_usize();
         let end = start + self.content_len.as_usize();
         start..end
     }
@@ -87,18 +87,19 @@ impl LineMetadata {
     /// let line_info = buffer.get_line_info(0).unwrap();
     ///
     /// // Beginning of line
-    /// assert_eq!(line_info.get_byte_offset(seg_index(0)).as_usize(), 0);
+    /// assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0);
     ///
     /// // End of line
-    /// assert_eq!(line_info.get_byte_offset(seg_index(5)).as_usize(), 5);
+    /// assert_eq!(line_info.get_byte_ofs(seg_index(5)).as_usize(), 5);
     /// ```
     #[must_use]
-    pub fn get_byte_offset(&self, seg_index: SegIndex) -> ByteOffset {
+    pub fn get_byte_ofs(&self, arg_seg_index: impl Into<SegIndex>) -> ByteOffset {
+        let seg_index: SegIndex = arg_seg_index.into();
         if seg_index.is_zero() {
             // Insert at beginning.
             byte_offset(0)
         } else {
-            let seg_idx = idx(seg_index.as_usize());
+            let seg_idx = idx(seg_index);
             let segments_length = len(self.segments.len());
             if seg_idx.overflows(segments_length) {
                 // Insert at end
@@ -115,12 +116,12 @@ impl LineMetadata {
     ///
     /// This method converts a byte position to its corresponding grapheme cluster
     /// index (segment index). It handles three cases:
-    /// - Beginning of line (`byte_pos` = 0) → returns SegIndex(0)
-    /// - End of line (`byte_pos` >= `content_len`) → returns SegIndex(segments.len())
+    /// - Beginning of line (`byte_ofs` = 0) → returns SegIndex(0)
+    /// - End of line (`byte_ofs` >= `content_len`) → returns SegIndex(segments.len())
     /// - Middle of line → returns the `seg_index` of the segment containing the byte
     ///
     /// # Arguments
-    /// * `byte_pos` - The byte position to convert
+    /// * `byte_ofs` - The byte offset to convert
     ///
     /// # Returns
     /// The segment index where the byte position falls
@@ -149,33 +150,34 @@ impl LineMetadata {
     /// assert_eq!(line_info.get_seg_index(byte_offset(8)), seg_index(5));
     /// ```
     #[must_use]
-    pub fn get_seg_index(&self, byte_offset: ByteOffset) -> SegIndex {
+    pub fn get_seg_index(&self, arg_byte_ofs: impl Into<ByteOffset>) -> SegIndex {
+        let byte_ofs: ByteOffset = arg_byte_ofs.into();
         // Handle edge cases.
-        if byte_offset.as_usize() == 0 {
+        if byte_ofs.as_usize() == 0 {
             return crate::seg_index(0);
         }
 
-        let byte_offset_idx = idx(byte_offset.as_usize());
+        let byte_ofs_idx = idx(byte_ofs);
         let content_length = len(self.content_len.as_usize());
-        if byte_offset_idx.overflows(content_length) {
+        if byte_ofs_idx.overflows(content_length) {
             return crate::seg_index(self.segments.len());
         }
 
-        // Binary search through segments to find the one containing byte_offset.
+        // Binary search through segments to find the one containing byte_ofs.
         // We could optimize this with binary search, but linear is fine for now
         // since lines typically have few segments.
         for segment in &self.segments {
-            if byte_offset.as_usize() >= segment.start_byte_index.as_usize()
-                && byte_offset.as_usize() < segment.end_byte_index.as_usize()
+            if byte_ofs.as_usize() >= segment.start_byte_index.as_usize()
+                && byte_ofs.as_usize() < segment.end_byte_index.as_usize()
             {
                 return segment.seg_index;
             }
         }
 
-        // If we get here, byte_offset is between segments (shouldn't happen with valid
+        // If we get here, byte_ofs is between segments (shouldn't happen with valid
         // UTF-8) Return the segment after the position.
         for segment in &self.segments {
-            if byte_offset.as_usize() < segment.start_byte_index.as_usize() {
+            if byte_ofs.as_usize() < segment.start_byte_index.as_usize() {
                 return segment.seg_index;
             }
         }
@@ -222,7 +224,8 @@ impl LineMetadata {
     /// assert!(line_info.check_is_in_middle_of_grapheme(col(4)).is_none()); // Valid
     /// ```
     #[must_use]
-    pub fn check_is_in_middle_of_grapheme(&self, col_index: ColIndex) -> Option<Seg> {
+    pub fn check_is_in_middle_of_grapheme(&self, arg_col_index: impl Into<ColIndex>) -> Option<Seg> {
+        let col_index: ColIndex = arg_col_index.into();
         // Find the segment that contains or would contain this column index.
         for seg in &self.segments {
             let seg_start = seg.start_display_col_index;
@@ -485,7 +488,7 @@ mod tests {
     use crate::{ZeroCopyGapBuffer, byte_offset, col, row, seg_index, width};
 
     #[test]
-    fn test_get_byte_pos_beginning() {
+    fn test_get_byte_ofs_beginning() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -497,11 +500,11 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test beginning position.
-        assert_eq!(line_info.get_byte_offset(seg_index(0)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0);
     }
 
     #[test]
-    fn test_get_byte_pos_end() {
+    fn test_get_byte_ofs_end() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -513,12 +516,12 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test end position (past last segment)
-        assert_eq!(line_info.get_byte_offset(seg_index(5)).as_usize(), 5);
-        assert_eq!(line_info.get_byte_offset(seg_index(10)).as_usize(), 5);
+        assert_eq!(line_info.get_byte_ofs(seg_index(5)).as_usize(), 5);
+        assert_eq!(line_info.get_byte_ofs(seg_index(10)).as_usize(), 5);
     }
 
     #[test]
-    fn test_get_byte_pos_middle() {
+    fn test_get_byte_ofs_middle() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -530,25 +533,25 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test various positions.
-        assert_eq!(line_info.get_byte_offset(seg_index(0)).as_usize(), 0); // Before 'H'
-        assert_eq!(line_info.get_byte_offset(seg_index(1)).as_usize(), 1); // Before '😀'
-        assert_eq!(line_info.get_byte_offset(seg_index(2)).as_usize(), 5); // Before 'l' (emoji is 4 bytes)
-        assert_eq!(line_info.get_byte_offset(seg_index(3)).as_usize(), 6); // Before second 'l'
-        assert_eq!(line_info.get_byte_offset(seg_index(4)).as_usize(), 7); // Before 'o'
-        assert_eq!(line_info.get_byte_offset(seg_index(5)).as_usize(), 8); // End of string
+        assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0); // Before 'H'
+        assert_eq!(line_info.get_byte_ofs(seg_index(1)).as_usize(), 1); // Before '😀'
+        assert_eq!(line_info.get_byte_ofs(seg_index(2)).as_usize(), 5); // Before 'l' (emoji is 4 bytes)
+        assert_eq!(line_info.get_byte_ofs(seg_index(3)).as_usize(), 6); // Before second 'l'
+        assert_eq!(line_info.get_byte_ofs(seg_index(4)).as_usize(), 7); // Before 'o'
+        assert_eq!(line_info.get_byte_ofs(seg_index(5)).as_usize(), 8); // End of string
     }
 
     #[test]
-    fn test_get_byte_pos_empty_line() {
+    fn test_get_byte_ofs_empty_line() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         let line_info = buffer.get_line_info(0).unwrap();
 
         // For empty line, any position should return 0.
-        assert_eq!(line_info.get_byte_offset(seg_index(0)).as_usize(), 0);
-        assert_eq!(line_info.get_byte_offset(seg_index(1)).as_usize(), 0);
-        assert_eq!(line_info.get_byte_offset(seg_index(100)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_ofs(seg_index(1)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_ofs(seg_index(100)).as_usize(), 0);
     }
 
     #[test]
@@ -622,7 +625,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_seg_index_get_byte_pos_round_trip() {
+    fn test_get_seg_index_get_byte_ofs_round_trip() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -636,12 +639,12 @@ mod tests {
         // Test round-trip conversion for each segment.
         for i in 0..line_info.segments.len() {
             let seg_idx = seg_index(i);
-            let byte_offset = line_info.get_byte_offset(seg_idx);
+            let byte_offset = line_info.get_byte_ofs(seg_idx);
             let seg_idx_back = line_info.get_seg_index(byte_offset);
             assert_eq!(
                 seg_idx,
                 seg_idx_back,
-                "Round-trip failed for segment {}: byte_offset={}",
+                "Round-trip failed for segment {}: byte_ofs={}",
                 i,
                 byte_offset.as_usize()
             );

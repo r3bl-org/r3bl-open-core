@@ -82,7 +82,7 @@ pub type SegmentArray = Vec<Seg>;
 /// ## Example
 ///
 /// ```
-/// use r3bl_tui::{GCStringOwned, ch, col, width, seg_index};
+/// use r3bl_tui::{GCStringOwned, ch, col, width, seg_index, byte_index};
 /// let u_str: GCStringOwned = "📦🙏🏽".into();
 /// if let Some(segment) = u_str.segments.first() {
 ///     assert_eq!(segment.start_byte_index, byte_index(0));

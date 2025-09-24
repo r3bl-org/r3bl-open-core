@@ -268,17 +268,32 @@
 //! While this adds some overhead to each edit operation, it ensures correctness
 //! for all Unicode text, including emojis, combining characters, and complex scripts.
 
-// Core implementation modules.
-mod core;
+// Core types and data structures.
+mod zcgb_core;
+mod zcgb_line;
+mod zcgb_line_metadata;
 
-// Specialized algorithms and optimizations.
-mod implementations;
+// Operation implementations.
+mod zcgb_access_ops;
+mod zcgb_basic_ops;
+mod zcgb_delete_ops;
+mod zcgb_insert_ops;
+mod zcgb_seg_builder_ops;
 
-// Adapters for converting to ZeroCopyGapBuffer.
-mod adapters;
+// Type conversion adapters.
+mod zcgb_adapters;
+
+// Constants used throughout the zero-copy gap buffer implementation.
+/// Initial size allocated for each line in bytes.
+pub const INITIAL_LINE_SIZE: usize = 256;
+
+/// Size increment for extending line capacity in bytes.
+pub const LINE_PAGE_SIZE: usize = 256;
 
 // Re-export core types and constants.
-pub use core::*;
+pub use zcgb_core::*;
+pub use zcgb_line::*;
+pub use zcgb_line_metadata::*;
 
 // Note: implementation modules extend [`ZeroCopyGapBuffer`] through inherent method
 // implementations. They are not re-exported as they provide specialized capabilities

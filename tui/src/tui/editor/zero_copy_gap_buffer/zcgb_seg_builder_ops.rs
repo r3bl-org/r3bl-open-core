@@ -141,7 +141,8 @@ impl ZeroCopyGapBuffer {
     ///
     /// This method carefully respects the `content_len` boundary to ensure
     /// null padding is never included in segment calculations.
-    pub fn rebuild_line_segments(&mut self, line_index: RowIndex) -> Result<()> {
+    pub fn rebuild_line_segments(&mut self, arg_line_index: impl Into<RowIndex>) -> Result<()> {
+        let line_index: RowIndex = arg_line_index.into();
         let line_idx = line_index.as_usize();
 
         // Get line info for content extraction.
@@ -251,7 +252,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{NULL_BYTE, col, row, seg_index, width};
+    use crate::{col, row, seg_index, width, NULL_BYTE};
 
     #[test]
     fn test_rebuild_line_segments_empty_line() -> Result<()> {
@@ -335,7 +336,7 @@ mod tests {
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Test")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = line_info.buffer_position.as_usize();
+        let buffer_start = line_info.buffer_pos.as_usize();
         let capacity = line_info.capacity.as_usize();
 
         // Verify null padding exists beyond content.

@@ -983,7 +983,7 @@ impl ZeroCopyGapBuffer {
         self.buffer.resize(self.buffer.len() + Self::LINE_SIZE, b'\0');
 
         // Add the newline character at the start (empty line)
-        self.buffer[buffer_offset] = b'\n';
+        self.buffer[buffer_offset] = LINE_FEED_BYTE;
 
         // Create line metadata
         self.lines.push(GapBufferLineInfo {
@@ -1052,7 +1052,7 @@ impl ZeroCopyGapBuffer {
             .copy_from_slice(text_bytes);
 
         // Update newline position
-        self.buffer[content_end + text_bytes.len()] = b'\n';
+        self.buffer[content_end + text_bytes.len()] = LINE_FEED_BYTE;
 
         // Update metadata
         self.lines[line_index].content_len += text_bytes.len();

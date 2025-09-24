@@ -165,14 +165,14 @@ impl ZeroCopyGapBuffer {
 
         // Calculate actual start offset from line info.
         let start_info = self.get_line_info(line_range.start)?;
-        let start_offset = *start_info.buffer_position;
+        let start_offset = *start_info.buffer_pos;
 
         // Calculate end offset using type-safe bounds checking.
         let end_offset = if line_range.end.overflows(self.line_count()) {
             self.buffer.len()
         } else {
             let end_info = self.get_line_info(line_range.end)?;
-            *end_info.buffer_position
+            *end_info.buffer_pos
         };
 
         // In debug builds, validate UTF-8.
@@ -196,9 +196,10 @@ impl ZeroCopyGapBuffer {
     ///
     /// This is useful for debugging and testing
     #[must_use]
-    pub fn get_line_raw(&self, line_index: RowIndex) -> Option<&[u8]> {
+    pub fn get_line_raw(&self, arg_line_index: impl Into<RowIndex>) -> Option<&[u8]> {
+        let line_index: RowIndex = arg_line_index.into();
         let line_info = self.get_line_info(line_index)?;
-        let start = *line_info.buffer_position;
+        let start = *line_info.buffer_pos;
         let end = start + line_info.capacity.as_usize();
         Some(&self.buffer[start..end])
     }
@@ -220,7 +221,8 @@ impl ZeroCopyGapBuffer {
     ///
     /// In debug builds, panics if the line with newline contains invalid UTF-8
     #[must_use]
-    pub fn get_line_with_newline(&self, line_index: RowIndex) -> Option<&str> {
+    pub fn get_line_with_newline(&self, arg_line_index: impl Into<RowIndex>) -> Option<&str> {
+        let line_index: RowIndex = arg_line_index.into();
         let line_info = self.get_line_info(line_index)?;
         let content_range = line_info.content_range();
         // Include the newline if there's content.
@@ -264,15 +266,17 @@ impl ZeroCopyGapBuffer {
     ///
     /// This method provides convenient access to line content without metadata.
     #[must_use]
-    pub fn get_line_content(&self, row_index: RowIndex) -> Option<&str> {
+    pub fn get_line_content(&self, arg_row_index: impl Into<RowIndex>) -> Option<&str> {
+        let row_index: RowIndex = arg_row_index.into();
         self.get_line(row_index).map(|line| line.content())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{NULL_BYTE, len, row, tui::editor::zero_copy_gap_buffer::INITIAL_LINE_SIZE};
+    use super::{super::INITIAL_LINE_SIZE,
+                *};
+    use crate::{LINE_FEED_BYTE, NULL_BYTE, len, row};
 
     #[test]
     fn test_as_str_empty() {
@@ -298,7 +302,7 @@ mod tests {
 
         let bytes = buffer.as_bytes();
         assert_eq!(bytes.len(), INITIAL_LINE_SIZE);
-        assert_eq!(bytes[0], b'\n');
+        assert_eq!(bytes[0], LINE_FEED_BYTE);
         assert!(bytes[1..].iter().all(|&b| b == NULL_BYTE));
     }
 
@@ -355,7 +359,7 @@ mod tests {
 
         let raw = buffer.get_line_raw(row(0)).unwrap();
         assert_eq!(raw.len(), INITIAL_LINE_SIZE);
-        assert_eq!(raw[0], b'\n');
+        assert_eq!(raw[0], LINE_FEED_BYTE);
         assert!(raw[1..].iter().all(|&b| b == NULL_BYTE));
     }
 
@@ -379,7 +383,7 @@ mod tests {
         // Get the line info first.
         let offset = {
             let line_info = buffer.get_line_info(0).unwrap();
-            *line_info.buffer_position
+            *line_info.buffer_pos
         };
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing
@@ -405,7 +409,7 @@ mod tests {
         buffer.add_line();
 
         // Get the line info first.
-        let offset = *buffer.get_line_info(0).unwrap().buffer_position;
+        let offset = *buffer.get_line_info(0).unwrap().buffer_pos;
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing.
         // Insert invalid UTF-8 sequence.

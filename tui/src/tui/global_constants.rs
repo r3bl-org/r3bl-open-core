@@ -104,3 +104,9 @@ pub const DEFAULT_CURSOR_CHAR: &str = "▒";
 /// extension cannot be determined. Markdown (.md) is chosen as a reasonable
 /// default that provides basic syntax highlighting without being too intrusive.
 pub const DEFAULT_SYN_HI_FILE_EXT: &str = "md";
+
+/// Newline byte used to terminate lines.
+pub const LINE_FEED_BYTE: u8 = b'\n';
+
+/// Null byte used for padding unused capacity.
+pub const NULL_BYTE: u8 = b'\0';

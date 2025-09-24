@@ -40,8 +40,9 @@ impl ZeroCopyGapBuffer {
     /// Panics in debug builds if the line contains invalid UTF-8. This should never
     /// happen as all content is validated on insertion.
     #[must_use]
-    pub fn get_line(&self, row_index: RowIndex) -> Option<GapBufferLine<'_>> {
-        let line_info = self.get_line_info(row_index.as_usize())?;
+    pub fn get_line(&self, arg_row_index: impl Into<RowIndex>) -> Option<GapBufferLine<'_>> {
+        let row_index: RowIndex = arg_row_index.into();
+        let line_info = self.get_line_info(row_index)?;
 
         // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
@@ -64,33 +65,38 @@ impl ZeroCopyGapBuffer {
     } // Line metadata access
 
     #[must_use]
-    pub fn get_line_display_width(&self, row_index: RowIndex) -> Option<ColWidth> {
-        self.get_line_info(row_index.as_usize())
+    pub fn get_line_display_width(&self, arg_row_index: impl Into<RowIndex>) -> Option<ColWidth> {
+        let row_index: RowIndex = arg_row_index.into();
+        self.get_line_info(row_index)
             .map(|info| info.display_width)
     }
 
     #[must_use]
-    pub fn get_line_grapheme_count(&self, row_index: RowIndex) -> Option<Length> {
-        self.get_line_info(row_index.as_usize())
+    pub fn get_line_grapheme_count(&self, arg_row_index: impl Into<RowIndex>) -> Option<Length> {
+        let row_index: RowIndex = arg_row_index.into();
+        self.get_line_info(row_index)
             .map(|info| info.grapheme_count)
     }
 
     #[must_use]
-    pub fn get_line_byte_len(&self, row_index: RowIndex) -> Option<Length> {
-        self.get_line_info(row_index.as_usize())
+    pub fn get_line_byte_len(&self, arg_row_index: impl Into<RowIndex>) -> Option<Length> {
+        let row_index: RowIndex = arg_row_index.into();
+        self.get_line_info(row_index)
             .map(|info| info.content_len)
     }
 
     // Line modification methods.
 
-    pub fn insert_line(&mut self, row_index: RowIndex) -> bool {
+    pub fn insert_line(&mut self, arg_row_index: impl Into<RowIndex>) -> bool {
+        let row_index: RowIndex = arg_row_index.into();
         match self.insert_empty_line(row_index) {
             Ok(()) => true,
             Err(_) => false,
         }
     }
 
-    pub fn set_line(&mut self, row_index: RowIndex, content: &str) -> bool {
+    pub fn set_line(&mut self, arg_row_index: impl Into<RowIndex>, content: &str) -> bool {
+        let row_index: RowIndex = arg_row_index.into();
         // First, clear the existing line content.
         if let Some(line_info) = self.get_line_info(row_index) {
             let grapheme_count = line_info.grapheme_count;
@@ -200,11 +206,11 @@ impl ZeroCopyGapBuffer {
         let line_content = self.get_line_content(row_index)?.to_string();
 
         // Find the byte position for the segment.
-        let line_info = self.get_line_info(row_index.as_usize())?;
-        let byte_offset = line_info.get_byte_offset(seg_idx);
+        let line_info = self.get_line_info(row_index)?;
+        let byte_ofs = line_info.get_byte_ofs(seg_idx);
 
         // Split the content.
-        let (left_part, right_part) = line_content.split_at(byte_offset.as_usize());
+        let (left_part, right_part) = line_content.split_at(byte_ofs.as_usize());
         let right_content = right_part.to_string();
 
         // Update the current line to only contain the left part.
@@ -213,7 +219,8 @@ impl ZeroCopyGapBuffer {
         Some(right_content)
     }
 
-    pub fn merge_with_next_line(&mut self, base_row_index: RowIndex) -> bool {
+    pub fn merge_with_next_line(&mut self, arg_base_row_index: impl Into<RowIndex>) -> bool {
+        let base_row_index: RowIndex = arg_base_row_index.into();
         let next_row_index = row(base_row_index.as_usize() + 1);
 
         // Get the content of the second line.
@@ -221,7 +228,7 @@ impl ZeroCopyGapBuffer {
             let content_to_append = second_line_content.to_string();
 
             // Get the grapheme count of the base line to know where to append.
-            if let Some(line_info) = self.get_line_info(base_row_index.as_usize()) {
+            if let Some(line_info) = self.get_line_info(base_row_index) {
                 let append_pos = seg_index(line_info.grapheme_count.as_usize());
 
                 // Append the second line's content to the base line.
@@ -247,13 +254,15 @@ impl ZeroCopyGapBuffer {
     // Byte position conversions.
 
     #[must_use]
-    pub fn get_byte_offset_for_row(&self, row_index: RowIndex) -> Option<ByteIndex> {
-        self.get_line_info(row_index.as_usize())
-            .map(|info| info.buffer_position)
+    pub fn get_byte_pos_for_row(&self, arg_row_index: impl Into<RowIndex>) -> Option<ByteIndex> {
+        let row_index: RowIndex = arg_row_index.into();
+        self.get_line_info(row_index)
+            .map(|info| info.buffer_pos)
     }
 
     #[must_use]
-    pub fn find_row_containing_byte(&self, byte_index: ByteIndex) -> Option<RowIndex> {
+    pub fn find_row_containing_byte(&self, arg_byte_index: impl Into<ByteIndex>) -> Option<RowIndex> {
+        let byte_index: ByteIndex = arg_byte_index.into();
         // Early bounds check for performance optimization.
         let byte_idx = idx(byte_index);
         let buffer_length = len(self.buffer.len());
@@ -269,7 +278,7 @@ impl ZeroCopyGapBuffer {
         let total_lines = self.line_count();
         for i in 0..total_lines.as_usize() {
             if let Some(line_info) = self.get_line_info(i) {
-                let line_start = line_info.buffer_position.as_usize();
+                let line_start = line_info.buffer_pos.as_usize();
                 let line_end = line_start + line_info.capacity.as_usize();
 
                 if target_byte >= line_start && target_byte < line_end {
@@ -317,9 +326,11 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn get_string_at_col(
         &self,
-        row_index: RowIndex,
-        col_index: ColIndex,
+        arg_row_index: impl Into<RowIndex>,
+        arg_col_index: impl Into<ColIndex>,
     ) -> Option<crate::SegStringOwned> {
+        let row_index: RowIndex = arg_row_index.into();
+        let col_index: ColIndex = arg_col_index.into();
         let line = self.get_line(row_index)?;
         line.get_string_at(col_index)
     }
@@ -327,9 +338,11 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn check_is_in_middle_of_grapheme(
         &self,
-        row_index: RowIndex,
-        col_index: ColIndex,
+        arg_row_index: impl Into<RowIndex>,
+        arg_col_index: impl Into<ColIndex>,
     ) -> Option<crate::Seg> {
+        let row_index: RowIndex = arg_row_index.into();
+        let col_index: ColIndex = arg_col_index.into();
         let line = self.get_line(row_index)?;
         line.check_is_in_middle_of_grapheme(col_index)
     }
@@ -343,7 +356,7 @@ impl ZeroCopyGapBuffer {
         row_index: RowIndex,
         col_index: ColIndex,
     ) -> Option<SegIndex> {
-        let line_info = self.get_line_info(row_index.as_usize())?;
+        let line_info = self.get_line_info(row_index)?;
         let target_col = col_index.as_usize();
         let mut current_col = 0;
 

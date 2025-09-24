@@ -2,8 +2,8 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::{ChUnit, ch, IndexMarker, UnitCompare};
 use super::seg_width::{SegWidth, seg_width};
+use crate::{ChUnit, Index, IndexMarker, UnitCompare, ch};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
@@ -12,7 +12,8 @@ pub struct SegIndex(pub ChUnit);
 pub fn seg_index(arg_seg_index: impl Into<SegIndex>) -> SegIndex { arg_seg_index.into() }
 
 mod seg_index_impl_block {
-    use super::{ChUnit, Deref, DerefMut, SegIndex, SegWidth, ch, seg_width};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl SegIndex {
         /// Converts the segment index to a width, by adding 1.
@@ -35,6 +36,11 @@ mod seg_index_impl_block {
     impl DerefMut for SegIndex {
         fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
     }
+}
+
+mod conversions {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<usize> for SegIndex {
         fn from(it: usize) -> Self { Self(ch(it)) }
@@ -56,6 +62,13 @@ mod seg_index_impl_block {
         fn from(other: SegWidth) -> Self { other.convert_to_seg_index() }
     }
 
+    impl From<Index> for SegIndex {
+        fn from(it: Index) -> Self { Self(ch(it.as_usize())) }
+    }
+
+    impl From<SegIndex> for Index {
+        fn from(it: SegIndex) -> Self { Index::from(it.as_usize()) }
+    }
 }
 
 // Implement bounds checking traits for SegIndex
@@ -67,11 +80,8 @@ impl UnitCompare for SegIndex {
 impl IndexMarker for SegIndex {
     type LengthType = SegWidth;
 
-    fn convert_to_length(&self) -> Self::LengthType {
-        self.convert_to_seg_width()
-    }
+    fn convert_to_length(&self) -> Self::LengthType { self.convert_to_seg_width() }
 }
-
 
 #[cfg(test)]
 mod tests {

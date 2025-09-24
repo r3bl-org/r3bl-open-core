@@ -67,25 +67,29 @@ impl<'a> GapBufferLine<'a> {
 
     /// Check if the given column index falls in the middle of a grapheme cluster.
     #[must_use]
-    pub fn check_is_in_middle_of_grapheme(&self, col_index: ColIndex) -> Option<Seg> {
+    pub fn check_is_in_middle_of_grapheme(&self, arg_col_index: impl Into<ColIndex>) -> Option<Seg> {
+        let col_index: ColIndex = arg_col_index.into();
         self.info.check_is_in_middle_of_grapheme(col_index)
     }
 
     /// Get the string at the given column index.
     #[must_use]
-    pub fn get_string_at(&self, col_index: ColIndex) -> Option<SegStringOwned> {
+    pub fn get_string_at(&self, arg_col_index: impl Into<ColIndex>) -> Option<SegStringOwned> {
+        let col_index: ColIndex = arg_col_index.into();
         self.info.get_string_at(self.content, col_index)
     }
 
     /// Get the string at the right of the given column index.
     #[must_use]
-    pub fn get_string_at_right_of(&self, col_index: ColIndex) -> Option<SegStringOwned> {
+    pub fn get_string_at_right_of(&self, arg_col_index: impl Into<ColIndex>) -> Option<SegStringOwned> {
+        let col_index: ColIndex = arg_col_index.into();
         self.info.get_string_at_right_of(self.content, col_index)
     }
 
     /// Get the string at the left of the given column index.
     #[must_use]
-    pub fn get_string_at_left_of(&self, col_index: ColIndex) -> Option<SegStringOwned> {
+    pub fn get_string_at_left_of(&self, arg_col_index: impl Into<ColIndex>) -> Option<SegStringOwned> {
+        let col_index: ColIndex = arg_col_index.into();
         self.info.get_string_at_left_of(self.content, col_index)
     }
 
