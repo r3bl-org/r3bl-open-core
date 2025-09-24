@@ -26,6 +26,11 @@ For both patterns:
 
 - Instead of using `usize` or `u16` for indices, try using `IndexMarker` which is 0-based
 - Instead of using `usize` or `u16` for lengths, try using `LengthMarker` which is 1-based
+- Implement Range Validation with RangeBoundary
+- Array Access Bounds Checking with check_array_access_bounds() and overflows()
+- Cursor Position Bounds Checking with check_cursor_position_bounds()
+- Type-safe comparisons to eliminate .as_usize() calls
+- Use .is_zero() for zero checks instead of == 0
 
 For "array access bounds checking" pattern:
 

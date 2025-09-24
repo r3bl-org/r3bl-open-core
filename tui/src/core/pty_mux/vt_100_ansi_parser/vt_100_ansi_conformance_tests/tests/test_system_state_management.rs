@@ -12,6 +12,7 @@ use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, SgrCode,
             vt_100_ansi_parser::{protocols::csi_codes::{CsiSequence, PrivateModeType},
                                  term_units::{term_col, term_row}}};
+use crate::{col,row};
 
 /// Tests for cursor save/restore with active SGR styling attributes.
 pub mod cursor_save_restore_with_attributes {
@@ -66,7 +67,7 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf.apply_ansi_bytes(restore_sequence);
 
         // Position should be restored
-        assert_eq!(ofs_buf.cursor_pos, crate::row(2) + crate::col(4)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos, row(2) + col(4)); // 0-based
 
         // Attributes should remain as they were changed (not restored)
         // Current style should be green foreground from the change above
@@ -113,7 +114,7 @@ pub mod cursor_save_restore_with_attributes {
         let restore_sequence = format!("{}", CsiSequence::RestoreCursor);
         let _result = ofs_buf.apply_ansi_bytes(restore_sequence);
 
-        assert_eq!(ofs_buf.cursor_pos, crate::row(1) + crate::col(2)); // 0-based position 1
+        assert_eq!(ofs_buf.cursor_pos, row(1) + col(2)); // 0-based position 1
     }
 
     #[test]
@@ -155,7 +156,7 @@ pub mod cursor_save_restore_with_attributes {
         let _result = ofs_buf.apply_ansi_bytes(restore_sequence);
 
         // Verify cursor position restored
-        assert_eq!(ofs_buf.cursor_pos, crate::row(1) + crate::col(3)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos, row(1) + col(3)); // 0-based
 
         // Write text to verify current attributes are maintained
         let _result = ofs_buf.apply_ansi_bytes("Test");
@@ -321,7 +322,7 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf.apply_ansi_bytes(restore_sequence);
 
         // Should restore to original absolute position (5,6)
-        assert_eq!(ofs_buf.cursor_pos, crate::row(4) + crate::col(5)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos, row(4) + col(5)); // 0-based
 
         // Verify scroll region changed
         assert_eq!(
@@ -382,7 +383,7 @@ pub mod scroll_region_state_interactions {
         let _result = ofs_buf.apply_ansi_bytes(restore_sequence);
 
         // Should restore to saved position (6,3)
-        assert_eq!(ofs_buf.cursor_pos, crate::row(5) + crate::col(2)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos, row(5) + col(2)); // 0-based
     }
 }
 
@@ -438,7 +439,7 @@ pub mod complex_state_combinations {
         let _result = ofs_buf.apply_ansi_bytes(restore_sequence);
 
         // Verify cursor position restored
-        assert_eq!(ofs_buf.cursor_pos, crate::row(4) + crate::col(3)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos, row(4) + col(3)); // 0-based
 
         // Verify other states changed (not restored)
         assert_eq!(

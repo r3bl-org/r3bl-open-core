@@ -1197,7 +1197,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(next_line_sequence);
 
         // Should be at row 5, column 1 (within scroll region)
-        assert_eq!(ofs_buf.cursor_pos, crate::row(4) + crate::col(0)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos, row(4) + col(0)); // 0-based
     }
 
     #[test]
@@ -1229,7 +1229,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(next_line_sequence);
 
         // Should remain at row 7, column 1 (region boundary), but content should scroll
-        assert_eq!(ofs_buf.cursor_pos, crate::row(6) + crate::col(0)); // 0-based row 6 = 1-based row 7
+        assert_eq!(ofs_buf.cursor_pos, row(6) + col(0)); // 0-based row 6 = 1-based row 7
     }
 
     #[test]
@@ -1261,7 +1261,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(prev_line_sequence);
 
         // Should be at row 4, column 1 (within scroll region)
-        assert_eq!(ofs_buf.cursor_pos, crate::row(3) + crate::col(0)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos, row(3) + col(0)); // 0-based
     }
 
     #[test]
@@ -1293,7 +1293,7 @@ pub mod cursor_boundary_operations {
         let _result = ofs_buf.apply_ansi_bytes(prev_line_sequence);
 
         // Should remain at row 3, column 1 (region boundary)
-        assert_eq!(ofs_buf.cursor_pos, crate::row(2) + crate::col(0)); // 0-based row 2 = 1-based row 3
+        assert_eq!(ofs_buf.cursor_pos, row(2) + col(0)); // 0-based row 2 = 1-based row 3
     }
 
     #[test]
@@ -1329,7 +1329,7 @@ pub mod cursor_boundary_operations {
         // column 0 From row 2 (1-based) to row 3 (1-based) = from row 1 (0-based)
         // to row 2 (0-based) But test shows cursor at row 4 (0-based), so
         // CursorNextLine(1) moved from row 1 to row 4
-        assert_eq!(ofs_buf.cursor_pos, crate::row(4) + crate::col(0)); // 0-based - matches actual behavior
+        assert_eq!(ofs_buf.cursor_pos, row(4) + col(0)); // 0-based - matches actual behavior
     }
 }
 
@@ -1413,7 +1413,7 @@ pub mod boundary_validation {
 
         // Cursor should stay within or handle the single-line region appropriately
         // Exact behavior may vary by implementation
-        assert!(ofs_buf.cursor_pos.row_index <= crate::row(9)); // Within buffer bounds
+        assert!(ofs_buf.cursor_pos.row_index <= row(9)); // Within buffer bounds
     }
 
     #[test]
@@ -1447,7 +1447,7 @@ pub mod boundary_validation {
         let _result = ofs_buf.apply_ansi_bytes(scroll_ops);
 
         // Should handle full-buffer scrolling correctly
-        assert_eq!(ofs_buf.cursor_pos.row_index, crate::row(9)); // Should stay at bottom row
+        assert_eq!(ofs_buf.cursor_pos.row_index, row(9)); // Should stay at bottom row
     }
 }
 
@@ -1509,8 +1509,8 @@ pub mod complex_interactions {
         let _result = ofs_buf.apply_ansi_bytes(complex_ops);
 
         // Verify the cursor is within the scroll region bounds
-        assert!(ofs_buf.cursor_pos.row_index >= crate::row(2)); // >= row 3 (1-based)
-        assert!(ofs_buf.cursor_pos.row_index <= crate::row(6)); // <= row 7 (1-based)
+        assert!(ofs_buf.cursor_pos.row_index >= row(2)); // >= row 3 (1-based)
+        assert!(ofs_buf.cursor_pos.row_index <= row(6)); // <= row 7 (1-based)
     }
 
     #[test]
@@ -1544,15 +1544,15 @@ pub mod complex_interactions {
         // Based on actual behavior: line feed may move cursor beyond expected bounds
         // Current implementation may not fully respect scroll region boundaries for LF
         // Verify the cursor position is reasonable within the buffer bounds
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10)); // Within buffer bounds
+        assert!(ofs_buf.cursor_pos.row_index < row(10)); // Within buffer bounds
 
         // Send carriage return + line feed combination
         let crlf_sequence = "\r\n";
         let _result = ofs_buf.apply_ansi_bytes(crlf_sequence);
 
         // Should handle the combination and move to beginning of next line
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10)); // Within buffer bounds
-        assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(0)); // Should be at column 1
+        assert!(ofs_buf.cursor_pos.row_index < row(10)); // Within buffer bounds
+        assert_eq!(ofs_buf.cursor_pos.col_index, col(0)); // Should be at column 1
     }
 
     #[test]
@@ -1590,7 +1590,7 @@ pub mod complex_interactions {
         let _result = ofs_buf.apply_ansi_bytes(text_overflow);
 
         // Final cursor position should be within the narrow scroll region
-        assert!(ofs_buf.cursor_pos.row_index >= crate::row(4)); // >= row 5 (1-based)
-        assert!(ofs_buf.cursor_pos.row_index <= crate::row(5)); // <= row 6 (1-based)
+        assert!(ofs_buf.cursor_pos.row_index >= row(4)); // >= row 5 (1-based)
+        assert!(ofs_buf.cursor_pos.row_index <= row(5)); // <= row 6 (1-based)
     }
 }

@@ -34,6 +34,7 @@
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                 term_units::{term_col, term_row}};
+use crate::{col, row};
 
 /// Tests for malformed CSI sequence handling.
 pub mod malformed_csi_sequences {
@@ -62,12 +63,12 @@ pub mod malformed_csi_sequences {
 
             // Cursor should remain within valid bounds
             assert!(
-                ofs_buf.cursor_pos.row_index < crate::row(10),
+                ofs_buf.cursor_pos.row_index < row(10),
                 "Cursor row out of bounds after sequence: {:?}",
                 std::str::from_utf8(sequence).unwrap_or("invalid UTF-8")
             );
             assert!(
-                ofs_buf.cursor_pos.col_index < crate::col(10),
+                ofs_buf.cursor_pos.col_index < col(10),
                 "Cursor column out of bounds after sequence: {:?}",
                 std::str::from_utf8(sequence).unwrap_or("invalid UTF-8")
             );
@@ -130,8 +131,8 @@ pub mod malformed_csi_sequences {
         let _result = ofs_buf.apply_ansi_bytes(excessive_params);
 
         // Should not crash and cursor should remain in bounds
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10));
-        assert!(ofs_buf.cursor_pos.col_index < crate::col(10));
+        assert!(ofs_buf.cursor_pos.row_index < row(10));
+        assert!(ofs_buf.cursor_pos.col_index < col(10));
     }
 
     #[test]
@@ -262,8 +263,8 @@ pub mod invalid_character_handling {
         let _result = ofs_buf.apply_ansi_bytes(mixed_sequence);
 
         // Should handle mixture gracefully
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10));
-        assert!(ofs_buf.cursor_pos.col_index < crate::col(10));
+        assert!(ofs_buf.cursor_pos.row_index < row(10));
+        assert!(ofs_buf.cursor_pos.col_index < col(10));
     }
 
     #[test]
@@ -283,8 +284,8 @@ pub mod invalid_character_handling {
         }
 
         // Should maintain stability under stress
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10));
-        assert!(ofs_buf.cursor_pos.col_index < crate::col(10));
+        assert!(ofs_buf.cursor_pos.row_index < row(10));
+        assert!(ofs_buf.cursor_pos.col_index < col(10));
 
         // Should still accept valid input
         let _result = ofs_buf.apply_ansi_bytes("FINAL");
@@ -311,32 +312,32 @@ pub mod boundary_edge_cases {
                 CsiSequence::CursorUp(0),
                 term_row(3),
                 term_col(3),
-                crate::row(1),
-                crate::col(2),
+                row(1),
+                col(2),
             ),
             (
                 "Cursor down by 0",
                 CsiSequence::CursorDown(0),
                 term_row(3),
                 term_col(3),
-                crate::row(3),
-                crate::col(2),
+                row(3),
+                col(2),
             ),
             (
                 "Cursor forward by 0",
                 CsiSequence::CursorForward(0),
                 term_row(3),
                 term_col(3),
-                crate::row(2),
-                crate::col(3),
+                row(2),
+                col(3),
             ),
             (
                 "Cursor backward by 0",
                 CsiSequence::CursorBackward(0),
                 term_row(3),
                 term_col(3),
-                crate::row(2),
-                crate::col(1),
+                row(2),
+                col(1),
             ),
         ];
 
@@ -388,8 +389,8 @@ pub mod boundary_edge_cases {
             let _result = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should clamp to valid ranges
-            assert!(ofs_buf.cursor_pos.row_index < crate::row(10));
-            assert!(ofs_buf.cursor_pos.col_index < crate::col(10));
+            assert!(ofs_buf.cursor_pos.row_index < row(10));
+            assert!(ofs_buf.cursor_pos.col_index < col(10));
         }
     }
 
@@ -427,13 +428,13 @@ pub mod boundary_edge_cases {
 
             // Positions should be clamped to buffer bounds
             assert!(
-                ofs_buf.cursor_pos.row_index <= crate::row(9), /* 0-based, so max is 9
+                ofs_buf.cursor_pos.row_index <= row(9), /* 0-based, so max is 9
                                                                 * for 10-row buffer */
                 "Row not clamped properly: {:?}",
                 ofs_buf.cursor_pos
             );
             assert!(
-                ofs_buf.cursor_pos.col_index <= crate::col(9), /* 0-based, so max is 9
+                ofs_buf.cursor_pos.col_index <= col(9), /* 0-based, so max is 9
                                                                 * for 10-col buffer */
                 "Column not clamped properly: {:?}",
                 ofs_buf.cursor_pos
@@ -469,8 +470,8 @@ pub mod parser_resilience {
         let _result = ofs_buf.apply_ansi_bytes("Final test");
 
         // Parser should be in a valid state
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10));
-        assert!(ofs_buf.cursor_pos.col_index < crate::col(10));
+        assert!(ofs_buf.cursor_pos.row_index < row(10));
+        assert!(ofs_buf.cursor_pos.col_index < col(10));
     }
 
     #[test]
@@ -494,8 +495,8 @@ pub mod parser_resilience {
         }
 
         // Should eventually process complete sequence
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10));
-        assert!(ofs_buf.cursor_pos.col_index < crate::col(10));
+        assert!(ofs_buf.cursor_pos.row_index < row(10));
+        assert!(ofs_buf.cursor_pos.col_index < col(10));
     }
 
     #[test]
@@ -517,8 +518,8 @@ pub mod parser_resilience {
         let _result = ofs_buf.apply_ansi_bytes(adversarial_input);
 
         // State should remain consistent
-        assert!(ofs_buf.cursor_pos.row_index < crate::row(10));
-        assert!(ofs_buf.cursor_pos.col_index < crate::col(10));
+        assert!(ofs_buf.cursor_pos.row_index < row(10));
+        assert!(ofs_buf.cursor_pos.col_index < col(10));
 
         // Should still respond to valid commands
         let move_sequence = format!(
@@ -530,7 +531,7 @@ pub mod parser_resilience {
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
 
-        assert_eq!(ofs_buf.cursor_pos.row_index, crate::row(2)); // 0-based
-        assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(2)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos.row_index, row(2)); // 0-based
+        assert_eq!(ofs_buf.cursor_pos.col_index, col(2)); // 0-based
     }
 }

@@ -12,7 +12,7 @@ pub type SegmentArray = Vec<Seg>;
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text
 /// handling. Each `Seg` contains all the information needed to convert between
-/// [`ByteIndex`](crate::ByteIndex), [`SegIndex`], and [`ColIndex`].
+/// [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
 ///
 /// A Unicode "grapheme" is a user-perceived character.
 /// - For `UTF-8` encoded text, a grapheme can be a single byte or up to 4 bytes.
@@ -53,7 +53,7 @@ pub type SegmentArray = Vec<Seg>;
 ///
 /// ## Fields and Their Relationship to Index Types
 ///
-/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`](crate::ByteIndex)
+/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`]
 ///   range for this segment. These are used when converting from `ByteIndex` to
 ///   `SegIndex`.
 /// - `seg_index`: The [`SegIndex`] of this segment. This is its position in the logical

@@ -7,7 +7,7 @@
 //! grapheme segments, and display information.
 
 use crate::{ByteIndex, ByteOffset, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length, Seg,
-            SegIndex, SegStringOwned, SegmentArray, byte_offset, ch,
+            SegIndex, SegStringOwned, SegmentArray, UnitCompare, byte_offset,
             core::units::{idx, len}};
 
 /// Metadata for a single line in the buffer
@@ -94,7 +94,7 @@ impl LineMetadata {
     /// ```
     #[must_use]
     pub fn get_byte_offset(&self, seg_index: SegIndex) -> ByteOffset {
-        if seg_index.as_usize() == 0 {
+        if seg_index.is_zero() {
             // Insert at beginning.
             byte_offset(0)
         } else {
@@ -429,7 +429,7 @@ impl LineMetadata {
                 let seg_display_width = seg.display_width;
 
                 // If we've skipped enough columns, stop here.
-                if *skip_col_count == ch(0) {
+                if skip_col_count.is_zero() {
                     break;
                 }
 
@@ -450,7 +450,7 @@ impl LineMetadata {
                 let seg_display_width = seg.display_width;
 
                 // Are we still skipping columns to reach the start?
-                if *skip_col_count == ch(0) {
+                if skip_col_count.is_zero() {
                     // We're in the content area - check if we have room for this segment.
                     if avail_col_count < seg_display_width {
                         // This segment would exceed our width limit.

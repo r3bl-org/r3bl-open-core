@@ -105,7 +105,7 @@ use std::{ops::Range, str::from_utf8_unchecked};
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{RowIndex,
-            core::units::bounds_check::{IndexMarker, RangeBoundary}};
+            core::units::bounds_check::{IndexMarker, RangeBoundary, UnitCompare}};
 
 impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice.
@@ -224,7 +224,7 @@ impl ZeroCopyGapBuffer {
         let line_info = self.get_line_info(line_index)?;
         let content_range = line_info.content_range();
         // Include the newline if there's content.
-        let end = if line_info.content_len.as_usize() > 0 {
+        let end = if !line_info.content_len.is_zero() {
             content_range.end + 1 // +1 for newline
         } else {
             content_range.start + 1 // Just the newline for empty lines

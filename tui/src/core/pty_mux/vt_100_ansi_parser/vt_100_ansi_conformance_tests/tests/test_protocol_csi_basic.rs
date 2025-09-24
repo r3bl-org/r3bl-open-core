@@ -7,6 +7,7 @@
 
 use super::super::{conformance_data::{basic_sequences, cursor_sequences},
                    test_fixtures_vt_100_ansi_conformance::*};
+use crate::{row, col};
 
 #[test]
 fn test_basic_delete_char_integration() {
@@ -85,5 +86,5 @@ fn test_basic_vpa_integration() {
     let _result = ofs_buf.apply_ansi_bytes(vpa_sequence);
 
     // Should be at row 2 (0-based), column 6 (0-based)
-    assert_eq!(ofs_buf.cursor_pos, crate::row(2) + crate::col(6));
+    assert_eq!(ofs_buf.cursor_pos, row(2) + col(6));
 }

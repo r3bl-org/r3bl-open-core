@@ -188,6 +188,7 @@ pub mod basic_tab_operations {
 /// Tests for tab operations with edge cases and boundary conditions.
 pub mod tab_edge_cases {
     use super::*;
+    use crate::{row, col};
 
     #[test]
     fn test_tab_at_exact_buffer_width() {
@@ -251,8 +252,8 @@ pub mod tab_edge_cases {
         // Verify final cursor position
         // "AB" (cols 0-1) → TAB (col 8) → "CD" (cols 8-9) → CR (col 0) → LF (next line) →
         // TAB (col 8) → "EF" (cols 8-9)
-        assert_eq!(ofs_buf.cursor_pos.row_index, crate::row(1)); // Second row
-        assert_eq!(ofs_buf.cursor_pos.col_index, crate::col(10)); // After "EF" at tab position
+        assert_eq!(ofs_buf.cursor_pos.row_index, row(1)); // Second row
+        assert_eq!(ofs_buf.cursor_pos.col_index, col(10)); // After "EF" at tab position
 
         // Verify content placement
         let first_row = &ofs_buf.buffer[0];

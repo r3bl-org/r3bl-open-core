@@ -92,9 +92,9 @@ impl ZeroCopyGapBuffer {
 
     pub fn set_line(&mut self, row_index: RowIndex, content: &str) -> bool {
         // First, clear the existing line content.
-        if let Some(line_info) = self.get_line_info(row_index.as_usize()) {
+        if let Some(line_info) = self.get_line_info(row_index) {
             let grapheme_count = line_info.grapheme_count;
-            if grapheme_count.as_usize() > 0 {
+            if !grapheme_count.is_zero() {
                 // Delete all existing content.
                 match self.delete_range(
                     row_index,
@@ -162,11 +162,15 @@ impl ZeroCopyGapBuffer {
         // Convert column index to segment index.
         if let Some(seg_idx) = self.col_to_seg_index(row_index, col_index) {
             // Get the line info to check segment count.
-            if let Some(line_info) = self.get_line_info(row_index.as_usize()) {
-                let max_segments = line_info.segments.len();
-                // Calculate end segment index, clamping to available segments.
+            if let Some(line_info) = self.get_line_info(row_index) {
+                let max_segments = crate::seg_width(line_info.segments.len());
+                // Use type-safe arithmetic and clamping operations.
                 let requested_end = seg_idx.as_usize() + segment_count.as_usize();
-                let actual_end = requested_end.min(max_segments);
+                let actual_end = if requested_end > max_segments.as_usize() {
+                    max_segments.as_usize()
+                } else {
+                    requested_end
+                };
                 let end_seg_index = seg_index(actual_end);
 
                 // Use the range deletion method.
@@ -261,7 +265,9 @@ impl ZeroCopyGapBuffer {
         // This could be optimized with binary search if needed.
         let target_byte = byte_index.as_usize();
 
-        for i in 0..self.line_count().as_usize() {
+        // Use type-safe line count check
+        let total_lines = self.line_count();
+        for i in 0..total_lines.as_usize() {
             if let Some(line_info) = self.get_line_info(i) {
                 let line_start = line_info.buffer_position.as_usize();
                 let line_end = line_start + line_info.capacity.as_usize();
@@ -279,8 +285,9 @@ impl ZeroCopyGapBuffer {
 
     #[must_use]
     pub fn iter_lines(&self) -> Box<dyn Iterator<Item = GapBufferLine<'_>> + '_> {
+        let total_lines = self.line_count();
         Box::new(
-            (0..self.line_count().as_usize()).filter_map(move |i| self.get_line(row(i))),
+            (0..total_lines.as_usize()).filter_map(move |i| self.get_line(row(i))),
         )
     } // Total size information
 

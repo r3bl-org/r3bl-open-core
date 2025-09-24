@@ -11,7 +11,7 @@ use std::cmp::min;
 use super::super::conformance_data::{basic_sequences, cursor_sequences, emacs_sequences,
                                      styling_sequences, tmux_sequences, vim_sequences};
 use crate::{ANSIBasicColor, PixelChar, offscreen_buffer::test_fixtures_ofs_buf::*,
-            tui_style_attrib};
+            tui_style_attrib, row, col};
 
 /// Create a realistic terminal buffer for real-world scenario testing.
 /// Uses standard 80x25 dimensions typical of actual terminal usage.
@@ -76,7 +76,7 @@ fn test_terminal_initialization_pattern() {
     );
 
     // Verify cursor position
-    assert_eq!(ofs_buf.cursor_pos, crate::row(2) + crate::col(0));
+    assert_eq!(ofs_buf.cursor_pos, row(2) + col(0));
 }
 
 /// Test cursor save/restore patterns using both ESC and CSI variants.
@@ -108,7 +108,7 @@ fn test_cursor_save_restore_variants() {
     assert_plain_text_at(&ofs_buf, 4, 4, "CSI");
 
     // Cursor should be back at origin after save/restore operations
-    assert_eq!(ofs_buf.cursor_pos, crate::row(0) + crate::col(0));
+    assert_eq!(ofs_buf.cursor_pos, row(0) + col(0));
 }
 
 /// Test complex styling combinations using the styling sequences.
@@ -360,7 +360,7 @@ fn test_text_editor_workflow() {
     );
 
     // Cursor should be at end of second line
-    assert_eq!(ofs_buf.cursor_pos.row_index, crate::row(1));
+    assert_eq!(ofs_buf.cursor_pos.row_index, row(1));
     assert!(ofs_buf.cursor_pos.col_index.as_usize() > 15);
 }
 

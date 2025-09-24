@@ -504,9 +504,7 @@ mod tests {
     use crate::{col, width};
 
     // Helper function to create test strings
-    fn create_test_string(s: &str) -> GCStringOwned {
-        GCStringOwned::from(s)
-    }
+    fn create_test_string(s: &str) -> GCStringOwned { GCStringOwned::from(s) }
 
     // Test module: convert (index conversion operations)
     mod convert_tests {
@@ -662,7 +660,7 @@ mod tests {
             let gc_string = create_test_string("a😀b😎c");
             // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
 
-            assert_eq!(gc_string.trunc_end_to_fit(width(3)), "a😀");  // Stops at emoji boundary
+            assert_eq!(gc_string.trunc_end_to_fit(width(3)), "a😀"); // Stops at emoji boundary
             assert_eq!(gc_string.trunc_end_to_fit(width(4)), "a😀b"); // Includes single char
             assert_eq!(gc_string.trunc_end_to_fit(width(6)), "a😀b😎"); // Stops before final char
             assert_eq!(gc_string.trunc_end_to_fit(width(7)), "a😀b😎c"); // Full string

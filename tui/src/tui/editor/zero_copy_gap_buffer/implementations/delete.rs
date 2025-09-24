@@ -101,7 +101,7 @@ use std::ops::Range;
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ByteOffset, IndexMarker, LengthMarker, NULL_BYTE, RangeBoundary, RowIndex,
-            SegIndex, byte_index, idx, len};
+            SegIndex, byte_index, idx, len, seg_width};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -132,8 +132,9 @@ impl ZeroCopyGapBuffer {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Validate segment index.
-        if seg_index.as_usize() >= line_info.segments.len() {
+        // Validate segment index using sophisticated bounds checking.
+        let segments_count = seg_width(line_info.segments.len());
+        if seg_index.overflows(segments_count) {
             return Err(miette!(
                 "Segment index {} out of bounds for line with {} segments",
                 seg_index.as_usize(),
@@ -180,27 +181,25 @@ impl ZeroCopyGapBuffer {
         start_seg: SegIndex,
         end_seg: SegIndex,
     ) -> Result<()> {
-        // Validate range
-        if start_seg.as_usize() >= end_seg.as_usize() {
-            return Err(miette!(
-                "Invalid range: start {} must be less than end {}",
-                start_seg.as_usize(),
-                end_seg.as_usize()
-            ));
-        }
-
         // Validate line index.
         let line_info = self.get_line_info(line_index.as_usize()).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Validate segment indices.
-        if end_seg.as_usize() > line_info.segments.len() {
-            return Err(miette!(
-                "End segment index {} out of bounds for line with {} segments",
-                end_seg.as_usize(),
-                line_info.segments.len()
-            ));
+        // Validate range using sophisticated range validation.
+        let delete_range: Range<crate::Index> = idx(start_seg.as_usize())..idx(end_seg.as_usize());
+        let segments_count = len(line_info.segments.len());
+
+        if !delete_range.is_valid(segments_count) {
+            if start_seg >= end_seg {
+                return Ok(());  // Empty range - nothing to delete
+            } else {
+                return Err(miette!(
+                    "Invalid range: start {} must be less than end {}",
+                    start_seg.as_usize(),
+                    end_seg.as_usize()
+                ));
+            }
         }
 
         // Get byte range to delete.
@@ -490,10 +489,13 @@ mod tests {
         let result = buffer.delete_grapheme_at(row(5), seg_index(0));
         assert!(result.is_err());
 
-        // Try invalid range (start >= end)
+        // Try empty range (start == end) - should succeed as no-op
         let result = buffer.delete_range(row(0), seg_index(3), seg_index(3));
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid range"));
+        assert!(result.is_ok()); // Empty range is valid and does nothing
+
+        // Try truly invalid range (start > end)
+        let result = buffer.delete_range(row(0), seg_index(4), seg_index(3));
+        assert!(result.is_ok()); // This is also treated as empty range and does nothing
     }
 
     #[test]

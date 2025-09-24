@@ -16,7 +16,7 @@
 //! The underlying adapter functions `gap_buffer_from_lines()` and `gap_buffer_from_str()`
 //! are private implementation details and should not be used directly.
 
-use crate::{GCStringOwned, SegIndex, ZeroCopyGapBuffer,
+use crate::{GCStringOwned, SegIndex, UnitCompare, ZeroCopyGapBuffer,
             md_parser_types::constants::NEW_LINE_CHAR};
 #[cfg(test)]
 use crate::{len, md_parser_types::constants::NULL_CHAR};
@@ -84,10 +84,15 @@ fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
 
     // If the text ends with a newline, split will create an empty string at the end.
     // We should process all lines in that case.
+    let total_lines = crate::len(lines.len());
     let num_lines_to_process = if text.ends_with(NEW_LINE_CHAR) {
-        lines.len() - 1 // Skip the last empty element from split
+        if !total_lines.is_zero() {
+            total_lines.as_usize() - 1 // Skip the last empty element from split
+        } else {
+            0
+        }
     } else {
-        lines.len() // Process all lines
+        total_lines.as_usize() // Process all lines
     };
 
     for line_text in lines.iter().take(num_lines_to_process) {
