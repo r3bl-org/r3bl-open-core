@@ -3,7 +3,7 @@
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use super::SegIndex;
-use crate::{ChUnit, ColIndex, ColWidth, Length, usize};
+use crate::{ByteIndex, ColIndex, ColWidth, Length, usize};
 
 /// A vector-like container for grapheme segments.
 pub type SegmentArray = Vec<Seg>;
@@ -85,8 +85,8 @@ pub type SegmentArray = Vec<Seg>;
 /// use r3bl_tui::{GCStringOwned, ch, col, width, seg_index};
 /// let u_str: GCStringOwned = "📦🙏🏽".into();
 /// if let Some(segment) = u_str.segments.first() {
-///     assert_eq!(segment.start_byte_index, ch(0));
-///     assert_eq!(segment.end_byte_index, ch(4));
+///     assert_eq!(segment.start_byte_index, byte_index(0));
+///     assert_eq!(segment.end_byte_index, byte_index(4));
 ///     assert_eq!(segment.display_width, width(2));
 ///     assert_eq!(segment.seg_index, seg_index(0));
 ///     assert_eq!(segment.bytes_size.as_usize(), 4);
@@ -101,11 +101,11 @@ pub type SegmentArray = Vec<Seg>;
 pub struct Seg {
     /// The start index (bytes), in the string slice, used to generate the
     /// [`crate::GCStringOwned`] that this grapheme cluster represents.
-    pub start_byte_index: ChUnit,
+    pub start_byte_index: ByteIndex,
 
     /// The end index (bytes), in the string slice, used to generate the
     /// [`crate::GCStringOwned`] that this grapheme cluster represents.
-    pub end_byte_index: ChUnit,
+    pub end_byte_index: ByteIndex,
 
     /// Display width of the grapheme cluster calculated using
     /// [`unicode_width::UnicodeWidthChar`]. The display width (aka `unicode_width`) may
@@ -164,14 +164,14 @@ impl Seg {
 
 #[cfg(test)]
 mod tests {
-    use crate::{GCStringOwned, ch, col, seg_index, width};
+    use crate::{GCStringOwned, byte_index, col, seg_index, width};
 
     #[test]
     fn test_single_grapheme_cluster() {
         let grapheme_string: GCStringOwned = "📦".into();
         if let Some(segment) = grapheme_string.segments.first() {
-            assert_eq!(segment.start_byte_index, ch(0));
-            assert_eq!(segment.end_byte_index, ch(4));
+            assert_eq!(segment.start_byte_index, byte_index(0));
+            assert_eq!(segment.end_byte_index, byte_index(4));
             assert_eq!(segment.display_width, width(2));
             assert_eq!(segment.seg_index, seg_index(0));
             assert_eq!(segment.bytes_size.as_usize(), 4);
@@ -186,8 +186,8 @@ mod tests {
         assert_eq!(grapheme_string.segments.len(), 2);
 
         let segment1 = &grapheme_string.segments[0];
-        assert_eq!(segment1.start_byte_index, ch(0));
-        assert_eq!(segment1.end_byte_index, ch(4));
+        assert_eq!(segment1.start_byte_index, byte_index(0));
+        assert_eq!(segment1.end_byte_index, byte_index(4));
         assert_eq!(segment1.display_width, width(2));
         assert_eq!(segment1.seg_index, seg_index(0));
         assert_eq!(segment1.bytes_size.as_usize(), 4);
@@ -195,8 +195,8 @@ mod tests {
         assert_eq!(segment1.get_str(&grapheme_string), "📦");
 
         let segment2 = &grapheme_string.segments[1];
-        assert_eq!(segment2.start_byte_index, ch(4));
-        assert_eq!(segment2.end_byte_index, ch(12));
+        assert_eq!(segment2.start_byte_index, byte_index(4));
+        assert_eq!(segment2.end_byte_index, byte_index(12));
         assert_eq!(segment2.display_width, width(2));
         assert_eq!(segment2.seg_index, seg_index(1));
         assert_eq!(segment2.bytes_size.as_usize(), 8);
@@ -209,8 +209,8 @@ mod tests {
     fn test_combining_grapheme_cluster() {
         let grapheme_string: GCStringOwned = "á".into(); // 'a' + combining acute accent
         if let Some(segment) = grapheme_string.segments.first() {
-            assert_eq!(segment.start_byte_index, ch(0));
-            assert_eq!(segment.end_byte_index, ch(3));
+            assert_eq!(segment.start_byte_index, byte_index(0));
+            assert_eq!(segment.end_byte_index, byte_index(3));
             assert_eq!(segment.display_width, width(1));
             assert_eq!(segment.seg_index, seg_index(0));
             assert_eq!(segment.bytes_size.as_usize(), 3);

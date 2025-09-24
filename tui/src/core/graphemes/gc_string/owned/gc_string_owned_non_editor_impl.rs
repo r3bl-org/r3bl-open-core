@@ -18,8 +18,8 @@
 use std::ops::Add;
 
 use super::GCStringOwned;
-use crate::{ByteIndex, ColIndex, ColWidth, InlineString, SegIndex, ch, pad_fmt,
-            seg_index, usize};
+use crate::{ByteIndex, ColIndex, ColWidth, InlineString, SegIndex, UnitCompare,
+            byte_index, ch, pad_fmt, seg_index, usize};
 
 /// Convert between different types of indices. This unifies the API so that different
 /// index types are all converted into [`SegIndex`] for use with this struct. Here's the
@@ -59,7 +59,8 @@ use crate::{ByteIndex, ColIndex, ColWidth, InlineString, SegIndex, ch, pad_fmt,
 /// ColIndex 3 → SegIndex 2 ('b' at column 3)
 /// ```
 mod convert {
-    use super::{Add, ByteIndex, ColIndex, GCStringOwned, SegIndex, seg_index, usize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// Convert a `byte_index` to a `seg_index`.
     ///
@@ -124,7 +125,8 @@ mod convert {
 /// Methods for easily truncating grapheme cluster segments (at the end) for common TUI
 /// use cases.
 pub mod trunc_end {
-    use super::{ColWidth, GCStringOwned, ch, usize};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl GCStringOwned {
         /// Returns a string slice from `self.string` w/ the segments removed from the end
@@ -209,7 +211,7 @@ pub mod trunc_end {
         /// ```
         pub fn trunc_end_by(&self, arg_col_width: impl Into<ColWidth>) -> &str {
             let mut countdown_col_count: ColWidth = arg_col_width.into();
-            let mut string_end_byte_index = ch(0);
+            let mut string_end_byte_index = byte_index(0);
 
             let rev_iter = self.segments.iter().rev();
 
@@ -231,7 +233,8 @@ pub mod trunc_end {
 /// Methods for easily truncating grapheme cluster segments (from the start) for common
 /// TUI use cases.
 pub mod trunc_start {
-    use super::{ColWidth, GCStringOwned, ch};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl GCStringOwned {
         /// Removes segments from the start of the string so that `col_count` (width) is
@@ -284,8 +287,8 @@ pub mod trunc_start {
 
 /// Methods for easily padding grapheme cluster segments for common TUI use cases.
 mod pad {
-    use super::{ColWidth, GCStringOwned, InlineString, pad_fmt};
-    use crate::UnitCompare;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl GCStringOwned {
         /// Returns a new [`InlineString`] that is the result of padding `self.string` to
@@ -407,7 +410,8 @@ mod pad {
 
 /// Methods for easily clipping grapheme cluster segments for common TUI use cases.
 mod clip {
-    use super::{ColIndex, ColWidth, GCStringOwned, ch};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl GCStringOwned {
         /// Clip the content starting from `arg_start_at_col_index` and take as many
@@ -490,6 +494,535 @@ mod clip {
             };
 
             &self.string[string_start_byte_index..string_end_byte_index]
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{col, width};
+
+    // Helper function to create test strings
+    fn create_test_string(s: &str) -> GCStringOwned {
+        GCStringOwned::from(s)
+    }
+
+    // Test module: convert (index conversion operations)
+    mod convert_tests {
+        use super::*;
+
+        #[test]
+        fn test_byte_index_to_seg_index_ascii() {
+            let gc_string = create_test_string("hello");
+
+            // Test valid byte indices
+            assert_eq!(&gc_string + byte_index(0), Some(seg_index(0))); // 'h'
+            assert_eq!(&gc_string + byte_index(1), Some(seg_index(1))); // 'e'
+            assert_eq!(&gc_string + byte_index(2), Some(seg_index(2))); // 'l'
+            assert_eq!(&gc_string + byte_index(3), Some(seg_index(3))); // 'l'
+            assert_eq!(&gc_string + byte_index(4), Some(seg_index(4))); // 'o'
+
+            // Test invalid byte index
+            assert_eq!(&gc_string + byte_index(5), None);
+        }
+
+        #[test]
+        fn test_byte_index_to_seg_index_emoji() {
+            let gc_string = create_test_string("a😀b");
+
+            // 'a' at byte 0
+            assert_eq!(&gc_string + byte_index(0), Some(seg_index(0)));
+            // '😀' starts at byte 1
+            assert_eq!(&gc_string + byte_index(1), Some(seg_index(1)));
+            // Inside '😀' (invalid)
+            assert_eq!(&gc_string + byte_index(2), Some(seg_index(1)));
+            assert_eq!(&gc_string + byte_index(3), Some(seg_index(1)));
+            assert_eq!(&gc_string + byte_index(4), Some(seg_index(1)));
+            // 'b' starts at byte 5
+            assert_eq!(&gc_string + byte_index(5), Some(seg_index(2)));
+
+            // Out of bounds
+            assert_eq!(&gc_string + byte_index(6), None);
+        }
+
+        #[test]
+        fn test_col_index_to_seg_index_ascii() {
+            let gc_string = create_test_string("hello");
+
+            // Each ASCII char is 1 column wide
+            assert_eq!(&gc_string + col(0), Some(seg_index(0))); // 'h'
+            assert_eq!(&gc_string + col(1), Some(seg_index(1))); // 'e'
+            assert_eq!(&gc_string + col(2), Some(seg_index(2))); // 'l'
+            assert_eq!(&gc_string + col(3), Some(seg_index(3))); // 'l'
+            assert_eq!(&gc_string + col(4), Some(seg_index(4))); // 'o'
+
+            // Out of bounds
+            assert_eq!(&gc_string + col(5), None);
+        }
+
+        #[test]
+        fn test_col_index_to_seg_index_emoji() {
+            let gc_string = create_test_string("a😀b");
+
+            // 'a' at column 0 (width 1)
+            assert_eq!(&gc_string + col(0), Some(seg_index(0)));
+            // '😀' at columns 1-2 (width 2)
+            assert_eq!(&gc_string + col(1), Some(seg_index(1)));
+            assert_eq!(&gc_string + col(2), Some(seg_index(1)));
+            // 'b' at column 3 (width 1)
+            assert_eq!(&gc_string + col(3), Some(seg_index(2)));
+
+            // Out of bounds
+            assert_eq!(&gc_string + col(4), None);
+        }
+
+        #[test]
+        fn test_seg_index_to_col_index_ascii() {
+            let gc_string = create_test_string("hello");
+
+            assert_eq!(&gc_string + seg_index(0), Some(col(0))); // 'h'
+            assert_eq!(&gc_string + seg_index(1), Some(col(1))); // 'e'
+            assert_eq!(&gc_string + seg_index(2), Some(col(2))); // 'l'
+            assert_eq!(&gc_string + seg_index(3), Some(col(3))); // 'l'
+            assert_eq!(&gc_string + seg_index(4), Some(col(4))); // 'o'
+
+            // Out of bounds
+            assert_eq!(&gc_string + seg_index(5), None);
+        }
+
+        #[test]
+        fn test_seg_index_to_col_index_emoji() {
+            let gc_string = create_test_string("a😀b");
+
+            assert_eq!(&gc_string + seg_index(0), Some(col(0))); // 'a' at col 0
+            assert_eq!(&gc_string + seg_index(1), Some(col(1))); // '😀' starts at col 1
+            assert_eq!(&gc_string + seg_index(2), Some(col(3))); // 'b' at col 3
+
+            // Out of bounds
+            assert_eq!(&gc_string + seg_index(3), None);
+        }
+
+        #[test]
+        fn test_empty_string_conversions() {
+            let gc_string = create_test_string("");
+
+            // All conversions should return None for empty string
+            assert_eq!(&gc_string + byte_index(0), None);
+            assert_eq!(&gc_string + col(0), None);
+            assert_eq!(&gc_string + seg_index(0), None);
+        }
+
+        #[test]
+        fn test_complex_unicode_conversions() {
+            let gc_string = create_test_string("🙏🏽");
+
+            // This is a complex emoji (8 bytes, 2 columns, 1 segment)
+            assert_eq!(&gc_string + byte_index(0), Some(seg_index(0)));
+            // All byte positions within the emoji should map to same segment
+            for i in 1..8 {
+                assert_eq!(&gc_string + byte_index(i), Some(seg_index(0)));
+            }
+            assert_eq!(&gc_string + byte_index(8), None); // Out of bounds
+
+            // Both columns should map to the same segment
+            assert_eq!(&gc_string + col(0), Some(seg_index(0)));
+            assert_eq!(&gc_string + col(1), Some(seg_index(0)));
+            assert_eq!(&gc_string + col(2), None); // Out of bounds
+
+            // Segment 0 should start at column 0
+            assert_eq!(&gc_string + seg_index(0), Some(col(0)));
+            assert_eq!(&gc_string + seg_index(1), None); // Out of bounds
+        }
+    }
+
+    // Test module: trunc_end (text truncation from end)
+    mod trunc_end_tests {
+        use super::*;
+
+        #[test]
+        fn test_trunc_end_to_fit_ascii() {
+            let gc_string = create_test_string("hello world");
+
+            // Truncate to fit within 5 columns
+            assert_eq!(gc_string.trunc_end_to_fit(width(5)), "hello");
+
+            // Truncate to fit within 11 columns (exact fit)
+            assert_eq!(gc_string.trunc_end_to_fit(width(11)), "hello world");
+
+            // Truncate to fit within 15 columns (no truncation needed)
+            assert_eq!(gc_string.trunc_end_to_fit(width(15)), "hello world");
+
+            // Truncate to fit within 0 columns
+            assert_eq!(gc_string.trunc_end_to_fit(width(0)), "");
+        }
+
+        #[test]
+        fn test_trunc_end_to_fit_emoji() {
+            let gc_string = create_test_string("a😀b😎c");
+            // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
+
+            assert_eq!(gc_string.trunc_end_to_fit(width(3)), "a😀");  // Stops at emoji boundary
+            assert_eq!(gc_string.trunc_end_to_fit(width(4)), "a😀b"); // Includes single char
+            assert_eq!(gc_string.trunc_end_to_fit(width(6)), "a😀b😎"); // Stops before final char
+            assert_eq!(gc_string.trunc_end_to_fit(width(7)), "a😀b😎c"); // Full string
+        }
+
+        #[test]
+        fn test_trunc_end_by_ascii() {
+            let gc_string = create_test_string("hello world");
+
+            // Remove 0 columns (no truncation) - special case
+            assert_eq!(gc_string.trunc_end_by(width(0)), "hello worl");
+
+            // Remove 1 column from end ('d')
+            assert_eq!(gc_string.trunc_end_by(width(1)), "hello worl");
+
+            // Remove 5 columns from end ("world")
+            assert_eq!(gc_string.trunc_end_by(width(5)), "hello ");
+
+            // Remove 6 columns from end (" world")
+            assert_eq!(gc_string.trunc_end_by(width(6)), "hello");
+
+            // Remove all columns
+            assert_eq!(gc_string.trunc_end_by(width(11)), "");
+
+            // Remove more than available (should return empty)
+            assert_eq!(gc_string.trunc_end_by(width(15)), "");
+        }
+
+        #[test]
+        fn test_trunc_end_by_emoji() {
+            let gc_string = create_test_string("a😀b😎c");
+            // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
+
+            // Remove 1 column from end ('c')
+            assert_eq!(gc_string.trunc_end_by(width(1)), "a😀b😎");
+
+            // Remove 3 columns from end ('c' + '😎')
+            assert_eq!(gc_string.trunc_end_by(width(3)), "a😀b");
+
+            // Remove 4 columns from end
+            assert_eq!(gc_string.trunc_end_by(width(4)), "a😀");
+
+            // Remove all columns
+            assert_eq!(gc_string.trunc_end_by(width(7)), "");
+        }
+
+        #[test]
+        fn test_trunc_end_empty_string() {
+            let gc_string = create_test_string("");
+
+            assert_eq!(gc_string.trunc_end_to_fit(width(5)), "");
+            assert_eq!(gc_string.trunc_end_by(width(5)), "");
+        }
+    }
+
+    // Test module: trunc_start (text truncation from start)
+    mod trunc_start_tests {
+        use super::*;
+
+        #[test]
+        fn test_trunc_start_by_ascii() {
+            let gc_string = create_test_string("hello world");
+
+            // Skip 0 columns (no truncation)
+            assert_eq!(gc_string.trunc_start_by(width(0)), "hello world");
+
+            // Skip 5 columns from start
+            assert_eq!(gc_string.trunc_start_by(width(5)), " world");
+
+            // Skip 6 columns from start
+            assert_eq!(gc_string.trunc_start_by(width(6)), "world");
+
+            // Skip all columns
+            assert_eq!(gc_string.trunc_start_by(width(11)), "");
+
+            // Skip more than available
+            assert_eq!(gc_string.trunc_start_by(width(15)), "");
+        }
+
+        #[test]
+        fn test_trunc_start_by_emoji() {
+            let gc_string = create_test_string("a😀b😎c");
+            // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
+
+            // Skip 1 column ('a')
+            assert_eq!(gc_string.trunc_start_by(width(1)), "😀b😎c");
+
+            // Skip 3 columns ('a' + '😀')
+            assert_eq!(gc_string.trunc_start_by(width(3)), "b😎c");
+
+            // Skip 4 columns ('a' + '😀' + 'b')
+            assert_eq!(gc_string.trunc_start_by(width(4)), "😎c");
+
+            // Skip 6 columns ('a' + '😀' + 'b' + '😎')
+            assert_eq!(gc_string.trunc_start_by(width(6)), "c");
+
+            // Skip all columns
+            assert_eq!(gc_string.trunc_start_by(width(7)), "");
+        }
+
+        #[test]
+        fn test_trunc_start_empty_string() {
+            let gc_string = create_test_string("");
+
+            assert_eq!(gc_string.trunc_start_by(width(0)), "");
+            assert_eq!(gc_string.trunc_start_by(width(5)), "");
+        }
+    }
+
+    // Test module: pad (string padding operations)
+    mod pad_tests {
+        use super::*;
+
+        #[test]
+        fn test_pad_end_to_fit_no_padding_needed() {
+            let gc_string = create_test_string("hello");
+
+            // String is already 5 columns, no padding needed
+            let result = gc_string.pad_end_to_fit(" ", width(5));
+            assert_eq!(result.as_str(), "hello");
+        }
+
+        #[test]
+        fn test_pad_end_to_fit_with_padding() {
+            let gc_string = create_test_string("hi");
+
+            // Pad to 5 columns with spaces
+            let result = gc_string.pad_end_to_fit(" ", width(5));
+            assert_eq!(result.as_str(), "hi   ");
+
+            // Pad to 5 columns with dots
+            let result = gc_string.pad_end_to_fit(".", width(5));
+            assert_eq!(result.as_str(), "hi...");
+        }
+
+        #[test]
+        fn test_pad_start_to_fit_no_padding_needed() {
+            let gc_string = create_test_string("hello");
+
+            // String is already 5 columns, no padding needed
+            let result = gc_string.pad_start_to_fit(" ", width(5));
+            assert_eq!(result.as_str(), "hello");
+        }
+
+        #[test]
+        fn test_pad_start_to_fit_with_padding() {
+            let gc_string = create_test_string("hi");
+
+            // Pad to 5 columns with spaces
+            let result = gc_string.pad_start_to_fit(" ", width(5));
+            assert_eq!(result.as_str(), "   hi");
+
+            // Pad to 5 columns with dots
+            let result = gc_string.pad_start_to_fit(".", width(5));
+            assert_eq!(result.as_str(), "...hi");
+        }
+
+        #[test]
+        fn test_pad_emoji_strings() {
+            let gc_string = create_test_string("😀"); // 2 columns wide
+
+            // Pad end to 5 columns
+            let result = gc_string.pad_end_to_fit(" ", width(5));
+            assert_eq!(result.as_str(), "😀   ");
+
+            // Pad start to 5 columns
+            let result = gc_string.pad_start_to_fit(" ", width(5));
+            assert_eq!(result.as_str(), "   😀");
+        }
+
+        #[test]
+        fn test_try_get_postfix_padding_for_none() {
+            let gc_string = create_test_string("hello");
+
+            // String is already 5 columns, no padding needed
+            assert_eq!(gc_string.try_get_postfix_padding_for(" ", width(5)), None);
+
+            // String is wider than requested width
+            assert_eq!(gc_string.try_get_postfix_padding_for(" ", width(3)), None);
+        }
+
+        #[test]
+        fn test_try_get_postfix_padding_for_some() {
+            let gc_string = create_test_string("hi");
+
+            // Need 3 spaces to pad to 5 columns
+            let result = gc_string.try_get_postfix_padding_for(" ", width(5));
+            assert!(result.is_some());
+            assert_eq!(result.unwrap().as_str(), "   ");
+
+            // Need 3 dots to pad to 5 columns
+            let result = gc_string.try_get_postfix_padding_for(".", width(5));
+            assert!(result.is_some());
+            assert_eq!(result.unwrap().as_str(), "...");
+        }
+
+        #[test]
+        fn test_pad_empty_string() {
+            let gc_string = create_test_string("");
+
+            // Pad empty string to 3 columns
+            let result = gc_string.pad_end_to_fit(" ", width(3));
+            assert_eq!(result.as_str(), "   ");
+
+            let result = gc_string.pad_start_to_fit(" ", width(3));
+            assert_eq!(result.as_str(), "   ");
+
+            let result = gc_string.try_get_postfix_padding_for(" ", width(3));
+            assert!(result.is_some());
+            assert_eq!(result.unwrap().as_str(), "   ");
+        }
+    }
+
+    // Test module: clip (text clipping operations)
+    mod clip_tests {
+        use super::*;
+
+        #[test]
+        fn test_clip_ascii_from_start() {
+            let gc_string = create_test_string("hello world");
+
+            // Clip from start, take 5 columns
+            assert_eq!(gc_string.clip(col(0), width(5)), "hello");
+
+            // Clip from start, take all columns
+            assert_eq!(gc_string.clip(col(0), width(11)), "hello world");
+
+            // Clip from start, take more than available
+            assert_eq!(gc_string.clip(col(0), width(15)), "hello world");
+        }
+
+        #[test]
+        fn test_clip_ascii_from_middle() {
+            let gc_string = create_test_string("hello world");
+
+            // Clip starting at column 6, take 5 columns
+            assert_eq!(gc_string.clip(col(6), width(5)), "world");
+
+            // Clip starting at column 3, take 4 columns
+            assert_eq!(gc_string.clip(col(3), width(4)), "lo w");
+
+            // Clip starting at column 6, take 3 columns
+            assert_eq!(gc_string.clip(col(6), width(3)), "wor");
+        }
+
+        #[test]
+        fn test_clip_emoji_strings() {
+            let gc_string = create_test_string("a😀b😎c");
+            // Display: a😀b😎c (1+2+1+2+1 = 7 columns)
+
+            // Clip from start, take 3 columns
+            assert_eq!(gc_string.clip(col(0), width(3)), "a😀");
+
+            // Clip from column 1 (start of emoji), take 3 columns
+            assert_eq!(gc_string.clip(col(1), width(3)), "😀b");
+
+            // Clip from column 3, take 3 columns
+            assert_eq!(gc_string.clip(col(3), width(3)), "b😎");
+
+            // Clip from column 4 (middle of second emoji), take 2 columns
+            assert_eq!(gc_string.clip(col(4), width(2)), "😎");
+
+            // Clip from column 6, take 2 columns (only 1 available)
+            assert_eq!(gc_string.clip(col(6), width(2)), "c");
+        }
+
+        #[test]
+        fn test_clip_zero_width() {
+            let gc_string = create_test_string("hello");
+
+            // Clip with zero width should return empty string
+            assert_eq!(gc_string.clip(col(0), width(0)), "");
+            assert_eq!(gc_string.clip(col(2), width(0)), "");
+        }
+
+        #[test]
+        fn test_clip_beyond_string_bounds() {
+            let gc_string = create_test_string("hello");
+
+            // Start clipping beyond string end
+            assert_eq!(gc_string.clip(col(10), width(5)), "");
+
+            // Start clipping at string end
+            assert_eq!(gc_string.clip(col(5), width(5)), "");
+        }
+
+        #[test]
+        fn test_clip_empty_string() {
+            let gc_string = create_test_string("");
+
+            assert_eq!(gc_string.clip(col(0), width(5)), "");
+            assert_eq!(gc_string.clip(col(3), width(2)), "");
+        }
+
+        #[test]
+        fn test_clip_complex_unicode() {
+            let gc_string = create_test_string("🙏🏽👨‍👩‍👧‍👦");
+            // Complex emojis with varying widths
+
+            // Should handle complex unicode correctly
+            let result = gc_string.clip(col(0), width(2));
+            assert_eq!(result, "🙏🏽");
+        }
+    }
+
+    // Integration tests combining multiple operations
+    mod integration_tests {
+        use super::*;
+
+        #[test]
+        fn test_convert_and_clip_consistency() {
+            let gc_string = create_test_string("hello world");
+
+            // Find segment at column 6
+            let seg_opt = &gc_string + col(6);
+            assert!(seg_opt.is_some());
+            let seg_idx = seg_opt.unwrap();
+
+            // Convert back to column
+            let col_opt = &gc_string + seg_idx;
+            assert!(col_opt.is_some());
+            let col_idx = col_opt.unwrap();
+
+            // Should be at column 6 (start of 'w' in "world")
+            assert_eq!(col_idx, col(6));
+
+            // Clipping from that position should give expected result
+            assert_eq!(gc_string.clip(col_idx, width(5)), "world");
+        }
+
+        #[test]
+        fn test_pad_and_clip_combination() {
+            let gc_string = create_test_string("hi");
+
+            // Pad to 10 columns
+            let padded = gc_string.pad_end_to_fit(" ", width(10));
+            let padded_gc = create_test_string(padded.as_str());
+
+            // Clip first 5 columns
+            assert_eq!(padded_gc.clip(col(0), width(5)), "hi   ");
+
+            // Clip last 5 columns
+            assert_eq!(padded_gc.clip(col(5), width(5)), "     ");
+        }
+
+        #[test]
+        fn test_truncate_and_convert() {
+            let gc_string = create_test_string("hello world test");
+
+            // Truncate to fit 10 columns
+            let truncated_str = gc_string.trunc_end_to_fit(width(10));
+            let truncated_gc = create_test_string(truncated_str);
+
+            // Should be "hello worl"
+            assert_eq!(truncated_str, "hello worl");
+
+            // Test conversion on truncated string
+            assert_eq!(&truncated_gc + col(0), Some(seg_index(0))); // 'h'
+            assert_eq!(&truncated_gc + col(9), Some(seg_index(9))); // 'l'
+            assert_eq!(&truncated_gc + col(10), None); // Beyond end
         }
     }
 }

@@ -7,7 +7,7 @@
 
 use super::LineMetadata;
 use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, GraphemeString, Length,
-            Seg, SegContent, SegIndex, SegStringOwned, SegWidth, UnitCompare, ch, width};
+            Seg, SegContent, SegIndex, SegStringOwned, SegWidth, UnitCompare, byte_index, ch, width};
 
 /// A line from the gap buffer containing both content and metadata.
 ///
@@ -255,7 +255,7 @@ impl GraphemeString for GapBufferLine<'_> {
     fn trunc_end_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
         // Source of truth: GCStringOwned::trunc_end_by algorithm
         let mut countdown_col_count = width;
-        let mut string_end_byte_index = ch(0);
+        let mut string_end_byte_index = byte_index(0);
 
         for seg in self.segments().iter().rev() {
             let seg_display_width = seg.display_width;

@@ -197,10 +197,10 @@ impl ZeroCopyGapBuffer {
 
         // Find the byte position for the segment.
         let line_info = self.get_line_info(row_index.as_usize())?;
-        let byte_pos = line_info.get_byte_pos(seg_idx);
+        let byte_offset = line_info.get_byte_offset(seg_idx);
 
         // Split the content.
-        let (left_part, right_part) = line_content.split_at(byte_pos.as_usize());
+        let (left_part, right_part) = line_content.split_at(byte_offset.as_usize());
         let right_content = right_part.to_string();
 
         // Update the current line to only contain the left part.
@@ -245,7 +245,7 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn get_byte_offset_for_row(&self, row_index: RowIndex) -> Option<ByteIndex> {
         self.get_line_info(row_index.as_usize())
-            .map(|info| info.buffer_offset)
+            .map(|info| info.buffer_position)
     }
 
     #[must_use]
@@ -263,7 +263,7 @@ impl ZeroCopyGapBuffer {
 
         for i in 0..self.line_count().as_usize() {
             if let Some(line_info) = self.get_line_info(i) {
-                let line_start = line_info.buffer_offset.as_usize();
+                let line_start = line_info.buffer_position.as_usize();
                 let line_end = line_start + line_info.capacity.as_usize();
 
                 if target_byte >= line_start && target_byte < line_end {

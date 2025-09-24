@@ -97,8 +97,11 @@
 
 use miette::{Result, miette};
 
+use std::ops::Range;
+
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, NULL_BYTE, RowIndex, SegIndex, ch, len};
+use crate::{ByteOffset, IndexMarker, LengthMarker, NULL_BYTE, RangeBoundary, RowIndex,
+            SegIndex, byte_index, idx, len};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -205,14 +208,14 @@ impl ZeroCopyGapBuffer {
             line_info.segments[start_seg.as_usize()].start_byte_index
         } else {
             // Start is at end of line.
-            ch(line_info.content_len.as_usize())
+            byte_index(line_info.content_len.as_usize())
         };
 
         let delete_end = if end_seg.as_usize() < line_info.segments.len() {
             line_info.segments[end_seg.as_usize()].start_byte_index
         } else {
             // End is at end of line.
-            ch(line_info.content_len.as_usize())
+            byte_index(line_info.content_len.as_usize())
         };
 
         // Perform the actual deletion.
@@ -247,69 +250,78 @@ impl ZeroCopyGapBuffer {
     pub fn delete_bytes_at_range(
         &mut self,
         line_index: RowIndex,
-        start_byte: ByteIndex,
-        end_byte: ByteIndex,
+        start_offset: ByteOffset,
+        end_offset: ByteOffset,
     ) -> Result<()> {
-        let line_idx = line_index.as_usize();
-        let line_info = self
-            .get_line_info(line_idx)
-            .ok_or_else(|| miette!("Line index {} out of bounds", line_idx))?;
+        // Get line info and validate line index.
+        let line_info = self.get_line_info(line_index).ok_or_else(|| {
+            miette!("Line index {} out of bounds", line_index.as_usize())
+        })?;
 
-        let start_pos = start_byte.as_usize();
-        let end_pos = end_byte.as_usize();
-        let current_content_len = line_info.content_len.as_usize();
+        // Convert offsets to indices and create range for comprehensive bounds checking.
+        let start_idx = idx(start_offset);
+        let end_idx = idx(end_offset);
+        let delete_range: Range<crate::Index> = start_idx..end_idx;
 
-        // Validate byte positions.
-        if start_pos > current_content_len || end_pos > current_content_len {
-            return Err(miette!(
-                "Byte positions {}-{} exceed content length {}",
-                start_pos,
-                end_pos,
-                current_content_len
-            ));
+        // Use type-safe range validation from bounds_check module.
+        // This checks: range not inverted, start within bounds, end within cursor bounds.
+        if !delete_range.is_valid(line_info.content_len) {
+            if start_idx >= end_idx {
+                // Range is empty or inverted - nothing to delete.
+                return Ok(());
+            } else {
+                // Range is invalid due to out-of-bounds positions.
+                return Err(miette!(
+                    "Byte range {}-{} exceeds content length {}",
+                    start_offset.as_usize(),
+                    end_offset.as_usize(),
+                    line_info.content_len.as_usize()
+                ));
+            }
         }
 
-        if start_pos >= end_pos {
-            // Nothing to delete.
-            return Ok(());
-        }
-
-        let delete_len = end_pos - start_pos;
-        let buffer_start = line_info.buffer_offset.as_usize();
-        let delete_start = buffer_start + start_pos;
-        let delete_end = buffer_start + end_pos;
+        // Extract values needed for buffer operations before mutable operations.
+        let num_deleted_chars = len((end_offset - start_offset).as_usize());
+        let delete_start = line_info.buffer_position + start_offset;
+        let current_content_len = line_info.content_len;
+        let buffer_position = line_info.buffer_position;
 
         // Shift content left to overwrite deleted portion.
-        if end_pos < current_content_len {
-            // Move content after deletion point.
-            let move_from = delete_end;
-            let move_to = delete_start;
-            let move_len = current_content_len - end_pos;
+        if !end_idx.overflows(current_content_len) {
+            // Content remains after deletion - need to shift
+            let move_from = (buffer_position + end_offset).as_usize();
+            let move_to = delete_start.as_usize();
+            let remaining_content = current_content_len.remaining_from(end_idx);
+            let move_len = remaining_content.as_usize();
 
-            // Move content (including the newline)
+            // Move content (including the newline).
             for i in 0..=move_len {
                 self.buffer[move_to + i] = self.buffer[move_from + i];
             }
         }
 
-        // New content length after deletion.
-        let new_content_len = current_content_len - delete_len;
+        // Calculate new content length after deletion.
+        let new_content_len = current_content_len - num_deleted_chars;
 
         // Place newline at new end position.
-        self.buffer[buffer_start + new_content_len] = b'\n';
+        let newline_pos = buffer_position.as_usize() + new_content_len.as_usize();
+        self.buffer[newline_pos] = b'\n';
 
         // Fill the freed space with null bytes.
-        let null_start = buffer_start + new_content_len + 1;
-        let null_end = buffer_start + current_content_len + 1;
+        let null_start = newline_pos + 1;
+        let null_end = buffer_position.as_usize() + current_content_len.as_usize() + 1;
         for i in null_start..null_end {
             self.buffer[i] = NULL_BYTE;
         }
 
         // Update line metadata.
-        let line_info_mut = self.get_line_info_mut(line_idx).ok_or_else(|| {
-            miette!("Line {} not found when updating metadata", line_idx)
+        let line_info_mut = self.get_line_info_mut(line_index).ok_or_else(|| {
+            miette!(
+                "Line {} not found when updating metadata",
+                line_index.as_usize()
+            )
         })?;
-        line_info_mut.content_len = len(new_content_len);
+        line_info_mut.content_len = new_content_len;
 
         Ok(())
     }
@@ -496,7 +508,7 @@ mod tests {
 
         // Check that the buffer is properly null-padded.
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = line_info.buffer_offset.as_usize();
+        let buffer_start = line_info.buffer_position.as_usize();
         let content_len = line_info.content_len.as_usize();
 
         // Content should be "Helo\n"

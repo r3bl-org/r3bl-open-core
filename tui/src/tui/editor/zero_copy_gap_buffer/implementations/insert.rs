@@ -96,7 +96,7 @@
 use miette::{Result, miette};
 
 use super::super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{BoundsCheck, ByteIndex, CursorPositionBoundsStatus, IndexMarker,
+use crate::{BoundsCheck, ByteOffset, CursorPositionBoundsStatus, IndexMarker,
             LengthMarker, NULL_BYTE, RowIndex, SegIndex, UnitCompare, height, idx, len};
 
 impl ZeroCopyGapBuffer {
@@ -131,7 +131,7 @@ impl ZeroCopyGapBuffer {
                 self.get_line_info(line_index.as_usize()).ok_or_else(|| {
                     miette!("Line index {} out of bounds", line_index.as_usize())
                 })?;
-            line_info.get_byte_pos(seg_index)
+            line_info.get_byte_offset(seg_index)
         };
 
         // Perform the actual insertion.
@@ -165,7 +165,7 @@ impl ZeroCopyGapBuffer {
     pub fn insert_text_at_byte_pos(
         &mut self,
         line_index: RowIndex,
-        byte_pos: ByteIndex,
+        byte_offset: ByteOffset,
         text: &str,
     ) -> Result<()> {
         let text_bytes = text.as_bytes();
@@ -179,13 +179,13 @@ impl ZeroCopyGapBuffer {
         // Validate byte position using cursor position bounds checking.
         // For insertion, we allow inserting at position equal to content length (at the
         // end of the line).
-        let byte_pos_idx = idx(byte_pos);
-        if byte_pos_idx.check_cursor_position_bounds(line_info.content_len)
+        let byte_offset_idx = idx(byte_offset.as_usize());
+        if byte_offset_idx.check_cursor_position_bounds(line_info.content_len)
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(
-                "Byte position {} exceeds content length {}",
-                byte_pos.as_usize(),
+                "Byte offset {} exceeds content length {}",
+                byte_offset.as_usize(),
                 line_info.content_len.as_usize()
             ));
         }
@@ -221,20 +221,18 @@ impl ZeroCopyGapBuffer {
                 line_index.as_usize()
             )
         })?;
-        let buffer_start = line_info.buffer_offset.as_usize();
         let line_content_len = line_info.content_len; // Keep for type-safe operations
-        let byte_position = byte_pos.as_usize(); // Convert only when needed for buffer indexing
-        let insert_pos = buffer_start + byte_position;
+        let insert_pos = (line_info.buffer_position + byte_offset).as_usize();
 
         // Shift existing content to make room.
-        if byte_pos_idx.overflows(line_content_len) {
+        if byte_offset_idx.overflows(line_content_len) {
             // Inserting at end, just move the newline.
             self.buffer[insert_pos + text_len.as_usize()] = b'\n';
         } else {
             // Need to move content to the right.
             let move_from = insert_pos;
             let move_to = insert_pos + text_len.as_usize();
-            let move_len = line_content_len.remaining_from(byte_pos_idx).as_usize();
+            let move_len = line_content_len.remaining_from(byte_offset_idx).as_usize();
 
             // Move content (including the newline).
             for i in (0..=move_len).rev() {
@@ -267,6 +265,7 @@ impl ZeroCopyGapBuffer {
 
         // null-pad if there's remaining capacity.
         if !remaining_capacity.is_zero() {
+            let buffer_start = line_info_mut.buffer_position.as_usize();
             let line_end = buffer_start + line_end_length.as_usize();
             let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
 
@@ -514,7 +513,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_offset;
+        let buffer_start = *line_info.buffer_position;
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
@@ -552,7 +551,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_offset;
+        let buffer_start = *line_info.buffer_position;
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
@@ -588,7 +587,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_offset;
+        let buffer_start = *line_info.buffer_position;
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 

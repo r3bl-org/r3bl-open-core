@@ -165,14 +165,14 @@ impl ZeroCopyGapBuffer {
 
         // Calculate actual start offset from line info.
         let start_info = self.get_line_info(line_range.start)?;
-        let start_offset = *start_info.buffer_offset;
+        let start_offset = *start_info.buffer_position;
 
         // Calculate end offset using type-safe bounds checking.
         let end_offset = if line_range.end.overflows(self.line_count()) {
             self.buffer.len()
         } else {
             let end_info = self.get_line_info(line_range.end)?;
-            *end_info.buffer_offset
+            *end_info.buffer_position
         };
 
         // In debug builds, validate UTF-8.
@@ -198,7 +198,7 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn get_line_raw(&self, line_index: RowIndex) -> Option<&[u8]> {
         let line_info = self.get_line_info(line_index)?;
-        let start = *line_info.buffer_offset;
+        let start = *line_info.buffer_position;
         let end = start + line_info.capacity.as_usize();
         Some(&self.buffer[start..end])
     }
@@ -379,7 +379,7 @@ mod tests {
         // Get the line info first.
         let offset = {
             let line_info = buffer.get_line_info(0).unwrap();
-            *line_info.buffer_offset
+            *line_info.buffer_position
         };
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing
@@ -405,7 +405,7 @@ mod tests {
         buffer.add_line();
 
         // Get the line info first.
-        let offset = *buffer.get_line_info(0).unwrap().buffer_offset;
+        let offset = *buffer.get_line_info(0).unwrap().buffer_position;
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing.
         // Insert invalid UTF-8 sequence.

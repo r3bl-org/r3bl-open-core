@@ -3,6 +3,7 @@
 // Attach.
 pub mod bounds_check;
 pub mod byte_index;
+pub mod byte_offset;
 pub mod ch_unit;
 pub mod index;
 pub mod length;
@@ -10,6 +11,7 @@ pub mod length;
 // Re-export.
 pub use bounds_check::*;
 pub use byte_index::*;
+pub use byte_offset::*;
 pub use ch_unit::*;
 pub use index::*;
 pub use length::*;

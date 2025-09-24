@@ -13,7 +13,7 @@
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-use crate::{ColIndex, ColWidth, Seg, SegmentArray, ch, col, len, seg_index, width};
+use crate::{ColIndex, ColWidth, Seg, SegmentArray, byte_index, col, len, seg_index, width};
 
 /// Build grapheme cluster segments for any string slice.
 ///
@@ -44,8 +44,8 @@ pub fn build_segments_for_str(input: &str) -> SegmentArray {
         let display_width = UnicodeWidthStr::width(grapheme);
 
         segments.push(Seg {
-            start_byte_index: ch(byte_offset),
-            end_byte_index: ch(byte_offset + bytes_size.as_usize()),
+            start_byte_index: byte_index(byte_offset),
+            end_byte_index: byte_index(byte_offset + bytes_size.as_usize()),
             display_width: width(display_width),
             seg_index: seg_index(seg_idx),
             bytes_size,
@@ -68,8 +68,8 @@ fn build_ascii_segments(input: &str) -> SegmentArray {
 
     for (i, _) in input.char_indices() {
         segments.push(Seg {
-            start_byte_index: ch(i),
-            end_byte_index: ch(i + 1),
+            start_byte_index: byte_index(i),
+            end_byte_index: byte_index(i + 1),
             display_width: width(1),
             seg_index: seg_index(i),
             bytes_size: len(1),
@@ -111,8 +111,8 @@ mod tests {
 
         // Check first segment 'H'.
         let seg = &segments[0];
-        assert_eq2!(seg.start_byte_index, ch(0));
-        assert_eq2!(seg.end_byte_index, ch(1));
+        assert_eq2!(seg.start_byte_index, byte_index(0));
+        assert_eq2!(seg.end_byte_index, byte_index(1));
         assert_eq2!(seg.display_width, width(1));
         assert_eq2!(seg.start_display_col_index, col(0));
     }
@@ -127,8 +127,8 @@ mod tests {
 
         // Check emoji segment.
         let emoji_seg = &segments[1];
-        assert_eq2!(emoji_seg.start_byte_index, ch(1));
-        assert_eq2!(emoji_seg.end_byte_index, ch(5)); // 4 bytes
+        assert_eq2!(emoji_seg.start_byte_index, byte_index(1));
+        assert_eq2!(emoji_seg.end_byte_index, byte_index(5)); // 4 bytes
         assert_eq2!(emoji_seg.display_width, width(2));
         assert_eq2!(emoji_seg.start_display_col_index, col(1));
     }
