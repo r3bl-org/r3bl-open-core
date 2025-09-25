@@ -49,20 +49,75 @@ if ! command -v cargo &>/dev/null; then
     echo "You may need to restart your shell or run: source $HOME/.cargo/env"
 fi
 
-# Configure RUSTFLAGS for faster compilation on Linux
-# https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey-2025-results/
-if [[ "$OSTYPE" == "linux"* ]]; then
-    if ! grep -q "RUSTFLAGS.*-Z threads=" "$HOME/.profile" 2>/dev/null; then
-        echo "Configuring Rust parallel compiler for faster builds..."
-        echo "" >> "$HOME/.profile"
-        echo "# https://corrode.dev/blog/tips-for-faster-rust-compile-times/#switch-to-the-new-parallel-compiler-frontend" >> "$HOME/.profile"
-        echo "export RUSTFLAGS=\"-Z threads=8\"" >> "$HOME/.profile"
-        echo "✓ Added RUSTFLAGS configuration to ~/.profile"
-        echo "Note: You may need to restart your shell or run: source ~/.profile"
+# Install cargo-binstall for fast binary installation
+install_if_missing "cargo-binstall" "curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash"
+
+# Install clang (required by Wild linker on Linux)
+if [[ "$OSTYPE" == "linux"* ]] && [[ -n "$PKG_MGR" ]]; then
+    install_if_missing "clang" "$PKG_MGR clang"
+elif [[ "$OSTYPE" == "darwin"* ]] && [[ -n "$PKG_MGR" ]]; then
+    # Clang is usually available on macOS through Xcode Command Line Tools
+    if ! command -v clang &>/dev/null; then
+        echo "Warning: clang not found. Install Xcode Command Line Tools:"
+        echo "  xcode-select --install"
     else
-        echo "✓ RUSTFLAGS already configured in ~/.profile"
+        echo "✓ clang already available"
     fi
 fi
+
+# Install Wild linker via cargo-binstall
+if command -v cargo-binstall &>/dev/null; then
+    install_if_missing "wild" "cargo binstall -y wild-linker"
+else
+    echo "Warning: cargo-binstall not found, skipping Wild linker installation"
+fi
+
+# Generate appropriate cargo configuration based on available tools
+generate_cargo_config() {
+    echo "Generating cargo configuration..."
+
+    cat > ".cargo/config.toml" << 'EOF'
+[build]
+rustc-wrapper = "sccache"
+rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler
+EOF
+
+    # Add Wild linker configuration if both clang and wild are available
+    if command -v clang &>/dev/null && command -v wild &>/dev/null; then
+        echo "✓ Wild linker available - adding to configuration"
+        cat >> ".cargo/config.toml" << 'EOF'
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]
+EOF
+    else
+        echo "✓ Wild linker not available - using default configuration"
+        cat >> ".cargo/config.toml" << 'EOF'
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Z", "threads=8"]  # Parallel compilation only
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-Z", "threads=8"]  # Parallel compilation only
+EOF
+    fi
+
+    echo "✓ Cargo configuration generated"
+}
+
+# Generate the configuration
+generate_cargo_config
 
 # Install fish shell and fzf
 if [[ "$OSTYPE" == "darwin"* ]]; then

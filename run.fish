@@ -313,6 +313,56 @@ function install-cargo-tools
         install_if_missing $check $install
     end
 
+    # Function to generate cargo configuration based on available tools
+    function generate_cargo_config
+        echo "Generating cargo configuration..."
+
+        # Base configuration with sccache and parallel compilation
+        echo '[build]
+rustc-wrapper = "sccache"
+rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler' > .cargo/config.toml
+
+        # Add Wild linker configuration if both clang and wild are available
+        if command -v clang >/dev/null && command -v wild >/dev/null
+            echo "✓ Wild linker available - adding to configuration"
+            echo '
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]' >> .cargo/config.toml
+        else
+            echo "✓ Wild linker not available - using default configuration"
+            echo '
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Z", "threads=8"]  # Parallel compilation only
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-Z", "threads=8"]  # Parallel compilation only' >> .cargo/config.toml
+        end
+
+        echo "✓ Cargo configuration generated"
+    end
+
+    # Install Wild linker via cargo-binstall (Linux only)
+    if command -v cargo-binstall >/dev/null
+        install_if_missing "wild" "cargo binstall -y wild-linker"
+
+        # Generate appropriate cargo configuration after installation
+        generate_cargo_config
+    else
+        echo "Warning: cargo-binstall not found. Run bootstrap.sh first"
+        return 1
+    end
+
     # Rust components
     if not rustup component list --installed | grep -q rust-analyzer
         echo 'Installing rust-analyzer...'

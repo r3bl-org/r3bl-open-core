@@ -1,2 +1,17 @@
 [build]
 rustc-wrapper = "sccache"
+rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]

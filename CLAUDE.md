@@ -73,6 +73,16 @@ Performance analysis:
 - `cargo flamegraph` - Profiling
 - For TUI apps: ask user to run `run_example_with_flamegraph_profiling_perf_fold` in `lib_script.nu`
 
+### Build Optimizations
+
+The project includes several build optimizations configured in `.cargo/config.toml`:
+
+- **sccache**: Shared compilation cache for faster rebuilds
+- **Parallel compilation**: `-Z threads=8` for faster nightly builds
+- **Wild linker**: Fast alternative linker for Linux (auto-configured when available)
+
+Wild linker is automatically activated when both `clang` and `wild-linker` are installed via `bootstrap.sh`. It provides significantly faster link times for iterative development on Linux.
+
 ### Git Workflow
 
 - Never commit unless explicitly asked
