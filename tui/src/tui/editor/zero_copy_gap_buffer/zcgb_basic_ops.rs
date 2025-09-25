@@ -14,9 +14,7 @@
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GapBufferLine, IndexMarker,
-            Length, RowIndex, SegIndex, UnitCompare, byte_index,
-            core::units::{idx, len},
-            row, seg_index, width};
+            Length, RowIndex, SegIndex, UnitCompare, byte_index, row, seg_index, width};
 
 impl ZeroCopyGapBuffer {
     // Line access methods.
@@ -40,7 +38,10 @@ impl ZeroCopyGapBuffer {
     /// Panics in debug builds if the line contains invalid UTF-8. This should never
     /// happen as all content is validated on insertion.
     #[must_use]
-    pub fn get_line(&self, arg_row_index: impl Into<RowIndex>) -> Option<GapBufferLine<'_>> {
+    pub fn get_line(
+        &self,
+        arg_row_index: impl Into<RowIndex>,
+    ) -> Option<GapBufferLine<'_>> {
         let row_index: RowIndex = arg_row_index.into();
         let line_info = self.get_line_info(row_index)?;
 
@@ -65,24 +66,31 @@ impl ZeroCopyGapBuffer {
     } // Line metadata access
 
     #[must_use]
-    pub fn get_line_display_width(&self, arg_row_index: impl Into<RowIndex>) -> Option<ColWidth> {
+    pub fn get_line_display_width(
+        &self,
+        arg_row_index: impl Into<RowIndex>,
+    ) -> Option<ColWidth> {
         let row_index: RowIndex = arg_row_index.into();
-        self.get_line_info(row_index)
-            .map(|info| info.display_width)
+        self.get_line_info(row_index).map(|info| info.display_width)
     }
 
     #[must_use]
-    pub fn get_line_grapheme_count(&self, arg_row_index: impl Into<RowIndex>) -> Option<Length> {
+    pub fn get_line_grapheme_count(
+        &self,
+        arg_row_index: impl Into<RowIndex>,
+    ) -> Option<Length> {
         let row_index: RowIndex = arg_row_index.into();
         self.get_line_info(row_index)
             .map(|info| info.grapheme_count)
     }
 
     #[must_use]
-    pub fn get_line_byte_len(&self, arg_row_index: impl Into<RowIndex>) -> Option<Length> {
+    pub fn get_line_byte_len(
+        &self,
+        arg_row_index: impl Into<RowIndex>,
+    ) -> Option<Length> {
         let row_index: RowIndex = arg_row_index.into();
-        self.get_line_info(row_index)
-            .map(|info| info.content_len)
+        self.get_line_info(row_index).map(|info| info.content_len)
     }
 
     // Line modification methods.
@@ -95,7 +103,11 @@ impl ZeroCopyGapBuffer {
         }
     }
 
-    pub fn set_line(&mut self, arg_row_index: impl Into<RowIndex>, content: &str) -> bool {
+    pub fn set_line(
+        &mut self,
+        arg_row_index: impl Into<RowIndex>,
+        content: &str,
+    ) -> bool {
         let row_index: RowIndex = arg_row_index.into();
         // First, clear the existing line content.
         if let Some(line_info) = self.get_line_info(row_index) {
@@ -207,10 +219,10 @@ impl ZeroCopyGapBuffer {
 
         // Find the byte position for the segment.
         let line_info = self.get_line_info(row_index)?;
-        let byte_ofs = line_info.get_byte_ofs(seg_idx);
+        let byte_pos = line_info.get_byte_index(seg_idx);
 
         // Split the content.
-        let (left_part, right_part) = line_content.split_at(byte_ofs.as_usize());
+        let (left_part, right_part) = line_content.split_at(byte_pos.as_usize());
         let right_content = right_part.to_string();
 
         // Update the current line to only contain the left part.
@@ -219,7 +231,10 @@ impl ZeroCopyGapBuffer {
         Some(right_content)
     }
 
-    pub fn merge_with_next_line(&mut self, arg_base_row_index: impl Into<RowIndex>) -> bool {
+    pub fn merge_with_next_line(
+        &mut self,
+        arg_base_row_index: impl Into<RowIndex>,
+    ) -> bool {
         let base_row_index: RowIndex = arg_base_row_index.into();
         let next_row_index = row(base_row_index.as_usize() + 1);
 
@@ -254,19 +269,23 @@ impl ZeroCopyGapBuffer {
     // Byte position conversions.
 
     #[must_use]
-    pub fn get_byte_pos_for_row(&self, arg_row_index: impl Into<RowIndex>) -> Option<ByteIndex> {
+    pub fn get_byte_pos_for_row(
+        &self,
+        arg_row_index: impl Into<RowIndex>,
+    ) -> Option<ByteIndex> {
         let row_index: RowIndex = arg_row_index.into();
         self.get_line_info(row_index)
-            .map(|info| info.buffer_pos)
+            .map(|info| info.buffer_start_byte_index)
     }
 
     #[must_use]
-    pub fn find_row_containing_byte(&self, arg_byte_index: impl Into<ByteIndex>) -> Option<RowIndex> {
+    pub fn find_row_containing_byte(
+        &self,
+        arg_byte_index: impl Into<ByteIndex>,
+    ) -> Option<RowIndex> {
         let byte_index: ByteIndex = arg_byte_index.into();
         // Early bounds check for performance optimization.
-        let byte_idx = idx(byte_index);
-        let buffer_length = len(self.buffer.len());
-        if byte_idx.overflows(buffer_length) {
+        if byte_index.overflows(self.buffer.len()) {
             return None;
         }
 
@@ -278,7 +297,7 @@ impl ZeroCopyGapBuffer {
         let total_lines = self.line_count();
         for i in 0..total_lines.as_usize() {
             if let Some(line_info) = self.get_line_info(i) {
-                let line_start = line_info.buffer_pos.as_usize();
+                let line_start = line_info.buffer_start_byte_index.as_usize();
                 let line_end = line_start + line_info.capacity.as_usize();
 
                 if target_byte >= line_start && target_byte < line_end {
@@ -295,9 +314,7 @@ impl ZeroCopyGapBuffer {
     #[must_use]
     pub fn iter_lines(&self) -> Box<dyn Iterator<Item = GapBufferLine<'_>> + '_> {
         let total_lines = self.line_count();
-        Box::new(
-            (0..total_lines.as_usize()).filter_map(move |i| self.get_line(row(i))),
-        )
+        Box::new((0..total_lines.as_usize()).filter_map(move |i| self.get_line(row(i))))
     } // Total size information
 
     #[must_use]
@@ -389,7 +406,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::col;
+    use crate::{col, len};
 
     #[test]
     fn test_basic_line_operations() {

@@ -11,8 +11,8 @@ use std::{borrow::Cow, fmt::Display};
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
 use crate::{LINE_FEED_BYTE, NULL_BYTE};
 use crate::{BoundsCheck, ColIndex, GraphemeDoc, GraphemeDocMut, Length,
-            RowIndex, SegIndex, SegmentArray, UnitCompare, byte_index,
-            core::units::bounds_check::IndexMarker, height, len, row};
+            RowIndex, SegIndex, SegmentArray, UnitCompare, byte_index, byte_offset,
+            core::units::bounds_check::IndexMarker, len, row};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -107,8 +107,7 @@ impl ZeroCopyGapBuffer {
 
         // If inserting at the end, just add a new line.
         // Use cursor position bounds checking which allows insertion at line_count (end).
-        let row_height = height(self.line_count);
-        if line_index.check_cursor_position_bounds(row_height)
+        if line_index.check_cursor_position_bounds(self.line_count)
             == crate::CursorPositionBoundsStatus::AtEnd
         {
             self.add_line();
@@ -120,7 +119,7 @@ impl ZeroCopyGapBuffer {
             byte_index(0)
         } else {
             let prev_line = &self.lines[line_idx - 1];
-            byte_index(*prev_line.buffer_pos + prev_line.capacity.as_usize())
+            prev_line.buffer_start_byte_index + byte_offset(prev_line.capacity.as_usize())
         };
 
         // Extend buffer by INITIAL_LINE_SIZE bytes.
@@ -147,7 +146,7 @@ impl ZeroCopyGapBuffer {
 
         // Create line metadata for the new line.
         let new_line_info = LineMetadata {
-            buffer_pos: insert_offset,
+            buffer_start_byte_index: insert_offset,
             content_len: len(0),
             capacity: len(INITIAL_LINE_SIZE),
             segments: SegmentArray::new(),
@@ -160,8 +159,8 @@ impl ZeroCopyGapBuffer {
 
         // Update buffer offsets for all subsequent lines.
         for i in (line_idx + 1)..self.lines.len() {
-            self.lines[i].buffer_pos =
-                byte_index(*self.lines[i].buffer_pos + shift_amount);
+            self.lines[i].buffer_start_byte_index =
+                self.lines[i].buffer_start_byte_index + byte_offset(shift_amount);
         }
 
         self.line_count += len(1);
@@ -194,7 +193,7 @@ impl ZeroCopyGapBuffer {
             byte_index(0)
         } else {
             let prev_line = &self.lines[line_index - 1];
-            byte_index(*prev_line.buffer_pos + prev_line.capacity.as_usize())
+            prev_line.buffer_start_byte_index + byte_offset(prev_line.capacity.as_usize())
         };
 
         // Extend buffer by INITIAL_LINE_SIZE bytes, all initialized to '\0'
@@ -206,7 +205,7 @@ impl ZeroCopyGapBuffer {
 
         // Create line metadata.
         self.lines.push(LineMetadata {
-            buffer_pos,
+            buffer_start_byte_index: buffer_pos,
             content_len: len(0),
             capacity: len(INITIAL_LINE_SIZE),
             segments: SegmentArray::new(),
@@ -248,7 +247,7 @@ impl ZeroCopyGapBuffer {
         }
 
         let removed_line = &self.lines[line_index.as_usize()];
-        let removed_start = *removed_line.buffer_pos;
+        let removed_start = *removed_line.buffer_start_byte_index;
         let removed_size = removed_line.capacity.as_usize();
 
         // Remove from metadata.
@@ -268,7 +267,7 @@ impl ZeroCopyGapBuffer {
 
         // Update buffer offsets for remaining lines.
         for line in self.lines.iter_mut().skip(line_index.as_usize()) {
-            line.buffer_pos = byte_index(*line.buffer_pos - removed_size);
+            line.buffer_start_byte_index = line.buffer_start_byte_index - byte_offset(removed_size);
         }
 
         self.line_count -= len(1);
@@ -303,7 +302,7 @@ impl ZeroCopyGapBuffer {
         }
 
         let line_info = &self.lines[line_index.as_usize()];
-        let line_start = *line_info.buffer_pos;
+        let line_start = *line_info.buffer_start_byte_index;
         let old_capacity = line_info.capacity.as_usize();
         let new_capacity = old_capacity + LINE_PAGE_SIZE;
 
@@ -330,7 +329,7 @@ impl ZeroCopyGapBuffer {
 
         // Update buffer offsets for subsequent lines.
         for line in self.lines.iter_mut().skip(line_index.as_usize() + 1) {
-            line.buffer_pos = byte_index(*line.buffer_pos + shift_amount);
+            line.buffer_start_byte_index = line.buffer_start_byte_index + byte_offset(shift_amount);
         }
     }
 }
@@ -541,7 +540,7 @@ mod tests {
         assert_eq!(buffer.buffer.len(), INITIAL_LINE_SIZE);
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(*line_info.buffer_pos, 0);
+        assert_eq!(*line_info.buffer_start_byte_index, 0);
         assert_eq!(line_info.capacity, len(INITIAL_LINE_SIZE));
         assert_eq!(line_info.content_len, len(0));
 
@@ -552,7 +551,7 @@ mod tests {
         assert_eq!(buffer.buffer.len(), 2 * INITIAL_LINE_SIZE);
 
         let line_info = buffer.get_line_info(1).unwrap();
-        assert_eq!(*line_info.buffer_pos, INITIAL_LINE_SIZE);
+        assert_eq!(*line_info.buffer_start_byte_index, INITIAL_LINE_SIZE);
         assert_eq!(line_info.capacity, len(INITIAL_LINE_SIZE));
     }
 
@@ -597,14 +596,14 @@ mod tests {
         // Extend the middle line.
         buffer.extend_line_capacity(row(1));
 
-        let line1_offset_before = *buffer.get_line_info(2).unwrap().buffer_pos;
+        let line1_offset_before = *buffer.get_line_info(2).unwrap().buffer_start_byte_index;
 
         // Remove the extended middle line.
         assert!(buffer.remove_line(row(1)));
         assert_eq!(buffer.line_count(), len(2));
 
         // Check that the third line's offset was updated correctly.
-        let line1_offset_after = *buffer.get_line_info(1).unwrap().buffer_pos;
+        let line1_offset_after = *buffer.get_line_info(1).unwrap().buffer_start_byte_index;
         assert_eq!(line1_offset_after, INITIAL_LINE_SIZE);
         // The extended line had size INITIAL_LINE_SIZE + LINE_PAGE_SIZE = 512
         assert_eq!(
@@ -619,7 +618,7 @@ mod tests {
         buffer.add_line();
 
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = *line_info.buffer_pos;
+        let buffer_start = *line_info.buffer_start_byte_index;
         let capacity = line_info.capacity.as_usize();
 
         // Check that newline is at position 0.
@@ -644,7 +643,7 @@ mod tests {
         buffer.extend_line_capacity(row(0));
 
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = *line_info.buffer_pos;
+        let buffer_start = *line_info.buffer_start_byte_index;
         let capacity = line_info.capacity.as_usize();
 
         // Check that newline is still at position 0.
@@ -670,9 +669,9 @@ mod tests {
         buffer.add_line();
 
         // Record original offsets.
-        let line0_offset = *buffer.get_line_info(0).unwrap().buffer_pos;
-        let line1_offset = *buffer.get_line_info(1).unwrap().buffer_pos;
-        let line2_offset = *buffer.get_line_info(2).unwrap().buffer_pos;
+        let line0_offset = *buffer.get_line_info(0).unwrap().buffer_start_byte_index;
+        let line1_offset = *buffer.get_line_info(1).unwrap().buffer_start_byte_index;
+        let line2_offset = *buffer.get_line_info(2).unwrap().buffer_start_byte_index;
 
         assert_eq!(line0_offset, 0);
         assert_eq!(line1_offset, INITIAL_LINE_SIZE);
@@ -682,38 +681,38 @@ mod tests {
         buffer.insert_line_with_buffer_shift(0);
 
         // Check that all lines were shifted.
-        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_pos, 0);
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_start_byte_index, 0);
         assert_eq!(
-            *buffer.get_line_info(1).unwrap().buffer_pos,
+            *buffer.get_line_info(1).unwrap().buffer_start_byte_index,
             INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(2).unwrap().buffer_pos,
+            *buffer.get_line_info(2).unwrap().buffer_start_byte_index,
             2 * INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(3).unwrap().buffer_pos,
+            *buffer.get_line_info(3).unwrap().buffer_start_byte_index,
             3 * INITIAL_LINE_SIZE
         );
 
         // Test insertion in middle (should shift lines 2 and 3)
         buffer.insert_line_with_buffer_shift(2);
 
-        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_pos, 0);
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_start_byte_index, 0);
         assert_eq!(
-            *buffer.get_line_info(1).unwrap().buffer_pos,
+            *buffer.get_line_info(1).unwrap().buffer_start_byte_index,
             INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(2).unwrap().buffer_pos,
+            *buffer.get_line_info(2).unwrap().buffer_start_byte_index,
             2 * INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(3).unwrap().buffer_pos,
+            *buffer.get_line_info(3).unwrap().buffer_start_byte_index,
             3 * INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(4).unwrap().buffer_pos,
+            *buffer.get_line_info(4).unwrap().buffer_start_byte_index,
             4 * INITIAL_LINE_SIZE
         );
 
@@ -739,30 +738,30 @@ mod tests {
         assert!(buffer.remove_line(row(0)));
 
         // Check that all lines were shifted up.
-        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_pos, 0);
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_start_byte_index, 0);
         assert_eq!(
-            *buffer.get_line_info(1).unwrap().buffer_pos,
+            *buffer.get_line_info(1).unwrap().buffer_start_byte_index,
             INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(2).unwrap().buffer_pos,
+            *buffer.get_line_info(2).unwrap().buffer_start_byte_index,
             2 * INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(3).unwrap().buffer_pos,
+            *buffer.get_line_info(3).unwrap().buffer_start_byte_index,
             3 * INITIAL_LINE_SIZE
         );
 
         // Test deletion in middle (should shift lines 2 and 3 up)
         assert!(buffer.remove_line(row(1)));
 
-        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_pos, 0);
+        assert_eq!(*buffer.get_line_info(0).unwrap().buffer_start_byte_index, 0);
         assert_eq!(
-            *buffer.get_line_info(1).unwrap().buffer_pos,
+            *buffer.get_line_info(1).unwrap().buffer_start_byte_index,
             INITIAL_LINE_SIZE
         );
         assert_eq!(
-            *buffer.get_line_info(2).unwrap().buffer_pos,
+            *buffer.get_line_info(2).unwrap().buffer_start_byte_index,
             2 * INITIAL_LINE_SIZE
         );
 

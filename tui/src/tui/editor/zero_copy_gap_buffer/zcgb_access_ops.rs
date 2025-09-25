@@ -165,14 +165,14 @@ impl ZeroCopyGapBuffer {
 
         // Calculate actual start offset from line info.
         let start_info = self.get_line_info(line_range.start)?;
-        let start_offset = *start_info.buffer_pos;
+        let start_offset = *start_info.buffer_start_byte_index;
 
         // Calculate end offset using type-safe bounds checking.
         let end_offset = if line_range.end.overflows(self.line_count()) {
             self.buffer.len()
         } else {
             let end_info = self.get_line_info(line_range.end)?;
-            *end_info.buffer_pos
+            *end_info.buffer_start_byte_index
         };
 
         // In debug builds, validate UTF-8.
@@ -199,7 +199,7 @@ impl ZeroCopyGapBuffer {
     pub fn get_line_raw(&self, arg_line_index: impl Into<RowIndex>) -> Option<&[u8]> {
         let line_index: RowIndex = arg_line_index.into();
         let line_info = self.get_line_info(line_index)?;
-        let start = *line_info.buffer_pos;
+        let start = *line_info.buffer_start_byte_index;
         let end = start + line_info.capacity.as_usize();
         Some(&self.buffer[start..end])
     }
@@ -221,7 +221,10 @@ impl ZeroCopyGapBuffer {
     ///
     /// In debug builds, panics if the line with newline contains invalid UTF-8
     #[must_use]
-    pub fn get_line_with_newline(&self, arg_line_index: impl Into<RowIndex>) -> Option<&str> {
+    pub fn get_line_with_newline(
+        &self,
+        arg_line_index: impl Into<RowIndex>,
+    ) -> Option<&str> {
         let line_index: RowIndex = arg_line_index.into();
         let line_info = self.get_line_info(line_index)?;
         let content_range = line_info.content_range();
@@ -274,8 +277,7 @@ impl ZeroCopyGapBuffer {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::INITIAL_LINE_SIZE,
-                *};
+    use super::{super::INITIAL_LINE_SIZE, *};
     use crate::{LINE_FEED_BYTE, NULL_BYTE, len, row};
 
     #[test]
@@ -383,7 +385,7 @@ mod tests {
         // Get the line info first.
         let offset = {
             let line_info = buffer.get_line_info(0).unwrap();
-            *line_info.buffer_pos
+            *line_info.buffer_start_byte_index
         };
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing
@@ -409,7 +411,7 @@ mod tests {
         buffer.add_line();
 
         // Get the line info first.
-        let offset = *buffer.get_line_info(0).unwrap().buffer_pos;
+        let offset = *buffer.get_line_info(0).unwrap().buffer_start_byte_index;
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing.
         // Insert invalid UTF-8 sequence.

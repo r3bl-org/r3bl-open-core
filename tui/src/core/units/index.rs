@@ -545,21 +545,15 @@ mod tests {
 
     #[test]
     fn test_index_bounds_check_edge_cases() {
-        // Test with zero length.
+        // Test with zero length - empty collections have no valid indices
         let index = idx(0);
         let length = len(0);
         assert_eq!(
             index.check_array_access_bounds(length),
-            ArrayAccessBoundsStatus::Within
+            ArrayAccessBoundsStatus::Overflowed
         );
 
-        // Test with zero index against zero length.
-        let index = idx(0);
-        let length = len(0);
-        assert_eq!(
-            index.check_array_access_bounds(length),
-            ArrayAccessBoundsStatus::Within
-        );
+        // Duplicate test removed - empty collections consistently have no valid indices
 
         // Test with non-zero index against zero length.
         let index = idx(1);

@@ -96,9 +96,9 @@
 use miette::{Result, miette};
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{BoundsCheck, ByteOffset, CursorPositionBoundsStatus, IndexMarker,
+use crate::{BoundsCheck, ByteIndex, ByteOffset, CursorPositionBoundsStatus, IndexMarker,
             LINE_FEED_BYTE, LengthMarker, NULL_BYTE, RowIndex, SegIndex, UnitCompare,
-            height, idx, len};
+            byte_len, len};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line.
@@ -129,15 +129,15 @@ impl ZeroCopyGapBuffer {
         let line_index: RowIndex = arg_line_index.into();
         let seg_index: SegIndex = arg_seg_index.into();
         // Validate line index and get the byte position.
-        let byte_ofs = {
+        let byte_pos = {
             let line_info = self.get_line_info(line_index).ok_or_else(|| {
                 miette!("Line index {} out of bounds", line_index.as_usize())
             })?;
-            line_info.get_byte_ofs(seg_index)
+            line_info.get_byte_index(seg_index)
         };
 
         // Perform the actual insertion.
-        self.insert_text_at_byte_ofs(line_index, byte_ofs, text)?;
+        self.insert_text_at_byte_pos(line_index, byte_pos, text)?;
 
         // Rebuild line segments after insertion.
         self.rebuild_line_segments(line_index)?;
@@ -158,20 +158,20 @@ impl ZeroCopyGapBuffer {
     /// The method ensures null padding is maintained after the newline character.
     ///
     /// # Safety
-    /// The caller must ensure that `byte_ofs` is at a valid UTF-8 boundary.
+    /// The caller must ensure that `byte_pos` is at a valid UTF-8 boundary.
     ///
     /// # Errors
     /// Returns an error if:
     /// - The line index is out of bounds
     /// - The byte position exceeds the content length
-    pub fn insert_text_at_byte_ofs(
+    pub fn insert_text_at_byte_pos(
         &mut self,
         arg_line_index: impl Into<RowIndex>,
-        arg_byte_ofs: impl Into<ByteOffset>,
+        arg_byte_index: impl Into<ByteIndex>,
         text: &str,
     ) -> Result<()> {
         let line_index: RowIndex = arg_line_index.into();
-        let byte_ofs: ByteOffset = arg_byte_ofs.into();
+        let byte_index: ByteIndex = arg_byte_index.into();
         let text_bytes = text.as_bytes();
         let text_len = len(text_bytes.len());
 
@@ -183,13 +183,12 @@ impl ZeroCopyGapBuffer {
         // Validate byte position using cursor position bounds checking.
         // For insertion, we allow inserting at position equal to content length (at the
         // end of the line).
-        let byte_ofs_idx = idx(byte_ofs);
-        if byte_ofs_idx.check_cursor_position_bounds(line_info.content_len)
+        if byte_index.check_cursor_position_bounds(line_info.content_len)
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(
-                "Byte offset {} exceeds content length {}",
-                byte_ofs.as_usize(),
+                "Byte position {} exceeds content length {}",
+                byte_index.as_usize(),
                 line_info.content_len.as_usize()
             ));
         }
@@ -225,17 +224,18 @@ impl ZeroCopyGapBuffer {
             )
         })?;
         let line_content_len = line_info.content_len; // Keep for type-safe operations
-        let insert_pos = (line_info.buffer_pos + byte_ofs).as_usize();
+        let insert_pos =
+            (line_info.buffer_start_byte_index + ByteOffset::from(byte_index)).as_usize();
 
         // Shift existing content to make room.
-        if byte_ofs_idx.overflows(line_content_len) {
+        if byte_index.overflows(byte_len(line_content_len)) {
             // Inserting at end, just move the newline.
             self.buffer[insert_pos + text_len.as_usize()] = LINE_FEED_BYTE;
         } else {
             // Need to move content to the right.
             let move_from = insert_pos;
             let move_to = insert_pos + text_len.as_usize();
-            let move_len = line_content_len.remaining_from(byte_ofs_idx).as_usize();
+            let move_len = line_content_len.remaining_from(byte_index).as_usize();
 
             // Move content (including the newline).
             for i in (0..=move_len).rev() {
@@ -268,7 +268,7 @@ impl ZeroCopyGapBuffer {
 
         // null-pad if there's remaining capacity.
         if !remaining_capacity.is_zero() {
-            let buffer_start = line_info_mut.buffer_pos.as_usize();
+            let buffer_start = line_info_mut.buffer_start_byte_index.as_usize();
             let line_end = buffer_start + line_end_length.as_usize();
             let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
 
@@ -288,12 +288,14 @@ impl ZeroCopyGapBuffer {
     ///
     /// # Errors
     /// Returns an error if the line index exceeds the current line count.
-    pub fn insert_empty_line(&mut self, arg_line_index: impl Into<RowIndex>) -> Result<()> {
+    pub fn insert_empty_line(
+        &mut self,
+        arg_line_index: impl Into<RowIndex>,
+    ) -> Result<()> {
         let line_index: RowIndex = arg_line_index.into();
         // Use cursor position bounds checking for insertion operations.
         // This allows insertion at index == line_count (append at end).
-        let row_height = height(self.line_count().as_usize());
-        if line_index.check_cursor_position_bounds(row_height)
+        if line_index.check_cursor_position_bounds(self.line_count())
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(
@@ -517,7 +519,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_pos;
+        let buffer_start = *line_info.buffer_start_byte_index;
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
@@ -555,7 +557,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_pos;
+        let buffer_start = *line_info.buffer_start_byte_index;
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
@@ -591,7 +593,7 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_pos;
+        let buffer_start = *line_info.buffer_start_byte_index;
         let content_len = line_info.content_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 

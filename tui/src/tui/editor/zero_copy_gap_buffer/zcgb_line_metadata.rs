@@ -6,15 +6,15 @@
 //! for a single line in the gap buffer, including buffer position, capacity,
 //! grapheme segments, and display information.
 
-use crate::{ByteIndex, ByteOffset, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length, Seg,
-            SegIndex, SegStringOwned, SegmentArray, UnitCompare, byte_offset,
-            core::units::{idx, len}};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker,
+            Length, Seg, SegIndex, SegStringOwned, SegmentArray, UnitCompare,
+            byte_index, core::units::idx};
 
 /// Metadata for a single line in the buffer
 #[derive(Debug, Clone, PartialEq)]
 pub struct LineMetadata {
     /// Where this line starts in the buffer
-    pub buffer_pos: ByteIndex,
+    pub buffer_start_byte_index: ByteIndex,
 
     /// Actual content length in bytes (before '\n')
     pub content_len: Length,
@@ -56,7 +56,7 @@ impl LineMetadata {
     /// ```
     #[must_use]
     pub fn content_range(&self) -> std::ops::Range<usize> {
-        let start = self.buffer_pos.as_usize();
+        let start = self.buffer_start_byte_index.as_usize();
         let end = start + self.content_len.as_usize();
         start..end
     }
@@ -65,8 +65,9 @@ impl LineMetadata {
     ///
     /// This method converts a grapheme cluster index (segment index) to its
     /// corresponding byte position in the line buffer. It handles three cases:
-    /// - Beginning of line (`seg_index` = 0) → returns 0
-    /// - End of line (`seg_index` >= `segments.len()`) → returns `content_len`
+    /// - Beginning of line (`seg_index` = 0) → returns byte position 0
+    /// - End of line (`seg_index` >= `segments.len()`) → returns content length as byte
+    ///   position
     /// - Middle of line → returns the `start_byte_index` of the segment
     ///
     /// # Arguments
@@ -87,27 +88,26 @@ impl LineMetadata {
     /// let line_info = buffer.get_line_info(0).unwrap();
     ///
     /// // Beginning of line
-    /// assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0);
+    /// assert_eq!(line_info.get_byte_index(seg_index(0)).as_usize(), 0);
     ///
     /// // End of line
-    /// assert_eq!(line_info.get_byte_ofs(seg_index(5)).as_usize(), 5);
+    /// assert_eq!(line_info.get_byte_index(seg_index(5)).as_usize(), 5);
     /// ```
     #[must_use]
-    pub fn get_byte_ofs(&self, arg_seg_index: impl Into<SegIndex>) -> ByteOffset {
+    pub fn get_byte_index(&self, arg_seg_index: impl Into<SegIndex>) -> ByteIndex {
         let seg_index: SegIndex = arg_seg_index.into();
         if seg_index.is_zero() {
-            // Insert at beginning.
-            byte_offset(0)
+            // Beginning of line.
+            byte_index(0)
         } else {
             let seg_idx = idx(seg_index);
-            let segments_length = len(self.segments.len());
-            if seg_idx.overflows(segments_length) {
-                // Insert at end
-                byte_offset(self.content_len.as_usize())
+            if seg_idx.overflows(self.segments.len()) {
+                // End of line - return content length as byte position
+                byte_index(self.content_len.as_usize())
             } else {
-                // Insert in middle - find the start of the target segment.
+                // Middle of line - return the start byte index of the target segment.
                 let segment = &self.segments[seg_index.as_usize()];
-                byte_offset(segment.start_byte_index.as_usize())
+                segment.start_byte_index // Already a ByteIndex!
             }
         }
     }
@@ -121,7 +121,7 @@ impl LineMetadata {
     /// - Middle of line → returns the `seg_index` of the segment containing the byte
     ///
     /// # Arguments
-    /// * `byte_ofs` - The byte offset to convert
+    /// * `byte_index` - The byte position within the line to convert
     ///
     /// # Returns
     /// The segment index where the byte position falls
@@ -129,7 +129,7 @@ impl LineMetadata {
     /// # Example
     ///
     /// ```rust
-    /// use r3bl_tui::{ZeroCopyGapBuffer, byte_offset, seg_index, row};
+    /// use r3bl_tui::{ZeroCopyGapBuffer, byte_index, seg_index, row};
     ///
     /// let mut buffer = ZeroCopyGapBuffer::new();
     /// let line_idx = buffer.add_line();
@@ -138,46 +138,44 @@ impl LineMetadata {
     /// let line_info = buffer.get_line_info(line_idx).unwrap();
     ///
     /// // Beginning of line
-    /// assert_eq!(line_info.get_seg_index(byte_offset(0)), seg_index(0));
+    /// assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
     ///
     /// // Middle of emoji (byte 3 is in the middle of the 4-byte emoji)
-    /// assert_eq!(line_info.get_seg_index(byte_offset(3)), seg_index(1));
+    /// assert_eq!(line_info.get_seg_index(byte_index(3)), seg_index(1));
     ///
     /// // After emoji
-    /// assert_eq!(line_info.get_seg_index(byte_offset(5)), seg_index(2));
+    /// assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(2));
     ///
     /// // End of line
-    /// assert_eq!(line_info.get_seg_index(byte_offset(8)), seg_index(5));
+    /// assert_eq!(line_info.get_seg_index(byte_index(8)), seg_index(5));
     /// ```
     #[must_use]
-    pub fn get_seg_index(&self, arg_byte_ofs: impl Into<ByteOffset>) -> SegIndex {
-        let byte_ofs: ByteOffset = arg_byte_ofs.into();
+    pub fn get_seg_index(&self, arg_byte_index: impl Into<ByteIndex>) -> SegIndex {
+        let byte_index: ByteIndex = arg_byte_index.into();
         // Handle edge cases.
-        if byte_ofs.as_usize() == 0 {
+        if byte_index.is_zero() {
             return crate::seg_index(0);
         }
 
-        let byte_ofs_idx = idx(byte_ofs);
-        let content_length = len(self.content_len.as_usize());
-        if byte_ofs_idx.overflows(content_length) {
+        if byte_index.overflows(self.content_len) {
             return crate::seg_index(self.segments.len());
         }
 
-        // Binary search through segments to find the one containing byte_ofs.
+        // Binary search through segments to find the one containing byte_index.
         // We could optimize this with binary search, but linear is fine for now
         // since lines typically have few segments.
         for segment in &self.segments {
-            if byte_ofs.as_usize() >= segment.start_byte_index.as_usize()
-                && byte_ofs.as_usize() < segment.end_byte_index.as_usize()
+            if byte_index.as_usize() >= segment.start_byte_index.as_usize()
+                && byte_index.as_usize() < segment.end_byte_index.as_usize()
             {
                 return segment.seg_index;
             }
         }
 
-        // If we get here, byte_ofs is between segments (shouldn't happen with valid
+        // If we get here, byte_index is between segments (shouldn't happen with valid
         // UTF-8) Return the segment after the position.
         for segment in &self.segments {
-            if byte_ofs.as_usize() < segment.start_byte_index.as_usize() {
+            if byte_index.as_usize() < segment.start_byte_index.as_usize() {
                 return segment.seg_index;
             }
         }
@@ -224,7 +222,10 @@ impl LineMetadata {
     /// assert!(line_info.check_is_in_middle_of_grapheme(col(4)).is_none()); // Valid
     /// ```
     #[must_use]
-    pub fn check_is_in_middle_of_grapheme(&self, arg_col_index: impl Into<ColIndex>) -> Option<Seg> {
+    pub fn check_is_in_middle_of_grapheme(
+        &self,
+        arg_col_index: impl Into<ColIndex>,
+    ) -> Option<Seg> {
         let col_index: ColIndex = arg_col_index.into();
         // Find the segment that contains or would contain this column index.
         for seg in &self.segments {
@@ -485,10 +486,10 @@ impl LineMetadata {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ZeroCopyGapBuffer, byte_offset, col, row, seg_index, width};
+    use crate::{ZeroCopyGapBuffer, byte_index, col, row, seg_index, width};
 
     #[test]
-    fn test_get_byte_ofs_beginning() {
+    fn test_get_byte_pos_beginning() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -500,11 +501,11 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test beginning position.
-        assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_index(seg_index(0)).as_usize(), 0);
     }
 
     #[test]
-    fn test_get_byte_ofs_end() {
+    fn test_get_byte_pos_end() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -516,12 +517,12 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test end position (past last segment)
-        assert_eq!(line_info.get_byte_ofs(seg_index(5)).as_usize(), 5);
-        assert_eq!(line_info.get_byte_ofs(seg_index(10)).as_usize(), 5);
+        assert_eq!(line_info.get_byte_index(seg_index(5)).as_usize(), 5);
+        assert_eq!(line_info.get_byte_index(seg_index(10)).as_usize(), 5);
     }
 
     #[test]
-    fn test_get_byte_ofs_middle() {
+    fn test_get_byte_pos_middle() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -533,25 +534,25 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test various positions.
-        assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0); // Before 'H'
-        assert_eq!(line_info.get_byte_ofs(seg_index(1)).as_usize(), 1); // Before '😀'
-        assert_eq!(line_info.get_byte_ofs(seg_index(2)).as_usize(), 5); // Before 'l' (emoji is 4 bytes)
-        assert_eq!(line_info.get_byte_ofs(seg_index(3)).as_usize(), 6); // Before second 'l'
-        assert_eq!(line_info.get_byte_ofs(seg_index(4)).as_usize(), 7); // Before 'o'
-        assert_eq!(line_info.get_byte_ofs(seg_index(5)).as_usize(), 8); // End of string
+        assert_eq!(line_info.get_byte_index(seg_index(0)).as_usize(), 0); // Before 'H'
+        assert_eq!(line_info.get_byte_index(seg_index(1)).as_usize(), 1); // Before '😀'
+        assert_eq!(line_info.get_byte_index(seg_index(2)).as_usize(), 5); // Before 'l' (emoji is 4 bytes)
+        assert_eq!(line_info.get_byte_index(seg_index(3)).as_usize(), 6); // Before second 'l'
+        assert_eq!(line_info.get_byte_index(seg_index(4)).as_usize(), 7); // Before 'o'
+        assert_eq!(line_info.get_byte_index(seg_index(5)).as_usize(), 8); // End of string
     }
 
     #[test]
-    fn test_get_byte_ofs_empty_line() {
+    fn test_get_byte_pos_empty_line() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
         let line_info = buffer.get_line_info(0).unwrap();
 
         // For empty line, any position should return 0.
-        assert_eq!(line_info.get_byte_ofs(seg_index(0)).as_usize(), 0);
-        assert_eq!(line_info.get_byte_ofs(seg_index(1)).as_usize(), 0);
-        assert_eq!(line_info.get_byte_ofs(seg_index(100)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_index(seg_index(0)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_index(seg_index(1)).as_usize(), 0);
+        assert_eq!(line_info.get_byte_index(seg_index(100)).as_usize(), 0);
     }
 
     #[test]
@@ -567,7 +568,7 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test beginning position.
-        assert_eq!(line_info.get_seg_index(byte_offset(0)), seg_index(0));
+        assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
     }
 
     #[test]
@@ -583,8 +584,8 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test end position (at or past content length)
-        assert_eq!(line_info.get_seg_index(byte_offset(5)), seg_index(5));
-        assert_eq!(line_info.get_seg_index(byte_offset(10)), seg_index(5));
+        assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(5));
+        assert_eq!(line_info.get_seg_index(byte_index(10)), seg_index(5));
     }
 
     #[test]
@@ -600,15 +601,15 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test various byte positions.
-        assert_eq!(line_info.get_seg_index(byte_offset(0)), seg_index(0)); // Start of 'H'
-        assert_eq!(line_info.get_seg_index(byte_offset(1)), seg_index(1)); // Start of '😀'
-        assert_eq!(line_info.get_seg_index(byte_offset(2)), seg_index(1)); // Middle of '😀'
-        assert_eq!(line_info.get_seg_index(byte_offset(3)), seg_index(1)); // Middle of '😀'
-        assert_eq!(line_info.get_seg_index(byte_offset(4)), seg_index(1)); // End of '😀'
-        assert_eq!(line_info.get_seg_index(byte_offset(5)), seg_index(2)); // Start of 'l'
-        assert_eq!(line_info.get_seg_index(byte_offset(6)), seg_index(3)); // Start of second 'l'
-        assert_eq!(line_info.get_seg_index(byte_offset(7)), seg_index(4)); // Start of 'o'
-        assert_eq!(line_info.get_seg_index(byte_offset(8)), seg_index(5)); // End of string
+        assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0)); // Start of 'H'
+        assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(1)); // Start of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(2)), seg_index(1)); // Middle of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(3)), seg_index(1)); // Middle of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(4)), seg_index(1)); // End of '😀'
+        assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(2)); // Start of 'l'
+        assert_eq!(line_info.get_seg_index(byte_index(6)), seg_index(3)); // Start of second 'l'
+        assert_eq!(line_info.get_seg_index(byte_index(7)), seg_index(4)); // Start of 'o'
+        assert_eq!(line_info.get_seg_index(byte_index(8)), seg_index(5)); // End of string
     }
 
     #[test]
@@ -619,13 +620,13 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // For empty line, any position should return 0.
-        assert_eq!(line_info.get_seg_index(byte_offset(0)), seg_index(0));
-        assert_eq!(line_info.get_seg_index(byte_offset(1)), seg_index(0));
-        assert_eq!(line_info.get_seg_index(byte_offset(100)), seg_index(0));
+        assert_eq!(line_info.get_seg_index(byte_index(0)), seg_index(0));
+        assert_eq!(line_info.get_seg_index(byte_index(1)), seg_index(0));
+        assert_eq!(line_info.get_seg_index(byte_index(100)), seg_index(0));
     }
 
     #[test]
-    fn test_get_seg_index_get_byte_ofs_round_trip() {
+    fn test_get_seg_index_get_byte_pos_round_trip() {
         let mut buffer = ZeroCopyGapBuffer::new();
         buffer.add_line();
 
@@ -639,14 +640,14 @@ mod tests {
         // Test round-trip conversion for each segment.
         for i in 0..line_info.segments.len() {
             let seg_idx = seg_index(i);
-            let byte_offset = line_info.get_byte_ofs(seg_idx);
-            let seg_idx_back = line_info.get_seg_index(byte_offset);
+            let byte_pos = line_info.get_byte_index(seg_idx);
+            let seg_idx_back = line_info.get_seg_index(byte_pos);
             assert_eq!(
                 seg_idx,
                 seg_idx_back,
-                "Round-trip failed for segment {}: byte_ofs={}",
+                "Round-trip failed for segment {}: byte_pos={}",
                 i,
-                byte_offset.as_usize()
+                byte_pos.as_usize()
             );
         }
     }

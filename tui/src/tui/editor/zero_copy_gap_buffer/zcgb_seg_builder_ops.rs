@@ -336,7 +336,7 @@ mod tests {
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Test")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = line_info.buffer_pos.as_usize();
+        let buffer_start = line_info.buffer_start_byte_index.as_usize();
         let capacity = line_info.capacity.as_usize();
 
         // Verify null padding exists beyond content.

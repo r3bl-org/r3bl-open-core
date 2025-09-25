@@ -2,7 +2,8 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::{ChUnit, Index};
+use crate::{bounds_check::length_and_index_markers::{IndexMarker, UnitCompare},
+            ByteLength, ByteOffset, ChUnit, Index};
 
 /// Represents a byte index inside of the underlying [`crate::InlineString`] of
 /// [`crate::GCStringOwned`].
@@ -39,14 +40,62 @@ impl From<ByteIndex> for Index {
     fn from(it: ByteIndex) -> Self { Self::from(it.0) }
 }
 
+impl From<ByteOffset> for ByteIndex {
+    fn from(it: ByteOffset) -> Self { Self(it.as_usize()) }
+}
+
 impl From<ByteIndex> for usize {
     fn from(it: ByteIndex) -> Self { it.0 }
 }
 
+impl From<u16> for ByteIndex {
+    fn from(it: u16) -> Self { Self(it as usize) }
+}
+
+impl From<i32> for ByteIndex {
+    fn from(it: i32) -> Self { Self(it as usize) }
+}
+
+impl UnitCompare for ByteIndex {
+    /// Convert the byte index to a usize value for numeric comparison, usually for array
+    /// indexing operations.
+    fn as_usize(&self) -> usize { self.0 }
+
+    /// Convert the byte index to a u16 value for crossterm compatibility and other terminal
+    /// operations.
+    fn as_u16(&self) -> u16 { self.0 as u16 }
+}
+
+impl IndexMarker for ByteIndex {
+    type LengthType = ByteLength;
+
+    /// Convert this byte index to the corresponding byte length.
+    ///
+    /// This adds 1 to convert from 0-based index to 1-based length.
+    ///
+    /// ```text
+    /// ByteIndex=5 (0-based) to ByteLength (1-based) conversion:
+    ///
+    ///                         byte_index=5 (0-based)
+    ///                                 ↓
+    /// ByteIndex:  0   1   2   3   4   5   6   7   8   9
+    /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///           │   │   │   │   │   │   │   │   │   │   │
+    ///           └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    /// ByteLength: 1   2   3   4   5   6   7   8   9   10
+    /// (1-based)                       ↑
+    ///                convert_to_length() = 6 (1-based)
+    /// ```
+    fn convert_to_length(&self) -> Self::LengthType {
+        ByteLength::from(*self)
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ByteOffset, ch, byte_offset};
+    use crate::{ch, byte_offset};
 
     // Basic construction and conversion tests
     #[test]

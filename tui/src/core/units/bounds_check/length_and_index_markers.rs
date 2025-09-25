@@ -69,6 +69,10 @@ pub trait IndexMarker: UnitCompare {
     /// relationship: this ensures that the length type's `IndexType` points back to
     /// this same index type, preventing type mismatches like `ColIndex` ↔
     /// `RowHeight`.
+    ///
+    /// Note: For special cases like `ByteIndex` that need to work with `Length`,
+    /// we provide convenience methods that convert to compatible types rather than
+    /// breaking the bidirectional constraint system.
     type LengthType: LengthMarker<IndexType = Self>;
 
     /// Convert this index to the corresponding length type.
@@ -157,7 +161,12 @@ pub trait IndexMarker: UnitCompare {
         Self: PartialOrd + Sized + Copy,
     {
         let length: Self::LengthType = arg_length.into();
-        length.is_overflowed_by(*self)
+        // Single source of truth for bounds checking logic
+        // Special case: empty collection (length 0) has no valid indices.
+        if length.as_usize() == 0 {
+            return true;
+        }
+        *self > length.convert_to_index()
     }
 
     /// Check if this index underflows (goes below) the given minimum bound.
@@ -452,14 +461,12 @@ pub trait LengthMarker: UnitCompare {
     /// ```
     fn is_overflowed_by(&self, arg_index: impl Into<Self::IndexType>) -> bool
     where
-        Self::IndexType: PartialOrd,
+        Self::IndexType: PartialOrd + Copy,
+        Self: Copy,
     {
         let index: Self::IndexType = arg_index.into();
-        // Special case: empty collection (length 0) has no valid indices.
-        if self.as_usize() == 0 {
-            return true;
-        }
-        index > self.convert_to_index()
+        // Delegate to overflows() for single source of truth
+        index.overflows(*self)
     }
 
     /// Calculate the remaining space from the given index to the end of this length.
@@ -505,6 +512,7 @@ pub trait LengthMarker: UnitCompare {
     where
         Self::IndexType: PartialOrd + Sub<Output = Self::IndexType> + Copy,
         <Self::IndexType as IndexMarker>::LengthType: Into<Length>,
+        Self: Copy,
     {
         let index: Self::IndexType = arg_index.into();
         if self.is_overflowed_by(index) {

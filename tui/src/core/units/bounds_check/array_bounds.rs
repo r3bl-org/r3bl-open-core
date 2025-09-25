@@ -92,7 +92,7 @@ where
     ///
     /// [module documentation]: mod@crate::core::units::bounds_check
     /// [`overflows`]: crate::IndexMarker::overflows
-    fn check_array_access_bounds(&self, max: LengthType) -> ArrayAccessBoundsStatus;
+    fn check_array_access_bounds(&self, arg_max: impl Into<LengthType>) -> ArrayAccessBoundsStatus;
 
     /// Performs cursor position bounds checking.
     ///
@@ -125,7 +125,7 @@ where
     /// [`bounds_check` module documentation]: mod@crate::core::units::bounds_check
     fn check_cursor_position_bounds(
         &self,
-        content_length: LengthType,
+        arg_content_length: impl Into<LengthType>,
     ) -> CursorPositionBoundsStatus;
 }
 
@@ -138,16 +138,14 @@ where
 /// pairs.
 impl<IndexType, LengthType> BoundsCheck<LengthType> for IndexType
 where
-    IndexType: IndexMarker + PartialOrd + Copy,
+    IndexType: IndexMarker<LengthType = LengthType> + PartialOrd + Copy,
     LengthType: LengthMarker<IndexType = IndexType>,
 {
-    fn check_array_access_bounds(&self, length: LengthType) -> ArrayAccessBoundsStatus {
-        let this = *self;
-        let other = length.convert_to_index();
-
-        // For now, we only check overflow since indices are typically unsigned.
-        // Future versions might add underflow checking for signed scenarios.
-        if this > other {
+    fn check_array_access_bounds(&self, arg_max: impl Into<LengthType>) -> ArrayAccessBoundsStatus {
+        let length = arg_max.into();
+        // Delegate to overflows() for single source of truth
+        // This ensures consistency with all bounds checking methods
+        if self.overflows(length) {
             ArrayAccessBoundsStatus::Overflowed
         } else {
             ArrayAccessBoundsStatus::Within
@@ -156,8 +154,9 @@ where
 
     fn check_cursor_position_bounds(
         &self,
-        content_length: LengthType,
+        arg_content_length: impl Into<LengthType>,
     ) -> CursorPositionBoundsStatus {
+        let content_length = arg_content_length.into();
         let position = self.as_usize();
         let length = content_length.as_usize();
 
@@ -283,5 +282,122 @@ mod tests {
             RowIndex::new(3).check_cursor_position_bounds(row_height),
             CursorPositionBoundsStatus::Beyond
         );
+    }
+
+    /// Comprehensive tests to ensure consistency between all bounds checking methods:
+    /// - check_array_access_bounds()
+    /// - overflows()
+    /// - is_overflowed_by()
+    #[test]
+    fn test_bounds_checking_consistency() {
+        // Test critical boundary cases with generic Index/Length
+        let test_cases = [
+            // (index, length, expected_overflows)
+            (0, 1, false),   // First valid index
+            (0, 5, false),   // First valid index in larger array
+            (4, 5, false),   // Last valid index (length-1)
+            (5, 5, true),    // First invalid index (length)
+            (6, 5, true),    // Beyond bounds
+            (0, 0, true),    // Empty collection edge case
+            (1, 0, true),    // Index in empty collection
+        ];
+
+        for (index_val, length_val, expected_overflows) in test_cases {
+            let index = idx(index_val);
+            let length = len(length_val);
+
+            // Test overflows() method
+            let overflows_result = index.overflows(length);
+            assert_eq!(
+                overflows_result, expected_overflows,
+                "overflows mismatch for idx({}).overflows(len({}))",
+                index_val, length_val
+            );
+
+            // Test is_overflowed_by() method (inverse relationship)
+            let is_overflowed_result = length.is_overflowed_by(index);
+            assert_eq!(
+                is_overflowed_result, expected_overflows,
+                "is_overflowed_by mismatch for len({}).is_overflowed_by(idx({}))",
+                length_val, index_val
+            );
+
+            // Test check_array_access_bounds() consistency
+            let bounds_status = index.check_array_access_bounds(length);
+            let expected_status = if expected_overflows {
+                ArrayAccessBoundsStatus::Overflowed
+            } else {
+                ArrayAccessBoundsStatus::Within
+            };
+            assert_eq!(
+                bounds_status, expected_status,
+                "check_array_access_bounds mismatch for idx({}).check_array_access_bounds(len({}))",
+                index_val, length_val
+            );
+        }
+    }
+
+    #[test]
+    fn test_typed_bounds_checking_consistency() {
+        use crate::{ColIndex, ColWidth, RowIndex, RowHeight};
+
+        // Test with ColIndex/ColWidth
+        let col_cases = [
+            (0, 3, false),   // First valid
+            (2, 3, false),   // Last valid
+            (3, 3, true),    // First invalid
+            (0, 0, true),    // Empty
+        ];
+
+        for (index_val, width_val, expected_overflows) in col_cases {
+            let col_index = ColIndex::new(index_val);
+            let col_width = ColWidth::new(width_val);
+
+            let overflows_result = col_index.overflows(col_width);
+            let is_overflowed_result = col_width.is_overflowed_by(col_index);
+            let bounds_status = col_index.check_array_access_bounds(col_width);
+
+            assert_eq!(overflows_result, expected_overflows,
+                "ColIndex overflows mismatch for {}:{}", index_val, width_val);
+            assert_eq!(is_overflowed_result, expected_overflows,
+                "ColWidth is_overflowed_by mismatch for {}:{}", width_val, index_val);
+
+            let expected_status = if expected_overflows {
+                ArrayAccessBoundsStatus::Overflowed
+            } else {
+                ArrayAccessBoundsStatus::Within
+            };
+            assert_eq!(bounds_status, expected_status,
+                "ColIndex check_array_access_bounds mismatch for {}:{}", index_val, width_val);
+        }
+
+        // Test with RowIndex/RowHeight
+        let row_cases = [
+            (0, 2, false),   // First valid
+            (1, 2, false),   // Last valid
+            (2, 2, true),    // First invalid
+        ];
+
+        for (index_val, height_val, expected_overflows) in row_cases {
+            let row_index = RowIndex::new(index_val);
+            let row_height = RowHeight::new(height_val);
+
+            let overflows_result = row_index.overflows(row_height);
+            let is_overflowed_result = row_height.is_overflowed_by(row_index);
+            let bounds_status = row_index.check_array_access_bounds(row_height);
+
+            assert_eq!(overflows_result, expected_overflows,
+                "RowIndex overflows mismatch for {}:{}", index_val, height_val);
+            assert_eq!(is_overflowed_result, expected_overflows,
+                "RowHeight is_overflowed_by mismatch for {}:{}", height_val, index_val);
+
+            let expected_status = if expected_overflows {
+                ArrayAccessBoundsStatus::Overflowed
+            } else {
+                ArrayAccessBoundsStatus::Within
+            };
+            assert_eq!(bounds_status, expected_status,
+                "RowIndex check_array_access_bounds mismatch for {}:{}", index_val, height_val);
+        }
     }
 }

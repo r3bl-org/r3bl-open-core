@@ -95,14 +95,13 @@
 //!
 //! This allows deletion operations to be **extremely fast** with no validation overhead.
 
-use miette::{Result, miette};
-
 use std::ops::Range;
 
+use miette::{Result, miette};
+
 use super::ZeroCopyGapBuffer;
-use crate::{LINE_FEED_BYTE, NULL_BYTE};
-use crate::{ByteOffset, IndexMarker, LengthMarker, RangeBoundary, RowIndex,
-            SegIndex, byte_index, idx, len, seg_width};
+use crate::{ByteIndex, ByteOffset, IndexMarker, LINE_FEED_BYTE, LengthMarker, NULL_BYTE,
+            RangeBoundary, RowIndex, SegIndex, byte_index, idx, len, seg_width};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -198,7 +197,7 @@ impl ZeroCopyGapBuffer {
 
         if !delete_range.is_valid(segments_count) {
             if start_seg >= end_seg {
-                return Ok(());  // Empty range - nothing to delete
+                return Ok(()); // Empty range - nothing to delete
             } else {
                 return Err(miette!(
                     "Invalid range: start {} must be less than end {}",
@@ -232,10 +231,15 @@ impl ZeroCopyGapBuffer {
         Ok(())
     }
 
-    /// Delete bytes within a specified range
+    /// Delete bytes within a specified range using line-relative byte positions
     ///
     /// This is a lower-level helper that performs the actual buffer manipulation.
     /// It handles content shifting and null padding restoration.
+    ///
+    /// # Parameters
+    /// * `arg_line_index` - The line index containing the bytes to delete
+    /// * `arg_start_pos` - Line-relative byte position where deletion starts (inclusive)
+    /// * `arg_end_pos` - Line-relative byte position where deletion ends (exclusive)
     ///
     /// # Content Shifting Behavior
     ///
@@ -255,49 +259,57 @@ impl ZeroCopyGapBuffer {
     pub fn delete_bytes_at_range(
         &mut self,
         arg_line_index: impl Into<RowIndex>,
-        arg_start_ofs: impl Into<ByteOffset>,
-        arg_end_ofs: impl Into<ByteOffset>,
+        arg_start_index: impl Into<ByteIndex>,
+        arg_end_index: impl Into<ByteIndex>,
     ) -> Result<()> {
         let line_index: RowIndex = arg_line_index.into();
-        let start_ofs: ByteOffset = arg_start_ofs.into();
-        let end_ofs: ByteOffset = arg_end_ofs.into();
+        let start_index: ByteIndex = arg_start_index.into();
+        let end_index: ByteIndex = arg_end_index.into();
         // Get line info and validate line index.
         let line_info = self.get_line_info(line_index).ok_or_else(|| {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Convert offsets to indices and create range for comprehensive bounds checking.
-        let start_idx = idx(start_ofs);
-        let end_idx = idx(end_ofs);
-        let delete_range: Range<crate::Index> = start_idx..end_idx;
-
-        // Use type-safe range validation from bounds_check module.
-        // This checks: range not inverted, start within bounds, end within cursor bounds.
-        if !delete_range.is_valid(line_info.content_len) {
-            if start_idx >= end_idx {
-                // Range is empty or inverted - nothing to delete.
-                return Ok(());
-            } else {
-                // Range is invalid due to out-of-bounds positions.
-                return Err(miette!(
-                    "Byte range {}-{} exceeds content length {}",
-                    start_ofs.as_usize(),
-                    end_ofs.as_usize(),
-                    line_info.content_len.as_usize()
-                ));
-            }
+        // Validate range bounds manually (simpler than complex trait bounds)
+        if start_index.as_usize() > end_index.as_usize() {
+            // Range is empty or inverted - nothing to delete.
+            return Ok(());
         }
 
+        // Check if start position is within content bounds
+        if start_index.as_usize() >= line_info.content_len.as_usize() {
+            return Err(miette!(
+                "Start position {} exceeds content length {}",
+                start_index.as_usize(),
+                line_info.content_len.as_usize()
+            ));
+        }
+
+        // Check if end position is within valid range (can equal content length for
+        // exclusive ranges)
+        if end_index.as_usize() > line_info.content_len.as_usize() {
+            return Err(miette!(
+                "End position {} exceeds content length {}",
+                end_index.as_usize(),
+                line_info.content_len.as_usize()
+            ));
+        }
+
+        // Convert to indices for remaining logic
+        let _start_idx = idx(start_index);
+        let end_idx = idx(end_index);
+
         // Extract values needed for buffer operations before mutable operations.
-        let num_deleted_chars = len((end_ofs - start_ofs).as_usize());
-        let delete_start = line_info.buffer_pos + start_ofs;
+        let num_deleted_chars = len((end_index - start_index).as_usize());
+        let delete_start =
+            line_info.buffer_start_byte_index + ByteOffset::from(start_index);
         let current_content_len = line_info.content_len;
-        let buffer_pos = line_info.buffer_pos;
+        let buffer_pos = line_info.buffer_start_byte_index;
 
         // Shift content left to overwrite deleted portion.
         if !end_idx.overflows(current_content_len) {
             // Content remains after deletion - need to shift
-            let move_from = (buffer_pos + end_ofs).as_usize();
+            let move_from = (buffer_pos + ByteOffset::from(end_index)).as_usize();
             let move_to = delete_start.as_usize();
             let remaining_content = current_content_len.remaining_from(end_idx);
             let move_len = remaining_content.as_usize();
@@ -519,7 +531,7 @@ mod tests {
 
         // Check that the buffer is properly null-padded.
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = line_info.buffer_pos.as_usize();
+        let buffer_start = line_info.buffer_start_byte_index.as_usize();
         let content_len = line_info.content_len.as_usize();
 
         // Content should be "Helo\n"
