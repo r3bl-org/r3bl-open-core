@@ -26,10 +26,9 @@
 //!
 //! # Operations
 //!
-//! - [`insert_text_at_grapheme()`]: Insert
-//!   text at a specific grapheme position with automatic optimization detection
-//! - [`insert_empty_line()`]: Create new empty
-//!   lines with proper initialization
+//! - [`insert_text_at_grapheme()`]: Insert text at a specific grapheme position with
+//!   automatic optimization detection
+//! - [`insert_empty_line()`]: Create new empty lines with proper initialization
 //! - Internal helpers for byte-level manipulation and capacity management
 //!
 //! # Null-Padding Invariant
@@ -102,7 +101,7 @@ use miette::{Result, miette};
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 use crate::{BoundsCheck, ByteIndex, ByteOffset, CursorPositionBoundsStatus, IndexMarker,
             LINE_FEED_BYTE, LengthMarker, NULL_BYTE, RowIndex, SegIndex, UnitCompare,
-            byte_len, len};
+            len};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line.
@@ -210,10 +209,11 @@ impl ZeroCopyGapBuffer {
                 miette!("Line {} disappeared after extension", line_index.as_usize())
             })?;
             if required_capacity > line_info.capacity {
-                // Calculate how many pages we need.
-                let pages_needed = (required_capacity.as_usize()
-                    - line_info.capacity.as_usize())
-                .div_ceil(LINE_PAGE_SIZE);
+                // Calculate how many pages we need using type-safe remaining capacity.
+                let additional_capacity_needed = required_capacity - line_info.capacity;
+                let pages_needed = additional_capacity_needed
+                    .as_usize()
+                    .div_ceil(LINE_PAGE_SIZE);
                 for _ in 0..pages_needed {
                     self.extend_line_capacity(line_index);
                 }
@@ -232,7 +232,7 @@ impl ZeroCopyGapBuffer {
             (line_info.buffer_start_byte_index + ByteOffset::from(byte_index)).as_usize();
 
         // Shift existing content to make room.
-        if byte_index.overflows(byte_len(line_content_len)) {
+        if byte_index.overflows(line_content_len) {
             // Inserting at end, just move the newline.
             self.buffer[insert_pos + text_len.as_usize()] = LINE_FEED_BYTE;
         } else {

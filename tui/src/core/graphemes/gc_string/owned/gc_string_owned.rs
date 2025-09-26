@@ -5,7 +5,7 @@
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use crate::{ChUnit, ColIndex, ColWidth, CowInlineString, GraphemeString,
-            GraphemeStringMut, InlineString, Seg, SegContent, SegIndex, SegWidth,
+            GraphemeStringMut, InlineString, Seg, SegContent, SegIndex, SegLength,
             SegmentArray,
             graphemes::unicode_segment::{build_segments_for_str,
                                          calculate_display_width}};
@@ -110,12 +110,12 @@ impl GCStringOwned {
 
     /// Get the number of grapheme clusters.
     #[must_use]
-    pub fn len(&self) -> SegWidth { SegWidth::from(self.segments.len()) }
+    pub fn len(&self) -> SegLength { self.segments.len().into() }
 
     /// Get the number of grapheme cluster segments.
     /// This is the preferred method for semantic clarity.
     #[must_use]
-    pub fn segment_count(&self) -> SegWidth { SegWidth::from(self.segments.len()) }
+    pub fn segment_count(&self) -> SegLength { self.segments.len().into() }
 
     /// Check if the string is empty.
     #[must_use]
@@ -197,7 +197,7 @@ impl GraphemeString for GCStringOwned {
 
     fn display_width(&self) -> ColWidth { self.display_width }
 
-    fn segment_count(&self) -> SegWidth { self.segment_count() }
+    fn segment_count(&self) -> SegLength { self.segment_count() }
 
     fn byte_size(&self) -> ChUnit { self.bytes_size }
 

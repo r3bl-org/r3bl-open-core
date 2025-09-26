@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 
-use super::seg_width::{SegWidth, seg_width};
+use super::seg_length::{SegLength, seg_length};
 use crate::{ChUnit, Index, IndexMarker, UnitCompare, ch};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
@@ -16,12 +16,12 @@ mod seg_index_impl_block {
     use super::*;
 
     impl SegIndex {
-        /// Converts the segment index to a width, by adding 1.
+        /// Converts the segment index to a length, by adding 1.
         #[must_use]
-        pub fn convert_to_seg_width(&self) -> SegWidth {
+        pub fn convert_to_seg_length(&self) -> SegLength {
             let index = self.0;
-            let width = index + 1;
-            seg_width(width)
+            let length = index + 1;
+            seg_length(length)
         }
 
         #[must_use]
@@ -58,8 +58,8 @@ mod conversions {
         fn from(it: i32) -> Self { Self(ch(it)) }
     }
 
-    impl From<SegWidth> for SegIndex {
-        fn from(other: SegWidth) -> Self { other.convert_to_seg_index() }
+    impl From<SegLength> for SegIndex {
+        fn from(other: SegLength) -> Self { other.convert_to_seg_index() }
     }
 
     impl From<Index> for SegIndex {
@@ -71,16 +71,30 @@ mod conversions {
     }
 }
 
-// Implement bounds checking traits for SegIndex
+// Implement arithmetic operations for SegIndex.
+mod arithmetic {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl Add for SegIndex {
+        type Output = SegIndex;
+
+        fn add(self, rhs: SegIndex) -> Self::Output {
+            SegIndex::from(self.as_usize() + rhs.as_usize())
+        }
+    }
+}
+
+// Implement bounds checking traits for SegIndex.
 impl UnitCompare for SegIndex {
     fn as_usize(&self) -> usize { self.as_usize() }
     fn as_u16(&self) -> u16 { self.0.value }
 }
 
 impl IndexMarker for SegIndex {
-    type LengthType = SegWidth;
+    type LengthType = SegLength;
 
-    fn convert_to_length(&self) -> Self::LengthType { self.convert_to_seg_width() }
+    fn convert_to_length(&self) -> Self::LengthType { self.convert_to_seg_length() }
 }
 
 #[cfg(test)]
@@ -90,9 +104,9 @@ mod tests {
     #[test]
     fn seg_index_conversions() {
         let index = seg_index(0);
-        let width = index.convert_to_seg_width();
-        assert_eq!(width, seg_width(1));
-        let index = width.convert_to_seg_index();
+        let length = index.convert_to_seg_length();
+        assert_eq!(length, seg_length(1));
+        let index = length.convert_to_seg_index();
         assert_eq!(index, seg_index(0));
     }
 
@@ -100,5 +114,38 @@ mod tests {
     fn seg_index_as_usize() {
         let index = seg_index(0);
         assert_eq!(index.as_usize(), 0);
+    }
+
+    #[test]
+    fn seg_index_addition() {
+        let index1 = seg_index(5);
+        let index2 = seg_index(3);
+        let result = index1 + index2;
+        assert_eq!(result.as_usize(), 8);
+
+        // Test with zero
+        let zero = seg_index(0);
+        let index = seg_index(10);
+        assert_eq!((zero + index).as_usize(), 10);
+        assert_eq!((index + zero).as_usize(), 10);
+    }
+
+    #[test]
+    fn seg_index_range_boundary_compatibility() {
+        use std::ops::Range;
+
+        use crate::RangeBoundary;
+
+        let start = seg_index(2);
+        let end = seg_index(5);
+        let range: Range<SegIndex> = start..end;
+        let length = seg_length(10);
+
+        // Test that RangeBoundary works with SegIndex now that Add is implemented
+        assert!(range.is_valid(length));
+
+        // Test invalid range
+        let invalid_range: Range<SegIndex> = seg_index(8)..seg_index(12);
+        assert!(!invalid_range.is_valid(length));
     }
 }

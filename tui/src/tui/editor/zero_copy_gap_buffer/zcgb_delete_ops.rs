@@ -38,10 +38,8 @@
 //!
 //! # Operations
 //!
-//! - [`delete_grapheme_at()`]: Delete single
-//!   grapheme cluster
-//! - [`delete_range()`]: Delete range of grapheme
-//!   clusters
+//! - [`delete_grapheme_at()`]: Delete single grapheme cluster
+//! - [`delete_range()`]: Delete range of grapheme clusters
 //! - Internal helpers for byte-level manipulation and cleanup
 //!
 //! # Null-Padding Invariant
@@ -70,10 +68,10 @@
 //!
 //! ## Grapheme-Level Safety
 //!
-//! - **[`delete_grapheme_at()`]**: Only deletes
-//!   complete grapheme clusters, never splits UTF-8 sequences
-//! - **[`delete_range()`]**: Operates on grapheme
-//!   boundaries, ensuring no mid-character cuts
+//! - **[`delete_grapheme_at()`]**: Only deletes complete grapheme clusters, never splits
+//!   UTF-8 sequences
+//! - **[`delete_range()`]**: Operates on grapheme boundaries, ensuring no mid-character
+//!   cuts
 //! - **Segment-based indexing**: Uses pre-computed grapheme boundaries from segment
 //!   metadata
 //!
@@ -105,7 +103,8 @@ use std::ops::Range;
 use miette::{Result, miette};
 
 use super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, ByteOffset, Index, IndexMarker, LINE_FEED_BYTE, LengthMarker, NULL_BYTE, RangeBoundary, RowIndex, SegIndex, byte_index, len, seg_width};
+use crate::{ByteIndex, ByteOffset, IndexMarker, LINE_FEED_BYTE, LengthMarker, NULL_BYTE,
+            RangeBoundary, RowIndex, SegIndex, byte_index, len, seg_length};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -139,7 +138,7 @@ impl ZeroCopyGapBuffer {
         })?;
 
         // Validate segment index using sophisticated bounds checking.
-        let segments_count = seg_width(line_info.segments.len());
+        let segments_count = seg_length(line_info.segments.len());
         if seg_index.overflows(segments_count) {
             return Err(miette!(
                 "Segment index {} out of bounds for line with {} segments",
@@ -195,18 +194,18 @@ impl ZeroCopyGapBuffer {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Validate range using sophisticated range validation.
-        let delete_range: Range<Index> = start_seg.into()..end_seg.into();
-        let segments_count = len(line_info.segments.len());
+        let delete_range: Range<SegIndex> = start_seg..end_seg;
+        let segments_count = seg_length(line_info.segments.len());
 
         if !delete_range.is_valid(segments_count) {
             if start_seg >= end_seg {
                 return Ok(()); // Empty range - nothing to delete
             }
             return Err(miette!(
-                "Invalid range: start {} must be less than end {}",
+                "Invalid range: start {} must be less than end {} and within segment count {}",
                 start_seg.as_usize(),
-                end_seg.as_usize()
+                end_seg.as_usize(),
+                segments_count.as_usize()
             ));
         }
 
@@ -273,14 +272,15 @@ impl ZeroCopyGapBuffer {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Validate range bounds manually (simpler than complex trait bounds).
-        if start_index.as_usize() > end_index.as_usize() {
+        // Validate range using type-safe bounds checking.
+        if start_index >= end_index {
             // Range is empty or inverted - nothing to delete.
             return Ok(());
         }
 
-        // Check if start position is within content bounds.
-        if start_index.as_usize() >= line_info.content_len.as_usize() {
+        // Check if start position is within content bounds using type-safe overflow
+        // check.
+        if start_index.overflows(line_info.content_len) {
             return Err(miette!(
                 "Start position {} exceeds content length {}",
                 start_index.as_usize(),
@@ -288,8 +288,9 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Check if end position is within valid range (can equal content length for
-        // exclusive ranges).
+        // Check if end position is within valid range.
+        // For exclusive ranges, end can equal content length (e.g., 0..5 for content
+        // length 5).
         if end_index.as_usize() > line_info.content_len.as_usize() {
             return Err(miette!(
                 "End position {} exceeds content length {}",
@@ -297,9 +298,6 @@ impl ZeroCopyGapBuffer {
                 line_info.content_len.as_usize()
             ));
         }
-
-        // Convert to indices for remaining logic.
-        let end_idx: Index = end_index.into();
 
         // Extract values needed for buffer operations before mutable operations.
         let num_deleted_chars = len((end_index - start_index).as_usize());
@@ -309,11 +307,11 @@ impl ZeroCopyGapBuffer {
         let buffer_pos = line_info.buffer_start_byte_index;
 
         // Shift content left to overwrite deleted portion.
-        if !end_idx.overflows(current_content_len) {
+        if !end_index.overflows(current_content_len) {
             // Content remains after deletion - need to shift.
             let move_from = (buffer_pos + ByteOffset::from(end_index)).as_usize();
             let move_to = delete_start.as_usize();
-            let remaining_content = current_content_len.remaining_from(end_idx);
+            let remaining_content = current_content_len.remaining_from(end_index);
             let move_len = remaining_content.as_usize();
 
             // Move content (including the newline).
@@ -370,7 +368,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello World")
             .unwrap();
 
-        // Delete the space (index 5)
+        // Delete the space (index 5).
         buffer.delete_grapheme_at(row(0), seg_index(5)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
@@ -390,7 +388,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello World!")
             .unwrap();
 
-        // Delete "World" (indices 6-11)
+        // Delete "World" (indices 6-11).
         buffer
             .delete_range(row(0), seg_index(6), seg_index(11))
             .unwrap();
@@ -444,7 +442,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "Hello 😀 World")
             .unwrap();
 
-        // Delete the emoji (index 6)
+        // Delete the emoji (index 6).
         buffer.delete_grapheme_at(row(0), seg_index(6)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
@@ -464,7 +462,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "👨‍👩‍👧‍👦 Family")
             .unwrap();
 
-        // Delete the family emoji (1 grapheme cluster)
+        // Delete the family emoji (1 grapheme cluster).
         buffer.delete_grapheme_at(row(0), seg_index(0)).unwrap();
 
         let content = buffer.get_line_content(row(0)).unwrap();
@@ -514,11 +512,11 @@ mod tests {
         let result = buffer.delete_grapheme_at(row(5), seg_index(0));
         assert!(result.is_err());
 
-        // Try empty range (start == end) - should succeed as no-op
+        // Try empty range (start == end) - should succeed as no-op.
         let result = buffer.delete_range(row(0), seg_index(3), seg_index(3));
         assert!(result.is_ok()); // Empty range is valid and does nothing
 
-        // Try truly invalid range (start > end)
+        // Try truly invalid range (start > end).
         let result = buffer.delete_range(row(0), seg_index(4), seg_index(3));
         assert!(result.is_ok()); // This is also treated as empty range and does nothing
     }
@@ -538,7 +536,7 @@ mod tests {
         let buffer_start = line_info.buffer_start_byte_index.as_usize();
         let content_len = line_info.content_len.as_usize();
 
-        // Content should be "Helo\n"
+        // Content should be "Helo\n".
         assert_eq!(buffer.buffer[buffer_start + content_len], LINE_FEED_BYTE);
 
         // Everything after newline should be null.
@@ -559,7 +557,7 @@ mod tests {
             .insert_text_at_grapheme(row(0), seg_index(0), "a😀b🌍c")
             .unwrap();
 
-        // Delete range including emojis (indices 1-4, which is "😀b🌍")
+        // Delete range including emojis (indices 1-4, which is "😀b🌍").
         buffer
             .delete_range(row(0), seg_index(1), seg_index(4))
             .unwrap();
@@ -590,17 +588,17 @@ mod benches {
         let test_text = "Hello World";
 
         b.iter(|| {
-            // Setup: insert text
+            // Setup: insert text.
             buffer
                 .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
-            // Benchmark: delete a character
+            // Benchmark: delete a character.
             buffer
                 .delete_grapheme_at(row(0), black_box(seg_index(5)))
                 .unwrap();
 
-            // Cleanup: clear rest of content
+            // Cleanup: clear rest of content.
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
             buffer
                 .delete_range(row(0), seg_index(0), seg_index(count.as_usize()))
@@ -620,7 +618,7 @@ mod benches {
                 .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
-            // Benchmark: delete "Beautiful " (indices 6-16)
+            // Benchmark: delete "Beautiful " (indices 6-16).
             buffer
                 .delete_range(row(0), black_box(seg_index(6)), black_box(seg_index(16)))
                 .unwrap();
@@ -645,7 +643,7 @@ mod benches {
                 .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
-            // Benchmark: delete the emoji
+            // Benchmark: delete the emoji.
             buffer
                 .delete_grapheme_at(row(0), black_box(seg_index(6)))
                 .unwrap();
@@ -670,7 +668,7 @@ mod benches {
                 .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
-            // Benchmark: delete first 5 chars
+            // Benchmark: delete first 5 chars.
             buffer
                 .delete_range(row(0), black_box(seg_index(0)), black_box(seg_index(5)))
                 .unwrap();
@@ -696,7 +694,7 @@ mod benches {
                 .unwrap();
             let count = buffer.get_line_info(0).unwrap().grapheme_count;
 
-            // Benchmark: delete all content
+            // Benchmark: delete all content.
             buffer
                 .delete_range(
                     row(0),
@@ -719,7 +717,7 @@ mod benches {
                 .insert_text_at_grapheme(row(0), seg_index(0), test_text)
                 .unwrap();
 
-            // Benchmark: delete the complex family emoji
+            // Benchmark: delete the complex family emoji.
             buffer
                 .delete_grapheme_at(row(0), black_box(seg_index(8)))
                 .unwrap();

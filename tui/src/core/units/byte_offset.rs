@@ -3,7 +3,7 @@
 use std::ops::{Add, Deref, DerefMut, Sub};
 
 use super::ByteIndex;
-use crate::{ChUnit, Index, RowIndex};
+use crate::{ChUnit, Index, Length, RowIndex};
 
 /// Represents a byte offset within a line or buffer segment.
 ///
@@ -95,12 +95,16 @@ impl From<ByteOffset> for Index {
     fn from(it: ByteOffset) -> Self { Self::from(it.0) }
 }
 
+impl From<ByteOffset> for RowIndex {
+    fn from(it: ByteOffset) -> Self { RowIndex::from(Index::from(it)) }
+}
+
 impl From<ByteIndex> for ByteOffset {
     fn from(it: ByteIndex) -> Self { Self(it.as_usize()) }
 }
 
-impl From<ByteOffset> for RowIndex {
-    fn from(it: ByteOffset) -> Self { RowIndex::from(Index::from(it)) }
+impl From<Length> for ByteOffset {
+    fn from(it: Length) -> Self { Self(it.as_usize()) }
 }
 
 // Arithmetic operations between ByteIndex and ByteOffset.

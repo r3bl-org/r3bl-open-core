@@ -14,7 +14,8 @@
 
 use super::super::ZeroCopyGapBuffer;
 use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GapBufferLine, IndexMarker,
-            Length, RowIndex, SegIndex, UnitCompare, byte_index, row, seg_index, width};
+            Length, RowIndex, SegIndex, UnitCompare, byte_index, byte_offset, row,
+            seg_index, seg_length, width};
 
 impl ZeroCopyGapBuffer {
     // Line access methods.
@@ -181,11 +182,11 @@ impl ZeroCopyGapBuffer {
         if let Some(seg_idx) = self.col_to_seg_index(row_index, col_index) {
             // Get the line info to check segment count.
             if let Some(line_info) = self.get_line_info(row_index) {
-                let max_segments = crate::seg_width(line_info.segments.len());
-                // Use type-safe arithmetic and clamping operations.
+                let max_segments = seg_length(line_info.segments.len());
                 let requested_end = seg_idx.as_usize() + segment_count.as_usize();
-                let actual_end = if requested_end > max_segments.as_usize() {
-                    max_segments.as_usize()
+                let max_segments_usize = max_segments.as_usize();
+                let actual_end = if requested_end > max_segments_usize {
+                    max_segments_usize
                 } else {
                     requested_end
                 };
@@ -285,22 +286,20 @@ impl ZeroCopyGapBuffer {
     ) -> Option<RowIndex> {
         let byte_index: ByteIndex = arg_byte_index.into();
         // Early bounds check for performance optimization.
-        if byte_index.overflows(self.buffer.len()) {
+        let buffer_len = crate::len(self.buffer.len());
+        if byte_index.overflows(buffer_len) {
             return None;
         }
 
         // Linear search through lines to find which one contains the byte.
         // This could be optimized with binary search if needed.
-        let target_byte = byte_index.as_usize();
-
-        // Use type-safe line count check
         let total_lines = self.line_count();
         for i in 0..total_lines.as_usize() {
             if let Some(line_info) = self.get_line_info(i) {
-                let line_start = line_info.buffer_start_byte_index.as_usize();
-                let line_end = line_start + line_info.capacity.as_usize();
+                let line_start = line_info.buffer_start_byte_index;
+                let line_end = line_start + byte_offset(line_info.capacity);
 
-                if target_byte >= line_start && target_byte < line_end {
+                if byte_index >= line_start && byte_index < line_end {
                     return Some(row(i));
                 }
             }

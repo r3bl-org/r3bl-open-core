@@ -37,10 +37,8 @@
 //! ## When Segment Rebuilding Occurs
 //!
 //! Segment rebuilding is called **after content modifications**:
-//! - After [`insert_text_at_grapheme()`] -
-//!   content already validated at insertion
-//! - After [`delete_grapheme_at()`] - removing
-//!   valid UTF-8 can't create invalid sequences
+//! - After [`insert_text_at_grapheme()`] - content already validated at insertion
+//! - After [`delete_grapheme_at()`] - removing valid UTF-8 can't create invalid sequences
 //! - After bulk operations - operating on previously validated content
 //!
 //! ## Why `unsafe { `[`from_utf8_unchecked()`]` }` is Safe Here
@@ -119,12 +117,9 @@ impl ZeroCopyGapBuffer {
     /// - **After in-line operations** - Like find/replace within a single line
     ///
     /// Currently used by:
-    /// - [`insert_text_at_grapheme()`] -
-    ///   after inserting text
-    /// - [`delete_grapheme_at()`] - after deleting
-    ///   text
-    /// - [`delete_range()`] - after deleting multiple
-    ///   graphemes
+    /// - [`insert_text_at_grapheme()`] - after inserting text
+    /// - [`delete_grapheme_at()`] - after deleting text
+    /// - [`delete_range()`] - after deleting multiple graphemes
     ///
     /// # Arguments
     ///

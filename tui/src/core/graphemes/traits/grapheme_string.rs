@@ -3,7 +3,7 @@
 use std::fmt::Display;
 
 use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, Seg, SegContent, SegIndex,
-            SegWidth};
+            SegLength};
 
 /// Single-line grapheme-aware string trait providing core operations
 /// for working with strings that are aware of grapheme cluster boundaries.
@@ -45,7 +45,7 @@ pub trait GraphemeString {
     fn display_width(&self) -> ColWidth;
 
     /// Get the number of grapheme cluster segments
-    fn segment_count(&self) -> SegWidth;
+    fn segment_count(&self) -> SegLength;
 
     /// Get the size in bytes
     fn byte_size(&self) -> ChUnit;

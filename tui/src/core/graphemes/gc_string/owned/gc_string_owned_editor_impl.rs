@@ -22,7 +22,7 @@
 
 use super::{GCStringOwned, SegStringOwned};
 use crate::{ColIndex, ColWidth, InlineString, InlineVecStr, Seg, ch, join, seg_index,
-            seg_width, usize, width};
+            seg_length, usize, width};
 
 /// Methods to make it easy to work with getting owned string (from slices) at a given
 /// display col index.
@@ -350,7 +350,7 @@ pub mod mutate {
             }
 
             // There is only one segment present.
-            if self.len() == seg_width(1) {
+            if self.len() == seg_length(1) {
                 return Some("".into());
             }
 

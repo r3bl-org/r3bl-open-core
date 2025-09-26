@@ -7,7 +7,7 @@
 
 use super::LineMetadata;
 use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, GraphemeString, Length,
-            Seg, SegContent, SegIndex, SegStringOwned, SegWidth, UnitCompare,
+            Seg, SegContent, SegIndex, SegLength, SegStringOwned, UnitCompare,
             byte_index, ch, width};
 
 /// A line from the gap buffer containing both content and metadata.
@@ -58,8 +58,8 @@ impl<'a> GapBufferLine<'a> {
     /// Get the number of grapheme cluster segments.
     /// This is the preferred method for semantic clarity.
     #[must_use]
-    pub fn segment_count(&self) -> SegWidth {
-        SegWidth::from(self.info.grapheme_count.as_usize())
+    pub fn segment_count(&self) -> SegLength {
+        SegLength::from(self.info.grapheme_count.as_usize())
     }
 
     /// Get the segments (grapheme cluster information) for the line.
@@ -156,7 +156,7 @@ impl GraphemeString for GapBufferLine<'_> {
 
     fn display_width(&self) -> ColWidth { self.display_width() }
 
-    fn segment_count(&self) -> SegWidth { self.segment_count() }
+    fn segment_count(&self) -> SegLength { self.segment_count() }
 
     fn byte_size(&self) -> ChUnit { ch(self.content().len()) }
 

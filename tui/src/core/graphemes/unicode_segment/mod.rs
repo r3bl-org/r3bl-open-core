@@ -11,10 +11,10 @@
 
 pub mod seg;
 pub mod seg_index;
-pub mod seg_width;
+pub mod seg_length;
 pub mod segment_builder;
 
 pub use seg::*;
 pub use seg_index::*;
-pub use seg_width::*;
+pub use seg_length::*;
 pub use segment_builder::*;

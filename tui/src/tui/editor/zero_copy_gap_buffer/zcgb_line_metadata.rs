@@ -100,15 +100,13 @@ impl LineMetadata {
         if seg_index.is_zero() {
             // Beginning of line.
             byte_index(0)
+        } else if seg_index.overflows(self.segments.len()) {
+            // End of line - return content length as byte position.
+            byte_index(self.content_len.as_usize())
         } else {
-            if seg_index.overflows(self.segments.len()) {
-                // End of line - return content length as byte position.
-                byte_index(self.content_len.as_usize())
-            } else {
-                // Middle of line - return the start byte index of the target segment.
-                let segment = &self.segments[seg_index.as_usize()];
-                segment.start_byte_index // Already a ByteIndex!
-            }
+            // Middle of line - return the start byte index of the target segment.
+            let segment = &self.segments[seg_index.as_usize()];
+            segment.start_byte_index // Already a ByteIndex!
         }
     }
 
@@ -165,8 +163,8 @@ impl LineMetadata {
         // We could optimize this with binary search, but linear is fine for now
         // since lines typically have few segments.
         for segment in &self.segments {
-            if byte_index.as_usize() >= segment.start_byte_index.as_usize()
-                && byte_index.as_usize() < segment.end_byte_index.as_usize()
+            if byte_index >= segment.start_byte_index
+                && byte_index < segment.end_byte_index
             {
                 return segment.seg_index;
             }
@@ -175,7 +173,7 @@ impl LineMetadata {
         // If we get here, byte_index is between segments (shouldn't happen with valid
         // UTF-8) Return the segment after the position.
         for segment in &self.segments {
-            if byte_index.as_usize() < segment.start_byte_index.as_usize() {
+            if byte_index < segment.start_byte_index {
                 return segment.seg_index;
             }
         }
@@ -243,7 +241,7 @@ impl LineMetadata {
             }
         }
 
-        // Column index is beyond all segments (end of line) - valid position
+        // Column index is beyond all segments (end of line) - valid position.
         None
     }
 
@@ -273,13 +271,10 @@ impl LineMetadata {
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
         // Find the segment at the given column index.
-        let target_col = col_index.as_usize();
-
         for segment in &self.segments {
-            let seg_start_col = segment.start_display_col_index.as_usize();
-            let seg_width = segment.display_width.as_usize();
+            let seg_end_col = segment.start_display_col_index + segment.display_width;
 
-            if target_col >= seg_start_col && target_col < seg_start_col + seg_width {
+            if col_index >= segment.start_display_col_index && col_index < seg_end_col {
                 // Extract the segment's string content.
                 let start_byte = segment.start_byte_index.as_usize();
                 let end_byte = segment.end_byte_index.as_usize();
@@ -305,12 +300,8 @@ impl LineMetadata {
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
         // Find the segment after the given column index.
-        let target_col = col_index.as_usize();
-
         for segment in &self.segments {
-            let seg_start_col = segment.start_display_col_index.as_usize();
-
-            if seg_start_col > target_col {
+            if segment.start_display_col_index > col_index {
                 // This is the first segment to the right.
                 let start_byte = segment.start_byte_index.as_usize();
                 let end_byte = segment.end_byte_index.as_usize();
@@ -336,15 +327,12 @@ impl LineMetadata {
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
         // Find the segment before the given column index.
-        let target_col = col_index.as_usize();
         let mut last_valid_segment: Option<&Seg> = None;
 
         for segment in &self.segments {
-            let seg_start_col = segment.start_display_col_index.as_usize();
-            let seg_width = segment.display_width.as_usize();
-            let seg_end_col = seg_start_col + seg_width;
+            let seg_end_col = segment.start_display_col_index + segment.display_width;
 
-            if seg_end_col <= target_col {
+            if seg_end_col <= col_index {
                 last_valid_segment = Some(segment);
             } else {
                 break;
@@ -516,7 +504,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // Test end position (past last segment)
+        // Test end position (past last segment).
         assert_eq!(line_info.get_byte_index(seg_index(5)).as_usize(), 5);
         assert_eq!(line_info.get_byte_index(seg_index(10)).as_usize(), 5);
     }
@@ -583,7 +571,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
 
-        // Test end position (at or past content length)
+        // Test end position (at or past content length).
         assert_eq!(line_info.get_seg_index(byte_index(5)), seg_index(5));
         assert_eq!(line_info.get_seg_index(byte_index(10)), seg_index(5));
     }
@@ -670,39 +658,39 @@ mod tests {
         let content = line.content();
         let line_info = line.info();
 
-        // Test: Clip from start
+        // Test: Clip from start.
         let result = line_info.clip_to_range(content, col(0), width(2));
         assert_eq!(result, "Hi");
 
-        // Test: Clip emoji (starts at col 2, has width 2)
+        // Test: Clip emoji (starts at col 2, has width 2).
         let result = line_info.clip_to_range(content, col(2), width(2));
         assert_eq!(result, "📦");
 
-        // Test: Clip across emoji boundary
+        // Test: Clip across emoji boundary.
         let result = line_info.clip_to_range(content, col(2), width(4));
         assert_eq!(result, "📦Xe");
 
-        // Test: Clip multi-width emoji 🙏🏽 (starts at col 9, has width 2)
+        // Test: Clip multi-width emoji 🙏🏽 (starts at col 9, has width 2).
         let result = line_info.clip_to_range(content, col(9), width(2));
         assert_eq!(result, "🙏🏽");
 
-        // Test: Clip including multi-width emoji
+        // Test: Clip including multi-width emoji.
         let result = line_info.clip_to_range(content, col(6), width(5));
         assert_eq!(result, "lLo🙏🏽");
 
-        // Test: Clip from middle to end
+        // Test: Clip from middle to end.
         let result = line_info.clip_to_range(content, col(11), width(10));
         assert_eq!(result, "Bye");
 
-        // Test: Empty clip (beyond content)
+        // Test: Empty clip (beyond content).
         let result = line_info.clip_to_range(content, col(20), width(5));
         assert_eq!(result, "");
 
-        // Test: Zero width
+        // Test: Zero width.
         let result = line_info.clip_to_range(content, col(5), width(0));
         assert_eq!(result, "");
 
-        // Test: Empty line
+        // Test: Empty line.
         let mut empty_buffer = ZeroCopyGapBuffer::new();
         empty_buffer.add_line();
         let empty_line = empty_buffer.get_line(row(0)).unwrap();
