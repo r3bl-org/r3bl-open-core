@@ -167,6 +167,17 @@ impl ZeroCopyGapBuffer {
     /// Returns an error if:
     /// - The line index is out of bounds
     /// - The byte position exceeds the content length
+    ///
+    /// # Implementation Note: Intentional Use of Raw `usize`
+    ///
+    /// This method uses `.as_usize()` extensively for buffer operations because:
+    /// - **Buffer indexing**: Rust's `Index` trait requires `usize` for array/vector element access
+    /// - **Slice operations**: Range slicing (`buffer[start..end]`) requires `Range<usize>`
+    /// - **Range iteration**: For loops over ranges require the `Step` trait (unavailable for custom types)
+    ///
+    /// Buffer manipulation involves direct byte-level operations that fundamentally operate on
+    /// raw memory indices. Using type-safe wrappers would require immediate unwrapping at every
+    /// operation, providing no additional safety while significantly reducing code readability.
     pub fn insert_text_at_byte_pos(
         &mut self,
         arg_line_index: impl Into<RowIndex>,
@@ -186,18 +197,18 @@ impl ZeroCopyGapBuffer {
         // Validate byte position using cursor position bounds checking.
         // For insertion, we allow inserting at position equal to content length (at the
         // end of the line).
-        if byte_index.check_cursor_position_bounds(line_info.content_len)
+        if byte_index.check_cursor_position_bounds(line_info.content_byte_len)
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(
                 "Byte position {} exceeds content length {}",
                 byte_index.as_usize(),
-                line_info.content_len.as_usize()
+                line_info.content_byte_len.as_usize()
             ));
         }
 
         // Check if we need to extend the line capacity.
-        let current_content_len = line_info.content_len;
+        let current_content_len = line_info.content_byte_len;
         let new_content_len = current_content_len + text_len;
         let required_capacity = new_content_len + len(1); // +1 for newline
         if required_capacity > line_info.capacity {
@@ -227,9 +238,9 @@ impl ZeroCopyGapBuffer {
                 line_index.as_usize()
             )
         })?;
-        let line_content_len = line_info.content_len; // Keep for type-safe operations
+        let line_content_len = line_info.content_byte_len; // Keep for type-safe operations
         let insert_pos =
-            (line_info.buffer_start_byte_index + ByteOffset::from(byte_index)).as_usize();
+            (line_info.buffer_start + ByteOffset::from(byte_index)).as_usize();
 
         // Shift existing content to make room.
         if byte_index.overflows(line_content_len) {
@@ -264,7 +275,7 @@ impl ZeroCopyGapBuffer {
             )
         })?;
         let new_content_len = current_content_len + text_len;
-        line_info_mut.content_len = new_content_len;
+        line_info_mut.content_byte_len = new_content_len;
 
         // Ensure remainder of line capacity is null-padded.
         let line_end_length = new_content_len + len(1); // +1 for newline
@@ -272,7 +283,7 @@ impl ZeroCopyGapBuffer {
 
         // null-pad if there's remaining capacity.
         if !remaining_capacity.is_zero() {
-            let buffer_start = line_info_mut.buffer_start_byte_index.as_usize();
+            let buffer_start = line_info_mut.buffer_start.as_usize();
             let line_end = buffer_start + line_end_length.as_usize();
             let capacity_end = buffer_start + line_info_mut.capacity.as_usize();
 
@@ -340,7 +351,7 @@ mod tests {
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
         assert_eq!(line_info.grapheme_count, len(5));
-        assert_eq!(line_info.content_len, len(5));
+        assert_eq!(line_info.content_byte_len, len(5));
 
         Ok(())
     }
@@ -523,8 +534,8 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_start_byte_index;
-        let content_len = line_info.content_len.as_usize();
+        let buffer_start = *line_info.buffer_start;
+        let content_len = line_info.content_byte_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
         // Verify content and newline.
@@ -561,8 +572,8 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_start_byte_index;
-        let content_len = line_info.content_len.as_usize();
+        let buffer_start = *line_info.buffer_start;
+        let content_len = line_info.content_byte_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
         // Verify final content.
@@ -597,8 +608,8 @@ mod tests {
         let line_info = buffer
             .get_line_info(0)
             .ok_or_else(|| miette!("Failed to get line info"))?;
-        let buffer_start = *line_info.buffer_start_byte_index;
-        let content_len = line_info.content_len.as_usize();
+        let buffer_start = *line_info.buffer_start;
+        let content_len = line_info.content_byte_len.as_usize();
         let capacity = line_info.capacity.as_usize();
 
         // Verify the line was extended.

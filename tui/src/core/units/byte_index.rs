@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut, Range};
 
 use crate::{ByteLength, ByteOffset, ChUnit, Index,
             bounds_check::length_and_index_markers::{IndexMarker, UnitCompare}};
@@ -89,6 +89,47 @@ impl IndexMarker for ByteIndex {
     ///                convert_to_length() = 6 (1-based)
     /// ```
     fn convert_to_length(&self) -> Self::LengthType { ByteLength::from(*self) }
+}
+
+/// Implement Add trait to enable `RangeBoundary` usage.
+/// This allows `ByteIndex` to be used with `Range<ByteIndex>` for type-safe bounds
+/// checking.
+impl Add for ByteIndex {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output { Self(self.0 + other.0) }
+}
+
+/// Extension trait to enable conversion from `Range<ByteIndex>` to `Range<usize>` for
+/// slice indexing.
+///
+/// This works around Rust's orphan rule which prevents implementing
+/// `From<Range<ByteIndex>> for Range<usize>`. The method name mimics `.into()` behavior
+/// while remaining legally implementable.
+///
+/// # Example
+/// ```
+/// use r3bl_tui::{ByteIndex, byte_index};
+/// use r3bl_tui::ByteIndexRangeExt;
+/// use std::ops::Range;
+///
+/// let byte_range: Range<ByteIndex> = byte_index(5)..byte_index(10);
+/// let usize_range: Range<usize> = byte_range.to_usize_range();
+/// assert_eq!(usize_range, 5..10);
+/// ```
+pub trait ByteIndexRangeExt {
+    /// Convert a `Range<ByteIndex>` to `Range<usize>` for slice indexing.
+    ///
+    /// This method provides the functionality that would ideally be available via
+    /// `.into()`, but Rust's orphan rule prevents implementing
+    /// `From<Range<ByteIndex>> for Range<usize>` because the target type's head type
+    /// `Range` is foreign (from `std`), even though `ByteIndex` in the source type is
+    /// from our crate.
+    fn to_usize_range(self) -> Range<usize>;
+}
+
+impl ByteIndexRangeExt for Range<ByteIndex> {
+    fn to_usize_range(self) -> Range<usize> { self.start.as_usize()..self.end.as_usize() }
 }
 
 #[cfg(test)]
@@ -286,5 +327,48 @@ mod tests {
 
         let index_from_ch = byte_index(ch(10));
         assert_eq!(index_from_ch, ByteIndex::from(ch(10)));
+    }
+
+    // Add trait tests.
+    #[test]
+    fn test_byte_index_addition() {
+        let index1 = byte_index(10);
+        let index2 = byte_index(20);
+        let result = index1 + index2;
+        assert_eq!(result, byte_index(30));
+    }
+
+    #[test]
+    fn test_byte_index_range_boundary_compatibility() {
+        use std::ops::Range;
+
+        use crate::bounds_check::RangeBoundary;
+
+        let start = byte_index(5);
+        let end = byte_index(15);
+        let length = crate::byte_len(20);
+
+        let range: Range<ByteIndex> = start..end;
+        assert!(range.is_valid(length));
+
+        let invalid_range: Range<ByteIndex> = byte_index(25)..byte_index(30);
+        assert!(!invalid_range.is_valid(length));
+    }
+
+    #[test]
+    fn test_range_conversion_to_usize() {
+        let byte_range: Range<ByteIndex> = byte_index(5)..byte_index(10);
+        let usize_range: Range<usize> = byte_range.to_usize_range();
+        assert_eq!(usize_range, 5..10);
+
+        // Test with zero start
+        let zero_start_range: Range<ByteIndex> = byte_index(0)..byte_index(7);
+        let zero_usize_range: Range<usize> = zero_start_range.to_usize_range();
+        assert_eq!(zero_usize_range, 0..7);
+
+        // Test empty range
+        let empty_range: Range<ByteIndex> = byte_index(3)..byte_index(3);
+        let empty_usize_range: Range<usize> = empty_range.to_usize_range();
+        assert_eq!(empty_usize_range, 3..3);
     }
 }

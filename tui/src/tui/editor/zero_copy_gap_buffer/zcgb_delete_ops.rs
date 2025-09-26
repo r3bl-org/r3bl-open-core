@@ -138,17 +138,17 @@ impl ZeroCopyGapBuffer {
         })?;
 
         // Validate segment index using sophisticated bounds checking.
-        let segments_count = seg_length(line_info.segments.len());
+        let segments_count = seg_length(line_info.grapheme_segments.len());
         if seg_index.overflows(segments_count) {
             return Err(miette!(
                 "Segment index {} out of bounds for line with {} segments",
                 seg_index.as_usize(),
-                line_info.segments.len()
+                line_info.grapheme_segments.len()
             ));
         }
 
         // Get the segment to delete.
-        let segment = &line_info.segments[seg_index.as_usize()];
+        let segment = &line_info.grapheme_segments[seg_index.as_usize()];
         let delete_start = segment.start_byte_index;
         let delete_end = segment.end_byte_index;
 
@@ -195,7 +195,7 @@ impl ZeroCopyGapBuffer {
         })?;
 
         let delete_range: Range<SegIndex> = start_seg..end_seg;
-        let segments_count = seg_length(line_info.segments.len());
+        let segments_count = seg_length(line_info.grapheme_segments.len());
 
         if !delete_range.is_valid(segments_count) {
             if start_seg >= end_seg {
@@ -210,18 +210,18 @@ impl ZeroCopyGapBuffer {
         }
 
         // Get byte range to delete.
-        let delete_start = if start_seg.as_usize() < line_info.segments.len() {
-            line_info.segments[start_seg.as_usize()].start_byte_index
+        let delete_start = if start_seg.as_usize() < line_info.grapheme_segments.len() {
+            line_info.grapheme_segments[start_seg.as_usize()].start_byte_index
         } else {
             // Start is at end of line.
-            byte_index(line_info.content_len.as_usize())
+            byte_index(line_info.content_byte_len.as_usize())
         };
 
-        let delete_end = if end_seg.as_usize() < line_info.segments.len() {
-            line_info.segments[end_seg.as_usize()].start_byte_index
+        let delete_end = if end_seg.as_usize() < line_info.grapheme_segments.len() {
+            line_info.grapheme_segments[end_seg.as_usize()].start_byte_index
         } else {
             // End is at end of line.
-            byte_index(line_info.content_len.as_usize())
+            byte_index(line_info.content_byte_len.as_usize())
         };
 
         // Perform the actual deletion.
@@ -280,31 +280,30 @@ impl ZeroCopyGapBuffer {
 
         // Check if start position is within content bounds using type-safe overflow
         // check.
-        if start_index.overflows(line_info.content_len) {
+        if start_index.overflows(line_info.content_byte_len) {
             return Err(miette!(
                 "Start position {} exceeds content length {}",
                 start_index.as_usize(),
-                line_info.content_len.as_usize()
+                line_info.content_byte_len.as_usize()
             ));
         }
 
         // Check if end position is within valid range.
         // For exclusive ranges, end can equal content length (e.g., 0..5 for content
         // length 5).
-        if end_index.as_usize() > line_info.content_len.as_usize() {
+        if end_index.as_usize() > line_info.content_byte_len.as_usize() {
             return Err(miette!(
                 "End position {} exceeds content length {}",
                 end_index.as_usize(),
-                line_info.content_len.as_usize()
+                line_info.content_byte_len.as_usize()
             ));
         }
 
         // Extract values needed for buffer operations before mutable operations.
         let num_deleted_chars = len((end_index - start_index).as_usize());
-        let delete_start =
-            line_info.buffer_start_byte_index + ByteOffset::from(start_index);
-        let current_content_len = line_info.content_len;
-        let buffer_pos = line_info.buffer_start_byte_index;
+        let delete_start = line_info.buffer_start + ByteOffset::from(start_index);
+        let current_content_len = line_info.content_byte_len;
+        let buffer_pos = line_info.buffer_start;
 
         // Shift content left to overwrite deleted portion.
         if !end_index.overflows(current_content_len) {
@@ -341,7 +340,7 @@ impl ZeroCopyGapBuffer {
                 line_index.as_usize()
             )
         })?;
-        line_info_mut.content_len = new_content_len;
+        line_info_mut.content_byte_len = new_content_len;
 
         Ok(())
     }
@@ -491,7 +490,7 @@ mod tests {
 
         let line_info = buffer.get_line_info(0).unwrap();
         assert_eq!(line_info.grapheme_count, len(0));
-        assert_eq!(line_info.content_len, len(0));
+        assert_eq!(line_info.content_byte_len, len(0));
     }
 
     #[test]
@@ -533,8 +532,8 @@ mod tests {
 
         // Check that the buffer is properly null-padded.
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = line_info.buffer_start_byte_index.as_usize();
-        let content_len = line_info.content_len.as_usize();
+        let buffer_start = line_info.buffer_start.as_usize();
+        let content_len = line_info.content_byte_len.as_usize();
 
         // Content should be "Helo\n".
         assert_eq!(buffer.buffer[buffer_start + content_len], LINE_FEED_BYTE);

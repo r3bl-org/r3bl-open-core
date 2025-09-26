@@ -64,7 +64,7 @@ impl<'a> GapBufferLine<'a> {
 
     /// Get the segments (grapheme cluster information) for the line.
     #[must_use]
-    pub fn segments(&self) -> &[Seg] { &self.info.segments }
+    pub fn segments(&self) -> &[Seg] { &self.info.grapheme_segments }
 
     /// Check if the given column index falls in the middle of a grapheme cluster.
     #[must_use]
@@ -118,7 +118,7 @@ impl<'a> GapBufferLine<'a> {
 
     /// Get content length in bytes.
     #[must_use]
-    pub fn byte_len(&self) -> Length { self.info.content_len }
+    pub fn byte_len(&self) -> Length { self.info.content_byte_len }
 }
 
 /// `GraphemeString` trait implementation for `GapBufferLine`
@@ -161,7 +161,7 @@ impl GraphemeString for GapBufferLine<'_> {
     fn byte_size(&self) -> ChUnit { ch(self.content().len()) }
 
     fn get_seg(&self, index: SegIndex) -> Option<Seg> {
-        self.info.segments.get(index.as_usize()).copied()
+        self.info.grapheme_segments.get(index.as_usize()).copied()
     }
 
     fn check_is_in_middle_of_grapheme(&self, col: ColIndex) -> Option<Seg> {
@@ -269,6 +269,16 @@ impl GraphemeString for GapBufferLine<'_> {
     ///
     /// Returns a string slice with lifetime tied to `self`. The anonymous lifetime
     /// `'_` ensures the returned slice cannot outlive the `GapBufferLine` instance.
+    ///
+    /// # Implementation Note: Intentional Use of Raw `usize`
+    ///
+    /// This method uses `.as_usize()` combined with `.min()` for string slicing because:
+    /// - String slice operations require `usize` indices
+    /// - The `.min()` comparison operates on `usize` values
+    /// - Type-safe `ByteIndex` must be unwrapped for both operations
+    ///
+    /// The pattern `byte_index.as_usize().min(content.len())` is necessary since we're
+    /// clamping to the string's length before slicing.
     fn trunc_end_by(&self, width: ColWidth) -> Self::StringSlice<'_> {
         // Source of truth: GCStringOwned::trunc_end_by algorithm
         let mut countdown_col_count = width;
@@ -368,7 +378,10 @@ mod tests_content_metadata_consistency {
 
         // Content byte length should match metadata.
         assert_eq!(line.content().len(), line.byte_len().as_usize());
-        assert_eq!(line.content().len(), line.info().content_len.as_usize());
+        assert_eq!(
+            line.content().len(),
+            line.info().content_byte_len.as_usize()
+        );
     }
 
     #[test]
@@ -398,8 +411,8 @@ mod tests_content_metadata_consistency {
         let line = buffer.get_line(row(0)).unwrap();
 
         // Segments should match between facade and metadata.
-        assert_eq!(line.segments().len(), line.info().segments.len());
-        assert_eq!(line.segments(), &line.info().segments[..]);
+        assert_eq!(line.segments().len(), line.info().grapheme_segments.len());
+        assert_eq!(line.segments(), &line.info().grapheme_segments[..]);
 
         // Number of segments should match grapheme count.
         assert_eq!(line.segments().len(), line.grapheme_count().as_usize());
@@ -542,7 +555,7 @@ mod tests_access_pattern_equivalence {
         let line = buffer.get_line(row(0)).unwrap();
 
         // Convenience method should equal direct access.
-        assert_eq!(line.segments(), &line.info().segments[..]);
+        assert_eq!(line.segments(), &line.info().grapheme_segments[..]);
     }
 
     #[test]
@@ -551,7 +564,7 @@ mod tests_access_pattern_equivalence {
         let line = buffer.get_line(row(0)).unwrap();
 
         // Convenience method should equal direct access.
-        assert_eq!(line.byte_len(), line.info().content_len);
+        assert_eq!(line.byte_len(), line.info().content_byte_len);
     }
 
     #[test]
@@ -685,7 +698,7 @@ mod tests_access_pattern_equivalence {
         // Test all accessor methods with complex Unicode.
         assert_eq!(line.display_width(), line.info().display_width);
         assert_eq!(line.grapheme_count(), line.info().grapheme_count);
-        assert_eq!(line.byte_len(), line.info().content_len);
+        assert_eq!(line.byte_len(), line.info().content_byte_len);
 
         // Test string access methods.
         for col_idx in 0..=line.grapheme_count().as_usize() {

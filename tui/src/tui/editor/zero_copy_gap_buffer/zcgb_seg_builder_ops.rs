@@ -95,7 +95,7 @@ use std::str::from_utf8_unchecked;
 use miette::{Result, miette};
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{RowIndex, len,
+use crate::{ByteIndexRangeExt, RowIndex, len,
             segment_builder::{build_segments_for_str, calculate_display_width}};
 
 impl ZeroCopyGapBuffer {
@@ -157,7 +157,8 @@ impl ZeroCopyGapBuffer {
 
         // Extract content slice up to content_len boundary.
         // This ensures we don't read into null padding.
-        let content_slice = &self.buffer[line_info.content_range()];
+        let content_range = line_info.content_range();
+        let content_slice = &self.buffer[content_range.to_usize_range()];
 
         // Convert to string (UTF-8 invariants maintained by buffer)
         let content_str = {
@@ -190,7 +191,7 @@ impl ZeroCopyGapBuffer {
             miette!("Line {} not found when updating segments", line_idx)
         })?;
 
-        line_info.segments = segments;
+        line_info.grapheme_segments = segments;
         line_info.display_width = display_width;
         line_info.grapheme_count = grapheme_count;
 
@@ -270,7 +271,7 @@ mod tests {
         buffer.rebuild_line_segments(row(0))?;
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.segments.len(), 0);
+        assert_eq!(line_info.grapheme_segments.len(), 0);
         assert_eq!(line_info.grapheme_count, len(0));
         assert_eq!(line_info.display_width, width(0));
 
@@ -286,7 +287,7 @@ mod tests {
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hello")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.segments.len(), 5);
+        assert_eq!(line_info.grapheme_segments.len(), 5);
         assert_eq!(line_info.grapheme_count, len(5));
         assert_eq!(line_info.display_width, width(5));
 
@@ -302,7 +303,7 @@ mod tests {
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Hi 👋 😀")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.segments.len(), 6); // "H" "i" " " "👋" " " "😀"
+        assert_eq!(line_info.grapheme_segments.len(), 6); // "H" "i" " " "👋" " " "😀"
         assert_eq!(line_info.grapheme_count, len(6));
         assert_eq!(line_info.display_width, width(8)); // 1+1+1+2+1+2
 
@@ -326,7 +327,7 @@ mod tests {
         // Verify all lines were rebuilt correctly.
         for i in 0..3 {
             let line_info = buffer.get_line_info(i).unwrap();
-            assert_eq!(line_info.segments.len(), 6); // "Line X" = 6 chars
+            assert_eq!(line_info.grapheme_segments.len(), 6); // "Line X" = 6 chars
             assert_eq!(line_info.grapheme_count, len(6));
             assert_eq!(line_info.display_width, width(6));
         }
@@ -343,7 +344,7 @@ mod tests {
         buffer.insert_text_at_grapheme(row(0), seg_index(0), "Test")?;
 
         let line_info = buffer.get_line_info(0).unwrap();
-        let buffer_start = line_info.buffer_start_byte_index.as_usize();
+        let buffer_start = line_info.buffer_start.as_usize();
         let capacity = line_info.capacity.as_usize();
 
         // Verify null padding exists beyond content.
@@ -358,7 +359,7 @@ mod tests {
         buffer.rebuild_line_segments(row(0))?;
 
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.segments.len(), 4); // Only "Test"
+        assert_eq!(line_info.grapheme_segments.len(), 4); // Only "Test"
         assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));
 
@@ -388,7 +389,7 @@ mod tests {
         // Segments should be rebuilt automatically by delete, but let's verify.
         let line_info = buffer.get_line_info(0).unwrap();
         /* cspell:disable-next-line */
-        assert_eq!(line_info.segments.len(), 4); // "Hllo" (after deleting 'e')
+        assert_eq!(line_info.grapheme_segments.len(), 4); // "Hllo" (after deleting 'e')
         assert_eq!(line_info.grapheme_count, len(4));
         assert_eq!(line_info.display_width, width(4));
 
@@ -407,10 +408,10 @@ mod tests {
 
         // Check the segments are positioned correctly.
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.segments.len(), 6);
+        assert_eq!(line_info.grapheme_segments.len(), 6);
 
         // The emoji should be at column 5.
-        let emoji_seg = &line_info.segments[5];
+        let emoji_seg = &line_info.grapheme_segments[5];
         assert_eq!(
             emoji_seg.start_display_col_index,
             col(5),
@@ -440,7 +441,7 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // The segments are positioned correctly.
-        let emoji_seg = &line_info.segments[5];
+        let emoji_seg = &line_info.grapheme_segments[5];
         assert_eq!(emoji_seg.start_display_col_index, col(5));
 
         // NOTE: Due to how the append optimization works, the display_width
@@ -450,7 +451,7 @@ mod tests {
 
         // For now, we just verify segments are correct, which is what matters
         // for the backspace operation.
-        assert_eq!(line_info.segments.len(), 6);
+        assert_eq!(line_info.grapheme_segments.len(), 6);
 
         Ok(())
     }
@@ -469,13 +470,25 @@ mod tests {
 
         // Verify final segment positions.
         let line_info = buffer.get_line_info(0).unwrap();
-        assert_eq!(line_info.segments.len(), 4);
+        assert_eq!(line_info.grapheme_segments.len(), 4);
 
         // Check each segment's position.
-        assert_eq!(line_info.segments[0].start_display_col_index, col(0)); // 'a'
-        assert_eq!(line_info.segments[1].start_display_col_index, col(1)); // 'b'
-        assert_eq!(line_info.segments[2].start_display_col_index, col(2)); // '😃'
-        assert_eq!(line_info.segments[3].start_display_col_index, col(4)); // 'c' (after emoji width 2)
+        assert_eq!(
+            line_info.grapheme_segments[0].start_display_col_index,
+            col(0)
+        ); // 'a'
+        assert_eq!(
+            line_info.grapheme_segments[1].start_display_col_index,
+            col(1)
+        ); // 'b'
+        assert_eq!(
+            line_info.grapheme_segments[2].start_display_col_index,
+            col(2)
+        ); // '😃'
+        assert_eq!(
+            line_info.grapheme_segments[3].start_display_col_index,
+            col(4)
+        ); // 'c' (after emoji width 2)
 
         // Total width should be 5 (1 + 1 + 2 + 1)
         assert_eq!(line_info.display_width, width(5));

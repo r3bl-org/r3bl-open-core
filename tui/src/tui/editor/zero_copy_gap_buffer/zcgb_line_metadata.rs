@@ -8,33 +8,35 @@
 
 use std::ops::Range;
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length, Seg,
-            SegIndex, SegStringOwned, SegmentArray, UnitCompare, byte_index};
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length,
+            LengthMarker, RangeBoundary, Seg, SegIndex, SegStringOwned, SegmentArray,
+            UnitCompare, byte_index, byte_len};
+use crate::core::units::byte_index::ByteIndexRangeExt;
 
-/// Metadata for a single line in the buffer
+/// Metadata for a single line in the buffer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LineMetadata {
-    /// Where this line starts in the buffer
-    pub buffer_start_byte_index: ByteIndex,
+    /// Where this line starts in the buffer.
+    pub buffer_start: ByteIndex,
 
-    /// Actual content length in bytes (before '\n')
-    pub content_len: Length,
+    /// Actual content length in bytes (before '\n').
+    pub content_byte_len: Length,
 
-    /// Allocated capacity for this line
+    /// Allocated capacity for this line.
     pub capacity: Length,
 
-    /// Segment array for this line (grapheme cluster information)
-    pub segments: SegmentArray,
+    /// Grapheme cluster segments for this line.
+    pub grapheme_segments: SegmentArray,
 
-    /// Display width of the line
+    /// Display width of the line.
     pub display_width: ColWidth,
 
-    /// Number of grapheme clusters
+    /// Number of grapheme clusters.
     pub grapheme_count: Length,
 }
 
 impl LineMetadata {
-    /// Get the buffer range for this line's content (excluding null padding)
+    /// Get the buffer range for this line's content (excluding null padding).
     ///
     /// Returns a range that can be used to slice the buffer to get only the
     /// actual content bytes, not including the null padding that fills the
@@ -56,10 +58,28 @@ impl LineMetadata {
     /// assert_eq!(content_range.len(), 0);
     /// ```
     #[must_use]
-    pub fn content_range(&self) -> Range<usize> {
-        let start = self.buffer_start_byte_index.as_usize();
-        let end = start + self.content_len.as_usize();
-        start..end
+    pub fn content_range(&self) -> Range<ByteIndex> {
+        let start = self.buffer_start;
+        // Convert Length to ByteIndex preserving the numeric value (for exclusive range
+        // end).
+        let end = start + byte_index(self.content_byte_len.as_usize());
+
+        // Create the range and validate using cursor bounds checking.
+        let content_range = start..end;
+
+        // Type-safe bounds checking: ensure content doesn't exceed allocated capacity.
+        // Convert content_byte_len to its last valid index, then check if capacity would
+        // be overflowed.
+        debug_assert!(
+            !self
+                .capacity
+                .is_overflowed_by(self.content_byte_len.convert_to_index()),
+            "content_byte_len ({}) overflows line capacity ({})",
+            self.content_byte_len.as_usize(),
+            self.capacity.as_usize()
+        );
+
+        content_range
     }
 
     /// Get the byte position for a given segment index
@@ -67,8 +87,8 @@ impl LineMetadata {
     /// This method converts a grapheme cluster index (segment index) to its
     /// corresponding byte position in the line buffer. It handles three cases:
     /// - Beginning of line (`seg_index` = 0) → returns byte position 0
-    /// - End of line (`seg_index` >= `segments.len()`) → returns content length as byte
-    ///   position
+    /// - End of line (`seg_index` >= `grapheme_segments.len()`) → returns content length
+    ///   as byte position
     /// - Middle of line → returns the `start_byte_index` of the segment
     ///
     /// # Arguments
@@ -100,12 +120,12 @@ impl LineMetadata {
         if seg_index.is_zero() {
             // Beginning of line.
             byte_index(0)
-        } else if seg_index.overflows(self.segments.len()) {
+        } else if seg_index.overflows(self.grapheme_segments.len()) {
             // End of line - return content length as byte position.
-            byte_index(self.content_len.as_usize())
+            byte_index(self.content_byte_len.as_usize())
         } else {
             // Middle of line - return the start byte index of the target segment.
-            let segment = &self.segments[seg_index.as_usize()];
+            let segment = &self.grapheme_segments[seg_index.as_usize()];
             segment.start_byte_index // Already a ByteIndex!
         }
     }
@@ -115,7 +135,8 @@ impl LineMetadata {
     /// This method converts a byte position to its corresponding grapheme cluster
     /// index (segment index). It handles three cases:
     /// - Beginning of line (`byte_ofs` = 0) → returns SegIndex(0)
-    /// - End of line (`byte_ofs` >= `content_len`) → returns SegIndex(segments.len())
+    /// - End of line (`byte_ofs` >= `content_byte_len`) → returns
+    ///   `SegIndex(grapheme_segments.len())`
     /// - Middle of line → returns the `seg_index` of the segment containing the byte
     ///
     /// # Arguments
@@ -155,14 +176,14 @@ impl LineMetadata {
             return crate::seg_index(0);
         }
 
-        if byte_index.overflows(self.content_len) {
-            return crate::seg_index(self.segments.len());
+        if byte_index.overflows(self.content_byte_len) {
+            return crate::seg_index(self.grapheme_segments.len());
         }
 
         // Binary search through segments to find the one containing byte_index.
         // We could optimize this with binary search, but linear is fine for now
         // since lines typically have few segments.
-        for segment in &self.segments {
+        for segment in &self.grapheme_segments {
             if byte_index >= segment.start_byte_index
                 && byte_index < segment.end_byte_index
             {
@@ -172,14 +193,14 @@ impl LineMetadata {
 
         // If we get here, byte_index is between segments (shouldn't happen with valid
         // UTF-8) Return the segment after the position.
-        for segment in &self.segments {
+        for segment in &self.grapheme_segments {
             if byte_index < segment.start_byte_index {
                 return segment.seg_index;
             }
         }
 
         // Fallback to end of line.
-        crate::seg_index(self.segments.len())
+        crate::seg_index(self.grapheme_segments.len())
     }
 
     /// Check if the given display column index falls in the middle of a grapheme cluster.
@@ -226,14 +247,16 @@ impl LineMetadata {
     ) -> Option<Seg> {
         let col_index: ColIndex = arg_col_index.into();
         // Find the segment that contains or would contain this column index.
-        for seg in &self.segments {
-            let seg_start = seg.start_display_col_index;
-            let seg_end = seg_start + seg.display_width;
+        for seg in &self.grapheme_segments {
+            // Create a type-safe column range for this segment.
+            let seg_col_range: Range<ColIndex> = seg.start_display_col_index
+                ..(seg.start_display_col_index + seg.display_width);
 
-            // Check if the column index falls within this segment.
-            if col_index >= seg_start && col_index < seg_end {
+            // Check if the column index falls within this segment using type-safe
+            // containment.
+            if seg_col_range.contains(&col_index) {
                 // If it's not at the start of the segment, it's in the middle.
-                if col_index != seg_start {
+                if col_index != seg.start_display_col_index {
                     return Some(*seg);
                 }
                 // If it is at the start, this is a valid cursor position.
@@ -271,14 +294,24 @@ impl LineMetadata {
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
         // Find the segment at the given column index.
-        for segment in &self.segments {
-            let seg_end_col = segment.start_display_col_index + segment.display_width;
+        for segment in &self.grapheme_segments {
+            // Create a type-safe column range for this segment.
+            let seg_col_range: Range<ColIndex> = segment.start_display_col_index
+                ..(segment.start_display_col_index + segment.display_width);
 
-            if col_index >= segment.start_display_col_index && col_index < seg_end_col {
-                // Extract the segment's string content.
-                let start_byte = segment.start_byte_index.as_usize();
-                let end_byte = segment.end_byte_index.as_usize();
-                let seg_content = &content[start_byte..end_byte];
+            if seg_col_range.contains(&col_index) {
+                // Create type-safe byte range.
+                let byte_range: Range<ByteIndex> =
+                    segment.start_byte_index..segment.end_byte_index;
+
+                // Validate the byte range against content length.
+                let content_len = byte_len(content.len());
+                if !byte_range.is_valid(content_len) {
+                    return None; // Invalid byte range
+                }
+
+                // Extract the segment's string content using validated indices.
+                let seg_content = &content[byte_range.to_usize_range()];
 
                 return Some(SegStringOwned {
                     string: GCStringOwned::from(seg_content),
@@ -300,7 +333,7 @@ impl LineMetadata {
         col_index: ColIndex,
     ) -> Option<SegStringOwned> {
         // Find the segment after the given column index.
-        for segment in &self.segments {
+        for segment in &self.grapheme_segments {
             if segment.start_display_col_index > col_index {
                 // This is the first segment to the right.
                 let start_byte = segment.start_byte_index.as_usize();
@@ -329,7 +362,7 @@ impl LineMetadata {
         // Find the segment before the given column index.
         let mut last_valid_segment: Option<&Seg> = None;
 
-        for segment in &self.segments {
+        for segment in &self.grapheme_segments {
             let seg_end_col = segment.start_display_col_index + segment.display_width;
 
             if seg_end_col <= col_index {
@@ -340,9 +373,18 @@ impl LineMetadata {
         }
 
         if let Some(segment) = last_valid_segment {
-            let start_byte = segment.start_byte_index.as_usize();
-            let end_byte = segment.end_byte_index.as_usize();
-            let seg_content = &content[start_byte..end_byte];
+            // Create type-safe byte range.
+            let byte_range: Range<ByteIndex> =
+                segment.start_byte_index..segment.end_byte_index;
+
+            // Validate the byte range against content length.
+            let content_len = byte_len(content.len());
+            if !byte_range.is_valid(content_len) {
+                return None; // Invalid byte range
+            }
+
+            // Extract the segment's string content using validated indices.
+            let seg_content = &content[byte_range.to_usize_range()];
 
             Some(SegStringOwned {
                 string: GCStringOwned::from(seg_content),
@@ -358,11 +400,20 @@ impl LineMetadata {
     /// This method provides GCString-compatible behavior for editor operations.
     #[must_use]
     pub fn get_string_at_end(&self, content: &str) -> Option<SegStringOwned> {
-        let last_segment = self.segments.last()?;
+        let last_segment = self.grapheme_segments.last()?;
 
-        let start_byte = last_segment.start_byte_index.as_usize();
-        let end_byte = last_segment.end_byte_index.as_usize();
-        let seg_content = &content[start_byte..end_byte];
+        // Create type-safe byte range.
+        let byte_range: Range<ByteIndex> =
+            last_segment.start_byte_index..last_segment.end_byte_index;
+
+        // Validate the byte range against content length.
+        let content_len = byte_len(content.len());
+        if !byte_range.is_valid(content_len) {
+            return None; // Invalid byte range
+        }
+
+        // Extract the segment's string content using validated indices.
+        let seg_content = &content[byte_range.to_usize_range()];
 
         Some(SegStringOwned {
             string: GCStringOwned::from(seg_content),
@@ -376,6 +427,35 @@ impl LineMetadata {
     /// This method extracts a substring from the line content based on display column
     /// indices, properly handling Unicode grapheme clusters and multi-width characters.
     /// This is the zero-copy equivalent of `GCStringOwned::clip()`.
+    ///
+    /// # Implementation Note: Intentional Use of Raw `usize`
+    ///
+    /// **This method deliberately uses raw `usize` instead of type-safe [`ByteIndex`]
+    /// wrappers and [`Range<ByteIndex>`] validation for bounds checking. Do not refactor
+    /// to use type-safe mechanisms - this tradeoff has been carefully evaluated.**
+    ///
+    /// The algorithm is complex with multiple accumulator loops and mixed type arithmetic
+    /// ([`ByteIndex`], [`ColIndex`], [`ColWidth`]). Using type-safe wrappers or range
+    /// validation requires immediate unwrapping with `.as_usize()` for the actual
+    /// operations, creating this pattern:
+    ///
+    /// ```rust,ignore
+    /// // Wrapping approach:
+    /// let start = byte_index(start_idx.as_usize().min(content_len.as_usize()));
+    /// // unwrap → raw operation → rewrap
+    ///
+    /// // Range validation approach:
+    /// let byte_range: Range<ByteIndex> = start..end;
+    /// if byte_range.is_valid(content_len) {
+    ///     &content[byte_range.start.as_usize()..byte_range.end.as_usize()]
+    ///     // still need to unwrap for actual slicing
+    /// }
+    /// ```
+    ///
+    /// Both approaches add ceremony without providing actual type safety benefits, since
+    /// the core algorithm already operates on raw `usize` accumulators throughout,
+    /// and the final slice operation requires `usize` anyway. The current simple
+    /// implementation with `start <= end` checking is more readable and maintainable.
     ///
     /// # Arguments
     /// * `content` - The line content as a string slice
@@ -401,6 +481,11 @@ impl LineMetadata {
     /// clip_to_range(content, col(2), width(4)) → "📦Xe"
     /// clip_to_range(content, col(6), width(3)) → "Lo🙏🏽" (note: 🙏🏽 has width 2)
     /// ```
+    ///
+    /// [`ByteIndex`]: crate::ByteIndex
+    /// [`ColIndex`]: crate::ColIndex
+    /// [`ColWidth`]: crate::ColWidth
+    /// [`Range<ByteIndex>`]: std::ops::Range
     #[must_use]
     pub fn clip_to_range<'a>(
         &'a self,
@@ -408,7 +493,7 @@ impl LineMetadata {
         start_col_index: ColIndex,
         max_col_width: ColWidth,
     ) -> &'a str {
-        if self.segments.is_empty() || content.is_empty() {
+        if self.grapheme_segments.is_empty() || content.is_empty() {
             return "";
         }
 
@@ -417,7 +502,7 @@ impl LineMetadata {
             let mut byte_index = 0;
             let mut skip_col_count = start_col_index;
 
-            for seg in &self.segments {
+            for seg in &self.grapheme_segments {
                 let seg_display_width = seg.display_width;
 
                 // If we've skipped enough columns, stop here.
@@ -438,7 +523,7 @@ impl LineMetadata {
             let mut avail_col_count = max_col_width;
             let mut skip_col_count = start_col_index;
 
-            for seg in &self.segments {
+            for seg in &self.grapheme_segments {
                 let seg_display_width = seg.display_width;
 
                 // Are we still skipping columns to reach the start?
@@ -626,7 +711,7 @@ mod tests {
         let line_info = buffer.get_line_info(0).unwrap();
 
         // Test round-trip conversion for each segment.
-        for i in 0..line_info.segments.len() {
+        for i in 0..line_info.grapheme_segments.len() {
             let seg_idx = seg_index(i);
             let byte_pos = line_info.get_byte_index(seg_idx);
             let seg_idx_back = line_info.get_seg_index(byte_pos);

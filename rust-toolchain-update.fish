@@ -128,6 +128,17 @@ function install_target_toolchain
     return 0
 end
 
+function install_rust_analyzer_component
+    log_message "Installing rust-analyzer component for $target_toolchain..."
+    if not log_command_output "Adding rust-analyzer component..." rustup component add rust-analyzer --toolchain $target_toolchain
+        log_message "❌ Failed to install rust-analyzer component"
+        return 1
+    end
+
+    log_message "✅ Successfully installed rust-analyzer component"
+    return 0
+end
+
 function cleanup_old_toolchains
     # Get disk usage before cleanup
     log_message "Checking disk usage before cleanup..."
@@ -202,6 +213,9 @@ function main
     or return 1
 
     install_target_toolchain
+    or return 1
+
+    install_rust_analyzer_component
     or return 1
 
     cleanup_old_toolchains

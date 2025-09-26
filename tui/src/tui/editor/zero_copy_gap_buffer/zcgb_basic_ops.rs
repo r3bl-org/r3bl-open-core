@@ -12,10 +12,13 @@
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
+use std::{ops::Range,
+          str::{from_utf8, from_utf8_unchecked}};
+
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, GapBufferLine, IndexMarker,
-            Length, RowIndex, SegIndex, UnitCompare, byte_index, byte_offset, row,
-            seg_index, seg_length, width};
+use crate::{ByteIndex, ByteIndexRangeExt, ColIndex, ColWidth, GCStringOwned,
+            GapBufferLine, IndexMarker, Length, RowIndex, SegIndex, UnitCompare,
+            byte_index, byte_offset, row, seg_index, seg_length, width};
 
 impl ZeroCopyGapBuffer {
     // Line access methods.
@@ -49,8 +52,8 @@ impl ZeroCopyGapBuffer {
         // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
         {
-            use std::str::from_utf8;
-            if let Err(e) = from_utf8(&self.buffer[line_info.content_range()]) {
+            let content_range = line_info.content_range();
+            if let Err(e) = from_utf8(&self.buffer[content_range.to_usize_range()]) {
                 panic!(
                     "Line {} contains invalid UTF-8 at byte {}: {}",
                     row_index.as_usize(),
@@ -61,11 +64,13 @@ impl ZeroCopyGapBuffer {
         }
         // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
         let content = unsafe {
-            std::str::from_utf8_unchecked(&self.buffer[line_info.content_range()])
+            let content_range = line_info.content_range();
+            from_utf8_unchecked(&self.buffer[content_range.to_usize_range()])
         };
         Some(GapBufferLine::new(content, line_info))
-    } // Line metadata access
+    }
 
+    // Line metadata access
     #[must_use]
     pub fn get_line_display_width(
         &self,
@@ -91,7 +96,8 @@ impl ZeroCopyGapBuffer {
         arg_row_index: impl Into<RowIndex>,
     ) -> Option<Length> {
         let row_index: RowIndex = arg_row_index.into();
-        self.get_line_info(row_index).map(|info| info.content_len)
+        self.get_line_info(row_index)
+            .map(|info| info.content_byte_len)
     }
 
     // Line modification methods.
@@ -182,7 +188,7 @@ impl ZeroCopyGapBuffer {
         if let Some(seg_idx) = self.col_to_seg_index(row_index, col_index) {
             // Get the line info to check segment count.
             if let Some(line_info) = self.get_line_info(row_index) {
-                let max_segments = seg_length(line_info.segments.len());
+                let max_segments = seg_length(line_info.grapheme_segments.len());
                 let requested_end = seg_idx.as_usize() + segment_count.as_usize();
                 let max_segments_usize = max_segments.as_usize();
                 let actual_end = if requested_end > max_segments_usize {
@@ -275,10 +281,15 @@ impl ZeroCopyGapBuffer {
         arg_row_index: impl Into<RowIndex>,
     ) -> Option<ByteIndex> {
         let row_index: RowIndex = arg_row_index.into();
-        self.get_line_info(row_index)
-            .map(|info| info.buffer_start_byte_index)
+        self.get_line_info(row_index).map(|info| info.buffer_start)
     }
 
+    /// # Implementation Note: Intentional Use of Raw `usize`
+    ///
+    /// This method uses `.as_usize()` for range iteration (`0..total_lines.as_usize()`)
+    /// because custom types like `Length` don't implement Rust's `Step` trait, which is
+    /// required for range iteration in for loops. Using type-safe wrappers would require
+    /// `.as_usize()` anyway since `Range<Length>` cannot be iterated.
     #[must_use]
     pub fn find_row_containing_byte(
         &self,
@@ -296,10 +307,11 @@ impl ZeroCopyGapBuffer {
         let total_lines = self.line_count();
         for i in 0..total_lines.as_usize() {
             if let Some(line_info) = self.get_line_info(i) {
-                let line_start = line_info.buffer_start_byte_index;
-                let line_end = line_start + byte_offset(line_info.capacity);
+                // Create a type-safe byte range for this line.
+                let line_byte_range: Range<ByteIndex> = line_info.buffer_start
+                    ..(line_info.buffer_start + byte_offset(line_info.capacity));
 
-                if byte_index >= line_start && byte_index < line_end {
+                if line_byte_range.contains(&byte_index) {
                     return Some(row(i));
                 }
             }
@@ -310,17 +322,28 @@ impl ZeroCopyGapBuffer {
 
     // Iterator support.
 
+    /// # Implementation Note: Intentional Use of Raw `usize`
+    ///
+    /// This method uses `.as_usize()` to create an iterator range (`0..total_lines.as_usize()`)
+    /// because Rust's `Range` type requires the `Step` trait for iteration, which custom types
+    /// like `Length` don't implement. This is a fundamental language limitation.
     #[must_use]
     pub fn iter_lines(&self) -> Box<dyn Iterator<Item = GapBufferLine<'_>> + '_> {
         let total_lines = self.line_count();
         Box::new((0..total_lines.as_usize()).filter_map(move |i| self.get_line(row(i))))
-    } // Total size information
+    }
 
+    // Total size information
     #[must_use]
     pub fn total_bytes(&self) -> ByteIndex { byte_index(self.buffer.len()) }
 
     // Conversion methods.
 
+    /// # Implementation Note: Intentional Use of Raw `usize`
+    ///
+    /// This method uses `.as_usize()` for range iteration (`0..self.line_count().as_usize()`)
+    /// because custom length types don't implement Rust's `Step` trait, which is required
+    /// for creating iterable ranges.
     pub fn to_gc_string_vec(&self) -> Vec<GCStringOwned> {
         (0..self.line_count().as_usize())
             .filter_map(|i| self.get_line_content(row(i)))
@@ -377,7 +400,7 @@ impl ZeroCopyGapBuffer {
         let mut current_col = 0;
 
         // Find the segment that contains or is after the target column.
-        for (i, segment) in line_info.segments.iter().enumerate() {
+        for (i, segment) in line_info.grapheme_segments.iter().enumerate() {
             if current_col >= target_col {
                 return Some(seg_index(i));
             }
@@ -385,7 +408,7 @@ impl ZeroCopyGapBuffer {
         }
 
         // If we've gone through all segments, return the end position.
-        Some(seg_index(line_info.segments.len()))
+        Some(seg_index(line_info.grapheme_segments.len()))
     }
 
     /// Calculate the display width of a text string.

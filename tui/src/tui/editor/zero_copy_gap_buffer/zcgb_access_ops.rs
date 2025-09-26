@@ -101,10 +101,11 @@
 //! UTF-8 validation occurs once at input boundaries, making subsequent unsafe
 //! operations safe and performant.
 
-use std::{ops::Range, str::from_utf8_unchecked};
+use std::{ops::Range,
+          str::{from_utf8, from_utf8_unchecked}};
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{RowIndex,
+use crate::{ByteIndexRangeExt, RowIndex, byte_index,
             core::units::bounds_check::{IndexMarker, RangeBoundary, UnitCompare}};
 
 impl ZeroCopyGapBuffer {
@@ -123,7 +124,6 @@ impl ZeroCopyGapBuffer {
         // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
         {
-            use std::str::from_utf8;
             if let Err(e) = from_utf8(&self.buffer) {
                 panic!(
                     "ZeroCopyGapBuffer contains invalid UTF-8 at byte {}: {}",
@@ -165,20 +165,20 @@ impl ZeroCopyGapBuffer {
 
         // Calculate actual start offset from line info.
         let start_info = self.get_line_info(line_range.start)?;
-        let start_offset = *start_info.buffer_start_byte_index;
+        let start_offset = *start_info.buffer_start;
 
         // Calculate end offset using type-safe bounds checking.
         let end_offset = if line_range.end.overflows(self.line_count()) {
             self.buffer.len()
         } else {
             let end_info = self.get_line_info(line_range.end)?;
-            *end_info.buffer_start_byte_index
+            *end_info.buffer_start
         };
 
         // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
         {
-            if let Err(e) = std::str::from_utf8(&self.buffer[start_offset..end_offset]) {
+            if let Err(e) = from_utf8(&self.buffer[start_offset..end_offset]) {
                 panic!(
                     "Line slice {:?} contains invalid UTF-8 at byte {}: {}",
                     line_range,
@@ -199,7 +199,7 @@ impl ZeroCopyGapBuffer {
     pub fn get_line_raw(&self, arg_line_index: impl Into<RowIndex>) -> Option<&[u8]> {
         let line_index: RowIndex = arg_line_index.into();
         let line_info = self.get_line_info(line_index)?;
-        let start = *line_info.buffer_start_byte_index;
+        let start = *line_info.buffer_start;
         let end = start + line_info.capacity.as_usize();
         Some(&self.buffer[start..end])
     }
@@ -208,18 +208,18 @@ impl ZeroCopyGapBuffer {
     ///
     /// This should always return true in normal operation
     #[must_use]
-    pub fn is_valid_utf8(&self) -> bool { std::str::from_utf8(&self.buffer).is_ok() }
+    pub fn is_valid_utf8(&self) -> bool { from_utf8(&self.buffer).is_ok() }
 
-    /// Get the content of a line including its newline character (if present)
+    /// Get the content of a line including its newline character (if present).
     ///
     /// This is useful for parsers that need to distinguish between lines with
     /// and without trailing newlines.
     ///
-    /// Returns None if the line index is out of bounds
+    /// # Returns
+    /// Returns None if the line index is out of bounds.
     ///
     /// # Panics
-    ///
-    /// In debug builds, panics if the line with newline contains invalid UTF-8
+    /// In debug builds, panics if the line with newline contains invalid UTF-8.
     #[must_use]
     pub fn get_line_with_newline(
         &self,
@@ -229,14 +229,15 @@ impl ZeroCopyGapBuffer {
         let line_info = self.get_line_info(line_index)?;
         let content_range = line_info.content_range();
         // Include the newline if there's content.
-        let end = if line_info.content_len.is_zero() {
-            content_range.start + 1 // Just the newline for empty lines
+        let end = if line_info.content_byte_len.is_zero() {
+            content_range.start + byte_index(1) // Just the newline for empty lines.
         } else {
-            content_range.end + 1 // +1 for newline
+            content_range.end + byte_index(1) // +1 for newline.
         };
 
         // Ensure we don't go past the line boundary using explicit bounds checking.
-        let line_boundary = content_range.start + line_info.capacity.as_usize();
+        let line_boundary =
+            content_range.start + byte_index(line_info.capacity.as_usize());
         let end = if end <= line_boundary {
             end
         } else {
@@ -247,7 +248,7 @@ impl ZeroCopyGapBuffer {
         // In debug builds, validate UTF-8.
         #[cfg(debug_assertions)]
         {
-            if let Err(e) = std::str::from_utf8(&self.buffer[range.clone()]) {
+            if let Err(e) = from_utf8(&self.buffer[range.clone().to_usize_range()]) {
                 panic!(
                     "Line {} with newline contains invalid UTF-8 at byte {}: {}",
                     line_index.as_usize(),
@@ -257,8 +258,8 @@ impl ZeroCopyGapBuffer {
             }
         }
 
-        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
-        Some(unsafe { from_utf8_unchecked(&self.buffer[range]) })
+        // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str.
+        Some(unsafe { from_utf8_unchecked(&self.buffer[range.to_usize_range()]) })
     }
 
     /// Convenience method to get only the line content as a string slice.
@@ -385,7 +386,7 @@ mod tests {
         // Get the line info first.
         let offset = {
             let line_info = buffer.get_line_info(0).unwrap();
-            *line_info.buffer_start_byte_index
+            *line_info.buffer_start
         };
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing
@@ -396,7 +397,7 @@ mod tests {
 
         // Update line info.
         if let Some(line_info) = buffer.get_line_info_mut(0) {
-            line_info.content_len = len(2);
+            line_info.content_byte_len = len(2);
         }
 
         // This should panic in debug mode.
@@ -411,7 +412,7 @@ mod tests {
         buffer.add_line();
 
         // Get the line info first.
-        let offset = *buffer.get_line_info(0).unwrap().buffer_start_byte_index;
+        let offset = *buffer.get_line_info(0).unwrap().buffer_start;
 
         // SAFETY: We're intentionally creating invalid UTF-8 for testing.
         // Insert invalid UTF-8 sequence.
@@ -421,7 +422,7 @@ mod tests {
 
         // Update line info.
         if let Some(line_info) = buffer.get_line_info_mut(0) {
-            line_info.content_len = crate::len(2);
+            line_info.content_byte_len = crate::len(2);
         }
 
         // This should panic in debug mode.
