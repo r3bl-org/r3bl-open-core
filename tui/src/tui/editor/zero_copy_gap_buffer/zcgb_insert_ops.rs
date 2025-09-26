@@ -26,9 +26,9 @@
 //!
 //! # Operations
 //!
-//! - [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme]: Insert
+//! - [`insert_text_at_grapheme()`]: Insert
 //!   text at a specific grapheme position with automatic optimization detection
-//! - [`insert_empty_line()`][ZeroCopyGapBuffer::insert_empty_line]: Create new empty
+//! - [`insert_empty_line()`]: Create new empty
 //!   lines with proper initialization
 //! - Internal helpers for byte-level manipulation and capacity management
 //!
@@ -49,7 +49,7 @@
 //! 4. When extending line capacity, new memory is initialized with `\0`
 //!
 //! The null-padding logic is especially critical in
-//! [`insert_text_at_byte_ofs`][ZeroCopyGapBuffer::insert_text_at_byte_ofs] where
+//! [`insert_text_at_byte_ofs`] where
 //! content shifting and capacity extension occur.
 //!
 //! # UTF-8 Safety in Insertion Operations
@@ -92,6 +92,10 @@
 //!
 //! After insertion, all other modules can safely use [`from_utf8_unchecked()`] because
 //! they operate on content that was validated at this boundary.
+//!
+//! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`insert_empty_line()`]: ZeroCopyGapBuffer::insert_empty_line
+//! [`insert_text_at_byte_ofs`]: ZeroCopyGapBuffer::insert_text_at_byte_ofs
 
 use miette::{Result, miette};
 

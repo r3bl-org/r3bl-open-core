@@ -229,10 +229,10 @@ impl ZeroCopyGapBuffer {
         let line_info = self.get_line_info(line_index)?;
         let content_range = line_info.content_range();
         // Include the newline if there's content.
-        let end = if !line_info.content_len.is_zero() {
-            content_range.end + 1 // +1 for newline
-        } else {
+        let end = if line_info.content_len.is_zero() {
             content_range.start + 1 // Just the newline for empty lines
+        } else {
+            content_range.end + 1 // +1 for newline
         };
 
         // Ensure we don't go past the line boundary using explicit bounds checking.

@@ -188,7 +188,7 @@ pub mod basic_tab_operations {
 /// Tests for tab operations with edge cases and boundary conditions.
 pub mod tab_edge_cases {
     use super::*;
-    use crate::{row, col};
+    use crate::{col, row};
 
     #[test]
     fn test_tab_at_exact_buffer_width() {

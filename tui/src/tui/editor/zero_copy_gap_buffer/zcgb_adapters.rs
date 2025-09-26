@@ -45,11 +45,8 @@ fn gap_buffer_from_lines(lines: &[GCStringOwned]) -> ZeroCopyGapBuffer {
         // Insert the text at the beginning of the line.
         if !text.is_empty() {
             // Use insert_at_grapheme which is the public API.
-            let _unused = buffer.insert_text_at_grapheme(
-                line_index,
-                SegIndex::from(0),
-                text,
-            );
+            let _unused =
+                buffer.insert_text_at_grapheme(line_index, SegIndex::from(0), text);
         }
     }
 
@@ -86,10 +83,10 @@ fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
     // We should process all lines in that case.
     let total_lines = crate::len(lines.len());
     let num_lines_to_process = if text.ends_with(NEW_LINE_CHAR) {
-        if !total_lines.is_zero() {
-            total_lines.as_usize() - 1 // Skip the last empty element from split
-        } else {
+        if total_lines.is_zero() {
             0
+        } else {
+            total_lines.as_usize() - 1 // Skip the last empty element from split
         }
     } else {
         total_lines.as_usize() // Process all lines
@@ -101,11 +98,8 @@ fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
 
         // Insert the text content if not empty.
         if !line_text.is_empty() {
-            let _unused = buffer.insert_text_at_grapheme(
-                line_index,
-                SegIndex::from(0),
-                line_text,
-            );
+            let _unused =
+                buffer.insert_text_at_grapheme(line_index, SegIndex::from(0), line_text);
         }
     }
 

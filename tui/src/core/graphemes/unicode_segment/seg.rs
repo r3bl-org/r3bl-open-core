@@ -53,9 +53,8 @@ pub type SegmentArray = Vec<Seg>;
 ///
 /// ## Fields and Their Relationship to Index Types
 ///
-/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`]
-///   range for this segment. These are used when converting from `ByteIndex` to
-///   `SegIndex`.
+/// - `start_byte_index` & `end_byte_index`: Define the [`ByteIndex`] range for this
+///   segment. These are used when converting from `ByteIndex` to `SegIndex`.
 /// - `seg_index`: The [`SegIndex`] of this segment. This is its position in the logical
 ///   sequence of grapheme clusters.
 /// - `start_display_col_index`: The [`ColIndex`] where this segment begins on screen.

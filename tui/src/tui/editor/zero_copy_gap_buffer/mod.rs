@@ -106,8 +106,7 @@
 //!
 //! UTF-8 validation occurs **at the API boundaries** where content enters the system:
 //!
-//! - **[`insert_text_at_grapheme(text:
-//!   &str)`][ZeroCopyGapBuffer::insert_text_at_grapheme]** - Rust's `&str` type
+//! - **[`insert_text_at_grapheme(text: &str)`]** - Rust's `&str` type
 //!   guarantees valid UTF-8
 //! - **File loading** - Use `std::fs::read_to_string()` or `String::from_utf8()` which
 //!   validate
@@ -121,10 +120,10 @@
 //! Once content is in the buffer, all read operations use `unsafe { from_utf8_unchecked()
 //! }` for **maximum performance**:
 //!
-//! - **[`as_str()`][ZeroCopyGapBuffer::as_str]** - Zero-copy access to entire buffer
-//! - **[`get_line_content()`][ZeroCopyGapBuffer::get_line_content]** - Zero-copy access
+//! - **[`as_str()`]** - Zero-copy access to entire buffer
+//! - **[`get_line_content()`]** - Zero-copy access
 //!   to individual lines
-//! - **[`rebuild_line_segments()`][ZeroCopyGapBuffer::rebuild_line_segments]** - Fast
+//! - **[`rebuild_line_segments()`]** - Fast
 //!   string creation during metadata updates
 //!
 //! This avoids redundant UTF-8 validation in performance-critical paths like:
@@ -159,6 +158,11 @@
 //!
 //! This approach follows Rust's philosophy of "zero-cost abstractions" while maintaining
 //! memory safety through careful API design rather than runtime validation.
+//!
+//! [`insert_text_at_grapheme(text: &str)`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`as_str()`]: ZeroCopyGapBuffer::as_str
+//! [`get_line_content()`]: ZeroCopyGapBuffer::get_line_content
+//! [`rebuild_line_segments()`]: ZeroCopyGapBuffer::rebuild_line_segments
 //!
 //! # Performance Benchmarks
 //!

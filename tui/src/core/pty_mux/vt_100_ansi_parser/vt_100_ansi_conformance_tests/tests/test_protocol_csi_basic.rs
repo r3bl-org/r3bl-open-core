@@ -7,7 +7,7 @@
 
 use super::super::{conformance_data::{basic_sequences, cursor_sequences},
                    test_fixtures_vt_100_ansi_conformance::*};
-use crate::{row, col};
+use crate::{col, row};
 
 #[test]
 fn test_basic_delete_char_integration() {

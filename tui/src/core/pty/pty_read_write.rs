@@ -7,7 +7,10 @@ use std::{io::{Read, Write},
 use miette::{IntoDiagnostic, miette};
 use portable_pty::PtySize;
 
-use crate::{Controlled, ControlledChild, Controller, ControllerReader, ControllerWriter, LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent, PtyReadWriteSession, ok, pty_common_io::{READ_BUFFER_SIZE, create_pty_pair, spawn_command_in_pty}};
+use crate::{Controlled, ControlledChild, Controller, ControllerReader, ControllerWriter,
+            LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
+            PtyReadWriteSession, ok,
+            pty_common_io::{READ_BUFFER_SIZE, create_pty_pair, spawn_command_in_pty}};
 
 impl PtyCommandBuilder {
     /// Spawns a read-write PTY session; it spawns three Tokio tasks and one OS child

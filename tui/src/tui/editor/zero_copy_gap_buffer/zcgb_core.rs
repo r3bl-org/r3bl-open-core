@@ -9,10 +9,9 @@
 use std::{borrow::Cow, fmt::Display};
 
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
-use crate::{LINE_FEED_BYTE, NULL_BYTE};
-use crate::{BoundsCheck, ColIndex, GraphemeDoc, GraphemeDocMut, Length,
-            RowIndex, SegIndex, SegmentArray, UnitCompare, byte_index, byte_offset,
-            core::units::bounds_check::IndexMarker, len, row};
+use crate::{BoundsCheck, ColIndex, GraphemeDoc, GraphemeDocMut, LINE_FEED_BYTE, Length,
+            NULL_BYTE, RowIndex, SegIndex, SegmentArray, UnitCompare, byte_index,
+            byte_offset, core::units::bounds_check::IndexMarker, len, row};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -267,7 +266,8 @@ impl ZeroCopyGapBuffer {
 
         // Update buffer offsets for remaining lines.
         for line in self.lines.iter_mut().skip(line_index.as_usize()) {
-            line.buffer_start_byte_index = line.buffer_start_byte_index - byte_offset(removed_size);
+            line.buffer_start_byte_index =
+                line.buffer_start_byte_index - byte_offset(removed_size);
         }
 
         self.line_count -= len(1);
@@ -283,7 +283,11 @@ impl ZeroCopyGapBuffer {
 
     /// Check if a line can accommodate additional bytes without reallocation
     #[must_use]
-    pub fn can_insert(&self, arg_line_index: impl Into<RowIndex>, additional_bytes: usize) -> bool {
+    pub fn can_insert(
+        &self,
+        arg_line_index: impl Into<RowIndex>,
+        additional_bytes: usize,
+    ) -> bool {
         let line_index: RowIndex = arg_line_index.into();
         if let Some(line_info) = self.get_line_info(line_index) {
             // Need space for content + newline.
@@ -329,7 +333,8 @@ impl ZeroCopyGapBuffer {
 
         // Update buffer offsets for subsequent lines.
         for line in self.lines.iter_mut().skip(line_index.as_usize() + 1) {
-            line.buffer_start_byte_index = line.buffer_start_byte_index + byte_offset(shift_amount);
+            line.buffer_start_byte_index =
+                line.buffer_start_byte_index + byte_offset(shift_amount);
         }
     }
 }
@@ -408,12 +413,12 @@ impl<'a> Iterator for ZeroCopyLineIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current_index = row(self.current);
-        if !current_index.overflows(self.buffer.line_count()) {
+        if current_index.overflows(self.buffer.line_count()) {
+            None
+        } else {
             let line = self.buffer.get_line(current_index);
             self.current += 1;
             line
-        } else {
-            None
         }
     }
 }
@@ -596,14 +601,16 @@ mod tests {
         // Extend the middle line.
         buffer.extend_line_capacity(row(1));
 
-        let line1_offset_before = *buffer.get_line_info(2).unwrap().buffer_start_byte_index;
+        let line1_offset_before =
+            *buffer.get_line_info(2).unwrap().buffer_start_byte_index;
 
         // Remove the extended middle line.
         assert!(buffer.remove_line(row(1)));
         assert_eq!(buffer.line_count(), len(2));
 
         // Check that the third line's offset was updated correctly.
-        let line1_offset_after = *buffer.get_line_info(1).unwrap().buffer_start_byte_index;
+        let line1_offset_after =
+            *buffer.get_line_info(1).unwrap().buffer_start_byte_index;
         assert_eq!(line1_offset_after, INITIAL_LINE_SIZE);
         // The extended line had size INITIAL_LINE_SIZE + LINE_PAGE_SIZE = 512
         assert_eq!(

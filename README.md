@@ -53,6 +53,7 @@ Table of contents:
   - [Bacon Development Tools](#bacon-development-tools)
   - [Status Monitoring Scripts](#status-monitoring-scripts)
   - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
+  - [Wild Linker (Linux)](#wild-linker-linux)
   - [Rust Toolchain Management](#rust-toolchain-management)
     - [Testing Toolchain Installation Progress](#testing-toolchain-installation-progress)
   - [Unified Script Architecture](#unified-script-architecture)
@@ -594,6 +595,30 @@ cargo build  # or sccache --show-stats
 
 There is no need to restart the server, as it is designed to be "lazy". And running `cargo build` or
 `sccache --show-stats` will automatically start the server if it is stopped.
+
+### Wild Linker (Linux)
+
+This project uses the [Wild linker](https://github.com/davidlattimore/wild) as a fast alternative to the default linker on Linux systems. Wild can significantly reduce link times during iterative development, making builds faster and more responsive.
+
+**Automatic Configuration**: The build system automatically detects and configures Wild when both `clang` and `wild` are installed. If either tool is missing, the configuration gracefully falls back to standard parallel compilation without Wild.
+
+**Installation**: The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script automatically installs both prerequisites:
+- `clang`: Required as the linker frontend
+- `wild-linker`: The fast linker implementation via `cargo-binstall`
+
+**Configuration**: When available, Wild is configured in `.cargo/config.toml` for Linux targets:
+```toml
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]
+```
+
+**Verification**: Check if Wild is active by looking for the configuration in `.cargo/config.toml` or by observing faster link times during development builds.
+
+**Platform Support**: Wild linker is Linux-only. On other platforms, the build system uses standard parallel compilation without Wild.
 
 ### Rust Toolchain Management
 

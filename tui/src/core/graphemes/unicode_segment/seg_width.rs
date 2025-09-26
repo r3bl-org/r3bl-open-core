@@ -2,8 +2,8 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::{ChUnit, ch, LengthMarker, UnitCompare};
 use super::seg_index::{SegIndex, seg_index};
+use crate::{ChUnit, LengthMarker, UnitCompare, ch};
 
 /// Represents a count of the number of grapheme segments inside of
 /// [`crate::GCStringOwned`]. The width is max index (zero based) + 1.
@@ -56,7 +56,6 @@ mod seg_width_impl_block {
     impl From<SegIndex> for SegWidth {
         fn from(other: SegIndex) -> Self { other.convert_to_seg_width() }
     }
-
 }
 
 // Implement bounds checking traits for SegWidth

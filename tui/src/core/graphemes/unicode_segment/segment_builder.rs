@@ -13,7 +13,8 @@
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
-use crate::{ColIndex, ColWidth, Seg, SegmentArray, byte_index, col, len, seg_index, width};
+use crate::{ColIndex, ColWidth, Seg, SegmentArray, byte_index, col, len, seg_index,
+            width};
 
 /// Build grapheme cluster segments for any string slice.
 ///

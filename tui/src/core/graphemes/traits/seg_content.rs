@@ -47,7 +47,7 @@ mod tests {
     use super::*;
     use crate::{byte_index, col, seg_index, width};
 
-    // Helper function to create a test segment
+    // Helper function to create a test segment.
     fn create_test_seg(
         start_byte: usize,
         end_byte: usize,
@@ -186,11 +186,11 @@ mod tests {
     }
 
     #[test]
-    fn test_segment_clone() {
+    fn test_segment_copy() {
         let content = "test";
         let seg = create_test_seg(0, 4, 4, 0, 0);
         let seg_content1 = SegContent { content, seg };
-        let seg_content2 = seg_content1.clone();
+        let seg_content2 = seg_content1; // Copy semantics for Copy types
 
         assert_eq!(seg_content1.as_str(), seg_content2.as_str());
         assert_eq!(seg_content1.width(), seg_content2.width());
@@ -203,21 +203,21 @@ mod tests {
         let seg = create_test_seg(0, 5, 5, 0, 0);
         let seg_content = SegContent { content, seg };
 
-        let debug_str = format!("{:?}", seg_content);
+        let debug_str = format!("{seg_content:?}");
         assert!(debug_str.contains("SegContent"));
-        // The exact format may vary, but it should contain the struct name
+        // The exact format may vary, but it should contain the struct name.
     }
 
     #[test]
     fn test_lifetime_correctness() {
-        // Test that SegContent correctly borrows from the string
+        // Test that SegContent correctly borrows from the string.
         let content = String::from("lifetime_test");
         let seg = create_test_seg(0, 13, 13, 0, 0);
 
-        // This should compile and work correctly
+        // This should compile and work correctly.
         let seg_content = SegContent {
             content: &content,
-            seg
+            seg,
         };
 
         assert_eq!(seg_content.as_str(), "lifetime_test");
@@ -236,7 +236,7 @@ mod tests {
         assert_eq!(range.start.as_usize(), start);
         assert_eq!(range.end.as_usize(), end);
 
-        // Range should be consistent with segment data
+        // Range should be consistent with segment data.
         assert_eq!(range.start, seg_content.seg.start_byte_index);
         assert_eq!(range.end, seg_content.seg.end_byte_index);
     }
@@ -244,11 +244,11 @@ mod tests {
     #[test]
     fn test_different_content_lengths() {
         let test_cases = [
-            ("", 0, 0),         // Empty string
-            ("a", 0, 1),        // Single ASCII
-            ("ab", 0, 2),       // Two ASCII
-            ("😀", 0, 4),       // Single emoji (4 bytes)
-            ("a😀b", 1, 5),     // Mixed content
+            ("", 0, 0),     // Empty string
+            ("a", 0, 1),    // Single ASCII
+            ("ab", 0, 2),   // Two ASCII
+            ("😀", 0, 4),   // Single emoji (4 bytes)
+            ("a😀b", 1, 5), // Mixed content
         ];
 
         for (content, start, end) in test_cases {

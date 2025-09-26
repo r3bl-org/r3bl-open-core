@@ -6,9 +6,10 @@
 //! for a single line in the gap buffer, including buffer position, capacity,
 //! grapheme segments, and display information.
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker,
-            Length, Seg, SegIndex, SegStringOwned, SegmentArray, UnitCompare,
-            byte_index, core::units::idx};
+use std::ops::Range;
+
+use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length, Seg,
+            SegIndex, SegStringOwned, SegmentArray, UnitCompare, byte_index};
 
 /// Metadata for a single line in the buffer
 #[derive(Debug, Clone, PartialEq)]
@@ -55,7 +56,7 @@ impl LineMetadata {
     /// assert_eq!(content_range.len(), 0);
     /// ```
     #[must_use]
-    pub fn content_range(&self) -> std::ops::Range<usize> {
+    pub fn content_range(&self) -> Range<usize> {
         let start = self.buffer_start_byte_index.as_usize();
         let end = start + self.content_len.as_usize();
         start..end
@@ -100,9 +101,8 @@ impl LineMetadata {
             // Beginning of line.
             byte_index(0)
         } else {
-            let seg_idx = idx(seg_index);
-            if seg_idx.overflows(self.segments.len()) {
-                // End of line - return content length as byte position
+            if seg_index.overflows(self.segments.len()) {
+                // End of line - return content length as byte position.
                 byte_index(self.content_len.as_usize())
             } else {
                 // Middle of line - return the start byte index of the target segment.

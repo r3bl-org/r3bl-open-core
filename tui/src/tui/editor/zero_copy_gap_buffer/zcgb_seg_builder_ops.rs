@@ -37,9 +37,9 @@
 //! ## When Segment Rebuilding Occurs
 //!
 //! Segment rebuilding is called **after content modifications**:
-//! - After [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme] -
+//! - After [`insert_text_at_grapheme()`] -
 //!   content already validated at insertion
-//! - After [`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at] - removing
+//! - After [`delete_grapheme_at()`] - removing
 //!   valid UTF-8 can't create invalid sequences
 //! - After bulk operations - operating on previously validated content
 //!
@@ -88,6 +88,9 @@
 //!
 //! The safety depends on the **architectural contract** that content entering
 //! the buffer is UTF-8 validated, making subsequent operations safe.
+//!
+//! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+//! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
 
 use std::str::from_utf8_unchecked;
 
@@ -116,11 +119,11 @@ impl ZeroCopyGapBuffer {
     /// - **After in-line operations** - Like find/replace within a single line
     ///
     /// Currently used by:
-    /// - [`insert_text_at_grapheme()`][ZeroCopyGapBuffer::insert_text_at_grapheme] -
+    /// - [`insert_text_at_grapheme()`] -
     ///   after inserting text
-    /// - [`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at] - after deleting
+    /// - [`delete_grapheme_at()`] - after deleting
     ///   text
-    /// - [`delete_range()`][ZeroCopyGapBuffer::delete_range] - after deleting multiple
+    /// - [`delete_range()`] - after deleting multiple
     ///   graphemes
     ///
     /// # Arguments
@@ -141,7 +144,14 @@ impl ZeroCopyGapBuffer {
     ///
     /// This method carefully respects the `content_len` boundary to ensure
     /// null padding is never included in segment calculations.
-    pub fn rebuild_line_segments(&mut self, arg_line_index: impl Into<RowIndex>) -> Result<()> {
+    ///
+    /// [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
+    /// [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
+    /// [`delete_range()`]: ZeroCopyGapBuffer::delete_range
+    pub fn rebuild_line_segments(
+        &mut self,
+        arg_line_index: impl Into<RowIndex>,
+    ) -> Result<()> {
         let line_index: RowIndex = arg_line_index.into();
         let line_idx = line_index.as_usize();
 
@@ -213,8 +223,10 @@ impl ZeroCopyGapBuffer {
     /// # Performance Note
     ///
     /// This is more efficient than calling
-    /// [`rebuild_line_segments()`][Self::rebuild_line_segments] multiple times
+    /// [`rebuild_line_segments()`] multiple times
     /// as it avoids repeated function call overhead for bulk operations.
+    ///
+    /// [`rebuild_line_segments()`]: Self::rebuild_line_segments
     ///
     /// # Arguments
     ///
@@ -252,7 +264,7 @@ impl ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{col, row, seg_index, width, NULL_BYTE};
+    use crate::{NULL_BYTE, col, row, seg_index, width};
 
     #[test]
     fn test_rebuild_line_segments_empty_line() -> Result<()> {

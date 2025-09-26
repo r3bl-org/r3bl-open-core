@@ -2,14 +2,14 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::{bounds_check::length_and_index_markers::{LengthMarker, UnitCompare},
-            ByteIndex, ChUnit, Length};
+use crate::{ByteIndex, ChUnit, Length,
+            bounds_check::length_and_index_markers::{LengthMarker, UnitCompare}};
 
 /// Represents a byte length measurement (1-based).
 ///
 /// A `ByteLength` represents the number of bytes in a buffer, string segment, or other
-/// byte-oriented structure. Unlike [`ByteIndex`] which is 0-based (representing positions),
-/// `ByteLength` is 1-based (representing sizes/counts).
+/// byte-oriented structure. Unlike [`ByteIndex`] which is 0-based (representing
+/// positions), `ByteLength` is 1-based (representing sizes/counts).
 ///
 /// This type enables semantic correctness in the bounds checking system by providing
 /// a proper length type that pairs with [`ByteIndex`] for byte-based operations,
@@ -17,8 +17,8 @@ use crate::{bounds_check::length_and_index_markers::{LengthMarker, UnitCompare},
 ///
 /// # Type System Integration
 ///
-/// `ByteLength` implements [`LengthMarker`] with [`ByteIndex`] as its associated index type,
-/// creating a bidirectional relationship that allows for type-safe bounds checking
+/// `ByteLength` implements [`LengthMarker`] with [`ByteIndex`] as its associated index
+/// type, creating a bidirectional relationship that allows for type-safe bounds checking
 /// operations specific to byte measurements.
 ///
 /// # Examples
@@ -118,6 +118,7 @@ impl From<u16> for ByteLength {
 }
 
 impl From<i32> for ByteLength {
+    #[allow(clippy::cast_sign_loss)]
     fn from(it: i32) -> Self { Self(it as usize) }
 }
 
@@ -135,6 +136,7 @@ impl UnitCompare for ByteLength {
     fn as_usize(&self) -> usize { self.0 }
 
     /// Convert the byte length to a u16 value for crossterm compatibility.
+    #[allow(clippy::cast_possible_truncation)]
     fn as_u16(&self) -> u16 { self.0 as u16 }
 }
 
@@ -147,7 +149,7 @@ mod tests {
     use super::*;
     use crate::{byte_index, ch};
 
-    // Basic construction and conversion tests
+    // Basic construction and conversion tests.
     #[test]
     fn test_byte_length_from_usize() {
         let length = ByteLength::from(42usize);
@@ -181,7 +183,7 @@ mod tests {
         assert_eq!(length.as_usize(), 30);
     }
 
-    // Conversion tests
+    // Conversion tests.
     #[test]
     fn test_byte_length_from_byte_index() {
         let index = byte_index(5);
@@ -206,14 +208,14 @@ mod tests {
         assert_eq!(back_to_index, original_index);
     }
 
-    // Edge case tests
+    // Edge case tests.
     #[test]
     fn test_zero_byte_length() {
         let zero_length = byte_len(0);
         assert_eq!(zero_length.as_usize(), 0);
         assert_eq!(*zero_length, 0);
 
-        // Converting zero length to index should saturate at 0
+        // Converting zero length to index should saturate at 0.
         let index = zero_length.convert_to_index();
         assert_eq!(index.as_usize(), 0);
     }
@@ -227,11 +229,11 @@ mod tests {
         assert_eq!(index.as_usize(), (usize::MAX / 2) - 1);
     }
 
-    // Trait implementation tests
+    // Trait implementation tests.
     #[test]
     fn test_debug_format() {
         let length = byte_len(42);
-        let debug_str = format!("{:?}", length);
+        let debug_str = format!("{length:?}");
         assert!(debug_str.contains("ByteLength"));
         assert!(debug_str.contains("42"));
     }
@@ -239,7 +241,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let length1 = byte_len(42);
-        let length2 = length1.clone();
+        let length2 = length1;
         assert_eq!(length1, length2);
     }
 
@@ -297,29 +299,29 @@ mod tests {
         assert!(set.contains(&length3));
     }
 
-    // Semantic correctness tests
+    // Semantic correctness tests.
     #[test]
     fn test_semantic_buffer_length_usage() {
-        // ByteLength represents the total size of a byte buffer
+        // ByteLength represents the total size of a byte buffer.
         let buffer_size = byte_len(100);
         let first_position = byte_index(0);
         let _middle_position = byte_index(50);
         let last_valid_position = byte_index(99);
         let beyond_position = byte_index(100);
 
-        // These should be semantically correct comparisons
+        // These should be semantically correct comparisons.
         assert_eq!(buffer_size.as_usize(), 100);
         assert_eq!(first_position.as_usize(), 0);
         assert_eq!(last_valid_position, buffer_size.convert_to_index());
 
-        // The last valid index should be length - 1
+        // The last valid index should be length - 1.
         assert_eq!(buffer_size.convert_to_index().as_usize(), 99);
 
-        // Beyond position should equal the length value
+        // Beyond position should equal the length value.
         assert_eq!(beyond_position.as_usize(), buffer_size.as_usize());
     }
 
-    // Constructor function tests
+    // Constructor function tests.
     #[test]
     fn test_byte_len_constructor_function() {
         let length = byte_len(42usize);
@@ -329,7 +331,7 @@ mod tests {
         assert_eq!(length_from_ch, ByteLength::from(ch(10)));
     }
 
-    // Unit trait tests
+    // Unit trait tests.
     #[test]
     fn test_unit_compare_implementation() {
         let length = byte_len(42);

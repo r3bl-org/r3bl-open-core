@@ -2,8 +2,8 @@
 
 use std::ops::{Deref, DerefMut};
 
-use crate::{bounds_check::length_and_index_markers::{IndexMarker, UnitCompare},
-            ByteLength, ByteOffset, ChUnit, Index};
+use crate::{ByteLength, ByteOffset, ChUnit, Index,
+            bounds_check::length_and_index_markers::{IndexMarker, UnitCompare}};
 
 /// Represents a byte index inside of the underlying [`crate::InlineString`] of
 /// [`crate::GCStringOwned`].
@@ -53,6 +53,7 @@ impl From<u16> for ByteIndex {
 }
 
 impl From<i32> for ByteIndex {
+    #[allow(clippy::cast_sign_loss)]
     fn from(it: i32) -> Self { Self(it as usize) }
 }
 
@@ -61,8 +62,9 @@ impl UnitCompare for ByteIndex {
     /// indexing operations.
     fn as_usize(&self) -> usize { self.0 }
 
-    /// Convert the byte index to a u16 value for crossterm compatibility and other terminal
-    /// operations.
+    /// Convert the byte index to a u16 value for crossterm compatibility and other
+    /// terminal operations.
+    #[allow(clippy::cast_possible_truncation)]
     fn as_u16(&self) -> u16 { self.0 as u16 }
 }
 
@@ -86,18 +88,15 @@ impl IndexMarker for ByteIndex {
     /// (1-based)                       ↑
     ///                convert_to_length() = 6 (1-based)
     /// ```
-    fn convert_to_length(&self) -> Self::LengthType {
-        ByteLength::from(*self)
-    }
+    fn convert_to_length(&self) -> Self::LengthType { ByteLength::from(*self) }
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, byte_offset};
+    use crate::{byte_offset, ch};
 
-    // Basic construction and conversion tests
+    // Basic construction and conversion tests.
     #[test]
     fn test_byte_index_from_usize() {
         let index = ByteIndex::from(42usize);
@@ -131,7 +130,7 @@ mod tests {
         assert_eq!(index.as_usize(), 30);
     }
 
-    // Conversion tests to other types
+    // Conversion tests to other types.
     #[test]
     fn test_byte_index_to_usize() {
         let index = byte_index(42);
@@ -146,7 +145,7 @@ mod tests {
         assert_eq!(generic_index.as_usize(), 42);
     }
 
-    // Critical ByteIndex <-> ByteOffset conversion tests
+    // Critical ByteIndex <-> ByteOffset conversion tests.
     #[test]
     fn test_byte_index_to_byte_offset_conversion() {
         let index = byte_index(100);
@@ -156,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_byte_offset_from_byte_index_semantic() {
-        // Semantic test: converting absolute position to relative offset
+        // Semantic test: converting absolute position to relative offset.
         let absolute_position = byte_index(50);
         let relative_offset = ByteOffset::from(absolute_position);
         assert_eq!(relative_offset, byte_offset(50));
@@ -173,7 +172,7 @@ mod tests {
         assert_eq!(as_offset.as_usize(), as_usize);
     }
 
-    // Edge case tests
+    // Edge case tests.
     #[test]
     fn test_zero_byte_index() {
         let zero_index = byte_index(0);
@@ -193,11 +192,11 @@ mod tests {
         assert_eq!(offset.as_usize(), usize::MAX / 2);
     }
 
-    // Trait implementation tests
+    // Trait implementation tests.
     #[test]
     fn test_debug_format() {
         let index = byte_index(42);
-        let debug_str = format!("{:?}", index);
+        let debug_str = format!("{index:?}");
         assert!(debug_str.contains("ByteIndex"));
         assert!(debug_str.contains("42"));
     }
@@ -205,7 +204,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let index1 = byte_index(42);
-        let index2 = index1.clone();
+        let index2 = index1;
         assert_eq!(index1, index2);
     }
 
@@ -263,10 +262,10 @@ mod tests {
         assert!(set.contains(&index3));
     }
 
-    // Semantic correctness tests
+    // Semantic correctness tests.
     #[test]
     fn test_semantic_absolute_position_usage() {
-        // ByteIndex represents absolute positions in buffers/strings
+        // ByteIndex represents absolute positions in buffers/strings.
         let buffer_start = byte_index(0);
         let char_position = byte_index(5);
         let end_position = byte_index(100);
@@ -274,12 +273,12 @@ mod tests {
         assert!(buffer_start < char_position);
         assert!(char_position < end_position);
 
-        // Converting to offset makes sense when position becomes relative
+        // Converting to offset makes sense when position becomes relative.
         let relative_from_start: ByteOffset = char_position.into();
         assert_eq!(relative_from_start.as_usize(), 5);
     }
 
-    // Constructor function tests
+    // Constructor function tests.
     #[test]
     fn test_byte_index_constructor_function() {
         let index = byte_index(42usize);

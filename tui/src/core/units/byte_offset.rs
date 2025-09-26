@@ -103,7 +103,7 @@ impl From<ByteOffset> for RowIndex {
     fn from(it: ByteOffset) -> Self { RowIndex::from(Index::from(it)) }
 }
 
-// Arithmetic operations between ByteIndex and ByteOffset
+// Arithmetic operations between ByteIndex and ByteOffset.
 impl Add<ByteOffset> for ByteIndex {
     type Output = ByteIndex;
 
@@ -169,7 +169,7 @@ mod tests {
     use super::*;
     use crate::{byte_index, ch};
 
-    // Basic construction and conversion tests
+    // Basic construction and conversion tests.
     #[test]
     fn test_byte_offset_from_usize() {
         let offset = ByteOffset::from(42usize);
@@ -203,7 +203,7 @@ mod tests {
         assert_eq!(offset.as_usize(), 30);
     }
 
-    // Conversion tests
+    // Conversion tests.
     #[test]
     fn test_byte_offset_to_index() {
         let offset = byte_offset(42);
@@ -218,7 +218,7 @@ mod tests {
         assert_eq!(row_index.as_usize(), 42);
     }
 
-    // ByteOffset + ByteOffset arithmetic tests
+    // ByteOffset + ByteOffset arithmetic tests.
     #[test]
     fn test_offset_add_offset() {
         let offset1 = byte_offset(10);
@@ -243,7 +243,7 @@ mod tests {
         assert_eq!(result, byte_offset(0)); // saturating_sub prevents underflow
     }
 
-    // Critical cross-type arithmetic tests (ByteIndex + ByteOffset)
+    // Critical cross-type arithmetic tests (ByteIndex + ByteOffset).
     #[test]
     fn test_index_add_offset() {
         let index = byte_index(100);
@@ -284,18 +284,18 @@ mod tests {
         assert_eq!(offset, byte_offset(0)); // saturating_sub prevents underflow
     }
 
-    // Edge case tests
+    // Edge case tests.
     #[test]
     fn test_zero_offset_operations() {
         let zero_offset = byte_offset(0);
         let some_offset = byte_offset(42);
         let some_index = byte_index(100);
 
-        // Adding zero should not change value
+        // Adding zero should not change value.
         assert_eq!(some_index + zero_offset, some_index);
         assert_eq!(some_offset + zero_offset, some_offset);
 
-        // Subtracting zero should not change value
+        // Subtracting zero should not change value.
         assert_eq!(some_index - zero_offset, some_index);
         assert_eq!(some_offset - zero_offset, some_offset);
     }
@@ -305,16 +305,16 @@ mod tests {
         let large_offset = byte_offset(usize::MAX / 2);
         let another_offset = byte_offset(10);
 
-        // Test that large operations don't panic
-        let _result = large_offset + another_offset;
-        let _result = large_offset - another_offset;
+        // Test that large operations don't panic.
+        _ = large_offset + another_offset;
+        _ = large_offset - another_offset;
     }
 
-    // Trait implementation tests
+    // Trait implementation tests.
     #[test]
     fn test_debug_format() {
         let offset = byte_offset(42);
-        let debug_str = format!("{:?}", offset);
+        let debug_str = format!("{offset:?}");
         assert!(debug_str.contains("ByteOffset"));
         assert!(debug_str.contains("42"));
     }
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let offset1 = byte_offset(42);
-        let offset2 = offset1.clone();
+        let offset2 = offset1;
         assert_eq!(offset1, offset2);
     }
 
@@ -368,7 +368,7 @@ mod tests {
         assert_eq!(index.as_usize(), 42);
     }
 
-    // ByteIndex <-> ByteOffset conversion tests
+    // ByteIndex <-> ByteOffset conversion tests.
     #[test]
     fn test_byte_offset_from_byte_index() {
         let byte_index = byte_index(100);
@@ -385,13 +385,13 @@ mod tests {
 
     #[test]
     fn test_byte_index_to_byte_offset_semantic_conversion() {
-        // Converting absolute position within line to relative offset
+        // Converting absolute position within line to relative offset.
         let segment_start_position = byte_index(25); // Position 25 in line content
         let as_line_relative_offset: ByteOffset = segment_start_position.into();
 
         assert_eq!(as_line_relative_offset.as_usize(), 25);
 
-        // Should be usable with line position arithmetic
+        // Should be usable with line position arithmetic.
         let line_buffer_start = byte_index(1000);
         let absolute_position = line_buffer_start + as_line_relative_offset;
         assert_eq!(absolute_position, byte_index(1025));
@@ -421,10 +421,10 @@ mod tests {
         assert_eq!(zero_offset, byte_offset(0));
     }
 
-    // Semantic correctness tests - demonstrating the type safety improvements
+    // Semantic correctness tests - demonstrating the type safety improvements.
     #[test]
     fn test_semantic_position_plus_distance() {
-        // Semantic test: absolute position + relative distance = new absolute position
+        // Semantic test: absolute position + relative distance = new absolute position.
         let line_start_position = byte_index(1000); // Position in global buffer
         let position_within_line = byte_offset(25); // Distance from line start
         let absolute_position = line_start_position + position_within_line;
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_semantic_distance_between_positions() {
-        // Semantic test: position - position = distance
+        // Semantic test: position - position = distance.
         let end_position = byte_index(150);
         let start_position = byte_index(100);
         let distance: ByteOffset = end_position - start_position;

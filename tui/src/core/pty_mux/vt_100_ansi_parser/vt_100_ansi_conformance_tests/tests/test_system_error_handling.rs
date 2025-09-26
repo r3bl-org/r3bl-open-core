@@ -32,9 +32,9 @@
 //! - Buffer overflow and performance stress scenarios
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
-                                term_units::{term_col, term_row}};
-use crate::{col, row};
+use crate::{col, row,
+            vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
+                                 term_units::{term_col, term_row}}};
 
 /// Tests for malformed CSI sequence handling.
 pub mod malformed_csi_sequences {
@@ -429,13 +429,13 @@ pub mod boundary_edge_cases {
             // Positions should be clamped to buffer bounds
             assert!(
                 ofs_buf.cursor_pos.row_index <= row(9), /* 0-based, so max is 9
-                                                                * for 10-row buffer */
+                                                         * for 10-row buffer */
                 "Row not clamped properly: {:?}",
                 ofs_buf.cursor_pos
             );
             assert!(
                 ofs_buf.cursor_pos.col_index <= col(9), /* 0-based, so max is 9
-                                                                * for 10-col buffer */
+                                                         * for 10-col buffer */
                 "Column not clamped properly: {:?}",
                 ofs_buf.cursor_pos
             );

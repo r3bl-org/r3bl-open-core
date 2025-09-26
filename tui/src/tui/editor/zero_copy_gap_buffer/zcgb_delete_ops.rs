@@ -38,9 +38,9 @@
 //!
 //! # Operations
 //!
-//! - [`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at]: Delete single
+//! - [`delete_grapheme_at()`]: Delete single
 //!   grapheme cluster
-//! - [`delete_range()`][ZeroCopyGapBuffer::delete_range]: Delete range of grapheme
+//! - [`delete_range()`]: Delete range of grapheme
 //!   clusters
 //! - Internal helpers for byte-level manipulation and cleanup
 //!
@@ -60,7 +60,7 @@
 //! 3. The newline character is properly repositioned
 //! 4. All unused capacity remains null-padded
 //!
-//! See [`delete_bytes_at_range`][ZeroCopyGapBuffer::delete_bytes_at_range] for the core
+//! See [`delete_bytes_at_range`] for the core
 //! null-padding logic.
 //!
 //! # UTF-8 Safety in Deletion Operations
@@ -70,16 +70,16 @@
 //!
 //! ## Grapheme-Level Safety
 //!
-//! - **[`delete_grapheme_at()`][ZeroCopyGapBuffer::delete_grapheme_at]**: Only deletes
+//! - **[`delete_grapheme_at()`]**: Only deletes
 //!   complete grapheme clusters, never splits UTF-8 sequences
-//! - **[`delete_range()`][ZeroCopyGapBuffer::delete_range]**: Operates on grapheme
+//! - **[`delete_range()`]**: Operates on grapheme
 //!   boundaries, ensuring no mid-character cuts
 //! - **Segment-based indexing**: Uses pre-computed grapheme boundaries from segment
 //!   metadata
 //!
 //! ## Byte-Level Safety
 //!
-//! The low-level [`delete_bytes_at_range()`][ZeroCopyGapBuffer::delete_bytes_at_range]
+//! The low-level [`delete_bytes_at_range()`]
 //! operates on **pre-validated byte boundaries**:
 //! - Callers ensure byte positions align with UTF-8 character boundaries
 //! - Content shifting preserves UTF-8 validity by moving complete byte sequences
@@ -94,14 +94,18 @@
 //! 4. **Null padding is valid UTF-8** (`\0` is ASCII, thus valid UTF-8)
 //!
 //! This allows deletion operations to be **extremely fast** with no validation overhead.
+//!
+//! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
+//! [`delete_range()`]: ZeroCopyGapBuffer::delete_range
+//! [`delete_bytes_at_range`]: ZeroCopyGapBuffer::delete_bytes_at_range
+//! [`delete_bytes_at_range()`]: ZeroCopyGapBuffer::delete_bytes_at_range
 
 use std::ops::Range;
 
 use miette::{Result, miette};
 
 use super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, ByteOffset, IndexMarker, LINE_FEED_BYTE, LengthMarker, NULL_BYTE,
-            RangeBoundary, RowIndex, SegIndex, byte_index, idx, len, seg_width};
+use crate::{ByteIndex, ByteOffset, Index, IndexMarker, LINE_FEED_BYTE, LengthMarker, NULL_BYTE, RangeBoundary, RowIndex, SegIndex, byte_index, len, seg_width};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -192,19 +196,18 @@ impl ZeroCopyGapBuffer {
         })?;
 
         // Validate range using sophisticated range validation.
-        let delete_range: Range<crate::Index> = idx(start_seg)..idx(end_seg);
+        let delete_range: Range<Index> = start_seg.into()..end_seg.into();
         let segments_count = len(line_info.segments.len());
 
         if !delete_range.is_valid(segments_count) {
             if start_seg >= end_seg {
                 return Ok(()); // Empty range - nothing to delete
-            } else {
-                return Err(miette!(
-                    "Invalid range: start {} must be less than end {}",
-                    start_seg.as_usize(),
-                    end_seg.as_usize()
-                ));
             }
+            return Err(miette!(
+                "Invalid range: start {} must be less than end {}",
+                start_seg.as_usize(),
+                end_seg.as_usize()
+            ));
         }
 
         // Get byte range to delete.
@@ -270,13 +273,13 @@ impl ZeroCopyGapBuffer {
             miette!("Line index {} out of bounds", line_index.as_usize())
         })?;
 
-        // Validate range bounds manually (simpler than complex trait bounds)
+        // Validate range bounds manually (simpler than complex trait bounds).
         if start_index.as_usize() > end_index.as_usize() {
             // Range is empty or inverted - nothing to delete.
             return Ok(());
         }
 
-        // Check if start position is within content bounds
+        // Check if start position is within content bounds.
         if start_index.as_usize() >= line_info.content_len.as_usize() {
             return Err(miette!(
                 "Start position {} exceeds content length {}",
@@ -286,7 +289,7 @@ impl ZeroCopyGapBuffer {
         }
 
         // Check if end position is within valid range (can equal content length for
-        // exclusive ranges)
+        // exclusive ranges).
         if end_index.as_usize() > line_info.content_len.as_usize() {
             return Err(miette!(
                 "End position {} exceeds content length {}",
@@ -295,9 +298,8 @@ impl ZeroCopyGapBuffer {
             ));
         }
 
-        // Convert to indices for remaining logic
-        let _start_idx = idx(start_index);
-        let end_idx = idx(end_index);
+        // Convert to indices for remaining logic.
+        let end_idx: Index = end_index.into();
 
         // Extract values needed for buffer operations before mutable operations.
         let num_deleted_chars = len((end_index - start_index).as_usize());
@@ -308,7 +310,7 @@ impl ZeroCopyGapBuffer {
 
         // Shift content left to overwrite deleted portion.
         if !end_idx.overflows(current_content_len) {
-            // Content remains after deletion - need to shift
+            // Content remains after deletion - need to shift.
             let move_from = (buffer_pos + ByteOffset::from(end_index)).as_usize();
             let move_to = delete_start.as_usize();
             let remaining_content = current_content_len.remaining_from(end_idx);
@@ -346,9 +348,11 @@ impl ZeroCopyGapBuffer {
         Ok(())
     }
 
-    // The [`rebuild_line_segments`][Self::rebuild_line_segments] method is now in
+    // The [`rebuild_line_segments`] method is now in
     // implementations::segment_builder and is accessible directly on.
-    // [`ZeroCopyGapBuffer`]
+    // [`ZeroCopyGapBuffer`].
+    //
+    // [`rebuild_line_segments`]: Self::rebuild_line_segments
 }
 
 #[cfg(test)]
