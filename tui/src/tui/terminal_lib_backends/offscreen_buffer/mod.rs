@@ -13,15 +13,15 @@
 //! bridging the gap between raw terminal output and visual rendering:
 //!
 //! ```text
-//! ╭─────────────────╮    ╭──────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │───▶│ PTY Master   │───▶│ VTE Parser      │───▶│ OffscreenBuf │
-//! │ (vim, bash...)  │    │ (byte stream)│    │ (state machine) │    │ (terminal    │
-//! ╰─────────────────╯    ╰──────────────╯    ╰─────────────────╯    │  buffer)     │
-//! │                                                                  ╰──────────────╯
-//! │                                           ╭─────────────────╮           │
-//! │                                           │ RenderPipeline  │◀──────────╯
-//! │                                           │ paint()         │
-//! ╰───────────────────────────────────────────▶ Terminal Output │
+//! ╭─────────────────╮    ╭───────────────╮    ╭─────────────────╮    ╭──────────────╮
+//! │ Child Process   │───▶│ PTY Master    │───▶│ VTE Parser      │───▶│ OffscreenBuf │
+//! │ (vim, bash...)  │    │ (byte stream) │    │ (state machine) │    │ (terminal    │
+//! ╰─────────────────╯    ╰───────────────╯    ╰─────────────────╯    │  buffer)     │
+//!        │                                                           ╰──────────────╯
+//!        │                                    ╭─────────────────╮           │
+//!        │                                    │ RenderPipeline  │◀──────────╯
+//!        │                                    │ paint()         │
+//!        ╰────────────────────────────────────▶ Terminal Output │
 //!                                             ╰─────────────────╯
 //! ```
 //!

@@ -10,8 +10,8 @@ use std::ops::Range;
 
 use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length,
             LengthMarker, RangeBoundary, Seg, SegIndex, SegStringOwned, SegmentArray,
-            UnitCompare, byte_index, byte_len};
-use crate::core::units::byte_index::ByteIndexRangeExt;
+            UnitCompare, byte_index, byte_len,
+            core::units::byte_index::ByteIndexRangeExt};
 
 /// Metadata for a single line in the buffer.
 #[derive(Debug, Clone, PartialEq)]
@@ -46,6 +46,7 @@ impl LineMetadata {
     ///
     /// ```rust
     /// use r3bl_tui::ZeroCopyGapBuffer;
+    /// use r3bl_tui::ByteIndexRangeExt;
     ///
     /// let mut buffer = ZeroCopyGapBuffer::new();
     /// buffer.add_line();
@@ -55,7 +56,7 @@ impl LineMetadata {
     /// let content_range = line_info.content_range();
     ///
     /// // For a newly created line, content should be empty (only newline is stored separately)
-    /// assert_eq!(content_range.len(), 0);
+    /// assert_eq!(content_range.to_usize_range().len(), 0);
     /// ```
     #[must_use]
     pub fn content_range(&self) -> Range<ByteIndex> {

@@ -4,13 +4,19 @@
 # create tmux POC
 
 - [x] [`task_ring_buffer_enhance`](docs/done/task_ring_buffer_enhance.md)
-- [⌛] [`task_make_editor_vt_100_parser_more_typesafe`](docs/task_make_editor_vt_100_parser_more_typesafe.md)
+- [x] [`task_make_editor_vt_100_parser_more_typesafe`](docs/done/task_make_editor_vt_100_parser_more_typesafe.md)
 - [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
 - [⌛] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)
 - [ ] extend `main_event_loop.rs` to support OSC output to terminal emulator (main window)
   - via `GlobalData::main_thread_channel_sender` -> add a variant to `TerminalWindowMainThreadSignal`
   - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
   - using `OscController` to write to `OutputDevice`
+
+# fix editor component bugs
+
+- [ ] Run the tui_examples #3 (editor) and invoke simple or complex dialog box. Select a
+      few chars of text at the end and scroll to the left, and see the component painting
+      outside of its bounds (on the right).
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 

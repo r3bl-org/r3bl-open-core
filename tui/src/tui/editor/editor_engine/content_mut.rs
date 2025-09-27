@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
-use crate::{CaretScrAdj, ColIndex, ColWidth, CursorPositionBoundsStatus,
+use crate::{BoundsCheck, CaretScrAdj, ColIndex, ColWidth, CursorPositionBoundsStatus,
             EOLCursorPosition, EditorArgsMut, EditorBuffer, EditorEngine, InlineString,
             InlineVec, RowIndex, SelectionList, SelectionRange, Width,
             ZeroCopyGapBuffer, caret_locate::locate_col, caret_scr_adj, col,
@@ -128,7 +128,20 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
         // Insert newline between lines (but not after the last line)
         if index < line_count - 1 {
             // Insert newline logic similar to insert_new_line_at_caret.
-            match locate_col_impl(&buffer_mut) {
+            let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
+            let cursor_status = if let Some(line_width) = buffer_mut
+                .inner
+                .lines
+                .get_line_display_width(caret_scr_adj.row_index)
+            {
+                caret_scr_adj
+                    .col_index
+                    .check_cursor_position_bounds(line_width)
+            } else {
+                CursorPositionBoundsStatus::AtEnd
+            };
+
+            match cursor_status {
                 CursorPositionBoundsStatus::AtEnd
                 | CursorPositionBoundsStatus::Beyond => {
                     // Insert new line at end.
@@ -162,17 +175,16 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                     // Split line in middle.
                     let caret_scr_adj =
                         *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
-                    let row_index = caret_scr_adj.row_index.as_usize();
-
                     if let Some(right_content) = buffer_mut.inner.lines.split_line_at_col(
                         caret_scr_adj.row_index,
                         caret_scr_adj.col_index,
                     ) {
-                        buffer_mut.inner.lines.insert_line(row(row_index + 1));
+                        let next_row_index = caret_scr_adj.row_index + row(1);
+                        buffer_mut.inner.lines.insert_line(next_row_index);
                         buffer_mut
                             .inner
                             .lines
-                            .set_line(row(row_index + 1), &right_content);
+                            .set_line(next_row_index, &right_content);
 
                         scroll_editor_content::inc_caret_row(
                             buffer_mut.inner.caret_raw,
@@ -193,44 +205,16 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
     // The EditorBufferMutWithDrop will perform validation once when it's dropped.
 }
 
-/// Helper function to locate caret position when we already have `buffer_mut`
-fn locate_col_impl(
-    buffer_mut: &EditorBufferMutWithDrop<'_>,
-) -> CursorPositionBoundsStatus {
-    let caret_scr_adj = *buffer_mut.inner.caret_raw + *buffer_mut.inner.scr_ofs;
-    let row_index = caret_scr_adj.row_index;
-
-    if let Some(line_width) = buffer_mut.inner.lines.get_line_display_width(row_index) {
-        let col_index = caret_scr_adj.col_index;
-
-        if col_index.as_usize() > line_width.as_usize() {
-            CursorPositionBoundsStatus::Beyond
-        } else if col_index == col(0) {
-            CursorPositionBoundsStatus::AtStart
-        } else if col_index >= line_width.eol_cursor_position() {
-            CursorPositionBoundsStatus::AtEnd
-        } else {
-            CursorPositionBoundsStatus::Within
-        }
-    } else {
-        CursorPositionBoundsStatus::AtEnd
-    }
-}
-
 /// Helper function to fill missing lines when we already have `buffer_mut`
 fn fill_in_missing_lines_up_to_row_impl(
     buffer_mut: &mut EditorBufferMutWithDrop<'_>,
     row_index: RowIndex,
 ) {
-    let max_row_index = row_index.as_usize();
-
-    if buffer_mut
-        .inner
-        .lines
-        .get_line_content(row(max_row_index))
-        .is_none()
-    {
-        for row_idx in 0..=max_row_index {
+    if buffer_mut.inner.lines.get_line_content(row_index).is_none() {
+        // Implementation Note: Intentional Use of Raw `usize`
+        // Uses `.as_usize()` for range iteration which requires `usize`.
+        // Type-safe bounds checking performed above via `get_line_content()`.
+        for row_idx in 0..=row_index.as_usize() {
             if buffer_mut
                 .inner
                 .lines
@@ -345,13 +329,12 @@ mod insert_new_line_at_caret_helper {
                 .lines
                 .split_line_at_col(caret_adj.row_index, caret_adj.col_index)
             {
-                let row_index = caret_adj.row_index.as_usize();
-
-                buffer_mut.inner.lines.insert_line(row(row_index + 1));
+                let next_row_index = caret_adj.row_index + row(1);
+                buffer_mut.inner.lines.insert_line(next_row_index);
                 buffer_mut
                     .inner
                     .lines
-                    .set_line(row(row_index + 1), &right_content);
+                    .set_line(next_row_index, &right_content);
 
                 scroll_editor_content::inc_caret_row(
                     buffer_mut.inner.caret_raw,
@@ -826,18 +809,17 @@ fn insert_into_existing_line(
 }
 
 /// Insert empty lines up to the row index.
+///
+/// # Implementation Note: Intentional Use of Raw `usize`
+///
+/// Uses `.as_usize()` for range iteration in loop which requires `usize`.
+/// Type-safe bounds checking performed via `get_line_content()` checks.
 fn fill_in_missing_lines_up_to_row(args: EditorArgsMut<'_>, row_index: RowIndex) {
     let EditorArgsMut { buffer, engine } = args;
 
-    let max_row_index = row_index.as_usize();
-
     // Fill in any missing lines.
-    if buffer
-        .get_lines()
-        .get_line_content(row(max_row_index))
-        .is_none()
-    {
-        for row_idx in 0..=max_row_index {
+    if buffer.get_lines().get_line_content(row_index).is_none() {
+        for row_idx in 0..=row_index.as_usize() {
             if buffer.get_lines().get_line_content(row(row_idx)).is_none() {
                 // When buffer_mut goes out of scope, it will be dropped & validation
                 // performed.
@@ -890,6 +872,13 @@ fn insert_chunk_into_new_line(
 
 #[cfg(test)]
 mod tests {
+    //! Content mutation tests.
+    //!
+    //! # Implementation Note: Intentional Use of Raw `usize`
+    //!
+    //! Test assertions use `.as_usize()` for comparison with numeric literals.
+    //! This is legitimate for test validation and doesn't require type-safe bounds
+    //! checking.
 
     use crate::{CaretDirection, DEFAULT_SYN_HI_FILE_EXT, EditorArgsMut, EditorBuffer,
                 EditorEvent, GCStringOwned, assert_eq2, caret_scr_adj,
