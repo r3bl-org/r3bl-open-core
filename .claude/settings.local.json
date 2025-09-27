@@ -78,7 +78,8 @@
       "WebFetch(domain:nexte.st)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Read(//home/nazmul/.config/Code/User/**)",
-      "Read(//home/nazmul/.config/Code/logs/20250925T142242/window1/**)"
+      "Read(//home/nazmul/.config/Code/logs/20250925T142242/window1/**)",
+      "Read(//home/nazmul/.claude/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

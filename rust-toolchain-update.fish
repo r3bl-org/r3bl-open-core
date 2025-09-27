@@ -164,7 +164,7 @@ function cleanup_old_toolchains
         end
 
         # Keep our target nightly
-        if test "$toolchain" = "$target_toolchain"
+        if string match -q "$target_toolchain*" $toolchain
             log_message "  KEEPING: $toolchain (target month-old nightly)"
             continue
         end
