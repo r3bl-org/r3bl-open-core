@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::buffer_struct::EditorBuffer;
-use crate::{BoundsCheck, CursorPositionBoundsStatus, UnitCompare};
+use crate::{BoundsCheck, CursorPositionBoundsStatus, IndexMarker, UnitCompare};
 
 /// Represents the position of a row within a buffer.
 ///
@@ -112,22 +112,22 @@ pub fn locate_col(editor_buffer: &EditorBuffer) -> CursorPositionBoundsStatus {
 #[must_use]
 pub fn locate_row(buffer: &EditorBuffer) -> RowContentPositionStatus {
     let row_index = buffer.get_caret_scr_adj().row_index;
-    let buffer_line_count = buffer.get_lines().len().as_usize();
+    let buffer_line_count = buffer.get_lines().len();
 
-    if buffer_line_count == 0 {
+    if buffer_line_count.is_zero() {
         // Empty buffer: treat as on first row.
         RowContentPositionStatus::OnFirstRow
-    } else if row_index.as_usize() >= buffer_line_count {
+    } else if row_index.overflows(buffer_line_count) {
         // Beyond buffer bounds.
         RowContentPositionStatus::BeyondBuffer
-    } else if buffer_line_count == 1 {
+    } else if buffer_line_count == 1.into() {
         // Single line: always on first row (precedence rule)
         RowContentPositionStatus::OnFirstRow
     } else {
         // Multiple lines (2+)
         if row_index.is_zero() {
             RowContentPositionStatus::OnFirstRow
-        } else if row_index.as_usize() == buffer_line_count - 1 {
+        } else if row_index == buffer_line_count.convert_to_index().into() {
             RowContentPositionStatus::OnLastRow
         } else {
             RowContentPositionStatus::OnMiddleRow
@@ -191,7 +191,7 @@ pub fn row_is_at_bottom(buffer: &EditorBuffer) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
+mod locate_col_tests {
     use super::*;
     use crate::{EOLCursorPosition, EditorEngine, EditorEngineConfig, assert_eq2, col,
                 row};
@@ -293,6 +293,125 @@ mod tests {
     }
 
     #[test]
+    fn test_locate_col_with_scroll_offset() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Very long line with many characters"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Set scroll offset and caret.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.scr_ofs.row_index = row(0);
+            buffer_mut.inner.scr_ofs.col_index = col(5);
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+
+        // The caret is at the start of the visible area, but not the start of the line.
+        let location = locate_col(&buffer);
+        // Scroll adjusted position is col 5, which is in the middle of the line.
+        assert_eq2!(location, CursorPositionBoundsStatus::Within);
+    }
+
+    #[test]
+    fn test_locate_col_beyond_line_width() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Short"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Get the actual line width to ensure our test is correct.
+        let line_width = buffer.get_lines().get_line_display_width(row(0)).unwrap();
+        assert_eq2!(line_width.as_usize(), 5); // "Short" has 5 characters
+
+        // Attempt to set caret beyond line width (line width is 5, try to set caret to
+        // col 10). Note: The editor buffer system validates and clamps positions,
+        // so this tests the actual behavior rather than an impossible state.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(10);
+        }
+
+        // The editor system clamps invalid positions, so col 10 becomes col 5 (end of
+        // line). This tests that when attempting to go beyond bounds, the system
+        // handles it gracefully.
+        let location = locate_col(&buffer);
+        // Given the validation/clamping, we expect AtEnd rather than Beyond.
+        assert_eq2!(location, CursorPositionBoundsStatus::AtEnd);
+    }
+
+    #[test]
+    fn test_locate_col_no_line_available() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        // Empty buffer - no lines exist
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Set caret position even though no line exists.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(5);
+        }
+
+        let location = locate_col(&buffer);
+        // When no line is available, function should return AtStart (fallback behavior)
+        assert_eq2!(location, CursorPositionBoundsStatus::AtStart);
+    }
+
+    #[test]
+    fn test_locate_col_multiple_rows() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Line 1", "Different Length Line", "Short"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test column position on second row (longer line).
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(15); // Within "Different Length Line"
+        }
+        let location = locate_col(&buffer);
+        assert_eq2!(location, CursorPositionBoundsStatus::Within);
+
+        // Test column position at end of third row (shorter line).
+        let line_width = buffer.get_lines().get_line_display_width(row(2)).unwrap();
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(2);
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
+        }
+        let location = locate_col(&buffer);
+        assert_eq2!(location, CursorPositionBoundsStatus::AtEnd);
+    }
+
+    #[test]
+    fn test_locate_col_empty_line_at_end_position() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec![""]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // For empty line, test what happens when trying to position at "end".
+        // Empty line has width 0, so end position would be col 0.
+        let line_width = buffer.get_lines().get_line_display_width(row(0)).unwrap();
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
+        }
+
+        let location = locate_col(&buffer);
+        // For empty line, end position is same as start position (col 0).
+        // Implementation should return AtStart due to precedence rule.
+        assert_eq2!(location, CursorPositionBoundsStatus::AtStart);
+    }
+}
+
+#[cfg(test)]
+mod locate_row_tests {
+    use super::*;
+    use crate::{EditorEngine, EditorEngineConfig, assert_eq2, col, row};
+
+    #[test]
     fn test_locate_row_at_top() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Line 1", "Line 2", "Line 3"]);
@@ -370,6 +489,96 @@ mod tests {
     }
 
     #[test]
+    fn test_locate_row_beyond_buffer() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Line 1", "Line 2"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Set caret beyond buffer bounds (buffer has 2 lines, set row to 5).
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(5);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+
+        let location = locate_row(&buffer);
+        assert_eq2!(location, RowContentPositionStatus::BeyondBuffer);
+    }
+
+    #[test]
+    fn test_locate_row_two_line_buffer() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["First line", "Second line"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test first row of two-line buffer.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        let location = locate_row(&buffer);
+        assert_eq2!(location, RowContentPositionStatus::OnFirstRow);
+
+        // Test second row of two-line buffer (should be OnLastRow, not OnMiddleRow).
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        let location = locate_row(&buffer);
+        assert_eq2!(location, RowContentPositionStatus::OnLastRow);
+    }
+
+    #[test]
+    fn test_locate_row_column_independent() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Line 1", "Line 2", "Line 3"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test that row detection is independent of column position.
+        // Test middle row with different column positions.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(0); // Start of line
+        }
+        let location = locate_row(&buffer);
+        assert_eq2!(location, RowContentPositionStatus::OnMiddleRow);
+
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(5); // Middle of line
+        }
+        let location = locate_row(&buffer);
+        assert_eq2!(location, RowContentPositionStatus::OnMiddleRow);
+
+        // Test last row with different column positions.
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(2);
+            buffer_mut.inner.caret_raw.col_index = col(0); // Start of line
+        }
+        let location = locate_row(&buffer);
+        assert_eq2!(location, RowContentPositionStatus::OnLastRow);
+
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(2);
+            buffer_mut.inner.caret_raw.col_index = col(3); // Middle of line
+        }
+        let location = locate_row(&buffer);
+        assert_eq2!(location, RowContentPositionStatus::OnLastRow);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{EOLCursorPosition, EditorEngine, EditorEngineConfig, col, row};
+
+    #[test]
     fn test_col_is_at_start_of_line() {
         let mut buffer = EditorBuffer::new_empty(None, None);
         buffer.init_with(vec!["Test line"]);
@@ -381,8 +590,7 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
-        let location = locate_col(&buffer);
-        assert_eq2!(location, CursorPositionBoundsStatus::AtStart);
+        assert!(col_is_at_start(&buffer));
 
         // Test not at start.
         {
@@ -390,8 +598,91 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(5);
         }
-        let location = locate_col(&buffer);
-        assert_eq2!(location, CursorPositionBoundsStatus::Within);
+        assert!(!col_is_at_start(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_start_empty_buffer() {
+        let buffer = EditorBuffer::new_empty(None, None);
+        // Empty buffer - should return true (cursor is at start of empty content)
+        assert!(col_is_at_start(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_start_multiple_rows() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["First line", "Second line is longer", "Short"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test col position is independent of row - start of row 0
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(col_is_at_start(&buffer));
+
+        // Test start of row 1 (longer line)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(col_is_at_start(&buffer));
+
+        // Test start of row 2 (shorter line)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(2);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(col_is_at_start(&buffer));
+
+        // Test not at start on row 1
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(5);
+        }
+        assert!(!col_is_at_start(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_start_unicode_text() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Hello 😄 World"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test at start with Unicode content
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(col_is_at_start(&buffer));
+
+        // Test not at start (before emoji)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(6);
+        }
+        assert!(!col_is_at_start(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_start_empty_line() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec![""]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test empty line - col 0 is both start and end, should return true for start
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(col_is_at_start(&buffer));
     }
 
     #[test]
@@ -407,8 +698,7 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
         }
-        let location = locate_col(&buffer);
-        assert_eq2!(location, CursorPositionBoundsStatus::AtEnd);
+        assert!(col_is_at_end(&buffer));
 
         // Test not at end.
         {
@@ -416,8 +706,97 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(2);
         }
-        let location = locate_col(&buffer);
-        assert_eq2!(location, CursorPositionBoundsStatus::Within);
+        assert!(!col_is_at_end(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_end_empty_buffer() {
+        let buffer = EditorBuffer::new_empty(None, None);
+        // Empty buffer - should return false (locate_col returns AtStart for empty, not
+        // AtEnd)
+        assert!(!col_is_at_end(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_end_multiple_rows() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["First", "Second line is longer", "Short"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test end of row 0 (shorter line)
+        let line_width = buffer.get_lines().get_line_display_width(row(0)).unwrap();
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
+        }
+        assert!(col_is_at_end(&buffer));
+
+        // Test end of row 1 (longer line)
+        let line_width = buffer.get_lines().get_line_display_width(row(1)).unwrap();
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
+        }
+        assert!(col_is_at_end(&buffer));
+
+        // Test end of row 2 (shorter line)
+        let line_width = buffer.get_lines().get_line_display_width(row(2)).unwrap();
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(2);
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
+        }
+        assert!(col_is_at_end(&buffer));
+
+        // Test not at end on row 1
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(5);
+        }
+        assert!(!col_is_at_end(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_end_unicode_text() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Hello 😄 World"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test at end with Unicode content
+        let line_width = buffer.get_lines().get_line_display_width(row(0)).unwrap();
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = line_width.eol_cursor_position();
+        }
+        assert!(col_is_at_end(&buffer));
+
+        // Test not at end (before emoji)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(6);
+        }
+        assert!(!col_is_at_end(&buffer));
+    }
+
+    #[test]
+    fn test_col_is_at_end_empty_line() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec![""]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test empty line - col 0 is both start and end, but should return false for end
+        // due to precedence rule (AtStart takes precedence over AtEnd for empty content)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(!col_is_at_end(&buffer));
     }
 
     #[test]
@@ -432,17 +811,60 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
-        let location = locate_row(&buffer);
-        assert_eq2!(location, RowContentPositionStatus::OnFirstRow);
+        assert!(row_is_at_top(&buffer));
 
-        // Test not at top (with 2 lines, row 1 is the bottom)
+        // Test not at top
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
             buffer_mut.inner.caret_raw.row_index = row(1);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
-        let location = locate_row(&buffer);
-        assert_eq2!(location, RowContentPositionStatus::OnMiddleRow);
+        assert!(!row_is_at_top(&buffer));
+    }
+
+    #[test]
+    fn test_row_is_at_top_empty_buffer() {
+        let buffer = EditorBuffer::new_empty(None, None);
+        // Empty buffer - should return true (locate_row returns OnFirstRow for empty)
+        assert!(row_is_at_top(&buffer));
+    }
+
+    #[test]
+    fn test_row_is_at_top_single_line() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["Only line"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Single line buffer - should return true (OnFirstRow takes precedence)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(row_is_at_top(&buffer));
+    }
+
+    #[test]
+    fn test_row_is_at_top_two_line() {
+        let mut buffer = EditorBuffer::new_empty(None, None);
+        buffer.init_with(vec!["First line", "Second line"]);
+        let engine = EditorEngine::new(EditorEngineConfig::default());
+
+        // Test first row of two-line buffer
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(0);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(row_is_at_top(&buffer));
+
+        // Test second row of two-line buffer (should not be top)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(!row_is_at_top(&buffer));
     }
 
     #[test]
@@ -457,8 +879,7 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(2);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
-        let location = locate_row(&buffer);
-        assert_eq2!(location, RowContentPositionStatus::OnLastRow);
+        assert!(row_is_at_bottom(&buffer));
 
         // Test not at bottom.
         {
@@ -466,10 +887,9 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(1);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
-        let location = locate_row(&buffer);
-        assert_eq2!(location, RowContentPositionStatus::OnMiddleRow);
+        assert!(!row_is_at_bottom(&buffer));
 
-        // Test single line (should return false)
+        // Test single line buffer (should return false for bottom)
         let mut single_line_buffer = EditorBuffer::new_empty(None, None);
         single_line_buffer.init_with(vec!["Only line"]);
         {
@@ -477,28 +897,37 @@ mod tests {
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
-        let location = locate_row(&single_line_buffer);
-        assert_eq2!(location, RowContentPositionStatus::OnFirstRow); // Single line is at top, not bottom
+        assert!(!row_is_at_bottom(&single_line_buffer)); // Single line is at top, not bottom
     }
 
     #[test]
-    fn test_locate_functions_with_scroll_offset() {
+    fn test_row_is_at_bottom_empty_buffer() {
+        let buffer = EditorBuffer::new_empty(None, None);
+        // Empty buffer - should return false (locate_row returns OnFirstRow for empty,
+        // not OnLastRow)
+        assert!(!row_is_at_bottom(&buffer));
+    }
+
+    #[test]
+    fn test_row_is_at_bottom_two_line() {
         let mut buffer = EditorBuffer::new_empty(None, None);
-        buffer.init_with(vec!["Very long line with many characters"]);
+        buffer.init_with(vec!["First line", "Second line"]);
         let engine = EditorEngine::new(EditorEngineConfig::default());
 
-        // Set scroll offset and caret.
+        // Test first row of two-line buffer (should not be bottom)
         {
             let buffer_mut = buffer.get_mut(engine.viewport());
-            buffer_mut.inner.scr_ofs.row_index = row(0);
-            buffer_mut.inner.scr_ofs.col_index = col(5);
             buffer_mut.inner.caret_raw.row_index = row(0);
             buffer_mut.inner.caret_raw.col_index = col(0);
         }
+        assert!(!row_is_at_bottom(&buffer));
 
-        // The caret is at the start of the visible area, but not the start of the line.
-        let location = locate_col(&buffer);
-        // Scroll adjusted position is col 5, which is in the middle of the line.
-        assert_eq2!(location, CursorPositionBoundsStatus::Within);
+        // Test second row of two-line buffer (should be bottom)
+        {
+            let buffer_mut = buffer.get_mut(engine.viewport());
+            buffer_mut.inner.caret_raw.row_index = row(1);
+            buffer_mut.inner.caret_raw.col_index = col(0);
+        }
+        assert!(row_is_at_bottom(&buffer));
     }
 }

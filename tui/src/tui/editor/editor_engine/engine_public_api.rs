@@ -460,6 +460,11 @@ mod syn_hi_r3bl_path {
 
             DEBUG_TUI_SYN_HI.then(|| {
                 // % is Display, ? is Debug.
+                //
+                // # Implementation Note: Intentional Use of Raw `usize`
+                //
+                // Uses `.as_usize()` for debug display formatting in tracing statement.
+                // Type-safe `Length` values need conversion to `usize` for string interpolation.
                 tracing::debug!(
                     message = %inline_string!(
                         "🎯🎯🎯 editor_buffer.lines({a}) vs md_document.lines.len({b})",

@@ -929,6 +929,11 @@ mod tests {
     mod movement_count_tests {
         use super::*;
 
+        // # Implementation Note: Intentional Use of Raw `usize`
+        //
+        // Test assertions use `.as_usize()` for comparison with numeric literals.
+        // Type-safe `Length` values need conversion to `usize` for test validation.
+
         #[test]
         fn test_parse_as_length_non_zero_with_valid_value() {
             process_csi_sequence_and_test("\x1b[5A", |params| {

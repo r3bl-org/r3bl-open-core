@@ -7,7 +7,7 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegStringOwned,
             Size, TinyInlineString, UnitCompare, ZeroCopyGapBuffer,
-            caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs, height,
+            caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs,
             inline_string, ok, row, validate_buffer_mut::EditorBufferMutNoDrop, width,
             with_mut};
 
@@ -15,7 +15,9 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
 /// text storage.
 ///
 /// Please do not construct this struct directly and use
-/// [`new_empty`](EditorBuffer::new_empty) instead.
+/// [`new_empty`] instead.
+///
+/// [`new_empty`]: EditorBuffer::new_empty
 ///
 /// As of 2025, `EditorBuffer` uses [`ZeroCopyGapBuffer`] directly as a concrete type
 /// for efficient content storage with zero-copy access.
@@ -49,7 +51,7 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
 ///
 /// All the fields in this struct are private. In order to access them you have to use the
 /// accessor associated functions. To mutate them, you have to use the
-/// [`get_mut`](EditorBuffer::get_mut) method, which returns a struct of mutable
+/// [`get_mut`] method, which returns a struct of mutable
 /// references to the fields. This struct [`crate::EditorBufferMut`] implements the [Drop]
 /// trait, which allows for validation
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`] operations to
@@ -67,7 +69,9 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
 ///
 /// Please don't mutate these fields directly, they are not marked `pub` to guard from
 /// unintentional mutation. To mutate or access it, use
-/// [`get_mut`](EditorBuffer::get_mut).
+/// [`get_mut`].
+///
+/// [`get_mut`]: EditorBuffer::get_mut
 ///
 /// ## `lines`
 ///
@@ -92,8 +96,9 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
 /// > - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA)
 ///
 /// 1. It represents the current caret position (relative to the
-///    [`style_adjusted_origin_pos`](crate::FlexBox::style_adjusted_origin_pos) of the
-///    enclosing [`crate::FlexBox`]).
+///    [`style_adjusted_origin_pos`] of the enclosing [`crate::FlexBox`]).
+///
+/// [`style_adjusted_origin_pos`]: crate::FlexBox::style_adjusted_origin_pos
 /// 2. It works w/ [`crate::RenderOp::MoveCursorPositionRelTo`] as well.
 ///
 /// > 💡 For the diagrams below, the caret is where `⮬` and `❱` intersects.
@@ -125,7 +130,7 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
 /// ## `scr_ofs`
 ///
 /// The col and row offset for scrolling if active. This is not marked pub to guard
-/// against unintentional mutation. To access it, use [`get_mut`](EditorBuffer::get_mut).
+/// against unintentional mutation. To access it, use [`get_mut`].
 ///
 /// # Vertical scrolling and viewport
 ///
@@ -308,13 +313,12 @@ pub mod versions {
 pub mod content_display_width {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use crate::core::units::bounds_check::LengthMarker;
 
     impl EditorBuffer {
         #[must_use]
         pub fn get_max_row_index(&self) -> RowIndex {
             // Subtract 1 from the height to get the last row index.
-            height(self.get_lines().len().as_usize()).convert_to_index()
+            self.get_lines().len().convert_to_index().into()
         }
 
         /// Get line display with at caret's scroll adjusted row index.
@@ -527,7 +531,7 @@ pub mod access_and_mutate {
         }
 
         #[must_use]
-        pub fn len(&self) -> RowHeight { height(self.content.lines.len().as_usize()) }
+        pub fn len(&self) -> RowHeight { self.content.lines.len().into() }
 
         #[must_use]
         pub fn get_lines(&self) -> &ZeroCopyGapBuffer { &self.content.lines }
@@ -605,7 +609,7 @@ pub mod access_and_mutate {
             // Invalidate and recalculate memory size cache.
             self.invalidate_memory_size_calc_cache();
 
-            // Reset undo/redo history since this is a complete re-initialization
+            // Reset undo/redo history since this is a complete re-initialization.
             self.history.clear();
         }
 
@@ -685,6 +689,13 @@ mod display_impl {
         /// This must be a fast implementation, so we avoid deep traversal of the
         /// editor buffer. This is used for telemetry reporting, and it is expected
         /// to be fast, since it is called in a hot loop, on every render.
+        ///
+        /// # Implementation Note: Intentional Use of Raw `usize`
+        ///
+        /// This method uses `.as_usize()` for display formatting purposes:
+        /// - Line/column numbers are converted to 1-indexed display format
+        /// - Type-safe bounds checking not needed for display-only operations
+        /// - Required for user-friendly editor coordinate display
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             // Note: Display requires &self not &mut self, so we access the cache
             // directly. The cache is populated elsewhere in the buffer's lifecycle
@@ -702,8 +713,8 @@ mod display_impl {
 
             // Get active line/column info.
             let caret = self.get_caret_scr_adj();
-            let line = caret.row_index.as_usize() + 1; // 1-indexed for display.
-            let col = caret.col_index.as_usize() + 1; // 1-indexed for display.
+            let line = caret.row_index.as_usize() + 1; // 1-indexed for display
+            let col = caret.col_index.as_usize() + 1; // 1-indexed for display
 
             // Get file info and format output.
             let ext = self
@@ -757,6 +768,10 @@ mod debug_impl {
     }
 
     impl Debug for EditorContent {
+        /// # Implementation Note: Intentional Use of Raw `usize`
+        ///
+        /// Uses `.as_usize()` for Debug formatting output only.
+        /// Type-safe bounds checking not needed for debug display.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             let mem_size = self.get_mem_size();
             let mem_size_fmt = format_as_kilobytes_with_commas(mem_size);
@@ -784,7 +799,7 @@ mod debug_impl {
 mod test_memory_cache_invalidation {
     use super::*;
     use crate::{CaretMovementDirection, EditorEngine, RingBuffer, assert_eq2,
-                caret_scr_adj, col, len};
+                caret_scr_adj, col, height, len};
 
     #[test]
     fn test_cache_invalidated_on_get_mut() {
@@ -878,7 +893,7 @@ mod test_memory_cache_invalidation {
         assert!(!buffer.is_empty());
         assert_eq2!(buffer.len(), height(3));
 
-        // Clear all lines
+        // Clear all lines.
         buffer.init_with::<Vec<&str>>(vec![]);
         assert!(buffer.is_empty());
         assert_eq2!(buffer.len(), height(0));
@@ -913,7 +928,7 @@ mod test_memory_cache_invalidation {
     fn test_memory_cache_functions() {
         let mut buffer: EditorBuffer = EditorBuffer::new_empty(None, None);
 
-        // Initially, cache should be empty (dirty)
+        // Initially, cache should be empty (dirty).
         assert!(buffer.memory_size_calc_cache.get_cached().is_none());
 
         // Populate the cache.
@@ -939,7 +954,7 @@ mod test_memory_cache_invalidation {
             size_before_invalidate
         );
 
-        // When accessed through get_memory_size_calc_cached(), it auto-populates
+        // When accessed through get_memory_size_calc_cached(), it auto-populates.
         let auto_populated = buffer.get_memory_size_calc_cached();
         assert!(auto_populated.size().is_some());
 
@@ -1008,7 +1023,7 @@ mod test_memory_cache_invalidation {
         assert!(!buffer.get_selection_list().is_empty());
         assert_eq2!(buffer.get_selection_list().len(), 1);
 
-        // Clear selection
+        // Clear selection.
         buffer.clear_selection();
 
         // Verify selection is cleared.
@@ -1054,7 +1069,7 @@ mod test_memory_cache_invalidation {
             "changed"
         );
 
-        // Another undo
+        // Another undo.
         buffer.undo();
         assert_eq2!(
             buffer.get_lines().get_line_content(row(0)).unwrap(),

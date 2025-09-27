@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter, Result};
 
 use super::{EditorContent,
             cur_index::{CurIndex, CurIndexLoc}};
-use crate::{Length, RingBuffer, format_as_kilobytes_with_commas, idx};
+use crate::{RingBuffer, format_as_kilobytes_with_commas, idx};
 
 /// The `EditorHistory` struct manages the undo/redo functionality for the `EditorBuffer`.
 ///
@@ -75,6 +75,11 @@ impl EditorHistory {
     /// incremented. And [`EditorHistory::undo()`] can be called to undo.
     ///
     /// Any dangling redos are truncated when a new state is added to the buffer.
+    ///
+    /// # Implementation Note: Intentional Use of Raw `usize`
+    ///
+    /// Uses `.as_usize()` for `Vec::truncate()` which requires `usize` parameter.
+    /// Type-safe bounds checking is performed in `CurIndexLoc` logic.
     pub fn add(&mut self, content: EditorContent) {
         match self.locate_current_index() {
             CurIndexLoc::End(current_index) | CurIndexLoc::Middle(current_index) => {
@@ -89,10 +94,7 @@ impl EditorHistory {
         }
 
         self.versions.add(content);
-        CurIndexLoc::inc(
-            &mut self.current_index,
-            Length::from(self.versions.len().as_usize()),
-        );
+        CurIndexLoc::inc(&mut self.current_index, self.versions.len());
     }
 
     /// This is the underlying function that enables undo. It changes the current index to
@@ -150,10 +152,7 @@ impl EditorHistory {
     /// Convenience method that calls [`CurIndexLoc::locate()`].
     #[must_use]
     pub fn locate_current_index(&self) -> CurIndexLoc {
-        CurIndexLoc::locate(
-            &self.current_index,
-            Length::from(self.versions.len().as_usize()),
-        )
+        CurIndexLoc::locate(&self.current_index, self.versions.len())
     }
 }
 
@@ -163,6 +162,10 @@ mod impl_debug_format {
     use crate::GetMemSize;
 
     impl Debug for EditorHistory {
+        /// # Implementation Note: Intentional Use of Raw `usize`
+        ///
+        /// Uses `.as_usize()` for Debug formatting output only.
+        /// Type-safe bounds checking not needed for debug display.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             let self_mem_size = self.get_mem_size();
             let size_fmt = format_as_kilobytes_with_commas(self_mem_size);

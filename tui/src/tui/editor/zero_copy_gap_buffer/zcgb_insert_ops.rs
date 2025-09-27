@@ -171,13 +171,17 @@ impl ZeroCopyGapBuffer {
     /// # Implementation Note: Intentional Use of Raw `usize`
     ///
     /// This method uses `.as_usize()` extensively for buffer operations because:
-    /// - **Buffer indexing**: Rust's `Index` trait requires `usize` for array/vector element access
-    /// - **Slice operations**: Range slicing (`buffer[start..end]`) requires `Range<usize>`
-    /// - **Range iteration**: For loops over ranges require the `Step` trait (unavailable for custom types)
+    /// - **Buffer indexing**: Rust's `Index` trait requires `usize` for array/vector
+    ///   element access
+    /// - **Slice operations**: Range slicing (`buffer[start..end]`) requires
+    ///   `Range<usize>`
+    /// - **Range iteration**: For loops over ranges require the `Step` trait (unavailable
+    ///   for custom types)
     ///
-    /// Buffer manipulation involves direct byte-level operations that fundamentally operate on
-    /// raw memory indices. Using type-safe wrappers would require immediate unwrapping at every
-    /// operation, providing no additional safety while significantly reducing code readability.
+    /// Buffer manipulation involves direct byte-level operations that fundamentally
+    /// operate on raw memory indices. Using type-safe wrappers would require
+    /// immediate unwrapping at every operation, providing no additional safety while
+    /// significantly reducing code readability.
     pub fn insert_text_at_byte_pos(
         &mut self,
         arg_line_index: impl Into<RowIndex>,

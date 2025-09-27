@@ -324,9 +324,10 @@ impl ZeroCopyGapBuffer {
 
     /// # Implementation Note: Intentional Use of Raw `usize`
     ///
-    /// This method uses `.as_usize()` to create an iterator range (`0..total_lines.as_usize()`)
-    /// because Rust's `Range` type requires the `Step` trait for iteration, which custom types
-    /// like `Length` don't implement. This is a fundamental language limitation.
+    /// This method uses `.as_usize()` to create an iterator range
+    /// (`0..total_lines.as_usize()`) because Rust's `Range` type requires the `Step`
+    /// trait for iteration, which custom types like `Length` don't implement. This is
+    /// a fundamental language limitation.
     #[must_use]
     pub fn iter_lines(&self) -> Box<dyn Iterator<Item = GapBufferLine<'_>> + '_> {
         let total_lines = self.line_count();
@@ -341,9 +342,9 @@ impl ZeroCopyGapBuffer {
 
     /// # Implementation Note: Intentional Use of Raw `usize`
     ///
-    /// This method uses `.as_usize()` for range iteration (`0..self.line_count().as_usize()`)
-    /// because custom length types don't implement Rust's `Step` trait, which is required
-    /// for creating iterable ranges.
+    /// This method uses `.as_usize()` for range iteration
+    /// (`0..self.line_count().as_usize()`) because custom length types don't
+    /// implement Rust's `Step` trait, which is required for creating iterable ranges.
     pub fn to_gc_string_vec(&self) -> Vec<GCStringOwned> {
         (0..self.line_count().as_usize())
             .filter_map(|i| self.get_line_content(row(i)))

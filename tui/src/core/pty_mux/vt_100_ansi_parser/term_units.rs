@@ -5,6 +5,12 @@
 //! This module provides type-safe coordinate types for terminal operations that use
 //! 1-based indexing, as opposed to buffer operations which use 0-based indexing.
 //!
+//! # Implementation Note: Intentional Use of Raw `usize`
+//!
+//! This file contains `.as_usize()` calls exclusively in doctest examples for
+//! demonstration purposes. All production code uses type-safe conversions via
+//! `from_zero_based()` and `to_zero_based()` methods.
+//!
 //! ## Coordinate Systems
 //!
 //! Understanding the distinction between coordinate systems is crucial for terminal
