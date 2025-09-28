@@ -5,12 +5,19 @@
 
 - [x] [`task_ring_buffer_enhance`](docs/done/task_ring_buffer_enhance.md)
 - [x] [`task_make_editor_vt_100_parser_more_typesafe`](docs/done/task_make_editor_vt_100_parser_more_typesafe.md)
+- [⌛] [`task_task_scroll_viewport_selection_refactor`](docs/task_scroll_viewport_selection_refactor.md)
 - [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
 - [⌛] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)
 - [ ] extend `main_event_loop.rs` to support OSC output to terminal emulator (main window)
   - via `GlobalData::main_thread_channel_sender` -> add a variant to `TerminalWindowMainThreadSignal`
   - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
   - using `OscController` to write to `OutputDevice`
+
+# rearchitect how scrolling and rendering is done
+
+- [ ] Instead of having a single OffscreenBuffer for the terminal window, have 1 for each
+      component. Then compose them together w/ proper Z-index handling. This should
+      simplify a lot of complexity around scrolling
 
 # fix editor component bugs
 

@@ -59,7 +59,9 @@
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount};
-use crate::{RowHeight, RowIndex};
+use crate::{RowHeight, RowIndex,
+            core::units::bounds_check::{length_and_index_markers::IndexMarker,
+                                        result_enums::ArrayAccessBoundsStatus}};
 
 /// Handle IL (Insert Line) - insert n blank lines at cursor position.
 /// Lines below cursor and within scroll region shift down.
@@ -99,9 +101,15 @@ fn insert_lines_at(
     let scroll_top = performer.ofs_buf.get_scroll_top_boundary();
     let scroll_bottom = performer.ofs_buf.get_scroll_bottom_boundary();
 
-    // Only operate within scroll region and if cursor is within region.
-    if row_index < scroll_top || row_index > scroll_bottom {
-        return;
+    // Only operate within scroll region - check if cursor is within the inclusive range.
+    match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
+        ArrayAccessBoundsStatus::Within => {
+            // Continue with the operation - cursor is within scroll region.
+        }
+        _ => {
+            // Skip operation - cursor is outside scroll region.
+            return;
+        }
     }
 
     // Use shift_lines_down to shift lines down by how_many positions.
@@ -141,9 +149,15 @@ fn delete_lines_at(
     let scroll_top = performer.ofs_buf.get_scroll_top_boundary();
     let scroll_bottom = performer.ofs_buf.get_scroll_bottom_boundary();
 
-    // Only operate within scroll region and if cursor is within region.
-    if row_index < scroll_top || row_index > scroll_bottom {
-        return;
+    // Only operate within scroll region - check if cursor is within the inclusive range.
+    match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
+        ArrayAccessBoundsStatus::Within => {
+            // Continue with the operation - cursor is within scroll region.
+        }
+        _ => {
+            // Skip operation - cursor is outside scroll region.
+            return;
+        }
     }
 
     // Use shift_lines_up to shift lines up by how_many positions.

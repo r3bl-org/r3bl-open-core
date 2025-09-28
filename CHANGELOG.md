@@ -185,8 +185,6 @@ tasks are run in CICD are included here.
   replaces `run.nu` throughout the project for improved maintainability and readability
 - **uv Python package manager & runtime:** `run.fish` `install-cargo-tools` command now includes
   installation of `uv` Python runtime (required for `serena` MCP server)
-- **MCP server configuration:** Automated setup for `serena` semantic language MCP server and
-  `context7` documentation lookup server in Claude Code
 - **Copyright headers:** Shrunk copyright headers in all files for better readability
 - **Claude Code configuration:** Updated Claude Code configuration files and VS Code settings for
   improved development experience
@@ -197,8 +195,6 @@ tasks are run in CICD are included here.
 
 - **MCP server integration:** Integration with [`serena`](https://github.com/oraios/serena) semantic
   language MCP server for improved Claude Code performance and efficiency
-- **Documentation lookup:** [`context7`](https://mcp.context7.com/mcp) MCP server configuration for
-  real-time documentation and API lookup
 - **Compilation cache:** [`sccache`](https://github.com/mozilla/sccache) support for shared
   compilation cache to significantly speed up cargo builds across the project
 

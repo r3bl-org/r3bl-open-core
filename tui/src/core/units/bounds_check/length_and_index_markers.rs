@@ -255,6 +255,92 @@ pub trait IndexMarker: UnitCompare {
         }
     }
 
+    /// Check if this index is within an inclusive range [min_index, max_index].
+    ///
+    /// This is useful for checking membership in regions defined by two indices,
+    /// such as scroll regions, selection ranges, or viewport bounds. Both endpoints
+    /// are included in the valid range.
+    ///
+    /// ```text
+    /// Example with min_index=2, max_index=7:
+    ///
+    ///            min_index=2           max_index=7
+    ///                  ↓                   ↓
+    /// Index:   0   1   2   3   4   5   6   7   8   9
+    ///        ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///        │ U │ U │ W │ W │ W │ W │ W │ W │ O │ O │
+    ///        └───┴───┼───┴───┴───┴───┴───┴───┼───┴───┘
+    ///                └──── within range ─────┘
+    ///
+    /// U = Underflowed (index < min_index)
+    /// W = Within (min_index <= index <= max_index)
+    /// O = Overflowed (index > max_index)
+    ///
+    /// check_inclusive_range_bounds(row(1), row(2), row(7)) = Underflowed
+    /// check_inclusive_range_bounds(row(2), row(2), row(7)) = Within
+    /// check_inclusive_range_bounds(row(5), row(2), row(7)) = Within
+    /// check_inclusive_range_bounds(row(7), row(2), row(7)) = Within
+    /// check_inclusive_range_bounds(row(8), row(2), row(7)) = Overflowed
+    /// ```
+    ///
+    /// # Arguments
+    /// - `min_index`: Lower bound of the range (inclusive)
+    /// - `max_index`: Upper bound of the range (inclusive)
+    ///
+    /// # Returns
+    /// - [`ArrayAccessBoundsStatus::Underflowed`] if index < min_index
+    /// - [`ArrayAccessBoundsStatus::Within`] if min_index <= index <= max_index
+    /// - [`ArrayAccessBoundsStatus::Overflowed`] if index > max_index
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{IndexMarker, ArrayAccessBoundsStatus, row, col};
+    ///
+    /// // Scroll region bounds checking
+    /// let scroll_top = row(2);
+    /// let scroll_bottom = row(7);
+    ///
+    /// assert_eq!(row(1).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Underflowed);
+    /// assert_eq!(row(2).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(row(5).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(row(7).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(row(8).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Overflowed);
+    ///
+    /// // Usage in conditional logic
+    /// let row_index = row(5); // Example row index
+    /// match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
+    ///     ArrayAccessBoundsStatus::Within => {
+    ///         // Process operation within scroll region
+    ///     }
+    ///     _ => {
+    ///         // Skip operation - outside scroll region
+    ///         return;
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Use Cases
+    /// - VT-100 scroll region checking: `[scroll_top, scroll_bottom]`
+    /// - Text selection bounds: `[selection_start, selection_end]`
+    /// - Viewport boundaries: `[viewport_top, viewport_bottom]`
+    /// - Any range where both endpoints are meaningful positions
+    ///
+    /// [`ArrayAccessBoundsStatus::Underflowed`]: crate::ArrayAccessBoundsStatus::Underflowed
+    /// [`ArrayAccessBoundsStatus::Within`]: crate::ArrayAccessBoundsStatus::Within
+    /// [`ArrayAccessBoundsStatus::Overflowed`]: crate::ArrayAccessBoundsStatus::Overflowed
+    fn check_inclusive_range_bounds(&self, min_index: Self, max_index: Self) -> ArrayAccessBoundsStatus
+    where
+        Self: PartialOrd + Copy,
+    {
+        if *self < min_index {
+            ArrayAccessBoundsStatus::Underflowed
+        } else if *self > max_index {
+            ArrayAccessBoundsStatus::Overflowed
+        } else {
+            ArrayAccessBoundsStatus::Within
+        }
+    }
+
     /// Clamp this index to stay within the bounds defined by a container length.
     ///
     /// **Why this method takes a `LengthType` parameter:**
@@ -1050,6 +1136,95 @@ mod overflow_operations_tests {
             col(200),
             "Large index unchanged when above minimum"
         );
+    }
+
+    #[test]
+    fn test_check_inclusive_range_bounds() {
+        use crate::{ArrayAccessBoundsStatus, col, row};
+
+        // Test basic Index types
+        assert_eq!(idx(1).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Underflowed, "Index below range");
+        assert_eq!(idx(2).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Within, "Index at range start");
+        assert_eq!(idx(5).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Within, "Index within range");
+        assert_eq!(idx(7).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Within, "Index at range end");
+        assert_eq!(idx(8).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Overflowed, "Index above range");
+
+        // Test edge case: single element range
+        assert_eq!(idx(5).check_inclusive_range_bounds(idx(5), idx(5)), ArrayAccessBoundsStatus::Within, "Single element range - at element");
+        assert_eq!(idx(4).check_inclusive_range_bounds(idx(5), idx(5)), ArrayAccessBoundsStatus::Underflowed, "Single element range - below");
+        assert_eq!(idx(6).check_inclusive_range_bounds(idx(5), idx(5)), ArrayAccessBoundsStatus::Overflowed, "Single element range - above");
+
+        // Test with ColIndex (scroll regions use case)
+        let scroll_top = col(10);
+        let scroll_bottom = col(20);
+
+        assert_eq!(col(9).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Underflowed, "Col below scroll region");
+        assert_eq!(col(10).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within, "Col at scroll start");
+        assert_eq!(col(15).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within, "Col within scroll region");
+        assert_eq!(col(20).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within, "Col at scroll end");
+        assert_eq!(col(21).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Overflowed, "Col above scroll region");
+
+        // Test with RowIndex (typical VT-100 scroll region scenario)
+        let vt_scroll_top = row(5);
+        let vt_scroll_bottom = row(15);
+
+        assert_eq!(row(4).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Underflowed, "Row above scroll region");
+        assert_eq!(row(5).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Within, "Row at scroll top");
+        assert_eq!(row(10).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Within, "Row within scroll region");
+        assert_eq!(row(15).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Within, "Row at scroll bottom");
+        assert_eq!(row(16).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Overflowed, "Row below scroll region");
+
+        // Test zero-based ranges
+        assert_eq!(idx(0).check_inclusive_range_bounds(idx(0), idx(3)), ArrayAccessBoundsStatus::Within, "Zero at start of zero-based range");
+        assert_eq!(idx(3).check_inclusive_range_bounds(idx(0), idx(3)), ArrayAccessBoundsStatus::Within, "End of zero-based range");
+        assert_eq!(idx(4).check_inclusive_range_bounds(idx(0), idx(3)), ArrayAccessBoundsStatus::Overflowed, "Beyond zero-based range");
+
+        // Test property: consistency with manual bounds checking
+        let test_cases = [
+            (0, 0, 10),   // At start
+            (5, 0, 10),   // Within
+            (10, 0, 10),  // At end
+            (15, 10, 20), // Within larger range
+            (1, 1, 1),    // Single element range
+        ];
+
+        for (index_val, min_val, max_val) in test_cases {
+            let index = idx(index_val);
+            let min_index = idx(min_val);
+            let max_index = idx(max_val);
+
+            let status = index.check_inclusive_range_bounds(min_index, max_index);
+            let not_underflow = !index.underflows(min_index);
+            let not_overflow = index <= max_index;
+            let expected_within = not_underflow && not_overflow;
+
+            let is_within = status == ArrayAccessBoundsStatus::Within;
+            assert_eq!(
+                is_within,
+                expected_within,
+                "check_inclusive_range_bounds({index_val}, {min_val}, {max_val}) = {status:?} should match manual bounds checking"
+            );
+        }
+
+        // Test inverted range (min > max) - should always return Overflowed since index < min but also > max
+        assert_eq!(idx(5).check_inclusive_range_bounds(idx(10), idx(5)), ArrayAccessBoundsStatus::Underflowed, "Inverted range: 5 < 10 (min)");
+        assert_eq!(idx(10).check_inclusive_range_bounds(idx(10), idx(5)), ArrayAccessBoundsStatus::Overflowed, "Inverted range: 10 > 5 (max)");
+        assert_eq!(idx(0).check_inclusive_range_bounds(idx(10), idx(5)), ArrayAccessBoundsStatus::Underflowed, "Inverted range: 0 < 10 (min)");
+
+        // Test large values
+        let large_min = idx(1000);
+        let large_max = idx(2000);
+        assert_eq!(idx(999).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Underflowed, "Below large range");
+        assert_eq!(idx(1000).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Within, "At large range start");
+        assert_eq!(idx(1500).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Within, "Within large range");
+        assert_eq!(idx(2000).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Within, "At large range end");
+        assert_eq!(idx(2001).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Overflowed, "Above large range");
+
+        // Test typed consistency between ColIndex and RowIndex
+        assert_eq!(col(5).check_inclusive_range_bounds(col(3), col(7)), ArrayAccessBoundsStatus::Within, "ColIndex range check");
+        assert_eq!(row(5).check_inclusive_range_bounds(row(3), row(7)), ArrayAccessBoundsStatus::Within, "RowIndex range check");
+        assert_eq!(col(2).check_inclusive_range_bounds(col(3), col(7)), ArrayAccessBoundsStatus::Underflowed, "ColIndex below range");
+        assert_eq!(row(8).check_inclusive_range_bounds(row(3), row(7)), ArrayAccessBoundsStatus::Overflowed, "RowIndex above range");
     }
 }
 

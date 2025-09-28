@@ -256,7 +256,6 @@ end
 # - Idempotent - safe to run multiple times
 # - Configures Claude MCP servers for enhanced code assistance:
 #   - rust-analyzer: Language server protocol for Rust
-#   - context7: Documentation lookup service
 #   - serena: Semantic code analysis
 #
 # Prerequisites:

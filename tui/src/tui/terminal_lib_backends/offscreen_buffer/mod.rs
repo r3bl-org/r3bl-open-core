@@ -129,7 +129,7 @@
 //!
 //! // In development, use debug_assert! to catch issues early
 //! let success = buffer.set_char(pos, pixel_char);
-//! debug_assert!(success, "Failed to set char at {:?}", pos);
+//! debug_assert!(success.is_ok(), "Failed to set char at {:?}", pos);
 //! ```
 //!
 //! ### Query Methods → `Option<T>`
@@ -196,7 +196,7 @@
 //! # let count = Length::from(1);
 //! // In parser operations
 //! let success = buffer.delete_chars_at_cursor(count);
-//! debug_assert!(success, "Failed to delete {:?} chars at cursor", count);
+//! debug_assert!(success.is_ok(), "Failed to delete {:?} chars at cursor", count);
 //!
 //! # let row = RowIndex::from(1);
 //! # let source = ColIndex::from(0);
@@ -204,7 +204,7 @@
 //! # let dest = ColIndex::from(2);
 //! // In internal operations with edge case awareness
 //! let success = buffer.copy_chars_within_line(row, source..end, dest);
-//! debug_assert!(success || source >= end,
+//! debug_assert!(success.is_ok() || source >= end,
 //!     "Failed to copy chars, range: {:?}..{:?}", source, end);
 //! ```
 //!

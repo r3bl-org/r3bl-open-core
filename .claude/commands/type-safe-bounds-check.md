@@ -3,36 +3,58 @@
 This task involves refactoring two major subsystems to use type-safe index and length types instead of raw `usize`.
 
 Throughout the implementation, use the type-safe bounds checking utilities from
-`tui/src/core/units/bounds_check.rs` which have 2 main patterns: "array access bounds checking, and
-"cursor positioning bounds checking". Make sure to use the `cursor_bounds.rs` utilities for cursor
-positioning related tasks, and `array_bounds.rs` utilities for array access related tasks.
+`tui/src/core/units/bounds_check/` which provide **three main patterns** for different use cases:
 
-For both patterns:
+1. **Array Access Bounds Checking** - for accessing elements in arrays/vectors
+2. **Cursor Position Bounds Checking** - for cursor placement (allows position at end)
+3. **Range Membership Checking** - for viewport, scroll region, and selection bounds
 
-- Instead of using `usize` or `u16` for indices, try using `IndexMarker` which is 0-based
-- Instead of using `usize` or `u16` for lengths, try using `LengthMarker` which is 1-based
-- Implement Range Validation with RangeBoundary
-- Array Access Bounds Checking with check_array_access_bounds() and overflows()
-- Cursor Position Bounds Checking with check_cursor_position_bounds()
-- Type-safe comparisons to eliminate .as_usize() calls
-- Use .is_zero() for zero checks instead of == 0
+#### Core Type Safety Principles
 
-For "array access bounds checking" pattern:
+- Instead of using `usize` or `u16` for indices, use `IndexMarker` types (0-based): `RowIndex`, `ColIndex`
+- Instead of using `usize` or `u16` for lengths, use `LengthMarker` types (1-based): `RowHeight`, `ColWidth`
+- Use type-safe comparisons to eliminate `.as_usize()` calls where possible
+- Use `.is_zero()` for zero checks instead of `== 0`
+- Leverage `convert_to_index()` and `convert_to_length()` for safe type conversions
 
-- Use `IndexMarker::overflows()` instead of raw `<` or `>` comparisons between 0/1-based values
-- Use `LengthMarker::is_overflowed_by()` for inverse checks, and `IndexMarker::is_overflowed_by()`
-  similarly
-- Use `LengthMarker::clamp_to()` for clamping operations
-- Leverage `convert_to_index()` and `convert_to_length()` for type conversions
-- Use `clamp_to()` to ensure indices and lengths stay within valid bounds and `remaining_from()` to
-  compute available space
-- Use `range_ext::RangeValidation` for validating ranges instead of manually comparing start and end
-  values as `usize`
+#### Pattern 1: Array Access Bounds Checking
 
-For "cursor positioning bounds checking" pattern:
+**When to use**: Accessing elements in arrays, vectors, or buffers where you have an index and a container length.
 
-- Use `check_cursor_position_bounds` instead of `overflows` since line_index == line_count() which
-  is valid for insertions (can insert at the end), while still preventing indices beyond that point
+**Methods**:
+- `index.overflows(length)` - checks if `index >= length`
+- `index.check_array_access_bounds(length)` - returns `ArrayAccessBoundsStatus`
+- `length.is_overflowed_by(index)` - inverse check from length perspective
+- `index.clamp_to_max_length(length)` - clamp index to valid range
+
+#### Pattern 2: Cursor Position Bounds Checking
+
+**When to use**: Positioning cursors where `index == length` is valid (cursor can be placed at end).
+
+**Methods**:
+- `cursor_pos.check_cursor_position_bounds(content_length)` - allows position at end
+- Use this instead of `overflows()` for cursor placement
+
+**Key Difference**: `check_cursor_position_bounds()` considers `index == length` as valid (AtEnd status).
+
+#### Pattern 3: Range Membership Checking
+
+**When to use**: Checking if a position is within a defined region or window.
+
+**Methods**:
+- `index.check_bounds_range(start_index, width_or_height)` - for viewport/window checks `[start, start+length)`
+- `index.check_inclusive_range_bounds(min_index, max_index)` - for inclusive ranges `[min, max]`
+
+**Use Cases**:
+- **Viewport checking**: Use `check_bounds_range(viewport_start, viewport_size)` for windows
+- **Scroll regions**: Use `check_inclusive_range_bounds(scroll_top, scroll_bottom)` for VT-100 regions
+- **Selection ranges**: Use `check_inclusive_range_bounds(selection_start, selection_end)` for text selection
+
+#### Range Validation
+
+- Use `RangeBoundary::is_valid()` for validating `Range<Index>` objects
+- Use `range_ext::RangeValidation` for complex range operations
+- Avoid manually comparing start and end values as `usize`
 
 ### Why This Refactoring?
 
@@ -127,7 +149,7 @@ Index:      0   1   2   3   4   5 (out of bounds)
 
 
 
-## The Two Bounds Checking Patterns
+## The Three Bounds Checking Patterns
 
 ### Pattern 1: Array Access Bounds Checking
 
@@ -185,16 +207,61 @@ Array Access:     0 ≤ index < length     (5 < 5 = false, out of bounds)
 Cursor Position:  0 ≤ index ≤ length     (5 ≤ 5 = true, valid for insertion)
 ```
 
+### Pattern 3: Range Membership Checking
+
+**Use when**: Checking if a position is within a defined region or window
+
+**Two Sub-patterns**:
+
+#### 3a. Viewport/Window Checking (Exclusive Upper Bound)
+```rust
+use r3bl_tui::{BoundsCheck, ArrayAccessBoundsStatus, col, width};
+
+let caret_col = col(15);
+let viewport_start = col(10);
+let viewport_width = width(20);
+
+// Check if caret is visible in viewport [10, 30)
+match caret_col.check_bounds_range(viewport_start, viewport_width) {
+    ArrayAccessBoundsStatus::Within => { /* caret visible */ }
+    ArrayAccessBoundsStatus::Underflowed => { /* scroll left */ }
+    ArrayAccessBoundsStatus::Overflowed => { /* scroll right */ }
+}
+```
+
+#### 3b. Inclusive Range Checking (Inclusive Upper Bound)
+```rust
+use r3bl_tui::{IndexMarker, ArrayAccessBoundsStatus, row};
+
+let row_index = row(5);
+let scroll_top = row(2);
+let scroll_bottom = row(7);
+
+// Check if row is within scroll region [2, 7] (both inclusive)
+match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
+    ArrayAccessBoundsStatus::Within => { /* operate within scroll region */ }
+    _ => { /* skip operation - outside scroll region */ }
+}
+```
+
+**When to Use Which Sub-pattern**:
+- **Viewport/Window**: Use `check_bounds_range(start, size)` for sliding windows
+- **Regions/Selections**: Use `check_inclusive_range_bounds(min, max)` for fixed ranges
+
 ### When to Use Which Pattern
 
 | Operation | Pattern | Reason |
-|--||--|
+|--|--|--|
 | `buffer[index]` access | Array Access | Reading/writing needs valid element |
 | `buffer.insert(pos, item)` | Cursor Position | Can insert at end (position == length) |
 | `line.grapheme_at(col)` | Array Access | Retrieving existing grapheme |
 | `cursor.move_to(pos)` | Cursor Position | Cursor can be after last char |
 | `range.start` | Array Access | Range start must point to valid element |
 | `range.end` (exclusive) | Cursor Position | Exclusive end can equal length |
+| **Viewport containment** | **Range (3a)** | **Check if position visible in window** |
+| **Scroll region membership** | **Range (3b)** | **Check if position within VT-100 scroll region** |
+| **Text selection bounds** | **Range (3b)** | **Check if position within selected text** |
+| **Window bounds checking** | **Range (3a)** | **Check if element fits in display area** |
 
 
 
@@ -366,14 +433,25 @@ if index < start || index > end {
     return None;
 }
 
+if caret_col >= viewport_start && caret_col < viewport_start + viewport_width {
+    // caret visible
+}
+
 // ✅ After
 if index.overflows(length) {
     return None;
 }
 
-match index.check_bounds_range(start, end_length) {
+// For inclusive ranges (scroll regions, selections)
+match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
     ArrayAccessBoundsStatus::Within => { /* proceed */ }
     _ => return None,
+}
+
+// For viewport/window checking (exclusive upper bound)
+match caret_col.check_bounds_range(viewport_start, viewport_width) {
+    ArrayAccessBoundsStatus::Within => { /* caret visible */ }
+    _ => { /* need to scroll */ }
 }
 ```
 
@@ -610,6 +688,11 @@ let item = &self.buffer[idx.as_usize()];
   - Array access: `index.overflows(length)` checks `index >= length`
   - Cursor position: `index.check_cursor_position_bounds(length)` uses `index > length` for Beyond
   - Cursor at `index == length` is VALID for insertion operations!
+  - **Range membership**: Use `check_bounds_range()` for viewport (exclusive) vs `check_inclusive_range_bounds()` for selections (inclusive)
+- **🆕 Range Checking Patterns**:
+  - **Viewport checking**: `caret.check_bounds_range(viewport_start, viewport_width)` for `[start, start+width)`
+  - **Scroll regions**: `row.check_inclusive_range_bounds(scroll_top, scroll_bottom)` for `[min, max]`
+  - **Never manually calculate range ends**: Use the appropriate method for the semantic intent
 - **Function Inlining**: Single-use helper functions should be inlined for clarity
 - **Range Extensions**: Use `ByteIndexRangeExt::to_usize_range()` for stdlib range operations
 

@@ -223,7 +223,6 @@ if command -v npm &>/dev/null; then
         # Configure MCP servers for Claude
         if command -v claude &>/dev/null; then
             echo "Configuring Claude MCP servers..."
-            claude mcp add-json context7 '{"type":"http","url":"https://mcp.context7.com/mcp"}'
             claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant --project "$PWD" 2>/dev/null || true
         fi
     else

@@ -11,43 +11,87 @@ Use these MCP tools to navigate and modify Rust code effectively:
 
 - serena: definition, diagnostics, edit_file, hover, references, rename symbol, etc.
 
-Use these tools to lookup documentation and APIs:
-
-- context7: Documentation lookup for Rust crates and APIs, and all other APIs as well
-
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
 
 Throughout the implementation, use the type-safe bounds checking utilities from
-`tui/src/core/units/bounds_check.rs` which have 2 main patterns: "array access bounds checking, and
-"cursor positioning bounds checking". Make sure to use the `cursor_bounds.rs` utilities for cursor
-positioning related tasks, and `array_bounds.rs` utilities for array access related tasks.
+`tui/src/core/units/bounds_check/` which provide three main patterns for different use cases.
 
-For both patterns:
+#### Core Type Safety Principles
 
-- Instead of using `usize` or `u16` for indices, try using `IndexMarker` which is 0-based
-- Instead of using `usize` or `u16` for lengths, try using `LengthMarker` which is 1-based
-- Implement Range Validation with RangeBoundary
-- Array Access Bounds Checking with check_array_access_bounds() and overflows()
-- Cursor Position Bounds Checking with check_cursor_position_bounds()
-- Type-safe comparisons to eliminate .as_usize() calls
-- Use .is_zero() for zero checks instead of == 0
+- Instead of using `usize` or `u16` for indices, use `IndexMarker` types (0-based): `RowIndex`, `ColIndex`
+- Instead of using `usize` or `u16` for lengths, use `LengthMarker` types (1-based): `RowHeight`, `ColWidth`
+- Use type-safe comparisons to eliminate `.as_usize()` calls where possible
+- Use `.is_zero()` for zero checks instead of `== 0`
+- Leverage `convert_to_index()` and `convert_to_length()` for safe type conversions
 
-For "array access bounds checking" pattern:
+#### Pattern 1: Array Access Bounds Checking
 
-- Use `IndexMarker::overflows()` instead of raw `<` or `>` comparisons between 0/1-based values
-- Use `LengthMarker::is_overflowed_by()` for inverse checks, and `IndexMarker::is_overflowed_by()`
-  similarly
-- Use `LengthMarker::clamp_to()` for clamping operations
-- Leverage `convert_to_index()` and `convert_to_length()` for type conversions
-- Use `clamp_to()` to ensure indices and lengths stay within valid bounds and `remaining_from()` to
-  compute available space
-- Use `range_ext::RangeValidation` for validating ranges instead of manually comparing start and end
-  values as `usize`
+**When to use**: Accessing elements in arrays, vectors, or buffers where you have an index and a container length.
 
-For "cursor positioning bounds checking" pattern:
+**Methods**:
+- `index.overflows(length)` - checks if `index >= length`
+- `index.check_array_access_bounds(length)` - returns `ArrayAccessBoundsStatus`
+- `length.is_overflowed_by(index)` - inverse check from length perspective
+- `index.clamp_to_max_length(length)` - clamp index to valid range
 
-- Use `check_cursor_position_bounds` instead of `overflows` since line_index == line_count() which
-  is valid for insertions (can insert at the end), while still preventing indices beyond that point
+**Example**:
+```rust
+if row_index.overflows(buffer_height) {
+    return; // Index out of bounds
+}
+let line = buffer[row_index]; // Safe access
+```
+
+#### Pattern 2: Cursor Position Bounds Checking
+
+**When to use**: Positioning cursors where `index == length` is valid (cursor can be placed at end).
+
+**Methods**:
+- `cursor_pos.check_cursor_position_bounds(content_length)` - allows position at end
+- Use this instead of `overflows()` for cursor placement
+
+**Example**:
+```rust
+match cursor_row.check_cursor_position_bounds(line_count) {
+    CursorPositionBoundsStatus::Within => { /* valid position */ }
+    CursorPositionBoundsStatus::AtEnd => { /* cursor at end, also valid */ }
+    _ => { /* invalid position */ }
+}
+```
+
+#### Pattern 3: Range Membership Checking
+
+**When to use**: Checking if a position is within a defined region or window.
+
+**Methods**:
+- `index.check_bounds_range(start_index, width_or_height)` - for viewport/window checks `[start, start+length)`
+- `index.check_inclusive_range_bounds(min_index, max_index)` - for inclusive ranges `[min, max]`
+
+**Use Cases**:
+- **Viewport checking**: Use `check_bounds_range(viewport_start, viewport_size)` for windows
+- **Scroll regions**: Use `check_inclusive_range_bounds(scroll_top, scroll_bottom)` for VT-100 regions
+- **Selection ranges**: Use `check_inclusive_range_bounds(selection_start, selection_end)` for text selection
+
+**Examples**:
+```rust
+// Viewport containment (exclusive upper bound)
+match caret_col.check_bounds_range(viewport_start, viewport_width) {
+    ArrayAccessBoundsStatus::Within => { /* caret visible */ }
+    _ => { /* need to scroll */ }
+}
+
+// Scroll region membership (inclusive bounds)
+match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
+    ArrayAccessBoundsStatus::Within => { /* operate within scroll region */ }
+    _ => { /* skip operation */ }
+}
+```
+
+#### Range Validation
+
+- Use `RangeBoundary::is_valid()` for validating `Range<Index>` objects
+- Use `range_ext::RangeValidation` for complex range operations
+- Avoid manually comparing start and end values as `usize`
 
 # Testing interactive terminal applications
 
