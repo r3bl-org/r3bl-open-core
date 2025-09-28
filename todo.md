@@ -90,6 +90,20 @@
 
 # add animation api: https://github.com/r3bl-org/r3bl-open-core/issues/174
 
+# add TTS "assistive technology" support in the framework
+
+- [ ] Not "accessibility" but "assistive technology" support in order to support people of
+      [infinite diversity in infinite
+      combinations](https://en.wikipedia.org/wiki/Vulcan_(Star_Trek)#IDIC). This is meant
+      to augment users with situational, temporary disabilities, AND varying capabilities.
+      For example, someone might have a preference (e.g., they absorb information 3x faster
+      aurally vs visually) to hear text read out loud, because this is their preferred /
+      optimized way to consume information. So, notifications should be read out loud for
+      these users, in addition to being displayed in terminal / GUI environment, etc. So this
+      is about meeting the user where they are, rather than forcing them to adapt to the
+      technology. Another AI feature could be "summarize this and read out loud" that is
+      available everywhere in the framework.
+
 # edi features
 
 - [ ] cache AST in editor to implement jump to link (intra doc link) and jump to heading (intra doc
