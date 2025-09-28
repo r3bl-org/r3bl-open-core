@@ -67,11 +67,12 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 /// [`OffscreenBuffer::insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_length_non_zero(params);
-    let success = performer.ofs_buf.insert_chars_at_cursor(how_many);
+    let result = performer.ofs_buf.insert_chars_at_cursor(how_many);
     debug_assert!(
-        success,
+        result.is_ok(),
         "Failed to insert {:?} chars at cursor position {:?}",
-        how_many, performer.ofs_buf.cursor_pos
+        how_many,
+        performer.ofs_buf.cursor_pos
     );
 }
 
@@ -82,11 +83,12 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// [`OffscreenBuffer::delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_length_non_zero(params);
-    let success = performer.ofs_buf.delete_chars_at_cursor(how_many);
+    let result = performer.ofs_buf.delete_chars_at_cursor(how_many);
     debug_assert!(
-        success,
+        result.is_ok(),
         "Failed to delete {:?} chars at cursor position {:?}",
-        how_many, performer.ofs_buf.cursor_pos
+        how_many,
+        performer.ofs_buf.cursor_pos
     );
 }
 
@@ -97,7 +99,13 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// [`OffscreenBuffer::erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_length_non_zero(params);
-    performer.ofs_buf.erase_chars_at_cursor(how_many);
+    let result = performer.ofs_buf.erase_chars_at_cursor(how_many);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to erase {:?} chars at cursor position {:?}",
+        how_many,
+        performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Handle printable character printing - display character at cursor position.
@@ -107,5 +115,11 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 ///
 /// [`OffscreenBuffer::print_char`]: crate::OffscreenBuffer::print_char
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
-    performer.ofs_buf.print_char(ch);
+    let result = performer.ofs_buf.print_char(ch);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to print char {:?} at cursor position {:?}",
+        ch,
+        performer.ofs_buf.cursor_pos
+    );
 }

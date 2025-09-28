@@ -38,12 +38,16 @@ use crate::{Length, RowIndex};
 impl OffscreenBuffer {
     /// Clear an entire line by filling it with blank characters.
     /// Returns true if the operation was successful.
-    pub fn clear_line(&mut self, row: RowIndex) -> bool {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the row is out of bounds.
+    pub fn clear_line(&mut self, row: RowIndex) -> miette::Result<()> {
         // Use type-safe row validation via validation helpers.
         let next_row = RowIndex::from(row.as_usize() + 1);
         let row_range = row..next_row;
         let Some((_, _, lines)) = self.validate_row_range_mut(row_range) else {
-            return false;
+            miette::bail!("Operation failed");
         };
 
         // Safe to clear the validated line.
@@ -55,7 +59,7 @@ impl OffscreenBuffer {
             "Line clear operation failed at row {row:?}"
         );
 
-        true
+        Ok(())
     }
 
     /// Shift lines up within a range by the specified amount.
@@ -66,32 +70,36 @@ impl OffscreenBuffer {
     ///
     /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
     /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the row range is invalid or out of bounds.
     pub fn shift_lines_up(
         &mut self,
         row_range: Range<RowIndex>,
         shift_by: Length,
-    ) -> bool {
+    ) -> miette::Result<()> {
         // Use lightweight validation-only method without creating unused slice
         if !self.is_row_range_valid(row_range.clone()) {
-            return false;
+            miette::bail!("Operation failed");
         }
 
         let start_idx = row_range.start.as_usize();
         let end_idx = row_range.end.as_usize();
 
-        // Shift lines up by cloning (use manual index management to avoid borrow
-        // checker issues).
+        // Shift lines up using rotate_left for better performance
         for _ in 0..shift_by.as_usize() {
-            for row_idx in start_idx..end_idx.saturating_sub(1) {
-                let next_line = self.buffer[row_idx + 1].clone();
-                self.buffer[row_idx] = next_line;
+            // Use rotate_left to shift lines up efficiently
+            let range_len = end_idx - start_idx;
+            if range_len > 1 {
+                self.buffer[start_idx..end_idx].rotate_left(1);
             }
 
-            // Clear the bottom line.
+            // Clear the bottom line (which is now at the end after rotation).
             self.buffer[end_idx.saturating_sub(1)].fill(PixelChar::Spacer);
         }
 
-        true
+        Ok(())
     }
 
     /// Shift lines down within a range by the specified amount.
@@ -105,31 +113,36 @@ impl OffscreenBuffer {
     ///
     /// [`is_row_range_valid()`]: crate::OffscreenBuffer::is_row_range_valid
     /// [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the row range is invalid or out of bounds.
     pub fn shift_lines_down(
         &mut self,
         row_range: Range<RowIndex>,
         shift_by: Length,
-    ) -> bool {
+    ) -> miette::Result<()> {
         // Use lightweight validation-only method without creating unused slice
         if !self.is_row_range_valid(row_range.clone()) {
-            return false;
+            miette::bail!("Invalid row range");
         }
 
         let start_idx = row_range.start.as_usize();
         let end_idx = row_range.end.as_usize();
 
-        // Shift lines down by cloning (work backwards to avoid overwriting).
+        // Shift lines down using rotate_right for better performance
         for _ in 0..shift_by.as_usize() {
-            for row_idx in (start_idx + 1..end_idx).rev() {
-                let prev_line = self.buffer[row_idx - 1].clone();
-                self.buffer[row_idx] = prev_line;
+            // Use rotate_right to shift lines down efficiently
+            let range_len = end_idx - start_idx;
+            if range_len > 1 {
+                self.buffer[start_idx..end_idx].rotate_right(1);
             }
 
-            // Clear the top line.
+            // Clear the top line (which is now at the beginning after rotation).
             self.buffer[start_idx].fill(PixelChar::Spacer);
         }
 
-        true
+        Ok(())
     }
 }
 
@@ -159,12 +172,12 @@ mod tests_line_ops {
 
         // Fill the line with test characters first.
         for col_idx in 0..4 {
-            buffer.set_char(test_row + col(col_idx), create_test_char('X'));
+            let _unused = buffer.set_char(test_row + col(col_idx), create_test_char('X'));
         }
 
         // Clear the line.
         let result = buffer.clear_line(test_row);
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify all characters are now spacers.
         for col_idx in 0..4 {
@@ -178,7 +191,7 @@ mod tests_line_ops {
     fn test_clear_line_out_of_bounds() {
         let mut buffer = create_test_buffer();
         let result = buffer.clear_line(row(10)); // Out of bounds
-        assert!(!result);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -186,13 +199,13 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 up by 1.
         let result = buffer.shift_lines_up(row(1)..row(4), len(1));
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify the shift: line 2 content should now be at line 1, etc.
         let line1 = buffer.get_line(row(1)).unwrap();
@@ -231,13 +244,13 @@ mod tests_line_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 down by 1.
         let result = buffer.shift_lines_down(row(1)..row(4), len(1));
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify the shift: line 1 content should now be at line 2, etc.
         let line1 = buffer.get_line(row(1)).unwrap();

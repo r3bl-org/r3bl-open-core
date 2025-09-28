@@ -57,7 +57,11 @@ impl OffscreenBuffer {
     ///
     /// Result: Buffer scrolled up, cursor stays at scroll region bottom
     /// ```
-    pub fn index_down(&mut self) {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the scroll operation fails.
+    pub fn index_down(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
         // Get bottom boundary of scroll region using helper method.
@@ -67,9 +71,10 @@ impl OffscreenBuffer {
         if current_row.underflows(scroll_bottom_boundary) {
             // Not at scroll region bottom - just move cursor down.
             self.cursor_down(RowHeight::from(1));
+            Ok(())
         } else {
             // At scroll region bottom - scroll buffer content up by one line.
-            self.scroll_buffer_up();
+            self.scroll_buffer_up()
         }
     }
 
@@ -106,7 +111,11 @@ impl OffscreenBuffer {
     ///
     /// Result: Buffer scrolled down, cursor stays at scroll region top
     /// ```
-    pub fn reverse_index_up(&mut self) {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the scroll operation fails.
+    pub fn reverse_index_up(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
         // Get top boundary of scroll region using helper method.
@@ -116,9 +125,10 @@ impl OffscreenBuffer {
         if scroll_top_boundary.underflows(current_row) {
             // Not at scroll region top - just move cursor up.
             self.cursor_up(RowHeight::from(1));
+            Ok(())
         } else {
             // At scroll region top - scroll buffer content down by one line.
-            self.scroll_buffer_down();
+            self.scroll_buffer_down()
         }
     }
 
@@ -128,7 +138,11 @@ impl OffscreenBuffer {
     /// See [`shift_lines_up`] for detailed behavior and examples.
     ///
     /// [`shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
-    pub fn scroll_buffer_up(&mut self) {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the scroll operation fails.
+    pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
         // Get scroll region boundaries using helper methods.
         let scroll_top = self.get_scroll_top_boundary();
         let scroll_bottom = self.get_scroll_bottom_boundary();
@@ -141,7 +155,7 @@ impl OffscreenBuffer {
                 start..end
             },
             len(1),
-        );
+        )
     }
 
     /// Scroll buffer content down by one line (for ESC M at top).
@@ -151,7 +165,11 @@ impl OffscreenBuffer {
     /// examples.
     ///
     /// [`shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
-    pub fn scroll_buffer_down(&mut self) {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the scroll operation fails.
+    pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
         // Get scroll region boundaries using helper methods.
         let scroll_top = self.get_scroll_top_boundary();
         let scroll_bottom = self.get_scroll_bottom_boundary();
@@ -164,7 +182,7 @@ impl OffscreenBuffer {
                 start..end
             },
             len(1),
-        );
+        )
     }
 
     /// Handle SU (Scroll Up) - scroll display up by n lines.
@@ -200,10 +218,15 @@ impl OffscreenBuffer {
     ///
     /// Result: 2 lines scrolled up, Lines A and B lost, 2 blank lines added at bottom
     /// ```
-    pub fn scroll_up(&mut self, how_many: RowHeight) {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the scroll operation fails.
+    pub fn scroll_up(&mut self, how_many: RowHeight) -> miette::Result<()> {
         for _ in 0..how_many.as_u16() {
-            self.scroll_buffer_up();
+            self.scroll_buffer_up()?;
         }
+        Ok(())
     }
 
     /// Handle SD (Scroll Down) - scroll display down by n lines.
@@ -239,10 +262,15 @@ impl OffscreenBuffer {
     ///
     /// Result: 2 lines scrolled down, Lines C and D lost, 2 blank lines added at top
     /// ```
-    pub fn scroll_down(&mut self, how_many: RowHeight) {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the scroll operation fails.
+    pub fn scroll_down(&mut self, how_many: RowHeight) -> miette::Result<()> {
         for _ in 0..how_many.as_u16() {
-            self.scroll_buffer_down();
+            self.scroll_buffer_down()?;
         }
+        Ok(())
     }
 }
 
@@ -272,7 +300,8 @@ mod tests_scroll_vert_ops {
             for col_idx in 0..10 {
                 buffer.cursor_pos = row(row_idx) + col(col_idx);
                 let index = idx(row_idx);
-                buffer.print_char(char::from_digit(index.as_u32(), 10).unwrap());
+                let _unused =
+                    buffer.print_char(char::from_digit(index.as_u32(), 10).unwrap());
             }
         }
         buffer.cursor_pos = row(0) + col(0);
@@ -286,7 +315,7 @@ mod tests_scroll_vert_ops {
         // Position cursor at row 2, col 5.
         buffer.cursor_pos = row(2) + col(5);
 
-        buffer.index_down();
+        let _unused = buffer.index_down();
 
         // Cursor should move down one row.
         assert_eq!(buffer.cursor_pos.row_index, row(3));
@@ -305,7 +334,7 @@ mod tests_scroll_vert_ops {
         // Position cursor at bottom row (row 5).
         buffer.cursor_pos = row(5) + col(3);
 
-        buffer.index_down();
+        let _unused = buffer.index_down();
 
         // Cursor should stay at bottom row.
         assert_eq!(buffer.cursor_pos.row_index, row(5));
@@ -332,7 +361,7 @@ mod tests_scroll_vert_ops {
         // Position cursor at row 3, col 2.
         buffer.cursor_pos = row(3) + col(2);
 
-        buffer.reverse_index_up();
+        let _unused = buffer.reverse_index_up();
 
         // Cursor should move up one row.
         assert_eq!(buffer.cursor_pos.row_index, row(2));
@@ -351,7 +380,7 @@ mod tests_scroll_vert_ops {
         // Position cursor at top row (row 0).
         buffer.cursor_pos = row(0) + col(7);
 
-        buffer.reverse_index_up();
+        let _unused = buffer.reverse_index_up();
 
         // Cursor should stay at top row.
         assert_eq!(buffer.cursor_pos.row_index, row(0));
@@ -372,7 +401,7 @@ mod tests_scroll_vert_ops {
         let mut buffer = create_test_buffer();
         fill_buffer_with_test_content(&mut buffer);
 
-        buffer.scroll_up(RowHeight::from(2));
+        let _unused = buffer.scroll_up(RowHeight::from(2));
 
         // Top 2 lines should be lost, content shifted up.
         assert_plain_char_at(&buffer, 0, 0, '2'); // Row 2 moved to row 0
@@ -398,7 +427,7 @@ mod tests_scroll_vert_ops {
         let mut buffer = create_test_buffer();
         fill_buffer_with_test_content(&mut buffer);
 
-        buffer.scroll_down(RowHeight::from(2));
+        let _unused = buffer.scroll_down(RowHeight::from(2));
 
         // Top 2 lines should be blank.
         let blank_line_1 = buffer.get_char(row(0) + col(0));
@@ -431,7 +460,7 @@ mod tests_scroll_vert_ops {
         // Position cursor at scroll region bottom.
         buffer.cursor_pos = row(4) + col(0);
 
-        buffer.index_down();
+        let _unused = buffer.index_down();
 
         // Only content within scroll region should have moved.
         assert_plain_char_at(&buffer, 0, 0, '0'); // Row 0 unchanged (outside region)

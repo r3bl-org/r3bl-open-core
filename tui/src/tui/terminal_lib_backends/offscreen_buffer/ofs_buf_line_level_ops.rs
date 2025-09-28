@@ -14,25 +14,33 @@ impl OffscreenBuffer {
 
     /// Set an entire line at the specified row.
     /// Returns true if the operation was successful.
-    pub fn set_line(&mut self, row: RowIndex, line: PixelCharLine) -> bool {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the row is out of bounds.
+    pub fn set_line(&mut self, row: RowIndex, line: PixelCharLine) -> miette::Result<()> {
         let row_idx = row.as_usize();
         let Some(target_line) = self.buffer.get_mut(row_idx) else {
-            return false;
+            miette::bail!("Operation failed");
         };
         *target_line = line;
-        true
+        Ok(())
     }
 
     /// Swap two lines in the buffer.
     /// Returns true if both rows are valid and the swap was successful.
-    pub fn swap_lines(&mut self, row_1: RowIndex, row_2: RowIndex) -> bool {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if either row is out of bounds.
+    pub fn swap_lines(&mut self, row_1: RowIndex, row_2: RowIndex) -> miette::Result<()> {
         // Use type-safe validation for both rows.
         let range_1 = row_1..row(row_1.as_usize() + 1);
         let range_2 = row_2..row(row_2.as_usize() + 1);
 
         // Validate both rows exist using lightweight validation-only methods.
         if !self.is_row_range_valid(range_1) || !self.is_row_range_valid(range_2) {
-            return false;
+            miette::bail!("Operation failed");
         }
 
         // Safe to perform swap - both rows have been validated.
@@ -46,7 +54,7 @@ impl OffscreenBuffer {
         );
 
         self.buffer.swap(row_1_idx, row_2_idx);
-        true
+        Ok(())
     }
 }
 
@@ -82,12 +90,12 @@ mod tests_line_level_ops {
 
         // Fill the line with test characters first.
         for col_idx in 0..4 {
-            buffer.set_char(test_row + col(col_idx), create_test_char('X'));
+            let _unused = buffer.set_char(test_row + col(col_idx), create_test_char('X'));
         }
 
         // Clear the line.
         let result = buffer.clear_line(test_row);
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify all characters are now spacers.
         for col_idx in 0..4 {
@@ -103,7 +111,7 @@ mod tests_line_level_ops {
 
         // Try to clear an invalid row.
         let result = buffer.clear_line(row(10));
-        assert!(!result);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -128,7 +136,7 @@ mod tests_line_level_ops {
 
         // Set the line.
         let result = buffer.set_line(test_row, test_line.clone());
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify the line was set correctly.
         let retrieved_line = buffer.get_line(test_row).unwrap();
@@ -160,7 +168,7 @@ mod tests_line_level_ops {
 
         // Try to set an invalid row.
         let result = buffer.set_line(row(10), test_line);
-        assert!(!result);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -173,12 +181,12 @@ mod tests_line_level_ops {
         let line2 = create_test_line(&['A', 'B', 'C', 'D']);
 
         // Set up the initial lines.
-        buffer.set_line(row1, line1.clone());
-        buffer.set_line(row2, line2.clone());
+        let _unused = buffer.set_line(row1, line1.clone());
+        let _unused = buffer.set_line(row2, line2.clone());
 
         // Swap the lines.
         let result = buffer.swap_lines(row1, row2);
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify the swap was successful.
         let swapped_line1 = buffer.get_line(row1).unwrap();
@@ -194,13 +202,13 @@ mod tests_line_level_ops {
 
         // Try to swap with invalid rows.
         let result1 = buffer.swap_lines(row(0), row(10));
-        assert!(!result1);
+        assert!(result1.is_err());
 
         let result2 = buffer.swap_lines(row(10), row(0));
-        assert!(!result2);
+        assert!(result2.is_err());
 
         let result3 = buffer.swap_lines(row(10), row(11));
-        assert!(!result3);
+        assert!(result3.is_err());
     }
 
     #[test]
@@ -208,13 +216,13 @@ mod tests_line_level_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 up by 1.
         let result = buffer.shift_lines_up(row(1)..row(4), len(1));
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify the shift: line 2 content should now be at line 1, etc.
         let line1 = buffer.get_line(row(1)).unwrap();
@@ -253,13 +261,13 @@ mod tests_line_level_ops {
         let mut buffer = create_test_buffer();
 
         // Set up initial lines.
-        buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
-        buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
-        buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
+        let _unused = buffer.set_line(row(1), create_test_line(&['A', 'A', 'A', 'A']));
+        let _unused = buffer.set_line(row(2), create_test_line(&['B', 'B', 'B', 'B']));
+        let _unused = buffer.set_line(row(3), create_test_line(&['C', 'C', 'C', 'C']));
 
         // Shift lines 1-3 down by 1.
         let result = buffer.shift_lines_down(row(1)..row(4), len(1));
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify the shift: line 1 content should now be at line 2, etc.
         let line1 = buffer.get_line(row(1)).unwrap();
@@ -299,12 +307,12 @@ mod tests_line_level_ops {
 
         // Test invalid row ranges.
         let result1 = buffer.shift_lines_up(row(10)..row(12), len(1));
-        assert!(!result1);
+        assert!(result1.is_err());
 
         let result2 = buffer.shift_lines_down(row(3)..row(1), len(1)); // Backward range
-        assert!(!result2);
+        assert!(result2.is_err());
 
         let result3 = buffer.shift_lines_up(row(0)..row(10), len(1)); // End beyond buffer
-        assert!(!result3);
+        assert!(result3.is_err());
     }
 }

@@ -25,17 +25,21 @@ impl OffscreenBuffer {
 
     /// Set character at position. Automatically handles cache invalidation.
     /// Returns true if the position was valid and the character was set.
-    pub fn set_char(&mut self, pos: Pos, char: PixelChar) -> bool {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the position is out of bounds.
+    pub fn set_char(&mut self, pos: Pos, char: PixelChar) -> miette::Result<()> {
         // Use type-safe row validation via validation helpers
         let row_range = pos.row_index..row(pos.row_index.as_usize() + 1);
         let Some((_, _, lines)) = self.validate_row_range_mut(row_range) else {
-            return false;
+            miette::bail!("Position out of bounds");
         };
 
         // Validate column within the selected line using type-safe bounds checking.
         let line_width = crate::width(lines[0].len());
         if line_width.is_overflowed_by(pos.col_index) {
-            return false;
+            miette::bail!("Position out of bounds");
         }
 
         // Safe assignment - both row and column have been validated.
@@ -48,53 +52,61 @@ impl OffscreenBuffer {
             "Character assignment failed at position {pos:?}"
         );
 
-        true
+        Ok(())
     }
 
     /// Fill a range of characters in a line with the specified character.
     /// Returns true if the operation was successful.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the row or column range is out of bounds.
     pub fn fill_char_range(
         &mut self,
         row: RowIndex,
         col_range: Range<ColIndex>,
         char: PixelChar,
-    ) -> bool {
+    ) -> miette::Result<()> {
         // Use type-safe range validation for both row and column bounds.
         let Some((start_col, end_col, line)) =
             self.validate_col_range_mut(row, col_range)
         else {
-            return false;
+            miette::bail!("Position out of bounds");
         };
 
         line[start_col..end_col].fill(char);
-        true
+        Ok(())
     }
 
     /// Copy characters within a line from source range to destination position.
     /// Returns true if the operation was successful.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the row or any column position is out of bounds.
     pub fn copy_chars_within_line(
         &mut self,
         row: RowIndex,
         source_range: Range<ColIndex>,
         dest_start: ColIndex,
-    ) -> bool {
+    ) -> miette::Result<()> {
         // Use type-safe range validation for both row and column bounds.
         let Some((source_start, source_end, line)) =
             self.validate_col_range_mut(row, source_range)
         else {
-            return false;
+            miette::bail!("Position out of bounds");
         };
 
         // Validate destination position is within line bounds using type-safe bounds
         // checking.
         let line_width = crate::width(line.len());
         if line_width.is_overflowed_by(dest_start) {
-            return false;
+            miette::bail!("Position out of bounds");
         }
 
         // Perform the copy operation.
         line.copy_within(source_start..source_end, dest_start.as_usize());
-        true
+        Ok(())
     }
 }
 
@@ -122,7 +134,7 @@ mod tests_char_ops {
         let test_char = create_test_char('A');
 
         // Set a character first.
-        buffer.set_char(pos, test_char);
+        let _unused = buffer.set_char(pos, test_char);
 
         // Then get it back.
         let retrieved = buffer.get_char(pos);
@@ -155,7 +167,7 @@ mod tests_char_ops {
 
         // Verify the character was set successfully.
         let result = buffer.set_char(pos, test_char);
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify we can retrieve it.
         let retrieved = buffer.get_char(pos);
@@ -170,12 +182,12 @@ mod tests_char_ops {
         // Test row out of bounds.
         let invalid_pos1 = row(10) + col(2);
         let result1 = buffer.set_char(invalid_pos1, test_char);
-        assert!(!result1);
+        assert!(result1.is_err());
 
         // Test column out of bounds.
         let invalid_pos2 = row(1) + col(10);
         let result2 = buffer.set_char(invalid_pos2, test_char);
-        assert!(!result2);
+        assert!(result2.is_err());
     }
 
     #[test]
@@ -187,7 +199,7 @@ mod tests_char_ops {
 
         // Fill the range.
         let result = buffer.fill_char_range(test_row, col_range.clone(), fill_char);
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify all characters in range were filled.
         for col_idx in 1..4 {
@@ -209,15 +221,15 @@ mod tests_char_ops {
 
         // Test with invalid row.
         let result1 = buffer.fill_char_range(row(10), col(0)..col(2), fill_char);
-        assert!(!result1);
+        assert!(result1.is_err());
 
         // Test with invalid column range.
         let result2 = buffer.fill_char_range(row(0), col(3)..col(10), fill_char);
-        assert!(!result2);
+        assert!(result2.is_err());
 
         // Test with backward range.
         let result3 = buffer.fill_char_range(row(0), col(3)..col(1), fill_char);
-        assert!(!result3);
+        assert!(result3.is_err());
     }
 
     #[test]
@@ -226,13 +238,13 @@ mod tests_char_ops {
         let test_row = row(0);
 
         // Set up source characters.
-        buffer.set_char(test_row + col(1), create_test_char('A'));
-        buffer.set_char(test_row + col(2), create_test_char('B'));
-        buffer.set_char(test_row + col(3), create_test_char('C'));
+        let _unused = buffer.set_char(test_row + col(1), create_test_char('A'));
+        let _unused = buffer.set_char(test_row + col(2), create_test_char('B'));
+        let _unused = buffer.set_char(test_row + col(3), create_test_char('C'));
 
         // Copy from columns 1-3 to column 0.
         let result = buffer.copy_chars_within_line(test_row, col(1)..col(3), col(0));
-        assert!(result);
+        assert!(result.is_ok());
 
         // Verify the copy was successful.
         assert_eq!(
@@ -262,14 +274,14 @@ mod tests_char_ops {
 
         // Test with invalid row.
         let result1 = buffer.copy_chars_within_line(row(10), col(0)..col(2), col(3));
-        assert!(!result1);
+        assert!(result1.is_err());
 
         // Test with invalid source range.
         let result2 = buffer.copy_chars_within_line(row(0), col(3)..col(10), col(0));
-        assert!(!result2);
+        assert!(result2.is_err());
 
         // Test with invalid destination.
         let result3 = buffer.copy_chars_within_line(row(0), col(0)..col(2), col(10));
-        assert!(!result3);
+        assert!(result3.is_err());
     }
 }

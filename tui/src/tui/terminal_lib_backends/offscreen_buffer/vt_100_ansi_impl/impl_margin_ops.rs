@@ -9,9 +9,6 @@
 //! - **DECSTBM** (Set Top and Bottom Margins) - [`set_scroll_margins`]
 //! - **Reset margins** - [`reset_scroll_margins`]
 //!
-//! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
-//! [`reset_scroll_margins`]: crate::OffscreenBuffer::reset_scroll_margins
-//!
 //! All operations maintain VT100 compliance and handle proper scroll region
 //! boundaries for terminal operations.
 //!
@@ -26,6 +23,8 @@
 //!
 //! [`margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::margin_ops
 //! [`test_margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_margin_ops
+//! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
+//! [`reset_scroll_margins`]: crate::OffscreenBuffer::reset_scroll_margins
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -45,8 +44,9 @@ impl OffscreenBuffer {
     /// Operations like scrolling and line insertion/deletion will be
     /// restricted to this region.
     ///
-    /// Returns true if the margins were set successfully.
-    pub fn set_scroll_margins(&mut self, top: TermRow, bottom: TermRow) -> bool {
+    /// Validates input parameters and sets margins only if valid. Invalid
+    /// parameters (e.g., top >= bottom) are logged and ignored per VTE spec.
+    pub fn set_scroll_margins(&mut self, top: TermRow, bottom: TermRow) {
         let buffer_height = self.window_size.row_height;
         let top_value = top.as_u16();
         let bottom_value = bottom.as_u16();
@@ -64,11 +64,10 @@ impl OffscreenBuffer {
                 bottom_value,
                 buffer_height
             );
-            return false;
+            return;
         }
         self.ansi_parser_support.scroll_region_top = Some(top);
         self.ansi_parser_support.scroll_region_bottom = Some(clamped_bottom_raw.into());
-        true
     }
 }
 
@@ -101,8 +100,7 @@ mod tests_margin_ops {
     fn test_set_scroll_margins_valid() {
         let mut buffer = create_test_buffer();
 
-        let result = buffer.set_scroll_margins(term_row(2), term_row(4));
-        assert!(result);
+        buffer.set_scroll_margins(term_row(2), term_row(4));
 
         // Check that margins were set.
         assert_eq!(
@@ -119,8 +117,7 @@ mod tests_margin_ops {
     fn test_set_scroll_margins_invalid_top_greater_than_bottom() {
         let mut buffer = create_test_buffer();
 
-        let result = buffer.set_scroll_margins(term_row(4), term_row(2));
-        assert!(!result);
+        buffer.set_scroll_margins(term_row(4), term_row(2));
 
         // Margins should remain unchanged. (None).
         assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
@@ -132,8 +129,7 @@ mod tests_margin_ops {
         let mut buffer = create_test_buffer();
 
         // Try to set bottom margin beyond buffer height (buffer height is 6).
-        let result = buffer.set_scroll_margins(term_row(2), term_row(10));
-        assert!(result); // Should succeed with clamping
+        buffer.set_scroll_margins(term_row(2), term_row(10));
 
         // Bottom should be clamped to buffer height.
         assert_eq!(
@@ -150,8 +146,7 @@ mod tests_margin_ops {
     fn test_set_scroll_margins_equal_top_and_bottom() {
         let mut buffer = create_test_buffer();
 
-        let result = buffer.set_scroll_margins(term_row(3), term_row(3));
-        assert!(!result); // Should fail - no room for content
+        buffer.set_scroll_margins(term_row(3), term_row(3));
 
         // Margins should remain unchanged.
         assert!(buffer.ansi_parser_support.scroll_region_top.is_none());

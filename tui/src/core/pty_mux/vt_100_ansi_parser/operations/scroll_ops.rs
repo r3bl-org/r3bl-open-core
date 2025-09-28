@@ -65,7 +65,12 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 /// Respects DECSTBM scroll region margins.
 /// See [`crate::OffscreenBuffer::index_down`] for detailed behavior and examples.
 pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.index_down();
+    let result = performer.ofs_buf.index_down();
+    debug_assert!(
+        result.is_ok(),
+        "Failed to index down at cursor position {:?}",
+        performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Move cursor up one line, scrolling the buffer if at top.
@@ -73,7 +78,12 @@ pub fn index_down(performer: &mut AnsiToOfsBufPerformer) {
 /// Respects DECSTBM scroll region margins.
 /// See [`crate::OffscreenBuffer::reverse_index_up`] for detailed behavior and examples.
 pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.reverse_index_up();
+    let result = performer.ofs_buf.reverse_index_up();
+    debug_assert!(
+        result.is_ok(),
+        "Failed to reverse index up at cursor position {:?}",
+        performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Scroll buffer content up by one line (for ESC D at bottom).
@@ -81,7 +91,12 @@ pub fn reverse_index_up(performer: &mut AnsiToOfsBufPerformer) {
 /// Respects DECSTBM scroll region margins.
 /// See [`crate::OffscreenBuffer::scroll_buffer_up`] for detailed behavior and examples.
 pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.scroll_buffer_up();
+    let result = performer.ofs_buf.scroll_buffer_up();
+    debug_assert!(
+        result.is_ok(),
+        "Failed to scroll buffer up at cursor position {:?}",
+        performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Scroll buffer content down by one line (for ESC M at top).
@@ -89,19 +104,36 @@ pub fn scroll_buffer_up(performer: &mut AnsiToOfsBufPerformer) {
 /// Respects DECSTBM scroll region margins.
 /// See [`crate::OffscreenBuffer::scroll_buffer_down`] for detailed behavior and examples.
 pub fn scroll_buffer_down(performer: &mut AnsiToOfsBufPerformer) {
-    performer.ofs_buf.scroll_buffer_down();
+    let result = performer.ofs_buf.scroll_buffer_down();
+    debug_assert!(
+        result.is_ok(),
+        "Failed to scroll buffer down at cursor position {:?}",
+        performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Handle SU (Scroll Up) - scroll display up by n lines.
 /// See [`crate::OffscreenBuffer::scroll_up`] for detailed behavior and examples.
 pub fn scroll_up(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_row_height_non_zero(params);
-    performer.ofs_buf.scroll_up(how_many);
+    let result = performer.ofs_buf.scroll_up(how_many);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to scroll up {:?} lines at cursor position {:?}",
+        how_many,
+        performer.ofs_buf.cursor_pos
+    );
 }
 
 /// Handle SD (Scroll Down) - scroll display down by n lines.
 /// See [`crate::OffscreenBuffer::scroll_down`] for detailed behavior and examples.
 pub fn scroll_down(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_row_height_non_zero(params);
-    performer.ofs_buf.scroll_down(how_many);
+    let result = performer.ofs_buf.scroll_down(how_many);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to scroll down {:?} lines at cursor position {:?}",
+        how_many,
+        performer.ofs_buf.cursor_pos
+    );
 }

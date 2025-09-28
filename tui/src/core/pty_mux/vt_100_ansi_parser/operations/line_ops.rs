@@ -59,7 +59,7 @@
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MovementCount};
-use crate::{RowIndex, len};
+use crate::{RowHeight, RowIndex};
 
 /// Handle IL (Insert Line) - insert n blank lines at cursor position.
 /// Lines below cursor and within scroll region shift down.
@@ -68,11 +68,9 @@ use crate::{RowIndex, len};
 /// [`OffscreenBuffer::shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_row_height_non_zero(params);
-    let current_row = performer.ofs_buf.cursor_pos.row_index;
+    let at = performer.ofs_buf.cursor_pos.row_index;
 
-    for _ in 0..how_many.as_u16() {
-        insert_line_at(performer, current_row);
-    }
+    insert_lines_at(performer, at, how_many);
 }
 
 /// Handle DL (Delete Line) - delete n lines starting at cursor position.
@@ -84,17 +82,19 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 /// [`OffscreenBuffer::shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
     let how_many = MovementCount::parse_as_row_height_non_zero(params);
-    let current_row = performer.ofs_buf.cursor_pos.row_index;
+    let at = performer.ofs_buf.cursor_pos.row_index;
 
-    for _ in 0..how_many.as_u16() {
-        delete_line_at(performer, current_row);
-    }
+    delete_lines_at(performer, at, how_many);
 }
 
-/// Insert a single blank line at the specified row.
+/// Insert multiple blank lines at the specified row.
 /// Lines below shift down within the scroll region.
-/// The bottom line of the scroll region is lost.
-fn insert_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
+/// The bottom lines of the scroll region are lost.
+fn insert_lines_at(
+    performer: &mut AnsiToOfsBufPerformer,
+    row_index: RowIndex,
+    how_many: RowHeight,
+) {
     // Get scroll region boundaries using helper methods.
     let scroll_top = performer.ofs_buf.get_scroll_top_boundary();
     let scroll_bottom = performer.ofs_buf.get_scroll_bottom_boundary();
@@ -104,24 +104,39 @@ fn insert_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
         return;
     }
 
-    // Use shift_lines_down to shift lines down and clear the newly inserted line.
-    performer.ofs_buf.shift_lines_down(
+    // Use shift_lines_down to shift lines down by how_many positions.
+    let result = performer.ofs_buf.shift_lines_down(
         {
             let start = row_index;
             let end = scroll_bottom + 1;
             start..end
         },
-        len(1),
+        how_many.into(),
+    );
+    debug_assert!(
+        result.is_ok(),
+        "Failed to shift lines down for line insertion at row {row_index:?}, scroll region {row_index:?}..{scroll_bottom:?}"
     );
 
-    // Clear the newly inserted line (shift_lines_down fills with blanks at the top).
-    clear_line(performer, row_index);
+    // Clear the newly inserted lines (shift_lines_down fills with blanks at the top).
+    for offset in 0..how_many.as_u16() {
+        if let Some(clear_row_u16) = row_index.as_u16().checked_add(offset) {
+            let clear_row = RowIndex::from(clear_row_u16);
+            if clear_row <= scroll_bottom {
+                clear_line(performer, clear_row);
+            }
+        }
+    }
 }
 
-/// Delete a single line at the specified row.
+/// Delete multiple lines at the specified row.
 /// Lines below shift up within the scroll region.
-/// A blank line is added at the bottom of the scroll region.
-fn delete_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
+/// Blank lines are added at the bottom of the scroll region.
+fn delete_lines_at(
+    performer: &mut AnsiToOfsBufPerformer,
+    row_index: RowIndex,
+    how_many: RowHeight,
+) {
     // Get scroll region boundaries using helper methods.
     let scroll_top = performer.ofs_buf.get_scroll_top_boundary();
     let scroll_bottom = performer.ofs_buf.get_scroll_bottom_boundary();
@@ -131,22 +146,34 @@ fn delete_line_at(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
         return;
     }
 
-    // Use shift_lines_up to shift lines up and clear the bottom line.
-    performer.ofs_buf.shift_lines_up(
+    // Use shift_lines_up to shift lines up by how_many positions.
+    let result = performer.ofs_buf.shift_lines_up(
         {
             let start = row_index;
             let end = scroll_bottom + 1;
             start..end
         },
-        len(1),
+        how_many.into(),
+    );
+    debug_assert!(
+        result.is_ok(),
+        "Failed to shift lines up for line deletion at row {row_index:?}, scroll region {row_index:?}..{scroll_bottom:?}"
     );
 
-    // Clear the bottom line of the scroll region (shift_lines_up fills with blanks at the
-    // bottom).
-    clear_line(performer, scroll_bottom);
+    // Clear the bottom lines of the scroll region (shift_lines_up fills with blanks at
+    // the bottom).
+    for offset in 0..how_many.as_u16() {
+        if let Some(clear_row_u16) = scroll_bottom.as_u16().checked_sub(offset) {
+            let clear_row = RowIndex::from(clear_row_u16);
+            if clear_row >= row_index {
+                clear_line(performer, clear_row);
+            }
+        }
+    }
 }
 
 /// Clear a line by filling it with blanks.
 fn clear_line(performer: &mut AnsiToOfsBufPerformer, row_index: RowIndex) {
-    performer.ofs_buf.clear_line(row_index);
+    let result = performer.ofs_buf.clear_line(row_index);
+    debug_assert!(result.is_ok(), "Failed to clear line at row {row_index:?}");
 }
