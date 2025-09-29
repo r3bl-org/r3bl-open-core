@@ -382,7 +382,7 @@ pub fn clip_caret_row_to_content_height(
 ) {
     // Clip desired_caret_adj_row if it overflows past the bottom of the buffer.
     let max_row_index = buffer.get_max_row_index();
-    let is_past_end_of_buffer = *desired_caret_scr_adj_row_index > max_row_index;
+    let is_past_end_of_buffer = desired_caret_scr_adj_row_index.overflows(buffer.len());
     if is_past_end_of_buffer {
         *desired_caret_scr_adj_row_index = max_row_index;
     }

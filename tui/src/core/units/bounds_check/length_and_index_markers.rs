@@ -4,8 +4,9 @@
 //!
 //! This module defines the foundational traits that enable the bounds checking system:
 //! - [`UnitCompare`] - Numeric conversion operations for unit types
-//! - [`IndexMarker`] - Identifies 0-based position types (like `ColIndex`, `RowIndex`)
-//! - [`LengthMarker`] - Identifies 1-based size types (like `ColWidth`, `RowHeight`)
+//! - [`IndexMarker`] - Identifies 0-based position types (like [`ColIndex`],
+//!   [`RowIndex`])
+//! - [`LengthMarker`] - Identifies 1-based size types (like [`ColWidth`], [`RowHeight`])
 //!
 //! These traits work together to provide type safety and prevent incorrect
 //! comparisons between incompatible types (e.g., row vs column indices).
@@ -13,6 +14,13 @@
 //! See the [module documentation] for details on the type system and safety guarantees.
 //!
 //! [module documentation]: mod@crate::core::units::bounds_check
+//! [`UnitCompare`]: crate::UnitCompare
+//! [`IndexMarker`]: crate::IndexMarker
+//! [`LengthMarker`]: crate::LengthMarker
+//! [`ColIndex`]: crate::ColIndex
+//! [`RowIndex`]: crate::RowIndex
+//! [`ColWidth`]: crate::ColWidth
+//! [`RowHeight`]: crate::RowHeight
 
 use std::{cmp::min, ops::Sub};
 
@@ -39,7 +47,7 @@ pub trait UnitCompare: From<usize> + From<u16> {
 /// Marker trait for index-type units (0-based position indicators).
 ///
 /// This trait identifies types that represent positions or indices within
-/// content, such as `RowIndex`, `ColIndex`, and `Index`. These are 0-based
+/// content, such as [`RowIndex`], [`ColIndex`], and [`Index`]. These are 0-based
 /// values where the first position is index 0.
 ///
 /// Each index type has a corresponding length type via [`LengthType`](Self::LengthType),
@@ -62,17 +70,25 @@ pub trait UnitCompare: From<usize> + From<u16> {
 /// typically used in practice.
 ///
 /// [module documentation]: mod@crate::core::units::bounds_check
+/// [`RowIndex`]: crate::RowIndex
+/// [`ColIndex`]: crate::ColIndex
+/// [`Index`]: crate::Index
 pub trait IndexMarker: UnitCompare {
     /// The corresponding length type for this index type.
     ///
     /// The constraint `LengthMarker<IndexType = Self>` creates a bidirectional
     /// relationship: this ensures that the length type's `IndexType` points back to
-    /// this same index type, preventing type mismatches like `ColIndex` ↔
-    /// `RowHeight`.
+    /// this same index type, preventing type mismatches like [`ColIndex`] ↔
+    /// [`RowHeight`].
     ///
-    /// Note: For special cases like `ByteIndex` that need to work with `Length`,
+    /// Note: For special cases like [`ByteIndex`] that need to work with [`Length`],
     /// we provide convenience methods that convert to compatible types rather than
     /// breaking the bidirectional constraint system.
+    ///
+    /// [`ColIndex`]: crate::ColIndex
+    /// [`RowHeight`]: crate::RowHeight
+    /// [`ByteIndex`]: crate::ByteIndex
+    /// [`Length`]: crate::Length
     type LengthType: LengthMarker<IndexType = Self>;
 
     /// Convert this index to the corresponding length type.
@@ -110,7 +126,7 @@ pub trait IndexMarker: UnitCompare {
     /// (1-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┐
     ///           │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │
     ///           ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┤
-    ///           ├────────── within bounds ──────────────┼─ overflow ┘
+    ///           ├──────────── within bounds ────────────┼─ overflow ┘
     ///           └────────── length=10 (1-based) ────────┘
     ///
     /// overflows(length=10) = true (index 10 overflows length 10)
@@ -156,6 +172,7 @@ pub trait IndexMarker: UnitCompare {
     ///
     /// [`check_array_access_bounds`]: crate::BoundsCheck::check_array_access_bounds
     /// [`ArrayAccessBoundsStatus`]: crate::ArrayAccessBoundsStatus
+    /// [`LengthMarker::is_overflowed_by`]: crate::LengthMarker::is_overflowed_by
     fn overflows(&self, arg_length: impl Into<Self::LengthType>) -> bool
     where
         Self: PartialOrd + Sized + Copy,
@@ -211,55 +228,127 @@ pub trait IndexMarker: UnitCompare {
         *self < min
     }
 
-    /// Check bounds against both minimum and maximum values.
+    /// Check if this index is within a range [start, start+size).
+    /// The upper bound is EXCLUSIVE, making this suitable for viewport and window bounds.
     ///
     /// This provides comprehensive bounds checking that can detect underflow,
-    /// valid positions, and overflow in a single operation.
+    /// valid positions, and overflow in a single operation with exclusive upper bound
+    /// semantics.
+    ///
+    /// **Note on interval notation:**
+    /// - `[` means the boundary is INCLUDED (closed)
+    /// - `)` means the boundary is EXCLUDED (open)
+    /// - Example: `[2, 8)` includes 2,3,4,5,6,7 but excludes 8
+    ///
+    /// ```text
+    /// Example with start=2, size=6:
+    /// Viewport covers [2, 8) - index 8 is NOT included
+    ///
+    ///       start=2                start+size=8 (exclusive)
+    ///           ↓                          ↓
+    /// Index:    0   1   2   3   4   5   6   7   8   9
+    ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///         │ U │ U │ W │ W │ W │ W │ W │ W │ O │ O │
+    ///         └───┴───┼───┴───┴───┴───┴───┴───┼───┴───┘
+    ///                 ╰───── within range ────╯
+    ///
+    /// U = Underflowed (index < start)
+    /// W = Within (start <= index < start+size)
+    /// O = Overflowed (index >= start+size)
+    ///
+    /// check_range_bounds_exclusive_end(col(1), col(2), width(6)) = Underflowed
+    /// check_range_bounds_exclusive_end(col(2), col(2), width(6)) = Within
+    /// check_range_bounds_exclusive_end(col(7), col(2), width(6)) = Within
+    /// check_range_bounds_exclusive_end(col(8), col(2), width(6)) = Overflowed
+    /// ```
+    ///
+    /// # Use Cases
+    /// - **Viewport bounds checking**: `[viewport_start, viewport_start+viewport_size)`
+    /// - **Buffer array access**: `[0, buffer_length)` for safe indexing
+    /// - **Window visibility**: Checking if content is within a scrollable window
+    /// - **Memory range validation**: Ensuring pointers stay within allocated bounds
+    ///
+    /// # When to Use This Method vs Semantic Aliases
+    /// - **Use this method** when you need detailed status information
+    ///   (underflow/overflow handling)
+    /// - **Use [`is_in_viewport()`]** for simple boolean viewport containment checks
+    /// - **For pattern matching**: When you need to handle underflow/overflow differently
+    /// - **For complex logic**: When the specific type of bounds violation matters
+    ///
+    /// ```rust
+    /// // Use this core method for detailed handling:
+    /// match caret_col.check_range_bounds_exclusive_end(viewport_start, viewport_width) {
+    ///     ArrayAccessBoundsStatus::Underflowed => scroll_right(),
+    ///     ArrayAccessBoundsStatus::Within => render_cursor(),
+    ///     ArrayAccessBoundsStatus::Overflowed => scroll_left(),
+    /// }
+    ///
+    /// // Use semantic alias for simple checks:
+    /// if caret_col.is_in_viewport(viewport_start, viewport_width) {
+    ///     render_cursor();
+    /// }
+    /// ```
     ///
     /// # Returns
-    /// - [`ArrayAccessBoundsStatus::Underflowed`] if index < min
-    /// - [`ArrayAccessBoundsStatus::Within`] if min <= index < `max_length`
-    /// - [`ArrayAccessBoundsStatus::Overflowed`] if index >= `max_length`
+    /// - [`ArrayAccessBoundsStatus::Underflowed`] if index < start
+    /// - [`ArrayAccessBoundsStatus::Within`] if start <= index < start+size
+    /// - [`ArrayAccessBoundsStatus::Overflowed`] if index >= start+size
     ///
     /// # Examples
     /// ```
     /// use r3bl_tui::{IndexMarker, ArrayAccessBoundsStatus, col, width};
     ///
-    /// let min_col = col(2);
-    /// let max_width = width(8);
+    /// let viewport_start = col(2);
+    /// let viewport_width = width(6);
     ///
-    /// assert_eq!(col(1).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Underflowed);
-    /// assert_eq!(col(5).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Within);
-    /// assert_eq!(col(8).check_bounds_range(min_col, max_width), ArrayAccessBoundsStatus::Overflowed);
+    /// // Viewport covers [2, 8) - column 8 is NOT included
+    /// assert_eq!(col(1).check_range_bounds_exclusive_end(viewport_start, viewport_width), ArrayAccessBoundsStatus::Underflowed);
+    /// assert_eq!(col(5).check_range_bounds_exclusive_end(viewport_start, viewport_width), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(col(8).check_range_bounds_exclusive_end(viewport_start, viewport_width), ArrayAccessBoundsStatus::Overflowed);
     /// ```
     ///
     /// [`ArrayAccessBoundsStatus::Underflowed`]: crate::ArrayAccessBoundsStatus::Underflowed
     /// [`ArrayAccessBoundsStatus::Within`]: crate::ArrayAccessBoundsStatus::Within
     /// [`ArrayAccessBoundsStatus::Overflowed`]: crate::ArrayAccessBoundsStatus::Overflowed
-    fn check_bounds_range(
+    /// [`is_in_viewport()`]: Self::is_in_viewport
+    fn check_range_bounds_exclusive_end(
         &self,
-        arg_min: impl Into<Self>,
-        max: Self::LengthType,
+        arg_start: impl Into<Self>,
+        size: Self::LengthType,
     ) -> ArrayAccessBoundsStatus
     where
         Self: PartialOrd + Sized + Copy,
     {
-        let min_bound: Self = arg_min.into();
+        let start_bound: Self = arg_start.into();
 
-        if *self < min_bound {
+        if *self < start_bound {
             ArrayAccessBoundsStatus::Underflowed
-        } else if self.overflows(max) {
-            ArrayAccessBoundsStatus::Overflowed
         } else {
-            ArrayAccessBoundsStatus::Within
+            // Calculate the exclusive upper bound: start + size (using usize arithmetic)
+            let start_as_usize = start_bound.as_usize();
+            let size_as_usize = size.as_usize();
+            let end_bound_usize = start_as_usize + size_as_usize;
+            let self_as_usize = self.as_usize();
+
+            if self_as_usize >= end_bound_usize {
+                ArrayAccessBoundsStatus::Overflowed
+            } else {
+                ArrayAccessBoundsStatus::Within
+            }
         }
     }
 
     /// Check if this index is within an inclusive range [min_index, max_index].
+    /// Both the lower and upper bounds are INCLUSIVE, making this suitable for scroll
+    /// regions and selections.
     ///
     /// This is useful for checking membership in regions defined by two indices,
     /// such as scroll regions, selection ranges, or viewport bounds. Both endpoints
     /// are included in the valid range.
+    ///
+    /// **Note on interval notation:**
+    /// - `[` and `]` mean the boundaries are INCLUDED (closed)
+    /// - Example: `[2, 7]` includes 2,3,4,5,6,7 (both 2 and 7 are included)
     ///
     /// ```text
     /// Example with min_index=2, max_index=7:
@@ -270,17 +359,54 @@ pub trait IndexMarker: UnitCompare {
     ///        ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
     ///        │ U │ U │ W │ W │ W │ W │ W │ W │ O │ O │
     ///        └───┴───┼───┴───┴───┴───┴───┴───┼───┴───┘
-    ///                └──── within range ─────┘
+    ///                ╰─── within range ───╯
     ///
     /// U = Underflowed (index < min_index)
     /// W = Within (min_index <= index <= max_index)
     /// O = Overflowed (index > max_index)
     ///
-    /// check_inclusive_range_bounds(row(1), row(2), row(7)) = Underflowed
-    /// check_inclusive_range_bounds(row(2), row(2), row(7)) = Within
-    /// check_inclusive_range_bounds(row(5), row(2), row(7)) = Within
-    /// check_inclusive_range_bounds(row(7), row(2), row(7)) = Within
-    /// check_inclusive_range_bounds(row(8), row(2), row(7)) = Overflowed
+    /// check_range_bounds_inclusive_end(row(1), row(2), row(7)) = Underflowed
+    /// check_range_bounds_inclusive_end(row(2), row(2), row(7)) = Within
+    /// check_range_bounds_inclusive_end(row(5), row(2), row(7)) = Within
+    /// check_range_bounds_inclusive_end(row(7), row(2), row(7)) = Within
+    /// check_range_bounds_inclusive_end(row(8), row(2), row(7)) = Overflowed
+    /// ```
+    ///
+    /// # Use Cases
+    /// - **VT-100 scroll region checking**: `[scroll_top, scroll_bottom]` for terminal
+    ///   operations
+    /// - **Text selection bounds**: `[selection_start, selection_end]` for highlighting
+    /// - **Inclusive range validation**: Any range where both endpoints are meaningful
+    ///   positions
+    /// - **Region membership testing**: Checking if a position falls within defined
+    ///   boundaries
+    ///
+    /// # When to Use This Method vs Semantic Aliases
+    /// - **Use this method** when you need detailed status information for pattern
+    ///   matching
+    /// - **Use [`is_in_inclusive_range()`]** for simple boolean range membership checks
+    /// - **Use [`is_in_scroll_region()`]** for VT-100 terminal scroll region operations
+    /// - **Use [`is_in_selection_range()`]** for text editor selection operations
+    /// - **For pattern matching**: When you need to handle underflow/overflow differently
+    /// - **For complex logic**: When the specific type of bounds violation matters
+    ///
+    /// ```rust
+    /// // Use this core method for detailed handling:
+    /// match row_index.check_range_bounds_inclusive_end(scroll_top, scroll_bottom) {
+    ///     ArrayAccessBoundsStatus::Within => {
+    ///         // Process operation within scroll region
+    ///         perform_scroll_operation();
+    ///     }
+    ///     _ => {
+    ///         // Skip operation - outside scroll region
+    ///         return;
+    ///     }
+    /// }
+    ///
+    /// // Use semantic aliases for simple checks:
+    /// if row_index.is_in_scroll_region(scroll_top, scroll_bottom) {
+    ///     perform_scroll_operation();
+    /// }
     /// ```
     ///
     /// # Arguments
@@ -300,15 +426,15 @@ pub trait IndexMarker: UnitCompare {
     /// let scroll_top = row(2);
     /// let scroll_bottom = row(7);
     ///
-    /// assert_eq!(row(1).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Underflowed);
-    /// assert_eq!(row(2).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
-    /// assert_eq!(row(5).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
-    /// assert_eq!(row(7).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
-    /// assert_eq!(row(8).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Overflowed);
+    /// assert_eq!(row(1).check_range_bounds_inclusive_end(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Underflowed);
+    /// assert_eq!(row(2).check_range_bounds_inclusive_end(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(row(5).check_range_bounds_inclusive_end(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(row(7).check_range_bounds_inclusive_end(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within);
+    /// assert_eq!(row(8).check_range_bounds_inclusive_end(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Overflowed);
     ///
     /// // Usage in conditional logic
     /// let row_index = row(5); // Example row index
-    /// match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
+    /// match row_index.check_range_bounds_inclusive_end(scroll_top, scroll_bottom) {
     ///     ArrayAccessBoundsStatus::Within => {
     ///         // Process operation within scroll region
     ///     }
@@ -319,16 +445,17 @@ pub trait IndexMarker: UnitCompare {
     /// }
     /// ```
     ///
-    /// # Use Cases
-    /// - VT-100 scroll region checking: `[scroll_top, scroll_bottom]`
-    /// - Text selection bounds: `[selection_start, selection_end]`
-    /// - Viewport boundaries: `[viewport_top, viewport_bottom]`
-    /// - Any range where both endpoints are meaningful positions
-    ///
     /// [`ArrayAccessBoundsStatus::Underflowed`]: crate::ArrayAccessBoundsStatus::Underflowed
     /// [`ArrayAccessBoundsStatus::Within`]: crate::ArrayAccessBoundsStatus::Within
     /// [`ArrayAccessBoundsStatus::Overflowed`]: crate::ArrayAccessBoundsStatus::Overflowed
-    fn check_inclusive_range_bounds(&self, min_index: Self, max_index: Self) -> ArrayAccessBoundsStatus
+    /// [`is_in_inclusive_range()`]: Self::is_in_inclusive_range
+    /// [`is_in_scroll_region()`]: Self::is_in_scroll_region
+    /// [`is_in_selection_range()`]: Self::is_in_selection_range
+    fn check_range_bounds_inclusive_end(
+        &self,
+        min_index: Self,
+        max_index: Self,
+    ) -> ArrayAccessBoundsStatus
     where
         Self: PartialOrd + Copy,
     {
@@ -361,7 +488,7 @@ pub trait IndexMarker: UnitCompare {
     /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┬───┬───┬───┐
     ///           │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │ × │ × │ × │
     ///           ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┴───┴───┴───┤
-    ///           ├────────── valid indices ──────────────┼───── overflow ────────┘
+    ///           ├────────── valid indices ──────────────┼─── overflow ──────────┘
     ///           └────────── length=10 (1-based) ────────┘
     ///
     /// clamp_to_max_length(index=5, max_length=10)  = 5 (unchanged - within bounds)
@@ -425,7 +552,7 @@ pub trait IndexMarker: UnitCompare {
     ///        ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
     ///        │ × │ × │ × │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │
     ///        ├───┴───┴───┼───┴───┴───┴───┴───┴───┴───┤
-    ///        └ underflow ┼──── valid range ──────────┘
+    ///        └ underflow ┴──── valid range ──────────┘
     ///
     /// clamp_to_min_index(index=2, min_index=3) = 3 (clamped up to minimum)
     /// clamp_to_min_index(index=7, min_index=3) = 7 (unchanged - above minimum)
@@ -462,12 +589,297 @@ pub trait IndexMarker: UnitCompare {
         let min: Self = min_bound.into();
         (*self).max(min)
     }
+
+    // ======================================================================================
+    // Semantic Aliases - Boolean convenience methods for common use cases
+    // ======================================================================================
+    //
+    // These methods provide self-documenting names for specific bounds checking
+    // scenarios. They wrap the core methods above to provide clear, domain-specific
+    // boolean checks.
+    //
+    // USAGE GUIDANCE:
+    // - Use semantic aliases for simple boolean conditions in business logic
+    // - Use core methods when you need pattern matching or detailed status information
+    // - Choose the alias that best describes your specific use case
+
+    /// Check if this index is visible within a viewport window.
+    ///
+    /// This is a semantic alias for `check_range_bounds_exclusive_end()` that returns
+    /// a boolean result. Use this when you need a simple true/false answer for viewport
+    /// containment checking.
+    ///
+    /// A viewport defines a rectangular window showing a portion of larger content,
+    /// with exclusive upper bounds: `[start, start+size)`.
+    ///
+    /// **Note on interval notation:**
+    /// - `[` means the boundary is INCLUDED (closed)
+    /// - `)` means the boundary is EXCLUDED (open)
+    /// - Example: `[10, 30)` includes 10,11,12,...,29 but excludes 30
+    ///
+    /// ```text
+    /// Viewport Window Example:
+    /// Full content is 50 columns wide, viewport shows columns [10, 30)
+    ///
+    ///          viewport_start=10       viewport_end=30 (exclusive)
+    ///                   ↓                       ↓
+    /// Column:   8   9   10  11  12 ...  28  29  30  31  32
+    ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///         │   │   │ ▓ │ ▓ │ ▓ │...│ ▓ │ ▓ │ X │   │   │
+    ///         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+    ///                 ╰────── viewport area ──────╯
+    ///
+    /// is_in_viewport(col(9),  start=col(10), size=width(20)) → false
+    /// is_in_viewport(col(10), start=col(10), size=width(20)) → true
+    /// is_in_viewport(col(29), start=col(10), size=width(20)) → true
+    /// is_in_viewport(col(30), start=col(10), size=width(20)) → false
+    /// ```
+    ///
+    /// # When to Use This Method
+    /// - **Simple boolean checks**: When you only need true/false for viewport visibility
+    /// - **Conditional rendering**: Deciding whether to draw/process elements
+    /// - **Scroll calculations**: Checking if content is currently visible
+    ///
+    /// # When to Use Core Methods Instead
+    /// - **Pattern matching**: When you need to handle underflow/overflow differently
+    /// - **Detailed status**: When the specific type of bounds violation matters
+    /// - **Complex logic**: When you need more than just within/not-within information
+    ///
+    /// ```rust
+    /// // Use this semantic alias for simple checks:
+    /// if caret_col.is_in_viewport(viewport_start, viewport_width) {
+    ///     render_cursor();
+    /// }
+    ///
+    /// // Use core method for detailed handling:
+    /// match caret_col.check_range_bounds_exclusive_end(viewport_start, viewport_width) {
+    ///     ArrayAccessBoundsStatus::Underflowed => scroll_right(),
+    ///     ArrayAccessBoundsStatus::Within => render_cursor(),
+    ///     ArrayAccessBoundsStatus::Overflowed => scroll_left(),
+    /// }
+    /// ```
+    fn is_in_viewport(
+        &self,
+        viewport_start: impl Into<Self>,
+        viewport_size: Self::LengthType,
+    ) -> bool
+    where
+        Self: PartialOrd + Sized + Copy,
+    {
+        matches!(
+            self.check_range_bounds_exclusive_end(viewport_start, viewport_size),
+            ArrayAccessBoundsStatus::Within
+        )
+    }
+
+    /// Check if this index is within an inclusive range.
+    ///
+    /// This is a semantic alias for `check_range_bounds_inclusive_end()` that returns
+    /// a boolean result. Use this for general-purpose inclusive range membership testing
+    /// where both endpoints are meaningful positions.
+    ///
+    /// **Note on interval notation:**
+    /// - `[` and `]` mean the boundaries are INCLUDED (closed)
+    /// - Example: `[3, 7]` includes 3,4,5,6,7 (both 3 and 7 are included)
+    ///
+    /// ```text
+    /// Generic Inclusive Range [min=3, max=7]:
+    ///
+    ///       min_index=3              max_index=7
+    ///           ↓                          ↓
+    /// Index:    0   1   2   3   4   5   6   7   8   9
+    ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///         │   │   │   │ ● │ ● │ ● │ ● │ ● │   │   │
+    ///         └───┴───┴───┼───┴───┴───┴───┴───┼───┴───┘
+    ///                     ╰─── within range ───╯
+    ///                     (both ends included)
+    ///
+    /// is_in_inclusive_range(2, min=3, max=7) → false
+    /// is_in_inclusive_range(3, min=3, max=7) → true
+    /// is_in_inclusive_range(5, min=3, max=7) → true
+    /// is_in_inclusive_range(7, min=3, max=7) → true
+    /// is_in_inclusive_range(8, min=3, max=7) → false
+    /// ```
+    ///
+    /// # When to Use This Method
+    /// - **Simple membership tests**: When you only need true/false for range containment
+    /// - **General range checking**: For any inclusive range where endpoints matter
+    /// - **Algorithm logic**: Simple bounds checking in loops or calculations
+    ///
+    /// # When to Use More Specific Aliases
+    /// - **Scroll regions**: Use `is_in_scroll_region()` for VT-100 terminal operations
+    /// - **Text selections**: Use `is_in_selection_range()` for text editing operations
+    ///
+    /// ```rust
+    /// // Use this for general inclusive range checks:
+    /// if row_index.is_in_inclusive_range(region_start, region_end) {
+    ///     process_within_region();
+    /// }
+    ///
+    /// // Use more specific aliases for domain-specific operations:
+    /// if row_index.is_in_scroll_region(scroll_top, scroll_bottom) {
+    ///     apply_scroll_operation();
+    /// }
+    /// ```
+    fn is_in_inclusive_range(&self, start_index: Self, end_index: Self) -> bool
+    where
+        Self: PartialOrd + Copy,
+    {
+        matches!(
+            self.check_range_bounds_inclusive_end(start_index, end_index),
+            ArrayAccessBoundsStatus::Within
+        )
+    }
+
+    /// Check if this index is within a VT-100 terminal scroll region.
+    ///
+    /// This is a semantic alias for `check_range_bounds_inclusive_end()` specifically
+    /// for VT-100 terminal scroll region operations. VT-100 scroll regions use
+    /// inclusive bounds where both the top and bottom lines are part of the scrollable
+    /// area.
+    ///
+    /// **Note on interval notation:**
+    /// - `[` and `]` mean the boundaries are INCLUDED (closed)
+    /// - Example: `[2, 5]` includes rows 2,3,4,5 (both 2 and 5 are included)
+    ///
+    /// ```text
+    /// Terminal Buffer with Scroll Region:
+    ///               Row: 0-based
+    /// max_height=8 ╮  ▼  ┌─────────────────────────────────────┐
+    /// (1-based)    │  0  │ Fixed Header (outside scroll)       │
+    ///              │  1  │ Status Bar (outside scroll)         │
+    ///              │     ├─────────────────────────────────────┤ ← scroll_top=2
+    ///              │  2  │ ▓▓▓ Scrollable Line 1 ▓▓▓          │ ╮
+    ///              │  3  │ ▓▓▓ Scrollable Line 2 ▓▓▓          │ │ Scroll
+    ///              │  4  │ ▓▓▓ Scrollable Line 3 ▓▓▓          │ │ Region
+    ///              │  5  │ ▓▓▓ Scrollable Line 4 ▓▓▓          │ ╯ [2,5]
+    ///              │     ├─────────────────────────────────────┤ ← scroll_bottom=5
+    ///              │  6  │ Fixed Footer (outside scroll)       │
+    ///              ╰  7  │ Command Line (outside scroll)       │
+    ///                    └─────────────────────────────────────┘
+    ///
+    /// is_in_scroll_region(row(1), top=row(2), bottom=row(5)) → false
+    /// is_in_scroll_region(row(2), top=row(2), bottom=row(5)) → true
+    /// is_in_scroll_region(row(4), top=row(2), bottom=row(5)) → true
+    /// is_in_scroll_region(row(5), top=row(2), bottom=row(5)) → true
+    /// is_in_scroll_region(row(6), top=row(2), bottom=row(5)) → false
+    /// ```
+    ///
+    /// # When to Use This Method
+    /// - **VT-100 operations**: Line insertion, deletion, and scrolling operations
+    /// - **Terminal emulation**: Implementing CSI sequences like IL (Insert Line), DL
+    ///   (Delete Line)
+    /// - **Scroll region logic**: Determining if operations should affect a line
+    ///
+    /// # VT-100 Context
+    /// In VT-100 terminals, scroll regions define which lines participate in scrolling
+    /// operations:
+    /// - **Insert Line (IL)**: Only affects lines within the scroll region
+    /// - **Delete Line (DL)**: Only affects lines within the scroll region
+    /// - **Scroll Up (SU)**: Only scrolls content within the region
+    /// - **Scroll Down (SD)**: Only scrolls content within the region
+    ///
+    /// ```rust
+    /// // Use this in VT-100 terminal operations:
+    /// if cursor_row.is_in_scroll_region(scroll_top, scroll_bottom) {
+    ///     perform_line_operation();
+    /// } else {
+    ///     skip_operation(); // Outside scroll region
+    /// }
+    ///
+    /// // Example from actual VT-100 parser:
+    /// match row_index.check_range_bounds_inclusive_end(scroll_top, scroll_bottom) {
+    ///     ArrayAccessBoundsStatus::Within => {
+    ///         // Continue with line insertion/deletion
+    ///     }
+    ///     _ => {
+    ///         // Skip - cursor outside scroll region
+    ///         return;
+    ///     }
+    /// }
+    /// ```
+    fn is_in_scroll_region(&self, scroll_top: Self, scroll_bottom: Self) -> bool
+    where
+        Self: PartialOrd + Copy,
+    {
+        matches!(
+            self.check_range_bounds_inclusive_end(scroll_top, scroll_bottom),
+            ArrayAccessBoundsStatus::Within
+        )
+    }
+
+    /// Check if this index is within a text selection range.
+    ///
+    /// This is a semantic alias for `check_range_bounds_inclusive_end()` specifically
+    /// for text selection operations. Text selections use inclusive bounds where both
+    /// the start and end positions are part of the selected content.
+    ///
+    /// **Note on interval notation:**
+    /// - `[` and `]` mean the boundaries are INCLUDED (closed)
+    /// - Example: `[4, 14]` includes indices 4,5,6,7,8,9,10,11,12,13,14 (both 4 and 14
+    ///   are included)
+    ///
+    /// ```text
+    /// Text Selection Example:
+    /// Original text: "The quick brown fox jumps"
+    /// Selected text: "quick brown" (indices 4-14 inclusive)
+    ///
+    ///       selection_start=4                      selection_end=14
+    ///               ↓                                      ↓
+    /// Index:    0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18
+    ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    /// Char:   │ T │ h │ e │   │ q │ u │ i │ c │ k │   │ b │ r │ o │ w │ n │   │ f │ o │ x │
+    ///         └───┴───┴───┴───┼───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┴───┘
+    ///                         ╰───────────── selected range ──────────────╯
+    ///
+    /// is_in_selection_range(idx(3),  start=idx(4), end=idx(14)) → false
+    /// is_in_selection_range(idx(4),  start=idx(4), end=idx(14)) → true
+    /// is_in_selection_range(idx(14), start=idx(4), end=idx(14)) → true
+    /// is_in_selection_range(idx(15), start=idx(4), end=idx(14)) → false
+    /// ```
+    ///
+    /// # When to Use This Method
+    /// - **Text editing**: Determining if a position is within selected text
+    /// - **Highlighting logic**: Deciding whether to apply selection styling
+    /// - **Copy/cut operations**: Identifying which content to include
+    /// - **Selection manipulation**: Expanding, contracting, or moving selections
+    ///
+    /// # Text Selection Context
+    /// In text editors, selections define ranges of content for operations:
+    /// - **Visual feedback**: Highlighting selected text with different colors
+    /// - **Clipboard operations**: Copy/cut only affects selected content
+    /// - **Bulk editing**: Apply formatting or transformations to selection
+    /// - **Navigation**: Jump between selection boundaries
+    ///
+    /// ```rust
+    /// // Use this in text editor operations:
+    /// if char_index.is_in_selection_range(selection_start, selection_end) {
+    ///     apply_selection_highlight();
+    /// }
+    ///
+    /// // Example selection operation:
+    /// for (index, character) in text.chars().enumerate() {
+    ///     let char_index = CharIndex::from(index);
+    ///     if char_index.is_in_selection_range(sel_start, sel_end) {
+    ///         selected_text.push(character);
+    ///     }
+    /// }
+    /// ```
+    fn is_in_selection_range(&self, selection_start: Self, selection_end: Self) -> bool
+    where
+        Self: PartialOrd + Copy,
+    {
+        matches!(
+            self.check_range_bounds_inclusive_end(selection_start, selection_end),
+            ArrayAccessBoundsStatus::Within
+        )
+    }
 }
 
 /// Marker trait for length-type units (1-based size measurements).
 ///
 /// This trait identifies types that represent sizes or lengths of content,
-/// such as `RowHeight`, `ColWidth`, and `Length`. These are 1-based values
+/// such as [`RowHeight`], [`ColWidth`], and [`Length`]. These are 1-based values
 /// where a length of 1 means "one unit of size".
 ///
 /// Each length type has a corresponding index type via [`IndexType`](Self::IndexType),
@@ -476,13 +888,20 @@ pub trait IndexMarker: UnitCompare {
 /// See the [module documentation](crate::core::units::bounds_check) "Type System"
 /// section for details on how length types relate to index types and the type safety
 /// guarantees.
+///
+/// [`RowHeight`]: crate::RowHeight
+/// [`ColWidth`]: crate::ColWidth
+/// [`Length`]: crate::Length
 pub trait LengthMarker: UnitCompare {
     /// The corresponding index type for this length type.
     ///
     /// The constraint `IndexMarker<LengthType = Self>` creates a bidirectional
     /// relationship: this ensures that the index type's `LengthType` points back to
-    /// this same length type, preventing type mismatches like `ColWidth` ↔
-    /// `RowIndex`.
+    /// this same length type, preventing type mismatches like [`ColWidth`] ↔
+    /// [`RowIndex`].
+    ///
+    /// [`ColWidth`]: crate::ColWidth
+    /// [`RowIndex`]: crate::RowIndex
     type IndexType: IndexMarker<LengthType = Self>;
 
     /// Convert this length to the corresponding index type.
@@ -495,7 +914,7 @@ pub trait LengthMarker: UnitCompare {
     ///           ┌────────── length=10 (1-based) ────────┐
     /// Length:     1   2   3   4   5   6   7   8   9   10
     /// (1-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-    ///           │   │   │   │   │   │   │   │   │   │ ␩ │
+    ///           │   │   │   │   │   │   │   │   │ x │   │
     ///           └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
     /// Index:      0   1   2   3   4   5   6   7   8   9
     /// (0-based)                                       ↑
@@ -519,7 +938,7 @@ pub trait LengthMarker: UnitCompare {
     ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┼───┬───┬───┐
     ///         │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✗ │ ✗ │ ✗ │
     ///         ├───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┤
-    ///         ├────────── valid indices ──────────────┼─ overflow ┘
+    ///         ├──────────── valid indices ────────────┼─ overflow ┘
     ///         └────────── length=10 (1-based) ────────┘
     ///
     /// is_overflowed_by(5)  = false (within bounds)
@@ -576,10 +995,10 @@ pub trait LengthMarker: UnitCompare {
     ///
     /// # Returns
     /// The number of units between the index and the boundary defined by this
-    /// length. For example, if this is a `ColWidth` of 10 and the index is at column 3,
-    /// this returns a Length of 7 (columns 3-9, inclusive).
+    /// length. For example, if this is a [`ColWidth`] of 10 and the index is at column 3,
+    /// this returns a [`Length`] of 7 (columns 3-9, inclusive).
     ///
-    /// Returns Length(0) if the index is at or beyond the boundary.
+    /// Returns [`Length`](0) if the index is at or beyond the boundary.
     ///
     /// # Examples
     /// ```
@@ -594,6 +1013,9 @@ pub trait LengthMarker: UnitCompare {
     /// assert_eq!(max_width.remaining_from(row(0) + col(3)), len(7));  // Pos converts to ColIndex
     /// assert_eq!(max_width.remaining_from(row(1) + col(10)), len(0)); // Pos at boundary
     /// ```
+    ///
+    /// [`ColWidth`]: crate::ColWidth
+    /// [`Length`]: crate::Length
     fn remaining_from(&self, arg_index: impl Into<Self::IndexType>) -> Length
     where
         Self::IndexType: PartialOrd + Sub<Output = Self::IndexType> + Copy,
@@ -619,7 +1041,7 @@ pub trait LengthMarker: UnitCompare {
     /// Clamping operation with max_length=7:
     ///
     /// Case 1: length=5 (within bounds)
-    /// ┌───── length=5 ─────┐
+    /// ┌───── length=5 ────┐
     /// │ 1   2   3   4   5 │ 6   7 ← max_length boundary
     /// ├───┬───┬───┬───┬───┼───┬───┤
     /// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │   │   │
@@ -628,7 +1050,7 @@ pub trait LengthMarker: UnitCompare {
     /// Result: clamp_to_max_length(5, max=7) = 5 (no change - within bounds)
     ///
     /// Case 2: length=10 (exceeds bounds)
-    /// ┌───────────── length=10 ──────────────┐
+    /// ┌───────────── length=10 ───────────────┐
     /// │ 1   2   3   4   5   6   7 │ 8   9   10 (trimmed)
     /// ├───┬───┬───┬───┬───┬───┬───┼───┬───┬───┤
     /// │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ ✓ │ × │ × │ × │
@@ -748,58 +1170,58 @@ mod overflow_operations_tests {
     }
 
     #[test]
-    fn test_check_bounds_range() {
+    fn test_check_range_bounds_exclusive_end() {
         use crate::{ArrayAccessBoundsStatus, col, width};
 
         let min_col = col(2);
-        let max_width = width(8);
+        let max_width = width(6);
 
-        // Test underflow
+        // Test underflow (before start)
         assert_eq!(
-            col(0).check_bounds_range(min_col, max_width),
+            col(0).check_range_bounds_exclusive_end(min_col, max_width),
             ArrayAccessBoundsStatus::Underflowed
         );
         assert_eq!(
-            col(1).check_bounds_range(min_col, max_width),
+            col(1).check_range_bounds_exclusive_end(min_col, max_width),
             ArrayAccessBoundsStatus::Underflowed
         );
 
-        // Test within bounds
+        // Test within bounds [2, 8) - range is [start, start+size)
         assert_eq!(
-            col(2).check_bounds_range(min_col, max_width),
+            col(2).check_range_bounds_exclusive_end(min_col, max_width),
             ArrayAccessBoundsStatus::Within
         );
         assert_eq!(
-            col(5).check_bounds_range(min_col, max_width),
+            col(5).check_range_bounds_exclusive_end(min_col, max_width),
             ArrayAccessBoundsStatus::Within
         );
         assert_eq!(
-            col(7).check_bounds_range(min_col, max_width),
+            col(7).check_range_bounds_exclusive_end(min_col, max_width),
             ArrayAccessBoundsStatus::Within
         );
 
-        // Test overflow
+        // Test overflow (at or beyond exclusive end)
         assert_eq!(
-            col(8).check_bounds_range(min_col, max_width),
+            col(8).check_range_bounds_exclusive_end(min_col, max_width),
             ArrayAccessBoundsStatus::Overflowed
         );
         assert_eq!(
-            col(10).check_bounds_range(min_col, max_width),
+            col(10).check_range_bounds_exclusive_end(min_col, max_width),
             ArrayAccessBoundsStatus::Overflowed
         );
 
         // Test edge cases with zero minimum
         let min_zero = col(0);
         assert_eq!(
-            col(0).check_bounds_range(min_zero, max_width),
+            col(0).check_range_bounds_exclusive_end(min_zero, max_width),
             ArrayAccessBoundsStatus::Within
         );
         assert_eq!(
-            col(7).check_bounds_range(min_zero, max_width),
+            col(5).check_range_bounds_exclusive_end(min_zero, max_width),
             ArrayAccessBoundsStatus::Within
         );
         assert_eq!(
-            col(8).check_bounds_range(min_zero, max_width),
+            col(6).check_range_bounds_exclusive_end(min_zero, max_width),
             ArrayAccessBoundsStatus::Overflowed
         );
     }
@@ -1139,45 +1561,129 @@ mod overflow_operations_tests {
     }
 
     #[test]
-    fn test_check_inclusive_range_bounds() {
+    fn test_check_range_bounds_inclusive_end() {
         use crate::{ArrayAccessBoundsStatus, col, row};
 
         // Test basic Index types
-        assert_eq!(idx(1).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Underflowed, "Index below range");
-        assert_eq!(idx(2).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Within, "Index at range start");
-        assert_eq!(idx(5).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Within, "Index within range");
-        assert_eq!(idx(7).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Within, "Index at range end");
-        assert_eq!(idx(8).check_inclusive_range_bounds(idx(2), idx(7)), ArrayAccessBoundsStatus::Overflowed, "Index above range");
+        assert_eq!(
+            idx(1).check_range_bounds_inclusive_end(idx(2), idx(7)),
+            ArrayAccessBoundsStatus::Underflowed,
+            "Index below range"
+        );
+        assert_eq!(
+            idx(2).check_range_bounds_inclusive_end(idx(2), idx(7)),
+            ArrayAccessBoundsStatus::Within,
+            "Index at range start"
+        );
+        assert_eq!(
+            idx(5).check_range_bounds_inclusive_end(idx(2), idx(7)),
+            ArrayAccessBoundsStatus::Within,
+            "Index within range"
+        );
+        assert_eq!(
+            idx(7).check_range_bounds_inclusive_end(idx(2), idx(7)),
+            ArrayAccessBoundsStatus::Within,
+            "Index at range end"
+        );
+        assert_eq!(
+            idx(8).check_range_bounds_inclusive_end(idx(2), idx(7)),
+            ArrayAccessBoundsStatus::Overflowed,
+            "Index above range"
+        );
 
         // Test edge case: single element range
-        assert_eq!(idx(5).check_inclusive_range_bounds(idx(5), idx(5)), ArrayAccessBoundsStatus::Within, "Single element range - at element");
-        assert_eq!(idx(4).check_inclusive_range_bounds(idx(5), idx(5)), ArrayAccessBoundsStatus::Underflowed, "Single element range - below");
-        assert_eq!(idx(6).check_inclusive_range_bounds(idx(5), idx(5)), ArrayAccessBoundsStatus::Overflowed, "Single element range - above");
+        assert_eq!(
+            idx(5).check_range_bounds_inclusive_end(idx(5), idx(5)),
+            ArrayAccessBoundsStatus::Within,
+            "Single element range - at element"
+        );
+        assert_eq!(
+            idx(4).check_range_bounds_inclusive_end(idx(5), idx(5)),
+            ArrayAccessBoundsStatus::Underflowed,
+            "Single element range - below"
+        );
+        assert_eq!(
+            idx(6).check_range_bounds_inclusive_end(idx(5), idx(5)),
+            ArrayAccessBoundsStatus::Overflowed,
+            "Single element range - above"
+        );
 
         // Test with ColIndex (scroll regions use case)
         let scroll_top = col(10);
         let scroll_bottom = col(20);
 
-        assert_eq!(col(9).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Underflowed, "Col below scroll region");
-        assert_eq!(col(10).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within, "Col at scroll start");
-        assert_eq!(col(15).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within, "Col within scroll region");
-        assert_eq!(col(20).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Within, "Col at scroll end");
-        assert_eq!(col(21).check_inclusive_range_bounds(scroll_top, scroll_bottom), ArrayAccessBoundsStatus::Overflowed, "Col above scroll region");
+        assert_eq!(
+            col(9).check_range_bounds_inclusive_end(scroll_top, scroll_bottom),
+            ArrayAccessBoundsStatus::Underflowed,
+            "Col below scroll region"
+        );
+        assert_eq!(
+            col(10).check_range_bounds_inclusive_end(scroll_top, scroll_bottom),
+            ArrayAccessBoundsStatus::Within,
+            "Col at scroll start"
+        );
+        assert_eq!(
+            col(15).check_range_bounds_inclusive_end(scroll_top, scroll_bottom),
+            ArrayAccessBoundsStatus::Within,
+            "Col within scroll region"
+        );
+        assert_eq!(
+            col(20).check_range_bounds_inclusive_end(scroll_top, scroll_bottom),
+            ArrayAccessBoundsStatus::Within,
+            "Col at scroll end"
+        );
+        assert_eq!(
+            col(21).check_range_bounds_inclusive_end(scroll_top, scroll_bottom),
+            ArrayAccessBoundsStatus::Overflowed,
+            "Col above scroll region"
+        );
 
         // Test with RowIndex (typical VT-100 scroll region scenario)
         let vt_scroll_top = row(5);
         let vt_scroll_bottom = row(15);
 
-        assert_eq!(row(4).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Underflowed, "Row above scroll region");
-        assert_eq!(row(5).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Within, "Row at scroll top");
-        assert_eq!(row(10).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Within, "Row within scroll region");
-        assert_eq!(row(15).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Within, "Row at scroll bottom");
-        assert_eq!(row(16).check_inclusive_range_bounds(vt_scroll_top, vt_scroll_bottom), ArrayAccessBoundsStatus::Overflowed, "Row below scroll region");
+        assert_eq!(
+            row(4).check_range_bounds_inclusive_end(vt_scroll_top, vt_scroll_bottom),
+            ArrayAccessBoundsStatus::Underflowed,
+            "Row above scroll region"
+        );
+        assert_eq!(
+            row(5).check_range_bounds_inclusive_end(vt_scroll_top, vt_scroll_bottom),
+            ArrayAccessBoundsStatus::Within,
+            "Row at scroll top"
+        );
+        assert_eq!(
+            row(10).check_range_bounds_inclusive_end(vt_scroll_top, vt_scroll_bottom),
+            ArrayAccessBoundsStatus::Within,
+            "Row within scroll region"
+        );
+        assert_eq!(
+            row(15).check_range_bounds_inclusive_end(vt_scroll_top, vt_scroll_bottom),
+            ArrayAccessBoundsStatus::Within,
+            "Row at scroll bottom"
+        );
+        assert_eq!(
+            row(16).check_range_bounds_inclusive_end(vt_scroll_top, vt_scroll_bottom),
+            ArrayAccessBoundsStatus::Overflowed,
+            "Row below scroll region"
+        );
 
         // Test zero-based ranges
-        assert_eq!(idx(0).check_inclusive_range_bounds(idx(0), idx(3)), ArrayAccessBoundsStatus::Within, "Zero at start of zero-based range");
-        assert_eq!(idx(3).check_inclusive_range_bounds(idx(0), idx(3)), ArrayAccessBoundsStatus::Within, "End of zero-based range");
-        assert_eq!(idx(4).check_inclusive_range_bounds(idx(0), idx(3)), ArrayAccessBoundsStatus::Overflowed, "Beyond zero-based range");
+        assert_eq!(
+            idx(0).check_range_bounds_inclusive_end(idx(0), idx(3)),
+            ArrayAccessBoundsStatus::Within,
+            "Zero at start of zero-based range"
+        );
+        assert_eq!(
+            idx(3).check_range_bounds_inclusive_end(idx(0), idx(3)),
+            ArrayAccessBoundsStatus::Within,
+            "End of zero-based range"
+        );
+        assert_eq!(
+            idx(4).check_range_bounds_inclusive_end(idx(0), idx(3)),
+            ArrayAccessBoundsStatus::Overflowed,
+            "Beyond zero-based range"
+        );
 
         // Test property: consistency with manual bounds checking
         let test_cases = [
@@ -1193,38 +1699,86 @@ mod overflow_operations_tests {
             let min_index = idx(min_val);
             let max_index = idx(max_val);
 
-            let status = index.check_inclusive_range_bounds(min_index, max_index);
+            let status = index.check_range_bounds_inclusive_end(min_index, max_index);
             let not_underflow = !index.underflows(min_index);
             let not_overflow = index <= max_index;
             let expected_within = not_underflow && not_overflow;
 
             let is_within = status == ArrayAccessBoundsStatus::Within;
             assert_eq!(
-                is_within,
-                expected_within,
-                "check_inclusive_range_bounds({index_val}, {min_val}, {max_val}) = {status:?} should match manual bounds checking"
+                is_within, expected_within,
+                "check_range_bounds_inclusive_end({index_val}, {min_val}, {max_val}) = {status:?} should match manual bounds checking"
             );
         }
 
-        // Test inverted range (min > max) - should always return Overflowed since index < min but also > max
-        assert_eq!(idx(5).check_inclusive_range_bounds(idx(10), idx(5)), ArrayAccessBoundsStatus::Underflowed, "Inverted range: 5 < 10 (min)");
-        assert_eq!(idx(10).check_inclusive_range_bounds(idx(10), idx(5)), ArrayAccessBoundsStatus::Overflowed, "Inverted range: 10 > 5 (max)");
-        assert_eq!(idx(0).check_inclusive_range_bounds(idx(10), idx(5)), ArrayAccessBoundsStatus::Underflowed, "Inverted range: 0 < 10 (min)");
+        // Test inverted range (min > max) - should always return Overflowed since index <
+        // min but also > max
+        assert_eq!(
+            idx(5).check_range_bounds_inclusive_end(idx(10), idx(5)),
+            ArrayAccessBoundsStatus::Underflowed,
+            "Inverted range: 5 < 10 (min)"
+        );
+        assert_eq!(
+            idx(10).check_range_bounds_inclusive_end(idx(10), idx(5)),
+            ArrayAccessBoundsStatus::Overflowed,
+            "Inverted range: 10 > 5 (max)"
+        );
+        assert_eq!(
+            idx(0).check_range_bounds_inclusive_end(idx(10), idx(5)),
+            ArrayAccessBoundsStatus::Underflowed,
+            "Inverted range: 0 < 10 (min)"
+        );
 
         // Test large values
         let large_min = idx(1000);
         let large_max = idx(2000);
-        assert_eq!(idx(999).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Underflowed, "Below large range");
-        assert_eq!(idx(1000).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Within, "At large range start");
-        assert_eq!(idx(1500).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Within, "Within large range");
-        assert_eq!(idx(2000).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Within, "At large range end");
-        assert_eq!(idx(2001).check_inclusive_range_bounds(large_min, large_max), ArrayAccessBoundsStatus::Overflowed, "Above large range");
+        assert_eq!(
+            idx(999).check_range_bounds_inclusive_end(large_min, large_max),
+            ArrayAccessBoundsStatus::Underflowed,
+            "Below large range"
+        );
+        assert_eq!(
+            idx(1000).check_range_bounds_inclusive_end(large_min, large_max),
+            ArrayAccessBoundsStatus::Within,
+            "At large range start"
+        );
+        assert_eq!(
+            idx(1500).check_range_bounds_inclusive_end(large_min, large_max),
+            ArrayAccessBoundsStatus::Within,
+            "Within large range"
+        );
+        assert_eq!(
+            idx(2000).check_range_bounds_inclusive_end(large_min, large_max),
+            ArrayAccessBoundsStatus::Within,
+            "At large range end"
+        );
+        assert_eq!(
+            idx(2001).check_range_bounds_inclusive_end(large_min, large_max),
+            ArrayAccessBoundsStatus::Overflowed,
+            "Above large range"
+        );
 
         // Test typed consistency between ColIndex and RowIndex
-        assert_eq!(col(5).check_inclusive_range_bounds(col(3), col(7)), ArrayAccessBoundsStatus::Within, "ColIndex range check");
-        assert_eq!(row(5).check_inclusive_range_bounds(row(3), row(7)), ArrayAccessBoundsStatus::Within, "RowIndex range check");
-        assert_eq!(col(2).check_inclusive_range_bounds(col(3), col(7)), ArrayAccessBoundsStatus::Underflowed, "ColIndex below range");
-        assert_eq!(row(8).check_inclusive_range_bounds(row(3), row(7)), ArrayAccessBoundsStatus::Overflowed, "RowIndex above range");
+        assert_eq!(
+            col(5).check_range_bounds_inclusive_end(col(3), col(7)),
+            ArrayAccessBoundsStatus::Within,
+            "ColIndex range check"
+        );
+        assert_eq!(
+            row(5).check_range_bounds_inclusive_end(row(3), row(7)),
+            ArrayAccessBoundsStatus::Within,
+            "RowIndex range check"
+        );
+        assert_eq!(
+            col(2).check_range_bounds_inclusive_end(col(3), col(7)),
+            ArrayAccessBoundsStatus::Underflowed,
+            "ColIndex below range"
+        );
+        assert_eq!(
+            row(8).check_range_bounds_inclusive_end(row(3), row(7)),
+            ArrayAccessBoundsStatus::Overflowed,
+            "RowIndex above range"
+        );
     }
 }
 

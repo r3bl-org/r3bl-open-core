@@ -222,6 +222,8 @@ impl SelectionRange {
     /// - [`SelectionRange::clip_to_range_str()`] : "ell"
     #[must_use]
     pub fn locate_column(&self, caret: CaretScrAdj) -> CaretLocationInRange {
+        // Selection ranges use exclusive upper bound semantics [start, end)
+        // This means end position is NOT included in the selection
         if caret.col_index < self.start.col_index {
             CaretLocationInRange::Underflow
         } else if caret.col_index >= self.end.col_index {

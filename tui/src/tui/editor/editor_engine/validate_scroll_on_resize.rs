@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{EOLCursorPosition, EditorArgsMut, ch};
+use crate::{EOLCursorPosition, EditorArgsMut, ch, core::units::bounds_check::length_and_index_markers::IndexMarker};
 
 // Unicode glyphs links (for the ASCII diagrams):
 // - https://symbl.cc/en/unicode/blocks/box-drawing/
@@ -70,7 +70,7 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     // Make sure that caret row can't go past the bottom of the buffer.
     {
         let caret_scr_adj_row_index = buffer.get_caret_scr_adj().row_index;
-        if caret_scr_adj_row_index > max_row {
+        if caret_scr_adj_row_index.overflows(max_row.convert_to_length()) {
             let diff = max_row - buffer.get_caret_scr_adj().row_index;
             let buffer_mut = buffer.get_mut_no_drop(vp);
             buffer_mut.inner.caret_raw.row_index -= diff;
@@ -80,7 +80,7 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
     // Make sure that scr_ofs row can't go past the bottom of the buffer.
     {
         let scr_ofs_row_index = buffer.get_scr_ofs().row_index;
-        if scr_ofs_row_index > max_row {
+        if scr_ofs_row_index.overflows(max_row.convert_to_length()) {
             let diff = max_row - scr_ofs_row_index;
             let buffer_mut = buffer.get_mut_no_drop(vp);
             buffer_mut.inner.scr_ofs.row_index -= diff;
@@ -93,8 +93,7 @@ fn validate_vertical_scroll(args: EditorArgsMut<'_>) {
         let scr_ofs_row_index = buffer.get_scr_ofs().row_index;
 
         let location = {
-            let is_within = caret_scr_adj_row_index >= scr_ofs_row_index
-                && caret_scr_adj_row_index <= (scr_ofs_row_index + vp_height);
+            let is_within = caret_scr_adj_row_index.is_in_viewport(scr_ofs_row_index, vp_height);
             let is_above_or_below = caret_scr_adj_row_index < scr_ofs_row_index;
             match (is_within, is_above_or_below) {
                 (true, _) => CaretLocRelativeToVp::Within,
@@ -150,9 +149,7 @@ fn validate_horizontal_scroll(args: EditorArgsMut<'_>) {
     let caret_scr_adj_col_index = buffer.get_caret_scr_adj().col_index;
     let scr_ofs_col_index = buffer.get_scr_ofs().col_index;
 
-    let is_within = if caret_scr_adj_col_index >= scr_ofs_col_index
-        && caret_scr_adj_col_index < scr_ofs_col_index + viewport_width
-    {
+    let is_within = if caret_scr_adj_col_index.is_in_viewport(scr_ofs_col_index, viewport_width) {
         CaretColWithinVp::Yes
     } else {
         CaretColWithinVp::No
