@@ -21,7 +21,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, col,
-            core::units::bounds_check::IndexMarker};
+            core::units::bounds_check::IndexOps};
 
 impl OffscreenBuffer {
     /// Move cursor up by n lines.
@@ -58,7 +58,7 @@ impl OffscreenBuffer {
     /// ```
     pub fn cursor_up(&mut self, how_many: RowHeight) {
         let current_row = self.cursor_pos.row_index;
-        let scroll_top_boundary = self.get_scroll_top_boundary();
+        let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
 
         // Move cursor up but don't go above scroll region boundary.
         let potential_new_row = current_row - how_many;
@@ -70,7 +70,7 @@ impl OffscreenBuffer {
     /// Respects DECSTBM scroll region margins.
     pub fn cursor_down(&mut self, how_many: RowHeight) {
         let current_row = self.cursor_pos.row_index;
-        let scroll_bottom_boundary = self.get_scroll_bottom_boundary();
+        let scroll_bottom_boundary = *self.get_scroll_range_inclusive().end();
 
         // Move cursor down but don't go below scroll region boundary.
         let potential_new_row = current_row + how_many;
@@ -115,11 +115,10 @@ impl OffscreenBuffer {
     /// Set cursor position to specific row and column coordinates.
     /// Coordinates are clamped to valid screen boundaries and scroll regions.
     pub fn cursor_to_position(&mut self, row: RowIndex, col: ColIndex) {
-        let scroll_top_boundary = self.get_scroll_top_boundary();
-        let scroll_bottom_boundary = self.get_scroll_bottom_boundary();
+        let scroll_region = self.get_scroll_range_inclusive();
 
         // Clamp row to scroll region boundaries.
-        let clamped_row = row.clamp(scroll_top_boundary, scroll_bottom_boundary);
+        let clamped_row = row.clamp_to_range(scroll_region);
 
         // Clamp column to screen width.
         let new_col = col.clamp_to_max_length(self.window_size.col_width);

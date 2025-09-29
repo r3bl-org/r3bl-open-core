@@ -3,8 +3,8 @@
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
-use crate::{ColIndex, ColWidth, EOLCursorPosition, IndexMarker, RowHeight, RowIndex,
-            Size, UnitCompare, ch, col, row};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ChUnit, ColIndex, ColWidth,
+            CursorBoundsCheck, NumericValue, RowHeight, RowIndex, Size, ch, col, row};
 
 // Type aliases for better code readability.
 
@@ -161,7 +161,6 @@ mod convert {
 mod ops {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use crate::ChUnit;
 
     // Dim is equivalent to (ColWidthCount, RowHeightCount).
     impl Mul<Size> for Pos {
@@ -384,16 +383,17 @@ mod api {
             let value: RowHeight = arg_row_height.into();
             let max: RowHeight = arg_max_row_height.into();
             let new_row_index = self.row_index + value;
-            self.row_index = if new_row_index.overflows(max) {
-                // Handle zero height edge case: clamp to position 0
-                if max.is_zero() {
-                    row(0)
+            self.row_index =
+                if new_row_index.overflows(max) == ArrayOverflowResult::Overflowed {
+                    // Handle zero height edge case: clamp to position 0
+                    if max.is_zero() {
+                        row(0)
+                    } else {
+                        max.eol_cursor_position() // Allow "after last row" position
+                    }
                 } else {
-                    max.eol_cursor_position() // Allow "after last row" position
-                }
-            } else {
-                new_row_index
-            };
+                    new_row_index
+                };
         }
 
         /// Decrement row index by `value`.
@@ -452,22 +452,23 @@ mod api {
             let value: ColWidth = arg_col_width.into();
             let max: ColWidth = arg_max_col_width.into();
             let new_col_index = self.col_index + value;
-            self.col_index = if new_col_index.overflows(max) {
-                // Handle zero width edge case: clamp to position 0
-                if max.is_zero() {
-                    col(0)
+            self.col_index =
+                if new_col_index.overflows(max) == ArrayOverflowResult::Overflowed {
+                    // Handle zero width edge case: clamp to position 0
+                    if max.is_zero() {
+                        col(0)
+                    } else {
+                        max.eol_cursor_position() // Allow "after last character" position
+                    }
                 } else {
-                    max.eol_cursor_position() // Allow "after last character" position
-                }
-            } else {
-                new_col_index
-            };
+                    new_col_index
+                };
         }
 
         /// Clip col index to `max_col` if it exceeds it.
         pub fn clip_col_to_bounds(&mut self, arg_max_col_width: impl Into<ColWidth>) {
             let max: ColWidth = arg_max_col_width.into();
-            if self.col_index.overflows(max) {
+            if self.col_index.overflows(max) == ArrayOverflowResult::Overflowed {
                 // Handle zero width edge case: clamp to position 0
                 if max.is_zero() {
                     self.col_index = col(0);

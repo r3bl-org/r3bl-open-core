@@ -90,10 +90,6 @@
 //! - **Clear Separation**: Parser logic separate from buffer implementation
 //! - **Comprehensive Testing**: Each implementation file has full unit test coverage
 //!
-//! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
-//! [`TuiStyle`]: crate::TuiStyle
-//! [`PixelChar::Void`]: PixelChar::Void
-//!
 //! # API Design Philosophy
 //!
 //! The [`OffscreenBuffer`] API follows a consistent design philosophy for method return
@@ -109,14 +105,9 @@
 //! - `false`: Operation failed due to invalid input/bounds
 //!
 //! **Examples:**
-//! - [`set_char()`][OffscreenBuffer::set_char],
-//!   [`fill_char_range()`][OffscreenBuffer::fill_char_range],
-//!   [`copy_chars_within_line()`][OffscreenBuffer::copy_chars_within_line]
-//! - [`clear_line()`][OffscreenBuffer::clear_line],
-//!   [`shift_lines_up()`][OffscreenBuffer::shift_lines_up],
-//!   [`shift_lines_down()`][OffscreenBuffer::shift_lines_down]
-//! - [`insert_chars_at_cursor()`][OffscreenBuffer::insert_chars_at_cursor],
-//!   [`delete_chars_at_cursor()`][OffscreenBuffer::delete_chars_at_cursor]
+//! - [`set_char()`], [`fill_char_range()`], [`copy_chars_within_line()`]
+//! - [`clear_line()`], [`shift_lines_up()`], [`shift_lines_down()`]
+//! - [`insert_chars_at_cursor()`], [`delete_chars_at_cursor()`]
 //!
 //! **Usage Pattern:**
 //! ```rust
@@ -134,17 +125,14 @@
 //!
 //! ### Query Methods → `Option<T>`
 //!
-//! Methods that retrieve data return [`Option<T>`][std::option::Option]:
+//! Methods that retrieve data return [`Option<T>`]:
 //! - `Some(value)`: Data exists at the requested location
 //! - `None`: No data or out of bounds
 //!
 //! **Examples:**
-//! - [`get_char()`][OffscreenBuffer::get_char] →
-//!   [`Option<PixelChar>`][std::option::Option]
-//! - [`get_line()`][OffscreenBuffer::get_line] →
-//!   [`Option<&PixelCharLine>`][std::option::Option]
-//! - [`diff()`][OffscreenBuffer::diff] →
-//!   [`Option<PixelCharDiffChunks>`][std::option::Option]
+//! - [`get_char()`] → [`Option<PixelChar>`]
+//! - [`get_line()`] → [`Option<&PixelCharLine>`]
+//! - [`diff()`] → [`Option<PixelCharDiffChunks>`]
 //!
 //! **Usage Pattern:**
 //! ```rust
@@ -162,17 +150,11 @@
 //!
 //! **Categories:**
 //! - **Cursor operations**: Always clamp to valid bounds (VT100 behavior)
-//!   - [`cursor_up()`][OffscreenBuffer::cursor_up],
-//!     [`cursor_down()`][OffscreenBuffer::cursor_down],
-//!     [`cursor_forward()`][OffscreenBuffer::cursor_forward],
-//!     [`cursor_backward()`][OffscreenBuffer::cursor_backward]
+//!   - [`cursor_up()`], [`cursor_down()`], [`cursor_forward()`], [`cursor_backward()`]
 //! - **Style operations**: No failure mode for attribute changes
-//!   - [`set_foreground_color()`][OffscreenBuffer::set_foreground_color],
-//!     [`reset_all_style_attributes()`][OffscreenBuffer::reset_all_style_attributes]
+//!   - [`set_foreground_color()`], [`reset_all_style_attributes()`]
 //! - **Control operations**: Terminal emulation resilience
-//!   - [`handle_backspace()`][OffscreenBuffer::handle_backspace],
-//!     [`handle_tab()`][OffscreenBuffer::handle_tab],
-//!     [`handle_line_feed()`][OffscreenBuffer::handle_line_feed]
+//!   - [`handle_backspace()`], [`handle_tab()`], [`handle_line_feed()`]
 //!
 //! These operations follow VT100 terminal behavior where operations are resilient
 //! and clamp values rather than failing.
@@ -226,16 +208,10 @@
 //!
 //! ### Type-Safe Bounds Checking
 //!
-//! All bounds checking uses type-safe utilities from
-//! [`bounds_check`]:
-//! - [`IndexMarker`] for 0-based indices
-//! - [`LengthMarker`] for 1-based lengths
+//! All bounds checking uses type-safe utilities from [`bounds_check`]:
+//! - [`IndexOps`] for 0-based indices
+//! - [`LengthOps`] for 1-based lengths
 //! - [`Pos`] for 2D positions combining row and column indices
-//!
-//! [`bounds_check`]: crate::core::units::bounds_check
-//! [`IndexMarker`]: crate::core::units::bounds_check::IndexMarker
-//! [`LengthMarker`]: crate::core::units::bounds_check::LengthMarker
-//! [`Pos`]: crate::Pos
 //!
 //! ### Validation Helpers - Preferred Pattern
 //!
@@ -301,22 +277,54 @@
 //! ```
 //!
 //! #### Core Validation Methods
-//! - [`validate_col_range_mut()`][OffscreenBuffer::validate_col_range_mut] for column
-//!   range validation
-//! - [`validate_row_range_mut()`][OffscreenBuffer::validate_row_range_mut] for row range
-//!   validation
+//! - [`validate_col_range_mut()`] for column range validation
+//! - [`validate_row_range_mut()`] for row range validation
 //!
 //! #### Validation Benefits
 //!
-//! The standardized validation helpers provide:
+//! These ensure consistent validation across all buffer operations. The standardized
+//! validation helpers provide:
 //! - **Consistency**: Single source of truth for bounds checking logic
-//! - **Type Safety**: Leverages `RangeBoundary` trait for correct exclusive range
+//! - **Type Safety**: Leverages [`RangeBoundsExt`] trait for correct exclusive range
 //!   semantics
 //! - **No `unwrap()` calls**: All validation returns `Option` for safe access
 //! - **Zero allocation**: Methods return references to existing buffer data
 //! - **Error Prevention**: Eliminates common off-by-one errors in manual bounds checking
 //!
-//! These ensure consistent validation across all buffer operations.
+//! [`validate_col_range_mut()`]: OffscreenBuffer::validate_col_range_mut
+//! [`validate_row_range_mut()`]: OffscreenBuffer::validate_row_range_mut
+//! [`RangeBoundsExt`]: crate::core::units::bounds_check::RangeBoundsExt
+//! [`bounds_check`]: crate::core::units::bounds_check
+//! [`IndexOps`]: crate::core::units::bounds_check::IndexOps
+//! [`LengthOps`]: crate::core::units::bounds_check::LengthOps
+//! [`Pos`]: crate::Pos
+//! [`set_char()`]: OffscreenBuffer::set_char
+//! [`fill_char_range()`]: OffscreenBuffer::fill_char_range
+//! [`copy_chars_within_line()`]: OffscreenBuffer::copy_chars_within_line
+//! [`clear_line()`]: OffscreenBuffer::clear_line
+//! [`shift_lines_up()`]: OffscreenBuffer::shift_lines_up
+//! [`shift_lines_down()`]: OffscreenBuffer::shift_lines_down
+//! [`insert_chars_at_cursor()`]: OffscreenBuffer::insert_chars_at_cursor
+//! [`delete_chars_at_cursor()`]: OffscreenBuffer::delete_chars_at_cursor
+//! [`Option<T>`]: std::option::Option
+//! [`get_char()`]: OffscreenBuffer::get_char
+//! [`Option<PixelChar>`]: std::option::Option
+//! [`get_line()`]: OffscreenBuffer::get_line
+//! [`Option<&PixelCharLine>`]: std::option::Option
+//! [`diff()`]: OffscreenBuffer::diff
+//! [`Option<PixelCharDiffChunks>`]: std::option::Option
+//! [`cursor_up()`]: OffscreenBuffer::cursor_up
+//! [`cursor_down()`]: OffscreenBuffer::cursor_down
+//! [`cursor_forward()`]: OffscreenBuffer::cursor_forward
+//! [`cursor_backward()`]: OffscreenBuffer::cursor_backward
+//! [`set_foreground_color()`]: OffscreenBuffer::set_foreground_color
+//! [`reset_all_style_attributes()`]: OffscreenBuffer::reset_all_style_attributes
+//! [`handle_backspace()`]: OffscreenBuffer::handle_backspace
+//! [`handle_tab()`]: OffscreenBuffer::handle_tab
+//! [`handle_line_feed()`]: OffscreenBuffer::handle_line_feed
+//! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
+//! [`TuiStyle`]: crate::TuiStyle
+//! [`PixelChar::Void`]: PixelChar::Void
 
 // Attach.
 pub mod diff_chunks;

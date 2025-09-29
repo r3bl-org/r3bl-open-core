@@ -5,7 +5,7 @@
 //! Tests the complete pipeline from ANSI sequences through the shim to implementation
 //! using the public [`apply_ansi_bytes`] API. This provides integration testing coverage
 //! for the [`line_ops`] shim layer. The `test_` prefix follows our naming convention.
-//! See [parser module docs](super::super) for the complete testing philosophy.
+//! See [parser module docs] for the complete testing philosophy.
 //!
 //! **Related Files:**
 //! - **Shim**: [`line_ops`] - Parameter translation (tested indirectly by this module)
@@ -14,6 +14,7 @@
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
 //! [`line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::line_ops
 //! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_line_ops
+//! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{col, row, term_col,

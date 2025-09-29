@@ -3,29 +3,30 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{ChUnit, Index, IndexMarker, RowHeight, UnitCompare,
+use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericValue, RowHeight,
             create_numeric_arithmetic_operators, height, usize};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
-/// This is one part of a [`Pos`] position and is different from
-/// [`RowHeight`], which is one part of a [`Size`].
 ///
-/// You can use the [`row()`] to create a new instance.
-///
-/// [`Pos`]: crate::Pos
-/// [`RowHeight`]: crate::RowHeight
-/// [`Size`]: crate::Size
-/// [`row()`]: crate::row
+/// This is one part of a [`Pos`] position and is different from [`RowHeight`], which is
+/// one part of a [`Size`]. You can use the [`row()`] to create a new instance.
 ///
 /// # Examples
-///
 /// ```
 /// use r3bl_tui::{RowIndex, row};
 /// let row = row(5);
 /// let row = RowIndex::new(5);
 /// ```
+///
+/// [`Pos`]: crate::Pos
+/// [`RowHeight`]: crate::RowHeight
+/// [`Size`]: crate::Size
+/// [`row()`]: crate::row
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct RowIndex(pub ChUnit);
+
+/// [`ArrayBoundsCheck`] implementation for type-safe bounds checking.
+impl ArrayBoundsCheck<RowHeight> for RowIndex {}
 
 impl Debug for RowIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -201,16 +202,14 @@ mod bounds_check_trait_impls {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl UnitCompare for RowIndex {
-        fn as_usize(&self) -> usize { self.0.into() }
+    impl NumericValue for RowIndex {
+        fn as_usize(&self) -> usize { self.0.as_usize() }
 
-        fn as_u16(&self) -> u16 { self.0.into() }
+        fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
 
-    impl IndexMarker for RowIndex {
+    impl IndexOps for RowIndex {
         type LengthType = RowHeight;
-
-        fn convert_to_length(&self) -> Self::LengthType { self.convert_to_height() }
     }
 }
 

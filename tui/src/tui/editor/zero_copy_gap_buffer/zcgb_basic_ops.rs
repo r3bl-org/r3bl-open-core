@@ -16,9 +16,10 @@ use std::{ops::Range,
           str::{from_utf8, from_utf8_unchecked}};
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, ByteIndexRangeExt, ColIndex, ColWidth, GCStringOwned,
-            GapBufferLine, IndexMarker, Length, RowIndex, SegIndex, UnitCompare,
-            byte_index, byte_offset, row, seg_index, seg_length, width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
+            ColIndex, ColWidth, GCStringOwned, GapBufferLine, Length, NumericValue,
+            RowIndex, SegIndex, byte_index, byte_offset, row, seg_index, seg_length,
+            width};
 
 impl ZeroCopyGapBuffer {
     // Line access methods.
@@ -298,7 +299,7 @@ impl ZeroCopyGapBuffer {
         let byte_index: ByteIndex = arg_byte_index.into();
         // Early bounds check for performance optimization.
         let buffer_len = crate::len(self.buffer.len());
-        if byte_index.overflows(buffer_len) {
+        if byte_index.overflows(buffer_len) == ArrayOverflowResult::Overflowed {
             return None;
         }
 

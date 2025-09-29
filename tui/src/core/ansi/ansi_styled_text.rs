@@ -143,7 +143,7 @@ macro_rules! ast_lines {
 pub mod ansi_styled_text_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use crate::core::units::bounds_check::LengthMarker;
+    use crate::core::units::bounds_check::LengthOps;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct ASTextConvertOptions {

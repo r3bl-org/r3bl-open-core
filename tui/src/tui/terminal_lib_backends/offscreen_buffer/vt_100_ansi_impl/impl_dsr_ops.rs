@@ -9,9 +9,6 @@
 //! - **DSR 5** (Device Status Report) - [`handle_status_report_request`]
 //! - **DSR 6** (Cursor Position Report) - [`handle_cursor_position_request`]
 //!
-//! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
-//! [`handle_cursor_position_request`]: crate::OffscreenBuffer::handle_cursor_position_request
-//!
 //! All operations maintain VT100 compliance and handle proper response
 //! queueing for later transmission back to the PTY.
 //!
@@ -24,6 +21,8 @@
 //! - **Shim**: [`dsr_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_dsr_ops`] - Full ANSI pipeline testing
 //!
+//! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
+//! [`handle_cursor_position_request`]: crate::OffscreenBuffer::handle_cursor_position_request
 //! [`dsr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::dsr_ops
 //! [`test_dsr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_dsr_ops
 

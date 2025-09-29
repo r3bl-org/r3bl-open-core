@@ -29,7 +29,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
-                  units::bounds_check::LengthMarker};
+                  units::bounds_check::LengthOps};
 
 impl OffscreenBuffer {
     /// Reset scroll margins to full screen (no restrictions).

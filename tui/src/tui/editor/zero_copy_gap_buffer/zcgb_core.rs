@@ -9,9 +9,10 @@
 use std::{borrow::Cow, fmt::Display};
 
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
-use crate::{BoundsCheck, ColIndex, GraphemeDoc, GraphemeDocMut, LINE_FEED_BYTE, Length,
-            NULL_BYTE, RowIndex, SegIndex, SegmentArray, UnitCompare, byte_index,
-            byte_offset, core::units::bounds_check::IndexMarker, len, row};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, CursorBoundsCheck,
+            GraphemeDoc, GraphemeDocMut, LINE_FEED_BYTE, Length, NULL_BYTE,
+            NumericValue, RowIndex, SegIndex, SegmentArray, byte_index, byte_offset,
+            len, row};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -106,7 +107,9 @@ impl ZeroCopyGapBuffer {
 
         // If inserting at the end, just add a new line.
         // Use cursor position bounds checking which allows insertion at line_count (end).
-        if line_index.check_cursor_position_bounds(self.line_count)
+        if self
+            .line_count
+            .check_cursor_position_bounds(line_index.into())
             == crate::CursorPositionBoundsStatus::AtEnd
         {
             self.add_line();
@@ -241,7 +244,7 @@ impl ZeroCopyGapBuffer {
     /// that lines are ordered by their buffer offsets.
     pub fn remove_line(&mut self, arg_line_index: impl Into<RowIndex>) -> bool {
         let line_index: RowIndex = arg_line_index.into();
-        if line_index.overflows(self.line_count) {
+        if line_index.overflows(self.line_count) == ArrayOverflowResult::Overflowed {
             return false;
         }
 
@@ -300,7 +303,7 @@ impl ZeroCopyGapBuffer {
     /// Extend the capacity of a line by `LINE_PAGE_SIZE`
     pub fn extend_line_capacity(&mut self, arg_line_index: impl Into<RowIndex>) {
         let line_index: RowIndex = arg_line_index.into();
-        if line_index.overflows(self.line_count) {
+        if line_index.overflows(self.line_count) == ArrayOverflowResult::Overflowed {
             return;
         }
 
@@ -411,7 +414,9 @@ impl<'a> Iterator for ZeroCopyLineIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let current_index = row(self.current);
-        if current_index.overflows(self.buffer.line_count()) {
+        if current_index.overflows(self.buffer.line_count())
+            == ArrayOverflowResult::Overflowed
+        {
             None
         } else {
             let line = self.buffer.get_line(current_index);
@@ -464,7 +469,7 @@ impl GraphemeDocMut for ZeroCopyGapBuffer {
         // we'll implement it by copying content from the next line to current line
         // and then removing the next line.
         let next_row = row(row_idx.as_usize() + 1);
-        if next_row.overflows(self.line_count()) {
+        if next_row.overflows(self.line_count()) == ArrayOverflowResult::Overflowed {
             return Err(miette::miette!(
                 "Cannot merge: no line after row {}",
                 row_idx.as_usize()

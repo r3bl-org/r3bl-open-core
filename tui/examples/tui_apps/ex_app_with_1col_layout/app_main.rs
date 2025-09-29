@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
-               InputEvent, LayoutDirection, LayoutManagement, LengthMarker,
+               InputEvent, LayoutDirection, LayoutManagement, LengthOps,
                PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
                Size, Surface, SurfaceProps, SurfaceRender, TuiStylesheet, ZOrder,
                box_end, box_start, ch, col, height, new_style,

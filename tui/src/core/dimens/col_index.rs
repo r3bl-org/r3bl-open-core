@@ -3,7 +3,7 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
-use crate::{ChUnit, ColWidth, IndexMarker, Length, UnitCompare,
+use crate::{ArrayBoundsCheck, ChUnit, ColWidth, IndexOps, Length, NumericValue,
             create_numeric_arithmetic_operators, usize, width};
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
@@ -26,6 +26,9 @@ use crate::{ChUnit, ColWidth, IndexMarker, Length, UnitCompare,
 /// ```
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColIndex(pub ChUnit);
+
+/// [`ArrayBoundsCheck`] implementation for type-safe bounds checking.
+impl ArrayBoundsCheck<ColWidth> for ColIndex {}
 
 impl Debug for ColIndex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -235,16 +238,14 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl UnitCompare for ColIndex {
-        fn as_usize(&self) -> usize { self.0.into() }
+    impl NumericValue for ColIndex {
+        fn as_usize(&self) -> usize { self.0.as_usize() }
 
-        fn as_u16(&self) -> u16 { self.0.into() }
+        fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
 
-    impl IndexMarker for ColIndex {
+    impl IndexOps for ColIndex {
         type LengthType = ColWidth;
-
-        fn convert_to_length(&self) -> Self::LengthType { self.convert_to_width() }
     }
 }
 

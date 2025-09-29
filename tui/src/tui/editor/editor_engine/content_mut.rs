@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 
 use super::{DeleteSelectionWith, scroll_editor_content};
-use crate::{BoundsCheck, CaretScrAdj, ColIndex, ColWidth, CursorPositionBoundsStatus,
-            EOLCursorPosition, EditorArgsMut, EditorBuffer, EditorEngine, InlineString,
-            InlineVec, RowIndex, SelectionList, SelectionRange, Width,
+use crate::{CaretScrAdj, ColIndex, ColWidth, CursorBoundsCheck,
+            CursorPositionBoundsStatus, EditorArgsMut, EditorBuffer, EditorEngine,
+            InlineString, InlineVec, RowIndex, SelectionList, SelectionRange, Width,
             ZeroCopyGapBuffer, caret_locate::locate_col, caret_scr_adj, col,
             empty_check_early_return, len, multiline_disabled_check_early_return, row,
             validate_buffer_mut::EditorBufferMutWithDrop, width};
@@ -134,9 +134,7 @@ pub fn insert_lines_batch_at_caret(args: EditorArgsMut<'_>, lines: &[&str]) {
                 .lines
                 .get_line_display_width(caret_scr_adj.row_index)
             {
-                caret_scr_adj
-                    .col_index
-                    .check_cursor_position_bounds(line_width)
+                line_width.check_cursor_position_bounds(caret_scr_adj.col_index)
             } else {
                 CursorPositionBoundsStatus::AtEnd
             };

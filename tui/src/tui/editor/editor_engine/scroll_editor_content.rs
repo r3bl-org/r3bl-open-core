@@ -10,9 +10,9 @@
 use std::cmp::Ordering;
 
 use super::{SelectMode, caret_mut};
-use crate::{CaretDirection, CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer,
-            LengthMarker, RowHeight, RowIndex, ScrOfs, UnitCompare, ch, col,
-            core::units::bounds_check::IndexMarker, height, row, width};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ArrayUnderflowResult, CaretDirection,
+            CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, LengthOps,
+            NumericValue, RowHeight, RowIndex, ScrOfs, ch, col, height, row, width};
 
 /// # Scrolling not active
 ///
@@ -73,7 +73,7 @@ pub fn inc_caret_col_by(
     // Just move the caret right.
     caret_raw.add_col_with_bounds(col_amt, line_display_width);
 
-    if vp_width.is_overflowed_by(caret_raw.col_index) {
+    if vp_width.is_overflowed_by(caret_raw.col_index) == ArrayOverflowResult::Overflowed {
         // The following is equivalent to:
         // `let diff_overflow = (caret_raw.col_index + ch!(1)) - vp_width;`
         let diff_overflow = caret_raw.col_index.convert_to_width() /*+1*/ - vp_width;
@@ -99,7 +99,9 @@ pub fn clip_caret_to_content_width(args: EditorArgsMut<'_>) {
     let caret_scr_adj = buffer.get_caret_scr_adj();
     let line_display_width = buffer.get_line_display_width_at_caret_scr_adj();
 
-    if caret_scr_adj.col_index.overflows(line_display_width) {
+    if caret_scr_adj.col_index.overflows(line_display_width)
+        == ArrayOverflowResult::Overflowed
+    {
         caret_mut::to_end_of_line(buffer, engine, SelectMode::Disabled);
     }
 }
@@ -202,7 +204,8 @@ pub fn dec_caret_col_by(
 
             // Check if caret would underflow the safe zone (go below the minimum safe
             // position).
-            let need_to_scroll_left = caret_raw.col_index.underflows(safe_zone_start);
+            let need_to_scroll_left = caret_raw.col_index.underflows(safe_zone_start)
+                == ArrayUnderflowResult::Underflowed;
 
             // Move caret left by col_amt.
             caret_raw.col_index -= col_amt;
@@ -382,7 +385,8 @@ pub fn clip_caret_row_to_content_height(
 ) {
     // Clip desired_caret_adj_row if it overflows past the bottom of the buffer.
     let max_row_index = buffer.get_max_row_index();
-    let is_past_end_of_buffer = desired_caret_scr_adj_row_index.overflows(buffer.len());
+    let is_past_end_of_buffer = desired_caret_scr_adj_row_index.overflows(buffer.len())
+        == ArrayOverflowResult::Overflowed;
     if is_past_end_of_buffer {
         *desired_caret_scr_adj_row_index = max_row_index;
     }
@@ -410,7 +414,7 @@ pub fn inc_caret_row(
     scroll_offset: &mut ScrOfs,
     viewport_height: RowHeight,
 ) -> RowIndex {
-    if caret.row_index.overflows(viewport_height) {
+    if caret.row_index.overflows(viewport_height) == ArrayOverflowResult::Overflowed {
         scroll_offset.row_index += row(1); // Activate vertical scroll.
     } else {
         caret.row_index += row(1); // Scroll inactive & Not at bottom of viewport.

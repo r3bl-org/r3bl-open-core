@@ -76,9 +76,24 @@
 //! - [TUI Development Workflow](#tui-development-workflow)
 //!   - [TUI-Specific Commands](#tui-specific-commands)
 //!   - [Testing and Development](#testing-and-development)
+//!     - [VT100 ANSI Conformance Testing](#vt100-ansi-conformance-testing)
+//!     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
 //!   - [Performance Analysis Features](#performance-analysis-features)
 //! - [Examples to get you started](#examples-to-get-you-started)
 //!   - [Video of the demo in action](#video-of-the-demo-in-action)
+//! - [Type-safe bounds checking](#type-safe-bounds-checking)
+//!   - [The Problem](#the-problem)
+//!   - [The Solution](#the-solution)
+//!   - [Key Benefits](#key-benefits)
+//!   - [Architecture](#architecture)
+//!   - [Common Patterns](#common-patterns)
+//!   - [Learn More](#learn-more)
+//! - [Grapheme support](#grapheme-support)
+//!   - [The Challenge](#the-challenge)
+//!   - [The Solution: Three Index Types](#the-solution-three-index-types)
+//!   - [Type-Safe String Handling](#type-safe-string-handling)
+//!   - [Key Features](#key-features)
+//!   - [Learn More](#learn-more-1)
 //! - [Layout, rendering, and event handling](#layout-rendering-and-event-handling)
 //! - [Architecture overview, is message passing, was shared
 //!   memory](#architecture-overview-is-message-passing-was-shared-memory)
@@ -99,14 +114,31 @@
 //!   - [First render](#first-render)
 //!   - [Subsequent render](#subsequent-render)
 //! - [How does the editor component work?](#how-does-the-editor-component-work)
+//!   - [Zero-Copy Gap Buffer for High
+//!     Performance](#zero-copy-gap-buffer-for-high-performance)
+//!     - [Key Performance Features](#key-performance-features)
+//!     - [Storage Architecture](#storage-architecture)
+//!     - [UTF-8 Safety Strategy](#utf-8-safety-strategy)
+//!     - [Optimization: Append Detection](#optimization-append-detection)
+//!     - [Learn More](#learn-more-2)
+//! - [Markdown Parser with R3BL Extensions](#markdown-parser-with-r3bl-extensions)
+//!   - [Key Features](#key-features-1)
+//!   - [Architecture and Parser Priority](#architecture-and-parser-priority)
+//!   - [Integration with Syntax Highlighting](#integration-with-syntax-highlighting)
+//!   - [Performance Characteristics](#performance-characteristics)
+//!   - [Learn More](#learn-more-3)
+//! - [Terminal Multiplexer with VT-100 ANSI
+//!   Parsing](#terminal-multiplexer-with-vt-100-ansi-parsing)
+//!   - [Core Capabilities](#core-capabilities)
+//!   - [Architecture: The Virtual Terminal
+//!     Pipeline](#architecture-the-virtual-terminal-pipeline)
+//!   - [VT-100 ANSI Parser Implementation](#vt-100-ansi-parser-implementation)
+//!   - [Usage Example](#usage-example)
+//!   - [Learn More](#learn-more-4)
 //! - [Painting the caret](#painting-the-caret)
 //! - [How do modal dialog boxes work?](#how-do-modal-dialog-boxes-work)
 //!   - [Two callback functions](#two-callback-functions)
-//!   - [Dialog HTTP requests and results](#dialog-http-requests-and-results)
-//! - [How to make HTTP requests](#how-to-make-http-requests)
-//!   - [Custom Markdown parsing and syntax
-//!     highlighting](#custom-markdown-parsing-and-syntax-highlighting)
-//! - [Grapheme support](#grapheme-support)
+//!   - [Async Autocomplete Provider](#async-autocomplete-provider)
 //! - [Lolcat support](#lolcat-support)
 //! - [Issues and PRs](#issues-and-prs)
 //! <!-- /TOC -->
@@ -329,8 +361,8 @@
 //!
 //! ## TUI-Specific Commands
 //!
-//! | Command                                 | Description                                      |
-//! | --------------------------------------- | ------------------------------------------------ |
+//! | Command                                     | Description                                      |
+//! | ------------------------------------------- | ------------------------------------------------ |
 //! | `fish run.fish run-examples`                | Run TUI examples interactively with options      |
 //! | `fish run.fish run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis |
 //! | `fish run.fish run-examples-flamegraph-fold`| Generate perf-folded format for analysis         |
@@ -339,14 +371,14 @@
 //!
 //! ## Testing and Development
 //!
-//! | Command                                | Description                         |
-//! | -------------------------------------- | ----------------------------------- |
+//! | Command                                    | Description                         |
+//! | ------------------------------------------ | ----------------------------------- |
 //! | `fish run.fish test`                       | Run all tests                       |
 //! | `fish run.fish watch-all-tests`            | Watch files, run all tests          |
 //! | `fish run.fish watch-one-test <pattern>`   | Watch files, run specific test      |
 //! | `fish run.fish clippy`                     | Run clippy with fixes               |
 //! | `fish run.fish watch-clippy`               | Watch files, run clippy             |
-//! | `fish run.fish docs`                       | Generate documentation               |
+//! | `fish run.fish docs`                       | Generate documentation              |
 //!
 //! ### VT100 ANSI Conformance Testing
 //!
@@ -358,14 +390,14 @@
 //! cargo test vt_100_ansi_conformance_tests
 //!
 //! # Run specific conformance test categories
-//! cargo test test_real_world_scenarios    # vim, emacs, tmux patterns
+//! cargo test test_real_world_scenarios     # vim, emacs, tmux patterns
 //! cargo test test_cursor_operations        # cursor positioning & movement
 //! cargo test test_sgr_and_character_sets   # text styling & colors
 //! ```
 //!
 //! **Testing Architecture Features:**
-//! - **Type-safe sequence builders**: Uses `CsiSequence`, `EscSequence`, and `SgrCode`
-//!   builders instead of hardcoded escape strings
+//! - **Type-safe sequence builders**: Uses [`CsiSequence`], [`EscSequence`], and
+//!   [`SgrCode`] builders instead of hardcoded escape strings
 //! - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
 //!   with authentic 80x25 terminal dimensions
 //! - **VT100 specification compliance**: Comprehensive coverage of ANSI escape sequences
@@ -375,6 +407,41 @@
 //!
 //! The conformance tests ensure the ANSI parser correctly processes sequences from
 //! real terminal applications and maintains compatibility with VT100 specifications.
+//!
+//! ### Markdown Parser Conformance Testing
+//!
+//! The markdown parser includes a comprehensive conformance test suite with organized
+//! test data that validates parsing correctness across diverse markdown content:
+//!
+//! ```bash
+//! # Run all markdown parser tests
+//! cargo test md_parser
+//!
+//! # Run specific test categories
+//! cargo test parser_snapshot_tests     # Snapshot testing for parser output
+//! cargo test parser_bench_tests        # Performance benchmarks
+//! cargo test conformance_test_data     # Conformance test data validation
+//! ```
+//!
+//! **Testing Infrastructure Features:**
+//! - **Conformance test data organization**: Test inputs organized by complexity
+//!   (invalid, small, medium, large, jumbo)
+//! - **Snapshot testing**: Validates parser output structure and correctness using insta
+//!   snapshots
+//! - **Performance benchmarks**: Ensures parser maintains efficient performance across
+//!   content sizes
+//! - **Real-world documents**: Tests with authentic markdown files including complex
+//!   nested structures
+//!
+//! **Test Data Categories:**
+//! - **Invalid inputs**: Edge cases and malformed syntax for error handling validation
+//! - **Valid small inputs**: Simple formatting and single-line markdown
+//! - **Valid medium inputs**: Multi-paragraph content and structured documents
+//! - **Valid large inputs**: Complex nested structures and advanced features
+//! - **Valid jumbo inputs**: Real-world files and comprehensive documents
+//!
+//! The conformance tests ensure the parser correctly handles both standard markdown
+//! syntax and R3BL extensions while maintaining performance and reliability.
 //!
 //! For complete development setup and all available commands, see the
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
@@ -401,14 +468,266 @@
 //!
 //! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
 //!
+//! # Type-safe bounds checking
+//!
+//! The R3BL TUI engine uses a comprehensive type-safe bounds checking system that
+//! eliminates off-by-one errors and prevents mixing incompatible index types (like
+//! comparing row positions with column widths) at compile time.
+//!
+//! ## The Problem
+//!
+//! Off-by-one errors and index confusion have plagued programming since its inception.
+//! UI and layout development (web, mobile, desktop, GUI, TUI) amplifies these challenges
+//! with multiple sources of confusion:
+//!
+//! - **0-based vs 1-based**: Mixing indices (positions, 0-based) with lengths (sizes,
+//!   1-based)
+//! - **Dimension confusion**: Mixing row and column types
+//! - **Semantic ambiguity**: Is this value a position, a size, or a count?
+//! - **Range boundary confusion**: Inclusive `[min, max]` vs exclusive `[start, end)` vs
+//!   position+size `[start, start+width)` - different use cases demand different
+//!   semantics
+//!
+//! ```rust,should_panic
+//! // ❌ Unsafe: raw integers hide these distinctions
+//! let cursor_row: usize = 5;        // Is this 0-based or 1-based?
+//! let viewport_width: usize = 80;   // Is this a size or position?
+//! let buffer_size: usize = 100;     // Can I use this as an index?
+//! let buffer: Vec<u8> = vec![0; 100];
+//!
+//! // Problem 1: Dimension confusion
+//! if cursor_row < viewport_width { /* Mixing row index with column size! */ }
+//!
+//! // Problem 2: 0-based vs 1-based confusion
+//! if buffer_size > 0 {
+//!     let last = buffer[buffer_size];  /* Off-by-one: size is 1-based! PANICS! */
+//! }
+//!
+//! // Problem 3: Range boundary confusion
+//! let scroll_region_start = 2_usize;
+//! let scroll_region_end = 5_usize;
+//! // Is this [2, 5] inclusive or [2, 5) exclusive?
+//! // VT-100 uses inclusive, but iteration needs exclusive!
+//! for row in scroll_region_start..scroll_region_end {
+//!     // Processes rows 2, 3, 4 (exclusive end)
+//!     // But VT-100 scroll region 2..=5 includes row 5!
+//!     // Easy to create off-by-one errors when converting
+//! }
+//! ```
+//!
+//! ## The Solution
+//!
+//! Use strongly-typed indices and lengths with semantic validation:
+//!
+//! ```rust
+//! use r3bl_tui::{row, height, ArrayBoundsCheck, ArrayOverflowResult};
+//!
+//! let cursor_row = row(5);          // RowIndex (0-based position)
+//! let viewport_height = height(24); // RowHeight (1-based size)
+//!
+//! // ✅ Type-safe: Compiler prevents row/column confusion
+//! if cursor_row.overflows(viewport_height) == ArrayOverflowResult::Within {
+//!     // Safe to access buffer[cursor_row]
+//! }
+//! ```
+//!
+//! ## Key Benefits
+//!
+//! 1. **Compile-time safety**: Impossible to compare [`RowIndex`] with [`ColWidth`]
+//! 2. **Semantic clarity**: Code intent is explicit (position vs size, row vs column)
+//! 3. **Zero-cost abstraction**: No runtime overhead compared to raw integers
+//! 4. **Comprehensive coverage**: Handles array access, cursor positioning, viewport
+//!    visibility, and range validation
+//!
+//! ## Architecture
+//!
+//! The system uses a two-tier trait architecture:
+//!
+//! - **Foundational traits**: Core operations ([`IndexOps`], [`LengthOps`]) that work
+//!   with any index/length type
+//! - **Semantic traits**: Use-case specific validation ([`ArrayBoundsCheck`],
+//!   [`CursorBoundsCheck`], [`ViewportBoundsCheck`], [`RangeBoundsExt`],
+//!   [`RangeConvertExt`])
+//!
+//! ## Common Patterns
+//!
+//! **Array/buffer access** (strict bounds):
+//! ```rust
+//! use r3bl_tui::{col, width, ArrayBoundsCheck, ArrayOverflowResult};
+//! # let buffer: Vec<char> = vec!['a'; 10];
+//! let index = col(5);
+//! let buffer_width = width(10);
+//!
+//! // Check before accessing
+//! if index.overflows(buffer_width) == ArrayOverflowResult::Within {
+//!     let ch = buffer[index.as_usize()]; // Safe access
+//! }
+//! ```
+//!
+//! **Text cursor positioning** (allows end-of-line):
+//! ```rust
+//! use r3bl_tui::{col, width, CursorBoundsCheck, CursorPositionBoundsStatus};
+//! let cursor_col = col(10);
+//! let line_width = width(10);
+//!
+//! // Cursor can be placed after last character (position == length)
+//! match line_width.check_cursor_position_bounds(cursor_col) {
+//!     CursorPositionBoundsStatus::AtEnd => { /* Valid: cursor after last char */ }
+//!     CursorPositionBoundsStatus::Within => { /* Valid: cursor on character */ }
+//!     CursorPositionBoundsStatus::Beyond => { /* Invalid: out of bounds */ }
+//!     _ => {}
+//! }
+//! ```
+//!
+//! **Viewport visibility** (rendering optimization):
+//! ```rust
+//! use r3bl_tui::{row, height, ViewportBoundsCheck, RangeBoundsResult};
+//! let content_row = row(15);
+//! let viewport_start = row(10);
+//! let viewport_size = height(20);
+//!
+//! // Check if content is visible before rendering
+//! if content_row.check_viewport_bounds(viewport_start, viewport_size) == RangeBoundsResult::Within {
+//!     // Render this row
+//! }
+//! ```
+//!
+//! **Range boundary handling** (inclusive vs exclusive):
+//! ```rust
+//! use r3bl_tui::{row, RangeConvertExt};
+//!
+//! // VT-100 scroll region: inclusive bounds [2, 5] means rows 2,3,4,5
+//! let scroll_region = row(2)..=row(5);
+//!
+//! // Convert to exclusive for Rust iteration: [2, 6) means rows 2,3,4,5
+//! let iter_range = scroll_region.to_exclusive();  // row(2)..row(6)
+//!
+//! // Now safe to use for iteration - no off-by-one errors!
+//! // for row in iter_range { /* process rows 2,3,4,5 */ }
+//! ```
+//!
+//! ## Learn More
+//!
+//! For comprehensive documentation including:
+//! - Complete trait reference and method details
+//! - Decision trees for choosing the right trait
+//! - Common pitfalls and best practices
+//! - Advanced patterns (range validation, scroll regions, text selections)
+//!
+//! See the extensive and detailed [`bounds_check` module
+//! documentation](mod@crate::core::units::bounds_check).
+//!
+//! # Grapheme support
+//!
+//! The R3BL TUI engine provides comprehensive Unicode support through grapheme cluster
+//! handling, ensuring correct text manipulation regardless of character complexity.
+//!
+//! ## The Challenge
+//!
+//! Unicode text contains characters that may:
+//! - Occupy multiple bytes (UTF-8 encoding: 1-4 bytes per character)
+//! - Occupy multiple display columns (e.g., emoji take 2 columns, CJK characters)
+//! - Be composed of multiple codepoints (e.g., `👨🏾‍🤝‍👨🏿` is 5 codepoints combined)
+//!
+//! This creates a fundamental mismatch between:
+//! - **Memory layout** (byte indices in UTF-8)
+//! - **Logical structure** (user-perceived characters)
+//! - **Visual display** (terminal column positions)
+//!
+//! Traditional string indexing fails with such text:
+//!
+//! ```rust,should_panic
+//! // ❌ Unsafe: byte indexing can split multi-byte characters
+//! let text = "Hello 👋🏽";  // Wave emoji with skin tone modifier
+//! let byte_len = text.len();        // 14 bytes (not 7 characters!)
+//! let _substring = &text[0..7];     // PANICS! Splits 👋 emoji mid-character
+//! ```
+//!
+//! ## The Solution: Three Index Types
+//!
+//! The grapheme system uses three distinct index types to handle text correctly:
+//!
+//! 1. **[`ByteIndex`]** - Memory position (UTF-8 byte offset)
+//!    - For string slicing at valid UTF-8 boundaries
+//!    - Example: In "H😀!", 'H' at byte 0, '😀' at byte 1, '!' at byte 5
+//!
+//! 2. **[`SegIndex`]** - Logical position (grapheme cluster index)
+//!    - For cursor movement and text editing
+//!    - Example: In "H😀!", 3 segments: seg\[0\]='H', seg\[1\]='😀', seg\[2\]='!'
+//!
+//! 3. **[`ColIndex`]** - Display position (terminal column)
+//!    - For rendering and visual positioning
+//!    - Example: In "H😀!", 'H' at col 0, '😀' spans cols 1-2, '!' at col 3
+//!
+//! ### Visual Example
+//!
+//! ```text
+//! String: "H😀!"
+//!
+//! ByteIndex: 0 1 2 3 4 5
+//! Content:  [H][😀----][!]
+//!
+//! SegIndex:  0    1     2
+//! Segments: [H] [😀]  [!]
+//!
+//! ColIndex:  0  1  2   3
+//! Display:  [H][😀--] [!]
+//! ```
+//!
+//! ## Type-Safe String Handling
+//!
+//! Use [`GCStringOwned`] for grapheme-aware string operations:
+//!
+//! ```rust
+//! use r3bl_tui::*;
+//!
+//! let text = GCStringOwned::new("Hello 👋🏽");
+//! let grapheme_count = text.len();           // 7 grapheme clusters
+//! let display_width = text.display_width;    // Actual terminal columns needed
+//!
+//! // Safe conversions between index types
+//! // ByteIndex → SegIndex: find which character contains a byte
+//! // ColIndex → SegIndex: find which character is at a column
+//! // SegIndex → ColIndex: find the display column of a character
+//! ```
+//!
+//! ## Key Features
+//!
+//! - **Grapheme cluster awareness**: Correctly handles composed characters
+//!   - Emoji with modifiers: `👋🏽` (wave + skin tone)
+//!   - Complex emoji: `👨🏾‍🤝‍👨🏿` (5 codepoints, 1 user-perceived character)
+//!   - Accented letters: `é` (may be 1 or 2 codepoints)
+//!
+//! - **Display width calculation**: Accurately computes terminal column width
+//!   - ASCII: 'H' = 1 column
+//!   - Emoji: '😀' = 2 columns
+//!   - CJK: '中' = 2 columns
+//!
+//! - **Safe slicing**: Substring operations never split multi-byte characters
+//!   - Conversion methods return [`Option<SegIndex>`] for invalid indices
+//!   - [`ByteIndex`] in the middle of a character → `None`
+//!
+//! - **Iterator support**: Iterate over graphemes, not bytes or codepoints
+//!
+//! ## Learn More
+//!
+//! For comprehensive documentation including:
+//! - Detailed explanations of the three index types and conversions
+//! - Platform-specific terminal rendering differences (Linux/macOS/Windows)
+//! - Performance optimization details (memory latency considerations)
+//! - Complete API reference for [`GCStringOwned`]
+//!
+//! See the extensive and detailed [`graphemes` module
+//! documentation](mod@crate::core::graphemes) documentation.
+//!
 //! # Layout, rendering, and event handling
 //!
 //! The current render pipeline flow is:
-//! 1. Input Event → State generation → `App` renders to `RenderOps`
-//! 2. `RenderOps` → Rendered to `OffscreenBuffer` (`PixelChar` grid)
-//! 3. `OffscreenBuffer` → Diffed with previous buffer → Generate diff chunks
-//! 4. Diff chunks → Converted back to `RenderOps` for painting
-//! 5. `RenderOps` execution → Each op routed through crossterm backend
+//! 1. Input Event → State generation → [App] renders to [`RenderOps`]
+//! 2. [`RenderOps`] → Rendered to [`OffscreenBuffer`] ([`PixelChar`] grid)
+//! 3. [`OffscreenBuffer`] → Diffed with previous buffer → Generate diff chunks
+//! 4. Diff chunks → Converted back to [`RenderOps`] for painting
+//! 5. [`RenderOps`] execution → Each op routed through crossterm backend
 //! 6. Crossterm → Converts to ANSI escape sequences → Queued to stdout → Flushed
 //!
 //! ```text
@@ -700,17 +1019,17 @@
 //!
 //! The R3BL TUI engine uses a high performance compositor to render the UI to the
 //! terminal. This ensures that only "pixels" that have changed are painted to the
-//! terminal. This is done by creating a concept of `PixelChar` which represents a single
-//! "pixel" in the terminal screen at a given col and row index position. There are only
-//! as many `PixelChar`s as there are rows and cols in a terminal screen. And the index
-//! maps directly to the position of the pixel in the terminal screen.
+//! terminal. This is done by creating a concept of [`PixelChar`] which represents a
+//! single "pixel" in the terminal screen at a given col and row index position. There are
+//! only as many [`PixelChar`]s as there are rows and cols in a terminal screen. And the
+//! index maps directly to the position of the pixel in the terminal screen.
 //!
 //! ## Offscreen buffer
 //!
 //! Here is an example of what a single row of rendered output might look like in a row of
-//! the `OffscreenBuffer`. This diagram shows each `PixelChar` in `row_index: 1` of the
-//! `OffscreenBuffer`. In this example, there are 80 columns in the terminal screen. This
-//! actual log output generated by the TUI engine when logging is enabled.
+//! the [`OffscreenBuffer`]. This diagram shows each [`PixelChar`] in `row_index: 1` of
+//! the [`OffscreenBuffer`]. In this example, there are 80 columns in the terminal screen.
+//! This actual log output generated by the TUI engine when logging is enabled.
 //!
 //! ```text
 //! row_index: 1
@@ -730,15 +1049,15 @@
 //! 078 S ░░░░░░░╳░░░░░░░░079 S ░░░░░░░╳░░░░░░░░080 S ░░░░░░░╳░░░░░░░░spacer [ 0, 16-80 ]
 //! ```
 //!
-//! When `RenderOps` are executed and used to create an `OffscreenBuffer` that maps to the
-//! size of the terminal window, clipping is performed automatically. This means that it
-//! isn't possible to move the caret outside of the bounds of the viewport (terminal
+//! When [`RenderOps`] are executed and used to create an [`OffscreenBuffer`] that maps to
+//! the size of the terminal window, clipping is performed automatically. This means that
+//! it isn't possible to move the caret outside of the bounds of the viewport (terminal
 //! window size). And it isn't possible to paint text that is larger than the size of the
 //! offscreen buffer. The buffer really represents the current state of the viewport.
 //! Scrolling has to be handled by the component itself (an example of this is the editor
 //! component).
 //!
-//! Each `PixelChar` can be one of 4 things:
+//! Each [`PixelChar`] can be one of 4 things:
 //!
 //! 1. **Space**. This is just an empty space. There is no flickering in the TUI engine.
 //!    When a new offscreen buffer is created, it is fulled with spaces. Then components
@@ -784,34 +1103,34 @@
 //! ```
 //! <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 //!
-//! Each component produces a `RenderPipeline`, which is a map of `ZOrder` and
-//! `Vec<RenderOps>`. `RenderOps` are the instructions that are grouped together, such as
-//! move the caret to a position, set a color, and paint some text.
+//! Each component produces a [`RenderPipeline`], which is a map of [`ZOrder`] and
+//! `Vec<`[`RenderOps`]`>`. [`RenderOps`] are the instructions that are grouped together,
+//! such as move the caret to a position, set a color, and paint some text.
 //!
-//! Inside of each `RenderOps` the caret is stateful, meaning that the caret position is
-//! remembered after each `RenderOp` is executed. However, once a new `RenderOps` is
-//! executed, the caret position reset just for that `RenderOps`. Caret position is not
+//! Inside of each [`RenderOps`] the caret is stateful, meaning that the caret position is
+//! remembered after each [`RenderOp`] is executed. However, once a new [`RenderOps`] is
+//! executed, the caret position reset just for that [`RenderOps`]. Caret position is not
 //! stored globally. You should read more about "atomic paint operations" in the
-//! `RenderOp` documentation.
+//! [`RenderOp`] documentation.
 //!
-//! Once a set of these `RenderPipeline`s have been generated, typically after the user
+//! Once a set of these [`RenderPipeline`]s have been generated, typically after the user
 //! enters some input event, and that produces a new state which then has to be rendered,
-//! they are combined and painted into an `OffscreenBuffer`.
+//! they are combined and painted into an [`OffscreenBuffer`].
 //!
 //! ## First render
 //!
 //! The `paint.rs` file contains the `paint` function, which is the entry point for all
-//! rendering. Once the first render occurs, the `OffscreenBuffer` that is generated is
+//! rendering. Once the first render occurs, the [`OffscreenBuffer`] that is generated is
 //! saved to `GlobalSharedState`. The following table shows the various tasks that have to
-//! be performed in order to render to an `OffscreenBuffer`. There is a different code
+//! be performed in order to render to an [`OffscreenBuffer`]. There is a different code
 //! path that is taken for ANSI text and plain text (which includes `StyledText` which is
 //! just plain text with a color). Syntax highlighted text is also just `StyledText`.
 //!
-//! | UTF-8 | Task                                                                                                    |
-//! | ----- | ------------------------------------------------------------------------------------------------------- |
-//! | Y     | convert `RenderPipeline` to `List<List<PixelChar>>` (`OffscreenBuffer`)                                 |
-//! | Y     | paint each `PixelChar` in `List<List<PixelChar>>` to stdout using `OffscreenBufferPainterImplCrossterm` |
-//! | Y     | save the `List<List<PixelChar>>` to `GlobalSharedState`                                                 |
+//! | UTF-8 | Task                                                                                                           |
+//! | ----- | -------------------------------------------------------------------------------------------------------------- |
+//! | Y     | convert [`RenderPipeline`] to `List<List<`[`PixelChar`]`>>` ([`OffscreenBuffer`])                            |
+//! | Y     | paint each [`PixelChar`] in `List<List<`[`PixelChar`]`>>` to stdout using `OffscreenBufferPainterImplCrossterm` |
+//! | Y     | save the `List<List<`[`PixelChar`]`>>` to `GlobalSharedState`                                                 |
 //!
 //! Currently only `crossterm` is supported for actually painting to the terminal. But
 //! this process is really simple making it very easy to swap out other terminal libraries
@@ -819,66 +1138,332 @@
 //!
 //! ## Subsequent render
 //!
-//! Since the `OffscreenBuffer` is cached in `GlobalSharedState` a diff to be performed
+//! Since the [`OffscreenBuffer`] is cached in `GlobalSharedState` a diff to be performed
 //! for subsequent renders. And only those diff chunks are painted to the screen. This
 //! ensures that there is no flicker when the content of the screen changes. It also
 //! minimizes the amount of work that the terminal or terminal emulator has to do put the
-//! `PixelChar`s on the screen.
+//! [`PixelChar`]s on the screen.
 //!
 //! # How does the editor component work?
 //!
-//! The `EditorComponent` struct can hold data in its own memory, in addition to relying
+//! The [`EditorComponent`] struct can hold data in its own memory, in addition to relying
 //! on the state.
 //!
-//! - It has an `EditorEngine` which holds syntax highlighting information, and
+//! - It has an [`EditorEngine`] which holds syntax highlighting information, and
 //!   configuration options for the editor (such as multiline mode enabled or not, syntax
 //!   highlighting enabled or not, etc.). Note that this information lives outside of the
 //!   state.
 //! - It also implements the `Component<S, AS>` trait.
 //! - However, for the reusable editor component we need the data representing the
-//!   document being edited to be stored in the state (`EditorBuffer`) and not inside of
-//!   the `EditorComponent` itself.
-//!   - This is why the state must implement the trait `HasEditorBuffers` which is where
+//!   document being edited to be stored in the state ([`EditorBuffer`]) and not inside of
+//!   the [`EditorComponent`] itself.
+//!   - This is why the state must implement the trait [`HasEditorBuffers`] which is where
 //!     the document data is stored (the key is the id of the flex box in which the editor
 //!     component is placed).
-//!   - The `EditorBuffer` contains the text content in a `Vec` of `UnicodeString`. Where
-//!     each line is represented by a `UnicodeString`. It also contains the scroll offset,
-//!     caret position, and file extension for syntax highlighting.
+//!   - The [`EditorBuffer`] contains the text content in a `Vec` of `UnicodeString`.
+//!     Where each line is represented by a `UnicodeString`. It also contains the scroll
+//!     offset, caret position, and file extension for syntax highlighting.
 //!
 //! In other words,
 //!
-//! 1. `EditorEngine` -> **This goes in `EditorComponent`**
+//! 1. [`EditorEngine`] -> **This goes in [`EditorComponent`]**
 //!     - Contains the logic to process keypresses and modify an editor buffer.
-//! 2. `EditorBuffer` -> **This goes in the `State`**
+//! 2. [`EditorBuffer`] -> **This goes in the `State`**
 //!     - Contains the data that represents the document being edited. This contains the
 //!       caret (insertion point) position and scroll position. And in the future can
 //!       contain lots of other information such as undo / redo history, etc.
 //!
 //! Here are the connection points with the impl of `Component<S, AS>` in
-//! `EditorComponent`:
+//! [`EditorComponent`]:
 //!
 //! 1. `handle_event(global_data: &mut GlobalData<S, AS>, input_event: InputEvent,
 //!    has_focus: &mut HasFocus)`
 //!     - Can simply relay the arguments to `EditorEngine::apply(state.editor_buffer,
-//!       input_event)` which will return another `EditorBuffer`.
+//!       input_event)` which will return another [`EditorBuffer`].
 //!     - Return value can be dispatched to the store via an action
 //!       `UpdateEditorBuffer(EditorBuffer)`.
 //! 2. `render(global_data: &mut GlobalData<S, AS>, current_box: FlexBox, surface_bounds:
 //!    SurfaceBounds, has_focus: &mut HasFocus,)`
 //!     - Can simply relay the arguments to `EditorEngine::render(state.editor_buffer)`
-//!     - Which will return a `RenderPipeline`.
+//!     - Which will return a [`RenderPipeline`].
+//!
+//! ## Zero-Copy Gap Buffer for High Performance
+//!
+//! The editor uses a [`ZeroCopyGapBuffer`] for text storage, delivering exceptional
+//! performance through careful memory management and zero-copy access patterns.
+//!
+//! ### Key Performance Features
+//!
+//! **Zero-copy access**: Read operations return `&str` slices directly into the buffer
+//! without allocation or copying:
+//! - `as_str()` access: **0.19 ns** (essentially free)
+//! - `get_line_content()`: **0.37 ns** (direct pointer return)
+//! - Perfect for markdown parsing and text rendering hot paths
+//!
+//! **Efficient Unicode handling**: All text operations are grapheme-cluster aware:
+//! - Handles emojis, combining characters, and complex scripts correctly
+//! - Insert operations: **88-408 ns** depending on content complexity
+//! - Delete operations: **128-559 ns** for various deletion scenarios
+//!
+//! **Scalable line management**: Dynamic growth with predictable performance:
+//! - Lines start at 256 bytes, grow in 256-byte pages as needed
+//! - Adding 100 lines: **~16 ns per line**
+//! - Line capacity extension: **12 ns**
+//!
+//! ### Storage Architecture
+//!
+//! Each line is stored as a null-padded byte array:
+//! ```text
+//! Line: [H][e][l][l][o][\\n][\\0][\\0]...[\\0]  // 256 bytes
+//! ```
+//!
+//! This enables:
+//! - **In-place editing**: No allocations for small edits
+//! - **Safe slicing**: Null padding ensures valid UTF-8 boundaries
+//! - **Zero-copy parsing**: Direct `&str` access for syntax highlighting and rendering
+//!
+//! ### UTF-8 Safety Strategy
+//!
+//! The implementation uses a **"validate once, trust thereafter"** approach:
+//! - **Input validation**: Rust's `&str` type guarantees UTF-8 at API boundaries
+//! - **Zero-copy reads**: `unsafe { from_utf8_unchecked() }` in hot paths for maximum
+//!   performance
+//! - **Debug validation**: Development builds verify UTF-8 invariants
+//!
+//! This provides both safety (through type system guarantees) and performance (zero
+//! validation overhead in production).
+//!
+//! ### Optimization: Append Detection
+//!
+//! End-of-line append operations are detected and optimized:
+//! - Single character append: **1.48 ns** (68x faster than full rebuild)
+//! - Word append: **2.91 ns** (94x faster than full rebuild)
+//!
+//! This makes typing at the end of lines (the most common editing pattern) extremely
+//! fast.
+//!
+//! ### Learn More
+//!
+//! For comprehensive implementation details including:
+//! - Complete benchmark results across all operation types
+//! - Null-padding invariant and safety guarantees
+//! - Segment rebuilding strategies
+//! - Dynamic growth algorithms
+//!
+//! See the detailed and extensive [`zero_copy_gap_buffer` module
+//! documentation](crate::tui::editor::zero_copy_gap_buffer).
+//!
+//! # Markdown Parser with R3BL Extensions
+//!
+//! The TUI includes a high-performance markdown parser built with `nom` that supports
+//! both standard markdown syntax and R3BL-specific extensions.
+//!
+//! ### Key Features
+//!
+//! **Standard markdown support**:
+//! - Headings, bold, italic, links, images
+//! - Ordered and unordered lists with smart indentation tracking
+//! - Fenced code blocks with syntax highlighting
+//! - Inline code, checkboxes
+//!
+//! **R3BL extensions** for enhanced document metadata:
+//! - `@title: <text>` - Document title metadata
+//! - `@tags: <tag1>, <tag2>` - Tag lists for categorization
+//! - `@authors: <name1>, <name2>` - Author attribution
+//! - `@date: <date>` - Publication date
+//!
+//! **Smart lists** - Multi-line list items with automatic indentation:
+//! ```text
+//! - This is a list item that spans
+//!   multiple lines and maintains proper
+//!   indentation automatically
+//!   - Nested items work correctly
+//! ```
+//!
+//! ### Architecture and Parser Priority
+//!
+//! The parser uses a **priority-based composition** strategy where more specific parsers
+//! are attempted first:
+//!
+//! ```text
+//! parse_markdown() {
+//!   many0(
+//!     parse_title_value()          → MdBlock::Title
+//!     parse_tags_list()            → MdBlock::Tags
+//!     parse_authors_list()         → MdBlock::Authors
+//!     parse_date_value()           → MdBlock::Date
+//!     parse_heading()              → MdBlock::Heading
+//!     parse_smart_list_block()     → MdBlock::SmartList
+//!     parse_fenced_code_block()    → MdBlock::CodeBlock
+//!     parse_block_text()           → MdBlock::Text (catch-all)
+//!   )
+//! }
+//! ```
+//!
+//! Within each block, inline fragments are parsed with similar priority:
+//! - Bold (`**text**`), italic (`_text_`), inline code (`` `code` ``)
+//! - Images (`![alt](url)`), links (`[text](url)`)
+//! - Checkboxes (`[ ]`, `[x]`)
+//! - Plain text (catch-all for everything else)
+//!
+//! ### Integration with Syntax Highlighting
+//!
+//! The parser works seamlessly with the editor's syntax highlighting through several
+//! key functions:
+//! - [`try_parse_and_highlight`] - Main entry point for parsing and syntax highlighting
+//! - [`parse_markdown()`] - Core parser that produces the [`MdDocument`] AST
+//! - [`parse_smart_list`] - Specialized parser for multi-line list handling
+//! - Code blocks use `syntect` via
+//!   [`render_engine()`](crate::editor_engine::engine_public_api::render_engine) for
+//!   syntax highlighting
+//! - The styled content is rendered through the standard [`RenderPipeline`]
+//!
+//! ### Performance Characteristics
+//!
+//! The parser was chosen after extensive benchmarking against alternatives (including
+//! `markdown-rs`):
+//! - **Streaming parser**: Built with [`nom`](https://developerlife.com/2023/02/20/guide-to-nom-parsing/)
+//!   for efficient memory usage
+//! - **Low CPU overhead**: No unnecessary allocations or copies
+//! - **Proven reliability**: Powers all markdown rendering in `r3bl_tui`
+//!
+//! ### Learn More
+//!
+//! For comprehensive implementation details including:
+//! - Complete parser composition diagrams
+//! - Detailed explanation of the priority system
+//! - "Catch-all" parser edge case handling
+//! - Full conformance test suite documentation
+//!
+//! See:
+//! - The [`parse_markdown()`] function entry point
+//! - The detailed [`md_parser` module documentation](crate::tui::md_parser)
+//! - [Blog post: Building a Markdown Parser in Rust](https://developerlife.com/2024/06/28/md-parser-rust-from-r3bl-tui/)
+//! - [Video: Markdown Parser Deep Dive](https://youtu.be/SbwvSHZRb1E)
+//!
+//! # Terminal Multiplexer with VT-100 ANSI Parsing
+//!
+//! The [`PTYMux`] module provides tmux-like functionality with **universal
+//! compatibility** for all programs: TUI applications, interactive shells, and
+//! command-line tools.
+//!
+//! ### Core Capabilities
+//!
+//! **Per-process virtual terminals**: Each process maintains its own [`OffscreenBuffer`]
+//! that acts as a complete virtual terminal, enabling:
+//! - **Instant switching** between processes (F1-F9) - no delays or rendering artifacts
+//! - **Independent state**: Each process's screen state is fully preserved
+//! - **True multiplexing**: All processes update their buffers continuously, only the
+//!   active one is displayed
+//!
+//! **Universal program support**:
+//! - Interactive shells (bash, zsh, fish)
+//! - TUI applications (vim, htop, any `r3bl_tui` app)
+//! - Command-line tools (compilers, build systems)
+//! - All programs that use terminal output
+//!
+//! **Advanced features**:
+//! - Dynamic keyboard shortcuts (F-keys based on process count)
+//! - Status bar with live process information
+//! - OSC sequence support for dynamic terminal titles
+//! - Clean resource management (PTY cleanup, raw mode handling)
+//!
+//! ### Architecture: The Virtual Terminal Pipeline
+//!
+//! ```text
+//! ╭─────────────╮    ╭──────────╮    ╭────────────╮    ╭─────────────────╮
+//! │ Child Proc  │────▶ PTY      │────▶ VTE Parser │────▶ OffscreenBuffer │
+//! │ (vim, bash) │    │ (bytes)  │    │ (ANSI)     │    │ (virtual        │
+//! ╰────▲────────╯    ╰──────────╯    ╰────────────╯    │  terminal)      │
+//!      │                                    │          ╰─────────────────╯
+//!      │                                    │                  │
+//!      │                           ╔════════▼══════╗           │
+//!      │                           ║ Perform Trait ║           │
+//!      │                           ║ Implementation║           │
+//!      │                           ╚═══════════════╝           │
+//!      │                                                       │
+//!      │                           ╭────────────────╮          │
+//!      │                           │ RenderPipeline ◀──────────╯
+//!      ╰───────────────────────────│ paint()        │
+//!                                  ╰────────────────╯
+//! ```
+//!
+//! ### VT-100 ANSI Parser Implementation
+//!
+//! The parser provides comprehensive VT100 compliance using the `vte` crate (same as
+//! Alacritty):
+//!
+//! **Supported sequences**:
+//! - **CSI sequences**: Cursor movement, text styling, scrolling, device control
+//! - **ESC sequences**: Simple escape commands, character set selection
+//! - **OSC sequences**: Operating system commands (window titles, etc.)
+//! - **Control characters**: Backspace, tab, line feed, carriage return
+//! - **SGR codes**: Text styling (colors, bold, italic, underline)
+//!
+//! **Three-layer architecture** for maintainability:
+//! ```text
+//! Layer 1: SHIM           → Protocol delegation (char_ops.rs)
+//! Layer 2: IMPLEMENTATION → Business logic (impl_char_ops.rs)
+//! Layer 3: TESTS          → Conformance validation (test_char_ops.rs)
+//! ```
+//!
+//! This naming convention enables **predictable IDE navigation**: searching for
+//! `char_ops` shows you the shim, implementation, and tests all together.
+//!
+//! **VT100 specification compliance**:
+//! - [VT100 User Guide](https://vt100.net/docs/vt100-ug/)
+//! - [ANSI X3.64 Standard](https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf)
+//! - [XTerm Control Sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)
+//!
+//! **Intentionally unimplemented legacy features**: Custom tab stops (HTS, TBC), legacy
+//! line control (NEL), and legacy terminal modes (IRM, DECOM) are not implemented as
+//! they're primarily used by mainframe terminals and very old applications.
+//!
+//! ### Usage Example
+//!
+//! ```rust,no_run
+//! use r3bl_tui::core::{pty_mux::{PTYMux, Process}, get_size};
+//!
+//! #[tokio::main]
+//! async fn main() -> miette::Result<()> {
+//!     let terminal_size = get_size()?;
+//!     let processes = vec![
+//!         Process::new("bash", "bash", vec![], terminal_size),
+//!         Process::new("editor", "nvim", vec![], terminal_size),
+//!         Process::new("monitor", "htop", vec![], terminal_size),
+//!     ];
+//!
+//!     let multiplexer = PTYMux::builder()
+//!         .processes(processes)
+//!         .build()?;
+//!
+//!     multiplexer.run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Learn More
+//!
+//! For comprehensive implementation details including:
+//! - Complete VT-100 sequence support matrix
+//! - Virtual terminal state management
+//! - Process lifecycle and resource cleanup
+//! - VT-100 conformance test suite
+//!
+//! See the detailed [`pty_mux` module documentation](crate::core::pty_mux) and
+//! [`vt_100_ansi_parser` module](crate::core::pty_mux::vt_100_ansi_parser).
 //!
 //! # Painting the caret
 //!
 //! Definitions:
 //!
-//! 1. **`Caret`** - the block that is visually displayed in a terminal which represents
-//!    the insertion point for whatever is in focus. While only one insertion point is
+//! 1. **Caret** - the block that is visually displayed in a terminal which represents the
+//!    insertion point for whatever is in focus. While only one insertion point is
 //!    editable for the local user, there may be multiple of them, in which case there has
 //!    to be a way to distinguish a local caret from a remote one (this can be done with
 //!    bg color).
 //!
-//! 2. **`Cursor`** - the global "thing" provided in terminals that shows by blinking
+//! 2. **Cursor** - the global "thing" provided in terminals that shows by blinking
 //!    usually where the cursor is. This cursor is moved around and then paint operations
 //!    are performed on various different areas in a terminal window to paint the output
 //!    of render operations.
@@ -910,12 +1495,12 @@
 //! A modal dialog box is different than a normal reusable component. This is because:
 //!
 //! 1. It paints on top of the entire screen (in front of all other components, in
-//!    `ZOrder::Glass`, and outside of any layouts using `FlexBox`es).
+//!    [`ZOrder::Glass`], and outside of any layouts using [`FlexBox`]es).
 //! 2. Is "activated" by a keyboard shortcut (hidden otherwise). Once activated, the user
 //!    can accept or cancel the dialog box. And this results in a callback being called
 //!    with the result.
 //!
-//! So this activation trigger must be done at the `App` trait impl level (in the
+//! So this activation trigger must be done at the [App] trait impl level (in the
 //! `app_handle_event()` method). Also, when this trigger is detected it has to:
 //!
 //! 1. When a trigger is detected, send a signal via the channel sender (out of band) so
@@ -926,12 +1511,12 @@
 //!
 //! There is a question about where does the response from the user (once a dialog is
 //! shown) go? This seems as though it would be different in nature from an
-//! `EditorComponent` but it is the same. Here's why:
+//! [`EditorComponent`] but it is the same. Here's why:
 //!
-//! - The `EditorComponent` is always updating its buffer based on user input, and there's
-//!   no "handler" for when the user performs some action on the editor. The editor needs
-//!   to save all the changes to the buffer to the state. This requires the trait bound
-//!   `HasEditorBuffers` to be implemented by the state.
+//! - The [`EditorComponent`] is always updating its buffer based on user input, and
+//!   there's no "handler" for when the user performs some action on the editor. The
+//!   editor needs to save all the changes to the buffer to the state. This requires the
+//!   trait bound [`HasEditorBuffers`] to be implemented by the state.
 //! - The dialog box seems different in that you would think that it doesn't always
 //!   updating its state and that the only time we really care about what state the dialog
 //!   box has is when the user has accepted something they've typed into the dialog box
@@ -941,9 +1526,9 @@
 //!   user is typing things into the dialog box, it has to be updating the state,
 //!   otherwise, re-rendering the dialog box won't be triggered and the user won't see
 //!   what they're typing. This means that even intermediate information needs to be
-//!   recorded into the state via the `HasDialogBuffers` trait bound. This will hold stale
-//!   data once the dialog is dismissed or accepted, but that's ok since the title and
-//!   text should always be set before it is shown.
+//!   recorded into the state via the [`HasDialogBuffers`] trait bound. This will hold
+//!   stale data once the dialog is dismissed or accepted, but that's ok since the title
+//!   and text should always be set before it is shown.
 //!   - **Note**: it might be possible to save this type of intermediate data in
 //!     `ComponentRegistry::user_data`. And it is possible for `handle_event()` to return
 //!     a `EventPropagation::ConsumedRerender` to make sure that changes are re-rendered.
@@ -960,56 +1545,23 @@
 //! 2. `on_dialog_editors_changed_handler()` - this will be called if the user types
 //!    something into the editor.
 //!
-//! ## Dialog HTTP requests and results
+//! ## Async Autocomplete Provider
 //!
-//! So far we have covered the use case for a simple modal dialog box. In order to provide
-//! auto-completion capabilities, via some kind of web service, there needs to be a
-//! slightly more complex version of this. This is where the `DialogEngineConfigOptions`
-//! struct comes in. It allows us to create a dialog component and engine to be configured
-//! with the appropriate mode - simple or autocomplete.
+//! So far we have covered the use case for a simple modal dialog box. The dialog system
+//! also supports **async autocomplete capabilities** through the
+//! [`DialogEngineConfigOptions`] struct, which allows configuring the dialog in
+//! autocomplete mode.
 //!
-//! In autocomplete mode, an extra "results panel" is displayed, and the layout of the
-//! dialog is different on the screen. Instead of being in the middle of the screen, it
-//! starts at the top of the screen. The callbacks are the same.
+//! In autocomplete mode, you can provide an async autocomplete provider that performs
+//! long-running operations such as:
+//! - **Network requests** to web services or APIs
+//! - **Database queries** for search results
+//! - **File system operations** for file/path completion
+//! - Any other async operation that generates completion suggestions
 //!
-//! # How to make HTTP requests
-//!
-//! Crates like `reqwest` and `hyper` (which is part of Tokio) will work. Here's a link
-//! that shows the pros and cons of using each:
-//! - [Rust Crates for Networking and HTTP Foundations](https://blessed.rs/crates#section-networking-subsection-http-foundations)
-//!
-//! ## Custom Markdown parsing and syntax highlighting
-//!
-//! The code for parsing and syntax highlighting is in [`try_parse_and_highlight`].
-//!
-//! A custom Markdown parser is provided to provide some extensions over the standard
-//! Markdown syntax. The parser code is in the [`parse_markdown()`] function. Here are
-//! some of the extensions:
-//! - Metadata title (eg: `@title: <title_text>`). Similar to front matter.
-//! - Metadata tags (eg: `@tags: <tag1>, <tag2>`).
-//! - Metadata authors (eg: `@authors: <author1>, <author2>`).
-//! - Metadata date (eg: `@date: <date>`).
-//!
-//! Some other changes are adding support for smart lists. These are lists that span
-//! multiple lines of text. And indentation levels are tracked. This information is used
-//! to render the list items in a way that is visually appealing.
-//! - The code for parsing smart lists is in [`parse_smart_list`].
-//! - The code for syntax highlighting is in [`StyleUSSpanLines::from_document`].
-//!
-//! Also, `syntect` crate is still used by the editor component
-//! [`crate::editor_engine::engine_public_api::render_engine()`] to syntax highlight the
-//! text inside code blocks of Markdown documents.
-//!
-//! An alternative approach to doing this was considered using the crate `markdown-rs`,
-//! but we decided to implement our own parser using
-//! [`nom`](https://developerlife.com/2023/02/20/guide-to-nom-parsing/) since it was
-//! streaming and used less CPU and memory.
-//!
-//! # Grapheme support
-//!
-//! Unicode is supported (to an extent). There are some caveats. The
-//! [`crate::GCStringOwned`] struct has lots of great information on this graphemes and
-//! what is supported and what is not.
+//! The autocomplete mode displays an extra "results panel" and uses a different layout
+//! (top of screen instead of centered). The same callback functions are used, but the
+//! provider can now perform async operations to populate the results.
 //!
 //! # Lolcat support
 //!
@@ -1046,6 +1598,60 @@
 //! Please report any issues to the [issue
 //! tracker](https://github.com/r3bl-org/r3bl-rs-utils/issues). And if you have any
 //! feature requests, feel free to add them there too 👍.
+//!
+//! <!-- Type references for documentation links -->
+//! [App]: crate::App
+//! [Component]: crate::Component
+//! [TerminalWindow]: crate::TerminalWindow
+//! [FlexBox]: crate::FlexBox
+//! [Surface]: crate::Surface
+//! [HasFocus]: crate::HasFocus
+//! [ComponentRegistry]: crate::ComponentRegistry
+//! [ComponentRegistryMap]: crate::ComponentRegistryMap
+//! [GlobalData]: crate::GlobalData
+//! [EventPropagation]: crate::EventPropagation
+//!
+//! [RenderOp]: crate::RenderOp
+//! [RenderOps]: crate::RenderOps
+//! [RenderPipeline]: crate::RenderPipeline
+//! [OffscreenBuffer]: crate::OffscreenBuffer
+//! [PixelChar]: crate::PixelChar
+//! [ZOrder]: crate::ZOrder
+//!
+//! [EditorComponent]: crate::EditorComponent
+//! [EditorEngine]: crate::EditorEngine
+//! [EditorBuffer]: crate::EditorBuffer
+//! [HasEditorBuffers]: crate::HasEditorBuffers
+//! [ZeroCopyGapBuffer]: crate::tui::editor::zero_copy_gap_buffer::ZeroCopyGapBuffer
+//!
+//! [MdDocument]: crate::tui::md_parser::MdDocument
+//! [parse_markdown()]: fn@crate::tui::md_parser::parse_markdown::parse_markdown
+//! [parse_smart_list]: crate::tui::md_parser::parse_smart_list
+//! [try_parse_and_highlight]: crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
+//!
+//! [PTYMux]: crate::core::pty_mux::PTYMux
+//! [CsiSequence]: crate::core::pty_mux::vt_100_ansi_parser::CsiSequence
+//! [EscSequence]: crate::core::pty_mux::vt_100_ansi_parser::EscSequence
+//! [SgrCode]: crate::core::ansi::SgrCode
+//!
+//! [RowIndex]: crate::RowIndex
+//! [ColIndex]: crate::ColIndex
+//! [ColWidth]: crate::ColWidth
+//! [RowHeight]: crate::RowHeight
+//! [IndexOps]: crate::IndexOps
+//! [LengthOps]: crate::LengthOps
+//! [ArrayBoundsCheck]: crate::ArrayBoundsCheck
+//! [CursorBoundsCheck]: crate::CursorBoundsCheck
+//! [ViewportBoundsCheck]: crate::ViewportBoundsCheck
+//! [RangeBoundsExt]: crate::RangeBoundsExt
+//! [RangeConvertExt]: crate::RangeConvertExt
+//!
+//! [ByteIndex]: crate::ByteIndex
+//! [SegIndex]: crate::SegIndex
+//! [GCStringOwned]: crate::GCStringOwned
+//!
+//! [HasDialogBuffers]: crate::HasDialogBuffers
+//! [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]
@@ -1058,7 +1664,6 @@ pub mod tui;
 
 // Re-export.
 pub use core::*;
-
 pub use network_io::*;
 pub use readline_async::*;
 pub use tui::*;

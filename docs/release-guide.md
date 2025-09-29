@@ -23,6 +23,7 @@ cd analytics_schema
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
+# Generate the crates.io landing page for this crate
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
@@ -41,6 +42,7 @@ cd tui
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
+# Generate the crates.io landing page for this crate
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A
@@ -59,6 +61,7 @@ cd cmdr
 #    <https://github.com/killercup/cargo-edit> and `cargo upgrade`.
 cargo update --verbose # Update Cargo.lock file (not Cargo.toml)
 cargo build; cargo test; cargo doc --no-deps; cargo clippy --fix --allow-dirty --allow-staged; cargo fmt --all
+# Generate the crates.io landing page for this crate
 cargo readme > README.md
 cargo publish --dry-run --allow-dirty
 git add -A

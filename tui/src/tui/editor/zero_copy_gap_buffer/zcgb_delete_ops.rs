@@ -103,8 +103,9 @@ use std::ops::Range;
 use miette::{Result, miette};
 
 use super::ZeroCopyGapBuffer;
-use crate::{ByteIndex, ByteOffset, IndexMarker, LINE_FEED_BYTE, LengthMarker, NULL_BYTE,
-            RangeBoundary, RowIndex, SegIndex, byte_index, len, seg_length};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset,
+            LINE_FEED_BYTE, LengthOps, NULL_BYTE, RangeBoundsExt, RangeValidityStatus,
+            RowIndex, SegIndex, byte_index, len, seg_length};
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -139,7 +140,7 @@ impl ZeroCopyGapBuffer {
 
         // Validate segment index using sophisticated bounds checking.
         let segments_count = seg_length(line_info.grapheme_segments.len());
-        if seg_index.overflows(segments_count) {
+        if seg_index.overflows(segments_count) == ArrayOverflowResult::Overflowed {
             return Err(miette!(
                 "Segment index {} out of bounds for line with {} segments",
                 seg_index.as_usize(),
@@ -197,7 +198,9 @@ impl ZeroCopyGapBuffer {
         let delete_range: Range<SegIndex> = start_seg..end_seg;
         let segments_count = seg_length(line_info.grapheme_segments.len());
 
-        if !delete_range.is_valid(segments_count) {
+        if delete_range.check_range_is_valid_for_length(segments_count)
+            != RangeValidityStatus::Valid
+        {
             if start_seg >= end_seg {
                 return Ok(()); // Empty range - nothing to delete
             }
@@ -280,7 +283,9 @@ impl ZeroCopyGapBuffer {
 
         // Check if start position is within content bounds using type-safe overflow
         // check.
-        if start_index.overflows(line_info.content_byte_len) {
+        if start_index.overflows(line_info.content_byte_len)
+            == ArrayOverflowResult::Overflowed
+        {
             return Err(miette!(
                 "Start position {} exceeds content length {}",
                 start_index.as_usize(),
@@ -306,7 +311,7 @@ impl ZeroCopyGapBuffer {
         let buffer_pos = line_info.buffer_start;
 
         // Shift content left to overwrite deleted portion.
-        if !end_index.overflows(current_content_len) {
+        if end_index.overflows(current_content_len) == ArrayOverflowResult::Within {
             // Content remains after deletion - need to shift.
             let move_from = (buffer_pos + ByteOffset::from(end_index)).as_usize();
             let move_to = delete_start.as_usize();

@@ -3,11 +3,14 @@
 use std::ops::{Add, Deref, DerefMut};
 
 use super::seg_length::{SegLength, seg_length};
-use crate::{ChUnit, Index, IndexMarker, UnitCompare, ch};
+use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericValue, ch};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct SegIndex(pub ChUnit);
+
+/// [`ArrayBoundsCheck`] implementation for type-safe bounds checking.
+impl ArrayBoundsCheck<SegLength> for SegIndex {}
 
 pub fn seg_index(arg_seg_index: impl Into<SegIndex>) -> SegIndex { arg_seg_index.into() }
 
@@ -86,15 +89,13 @@ mod arithmetic {
 }
 
 // Implement bounds checking traits for SegIndex.
-impl UnitCompare for SegIndex {
-    fn as_usize(&self) -> usize { self.as_usize() }
-    fn as_u16(&self) -> u16 { self.0.value }
+impl NumericValue for SegIndex {
+    fn as_usize(&self) -> usize { self.0.as_usize() }
+    fn as_u16(&self) -> u16 { self.0.as_u16() }
 }
 
-impl IndexMarker for SegIndex {
+impl IndexOps for SegIndex {
     type LengthType = SegLength;
-
-    fn convert_to_length(&self) -> Self::LengthType { self.convert_to_seg_length() }
 }
 
 #[cfg(test)]
@@ -134,18 +135,24 @@ mod tests {
     fn seg_index_range_boundary_compatibility() {
         use std::ops::Range;
 
-        use crate::RangeBoundary;
+        use crate::{RangeBoundsExt, RangeValidityStatus};
 
         let start = seg_index(2);
         let end = seg_index(5);
         let range: Range<SegIndex> = start..end;
         let length = seg_length(10);
 
-        // Test that RangeBoundary works with SegIndex now that Add is implemented
-        assert!(range.is_valid(length));
+        // Test that RangeBoundsExt works with SegIndex now that Add is implemented
+        assert_eq!(
+            range.check_range_is_valid_for_length(length),
+            RangeValidityStatus::Valid
+        );
 
-        // Test invalid range
+        // Test invalid range - end is out of bounds
         let invalid_range: Range<SegIndex> = seg_index(8)..seg_index(12);
-        assert!(!invalid_range.is_valid(length));
+        assert_eq!(
+            invalid_range.check_range_is_valid_for_length(length),
+            RangeValidityStatus::EndOutOfBounds
+        );
     }
 }

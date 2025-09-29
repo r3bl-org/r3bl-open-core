@@ -3,7 +3,7 @@
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelChar};
-use crate::{ColIndex, LengthMarker, Pos, RowIndex, row};
+use crate::{ArrayOverflowResult, ColIndex, LengthOps, Pos, RowIndex, row};
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {
@@ -12,7 +12,7 @@ impl OffscreenBuffer {
     pub fn get_char(&self, pos: Pos) -> Option<PixelChar> {
         // Use type-safe bounds checking before converting to usize.
         let buffer_height = crate::height(self.buffer.len());
-        if buffer_height.is_overflowed_by(pos) {
+        if buffer_height.is_overflowed_by(pos) == ArrayOverflowResult::Overflowed {
             return None;
         }
 
@@ -38,7 +38,7 @@ impl OffscreenBuffer {
 
         // Validate column within the selected line using type-safe bounds checking.
         let line_width = crate::width(lines[0].len());
-        if line_width.is_overflowed_by(pos.col_index) {
+        if line_width.is_overflowed_by(pos.col_index) == ArrayOverflowResult::Overflowed {
             miette::bail!("Position out of bounds");
         }
 
@@ -100,7 +100,7 @@ impl OffscreenBuffer {
         // Validate destination position is within line bounds using type-safe bounds
         // checking.
         let line_width = crate::width(line.len());
-        if line_width.is_overflowed_by(dest_start) {
+        if line_width.is_overflowed_by(dest_start) == ArrayOverflowResult::Overflowed {
             miette::bail!("Position out of bounds");
         }
 

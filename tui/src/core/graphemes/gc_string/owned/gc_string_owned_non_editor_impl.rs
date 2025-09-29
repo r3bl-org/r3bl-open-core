@@ -18,7 +18,7 @@
 use std::ops::Add;
 
 use super::GCStringOwned;
-use crate::{ByteIndex, ColIndex, ColWidth, InlineString, SegIndex, UnitCompare,
+use crate::{ByteIndex, ColIndex, ColWidth, InlineString, NumericValue, SegIndex,
             byte_index, ch, pad_fmt, seg_index, usize};
 
 /// Convert between different types of indices. This unifies the API so that different

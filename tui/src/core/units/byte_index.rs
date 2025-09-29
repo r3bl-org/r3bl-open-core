@@ -1,12 +1,62 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Zero-based byte position in strings and buffers - see [`ByteIndex`] type.
+
 use std::ops::{Add, Deref, DerefMut, Range};
 
 use crate::{ByteLength, ByteOffset, ChUnit, Index,
-            bounds_check::length_and_index_markers::{IndexMarker, UnitCompare}};
+            bounds_check::{IndexOps, NumericValue}};
 
-/// Represents a byte index inside of the underlying [`crate::InlineString`] of
-/// [`crate::GCStringOwned`].
+/// Represents an absolute byte position within strings and buffers (0-based).
+///
+/// A `ByteIndex` represents a specific byte position within a buffer, string, or other
+/// byte-oriented structure. As a 0-based index, `ByteIndex(0)` refers to the first byte,
+/// `ByteIndex(1)` to the second byte, and so on. This is distinct from [`ByteLength`]
+/// which is 1-based and represents sizes/counts.
+///
+/// > This newtype struct does not use [`ChUnit`] like other unit types because
+/// > byte positions are inherently [`usize`].
+///
+/// This type is primarily used for byte-level operations in text processing, particularly
+/// when working with UTF-8 strings where character boundaries don't align with byte
+/// boundaries. It provides type safety when dealing with the underlying byte
+/// representation of [`crate::InlineString`] within [`crate::GCStringOwned`].
+///
+/// # Type System Integration
+///
+/// `ByteIndex` implements [`IndexOps`] with [`ByteLength`] as its associated length
+/// type, creating a bidirectional relationship that enables type-safe bounds checking
+/// operations specific to byte-level indexing.
+///
+/// # Type System Disambiguation
+///
+/// `ByteIndex` is conceptually distinct from related types in the type system:
+/// - **vs [`ByteLength`]**: Index is 0-based position, Length is 1-based size
+/// - **vs [`ByteOffset`]**: Index is absolute position, Offset is relative displacement
+/// - **vs [`Index`]**: `ByteIndex` is for byte positions, Index is for character
+///   positions
+///
+/// Think of it as:
+/// - [`ByteIndex`] = absolute byte coordinate (like "byte position 42")
+/// - [`ByteLength`] = byte count/size (like "10 bytes long")
+/// - [`ByteOffset`] = byte displacement (like "5 bytes forward from here")
+///
+/// # Examples
+///
+/// ```rust
+/// use r3bl_tui::{ByteIndex, ByteLength, byte_index, byte_len, ArrayBoundsCheck, ArrayOverflowResult};
+///
+/// // Create a byte index
+/// let pos = byte_index(10);
+/// let buffer_size = byte_len(20);
+///
+/// // Check if the byte position is valid for array access
+/// assert_eq!(pos.overflows(buffer_size), ArrayOverflowResult::Within);
+///
+/// // Convert to character-based Index if needed
+/// use r3bl_tui::Index;
+/// let char_index: Index = pos.into();
+/// ```
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteIndex(pub usize);
 
@@ -57,7 +107,7 @@ impl From<i32> for ByteIndex {
     fn from(it: i32) -> Self { Self(it as usize) }
 }
 
-impl UnitCompare for ByteIndex {
+impl NumericValue for ByteIndex {
     /// Convert the byte index to a usize value for numeric comparison, usually for array
     /// indexing operations.
     fn as_usize(&self) -> usize { self.0 }
@@ -68,30 +118,11 @@ impl UnitCompare for ByteIndex {
     fn as_u16(&self) -> u16 { self.0 as u16 }
 }
 
-impl IndexMarker for ByteIndex {
+impl IndexOps for ByteIndex {
     type LengthType = ByteLength;
-
-    /// Convert this byte index to the corresponding byte length.
-    ///
-    /// This adds 1 to convert from 0-based index to 1-based length.
-    ///
-    /// ```text
-    /// ByteIndex=5 (0-based) to ByteLength (1-based) conversion:
-    ///
-    ///                         byte_index=5 (0-based)
-    ///                                 ↓
-    /// ByteIndex:  0   1   2   3   4   5   6   7   8   9
-    /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-    ///           │   │   │   │   │   │   │   │   │   │   │
-    ///           └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
-    /// ByteLength: 1   2   3   4   5   6   7   8   9   10
-    /// (1-based)                       ↑
-    ///                convert_to_length() = 6 (1-based)
-    /// ```
-    fn convert_to_length(&self) -> Self::LengthType { ByteLength::from(*self) }
 }
 
-/// Implement Add trait to enable `RangeBoundary` usage.
+/// Implement Add trait to enable `RangeBoundsExt` usage.
 /// This allows `ByteIndex` to be used with `Range<ByteIndex>` for type-safe bounds
 /// checking.
 impl Add for ByteIndex {
@@ -131,6 +162,9 @@ pub trait ByteIndexRangeExt {
 impl ByteIndexRangeExt for Range<ByteIndex> {
     fn to_usize_range(self) -> Range<usize> { self.start.as_usize()..self.end.as_usize() }
 }
+
+// ArrayBoundsCheck implementation for type-safe bounds checking
+impl crate::ArrayBoundsCheck<crate::ByteLength> for ByteIndex {}
 
 #[cfg(test)]
 mod tests {
@@ -342,17 +376,23 @@ mod tests {
     fn test_byte_index_range_boundary_compatibility() {
         use std::ops::Range;
 
-        use crate::bounds_check::RangeBoundary;
+        use crate::{RangeValidityStatus, bounds_check::RangeBoundsExt};
 
         let start = byte_index(5);
         let end = byte_index(15);
         let length = crate::byte_len(20);
 
         let range: Range<ByteIndex> = start..end;
-        assert!(range.is_valid(length));
+        assert_eq!(
+            range.check_range_is_valid_for_length(length),
+            RangeValidityStatus::Valid
+        );
 
         let invalid_range: Range<ByteIndex> = byte_index(25)..byte_index(30);
-        assert!(!invalid_range.is_valid(length));
+        assert_eq!(
+            invalid_range.check_range_is_valid_for_length(length),
+            RangeValidityStatus::StartOutOfBounds
+        );
     }
 
     #[test]

@@ -4,11 +4,8 @@ use std::collections::VecDeque;
 
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use crate::{
-    core::units::{Index, idx, len},
-    IndexMarker,
-    HISTORY_SIZE_MAX,
-};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, HISTORY_SIZE_MAX,
+            core::units::{Index, idx, len}};
 
 #[derive(Debug)]
 pub struct History {
@@ -62,7 +59,7 @@ impl History {
         if let Some(index) = &mut self.current_position {
             let entries_length = len(self.entries.len());
             let next_index: Index = *index + 1;
-            if !next_index.overflows(entries_length) {
+            if next_index.overflows(entries_length) == ArrayOverflowResult::Within {
                 *index = next_index;
             }
             Some(&self.entries[index.as_usize()])

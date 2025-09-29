@@ -11,11 +11,6 @@
 //! - **LF** (Line Feed) - [`handle_line_feed`]
 //! - **CR** (Carriage Return) - [`handle_carriage_return`]
 //!
-//! [`handle_backspace`]: crate::OffscreenBuffer::handle_backspace
-//! [`handle_tab`]: crate::OffscreenBuffer::handle_tab
-//! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
-//! [`handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
-//!
 //! All operations maintain VT100 compliance and handle proper cursor positioning
 //! and scrolling as specified in VT100 documentation.
 //!
@@ -28,14 +23,18 @@
 //! - **Shim**: [`control_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_control_ops`] - Full ANSI pipeline testing
 //!
+//! [`handle_backspace`]: crate::OffscreenBuffer::handle_backspace
+//! [`handle_tab`]: crate::OffscreenBuffer::handle_tab
+//! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
+//! [`handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
 //! [`control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::control_ops
 //! [`test_control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_control_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use super::TAB_STOP_WIDTH;
-use crate::{ArrayAccessBoundsStatus, BoundsCheck, RowIndex, UnitCompare, col,
-            core::units::bounds_check::{IndexMarker, LengthMarker}};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, NumericValue, RowIndex, col,
+            core::units::bounds_check::LengthOps};
 
 impl OffscreenBuffer {
     /// Handle backspace control character (0x08).
@@ -63,11 +62,12 @@ impl OffscreenBuffer {
         let next_col_index = crate::col(next_tab_col_usize);
 
         // Use type-safe overflow checking and clamping
-        self.cursor_pos.col_index = if next_col_index.overflows(max_col) {
-            max_col.convert_to_index()
-        } else {
-            next_col_index
-        };
+        self.cursor_pos.col_index =
+            if next_col_index.overflows(max_col) == ArrayOverflowResult::Overflowed {
+                max_col.convert_to_index()
+            } else {
+                next_col_index
+            };
     }
 
     /// Handle line feed control character (0x0A).
@@ -75,8 +75,7 @@ impl OffscreenBuffer {
     pub fn handle_line_feed(&mut self) {
         let max_row = self.window_size.row_height;
         let next_row: RowIndex = self.cursor_pos.row_index + 1;
-        if next_row.check_array_access_bounds(max_row) == ArrayAccessBoundsStatus::Within
-        {
+        if next_row.overflows(max_row) == ArrayOverflowResult::Within {
             self.cursor_pos.row_index = next_row;
         }
     }

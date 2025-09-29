@@ -12,7 +12,7 @@
 //! - Cursor positioning: VT100 User Guide Section 3.3.1
 //! - Basic movement: VT100 User Guide Section 3.3.2
 
-use crate::{LengthMarker, len,
+use crate::{LengthOps, len,
             vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                  term_units::{term_col, term_row}}};
 

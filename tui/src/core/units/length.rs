@@ -1,10 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+//! One-based character size measurements for terminal UI - see [`Length`] type.
+
 use std::{fmt::Debug,
           hash::Hash,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
 use super::{ChUnit, Index, ch, idx};
-use crate::{ColWidth, LengthMarker, RowHeight, UnitCompare,
+use crate::{ColWidth, LengthOps, NumericValue, RowHeight,
             create_numeric_arithmetic_operators};
 
 /// Represents a length measurement in character units.
@@ -185,14 +188,22 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl UnitCompare for Length {
-        fn as_usize(&self) -> usize { self.0.into() }
+    impl NumericValue for Length {
+        fn as_usize(&self) -> usize { self.0.as_usize() }
 
-        fn as_u16(&self) -> u16 { self.0.into() }
+        fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
 
-    impl LengthMarker for Length {
+    impl LengthOps for Length {
         type IndexType = Index;
+
+        fn convert_to_index(&self) -> Self::IndexType {
+            if self.0.value == 0 {
+                Index::new(0)
+            } else {
+                Index::new(self.0.value - 1)
+            }
+        }
     }
 }
 

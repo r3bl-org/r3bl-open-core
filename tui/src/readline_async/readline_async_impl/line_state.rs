@@ -2,16 +2,15 @@
 
 use std::io::{self, Write};
 
-use crossterm::{cursor,
+use crossterm::{QueueableCommand, cursor,
                 event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
                 terminal::{Clear,
-                           ClearType::{All, FromCursorDown}},
-                QueueableCommand};
+                           ClearType::{All, FromCursorDown}}};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{
-    IndexMarker, LINE_FEED_BYTE, MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength, core::units::idx, ok
-};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, LINE_FEED_BYTE,
+            MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength,
+            core::units::idx, ok};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
@@ -136,7 +135,9 @@ impl LineState {
     fn move_to_beginning(&self, term: &mut dyn Write, from: u16) -> io::Result<()> {
         let from_index = idx(usize::from(from));
         let one_idx = idx(1);
-        let prev_pos = if one_idx.overflows(from_index.convert_to_length()) {
+        let prev_pos = if one_idx.overflows(from_index.convert_to_length())
+            == ArrayOverflowResult::Overflowed
+        {
             0
         } else {
             from - 1
@@ -154,7 +155,9 @@ impl LineState {
     fn move_from_beginning(&self, term: &mut dyn Write, to: u16) -> io::Result<()> {
         let to_index = idx(usize::from(to));
         let one_idx = idx(1);
-        let prev_pos = if one_idx.overflows(to_index.convert_to_length()) {
+        let prev_pos = if one_idx.overflows(to_index.convert_to_length())
+            == ArrayOverflowResult::Overflowed
+        {
             0
         } else {
             to - 1
@@ -184,13 +187,17 @@ impl LineState {
 
             let new_position = idx(self.line_cursor_grapheme + change_usize);
             let count_length = idx(count).convert_to_length();
-            self.line_cursor_grapheme = new_position.clamp_to_max_length(count_length).as_usize();
+            self.line_cursor_grapheme =
+                new_position.clamp_to_max_length(count_length).as_usize();
         } else {
             // Use unsigned_abs() to convert negative change to positive amount to
             // subtract.
             let change_idx = idx(change.unsigned_abs());
             let current_idx = idx(self.line_cursor_grapheme);
-            self.line_cursor_grapheme = if change_idx.overflows(current_idx.convert_to_length()) {
+            self.line_cursor_grapheme = if change_idx
+                .overflows(current_idx.convert_to_length())
+                == ArrayOverflowResult::Overflowed
+            {
                 0
             } else {
                 self.line_cursor_grapheme - change.unsigned_abs()
@@ -331,9 +338,9 @@ impl LineState {
 
         self.last_line_completed = data.ends_with(b"\n"); // Set whether data ends with newline
 
-        // If data does not end with newline, save the cursor and write newline for prompt.
-        // Usually data does end in newline due to the buffering of SharedWriter, but
-        // sometimes it may not (i.e. if .flush() is called).
+        // If data does not end with newline, save the cursor and write newline for
+        // prompt. Usually data does end in newline due to the buffering of
+        // SharedWriter, but sometimes it may not (i.e. if .flush() is called).
         if self.last_line_completed {
             self.last_line_length = 0;
         } else {
@@ -422,7 +429,8 @@ impl LineState {
     #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     /// # Errors
     ///
-    /// Returns an error if writing to the terminal fails or if the event cannot be processed.
+    /// Returns an error if writing to the terminal fails or if the event cannot be
+    /// processed.
     pub fn apply_event_and_render(
         &mut self,
         event: &Event,
@@ -454,9 +462,9 @@ impl LineState {
 }
 
 mod apply_event_and_render_helper {
-    use super::{cursor, All, Clear, KeyCode, LineState, LineStateLiveness,
-                QueueableCommand, ReadlineError, ReadlineEvent, SafeHistory,
-                UnicodeSegmentation, Write};
+    use super::{All, Clear, KeyCode, LineState, LineStateLiveness, QueueableCommand,
+                ReadlineError, ReadlineEvent, SafeHistory, UnicodeSegmentation, Write,
+                cursor};
 
     /// Handle control key events (Ctrl+key combinations)
     pub fn handle_control_key(
@@ -870,10 +878,10 @@ mod apply_event_and_render_helper {
             if prev_len > 0
                 && let Some((pos, str)) =
                     line_state.cluster_buffer.grapheme_indices(true).next()
-                {
-                    let len = str.len();
-                    line_state.cluster_buffer.replace_range(pos..len, "");
-                }
+            {
+                let len = str.len();
+                line_state.cluster_buffer.replace_range(pos..len, "");
+            }
         }
 
         line_state.render_and_flush(term)?;
@@ -886,7 +894,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::{core::test_fixtures::StdoutMock, History, StdMutex};
+    use crate::{History, StdMutex, core::test_fixtures::StdoutMock};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

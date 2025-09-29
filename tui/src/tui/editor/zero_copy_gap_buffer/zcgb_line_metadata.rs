@@ -8,10 +8,10 @@
 
 use std::ops::Range;
 
-use crate::{ByteIndex, ColIndex, ColWidth, GCStringOwned, IndexMarker, Length,
-            LengthMarker, RangeBoundary, Seg, SegIndex, SegStringOwned, SegmentArray,
-            UnitCompare, byte_index, byte_len,
-            core::units::byte_index::ByteIndexRangeExt};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ColIndex, ColWidth,
+            GCStringOwned, Length, LengthOps, NumericValue, RangeBoundsExt,
+            RangeValidityStatus, Seg, SegIndex, SegStringOwned, SegmentArray,
+            byte_index, byte_len, core::units::byte_index::ByteIndexRangeExt};
 
 /// Metadata for a single line in the buffer.
 #[derive(Debug, Clone, PartialEq)]
@@ -72,9 +72,9 @@ impl LineMetadata {
         // Convert content_byte_len to its last valid index, then check if capacity would
         // be overflowed.
         debug_assert!(
-            !self
-                .capacity
-                .is_overflowed_by(self.content_byte_len.convert_to_index()),
+            self.capacity
+                .is_overflowed_by(self.content_byte_len.convert_to_index())
+                == ArrayOverflowResult::Within,
             "content_byte_len ({}) overflows line capacity ({})",
             self.content_byte_len.as_usize(),
             self.capacity.as_usize()
@@ -121,7 +121,9 @@ impl LineMetadata {
         if seg_index.is_zero() {
             // Beginning of line.
             byte_index(0)
-        } else if seg_index.overflows(self.grapheme_segments.len()) {
+        } else if seg_index.overflows(self.grapheme_segments.len())
+            == ArrayOverflowResult::Overflowed
+        {
             // End of line - return content length as byte position.
             byte_index(self.content_byte_len.as_usize())
         } else {
@@ -177,7 +179,8 @@ impl LineMetadata {
             return crate::seg_index(0);
         }
 
-        if byte_index.overflows(self.content_byte_len) {
+        if byte_index.overflows(self.content_byte_len) == ArrayOverflowResult::Overflowed
+        {
             return crate::seg_index(self.grapheme_segments.len());
         }
 
@@ -307,7 +310,9 @@ impl LineMetadata {
 
                 // Validate the byte range against content length.
                 let content_len = byte_len(content.len());
-                if !byte_range.is_valid(content_len) {
+                if byte_range.check_range_is_valid_for_length(content_len)
+                    != RangeValidityStatus::Valid
+                {
                     return None; // Invalid byte range
                 }
 
@@ -380,7 +385,9 @@ impl LineMetadata {
 
             // Validate the byte range against content length.
             let content_len = byte_len(content.len());
-            if !byte_range.is_valid(content_len) {
+            if byte_range.check_range_is_valid_for_length(content_len)
+                != RangeValidityStatus::Valid
+            {
                 return None; // Invalid byte range
             }
 
@@ -409,7 +416,9 @@ impl LineMetadata {
 
         // Validate the byte range against content length.
         let content_len = byte_len(content.len());
-        if !byte_range.is_valid(content_len) {
+        if byte_range.check_range_is_valid_for_length(content_len)
+            != RangeValidityStatus::Valid
+        {
             return None; // Invalid byte range
         }
 
@@ -447,7 +456,7 @@ impl LineMetadata {
     ///
     /// // Range validation approach:
     /// let byte_range: Range<ByteIndex> = start..end;
-    /// if byte_range.is_valid(content_len) {
+    /// if byte_range.check_range_is_valid_for_length(content_len) {
     ///     &content[byte_range.start.as_usize()..byte_range.end.as_usize()]
     ///     // still need to unwrap for actual slicing
     /// }

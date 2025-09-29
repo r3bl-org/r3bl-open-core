@@ -99,9 +99,9 @@
 use miette::{Result, miette};
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{BoundsCheck, ByteIndex, ByteOffset, CursorPositionBoundsStatus, IndexMarker,
-            LINE_FEED_BYTE, LengthMarker, NULL_BYTE, RowIndex, SegIndex, UnitCompare,
-            len};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset,
+            CursorBoundsCheck, CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps,
+            NULL_BYTE, NumericValue, RowIndex, SegIndex, len};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line.
@@ -201,7 +201,9 @@ impl ZeroCopyGapBuffer {
         // Validate byte position using cursor position bounds checking.
         // For insertion, we allow inserting at position equal to content length (at the
         // end of the line).
-        if byte_index.check_cursor_position_bounds(line_info.content_byte_len)
+        if line_info
+            .content_byte_len
+            .check_cursor_position_bounds(byte_index.into())
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(
@@ -247,7 +249,7 @@ impl ZeroCopyGapBuffer {
             (line_info.buffer_start + ByteOffset::from(byte_index)).as_usize();
 
         // Shift existing content to make room.
-        if byte_index.overflows(line_content_len) {
+        if byte_index.overflows(line_content_len) == ArrayOverflowResult::Overflowed {
             // Inserting at end, just move the newline.
             self.buffer[insert_pos + text_len.as_usize()] = LINE_FEED_BYTE;
         } else {
@@ -314,7 +316,9 @@ impl ZeroCopyGapBuffer {
         let line_index: RowIndex = arg_line_index.into();
         // Use cursor position bounds checking for insertion operations.
         // This allows insertion at index == line_count (append at end).
-        if line_index.check_cursor_position_bounds(self.line_count())
+        if self
+            .line_count()
+            .check_cursor_position_bounds(line_index.into())
             == CursorPositionBoundsStatus::Beyond
         {
             return Err(miette!(

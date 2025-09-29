@@ -6,7 +6,7 @@
 //! to verify the state of the offscreen buffer contents.
 
 use crate::{Height, OffscreenBuffer, PixelChar, PixelCharLine, SPACER_GLYPH_CHAR,
-            TuiStyle, Width, col, core::units::bounds_check::LengthMarker, row};
+            TuiStyle, Width, col, core::units::bounds_check::LengthOps, row};
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:

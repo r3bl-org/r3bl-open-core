@@ -1021,7 +1021,7 @@ mod color_wheel_navigation {
         direction: &mut ColorWheelDirection,
         gradient_len: usize,
     ) -> Option<TuiColor> {
-        use crate::{IndexMarker,
+        use crate::{ArrayBoundsCheck, ArrayOverflowResult,
                     core::units::{idx, len}};
 
         match *direction {
@@ -1031,7 +1031,9 @@ mod color_wheel_navigation {
                 // Hit the end of the gradient, reverse direction.
                 let current_idx = idx(usize(*index));
                 let gradient_length = len(gradient_len);
-                if current_idx.overflows(gradient_length) {
+                if current_idx.overflows(gradient_length)
+                    == ArrayOverflowResult::Overflowed
+                {
                     // We've reached the end, reverse direction
                     *direction = ColorWheelDirection::Reverse;
                     *index -= 2;

@@ -21,7 +21,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{RowHeight, core::units::bounds_check::IndexMarker, len};
+use crate::{ArrayBoundsCheck, ArrayUnderflowResult, RowHeight,
+            core::units::bounds_check::RangeConvertExt};
 
 impl OffscreenBuffer {
     /// Move cursor down one line, scrolling the buffer if at bottom.
@@ -64,11 +65,13 @@ impl OffscreenBuffer {
     pub fn index_down(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
-        // Get bottom boundary of scroll region using helper method.
-        let scroll_bottom_boundary = self.get_scroll_bottom_boundary();
+        // Get bottom boundary of scroll region from inclusive range.
+        let scroll_bottom_boundary = *self.get_scroll_range_inclusive().end();
 
         // Check if we're at the bottom of the scroll region.
-        if current_row.underflows(scroll_bottom_boundary) {
+        if current_row.underflows(scroll_bottom_boundary)
+            == ArrayUnderflowResult::Underflowed
+        {
             // Not at scroll region bottom - just move cursor down.
             self.cursor_down(RowHeight::from(1));
             Ok(())
@@ -118,11 +121,13 @@ impl OffscreenBuffer {
     pub fn reverse_index_up(&mut self) -> miette::Result<()> {
         let current_row = self.cursor_pos.row_index;
 
-        // Get top boundary of scroll region using helper method.
-        let scroll_top_boundary = self.get_scroll_top_boundary();
+        // Get top boundary of scroll region from inclusive range.
+        let scroll_top_boundary = *self.get_scroll_range_inclusive().start();
 
         // Check if we're at the top of the scroll region.
-        if scroll_top_boundary.underflows(current_row) {
+        if scroll_top_boundary.underflows(current_row)
+            == ArrayUnderflowResult::Underflowed
+        {
             // Not at scroll region top - just move cursor up.
             self.cursor_up(RowHeight::from(1));
             Ok(())
@@ -143,19 +148,11 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the scroll operation fails.
     pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
-        // Get scroll region boundaries using helper methods.
-        let scroll_top = self.get_scroll_top_boundary();
-        let scroll_bottom = self.get_scroll_bottom_boundary();
+        // Get scroll region as an inclusive range and convert to exclusive for iteration.
+        let scroll_region = self.get_scroll_range_inclusive();
 
         // Use shift_lines_up to shift lines up within the scroll region.
-        self.shift_lines_up(
-            {
-                let start = scroll_top;
-                let end = scroll_bottom + 1;
-                start..end
-            },
-            len(1),
-        )
+        self.shift_lines_up(scroll_region.to_exclusive(), 1)
     }
 
     /// Scroll buffer content down by one line (for ESC M at top).
@@ -170,19 +167,11 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the scroll operation fails.
     pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
-        // Get scroll region boundaries using helper methods.
-        let scroll_top = self.get_scroll_top_boundary();
-        let scroll_bottom = self.get_scroll_bottom_boundary();
+        // Get scroll region as an inclusive range and convert to exclusive for iteration.
+        let scroll_region = self.get_scroll_range_inclusive();
 
         // Use shift_lines_down to shift lines down within the scroll region.
-        self.shift_lines_down(
-            {
-                let start = scroll_top;
-                let end = scroll_bottom + 1;
-                start..end
-            },
-            len(1),
-        )
+        self.shift_lines_down(scroll_region.to_exclusive(), 1)
     }
 
     /// Handle SU (Scroll Up) - scroll display up by n lines.

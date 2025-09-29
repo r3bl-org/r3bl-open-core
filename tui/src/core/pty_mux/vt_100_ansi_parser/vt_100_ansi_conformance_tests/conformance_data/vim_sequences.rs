@@ -14,7 +14,7 @@
 //! styling patterns, and efficient screen updates that stress-test terminal
 //! parsers and buffer management.
 
-use crate::{ANSIBasicColor, LengthMarker, SgrCode, height,
+use crate::{ANSIBasicColor, LengthOps, SgrCode, height,
             vt_100_ansi_parser::{protocols::{csi_codes::CsiSequence,
                                              esc_codes::EscSequence},
                                  term_units::{term_col, term_row}}};

@@ -7,8 +7,8 @@
 //! showing process information and keyboard shortcuts.
 
 use super::ProcessManager;
-use crate::{ANSIBasicColor, FlushKind, IndexMarker, LengthMarker, OffscreenBuffer,
-            OutputDevice, PixelChar, Size, TuiColor, TuiStyle, col,
+use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
+            OffscreenBuffer, OutputDevice, PixelChar, Size, TuiColor, TuiStyle, col,
             core::units::{idx, len},
             lock_output_device_as_mut,
             tui::terminal_lib_backends::{OffscreenBufferPaint,
@@ -112,7 +112,9 @@ impl OutputRenderer {
         };
 
         for (col_idx, ch) in status_text.chars().enumerate() {
-            if self.terminal_size.col_width.is_overflowed_by(col(col_idx)) {
+            if self.terminal_size.col_width.is_overflowed_by(col(col_idx))
+                == ArrayOverflowResult::Overflowed
+            {
                 break;
             }
             ofs_buf[last_row_idx][col_idx] = PixelChar::PlainText {
@@ -159,6 +161,7 @@ impl OutputRenderer {
                 .terminal_size
                 .col_width
                 .is_overflowed_by(col(new_width))
+                == ArrayOverflowResult::Overflowed
             {
                 break;
             }
@@ -178,6 +181,7 @@ impl OutputRenderer {
             .terminal_size
             .col_width
             .is_overflowed_by(col(total_width))
+            == ArrayOverflowResult::Overflowed
         {
             return status_parts.join("");
         }

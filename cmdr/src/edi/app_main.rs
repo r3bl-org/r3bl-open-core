@@ -6,7 +6,7 @@ use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelCo
                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasEditorBuffers, HasFocus, InputEvent, Key,
-               KeyPress, LayoutDirection, LayoutManagement, LengthMarker, LineMode,
+               KeyPress, LayoutDirection, LayoutManagement, LengthOps, LineMode,
                ModifierKeysMask, PerformPositioningAndSizing, RenderOp, RenderPipeline,
                Size, Surface, SurfaceProps, SurfaceRender, SyntaxHighlightMode,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,

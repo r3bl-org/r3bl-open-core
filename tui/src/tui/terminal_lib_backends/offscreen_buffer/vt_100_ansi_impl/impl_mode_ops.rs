@@ -9,8 +9,6 @@
 //! - **SM h** (Set Mode) - [`set_auto_wrap_mode`] (enabled=true)
 //! - **RM l** (Reset Mode) - [`set_auto_wrap_mode`] (enabled=false)
 //!
-//! [`set_auto_wrap_mode`]: crate::OffscreenBuffer::set_auto_wrap_mode
-//!
 //! All operations maintain VT100 compliance and handle proper mode state
 //! management for terminal operations.
 //!
@@ -23,6 +21,7 @@
 //! - **Shim**: [`mode_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_mode_ops`] - Full ANSI pipeline testing
 //!
+//! [`set_auto_wrap_mode`]: crate::OffscreenBuffer::set_auto_wrap_mode
 //! [`mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::mode_ops
 //! [`test_mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_mode_ops
 

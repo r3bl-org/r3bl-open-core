@@ -3,7 +3,7 @@
 use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
 
-use crate::{Index, Length, UnitCompare, idx};
+use crate::{Index, Length, NumericValue, idx};
 
 /// The current index in the history buffer.
 ///

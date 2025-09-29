@@ -3,7 +3,7 @@
 use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, Continuation, EventPropagation, FlexBoxId, GlobalData,
                HasFocus, InputEvent, Key, KeyPress, LayoutDirection, LayoutManagement,
-               LengthMarker, PerformPositioningAndSizing, RenderOp, RenderPipeline,
+               LengthOps, PerformPositioningAndSizing, RenderOp, RenderPipeline,
                SPACER_GLYPH, Size, SpecialKey, Surface, SurfaceProps, SurfaceRender,
                TuiStylesheet, ZOrder, box_end, box_start, col, glyphs, height,
                inline_string, new_style, render_component_in_current_box, render_ops,

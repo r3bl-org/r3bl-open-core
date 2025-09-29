@@ -27,6 +27,32 @@ use crate::{CaretScrAdj, ChUnitPrimitiveType, ColIndex, ColWidth, GapBufferLine,
 /// - `"▓▓"` = `"😃"`
 /// - [`SelectionRange::clip_to_range_str()`] : "e😃"
 ///
+/// ## Selection Range Semantics
+///
+/// When checking if an index is within a selection, inclusive range checking is typically
+/// used. Here's how text selection works with character-level precision:
+///
+/// ```text
+/// Text Selection Example:
+/// Original text: "The quick brown fox jumps"
+/// Selected text: "quick brown" (indices 4-14 inclusive)
+///
+///       selection_start=4                      selection_end=14
+///               ↓                                      ↓
+/// Index:    0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18
+///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+/// Char:   │ T │ h │ e │   │ q │ u │ i │ c │ k │   │ b │ r │ o │ w │ n │   │ f │ o │ x │
+///         └───┴───┴───┴───┼───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┼───┴───┴───┴───┘
+///                         ╰───────────── selected range ──────────────╯
+///
+/// Checking if index is selected (using inclusive range):
+/// - (start..=end).contains(&idx(3))  → false (before selection)
+/// - (start..=end).contains(&idx(4))  → true  (at start boundary)
+/// - (start..=end).contains(&idx(9))  → true  (within selection)
+/// - (start..=end).contains(&idx(14)) → true  (at end boundary)
+/// - (start..=end).contains(&idx(15)) → false (after selection)
+/// ```
+///
 /// This range can't be instantiated directly via the struct, you have to use the tuple
 /// conversion. Even though the struct holds two [`CaretScrAdj`] values, it does not use
 /// the [`crate::RowIndex`] fields.

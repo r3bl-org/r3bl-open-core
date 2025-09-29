@@ -3,7 +3,7 @@
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
-use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch,
+use crate::{ChUnit, ColIndex, LengthOps, NumericValue, ch,
             create_numeric_arithmetic_operators};
 
 /// Width is column count, i.e., the number of columns that a UI component occupies.
@@ -23,7 +23,7 @@ use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch,
 /// case.
 ///
 /// There is a special case for scrolling horizontally, and creates a selection range,
-/// which is handled by the [`EOLCursorPosition`] trait method [`eol_cursor_position()`].
+/// which is handled by the [`CursorBoundsCheck`] trait method [`eol_cursor_position()`].
 ///
 /// # Examples
 /// ```
@@ -36,8 +36,8 @@ use crate::{ChUnit, ColIndex, LengthMarker, UnitCompare, ch,
 /// [`Height`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`Size`]: crate::Size
-/// [`EOLCursorPosition`]: crate::EOLCursorPosition
-/// [`eol_cursor_position()`]: crate::EOLCursorPosition::eol_cursor_position
+/// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
+/// [`eol_cursor_position()`]: crate::CursorBoundsCheck::eol_cursor_position
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColWidth(pub ChUnit);
 
@@ -162,14 +162,22 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl UnitCompare for ColWidth {
-        fn as_usize(&self) -> usize { self.0.into() }
+    impl NumericValue for ColWidth {
+        fn as_usize(&self) -> usize { self.0.as_usize() }
 
-        fn as_u16(&self) -> u16 { self.0.into() }
+        fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
 
-    impl LengthMarker for ColWidth {
+    impl LengthOps for ColWidth {
         type IndexType = ColIndex;
+
+        fn convert_to_index(&self) -> Self::IndexType {
+            if self.0.value == 0 {
+                ColIndex::new(0)
+            } else {
+                ColIndex::new(self.0.value - 1)
+            }
+        }
     }
 }
 

@@ -3,7 +3,7 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
                ComponentRegistryMap, EventPropagation, GCStringOwned, GlobalData,
                GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
-               InputEvent, Key, KeyPress, LengthMarker, LolcatBuilder, RenderOp,
+               InputEvent, Key, KeyPress, LengthOps, LolcatBuilder, RenderOp,
                RenderPipeline, SPACER_GLYPH, Size, SpecialKey,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
                defaults::get_default_gradient_stops, glyphs, inline_string, new_style,

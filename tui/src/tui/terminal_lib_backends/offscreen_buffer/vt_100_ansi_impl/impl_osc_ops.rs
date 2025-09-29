@@ -9,9 +9,6 @@
 //! - **OSC 0/1/2** (Set Title/Icon) - [`handle_title_and_icon`]
 //! - **OSC 8** (Hyperlinks) - [`handle_hyperlink`]
 //!
-//! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
-//! [`handle_hyperlink`]: crate::OffscreenBuffer::handle_hyperlink
-//!
 //! All operations maintain VT100 compliance and handle proper OSC event
 //! queueing for later transmission to the rendering layer.
 //!
@@ -24,6 +21,8 @@
 //! - **Shim**: [`osc_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_osc_ops`] - Full ANSI pipeline testing
 //!
+//! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
+//! [`handle_hyperlink`]: crate::OffscreenBuffer::handle_hyperlink
 //! [`osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::osc_ops
 //! [`test_osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_osc_ops
 

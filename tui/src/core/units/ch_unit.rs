@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Base character unit for monospace terminal measurements - see [`ChUnit`] type.
+
 use std::{fmt::{Debug, Formatter},
           ops::{Add, AddAssign, Deref, Div, Mul, MulAssign, Sub, SubAssign}};
 
@@ -31,6 +33,9 @@ impl ChUnit {
 
     #[must_use]
     pub fn as_usize(&self) -> usize { usize(*self) }
+
+    #[must_use]
+    pub fn as_u16(&self) -> u16 { self.value }
 
     #[must_use]
     pub fn as_u32(&self) -> u32 { u32(*self) }
@@ -402,6 +407,23 @@ pub mod convert_from_other_types_to_ch {
                 value: value.try_into().unwrap_or(value as ChUnitPrimitiveType),
             }
         }
+    }
+}
+
+/// Implementation of [`NumericValue`] trait for [`ChUnit`].
+///
+/// This enables `ChUnit` to participate in the bounds checking type system.
+/// All wrapper types (`RowIndex`, `ColWidth`, etc.) delegate to this implementation.
+///
+/// [`NumericValue`]: crate::NumericValue
+mod bounds_check_trait_impls {
+    use super::ChUnit;
+    use crate::NumericValue;
+
+    impl NumericValue for ChUnit {
+        fn as_usize(&self) -> usize { usize::from(self.value) }
+
+        fn as_u16(&self) -> u16 { self.value }
     }
 }
 

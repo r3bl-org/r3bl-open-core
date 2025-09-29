@@ -12,11 +12,6 @@
 //! - **Print Character** - [`print_char`] (printable character handling with VT100
 //!   features)
 //!
-//! [`insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
-//! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
-//! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
-//! [`print_char`]: crate::OffscreenBuffer::print_char
-//!
 //! All operations maintain VT100 compliance and handle proper character shifting,
 //! bounds checking, and cursor positioning as specified in VT100 documentation.
 //!
@@ -29,14 +24,18 @@
 //! - **Shim**: [`char_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_char_ops`] - Full ANSI pipeline testing
 //!
+//! [`insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
+//! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
+//! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
+//! [`print_char`]: crate::OffscreenBuffer::print_char
 //! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
 //! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_char_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{ColIndex, Length, RowIndex, UnitCompare, col,
-            core::units::bounds_check::{EOLCursorPosition, IndexMarker, LengthMarker,
-                                        RangeBoundary},
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue,
+            RowIndex, col,
+            core::units::bounds_check::{CursorBoundsCheck, LengthOps, RangeBoundsExt},
             height, len};
 
 impl OffscreenBuffer {
@@ -75,7 +74,7 @@ impl OffscreenBuffer {
         let max_width = self.window_size.col_width;
 
         // Nothing to insert if cursor is at or beyond right margin.
-        if max_width.is_overflowed_by(at) {
+        if max_width.is_overflowed_by(at) == ArrayOverflowResult::Overflowed {
             return Err(miette::miette!("Operation failed"));
         }
 
@@ -88,7 +87,7 @@ impl OffscreenBuffer {
         }
 
         let buffer_height = height(self.buffer.len());
-        if buffer_height.is_overflowed_by(at) {
+        if buffer_height.is_overflowed_by(at) == ArrayOverflowResult::Overflowed {
             return Err(miette::miette!("Operation failed"));
         }
 
@@ -108,7 +107,9 @@ impl OffscreenBuffer {
         // 1. Destination must be within bounds.
         // 2. Source range must not be empty (clamp_range_to ensures validity).
         let copy_dest_start_col = at.col_index + how_many_clamped;
-        if !copy_dest_start_col.overflows(max_width) && !copy_source_range.is_empty() {
+        if copy_dest_start_col.overflows(max_width) == ArrayOverflowResult::Within
+            && !copy_source_range.is_empty()
+        {
             // Convert to usize only when accessing the buffer.
             line.copy_within(
                 copy_source_range.start.as_usize()..copy_source_range.end.as_usize(),
@@ -134,7 +135,7 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// Before:
-    ///           ╭────── max_width=10 (1-based) ──────╮
+    ///           ╭────── max_width=10 (1-based) ─────╮
     /// Column:   0   1   2   3   4   5   6   7   8   9
     ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
     /// Row:    │ A │ B │ c │ d │ E │ F │ G │ H │ I │ J │
@@ -160,7 +161,7 @@ impl OffscreenBuffer {
         let max_width = self.window_size.col_width;
 
         // Nothing to delete if cursor is at or beyond right margin.
-        if max_width.is_overflowed_by(at) {
+        if max_width.is_overflowed_by(at) == ArrayOverflowResult::Overflowed {
             return Err(miette::miette!("Operation failed"));
         }
 
@@ -173,12 +174,12 @@ impl OffscreenBuffer {
         }
 
         let buffer_height = height(self.buffer.len());
-        if buffer_height.is_overflowed_by(at) {
+        if buffer_height.is_overflowed_by(at) == ArrayOverflowResult::Overflowed {
             return Err(miette::miette!("Operation failed"));
         }
 
         // Copy characters from the right, overwriting the characters at cursor (this IS
-        // the deletion). Use EOLCursorPosition for the exclusive end.
+        // the deletion). Use CursorBoundsCheck for the exclusive end.
         let source_start = at.col_index + how_many_clamped;
         let source_end = max_width.eol_cursor_position();
         let copy_result = self.copy_chars_within_line(
@@ -219,7 +220,7 @@ impl OffscreenBuffer {
     ///
     /// ```text
     /// Before:
-    ///           ╭────── max_width=10 (1-based) ──────╮
+    ///           ╭────── max_width=10 (1-based) ─────╮
     /// Column:   0   1   2   3   4   5   6   7   8   9
     ///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
     /// Row:    │ A │ B │ C │ D │ E │ F │ G │ H │ I │ J │
@@ -245,7 +246,7 @@ impl OffscreenBuffer {
         let max_width = self.window_size.col_width;
 
         // Nothing to erase if cursor is at or beyond right margin.
-        if max_width.is_overflowed_by(at) {
+        if max_width.is_overflowed_by(at) == ArrayOverflowResult::Overflowed {
             return Err(miette::miette!("Operation failed"));
         }
 
@@ -258,7 +259,7 @@ impl OffscreenBuffer {
         }
 
         let buffer_height = height(self.buffer.len());
-        if buffer_height.is_overflowed_by(at) {
+        if buffer_height.is_overflowed_by(at) == ArrayOverflowResult::Overflowed {
             return Err(miette::miette!("Operation failed"));
         }
 
@@ -310,7 +311,9 @@ impl OffscreenBuffer {
         let current_col = self.cursor_pos.col_index;
 
         // Only write if within bounds.
-        if !current_row.overflows(row_max) && !current_col.overflows(col_max) {
+        if current_row.overflows(row_max) == ArrayOverflowResult::Within
+            && current_col.overflows(col_max) == ArrayOverflowResult::Within
+        {
             let result = self.set_char(
                 current_row + current_col,
                 PixelChar::PlainText {
@@ -326,12 +329,12 @@ impl OffscreenBuffer {
             let new_col: ColIndex = current_col + 1;
 
             // Handle line wrap based on DECAWM (Auto Wrap Mode).
-            if new_col.overflows(col_max) {
+            if new_col.overflows(col_max) == ArrayOverflowResult::Overflowed {
                 if self.ansi_parser_support.auto_wrap_mode {
                     // DECAWM enabled: wrap to next line (default behavior).
                     self.cursor_pos.col_index = col(0);
                     let next_row: RowIndex = current_row + 1;
-                    if !next_row.overflows(row_max) {
+                    if next_row.overflows(row_max) == ArrayOverflowResult::Within {
                         self.cursor_pos.row_index = next_row;
                     }
                 } else {

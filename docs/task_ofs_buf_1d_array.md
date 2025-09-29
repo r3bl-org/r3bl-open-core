@@ -2,11 +2,15 @@
 
 ## Executive Summary
 
-Convert the current 2D `Vec<Vec<PixelChar>>` structure in `OffscreenBuffer` to a flat 1D `Box<[PixelChar]>` array to improve memory efficiency, cache locality, and performance. The new implementation will leverage the existing type-safe `Pos`, `RowIndex`, and `ColIndex` types for an ergonomic and safe API.
+Convert the current 2D `Vec<Vec<PixelChar>>` structure in `OffscreenBuffer` to a flat 1D
+`Box<[PixelChar]>` array to improve memory efficiency, cache locality, and performance. The new
+implementation will leverage the existing type-safe `Pos`, `RowIndex`, and `ColIndex` types for an
+ergonomic and safe API.
 
 ## Background and Motivation
 
 ### Current Implementation Problems
+
 1. **Memory Overhead**: Each row is a separate `Vec`, requiring:
    - Individual heap allocations (rows + 1 total allocations)
    - Vec metadata (24 bytes per Vec on 64-bit systems: ptr, capacity, length)
@@ -20,6 +24,7 @@ Convert the current 2D `Vec<Vec<PixelChar>>` structure in `OffscreenBuffer` to a
 3. **Allocation Cost**: Creating a new buffer requires multiple allocations
 
 ### Benefits of 1D Array
+
 1. **Single Allocation**: One contiguous memory block
 2. **Better Cache Locality**: Sequential memory access patterns
 3. **Reduced Memory Overhead**: Single Vec metadata instead of rows+1
@@ -31,30 +36,39 @@ Convert the current 2D `Vec<Vec<PixelChar>>` structure in `OffscreenBuffer` to a
 ### SIMD and Performance Background
 
 #### What is SIMD?
-**Single Instruction, Multiple Data (SIMD)** is a class of parallel computing that allows a single CPU instruction to operate on multiple data points simultaneously. Modern CPUs include SIMD instruction sets like:
+
+**Single Instruction, Multiple Data (SIMD)** is a class of parallel computing that allows a single
+CPU instruction to operate on multiple data points simultaneously. Modern CPUs include SIMD
+instruction sets like:
+
 - **x86_64**: SSE, AVX, AVX-512 (process 4, 8, or 16 elements per instruction)
 - **ARM**: NEON (process 4-16 elements per instruction)
 - **RISC-V**: Vector extensions
 
 #### Why 1D Arrays Enable SIMD
+
 The key to SIMD optimization is **contiguous memory layout**:
 
 ##### 2D Array Problem (Vec<Vec<PixelChar>>):
+
 ```
 Memory Layout: [Row0_ptr] -> [pixel, pixel, pixel, pixel]
                [Row1_ptr] -> [pixel, pixel, pixel, pixel] (different allocation)
                [Row2_ptr] -> [pixel, pixel, pixel, pixel] (different allocation)
 ```
+
 - **Fragmented Memory**: Each row is a separate allocation
 - **Pointer Chasing**: CPU must follow pointers to access data
 - **Cache Misses**: Rows may not be adjacent in memory
 - **SIMD Blocked**: Cannot vectorize across row boundaries
 
 ##### 1D Array Solution (Box<[PixelChar]>):
+
 ```
 Memory Layout: [pixel][pixel][pixel][pixel][pixel][pixel][pixel][pixel]...
                 Row 0 ←──────────────────→ Row 1 ←──────────────────→
 ```
+
 - **Contiguous Memory**: All pixels in one allocation
 - **Sequential Access**: Natural memory access patterns
 - **Cache Friendly**: Excellent spatial locality
@@ -63,12 +77,14 @@ Memory Layout: [pixel][pixel][pixel][pixel][pixel][pixel][pixel][pixel]...
 #### SIMD Operations Enabled by Flat Buffer
 
 ##### Automatic Vectorization:
+
 - **Buffer Clear**: `slice::fill()` → vectorized store instructions
 - **Memory Copy**: `copy_within()` → vectorized load/store pairs
 - **Comparison**: `slice == slice` → vectorized comparison instructions
 - **Iteration**: Compiler auto-vectorization of loops over contiguous data
 
 ##### Performance Impact Examples:
+
 ```rust
 // This operation on 1920 pixels (80×24 buffer):
 buffer.fill(PixelChar::Spacer);
@@ -79,7 +95,9 @@ buffer.fill(PixelChar::Spacer);
 ```
 
 ##### Why Standard Library Operations "Just Work":
+
 Rust's standard library is designed with SIMD in mind:
+
 - `slice::fill()` automatically uses SIMD when profitable
 - `slice::copy_from_slice()` leverages optimized `memcpy` (often SIMD)
 - Iterators enable compiler auto-vectorization
@@ -88,12 +106,14 @@ Rust's standard library is designed with SIMD in mind:
 ## Current Architecture Analysis
 
 ### Key Files and Structures
+
 ```
 tui/src/tui/terminal_lib_backends/offscreen_buffer/
 └── ofs_buf_core.rs            # Main OffscreenBuffer struct
 ```
 
 ### Current Type Hierarchy
+
 ```rust
 OffscreenBuffer {
     buffer: PixelCharLines {
@@ -105,6 +125,7 @@ OffscreenBuffer {
 ```
 
 ### Access Patterns in Current Code
+
 1. **Direct indexing**: `buffer[row][col]`
 2. **Safe access**: `buffer.get(row)?.get(col)`
 3. **Line operations**: `buffer[row].clone()`, `buffer[row].fill()`
@@ -113,6 +134,7 @@ OffscreenBuffer {
 ## Proposed Solution
 
 ### Core Data Structure
+
 ```rust
 pub struct FlatGridBuffer<T>
 where
@@ -130,6 +152,7 @@ where
 ### Benefits of Generic Design
 
 **Reusability**: The generic `FlatGridBuffer<T>` can be used for various grid-like data structures:
+
 - `FlatGridBuffer<PixelChar>` - Terminal buffer (our primary use case)
 - `FlatGridBuffer<Color>` - Color maps or background layers
 - `FlatGridBuffer<u8>` - Masks, alpha channels, or simple grids
@@ -137,6 +160,7 @@ where
 - `FlatGridBuffer<char>` - Simple text grids for testing
 
 **Testing Benefits**: Generic design enables easier testing with simple types:
+
 ```rust
 // Easy to test with simple types
 let mut test_grid = FlatGridBuffer::<u8>::new_empty(height(3) + width(3));
@@ -145,13 +169,16 @@ test_grid.fill(42);
 // Much simpler than setting up PixelChar instances for every test
 ```
 
-**Performance Consistency**: All specialized types benefit from the same SIMD optimizations and memory layout advantages.
+**Performance Consistency**: All specialized types benefit from the same SIMD optimizations and
+memory layout advantages.
 
-**Type Safety**: The trait bounds `T: Copy + Default + PartialEq + Clone + Debug` ensure that all operations work correctly and efficiently with any compatible type.
+**Type Safety**: The trait bounds `T: Copy + Default + PartialEq + Clone + Debug` ensure that all
+operations work correctly and efficiently with any compatible type.
 
 **Why Box<[T]> instead of Vec<T>?**
 
 Both `Box<[PixelChar]>` and `Vec<PixelChar>` provide **identical SIMD performance** since they both:
+
 - Use the same global allocator with proper alignment
 - Store data as contiguous arrays in memory
 - Support the same slice operations (`fill()`, `copy_within()`, etc.)
@@ -159,6 +186,7 @@ Both `Box<[PixelChar]>` and `Vec<PixelChar>` provide **identical SIMD performanc
 However, `Box<[PixelChar]>` is better for our use case because:
 
 **Memory Efficiency**:
+
 ```rust
 // Vec<T> overhead: 24 bytes on 64-bit systems
 struct Vec<T> { ptr: *mut T, capacity: usize, len: usize }
@@ -169,21 +197,25 @@ struct Box<[T]> { ptr: *mut T, len: usize }
 ```
 
 **API Safety**:
+
 - Buffer size never changes after creation (resizing creates new buffer)
 - Prevents accidental `push()`, `resize()`, or `reserve()` operations
 - Clearer API semantics - fixed-size buffer intent is explicit
 - No risk of unexpected reallocations
 
 **When to Use Vec<PixelChar> Instead**:
+
 - Dynamic buffer resizing needed (not our case)
 - Building buffers incrementally
 - Temporary work buffers with varying sizes
 
-**SIMD Alignment Guarantee**: Both containers get proper SIMD alignment from Rust's allocator based on `align_of::<PixelChar>()` and platform SIMD requirements.
+**SIMD Alignment Guarantee**: Both containers get proper SIMD alignment from Rust's allocator based
+on `align_of::<PixelChar>()` and platform SIMD requirements.
 
 ### Flexible, Type-Safe API Design
 
-The new API leverages the existing `Pos`, `RowIndex`, and `ColIndex` types with `impl Into<Pos>` for maximum flexibility:
+The new API leverages the existing `Pos`, `RowIndex`, and `ColIndex` types with `impl Into<Pos>` for
+maximum flexibility:
 
 ```rust
 impl<T> FlatGridBuffer<T>
@@ -252,7 +284,9 @@ let pixel = buffer[my_pos];            // Direct Pos
 
 ## Implementation Tasks
 
-**Important**: Throughout the implementation, use the type-safe bounds checking utilities from `tui/src/core/units/bounds_check.rs`:
+**Important**: Throughout the implementation, use the type-safe bounds checking utilities from
+`tui/src/core/units/bounds_check.rs`:
+
 - Use `IndexMarker::overflows()` instead of raw `<` comparisons
 - Use `LengthMarker::is_overflowed_by()` for inverse checks
 - Use `LengthMarker::clamp_to()` for clamping operations
@@ -261,10 +295,13 @@ let pixel = buffer[my_pos];            // Direct Pos
 ### Phase 1: Core Infrastructure (Priority: High)
 
 #### Task 1.1: Create FlatGridBuffer Module
+
 **File**: `tui/src/core/1d_buffer/flat_grid_buffer.rs`
 
 **Requirements**:
-- [ ] Define `FlatGridBuffer<T>` struct with fields: `data: Box<[T]>`, `width: ColWidth`, `height: RowHeight`
+
+- [ ] Define `FlatGridBuffer<T>` struct with fields: `data: Box<[T]>`, `width: ColWidth`,
+      `height: RowHeight`
 - [ ] Add trait bounds: `T: Copy + Default + PartialEq + Clone + Debug`
 - [ ] Implement `new_empty(arg_size: impl Into<Size>) -> Self` constructor
   - Create with `vec![T::default(); capacity]`
@@ -275,6 +312,7 @@ let pixel = buffer[my_pos];            // Direct Pos
 - [ ] Implement `Debug` trait
 
 **Example Implementation**:
+
 ```rust
 impl<T> FlatGridBuffer<T>
 where
@@ -302,7 +340,7 @@ where
     }
 
     fn get_mut_internal(&mut self, pos: Pos) -> Option<&mut T> {
-        // Use IndexMarker::overflows for type-safe bounds checking
+        // Use IndexOps::overflows for type-safe bounds checking
         if !pos.row_index.overflows(self.height) && !pos.col_index.overflows(self.width) {
             let idx = self.index_of(pos);
             Some(&mut self.data[idx])
@@ -314,7 +352,9 @@ where
 ```
 
 #### Task 1.2: Implement Core Access Methods
+
 **Requirements**:
+
 - [ ] `pub fn get(&self, arg_pos: impl Into<Pos>) -> Option<&T>`
 - [ ] `pub fn get_mut(&mut self, arg_pos: impl Into<Pos>) -> Option<&mut T>`
 - [ ] `pub fn set(&mut self, arg_pos: impl Into<Pos>, element: T) -> bool`
@@ -322,7 +362,9 @@ where
 - [ ] Consider adding `get_clamped()` methods that use `LengthMarker::clamp_to()` for safe access
 
 #### Task 1.3: Implement Row-Level Access Methods
+
 **Requirements**:
+
 - [ ] `pub fn row(&self, arg_row: impl Into<RowIndex>) -> Option<&[T]>`
 - [ ] `pub fn row_mut(&mut self, arg_row: impl Into<RowIndex>) -> Option<&mut [T]>`
 - [ ] `pub fn copy_row(&mut self, arg_from: impl Into<RowIndex>, arg_to: impl Into<RowIndex>) -> bool`
@@ -331,6 +373,7 @@ where
 - [ ] `pub fn shift_rows_down(&mut self, range: Range<RowIndex>, shift_by: Length) -> bool`
 
 **Example**:
+
 ```rust
 impl<T> FlatGridBuffer<T>
 where
@@ -377,14 +420,18 @@ where
 ### Phase 2: Standard Trait Implementations (Priority: High)
 
 #### Task 2.1: Implement Index Traits
+
 **Requirements**:
+
 - [ ] `impl<T, P> Index<P> for FlatGridBuffer<T> where T: Copy + Default + PartialEq + Clone + Debug, P: Into<Pos>`
 - [ ] `impl<T, P> IndexMut<P> for FlatGridBuffer<T> where T: Copy + Default + PartialEq + Clone + Debug, P: Into<Pos>`
 - [ ] `impl<T> Index<Range<RowIndex>> for FlatGridBuffer<T>` (for row ranges)
 - [ ] `impl<T> IndexMut<Range<RowIndex>> for FlatGridBuffer<T>`
 
 #### Task 2.2: Implement Iterator Support
+
 **Requirements**:
+
 - [ ] `pub fn rows(&self) -> impl Iterator<Item = &[T]>`
 - [ ] `pub fn rows_mut(&mut self) -> impl Iterator<Item = &mut [T]>`
 - [ ] `pub fn iter(&self) -> impl Iterator<Item = &T>`
@@ -392,6 +439,7 @@ where
 - [ ] `pub fn iter_positions(&self) -> impl Iterator<Item = (Pos, &T)>`
 
 **Example**:
+
 ```rust
 impl<T> FlatGridBuffer<T>
 where
@@ -414,12 +462,15 @@ where
 ### Phase 3: Advanced Operations (Priority: Medium)
 
 #### Task 3.1: Region Operations
+
 **Requirements**:
+
 - [ ] `pub fn get_region(&self, arg_start: impl Into<Pos>, arg_size: impl Into<Size>) -> Option<Vec<T>>`
 - [ ] `pub fn fill_region(&mut self, arg_start: impl Into<Pos>, arg_size: impl Into<Size>, element: T) -> bool`
 - [ ] `pub fn copy_region(&self, arg_start: impl Into<Pos>, arg_size: impl Into<Size>) -> Option<FlatGridBuffer<T>>`
 
 **Example**:
+
 ```rust
 impl<T> FlatGridBuffer<T>
 where
@@ -450,13 +501,16 @@ where
 ```
 
 #### Task 3.2: Clear and Fill Operations
+
 **Requirements**:
+
 - [ ] `pub fn clear(&mut self)` - fill entire buffer with `T::default()`
 - [ ] `pub fn clear_row(&mut self, arg_row: impl Into<RowIndex>)`
 - [ ] `pub fn clear_rows(&mut self, arg_range: Range<RowIndex>)`
 - [ ] `pub fn fill(&mut self, element: T)`
 
 **SIMD-Optimized Implementation Examples**:
+
 ```rust
 impl<T> FlatGridBuffer<T>
 where
@@ -509,9 +563,11 @@ where
 ### Phase 4: Migration Operations (Priority: High)
 
 #### Task 4.1: Line-Level Operations Migration
+
 **File**: `tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_line_level_ops.rs`
 
 **Migration patterns**:
+
 ```rust
 // SCROLLING/SHIFTING - Much more efficient with flat buffer!
 
@@ -561,9 +617,11 @@ self.swap_rows(row1, row2);  // Uses slice::swap internally
 ```
 
 #### Task 4.2: Character Operations Migration
+
 **File**: `tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_char_ops.rs`
 
 **Migration patterns**:
+
 ```rust
 // Old: self.buffer.get(row_idx)?.get(col_idx)
 // New: self.buffer.get(row(row_idx) + col(col_idx))
@@ -574,9 +632,11 @@ self.swap_rows(row1, row2);  // Uses slice::swap internally
 ```
 
 #### Task 4.3: Update OffscreenBuffer
+
 **File**: `tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_core.rs`
 
 **Requirements**:
+
 - [ ] Replace `buffer: PixelCharLines` with `buffer: FlatGridBuffer<PixelChar>`
 - [ ] Update `Deref` and `DerefMut` implementations to return `&FlatGridBuffer<PixelChar>`
 - [ ] Update `new_empty()` constructor
@@ -584,6 +644,7 @@ self.swap_rows(row1, row2);  // Uses slice::swap internally
 - [ ] Update `diff()` method to work with flat buffer
 
 **Optimized diff implementation**:
+
 ```rust
 // Old: Nested loops with poor cache locality
 pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
@@ -628,9 +689,11 @@ pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
 ### Phase 5: Testing (Priority: Critical)
 
 #### Task 5.1: Unit Tests
+
 **File**: `tui/src/core/1d_buffer/flat_grid_buffer.rs` (test module)
 
 **Test Coverage**:
+
 - [ ] Index calculation correctness
 - [ ] Boundary conditions: (0,0), (max_row, max_col)
 - [ ] Empty buffer handling (0x0 size)
@@ -640,6 +703,7 @@ pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
 - [ ] Row operations (copy, swap, clear)
 
 **Example Test**:
+
 ```rust
 #[test]
 fn test_flexible_api() {
@@ -674,7 +738,9 @@ fn test_generic_with_simple_type() {
 ```
 
 #### Task 5.2: Integration Tests
+
 **Requirements**:
+
 - [ ] Test with ANSI parser operations
 - [ ] Test with render pipeline
 - [ ] Test scrolling and shifting operations
@@ -684,14 +750,19 @@ fn test_generic_with_simple_type() {
 ### Phase 6: Documentation (Priority: Medium)
 
 #### Task 6.1: API Documentation
+
 **Requirements**:
+
 - [ ] Document all public methods with examples
 - [ ] Explain the flexible `impl Into<Pos>` pattern
 - [ ] Document performance characteristics
-- [ ] Add module-level documentation explaining the flat buffer design
+- [ ] Add module-level documentation explaining the flat buffer design; make the quality of this at
+      the same level as `bounds_check/mod.rs`. Use ASCII diagrams, quick start guide, design guide,
+      and pedagogical examples.
 
 **Example Documentation**:
-```rust
+
+````rust
 /// A flat, cache-friendly buffer for grid-like data structures.
 ///
 /// This generic implementation uses a single contiguous memory block for better cache
@@ -743,21 +814,24 @@ fn test_generic_with_simple_type() {
 /// mask.clear(); // Fill with false (default for bool)
 /// ```
 pub struct FlatGridBuffer<T> { /* ... */ }
-```
+````
 
 ## Migration Strategy
 
 ### Step 1: Parallel Development
+
 1. Create `FlatGridBuffer<T>` in new module at `tui/src/core/1d_buffer/`
 2. Implement all core functionality with tests
 3. Benchmark against current implementation using `FlatGridBuffer<PixelChar>`
 
 ### Step 2: Integration
+
 1. Update `OffscreenBuffer` to use `FlatGridBuffer<PixelChar>`
 2. Migrate all operations one file at a time
 3. Run full test suite after each file migration
 
 ### Step 3: Cleanup
+
 1. Remove old `PixelCharLines` and `PixelCharLine` types
 2. Remove unnecessary intermediate types
 3. Update all documentation
@@ -795,6 +869,7 @@ pub struct FlatGridBuffer<T> { /* ... */ }
 ## Implementation Notes
 
 ### Index Calculation Formula
+
 ```rust
 // For position (row, col) in a buffer of width W:
 index = row * W + col
@@ -807,6 +882,7 @@ index = row * W + col
 ```
 
 ### Memory Layout
+
 ```
 Row 0: [0..width)
 Row 1: [width..2*width)
@@ -818,6 +894,7 @@ Row n: [n*width..(n+1)*width)
 ### Key Performance Improvements
 
 #### Scrolling Operations
+
 The flat buffer design transforms scrolling from O(n) allocations to zero allocations:
 
 ```rust
@@ -826,40 +903,52 @@ The flat buffer design transforms scrolling from O(n) allocations to zero alloca
 ```
 
 Performance characteristics:
+
 - **Old**: O(rows × cols) memory allocation per scroll
 - **New**: O(1) - no allocations, just memory movement
 - **Expected improvement**: 10-50x faster for scrolling operations
 
 #### Memory Usage
+
 For a typical 80×24 terminal buffer:
+
 - **Old**: 25 heap allocations (1 outer + 24 inner Vecs), ~600 bytes Vec overhead
 - **New**: 1 heap allocation, 24 bytes Vec overhead
 - **Savings**: ~96% reduction in allocation overhead
 
 #### SIMD Acceleration Benefits
+
 The flat buffer design naturally enables SIMD optimizations:
 
 **Automatic Vectorization**:
-- **Fill Operations**: `slice::fill()` uses SIMD instructions when available (up to 16x faster for large buffers)
+
+- **Fill Operations**: `slice::fill()` uses SIMD instructions when available (up to 16x faster for
+  large buffers)
 - **Copy Operations**: `copy_within()` and `copy_from_slice()` leverage optimized memcpy with SIMD
 - **Comparisons**: Slice equality (`==`) operations can use SIMD for bulk comparisons
 
 **Real-World Performance Impact**:
+
 - **Buffer Clear**: 80×24 buffer clear ~8-16x faster with SIMD (depends on CPU)
 - **Scrolling**: Memory movement uses vectorized instructions automatically
 - **Diff Calculation**: Contiguous memory enables compiler auto-vectorization
 
-**No Code Complexity**: SIMD benefits come "for free" through standard library operations without explicit SIMD programming.
+**No Code Complexity**: SIMD benefits come "for free" through standard library operations without
+explicit SIMD programming.
 
 ### Type Safety Benefits
+
 Using `RowIndex`, `ColIndex`, and `Pos` prevents common bugs:
+
 - Cannot swap row and column arguments
 - Cannot pass arbitrary integers
 - Self-documenting code
 - Compile-time safety
 
 ### Flexible API Benefits
+
 The `impl Into<Pos>` pattern allows:
+
 - Natural expression syntax: `row(5) + col(10)`
 - Multiple input styles for different contexts
 - Backward compatibility with existing Pos-based code

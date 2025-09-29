@@ -141,7 +141,11 @@ mod tests {
     #![allow(unused_imports)]
     use super::*;
 
-    // Define a test type to validate the macro.
+    /// Define a test type to validate the macro.
+    ///
+    /// Note: We can't use `Index`/`Length` types here because they already have these
+    /// implementations. This test exists specifically to validate the macro's code
+    /// generation.
     #[derive(Copy, Clone, PartialEq, Debug)]
     struct TestIndex(usize);
 

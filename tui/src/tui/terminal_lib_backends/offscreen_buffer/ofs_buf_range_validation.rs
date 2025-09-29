@@ -8,7 +8,7 @@
 //!
 //! ## Features
 //!
-//! - **Type-safe validation**: Uses the [`RangeBoundary`] trait for correct exclusive
+//! - **Type-safe validation**: Uses the [`RangeBoundsExt`] trait for correct exclusive
 //!   range semantics
 //! - **No `unwrap()` calls**: All validation returns `Option` for safe access
 //! - **Immutable and mutable variants**: Support for both read-only and write operations
@@ -89,12 +89,13 @@
 //! }
 //! ```
 //!
-//! [`RangeBoundary`]: crate::core::units::bounds_check::RangeBoundary
+//! [`RangeBoundsExt`]: crate::core::units::bounds_check::RangeBoundsExt
 
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelCharLine};
-use crate::{ColIndex, RowIndex, core::units::bounds_check::RangeBoundary};
+use crate::{ColIndex, RangeValidityStatus, RowIndex,
+            core::units::bounds_check::RangeBoundsExt};
 
 impl OffscreenBuffer {
     /// Check if a row range is valid without creating slice references.
@@ -130,7 +131,8 @@ impl OffscreenBuffer {
     /// ```
     #[must_use]
     pub fn is_row_range_valid(&self, row_range: Range<RowIndex>) -> bool {
-        row_range.is_valid(self.buffer.len())
+        row_range.check_range_is_valid_for_length(self.buffer.len())
+            == RangeValidityStatus::Valid
     }
 
     /// Check if a column range within a specific row is valid without creating
@@ -174,9 +176,10 @@ impl OffscreenBuffer {
     #[must_use]
     pub fn is_col_range_valid(&self, row: RowIndex, col_range: Range<ColIndex>) -> bool {
         let row_idx = row.as_usize();
-        self.buffer
-            .get(row_idx)
-            .is_some_and(|line| col_range.is_valid(line.len()))
+        self.buffer.get(row_idx).is_some_and(|line| {
+            col_range.check_range_is_valid_for_length(line.len())
+                == RangeValidityStatus::Valid
+        })
     }
 
     /// Validate a row range and return immutable access to the buffer lines.
@@ -224,7 +227,9 @@ impl OffscreenBuffer {
         &self,
         row_range: Range<RowIndex>,
     ) -> Option<(usize, usize, &[PixelCharLine])> {
-        if !row_range.is_valid(self.buffer.len()) {
+        if row_range.check_range_is_valid_for_length(self.buffer.len())
+            != RangeValidityStatus::Valid
+        {
             return None;
         }
 
@@ -278,7 +283,9 @@ impl OffscreenBuffer {
         &mut self,
         row_range: Range<RowIndex>,
     ) -> Option<(usize, usize, &mut [PixelCharLine])> {
-        if !row_range.is_valid(self.buffer.len()) {
+        if row_range.check_range_is_valid_for_length(self.buffer.len())
+            != RangeValidityStatus::Valid
+        {
             return None;
         }
 
@@ -338,7 +345,9 @@ impl OffscreenBuffer {
     ) -> Option<(usize, usize, &PixelCharLine)> {
         let row_idx = row.as_usize();
         self.buffer.get(row_idx).and_then(|line| {
-            if col_range.is_valid(line.len()) {
+            if col_range.check_range_is_valid_for_length(line.len())
+                == RangeValidityStatus::Valid
+            {
                 let start_idx = col_range.start.as_usize();
                 let end_idx = col_range.end.as_usize();
                 Some((start_idx, end_idx, line))
@@ -394,7 +403,9 @@ impl OffscreenBuffer {
     ) -> Option<(usize, usize, &mut PixelCharLine)> {
         let row_idx = row.as_usize();
         self.buffer.get_mut(row_idx).and_then(|line| {
-            if col_range.is_valid(line.len()) {
+            if col_range.check_range_is_valid_for_length(line.len())
+                == RangeValidityStatus::Valid
+            {
                 let start_idx = col_range.start.as_usize();
                 let end_idx = col_range.end.as_usize();
                 Some((start_idx, end_idx, line))
@@ -688,7 +699,9 @@ mod tests_range_validation {
                 // (we can't use the mutable reference from validate_col_range_mut here)
                 let col_range = col(2)..col(4);
 
-                if col_range.is_valid(line.len()) {
+                if col_range.check_range_is_valid_for_length(line.len())
+                    == RangeValidityStatus::Valid
+                {
                     let start_idx = col_range.start.as_usize();
                     let end_idx = col_range.end.as_usize();
                     line[start_idx..end_idx].fill(PixelChar::Spacer);

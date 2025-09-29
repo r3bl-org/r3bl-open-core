@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::buffer_struct::EditorBuffer;
-use crate::{BoundsCheck, CursorPositionBoundsStatus, IndexMarker, UnitCompare};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck,
+            CursorPositionBoundsStatus, NumericValue};
 
 /// Represents the position of a row within a buffer.
 ///
@@ -44,8 +45,8 @@ pub enum RowContentPositionStatus {
     BeyondBuffer,
 }
 
-/// Locate the col position using [`BoundsCheck::check_cursor_position_bounds`] method on
-/// column indices.
+/// Locate the col position using [`CursorBoundsCheck::check_cursor_position_bounds`]
+/// method on column widths.
 ///
 /// ```text
 /// R ┌──────────┐
@@ -72,7 +73,7 @@ pub fn locate_col(editor_buffer: &EditorBuffer) -> CursorPositionBoundsStatus {
     if let Some(_line) = editor_buffer.line_at_caret_scr_adj() {
         let col_index = editor_buffer.get_caret_scr_adj().col_index;
         let line_display_width = editor_buffer.get_line_display_width_at_caret_scr_adj();
-        col_index.check_cursor_position_bounds(line_display_width)
+        line_display_width.check_cursor_position_bounds(col_index)
     } else {
         // No line available - treat as at start.
         CursorPositionBoundsStatus::AtStart
@@ -117,7 +118,7 @@ pub fn locate_row(buffer: &EditorBuffer) -> RowContentPositionStatus {
     if buffer_line_count.is_zero() {
         // Empty buffer: treat as on first row.
         RowContentPositionStatus::OnFirstRow
-    } else if row_index.overflows(buffer_line_count) {
+    } else if row_index.overflows(buffer_line_count) == ArrayOverflowResult::Overflowed {
         // Beyond buffer bounds.
         RowContentPositionStatus::BeyondBuffer
     } else if buffer_line_count == 1.into() {
@@ -193,8 +194,7 @@ pub fn row_is_at_bottom(buffer: &EditorBuffer) -> bool {
 #[cfg(test)]
 mod locate_col_tests {
     use super::*;
-    use crate::{EOLCursorPosition, EditorEngine, EditorEngineConfig, assert_eq2, col,
-                row};
+    use crate::{EditorEngine, EditorEngineConfig, assert_eq2, col, row};
 
     #[test]
     fn test_locate_col_at_start() {
@@ -576,7 +576,7 @@ mod locate_row_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{EOLCursorPosition, EditorEngine, EditorEngineConfig, col, row};
+    use crate::{EditorEngine, EditorEngineConfig, col, row};
 
     #[test]
     fn test_col_is_at_start_of_line() {

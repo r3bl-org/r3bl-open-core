@@ -16,7 +16,7 @@
 //! The underlying adapter functions `gap_buffer_from_lines()` and `gap_buffer_from_str()`
 //! are private implementation details and should not be used directly.
 
-use crate::{GCStringOwned, SegIndex, UnitCompare, ZeroCopyGapBuffer,
+use crate::{GCStringOwned, NumericValue, SegIndex, ZeroCopyGapBuffer,
             md_parser_types::constants::NEW_LINE_CHAR};
 #[cfg(test)]
 use crate::{len, md_parser_types::constants::NULL_CHAR};

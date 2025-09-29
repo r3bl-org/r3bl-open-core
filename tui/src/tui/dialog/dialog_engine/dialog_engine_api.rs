@@ -482,7 +482,7 @@ mod internal_impl {
     mod render_results_panel_inner {
         #[allow(clippy::wildcard_imports)]
         use super::*;
-        use crate::core::units::bounds_check::LengthMarker;
+        use crate::core::units::bounds_check::LengthOps;
 
         pub fn paint_results(
             ops: &mut RenderOps,

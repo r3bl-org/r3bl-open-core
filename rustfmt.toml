@@ -15,7 +15,8 @@ fn_single_line = true
 imports_indent = "Visual"
 imports_layout = "Mixed"
 imports_granularity = "Crate"
-group_imports = "StdExternalCrate"
+# prevent the "re-export" sections from getting reformatted
+group_imports = "One"
 reorder_imports = true
 
 # modules

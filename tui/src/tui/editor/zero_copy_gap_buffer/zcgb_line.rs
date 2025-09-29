@@ -7,7 +7,7 @@
 
 use super::LineMetadata;
 use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, GraphemeString, Length,
-            Seg, SegContent, SegIndex, SegLength, SegStringOwned, UnitCompare,
+            NumericValue, Seg, SegContent, SegIndex, SegLength, SegStringOwned,
             byte_index, ch, width};
 
 /// A line from the gap buffer containing both content and metadata.
@@ -529,7 +529,7 @@ mod tests_empty_line_edge_cases {
 #[cfg(test)]
 mod tests_access_pattern_equivalence {
     use super::test_fixtures::create_test_buffer;
-    use crate::{UnitCompare, ZeroCopyGapBuffer, col, row, seg_index};
+    use crate::{NumericValue, ZeroCopyGapBuffer, col, row, seg_index};
 
     #[test]
     fn test_display_width_equivalence() {

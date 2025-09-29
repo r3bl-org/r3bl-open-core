@@ -1,5 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! Relative byte displacement from a reference point - see [`ByteOffset`] type.
+
 use std::ops::{Add, Deref, DerefMut, Sub};
 
 use super::ByteIndex;
@@ -11,13 +13,16 @@ use crate::{ChUnit, Index, Length, RowIndex};
 /// as opposed to [`ByteIndex`] which represents an absolute position within a buffer.
 /// This distinction is crucial for maintaining semantic correctness in operations.
 ///
+/// > This newtype struct does not use [`ChUnit`] like other unit types because
+/// > offsets are inherently [`usize`].
+///
 /// # Type System Disambiguation
 ///
 /// `ByteOffset` is conceptually distinct from both indices and lengths in the type
 /// system:
 /// - **Not an Index**: Unlike [`ByteIndex`], it doesn't represent an absolute position
-/// - **Not a Length**: Unlike length types (e.g., [`LengthMarker`]), it doesn't represent
-///   an extent or size
+/// - **Not a Length**: Unlike length types (e.g., [`LengthOps`]), it doesn't represent an
+///   extent or size
 /// - **Is a Displacement**: Represents a relative displacement/distance from a reference
 ///   point
 ///
@@ -49,7 +54,7 @@ use crate::{ChUnit, Index, Length, RowIndex};
 /// assert_eq!(absolute_position.as_usize(), 105);
 /// ```
 ///
-/// [`LengthMarker`]: crate::LengthMarker
+/// [`LengthOps`]: crate::LengthOps
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
 pub struct ByteOffset(pub usize);
 

@@ -2,8 +2,8 @@
 use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
-               GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress,
-               LengthMarker, Pos, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
+               GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, LengthOps,
+               Pos, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
                glyphs, inline_string, render_ops, render_pipeline, row, send_signal,
                throws_with_return};

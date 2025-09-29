@@ -9,46 +9,94 @@
 use super::super::*;
 use crate::{RowIndex,
             core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
-                   units::bounds_check::LengthMarker},
+                   units::bounds_check::{IndexOps, LengthOps}},
             row};
 
 impl OffscreenBuffer {
-    /// Get the top boundary of the scroll region (0 if no region set).
+    /// Get the scroll region as an inclusive range.
     ///
-    /// This resolves the ANSI parser's scroll region top boundary, converting
-    /// from 1-based ANSI coordinates to 0-based buffer indices.
-    pub fn get_scroll_top_boundary(&self) -> RowIndex {
-        self.ansi_parser_support
+    /// Returns `RangeInclusive<RowIndex>` representing the VT-100 scroll region
+    /// boundaries where line operations are confined. The range includes both
+    /// the top and bottom boundaries (inclusive on both ends).
+    ///
+    /// # Returns
+    ///
+    /// - If no scroll region is set: `[0, max_row_index]` (entire buffer)
+    /// - If scroll region is set: `[scroll_top, scroll_bottom]` (confined region)
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// Terminal Buffer (height=6, max_index=5):
+    /// ┌─────────────────┐
+    /// │ Line 0 (fixed)  │  ← Outside scroll region
+    /// │ Line 1 (fixed)  │  ← Outside scroll region
+    /// ├─────────────────┤  ← scroll_top = 2
+    /// │ Line 2          │  ← ┐
+    /// │ Line 3          │  ← │ Scroll Region
+    /// │ Line 4          │  ← │ [2, 5] inclusive
+    /// │ Line 5          │  ← ┘
+    /// ├─────────────────┤  ← scroll_bottom = 5
+    /// │ Line 6 (fixed)  │  ← Outside scroll region
+    /// └─────────────────┘
+    ///
+    /// range = get_scroll_range_inclusive();  // Returns 2..=5
+    /// *range.start()  // 2 (scroll_top)
+    /// *range.end()    // 5 (scroll_bottom)
+    /// range.contains(&row(4))  // true (within region)
+    /// ```
+    #[must_use]
+    pub fn get_scroll_range_inclusive(&self) -> std::ops::RangeInclusive<RowIndex> {
+        let scroll_top = self
+            .ansi_parser_support
             .scroll_region_top
-            .and_then(TermRow::to_zero_based) // Convert 1 to 0 based.
-            .map_or(/* None */ row(0), /* Some */ Into::into)
-    }
+            .and_then(TermRow::to_zero_based)
+            .map_or(/* None */ row(0), /* Some */ Into::into);
 
-    /// Get the bottom boundary of the scroll region (screen bottom if no region set).
-    ///
-    /// This resolves the ANSI parser's scroll region bottom boundary, converting
-    /// from 1-based ANSI coordinates to 0-based buffer indices.
-    pub fn get_scroll_bottom_boundary(&self) -> RowIndex {
-        self.ansi_parser_support
+        let scroll_bottom = self
+            .ansi_parser_support
             .scroll_region_bottom
-            .and_then(TermRow::to_zero_based) // Convert 1 to 0 based.
+            .and_then(TermRow::to_zero_based)
             .map_or(
                 /* None */ self.window_size.row_height.convert_to_index(),
                 /* Some */ Into::into,
-            )
+            );
+
+        scroll_top..=scroll_bottom
     }
 
     /// Clamp a row to stay within the scroll region boundaries.
     ///
     /// This ensures row positions respect ANSI scroll region settings,
     /// keeping the cursor within the defined scrollable area.
+    ///
+    /// ```text
+    /// Terminal Buffer:
+    /// ┌─────────────────┐
+    /// │ Line 0 (fixed)  │  ← Outside scroll region
+    /// │ Line 1 (fixed)  │  ← Outside scroll region
+    /// ├─────────────────┤  ← scroll_top = 2
+    /// │ Line 2          │  ← ┐
+    /// │ Line 3          │  ← │ Scroll Region
+    /// │ Line 4          │  ← │ [2, 5] inclusive
+    /// │ Line 5          │  ← ┘
+    /// ├─────────────────┤  ← scroll_bottom = 5
+    /// │ Line 6 (fixed)  │  ← Outside scroll region
+    /// └─────────────────┘
+    ///
+    /// clamp_row_to_scroll_region() behavior:
+    /// - row=1 → clamped to 2 (below scroll_top, clamped up)
+    /// - row=2 → returns 2    (at top boundary)
+    /// - row=4 → returns 4    (within scroll region)
+    /// - row=5 → returns 5    (at bottom boundary)
+    /// - row=6 → clamped to 5 (above scroll_bottom, clamped down)
+    /// ```
     #[must_use]
     pub fn clamp_row_to_scroll_region(&self, row: RowIndex) -> RowIndex {
-        let top = self.get_scroll_top_boundary();
-        let bottom = self.get_scroll_bottom_boundary();
+        let scroll_region = self.get_scroll_range_inclusive();
 
-        // Use Rust's built-in clamp for type-safe range clamping.
-        row.clamp(top, bottom)
+        // Use IndexOps's clamp_to_range for semantic clarity with inclusive ranges.
+        row.clamp_to_range(scroll_region)
     }
 }
 
@@ -63,41 +111,71 @@ mod tests_bounds_check_ops {
     }
 
     #[test]
-    fn test_get_scroll_top_boundary_no_region() {
+    fn test_get_scroll_range_inclusive_no_region() {
         let buffer = create_test_buffer();
 
-        // No scroll region set - should return row 0
-        assert_eq!(buffer.get_scroll_top_boundary(), row(0));
+        // No scroll region set - should return full buffer range [0, 5]
+        let range = buffer.get_scroll_range_inclusive();
+        assert_eq!(*range.start(), row(0));
+        assert_eq!(*range.end(), row(5));
     }
 
     #[test]
-    fn test_get_scroll_top_boundary_with_region() {
+    fn test_get_scroll_range_inclusive_with_top_only() {
         let mut buffer = create_test_buffer();
 
-        // Set scroll region top to row 3 (1-based)
+        // Set scroll region top to row 3 (1-based) = row 2 (0-based)
         buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
 
-        // Should return row 2 (0-based)
-        assert_eq!(buffer.get_scroll_top_boundary(), row(2));
+        // Should return [2, 5] (top boundary to end of buffer)
+        let range = buffer.get_scroll_range_inclusive();
+        assert_eq!(*range.start(), row(2));
+        assert_eq!(*range.end(), row(5));
     }
 
     #[test]
-    fn test_get_scroll_bottom_boundary_no_region() {
-        let buffer = create_test_buffer();
-
-        // No scroll region set - should return max row index (height 6 = max index 5)
-        assert_eq!(buffer.get_scroll_bottom_boundary(), row(5));
-    }
-
-    #[test]
-    fn test_get_scroll_bottom_boundary_with_region() {
+    fn test_get_scroll_range_inclusive_with_bottom_only() {
         let mut buffer = create_test_buffer();
 
-        // Set scroll region bottom to row 4 (1-based)
+        // Set scroll region bottom to row 4 (1-based) = row 3 (0-based)
         buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
 
-        // Should return row 3 (0-based)
-        assert_eq!(buffer.get_scroll_bottom_boundary(), row(3));
+        // Should return [0, 3] (start of buffer to bottom boundary)
+        let range = buffer.get_scroll_range_inclusive();
+        assert_eq!(*range.start(), row(0));
+        assert_eq!(*range.end(), row(3));
+    }
+
+    #[test]
+    fn test_get_scroll_range_inclusive_with_both() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        // Should return [2, 4] (0-based)
+        let range = buffer.get_scroll_range_inclusive();
+        assert_eq!(*range.start(), row(2));
+        assert_eq!(*range.end(), row(4));
+    }
+
+    #[test]
+    fn test_get_scroll_range_inclusive_membership() {
+        let mut buffer = create_test_buffer();
+
+        // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+
+        let range = buffer.get_scroll_range_inclusive();
+
+        // Test inclusive range membership
+        assert!(!range.contains(&row(1))); // Before range
+        assert!(range.contains(&row(2))); // At start
+        assert!(range.contains(&row(3))); // Within range
+        assert!(range.contains(&row(4))); // At end
+        assert!(!range.contains(&row(5))); // After range
     }
 
     #[test]
