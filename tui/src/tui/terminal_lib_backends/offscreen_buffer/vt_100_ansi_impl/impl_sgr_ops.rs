@@ -20,11 +20,6 @@
 //! - **SGR 90-97** (Bright foreground) - [`set_foreground_color`]
 //! - **SGR 100-107** (Bright background) - [`set_background_color`]
 //!
-//! [`reset_all_style_attributes`]: crate::OffscreenBuffer::reset_all_style_attributes
-//! [`apply_style_attribute`]: crate::OffscreenBuffer::apply_style_attribute
-//! [`set_foreground_color`]: crate::OffscreenBuffer::set_foreground_color
-//! [`set_background_color`]: crate::OffscreenBuffer::set_background_color
-//!
 //! All operations maintain VT100 compliance and handle proper style state
 //! management for terminal text rendering.
 //!
@@ -37,6 +32,10 @@
 //! - **Shim**: [`sgr_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_sgr_ops`] - Full ANSI pipeline testing
 //!
+//! [`reset_all_style_attributes`]: crate::OffscreenBuffer::reset_all_style_attributes
+//! [`apply_style_attribute`]: crate::OffscreenBuffer::apply_style_attribute
+//! [`set_foreground_color`]: crate::OffscreenBuffer::set_foreground_color
+//! [`set_background_color`]: crate::OffscreenBuffer::set_background_color
 //! [`sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::sgr_ops
 //! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_sgr_ops
 

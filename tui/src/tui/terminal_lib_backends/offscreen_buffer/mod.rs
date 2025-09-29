@@ -310,7 +310,7 @@
 //!
 //! The standardized validation helpers provide:
 //! - **Consistency**: Single source of truth for bounds checking logic
-//! - **Type Safety**: Leverages `RangeBoundary` trait for correct exclusive range
+//! - **Type Safety**: Leverages `RangeBoundsCheck` trait for correct exclusive range
 //!   semantics
 //! - **No `unwrap()` calls**: All validation returns `Option` for safe access
 //! - **Zero allocation**: Methods return references to existing buffer data

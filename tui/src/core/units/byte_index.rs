@@ -3,7 +3,7 @@
 use std::ops::{Add, Deref, DerefMut, Range};
 
 use crate::{ByteLength, ByteOffset, ChUnit, Index,
-            bounds_check::length_and_index_markers::{IndexMarker, UnitCompare}};
+            bounds_check::{IndexMarker, UnitMarker}};
 
 /// Represents a byte index inside of the underlying [`crate::InlineString`] of
 /// [`crate::GCStringOwned`].
@@ -57,7 +57,7 @@ impl From<i32> for ByteIndex {
     fn from(it: i32) -> Self { Self(it as usize) }
 }
 
-impl UnitCompare for ByteIndex {
+impl UnitMarker for ByteIndex {
     /// Convert the byte index to a usize value for numeric comparison, usually for array
     /// indexing operations.
     fn as_usize(&self) -> usize { self.0 }
@@ -70,28 +70,9 @@ impl UnitCompare for ByteIndex {
 
 impl IndexMarker for ByteIndex {
     type LengthType = ByteLength;
-
-    /// Convert this byte index to the corresponding byte length.
-    ///
-    /// This adds 1 to convert from 0-based index to 1-based length.
-    ///
-    /// ```text
-    /// ByteIndex=5 (0-based) to ByteLength (1-based) conversion:
-    ///
-    ///                         byte_index=5 (0-based)
-    ///                                 ↓
-    /// ByteIndex:  0   1   2   3   4   5   6   7   8   9
-    /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-    ///           │   │   │   │   │   │   │   │   │   │   │
-    ///           └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
-    /// ByteLength: 1   2   3   4   5   6   7   8   9   10
-    /// (1-based)                       ↑
-    ///                convert_to_length() = 6 (1-based)
-    /// ```
-    fn convert_to_length(&self) -> Self::LengthType { ByteLength::from(*self) }
 }
 
-/// Implement Add trait to enable `RangeBoundary` usage.
+/// Implement Add trait to enable `RangeBoundsCheck` usage.
 /// This allows `ByteIndex` to be used with `Range<ByteIndex>` for type-safe bounds
 /// checking.
 impl Add for ByteIndex {
@@ -131,6 +112,9 @@ pub trait ByteIndexRangeExt {
 impl ByteIndexRangeExt for Range<ByteIndex> {
     fn to_usize_range(self) -> Range<usize> { self.start.as_usize()..self.end.as_usize() }
 }
+
+// ArrayBoundsCheck implementation for type-safe bounds checking
+impl crate::ArrayBoundsCheck<crate::ByteLength> for ByteIndex {}
 
 #[cfg(test)]
 mod tests {
@@ -342,7 +326,7 @@ mod tests {
     fn test_byte_index_range_boundary_compatibility() {
         use std::ops::Range;
 
-        use crate::bounds_check::RangeBoundary;
+        use crate::bounds_check::RangeBoundsCheck;
 
         let start = byte_index(5);
         let end = byte_index(15);

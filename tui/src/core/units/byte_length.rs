@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 
 use crate::{ByteIndex, ChUnit, Length,
-            bounds_check::length_and_index_markers::{LengthMarker, UnitCompare}};
+            bounds_check::{LengthMarker, UnitMarker}};
 
 /// Represents a byte length measurement (1-based).
 ///
@@ -24,22 +24,22 @@ use crate::{ByteIndex, ChUnit, Length,
 /// # Examples
 ///
 /// ```rust
-/// use r3bl_tui::{ByteIndex, ByteLength, IndexMarker, byte_index, byte_len};
+/// use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteLength, IndexMarker, byte_index, byte_len};
 ///
 /// // Create a buffer with 10 bytes
 /// let buffer_size = byte_len(10);
 ///
 /// // Check if an index is within bounds
 /// let index = byte_index(5);
-/// assert!(!index.overflows(buffer_size));
+/// assert_eq!(index.overflows(buffer_size), ArrayOverflowResult::Within);
 ///
 /// // Index at the boundary
 /// let boundary_index = byte_index(9);
-/// assert!(!boundary_index.overflows(buffer_size));
+/// assert_eq!(boundary_index.overflows(buffer_size), ArrayOverflowResult::Within);
 ///
 /// // Index beyond boundary
 /// let beyond_index = byte_index(10);
-/// assert!(beyond_index.overflows(buffer_size));
+/// assert_eq!(beyond_index.overflows(buffer_size), ArrayOverflowResult::Overflowed);
 /// ```
 ///
 /// [`Length`]: crate::Length
@@ -131,7 +131,12 @@ impl From<Length> for ByteLength {
     fn from(it: Length) -> Self { Self(it.as_usize()) }
 }
 
-impl UnitCompare for ByteLength {
+impl Add for ByteLength {
+    type Output = Self;
+    fn add(self, other: Self) -> Self { ByteLength(self.0 + other.0) }
+}
+
+impl UnitMarker for ByteLength {
     /// Convert the byte length to a usize value for numeric comparison.
     fn as_usize(&self) -> usize { self.0 }
 
@@ -333,7 +338,7 @@ mod tests {
 
     // Unit trait tests.
     #[test]
-    fn test_unit_compare_implementation() {
+    fn test_unit_marker_implementation() {
         let length = byte_len(42);
         assert_eq!(length.as_usize(), 42);
         assert_eq!(length.as_u16(), 42u16);

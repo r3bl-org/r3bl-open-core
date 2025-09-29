@@ -4,8 +4,8 @@ use std::cmp::{self, Ordering};
 
 use super::selection_list::RowLocationInSelectionList;
 use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
-            ChUnitPrimitiveType, ColIndex, DEBUG_TUI_COPY_PASTE, DirectionChangeResult,
-            EOLCursorPosition, EditorBuffer, RowIndex, SelectionRange, Size,
+            ChUnitPrimitiveType, ColIndex, CursorBoundsCheck, DEBUG_TUI_COPY_PASTE,
+            DirectionChangeResult, EditorBuffer, RowIndex, SelectionRange, Size,
             caret_scr_adj, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
             fg_yellow, height, inline_string, row, underline, width};
 

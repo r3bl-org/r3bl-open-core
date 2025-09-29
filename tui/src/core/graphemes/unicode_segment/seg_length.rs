@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::{Deref, DerefMut};
+use std::ops::{Add, Deref, DerefMut};
 
 use super::seg_index::{SegIndex, seg_index};
-use crate::{ChUnit, LengthMarker, UnitCompare, ch};
+use crate::{ChUnit, LengthMarker, UnitMarker, ch};
 
 /// Represents a count of the number of grapheme segments inside of
 /// [`crate::GCStringOwned`]. The length is max index (zero based) + 1.
@@ -61,13 +61,28 @@ mod seg_length_impl_block {
 }
 
 // Implement bounds checking traits for SegLength.
-impl UnitCompare for SegLength {
+impl Add for SegLength {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        SegLength(ChUnit::from(self.0.value + other.0.value))
+    }
+}
+
+impl UnitMarker for SegLength {
     fn as_usize(&self) -> usize { self.as_usize() }
     fn as_u16(&self) -> u16 { self.0.value }
 }
 
 impl LengthMarker for SegLength {
     type IndexType = SegIndex;
+
+    fn convert_to_index(&self) -> Self::IndexType {
+        if self.0.value == 0 {
+            SegIndex(ChUnit::from(0))
+        } else {
+            SegIndex(ChUnit::from(self.0.value - 1))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -129,7 +144,7 @@ mod tests {
     fn seg_length_bounds_checking_traits() {
         let length = seg_length(100);
 
-        // Test UnitCompare trait
+        // Test UnitMarker trait
         assert_eq!(length.as_usize(), 100);
         assert_eq!(length.as_u16(), 100);
 

@@ -4,7 +4,7 @@ use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
 use super::{ChUnit, Index, ch, idx};
-use crate::{ColWidth, LengthMarker, RowHeight, UnitCompare,
+use crate::{ColWidth, LengthMarker, RowHeight, UnitMarker,
             create_numeric_arithmetic_operators};
 
 /// Represents a length measurement in character units.
@@ -185,7 +185,7 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl UnitCompare for Length {
+    impl UnitMarker for Length {
         fn as_usize(&self) -> usize { self.0.into() }
 
         fn as_u16(&self) -> u16 { self.0.into() }
@@ -193,6 +193,14 @@ mod bounds_check_trait_impls {
 
     impl LengthMarker for Length {
         type IndexType = Index;
+
+        fn convert_to_index(&self) -> Self::IndexType {
+            if self.0.value == 0 {
+                Index::new(0)
+            } else {
+                Index::new(self.0.value - 1)
+            }
+        }
     }
 }
 

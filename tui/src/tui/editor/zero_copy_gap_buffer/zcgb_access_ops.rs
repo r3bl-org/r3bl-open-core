@@ -105,8 +105,9 @@ use std::{ops::Range,
           str::{from_utf8, from_utf8_unchecked}};
 
 use super::super::ZeroCopyGapBuffer;
-use crate::{ByteIndexRangeExt, RowIndex, byte_index,
-            core::units::bounds_check::{IndexMarker, RangeBoundary, UnitCompare}};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt, RowIndex,
+            byte_index,
+            core::units::bounds_check::{RangeBoundsCheck, UnitMarker}};
 
 impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice.
@@ -168,7 +169,9 @@ impl ZeroCopyGapBuffer {
         let start_offset = *start_info.buffer_start;
 
         // Calculate end offset using type-safe bounds checking.
-        let end_offset = if line_range.end.overflows(self.line_count()) {
+        let end_offset = if line_range.end.overflows(self.line_count())
+            == ArrayOverflowResult::Overflowed
+        {
             self.buffer.len()
         } else {
             let end_info = self.get_line_info(line_range.end)?;

@@ -30,9 +30,8 @@
 //! for operations that don't modify content (e.g., viewport resizing).
 
 use super::scroll_editor_content;
-use crate::{BoundsCheck, CaretRaw, ColWidth, CursorPositionBoundsStatus,
-            EOLCursorPosition, MemoizedMemorySize, ScrOfs, SelectionList, Size,
-            ZeroCopyGapBuffer, width};
+use crate::{CaretRaw, ColWidth, CursorBoundsCheck, CursorPositionBoundsStatus,
+            MemoizedMemorySize, ScrOfs, SelectionList, Size, ZeroCopyGapBuffer, width};
 
 /// Mutable access to editor buffer fields using concrete `ZeroCopyGapBuffer` storage.
 #[derive(Debug)]
@@ -241,7 +240,7 @@ fn adjust_caret_col_if_not_in_bounds_of_line(
     // Make sure that the col_index is within the bounds of the given line width.
     // Use CursorPositionBoundsStatus for semantic caret positioning bounds checking.
     let current_col = editor_buffer_mut.inner.caret_raw.col_index;
-    let new_caret_col_index = match current_col.check_cursor_position_bounds(row_width) {
+    let new_caret_col_index = match row_width.check_cursor_position_bounds(current_col) {
         // Valid: cursor at start, on existing content, or after last character
         CursorPositionBoundsStatus::AtStart
         | CursorPositionBoundsStatus::Within
@@ -331,8 +330,8 @@ pub fn adjust_caret_col_if_not_in_middle_of_grapheme_cluster(
 
 #[cfg(test)]
 mod tests {
-    use crate::{EditorBuffer, EditorEngine, EditorEngineConfig, IndexMarker, assert_eq2,
-                col, height, row, width};
+    use crate::{ArrayBoundsCheck, ArrayOverflowResult, EditorBuffer, EditorEngine,
+                EditorEngineConfig, assert_eq2, col, height, row, width};
 
     #[test]
     fn test_adjust_caret_col_if_not_in_bounds_of_line() {
@@ -387,9 +386,10 @@ mod tests {
         // Just verify the caret is not in an invalid position (middle of emoji)
         // The caret could stay at col(7) if the implementation doesn't detect it as
         // invalid
-        assert!(
-            !adjusted_col
-                .overflows(buffer.get_lines().get_line_display_width(row(0)).unwrap())
+        assert_eq!(
+            adjusted_col
+                .overflows(buffer.get_lines().get_line_display_width(row(0)).unwrap()),
+            ArrayOverflowResult::Within
         );
 
         // Test 2: Caret at a valid position
@@ -401,9 +401,10 @@ mod tests {
 
         // The validation might adjust the position slightly.
         let final_col = buffer.get_caret_raw().col_index;
-        assert!(
-            !final_col
-                .overflows(buffer.get_lines().get_line_display_width(row(0)).unwrap())
+        assert_eq!(
+            final_col
+                .overflows(buffer.get_lines().get_line_display_width(row(0)).unwrap()),
+            ArrayOverflowResult::Within
         );
     }
 
@@ -512,9 +513,10 @@ mod tests {
         // Caret position after validation - the exact behavior depends on implementation.
         let adjusted_col = buffer.get_caret_raw().col_index;
         // Just verify it's a valid position within the line.
-        assert!(
-            !adjusted_col
-                .overflows(buffer.get_lines().get_line_display_width(row(1)).unwrap())
+        assert_eq!(
+            adjusted_col
+                .overflows(buffer.get_lines().get_line_display_width(row(1)).unwrap()),
+            ArrayOverflowResult::Within
         );
     }
 

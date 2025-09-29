@@ -8,7 +8,7 @@
 //!
 //! ## Features
 //!
-//! - **Type-safe validation**: Uses the [`RangeBoundary`] trait for correct exclusive
+//! - **Type-safe validation**: Uses the [`RangeBoundsCheck`] trait for correct exclusive
 //!   range semantics
 //! - **No `unwrap()` calls**: All validation returns `Option` for safe access
 //! - **Immutable and mutable variants**: Support for both read-only and write operations
@@ -89,12 +89,12 @@
 //! }
 //! ```
 //!
-//! [`RangeBoundary`]: crate::core::units::bounds_check::RangeBoundary
+//! [`RangeBoundsCheck`]: crate::core::units::bounds_check::RangeBoundsCheck
 
 use std::ops::Range;
 
 use super::{OffscreenBuffer, PixelCharLine};
-use crate::{ColIndex, RowIndex, core::units::bounds_check::RangeBoundary};
+use crate::{ColIndex, RowIndex, core::units::bounds_check::RangeBoundsCheck};
 
 impl OffscreenBuffer {
     /// Check if a row range is valid without creating slice references.

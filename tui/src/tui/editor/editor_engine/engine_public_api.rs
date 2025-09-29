@@ -5,13 +5,13 @@
 //! API.
 use syntect::easy::HighlightLines;
 
-use crate::{ColWidth, CommonResult, DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD,
-            DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR, EditMode, EditorBuffer, EditorEngine,
-            EditorEvent, FlexBox, GapBufferLine, HasFocus, IndexMarker, InputEvent, Key,
-            PrettyPrintDebug, RenderArgs, RenderOp, RenderOps, RenderPipeline,
-            RowHeight, RowIndex, ScrollOffsetColLocationInRange, SegStringOwned,
-            SelectionRange, Size, SpecialKey, StyleUSSpanLines, SyntaxHighlightMode,
-            ZOrder, caret_scr_adj,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CommonResult,
+            DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR,
+            EditMode, EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine,
+            HasFocus, InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp,
+            RenderOps, RenderPipeline, RowHeight, RowIndex,
+            ScrollOffsetColLocationInRange, SegStringOwned, SelectionRange, Size,
+            SpecialKey, StyleUSSpanLines, SyntaxHighlightMode, ZOrder, caret_scr_adj,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
             height, inline_string, new_style,
@@ -485,7 +485,9 @@ mod syn_hi_r3bl_path {
                 let row_index = row(row_index);
 
                 // Clip the content to max rows.
-                if row_index.overflows(max_display_row_count) {
+                if row_index.overflows(max_display_row_count)
+                    == ArrayOverflowResult::Overflowed
+                {
                     break;
                 }
 
@@ -524,7 +526,9 @@ mod syn_hi_syntect_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index.overflows(max_display_row_count) {
+            if row_index.overflows(max_display_row_count)
+                == ArrayOverflowResult::Overflowed
+            {
                 break;
             }
 
@@ -638,7 +642,9 @@ mod no_syn_hi_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index.overflows(max_display_row_count) {
+            if row_index.overflows(max_display_row_count)
+                == ArrayOverflowResult::Overflowed
+            {
                 break;
             }
 

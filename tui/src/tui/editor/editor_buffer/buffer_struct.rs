@@ -6,7 +6,7 @@ use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
             EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
             MemoizedMemorySize, MemorySize, RowHeight, RowIndex, ScrOfs, SegStringOwned,
-            Size, TinyInlineString, UnitCompare, ZeroCopyGapBuffer,
+            Size, TinyInlineString, UnitMarker, ZeroCopyGapBuffer,
             caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs,
             inline_string, ok, row, validate_buffer_mut::EditorBufferMutNoDrop, width,
             with_mut};

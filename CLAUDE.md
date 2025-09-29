@@ -1,6 +1,7 @@
 # Claude Code Instructions for r3bl-open-core
 
-When doing work, when you have questions about important choices to be made, or ambiguities in the
+When doing work, when you have questions about important choices to be made, or
+ambiguities in the
 task, please ask the user for clarification immediately.
 
 ## Rust Code Guidelines
@@ -14,84 +15,385 @@ Use these MCP tools to navigate and modify Rust code effectively:
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
 
 Throughout the implementation, use the type-safe bounds checking utilities from
-`tui/src/core/units/bounds_check/` which provide three main patterns for different use cases.
+`tui/src/core/units/bounds_check/` which provide foundational traits for core operations
+and semantic traits for specific use case validation.
 
 #### Core Type Safety Principles
 
-- Instead of using `usize` or `u16` for indices, use `IndexMarker` types (0-based): `RowIndex`, `ColIndex`
-- Instead of using `usize` or `u16` for lengths, use `LengthMarker` types (1-based): `RowHeight`, `ColWidth`
+- Instead of using `usize` or `u16` for indices, use `IndexMarker` types (0-based):
+  `RowIndex`,
+  `ColIndex`
+- Instead of using `usize` or `u16` for lengths, use `LengthMarker` types (1-based):
+  `RowHeight`,
+  `ColWidth`
 - Use type-safe comparisons to eliminate `.as_usize()` calls where possible
 - Use `.is_zero()` for zero checks instead of `== 0`
 - Leverage `convert_to_index()` and `convert_to_length()` for safe type conversions
 
+#### Common Imports for Bounds Checking
+
+When using bounds checking in your code, you'll typically need these imports:
+
+```rust
+use std::ops::Range;
+use r3bl_tui::{
+    // Core traits
+    ArrayBoundsCheck, IndexMarker, LengthMarker, ViewportBoundsCheck, RangeBoundsCheck,
+    RangeConversion, CursorBoundsCheck,
+    // Status enums
+    ArrayAccessBoundsStatus, CursorPositionBoundsStatus,
+    // Type constructors
+    col, row, width, height, idx, len,
+    // Index types
+    ColIndex, RowIndex, Index,
+    // Length types
+    ColWidth, RowHeight, Length,
+};
+```
+
 #### Pattern 1: Array Access Bounds Checking
 
-**When to use**: Accessing elements in arrays, vectors, or buffers where you have an index and a container length.
+**When to use**: Accessing elements in arrays, vectors, or buffers where you have an index
+and a
+container length.
 
-**Methods**:
+**Methods** (from `ArrayBoundsCheck` trait):
+
 - `index.overflows(length)` - checks if `index >= length`
+- `index.underflows(min_bound)` - checks if `index < min_bound`
 - `index.check_array_access_bounds(length)` - returns `ArrayAccessBoundsStatus`
-- `length.is_overflowed_by(index)` - inverse check from length perspective
-- `index.clamp_to_max_length(length)` - clamp index to valid range
+- `index.check_within_bounds(min, max)` - returns `RangeBoundsResult`
+- `length.is_overflowed_by(index)` - same check from length perspective (LengthMarker)
+- `index.clamp_to_max_length(length)` - clamp index to valid range (IndexMarker)
+- `index.clamp_to_min_index(min_bound)` - clamp index to minimum bound (IndexMarker)
 
 **Example**:
+
 ```rust
 if row_index.overflows(buffer_height) {
     return; // Index out of bounds
 }
-let line = buffer[row_index]; // Safe access
+let line = buffer[row_index.as_usize()]; // Safe access
 ```
 
 #### Pattern 2: Cursor Position Bounds Checking
 
-**When to use**: Positioning cursors where `index == length` is valid (cursor can be placed at end).
+**When to use**: Positioning cursors where `index == length` is valid (cursor can be
+placed at end).
 
 **Methods**:
-- `cursor_pos.check_cursor_position_bounds(content_length)` - allows position at end
-- Use this instead of `overflows()` for cursor placement
+
+- `content_length.check_cursor_position_bounds(cursor_pos)` - allows position at end
+- `content_length.eol_cursor_position()` - get cursor position at end-of-line
+- `content_length.is_valid_cursor_position(pos)` - check if cursor position is valid
+- `content_length.clamp_cursor_position(pos)` - clamp cursor to valid bounds
+- Use these instead of `overflows()` for cursor placement
 
 **Example**:
+
 ```rust
-match cursor_row.check_cursor_position_bounds(line_count) {
+match line_count.check_cursor_position_bounds(cursor_row) {
     CursorPositionBoundsStatus::Within => { /* valid position */ }
     CursorPositionBoundsStatus::AtEnd => { /* cursor at end, also valid */ }
     _ => { /* invalid position */ }
 }
 ```
 
-#### Pattern 3: Range Membership Checking
+#### Pattern 3: Viewport Visibility Checking
 
-**When to use**: Checking if a position is within a defined region or window.
+**When to use**: Determining what content is visible in rendering windows with exclusive
+upper
+bounds.
 
 **Methods**:
-- `index.check_bounds_range(start_index, width_or_height)` - for viewport/window checks `[start, start+length)`
-- `index.check_inclusive_range_bounds(min_index, max_index)` - for inclusive ranges `[min, max]`
+
+- `index.check_viewport_bounds(viewport_start, viewport_size)` - for viewport/window
+  checks
+  `[start, start+size)`
+- `index.is_in_viewport(viewport_start, viewport_size)` - boolean check for viewport
+  visibility
 
 **Use Cases**:
-- **Viewport checking**: Use `check_bounds_range(viewport_start, viewport_size)` for windows
-- **Scroll regions**: Use `check_inclusive_range_bounds(scroll_top, scroll_bottom)` for VT-100 regions
-- **Selection ranges**: Use `check_inclusive_range_bounds(selection_start, selection_end)` for text selection
+
+- **Viewport checking**: Use `check_viewport_bounds(viewport_start, viewport_size)` for
+  windows
+- **Rendering optimization**: Skip processing for off-screen elements
+- **Scroll calculations**: Determining what content needs to be rendered
 
 **Examples**:
+
 ```rust
 // Viewport containment (exclusive upper bound)
-match caret_col.check_bounds_range(viewport_start, viewport_width) {
+match caret_col.check_viewport_bounds(viewport_start, viewport_width) {
     ArrayAccessBoundsStatus::Within => { /* caret visible */ }
     _ => { /* need to scroll */ }
 }
 
-// Scroll region membership (inclusive bounds)
-match row_index.check_inclusive_range_bounds(scroll_top, scroll_bottom) {
-    ArrayAccessBoundsStatus::Within => { /* operate within scroll region */ }
-    _ => { /* skip operation */ }
+// Simple viewport visibility check
+if content_index.is_in_viewport(viewport_start, viewport_size) {
+    render_content(content_index);
 }
 ```
 
-#### Range Validation
+#### Pattern 4: Range Membership & Validation
 
-- Use `RangeBoundary::is_valid()` for validating `Range<Index>` objects
-- Use `range_ext::RangeValidation` for complex range operations
+**When to use**: Validating range objects and checking if indices are within ranges.
+
+This pattern covers TWO distinct operations:
+
+**A. Range Structure Validation** - Check if range object is well-formed:
+
+**Methods**:
+- `range.is_valid(buffer_length)` - check if `Range<Index>` or `RangeInclusive<Index>` is structurally valid
+- `range.clamp_range_to(buffer_length)` - ensure range fits within content bounds
+
+**Use Cases**:
+- Iterator bounds validation
+- Algorithm parameter checking
+- Range operations on buffers
+
+**Example**:
+```rust
+use std::ops::Range;
+use r3bl_tui::{col, width, RangeBoundsCheck};
+
+let range: Range<ColIndex> = col(2)..col(8);
+let buffer_length = width(10);
+
+if range.is_valid(buffer_length) {
+    for i in range { /* safe iteration */ }
+}
+```
+
+**B. Range Membership Checking** - Check if index is within range:
+
+**Methods**:
+- `range.check_index_is_within(index)` - check if index is within range bounds (works for both `Range<Index>` and `RangeInclusive<Index>`)
+
+**Use Cases**:
+- VT-100 scroll region checking (inclusive bounds `[min, max]`)
+- Text selection highlighting (inclusive bounds)
+- Array iteration bounds (exclusive bounds `[min, max)`)
+- Any range membership test with detailed status
+
+**Examples**:
+```rust
+use r3bl_tui::{row, col, RangeBoundsCheck, RangeBoundsResult};
+
+// VT-100 scroll region checking (inclusive: both endpoints valid)
+let scroll_region = row(2)..=row(5);
+if scroll_region.check_index_is_within(row_index) == RangeBoundsResult::Within {
+    perform_line_operation(row_index);
+}
+
+// Exclusive range checking for array iteration
+let range = col(3)..col(8);  // [3, 8) - exclusive upper bound
+match range.check_index_is_within(col_index) {
+    RangeBoundsResult::Within => process_column(col_index),
+    RangeBoundsResult::Underflowed => handle_too_low(),
+    RangeBoundsResult::Overflowed => handle_too_high(),
+}
+
+// Three-state checking for detailed error handling
+if scroll_region.check_index_is_within(row_index) != RangeBoundsResult::Within {
+    return Ok(()); // Skip operation - cursor outside scroll region
+}
+```
+
+**Alternative**: For simple boolean checks, you can still use standard library's `.contains()`:
+```rust
+// Simple boolean check (no detailed status)
+if (scroll_top..=scroll_bottom).contains(&row_index) {
+    perform_line_operation(row_index);
+}
+```
+
+**C. Range Clamping** - Clamp index to stay within inclusive range bounds:
+
+**Methods**:
+- `index.clamp_to_range(range)` - clamp index to `RangeInclusive<Index>` bounds
+
+**Use Cases**:
+- VT-100 scroll region clamping (cursor positioning within scroll bounds)
+- Text selection boundary enforcement
+- Widget/viewport boundary constraints
+
+**Examples**:
+```rust
+use std::ops::RangeInclusive;
+use r3bl_tui::{IndexMarker, row};
+
+// VT-100 scroll region clamping
+let scroll_region: RangeInclusive<_> = row(2)..=row(5);
+let cursor_row = row(8);
+let clamped = cursor_row.clamp_to_range(scroll_region);
+assert_eq!(clamped, row(5)); // Clamped to bottom of scroll region
+
+// Text selection boundary enforcement
+let selection = col(10)..=col(20);
+let insert_col = col(25);
+let clamped_col = insert_col.clamp_to_range(selection);
+assert_eq!(clamped_col, col(20)); // Clamped to end of selection
+```
+
+**D. Range Type Conversion** - Convert between inclusive and exclusive ranges:
+
+**Methods**:
+- `inclusive_range.to_exclusive()` - convert `RangeInclusive<Index>` → `Range<Index>`
+
+**Use Cases**:
+- VT-100 scroll regions (stored as inclusive) → Rust iteration (needs exclusive)
+- Any case where you have inclusive bounds but need exclusive range semantics
+- Eliminating manual `+1` arithmetic when converting range types
+
+**Why This Matters**:
+VT-100 terminal operations use inclusive ranges where both endpoints are valid row positions (e.g., scroll region `2..=5` means rows 2,3,4,5 are all in the region). However, Rust's slice operations and iteration use exclusive ranges where the end is NOT included (e.g., `2..6` processes indices 2,3,4,5). The `to_exclusive()` method provides explicit, type-safe conversion between these two semantics.
+
+**Example**:
+```rust
+use r3bl_tui::{row, len, RangeConversion};
+
+// VT-100 scroll region: rows 2,3,4,5 (inclusive - both endpoints valid)
+let scroll_region = row(2)..=row(5);
+
+// Convert for Rust iteration (exclusive - end not included)
+let iter_range = scroll_region.to_exclusive();  // row(2)..row(6)
+
+// Use with buffer operations
+buffer.shift_lines_up(iter_range, len(1));
+```
+
+**Before** (manual conversion - error-prone):
+```rust
+let scroll_region = self.get_scroll_range_inclusive();
+self.shift_lines_up(
+    {
+        let start = *scroll_region.start();
+        let end = *scroll_region.end() + 1;  // Manual +1 - easy to forget!
+        start..end
+    },
+    len(1),
+)
+```
+
+**After** (type-safe conversion - explicit intent):
+```rust
+let scroll_region = self.get_scroll_range_inclusive();
+self.shift_lines_up(scroll_region.to_exclusive(), len(1))
+```
+
+#### Trait Organization and Use Case Mapping
+
+The bounds checking system is organized into foundational traits and semantic traits.
+Use this guide to quickly find the right trait for your task:
+
+##### Trait Hierarchy
+
+Both `IndexMarker` and `LengthMarker` build on top of `UnitCompare` as their super-trait:
+
+```text
+Trait Hierarchy:
+
+                   UnitCompare
+                  (super-trait)
+                       │
+                       │ Provides: as_usize(), as_u16(), is_zero()
+                       │ Purpose: Generic numeric conversions
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+     IndexMarker                LengthMarker
+     (0-based)                  (1-based)
+          │                         │
+  Adds: overflows(),        Adds: is_overflowed_by(),
+        underflows(),             remaining_from(),
+        clamp_to_*(),             convert_to_index(),
+        convert_to_length()       clamp_to_max()
+```
+
+- **`UnitCompare`** - The foundational trait providing numeric conversions that enable all
+  higher-level operations. Use this directly when writing generic bounds checking functions.
+
+- **`IndexMarker`** - Extends `UnitCompare` with 0-based position semantics and bounds
+  checking operations specific to array indexing.
+
+- **`LengthMarker`** - Extends `UnitCompare` with 1-based size semantics and space
+  calculation operations specific to container sizes.
+
+This hierarchy enables both generic operations (via `UnitCompare`) and specialized,
+type-safe operations (via `IndexMarker` and `LengthMarker`).
+
+##### Foundational Traits (Core Operations)
+
+| Trait                         | Module                | Key Question                              |
+|-------------------------------|-----------------------|-------------------------------------------|
+| UnitCompare                   | `unit_compare.rs`     | "How do I convert to usize/u16?"          |
+| IndexMarker                   | `index_marker.rs`     | "How do indices relate to each other?"    |
+| Result enums                  | `result_enums.rs`     | "What status types are available?"        |
+| LengthMarker                  | `length_marker.rs`    | "What can I do with a length value?"      |
+
+##### Semantic Traits (Use Case Validation)
+
+| Pattern | Trait                       | Module                  | Key Question                            |
+|---------|-----------------------------|-----------------------|-------------------------------------------|
+| 1       | ArrayBoundsCheck            | `array_bounds.rs`     | "Can I safely access array index?"        |
+| 2       | CursorBoundsCheck           | `cursor_bounds.rs`    | "Can a cursor be placed at position N?"   |
+| 3       | ViewportBoundsCheck         | `viewport_bounds.rs`  | "Is this content visible in my viewport?" |
+| 4       | RangeBoundsCheck            | `range_bounds.rs`     | "Is index in range? Is range valid?"      |
+
+##### When to Use Foundational Traits Directly
+
+**📐 Space calculations & text wrapping** → Use `LengthMarker` trait
+```rust
+let remaining = line_width.remaining_from(cursor_col);
+if text_length.convert_to_index().overflows(remaining) {
+    /* wrap to next line */
+}
+```
+
+**🔧 Writing generic bounds functions** → Use `UnitCompare` trait
+```rust
+fn safe_access<I, L>(index: I, length: L) -> bool
+where I: UnitCompare, L: UnitCompare {
+    index.as_usize() < length.as_usize()
+}
+```
+
+**🎛️ Check cursor position (EOL detection)** → Use `CursorPositionBoundsStatus`
+```rust
+match content.check_cursor_position_bounds(cursor) {
+    CursorPositionBoundsStatus::AtEnd => /* cursor after last char */,
+    CursorPositionBoundsStatus::Beyond => /* show error to user */,
+    _ => /* other cases */,
+}
+```
+
+#### Additional Methods
+
+**Cursor Positioning**:
+
+- `length.eol_cursor_position()` - get cursor position at end-of-line (after last
+  character)
+- `length.is_valid_cursor_position(pos)` - check if cursor position is valid
+- `length.clamp_cursor_position(pos)` - clamp cursor to valid bounds
+
+**Index Clamping**:
+
+- `index.clamp_to_range(range)` - clamp index to `RangeInclusive<Index>` bounds for scroll regions and selections
+- `index.clamp_to_max_length(length)` - clamp index to upper bound expressed as length
+- `index.clamp_to_min_index(min_bound)` - clamp index to lower bound expressed as index
+
+**Length Operations**:
+
+- `length.is_overflowed_by(index)` - same check from length perspective
+- `length.remaining_from(index)` - calculate remaining space from position
+- `length.clamp_to_max(max_length)` - clamp length to maximum bounds
+
+**Advanced Usage**:
+
 - Avoid manually comparing start and end values as `usize`
+- Use semantic aliases for domain-specific operations (scroll regions, selections)
+- Prefer type-safe methods over raw numeric comparisons
 
 # Testing interactive terminal applications
 
@@ -109,13 +411,15 @@ After completing tasks, run:
 - `cargo test --no-run` - Compile test code
 - `cargo clippy --all-targets` / `cargo clippy --fix --allow-dirty` - Discover lints
 - `cargo doc --no-deps` - Generate docs
-- `cargo nextest run` - Run tests
+- `cargo nextest run` - Run tests (does not run doctests)
+- `cargo test --doc` - Run doctests
 
 Performance analysis:
 
 - `cargo bench` - Benchmarks (mark tests with `#[bench]`)
 - `cargo flamegraph` - Profiling
-- For TUI apps: ask user to run `run_example_with_flamegraph_profiling_perf_fold` in `lib_script.nu`
+- For TUI apps: ask user to run `run_example_with_flamegraph_profiling_perf_fold` in
+  `lib_script.nu`
 
 ### Build Optimizations
 
@@ -125,7 +429,10 @@ The project includes several build optimizations configured in `.cargo/config.to
 - **Parallel compilation**: `-Z threads=8` for faster nightly builds
 - **Wild linker**: Fast alternative linker for Linux (auto-configured when available)
 
-Wild linker is automatically activated when both `clang` and `wild-linker` are installed via `bootstrap.sh`. It provides significantly faster link times for iterative development on Linux.
+Wild linker is automatically activated when both `clang` and `wild-linker` are installed
+via
+`bootstrap.sh`. It provides significantly faster link times for iterative development on
+Linux.
 
 ### Git Workflow
 

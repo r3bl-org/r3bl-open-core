@@ -1,33 +1,59 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! End-of-line cursor positioning utilities for text editing and range operations.
-//!
-//! This module provides unified traits for handling cursor positioning semantics where
-//! cursors can be placed at the end-of-line position (index == length). This is essential
-//! for:
-//! - Cursor positioning after the last character in text editing
-//! - Range operations with exclusive end semantics (e.g., 0..10 for buffer length 10)
-//! - Text editor interactions where cursors naturally sit after content
-//!
-//! The module provides the [`EOLCursorPosition`] trait for end-of-line cursor positioning
-//! and the [`RangeBoundary`] trait for range validation with text editing semantics.
+//! Cursor positioning for text editing - see [`CursorBoundsCheck`] trait.
 
-use std::ops::Range;
+use super::{length_marker::LengthMarker, result_enums::CursorPositionBoundsStatus,
+            unit_marker::UnitMarker};
 
-use super::{array_bounds::BoundsCheck,
-            length_and_index_markers::{IndexMarker, LengthMarker},
-            result_enums::{ArrayAccessBoundsStatus, CursorPositionBoundsStatus}};
-use crate::ArrayAccessBoundsStatus::Overflowed;
-
-/// Trait for determining end-of-line cursor positioning in text editing contexts.
+/// Cursor end-of-line positioning semantics for text editing.
 ///
-/// This trait provides the capability to determine where a cursor can be positioned
-/// at the end of a line or buffer. It handles the special case where a cursor position
+/// This trait provides cursor positioning utilities specifically for text editing
+/// contexts where cursors can be placed at the end-of-line position (index == length).
+///
+/// > See [Interval Notation] in the [Module Documentation] for the mathematical range
+/// > notation used in the diagrams.
+///
+/// ## Core Purpose
+///
+/// Use case: "Can a text cursor be placed at this position?"
+///
+/// This trait handles the special case in text editing where a cursor position
 /// can equal the content length, representing the position "after" the last character.
-/// This is essential for:
-/// - Cursor positioning after the last character in text editing
-/// - Range operations with exclusive end semantics
-/// - Natural text editor interactions where cursors sit after content
+/// This is distinct from array bounds checking where such positions are invalid.
+///
+/// # Key Distinction from Other Bounds Traits
+///
+/// | Trait                         | Rule                          | Use Case      | Example                                              |
+/// |-------------------------------|-------------------------------|---------------|------------------------------------------------------|
+/// | [`ArrayBoundsCheck`]          | `index < length`              | Index safety  | `buffer[5]` needs `5 < buffer.len()`                 |
+/// | `CursorBoundsCheck`📍         | `index <= length`             | Text editing  | Cursor can be at position `length` (after last char) |
+/// | [`ViewportBoundsCheck`]       | `start <= index < start+size` | Rendering     | Content visibility in windows                        |
+/// | [`RangeBoundsCheck`]          | `start <= end <= length`      | Iteration     | Range object structural validation                   |
+///
+/// ## Cursor Positioning Semantics
+///
+/// In text editing, cursors have special positioning rules that differ from array access:
+///
+/// ```text
+/// Text content: "hello" (length=5)
+///
+///             ╭── length=5 ───╮
+///             │   (1-based)   │
+/// Index:      0   1   2   3   4   5
+/// (0-based) ┌───┬───┬───┬───┬───┬───┐
+/// Content:  │ h │ e │ l │ l │ o │ ▓ │
+///           └───┴───┴───┴───┴───┴───┘
+///             ╰─valid indices─╯   │
+///             ╰─valid cursor──────╯
+///               positions         ↑
+///                        "after last position"
+///
+/// Array access: indices 0-4 are valid (index < length)
+/// Cursor positions: indices 0-5 are valid (index <= length)
+/// ```
+///
+/// Position 5 is invalid for array access (`text[5]` would panic) but valid for
+/// cursor placement (cursor after the last character).
 ///
 /// # Semantic Meaning
 ///
@@ -46,10 +72,43 @@ use crate::ArrayAccessBoundsStatus::Overflowed;
 ///                      "after last position"
 /// ```
 ///
+/// ## Primary Use Cases
+///
+/// This trait is essential for:
+/// - Cursor positioning after the last character in text editing
+/// - Range operations with exclusive end semantics
+/// - Natural text editor interactions where cursors sit after content
+/// - Text cursor positioning: Where to place the text insertion cursor
+/// - Range end boundaries: Exclusive range ends in text processing
+/// - Navigation operations: End key, append operations
+/// - Selection boundaries: Text selection endpoint validation
+///
+/// ## Relationship to Other Bounds Checking
+///
+/// This trait provides the foundation for cursor-aware operations:
+/// - Before text operations: Use cursor bounds to validate positions
+/// - During array access: Use array bounds to ensure correct content operations
+/// - For range operations: Use range validation to ensure structural validity
+///
+/// ## See Also
+///
+/// - [`ArrayBoundsCheck`] - Array access safety with strict boundaries
+/// - [`ViewportBoundsCheck`] - Viewport visibility checking
+/// - [`RangeBoundsCheck`] - Range validation for iteration and algorithms
+/// - [`IndexMarker`] - Index types that use cursor positioning
+/// - [Module documentation] - Overview of the complete bounds checking architecture
+///
+/// [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
+/// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
+/// [`RangeBoundsCheck`]: crate::RangeBoundsCheck
+/// [`IndexMarker`]: crate::IndexMarker
+/// [Module documentation]: mod@crate::core::units::bounds_check
+/// [Interval Notation]: mod@crate::core::units::bounds_check#interval-notation
+///
 /// # Examples
 ///
 /// ```
-/// use r3bl_tui::{EOLCursorPosition, ColWidth, col, width};
+/// use r3bl_tui::{CursorBoundsCheck, ColWidth, col, width};
 ///
 /// let w = width(5);
 /// assert_eq!(w.eol_cursor_position(), col(5));
@@ -57,7 +116,7 @@ use crate::ArrayAccessBoundsStatus::Overflowed;
 /// let zero_w = width(0);
 /// assert_eq!(zero_w.eol_cursor_position(), col(0));
 /// ```
-pub trait EOLCursorPosition: LengthMarker {
+pub trait CursorBoundsCheck: LengthMarker {
     /// Get the cursor position at end-of-line (after the last character).
     ///
     /// This is the position where a cursor can be placed to continue typing,
@@ -72,9 +131,14 @@ pub trait EOLCursorPosition: LengthMarker {
 
     /// Check if a cursor position is valid for this line/buffer.
     ///
+    /// See the [Interval Notation] section in the module documentation for notation
+    /// details.
+    ///
     /// Returns true for positions in the range [0, length] (inclusive of EOL position).
     /// This allows cursors to be positioned anywhere from the start to after the last
     /// character.
+    ///
+    /// [Interval Notation]: mod@crate::core::units::bounds_check#interval-notation
     fn is_valid_cursor_position(&self, pos: Self::IndexType) -> bool;
 
     /// Clamp a cursor position to valid bounds for this line/buffer.
@@ -82,32 +146,70 @@ pub trait EOLCursorPosition: LengthMarker {
     /// Ensures the cursor position is valid for text editing operations.
     /// Positions beyond the EOL are clamped to the EOL position.
     fn clamp_cursor_position(&self, pos: Self::IndexType) -> Self::IndexType;
+
+    /// Performs cursor position bounds checking for text editing contexts.
+    ///
+    /// This method validates whether a position is suitable for cursor placement,
+    /// allowing the cursor to be positioned at the end-of-line (after the last
+    /// character). This is distinct from array access checking where such positions
+    /// would be invalid.
+    ///
+    /// ```text
+    /// Cursor position checking:
+    ///
+    /// Self (Length)
+    /// Position:   0   1   2   3   4   5   6   7   8   9   10  11
+    /// (0-based) ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+    ///           │ S │ W │ W │ W │ W │ W │ W │ W │ W │ W │ E │ B │
+    ///           ├─▲─┴─▲─┴───┴───┴───┴───┴───┴───┴───┴─▲─┴─▲─┼─▲─┘
+    ///           │ │   │                               │   │ │ │
+    ///           │Start│                               │  End│Beyond
+    ///           │     └────────── Within ─────────────┘     │
+    ///           └───────────── content_length=10 ───────────┘
+    ///
+    /// S = AtStart (position=0)
+    /// W = Within (1 ≤ position < 10)
+    /// E = AtEnd (position=10)
+    /// B = Beyond (position > 10)
+    /// ```
+    ///
+    /// # Returns
+    /// [`CursorPositionBoundsStatus`] indicating whether the position is within content,
+    /// at a content boundary, or beyond content boundaries.
+    fn check_cursor_position_bounds(
+        &self,
+        pos: Self::IndexType,
+    ) -> CursorPositionBoundsStatus;
 }
 
 /// Blanket implementation for all types that implement `LengthMarker`.
 ///
 /// This provides consistent EOL cursor positioning for all length types
-/// (Length, `ColWidth`, `RowHeight`) without code duplication.
-impl<T: LengthMarker> EOLCursorPosition for T
+/// (`Length`, `ColWidth`, `RowHeight`) without code duplication.
+impl<T: LengthMarker> CursorBoundsCheck for T
 where
     T: Copy,
-    T::IndexType: From<usize> + std::ops::Add<Output = T::IndexType> + PartialOrd + Copy,
+    T::IndexType: From<usize>
+        + std::ops::Add<Output = T::IndexType>
+        + PartialOrd
+        + Copy
+        + UnitMarker,
 {
     fn eol_cursor_position(&self) -> Self::IndexType {
         let length_val = self.as_usize();
 
         if length_val == 0 {
             // Use From<usize> for type-safe construction.
-            T::IndexType::from(0)
+            T::IndexType::from(0_usize)
         } else {
             // Normal case: last valid index + 1.
-            self.convert_to_index() + T::IndexType::from(1)
+            self.convert_to_index() + T::IndexType::from(1_usize)
         }
     }
 
     fn is_valid_cursor_position(&self, pos: Self::IndexType) -> bool {
         // Position is valid if it's not beyond the boundary
-        pos.check_cursor_position_bounds(*self) != CursorPositionBoundsStatus::Beyond
+        self.check_cursor_position_bounds(pos) != CursorPositionBoundsStatus::Beyond
     }
 
     fn clamp_cursor_position(&self, pos: Self::IndexType) -> Self::IndexType {
@@ -117,172 +219,22 @@ where
             self.eol_cursor_position()
         }
     }
-}
 
-/// Range operations that respect content boundary semantics.
-///
-/// ## Why content boundary semantics matter for ranges
-///
-/// Rust's `Range<T>` uses exclusive end semantics, meaning the end value is NOT included
-/// in the range. This creates a special case when validating ranges against content
-/// bounds: a range like `0..10` is valid for content of length 10, even though index 10
-/// itself would be out of bounds for content access.
-///
-/// ## Example
-///
-/// Consider content with 10 columns (indices 0-9):
-/// ```text
-///           ╭────── content.len()=10 ───────────╮
-/// Column:   0   1   2   3   4   5   6   7   8   9   10 (invalid index)
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-///         │ A │ B │ C │ D │ E │ F │ G │ H │ I │ J │ ! │
-///         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
-///           ╰─────────── valid indices ─────────╯
-/// ```
-///
-/// When we want to process columns 5-9 (inclusive), we use Range `5..10`:
-/// ```text
-///                               ╭─── Range 5..10 ───╮
-///                               ▼                   ▼
-/// Column:   0   1   2   3   4   5   6   7   8   9   10
-///         ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
-///         │ A │ B │ C │ D │ E │ X │ X │ X │ X │ X │ ! │
-///         └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
-///                               ↑                   ↑
-///                             start=5            end=10 (exclusive)
-/// ```
-///
-/// The end index 10 equals content length, which is valid for exclusive range semantics.
-///
-/// # Usage Examples
-///
-/// ```rust
-/// use std::ops::Range;
-/// use r3bl_tui::{ColIndex, ColWidth, RangeBoundary};
-///
-/// let content_width = ColWidth::new(10);  // Content has 10 columns (0-9)
-///
-/// // Valid ranges:
-/// let range1: Range<ColIndex> = ColIndex::new(0)..ColIndex::new(5);   // columns 0-4
-/// let range2: Range<ColIndex> = ColIndex::new(5)..ColIndex::new(10);  // columns 5-9 (end=10 is valid!)
-/// let range3: Range<ColIndex> = ColIndex::new(0)..ColIndex::new(10);  // entire content
-///
-/// assert!(range1.is_valid(content_width));
-/// assert!(range2.is_valid(content_width));  // end=10 <= len=10 ✓
-/// assert!(range3.is_valid(content_width));
-///
-/// // Invalid ranges:
-/// let bad_range1: Range<ColIndex> = ColIndex::new(5)..ColIndex::new(11);  // end > len
-/// let bad_range2: Range<ColIndex> = ColIndex::new(8)..ColIndex::new(3);   // start > end
-///
-/// assert!(!bad_range1.is_valid(content_width));
-/// assert!(!bad_range2.is_valid(content_width));
-/// ```
-pub trait RangeBoundary {
-    /// The length type that this range can be validated against.
-    type LengthType: EOLCursorPosition;
+    fn check_cursor_position_bounds(
+        &self,
+        pos: Self::IndexType,
+    ) -> CursorPositionBoundsStatus {
+        let position = pos.as_usize();
+        let length = self.as_usize();
 
-    /// Check if this range is valid for the given buffer/line length.
-    ///
-    /// Returns `true` if:
-    /// - The range is not inverted (start <= end) - empty ranges are valid
-    /// - The start position is within buffer bounds (< length)
-    /// - The end position is valid for EOL cursor placement (<= length)
-    ///
-    /// # Arguments
-    ///
-    /// * `buffer_length` - The buffer length to validate against
-    ///
-    /// # Returns
-    ///
-    /// `true` if the range is valid for buffer operations, `false` otherwise.
-    fn is_valid(&self, buffer_length: impl Into<Self::LengthType>) -> bool;
-
-    /// Clamp this range to fit within buffer/line bounds.
-    ///
-    /// This method ensures that both the start and end of the range are valid
-    /// for the given buffer length, while preserving Rust's exclusive end semantics
-    /// and EOL cursor positioning rules.
-    ///
-    /// # Behavior
-    ///
-    /// - Start is clamped to `[0, length)`
-    /// - End is clamped to `[start, length]` (note: end can equal length for exclusive
-    ///   ranges and EOL cursor positioning)
-    /// - Empty ranges are preserved as empty
-    /// - If the original range was invalid, returns a valid empty range at the start
-    ///
-    /// # Arguments
-    ///
-    /// * `buffer_length` - The buffer length to clamp against
-    ///
-    /// # Returns
-    ///
-    /// A new range that is guaranteed to be valid for the given buffer length.
-    #[must_use]
-    fn clamp_range_to(self, buffer_length: Self::LengthType) -> Self;
-}
-
-/// Implementation of range operations for `Range<IndexType>`.
-///
-/// This provides type-safe validation and clamping for ranges of any index type
-/// (`ColIndex`, `RowIndex`, etc.) against their corresponding length types.
-impl<I> RangeBoundary for Range<I>
-where
-    I: IndexMarker + PartialOrd + Copy + From<usize> + std::ops::Add<Output = I>,
-    I::LengthType: Copy,
-{
-    type LengthType = I::LengthType;
-
-    fn is_valid(&self, buffer_length: impl Into<Self::LengthType>) -> bool {
-        let length = buffer_length.into();
-
-        // Check for inverted ranges (start > end).
-        if self.start > self.end {
-            return false;
-        }
-
-        // Start must be within bounds (standard index check).
-        if self.start.check_array_access_bounds(length) != ArrayAccessBoundsStatus::Within
-        {
-            return false;
-        }
-
-        // End can be equal to length for exclusive ranges (special case).
-        // Use CursorPositionBoundsStatus to handle this correctly.
-        self.end.check_cursor_position_bounds(length)
-            != CursorPositionBoundsStatus::Beyond
-    }
-
-    fn clamp_range_to(self, buffer_length: Self::LengthType) -> Range<I> {
-        // If start is beyond bounds, return empty range at start.
-        if self.start.check_array_access_bounds(buffer_length) == Overflowed {
-            let zero = I::LengthType::from(0usize).convert_to_index();
-            return zero..zero;
-        }
-
-        // Clamp start to valid bounds (already checked it's within bounds above).
-        let clamped_start = self.start;
-
-        // For end, we need to handle exclusive range semantics:
-        // - End can equal content_length (exclusive ranges allow this)
-        // - End beyond content_length should be clamped to content_length
-        let clamped_end = if self.end.check_cursor_position_bounds(buffer_length)
-            == CursorPositionBoundsStatus::Beyond
-        {
-            // For exclusive ranges, the end can equal the length (unlike regular index
-            // bounds checking). Use EOLCursorPosition to get the position where
-            // index == length, which is the valid exclusive range end.
-            buffer_length.eol_cursor_position()
+        if position > length {
+            CursorPositionBoundsStatus::Beyond
+        } else if position == 0 {
+            CursorPositionBoundsStatus::AtStart
+        } else if position == length {
+            CursorPositionBoundsStatus::AtEnd
         } else {
-            self.end
-        };
-
-        // Ensure range is not inverted (start >= end).
-        if clamped_start >= clamped_end {
-            clamped_start..clamped_start // Empty range.
-        } else {
-            clamped_start..clamped_end
+            CursorPositionBoundsStatus::Within
         }
     }
 }
@@ -290,8 +242,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, col, height, idx, len, row,
-                width};
+    use crate::{ColIndex, ColWidth, RowHeight, RowIndex, idx, len};
 
     mod eol_cursor_position_tests {
         use super::*;
@@ -409,187 +360,113 @@ mod tests {
         }
     }
 
-    mod range_boundary_tests {
+    mod check_cursor_position_bounds_tests {
         use super::*;
 
         #[test]
-        fn test_range_validation_valid_ranges() {
-            let content_width = width(10); // Columns 0-9
-            let content_height = height(5); // Rows 0-4
+        fn test_check_cursor_position_bounds_basic() {
+            let content_length = len(5);
 
-            // Valid column ranges.
-            let col_range1: Range<ColIndex> = col(0)..col(5); // columns 0-4
-            let col_range2: Range<ColIndex> = col(5)..col(10); // columns 5-9 (end=10 is valid!)
-            let col_range3: Range<ColIndex> = col(0)..col(10); // entire content
-            let col_range4: Range<ColIndex> = col(7)..col(9); // middle range
-
-            assert!(
-                col_range1.is_valid(content_width),
-                "Range 0..5 should be valid for width 10"
-            );
-            assert!(
-                col_range2.is_valid(content_width),
-                "Range 5..10 should be valid for width 10 (exclusive end)"
-            );
-            assert!(
-                col_range3.is_valid(content_width),
-                "Range 0..10 should be valid for width 10 (full content)"
-            );
-            assert!(
-                col_range4.is_valid(content_width),
-                "Range 7..9 should be valid for width 10"
+            // At start.
+            assert_eq!(
+                content_length.check_cursor_position_bounds(idx(0)),
+                CursorPositionBoundsStatus::AtStart
             );
 
-            // Valid row ranges.
-            let row_range1: Range<RowIndex> = row(0)..row(3); // rows 0-2
-            let row_range2: Range<RowIndex> = row(2)..row(5); // rows 2-4 (end=5 is valid!)
-            let row_range3: Range<RowIndex> = row(0)..row(5); // entire content
+            // Within content.
+            assert_eq!(
+                content_length.check_cursor_position_bounds(idx(2)),
+                CursorPositionBoundsStatus::Within
+            );
+            assert_eq!(
+                content_length.check_cursor_position_bounds(idx(4)),
+                CursorPositionBoundsStatus::Within
+            );
 
-            assert!(
-                row_range1.is_valid(content_height),
-                "Range 0..3 should be valid for height 5"
+            // At end boundary.
+            assert_eq!(
+                content_length.check_cursor_position_bounds(idx(5)),
+                CursorPositionBoundsStatus::AtEnd
             );
-            assert!(
-                row_range2.is_valid(content_height),
-                "Range 2..5 should be valid for height 5 (exclusive end)"
+
+            // Beyond content.
+            assert_eq!(
+                content_length.check_cursor_position_bounds(idx(6)),
+                CursorPositionBoundsStatus::Beyond
             );
-            assert!(
-                row_range3.is_valid(content_height),
-                "Range 0..5 should be valid for height 5 (full content)"
+            assert_eq!(
+                content_length.check_cursor_position_bounds(idx(10)),
+                CursorPositionBoundsStatus::Beyond
             );
         }
 
         #[test]
-        fn test_range_validation_invalid_ranges() {
-            let content_width = width(10); // Columns 0-9
-
-            // Invalid column ranges - end beyond content.
-            let bad_col_range1: Range<ColIndex> = col(5)..col(11); // end > len
-            let bad_col_range2: Range<ColIndex> = col(0)..col(11); // end > len
-            let bad_col_range3: Range<ColIndex> = col(15)..col(20); // start beyond content
-
-            assert!(
-                !bad_col_range1.is_valid(content_width),
-                "Range 5..11 should be invalid for width 10"
+        fn test_check_cursor_position_bounds_edge_cases() {
+            // Zero-length content - AtStart takes precedence.
+            let zero_length = len(0);
+            assert_eq!(
+                zero_length.check_cursor_position_bounds(idx(0)),
+                CursorPositionBoundsStatus::AtStart
             );
-            assert!(
-                !bad_col_range2.is_valid(content_width),
-                "Range 0..11 should be invalid for width 10"
-            );
-            assert!(
-                !bad_col_range3.is_valid(content_width),
-                "Range 15..20 should be invalid for width 10"
+            assert_eq!(
+                zero_length.check_cursor_position_bounds(idx(1)),
+                CursorPositionBoundsStatus::Beyond
             );
 
-            // Invalid ranges - inverted only (empty ranges are valid).
-            let empty_col_range1: Range<ColIndex> = col(5)..col(5); // empty range
-            let empty_col_range2: Range<ColIndex> = col(8)..col(3); // inverted range
-
-            assert!(
-                empty_col_range1.is_valid(content_width),
-                "Empty range 5..5 should be valid (within bounds)"
+            // Single element content.
+            let single_length = len(1);
+            assert_eq!(
+                single_length.check_cursor_position_bounds(idx(0)),
+                CursorPositionBoundsStatus::AtStart
             );
-            assert!(
-                !empty_col_range2.is_valid(content_width),
-                "Inverted range 8..3 should be invalid"
+            assert_eq!(
+                single_length.check_cursor_position_bounds(idx(1)),
+                CursorPositionBoundsStatus::AtEnd
+            );
+            assert_eq!(
+                single_length.check_cursor_position_bounds(idx(2)),
+                CursorPositionBoundsStatus::Beyond
             );
         }
 
         #[test]
-        fn test_range_clamp_to_content_normal_cases() {
-            let content_width = width(10); // Columns 0-9, length 10
-
-            // Normal range within bounds - should remain unchanged.
-            let col_range1: Range<ColIndex> = col(2)..col(7);
-            let clamped1 = col_range1.clamp_range_to(content_width);
+        fn test_check_cursor_position_bounds_with_typed_indices() {
+            // Test with ColIndex/ColWidth.
+            let col_width = ColWidth::new(3);
             assert_eq!(
-                clamped1,
-                col(2)..col(7),
-                "Normal range should remain unchanged"
+                col_width.check_cursor_position_bounds(ColIndex::new(0)),
+                CursorPositionBoundsStatus::AtStart
+            );
+            assert_eq!(
+                col_width.check_cursor_position_bounds(ColIndex::new(2)),
+                CursorPositionBoundsStatus::Within
+            );
+            assert_eq!(
+                col_width.check_cursor_position_bounds(ColIndex::new(3)),
+                CursorPositionBoundsStatus::AtEnd
+            );
+            assert_eq!(
+                col_width.check_cursor_position_bounds(ColIndex::new(4)),
+                CursorPositionBoundsStatus::Beyond
             );
 
-            // Range that exactly fits content (0..length) - should remain unchanged.
-            let full_col_range: Range<ColIndex> = col(0)..col(10);
-            let clamped_full = full_col_range.clamp_range_to(content_width);
+            // Test with RowIndex/RowHeight.
+            let row_height = RowHeight::new(2);
             assert_eq!(
-                clamped_full,
-                col(0)..col(10),
-                "Full content range should remain unchanged"
+                row_height.check_cursor_position_bounds(RowIndex::new(0)),
+                CursorPositionBoundsStatus::AtStart
             );
-
-            // Range to end of content (start..length) - should remain unchanged.
-            let to_end_range: Range<ColIndex> = col(5)..col(10);
-            let clamped_to_end = to_end_range.clamp_range_to(content_width);
             assert_eq!(
-                clamped_to_end,
-                col(5)..col(10),
-                "Range to end should remain unchanged"
+                row_height.check_cursor_position_bounds(RowIndex::new(1)),
+                CursorPositionBoundsStatus::Within
             );
-        }
-
-        #[test]
-        fn test_range_clamp_to_content_end_beyond_bounds() {
-            let content_width = width(10); // Columns 0-9, length 10
-
-            // Range with end beyond bounds - should clamp end to content length.
-            let col_range1: Range<ColIndex> = col(5)..col(15);
-            let clamped1 = col_range1.clamp_range_to(content_width);
             assert_eq!(
-                clamped1,
-                col(5)..col(10),
-                "End should be clamped to content length"
+                row_height.check_cursor_position_bounds(RowIndex::new(2)),
+                CursorPositionBoundsStatus::AtEnd
             );
-
-            // Range starting from 0 with end beyond bounds.
-            let col_range2: Range<ColIndex> = col(0)..col(15);
-            let clamped2 = col_range2.clamp_range_to(content_width);
             assert_eq!(
-                clamped2,
-                col(0)..col(10),
-                "Full range with end beyond should clamp to content"
-            );
-
-            // Range with both start and end way beyond bounds.
-            let col_range3: Range<ColIndex> = col(20)..col(30);
-            let clamped3 = col_range3.clamp_range_to(content_width);
-            assert_eq!(
-                clamped3,
-                col(0)..col(0),
-                "Range beyond bounds should become empty at start"
-            );
-        }
-
-        #[test]
-        fn test_range_clamp_to_content_exclusive_end_semantics() {
-            let content_width = width(10); // Columns 0-9, length 10
-
-            // Test that exclusive end semantics are preserved.
-            // Range 5..10 should remain 5..10 (end == length is valid for exclusive
-            // ranges).
-            let range_to_end: Range<ColIndex> = col(5)..col(10);
-            let clamped_to_end = range_to_end.clamp_range_to(content_width);
-            assert_eq!(
-                clamped_to_end,
-                col(5)..col(10),
-                "Range to content end should preserve exclusive end semantics"
-            );
-
-            // Range 0..10 should remain 0..10 (full content range).
-            let full_range: Range<ColIndex> = col(0)..col(10);
-            let clamped_full = full_range.clamp_range_to(content_width);
-            assert_eq!(
-                clamped_full,
-                col(0)..col(10),
-                "Full content range should preserve exclusive end semantics"
-            );
-
-            // Range 9..10 should remain 9..10 (single element range at end).
-            let last_element: Range<ColIndex> = col(9)..col(10);
-            let clamped_last = last_element.clamp_range_to(content_width);
-            assert_eq!(
-                clamped_last,
-                col(9)..col(10),
-                "Range for last element should preserve exclusive end semantics"
+                row_height.check_cursor_position_bounds(RowIndex::new(3)),
+                CursorPositionBoundsStatus::Beyond
             );
         }
     }

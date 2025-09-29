@@ -3,32 +3,42 @@
 //! Device Status Report (DSR) operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! See the [module-level documentation](super::super) for details on the "shim → impl →
+//! See the [module-level documentation] for details on the "shim → impl →
 //! test" architecture and naming conventions.
 //!
 //! **Related Files:**
 //! - **Implementation**: [`impl_dsr_ops`] - Business logic with unit tests
 //! - **Integration Tests**: [`test_dsr_ops`] - Full pipeline testing via public API
 //!
-//! [`impl_dsr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_dsr_ops
-//! [`test_dsr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_dsr_ops
+//! # Testing Strategy
+//!
+//! **This shim layer intentionally has no direct unit tests.**
+//!
+//! This is a deliberate architectural decision: these functions are pure delegation
+//! layers with no business logic. Testing is comprehensively handled by:
+//! - **Unit tests** in the implementation layer (with `#[test]` functions)
+//! - **Integration tests** in [`vt_100_ansi_conformance_tests`] validating the full
+//!   pipeline
+//!
+//! See the [operations module documentation] for the complete testing philosophy
+//! and rationale behind this approach.
 //!
 //! # Architecture Overview
 //!
 //! ```text
 //! ╭─────────────────╮    ╭───────────────╮    ╭─────────────────╮    ╭──────────────╮
-//! │ Child Process   │───▶│ PTY Master    │───▶│ VTE Parser      │───▶│ OffscreenBuf │
+//! │ Child Process   │────▶ PTY Master    │────▶ VTE Parser      │────▶ OffscreenBuf │
 //! │ (vim, bash...)  │    │ (byte stream) │    │ (state machine) │    │ (terminal    │
 //! ╰─────────────────╯    ╰───────────────╯    ╰─────────────────╯    │  buffer)     │
 //!        │                                            │              ╰──────────────╯
-//!        │                                            ▼                      │
-//!        │                                   ╔═════════════════╗             │
+//!        │                                            │                      │
+//!        │                                   ╔════════▼════════╗             │
 //!        │                                   ║ Perform Trait   ║             │
 //!        │                                   ║ Implementation  ║             │
 //!        │                                   ╚═════════════════╝             │
 //!        │                                                                   │
 //!        │                                   ╭─────────────────╮             │
-//!        │                                   │ RenderPipeline  │◀────────────╯
+//!        │                                   │ RenderPipeline  ◀─────────────╯
 //!        │                                   │ paint()         │
 //!        ╰───────────────────────────────────▶ Terminal Output │
 //!                                            ╰─────────────────╯
@@ -57,6 +67,12 @@
 //!         ↓                                  ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
+//!
+//! [`impl_dsr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_dsr_ops
+//! [`test_dsr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_dsr_ops
+//! [module-level documentation]: super::super
+//! [operations module documentation]: super
+//! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::dsr_codes::DsrRequestType};
