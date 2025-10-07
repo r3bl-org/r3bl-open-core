@@ -42,14 +42,11 @@
 //! - `ESC[31m` - Set text color to red
 //! - `ESC[1A` - Move cursor up 1 line
 
+use super::{super::term_units::{TermCol, TermRow, term_row}, dsr_codes::DsrRequestType};
+use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, Length, RowHeight, RowIndex, col,
+            height, len, row, width};
 use std::{cmp::max,
           fmt::{self, Display}};
-
-use super::{super::{param_utils::ParamsExt,
-                    term_units::{TermCol, TermRow, term_row}},
-            dsr_codes::DsrRequestType};
-use crate::{BufTextStorage, ColIndex, ColWidth, Length, RowHeight, RowIndex, WriteToBuf,
-            col, height, len, row, width};
 
 // CSI sequence components.
 
@@ -61,6 +58,54 @@ pub const CSI_PRIVATE_MODE_PREFIX: char = '?';
 
 /// Parameter separator in CSI sequences
 pub const CSI_PARAM_SEPARATOR: char = ';';
+
+/// Extension trait for vte::Params providing VT100-compliant parameter extraction.
+pub trait ParamsExt {
+    fn extract_nth_non_zero(&self, n: usize) -> u16;
+    fn extract_nth_opt(&self, n: usize) -> Option<u16>;
+}
+
+impl ParamsExt for vte::Params {
+    /// Extract the nth parameter (0-indexed) with VT100-compliant default handling.
+    ///
+    /// ## Parameter Handling Rules
+    /// - **Missing parameters** (None) default to 1
+    /// - **Zero parameters** (Some(0)) are treated as 1
+    /// - **Non-zero parameters** (Some(n)) are used as-is
+    ///
+    /// This ensures compatibility with real VT100 terminals and modern terminal
+    /// emulators.
+    ///
+    /// ## Examples
+    /// - `extract_nth_param_non_zero(params, 0)` extracts the first parameter
+    /// - `extract_nth_param_non_zero(params, 1)` extracts the second parameter
+    /// - `ESC[A` (no param) → returns 1 for any n
+    /// - `ESC[0;5A` → returns 1 for n=0, 5 for n=1
+    fn extract_nth_non_zero(&self, n: usize) -> u16 {
+        self.iter().nth(n).and_then(|p| p.first()).copied().map_or(
+            /* None -> 1 */ 1,
+            /* Some(0) -> 1 */ |v| max(v, 1),
+        )
+    }
+
+    /// Extract the nth parameter (0-indexed) without any default transformation.
+    ///
+    /// This is useful for cases where the parameter's absence has different
+    /// semantics than a default value.
+    ///
+    /// ## Returns
+    /// - `None` if no parameter is present at index n
+    /// - `Some(value)` if a parameter is present (including 0)
+    ///
+    /// ## Examples
+    /// - `extract_nth_optional_param(params, 0)` extracts the first parameter
+    /// - `extract_nth_optional_param(params, 1)` extracts the second parameter
+    /// - `ESC[5A` → returns Some(5) for n=0, None for n=1
+    /// - `ESC[0;7A` → returns Some(0) for n=0, Some(7) for n=1
+    fn extract_nth_opt(&self, n: usize) -> Option<u16> {
+        self.iter().nth(n).and_then(|p| p.first()).copied()
+    }
+}
 
 // Cursor Movement.
 
@@ -731,7 +776,7 @@ impl Display for CsiSequence {
     }
 }
 
-impl WriteToBuf for CsiSequence {
+impl FastStringify for CsiSequence {
     #[allow(clippy::too_many_lines)]
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
         acc.push_str("\x1b[");

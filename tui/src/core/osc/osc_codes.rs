@@ -79,9 +79,8 @@ pub const OSC_CODE_TITLE: &str = "2";
 /// OSC code 8: Hyperlink
 pub const OSC_CODE_HYPERLINK: &str = "8";
 
+use crate::core::common::fast_stringify::{BufTextStorage, FastStringify};
 use std::fmt;
-
-use crate::core::common::write_to_buf::{BufTextStorage, WriteToBuf};
 
 /// OSC sequence builder enum that provides type-safe construction of Operating System
 /// Command sequences.
@@ -124,7 +123,7 @@ impl fmt::Display for OscSequence {
     }
 }
 
-impl WriteToBuf for OscSequence {
+impl FastStringify for OscSequence {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
         acc.push_str(OSC_START);
         match self {

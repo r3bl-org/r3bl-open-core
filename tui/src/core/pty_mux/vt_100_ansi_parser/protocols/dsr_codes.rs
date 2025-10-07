@@ -21,12 +21,11 @@
 //! - `ESC [ 0 n` - Terminal OK status
 //! - `ESC [ row ; col R` - Cursor position (1-based)
 
-use std::fmt::{self, Display};
-
 use super::{super::term_units::{TermCol, TermRow},
             csi_codes::CSI_PARAM_SEPARATOR};
 use crate::{ParamsExt,
-            core::common::write_to_buf::{BufTextStorage, WriteToBuf}};
+            core::common::fast_stringify::{BufTextStorage, FastStringify}};
+use std::fmt::{self, Display};
 
 // DSR response sequence components.
 
@@ -103,7 +102,7 @@ mod dsr_request_type_impl {
 /// - **`OscSequence`**: Builds OSC sequences (titles, hyperlinks, notifications)
 /// - **`DsrSequence`**: Builds DSR response sequences (status reports)
 ///
-/// All implement `WriteToBuf` for efficient formatting and `Display` for convenience.
+/// All implement `FastStringify` for efficient formatting and `Display` for convenience.
 ///
 /// ## Examples
 ///
@@ -129,7 +128,7 @@ mod dsr_sequence_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl WriteToBuf for DsrSequence {
+    impl FastStringify for DsrSequence {
         fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
             acc.push_str(DSR_RESPONSE_START);
             match self {

@@ -722,7 +722,7 @@ pub trait WriteToBuf {
     fn write_to_buf(&self, buf: &mut ASTextStorage) -> Result;
 }
 
-// Display now delegates to WriteToBuf with a single write
+// Display now delegates to FastStringify with a single write
 impl Display for ASText {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let mut buf = String::new();

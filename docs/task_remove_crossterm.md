@@ -150,7 +150,7 @@ impl PaintRenderOp for RenderOpImplDirectAnsi {
                        pos.col_index.as_u16() + 1).ok();
             }
             RenderOp::SetFgColor(color) => {
-                // Reuse existing optimized WriteToBuf implementation
+                // Reuse existing optimized FastStringify implementation
                 let mut buf = String::new();
                 let sgr = color_to_sgr_code(*color, true);
                 sgr.write_to_buf(&mut buf).ok();

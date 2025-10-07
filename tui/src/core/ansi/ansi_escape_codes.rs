@@ -40,9 +40,8 @@
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 
+use crate::{ANSIBasicColor, AnsiValue, BufTextStorage, FastStringify};
 use std::fmt::{Display, Formatter, Result};
-
-use crate::{ANSIBasicColor, AnsiValue, BufTextStorage, WriteToBuf};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SgrCode {
@@ -108,16 +107,16 @@ impl Display for SgrCode {
     /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
     /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        // Delegate to WriteToBuf for consistency.
+        // Delegate to FastStringify for consistency.
         let mut acc = BufTextStorage::new();
         self.write_to_buf(&mut acc)?;
         self.write_buf_to_fmt(&acc, f)
     }
 }
 
-/// [`WriteToBuf`] implementation for optimized performance.
+/// [`FastStringify`] implementation for optimized performance.
 /// Uses direct string concatenation and lookup tables to avoid formatting overhead.
-impl WriteToBuf for SgrCode {
+impl FastStringify for SgrCode {
     #[allow(clippy::too_many_lines)]
     fn write_to_buf(&self, buf: &mut crate::BufTextStorage) -> Result {
         match *self {
@@ -319,9 +318,8 @@ impl WriteToBuf for SgrCode {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn bold() {
@@ -551,11 +549,9 @@ mod tests {
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
+    use crate::{AnsiValue, BufTextStorage, FastStringify, SgrCode};
     use std::fmt::Write;
-
     use test::Bencher;
-
-    use crate::{AnsiValue, BufTextStorage, SgrCode, WriteToBuf};
 
     #[bench]
     fn bench_ansi256_formatting_all_values(b: &mut Bencher) {

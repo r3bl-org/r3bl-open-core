@@ -39,9 +39,8 @@
 //! - `ESC ( 0` - Switch to line-drawing character set
 //! - `ESC c` - Reset terminal to initial state
 
+use crate::{BufTextStorage, FastStringify};
 use std::fmt;
-
-use crate::{BufTextStorage, WriteToBuf};
 
 // Cursor Save/Restore Operations
 
@@ -171,7 +170,7 @@ impl fmt::Display for EscSequence {
     }
 }
 
-impl WriteToBuf for EscSequence {
+impl FastStringify for EscSequence {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
         acc.push('\x1b');
         match self {

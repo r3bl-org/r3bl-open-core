@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! # Performance considerations: `write!` vs `push_str()` vs `WriteToBuf`
+//! # Performance considerations: `write!` vs `push_str()` vs `FastStringify`
 //!
 //! When working with string formatting in Rust, it's important to understand the
 //! performance implications of different approaches:
@@ -18,16 +18,16 @@
 //! acc.push_str("Hello, world!");  // Direct append, no formatting overhead
 //! ```
 //!
-//! ### 2. `WriteToBuf` trait - Fast batched writing
+//! ### 2. `FastStringify` trait - Fast batched writing
 //!
 //! For complex types that need to build strings from multiple parts, use the
-//! [`WriteToBuf`](crate::WriteToBuf) trait (see
-//! [`write_to_buf.rs`](../common/write_to_buf.rs)). This approach:
+//! [`FastStringify`](crate::FastStringify) trait (see
+//! [`fast_stringify`](../common/fast_stringify)). This approach:
 //! - Batches all string building into a single buffer
 //! - Makes only one call to the formatter when implementing `Display`
 //! - Allows mixing `push_str()` for literals with `write!` only when needed
 //!
-//! Even with `WriteToBuf`, using `write!` still incurs `FormatArgs` overhead, but the
+//! Even with `FastStringify`, using `write!` still incurs `FormatArgs` overhead, but the
 //! batching minimizes the overall impact.
 //!
 //! ### 3. Direct `write!` - Slowest due to formatting overhead
@@ -59,10 +59,10 @@
 //! ## Best practices
 //!
 //! 1. **Always prefer `push_str()`** for string literals and `&str` values
-//! 2. **Use `WriteToBuf`** when implementing `Display` for complex types
+//! 2. **Use `FastStringify`** when implementing `Display` for complex types
 //! 3. **Only use `write!`** when you actually need formatting capabilities
-//! 4. **Mix approaches**: In `WriteToBuf` implementations, use `push_str()` for literals
-//!    and `write!` only for values that need formatting
+//! 4. **Mix approaches**: In `FastStringify` implementations, use `push_str()` for
+//!    literals and `write!` only for values that need formatting
 //! 5. For repeated patterns, consider using the optimized macros in this module like
 //!    `pad_fmt!` which avoid formatting overhead
 
@@ -290,13 +290,11 @@ mod join_with_index_fmt_tests {
 }
 
 pub mod read_from_file {
-    use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
-
+    use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
     use miette::{Context, IntoDiagnostic};
     use smallstr::SmallString;
     use smallvec::Array;
-
-    use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
+    use std::{fs::File, io::Read, path::PathBuf, str::from_utf8};
 
     // XMARK: Clever Rust, use of `A` to allow any size `Array` to be passed in.
 
@@ -347,11 +345,9 @@ pub mod read_from_file {
 }
 
 pub mod write_to_file {
-    use std::{fs::File, io::Write, path::PathBuf};
-
-    use miette::IntoDiagnostic;
-
     use crate::CommonResult;
+    use miette::IntoDiagnostic;
+    use std::{fs::File, io::Write, path::PathBuf};
 
     /// # Errors
     ///
@@ -367,11 +363,9 @@ pub mod write_to_file {
 
 #[cfg(test)]
 mod tests_write_to_file {
-    use std::fs;
-
-    use miette::IntoDiagnostic;
-
     use crate::{into_existing::write_to_file::try_write_str_to_file, try_create_temp_dir};
+    use miette::IntoDiagnostic;
+    use std::fs;
 
     #[test]
     #[allow(clippy::missing_errors_doc)]
@@ -422,11 +416,10 @@ mod tests_write_to_file {
 
 #[cfg(test)]
 mod tests_read_from_file {
-    use std::{fs::File, io::Write};
-
     use crate::{DEFAULT_DOCUMENT_SIZE, DocumentStorage, InlineString,
                 into_existing::read_from_file::try_read_file_path_into_inline_string,
                 try_create_temp_dir};
+    use std::{fs::File, io::Write};
 
     #[test]
     fn test_read_tiny_file_into_inline_string() {

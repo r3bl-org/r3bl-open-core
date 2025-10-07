@@ -20,7 +20,7 @@
 /// ### OUTGOING (Terminal Emulator → Application)  
 /// 1. Terminal emulator needs to send OSC sequences
 /// 2. Creates `OscSequence` instances
-/// 3. Formats them using `WriteToBuf`/`Display` traits
+/// 3. Formats them using `FastStringify`/`Display` traits
 /// 4. Sends formatted sequences to the application
 ///
 /// ## Common OSC Events

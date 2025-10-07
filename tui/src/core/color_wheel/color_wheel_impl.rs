@@ -89,13 +89,6 @@
 //!
 //! The optimization successfully eliminated the hash operation bottleneck, making
 //! `ColorWheel` operations negligible in the overall performance profile.
-use std::{collections::hash_map::DefaultHasher,
-          hash::{Hash, Hasher},
-          sync::LazyLock};
-
-use sizing::VecConfigs;
-use smallvec::SmallVec;
-
 use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
             ColorWheelSpeed, GradientKind, GradientLengthKind, Lolcat, LolcatBuilder,
             Seed,
@@ -103,10 +96,15 @@ use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
                                  sizing::VecSteps},
             color_wheel_helpers, generate_random_truecolor_gradient,
             generate_truecolor_gradient, get_gradient_array_for};
-use crate::{ChUnit, GCStringOwned, GradientGenerationPolicy, RgbValue,
+use crate::{ChUnit, FastStringify, GCStringOwned, GradientGenerationPolicy, RgbValue,
             TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts,
-            WriteToBuf, ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color,
-            tui_styled_text, u8, usize};
+            ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color, tui_styled_text, u8,
+            usize};
+use sizing::VecConfigs;
+use smallvec::SmallVec;
+use std::{collections::hash_map::DefaultHasher,
+          hash::{Hash, Hasher},
+          sync::LazyLock};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into
@@ -643,14 +641,14 @@ impl ColorWheel {
             TextColorizationPolicy::ColorEachCharacter(None),
         );
 
-        // Convert styled texts to string using WriteToBuf for better performance.
+        // Convert styled texts to string using FastStringify for better performance.
         let mut buffer = String::new();
         for TuiStyledText { mut style, text } in styled_texts.inner {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
             let ansi_styled_text = ast(text, style);
-            // Use WriteToBuf trait for better performance.
+            // Use FastStringify trait for better performance.
             let _ = ansi_styled_text.write_to_buf(&mut buffer);
         }
 
@@ -680,7 +678,7 @@ impl ColorWheel {
                 style += default_style;
             }
             let ansi_styled_text = ast(text, style);
-            // Use WriteToBuf trait for better performance.
+            // Use FastStringify trait for better performance.
             let _ = ansi_styled_text.write_to_buf(&mut buffer);
         }
 
@@ -1187,12 +1185,11 @@ mod lolcat_bg_helper {
 
 #[cfg(test)]
 mod tests_color_wheel_rgb {
-    use serial_test::serial;
-
     use super::*;
     use crate::{ColorSupport, assert_eq2, global_color_support,
                 tui_style::tui_style_attrib::{Bold, Dim},
                 tui_style_attribs};
+    use serial_test::serial;
 
     #[test]
     fn test_convert_lolcat_seed_to_index() {
@@ -1237,9 +1234,8 @@ mod tests_color_wheel_rgb {
     }
 
     mod test_helper {
-        use smallvec::smallvec;
-
         use super::*;
+        use smallvec::smallvec;
 
         pub fn create_color_wheel_rgb() -> ColorWheel {
             let config_1 = ColorWheelConfig::Rgb(
@@ -1571,9 +1567,8 @@ mod tests_color_wheel_rgb {
 #[cfg(test)]
 mod bench {
     extern crate test;
-    use test::Bencher;
-
     use super::*;
+    use test::Bencher;
 
     /// Benchmark: `lolcat_into_string` with short ASCII text
     #[bench]
@@ -1841,9 +1836,8 @@ mod bench {
     /// - Performance improvement: 87% reduction in `ColorWheel` CPU usage
     #[bench]
     fn bench_fxhashmap_vs_hashmap_insert(b: &mut Bencher) {
-        use std::collections::HashMap;
-
         use rustc_hash::{FxBuildHasher, FxHashMap};
+        use std::collections::HashMap;
 
         // Create test keys.
         let mut keys = Vec::new();

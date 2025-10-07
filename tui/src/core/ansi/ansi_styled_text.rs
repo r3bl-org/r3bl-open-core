@@ -1,15 +1,13 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Display, Formatter, Result};
-
-use smallvec::{SmallVec, smallvec};
-use strum_macros::EnumCount;
-
-use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, GCStringOwned, InlineString,
-            InlineVec, PixelChar, SPACER_GLYPH_CHAR, SgrCode, TuiStyle,
-            UNICODE_REPLACEMENT_CHAR, WriteToBuf, inline_string, tui_color,
+use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
+            InlineString, InlineVec, PixelChar, SPACER_GLYPH_CHAR, SgrCode, TuiStyle,
+            UNICODE_REPLACEMENT_CHAR, inline_string, tui_color,
             tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse, Strikethrough,
                                Underline}};
+use smallvec::{SmallVec, smallvec};
+use std::fmt::{Display, Formatter, Result};
+use strum_macros::EnumCount;
 
 /// Please don't create this struct directly, use [`crate::ast()`], [`crate::ast_line`!],
 /// [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
@@ -779,11 +777,11 @@ mod convert_tui_style_to_vec_ast_style {
 }
 
 mod style_impl {
-    use super::{ASTStyle, BufTextStorage, Display, Formatter, Result, WriteToBuf};
+    use super::{ASTStyle, BufTextStorage, Display, FastStringify, Formatter, Result};
 
     impl Display for ASTStyle {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Delegate to WriteToBuf for consistency.
+            // Delegate to FastStringify for consistency.
             let mut acc = BufTextStorage::new();
             self.write_to_buf(&mut acc)?;
             self.write_buf_to_fmt(&acc, f)
@@ -791,7 +789,7 @@ mod style_impl {
     }
 }
 
-impl WriteToBuf for ASTStyle {
+impl FastStringify for ASTStyle {
     fn write_to_buf(&self, buf: &mut BufTextStorage) -> Result {
         use super::{ColorSupport, TransformColor, global_color_support};
 
@@ -852,7 +850,7 @@ impl WriteToBuf for ASTStyle {
     }
 }
 
-impl WriteToBuf for ASText {
+impl FastStringify for ASText {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         // Write all styles to buffer.
         for style in &self.styles {
@@ -870,7 +868,7 @@ impl WriteToBuf for ASText {
 }
 
 mod display_trait_impl {
-    use super::{ASText, BufTextStorage, Display, Formatter, Result, WriteToBuf};
+    use super::{ASText, BufTextStorage, Display, FastStringify, Formatter, Result};
 
     impl Display for ASText {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
@@ -886,10 +884,6 @@ mod display_trait_impl {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-    use serial_test::serial;
-    use smallvec::smallvec;
-
     use super::dim;
     use crate::{ASTColor, ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport,
                 InlineVec, PixelChar, TuiColor, TuiStyle,
@@ -899,6 +893,9 @@ mod tests {
                 tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
                                               Strikethrough, Underline},
                 tui_style_attribs, width};
+    use pretty_assertions::assert_eq;
+    use serial_test::serial;
+    use smallvec::smallvec;
 
     #[serial]
     #[test]
@@ -1707,10 +1704,9 @@ mod tests {
 #[cfg(test)]
 mod bench_tests {
     extern crate test;
+    use super::*;
     use smallvec::smallvec;
     use test::Bencher;
-
-    use super::*;
 
     // Benchmark data setup.
     fn simple_text() -> ASText {

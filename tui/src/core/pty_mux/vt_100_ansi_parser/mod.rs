@@ -302,7 +302,6 @@
 pub mod ansi_parser_public_api;
 pub mod ansi_to_tui_color;
 pub mod operations;
-pub mod param_utils;
 pub mod perform;
 pub mod protocols;
 pub mod term_units;
@@ -310,7 +309,6 @@ pub mod term_units;
 // Re-export.
 pub use ansi_parser_public_api::*;
 pub use operations::*;
-pub use param_utils::*;
 pub use protocols::*;
 pub use term_units::*;
 
