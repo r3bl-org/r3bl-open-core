@@ -78,7 +78,7 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 
 /// Handle ICH (Insert Character) - insert n blank characters at cursor position.
 /// Characters to the right of cursor shift right, characters beyond margin are lost.
-/// See [`OffscreenBuffer::insert_chars_at_cursor`] for detailed behavior and examples.
+/// See [`OffscreenBuffer::insert_chars_at_cursor`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -94,7 +94,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 
 /// Handle DCH (Delete Character) - delete n characters at cursor position.
 /// Characters to the right of cursor shift left, blanks are inserted at line end.
-/// See [`OffscreenBuffer::delete_chars_at_cursor`] for detailed behavior and examples.
+/// See [`OffscreenBuffer::delete_chars_at_cursor`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -110,7 +110,7 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 
 /// Handle ECH (Erase Character) - erase n characters at cursor position.
 /// Characters are replaced with blanks, no shifting occurs (unlike DCH).
-/// See [`OffscreenBuffer::erase_chars_at_cursor`] for detailed behavior and examples.
+/// See [`OffscreenBuffer::erase_chars_at_cursor`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
@@ -127,7 +127,7 @@ pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) 
 /// Handle printable character printing - display character at cursor position.
 /// Character set translation applied if DEC graphics mode is active.
 /// Cursor advances with automatic line wrapping based on DECAWM mode.
-/// See [`OffscreenBuffer::print_char`] for detailed behavior and examples.
+/// See [`OffscreenBuffer::print_char`] for the implementation of this shim.
 ///
 /// [`OffscreenBuffer::print_char`]: crate::OffscreenBuffer::print_char
 pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {

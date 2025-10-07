@@ -31,6 +31,131 @@ to hunt through method docs for the big picture.
 Where it is possible use ASCII diagrams to illustrate concepts. Use code examples extensively to
 demonstrate usage patterns.
 
+### Module Organization Pattern
+
+When organizing Rust modules, prefer **private modules with public re-exports** as the default pattern.
+This provides a clean API while maintaining flexibility to refactor internal structure.
+
+#### The Recommended Pattern
+
+```rust
+// mod.rs - Module coordinator
+
+// Private modules (hide internal structure)
+mod constants;
+mod types;
+mod helpers;
+
+// Public re-exports (expose stable API)
+pub use constants::*;
+pub use types::*;
+pub use helpers::*;
+```
+
+#### Benefits
+
+1. **Clean, Flat API** - Users import directly without unnecessary nesting:
+   ```rust
+   // Good - flat, ergonomic
+   use my_module::MyType;
+   use my_module::CONSTANT;
+
+   // Bad - exposes internal structure
+   use my_module::types::MyType;
+   use my_module::constants::CONSTANT;
+   ```
+
+2. **Refactoring Freedom** - Internal reorganization doesn't break external code:
+   ```rust
+   // Can move items between files freely
+   // External API stays: use my_module::Item;
+   ```
+
+3. **Avoid Naming Conflicts** - Private module names don't pollute the namespace:
+   ```rust
+   // No conflicts with other `constants` modules in the crate
+   mod constants;  // Private - name hidden
+   pub use constants::*;  // Items public
+   ```
+
+4. **Encapsulation** - Module structure is an implementation detail, not part of the API
+
+#### When to Use This Pattern
+
+**✅ Use private modules + public re-exports when:**
+
+- Module structure is an implementation detail
+- You want a flat, ergonomic API surface
+- Avoiding potential name collisions
+- Working with small to medium-sized modules with clear responsibilities
+
+**Example from `csi_codes`:**
+```rust
+// tui/src/core/pty_mux/vt_100_ansi_parser/protocols/csi_codes/mod.rs
+
+// Private modules - can refactor without breaking changes
+mod constants;
+mod margin;
+mod params;
+mod private_mode;
+mod sequence;
+
+// Public re-exports - stable API
+pub use constants::*;
+pub use margin::*;
+pub use params::*;
+pub use private_mode::*;
+pub use sequence::*;
+
+// Usage: clean imports
+use csi_codes::CsiSequence;
+use csi_codes::CSI_START;
+```
+
+#### When NOT to Use This Pattern
+
+**❌ Keep modules public when:**
+
+1. **Module structure IS the API** - Different domains should be explicit:
+   ```rust
+   pub mod frontend;  // Frontend-specific APIs
+   pub mod backend;   // Backend-specific APIs
+   ```
+
+2. **Large feature domains** - When namespacing provides clarity:
+   ```rust
+   pub mod graphics;   // 100+ graphics-related items
+   pub mod audio;      // 100+ audio-related items
+   // Users: use engine::graphics::Renderer;
+   ```
+
+3. **Optional/conditional features** - Make feature boundaries explicit:
+   ```rust
+   #[cfg(feature = "async")]
+   pub mod async_api;  // Keep separate for clarity
+   ```
+
+#### Special Cases
+
+**Test utilities** can be public but conditional:
+```rust
+#[cfg(any(test, doc))]
+pub mod test_helpers;  // Public for testing/docs, not in release builds
+```
+
+**Hybrid approach** (used by standard library):
+```rust
+pub mod collections {
+    // Internal structure hidden
+    mod vec;
+    mod hashmap;
+
+    // Items re-exported
+    pub use vec::Vec;
+    pub use hashmap::HashMap;
+}
+```
+
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
 
 Throughout the implementation, use the type-safe bounds checking utilities from

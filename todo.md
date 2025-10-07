@@ -6,26 +6,27 @@
 - [x] [`task_ring_buffer_enhance`](docs/done/task_ring_buffer_enhance.md)
 - [x] [`task_make_editor_vt_100_parser_more_typesafe`](docs/done/task_make_editor_vt_100_parser_more_typesafe.md)
 - [x] [`task_task_scroll_viewport_selection_refactor`](docs/done/task_scroll_viewport_selection_refactor.md)
-- [x] review `bounds_check`, and make polished documentation & ergonomic API
+- [x] 2025-10-07 review `bounds_check`, and make polished documentation & ergonomic API
 - [⌛] review `pty_mux`, `offscreen_buffer` and `ansi conformance tests`
 - [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
 - [⌛] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)
 - [ ] extend `main_event_loop.rs` to support OSC output to terminal emulator (main window)
-  - via `GlobalData::main_thread_channel_sender` -> add a variant to `TerminalWindowMainThreadSignal`
+  - via `GlobalData::main_thread_channel_sender` -> add a variant to
+    `TerminalWindowMainThreadSignal`
   - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
   - using `OscController` to write to `OutputDevice`
 
 # rearchitect how scrolling and rendering is done
 
-- [ ] Instead of having a single OffscreenBuffer for the terminal window, have 1 for each
-      component. Then compose them together w/ proper Z-index handling. This should
-      simplify a lot of complexity around scrolling
+- [ ] Instead of having a single OffscreenBuffer for the terminal window, have 1 for each component.
+      Then compose them together w/ proper Z-index handling. This should simplify a lot of
+      complexity around scrolling
 
 # fix editor component bugs
 
-- [ ] Run the tui_examples #3 (editor) and invoke simple or complex dialog box. Select a
-      few chars of text at the end and scroll to the left, and see the component painting
-      outside of its bounds (on the right).
+- [ ] Run the tui_examples #3 (editor) and invoke simple or complex dialog box. Select a few chars
+      of text at the end and scroll to the left, and see the component painting outside of its
+      bounds (on the right).
 
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 
@@ -102,16 +103,15 @@
 # add TTS "assistive technology" support in the framework
 
 - [ ] Not "accessibility" but "assistive technology" support in order to support people of
-      [infinite diversity in infinite
-      combinations](https://en.wikipedia.org/wiki/Vulcan_(Star_Trek)#IDIC). This is meant
-      to augment users with situational, temporary disabilities, AND varying capabilities.
-      For example, someone might have a preference (e.g., they absorb information 3x faster
-      aurally vs visually) to hear text read out loud, because this is their preferred /
-      optimized way to consume information. So, notifications should be read out loud for
-      these users, in addition to being displayed in terminal / GUI environment, etc. So this
-      is about meeting the user where they are, rather than forcing them to adapt to the
-      technology. Another AI feature could be "summarize this and read out loud" that is
-      available everywhere in the framework.
+      [infinite diversity in infinite combinations](<https://en.wikipedia.org/wiki/Vulcan_(Star_Trek)#IDIC>).
+      This is meant to augment users with situational, temporary disabilities, AND varying
+      capabilities. For example, someone might have a preference (e.g., they absorb information 3x
+      faster aurally vs visually) to hear text read out loud, because this is their preferred /
+      optimized way to consume information. So, notifications should be read out loud for these
+      users, in addition to being displayed in terminal / GUI environment, etc. So this is about
+      meeting the user where they are, rather than forcing them to adapt to the technology. Another
+      AI feature could be "summarize this and read out loud" that is available everywhere in the
+      framework.
 
 # edi features
 
@@ -130,8 +130,8 @@
 
 # giti features: https://github.com/r3bl-org/r3bl-open-core/issues/423
 
-- [ ] The parent issue has some pre-existing sub-issues. Make sure that all sub-issues in
-      the body of the issue have been created. Then work on each of them.
+- [ ] The parent issue has some pre-existing sub-issues. Make sure that all sub-issues in the body
+      of the issue have been created. Then work on each of them.
 
 # editor fixes and enhancements
 

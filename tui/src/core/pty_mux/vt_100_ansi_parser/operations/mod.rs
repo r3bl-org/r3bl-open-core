@@ -91,16 +91,20 @@
 //! - [`test_char_ops.rs`] (tests) - The validation layer
 //!
 //! This same pattern applies to all operation types:
-//! - [`control_ops.rs`] / [`impl_control_ops.rs`] / [`test_control_ops.rs`]
-//! - [`cursor_ops.rs`] / [`impl_cursor_ops.rs`] / [`test_cursor_ops.rs`]
-//! - [`dsr_ops.rs`] / [`impl_dsr_ops.rs`] / [`test_dsr_ops.rs`]
-//! - [`line_ops.rs`] / [`impl_line_ops.rs`] / [`test_line_ops.rs`]
-//! - [`margin_ops.rs`] / [`impl_margin_ops.rs`] / [`test_margin_ops.rs`]
-//! - [`mode_ops.rs`] / [`impl_mode_ops.rs`] / [`test_mode_ops.rs`]
-//! - [`osc_ops.rs`] / [`impl_osc_ops.rs`] / [`test_osc_ops.rs`]
-//! - [`scroll_ops.rs`] / [`impl_scroll_ops.rs`] / [`test_scroll_ops.rs`]
-//! - [`sgr_ops.rs`] / [`impl_sgr_ops.rs`] / [`test_sgr_ops.rs`]
-//! - [`terminal_ops.rs`] / [`impl_terminal_ops.rs`] / [`test_terminal_ops.rs`]
+//!
+//! | Ops | Shim | Tests |
+//! |-----|------|-------|
+//! | [`char_ops.rs`] | [`impl_char_ops.rs`] | [`test_char_ops.rs`] |
+//! | [`control_ops.rs`] | [`impl_control_ops.rs`] | [`test_control_ops.rs`] |
+//! | [`cursor_ops.rs`] | [`impl_cursor_ops.rs`] | [`test_cursor_ops.rs`] |
+//! | [`dsr_ops.rs`] | [`impl_dsr_ops.rs`] | [`test_dsr_ops.rs`] |
+//! | [`line_ops.rs`] | [`impl_line_ops.rs`] | [`test_line_ops.rs`] |
+//! | [`margin_ops.rs`] | [`impl_margin_ops.rs`] | [`test_margin_ops.rs`] |
+//! | [`mode_ops.rs`] | [`impl_mode_ops.rs`] | [`test_mode_ops.rs`] |
+//! | [`osc_ops.rs`] | [`impl_osc_ops.rs`] | [`test_osc_ops.rs`] |
+//! | [`scroll_ops.rs`] | [`impl_scroll_ops.rs`] | [`test_scroll_ops.rs`] |
+//! | [`sgr_ops.rs`] | [`impl_sgr_ops.rs`] | [`test_sgr_ops.rs`] |
+//! | [`terminal_ops.rs`] | [`impl_terminal_ops.rs`] | [`test_terminal_ops.rs`] |
 //!
 //! See the [main module documentation](super) for the complete explanation of this
 //! architectural pattern and its benefits for IDE navigation.
