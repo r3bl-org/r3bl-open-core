@@ -76,7 +76,7 @@ mod dsr_request_type_impl {
 
     impl From<&vte::Params> for DsrRequestType {
         fn from(params: &vte::Params) -> Self {
-            let first_param_or_zero = params.extract_nth_opt(0).unwrap_or(0);
+            let first_param_or_zero = params.extract_nth_opt_raw(0).unwrap_or(0);
             first_param_or_zero.into()
         }
     }
@@ -108,11 +108,15 @@ mod dsr_request_type_impl {
 ///
 /// ```rust
 /// use r3bl_tui::{DsrSequence, term_row, term_col};
+/// use std::num::NonZeroU16;
 ///
 /// let status = DsrSequence::StatusOkResponse;
 /// assert_eq!(status.to_string(), "\x1b[0n");
 ///
-/// let cursor = DsrSequence::CursorPositionResponse { row: term_row(5), col: term_col(10) };
+/// let cursor = DsrSequence::CursorPositionResponse {
+///     row: term_row(NonZeroU16::new(5).unwrap()),
+///     col: term_col(NonZeroU16::new(10).unwrap())
+/// };
 /// assert_eq!(cursor.to_string(), "\x1b[5;10R");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -183,8 +187,12 @@ mod dsr_sequence_impl {
 ///
 /// ```rust
 /// use r3bl_tui::{DsrRequestFromPtyEvent, term_row, term_col};
+/// use std::num::NonZeroU16;
 ///
-/// let request = DsrRequestFromPtyEvent::CursorPosition { row: term_row(10), col: term_col(25) };
+/// let request = DsrRequestFromPtyEvent::CursorPosition {
+///     row: term_row(NonZeroU16::new(10).unwrap()),
+///     col: term_col(NonZeroU16::new(25).unwrap())
+/// };
 /// let response_bytes = request.to_string().into_bytes();
 /// // The response_bytes would be sent back through the PTY input channel
 /// assert_eq!(response_bytes, b"\x1b[10;25R");
@@ -244,7 +252,10 @@ pub mod dsr_test_helpers {
 #[cfg(test)]
 mod tests {
     use super::{dsr_test_helpers::dsr_cursor_position_response, *};
-    use crate::term_units::{term_col, term_row};
+    use crate::{
+        term_units::{term_col, term_row},
+        vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+    };
 
     #[test]
     fn test_dsr_sequence_status_ok_response() {
@@ -255,18 +266,18 @@ mod tests {
     #[test]
     fn test_dsr_sequence_cursor_position_response() {
         let sequence = DsrSequence::CursorPositionResponse {
-            row: term_row(10),
-            col: term_col(25),
+            row: term_row(nz(10)),
+            col: term_col(nz(25)),
         };
-        let expected = dsr_cursor_position_response(term_row(10), term_col(25));
+        let expected = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
         assert_eq!(sequence.to_string(), expected);
     }
 
     #[test]
     fn test_dsr_sequence_clone_and_debug() {
         let original = DsrSequence::CursorPositionResponse {
-            row: term_row(5),
-            col: term_col(10),
+            row: term_row(nz(5)),
+            col: term_col(nz(10)),
         };
         let cloned = original.clone();
         assert_eq!(original, cloned);
@@ -280,14 +291,14 @@ mod tests {
     #[test]
     fn test_write_to_buf_produces_correct_ansi_sequence() {
         let sequence = DsrSequence::CursorPositionResponse {
-            row: term_row(42),
-            col: term_col(84),
+            row: term_row(nz(42)),
+            col: term_col(nz(84)),
         };
         let mut acc = BufTextStorage::new();
 
         // Test that write_to_buf works correctly.
         sequence.write_to_buf(&mut acc).unwrap();
-        let expected = dsr_cursor_position_response(term_row(42), term_col(84));
+        let expected = dsr_cursor_position_response(term_row(nz(42)), term_col(nz(84)));
         assert_eq!(acc.clone(), expected);
     }
 
@@ -300,22 +311,22 @@ mod tests {
     #[test]
     fn test_dsr_request_cursor_position_display() {
         let request = DsrRequestFromPtyEvent::CursorPosition {
-            row: term_row(10),
-            col: term_col(25),
+            row: term_row(nz(10)),
+            col: term_col(nz(25)),
         };
-        let expected = dsr_cursor_position_response(term_row(10), term_col(25));
+        let expected = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
         assert_eq!(request.to_string(), expected);
     }
 
     #[test]
     fn test_from_trait_conversion() {
         let request = DsrRequestFromPtyEvent::CursorPosition {
-            row: term_row(3),
-            col: term_col(7),
+            row: term_row(nz(3)),
+            col: term_col(nz(7)),
         };
         let expected_sequence = DsrSequence::CursorPositionResponse {
-            row: term_row(3),
-            col: term_col(7),
+            row: term_row(nz(3)),
+            col: term_col(nz(7)),
         };
 
         assert_eq!(DsrSequence::from(&request), expected_sequence);

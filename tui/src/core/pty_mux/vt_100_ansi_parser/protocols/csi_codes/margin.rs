@@ -6,7 +6,7 @@
 //! where scrolling operations occur.
 
 use super::super::super::term_units::{TermRow, term_row};
-use std::cmp::max;
+use std::{cmp::max, num::NonZeroU16};
 
 /// Margin request types for DECSTBM (Set Top and Bottom Margins) operations.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -25,10 +25,16 @@ impl From<(Option<u16>, Option<u16>)> for MarginRequest {
             _ => {
                 // Convert to 1-based terminal coordinates (VT100 spec uses 1-based).
                 let top_row = maybe_top.map_or(1, |v| max(v, 1));
-                let bottom_row = maybe_bottom.unwrap_or(24); // Default bottom
+                let bottom_row = maybe_bottom.map_or(24, |v| max(v, 1)); // Default to 24
+
+                // SAFETY: max(v, 1) guarantees values >= 1
+                debug_assert!(top_row > 0 && bottom_row > 0);
+                let top_nz = unsafe { NonZeroU16::new_unchecked(top_row) };
+                let bottom_nz = unsafe { NonZeroU16::new_unchecked(bottom_row) };
+
                 Self::SetRegion {
-                    top: term_row(top_row),
-                    bottom: term_row(bottom_row),
+                    top: term_row(top_nz),
+                    bottom: term_row(bottom_nz),
                 }
             }
         }
@@ -38,8 +44,8 @@ impl From<(Option<u16>, Option<u16>)> for MarginRequest {
 impl From<&vte::Params> for MarginRequest {
     fn from(params: &vte::Params) -> Self {
         use super::params::ParamsExt;
-        let maybe_top = params.extract_nth_opt(0);
-        let maybe_bottom = params.extract_nth_opt(1);
+        let maybe_top = params.extract_nth_opt_raw(0);
+        let maybe_bottom = params.extract_nth_opt_raw(1);
         (maybe_top, maybe_bottom).into()
     }
 }

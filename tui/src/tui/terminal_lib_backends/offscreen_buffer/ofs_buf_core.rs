@@ -181,7 +181,7 @@ impl Default for AnsiParserSupport {
 /// ## Key Features
 ///
 /// - **Dual Integration**: Works with both render pipeline and ANSI terminal emulation
-/// - **Variable-Width Support**: Proper handling of emoji and Unicode characters
+/// - **Variable-ColWidth Support**: Proper handling of emoji and Unicode characters
 /// - **VT100 Compliance**: Full terminal specification compliance
 /// - **Performance Optimized**: Pre-calculated memory sizes and efficient operations
 ///

@@ -14,10 +14,12 @@
 //! styling patterns, and efficient screen updates that stress-test terminal
 //! parsers and buffer management.
 
+use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, LengthOps, SgrCode, height,
             vt_100_ansi_parser::{protocols::{csi_codes::CsiSequence,
                                              esc_codes::EscSequence},
                                  term_units::{term_col, term_row}}};
+use std::num::NonZeroU16;
 
 /// Vim status line pattern with mode indicator.
 ///
@@ -34,13 +36,13 @@ use crate::{ANSIBasicColor, LengthOps, SgrCode, height,
 /// * `mode` - Mode string to display (e.g., "INSERT", "VISUAL", "NORMAL")
 /// * `status_row` - Row for status line (typically bottom row of terminal)
 #[must_use]
-pub fn vim_status_line(mode: &str, status_row: u16) -> String {
+pub fn vim_status_line(mode: &str, status_row: NonZeroU16) -> String {
     format!(
         "{}{}{}-- {} --{}{}",
         EscSequence::SaveCursor,
         CsiSequence::CursorPosition {
             row: term_row(status_row),
-            col: term_col(1)
+            col: term_col(nz(1))
         },
         SgrCode::Invert, // Reverse video for highlighting
         mode,
@@ -90,10 +92,12 @@ pub fn vim_visual_selection(
         };
 
         // Move to start of selection on this line.
+        let row_nz = nz(row);
+        let col_nz = nz(col_start);
         sequence.push_str(
             &CsiSequence::CursorPosition {
-                row: term_row(row),
-                col: term_col(col_start),
+                row: term_row(row_nz),
+                col: term_col(col_nz),
             }
             .to_string(),
         );
@@ -120,13 +124,13 @@ pub fn vim_visual_selection(
 /// * `command_char` - Command character (`:`, `/`, `?`)
 /// * `command_row` - Row for command line (typically bottom row)
 #[must_use]
-pub fn vim_command_line(command_char: char, command_row: u16) -> String {
+pub fn vim_command_line(command_char: char, command_row: NonZeroU16) -> String {
     format!(
         "{}{}{}",
         EscSequence::SaveCursor,
         CsiSequence::CursorPosition {
             row: term_row(command_row),
-            col: term_col(1)
+            col: term_col(nz(1))
         },
         command_char
     )
@@ -147,8 +151,8 @@ pub fn vim_clear_and_redraw() -> String {
         "{}{}",
         CsiSequence::EraseDisplay(2), // Clear screen
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         }  // Home cursor
     )
 }
@@ -163,12 +167,16 @@ pub fn vim_clear_and_redraw() -> String {
 /// * `line_row` - Row where line number appears
 /// * `content` - Line content to display after number
 #[must_use]
-pub fn vim_line_with_number(line_num: u16, line_row: u16, content: &str) -> String {
+pub fn vim_line_with_number(
+    line_num: u16,
+    line_row: NonZeroU16,
+    content: &str,
+) -> String {
     format!(
         "{}{}{:4} {}{}{}",
         CsiSequence::CursorPosition {
             row: term_row(line_row),
-            col: term_col(1)
+            col: term_col(nz(1))
         },
         SgrCode::ForegroundBasic(ANSIBasicColor::Yellow), // Dim line numbers
         line_num,                                         /* Right-aligned 4-digit
@@ -189,7 +197,11 @@ pub fn vim_line_with_number(line_num: u16, line_row: u16, content: &str) -> Stri
 /// * `col` - Column where match starts
 /// * `match_text` - Text that matches the search
 #[must_use]
-pub fn vim_search_highlight(row: u16, col: u16, match_text: &str) -> String {
+pub fn vim_search_highlight(
+    row: NonZeroU16,
+    col: NonZeroU16,
+    match_text: &str,
+) -> String {
     format!(
         "{}{}{}{}{}",
         CsiSequence::CursorPosition {
@@ -212,13 +224,13 @@ pub fn vim_search_highlight(row: u16, col: u16, match_text: &str) -> String {
 /// * `error_msg` - Error message to display
 /// * `error_row` - Row for error display (typically bottom row)
 #[must_use]
-pub fn vim_error_message(error_msg: &str, error_row: u16) -> String {
+pub fn vim_error_message(error_msg: &str, error_row: NonZeroU16) -> String {
     format!(
         "{}{}{}{}{}{}{}",
         EscSequence::SaveCursor,
         CsiSequence::CursorPosition {
             row: term_row(error_row),
-            col: term_col(1)
+            col: term_col(nz(1))
         },
         SgrCode::ForegroundBasic(ANSIBasicColor::Red),
         SgrCode::Bold,
@@ -236,8 +248,11 @@ pub fn vim_error_message(error_msg: &str, error_row: u16) -> String {
 /// # Arguments
 /// * `completions` - List of completion options
 /// * `start_row` - Row to start displaying completions
+///
+/// # Panics
+/// May panic if arithmetic operations overflow during sequence generation.
 #[must_use]
-pub fn vim_completion_menu(completions: &[&str], start_row: u16) -> String {
+pub fn vim_completion_menu(completions: &[&str], start_row: NonZeroU16) -> String {
     let mut sequence = String::new();
 
     sequence.push_str(&EscSequence::SaveCursor.to_string());
@@ -245,10 +260,12 @@ pub fn vim_completion_menu(completions: &[&str], start_row: u16) -> String {
     // Display each completion option.
     for (i, completion) in completions.iter().enumerate() {
         let row_offset = height(i).clamp_to_max(u16::MAX).as_u16();
+        let row_nz = NonZeroU16::new(start_row.get() + row_offset)
+            .expect("start_row + row_offset is always >= 1");
         sequence.push_str(
             &CsiSequence::CursorPosition {
-                row: term_row(start_row + row_offset),
-                col: term_col(1),
+                row: term_row(row_nz),
+                col: term_col(nz(1)),
             }
             .to_string(),
         );

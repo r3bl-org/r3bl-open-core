@@ -25,8 +25,8 @@ pub mod cursor_save_restore_with_attributes {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(3),
-                col: term_col(5)
+                row: term_row(nz(3)),
+                col: term_col(nz(5))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -48,8 +48,8 @@ pub mod cursor_save_restore_with_attributes {
         let move_sequence2 = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(7),
-                col: term_col(8)
+                row: term_row(nz(7)),
+                col: term_col(nz(8))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence2);
@@ -89,8 +89,8 @@ pub mod cursor_save_restore_with_attributes {
         let move1_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(2),
-                col: term_col(3)
+                row: term_row(nz(2)),
+                col: term_col(nz(3))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move1_sequence);
@@ -103,8 +103,8 @@ pub mod cursor_save_restore_with_attributes {
         let move2_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(7)
+                row: term_row(nz(5)),
+                col: term_col(nz(7))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move2_sequence);
@@ -124,8 +124,8 @@ pub mod cursor_save_restore_with_attributes {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(2),
-                col: term_col(4)
+                row: term_row(nz(2)),
+                col: term_col(nz(4))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -141,8 +141,8 @@ pub mod cursor_save_restore_with_attributes {
         let move_and_style = format!(
             "{}{}{}{}Text",
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(1)
+                row: term_row(nz(5)),
+                col: term_col(nz(1))
             },
             SgrCode::ForegroundBasic(ANSIBasicColor::Red),
             SgrCode::BackgroundBasic(ANSIBasicColor::Yellow),
@@ -199,8 +199,8 @@ pub mod character_set_state_management {
             "{}{}{}",
             CsiSequence::SaveCursor,
             CsiSequence::CursorPosition {
-                row: term_row(3),
-                col: term_col(5)
+                row: term_row(nz(3)),
+                col: term_col(nz(5))
             },
             CsiSequence::RestoreCursor
         );
@@ -276,8 +276,8 @@ pub mod scroll_region_state_interactions {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -286,8 +286,8 @@ pub mod scroll_region_state_interactions {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(6)
+                row: term_row(nz(5)),
+                col: term_col(nz(6))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -300,8 +300,8 @@ pub mod scroll_region_state_interactions {
         let move_outside = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(1),
-                col: term_col(2)
+                row: term_row(nz(1)),
+                col: term_col(nz(2))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_outside);
@@ -310,8 +310,8 @@ pub mod scroll_region_state_interactions {
         let new_margins = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(2)),
-                bottom: Some(term_row(8))
+                top: Some(term_row(nz(2))),
+                bottom: Some(term_row(nz(8)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(new_margins);
@@ -326,11 +326,11 @@ pub mod scroll_region_state_interactions {
         // Verify scroll region changed
         assert_eq!(
             ofs_buf.ansi_parser_support.scroll_region_top,
-            Some(term_row(2))
+            Some(term_row(nz(2)))
         );
         assert_eq!(
             ofs_buf.ansi_parser_support.scroll_region_bottom,
-            Some(term_row(8))
+            Some(term_row(nz(8)))
         );
     }
 
@@ -342,12 +342,12 @@ pub mod scroll_region_state_interactions {
         let setup_sequence = format!(
             "{}{}{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(4)),
-                bottom: Some(term_row(8))
+                top: Some(term_row(nz(4))),
+                bottom: Some(term_row(nz(8)))
             },
             CsiSequence::CursorPosition {
-                row: term_row(6),
-                col: term_col(3)
+                row: term_row(nz(6)),
+                col: term_col(nz(3))
             },
             CsiSequence::SaveCursor
         );
@@ -371,8 +371,8 @@ pub mod scroll_region_state_interactions {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(2),
-                col: term_col(8)
+                row: term_row(nz(2)),
+                col: term_col(nz(8))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -398,16 +398,16 @@ pub mod complex_state_combinations {
         let complex_setup = format!(
             "{}{}{}{}{}{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(2)),
-                bottom: Some(term_row(8))
+                top: Some(term_row(nz(2))),
+                bottom: Some(term_row(nz(8)))
             },
             "\x1b(0", // DEC Graphics
             CsiSequence::DisablePrivateMode(PrivateModeType::AutoWrap),
             SgrCode::Bold,
             SgrCode::ForegroundBasic(ANSIBasicColor::Cyan),
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(4)
+                row: term_row(nz(5)),
+                col: term_col(nz(4))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(complex_setup);
@@ -420,15 +420,15 @@ pub mod complex_state_combinations {
         let state_changes = format!(
             "{}{}{}{}{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(1)),
-                bottom: Some(term_row(10))
+                top: Some(term_row(nz(1))),
+                bottom: Some(term_row(nz(10)))
             },
             "\x1b(B", // ASCII
             CsiSequence::EnablePrivateMode(PrivateModeType::AutoWrap),
             SgrCode::Reset,
             CsiSequence::CursorPosition {
-                row: term_row(9),
-                col: term_col(1)
+                row: term_row(nz(9)),
+                col: term_col(nz(1))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(state_changes);
@@ -443,7 +443,7 @@ pub mod complex_state_combinations {
         // Verify other states changed (not restored)
         assert_eq!(
             ofs_buf.ansi_parser_support.scroll_region_top,
-            Some(term_row(1))
+            Some(term_row(nz(1)))
         );
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
                   crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::Ascii);
@@ -468,8 +468,8 @@ pub mod complex_state_combinations {
             "{}{}{}{}{}",
             "Text1 ",
             CsiSequence::CursorPosition {
-                row: term_row(2),
-                col: term_col(1)
+                row: term_row(nz(2)),
+                col: term_col(nz(1))
             },
             "Text2 ",
             CsiSequence::EraseDisplay(0), // Clear from cursor to end

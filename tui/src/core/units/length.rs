@@ -3,7 +3,7 @@
 //! One-based character size measurements for terminal UI - see [`Length`] type.
 
 use super::{ChUnit, Index, ch, idx};
-use crate::{ColWidth, LengthOps, NumericValue, RowHeight,
+use crate::{ColWidth, LengthOps, NumericConversions, NumericValue, RowHeight,
             create_numeric_arithmetic_operators};
 use std::{fmt::Debug,
           hash::Hash,
@@ -187,11 +187,13 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl NumericValue for Length {
+    impl NumericConversions for Length {
         fn as_usize(&self) -> usize { self.0.as_usize() }
 
         fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
+
+    impl NumericValue for Length {}
 
     impl LengthOps for Length {
         type IndexType = Index;

@@ -12,6 +12,7 @@
 //! - Uses different status indicators than vim
 //! - Often employs more conservative styling
 
+use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, SgrCode,
             vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                  term_units::{term_col, term_row}}};
@@ -26,8 +27,8 @@ pub fn emacs_mode_line() -> String {
         "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
         // Move to bottom line.
         CsiSequence::CursorPosition {
-            row: term_row(25),
-            col: term_col(1)
+            row: term_row(nz(25)),
+            col: term_col(nz(1))
         },
         // Cyan background for mode line.
         SgrCode::BackgroundBasic(ANSIBasicColor::Cyan),
@@ -59,8 +60,8 @@ pub fn emacs_minibuffer_prompt(prompt: &str) -> String {
         "{}{}{}{}{}",
         // Move to bottom line.
         CsiSequence::CursorPosition {
-            row: term_row(10),
-            col: term_col(1)
+            row: term_row(nz(10)),
+            col: term_col(nz(1))
         },
         // Clear the line first.
         CsiSequence::EraseLine(2),
@@ -82,8 +83,8 @@ pub fn emacs_buffer_list() -> String {
         // Clear screen and move to top.
         CsiSequence::EraseDisplay(2),
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         },
         // Header.
         SgrCode::Bold,

@@ -45,8 +45,9 @@ impl OffscreenBuffer {
     /// Converts 0-based internal position to 1-based terminal position.
     pub fn handle_cursor_position_request(&mut self) {
         // Convert 0-based internal position to 1-based terminal position.
-        let row: TermRow = (self.cursor_pos.row_index.as_u16() + 1).into();
-        let col: TermCol = (self.cursor_pos.col_index.as_u16() + 1).into();
+        // Uses type-safe From<RowIndex>/From<ColIndex> conversions.
+        let row = TermRow::from(self.cursor_pos.row_index);
+        let col = TermCol::from(self.cursor_pos.col_index);
         self.ansi_parser_support
             .pending_dsr_responses
             .push(DsrRequestFromPtyEvent::CursorPosition { row, col });

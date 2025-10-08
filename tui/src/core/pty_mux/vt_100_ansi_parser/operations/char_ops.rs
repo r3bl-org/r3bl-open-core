@@ -82,7 +82,7 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 ///
 /// [`OffscreenBuffer::insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
 pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = MovementCount::parse_as_length_non_zero(params);
+    let how_many = MovementCount::parse_first_as_length_non_zero(params);
     let result = performer.ofs_buf.insert_chars_at_cursor(how_many);
     debug_assert!(
         result.is_ok(),
@@ -98,7 +98,7 @@ pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// [`OffscreenBuffer::delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = MovementCount::parse_as_length_non_zero(params);
+    let how_many = MovementCount::parse_first_as_length_non_zero(params);
     let result = performer.ofs_buf.delete_chars_at_cursor(how_many);
     debug_assert!(
         result.is_ok(),
@@ -114,7 +114,7 @@ pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// [`OffscreenBuffer::erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
 pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = MovementCount::parse_as_length_non_zero(params);
+    let how_many = MovementCount::parse_first_as_length_non_zero(params);
     let result = performer.ofs_buf.erase_chars_at_cursor(how_many);
     debug_assert!(
         result.is_ok(),

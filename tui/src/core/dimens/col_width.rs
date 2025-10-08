@@ -1,23 +1,23 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, ColIndex, LengthOps, NumericValue, ch,
+use crate::{ChUnit, ColIndex, LengthOps, NumericConversions, NumericValue, ch,
             create_numeric_arithmetic_operators};
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
-/// Width is column count, i.e., the number of columns that a UI component occupies.
+/// `ColWidth` is column count, i.e., the number of columns that a UI component occupies.
 ///
 /// This is one part of a [`Size`] and is different from the [`ColIndex`] (position).
 ///
 /// You can use the [`width()`] to create a new instance.
 ///
 /// # Working with col index
-/// You can't safely add or subtract a [`ColIndex`] from this `Width`; since without
+/// You can't safely add or subtract a [`ColIndex`] from this `ColWidth`; since without
 /// knowing your specific use case ahead of time, it isn't possible to provide a default
 /// implementation without leading to unintended consequences. You can do the reverse
 /// safely.
 ///
-/// To add or subtract a [`ColIndex`] from this [`Width`], you can call
+/// To add or subtract a [`ColIndex`] from this [`ColWidth`], you can call
 /// [`Self::convert_to_index()`] and apply whatever logic makes sense for your use
 /// case.
 ///
@@ -31,8 +31,8 @@ use std::{fmt::Debug,
 /// let width = ColWidth::new(5);
 /// ```
 ///
-/// [`Width`]: crate::ColWidth
-/// [`Height`]: crate::RowHeight
+/// [`ColWidth`]: crate::ColWidth
+/// [`RowHeight`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`Size`]: crate::Size
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
@@ -161,11 +161,13 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl NumericValue for ColWidth {
+    impl NumericConversions for ColWidth {
         fn as_usize(&self) -> usize { self.0.as_usize() }
 
         fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
+
+    impl NumericValue for ColWidth {}
 
     impl LengthOps for ColWidth {
         type IndexType = ColIndex;
@@ -214,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_width_sub() {
-        // Sub. This returns a Width as expected, and not a ColIndex.
+        // Sub. This returns a ColWidth as expected, and not a ColIndex.
         {
             let width1 = width(5);
             let width2 = width(3);

@@ -31,7 +31,7 @@ pub mod insert_line {
         let mut ofs_buf = create_numbered_buffer(5, 10);
 
         // Move cursor to row 2 (0-based) and insert one line
-        let move_cursor = term_row(3) + term_col(1); // Move to row 3, col 1 (1-based)
+        let move_cursor = term_row(nz(3)) + term_col(nz(1)); // Move to row 3, col 1 (1-based)
         let insert_line = CsiSequence::InsertLine(1);
         let sequence = format!("{move_cursor}{insert_line}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -50,7 +50,7 @@ pub mod insert_line {
         let mut ofs_buf = create_numbered_buffer(5, 10);
 
         // Move cursor to row 1 (0-based) and insert three lines
-        let move_cursor = term_row(2) + term_col(1); // Move to row 2, col 1 (1-based)
+        let move_cursor = term_row(nz(2)) + term_col(nz(1)); // Move to row 2, col 1 (1-based)
         let insert_lines = CsiSequence::InsertLine(3);
         let sequence = format!("{move_cursor}{insert_lines}");
         let _result = ofs_buf.apply_ansi_bytes(sequence);
@@ -70,15 +70,15 @@ pub mod insert_line {
 
         // Set scroll margins: rows 3-7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         };
         let _result = ofs_buf.apply_ansi_bytes(format!("{set_margins}"));
 
         // Move cursor to row 5 (1-based, within margins) and insert one line
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(1),
+            row: term_row(nz(5)),
+            col: term_col(nz(1)),
         };
         let insert_line = CsiSequence::InsertLine(1);
         let sequence = format!("{move_cursor}{insert_line}");
@@ -104,8 +104,9 @@ pub mod insert_line {
         let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
-        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(2));
-        performer.ofs_buf.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
+        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
+        performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
+            Some(term_row(nz(4)));
 
         // Move cursor to row 0 (outside margins)
         performer.ofs_buf.cursor_pos = row(0) + col(0);
@@ -131,8 +132,8 @@ pub mod delete_line {
 
         // Move cursor to row 3 (1-based) and delete one line
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(3),
-            col: term_col(1),
+            row: term_row(nz(3)),
+            col: term_col(nz(1)),
         };
         let delete_line = CsiSequence::DeleteLine(1);
         let sequence = format!("{move_cursor}{delete_line}");
@@ -153,8 +154,8 @@ pub mod delete_line {
 
         // Move cursor to row 2 (1-based) and delete three lines
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(2),
-            col: term_col(1),
+            row: term_row(nz(2)),
+            col: term_col(nz(1)),
         };
         let delete_lines = CsiSequence::DeleteLine(3);
         let sequence = format!("{move_cursor}{delete_lines}");
@@ -175,15 +176,15 @@ pub mod delete_line {
 
         // Set scroll margins: rows 3-7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         };
         let _result = ofs_buf.apply_ansi_bytes(format!("{set_margins}"));
 
         // Move cursor to row 5 (1-based, within margins) and delete one line
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(1),
+            row: term_row(nz(5)),
+            col: term_col(nz(1)),
         };
         let delete_line = CsiSequence::DeleteLine(1);
         let sequence = format!("{move_cursor}{delete_line}");
@@ -209,8 +210,9 @@ pub mod delete_line {
         let performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Set scroll margins: rows 2-4 (1-based) = 1-3 (0-based)
-        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(2));
-        performer.ofs_buf.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
+        performer.ofs_buf.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
+        performer.ofs_buf.ansi_parser_support.scroll_region_bottom =
+            Some(term_row(nz(4)));
 
         // Move cursor to row 4 (outside margins)
         performer.ofs_buf.cursor_pos = row(4) + col(0);

@@ -33,12 +33,12 @@ mod full_sequences {
         let sequence = format!(
             "{clear_screen}{home_position}{reverse_video}{status_text}{reset_attrs}{save_cursor}{move_to_cmd}{prompt}{restore_cursor}{restored_text}",
             clear_screen = CsiSequence::EraseDisplay(2), // ESC[2J
-            home_position = csi_seq_cursor_pos(term_row(1) + term_col(1)), // ESC[H
-            reverse_video = SgrCode::Invert,             // ESC[7m
+            home_position = csi_seq_cursor_pos(term_row(nz(1)) + term_col(nz(1))), /* ESC[H */
+            reverse_video = SgrCode::Invert, // ESC[7m
             status_text = "-- INSERT --",
             reset_attrs = SgrCode::Reset,          // ESC[0m
             save_cursor = EscSequence::SaveCursor, // ESC 7
-            move_to_cmd = csi_seq_cursor_pos(term_row(24) + term_col(1)), // ESC[24;1H
+            move_to_cmd = csi_seq_cursor_pos(term_row(nz(24)) + term_col(nz(1))), /* ESC[24;1H */
             prompt = ":",
             restore_cursor = EscSequence::RestoreCursor, // ESC 8
             restored_text = "Hello World!"

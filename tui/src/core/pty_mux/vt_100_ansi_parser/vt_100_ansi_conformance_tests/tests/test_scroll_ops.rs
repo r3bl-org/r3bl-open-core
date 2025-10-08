@@ -853,8 +853,8 @@ pub mod decstbm_scroll_margins {
 
         // Set scroll region from row 3 to row 7 (1-based) - ESC [ 3 ; 7 r
         let sequence = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         }
         .to_string();
         performer.apply_ansi_bytes(sequence);
@@ -862,11 +862,11 @@ pub mod decstbm_scroll_margins {
         // Verify margins are set correctly (converted to 1-based internally)
         assert_eq!(
             performer.ofs_buf.ansi_parser_support.scroll_region_top,
-            Some(term_row(3))
+            Some(term_row(nz(3)))
         );
         assert_eq!(
             performer.ofs_buf.ansi_parser_support.scroll_region_bottom,
-            Some(term_row(7))
+            Some(term_row(nz(7)))
         );
     }
 
@@ -877,8 +877,8 @@ pub mod decstbm_scroll_margins {
 
         // Set some margins first.
         let sequence = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         }
         .to_string();
         performer.apply_ansi_bytes(sequence);
@@ -924,8 +924,8 @@ pub mod decstbm_scroll_margins {
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         }
         .to_string();
         performer.apply_ansi_bytes(set_margins);
@@ -957,16 +957,16 @@ pub mod decstbm_scroll_margins {
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         }
         .to_string();
         performer.apply_ansi_bytes(set_margins);
 
         // Position cursor at top of scroll region.
         let cursor_pos = CsiSequence::CursorPosition {
-            row: term_row(3),
-            col: term_col(1),
+            row: term_row(nz(3)),
+            col: term_col(nz(1)),
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos);
@@ -979,8 +979,8 @@ pub mod decstbm_scroll_margins {
 
         // Move cursor to bottom of scroll region.
         let cursor_pos_bottom = CsiSequence::CursorPosition {
-            row: term_row(7),
-            col: term_col(1),
+            row: term_row(nz(7)),
+            col: term_col(nz(1)),
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos_bottom);
@@ -999,16 +999,16 @@ pub mod decstbm_scroll_margins {
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         }
         .to_string();
         performer.apply_ansi_bytes(set_margins);
 
         // Try to position cursor above scroll region.
         let cursor_above = CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(5),
+            row: term_row(nz(1)),
+            col: term_col(nz(5)),
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_above);
@@ -1016,8 +1016,8 @@ pub mod decstbm_scroll_margins {
 
         // Try to position cursor below scroll region.
         let cursor_below = CsiSequence::CursorPosition {
-            row: term_row(9),
-            col: term_col(5),
+            row: term_row(nz(9)),
+            col: term_col(nz(5)),
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_below);
@@ -1025,8 +1025,8 @@ pub mod decstbm_scroll_margins {
 
         // Position within scroll region should work normally.
         let cursor_within = CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(5),
+            row: term_row(nz(5)),
+            col: term_col(nz(5)),
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_within);
@@ -1041,16 +1041,16 @@ pub mod decstbm_scroll_margins {
 
         // Set scroll region from row 3 to row 7 (1-based)
         let set_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         }
         .to_string();
         performer.apply_ansi_bytes(set_margins);
 
         // Position cursor at bottom of scroll region.
         let cursor_pos = CsiSequence::CursorPosition {
-            row: term_row(7),
-            col: term_col(1),
+            row: term_row(nz(7)),
+            col: term_col(nz(1)),
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos);
@@ -1070,8 +1070,8 @@ pub mod decstbm_scroll_margins {
 
         // Position cursor at top of scroll region.
         let cursor_pos_top = CsiSequence::CursorPosition {
-            row: term_row(3),
-            col: term_col(1),
+            row: term_row(nz(3)),
+            col: term_col(nz(1)),
         }
         .to_string();
         performer.apply_ansi_bytes(cursor_pos_top);
@@ -1092,8 +1092,8 @@ pub mod decstbm_scroll_margins {
 
         // Set scroll margins.
         let set_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(3)),
-            bottom: Some(term_row(7)),
+            top: Some(term_row(nz(3))),
+            bottom: Some(term_row(nz(7))),
         }
         .to_string();
         performer.apply_ansi_bytes(set_margins);
@@ -1127,8 +1127,8 @@ pub mod decstbm_scroll_margins {
 
         // Try to set invalid margins (top >= bottom)
         let invalid_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(7)),
-            bottom: Some(term_row(3)),
+            top: Some(term_row(nz(7))),
+            bottom: Some(term_row(nz(3))),
         }
         .to_string();
         performer.apply_ansi_bytes(invalid_margins);
@@ -1145,8 +1145,8 @@ pub mod decstbm_scroll_margins {
 
         // Try to set margins beyond buffer height.
         let large_margins = CsiSequence::SetScrollingMargins {
-            top: Some(term_row(1)),
-            bottom: Some(term_row(15)),
+            top: Some(term_row(nz(1))),
+            bottom: Some(term_row(nz(15))),
         }
         .to_string();
         performer.apply_ansi_bytes(large_margins);
@@ -1154,11 +1154,11 @@ pub mod decstbm_scroll_margins {
         // Should be clamped to buffer height.
         assert_eq!(
             performer.ofs_buf.ansi_parser_support.scroll_region_top,
-            Some(term_row(1))
+            Some(term_row(nz(1)))
         );
         assert_eq!(
             performer.ofs_buf.ansi_parser_support.scroll_region_bottom,
-            Some(term_row(10))
+            Some(term_row(nz(10)))
         );
     }
 }
@@ -1175,8 +1175,8 @@ pub mod cursor_boundary_operations {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1185,8 +1185,8 @@ pub mod cursor_boundary_operations {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(4),
-                col: term_col(5)
+                row: term_row(nz(4)),
+                col: term_col(nz(5))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1207,8 +1207,8 @@ pub mod cursor_boundary_operations {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1217,8 +1217,8 @@ pub mod cursor_boundary_operations {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(7),
-                col: term_col(5)
+                row: term_row(nz(7)),
+                col: term_col(nz(5))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1239,8 +1239,8 @@ pub mod cursor_boundary_operations {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1249,8 +1249,8 @@ pub mod cursor_boundary_operations {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(8)
+                row: term_row(nz(5)),
+                col: term_col(nz(8))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1271,8 +1271,8 @@ pub mod cursor_boundary_operations {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1281,8 +1281,8 @@ pub mod cursor_boundary_operations {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(3),
-                col: term_col(4)
+                row: term_row(nz(3)),
+                col: term_col(nz(4))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1303,8 +1303,8 @@ pub mod cursor_boundary_operations {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(4)),
-                bottom: Some(term_row(8))
+                top: Some(term_row(nz(4))),
+                bottom: Some(term_row(nz(8)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1313,8 +1313,8 @@ pub mod cursor_boundary_operations {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(2),
-                col: term_col(3)
+                row: term_row(nz(2)),
+                col: term_col(nz(3))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1344,8 +1344,8 @@ pub mod boundary_validation {
         let invalid_margins = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(8)),
-                bottom: Some(term_row(3))
+                top: Some(term_row(nz(8))),
+                bottom: Some(term_row(nz(3)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(invalid_margins);
@@ -1369,8 +1369,8 @@ pub mod boundary_validation {
         let invalid_margins = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(5)),
-                bottom: Some(term_row(15)) // Beyond 10 rows
+                top: Some(term_row(nz(5))),
+                bottom: Some(term_row(nz(15))) // Beyond 10 rows
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(invalid_margins);
@@ -1378,7 +1378,7 @@ pub mod boundary_validation {
         // Implementation should clamp or ignore invalid bounds
         // We verify the system remains in a valid state
         if let Some(bottom) = ofs_buf.ansi_parser_support.scroll_region_bottom {
-            assert!(bottom.0 <= 10); // Compare the inner u16 value
+            assert!(bottom.0.get() <= 10); // Compare the inner u16 value
         }
     }
 
@@ -1390,8 +1390,8 @@ pub mod boundary_validation {
         let single_line_margins = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(5)),
-                bottom: Some(term_row(5))
+                top: Some(term_row(nz(5))),
+                bottom: Some(term_row(nz(5)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(single_line_margins);
@@ -1400,8 +1400,8 @@ pub mod boundary_validation {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(3)
+                row: term_row(nz(5)),
+                col: term_col(nz(3))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1423,8 +1423,8 @@ pub mod boundary_validation {
         let full_margins = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(1)),
-                bottom: Some(term_row(10))
+                top: Some(term_row(nz(1))),
+                bottom: Some(term_row(nz(10)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(full_margins);
@@ -1434,8 +1434,8 @@ pub mod boundary_validation {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(10),
-                col: term_col(1)
+                row: term_row(nz(10)),
+                col: term_col(nz(1))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1462,8 +1462,8 @@ pub mod complex_interactions {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1472,24 +1472,24 @@ pub mod complex_interactions {
         let fill_sequence = format!(
             "{}Text1{}Text2{}Text3{}Text4{}Text5",
             CsiSequence::CursorPosition {
-                row: term_row(3),
-                col: term_col(1)
+                row: term_row(nz(3)),
+                col: term_col(nz(1))
             },
             CsiSequence::CursorPosition {
-                row: term_row(4),
-                col: term_col(1)
+                row: term_row(nz(4)),
+                col: term_col(nz(1))
             },
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(1)
+                row: term_row(nz(5)),
+                col: term_col(nz(1))
             },
             CsiSequence::CursorPosition {
-                row: term_row(6),
-                col: term_col(1)
+                row: term_row(nz(6)),
+                col: term_col(nz(1))
             },
             CsiSequence::CursorPosition {
-                row: term_row(7),
-                col: term_col(1)
+                row: term_row(nz(7)),
+                col: term_col(nz(1))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(fill_sequence);
@@ -1498,8 +1498,8 @@ pub mod complex_interactions {
         let complex_ops = format!(
             "{}{}{}{}",
             CsiSequence::CursorPosition {
-                row: term_row(7),
-                col: term_col(6)
+                row: term_row(nz(7)),
+                col: term_col(nz(6))
             },
             CsiSequence::CursorNextLine(1), // Should cause scrolling
             "NewText",
@@ -1520,8 +1520,8 @@ pub mod complex_interactions {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(4)),
-                bottom: Some(term_row(6))
+                top: Some(term_row(nz(4))),
+                bottom: Some(term_row(nz(6)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1530,8 +1530,8 @@ pub mod complex_interactions {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(6),
-                col: term_col(5)
+                row: term_row(nz(6)),
+                col: term_col(nz(5))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -1562,8 +1562,8 @@ pub mod complex_interactions {
         let margins_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(5)),
-                bottom: Some(term_row(6))
+                top: Some(term_row(nz(5))),
+                bottom: Some(term_row(nz(6)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(margins_sequence);
@@ -1572,8 +1572,8 @@ pub mod complex_interactions {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(5),
-                col: term_col(1)
+                row: term_row(nz(5)),
+                col: term_col(nz(1))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);

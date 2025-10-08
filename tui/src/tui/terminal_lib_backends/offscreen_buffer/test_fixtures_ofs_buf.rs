@@ -5,8 +5,8 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{Height, OffscreenBuffer, PixelChar, PixelCharLine, SPACER_GLYPH_CHAR,
-            TuiStyle, Width, col, core::units::bounds_check::LengthOps, row};
+use crate::{ColWidth, OffscreenBuffer, PixelChar, PixelCharLine, RowHeight,
+            SPACER_GLYPH_CHAR, TuiStyle, col, core::units::bounds_check::LengthOps, row};
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:
@@ -213,8 +213,8 @@ pub fn assert_plain_text_at(
 #[cfg(test)]
 #[must_use]
 pub fn create_test_buffer_with_size(
-    buffer_width: Width,
-    buffer_height: Height,
+    buffer_width: ColWidth,
+    buffer_height: RowHeight,
 ) -> OffscreenBuffer {
     OffscreenBuffer::new_empty(buffer_width + buffer_height)
 }
@@ -241,7 +241,10 @@ pub fn create_plain_test_char(ch: char) -> PixelChar {
 /// characters are provided.
 #[cfg(test)]
 #[must_use]
-pub fn create_test_line_with_chars(line_width: Width, chars: &[char]) -> PixelCharLine {
+pub fn create_test_line_with_chars(
+    line_width: ColWidth,
+    chars: &[char],
+) -> PixelCharLine {
     let mut line = vec![PixelChar::Spacer; line_width.as_usize()];
     for (i, &ch) in chars.iter().enumerate().take(line_width.as_usize()) {
         line[i] = create_plain_test_char(ch);

@@ -44,7 +44,7 @@
 //! - **Performance**: Efficient diff-based rendering to minimize screen updates
 //! - **Multi-width Characters**: Proper handling of emoji and Unicode display widths
 //!
-//! # Grid Representation & Variable-Width Characters
+//! # Grid Representation & Variable-ColWidth Characters
 //!
 //! The buffer implements a sophisticated grid system that handles the complexity of
 //! modern terminal content:

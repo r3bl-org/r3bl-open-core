@@ -2,7 +2,7 @@
 
 //! Tests for Device Status Report (DSR) response generation.
 
-use super::super::test_fixtures_vt_100_ansi_conformance::create_test_offscreen_buffer_10r_by_10c;
+use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz};
 use crate::{DsrRequestFromPtyEvent, col,
             core::pty_mux::vt_100_ansi_parser::protocols::{csi_codes::CsiSequence,
                                                     dsr_codes::{DSR_STATUS_OK_FULL_RESPONSE,
@@ -67,15 +67,15 @@ fn test_dsr_cursor_position_report() {
     assert_eq!(
         dsr_responses[0],
         DsrRequestFromPtyEvent::CursorPosition {
-            row: term_row(4),
-            col: term_col(6)
+            row: term_row(nz(4)),
+            col: term_col(nz(6))
         },
         "expected cursor position report at (4, 6) in 1-based coordinates"
     );
 
     // Verify the response bytes are correct.
     let response_bytes = dsr_responses[0].to_string().into_bytes();
-    let expected_bytes = dsr_cursor_position_response(term_row(4), term_col(6));
+    let expected_bytes = dsr_cursor_position_response(term_row(nz(4)), term_col(nz(6)));
     assert_eq!(
         response_bytes,
         expected_bytes.as_bytes(),
@@ -101,15 +101,15 @@ fn test_dsr_cursor_position_at_origin() {
     assert_eq!(
         dsr_responses[0],
         DsrRequestFromPtyEvent::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         },
         "expected cursor position report at (1, 1) for origin"
     );
 
     // Verify the response bytes.
     let response_bytes = dsr_responses[0].to_string().into_bytes();
-    let expected_bytes = dsr_cursor_position_response(term_row(1), term_col(1));
+    let expected_bytes = dsr_cursor_position_response(term_row(nz(1)), term_col(nz(1)));
     assert_eq!(
         response_bytes,
         expected_bytes.as_bytes(),
@@ -161,8 +161,8 @@ fn test_multiple_dsr_requests() {
     assert_eq!(
         dsr_responses[1],
         DsrRequestFromPtyEvent::CursorPosition {
-            row: term_row(3),
-            col: term_col(4)
+            row: term_row(nz(3)),
+            col: term_col(nz(4))
         }
     );
 }

@@ -6,8 +6,10 @@
 //! builders from the `conformance_data` module. These tests validate complex
 //! sequences that mirror actual terminal application behavior.
 
-use super::super::conformance_data::{basic_sequences, cursor_sequences, emacs_sequences,
-                                     styling_sequences, tmux_sequences, vim_sequences};
+use super::super::{conformance_data::{basic_sequences, cursor_sequences,
+                                      emacs_sequences, styling_sequences,
+                                      tmux_sequences, vim_sequences},
+                   test_fixtures_vt_100_ansi_conformance::nz};
 use crate::{ANSIBasicColor, PixelChar, col, offscreen_buffer::test_fixtures_ofs_buf::*,
             row, tui_style_attrib};
 use std::cmp::min;
@@ -29,7 +31,7 @@ fn test_vim_status_line_pattern() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     // Use the vim_sequences builder to create a realistic status line
-    let sequence = vim_sequences::vim_status_line("INSERT", 25);
+    let sequence = vim_sequences::vim_status_line("INSERT", nz(25));
     let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(sequence);
 
     // Verify no OSC/DSR events for this operation
@@ -51,15 +53,16 @@ fn test_terminal_initialization_pattern() {
 
     // Compose multiple operations into a single sequence
     let clear_sequence = basic_sequences::clear_and_home();
-    let welcome_sequence = basic_sequences::move_and_print(1, 1, "Welcome!");
+    let welcome_sequence = basic_sequences::move_and_print(nz(1), nz(1), "Welcome!");
     let styled_text =
         styling_sequences::colored_text(ANSIBasicColor::Green, "Ready for input");
-    let position_cursor = cursor_sequences::move_to_position(3, 1);
+    let position_cursor = cursor_sequences::move_to_position(nz(3), nz(1));
 
     // Apply sequences in order
     let _unused = ofs_buf.apply_ansi_bytes(clear_sequence);
     let _unused = ofs_buf.apply_ansi_bytes(welcome_sequence);
-    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
+    let _unused =
+        ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(nz(2), nz(1)));
     let _unused = ofs_buf.apply_ansi_bytes(styled_text);
     let _unused = ofs_buf.apply_ansi_bytes(position_cursor);
 
@@ -88,13 +91,13 @@ fn test_cursor_save_restore_variants() {
 
     // Test ESC variant (legacy) - using shorter text to fit in 10-column buffer
     let esc_pattern = cursor_sequences::save_do_restore(
-        &basic_sequences::move_and_print(3, 3, "ESC"),
+        &basic_sequences::move_and_print(nz(3), nz(3), "ESC"),
         true, // Use ESC 7/8
     );
 
     // Test CSI variant (modern) - using shorter text to fit in 10-column buffer
     let csi_pattern = cursor_sequences::save_do_restore(
-        &basic_sequences::move_and_print(5, 5, "CSI"),
+        &basic_sequences::move_and_print(nz(5), nz(5), "CSI"),
         false, // Use CSI s/u
     );
 
@@ -131,7 +134,8 @@ fn test_complex_styling_patterns() {
     let partial_reset = styling_sequences::partial_reset_test();
 
     let _unused = ofs_buf.apply_ansi_bytes(multi_style);
-    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
+    let _unused =
+        ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(nz(2), nz(1)));
     let _unused = ofs_buf.apply_ansi_bytes(partial_reset);
 
     // Verify bold red text
@@ -248,7 +252,7 @@ fn test_vim_syntax_highlighting_pattern() {
 fn test_vim_error_message_pattern() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
-    let error_sequence = vim_sequences::vim_error_message("E32: No such file", 25);
+    let error_sequence = vim_sequences::vim_error_message("E32: No such file", nz(25));
     let _result = ofs_buf.apply_ansi_bytes(error_sequence);
 
     // Verify error message appears at bottom with proper styling
@@ -321,7 +325,7 @@ fn test_text_editor_workflow() {
     let _unused = ofs_buf.apply_ansi_bytes(basic_sequences::clear_and_home());
 
     // Type the first line of code with syntax highlighting
-    let line1 = basic_sequences::move_and_print(1, 1, "def ");
+    let line1 = basic_sequences::move_and_print(nz(1), nz(1), "def ");
     let function_name = styling_sequences::bold_text("main");
     let parentheses = basic_sequences::insert_text("():");
 
@@ -330,7 +334,7 @@ fn test_text_editor_workflow() {
     let _unused = ofs_buf.apply_ansi_bytes(parentheses);
 
     // Move to next line and add indented content
-    let line2_pos = cursor_sequences::move_to_position(2, 5); // Indent 4 spaces
+    let line2_pos = cursor_sequences::move_to_position(nz(2), nz(5)); // Indent 4 spaces
     let print_stmt = styling_sequences::colored_text(ANSIBasicColor::Blue, "print");
     let string_content = basic_sequences::insert_text("(\"Hello World!\")");
 
@@ -479,7 +483,8 @@ fn test_log_viewer_color_coding() {
     // Header line with reverse video
     let header = styling_sequences::reverse_text("Application Logs - Live View");
     let _unused = ofs_buf.apply_ansi_bytes(header);
-    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(2, 1));
+    let _unused =
+        ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(nz(2), nz(1)));
 
     // Different log levels with appropriate colors
     let info_log = styling_sequences::colored_text(ANSIBasicColor::Cyan, "[INFO]");
@@ -487,14 +492,16 @@ fn test_log_viewer_color_coding() {
 
     let _unused = ofs_buf.apply_ansi_bytes(info_log);
     let _unused = ofs_buf.apply_ansi_bytes(info_msg);
-    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(3, 1));
+    let _unused =
+        ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(nz(3), nz(1)));
 
     let warn_log = styling_sequences::colored_text(ANSIBasicColor::Yellow, "[WARN]");
     let warn_msg = basic_sequences::insert_text(" High memory usage detected");
 
     let _unused = ofs_buf.apply_ansi_bytes(warn_log);
     let _unused = ofs_buf.apply_ansi_bytes(warn_msg);
-    let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(4, 1));
+    let _unused =
+        ofs_buf.apply_ansi_bytes(cursor_sequences::move_to_position(nz(4), nz(1)));
 
     // Error log with both color and bold
     let error_log = styling_sequences::colored_text(ANSIBasicColor::Red, "[ERROR]");
@@ -560,31 +567,31 @@ fn test_interface_drawing_with_cursor_ops() {
     let _unused = ofs_buf.apply_ansi_bytes(box_sequence);
 
     // Add title inside the box
-    let title_pos = cursor_sequences::move_to_position(3, 8);
+    let title_pos = cursor_sequences::move_to_position(nz(3), nz(8));
     let title = styling_sequences::bold_text("Settings Menu");
     let _unused = ofs_buf.apply_ansi_bytes(title_pos);
     let _unused = ofs_buf.apply_ansi_bytes(title);
 
     // Add menu options with cursor positioning
-    let option1_pos = cursor_sequences::move_to_position(5, 4);
+    let option1_pos = cursor_sequences::move_to_position(nz(5), nz(4));
     let option1 = basic_sequences::insert_text("1. Display Settings");
     let _unused = ofs_buf.apply_ansi_bytes(option1_pos);
     let _unused = ofs_buf.apply_ansi_bytes(option1);
 
-    let option2_pos = cursor_sequences::move_to_position(6, 4);
+    let option2_pos = cursor_sequences::move_to_position(nz(6), nz(4));
     let option2 = basic_sequences::insert_text("2. Audio Settings");
     let _unused = ofs_buf.apply_ansi_bytes(option2_pos);
     let _unused = ofs_buf.apply_ansi_bytes(option2);
 
     // Highlight selected option
-    let highlight_pos = cursor_sequences::move_to_position(7, 4);
+    let highlight_pos = cursor_sequences::move_to_position(nz(7), nz(4));
     let selected = styling_sequences::reverse_text("3. Network Settings");
     let _unused = ofs_buf.apply_ansi_bytes(highlight_pos);
     let _unused = ofs_buf.apply_ansi_bytes(selected);
 
     // Test save/restore cursor for status bar
     let save_cursor = cursor_sequences::save_cursor_csi();
-    let status_pos = cursor_sequences::move_to_position(25, 1);
+    let status_pos = cursor_sequences::move_to_position(nz(25), nz(1));
     let status = styling_sequences::colored_text(ANSIBasicColor::Green, "Ready");
     let restore_cursor = cursor_sequences::restore_cursor_csi();
 
@@ -658,20 +665,20 @@ fn test_practical_vim_editing_patterns() {
     let _unused = ofs_buf.apply_ansi_bytes(vim_sequences::vim_clear_and_redraw());
 
     // Display file content with line numbers
-    let line1 = vim_sequences::vim_line_with_number(1, 1, "#!/bin/bash");
-    let line2 = vim_sequences::vim_line_with_number(2, 2, "");
-    let line3 = vim_sequences::vim_line_with_number(3, 3, "echo \"Hello World!\"");
+    let line1 = vim_sequences::vim_line_with_number(1, nz(1), "#!/bin/bash");
+    let line2 = vim_sequences::vim_line_with_number(2, nz(2), "");
+    let line3 = vim_sequences::vim_line_with_number(3, nz(3), "echo \"Hello World!\"");
 
     let _unused = ofs_buf.apply_ansi_bytes(line1);
     let _unused = ofs_buf.apply_ansi_bytes(line2);
     let _unused = ofs_buf.apply_ansi_bytes(line3);
 
     // Show command line mode
-    let command_line = vim_sequences::vim_command_line(':', 25);
+    let command_line = vim_sequences::vim_command_line(':', nz(25));
     let _unused = ofs_buf.apply_ansi_bytes(command_line);
 
     // Add syntax highlighting to the echo command
-    let highlight_pos = cursor_sequences::move_to_position(3, 14); // Position of "echo"
+    let highlight_pos = cursor_sequences::move_to_position(nz(3), nz(14)); // Position of "echo"
     let highlighted_echo = styling_sequences::colored_text(ANSIBasicColor::Blue, "echo");
     let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::save_cursor_csi());
     let _unused = ofs_buf.apply_ansi_bytes(highlight_pos);
@@ -679,7 +686,7 @@ fn test_practical_vim_editing_patterns() {
     let _unused = ofs_buf.apply_ansi_bytes(cursor_sequences::restore_cursor_csi());
 
     // Show search highlighting
-    let search_highlight = vim_sequences::vim_search_highlight(1, 3, "bin");
+    let search_highlight = vim_sequences::vim_search_highlight(nz(1), nz(3), "bin");
     let _unused = ofs_buf.apply_ansi_bytes(search_highlight);
 
     // Verify line numbers are displayed (may have styling from vim functions)
@@ -752,11 +759,12 @@ fn test_text_manipulation_operations() {
     let mut ofs_buf = create_realistic_terminal_buffer();
 
     // Start with some initial text
-    let initial_text = basic_sequences::move_and_print(1, 1, "The quick fox jumps");
+    let initial_text =
+        basic_sequences::move_and_print(nz(1), nz(1), "The quick fox jumps");
     let _unused = ofs_buf.apply_ansi_bytes(initial_text);
 
     // Insert "brown " before "fox" using character insertion
-    let insert_pos = cursor_sequences::move_to_position(1, 11); // Before "fox"
+    let insert_pos = cursor_sequences::move_to_position(nz(1), nz(11)); // Before "fox"
     let insert_chars = basic_sequences::move_and_insert_chars(10, 6); // Insert 6 chars
     let brown_text = basic_sequences::insert_text("brown ");
 
@@ -765,7 +773,7 @@ fn test_text_manipulation_operations() {
     let _unused = ofs_buf.apply_ansi_bytes(brown_text);
 
     // Move to end and add more text
-    let end_pos = cursor_sequences::move_to_position(1, 25);
+    let end_pos = cursor_sequences::move_to_position(nz(1), nz(25));
     let over_text = basic_sequences::insert_text(" over the lazy dog");
 
     let _unused = ofs_buf.apply_ansi_bytes(end_pos);
@@ -789,7 +797,7 @@ fn test_text_manipulation_operations() {
     assert!(actual_text.contains("brown") || actual_text.contains("fox"));
 
     // Test character deletion - remove some text
-    let delete_pos = cursor_sequences::move_to_position(1, 17); // Before "jumps"
+    let delete_pos = cursor_sequences::move_to_position(nz(1), nz(17)); // Before "jumps"
     let delete_chars = basic_sequences::move_and_delete_chars(16, 6); // Delete "jumps "
 
     let _unused = ofs_buf.apply_ansi_bytes(delete_pos);

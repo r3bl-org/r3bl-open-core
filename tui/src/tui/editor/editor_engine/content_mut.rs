@@ -3,7 +3,7 @@
 use super::{DeleteSelectionWith, scroll_editor_content};
 use crate::{CaretScrAdj, ColIndex, ColWidth, CursorBoundsCheck,
             CursorPositionBoundsStatus, EditorArgsMut, EditorBuffer, EditorEngine,
-            InlineString, InlineVec, RowIndex, SelectionList, SelectionRange, Width,
+            InlineString, InlineVec, RowIndex, SelectionList, SelectionRange,
             ZeroCopyGapBuffer, caret_locate::locate_col, caret_scr_adj, col,
             empty_check_early_return, len, multiline_disabled_check_early_return, row,
             validate_buffer_mut::EditorBufferMutWithDrop, width};
@@ -637,7 +637,7 @@ mod delete_selected_helper {
     fn should_remove_entire_line(
         start_col_index: ColIndex,
         end_col_index: ColIndex,
-        line_width: Width,
+        line_width: ColWidth,
     ) -> bool {
         start_col_index == col(0) && end_col_index == line_width.eol_cursor_position()
     }
@@ -674,7 +674,7 @@ mod delete_selected_helper {
         selected_row_index: RowIndex,
         selection_range: SelectionRange,
         end_col_index: ColIndex,
-        line_width: Width,
+        line_width: ColWidth,
     ) -> Option<InlineString> {
         let line_with_info = lines.get_line(selected_row_index)?;
 
@@ -1723,7 +1723,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Width: a=1, 😃=2, b=1, 世=2, 界=2, c=1, total=9
+        // ColWidth: a=1, 😃=2, b=1, 世=2, 界=2, c=1, total=9
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(9) + row(0)));
 
         // Backspace 'c'
@@ -1964,7 +1964,7 @@ mod tests {
             &mut TestClipboard::default(),
         );
 
-        // Width: a=1, 😃=2, b=1, 世=2, 界=2, c=1 = total 9
+        // ColWidth: a=1, 😃=2, b=1, 世=2, 界=2, c=1 = total 9
         assert_eq2!(buffer.get_caret_scr_adj(), caret_scr_adj(col(9) + row(0)));
 
         // Backspace to delete 'c'.

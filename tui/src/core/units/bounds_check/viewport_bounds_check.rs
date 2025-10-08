@@ -2,7 +2,7 @@
 
 //! Viewport visibility checking for rendering - see [`ViewportBoundsCheck`] trait.
 
-use super::{index_ops::IndexOps, numeric_value::NumericValue};
+use super::{index_ops::IndexOps, numeric_value::NumericConversions};
 use crate::RangeBoundsResult;
 
 /// Viewport visibility checking for rendering and UI operations.

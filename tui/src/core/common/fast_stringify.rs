@@ -91,12 +91,18 @@ pub trait FastStringify {
     /// Write the formatted representation to the buffer. Use [`push_str`] for strings,
     /// [`write!`] only when formatting is needed.
     ///
+    /// # Errors
+    /// Returns an error if writing to the buffer fails (formatting error).
+    ///
     /// [`push_str`]: String::push_str
     /// [`write!`]: std::write
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
 
     /// Write the buffer to formatter. Call from [`Display::fmt`] after
     /// [`write_to_buf`].
+    ///
+    /// # Errors
+    /// Returns an error if writing to the formatter fails (formatting error).
     ///
     /// [`Display::fmt`]: std::fmt::Display::fmt
     /// [`write_to_buf`]: FastStringify::write_to_buf

@@ -3,7 +3,7 @@
 //! Zero-based byte position in strings and buffers - see [`ByteIndex`] type.
 
 use crate::{ByteLength, ByteOffset, ChUnit, Index,
-            bounds_check::{IndexOps, NumericValue}};
+            bounds_check::{IndexOps, NumericConversions, NumericValue}};
 use std::ops::{Add, Deref, DerefMut, Range};
 
 /// Represents an absolute byte position within strings and buffers (0-based).
@@ -106,7 +106,7 @@ impl From<i32> for ByteIndex {
     fn from(it: i32) -> Self { Self(it as usize) }
 }
 
-impl NumericValue for ByteIndex {
+impl NumericConversions for ByteIndex {
     /// Convert the byte index to a usize value for numeric comparison, usually for array
     /// indexing operations.
     fn as_usize(&self) -> usize { self.0 }
@@ -116,6 +116,8 @@ impl NumericValue for ByteIndex {
     #[allow(clippy::cast_possible_truncation)]
     fn as_u16(&self) -> u16 { self.0 as u16 }
 }
+
+impl NumericValue for ByteIndex {}
 
 impl IndexOps for ByteIndex {
     type LengthType = ByteLength;

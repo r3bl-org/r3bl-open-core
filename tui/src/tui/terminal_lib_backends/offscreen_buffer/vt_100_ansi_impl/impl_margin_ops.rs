@@ -54,7 +54,7 @@ impl OffscreenBuffer {
         // Use type-safe bounds checking: convert TermRow to RowHeight for clamping.
         let bottom_as_height = crate::RowHeight::from(bottom_value);
         let clamped_bottom_height = bottom_as_height.clamp_to_max(buffer_height);
-        let clamped_bottom_raw = clamped_bottom_height.into();
+        let clamped_bottom_raw: u16 = clamped_bottom_height.into();
 
         if !(top_value < clamped_bottom_raw && clamped_bottom_raw <= buffer_height.into())
         {
@@ -66,15 +66,25 @@ impl OffscreenBuffer {
             );
             return;
         }
+
+        // SAFETY: clamped_bottom_raw is a clamped RowHeight value, guaranteed >= 1
+        let clamped_bottom_nz =
+            unsafe { std::num::NonZeroU16::new_unchecked(clamped_bottom_raw) };
+
         self.ansi_parser_support.scroll_region_top = Some(top);
-        self.ansi_parser_support.scroll_region_bottom = Some(clamped_bottom_raw.into());
+        self.ansi_parser_support.scroll_region_bottom =
+            Some(TermRow::new(clamped_bottom_nz));
     }
 }
 
 #[cfg(test)]
 mod tests_margin_ops {
     use super::*;
-    use crate::{core::pty_mux::vt_100_ansi_parser::term_units::term_row, height, width};
+    use crate::{core::pty_mux::vt_100_ansi_parser::{
+                    term_units::term_row,
+                    vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+                },
+                height, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);
@@ -86,8 +96,8 @@ mod tests_margin_ops {
         let mut buffer = create_test_buffer();
 
         // Set some margins first.
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(4)));
 
         buffer.reset_scroll_margins();
 
@@ -100,16 +110,16 @@ mod tests_margin_ops {
     fn test_set_scroll_margins_valid() {
         let mut buffer = create_test_buffer();
 
-        buffer.set_scroll_margins(term_row(2), term_row(4));
+        buffer.set_scroll_margins(term_row(nz(2)), term_row(nz(4)));
 
         // Check that margins were set.
         assert_eq!(
             buffer.ansi_parser_support.scroll_region_top,
-            Some(term_row(2))
+            Some(term_row(nz(2)))
         );
         assert_eq!(
             buffer.ansi_parser_support.scroll_region_bottom,
-            Some(term_row(4))
+            Some(term_row(nz(4)))
         );
     }
 
@@ -117,7 +127,7 @@ mod tests_margin_ops {
     fn test_set_scroll_margins_invalid_top_greater_than_bottom() {
         let mut buffer = create_test_buffer();
 
-        buffer.set_scroll_margins(term_row(4), term_row(2));
+        buffer.set_scroll_margins(term_row(nz(4)), term_row(nz(2)));
 
         // Margins should remain unchanged. (None).
         assert!(buffer.ansi_parser_support.scroll_region_top.is_none());
@@ -129,16 +139,16 @@ mod tests_margin_ops {
         let mut buffer = create_test_buffer();
 
         // Try to set bottom margin beyond buffer height (buffer height is 6).
-        buffer.set_scroll_margins(term_row(2), term_row(10));
+        buffer.set_scroll_margins(term_row(nz(2)), term_row(nz(10)));
 
         // Bottom should be clamped to buffer height.
         assert_eq!(
             buffer.ansi_parser_support.scroll_region_top,
-            Some(term_row(2))
+            Some(term_row(nz(2)))
         );
         assert_eq!(
             buffer.ansi_parser_support.scroll_region_bottom,
-            Some(term_row(6))
+            Some(term_row(nz(6)))
         );
     }
 
@@ -146,7 +156,7 @@ mod tests_margin_ops {
     fn test_set_scroll_margins_equal_top_and_bottom() {
         let mut buffer = create_test_buffer();
 
-        buffer.set_scroll_margins(term_row(3), term_row(3));
+        buffer.set_scroll_margins(term_row(nz(3)), term_row(nz(3)));
 
         // Margins should remain unchanged.
         assert!(buffer.ansi_parser_support.scroll_region_top.is_none());

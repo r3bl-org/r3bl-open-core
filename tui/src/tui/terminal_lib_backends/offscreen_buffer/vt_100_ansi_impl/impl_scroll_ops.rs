@@ -267,7 +267,8 @@ impl OffscreenBuffer {
 mod tests_scroll_vert_ops {
     use super::*;
     use crate::{col,
-                core::pty_mux::vt_100_ansi_parser::term_units::term_row,
+                core::pty_mux::vt_100_ansi_parser::{term_units::term_row,
+                                                     vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz},
                 height, idx, row,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
                                         create_test_buffer_with_size},
@@ -443,8 +444,8 @@ mod tests_scroll_vert_ops {
         fill_buffer_with_test_content(&mut buffer);
 
         // Set up scroll region from row 1 to row 4.
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(2));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(2)));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Position cursor at scroll region bottom.
         buffer.cursor_pos = row(4) + col(0);

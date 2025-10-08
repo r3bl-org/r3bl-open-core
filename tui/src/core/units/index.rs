@@ -3,7 +3,8 @@
 //! Zero-based character position for terminal UI - see [`Index`] type.
 
 use super::{ChUnit, Length, ch};
-use crate::{IndexOps, NumericValue, RowIndex, create_numeric_arithmetic_operators};
+use crate::{IndexOps, NumericConversions, NumericValue, RowIndex,
+            create_numeric_arithmetic_operators};
 use std::{fmt::Debug,
           hash::Hash,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
@@ -211,11 +212,13 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl NumericValue for Index {
+    impl NumericConversions for Index {
         fn as_usize(&self) -> usize { self.0.as_usize() }
 
         fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
+
+    impl NumericValue for Index {}
 
     impl IndexOps for Index {
         type LengthType = Length;

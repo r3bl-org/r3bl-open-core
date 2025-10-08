@@ -5,11 +5,6 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ChUnit, ColIndex, ColWidth,
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
-// Type aliases for better code readability.
-
-pub type Row = RowIndex;
-pub type Col = ColIndex;
-
 /// `Pos` is a struct that holds the `row` and `col` indices of a character in a text
 /// buffer. [`RowIndex`] and [`ColIndex`] are the types of the `row` and `col` indices
 /// respectively. This ensures that it isn't possible to use a `col` when you intended to

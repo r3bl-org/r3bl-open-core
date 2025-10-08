@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::seg_index::{SegIndex, seg_index};
-use crate::{ChUnit, LengthOps, NumericValue, ch};
+use crate::{ChUnit, LengthOps, NumericConversions, NumericValue, ch};
 use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a count of the number of grapheme segments inside of
@@ -67,10 +67,12 @@ impl Add for SegLength {
     }
 }
 
-impl NumericValue for SegLength {
+impl NumericConversions for SegLength {
     fn as_usize(&self) -> usize { self.0.as_usize() }
     fn as_u16(&self) -> u16 { self.0.as_u16() }
 }
+
+impl NumericValue for SegLength {}
 
 impl LengthOps for SegLength {
     type IndexType = SegIndex;

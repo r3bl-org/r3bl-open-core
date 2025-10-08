@@ -927,7 +927,7 @@ impl GCStringOwned {
 let line: &dyn GraphemeString = &gc_string;
 if let Some(seg_content) = line.get_seg_at(col(5)) {
     println!("Content: {}", seg_content.as_str());
-    println!("Width: {}", seg_content.width());
+    println!("ColWidth: {}", seg_content.width());
     println!("Byte range: {:?}", seg_content.byte_range());
 }
 

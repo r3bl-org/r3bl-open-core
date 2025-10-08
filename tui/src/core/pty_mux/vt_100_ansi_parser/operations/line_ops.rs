@@ -85,7 +85,7 @@ use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
 ///
 /// [`OffscreenBuffer::insert_lines_at`]: crate::OffscreenBuffer::insert_lines_at
 pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
     let at = performer.ofs_buf.cursor_pos.row_index;
     let result = performer.ofs_buf.insert_lines_at(at, how_many);
     debug_assert!(
@@ -104,7 +104,7 @@ pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params)
 ///
 /// [`OffscreenBuffer::delete_lines_at`]: crate::OffscreenBuffer::delete_lines_at
 pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
     let at = performer.ofs_buf.cursor_pos.row_index;
     let result = performer.ofs_buf.delete_lines_at(at, how_many);
     debug_assert!(

@@ -1,23 +1,23 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ChUnit, LengthOps, NumericValue, RowIndex, ch,
+use crate::{ChUnit, LengthOps, NumericConversions, NumericValue, RowIndex, ch,
             create_numeric_arithmetic_operators};
 use std::{fmt::{Debug, Formatter},
           ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
 
-/// Height is row count, i.e., the number of rows that a UI component occupies.
+/// `RowHeight` is row count, i.e., the number of rows that a UI component occupies.
 ///
 /// This is one part of a [`Size`] and is different from the [`RowIndex`] (position).
 ///
 /// You can use the [`height()`] to create a new instance.
 ///
 /// # Working with row index
-/// You can't safely add or subtract a [`RowIndex`] from this [`Height`]; since without
+/// You can't safely add or subtract a [`RowIndex`] from this [`RowHeight`]; since without
 /// knowing your specific use case ahead of time, it isn't possible to provide a default
 /// implementation without leading to unintended consequences. You can do the reverse
 /// safely.
 ///
-/// To add or subtract a [`RowIndex`] from this [`Height`], you can call
+/// To add or subtract a [`RowIndex`] from this [`RowHeight`], you can call
 /// [`Self::convert_to_index()`] and apply whatever logic makes sense for your use
 /// case.
 ///
@@ -32,7 +32,7 @@ use std::{fmt::{Debug, Formatter},
 /// let height = RowHeight::new(5);
 /// ```
 ///
-/// [`Height`]: crate::RowHeight
+/// [`RowHeight`]: crate::RowHeight
 /// [`RowIndex`]: crate::RowIndex
 /// [`Size`]: crate::Size
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
@@ -157,11 +157,13 @@ mod bounds_check_trait_impls {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl NumericValue for RowHeight {
+    impl NumericConversions for RowHeight {
         fn as_usize(&self) -> usize { self.0.as_usize() }
 
         fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
+
+    impl NumericValue for RowHeight {}
 
     impl LengthOps for RowHeight {
         type IndexType = RowIndex;
@@ -199,7 +201,7 @@ mod tests {
 
     #[test]
     fn test_height_sub() {
-        // Sub. This returns a Height as expected, and not a RowIndex.
+        // Sub. This returns a RowHeight as expected, and not a RowIndex.
         {
             let height1 = height(10);
             let height2 = height(4);

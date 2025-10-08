@@ -3,7 +3,7 @@
 //! One-based byte size measurements - see [`ByteLength`] type.
 
 use crate::{ByteIndex, ChUnit, Length,
-            bounds_check::{LengthOps, NumericValue}};
+            bounds_check::{LengthOps, NumericConversions, NumericValue}};
 use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a byte length measurement (1-based).
@@ -140,7 +140,7 @@ impl Add for ByteLength {
     fn add(self, other: Self) -> Self { ByteLength(self.0 + other.0) }
 }
 
-impl NumericValue for ByteLength {
+impl NumericConversions for ByteLength {
     /// Convert the byte length to a usize value for numeric comparison.
     fn as_usize(&self) -> usize { self.0 }
 
@@ -148,6 +148,8 @@ impl NumericValue for ByteLength {
     #[allow(clippy::cast_possible_truncation)]
     fn as_u16(&self) -> u16 { self.0 as u16 }
 }
+
+impl NumericValue for ByteLength {}
 
 impl LengthOps for ByteLength {
     type IndexType = ByteIndex;

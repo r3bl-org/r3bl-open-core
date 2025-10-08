@@ -129,8 +129,8 @@ pub mod auto_wrap_mode {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(3),
-                col: term_col(5)
+                row: term_row(nz(3)),
+                col: term_col(nz(5))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);

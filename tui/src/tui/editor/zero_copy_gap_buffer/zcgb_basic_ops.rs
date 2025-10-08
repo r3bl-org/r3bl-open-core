@@ -651,7 +651,7 @@ mod tests {
         // Mix of ASCII and wide characters.
         storage.push_line("a😃b世界c");
 
-        // Width: a=1, 😃=2, b=1, 世=2, 界=2, c=1
+        // ColWidth: a=1, 😃=2, b=1, 世=2, 界=2, c=1
         assert_eq!(storage.get_line_display_width(row(0)), Some(width(9)));
 
         // Delete emoji at column 1 (segment index 1)

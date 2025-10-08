@@ -13,6 +13,7 @@
 //! - Window indicators show activity and current status
 //! - Copy mode uses reverse video for selection
 
+use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, SgrCode,
             vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                  term_units::{term_col, term_row}}};
@@ -27,8 +28,8 @@ pub fn tmux_status_bar() -> String {
         "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
         // Move to bottom line.
         CsiSequence::CursorPosition {
-            row: term_row(25),
-            col: term_col(1)
+            row: term_row(nz(25)),
+            col: term_col(nz(1))
         },
         // Green background for status bar.
         SgrCode::BackgroundBasic(ANSIBasicColor::Green),
@@ -67,33 +68,33 @@ pub fn tmux_pane_split_horizontal() -> String {
         CsiSequence::EraseDisplay(2),
         // Draw top pane content.
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         },
         "Top pane content",
         // Draw horizontal border.
         CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(1)
+            row: term_row(nz(5)),
+            col: term_col(nz(1))
         },
         "─".repeat(10),
         // Draw bottom pane content.
         CsiSequence::CursorPosition {
-            row: term_row(6),
-            col: term_col(1)
+            row: term_row(nz(6)),
+            col: term_col(nz(1))
         },
         "Bottom pane",
         // Show pane indicators.
         CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(1)
+            row: term_row(nz(5)),
+            col: term_col(nz(1))
         },
         SgrCode::ForegroundBasic(ANSIBasicColor::Blue),
         "0",
         SgrCode::Reset,
         CsiSequence::CursorPosition {
-            row: term_row(6),
-            col: term_col(1)
+            row: term_row(nz(6)),
+            col: term_col(nz(1))
         },
         SgrCode::ForegroundBasic(ANSIBasicColor::Blue),
         "1",
@@ -116,8 +117,8 @@ pub fn tmux_copy_mode_selection(
         "{}{}{}{}{}{}{}{}{}{}",
         // Move to selection start.
         CsiSequence::CursorPosition {
-            row: term_row(start_row),
-            col: term_col(start_col)
+            row: term_row(nz(start_row)),
+            col: term_col(nz(start_col))
         },
         // Start reverse video for selection.
         SgrCode::Invert,
@@ -125,8 +126,8 @@ pub fn tmux_copy_mode_selection(
         SgrCode::Reset,
         // Show copy mode indicator in status.
         CsiSequence::CursorPosition {
-            row: term_row(10),
-            col: term_col(1)
+            row: term_row(nz(10)),
+            col: term_col(nz(1))
         },
         SgrCode::BackgroundBasic(ANSIBasicColor::Yellow),
         SgrCode::ForegroundBasic(ANSIBasicColor::Black),
@@ -148,8 +149,8 @@ pub fn tmux_session_list() -> String {
         // Clear screen. and show session list
         CsiSequence::EraseDisplay(2),
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         },
         SgrCode::Bold,
         "Sessions:",

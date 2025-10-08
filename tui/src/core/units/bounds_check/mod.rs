@@ -30,10 +30,12 @@
 //!
 //! These provide the fundamental operations used across all bounds checking patterns:
 //!
-//! | Trait          | File                | Key Methods                                                                                        |
-//! |----------------|---------------------|----------------------------------------------------------------------------------------------------|
-//! | [`IndexOps`]   | [`index_ops.rs`]    | [`convert_to_length()`], [`clamp_to_max_length()`], [`clamp_to_min_index()`], [`clamp_to_range()`] |
-//! | [`LengthOps`]  | [`length_ops.rs`]   | [`convert_to_index()`], [`is_overflowed_by()`], [`remaining_from()`], [`clamp_to_max()`]           |
+//! | Trait                  | File                 | Key Methods                                                                                        |
+//! |------------------------|----------------------|----------------------------------------------------------------------------------------------------|
+//! | [`NumericConversions`] | [`numeric_value`]    | [`as_usize()`], [`as_u16()`]                                                                       |
+//! | [`NumericValue`]       | [`numeric_value`]    | Extends [`NumericConversions`], adds [`From`] conversions, [`is_zero()`]                           |
+//! | [`IndexOps`]           | [`index_ops.rs`]     | [`convert_to_length()`], [`clamp_to_max_length()`], [`clamp_to_min_index()`], [`clamp_to_range()`] |
+//! | [`LengthOps`]          | [`length_ops.rs`]    | [`convert_to_index()`], [`is_overflowed_by()`], [`remaining_from()`], [`clamp_to_max()`]           |
 //!
 //! ### Semantic Traits (Use Case Validation)
 //!
@@ -44,8 +46,8 @@
 //! |-------------------------|-------------------------------|----------------------------------------------------------------------------------------------------------------------------|
 //! | [`ArrayBoundsCheck`]    | [`array_bounds_check.rs`]     | [`overflows()`], [`underflows()`]                                                                                          |
 //! | [`CursorBoundsCheck`]   | [`cursor_bounds_check.rs`]    | [`eol_cursor_position()`], [`is_valid_cursor_position()`], [`clamp_cursor_position()`], [`check_cursor_position_bounds()`] |
-//! | [`ViewportBoundsCheck`] | [`viewport_bounds_check.rs`]  | [`check_viewport_bounds()`]                                                                                                 |
-//! | [`RangeBoundsExt`]    | [`range_bounds_check_ext.rs`] | [`check_range_is_valid_for_length()`], [`clamp_range_to()`], [`check_index_is_within()`] (supports both [`Range`] and [`RangeInclusive`])      |
+//! | [`ViewportBoundsCheck`] | [`viewport_bounds_check.rs`]  | [`check_viewport_bounds()`]                                                                                                |
+//! | [`RangeBoundsExt`]      | [`range_bounds_check_ext.rs`] | [`check_range_is_valid_for_length()`], [`clamp_range_to()`], [`check_index_is_within()`] (supports both [`Range`] and [`RangeInclusive`]) |
 //! | [`RangeConvertExt`]     | [`range_convert_ext.rs`]      | [`to_exclusive()`] - Convert [`RangeInclusive`] → [`Range`] for iteration                                                  |
 //!
 //! ### Why Import These Traits?
@@ -84,16 +86,18 @@
 //!
 //! ### Foundational Traits (Core Operations)
 //!
-//! | Task                          | Trait or enum                                           | File                | Key Question                           |
-//! |-------------------------------|---------------------------------------------------------|---------------------|----------------------------------------|
-//! | Compare indices to each other | [`IndexOps`]                                            | [`index_ops`]       | "How do indices relate to each other?" |
-//! | Work with lengths/sizes       | [`LengthOps`]                                           | [`length_ops`]      | "What can I do with a length value?"   |
-//! | Convert between numeric types | [`NumericValue`]                                        | [`numeric_value`]   | "How do I convert to usize/u16?"       |
-//! | Status return enum types      | [`ArrayOverflowResult`], [`CursorPositionBoundsStatus`] | [`result_enums.rs`] | "What status types are available?"     |
+//! | Task                               | Trait or enum                                           | File                | Key Question                                  |
+//! |------------------------------------|---------------------------------------------------------|---------------------|-----------------------------------------------|
+//! | Compare indices to each other      | [`IndexOps`]                                            | [`index_ops`]       | "How do indices relate to each other?"        |
+//! | Work with lengths/sizes            | [`LengthOps`]                                           | [`length_ops`]      | "What can I do with a length value?"          |
+//! | Read numeric values                | [`NumericConversions`]                                  | [`numeric_value`]   | "How do I read as usize/u16?"                 |
+//! | Construct & check numeric values   | [`NumericValue`]                                        | [`numeric_value`]   | "How do I create from integers & check zero?" |
+//! | Status return enum types           | [`ArrayOverflowResult`], [`CursorPositionBoundsStatus`] | [`result_enums.rs`] | "What status types are available?"            |
 //!
 //! #### When to Use Foundational Traits Directly
 //!
 //! **📐 Length/space/size calculations & text wrapping** → Use [`LengthOps`]
+//!
 //! ```rust
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, width, col, LengthOps, IndexOps};
 //! # let line_width = width(80);
@@ -103,16 +107,27 @@
 //! if text_length.convert_to_index().overflows(remaining) == ArrayOverflowResult::Overflowed { /* wrap to next line */ }
 //! ```
 //!
-//! **🔧 Writing generic bounds functions** → Use [`NumericValue`]
+//! **🔧 Writing generic bounds functions** → Use [`NumericConversions`] or
+//! [`NumericValue`]
+//!
 //! ```rust
-//! use r3bl_tui::NumericValue;
+//! // Use NumericConversions when you only need to READ values (most common)
+//! use r3bl_tui::NumericConversions;
 //! fn safe_access<I, L>(index: I, length: L) -> bool
-//! where I: NumericValue, L: NumericValue {
+//! where I: NumericConversions, L: NumericConversions {
 //!     index.as_usize() < length.as_usize()
+//! }
+//!
+//! // Use NumericValue when you need to CREATE values or check for zero
+//! use r3bl_tui::NumericValue;
+//! fn process_if_nonzero<T>(value: T) -> Option<usize>
+//! where T: NumericValue {
+//!     if value.is_zero() { None } else { Some(value.as_usize()) }
 //! }
 //! ```
 //!
 //! **🎛️ Check cursor position (EOL detection)** → Use [`CursorPositionBoundsStatus`]
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, CursorBoundsCheck, CursorPositionBoundsStatus};
 //! # let cursor = col(5);
@@ -126,17 +141,18 @@
 //!
 //! ### Semantic Traits (Use Case Validation)
 //!
-//! | Task                          | Trait                   | File                          | Key Question                                       |
-//! |-------------------------------|-------------------------|-------------------------------|--------------------------------------------------|
-//! | Validate array access safety  | [`ArrayBoundsCheck`]    | [`array_bounds_check.rs`]     | "Can I access array`[index]` correctly?"         |
-//! | Check cursor position bounds  | [`CursorBoundsCheck`]   | [`cursor_bounds_check.rs`]    | "Can a cursor be placed at position N?"          |
-//! | Determine viewport visibility | [`ViewportBoundsCheck`] | [`viewport_bounds_check.rs`]  | "Is this content visible in my viewport?"        |
-//! | Validate range structure      | [`RangeBoundsExt`]    | [`range_bounds_check_ext.rs`] | "Is this [`Range`]/[`RangeInclusive`] valid?" |
-//! | Convert range types           | [`RangeConvertExt`]     | [`range_convert_ext.rs`]      | "How do I convert inclusive → exclusive range?"  |
+//! | Task                          | Trait                   | File                          | Key Question                                    |
+//! |-------------------------------|-------------------------|-------------------------------|-------------------------------------------------|
+//! | Validate array access safety  | [`ArrayBoundsCheck`]    | [`array_bounds_check.rs`]     | "Can I access array`[index]` correctly?"        |
+//! | Check cursor position bounds  | [`CursorBoundsCheck`]   | [`cursor_bounds_check.rs`]    | "Can a cursor be placed at position N?"         |
+//! | Determine viewport visibility | [`ViewportBoundsCheck`] | [`viewport_bounds_check.rs`]  | "Is this content visible in my viewport?"       |
+//! | Validate range structure      | [`RangeBoundsExt`]      | [`range_bounds_check_ext.rs`] | "Is this [`Range`]/[`RangeInclusive`] valid?"   |
+//! | Convert range types           | [`RangeConvertExt`]     | [`range_convert_ext.rs`]      | "How do I convert inclusive → exclusive range?" |
 //!
 //! #### When to Use Semantic Traits Directly
 //!
 //! **🔍 Array access safety checking** → Use [`array_bounds_check.rs`]
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, ArrayBoundsCheck, ArrayOverflowResult};
 //! # let index = col(5);
@@ -154,6 +170,7 @@
 //! ```
 //!
 //! **📍 Cursor position validation** → Use [`cursor_bounds_check.rs`]
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, CursorPositionBoundsStatus, CursorBoundsCheck};
 //! # let pos = col(5);
@@ -165,6 +182,7 @@
 //! ```
 //!
 //! **👁️ Viewport visibility checking** → Use [`viewport_bounds_check.rs`]
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, ViewportBoundsCheck, RangeBoundsResult};
 //! # let index = col(15);
@@ -176,6 +194,7 @@
 //! **🎯 Range validation & membership** → Use [`range_bounds_check_ext.rs`]
 //!
 //! **Range Structure Validation** - Check if range object is well-formed:
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, RangeBoundsExt, RangeValidityStatus};
 //! # let buffer_length = width(10);
@@ -186,6 +205,7 @@
 //! ```
 //!
 //! **Range Membership Checking** - Check if index is within range:
+//!
 //! ```rust
 //! use r3bl_tui::{row, RangeBoundsExt, RangeBoundsResult};
 //! # let row_pos = row(5);
@@ -209,6 +229,7 @@
 //! ```
 //!
 //! **Range Type Conversion** - Convert inclusive to exclusive for iteration:
+//!
 //! ```rust
 //! use r3bl_tui::{row, RangeConvertExt};
 //!
@@ -305,14 +326,14 @@
 //!
 //! #### **[`ViewportBoundsCheck`] vs [`RangeBoundsExt`]**: Both handle content windows but serve different purposes
 //!
-//! | Aspect               | `ViewportBoundsCheck`                                                              | `RangeBoundsExt`                                             |
-//! |----------------------|------------------------------------------------------------------------------------|----------------------------------------------------------------|
-//! | **Window format**    | `(start, size)` - `start` is "index", `size` is "length" <-> `[start, start+size)` | `start..end` - Rust [`Range`] type, start and end both "index" |
-//! | **End semantics**    | End value not included (exclusive)                                                 | End value not included (exclusive)                             |
-//! | **Primary use**      | Rendering optimization (what's visible?)                                           | Iterator/algorithm parameter validation                        |
-//! | **Checks performed** | Is index visible in current view?                                                  | Is Range structurally valid?                                   |
-//! | **Example**          | "Is row 15 visible in viewport starting at row 10 with height 20?"                 | "Is range 5..10 valid for buffer len 20?"                      |
-//! | **Method hint**      | Use [`check_viewport_bounds()`]                                                     | Use [`check_range_is_valid_for_length()`] or [`clamp_range_to()`]                     |
+//! | Aspect               | `ViewportBoundsCheck`                                                              | `RangeBoundsExt`                                                  |
+//! |----------------------|------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+//! | **Window format**    | `(start, size)` - `start` is "index", `size` is "length" <-> `[start, start+size)` | `start..end` - Rust [`Range`] type, start and end both "index"    |
+//! | **End semantics**    | End value not included (exclusive)                                                 | End value not included (exclusive)                                |
+//! | **Primary use**      | Rendering optimization (what's visible?)                                           | Iterator/algorithm parameter validation                           |
+//! | **Checks performed** | Is index visible in current view?                                                  | Is Range structurally valid?                                      |
+//! | **Example**          | "Is row 15 visible in viewport starting at row 10 with height 20?"                 | "Is range 5..10 valid for buffer len 20?"                         |
+//! | **Method hint**      | Use [`check_viewport_bounds()`]                                                    | Use [`check_range_is_valid_for_length()`] or [`clamp_range_to()`] |
 //!
 //! ### Foundational Trait Distinctions
 //!
@@ -327,12 +348,23 @@
 //! | **Use case**         | Index validation, range membership | Space calculations, capacity checks          |
 //! | **Example**          | "Is cursor at row 5?"              | "Do I have 20 columns of width?"             |
 //!
-//! #### **When to Use [`NumericValue`]**
+//! #### **When to Use [`NumericConversions`] vs [`NumericValue`]**
 //!
-//! Use when writing generic functions that work with any index or length type, regardless
-//! of whether it's row/column specific or generic. It provides the lowest-level
-//! conversion operations ([`as_usize`], [`as_u16`], [`is_zero`]) that all other traits
-//! build upon.
+//! Both traits enable writing generic functions that work with any index or length type.
+//! Choose based on what operations you need:
+//!
+//! **Use [`NumericConversions`] (most common):**
+//! - When you only need to **read** numeric values ([`as_usize()`], [`as_u16()`])
+//! - For comparisons, calculations, or passing values to other functions
+//! - Example: Generic bounds checking that compares index < length
+//! - Less restrictive trait bound - works with both zero and non-zero types
+//!
+//! **Use [`NumericValue`] (when construction needed):**
+//! - When you need to **create** new values from integers ([`From<usize>`],
+//!   [`From<u16>`])
+//! - When you need to check for zero ([`is_zero()`])
+//! - Example: Generic factory functions or zero-handling logic
+//! - Extends [`NumericConversions`], so includes all reading operations
 //!
 //! ## Getting Started with Bounds Checking
 //!
@@ -345,6 +377,7 @@
 //! Adopt bounds checking incrementally in your existing code with these four steps:
 //!
 //! **Step 1**: Replace raw numeric types with constructors
+//!
 //! ```rust
 //! use r3bl_tui::{col, width};
 //! let pos_x = col(5); // Instead of let pos_x = 5_usize;
@@ -352,6 +385,7 @@
 //! ```
 //!
 //! **Step 2**: Replace manual bounds checks with safe methods
+//!
 //! ```rust
 //! # use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, col, width, IndexOps};
 //! # let pos_x = col(5);
@@ -361,6 +395,7 @@
 //! ```
 //!
 //! **Step 3**: Add pattern matching for array access (buffer/vector elements)
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, ArrayBoundsCheck, ArrayOverflowResult};
 //! # let pos_x = col(5);
@@ -372,6 +407,7 @@
 //! ```
 //!
 //! **Step 4**: Add pattern matching for cursor positioning (text editors)
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, CursorBoundsCheck, CursorPositionBoundsStatus};
 //! # let cursor_pos = col(5);
@@ -436,6 +472,7 @@
 //! ### Common Mistakes to Avoid
 //!
 //! **❌ Don't mix row and column types**
+//!
 //! ```rust,compile_fail
 //! use r3bl_tui::{row, width, IndexOps};  // IndexOps provides .overflows()
 //! // Compiler error - cannot compare RowIndex with ColWidth
@@ -445,6 +482,7 @@
 //! ```
 //!
 //! **❌ Don't use raw usize for bounds checking**
+//!
 //! ```rust
 //! let raw_index: usize = 5;
 //! let raw_length: usize = 10;
@@ -453,6 +491,7 @@
 //! ```
 //!
 //! **✅ Do use type-safe constructors and methods**
+//!
 //! ```rust
 //! use r3bl_tui::{ArrayBoundsCheck, ArrayOverflowResult, col, width, IndexOps};
 //! let index = col(5);
@@ -472,16 +511,23 @@
 //! ### Trait Hierarchy
 //!
 //! Both [`IndexOps`] and [`LengthOps`] build on top of [`NumericValue`] as their
-//! super-trait:
+//! super-trait, which in turn extends [`NumericConversions`]:
 //!
 //! ```text
 //! Trait Hierarchy:
 //!
-//!                   NumericValue
-//!                   (super-trait)
+//!                NumericConversions
+//!                   (base trait)
 //!                        │
-//!                        │ Provides: as_usize(), as_u16(), is_zero()
-//!                        │ Purpose: Generic numeric conversions
+//!                        │ Provides: as_usize(), as_u16()
+//!                        │ Purpose: Reading numeric values
+//!                        │
+//!                        ▼
+//!                   NumericValue
+//!                 (extends above)
+//!                        │
+//!                        │ Adds: From<usize>, From<u16>, is_zero()
+//!                        │ Purpose: Construction + zero checking
 //!                        │
 //!           ┌────────────┴────────────┐
 //!           │                         │
@@ -494,10 +540,13 @@
 //!         convert_to_length()       clamp_to_max()
 //! ```
 //!
-//! - **[`NumericValue`]** - The foundational trait providing numeric conversions
-//!   ([`NumericValue::as_usize()`], [`NumericValue::as_u16()`],
-//!   [`NumericValue::is_zero()`]) that enable all higher-level operations. Use this
-//!   directly when writing generic bounds checking functions.
+//! - **[`NumericConversions`]** - The base trait providing numeric reading operations
+//!   ([`as_usize()`], [`as_u16()`]). Use this when you only need to read values without
+//!   constructing new ones (most common case in generic functions).
+//!
+//! - **[`NumericValue`]** - Extends [`NumericConversions`] with construction
+//!   ([`From<usize>`], [`From<u16>`]) and zero checking ([`is_zero()`]). Use this when
+//!   you need to create values or check for zero in generic functions.
 //!
 //! - **[`IndexOps`]** - Extends [`NumericValue`] with 0-based position semantics and
 //!   bounds checking operations specific to array indexing.
@@ -505,8 +554,9 @@
 //! - **[`LengthOps`]** - Extends [`NumericValue`] with 1-based size semantics and space
 //!   calculation operations specific to container sizes.
 //!
-//! This hierarchy enables both generic operations (via [`NumericValue`]) and specialized,
-//! type-safe operations (via [`IndexOps`] and [`LengthOps`]).
+//! This hierarchy enables both generic operations (via [`NumericConversions`] or
+//! [`NumericValue`]) and specialized, type-safe operations (via [`IndexOps`] and
+//! [`LengthOps`]).
 //!
 //! ### The [`IndexOps`] Trait - index or position operations
 //!
@@ -648,7 +698,7 @@
 //! - [`TermRow`], [`TermCol`] - 1-based terminal coordinates for ANSI escape sequences
 //!   - Located in `vt_100_ansi_parser::term_units` module
 //!   - Used exclusively for CSI sequence parsing (`ESC[row;colH`)
-//!   - Convert to/from [`Row`]/[`Col`] for buffer operations
+//!   - Convert to/from [`RowIndex`]/[`ColIndex`] for buffer operations
 //!   - **Not paired**: Both are 1-based positions, neither represents a size/length
 //!   - **Different domain**: Terminal protocol coordinates, not buffer bounds checking
 //!
@@ -744,13 +794,13 @@
 //!
 //! Each semantic trait has specific requirements from the foundational layer:
 //!
-//! | Semantic Trait | Required Foundational Trait | Purpose |
-//! |----------------|------------------------------|---------|
-//! | [`ArrayBoundsCheck`] | [`IndexOps`] (for the index type) | Validates `index < length` for safe array access |
-//! | [`CursorBoundsCheck`] | [`LengthOps`] (auto-implemented) | Validates `index <= length` for cursor positioning |
-//! | [`ViewportBoundsCheck`] | [`IndexOps`] (auto-implemented) | Checks if index is within viewport `[start, start+size)` |
-//! | [`RangeBoundsExt`] | Associated types with [`IndexOps`]/[`LengthOps`] | Validates range structure and membership |
-//! | [`RangeConvertExt`] | Associated types with [`IndexOps`] | Converts between inclusive/exclusive ranges |
+//! | Semantic Trait          | Required Foundational Trait                      | Purpose                                                  |
+//! |-------------------------|--------------------------------------------------|----------------------------------------------------------|
+//! | [`ArrayBoundsCheck`]    | [`IndexOps`] (for the index type)                | Validates `index < length` for safe array access         |
+//! | [`CursorBoundsCheck`]   | [`LengthOps`] (auto-implemented)                 | Validates `index <= length` for cursor positioning       |
+//! | [`ViewportBoundsCheck`] | [`IndexOps`] (auto-implemented)                  | Checks if index is within viewport `[start, start+size)` |
+//! | [`RangeBoundsExt`]      | Associated types with [`IndexOps`]/[`LengthOps`] | Validates range structure and membership                 |
+//! | [`RangeConvertExt`]     | Associated types with [`IndexOps`]               | Converts between inclusive/exclusive ranges              |
 //!
 //! #### How Semantic Traits Build on Foundational Traits
 //!
@@ -851,10 +901,10 @@
 //!
 //! **Extension traits in this module:**
 //!
-//! | Trait | Target Type | Purpose |
-//! |-------|------------|---------|
-//! | [`RangeBoundsExt`] | [`Range<Index>`] and [`RangeInclusive<Index>`] | Validate range structure and membership |
-//! | [`RangeConvertExt`] | [`RangeInclusive<Index>`] | Convert inclusive → exclusive for iteration |
+//! | Trait               | Target Type                                    | Purpose                                     |
+//! |---------------------|------------------------------------------------|---------------------------------------------|
+//! | [`RangeBoundsExt`]  | [`Range<Index>`] and [`RangeInclusive<Index>`] | Validate range structure and membership     |
+//! | [`RangeConvertExt`] | [`RangeInclusive<Index>`]                      | Convert inclusive → exclusive for iteration |
 //!
 //! **Why extension traits are needed:**
 //! ```text
@@ -869,6 +919,7 @@
 //! ```
 //!
 //! **How to use extension traits:**
+//!
 //! ```rust
 //! use r3bl_tui::{col, width, RangeBoundsExt, RangeValidityStatus};
 //!
@@ -889,12 +940,13 @@
 //!
 //! **Blanket implementations in this module:**
 //!
-//! | Trait | Blanket Impl | Benefit |
-//! |-------|-------------|---------|
-//! | [`CursorBoundsCheck`] | `impl<T: LengthOps> CursorBoundsCheck for T` | Auto-available on all length types |
-//! | [`ViewportBoundsCheck`] | `impl<T: IndexOps> ViewportBoundsCheck for T` | Auto-available on all index types |
+//! | Trait                   | Blanket Impl                                  | Benefit                             |
+//! |-------------------------|-----------------------------------------------|-------------------------------------|
+//! | [`CursorBoundsCheck`]   | `impl<T: LengthOps> CursorBoundsCheck for T`  | Auto-available on all length types  |
+//! | [`ViewportBoundsCheck`] | `impl<T: IndexOps> ViewportBoundsCheck for T` | Auto-available on all index types   |
 //!
 //! **Without blanket impl (tedious boilerplate):**
+//!
 //! ```rust,compile_fail
 //! # use r3bl_tui::{CursorBoundsCheck, ColWidth, RowHeight, Length, ByteLength};
 //! impl CursorBoundsCheck for ColWidth {}
@@ -905,6 +957,7 @@
 //! ```
 //!
 //! **With blanket impl (write once, works everywhere):**
+//!
 //! ```rust,compile_fail
 //! # use r3bl_tui::{CursorBoundsCheck, LengthOps};
 //! // Single blanket impl in cursor_bounds_check.rs:
@@ -917,6 +970,7 @@
 //! ```
 //!
 //! **How blanket impls work:**
+//!
 //! ```rust
 //! use r3bl_tui::{width, col, CursorBoundsCheck, CursorPositionBoundsStatus};
 //!
@@ -933,6 +987,7 @@
 //! would violate Rust's coherence rules.
 //!
 //! **Example: [`ArrayBoundsCheck`] requires manual impls**
+//!
 //! ```rust,compile_fail
 //! # use r3bl_tui::{ArrayBoundsCheck, LengthOps, ColWidth, ColIndex, RowHeight, RowIndex};
 //! // ArrayBoundsCheck is parameterized over LengthType
@@ -950,11 +1005,11 @@
 //!
 //! #### Implementation Pattern Summary
 //!
-//! | Pattern | When to Use | Examples |
-//! |---------|------------|----------|
-//! | **Extension Trait (Ext suffix)** | Adding methods to foreign types (std lib) | [`RangeBoundsExt`], [`RangeConvertExt`] |
-//! | **Blanket Implementation** | Trait with no type params, all defaults | [`CursorBoundsCheck`], [`ViewportBoundsCheck`] |
-//! | **Manual Implementation** | Trait with type parameters | [`ArrayBoundsCheck<LengthType>`] |
+//! | Pattern                              | When to Use                               | Examples                                       |
+//! |--------------------------------------|-------------------------------------------|------------------------------------------------|
+//! | **Extension Trait (Ext suffix)**     | Adding methods to foreign types (std lib) | [`RangeBoundsExt`], [`RangeConvertExt`]        |
+//! | **Blanket Implementation**           | Trait with no type params, all defaults   | [`CursorBoundsCheck`], [`ViewportBoundsCheck`] |
+//! | **Manual Implementation**            | Trait with type parameters                | [`ArrayBoundsCheck<LengthType>`]               |
 //!
 //! This combination of patterns provides maximum ergonomics while respecting Rust's
 //! trait coherence rules and minimizing boilerplate code.
@@ -1014,6 +1069,8 @@
 //! [`Length`]: crate::Length
 //! [`IndexOps`]: crate::IndexOps
 //! [`LengthOps`]: crate::LengthOps
+//! [`NumericConversions`]: crate::NumericConversions
+//! [`NumericValue`]: crate::NumericValue
 //! [`ArrayBoundsCheck`]: crate::ArrayBoundsCheck
 //! [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 //! [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
@@ -1062,9 +1119,14 @@
 //! [`numeric_value`]: mod@crate::numeric_value
 //! [`Range`]: std::ops::Range
 //! [`RangeInclusive`]: std::ops::RangeInclusive
-//! [`as_usize`]: NumericValue::as_usize
-//! [`as_u16`]: NumericValue::as_u16
+//! [`as_usize`]: NumericConversions::as_usize
+//! [`as_u16`]: NumericConversions::as_u16
+//! [`as_usize()`]: crate::NumericConversions::as_usize
+//! [`as_u16()`]: crate::NumericConversions::as_u16
 //! [`is_zero`]: NumericValue::is_zero
+//! [`is_zero()`]: crate::NumericValue::is_zero
+//! [`From<usize>`]: std::convert::From
+//! [`From<u16>`]: std::convert::From
 //! [`col()`]: crate::col
 //! [`row()`]: crate::row
 //! [`width()`]: crate::width
@@ -1074,12 +1136,6 @@
 //! [`to_exclusive()`]: crate::RangeConvertExt::to_exclusive
 //! [`TermRow`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermRow
 //! [`TermCol`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermCol
-//! [`Row`]: crate::Row
-//! [`Col`]: crate::Col
-//! [`as_usize`]: crate::NumericValue::as_usize
-//! [`as_u16`]: crate::NumericValue::as_u16
-//! [`is_zero`]: crate::NumericValue::is_zero
-//! [`NumericValue`]: crate::NumericValue
 //! [Exclusive vs Inclusive Range Comparison]: mod@crate::core::units::bounds_check::range_bounds_check_ext#exclusive-vs-inclusive-range-comparison
 //! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
 //! [`cursor_bounds_check.rs`]: mod@crate::cursor_bounds_check

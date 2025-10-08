@@ -1,15 +1,13 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::pin::Pin;
-
+use crate::{CalculateResizeHint, ColWidth, DEVELOPMENT_MODE, EventLoopResult, Header,
+            InputDevice, InputEvent, ItemsOwned, Key, KeyPress, KeyState,
+            LineStateControlSignal, ModifierKeysMask, OutputDevice, RowHeight,
+            SelectComponent, SharedWriter, SpecialKey, State, StyleSheet, ch,
+            constants::SPACE_CHAR, enter_event_loop_async, get_size};
 use clap::ValueEnum;
 use miette::IntoDiagnostic;
-
-use crate::{ch, constants::SPACE_CHAR, enter_event_loop_async, get_size,
-            CalculateResizeHint, EventLoopResult, Header, Height, InputDevice,
-            InputEvent, ItemsOwned, Key, KeyPress, KeyState, LineStateControlSignal,
-            ModifierKeysMask, OutputDevice, SelectComponent, SharedWriter, SpecialKey,
-            State, StyleSheet, Width, DEVELOPMENT_MODE};
+use std::pin::Pin;
 
 pub const DEFAULT_HEIGHT: usize = 5;
 
@@ -138,8 +136,8 @@ impl DefaultIoDevices {
 pub fn choose<'a>(
     arg_header: impl Into<Header>,
     arg_options_to_choose_from: impl Into<ItemsOwned>,
-    maybe_max_height: Option<Height>,
-    maybe_max_width: Option<Width>,
+    maybe_max_height: Option<RowHeight>,
+    maybe_max_width: Option<ColWidth>,
     how: HowToChoose,
     stylesheet: StyleSheet,
     io: (
@@ -228,8 +226,8 @@ pub fn choose<'a>(
 }
 
 mod keypress_handler_helper {
-    use crate::{fg_green, inline_string, usize, CalculateResizeHint,
-                CaretVerticalViewportLocation, EventLoopResult, State, DEVELOPMENT_MODE};
+    use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEVELOPMENT_MODE,
+                EventLoopResult, State, fg_green, inline_string, usize};
 
     pub fn handle_resize_event(state: &mut State, size: crate::Size) -> EventLoopResult {
         DEVELOPMENT_MODE.then(|| {
@@ -439,11 +437,12 @@ fn keypress_handler(state: &mut State, input_event: InputEvent) -> EventLoopResu
             }
             | KeyPress::WithModifiers {
                 key: Key::Character('c'),
-                mask: ModifierKeysMask {
-                    ctrl_key_state: KeyState::Pressed,
-                    shift_key_state: KeyState::NotPressed,
-                    alt_key_state: KeyState::NotPressed,
-                },
+                mask:
+                    ModifierKeysMask {
+                        ctrl_key_state: KeyState::Pressed,
+                        shift_key_state: KeyState::NotPressed,
+                        alt_key_state: KeyState::NotPressed,
+                    },
             },
         ) => keypress_handler_helper::handle_escape_or_ctrl_c(),
 
@@ -487,12 +486,10 @@ pub enum HowToChoose {
 
 #[cfg(test)]
 mod test_choose_async {
-    use std::{io::Write, time::Duration};
-
-    use smallvec::smallvec;
-
     use super::*;
     use crate::{CrosstermEventResult, InlineVec, InputDeviceExtMock, OutputDeviceExt};
+    use smallvec::smallvec;
+    use std::{io::Write, time::Duration};
 
     /// Simulated key inputs: Down, Down, Enter.
     fn generated_key_events() -> InlineVec<CrosstermEventResult> {

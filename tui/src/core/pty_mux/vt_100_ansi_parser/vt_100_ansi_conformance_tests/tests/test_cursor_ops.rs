@@ -14,6 +14,7 @@ use crate::{Pos, col, height,
                                              esc_codes},
                                  term_units::{term_col, term_row}},
             width};
+use std::num::NonZeroU16;
 use vte::Perform;
 
 /// Tests for absolute cursor positioning (CUP, HVP commands).
@@ -55,7 +56,7 @@ pub mod positioning {
         );
 
         // Send ESC[1;1H to move to home position (r:1,c:1), 1-based index
-        let sequence = csi_seq_cursor_pos(term_row(1) + term_col(1)).to_string();
+        let sequence = csi_seq_cursor_pos(term_row(nz(1)) + term_col(nz(1))).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify cursor is at home position (r:0,c:0), in 0-based index
@@ -106,7 +107,7 @@ pub mod positioning {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Send ESC[5;10H to move to row 5, column 10 (1-based)
-        let sequence = csi_seq_cursor_pos(term_row(5) + term_col(10)).to_string();
+        let sequence = csi_seq_cursor_pos(term_row(nz(5)) + term_col(nz(10))).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify cursor is at (r:4,c:9) in 0-based indexing
@@ -154,7 +155,8 @@ pub mod positioning {
 
         // Try to move cursor beyond buffer bounds (row 15, col 15) - should clamp to
         // (r:9,c:9)
-        let sequence = csi_seq_cursor_pos(term_row(15) + term_col(15)).to_string();
+        let sequence =
+            csi_seq_cursor_pos(term_row(nz(15)) + term_col(nz(15))).to_string();
         performer.apply_ansi_bytes(sequence);
 
         // Verify cursor is clamped to buffer boundaries (r:9,c:9) in 0-based indexing
@@ -166,14 +168,18 @@ pub mod positioning {
 
         performer.print('B'); // Mark the clamped position
 
-        // Try to move to negative/zero positions (should become (r:0,c:0))
-        let sequence = csi_seq_cursor_pos(term_row(0) + term_col(0)).to_string();
-        performer.apply_ansi_bytes(sequence);
+        // Test parser's handling of invalid external data: coordinates with 0 values
+        // Our type system (TermRow/TermCol) is 1-based and cannot represent 0. So we
+        // can't use `csi_seq_cursor_pos(_)` and have to construct the raw
+        // ANSI sequence manually to test the parser's clamping behavior.
+        // ESC[0;0H should be clamped to ESC[1;1H (minimum valid coordinates)
+        let raw_sequence = "\x1b[0;0H"; // Raw ANSI: move to (row:0, col:0)
+        performer.apply_ansi_bytes(raw_sequence);
 
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(0) + col(0),
-            "Cursor should default to (r:0,c:0) for out-of-range coordinates"
+            "Parser should clamp invalid coordinate 0 to 1, resulting in buffer position (r:0,c:0)"
         );
 
         performer.print('C'); // Mark the origin
@@ -210,7 +216,8 @@ pub mod positioning {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Test CUP (Cursor Position) - ESC[3;4H
-        let cup_sequence = csi_seq_cursor_pos(term_row(3) + term_col(4)).to_string();
+        let cup_sequence =
+            csi_seq_cursor_pos(term_row(nz(3)) + term_col(nz(4))).to_string();
         performer.apply_ansi_bytes(cup_sequence);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
@@ -220,7 +227,8 @@ pub mod positioning {
         performer.print('D');
 
         // Test HVP (Horizontal Vertical Position) - ESC[6;7f
-        let hvp_sequence = csi_seq_cursor_pos_alt(term_row(6) + term_col(7)).to_string();
+        let hvp_sequence =
+            csi_seq_cursor_pos_alt(term_row(nz(6)) + term_col(nz(7))).to_string();
         performer.apply_ansi_bytes(hvp_sequence);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
@@ -705,8 +713,8 @@ pub mod vertical_position_absolute {
 
         // Start at position (3, 5) and move to row 7
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(4),
-            col: term_col(6),
+            row: term_row(nz(4)),
+            col: term_col(nz(6)),
         }; // Move to row 4, col 6 (1-based)
         let vpa_sequence = CsiSequence::VerticalPositionAbsolute(7);
         let sequence = format!("{move_cursor}{vpa_sequence}");
@@ -726,8 +734,8 @@ pub mod vertical_position_absolute {
 
         // Start at position (5, 8) and use VPA with default parameter
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(6),
-            col: term_col(9),
+            row: term_row(nz(6)),
+            col: term_col(nz(9)),
         }; // Move to row 6, col 9 (1-based)
         let vpa_sequence = CsiSequence::VerticalPositionAbsolute(1); // Default to row 1
         let sequence = format!("{move_cursor}{vpa_sequence}");
@@ -747,8 +755,8 @@ pub mod vertical_position_absolute {
 
         // Start at position (5, 3) and try to move beyond bounds
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(6),
-            col: term_col(4),
+            row: term_row(nz(6)),
+            col: term_col(nz(4)),
         }; // Move to row 6, col 4 (1-based)
         let vpa_sequence = CsiSequence::VerticalPositionAbsolute(15); // Beyond bounds
         let sequence = format!("{move_cursor}{vpa_sequence}");
@@ -768,8 +776,8 @@ pub mod vertical_position_absolute {
 
         // Start at position (7, 2) and move with parameter 0
         let move_cursor = CsiSequence::CursorPosition {
-            row: term_row(8),
-            col: term_col(3),
+            row: term_row(nz(8)),
+            col: term_col(nz(3)),
         }; // Move to row 8, col 3 (1-based)
         // VPA parameter 0 should be treated as 1, but since we need explicit param,
         // let's use 1 which represents the first row.
@@ -792,9 +800,11 @@ pub mod vertical_position_absolute {
             let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
             // Move to initial position and then use VPA.
+            let col_nz =
+                NonZeroU16::new(col_pos + 1).expect("col_pos + 1 is always >= 1");
             let move_cursor = CsiSequence::CursorPosition {
-                row: term_row(3),
-                col: term_col(col_pos + 1),
+                row: term_row(nz(3)),
+                col: term_col(col_nz),
             }; // Move to row 3, col (1-based)
             let vpa_sequence = CsiSequence::VerticalPositionAbsolute(8);
             let sequence = format!("{move_cursor}{vpa_sequence}");

@@ -14,6 +14,7 @@
 //! - Performance stress tests
 //! - Boundary condition validation
 
+use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, SgrCode,
             vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                  term_units::{term_col, term_row}}};
@@ -29,8 +30,8 @@ pub fn long_text_sequence() -> String {
         "{}{}{}{}",
         // Move to start.
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         },
         // Large text block (reduced from 10000 to fit tests)
         "A".repeat(200),
@@ -82,8 +83,8 @@ pub fn malformed_sequences() -> String {
         "{}{}{}{}{}{}",
         // Valid sequence for comparison.
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         },
         "Valid text\n",
         // Sequences with out-of-range parameters.
@@ -108,15 +109,15 @@ pub fn nested_escape_sequences() -> String {
         SgrCode::ForegroundBasic(ANSIBasicColor::Red),
         SgrCode::BackgroundBasic(ANSIBasicColor::Blue),
         CsiSequence::CursorPosition {
-            row: term_row(5),
-            col: term_col(5)
+            row: term_row(nz(5)),
+            col: term_col(nz(5))
         },
         "Nested",
         // Restore and move again.
         CsiSequence::RestoreCursor,
         CsiSequence::CursorPosition {
-            row: term_row(2),
-            col: term_col(2)
+            row: term_row(nz(2)),
+            col: term_col(nz(2))
         },
         SgrCode::Reset,
         SgrCode::Bold,
@@ -135,20 +136,20 @@ pub fn boundary_cursor_tests() -> String {
         "{}{}{}{}{}{}",
         // Test upper-left boundary.
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         },
         "UL",
         // Test lower-right boundary (within 10x10 buffer)
         CsiSequence::CursorPosition {
-            row: term_row(10),
-            col: term_col(8) // Leave room for 2-char text
+            row: term_row(nz(10)),
+            col: term_col(nz(8)) // Leave room for 2-char text
         },
         "LR",
         // Test beyond boundaries (should clamp)
         CsiSequence::CursorPosition {
-            row: term_row(15),
-            col: term_col(15)
+            row: term_row(nz(15)),
+            col: term_col(nz(15))
         },
         "XX"
     )

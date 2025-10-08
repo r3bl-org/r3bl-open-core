@@ -16,7 +16,7 @@ use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
             tui_style_attrib::Bold,
             tui_style_attribs};
 
-/// Height reserved for the status bar at the bottom of the terminal.
+/// `RowHeight` reserved for the status bar at the bottom of the terminal.
 pub const STATUS_BAR_HEIGHT: u16 = 1;
 
 /// Maximum number of processes supported (F1-F9).

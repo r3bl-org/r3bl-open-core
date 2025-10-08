@@ -310,32 +310,32 @@ pub mod boundary_edge_cases {
             (
                 "Cursor up by 0",
                 CsiSequence::CursorUp(0),
-                term_row(3),
-                term_col(3),
+                term_row(nz(3)),
+                term_col(nz(3)),
                 row(1),
                 col(2),
             ),
             (
                 "Cursor down by 0",
                 CsiSequence::CursorDown(0),
-                term_row(3),
-                term_col(3),
+                term_row(nz(3)),
+                term_col(nz(3)),
                 row(3),
                 col(2),
             ),
             (
                 "Cursor forward by 0",
                 CsiSequence::CursorForward(0),
-                term_row(3),
-                term_col(3),
+                term_row(nz(3)),
+                term_col(nz(3)),
                 row(2),
                 col(3),
             ),
             (
                 "Cursor backward by 0",
                 CsiSequence::CursorBackward(0),
-                term_row(3),
-                term_col(3),
+                term_row(nz(3)),
+                term_col(nz(3)),
                 row(2),
                 col(1),
             ),
@@ -403,22 +403,22 @@ pub mod boundary_edge_cases {
             format!(
                 "{}",
                 CsiSequence::CursorPosition {
-                    row: term_row(50),
-                    col: term_col(50)
+                    row: term_row(nz(50)),
+                    col: term_col(nz(50))
                 }
             ),
             format!(
                 "{}",
                 CsiSequence::CursorPosition {
-                    row: term_row(1),
-                    col: term_col(100)
+                    row: term_row(nz(1)),
+                    col: term_col(nz(100))
                 }
             ),
             format!(
                 "{}",
                 CsiSequence::CursorPosition {
-                    row: term_row(100),
-                    col: term_col(1)
+                    row: term_row(nz(100)),
+                    col: term_col(nz(1))
                 }
             ),
         ];
@@ -459,8 +459,8 @@ pub mod parser_resilience {
             "\x1b]999MALFORMED", // Malformed OSC
             "Recovery text",     // Should be processed normally
             CsiSequence::CursorPosition {
-                row: term_row(2),
-                col: term_col(1)
+                row: term_row(nz(2)),
+                col: term_col(nz(1))
             }
         );
 
@@ -525,8 +525,8 @@ pub mod parser_resilience {
         let move_sequence = format!(
             "{}",
             CsiSequence::CursorPosition {
-                row: term_row(3),
-                col: term_col(3)
+                row: term_row(nz(3)),
+                col: term_col(nz(3))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);

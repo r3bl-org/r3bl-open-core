@@ -2,7 +2,7 @@
 
 //! Cursor positioning for text editing - see [`CursorBoundsCheck`] trait.
 
-use super::{length_ops::LengthOps, numeric_value::NumericValue,
+use super::{length_ops::LengthOps, numeric_value::NumericConversions,
             result_enums::CursorPositionBoundsStatus};
 use std::ops::Add;
 

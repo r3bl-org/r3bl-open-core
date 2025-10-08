@@ -125,7 +125,7 @@
 //!
 //! // ✅ Type-safe builders (validated, self-documenting)
 //! let good_sequence = format!("{}{}{}",
-//!     CsiSequence::CursorPosition { row: term_row(2), col: term_col(5) },
+//!     CsiSequence::CursorPosition { row: term_row(nz(2)), col: term_col(nz(5)) },
 //!     SgrCode::ForegroundBasic(ANSIBasicColor::Red),
 //!     "Error",
 //!     SgrCode::Reset

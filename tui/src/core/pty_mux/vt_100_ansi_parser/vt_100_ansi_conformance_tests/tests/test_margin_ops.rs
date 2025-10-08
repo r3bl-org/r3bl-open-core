@@ -23,8 +23,8 @@ pub mod decstbm_margins {
         let csi_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(csi_sequence.as_bytes());
@@ -45,8 +45,8 @@ pub mod decstbm_margins {
         let csi_sequence = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(3)),
-                bottom: Some(term_row(7))
+                top: Some(term_row(nz(3))),
+                bottom: Some(term_row(nz(7)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(csi_sequence.as_bytes());
@@ -63,8 +63,8 @@ pub mod decstbm_margins {
         let full_buffer = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(1)),
-                bottom: Some(term_row(10))
+                top: Some(term_row(nz(1))),
+                bottom: Some(term_row(nz(10)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(full_buffer.as_bytes());
@@ -73,8 +73,8 @@ pub mod decstbm_margins {
         let invalid_range = format!(
             "{}",
             CsiSequence::SetScrollingMargins {
-                top: Some(term_row(7)),
-                bottom: Some(term_row(3))
+                top: Some(term_row(nz(7))),
+                bottom: Some(term_row(nz(3)))
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(invalid_range.as_bytes());

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericValue, RowHeight,
-            create_numeric_arithmetic_operators, height, usize};
+use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericConversions, NumericValue,
+            RowHeight, create_numeric_arithmetic_operators, height, usize};
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
@@ -201,11 +201,13 @@ mod bounds_check_trait_impls {
     #![allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl NumericValue for RowIndex {
+    impl NumericConversions for RowIndex {
         fn as_usize(&self) -> usize { self.0.as_usize() }
 
         fn as_u16(&self) -> u16 { self.0.as_u16() }
     }
+
+    impl NumericValue for RowIndex {}
 
     impl IndexOps for RowIndex {
         type LengthType = RowHeight;

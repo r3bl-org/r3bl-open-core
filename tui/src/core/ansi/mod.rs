@@ -36,7 +36,7 @@
 //!
 //! ```
 //! # use r3bl_tui::{
-//! #     fg_red, dim, fg_color, tui_color, new_style, ast,
+//! #     fg_red, size, fg_color, tui_color, new_style, ast,
 //! #     RgbValue, ASTStyle, AnsiStyledText, ASTColor,
 //! # };
 //!

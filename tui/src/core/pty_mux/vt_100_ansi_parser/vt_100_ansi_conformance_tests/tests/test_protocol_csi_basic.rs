@@ -78,7 +78,7 @@ fn test_basic_vpa_integration() {
     let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
     // Move to specific position using our sequence builder
-    let move_sequence = cursor_sequences::move_to_position(5, 7);
+    let move_sequence = cursor_sequences::move_to_position(nz(5), nz(7));
     let _move_result = ofs_buf.apply_ansi_bytes(move_sequence);
 
     // Use VPA to move to specific row while maintaining column

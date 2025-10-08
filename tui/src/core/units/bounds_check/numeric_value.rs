@@ -1,10 +1,57 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Base trait for numeric conversions - see [`NumericValue`] trait.
+//! Base traits for numeric conversions - see [`NumericValue`] and [`NumericConversions`].
+
+/// Base trait for reading numeric values from wrapper types.
+///
+/// `NumericConversions` provides the foundational conversion methods that enable all
+/// numeric types in the bounds checking system to convert to standard Rust integer types.
+/// It separates the concern of "reading values" from "constructing values".
+///
+/// ## Purpose
+///
+/// This trait serves as the minimal interface for types that wrap numeric
+/// values and need to expose those values as [`usize`] or [`u16`]. This trait is extended
+/// by [`NumericValue`] (which adds construction from integers) and is also used by
+/// types that cannot be constructed from arbitrary integers (like terminal coordinates
+/// that must be non-zero).
+///
+/// ## Implementing Types
+///
+/// This trait is implemented by:
+/// - All index and length types (via [`NumericValue`])
+/// - Terminal coordinate types ([`TermRow`], [`TermCol`]) that wrap [`NonZeroU16`]
+///
+/// ## Design Rationale
+///
+/// By separating reading ([`as_usize`], [`as_u16`]) from construction ([`From<usize>`],
+/// [`From<u16>`]), we allow types with construction constraints (like non-zero values)
+/// to participate in generic numeric operations without violating their invariants.
+///
+/// [`TermRow`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermRow
+/// [`TermCol`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermCol
+/// [`NonZeroU16`]: std::num::NonZeroU16
+/// [`as_usize`]: Self::as_usize
+/// [`as_u16`]: Self::as_u16
+/// [`From<usize>`]: std::convert::From
+/// [`From<u16>`]: std::convert::From
+pub trait NumericConversions: Copy + Sized {
+    /// Convert to a [`usize`] value for array indexing and size calculations.
+    ///
+    /// This is the preferred conversion method for most operations due to its
+    /// flexibility and compatibility with Rust's standard library.
+    fn as_usize(&self) -> usize;
+
+    /// Convert to a [`u16`] value for terminal and PTY operations.
+    ///
+    /// Use this when interfacing with terminal libraries or PTY operations
+    /// that require 16-bit values.
+    fn as_u16(&self) -> u16;
+}
 
 /// Base trait for numeric conversions in the bounds checking system.
 ///
-/// This trait provides standardized numeric conversion capabilities for any type that
+/// `NumericValue` provides standardized numeric conversion capabilities for any type that
 /// represents a numeric value. It enables generic implementations that can work with
 /// diverse numeric types without knowing their specific implementation details.
 ///
@@ -76,8 +123,8 @@
 /// assert!(!non_zero_length.is_zero());
 /// ```
 ///
-/// [`as_usize()`]: Self::as_usize
-/// [`as_u16()`]: Self::as_u16
+/// [`as_usize()`]: NumericConversions::as_usize
+/// [`as_u16()`]: NumericConversions::as_u16
 /// [`is_zero()`]: Self::is_zero
 /// [`Index`]: crate::Index
 /// [`RowIndex`]: crate::RowIndex
@@ -90,40 +137,7 @@
 /// [`ByteLength`]: crate::ByteLength
 /// [`SegLength`]: crate::SegLength
 /// [`ChUnit`]: crate::ChUnit
-pub trait NumericValue: From<usize> + From<u16> + Copy + Ord + Sized {
-    /// Convert the unit to a usize value for numeric comparison.
-    ///
-    /// See [trait-level documentation] for usage guidelines and design rationale.
-    /// Prefer this over [`as_u16()`] for most operations due to its flexibility
-    /// and compatibility with Rust's standard library.
-    ///
-    /// ## Common Use Cases
-    ///
-    /// - Array indexing in Vec, arrays, or buffers
-    /// - Size calculations for lengths, capacities, or offsets
-    /// - Loop bounds and iteration logic
-    /// - Memory operations and layout calculations
-    ///
-    /// [`as_u16()`]: Self::as_u16
-    /// [trait-level documentation]: NumericValue
-    fn as_usize(&self) -> usize;
-
-    /// Convert the unit to a u16 value for terminal and PTY operations.
-    ///
-    /// See [trait-level documentation] for usage guidelines and design rationale.
-    /// Use this specifically when interfacing with terminal libraries (like crossterm)
-    /// or PTY operations that require 16-bit values.
-    ///
-    /// ## Common Use Cases
-    ///
-    /// - Terminal operations with crossterm and similar libraries
-    /// - PTY communication and pseudo-terminal devices
-    /// - Network protocols with 16-bit size limits
-    /// - Memory-constrained embedded systems
-    ///
-    /// [trait-level documentation]: NumericValue
-    fn as_u16(&self) -> u16;
-
+pub trait NumericValue: NumericConversions + From<usize> + From<u16> + Ord {
     /// Check if the unit value is zero.
     ///
     /// See [trait-level documentation] for usage guidelines. The default
@@ -168,12 +182,14 @@ mod tests {
         fn sub(self, other: Self) -> Self { TestUnit(self.0.saturating_sub(other.0)) }
     }
 
-    impl NumericValue for TestUnit {
+    impl NumericConversions for TestUnit {
         fn as_usize(&self) -> usize { self.0 }
 
         #[allow(clippy::cast_possible_truncation)]
         fn as_u16(&self) -> u16 { self.0 as u16 }
     }
+
+    impl NumericValue for TestUnit {}
 
     #[test]
     fn test_as_usize_conversion() {

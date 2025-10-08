@@ -12,9 +12,11 @@
 //! - Save/Restore: VT100 User Guide Section 3.3.3
 //! - Absolute Positioning: VT100 User Guide Section 3.3.4
 
+use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::vt_100_ansi_parser::{protocols::{csi_codes::CsiSequence,
                                             esc_codes::EscSequence},
                                 term_units::{term_col, term_row}};
+use std::num::NonZeroU16;
 
 /// Move cursor to absolute position (row, col).
 ///
@@ -24,7 +26,7 @@ use crate::vt_100_ansi_parser::{protocols::{csi_codes::CsiSequence,
 /// * `row` - Target row (1-based, VT100 convention)
 /// * `col` - Target column (1-based, VT100 convention)
 #[must_use]
-pub fn move_to_position(row: u16, col: u16) -> String {
+pub fn move_to_position(row: NonZeroU16, col: NonZeroU16) -> String {
     CsiSequence::CursorPosition {
         row: term_row(row),
         col: term_col(col),
@@ -38,8 +40,8 @@ pub fn move_to_position(row: u16, col: u16) -> String {
 #[must_use]
 pub fn move_to_home() -> String {
     CsiSequence::CursorPosition {
-        row: term_row(1),
-        col: term_col(1),
+        row: term_row(nz(1)),
+        col: term_col(nz(1)),
     }
     .to_string()
 }
@@ -181,19 +183,19 @@ pub fn draw_box_outline(top_row: u16, left_col: u16, width: u16, height: u16) ->
     let mut sequence = String::new();
 
     // Top edge.
-    sequence.push_str(&move_to_position(top_row, left_col));
+    sequence.push_str(&move_to_position(nz(top_row), nz(left_col)));
     sequence.push_str(&"+".repeat(width as usize));
 
     // Side edges.
     for row in (top_row + 1)..(top_row + height - 1) {
-        sequence.push_str(&move_to_position(row, left_col));
+        sequence.push_str(&move_to_position(nz(row), nz(left_col)));
         sequence.push('+');
-        sequence.push_str(&move_to_position(row, left_col + width - 1));
+        sequence.push_str(&move_to_position(nz(row), nz(left_col + width - 1)));
         sequence.push('+');
     }
 
     // Bottom edge.
-    sequence.push_str(&move_to_position(top_row + height - 1, left_col));
+    sequence.push_str(&move_to_position(nz(top_row + height - 1), nz(left_col)));
     sequence.push_str(&"+".repeat(width as usize));
 
     sequence

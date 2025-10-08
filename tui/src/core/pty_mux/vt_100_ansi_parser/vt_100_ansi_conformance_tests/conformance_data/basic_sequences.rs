@@ -12,9 +12,11 @@
 //! - Cursor positioning: VT100 User Guide Section 3.3.1
 //! - Basic movement: VT100 User Guide Section 3.3.2
 
+use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{LengthOps, len,
             vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                  term_units::{term_col, term_row}}};
+use std::num::NonZeroU16;
 
 /// Clear entire screen and return cursor to home position (1,1).
 ///
@@ -35,8 +37,8 @@ pub fn clear_and_home() -> String {
         "{}{}",
         CsiSequence::EraseDisplay(2), // Clear entire screen
         CsiSequence::CursorPosition {
-            row: term_row(1),
-            col: term_col(1)
+            row: term_row(nz(1)),
+            col: term_col(nz(1))
         }  // Move to home position
     )
 }
@@ -53,7 +55,7 @@ pub fn clear_and_home() -> String {
 /// * `col` - Target column (1-based, VT100 convention)
 /// * `text` - Text to print at the specified position
 #[must_use]
-pub fn move_and_print(row: u16, col: u16, text: &str) -> String {
+pub fn move_and_print(row: NonZeroU16, col: NonZeroU16, text: &str) -> String {
     format!(
         "{}{}",
         CsiSequence::CursorPosition {

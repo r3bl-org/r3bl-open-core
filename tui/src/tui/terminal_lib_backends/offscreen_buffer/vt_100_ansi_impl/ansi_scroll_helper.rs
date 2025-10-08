@@ -8,7 +8,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{RowIndex,
-            core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
+            core::{pty_mux::vt_100_ansi_parser::term_units::TermUnit,
                    units::bounds_check::{IndexOps, LengthOps}},
             row};
 
@@ -47,20 +47,15 @@ impl OffscreenBuffer {
     /// ```
     #[must_use]
     pub fn get_scroll_range_inclusive(&self) -> std::ops::RangeInclusive<RowIndex> {
-        let scroll_top = self
-            .ansi_parser_support
-            .scroll_region_top
-            .and_then(TermRow::to_zero_based)
-            .map_or(/* None */ row(0), /* Some */ Into::into);
+        let scroll_top = self.ansi_parser_support.scroll_region_top.map_or(
+            /* None */ row(0),
+            /* Some */ |term_row| term_row.to_zero_based(),
+        );
 
-        let scroll_bottom = self
-            .ansi_parser_support
-            .scroll_region_bottom
-            .and_then(TermRow::to_zero_based)
-            .map_or(
-                /* None */ self.window_size.row_height.convert_to_index(),
-                /* Some */ Into::into,
-            );
+        let scroll_bottom = self.ansi_parser_support.scroll_region_bottom.map_or(
+            /* None */ self.window_size.row_height.convert_to_index(),
+            /* Some */ |term_row| term_row.to_zero_based(),
+        );
 
         scroll_top..=scroll_bottom
     }
@@ -103,7 +98,11 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bounds_check_ops {
     use super::*;
-    use crate::{core::pty_mux::vt_100_ansi_parser::term_units::term_row, height, width};
+    use crate::{core::pty_mux::vt_100_ansi_parser::{
+                    term_units::term_row,
+                    vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+                },
+                height, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);
@@ -125,7 +124,7 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region top to row 3 (1-based) = row 2 (0-based)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
 
         // Should return [2, 5] (top boundary to end of buffer)
         let range = buffer.get_scroll_range_inclusive();
@@ -138,7 +137,7 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region bottom to row 4 (1-based) = row 3 (0-based)
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(4));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(4)));
 
         // Should return [0, 3] (start of buffer to bottom boundary)
         let range = buffer.get_scroll_range_inclusive();
@@ -151,8 +150,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Should return [2, 4] (0-based)
         let range = buffer.get_scroll_range_inclusive();
@@ -165,8 +164,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
 
         let range = buffer.get_scroll_range_inclusive();
 
@@ -191,8 +190,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Row 3 (0-based) is within the scroll region
         assert_eq!(buffer.clamp_row_to_scroll_region(row(3)), row(3));
@@ -203,8 +202,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Row 0 is above scroll region - should be clamped to top (row 2)
         assert_eq!(buffer.clamp_row_to_scroll_region(row(0)), row(2));
@@ -215,8 +214,8 @@ mod tests_bounds_check_ops {
         let mut buffer = create_test_buffer();
 
         // Set scroll region from row 2 to row 4 (1-based: 3 to 5)
-        buffer.ansi_parser_support.scroll_region_top = Some(term_row(3));
-        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(5));
+        buffer.ansi_parser_support.scroll_region_top = Some(term_row(nz(3)));
+        buffer.ansi_parser_support.scroll_region_bottom = Some(term_row(nz(5)));
 
         // Row 5 is below scroll region - should be clamped to bottom (row 4)
         assert_eq!(buffer.clamp_row_to_scroll_region(row(5)), row(4));

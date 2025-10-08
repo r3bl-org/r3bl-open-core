@@ -20,7 +20,7 @@
 //! let new_way = format!("{}{}{}Error{}",
 //!     CsiSequence::EraseDisplay(2),           // Clear entire screen
 //!     CsiSequence::CursorPosition {           // Move to home
-//!         row: term_row(1), col: term_col(1)
+//!         row: term_row(nz(1)), col: term_col(nz(1))
 //!     },
 //!     SgrCode::ForegroundBasic(ANSIBasicColor::Red),  // Red text
 //!     SgrCode::Reset                                   // Reset styling
@@ -71,8 +71,8 @@
 //!     format!("{}{}",
 //!         CsiSequence::EraseDisplay(2),      // Clear screen
 //!         CsiSequence::CursorPosition {      // Move to home
-//!             row: term_row(1),
-//!             col: term_col(1)
+//!             row: term_row(nz(1)),
+//!             col: term_col(nz(1))
 //!         }
 //!     )
 //! }
@@ -102,7 +102,7 @@
 //!         EscSequence::SaveCursor,           // Save current position
 //!         CsiSequence::CursorPosition {      // Move to status line
 //!             row: term_row(status_row),
-//!             col: term_col(1)
+//!             col: term_col(nz(1))
 //!         },
 //!         SgrCode::Invert,                   // Reverse video
 //!         format!("-- {} --", mode),        // Status text

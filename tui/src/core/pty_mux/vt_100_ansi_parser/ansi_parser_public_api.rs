@@ -252,7 +252,7 @@ mod tests {
                 vt_100_ansi_parser::{protocols::csi_codes::{self,
                                                             csi_test_helpers::csi_seq_cursor_pos},
                                      term_units::{term_col, term_row},
-                                     vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::create_test_offscreen_buffer_10r_by_10c}};
+                                     vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz}}};
 
     #[test]
     #[allow(clippy::items_after_statements)]
@@ -603,9 +603,9 @@ mod tests {
 
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
             "Start{move_to_r2_c3}Mid{move_to_r1_c1}Home{move_to_r8_c8}End",
-            move_to_r2_c3 = csi_seq_cursor_pos(term_row(2) + term_col(3)),
-            move_to_r1_c1 = csi_seq_cursor_pos(term_row(1) + term_col(1)),
-            move_to_r8_c8 = csi_seq_cursor_pos(term_row(8) + term_col(8)),
+            move_to_r2_c3 = csi_seq_cursor_pos(term_row(nz(2)) + term_col(nz(3))),
+            move_to_r1_c1 = csi_seq_cursor_pos(term_row(nz(1)) + term_col(nz(1))),
+            move_to_r8_c8 = csi_seq_cursor_pos(term_row(nz(8)) + term_col(nz(8))),
         ));
 
         assert_eq!(osc_events.len(), 0, "no OSC events expected");

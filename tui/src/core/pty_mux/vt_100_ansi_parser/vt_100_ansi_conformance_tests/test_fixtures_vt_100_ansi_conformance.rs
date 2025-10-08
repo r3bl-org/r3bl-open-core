@@ -3,6 +3,7 @@
 //! Test modules for ANSI parser implementation.
 
 use crate::{OffscreenBuffer, TuiStyle, height, width};
+use std::num::NonZeroU16;
 
 /// Create a test `OffscreenBuffer` with 10x10 dimensions.
 #[must_use]
@@ -71,4 +72,27 @@ pub fn assert_blank_line(buf: &OffscreenBuffer, row: usize) {
         is_blank,
         "Line {row} should be blank but contains non-space characters"
     );
+}
+
+/// Test helper for creating [`NonZeroU16`] values.
+///
+/// This is a convenience function for tests and doc examples to avoid verbose
+/// `NonZeroU16::new().unwrap()` calls when constructing terminal coordinates.
+///
+/// # Panics
+/// Panics if value is 0, which indicates a test bug.
+///
+/// # Examples
+/// ```rust
+/// use r3bl_tui::vt_100_ansi_parser::term_units::{term_row, term_col};
+/// use std::num::NonZeroU16;
+///
+/// let row = term_row(NonZeroU16::new(5).unwrap());
+/// let col = term_col(NonZeroU16::new(10).unwrap());
+/// assert_eq!(row.as_u16(), 5);
+/// assert_eq!(col.as_u16(), 10);
+/// ```
+#[must_use]
+pub fn nz(value: u16) -> NonZeroU16 {
+    NonZeroU16::new(value).unwrap_or_else(|| panic!("value must be non-zero: {value}"))
 }

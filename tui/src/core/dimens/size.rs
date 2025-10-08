@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! [Size] is a struct that holds the `width` and `height` of a text buffer.
-//! [`ColWidth`] (aka [Width]) and [`RowHeight`] (aka [Height]) are the types of the
-//! `width` and `height` respectively. This ensures that it isn't possible to use a
+//! [`ColWidth`] (aka [`ColWidth`]) and [`RowHeight`] (aka [`RowHeight`]) are the types of
+//! the `width` and `height` respectively. This ensures that it isn't possible to use a
 //! `width` when you intended to use a `height` and vice versa.
 //!
 //! Here is a visual representation of how position and sizing work for the layout
@@ -39,7 +39,7 @@
 //! ```
 //! use r3bl_tui::{
 //!     ch, Size, ColWidth, RowHeight,
-//!     width, height, Width, Height, size
+//!     width, height, size
 //! };
 //!
 //! // Note the order of the arguments don't matter below.
@@ -69,16 +69,11 @@
 //! assert_eq!(*size_diff.row_height, ch(0));
 //! ```
 //!
-//! [`size()`]: crate::size
+//! [`size()`]: crate::size()
 
 use crate::{ChUnit, ColWidth, RowHeight};
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Sub, SubAssign}};
-
-// Type aliases for better code readability.
-
-pub type Width = ColWidth;
-pub type Height = RowHeight;
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Size {
@@ -360,8 +355,8 @@ mod tests {
     #[test]
     fn test_convert_dim_to_width_or_height() {
         let size = width(5) + height(10);
-        let w: Width = size.into();
-        let h: Height = size.into();
+        let w: ColWidth = size.into();
+        let h: RowHeight = size.into();
         assert_eq!(h, RowHeight(ch(10)));
         assert_eq!(w, ColWidth(ch(5)));
     }

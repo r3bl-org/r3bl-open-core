@@ -85,7 +85,7 @@ use vte::Params;
 ///
 /// [`OffscreenBuffer::cursor_up`]: crate::OffscreenBuffer::cursor_up
 pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
     performer.ofs_buf.cursor_up(how_many);
 }
 
@@ -95,7 +95,7 @@ pub fn cursor_up(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// [`OffscreenBuffer::cursor_down`]: crate::OffscreenBuffer::cursor_down
 pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
     performer.ofs_buf.cursor_down(how_many);
 }
 
@@ -104,7 +104,7 @@ pub fn cursor_down(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// [`OffscreenBuffer::cursor_forward`]: crate::OffscreenBuffer::cursor_forward
 pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let how_many = MovementCount::parse_as_col_width_non_zero(params);
+    let how_many = MovementCount::parse_first_as_col_width_non_zero(params);
     performer.ofs_buf.cursor_forward(how_many);
 }
 
@@ -113,7 +113,7 @@ pub fn cursor_forward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 ///
 /// [`OffscreenBuffer::cursor_backward`]: crate::OffscreenBuffer::cursor_backward
 pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let how_many = MovementCount::parse_as_col_width_non_zero(params);
+    let how_many = MovementCount::parse_first_as_col_width_non_zero(params);
     performer.ofs_buf.cursor_backward(how_many);
 }
 
@@ -129,21 +129,22 @@ pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 
 /// Handle CNL (Cursor Next Line) - move cursor to beginning of line n lines down.
 pub fn cursor_next_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
     performer.ofs_buf.cursor_down(how_many);
     performer.ofs_buf.cursor_to_line_start();
 }
 
 /// Handle CPL (Cursor Previous Line) - move cursor to beginning of line n lines up.
 pub fn cursor_prev_line(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let how_many = MovementCount::parse_as_row_height_non_zero(params);
+    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
     performer.ofs_buf.cursor_up(how_many);
     performer.ofs_buf.cursor_to_line_start();
 }
 
 /// Handle CHA (Cursor Horizontal Absolute) - move cursor to column n (1-based).
 pub fn cursor_column(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let target_col = AbsolutePosition::parse_as_col_index_non_zero_to_index_type(params);
+    let target_col =
+        AbsolutePosition::parse_first_as_col_index_non_zero_to_index_type(params);
     performer.ofs_buf.cursor_to_column(target_col);
 }
 
@@ -164,6 +165,7 @@ pub fn vertical_position_absolute(
     performer: &mut AnsiToOfsBufPerformer,
     params: &Params,
 ) {
-    let target_row = AbsolutePosition::parse_as_row_index_non_zero_to_index_type(params);
+    let target_row =
+        AbsolutePosition::parse_first_as_row_index_non_zero_to_index_type(params);
     performer.ofs_buf.cursor_to_row(target_row);
 }

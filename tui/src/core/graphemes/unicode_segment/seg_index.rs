@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::seg_length::{SegLength, seg_length};
-use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericValue, ch};
+use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericConversions, NumericValue,
+            ch};
 use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
@@ -88,10 +89,12 @@ mod arithmetic {
 }
 
 // Implement bounds checking traits for SegIndex.
-impl NumericValue for SegIndex {
+impl NumericConversions for SegIndex {
     fn as_usize(&self) -> usize { self.0.as_usize() }
     fn as_u16(&self) -> u16 { self.0.as_u16() }
 }
+
+impl NumericValue for SegIndex {}
 
 impl IndexOps for SegIndex {
     type LengthType = SegLength;

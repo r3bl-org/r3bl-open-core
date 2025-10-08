@@ -39,8 +39,8 @@ pub mod basic_tab_operations {
         let move_sequence = format!(
             "{}",
             crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-                row: term_row(1),
-                col: term_col(4) // 1-based column 4 = 0-based column 3
+                row: term_row(nz(1)),
+                col: term_col(nz(4)) // 1-based column 4 = 0-based column 3
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -61,8 +61,8 @@ pub mod basic_tab_operations {
         let move_sequence = format!(
             "{}",
             crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-                row: term_row(1),
-                col: term_col(9) // 1-based column 9 = 0-based column 8
+                row: term_row(nz(1)),
+                col: term_col(nz(9)) // 1-based column 9 = 0-based column 8
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -99,8 +99,8 @@ pub mod basic_tab_operations {
         let move_sequence = format!(
             "{}",
             crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-                row: term_row(1),
-                col: term_col(10) // 1-based column 10 = 0-based column 9
+                row: term_row(nz(1)),
+                col: term_col(nz(10)) // 1-based column 10 = 0-based column 9
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -159,11 +159,13 @@ pub mod basic_tab_operations {
 
         for (start_col, expected_col) in test_positions {
             // Reset position
+            let col_nz = std::num::NonZeroU16::new(start_col + 1)
+                .expect("start_col + 1 is always >= 1");
             let move_sequence = format!(
                 "{}",
                 crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-                    row: term_row(1),
-                    col: term_col(start_col + 1) // Convert to 1-based
+                    row: term_row(nz(1)),
+                    col: term_col(col_nz) // Convert to 1-based
                 }
             );
             let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -198,8 +200,8 @@ pub mod tab_edge_cases {
         let move_sequence = format!(
             "{}",
             crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-                row: term_row(1),
-                col: term_col(10) // 1-based column 10 = 0-based column 9
+                row: term_row(nz(1)),
+                col: term_col(nz(10)) // 1-based column 10 = 0-based column 9
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);
@@ -228,8 +230,8 @@ pub mod tab_edge_cases {
         let move_sequence = format!(
             "{}",
             crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
-                row: term_row(1),
-                col: term_col(7) // 1-based column 7 = 0-based column 6
+                row: term_row(nz(1)),
+                col: term_col(nz(7)) // 1-based column 7 = 0-based column 6
             }
         );
         let _result = ofs_buf.apply_ansi_bytes(move_sequence);

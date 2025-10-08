@@ -417,13 +417,15 @@ pub mod convert_from_other_types_to_ch {
 /// [`NumericValue`]: crate::NumericValue
 mod bounds_check_trait_impls {
     use super::ChUnit;
-    use crate::NumericValue;
+    use crate::{NumericConversions, NumericValue};
 
-    impl NumericValue for ChUnit {
+    impl NumericConversions for ChUnit {
         fn as_usize(&self) -> usize { usize::from(self.value) }
 
         fn as_u16(&self) -> u16 { self.value }
     }
+
+    impl NumericValue for ChUnit {}
 }
 
 #[cfg(test)]
