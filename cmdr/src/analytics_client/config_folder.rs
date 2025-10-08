@@ -1,13 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::DEBUG_ANALYTICS_CLIENT_MOD;
+use dirs::config_dir;
+use r3bl_tui::{CommonError, CommonErrorType, CommonResult};
 use std::{fmt::{Display, Formatter, Result},
           fs::{self},
           path::PathBuf};
-
-use dirs::config_dir;
-use r3bl_tui::{CommonError, CommonErrorType, CommonResult};
-
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 #[derive(Debug)]
 pub enum ConfigPaths {

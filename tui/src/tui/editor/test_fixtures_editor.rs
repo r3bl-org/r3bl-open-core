@@ -2,14 +2,12 @@
 
 #[cfg(test)]
 pub mod mock_real_objects_for_editor {
-    use std::fmt::Debug;
-
-    use tokio::sync::mpsc;
-
     use crate::{DefaultSize, EditorEngine, FlexBox, GlobalData, OffscreenBufferPool,
                 OutputDevice, OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper, col,
                 core::test_fixtures::StdoutMock, height, row,
                 telemetry::telemetry_sizing::TelemetryReportLineStorage, width};
+    use std::fmt::Debug;
+    use tokio::sync::mpsc;
 
     #[must_use]
     pub fn make_global_data<S, AS>(

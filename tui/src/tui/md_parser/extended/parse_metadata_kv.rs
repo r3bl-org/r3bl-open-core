@@ -1,10 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
-
 use crate::{md_parser::constants::{COLON, SPACE},
             parse_null_padded_line::trim_optional_leading_newline_and_nulls,
             take_text_in_single_line, tiny_inline_string};
+use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
 
 /// Parse key-value metadata pairs.
 ///

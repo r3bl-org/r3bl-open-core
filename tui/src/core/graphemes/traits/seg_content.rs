@@ -1,8 +1,7 @@
 // Copyright (c) 2024 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::Range;
-
 use crate::{ByteIndex, ColIndex, ColWidth, Seg};
+use std::ops::Range;
 
 /// Core segment content reference for zero-copy access to grapheme cluster segments.
 ///

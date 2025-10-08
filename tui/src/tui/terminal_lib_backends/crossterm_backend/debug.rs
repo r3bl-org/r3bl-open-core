@@ -1,7 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Formatter, Result};
-
 use crate::{DebugFormatRenderOp, RenderOp,
             RenderOp::{ApplyColors, ClearScreen,
                        CompositorNoClipTruncPaintTextWithAttributes, EnterRawMode,
@@ -9,6 +7,7 @@ use crate::{DebugFormatRenderOp, RenderOp,
                        Noop, PaintTextWithAttributes, ResetColor, SetBgColor,
                        SetFgColor},
             TuiStyle};
+use std::fmt::{Formatter, Result};
 
 #[derive(Debug)]
 pub struct CrosstermDebugFormatRenderOp;

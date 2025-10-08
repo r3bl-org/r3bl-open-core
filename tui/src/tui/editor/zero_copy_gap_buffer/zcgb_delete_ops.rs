@@ -98,14 +98,12 @@
 //! [`delete_bytes_at_range`]: ZeroCopyGapBuffer::delete_bytes_at_range
 //! [`delete_bytes_at_range()`]: ZeroCopyGapBuffer::delete_bytes_at_range
 
-use std::ops::Range;
-
-use miette::{Result, miette};
-
 use super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset,
             LINE_FEED_BYTE, LengthOps, NULL_BYTE, RangeBoundsExt, RangeValidityStatus,
             RowIndex, SegIndex, byte_index, len, seg_length};
+use miette::{Result, miette};
+use std::ops::Range;
 
 impl ZeroCopyGapBuffer {
     /// Delete a grapheme cluster at the specified position
@@ -576,12 +574,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use std::hint::black_box;
-
-    use test::Bencher;
-
     use super::*;
     use crate::{row, seg_index};
+    use std::hint::black_box;
+    use test::Bencher;
 
     extern crate test;
 

@@ -1,17 +1,16 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use nom::{IResult, Parser,
-          branch::alt,
-          bytes::complete::tag,
-          combinator::{map, recognize},
-          multi::many0};
-
 use super::specialized_parser_delim_matchers;
 use crate::{DEBUG_MD_PARSER_STDOUT, HyperlinkData, fg_blue, fg_red,
             md_parser::constants::{BACK_TICK, CHECKED, LEFT_BRACKET, LEFT_IMAGE,
                                    LEFT_PARENTHESIS, RIGHT_BRACKET, RIGHT_IMAGE,
                                    RIGHT_PARENTHESIS, STAR, UNCHECKED, UNDERSCORE},
             take_text_between_delims_err_on_new_line};
+use nom::{IResult, Parser,
+          branch::alt,
+          bytes::complete::tag,
+          combinator::{map, recognize},
+          multi::many0};
 
 /// # Null Padding Invariant
 ///

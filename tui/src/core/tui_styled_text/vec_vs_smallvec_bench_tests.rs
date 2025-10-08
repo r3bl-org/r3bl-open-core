@@ -28,10 +28,9 @@
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
+    use crate::{TuiStyle, TuiStyledText, tui_styled_text};
     use smallvec::SmallVec;
     use test::Bencher;
-
-    use crate::{TuiStyle, TuiStyledText, tui_styled_text};
 
     // Type aliases for different configurations.
     type SmallVec32 = SmallVec<[TuiStyledText; 32]>;

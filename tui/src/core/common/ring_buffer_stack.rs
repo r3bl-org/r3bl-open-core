@@ -4,10 +4,9 @@
 //! of the buffer, since if it is too large, you might get a stack overflow error. For a
 //! heap allocated version, take a look at [`super::RingBufferHeap`].
 
-use std::fmt::Debug;
-
 use super::RingBuffer;
 use crate::{Index, Length, len};
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RingBufferStack<T, const N: usize> {
@@ -193,9 +192,8 @@ impl<'a, T, const N: usize> Iterator for RingBufferStackIterator<'a, T, N> {
 
 #[cfg(test)]
 mod tests {
-    use smallstr::SmallString;
-
     use super::*;
+    use smallstr::SmallString;
     pub type SmallStringBackingStore = SmallString<[u8; DEFAULT_SMALL_STRING_SIZE]>;
     pub const DEFAULT_SMALL_STRING_SIZE: usize = 32;
 

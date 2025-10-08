@@ -1,5 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::{AppSignal, State};
 use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
                ComponentRegistryMap, DEBUG_TUI_MOD, DialogBuffer, DialogChoice,
                DialogComponent, DialogEngineConfigOptions, DialogEngineMode, EditMode,
@@ -16,8 +17,6 @@ use r3bl_tui::{App, BoxedSafeApp, CommonError, CommonResult, ComponentRegistry,
                surface, throws, throws_with_return, tui_color, tui_styled_text,
                tui_styled_texts, tui_stylesheet, width};
 use tokio::sync::mpsc::Sender;
-
-use super::{AppSignal, State};
 
 /// Constants for the ids.
 #[repr(u8)]

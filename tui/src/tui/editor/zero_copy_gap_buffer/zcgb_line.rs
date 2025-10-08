@@ -366,10 +366,9 @@ mod test_fixtures {
 /// Verify that the content and metadata are always in sync
 #[cfg(test)]
 mod tests_content_metadata_consistency {
-    use unicode_segmentation::UnicodeSegmentation;
-
     use super::test_fixtures::create_test_buffer;
     use crate::{ZeroCopyGapBuffer, row};
+    use unicode_segmentation::UnicodeSegmentation;
 
     #[test]
     fn test_content_length_consistency() {

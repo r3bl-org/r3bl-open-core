@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{GlobalData, InputDevice, OutputDevice, ok};
-
 use super::{AppMain, State};
 use crate::{CommonResult, InputEvent, TerminalWindow, key_press};
+use r3bl_tui::{GlobalData, InputDevice, OutputDevice, ok};
 
 pub async fn run_app() -> CommonResult<()> {
     // Create an App (renders & responds to user input).

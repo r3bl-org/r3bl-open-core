@@ -2,14 +2,13 @@
 
 //! Tests for all display operations - SGR styling, character sets, and printing.
 
-use vte::Perform;
-
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, CharacterSet, SgrCode,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             tui_style_attrib::{self},
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                  esc_codes}};
+use vte::Perform;
 
 /// Tests for SGR (Select Graphic Rendition) styling operations.
 pub mod sgr_styling {

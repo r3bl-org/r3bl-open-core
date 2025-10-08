@@ -2,10 +2,9 @@
 
 //! Cursor positioning for text editing - see [`CursorBoundsCheck`] trait.
 
-use std::ops::Add;
-
 use super::{length_ops::LengthOps, numeric_value::NumericValue,
             result_enums::CursorPositionBoundsStatus};
+use std::ops::Add;
 
 /// Trait for 0-based position/index types, providing text cursor positioning with
 /// end-of-line semantics.

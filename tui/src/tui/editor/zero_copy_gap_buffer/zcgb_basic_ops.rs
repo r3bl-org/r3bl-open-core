@@ -12,14 +12,13 @@
 //! - **Optimized appends**: Uses fast path for end-of-line insertions
 //! - **Dynamic line growth**: Automatically extends capacity as needed
 
-use std::{ops::Range,
-          str::{from_utf8, from_utf8_unchecked}};
-
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
             ColIndex, ColWidth, GCStringOwned, GapBufferLine, Length, NumericValue,
             RowIndex, SegIndex, byte_index, byte_offset, row, seg_index, seg_length,
             width};
+use std::{ops::Range,
+          str::{from_utf8, from_utf8_unchecked}};
 
 impl ZeroCopyGapBuffer {
     // Line access methods.

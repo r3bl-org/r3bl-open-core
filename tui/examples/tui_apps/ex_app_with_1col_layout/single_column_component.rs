@@ -1,4 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use super::{AppSignal, State};
 use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
@@ -8,8 +9,6 @@ use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelC
                glyphs, inline_string, render_ops, render_pipeline, row, send_signal,
                throws_with_return};
 use smallvec::smallvec;
-
-use super::{AppSignal, State};
 
 #[derive(Debug, Clone, Default)]
 pub struct SingleColumnComponent {

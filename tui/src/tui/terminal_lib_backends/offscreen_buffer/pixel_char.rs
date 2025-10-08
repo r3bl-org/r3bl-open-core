@@ -8,9 +8,8 @@
 //! It can be a void (invisible), spacer (empty but visible), or plain text
 //! with optional styling information.
 
-use std::fmt::{self, Debug};
-
 use crate::{GetMemSize, TuiStyle, fg_magenta, ok};
+use std::fmt::{self, Debug};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum PixelChar {

@@ -1,10 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use crate::InlineString;
 use std::{fmt::{Debug, Display, Error, Result as FmtResult},
           result::Result as StdResult};
-
 use tokio::process::Command;
-
-use crate::InlineString;
 
 /// Hold all the possible outcomes of executing a [`Command`].
 ///
@@ -44,11 +42,10 @@ pub enum CommandRunResult<T: Debug + Display> {
 
 /// Display impl for [`CommandRunResult`]. This also generates log output.
 pub(crate) mod display_impl_for_command_run_result {
-    use std::fmt::{Debug, Display, Formatter};
-
     use super::{Command, CommandRunResult, Error, FmtResult, StdResult};
     use crate::{InlineString, InlineVec, fg_lizard_green, fg_orange, fg_pink,
                 fg_slate_gray, inline_string};
+    use std::fmt::{Debug, Display, Formatter};
 
     impl<T: Debug + Display> Display for CommandRunResult<T> {
         fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {

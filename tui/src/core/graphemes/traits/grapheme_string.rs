@@ -1,9 +1,8 @@
 // Copyright (c) 2024 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Display;
-
 use crate::{ChUnit, ColIndex, ColWidth, ContainsWideSegments, Seg, SegContent, SegIndex,
             SegLength};
+use std::fmt::Display;
 
 /// Single-line grapheme-aware string trait providing core operations
 /// for working with strings that are aware of grapheme cluster boundaries.

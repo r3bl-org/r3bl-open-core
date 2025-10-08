@@ -59,9 +59,8 @@
 //! The detection approach is more work upfront but creates a much more robust and
 //! compatible system.
 
-use std::borrow::Cow;
-
 use crate::OscEvent;
+use std::borrow::Cow;
 
 /// Cursor key mode for terminal compatibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

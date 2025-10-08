@@ -1,11 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::{AnalyticsAction, config_folder, report_analytics};
+use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 use r3bl_tui::{InlineString, friendly_random_id,
                into_existing::{read_from_file::try_read_file_path_into_inline_string,
                                write_to_file}};
-
-use super::{AnalyticsAction, config_folder, report_analytics};
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 /// Read the file contents from [`config_folder::get_id_file_path`] and return it as a
 /// string if it exists and can be read.

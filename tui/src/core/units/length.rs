@@ -2,13 +2,12 @@
 
 //! One-based character size measurements for terminal UI - see [`Length`] type.
 
-use std::{fmt::Debug,
-          hash::Hash,
-          ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
-
 use super::{ChUnit, Index, ch, idx};
 use crate::{ColWidth, LengthOps, NumericValue, RowHeight,
             create_numeric_arithmetic_operators};
+use std::{fmt::Debug,
+          hash::Hash,
+          ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
 /// Represents a length measurement in character units.
 ///

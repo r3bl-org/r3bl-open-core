@@ -125,14 +125,13 @@
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
 
-use vte::{Params, Perform};
-
 // Import the operation modules.
 use super::operations::{char_ops, control_ops, cursor_ops, dsr_ops, line_ops,
                         margin_ops, mode_ops, osc_ops, scroll_ops, sgr_ops, terminal_ops};
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
             protocols::{csi_codes::{self},
                         esc_codes}};
+use vte::{Params, Perform};
 
 /// Internal methods for `AnsiToOfsBufPerformer` to implement [`Perform`] trait.
 impl Perform for AnsiToOfsBufPerformer<'_> {

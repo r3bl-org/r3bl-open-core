@@ -1,14 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Debug, Formatter};
-
-use tokio::sync::mpsc::Sender;
-
 use super::TerminalWindowMainThreadSignal;
 use crate::{ChUnit, CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, InlineString,
             OffscreenBuffer, OffscreenBufferPool, OutputDevice, Size, SpinnerStyle,
             TelemetryHudReport, ok, spinner_impl,
             telemetry::telemetry_sizing::TelemetryReportLineStorage};
+use std::fmt::{Debug, Formatter};
+use tokio::sync::mpsc::Sender;
 
 /// This is a global data structure that holds state for the entire application
 /// [`crate::App`] and the terminal window [`crate::TerminalWindow`] itself.

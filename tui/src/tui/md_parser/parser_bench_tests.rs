@@ -40,9 +40,8 @@
 #[cfg(test)]
 mod benchmarks {
     extern crate test;
-    use test::Bencher;
-
     use crate::{ZeroCopyGapBuffer, md_parser::conformance_test_data::*, parse_markdown};
+    use test::Bencher;
 
     // Helper macro to reduce boilerplate in benchmarks.
     macro_rules! bench_parser {

@@ -2,13 +2,11 @@
 
 //! Core type aliases and constants for PTY operations.
 
-use std::pin::Pin;
-
+use super::{PtyInputEvent, PtyReadOnlyOutputEvent, PtyReadWriteOutputEvent};
 use portable_pty::{ChildKiller, CommandBuilder, MasterPty, SlavePty};
+use std::pin::Pin;
 use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
             task::JoinHandle};
-
-use super::{PtyInputEvent, PtyReadOnlyOutputEvent, PtyReadWriteOutputEvent};
 
 /// Buffer size for reading PTY output (4KB stack allocation).
 ///

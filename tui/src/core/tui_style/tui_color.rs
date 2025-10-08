@@ -1,13 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use core::fmt::Debug;
-
 use super::parse_hex_color;
 use crate::{ASTColor, LossyConvertToByte, TransformColor,
             ansi_constants::ANSI_COLOR_PALETTE,
             color_utils,
             common::{CommonError, CommonErrorType, CommonResult},
             convert_rgb_into_ansi256};
+use core::fmt::Debug;
 
 /// Creates a [`TuiColor`] instance using various convenient syntaxes.
 ///

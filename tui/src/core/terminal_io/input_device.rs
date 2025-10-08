@@ -1,10 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{CrosstermEventResult, PinnedInputStream};
 use crossterm::event::EventStream;
 use futures_util::{FutureExt, StreamExt};
 use miette::IntoDiagnostic;
-
-use crate::{CrosstermEventResult, PinnedInputStream};
 
 /// This struct represents an input device that can be used to read from the terminal. See
 /// [`crate::InputDeviceExt`] for testing features.

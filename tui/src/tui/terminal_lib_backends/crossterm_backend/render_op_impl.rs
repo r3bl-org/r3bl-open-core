@@ -1,6 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::borrow::Cow;
-
+use crate::{Flush, GCStringOwned, InlineVec, LockedOutputDevice, PaintRenderOp, Pos,
+            RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle,
+            disable_raw_mode_now, enable_raw_mode_now, flush_now, queue_render_op,
+            sanitize_and_save_abs_pos};
 use crossterm::{cursor::{Hide, MoveTo, Show},
                 event::{DisableBracketedPaste, DisableMouseCapture,
                         EnableBracketedPaste, EnableMouseCapture},
@@ -8,11 +10,7 @@ use crossterm::{cursor::{Hide, MoveTo, Show},
                         SetForegroundColor},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 use smallvec::smallvec;
-
-use crate::{Flush, GCStringOwned, InlineVec, LockedOutputDevice, PaintRenderOp, Pos,
-            RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle,
-            disable_raw_mode_now, enable_raw_mode_now, flush_now, queue_render_op,
-            sanitize_and_save_abs_pos};
+use std::borrow::Cow;
 
 /// Struct representing the implementation of [`RenderOp`] for crossterm terminal backend.
 /// This empty struct is needed since the [Flush] trait needs to be implemented.

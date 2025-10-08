@@ -1,11 +1,10 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
-
 use crate::{InlineVec, List, list,
             md_parser::constants::{COLON, COMMA, SPACE},
             parse_null_padded_line::trim_optional_leading_newline_and_nulls,
             take_text_in_single_line};
+use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
 
 /// Parse comma-separated value metadata pairs.
 ///

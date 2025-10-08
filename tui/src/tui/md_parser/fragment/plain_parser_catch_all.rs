@@ -17,6 +17,10 @@
 //! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
 //! tests in [`crate::parse_fragments_in_a_line`].
 
+use crate::{DEBUG_MD_PARSER_STDOUT, fg_blue, fg_magenta, fg_red, is_any_of,
+            md_parser::constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
+                                   NEW_LINE_CHAR, NULL_CHAR, NULL_STR, STAR, UNDERSCORE},
+            specialized_parser_delim_matchers};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{tag, take_till1},
@@ -24,11 +28,6 @@ use nom::{IResult, Parser,
           combinator::{not, recognize},
           multi::many1,
           sequence::preceded};
-
-use crate::{DEBUG_MD_PARSER_STDOUT, fg_blue, fg_magenta, fg_red, is_any_of,
-            md_parser::constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
-                                   NEW_LINE_CHAR, NULL_CHAR, NULL_STR, STAR, UNDERSCORE},
-            specialized_parser_delim_matchers};
 
 // XMARK: Lowest priority parser for "plain text" Markdown fragment
 

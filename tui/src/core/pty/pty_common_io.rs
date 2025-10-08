@@ -9,9 +9,8 @@
 //! - Input/output event handling
 //! - Resource management and cleanup
 
-use portable_pty::{Child, MasterPty, PtySize, SlavePty, native_pty_system};
-
 use crate::PtyCommand;
+use portable_pty::{Child, MasterPty, PtySize, SlavePty, native_pty_system};
 
 /// Buffer size for reading from PTY.
 pub const READ_BUFFER_SIZE: usize = 4096;

@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
 use crate::{DialogEngine, EditorBuffer, EditorEngine, FlexBoxId, GlobalData, HasFocus};
+use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct RenderArgs<'a> {

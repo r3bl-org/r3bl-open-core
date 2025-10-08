@@ -1,12 +1,11 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, ast, ast_line, choose,
-               height, inline_vec,
-               readline_async::{HowToChoose, StyleSheet}};
-
 use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, RepoStatus,
                    git::{self},
                    try_is_working_directory_clean, ui_str},
             prefix_single_select_instruction_header};
+use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, ast, ast_line, choose,
+               height, inline_vec,
+               readline_async::{HowToChoose, StyleSheet}};
 
 /// The main function for `giti branch checkout` command.
 ///

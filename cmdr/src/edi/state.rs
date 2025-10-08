@@ -1,16 +1,14 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{collections::HashMap,
-          ffi::OsStr,
-          fmt::{Debug, Display, Formatter, Result},
-          path::Path};
-
+use crate::{AnalyticsAction, edi::Id, report_analytics};
 use r3bl_tui::{DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, DocumentStorage,
                EditorBuffer, FlexBoxId, HasDialogBuffers, HasEditorBuffers,
                InlineString, TinyInlineString, fg_green, fg_red, inline_string,
                into_existing};
-
-use crate::{AnalyticsAction, edi::Id, report_analytics};
+use std::{collections::HashMap,
+          ffi::OsStr,
+          fmt::{Debug, Display, Formatter, Result},
+          path::Path};
 
 #[derive(Clone, PartialEq)]
 pub struct State {
@@ -20,10 +18,9 @@ pub struct State {
 
 #[cfg(test)]
 mod state_tests {
-    use r3bl_tui::{FlexBoxId, InlineVec, friendly_random_id, len};
-
     use super::{constructor, file_utils};
     use crate::edi::Id;
+    use r3bl_tui::{FlexBoxId, InlineVec, friendly_random_id, len};
 
     #[test]
     fn test_file_extension() {

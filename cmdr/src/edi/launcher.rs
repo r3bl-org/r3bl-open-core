@@ -1,9 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::edi::{AppMain, constructor};
 use r3bl_tui::{CommonResult, GlobalData, InputDevice, InputEvent, ModifierKeysMask,
                OutputDevice, TerminalWindow, key_press, ok};
-
-use crate::edi::{AppMain, constructor};
 
 /// Runs the editor application with an optional file to open.
 ///

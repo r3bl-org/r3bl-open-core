@@ -1,11 +1,4 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::{fs,
-          io::Write,
-          ops::ControlFlow,
-          path::{self, PathBuf},
-          str::FromStr,
-          time::Duration};
-
 use miette::{IntoDiagnostic, miette};
 use r3bl_tui::{InlineVec, OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
                bold, fg_color, fg_red, fg_slate_gray, inline_string,
@@ -13,6 +6,12 @@ use r3bl_tui::{InlineVec, OutputDevice, SendRawTerminal, SharedWriter, SpinnerSt
                readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
                rla_println, set_mimalloc_in_main, tui_color};
 use smallvec::smallvec;
+use std::{fs,
+          io::Write,
+          ops::ControlFlow,
+          path::{self, PathBuf},
+          str::FromStr,
+          time::Duration};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
 use tokio::{select, spawn,

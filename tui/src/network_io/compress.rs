@@ -1,10 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::io::{Read, Write};
-
+use crate::{Buffer, BufferAtom};
 use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use miette::IntoDiagnostic;
-
-use crate::{Buffer, BufferAtom};
+use std::io::{Read, Write};
 
 /// Compress the payload using the [`flate2`] crate.
 ///

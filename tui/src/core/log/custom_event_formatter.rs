@@ -134,9 +134,10 @@
 //! - Additional fields form key-value pairs in the body
 //! - Empty field values are skipped to avoid blank lines
 
-use std::{fmt::{self},
-          sync::LazyLock};
-
+use crate::{ColWidth, ColorWheel, GCStringOwned, InlineString, OrderedMap, RgbValue,
+            TuiColor, TuiStyle, ast, fg_color, get_terminal_width, glyphs,
+            inline_string, new_style, remove_escaped_quotes, truncate_from_right,
+            tui_color, tui_style_attrib, usize, width};
 use chrono::Local;
 use const_format::formatcp;
 use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,
@@ -146,16 +147,13 @@ use custom_event_formatter_constants::{BODY_FG_COLOR, BODY_FG_COLOR_BRIGHT,
                                        INFO_FG_COLOR, INFO_SIGIL, LEVEL_SUFFIX,
                                        SUBSEQUENT_LINE_PREFIX, TRACE_FG_COLOR,
                                        TRACE_SIGIL, WARN_FG_COLOR, WARN_SIGIL};
+use std::{fmt::{self},
+          sync::LazyLock};
 use textwrap::{Options, WordSeparator, wrap};
 use tracing::{Event, Subscriber,
               field::{Field, Visit}};
 use tracing_subscriber::{fmt::{FormatEvent, FormatFields},
                          registry::LookupSpan};
-
-use crate::{ColWidth, ColorWheel, GCStringOwned, InlineString, OrderedMap, RgbValue,
-            TuiColor, TuiStyle, ast, fg_color, get_terminal_width, glyphs,
-            inline_string, new_style, remove_escaped_quotes, truncate_from_right,
-            tui_color, tui_style_attrib, usize, width};
 
 /// This is the "marker" struct that is used to register this formatter with the
 /// `tracing_subscriber` crate. Various traits are implemented for this struct.
@@ -207,9 +205,8 @@ pub mod custom_event_formatter_constants {
 
 /// Cache for colorized log headings.
 mod heading_cache {
-    use std::hash::{Hash, Hasher};
-
     use super::{LazyLock, TuiStyle};
+    use std::hash::{Hash, Hasher};
 
     /// Key for caching colorized headings.
     #[derive(Clone, PartialEq, Eq, Debug)]
@@ -606,13 +603,11 @@ pub fn build_spacer(max_display_width: ColWidth) -> InlineString {
 
 #[cfg(test)]
 mod tests_tracing_custom_event_formatter {
-    use std::sync::Mutex;
-
-    use tracing::{info, subscriber::set_default};
-    use tracing_subscriber::fmt::SubscriberBuilder;
-
     use super::*;
     use crate::{core::test_fixtures::StdoutMock, glyphs::SPACER_GLYPH as SPACER};
+    use std::sync::Mutex;
+    use tracing::{info, subscriber::set_default};
+    use tracing_subscriber::fmt::SubscriberBuilder;
 
     #[test]
     fn test_custom_formatter_with_special_message_field_handling() {

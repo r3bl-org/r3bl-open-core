@@ -597,9 +597,8 @@ mod tests {
     //! caching behavior that prevents performance bottlenecks in the main
     //! event loop. The `#[serial]` annotations ensure thread-safe testing
     //! of global state.
-    use serial_test::serial;
-
     use super::*;
+    use serial_test::serial;
 
     #[test]
     #[serial]
@@ -671,9 +670,8 @@ mod tests {
     }
 
     mod hyperlink_detection_tests {
-        use serial_test::serial;
-
         use super::*;
+        use serial_test::serial;
 
         #[test]
         #[serial]

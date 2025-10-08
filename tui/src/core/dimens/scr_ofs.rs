@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use crate::{ColIndex, Pos, RowIndex};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{Deref, DerefMut}};
-
-use crate::{ColIndex, Pos, RowIndex};
 
 /// `ScrOfs` is just a "newtype" built on top of (wrapping) [`crate::Pos`]. You can use
 /// this exactly like a [`crate::Pos`], when you deref it using `*` prefix, but it's more
@@ -67,10 +66,9 @@ mod debug {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Write;
-
     use super::*;
     use crate::{ColWidth, ch, col, height, row, width};
+    use std::fmt::Write;
 
     #[test]
     fn test_api() {

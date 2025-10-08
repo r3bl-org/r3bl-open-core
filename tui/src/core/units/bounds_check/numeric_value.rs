@@ -143,9 +143,8 @@ pub trait NumericValue: From<usize> + From<u16> + Copy + Ord + Sized {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::{Add, Sub};
-
     use super::*;
+    use std::ops::{Add, Sub};
 
     // Test implementation for unit testing
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

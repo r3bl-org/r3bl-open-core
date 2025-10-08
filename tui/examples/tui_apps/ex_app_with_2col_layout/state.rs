@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Debug, Display, Formatter};
-
 use r3bl_tui::InlineVec;
 use smallvec::smallvec;
+use std::fmt::{Debug, Display, Formatter};
 
 /// State.
 #[derive(Clone, PartialEq, Eq)]

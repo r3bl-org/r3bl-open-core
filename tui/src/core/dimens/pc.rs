@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::{Debug, Formatter, Result},
-          ops::Deref};
-
 use crate::{ChUnit, ChUnitPrimitiveType, CommonError, CommonErrorType,
             LossyConvertToByte, ch, glyphs};
+use std::{fmt::{Debug, Formatter, Result},
+          ops::Deref};
 
 /// Represents an integer value between 0 and 100 (inclusive). You can't directly create
 /// it, since it has to validate that the value is between 0 and 100. You can create it

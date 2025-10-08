@@ -2,10 +2,9 @@
 
 //! One-based byte size measurements - see [`ByteLength`] type.
 
-use std::ops::{Add, Deref, DerefMut};
-
 use crate::{ByteIndex, ChUnit, Length,
             bounds_check::{LengthOps, NumericValue}};
+use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a byte length measurement (1-based).
 ///

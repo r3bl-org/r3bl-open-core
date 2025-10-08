@@ -3,14 +3,13 @@
 //! Extension trait for [`Range`] and [`RangeInclusive`] validation for iteration and
 //! algorithms - see [`RangeBoundsExt`] trait.
 
-use std::ops::{Add, Range, RangeInclusive};
-
 use super::{cursor_bounds_check::CursorBoundsCheck,
             index_ops::IndexOps,
             length_ops::LengthOps,
             numeric_value::NumericValue,
             result_enums::{RangeBoundsResult, RangeValidityStatus}};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorPositionBoundsStatus};
+use std::ops::{Add, Range, RangeInclusive};
 
 /// Extension trait for [`Range<Index>`] and [`RangeInclusive<Index>`] validation for
 /// iteration and algorithms.

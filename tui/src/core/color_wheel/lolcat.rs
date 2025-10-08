@@ -12,11 +12,10 @@
 //! similar to the popular command-line `lolcat` tool. This module consolidates
 //! the previously separate `lolcat_api.rs` and `lolcat_impl.rs` files.
 
-use std::{borrow::Cow,
-          fmt::{Debug, Formatter, Result}};
-
 use super::{ColorChangeSpeed, ColorWheelControl, Seed, SeedDelta, color_wheel_helpers};
 use crate::{GCStringOwned, TuiStyle, TuiStyledTexts, tui_color, tui_styled_text};
+use std::{borrow::Cow,
+          fmt::{Debug, Formatter, Result}};
 
 /// Please use the [`LolcatBuilder`] to create this struct (lots of documentation is
 /// provided here). Please do not use this struct directly.

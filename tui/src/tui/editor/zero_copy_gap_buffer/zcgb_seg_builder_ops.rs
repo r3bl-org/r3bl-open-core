@@ -90,13 +90,11 @@
 //! [`insert_text_at_grapheme()`]: ZeroCopyGapBuffer::insert_text_at_grapheme
 //! [`delete_grapheme_at()`]: ZeroCopyGapBuffer::delete_grapheme_at
 
-use std::str::from_utf8_unchecked;
-
-use miette::{Result, miette};
-
 use super::super::ZeroCopyGapBuffer;
 use crate::{ByteIndexRangeExt, RowIndex, len,
             segment_builder::{build_segments_for_str, calculate_display_width}};
+use miette::{Result, miette};
+use std::str::from_utf8_unchecked;
 
 impl ZeroCopyGapBuffer {
     /// Rebuild grapheme cluster segments for a single line.
@@ -499,12 +497,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use std::hint::black_box;
-
-    use test::Bencher;
-
     use super::*;
     use crate::{row, seg_index};
+    use std::hint::black_box;
+    use test::Bencher;
 
     extern crate test;
 

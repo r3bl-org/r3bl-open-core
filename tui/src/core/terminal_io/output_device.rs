@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::sync::Arc;
-
 use crate::{SafeRawTerminal, SendRawTerminal, StdMutex};
+use std::sync::Arc;
 
 pub type LockedOutputDevice<'a> = &'a mut dyn std::io::Write;
 

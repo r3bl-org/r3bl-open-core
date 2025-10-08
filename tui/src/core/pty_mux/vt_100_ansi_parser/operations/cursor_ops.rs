@@ -73,12 +73,11 @@
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
-use vte::Params;
-
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::{AbsolutePosition, CursorPositionRequest,
                                           MovementCount}};
 use crate::{col, row};
+use vte::Params;
 
 /// Move cursor up by n lines.
 /// Respects DECSTBM scroll region margins.

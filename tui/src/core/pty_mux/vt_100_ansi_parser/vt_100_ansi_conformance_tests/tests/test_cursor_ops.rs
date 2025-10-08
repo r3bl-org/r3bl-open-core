@@ -2,8 +2,6 @@
 
 //! Tests for all cursor operations - positioning, movement, and save/restore.
 
-use vte::Perform;
-
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{Pos, col, height,
             offscreen_buffer::test_fixtures_ofs_buf::*,
@@ -16,6 +14,7 @@ use crate::{Pos, col, height,
                                              esc_codes},
                                  term_units::{term_col, term_row}},
             width};
+use vte::Perform;
 
 /// Tests for absolute cursor positioning (CUP, HVP commands).
 pub mod positioning {

@@ -10,10 +10,9 @@
 //! the repeated string allocation and unicode segmentation overhead by caching pre-built
 //! border strings for common sizes.
 
+use crate::{BorderGlyphCharacter, ColWidth, InlineString, ch, usize};
 use std::{hash::{Hash, Hasher},
           sync::LazyLock};
-
-use crate::{BorderGlyphCharacter, ColWidth, InlineString, ch, usize};
 
 /// Key for caching border strings.
 #[derive(Clone, PartialEq, Eq, Debug)]

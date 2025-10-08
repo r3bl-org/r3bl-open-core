@@ -78,9 +78,8 @@ impl RateLimiter {
 
 #[cfg(test)]
 mod tests {
-    use std::thread::sleep;
-
     use super::*;
+    use std::thread::sleep;
 
     #[test]
     fn test_not_started() {

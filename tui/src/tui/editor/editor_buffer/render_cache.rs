@@ -12,10 +12,9 @@
 //! can be implemented as a [`crate::RingBuffer`] or [`crate::InlineVec`] of
 //! [`CacheEntry`] structs.
 
-use std::ops::{Deref, DerefMut};
-
 use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOps, ScrOfs, Size,
             engine_public_api};
+use std::ops::{Deref, DerefMut};
 
 pub(in crate::tui::editor::editor_buffer) mod key {
     #[allow(clippy::wildcard_imports)]

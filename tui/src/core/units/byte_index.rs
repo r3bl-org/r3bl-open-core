@@ -2,10 +2,9 @@
 
 //! Zero-based byte position in strings and buffers - see [`ByteIndex`] type.
 
-use std::ops::{Add, Deref, DerefMut, Range};
-
 use crate::{ByteLength, ByteOffset, ChUnit, Index,
             bounds_check::{IndexOps, NumericValue}};
+use std::ops::{Add, Deref, DerefMut, Range};
 
 /// Represents an absolute byte position within strings and buffers (0-based).
 ///
@@ -374,9 +373,8 @@ mod tests {
 
     #[test]
     fn test_byte_index_range_boundary_compatibility() {
-        use std::ops::Range;
-
         use crate::{RangeValidityStatus, bounds_check::RangeBoundsExt};
+        use std::ops::Range;
 
         let start = byte_index(5);
         let end = byte_index(15);

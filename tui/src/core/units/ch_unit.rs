@@ -2,10 +2,9 @@
 
 //! Base character unit for monospace terminal measurements - see [`ChUnit`] type.
 
+use crate::LossyConvertToByte;
 use std::{fmt::{Debug, Formatter},
           ops::{Add, AddAssign, Deref, Div, Mul, MulAssign, Sub, SubAssign}};
-
-use crate::LossyConvertToByte;
 
 /// The backing field that is used to represent a [`ChUnit`] in memory.
 pub type ChUnitPrimitiveType = u16;

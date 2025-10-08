@@ -1,12 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{InlineVec, StdMutex};
+use smallvec::smallvec;
 use std::{io::{Result, Write},
           sync::Arc};
-
-use smallvec::smallvec;
 use strip_ansi_escapes::strip;
-
-use crate::{InlineVec, StdMutex};
 
 /// You can safely clone this struct, since it only contains an `Arc<StdMutex<Vec<u8>>>`.
 /// The inner `buffer` will not be cloned, just the [Arc] will be cloned.

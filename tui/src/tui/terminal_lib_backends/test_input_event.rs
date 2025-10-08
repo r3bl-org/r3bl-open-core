@@ -2,10 +2,9 @@
 
 #[cfg(test)]
 mod tests {
-    use crossterm::event::{KeyCode, KeyModifiers};
-
     use crate::{InputEvent, Key, ModifierKeysMask, assert_eq2, convert_key_event,
                 crossterm_keyevent, key_press, throws, try_convert_key_modifiers};
+    use crossterm::event::{KeyCode, KeyModifiers};
 
     #[test]
     #[allow(clippy::missing_errors_doc)]

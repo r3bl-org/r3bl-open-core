@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::{Add, AddAssign};
-
 use portable_pty::PtySize;
+use std::ops::{Add, AddAssign};
 
 /// Configuration options that can be combined to build a PTY configuration.
 ///

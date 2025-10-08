@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, InlineVec, StyleSheet, ast,
-               ast_line, choose, height, inline_vec};
-
 use super::CLIArg;
 use crate::{common, edi::ui_str, prefix_single_select_instruction_header};
+use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, InlineVec, StyleSheet, ast,
+               ast_line, choose, height, inline_vec};
 
 /// Ask the user to select a file to edit, and return the selected file path (if there is
 /// one).

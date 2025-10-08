@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{error::Error,
-          fmt::{Debug, Display, Result}};
-
 use super::FlexBox;
 use crate::CommonResult;
+use std::{error::Error,
+          fmt::{Debug, Display, Result}};
 
 /// Main error struct.
 /// <https://learning-rust.github.io/docs/e7.custom_error_types.html>

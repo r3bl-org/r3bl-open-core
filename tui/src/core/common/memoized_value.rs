@@ -9,10 +9,9 @@
 //! The memory size related types have been moved to [`crate::GetMemSize`] module
 //! to consolidate memory size calculation and caching logic.
 
-use std::fmt::Display;
-
 // Re-export memory size types from get_mem_size module.
 pub use crate::{MemoizedMemorySize, MemorySize};
+use std::fmt::Display;
 
 /// Memoized value calculation for performance optimization.
 ///
@@ -92,9 +91,8 @@ impl<T: Display> MemoizedValue<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc};
-
     use super::*;
+    use std::{cell::RefCell, rc::Rc};
 
     /// A test type that implements Display and tracks calculation calls
     #[derive(Debug, Clone, PartialEq)]

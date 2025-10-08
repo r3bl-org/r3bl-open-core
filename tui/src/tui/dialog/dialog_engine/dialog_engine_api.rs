@@ -1,7 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{borrow::Cow, fmt::Debug};
-
 use super::{DialogEngine, DialogEngineConfigOptions, DialogEngineMode};
 use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer,
             DialogChoice, DialogEngineArgs, DialogEvent, EditorEngineApplyEventResult,
@@ -17,6 +15,7 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             throws_with_return,
             tui_style_attrib::{Dim, Underline},
             tui_style_attribs, u16, usize, width};
+use std::{borrow::Cow, fmt::Debug};
 
 #[derive(Debug)]
 pub enum DialogEngineApplyResponse {

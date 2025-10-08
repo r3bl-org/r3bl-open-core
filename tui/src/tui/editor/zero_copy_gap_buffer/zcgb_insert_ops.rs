@@ -96,12 +96,11 @@
 //! [`insert_empty_line()`]: ZeroCopyGapBuffer::insert_empty_line
 //! [`insert_text_at_byte_ofs`]: ZeroCopyGapBuffer::insert_text_at_byte_ofs
 
-use miette::{Result, miette};
-
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset,
             CursorBoundsCheck, CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps,
             NULL_BYTE, NumericValue, RowIndex, SegIndex, len};
+use miette::{Result, miette};
 
 impl ZeroCopyGapBuffer {
     /// Insert text at a specific grapheme position within a line.
@@ -646,12 +645,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use std::hint::black_box;
-
-    use test::Bencher;
-
     use super::*;
     use crate::{row, seg_index};
+    use std::hint::black_box;
+    use test::Bencher;
 
     extern crate test;
 

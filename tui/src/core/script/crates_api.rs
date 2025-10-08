@@ -1,10 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use miette::IntoDiagnostic;
-
 use crate::{SCRIPT_MOD_DEBUG,
             crates_api::constants::{CRATE, MAX_VERSION},
             fg_magenta, http_client, ok};
+use miette::IntoDiagnostic;
 
 mod constants {
     pub const CRATE: &str = "crate";
@@ -48,15 +47,13 @@ pub async fn try_get_latest_release_version_from_crates_io(
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
+    use super::*;
+    use crate::{TTYResult, console_log, return_if_not_interactive_terminal};
     use nom::{IResult, Parser,
               character::complete::{char, digit0},
               combinator::map_res};
+    use std::time::Duration;
     use tokio::time::timeout;
-
-    use super::*;
-    use crate::{TTYResult, console_log, return_if_not_interactive_terminal};
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 

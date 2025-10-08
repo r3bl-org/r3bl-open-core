@@ -71,10 +71,9 @@
 //! [`Row`]: crate::Row
 //! [`Col`]: crate::Col
 
-use std::{fmt::Display, ops::Add};
-
 use super::super::protocols::csi_codes::CsiSequence;
 use crate::{Col, ColIndex, Row, RowIndex, col, row};
+use std::{fmt::Display, ops::Add};
 
 pub fn term_row(arg: impl Into<TermRow>) -> TermRow { arg.into() }
 

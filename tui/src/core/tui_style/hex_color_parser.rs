@@ -4,13 +4,11 @@
 //! struct. The hex color string can be in the following format: `#RRGGBB`, eg: `#FF0000`
 //! for red.
 
-use std::num::ParseIntError;
-
+use super::RgbValue;
 use nom::{IResult, Parser,
           bytes::complete::{tag, take_while_m_n},
           combinator::map_res};
-
-use super::RgbValue;
+use std::num::ParseIntError;
 
 /// Parse function that generate an [`RgbValue`] struct from a valid hex color string.
 ///

@@ -8,12 +8,10 @@
 //! [`PixelCharLines`]: crate::PixelCharLines
 //! [`PixelCharLine`]: crate::PixelCharLine
 
-use std::ops::{Deref, DerefMut};
-
-use smallvec::smallvec;
-
 use super::PixelCharLine;
 use crate::{GetMemSize, InlineVec, Size, get_mem_size};
+use smallvec::smallvec;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLines {

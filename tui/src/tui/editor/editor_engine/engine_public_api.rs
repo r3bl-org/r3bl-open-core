@@ -3,8 +3,6 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [`mod@super::engine_internal_api`] for the internal and functional
 //! API.
-use syntect::easy::HighlightLines;
-
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CommonResult,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR,
             EditMode, EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine,
@@ -20,6 +18,7 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CommonResult,
             terminal_lib_backends::KeyPress,
             throws, throws_with_return, try_get_syntax_ref, try_parse_and_highlight,
             tui_color, usize};
+use syntect::easy::HighlightLines;
 
 fn triggers_undo_redo(editor_event: &EditorEvent) -> bool {
     matches!(

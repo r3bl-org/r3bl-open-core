@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::Debug,
-          ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
-
 use crate::{ChUnit, ColIndex, LengthOps, NumericValue, ch,
             create_numeric_arithmetic_operators};
+use std::{fmt::Debug,
+          ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
 
 /// Width is column count, i.e., the number of columns that a UI component occupies.
 ///

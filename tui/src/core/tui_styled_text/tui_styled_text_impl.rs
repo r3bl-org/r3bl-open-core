@@ -1,9 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::TuiStyle;
 use sizing::StringTuiStyledText;
 use smallstr::SmallString;
-
-use crate::TuiStyle;
 
 pub(in crate::core::tui_styled_text) mod sizing {
     use super::{SmallString, TuiStyledText};

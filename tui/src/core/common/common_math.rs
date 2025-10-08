@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Write;
-
 use crate::{InlineString, constants::COMMA_CHAR};
+use std::fmt::Write;
 
 /// Format the given number of bytes as kilobytes with commas. If the number of bytes is
 /// less than 1024, it will be formatted as bytes.

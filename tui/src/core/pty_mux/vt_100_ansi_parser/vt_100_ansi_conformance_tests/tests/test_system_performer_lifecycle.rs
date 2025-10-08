@@ -2,10 +2,9 @@
 
 //! Tests for performer lifecycle - creation, initialization, and direct state mutation.
 
-use vte::Perform;
-
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{AnsiToOfsBufPerformer, Pos, TuiStyle, col, row};
+use vte::Perform;
 
 #[test]
 fn test_performer_creation() {

@@ -1,9 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::collections::{HashMap, hash_map::Entry};
-
-use sha2::{Digest, Sha256};
-
 use crate::{GCStringOwned, u16};
+use sha2::{Digest, Sha256};
+use std::collections::{HashMap, hash_map::Entry};
 
 /// Enum representing different methods for calculating the length of a string. The
 /// [`Self::calculate`] function memoizes the length of the string for the

@@ -1,15 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use clap::ValueEnum;
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, ast, ast_line, choose,
-               height, inline_vec,
-               readline_async::{HowToChoose, StyleSheet}};
-
 use crate::{common,
             common::ui_templates::prefix_single_select_instruction_header,
             giti::{BranchSubcommand, CLICommand, CommandRunDetails,
                    get_giti_command_subcommand_names, handle_branch_checkout_command,
                    handle_branch_delete_command, handle_branch_new_command, ui_str}};
+use clap::ValueEnum;
+use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, ast, ast_line, choose,
+               height, inline_vec,
+               readline_async::{HowToChoose, StyleSheet}};
 
 /// The main function to for `giti branch` command. This is the main routing function that
 /// directs execution flow to the appropriate subcommand handler: `checkout`, `delete`,

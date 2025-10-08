@@ -2,13 +2,12 @@
 
 //! [`GCStringOwned`] implementation for owned Unicode grapheme cluster strings.
 
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
-
 use crate::{ChUnit, ColIndex, ColWidth, CowInlineString, GraphemeString,
             GraphemeStringMut, InlineString, Seg, SegContent, SegIndex, SegLength,
             SegmentArray,
             graphemes::unicode_segment::{build_segments_for_str,
                                          calculate_display_width}};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 /// Wide segments detection result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

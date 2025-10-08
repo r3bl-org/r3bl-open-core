@@ -2,11 +2,10 @@
 
 //! PTY session handle types for read-only and read-write communication.
 
-use notify_rust::Notification;
-
 use super::pty_types::{InputEventSenderHalf, PtyCompletionHandle,
                        ReadOnlyOutputEventReceiverHalf, ReadWriteOutputEventReceiverHalf};
 use crate::ControlledChildTerminationHandle;
+use notify_rust::Notification;
 
 /// Show a desktop notification with error handling.
 ///

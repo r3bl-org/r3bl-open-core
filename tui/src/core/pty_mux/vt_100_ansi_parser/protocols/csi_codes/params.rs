@@ -5,7 +5,8 @@
 //! This module provides traits and structs for extracting and parsing parameters from
 //! CSI sequences according to VT100 specifications.
 
-use crate::{ColIndex, ColWidth, Length, RowHeight, RowIndex, col, height, len, row, width};
+use crate::{ColIndex, ColWidth, Length, RowHeight, RowIndex, col, height, len, row,
+            width};
 use std::cmp::max;
 
 /// Extension trait for vte::Params providing VT100-compliant parameter extraction.

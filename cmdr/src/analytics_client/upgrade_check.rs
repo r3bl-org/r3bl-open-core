@@ -42,12 +42,8 @@
 //!
 //! [`../remove_toolchains.sh`]: https://github.com/r3bl-org/r3bl-open-core/blob/main/remove_toolchains.sh
 
-use std::{env::current_exe,
-          io::{Error, ErrorKind},
-          process::ExitStatus,
-          sync::atomic::AtomicBool,
-          time::Duration};
-
+use super::ui_str;
+use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
                SpinnerStyle, StyleSheet, ast, ast_line, choose,
                core::pty::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
@@ -56,10 +52,12 @@ use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevi
                spinner::Spinner,
                try_get_latest_release_version_from_crates_io};
 use smallvec::smallvec;
+use std::{env::current_exe,
+          io::{Error, ErrorKind},
+          process::ExitStatus,
+          sync::atomic::AtomicBool,
+          time::Duration};
 use tokio::signal;
-
-use super::ui_str;
-use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 
 pub static UPGRADE_REQUIRED: AtomicBool = AtomicBool::new(false);
 /// Context for the exit message to determine what to display.

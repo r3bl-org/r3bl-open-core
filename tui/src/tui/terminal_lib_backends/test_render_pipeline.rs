@@ -2,10 +2,9 @@
 
 #[cfg(test)]
 mod tests {
-    use smallvec::smallvec;
-
     use crate::{InlineVec, RenderOp, RenderPipeline, ZOrder, assert_eq2, render_ops,
                 render_pipeline};
+    use smallvec::smallvec;
 
     #[test]
     fn render_ops_macro() {

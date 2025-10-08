@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Write;
-
 use crate::{ColWidth, CowInlineString, GCStringOwned, InlineString,
             glyphs::{ELLIPSIS_GLYPH, SPACER_GLYPH}};
+use std::fmt::Write;
 
 /// Tests whether the given text contains an ANSI escape sequence.
 #[must_use]
@@ -423,10 +422,9 @@ mod tests {
 #[cfg(test)]
 mod bench_tests {
     extern crate test;
-    use test::Bencher;
-
     use super::*;
     use crate::width;
+    use test::Bencher;
 
     #[bench]
     fn bench_truncate_ascii_no_truncation_no_pad(b: &mut Bencher) {

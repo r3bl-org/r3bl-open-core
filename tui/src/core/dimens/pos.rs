@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::{Debug, Formatter, Result},
-          ops::{Add, AddAssign, Mul, Sub, SubAssign}};
-
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ChUnit, ColIndex, ColWidth,
             CursorBoundsCheck, NumericValue, RowHeight, RowIndex, Size, ch, col, row};
+use std::{fmt::{Debug, Formatter, Result},
+          ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
 // Type aliases for better code readability.
 
@@ -504,10 +503,9 @@ mod debug {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Write;
-
     use super::*;
     use crate::{height, width};
+    use std::fmt::Write;
 
     #[allow(clippy::too_many_lines)]
     #[test]

@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::ok;
 use std::{fmt::{Display, Formatter, Result},
           time::Duration};
-
-use crate::ok;
 
 /// This is a wrapper struct around [Duration] so that we can "implement"
 /// [`std::fmt::Write`] for it. This allows us to format the duration in a human readable

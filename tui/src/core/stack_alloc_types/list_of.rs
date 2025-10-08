@@ -34,12 +34,10 @@
 //! list += another_list;
 //! ```
 
-use std::ops::{AddAssign, Deref, DerefMut};
-
+use crate::InlineVecStr;
 use sizing_list_of::ListStorage;
 use smallvec::SmallVec;
-
-use crate::InlineVecStr;
+use std::ops::{AddAssign, Deref, DerefMut};
 
 /// This needs to be accessible by the rest of the crate, and anyone using the [List]
 /// struct.

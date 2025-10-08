@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::{Add, Deref, DerefMut};
-
 use super::seg_length::{SegLength, seg_length};
 use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericValue, ch};
+use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a grapheme segment index inside of [`crate::GCStringOwned`].
 #[derive(Debug, Copy, Clone, Default, PartialEq, Ord, PartialOrd, Eq, Hash)]
@@ -133,9 +132,8 @@ mod tests {
 
     #[test]
     fn seg_index_range_boundary_compatibility() {
-        use std::ops::Range;
-
         use crate::{RangeBoundsExt, RangeValidityStatus};
+        use std::ops::Range;
 
         let start = seg_index(2);
         let end = seg_index(5);

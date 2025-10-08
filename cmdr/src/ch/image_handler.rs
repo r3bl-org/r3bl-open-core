@@ -1,14 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::path::PathBuf;
-
+use super::types::{HistoryItem, ImageContent, ParsedPastedContents, PastedContent,
+                   SavedImageInfo};
 use base64::{Engine, engine::general_purpose};
 use miette::IntoDiagnostic;
 use r3bl_tui::{CommonResult, friendly_random_id};
 use serde_json::Value;
-
-use super::types::{HistoryItem, ImageContent, ParsedPastedContents, PastedContent,
-                   SavedImageInfo};
+use std::path::PathBuf;
 
 /// Count the number of images in a history item's pasted contents
 #[must_use]
@@ -364,9 +362,8 @@ mod tests {
 
     #[test]
     fn test_count_images_in_history_item() {
-        use serde_json::json;
-
         use super::super::types::HistoryItem;
+        use serde_json::json;
 
         // Test with no images.
         let history_item = HistoryItem {

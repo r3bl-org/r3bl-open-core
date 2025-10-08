@@ -2,9 +2,8 @@
 
 //! Helper functions for creating OSC 8 hyperlink sequences.
 
-use std::path::Path;
-
 use super::osc_codes::OscSequence;
+use std::path::Path;
 
 /// Creates an OSC 8 hyperlink sequence.
 ///
@@ -84,9 +83,8 @@ pub fn format_file_hyperlink(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
     use super::{format_file_hyperlink, format_hyperlink};
+    use std::path::Path;
 
     #[test]
     fn test_format_hyperlink_basic() {

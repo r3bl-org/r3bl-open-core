@@ -2,10 +2,9 @@
 
 //! OSC controller for sending OSC sequences to the terminal.
 
-use miette::IntoDiagnostic;
-
 use super::{OscEvent, osc_codes::OscSequence};
 use crate::{core::terminal_io::OutputDevice, lock_output_device_as_mut};
+use miette::IntoDiagnostic;
 
 /// Controller for sending OSC sequences to the terminal.
 /// This provides a high-level interface for common OSC operations

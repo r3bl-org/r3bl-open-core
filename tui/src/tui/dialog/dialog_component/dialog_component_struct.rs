@@ -1,13 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
 use crate::{Component, DEBUG_TUI_MOD, DialogEngine, DialogEngineApi,
             DialogEngineApplyResponse, DialogEngineArgs, DialogEngineConfigOptions,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
             HasDialogBuffers, HasFocus, InputEvent, OnDialogEditorChangeFn,
             OnDialogPressFn, RenderPipeline, SurfaceBounds,
             common::{CommonError, CommonErrorType, CommonResult}};
+use std::fmt::Debug;
 
 /// This is a shim which allows the reusable [`DialogEngine`] to be used in the context of
 /// [Component]. The main methods here simply pass thru all their arguments to the

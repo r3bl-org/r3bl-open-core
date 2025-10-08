@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
+use super::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
+use crate::ex_rc::app_main::animator_task::start_animator_task;
 use chrono::{DateTime, Local};
 use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpeed,
                ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
@@ -18,10 +18,8 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                throws, throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
                tui_stylesheet};
 use smallvec::smallvec;
+use std::fmt::Debug;
 use tokio::{sync::mpsc::Sender, time::Duration};
-
-use super::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
-use crate::ex_rc::app_main::animator_task::start_animator_task;
 
 /// Constants for the ids.
 #[repr(u8)]

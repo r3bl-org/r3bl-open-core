@@ -1,5 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::md_parser::constants::NEW_LINE;
 use nom::{Parser,
           branch::alt,
           bytes::complete::tag,
@@ -7,8 +8,6 @@ use nom::{Parser,
           combinator::{not, recognize},
           multi::many0,
           sequence::preceded};
-
-use crate::md_parser::constants::NEW_LINE;
 
 /// Take text until an optional EOL character is found, or end of input is reached. If an
 /// EOL character is found:

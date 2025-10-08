@@ -1,12 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
+use crate::TinyVecBackingStore;
 use serde::{Deserialize, Serialize};
 use smallvec::smallvec;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-
-use crate::TinyVecBackingStore;
 
 /// A collection of analytics events stored in a memory-efficient structure.
 ///

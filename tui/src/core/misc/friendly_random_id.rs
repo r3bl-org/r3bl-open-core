@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use rand::{Rng, rngs::ThreadRng};
-
 use crate::InlineString;
+use rand::{Rng, rngs::ThreadRng};
 
 const PET_NAMES: [&str; 20] = [
     "buddy", "max", "bella", "charlie", "lucy", "daisy", "molly", "lola", "sadie",

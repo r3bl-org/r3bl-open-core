@@ -4,15 +4,13 @@
 //! - So replace `&`[`PathBuf`] with a `&`[Path].
 //! - More details [here](https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg).
 
+use crate::ok;
+use miette::Diagnostic;
 use std::{env, fs,
           fs::File,
           io::{ErrorKind, Write},
           path::{Path, PathBuf}};
-
-use miette::Diagnostic;
 use thiserror::Error;
-
-use crate::ok;
 
 /// Use this macro to make it more ergonomic to work with [`PathBuf`]s.
 ///
@@ -261,10 +259,9 @@ pub fn try_write_file(
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::fs::PermissionsExt;
-
     use super::*;
     use crate::{fs_path, try_create_temp_dir, with_saved_pwd};
+    use std::os::unix::fs::PermissionsExt;
 
     fn test_try_directory_exists_not_found_error() {
         with_saved_pwd!({

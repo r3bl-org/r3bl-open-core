@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
-
 use r3bl_tui::ItemsOwned;
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 /// Detailed information about a sub command that has run successfully.
 #[derive(Debug, Clone, Default)]

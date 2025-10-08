@@ -1,11 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::{Lolcat, LolcatBuilder, Seed};
+use crate::{ColorSupport, TuiColor, global_color_support};
 use sizing::VecSteps;
 use smallstr::SmallString;
 use smallvec::SmallVec;
-
-use super::{Lolcat, LolcatBuilder, Seed};
-use crate::{ColorSupport, TuiColor, global_color_support};
 
 /// These are sized to allow for stack allocation rather than heap allocation. If for some
 /// reason these are exceeded, then they will [`smallvec::SmallVec::spilled`] over into

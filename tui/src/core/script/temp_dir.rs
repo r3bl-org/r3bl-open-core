@@ -1,12 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::friendly_random_id::generate_friendly_random_id;
+use miette::IntoDiagnostic;
 use std::{fmt::{Display, Formatter},
           ops::Deref,
           path::Path};
-
-use miette::IntoDiagnostic;
-
-use crate::friendly_random_id::generate_friendly_random_id;
 
 #[derive(Debug)]
 pub struct TempDir {

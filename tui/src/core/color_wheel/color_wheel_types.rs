@@ -10,12 +10,10 @@
 //! These types were previously split between `color_wheel_types.rs` and
 //! `color_wheel_control.rs` but have been consolidated for better organization.
 
+use super::lolcat::Colorize;
+use rand::random;
 use std::{fmt::{Display, Formatter},
           ops::{AddAssign, Deref, DerefMut}};
-
-use rand::random;
-
-use super::lolcat::Colorize;
 
 // ================================================================================================
 // Basic types.

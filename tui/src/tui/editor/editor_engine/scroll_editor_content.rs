@@ -7,12 +7,11 @@
 //! - [`EditorBuffer`] provides [`crate::EditorContent`].
 //! - [`super::EditorEngine`] provides [`super::EditorEngine::viewport()`].
 
-use std::cmp::Ordering;
-
 use super::{SelectMode, caret_mut};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ArrayUnderflowResult, CaretDirection,
             CaretRaw, ColIndex, ColWidth, EditorArgsMut, EditorBuffer, LengthOps,
             NumericValue, RowHeight, RowIndex, ScrOfs, ch, col, height, row, width};
+use std::cmp::Ordering;
 
 /// # Scrolling not active
 ///

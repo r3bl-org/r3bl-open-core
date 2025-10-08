@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use miette::IntoDiagnostic;
-
 use crate::{SCRIPT_MOD_DEBUG, fg_magenta, http_client, ok};
+use miette::IntoDiagnostic;
 
 mod constants {
     pub const TAG_NAME: &str = "tag_name";
@@ -52,12 +51,10 @@ pub async fn try_get_latest_release_tag_from_github(
 
 #[cfg(test)]
 mod tests_github_api {
-    use std::time::Duration;
-
-    use tokio::time::timeout;
-
     use super::*;
     use crate::{TTYResult, return_if_not_interactive_terminal};
+    use std::time::Duration;
+    use tokio::time::timeout;
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 

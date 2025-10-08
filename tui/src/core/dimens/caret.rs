@@ -63,9 +63,8 @@
 //! assert_eq!(expected_2, *caret_4);
 //! ```
 
-use std::ops::{Add, Deref, DerefMut};
-
 use crate::{Pos, ScrOfs};
+use std::ops::{Add, Deref, DerefMut};
 
 pub fn caret_raw(arg_caret_raw: impl Into<CaretRaw>) -> CaretRaw { arg_caret_raw.into() }
 

@@ -62,11 +62,10 @@
 //! [parser module docs]: crate::core::pty_mux::vt_100_ansi_parser
 //! [Interval Notation]: crate::core::units::bounds_check#interval-notation
 
-use std::ops::Range;
-
 use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,
             core::units::bounds_check::{RangeBoundsExt, RangeBoundsResult,
                                         RangeConvertExt}};
+use std::ops::Range;
 
 impl OffscreenBuffer {
     /// Clear an entire line by filling it with blank characters.

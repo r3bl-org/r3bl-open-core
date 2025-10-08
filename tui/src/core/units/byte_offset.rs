@@ -2,10 +2,9 @@
 
 //! Relative byte displacement from a reference point - see [`ByteOffset`] type.
 
-use std::ops::{Add, Deref, DerefMut, Sub};
-
 use super::ByteIndex;
 use crate::{ChUnit, Index, Length, RowIndex};
+use std::ops::{Add, Deref, DerefMut, Sub};
 
 /// Represents a byte offset within a line or buffer segment.
 ///

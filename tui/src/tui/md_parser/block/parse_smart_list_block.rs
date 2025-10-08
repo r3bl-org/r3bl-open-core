@@ -1,13 +1,4 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use nom::{IResult, Parser,
-          branch::alt,
-          bytes::complete::{is_not, tag, take_while},
-          character::complete::{anychar, digit1, space0},
-          combinator::{map, opt, recognize, verify},
-          multi::{many0, many1},
-          sequence::{preceded, terminated}};
-use smallvec::smallvec;
-
 use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, List, MdLineFragment,
             SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces, list,
             md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
@@ -17,6 +8,14 @@ use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, List, MdLineFragm
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
             parse_null_padded_line::is,
             tiny_inline_string};
+use nom::{IResult, Parser,
+          branch::alt,
+          bytes::complete::{is_not, tag, take_while},
+          character::complete::{anychar, digit1, space0},
+          combinator::{map, opt, recognize, verify},
+          multi::{many0, many1},
+          sequence::{preceded, terminated}};
+use smallvec::smallvec;
 
 /// Public API for parsing a smart list block in markdown.
 ///

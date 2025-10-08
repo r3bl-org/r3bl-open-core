@@ -1,11 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{env, fs, path::PathBuf};
-
+use super::types::{ClaudeConfig, HistoryItem};
 use miette::IntoDiagnostic;
 use r3bl_tui::CommonResult;
-
-use super::types::{ClaudeConfig, HistoryItem};
+use std::{env, fs, path::PathBuf};
 
 /// Get the path to the Claude configuration file based on the current platform
 ///
@@ -182,12 +180,10 @@ pub fn get_prompts_for_current_project() -> CommonResult<(String, Vec<HistoryIte
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use r3bl_tui::{MkdirOptions, try_create_temp_dir, try_mkdir};
-
     use super::*;
     use crate::ch::types::Project;
+    use r3bl_tui::{MkdirOptions, try_create_temp_dir, try_mkdir};
+    use std::collections::HashMap;
 
     /// Create a mock Claude configuration with project paths for testing
     fn create_test_config() -> ClaudeConfig {

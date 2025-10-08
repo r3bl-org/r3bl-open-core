@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use tokio::sync::mpsc::Sender;
-
 use crate::{DialogBuffer, FlexBoxId, InlineString, TerminalWindowMainThreadSignal};
+use tokio::sync::mpsc::Sender;
 
 /// This marker trait is meant to be implemented by whatever state struct is being used to
 /// store the dialog buffer for this re-usable editor component.

@@ -3,9 +3,6 @@
 //! This module is responsible for converting a [`MdDocument`] into a
 //! [`StyleUSSpanLines`].
 
-use smallvec::smallvec;
-use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
-
 use super::create_color_wheel_from_heading_data;
 use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             CommonResult, FragmentsInOneLine, GradientGenerationPolicy, HeadingData,
@@ -25,6 +22,8 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
                                          NEW_LINE, RIGHT_BRACKET, RIGHT_IMAGE,
                                          RIGHT_PARENTHESIS, STAR, TAGS, TITLE,
                                          UNCHECKED_OUTPUT, UNDERSCORE}}};
+use smallvec::smallvec;
+use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 
 /// This is the main function that the [`crate::editor`] uses to display markdown to the
 /// user. It takes a direct reference to [`ZeroCopyGapBuffer`] and converts it into a
@@ -87,11 +86,10 @@ pub fn try_parse_and_highlight(
 
 #[cfg(test)]
 mod tests_try_parse_and_highlight {
-    use serial_test::serial;
-
     use super::*;
     use crate::{ColorSupport, assert_eq2, fg_cyan, global_color_support, throws,
                 tui_color};
+    use serial_test::serial;
 
     /// RAII guard for color support override cleanup
     struct ColorSupportGuard;
@@ -729,13 +727,12 @@ impl From<TuiStyledTexts> for StyleUSSpanLine {
 #[cfg(test)]
 mod tests_style_us_span_lines_from {
 
-    use serial_test::serial;
-
     use super::*;
     use crate::{CodeBlockLine, ColorSupport, HeadingLevel, assert_eq2,
                 get_metadata_tags_marker_style, get_metadata_tags_values_style,
                 get_metadata_title_marker_style, get_metadata_title_value_style,
                 global_color_support, list, throws, tui_color};
+    use serial_test::serial;
 
     /// RAII guard for color support override cleanup
     struct ColorSupportGuard;

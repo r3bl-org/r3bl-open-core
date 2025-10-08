@@ -2,12 +2,11 @@
 
 //! Zero-based character position for terminal UI - see [`Index`] type.
 
+use super::{ChUnit, Length, ch};
+use crate::{IndexOps, NumericValue, RowIndex, create_numeric_arithmetic_operators};
 use std::{fmt::Debug,
           hash::Hash,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
-
-use super::{ChUnit, Length, ch};
-use crate::{IndexOps, NumericValue, RowIndex, create_numeric_arithmetic_operators};
 
 /// Represents an index position in character units.
 ///
@@ -228,10 +227,9 @@ impl crate::ArrayBoundsCheck<crate::Length> for Index {}
 
 #[cfg(test)]
 mod tests {
-    use std::hash::{DefaultHasher, Hasher};
-
     use super::*;
     use crate::{ArrayBoundsCheck, ArrayOverflowResult, len};
+    use std::hash::{DefaultHasher, Hasher};
 
     #[test]
     fn test_index_new() {

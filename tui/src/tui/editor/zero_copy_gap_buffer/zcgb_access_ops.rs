@@ -101,13 +101,12 @@
 //! UTF-8 validation occurs once at input boundaries, making subsequent unsafe
 //! operations safe and performant.
 
-use std::{ops::Range,
-          str::{from_utf8, from_utf8_unchecked}};
-
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt,
             RangeValidityStatus, RowIndex, byte_index,
             core::units::bounds_check::{NumericValue, RangeBoundsExt}};
+use std::{ops::Range,
+          str::{from_utf8, from_utf8_unchecked}};
 
 impl ZeroCopyGapBuffer {
     /// Get the entire buffer as a string slice.
@@ -450,12 +449,10 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use std::hint::black_box;
-
-    use test::Bencher;
-
     use super::*;
     use crate::{row, seg_index};
+    use std::hint::black_box;
+    use test::Bencher;
 
     extern crate test;
 

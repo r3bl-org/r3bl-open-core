@@ -1,13 +1,12 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::cmp::{self, Ordering};
-
 use super::selection_list::RowLocationInSelectionList;
 use crate::{CaretLocationInRange, CaretMovementDirection, CaretScrAdj,
             ChUnitPrimitiveType, ColIndex, CursorBoundsCheck, DEBUG_TUI_COPY_PASTE,
             DirectionChangeResult, EditorBuffer, RowIndex, SelectionRange, Size,
             caret_scr_adj, col, dim, fg_blue, fg_cyan, fg_green, fg_magenta, fg_red,
             fg_yellow, height, inline_string, row, underline, width};
+use std::cmp::{self, Ordering};
 
 /// Usually [`EditorBuffer::get_mut()`] and [`EditorBuffer::get_mut_no_drop()`] need a
 /// viewport to be passed in (from the [`crate::EditorEngine`]). However, in this module,

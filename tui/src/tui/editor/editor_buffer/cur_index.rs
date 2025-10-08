@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{Index, Length, NumericValue, idx};
 use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
-
-use crate::{Index, Length, NumericValue, idx};
 
 /// The current index in the history buffer.
 ///

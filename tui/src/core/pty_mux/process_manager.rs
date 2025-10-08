@@ -6,16 +6,14 @@
 //! its own virtual terminal (`OffscreenBuffer`) and ANSI parser. Process switching
 //! is instant with no delays or hacks - just display a different buffer.
 
-use std::fmt::{Debug, Formatter, Result};
-
-use portable_pty::PtySize;
-
 use super::output_renderer::STATUS_BAR_HEIGHT;
 use crate::{OffscreenBuffer, Size,
             core::{osc::OscEvent,
                    pty::{PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
                          PtyReadWriteSession}},
             height};
+use portable_pty::PtySize;
+use std::fmt::{Debug, Formatter, Result};
 
 /// Manages multiple PTY processes and handles switching between them.
 #[derive(Debug)]

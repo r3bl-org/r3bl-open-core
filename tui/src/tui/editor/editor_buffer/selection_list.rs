@@ -1,15 +1,13 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::fmt::Debug;
-
-use sizing::VecRowIndex;
-use smallvec::{SmallVec, smallvec};
-
 use crate::{CaretMovementDirection, CaretScrAdj, DeleteSelectionWith, EditorBuffer,
             GetMemSize, InlineString, InlineVec, ItemsOwned, RowIndex, SelectionRange,
             caret_scr_adj, fg_color,
             glyphs::{CUT_GLYPH, DIRECTION_GLYPH, ELLIPSIS_GLYPH, TIRE_MARKS_GLYPH,
                      VERT_LINE_DASHED_GLYPH},
             inline_string, join, tui_color};
+use sizing::VecRowIndex;
+use smallvec::{SmallVec, smallvec};
+use std::fmt::Debug;
 
 mod sizing {
     #[allow(clippy::wildcard_imports)]

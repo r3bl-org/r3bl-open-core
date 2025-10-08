@@ -1,13 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use crate::{Pc, RateLimitStatus, RateLimiter, RingBuffer, RingBufferStack, TimeDuration,
+            glyphs};
+use smallstr::SmallString;
 use std::{collections::HashMap,
           fmt::Display,
           time::{Duration, Instant}};
-
-use smallstr::SmallString;
 use strum_macros::{Display, EnumString};
-
-use crate::{Pc, RateLimitStatus, RateLimiter, RingBuffer, RingBufferStack, TimeDuration,
-            glyphs};
 
 pub mod telemetry_sizing {
     use super::SmallString;
@@ -614,11 +612,10 @@ mod tests_fixtures {
 
 #[cfg(test)]
 mod tests_display_format {
-    use std::fmt::Write;
-
     use super::{telemetry_sizing::{TELEMETRY_REPORT_STRING_SIZE,
                                    TelemetryReportLineStorage},
                 *};
+    use std::fmt::Write;
 
     #[test]
     fn test_display_formatter() {
@@ -678,12 +675,10 @@ mod tests_display_format {
 /// [`mod@telemetry_default_constants`] for filtering, rate limiting, etc.
 #[cfg(test)]
 mod tests_record {
-    use std::thread::sleep;
-
-    use mutator::TryRecordResult;
-    use tests_fixtures::create::*;
-
     use super::*;
+    use mutator::TryRecordResult;
+    use std::thread::sleep;
+    use tests_fixtures::create::*;
 
     #[test]
     fn test_record_auto_stop() {
@@ -939,10 +934,9 @@ mod tests_record {
 
 #[cfg(test)]
 mod tests_math {
+    use super::*;
     use mutator::TryRecordResult;
     use tests_fixtures::create::*;
-
-    use super::*;
 
     #[test]
     fn test_overview() {
@@ -1021,10 +1015,9 @@ mod tests_math {
 
 #[cfg(test)]
 mod tests_median {
+    use super::*;
     use mutator::TryRecordResult;
     use tests_fixtures::{create::*, *};
-
-    use super::*;
 
     #[test]
     fn test_overview_no_hint() {

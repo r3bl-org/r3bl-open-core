@@ -34,11 +34,9 @@
 //!
 //! See `docs/task_tui_perf_optimize.md` for more details.
 
-use std::sync::LazyLock;
-
-use syntect::{highlighting::Theme, parsing::SyntaxSet};
-
 use crate::{load_default_theme, try_load_r3bl_theme};
+use std::sync::LazyLock;
+use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
 /// Global storage for syntax highlighting resources. [`LazyLock`] is an idiomatic way of
 /// creating a lazily initialized static variable in Rust.
@@ -101,9 +99,8 @@ mod tests {
 #[cfg(test)]
 mod bench {
     extern crate test;
-    use test::Bencher;
-
     use super::*;
+    use test::Bencher;
 
     /// Benchmark: Creating new `SyntaxSet` instances repeatedly
     /// This simulates the old behavior where each `EditorEngine` created its own

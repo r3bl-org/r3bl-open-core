@@ -1,10 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
-use tokio::sync::mpsc::Sender;
-
 use crate::{CommonResult, TerminalWindowMainThreadSignal, throws};
+use std::fmt::Debug;
+use tokio::sync::mpsc::Sender;
 
 /// This is a simple animator that can be used to run a single animation task. Animators
 /// can be re-used (stopped, and restarted repeatedly).

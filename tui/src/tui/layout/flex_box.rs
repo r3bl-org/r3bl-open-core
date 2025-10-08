@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
 use super::FlexBoxId;
 use crate::{Pos, ReqSizePc, Size, TuiStyle, ok};
+use std::fmt::Debug;
 
 /// Direction of the layout of the box.
 #[non_exhaustive]

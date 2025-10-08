@@ -1,7 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use std::io::{BufReader, Cursor};
-
 use syntect::highlighting::{Theme, ThemeSet};
 
 /// Use a [`std::io::Cursor`] as a fake [`std::fs::File`]:

@@ -4,9 +4,8 @@
 //! - <https://tintin.mudhalla.net/info/256color/>
 //! - <https://talyian.github.io/ansicolors/>
 
-use std::cmp::Ordering::Less;
-
 use crate::{AnsiValue, LossyConvertToByte, RgbValue};
+use std::cmp::Ordering::Less;
 
 pub mod color_utils {
     #[must_use]
@@ -354,9 +353,8 @@ pub mod ansi_constants {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-
     use crate::{AnsiValue, RgbValue, TransformColor};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn convert_ansi265_into_rgb() {

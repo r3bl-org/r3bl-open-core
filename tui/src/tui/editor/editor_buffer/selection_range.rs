@@ -1,10 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{cmp::{self},
-          fmt::Debug};
-
 use crate::{CaretScrAdj, ChUnitPrimitiveType, ColIndex, ColWidth, GapBufferLine, ScrOfs,
             caret_scr_adj, row, width};
+use std::{cmp::{self},
+          fmt::Debug};
 
 /// Represents a range of characters in a line. The col indices are scroll adjusted (and
 /// not raw). The row indices are not used, and clobbered with

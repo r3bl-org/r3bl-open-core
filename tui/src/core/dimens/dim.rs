@@ -71,10 +71,9 @@
 //!
 //! [`size()`]: crate::size
 
+use crate::{ChUnit, ColWidth, RowHeight};
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Sub, SubAssign}};
-
-use crate::{ChUnit, ColWidth, RowHeight};
 
 // Type aliases for better code readability.
 

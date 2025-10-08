@@ -77,14 +77,13 @@
 //! └───────────────────────────────┘
 //! ```
 
-use std::io::Write;
-
 use miette::IntoDiagnostic;
 use r3bl_tui::{SharedWriter, fg_guards_red, fg_lizard_green, fg_slate_gray,
                inline_string, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent,
                                 ReadlineEvent::{Eof, Interrupted, Line, Resized}},
                set_mimalloc_in_main};
+use std::io::Write;
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt},
             join,
             sync::broadcast};

@@ -7,12 +7,11 @@
 //! it uses crossterm's proper command system and `r3bl_tui`'s styled text with TUI colors
 //! for better maintainability and cross-platform compatibility.
 
+use crate::{ASText, TuiColor, lock_output_device_as_mut, terminal_io::OutputDevice};
 use crossterm::{ExecutableCommand,
                 cursor::MoveTo,
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType}};
-
-use crate::{ASText, TuiColor, lock_output_device_as_mut, terminal_io::OutputDevice};
 
 /// Clears the screen and positions cursor at home (top-left).
 ///

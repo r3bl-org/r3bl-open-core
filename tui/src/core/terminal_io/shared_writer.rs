@@ -1,11 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{InlineString, ok};
 use std::{io::{self, Write},
           str::from_utf8};
-
 use tokio::sync::{broadcast, mpsc};
-
-use crate::{InlineString, ok};
 
 /// Cloneable object that implements [`Write`] and allows for sending data to the terminal
 /// without messing up its associated `Readline` instance (in the `r3bl_terminal_async`

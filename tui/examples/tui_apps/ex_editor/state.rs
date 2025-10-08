@@ -1,12 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{collections::HashMap,
-          fmt::{Debug, Display, Formatter, Result}};
-
+use crate::ex_editor::Id;
 use r3bl_tui::{DEFAULT_SYN_HI_FILE_EXT, DialogBuffer, EditorBuffer, FlexBoxId,
                HasDialogBuffers, HasEditorBuffers};
-
-use crate::ex_editor::Id;
+use std::{collections::HashMap,
+          fmt::{Debug, Display, Formatter, Result}};
 
 /// Provides default content for the editor example.
 ///

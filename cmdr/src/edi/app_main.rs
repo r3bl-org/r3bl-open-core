@@ -1,5 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::edi::State;
 use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
                DialogBuffer, DialogChoice, DialogComponent, DialogEngineConfigOptions,
@@ -16,8 +17,6 @@ use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelCo
                req_size_pc, row, surface, tui_color, tui_styled_text, tui_stylesheet};
 use smallvec::smallvec;
 use tokio::sync::mpsc::Sender;
-
-use crate::edi::State;
 
 /// Signals that can be sent to the app.
 #[derive(Default, Clone, Debug)]
@@ -85,11 +84,10 @@ mod app_main_constructor {
 }
 
 mod app_main_impl_app_trait {
-    use r3bl_tui::{CommonError, CommonResult, send_signal, throws_with_return};
-
     #[allow(clippy::wildcard_imports)]
     use super::*;
     use crate::edi::file_utils;
+    use r3bl_tui::{CommonError, CommonResult, send_signal, throws_with_return};
 
     impl App for AppMain {
         type S = State;
@@ -285,11 +283,10 @@ mod app_main_impl_app_trait {
 }
 
 mod modal_dialog_ask_for_filename_to_save_file {
-    use r3bl_tui::{CommonResult, InlineString, get_tui_style, send_signal, throws};
-
     #[allow(clippy::wildcard_imports)]
     use super::*;
     use crate::edi::file_utils;
+    use r3bl_tui::{CommonResult, InlineString, get_tui_style, send_signal, throws};
 
     #[allow(clippy::needless_pass_by_value)]
     pub fn initialize(
@@ -466,10 +463,9 @@ mod modal_dialog_ask_for_filename_to_save_file {
 }
 
 mod perform_layout {
-    use r3bl_tui::{CommonResult, throws};
-
     #[allow(clippy::wildcard_imports)]
     use super::*;
+    use r3bl_tui::{CommonResult, throws};
 
     pub struct ContainerSurfaceRender<'a> {
         pub _app: &'a mut AppMain,
@@ -523,10 +519,9 @@ mod perform_layout {
 }
 
 mod populate_component_registry {
-    use r3bl_tui::send_signal;
-
     #[allow(clippy::wildcard_imports)]
     use super::*;
+    use r3bl_tui::send_signal;
 
     pub fn create_components(
         component_registry_map: &mut ComponentRegistryMap<State, AppSignal>,
@@ -585,9 +580,8 @@ mod populate_component_registry {
 }
 
 mod stylesheet {
-    use r3bl_tui::{CommonResult, TuiStylesheet, throws_with_return};
-
     use super::{Id, new_style, tui_color, tui_stylesheet};
+    use r3bl_tui::{CommonResult, TuiStylesheet, throws_with_return};
 
     pub fn create_stylesheet() -> CommonResult<TuiStylesheet> {
         throws_with_return!({

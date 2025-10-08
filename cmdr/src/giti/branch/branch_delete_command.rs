@@ -1,9 +1,4 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use r3bl_tui::{ASText, CommandRunResult, CommonResult, DefaultIoDevices, InlineString,
-               InlineVec, ItemsOwned, ast, ast_line, choose, height, inline_vec,
-               readline_async::{HowToChoose, StyleSheet}};
-use smallvec::smallvec;
-
 use crate::{AnalyticsAction, common,
             common::ui_templates::{prefix_multi_select_instruction_header,
                                    prefix_single_select_instruction_header},
@@ -12,6 +7,10 @@ use crate::{AnalyticsAction, common,
                    local_branch_ops::BranchExists,
                    ui_str::{self}},
             report_analytics};
+use r3bl_tui::{ASText, CommandRunResult, CommonResult, DefaultIoDevices, InlineString,
+               InlineVec, ItemsOwned, ast, ast_line, choose, height, inline_vec,
+               readline_async::{HowToChoose, StyleSheet}};
+use smallvec::smallvec;
 
 /// The main function for `giti branch delete` command.
 ///

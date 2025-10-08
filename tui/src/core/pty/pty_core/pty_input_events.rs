@@ -7,11 +7,10 @@
 //! - `KeyPress` to `PtyInputEvent` conversion using algorithmic approach
 //! - Terminal control sequence generation for cross-platform compatibility
 
-use portable_pty::PtySize;
-
 use super::pty_output_events::{ControlSequence, CursorKeyMode};
 use crate::tui::terminal_lib_backends::{FunctionKey, Key, KeyPress, KeyState,
                                         ModifierKeysMask, SpecialKey};
+use portable_pty::PtySize;
 
 /// Input event types that can be sent to a child process through PTY.
 ///

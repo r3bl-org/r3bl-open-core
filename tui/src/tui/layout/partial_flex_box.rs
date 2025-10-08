@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
 use super::{FlexBox, FlexBoxId};
 use crate::{Pos, Size, TuiStyle};
+use std::fmt::Debug;
 
 /// Holds a subset of the fields in [`FlexBox`] that are required by the editor and dialog
 /// engines.

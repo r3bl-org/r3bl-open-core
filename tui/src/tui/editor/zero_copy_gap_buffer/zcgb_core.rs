@@ -6,13 +6,12 @@
 //! core buffer management operations including line creation, deletion, and capacity
 //! management.
 
-use std::{borrow::Cow, fmt::Display};
-
 use super::{GapBufferLine, INITIAL_LINE_SIZE, LINE_PAGE_SIZE, LineMetadata};
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, CursorBoundsCheck,
             GraphemeDoc, GraphemeDocMut, LINE_FEED_BYTE, Length, NULL_BYTE,
             NumericValue, RowIndex, SegIndex, SegmentArray, byte_index, byte_offset,
             len, row};
+use std::{borrow::Cow, fmt::Display};
 
 /// Zero-copy gap buffer data structure for storing editor content
 #[derive(Debug, Clone, PartialEq)]
@@ -786,11 +785,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use std::hint::black_box;
-
-    use test::Bencher;
-
     use super::*;
+    use std::hint::black_box;
+    use test::Bencher;
 
     extern crate test;
 

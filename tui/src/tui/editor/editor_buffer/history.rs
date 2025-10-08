@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Debug, Formatter, Result};
-
 use super::{EditorContent,
             cur_index::{CurIndex, CurIndexLoc}};
 use crate::{RingBuffer, format_as_kilobytes_with_commas, idx};
+use std::fmt::{Debug, Formatter, Result};
 
 /// The `EditorHistory` struct manages the undo/redo functionality for the `EditorBuffer`.
 ///

@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use super::{KeyPress, MouseInput};
+use crate::{Size, height, width};
 use crossterm::event::{Event as CTEvent,
                        Event::{self},
                        KeyEvent, MouseEvent};
-
-use super::{KeyPress, MouseInput};
-use crate::{Size, height, width};
 /// Unified input event abstraction for the TUI framework.
 ///
 /// This enum represents all possible input events that can occur in a terminal

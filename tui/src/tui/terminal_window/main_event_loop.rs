@@ -1,10 +1,4 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::{fmt::{Debug, Display},
-          marker::PhantomData};
-
-use smallvec::smallvec;
-use tokio::sync::mpsc;
-
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
             MainEventLoopFuture};
 use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
@@ -18,6 +12,10 @@ use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             render_pipeline, row,
             telemetry::{Telemetry, telemetry_default_constants},
             telemetry_record, width};
+use smallvec::smallvec;
+use std::{fmt::{Debug, Display},
+          marker::PhantomData};
+use tokio::sync::mpsc;
 
 // XMARK: Box::pin a future that is larger than 16KB.
 
@@ -816,13 +814,6 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
 
 #[cfg(test)]
 mod tests {
-    use std::{fmt::{Debug, Display, Formatter},
-              time::Duration};
-
-    use smallvec::smallvec;
-    use test_fixture_app::AppMainTest;
-    use test_fixture_state::{AppSignal, State};
-
     use crate::{App, ColorWheel, ColorWheelConfig, ColorWheelSpeed, CommonResult,
                 ComponentRegistryMap, CrosstermEventResult, EventPropagation,
                 GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
@@ -835,6 +826,11 @@ mod tests {
                 new_style, ok, render_ops, render_pipeline,
                 render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,
                 tui_styled_text, width};
+    use smallvec::smallvec;
+    use std::{fmt::{Debug, Display, Formatter},
+              time::Duration};
+    use test_fixture_app::AppMainTest;
+    use test_fixture_state::{AppSignal, State};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

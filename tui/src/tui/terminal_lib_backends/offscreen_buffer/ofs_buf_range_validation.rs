@@ -91,11 +91,10 @@
 //!
 //! [`RangeBoundsExt`]: crate::core::units::bounds_check::RangeBoundsExt
 
-use std::ops::Range;
-
 use super::{OffscreenBuffer, PixelCharLine};
 use crate::{ColIndex, RangeValidityStatus, RowIndex,
             core::units::bounds_check::RangeBoundsExt};
+use std::ops::Range;
 
 impl OffscreenBuffer {
     /// Check if a row range is valid without creating slice references.

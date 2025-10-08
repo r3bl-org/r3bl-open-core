@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{collections::HashMap, fmt::Debug, marker::PhantomData};
-
 use super::HasFocus;
 use crate::{BoxedSafeComponent, CommonResult, ContainsResult, EventPropagation,
             FlexBoxId, GlobalData, InputEvent};
+use std::{collections::HashMap, fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
 pub struct ComponentRegistry<S, AS>

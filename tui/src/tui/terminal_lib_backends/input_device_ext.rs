@@ -53,10 +53,9 @@
 //!     - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#111-new-event-api>
 //!     - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
 
-use futures_util::FutureExt;
-
 use super::InputEvent;
 use crate::{DEBUG_TUI_SHOW_TERMINAL_BACKEND, InputDevice};
+use futures_util::FutureExt;
 
 pub trait InputDeviceExt {
     #[allow(async_fn_in_trait)]

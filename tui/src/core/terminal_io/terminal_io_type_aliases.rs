@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{io::Error, pin::Pin, sync::Arc};
-
 use crossterm::event::Event;
 use futures_core::Stream;
+use std::{io::Error, pin::Pin, sync::Arc};
 
 /// Disambiguate the type of `StdMutex` from stdlib and tokio to avoid conflicts.
 pub type StdMutex<T> = std::sync::Mutex<T>;

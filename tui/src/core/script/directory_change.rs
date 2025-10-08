@@ -4,10 +4,9 @@
 //! `fs_path.rs::test_all_fs_path_functions_in_isolated_process()` to prevent flakiness
 //! when tests are run in parallel.
 
-use std::{env, io::ErrorKind, path::Path};
-
 use crate::{fs_path::{FsOpError, FsOpResult},
             ok};
+use std::{env, io::ErrorKind, path::Path};
 
 /// This macro is used to wrap a block with code that saves the current working directory,
 /// runs the block of code for the test, and then restores the original working directory.

@@ -1,10 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::Debug,
-          ops::{AddAssign, Index}};
-
 use super::{TuiStyledText, sizing::VecTuiStyledText};
 use crate::{ConvertToPlainText, GCStringOwned, InlineString, join_with_index_fmt, ok};
+use std::{fmt::Debug,
+          ops::{AddAssign, Index}};
 
 /// Macro to make building [`TuiStyledTexts`] easy.
 ///

@@ -1,11 +1,10 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::md_parser::constants::{NEW_LINE, NEWLINE_OR_NULL, NULL_CHAR};
 use nom::{IResult, Parser,
           bytes::complete::{is_not, tag, take_while},
           combinator::opt,
           sequence::terminated};
-
-use crate::md_parser::constants::{NEW_LINE, NEWLINE_OR_NULL, NULL_CHAR};
 
 /// Helper function that creates a predicate for matching a specific character.
 /// This is the opposite of nom's `is_not()` - it matches only the specified char.

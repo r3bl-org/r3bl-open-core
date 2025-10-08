@@ -1,11 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::io::Write;
-
 use r3bl_tui::{InputDevice, OutputDevice, fg_slate_gray, ok,
                readline_async::{Header, HowToChoose, ReadlineAsyncContext, StyleSheet,
                                 choose},
                set_mimalloc_in_main, try_initialize_logging_global};
+use std::io::Write;
 
 #[tokio::main]
 #[allow(clippy::needless_return)]

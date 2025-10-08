@@ -1,14 +1,12 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{collections::{HashMap, hash_map::Entry},
-          fmt::Debug,
-          ops::{AddAssign, Deref, DerefMut}};
-
-use smallvec::smallvec;
-
 use super::{ZOrder, paint::paint, render_op::RenderOp};
 use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOps, ok,
             tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
+use smallvec::smallvec;
+use std::{collections::{HashMap, hash_map::Entry},
+          fmt::Debug,
+          ops::{AddAssign, Deref, DerefMut}};
 
 /// Macro to make it easier to create a [`RenderPipeline`]. It works w/ [`RenderOp`]
 /// items. It allows them to be added in sequence, and then flushed at the end.

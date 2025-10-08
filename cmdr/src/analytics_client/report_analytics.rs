@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_analytics_schema::AnalyticsEvent;
-use r3bl_tui::inline_string;
-
 use super::{AnalyticsAction, http_client, proxy_machine_id};
 use crate::DEBUG_ANALYTICS_CLIENT_MOD;
+use r3bl_analytics_schema::AnalyticsEvent;
+use r3bl_tui::inline_string;
 
 static mut ANALYTICS_REPORTING_ENABLED: bool = true;
 

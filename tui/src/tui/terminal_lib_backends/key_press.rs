@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MediaKeyCode,
-                       ModifierKeyCode};
-
 use super::{Enhanced, ModifierKeysMask};
 use crate::{MediaKey, ModifierKeyEnum, SpecialKeyExt, try_convert_key_modifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MediaKeyCode,
+                       ModifierKeyCode};
 
 /// Examples.
 ///

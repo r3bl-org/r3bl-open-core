@@ -11,10 +11,9 @@
 // editor performance
 pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
 
-use std::fmt::Display;
-
 use smallstr::SmallString;
 use smallvec::SmallVec;
+use std::fmt::Display;
 
 /// Intermediate struct used to insert a grapheme cluster segment into an existing unicode
 /// string. When this gets larger than [`INLINE_VEC_SIZE`], it will be

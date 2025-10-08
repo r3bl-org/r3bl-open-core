@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Display;
-
 use r3bl_tui::{InlineString, fg_frozen_blue, fg_lizard_green, fg_silver_metallic,
                fg_slate_gray, fg_soft_pink, inline_string};
+use std::fmt::Display;
 
 #[must_use]
 pub fn colon() -> InlineString { dim(":") }

@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Display;
-
 use crate::{MemoizedValue, format_as_kilobytes_with_commas};
+use std::fmt::Display;
 
 pub trait GetMemSize {
     fn get_mem_size(&self) -> usize;

@@ -2,10 +2,9 @@
 
 //! Tests for character encoding support - UTF-8, emojis, and wide characters.
 
-use vte::Perform;
-
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{AnsiToOfsBufPerformer, offscreen_buffer::test_fixtures_ofs_buf::*};
+use vte::Perform;
 
 #[test]
 fn test_utf8_characters() {

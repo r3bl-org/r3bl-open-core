@@ -15,11 +15,10 @@
 //! These are kept separate from editor-specific operations to maintain clear
 //! separation of concerns during the [`crate::ZeroCopyGapBuffer`] migration.
 
-use std::ops::Add;
-
 use super::GCStringOwned;
 use crate::{ByteIndex, ColIndex, ColWidth, InlineString, NumericValue, SegIndex,
             byte_index, ch, pad_fmt, seg_index, usize};
+use std::ops::Add;
 
 /// Convert between different types of indices. This unifies the API so that different
 /// index types are all converted into [`SegIndex`] for use with this struct. Here's the

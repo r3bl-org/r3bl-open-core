@@ -5,12 +5,10 @@
 //! This module provides the `CsiSequence` enum which represents various CSI control
 //! sequences and can serialize them into ANSI escape codes.
 
-use super::{
-    constants::*,
-    private_mode::PrivateModeType,
-    super::dsr_codes::DsrRequestType,
-    super::super::term_units::{TermCol, TermRow},
-};
+use super::{super::{super::term_units::{TermCol, TermRow},
+                    dsr_codes::DsrRequestType},
+            constants::*,
+            private_mode::PrivateModeType};
 use crate::{BufTextStorage, FastStringify};
 use std::fmt::{self, Display};
 

@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
 use super::{ComponentRegistryMap, EventPropagation, GlobalData, HasFocus};
 use crate::{CommonResult, FlexBox, FlexBoxId, InputEvent, RenderPipeline, Surface,
             SurfaceBounds};
+use std::fmt::Debug;
 
 /// See [`crate::App`].
 pub trait Component<S, AS>

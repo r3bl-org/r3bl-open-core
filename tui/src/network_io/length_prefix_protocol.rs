@@ -3,15 +3,13 @@
 //! This module is standalone, you can use it any project that needs to communicate
 //! between a client and a server using a length-prefix, binary payload, protocol.
 
-use std::time::Duration;
-
+use crate::{bincode_serde, compress, ok, protocol_types::LengthPrefixType};
 use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tokio::{io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
                  BufWriter},
             time::timeout};
-
-use crate::{bincode_serde, compress, ok, protocol_types::LengthPrefixType};
 
 pub mod protocol_constants {
     use super::Duration;

@@ -4,11 +4,10 @@
 //! [`ColorSupport`] constraints. You can find ANSI colors
 //! [here](https://www.ditig.com/256-colors-cheat-sheet).
 
-use smallvec::smallvec;
-
 use crate::{Ansi256GradientIndex, ColorSupport, ColorWheel, ColorWheelConfig,
             ColorWheelSpeed, HeadingData, TuiStyle, global_color_support, new_style,
             tui_color};
+use smallvec::smallvec;
 
 /// This style is for any selected range in the document.
 #[must_use]

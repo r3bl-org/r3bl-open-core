@@ -119,9 +119,8 @@
 //! flexibility, while ESC sequences remain for compatibility and simple operations that
 //! don't need parameters.
 
-use std::mem::take;
-
 use crate::{DsrRequestFromPtyEvent, OffscreenBuffer, core::osc::OscEvent};
+use std::mem::take;
 
 /// Terminal state context for ANSI sequence processing.
 ///

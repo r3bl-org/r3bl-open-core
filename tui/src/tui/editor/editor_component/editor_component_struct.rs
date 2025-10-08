@@ -1,15 +1,13 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
-use tokio::sync::mpsc::Sender;
-
 use crate::{BoxedSafeComponent, CommonResult, Component, DEFAULT_SYN_HI_FILE_EXT,
             EditorBuffer, EditorEngine, EditorEngineApplyEventResult,
             EditorEngineConfig, EventPropagation, FlexBox, FlexBoxId, GlobalData,
             HasEditorBuffers, HasFocus, InputEvent, RenderPipeline, SurfaceBounds,
             SystemClipboard, TerminalWindowMainThreadSignal,
             editor_engine::engine_public_api, ok};
+use std::fmt::Debug;
+use tokio::sync::mpsc::Sender;
 
 #[derive(Debug)]
 /// This is a shim which allows the reusable [`EditorEngine`] to be used in the context of

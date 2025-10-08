@@ -37,13 +37,11 @@
 //! store, the iterator [`kv::Bucket::iter`] can be used to read the current state of the
 //! db, as expected.
 
-use std::fmt::{Debug, Display};
-
+use crate::fg_cyan;
 use kv::{Bincode, Config, Store};
 use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
-
-use crate::fg_cyan;
+use std::fmt::{Debug, Display};
 
 /// Convenience type alias for the [`kv::Bucket`] type.
 /// 1. A [`kv::Bucket`] is created from a [Store].
@@ -347,19 +345,16 @@ pub mod kv_error {
         ExecuteTransaction,
     }
 }
-use kv_error::KvErrorCouldNot;
-
 use crate::inline_string;
+use kv_error::KvErrorCouldNot;
 
 #[cfg(test)]
 mod kv_tests {
-    use std::{collections::HashMap, path::Path};
-
-    use serial_test::serial;
-    use tracing::instrument;
-
     use super::*;
     use crate::try_create_temp_dir;
+    use serial_test::serial;
+    use std::{collections::HashMap, path::Path};
+    use tracing::instrument;
 
     fn check_folder_exists(path: &Path) -> bool { path.exists() && path.is_dir() }
 

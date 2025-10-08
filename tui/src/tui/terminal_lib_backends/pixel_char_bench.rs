@@ -70,10 +70,9 @@
 #[cfg(test)]
 mod pixel_char_benchmarks {
     extern crate test;
+    use crate::{PixelChar, RgbValue, TuiColor, TuiStyle};
     use smallvec::SmallVec;
     use test::Bencher;
-
-    use crate::{PixelChar, RgbValue, TuiColor, TuiStyle};
 
     // Type aliases for clarity.
     type PixelCharSmallVec = SmallVec<[PixelChar; 8]>;

@@ -12,8 +12,6 @@
 //! - Boundary testing for invalid scroll region parameters
 //! - Interactions between scroll regions and cursor positioning
 
-use vte::Perform;
-
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{TuiStyle, col,
             offscreen_buffer::test_fixtures_ofs_buf::*,
@@ -22,6 +20,7 @@ use crate::{TuiStyle, col,
                                  csi_codes::{CsiSequence, PrivateModeType},
                                  esc_codes::{self, EscSequence},
                                  term_units::{term_col, term_row}}};
+use vte::Perform;
 
 fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {
     for r in 0..ofs_buf.window_size.row_height.as_usize() {

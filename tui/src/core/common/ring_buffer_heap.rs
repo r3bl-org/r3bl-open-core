@@ -3,10 +3,9 @@
 //! A fixed-size ring buffer implementation using heap allocation. For stack allocated
 //! version, take a look at [`super::RingBufferStack`].
 
-use std::fmt::Debug;
-
 use super::RingBuffer;
 use crate::{Index, Length, len};
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RingBufferHeap<T, const N: usize> {
@@ -213,9 +212,8 @@ impl<'a, T, const N: usize> Iterator for RingBufferHeapIterator<'a, T, N> {
 
 #[cfg(test)]
 mod tests {
-    use smallstr::SmallString;
-
     use super::*;
+    use smallstr::SmallString;
     pub type SmallStringBackingStore = SmallString<[u8; DEFAULT_SMALL_STRING_SIZE]>;
     pub const DEFAULT_SMALL_STRING_SIZE: usize = 32;
 

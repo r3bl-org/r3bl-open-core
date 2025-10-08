@@ -1,10 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fs, io::Write, path::Path};
-
-use miette::IntoDiagnostic;
-
 use crate::{http_client::create_client_with_user_agent, ok};
+use miette::IntoDiagnostic;
+use std::{fs, io::Write, path::Path};
 
 /// # Errors
 ///
@@ -35,12 +33,10 @@ pub async fn try_download_file_overwrite_existing(
 mod tests_download {
     // cspell::ignore cfssljson
 
-    use std::time::Duration;
-
-    use tokio::time::timeout;
-
     use super::*;
     use crate::try_create_temp_dir;
+    use std::time::Duration;
+    use tokio::time::timeout;
 
     const TIMEOUT: Duration = Duration::from_secs(1);
 

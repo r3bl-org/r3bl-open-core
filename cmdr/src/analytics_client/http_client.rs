@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 use r3bl_tui::inline_string;
 use reqwest::{Client, Response};
-
-use crate::DEBUG_ANALYTICS_CLIENT_MOD;
 
 /// # Errors
 ///

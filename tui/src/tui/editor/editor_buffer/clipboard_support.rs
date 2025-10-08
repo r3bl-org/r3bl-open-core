@@ -1,8 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::error::Error;
-
 use crate::{DEBUG_TUI_COPY_PASTE, EditorBuffer, InlineVecStr};
+use std::error::Error;
 
 pub type ClipboardResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 

@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::{Deref, DerefMut};
-
 use super::{InlineString, InlineVec};
+use std::ops::{Deref, DerefMut};
 
 // XMARK: Clever Rust, use of newtype pattern to convert various types to `ItemsOwned`.
 
@@ -99,9 +98,8 @@ mod iter_impl {
 }
 
 mod convert_into_items_owned {
-    use smallvec::SmallVec;
-
     use super::{InlineString, InlineVec, ItemsOwned};
+    use smallvec::SmallVec;
 
     // XMARK: Clever Rust, to make it easy to work with arrays of any size, eg: `&["1",
     // "2"]`, `vec!["1", "2"]`, `vec!["1".to_string(), "2".to_string()]`

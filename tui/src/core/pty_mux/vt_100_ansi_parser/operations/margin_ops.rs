@@ -74,10 +74,9 @@
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
-use vte::Params;
-
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::MarginRequest};
+use vte::Params;
 
 /// Handle Set Top and Bottom Margins (DECSTBM) command.
 /// CSI r - ESC [ top ; bottom r

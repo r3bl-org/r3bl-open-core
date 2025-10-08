@@ -1,12 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Display;
-
 use r3bl_tui::{ASTColor, DefaultIoDevices, ItemsOwned, ast, choose, get_terminal_width,
                height, new_style,
                readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, usize, width};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 const JSON_DATA: &str = r#"[
   {

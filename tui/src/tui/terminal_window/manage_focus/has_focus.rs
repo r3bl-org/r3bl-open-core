@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
 use crate::{CommonError, CommonResult, FlexBox, FlexBoxId, InlineVec, inline_string,
             throws, tiny_inline_string};
+use std::fmt::Debug;
 
 /// This is a global (scoped to an [`crate::App`]) struct that is used to store the `id`
 /// of the [`FlexBox`] that has keyboard focus.

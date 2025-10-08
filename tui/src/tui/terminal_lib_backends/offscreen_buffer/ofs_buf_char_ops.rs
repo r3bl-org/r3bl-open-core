@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::Range;
-
 use super::{OffscreenBuffer, PixelChar};
 use crate::{ArrayOverflowResult, ColIndex, LengthOps, Pos, RowIndex, row};
+use std::ops::Range;
 
 /// Buffer manipulation methods - provides encapsulated access to buffer data.
 impl OffscreenBuffer {

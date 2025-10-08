@@ -3,9 +3,8 @@
 //! Extension trait for converting from [`RangeInclusive`] to [`Range`] types - see
 //! [`RangeConvertExt`] trait.
 
-use std::ops::{Add, Range, RangeInclusive};
-
 use super::index_ops::IndexOps;
+use std::ops::{Add, Range, RangeInclusive};
 
 /// Extension trait for converting from [`RangeInclusive`] to [`Range`] types.
 ///

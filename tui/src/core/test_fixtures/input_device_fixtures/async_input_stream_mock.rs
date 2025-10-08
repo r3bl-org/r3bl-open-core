@@ -1,10 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::time::Duration;
-
-use async_stream::stream;
-
 use crate::{InlineVec, PinnedInputStream};
+use async_stream::stream;
+use std::time::Duration;
 
 /// The main constructors are:
 /// - [`super::InputDeviceExtMock::new_mock()`]
@@ -39,10 +37,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use futures_util::StreamExt;
     use smallvec::smallvec;
-
-    use super::*;
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

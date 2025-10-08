@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::{Debug, Formatter},
-          ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
-
 use crate::{ChUnit, LengthOps, NumericValue, RowIndex, ch,
             create_numeric_arithmetic_operators};
+use std::{fmt::{Debug, Formatter},
+          ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
 
 /// Height is row count, i.e., the number of rows that a UI component occupies.
 ///

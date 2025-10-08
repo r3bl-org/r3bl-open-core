@@ -2,15 +2,13 @@
 
 #[cfg(test)]
 pub mod mock_real_objects_for_dialog {
-    use std::{collections::HashMap, fmt::Debug};
-
-    use tokio::sync::mpsc;
-
     use crate::{DefaultSize, DialogBuffer, DialogEngine, FlexBoxId, GlobalData,
                 HasDialogBuffers, OffscreenBufferPool, OutputDevice, OutputDeviceExt,
                 Size, SpinnerHelper, core::test_fixtures::StdoutMock,
                 editor::test_fixtures_editor::mock_real_objects_for_editor,
                 telemetry::telemetry_sizing::TelemetryReportLineStorage};
+    use std::{collections::HashMap, fmt::Debug};
+    use tokio::sync::mpsc;
 
     #[must_use]
     pub fn make_global_data(

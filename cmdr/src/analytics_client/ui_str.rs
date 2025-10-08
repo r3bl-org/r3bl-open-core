@@ -1,12 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{env::var, fmt::Display, io::Error, process::ExitStatus};
-
-use r3bl_tui::{ColorWheel, GradientGenerationPolicy, InlineString,
-               TextColorizationPolicy, glyphs, inline_string};
-
 use super::upgrade_check::{get_self_bin_name, get_self_crate_name};
 use crate::{common::fmt, get_self_bin_emoji};
+use r3bl_tui::{ColorWheel, GradientGenerationPolicy, InlineString,
+               TextColorizationPolicy, glyphs, inline_string};
+use std::{env::var, fmt::Display, io::Error, process::ExitStatus};
 
 pub mod upgrade_install {
     #[allow(clippy::wildcard_imports)]

@@ -1,10 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::Debug,
-          ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
-
 use crate::{ArrayBoundsCheck, ChUnit, Index, IndexOps, NumericValue, RowHeight,
             create_numeric_arithmetic_operators, height, usize};
+use std::{fmt::Debug,
+          ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
 /// The vertical index in a grid of characters, starting at 0, which is the first row.
 ///

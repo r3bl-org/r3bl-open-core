@@ -10,11 +10,10 @@
 //! comprehensive information about Unicode handling, grapheme clusters, and the three
 //! types of indices used in this system.
 
-use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
-
 use crate::{ColIndex, ColWidth, Seg, SegmentArray, byte_index, col, len, seg_index,
             width};
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 /// Build grapheme cluster segments for any string slice.
 ///
@@ -166,11 +165,9 @@ mod tests {
 
 #[cfg(test)]
 mod benches {
-    use std::hint::black_box;
-
-    use test::Bencher;
-
     use super::*;
+    use std::hint::black_box;
+    use test::Bencher;
 
     extern crate test;
 

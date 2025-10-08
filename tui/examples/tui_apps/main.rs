@@ -18,8 +18,6 @@ mod ex_pitch;
 mod ex_rc;
 
 // Use other crates.
-use std::str::FromStr;
-
 use miette::IntoDiagnostic;
 use r3bl_tui::{ASTColor, CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent,
                TerminalWindow, fg_color, fg_frozen_blue, fg_pink, fg_slate_gray,
@@ -28,6 +26,7 @@ use r3bl_tui::{ASTColor, CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
                rla_println, run_with_safe_stack, set_mimalloc_in_main, tui_color};
+use std::str::FromStr;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 

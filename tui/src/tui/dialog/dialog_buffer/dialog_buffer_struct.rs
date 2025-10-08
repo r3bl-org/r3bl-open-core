@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Debug, Display, Formatter, Result};
-
 use crate::{ChUnit, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, InlineString, ItemsOwned, ch,
             fmt_option};
+use std::fmt::{Debug, Display, Formatter, Result};
 
 /// Please do not construct this struct directly and use
 /// [`new_empty`](DialogBuffer::new_empty) instead.

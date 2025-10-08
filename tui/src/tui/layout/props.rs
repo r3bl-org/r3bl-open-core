@@ -21,10 +21,9 @@ pub struct SurfaceProps {
 
 #[cfg(test)]
 mod tests {
-    use smallvec::smallvec;
-
     use super::*;
     use crate::{CommonResult, col, height, ok, req_size_pc, row, width};
+    use smallvec::smallvec;
 
     #[test]
     fn test_flex_box_props_default() {

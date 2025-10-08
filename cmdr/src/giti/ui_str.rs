@@ -1,9 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::process::Output;
-
-use r3bl_tui::{InlineString, ItemsOwned, inline_string, join_fmt};
-
 use crate::common::fmt;
+use r3bl_tui::{InlineString, ItemsOwned, inline_string, join_fmt};
+use std::process::Output;
 
 pub const CURRENT_BRANCH_PREFIX: &str = "(◕‿◕)";
 

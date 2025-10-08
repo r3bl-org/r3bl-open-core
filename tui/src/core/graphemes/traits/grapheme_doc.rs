@@ -2,9 +2,8 @@
 
 //! Multi-line document traits for grapheme-aware text operations.
 
-use std::borrow::Cow;
-
 use crate::{ColIndex, GraphemeString, Length, RowIndex, SegIndex};
+use std::borrow::Cow;
 
 /// Multi-line document trait for read-only operations.
 ///

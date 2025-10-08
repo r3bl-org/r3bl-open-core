@@ -4,13 +4,11 @@
 //! `fs_path.rs::test_all_fs_path_functions_in_isolated_process()` to prevent flakiness
 //! when tests are run in parallel.
 
-use std::{fs, io::ErrorKind, path::Path};
-
-use strum_macros::Display;
-
 use crate::{fs_path,
             fs_path::{FsOpError, FsOpResult},
             ok};
+use std::{fs, io::ErrorKind, path::Path};
+use strum_macros::Display;
 
 #[derive(Debug, Display, Default, Copy, Clone, PartialEq, Eq)]
 pub enum MkdirOptions {

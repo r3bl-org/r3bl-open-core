@@ -1,4 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use super::{AppSignal, SingleColumnComponent, State};
 use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
                InputEvent, LayoutDirection, LayoutManagement, LengthOps,
@@ -9,8 +10,6 @@ use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegi
                render_tui_styled_texts_into, req_size_pc, row, surface, throws,
                throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
                tui_stylesheet};
-
-use super::{AppSignal, SingleColumnComponent, State};
 
 // Constants for the ids.
 #[repr(u8)]

@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fs, path::Path};
-
 use miette::IntoDiagnostic;
+use std::{fs, path::Path};
 
 /// This is noop on Windows because Windows does not use the same permission model as
 /// Unix-like systems. It is determined by file extension and ACLs (Access Control Lists).

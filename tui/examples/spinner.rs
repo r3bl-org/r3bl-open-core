@@ -1,12 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{io::Write, time::Duration};
-
 use r3bl_tui::{CommonResult, OutputDevice, SpinnerColor, SpinnerStyle, SpinnerTemplate,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                set_mimalloc_in_main,
                spinner_constants::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT},
                underline};
+use std::{io::Write, time::Duration};
 use tokio::{spawn,
             task::JoinError,
             time::{Instant, interval, sleep}};

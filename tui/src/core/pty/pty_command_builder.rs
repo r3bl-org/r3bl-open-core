@@ -2,9 +2,8 @@
 
 //! PTY command builder for constructing and configuring PTY commands.
 
-use std::path::PathBuf;
-
 use super::pty_core::pty_types::PtyCommand;
+use std::path::PathBuf;
 
 /// Configuration builder for PTY commands with sensible defaults.
 ///
@@ -175,9 +174,8 @@ impl PtyCommandBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use super::*;
+    use std::env;
 
     #[test]
     fn test_pty_command_builder_new() {

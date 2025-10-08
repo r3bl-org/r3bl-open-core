@@ -3,7 +3,6 @@
 use std::{io::Result,
           pin::Pin,
           task::{Context, Poll}};
-
 use tokio::io::{AsyncRead, AsyncWrite};
 
 /// A mock struct for the [`tokio::net::TcpStream`].

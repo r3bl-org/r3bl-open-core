@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
-
 use super::{ModifierKeysMask, try_convert_key_modifiers};
 use crate::{Pos, col, row};
+use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 
 /// Represents a mouse input event in the terminal.
 ///

@@ -1,5 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use crate::{HeadingData, HeadingLevel,
+            md_parser::constants::{self, NEW_LINE, NULL_CHAR, NULL_STR},
+            parse_null_padded_line::is};
 use nom::{IResult, Parser,
           branch::alt,
           bytes::complete::{tag, take_while, take_while1},
@@ -7,10 +10,6 @@ use nom::{IResult, Parser,
           combinator::{map, not, opt, recognize},
           multi::many1,
           sequence::{preceded, terminated}};
-
-use crate::{HeadingData, HeadingLevel,
-            md_parser::constants::{self, NEW_LINE, NULL_CHAR, NULL_STR},
-            parse_null_padded_line::is};
 
 /// This matches the heading tag and text until EOL. Outputs a tuple of [`HeadingLevel`] and
 /// [`crate::FragmentsInOneLine`].
@@ -78,11 +77,10 @@ fn parse_heading_tag(input: &str) -> IResult<&str, HeadingLevel> {
 
 #[cfg(test)]
 mod tests {
-    use nom::{Err as NomErr,
-              error::{Error, ErrorKind}};
-
     use super::*;
     use crate::assert_eq2;
+    use nom::{Err as NomErr,
+              error::{Error, ErrorKind}};
 
     #[test]
     fn test_parse_header_tag() {

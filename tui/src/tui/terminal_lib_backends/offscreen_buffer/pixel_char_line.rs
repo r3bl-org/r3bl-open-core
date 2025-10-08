@@ -9,14 +9,12 @@
 //! Each line can contain various types of pixel characters including plain text,
 //! spacers, and void characters.
 
-use std::{fmt::{self, Debug},
-          ops::{Deref, DerefMut}};
-
-use smallvec::smallvec;
-
 use super::PixelChar;
 use crate::{ColWidth, GetMemSize, InlineVec, TinyInlineString, dim_underline,
             get_mem_size, ok, tiny_inline_string};
+use smallvec::smallvec;
+use std::{fmt::{self, Debug},
+          ops::{Deref, DerefMut}};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PixelCharLine {

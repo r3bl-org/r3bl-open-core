@@ -1,9 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::Deref;
-
 use super::PixelChar;
 use crate::{List, Pos};
+use std::ops::Deref;
 
 /// This is a wrapper type so the [`std::fmt::Debug`] can be implemented for it, that
 /// won't conflict with [List]'s implementation of the trait.

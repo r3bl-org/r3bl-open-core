@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::CURRENT_BRANCH_PREFIX;
 use r3bl_tui::{CommonResult, InlineString, ItemsOwned, Run, command};
 use tokio::process::Command;
-
-use super::CURRENT_BRANCH_PREFIX;
 
 /// This is a type alias for the result of a git command. The tuple contains:
 /// 1. The result of the command.
@@ -276,10 +275,9 @@ pub mod local_branch_ops {
 /// the current working directory are completely isolated and cannot affect other tests.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use r3bl_tui::{TempDir, inline_string, inline_vec, ok, try_create_temp_dir_and_cd,
                    try_write_file, with_saved_pwd};
-
-    use super::*;
 
     /// Helper function to setup a basic git repository with an initial commit Returns a
     /// tuple of (`temp_dir_root`, `git_folder_path`, `initial_branch_name`). When the

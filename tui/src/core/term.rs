@@ -1,10 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::io::IsTerminal;
-
-use miette::IntoDiagnostic;
-
 use crate::{ColWidth, Size, height, width};
+use miette::IntoDiagnostic;
+use std::io::IsTerminal;
 pub const DEFAULT_WIDTH: u16 = 80;
 
 #[must_use]

@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
-
 use super::SegIndex;
 use crate::{ByteIndex, ColIndex, ColWidth, Length, usize};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 /// A vector-like container for grapheme segments.
 pub type SegmentArray = Vec<Seg>;

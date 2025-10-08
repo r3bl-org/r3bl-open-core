@@ -52,12 +52,11 @@
 //! This is a negligible memory cost for eliminating thousands of allocations per second
 //! in the rendering hot path.
 
+use crate::md_parser_types::constants::{HEADING, LIST_SPACE_DISPLAY,
+                                        LIST_SPACE_DISPLAY_CHAR, SPACE, SPACE_CHAR};
 use std::{borrow::Cow,
           collections::HashMap,
           sync::{LazyLock, Mutex}};
-
-use crate::md_parser_types::constants::{HEADING, LIST_SPACE_DISPLAY,
-                                        LIST_SPACE_DISPLAY_CHAR, SPACE, SPACE_CHAR};
 
 /// Static cache for space strings to avoid repeated allocations.
 /// Pre-computes space strings for common lengths (0 to 64 spaces).

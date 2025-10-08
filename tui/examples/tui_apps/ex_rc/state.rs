@@ -1,11 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::{collections::HashMap,
-          fmt::{Debug, Display, Formatter, Result}};
-
+use crate::ex_rc::Id;
 use r3bl_tui::{ComponentRegistryMap, DEFAULT_SYN_HI_FILE_EXT, EditorBuffer, FlexBoxId,
                HasEditorBuffers};
-
-use crate::ex_rc::Id;
+use std::{collections::HashMap,
+          fmt::{Debug, Display, Formatter, Result}};
 
 pub const FILE_CONTENT_ARRAY: [&str; 3] = [
     include_str!("slide1.md"),

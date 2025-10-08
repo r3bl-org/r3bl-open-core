@@ -1,12 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::io::Read;
-
-use miette::IntoDiagnostic;
-
 use crate::{Controlled, ControlledChild, Controller, ControllerReader, OscBuffer,
             PtyCommandBuilder, PtyConfig, PtyReadOnlyOutputEvent, PtyReadOnlySession,
             pty_common_io::{READ_BUFFER_SIZE, create_pty_pair, spawn_command_in_pty}};
+use miette::IntoDiagnostic;
+use std::io::Read;
 
 impl PtyCommandBuilder {
     /// Spawns a read-only PTY session; it spawns two Tokio tasks and one OS child
@@ -309,13 +307,12 @@ pub fn spawn_blocking_controller_output_reader_task(
 
 #[cfg(test)]
 mod tests {
-    use miette::IntoDiagnostic;
-    use tokio::{sync::mpsc::unbounded_channel,
-                time::{Duration, timeout}};
-
     use crate::{OscEvent, PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
                 PtyReadOnlySession,
                 pty_read_only::spawn_blocking_controller_output_reader_task};
+    use miette::IntoDiagnostic;
+    use tokio::{sync::mpsc::unbounded_channel,
+                time::{Duration, timeout}};
 
     /// Helper function to collect events with a timeout
     async fn collect_events_with_timeout(

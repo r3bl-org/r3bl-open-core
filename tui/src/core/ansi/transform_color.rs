@@ -17,10 +17,9 @@ pub trait TransformColor {
 
 #[cfg(test)]
 mod tests {
-    use test_case::test_case;
-
     use super::TransformColor;
     use crate::{ASTColor, AnsiValue, RgbValue};
+    use test_case::test_case;
 
     #[test_case(0, 0, 0)]
     #[test_case(255, 125, 0)]

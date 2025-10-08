@@ -6,12 +6,11 @@
 //! builders from the `conformance_data` module. These tests validate complex
 //! sequences that mirror actual terminal application behavior.
 
-use std::cmp::min;
-
 use super::super::conformance_data::{basic_sequences, cursor_sequences, emacs_sequences,
                                      styling_sequences, tmux_sequences, vim_sequences};
 use crate::{ANSIBasicColor, PixelChar, col, offscreen_buffer::test_fixtures_ofs_buf::*,
             row, tui_style_attrib};
+use std::cmp::min;
 
 /// Create a realistic terminal buffer for real-world scenario testing.
 /// Uses standard 80x25 dimensions typical of actual terminal usage.

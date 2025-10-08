@@ -1,7 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
+use crate::ex_pitch::state::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
 use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
                DEBUG_TUI_MOD, EditMode, EditorComponent, EditorEngineConfig,
                EventPropagation, FlexBoxId, GlobalData, HasFocus, InputEvent, Key,
@@ -14,9 +13,8 @@ use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegi
                render_tui_styled_texts_into, req_size_pc, row, send_signal, surface,
                throws, throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
                tui_stylesheet};
+use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
-
-use crate::ex_pitch::state::{AppSignal, FILE_CONTENT_ARRAY, State, state_mutator};
 
 /// Constants for the ids.
 #[repr(u8)]

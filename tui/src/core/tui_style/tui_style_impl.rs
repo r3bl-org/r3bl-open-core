@@ -1,11 +1,10 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use core::fmt::Debug;
-use std::{fmt::{Display, Formatter},
-          ops::{Add, AddAssign, Deref}};
-
 use super::{TuiColor, TuiStyleAttribs, tui_style_attrib};
 use crate::{ChUnit, InlineVecStr, TinyInlineString, ch, join, join_fmt, ok,
             tiny_inline_string};
+use core::fmt::Debug;
+use std::{fmt::{Display, Formatter},
+          ops::{Add, AddAssign, Deref}};
 
 /// Please use [`crate::new_style`!] declarative macro to generate code for this struct.
 ///

@@ -1,10 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fmt::{Debug, Display},
-          pin::Pin};
-
 use super::{BoxedSafeApp, GlobalData, main_event_loop_impl};
 use crate::{CommonResult, FlexBoxId, InputDevice, InputEvent, OutputDevice, get_size};
+use std::{fmt::{Debug, Display},
+          pin::Pin};
 
 #[derive(Debug)]
 pub struct TerminalWindow;

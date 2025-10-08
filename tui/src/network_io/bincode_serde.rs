@@ -5,10 +5,9 @@
 //! More info:
 //! - [bincode v2.x migration guide](https://github.com/bincode-org/bincode/blob/trunk/docs/migration_guide.md)
 
+use crate::{Buffer, BufferAtom};
 use miette::IntoDiagnostic;
 use serde::{Deserialize, Serialize};
-
-use crate::{Buffer, BufferAtom};
 
 /// Serialize the payload using the [bincode] crate. Returns a [Buffer]. `T` must
 /// implement the [Serialize] trait.
@@ -65,10 +64,9 @@ fn get_config() -> bincode::config::Configuration { bincode::config::standard() 
 /// quickly serialize it to bytes, and then deserialize it back just as fast!
 #[cfg(test)]
 mod tests_bincode_serde {
+    use crate::{Buffer, bincode_serde};
     use pretty_assertions::assert_eq;
     use serde::{Deserialize, Serialize};
-
-    use crate::{Buffer, bincode_serde};
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct TestPayload {

@@ -1,15 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use super::{CLIArg, image_handler, prompt_history,
+            types::{ChResult, HistoryItem, ImageContent},
+            ui_str};
+use crate::prefix_single_select_instruction_header;
 use r3bl_tui::{CommonResult, DefaultIoDevices, InlineString, TTYResult, ast, ast_line,
                choose, height, inline_vec, is_fully_uninteractive_terminal,
                readline_async::{HowToChoose, StyleSheet},
                tui::editor::editor_buffer::{clipboard_service::SystemClipboard,
                                             clipboard_support::ClipboardService}};
-
-use super::{CLIArg, image_handler, prompt_history,
-            types::{ChResult, HistoryItem, ImageContent},
-            ui_str};
-use crate::prefix_single_select_instruction_header;
 
 /// Handle the main ch command logic
 ///

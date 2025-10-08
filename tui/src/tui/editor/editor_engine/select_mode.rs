@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::cmp::Ordering;
-
 use crate::{CaretScrAdj, EditorBuffer, handle_selection_multiline_caret_movement,
             handle_selection_multiline_caret_movement_hit_top_or_bottom_of_document,
             handle_selection_single_line_caret_movement};
+use std::cmp::Ordering;
 
 #[derive(Clone, Copy, Debug)]
 pub enum SelectMode {

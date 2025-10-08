@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use serde::Deserialize;
 use std::{collections::HashMap,
           fmt::{Display, Formatter, Result}};
-
-use serde::Deserialize;
 
 /// Root structure for deserializing Claude Code's ~/.claude.json file
 #[derive(Debug, Deserialize)]

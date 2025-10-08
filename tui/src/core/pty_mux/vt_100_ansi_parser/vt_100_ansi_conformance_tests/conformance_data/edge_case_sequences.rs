@@ -14,11 +14,10 @@
 //! - Performance stress tests
 //! - Boundary condition validation
 
-use std::fmt::Write;
-
 use crate::{ANSIBasicColor, SgrCode,
             vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
                                  term_units::{term_col, term_row}}};
+use std::fmt::Write;
 
 /// Generate a very long text sequence to test buffer handling.
 ///

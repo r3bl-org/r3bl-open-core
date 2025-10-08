@@ -1,10 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::Debug;
-
 use super::super::{FlushKind, RenderOps};
 use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TuiStyle,
             core::pty_mux::vt_100_ansi_parser::term_units::TermRow, osc::OscEvent};
+use std::fmt::Debug;
 
 /// Character set modes for terminal emulation.
 ///
@@ -271,11 +270,10 @@ pub trait OffscreenBufferPaint {
 
 // Core implementations moved from ofs_buf_core_impl.rs.
 
-use std::{fmt::{self},
-          ops::{Deref, DerefMut}};
-
 use super::PixelCharDiffChunks;
 use crate::{List, col, fg_green, inline_string, ok, row};
+use std::{fmt::{self},
+          ops::{Deref, DerefMut}};
 
 impl Debug for PixelCharDiffChunks {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

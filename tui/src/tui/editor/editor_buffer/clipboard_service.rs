@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
-
 use super::{ClipboardResult, ClipboardService};
 use crate::{DEBUG_TUI_COPY_PASTE, throws};
+use copypasta_ext::{copypasta::ClipboardProvider, x11_fork::ClipboardContext};
 
 #[derive(Debug)]
 pub struct SystemClipboard;

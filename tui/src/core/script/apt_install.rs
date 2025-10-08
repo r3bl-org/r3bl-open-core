@@ -1,8 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use miette::IntoDiagnostic;
-
 use crate::{command, ok};
+use miette::IntoDiagnostic;
 
 /// Here are some examples of using `dpkg-query` to check if a package is installed:
 ///

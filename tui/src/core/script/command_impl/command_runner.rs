@@ -1,12 +1,10 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::process::Stdio;
-
+use crate::ok;
 use miette::{Context, IntoDiagnostic};
+use std::process::Stdio;
 use tokio::{io::AsyncWriteExt,
             process::{Child, Command}};
-
-use crate::ok;
 
 /// Disambiguate the [`tokio::process::Command`] type from the [`std::process::Command`]
 /// type. Here are the key differences between them:

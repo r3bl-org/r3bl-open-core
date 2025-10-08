@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::collections::HashMap;
-
 use super::{DeleteSelectionWith, scroll_editor_content};
 use crate::{CaretScrAdj, ColIndex, ColWidth, CursorBoundsCheck,
             CursorPositionBoundsStatus, EditorArgsMut, EditorBuffer, EditorEngine,
@@ -9,6 +7,7 @@ use crate::{CaretScrAdj, ColIndex, ColWidth, CursorBoundsCheck,
             ZeroCopyGapBuffer, caret_locate::locate_col, caret_scr_adj, col,
             empty_check_early_return, len, multiline_disabled_check_early_return, row,
             validate_buffer_mut::EditorBufferMutWithDrop, width};
+use std::collections::HashMap;
 
 pub fn insert_chunk_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
     let EditorArgsMut { buffer, engine } = args;

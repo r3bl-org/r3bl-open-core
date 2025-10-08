@@ -59,10 +59,9 @@
 #[cfg(test)]
 mod render_op_benchmarks {
     extern crate test;
+    use crate::{AnsiValue, InlineString, Pos, RenderOp, RgbValue, TuiColor, TuiStyle, ch};
     use smallvec::SmallVec;
     use test::Bencher;
-
-    use crate::{AnsiValue, InlineString, Pos, RenderOp, RgbValue, TuiColor, TuiStyle, ch};
 
     // Type aliases for clarity.
     type RenderOpsSmallVec = SmallVec<[RenderOp; 8]>;

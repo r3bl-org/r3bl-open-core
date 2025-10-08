@@ -1,16 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{io::{Read, Write},
-          sync::mpsc::RecvTimeoutError,
-          time::Duration};
-
-use miette::{IntoDiagnostic, miette};
-use portable_pty::PtySize;
-
 use crate::{Controlled, ControlledChild, Controller, ControllerReader, ControllerWriter,
             LINE_FEED_BYTE, PtyCommandBuilder, PtyInputEvent, PtyReadWriteOutputEvent,
             PtyReadWriteSession, ok,
             pty_common_io::{READ_BUFFER_SIZE, create_pty_pair, spawn_command_in_pty}};
+use miette::{IntoDiagnostic, miette};
+use portable_pty::PtySize;
+use std::{io::{Read, Write},
+          sync::mpsc::RecvTimeoutError,
+          time::Duration};
 
 impl PtyCommandBuilder {
     /// Spawns a read-write PTY session; it spawns three Tokio tasks and one OS child
@@ -589,10 +587,9 @@ fn spawn_blocking_passthrough_with_mode_detection_reader_task(
 
 #[cfg(test)]
 mod tests {
-    use tokio::sync::mpsc::unbounded_channel;
-
     use super::*;
     use crate::{ControlSequence, CursorKeyMode};
+    use tokio::sync::mpsc::unbounded_channel;
 
     // XMARK: Process isolated test functions
 
@@ -1344,7 +1341,6 @@ mod tests {
     #[allow(clippy::too_many_lines)]
     async fn test_htop_interactive_with_cursor_modes() -> miette::Result<()> {
         use std::process::Command;
-
         use tokio::time::timeout;
 
         println!("Starting htop integration test...");

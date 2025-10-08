@@ -1,10 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
-
-use tracing::dispatcher;
-
 use crate::{DisplayPreference, TracingConfig, WriterConfig, ok};
+use std::{fs::OpenOptions, io::Write, ops::Add, path::Path};
+use tracing::dispatcher;
 
 // XMARK: Clever Rust, use of `impl Into<ConfigStruct>` for elegant constructor config
 // options.

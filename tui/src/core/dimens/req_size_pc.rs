@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{self, Debug};
-
 use super::Pc;
+use std::fmt::{self, Debug};
 
 /// Represents a percentage value for the requested size. It is used to calculate the
 /// requested size as a percentage of the parent size.

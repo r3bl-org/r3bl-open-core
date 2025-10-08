@@ -1,11 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{env, path::Path};
-
-use miette::IntoDiagnostic;
-use strum_macros::{Display, EnumString};
-
 use crate::{InlineString, SCRIPT_MOD_DEBUG, inline_string, ok};
+use miette::IntoDiagnostic;
+use std::{env, path::Path};
+use strum_macros::{Display, EnumString};
 
 #[cfg(target_os = "windows")]
 const OS_SPECIFIC_ENV_PATH_SEPARATOR: &str = ";";
