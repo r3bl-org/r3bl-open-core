@@ -22,8 +22,8 @@
 //! - **Integration Tests**: [`test_mode_ops`] - Full ANSI pipeline testing
 //!
 //! [`set_auto_wrap_mode`]: crate::OffscreenBuffer::set_auto_wrap_mode
-//! [`mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::mode_ops
-//! [`test_mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_mode_ops
+//! [`mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_mode_ops
+//! [`test_mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_mode_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

@@ -68,9 +68,9 @@
 //! Note: Cursor save/restore ESC sequences (ESC 7/8) are handled by [`cursor_ops`]
 //! functions to maintain consistency with CSI equivalents (CSI s/u).
 //!
-//! [`cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::cursor_ops
-//! [`impl_terminal_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_terminal_ops
-//! [`test_terminal_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_terminal_ops
+//! [`cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_cursor_ops
+//! [`impl_terminal_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_terminal_ops
+//! [`test_terminal_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_terminal_ops
 //! [module-level documentation]: super::super
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests

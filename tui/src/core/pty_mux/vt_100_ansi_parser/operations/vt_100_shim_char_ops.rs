@@ -1,14 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Margin setting operations (DECSTBM).
+//! Character insertion, deletion, and erasure operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
 //! See the [module-level documentation] for details on the "shim → impl →
 //! test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_margin_ops`] - Business logic with unit tests
-//! - **Integration Tests**: [`test_margin_ops`] - Full pipeline testing via public API
+//! - **Implementation**: [`impl_char_ops`] - Business logic with unit tests
+//! - **Integration Tests**: [`test_char_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
 //!
@@ -47,7 +47,7 @@
 //! # CSI Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[1;20r" (set top/bottom margins)
+//! Application sends "ESC[2P" (delete 2 chars)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
@@ -61,37 +61,81 @@
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
 //!       - sgr_ops:: for styling (m)
-//!       - line_ops:: for lines (L,M)
-//!       - char_ops:: for chars (@,P,X)    ╭───────────╮
-//!       - margin_ops:: for margins (r) <- │THIS MODULE│
+//!       - line_ops:: for lines (L,M)      ╭───────────╮
+//!       - char_ops:: for chars (@,P,X) <- │THIS MODULE│
 //!         ↓                               ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! [`impl_margin_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_margin_ops
-//! [`test_margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_margin_ops
+//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`test_char_ops`]: super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
 //! [module-level documentation]: super::super
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                   protocols::csi_codes::MarginRequest};
-use vte::Params;
+                   protocols::csi_codes::MovementCount};
 
-/// Handle Set Top and Bottom Margins (DECSTBM) command.
-/// CSI r - ESC [ top ; bottom r
+/// Handle ICH (Insert Character) - insert n blank characters at cursor position.
+/// Characters to the right of cursor shift right, characters beyond margin are lost.
+/// See [`OffscreenBuffer::insert_chars_at_cursor`] for the implementation of this shim.
 ///
-/// This command sets the scrolling region for the terminal. Lines outside
-/// the scrolling region are not affected by scroll operations.
-pub fn set_margins(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    let request = MarginRequest::from(params);
+/// [`OffscreenBuffer::insert_chars_at_cursor`]: crate::OffscreenBuffer::insert_chars_at_cursor
+pub fn insert_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+    let how_many = MovementCount::parse_first_as_length_non_zero(params);
+    let result = performer.ofs_buf.insert_chars_at_cursor(how_many);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to insert {:?} chars at cursor position {:?}",
+        how_many,
+        performer.ofs_buf.cursor_pos
+    );
+}
 
-    match request {
-        MarginRequest::Reset => {
-            performer.ofs_buf.reset_scroll_margins();
-        }
-        MarginRequest::SetRegion { top, bottom } => {
-            performer.ofs_buf.set_scroll_margins(top, bottom);
-        }
-    }
+/// Handle DCH (Delete Character) - delete n characters at cursor position.
+/// Characters to the right of cursor shift left, blanks are inserted at line end.
+/// See [`OffscreenBuffer::delete_chars_at_cursor`] for the implementation of this shim.
+///
+/// [`OffscreenBuffer::delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
+pub fn delete_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+    let how_many = MovementCount::parse_first_as_length_non_zero(params);
+    let result = performer.ofs_buf.delete_chars_at_cursor(how_many);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to delete {:?} chars at cursor position {:?}",
+        how_many,
+        performer.ofs_buf.cursor_pos
+    );
+}
+
+/// Handle ECH (Erase Character) - erase n characters at cursor position.
+/// Characters are replaced with blanks, no shifting occurs (unlike DCH).
+/// See [`OffscreenBuffer::erase_chars_at_cursor`] for the implementation of this shim.
+///
+/// [`OffscreenBuffer::erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
+pub fn erase_chars(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
+    let how_many = MovementCount::parse_first_as_length_non_zero(params);
+    let result = performer.ofs_buf.erase_chars_at_cursor(how_many);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to erase {:?} chars at cursor position {:?}",
+        how_many,
+        performer.ofs_buf.cursor_pos
+    );
+}
+
+/// Handle printable character printing - display character at cursor position.
+/// Character set translation applied if DEC graphics mode is active.
+/// Cursor advances with automatic line wrapping based on DECAWM mode.
+/// See [`OffscreenBuffer::print_char`] for the implementation of this shim.
+///
+/// [`OffscreenBuffer::print_char`]: crate::OffscreenBuffer::print_char
+pub fn print_char(performer: &mut AnsiToOfsBufPerformer, ch: char) {
+    let result = performer.ofs_buf.print_char(ch);
+    debug_assert!(
+        result.is_ok(),
+        "Failed to print char {:?} at cursor position {:?}",
+        ch,
+        performer.ofs_buf.cursor_pos
+    );
 }

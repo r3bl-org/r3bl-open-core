@@ -76,8 +76,8 @@
 //! These operations are fundamental cursor control operations that don't require
 //! parameters, unlike their CSI sequence counterparts.
 //!
-//! [`impl_control_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_control_ops
-//! [`test_control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_control_ops
+//! [`impl_control_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_control_ops
+//! [`test_control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_control_ops
 //! [module-level documentation]: super::super
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests

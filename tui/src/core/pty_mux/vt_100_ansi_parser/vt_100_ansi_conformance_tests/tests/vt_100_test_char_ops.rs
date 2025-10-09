@@ -12,8 +12,8 @@
 //! - **Implementation**: [`impl_char_ops`] - Business logic (has separate unit tests)
 //!
 //! [`apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
-//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
-//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
+//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_char_ops
+//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;

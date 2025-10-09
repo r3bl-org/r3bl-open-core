@@ -49,7 +49,7 @@
 //! ```text
 //! ┌────────────────────────────────────────────────────────────────┐
 //! │                     Layer 1: SHIM (no prefix)                  │
-//! │  vt_100_ansi_parser/operations/char_ops.rs                     │
+//! │  vt_100_ansi_parser/operations/vt_100_shim_char_ops            │
 //! │  • Thin delegation layer                                       │
 //! │  • Parameter parsing and translation                           │
 //! │  • Minimal logic, maximum clarity                              │
@@ -57,7 +57,7 @@
 //!                               ↓ delegates to
 //! ┌────────────────────────────────────────────────────────────────┐
 //! │                  Layer 2: IMPLEMENTATION (impl_ prefix)        │
-//! │  offscreen_buffer/vt_100_ansi_impl/impl_char_ops.rs            │
+//! │  offscreen_buffer/vt_100_ansi_impl/vt_100_impl_char_ops        │
 //! │  • Full business logic                                         │
 //! │  • Buffer manipulation                                         │
 //! │  • VT100 compliance implementation                             │
@@ -65,7 +65,7 @@
 //!                               ↓ tested by
 //! ┌────────────────────────────────────────────────────────────────┐
 //! │                     Layer 3: TESTS (test_ prefix)              │
-//! │  vt_100_ansi_conformance_tests/tests/test_char_ops.rs          │
+//! │  vt_100_ansi_conformance_tests/tests/vt_100_test_char_ops      │
 //! │  • Comprehensive test coverage                                 │
 //! │  • VT100 conformance validation                                │
 //! │  • Real-world scenario testing                                 │
@@ -81,9 +81,9 @@
 //! **Solution**: Our naming convention creates a searchable, hierarchical namespace:
 //!
 //! When you search for "`char_ops`" in your IDE, you'll see:
-//! - `char_ops.rs` - The parser shim (clean, minimal delegation)
-//! - `impl_char_ops.rs` - The full implementation
-//! - `test_char_ops.rs` - The test files
+//! - `vt_100_shim_char_ops` - The parser shim (clean, minimal delegation)
+//! - `vt_100_impl_char_ops` - The full implementation
+//! - `vt_100_test_char_ops` - The test files
 //!
 //! This predictable pattern means developers can quickly jump between:
 //! - The protocol definition (shim)
@@ -100,11 +100,11 @@
 //!
 //! ## File Naming Rules
 //!
-//! | Layer | Prefix | Example | Purpose |
-//! |-------|--------|---------|---------|
-//! | Shim | (none) | `char_ops.rs` | Protocol translation |
-//! | Implementation | `impl_` | `impl_char_ops.rs` | Business logic |
-//! | Test | `test_` | `test_char_ops.rs` | Validation |
+//! | Layer          | Prefix  | Example                | Purpose              |
+//! |----------------|---------|------------------------|----------------------|
+//! | Shim           | (none)  | `vt_100_shim_char_ops` | Protocol translation |
+//! | Implementation | `impl_` | `vt_100_impl_char_ops` | Business logic       |
+//! | Test           | `test_` | `vt_100_test_char_ops` | Validation           |
 //!
 //! This pattern is consistently applied across all operation types:
 //! - Character operations (`char_ops` → `impl_char_ops` → `test_char_ops`)
@@ -171,7 +171,7 @@
 //! ```text
 //! ┌────────────────────────────────────────────────────────────────────────────┐
 //! │                        LAYER 1: SHIM (no tests)                            │
-//! │  operations/char_ops.rs                                                    │
+//! │  operations/vt_100_shim_char_ops                                           │
 //! │  • Pure delegation, no business logic                                      │
 //! │  • No direct unit tests (intentional!)                                     │
 //! │  • Tested indirectly via integration tests                                 │
@@ -179,7 +179,7 @@
 //!                                     ↓ delegates to
 //! ┌────────────────────────────────────────────────────────────────────────────┐
 //! │                    LAYER 2: IMPLEMENTATION (unit tests)                    │
-//! │  vt_100_ansi_impl/impl_char_ops.rs                                         │
+//! │  vt_100_ansi_impl/vt_100_impl_char_ops                                     │
 //! │  • Full business logic and buffer manipulation                             │
 //! │  • Comprehensive unit tests (#[test] functions)                            │
 //! │  • Tests isolated logic without ANSI parsing                               │
@@ -187,7 +187,7 @@
 //!                                     ↓ tested by
 //! ┌────────────────────────────────────────────────────────────────────────────┐
 //! │                    LAYER 3: INTEGRATION TESTS (full pipeline)              │
-//! │  vt_100_ansi_conformance_tests/tests/test_char_ops.rs                      │
+//! │  vt_100_ansi_conformance_tests/tests/vt_100_test_char_ops                      │
 //! │  • Tests complete ANSI sequence → buffer update pipeline                   │
 //! │  • Uses public API (apply_ansi_bytes) for real-world scenarios             │
 //! │  • VT100 conformance validation                                            │
@@ -294,9 +294,9 @@
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
-//! [`vt_100_ansi_impl::impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
-//! [`operations::char_ops`]: operations::char_ops
-//! [`vt_100_ansi_conformance_tests::tests::test_char_ops`]: vt_100_ansi_conformance_tests::tests::test_char_ops
+//! [`vt_100_ansi_impl::impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`operations::char_ops`]: operations::vt_100_shim_char_ops
+//! [`vt_100_ansi_conformance_tests::tests::test_char_ops`]: vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
 
 // Attach.
 pub mod ansi_parser_public_api;

@@ -36,8 +36,8 @@
 //! [`apply_style_attribute`]: crate::OffscreenBuffer::apply_style_attribute
 //! [`set_foreground_color`]: crate::OffscreenBuffer::set_foreground_color
 //! [`set_background_color`]: crate::OffscreenBuffer::set_background_color
-//! [`sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::sgr_ops
-//! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_sgr_ops
+//! [`sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_sgr_ops
+//! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_sgr_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

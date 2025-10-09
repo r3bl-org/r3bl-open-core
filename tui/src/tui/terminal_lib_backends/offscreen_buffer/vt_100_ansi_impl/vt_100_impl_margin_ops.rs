@@ -21,8 +21,8 @@
 //! - **Shim**: [`margin_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_margin_ops`] - Full ANSI pipeline testing
 //!
-//! [`margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::margin_ops
-//! [`test_margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_margin_ops
+//! [`margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_margin_ops
+//! [`test_margin_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_margin_ops
 //! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
 //! [`reset_scroll_margins`]: crate::OffscreenBuffer::reset_scroll_margins
 

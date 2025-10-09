@@ -1402,9 +1402,9 @@
 //!
 //! **Three-layer architecture** for maintainability:
 //! ```text
-//! Layer 1: SHIM           → Protocol delegation (char_ops.rs)
-//! Layer 2: IMPLEMENTATION → Business logic (impl_char_ops.rs)
-//! Layer 3: TESTS          → Conformance validation (test_char_ops.rs)
+//! Layer 1: SHIM           → Protocol delegation (vt_100_shim_char_ops)
+//! Layer 2: IMPLEMENTATION → Business logic (vt_100_impl_char_ops)
+//! Layer 3: TESTS          → Conformance validation (vt_100_test_char_ops)
 //! ```
 //!
 //! This naming convention enables **predictable IDE navigation**: searching for

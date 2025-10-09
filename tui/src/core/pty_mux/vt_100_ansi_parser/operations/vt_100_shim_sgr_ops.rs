@@ -67,8 +67,8 @@
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! [`impl_sgr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_sgr_ops
-//! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_sgr_ops
+//! [`impl_sgr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_sgr_ops
+//! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_sgr_ops
 //! [module-level documentation]: super::super
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
@@ -76,7 +76,7 @@
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer, protocols::csi_codes};
 // Import the StyleAttribute enum from the implementation module.
 // This will be available once we update the mod.rs file.
-use crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_sgr_ops::StyleAttribute;
+use crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_sgr_ops::StyleAttribute;
 use vte::Params;
 
 /// Reset all SGR attributes to default state.

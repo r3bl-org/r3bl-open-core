@@ -3,8 +3,8 @@
 //! Character operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements character-level operations that correspond to ANSI escape
-//! sequences handled by the `vt_100_ansi_parser/operations/char_ops.rs` shim. These
-//! include:
+//! sequences handled by the `vt_100_ansi_parser/operations/vt_100_shim_char_ops` shim.
+//! These include:
 //!
 //! - **ICH** (Insert Character) - [`insert_chars_at_cursor`]
 //! - **DCH** (Delete Character) - [`delete_chars_at_cursor`]
@@ -28,8 +28,8 @@
 //! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 //! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
 //! [`print_char`]: crate::OffscreenBuffer::print_char
-//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
-//! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_char_ops
+//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_char_ops
+//! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

@@ -192,9 +192,9 @@
 //!
 //! [`operations`]: super::operations
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
-//! [`operations::char_ops`]: super::operations::char_ops
-//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
-//! [`test_char_ops`]: tests::test_char_ops
+//! [`operations::char_ops`]: super::operations::vt_100_shim_char_ops
+//! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`test_char_ops`]: tests::vt_100_test_char_ops
 //! [parser module docs]: super
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
 

@@ -12,8 +12,8 @@
 //! - **Implementation**: [`impl_line_ops`] - Business logic (has separate unit tests)
 //!
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes
-//! [`line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::line_ops
-//! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_line_ops
+//! [`line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_line_ops
+//! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;

@@ -16,8 +16,8 @@
 //! - **Shim**: [`scroll_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_scroll_ops`] - Full ANSI pipeline testing
 //!
-//! [`scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::scroll_ops
-//! [`test_scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_scroll_ops
+//! [`scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_scroll_ops
+//! [`test_scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_scroll_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

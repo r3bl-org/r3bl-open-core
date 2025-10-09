@@ -10,9 +10,9 @@
 //! # Architecture
 //!
 //! ```text
-//! vt_100_ansi_parser/operations/char_ops.rs     (shim - minimal logic)
+//! vt_100_ansi_parser/operations/vt_100_shim_char_ops <- (shim - minimal logic)
 //!           ↓ delegates to
-//! vt_100_ansi_impl/impl_char_ops.rs     (implementation - full logic)
+//! vt_100_ansi_impl/vt_100_impl_char_ops                  <- (implementation - full logic)
 //! ```
 //!
 //! ## The `impl_` Prefix Convention
@@ -34,18 +34,18 @@
 //!
 //! Each file corresponds directly to a file in `vt_100_ansi_parser/operations/`:
 //!
-//! - [`impl_char_ops`] - Character operations (`print_char`, ICH, DCH, ECH)
-//! - [`impl_control_ops`] - Control character handling (BS, TAB, LF, CR)
-//! - [`impl_cursor_ops`] - Cursor movement operations
-//! - [`impl_dsr_ops`] - Device Status Report operations
-//! - [`impl_line_ops`] - Line manipulation operations
-//! - [`impl_margin_ops`] - Scroll margin operations (DECSTBM)
-//! - [`impl_mode_ops`] - Mode setting operations (SM/RM)
-//! - [`impl_osc_ops`] - Operating System Command operations
-//! - [`impl_scroll_ops`] - Scrolling operations
-//! - [`impl_sgr_ops`] - Select Graphic Rendition operations (styling)
-//! - [`impl_terminal_ops`] - Terminal state operations (reset, clear, charset)
-//! - [`ansi_scroll_helper`] - ANSI scroll region helper utilities
+//! - [`vt_100_impl_char_ops`] - Character operations (`print_char`, ICH, DCH, ECH)
+//! - [`vt_100_impl_control_ops`] - Control character handling (BS, TAB, LF, CR)
+//! - [`vt_100_impl_cursor_ops`] - Cursor movement operations
+//! - [`vt_100_impl_dsr_ops`] - Device Status Report operations
+//! - [`vt_100_impl_line_ops`] - Line manipulation operations
+//! - [`vt_100_impl_margin_ops`] - Scroll margin operations (DECSTBM)
+//! - [`vt_100_impl_mode_ops`] - Mode setting operations (SM/RM)
+//! - [`vt_100_impl_osc_ops`] - Operating System Command operations
+//! - [`vt_100_impl_scroll_ops`] - Scrolling operations
+//! - [`vt_100_impl_sgr_ops`] - Select Graphic Rendition operations (styling)
+//! - [`vt_100_impl_terminal_ops`] - Terminal state operations (reset, clear, charset)
+//! - [`vt_100_impl_ansi_scroll_helper`] - ANSI scroll region helper utilities
 //!
 //! # Testing Approach
 //!
@@ -57,7 +57,7 @@
 //! Each `impl_*.rs` file contains comprehensive unit tests using `#[test]` functions:
 //!
 //! ```text
-//! impl_char_ops.rs ──── Contains unit tests for:
+//! vt_100_impl_char_ops ──── Contains unit tests for:
 //!     ├── insert_chars_at_cursor_basic()
 //!     ├── delete_chars_at_cursor_overflow()
 //!     ├── erase_chars_at_end_of_line()
@@ -95,7 +95,8 @@
 //!   strategy
 //!
 //! For example, when working on character operations:
-//! 1. **Implementation**: [`impl_char_ops`] (this module) - Unit tests for buffer logic
+//! 1. **Implementation**: [`vt_100_impl_char_ops`] (this module) - Unit tests for buffer
+//!    logic
 //! 2. **Shim**: [`operations::char_ops`] - Parameter translation (no direct tests)
 //! 3. **Integration**: [`test_char_ops`] - Full ANSI sequence testing
 //!
@@ -106,7 +107,7 @@
 //! documentation, or by using IDE search with the operation name (e.g., search for
 //! [`char_ops`] to find all related files).
 //!
-//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
+//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_char_ops
 //!
 //! # VT100 Compliance
 //!
@@ -115,23 +116,23 @@
 //!
 //! [`operations`]: crate::core::pty_mux::vt_100_ansi_parser::operations
 //! [`vt_100_ansi_conformance_tests`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests
-//! [`operations::char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::char_ops
-//! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_char_ops
+//! [`operations::char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_char_ops
+//! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
 //! [parser module docs]: crate::core::pty_mux::vt_100_ansi_parser
 //!
 //! // Implementation layer hyperlinks (this module)
-//! [`impl_char_ops`]: `impl_char_ops`
-//! [`impl_control_ops`]: `impl_control_ops`
-//! [`impl_cursor_ops`]: `impl_cursor_ops`
-//! [`impl_dsr_ops`]: `impl_dsr_ops`
-//! [`impl_line_ops`]: `impl_line_ops`
-//! [`impl_margin_ops`]: `impl_margin_ops`
-//! [`impl_mode_ops`]: `impl_mode_ops`
-//! [`impl_osc_ops`]: `impl_osc_ops`
-//! [`impl_scroll_ops`]: `impl_scroll_ops`
-//! [`impl_sgr_ops`]: `impl_sgr_ops`
-//! [`impl_terminal_ops`]: `impl_terminal_ops`
-//! [`ansi_scroll_helper`]: `ansi_scroll_helper`
+//! [`vt_100_impl_char_ops`]: `impl_char_ops`
+//! [`vt_100_impl_control_ops`]: `impl_control_ops`
+//! [`vt_100_impl_cursor_ops`]: `impl_cursor_ops`
+//! [`vt_100_impl_dsr_ops`]: `impl_dsr_ops`
+//! [`vt_100_impl_line_ops`]: `impl_line_ops`
+//! [`vt_100_impl_margin_ops`]: `impl_margin_ops`
+//! [`vt_100_impl_mode_ops`]: `impl_mode_ops`
+//! [`vt_100_impl_osc_ops`]: `impl_osc_ops`
+//! [`vt_100_impl_scroll_ops`]: `impl_scroll_ops`
+//! [`vt_100_impl_sgr_ops`]: `impl_sgr_ops`
+//! [`vt_100_impl_terminal_ops`]: `impl_terminal_ops`
+//! [`vt_100_impl_ansi_scroll_helper`]: `ansi_scroll_helper`
 
 /// Standard terminal tab stop width (8 columns).
 /// Used for calculating tab positions in VT100 terminal emulation.
@@ -139,18 +140,18 @@
 pub const TAB_STOP_WIDTH: usize = 8;
 
 // Attach modules.
-pub mod ansi_scroll_helper;
-pub mod impl_char_ops;
-pub mod impl_control_ops;
-pub mod impl_cursor_ops;
-pub mod impl_dsr_ops;
-pub mod impl_line_ops;
-pub mod impl_margin_ops;
-pub mod impl_mode_ops;
-pub mod impl_osc_ops;
-pub mod impl_scroll_ops;
-pub mod impl_sgr_ops;
-pub mod impl_terminal_ops;
+pub mod vt_100_impl_ansi_scroll_helper;
+pub mod vt_100_impl_char_ops;
+pub mod vt_100_impl_control_ops;
+pub mod vt_100_impl_cursor_ops;
+pub mod vt_100_impl_dsr_ops;
+pub mod vt_100_impl_line_ops;
+pub mod vt_100_impl_margin_ops;
+pub mod vt_100_impl_mode_ops;
+pub mod vt_100_impl_osc_ops;
+pub mod vt_100_impl_scroll_ops;
+pub mod vt_100_impl_sgr_ops;
+pub mod vt_100_impl_terminal_ops;
 
 // Note: Individual modules are typically accessed directly by their respective
 // vt_100_ansi_parser operation files. No re-exports needed here.

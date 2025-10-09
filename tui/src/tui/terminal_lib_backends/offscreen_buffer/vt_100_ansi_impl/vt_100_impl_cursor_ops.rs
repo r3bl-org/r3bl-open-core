@@ -15,8 +15,8 @@
 //! - **Shim**: [`cursor_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_cursor_ops`] - Full ANSI pipeline testing
 //!
-//! [`cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::cursor_ops
-//! [`test_cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_cursor_ops
+//! [`cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_cursor_ops
+//! [`test_cursor_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_cursor_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

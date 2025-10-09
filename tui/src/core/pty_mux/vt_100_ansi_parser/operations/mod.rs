@@ -86,25 +86,25 @@
 //! with `impl_` prefixed implementations and `test_` prefixed tests.
 //!
 //! When you search for any operation (e.g., "`char_ops`") in your IDE, you'll see:
-//! - [`char_ops.rs`] (this directory) - The shim layer for protocol translation
-//! - [`impl_char_ops.rs`] (implementation) - The business logic layer
-//! - [`test_char_ops.rs`] (tests) - The validation layer
+//! - [`vt_100_shim_char_ops`] (this directory) - The shim layer for protocol translation
+//! - [`vt_100_impl_char_ops`] (implementation) - The business logic layer
+//! - [`vt_100_test_char_ops`] (tests) - The validation layer
 //!
 //! This same pattern applies to all operation types:
 //!
-//! | Ops | Shim | Tests |
-//! |-----|------|-------|
-//! | [`char_ops.rs`] | [`impl_char_ops.rs`] | [`test_char_ops.rs`] |
-//! | [`control_ops.rs`] | [`impl_control_ops.rs`] | [`test_control_ops.rs`] |
-//! | [`cursor_ops.rs`] | [`impl_cursor_ops.rs`] | [`test_cursor_ops.rs`] |
-//! | [`dsr_ops.rs`] | [`impl_dsr_ops.rs`] | [`test_dsr_ops.rs`] |
-//! | [`line_ops.rs`] | [`impl_line_ops.rs`] | [`test_line_ops.rs`] |
-//! | [`margin_ops.rs`] | [`impl_margin_ops.rs`] | [`test_margin_ops.rs`] |
-//! | [`mode_ops.rs`] | [`impl_mode_ops.rs`] | [`test_mode_ops.rs`] |
-//! | [`osc_ops.rs`] | [`impl_osc_ops.rs`] | [`test_osc_ops.rs`] |
-//! | [`scroll_ops.rs`] | [`impl_scroll_ops.rs`] | [`test_scroll_ops.rs`] |
-//! | [`sgr_ops.rs`] | [`impl_sgr_ops.rs`] | [`test_sgr_ops.rs`] |
-//! | [`terminal_ops.rs`] | [`impl_terminal_ops.rs`] | [`test_terminal_ops.rs`] |
+//! | Shim                          | Ops                          | Tests                          |
+//! |-------------------------------|------------------------------|--------------------------------|
+//! | [`vt_100_shim_char_ops`]      | [`vt_100_impl_char_ops`]     | [`vt_100_test_char_ops`]       |
+//! | [`vt_100_shim_control_ops`]   | [`vt_100_impl_control_ops`]  | [`vt_100_test_control_ops`]    |
+//! | [`vt_100_shim_cursor_ops`]    | [`vt_100_impl_cursor_ops`]   | [`vt_100_test_cursor_ops`]     |
+//! | [`vt_100_shim_dsr_ops`]       | [`vt_100_impl_dsr_ops`]      | [`vt_100_test_dsr_ops`]        |
+//! | [`vt_100_shim_line_ops`]      | [`vt_100_impl_line_ops`]     | [`vt_100_test_line_ops`]       |
+//! | [`vt_100_shim_margin_ops`]    | [`vt_100_impl_margin_ops`]   | [`vt_100_test_margin_ops`]     |
+//! | [`vt_100_shim_mode_ops`]      | [`vt_100_impl_mode_ops`]     | [`vt_100_test_mode_ops`]       |
+//! | [`vt_100_shim_osc_ops`]       | [`vt_100_impl_osc_ops`]      | [`vt_100_test_osc_ops`]        |
+//! | [`vt_100_shim_scroll_ops`]    | [`vt_100_impl_scroll_ops`]   | [`vt_100_test_scroll_ops`]     |
+//! | [`vt_100_shim_sgr_ops`]       | [`vt_100_impl_sgr_ops`]      | [`vt_100_test_sgr_ops`]        |
+//! | [`vt_100_shim_terminal_ops`]  | [`vt_100_impl_terminal_ops`] | [`vt_100_test_terminal_ops`]   |
 //!
 //! See the [main module documentation](super) for the complete explanation of this
 //! architectural pattern and its benefits for IDE navigation.
@@ -112,61 +112,61 @@
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
-//! [`char_ops.rs`]: char_ops
-//! [`impl_char_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_char_ops
-//! [`test_char_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_char_ops
-//! [`control_ops.rs`]: control_ops
-//! [`impl_control_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_control_ops
-//! [`test_control_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_control_ops
-//! [`cursor_ops.rs`]: cursor_ops
-//! [`impl_cursor_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_cursor_ops
-//! [`test_cursor_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_cursor_ops
-//! [`dsr_ops.rs`]: dsr_ops
-//! [`impl_dsr_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_dsr_ops
-//! [`test_dsr_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_dsr_ops
-//! [`line_ops.rs`]: line_ops
-//! [`impl_line_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_line_ops
-//! [`test_line_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_line_ops
-//! [`margin_ops.rs`]: margin_ops
-//! [`impl_margin_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_margin_ops
-//! [`test_margin_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_margin_ops
-//! [`mode_ops.rs`]: mode_ops
-//! [`impl_mode_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_mode_ops
-//! [`test_mode_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_mode_ops
-//! [`osc_ops.rs`]: osc_ops
-//! [`impl_osc_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_osc_ops
-//! [`test_osc_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_osc_ops
-//! [`scroll_ops.rs`]: scroll_ops
-//! [`impl_scroll_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_scroll_ops
-//! [`test_scroll_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_scroll_ops
-//! [`sgr_ops.rs`]: sgr_ops
-//! [`impl_sgr_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_sgr_ops
-//! [`test_sgr_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_sgr_ops
-//! [`terminal_ops.rs`]: terminal_ops
-//! [`impl_terminal_ops.rs`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_terminal_ops
-//! [`test_terminal_ops.rs`]: mod@super::super::vt_100_ansi_conformance_tests::tests::test_terminal_ops
+//! [`vt_100_shim_char_ops`]: vt_100_shim_char_ops
+//! [`vt_100_impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
+//! [`vt_100_test_char_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
+//! [`vt_100_shim_control_ops`]: vt_100_shim_control_ops
+//! [`vt_100_impl_control_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_control_ops
+//! [`vt_100_test_control_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_control_ops
+//! [`vt_100_shim_cursor_ops`]: vt_100_shim_cursor_ops
+//! [`vt_100_impl_cursor_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_cursor_ops
+//! [`vt_100_test_cursor_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_cursor_ops
+//! [`vt_100_shim_dsr_ops`]: vt_100_shim_dsr_ops
+//! [`vt_100_impl_dsr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_dsr_ops
+//! [`vt_100_test_dsr_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_dsr_ops
+//! [`vt_100_shim_line_ops`]: vt_100_shim_line_ops
+//! [`vt_100_impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
+//! [`vt_100_test_line_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_line_ops
+//! [`vt_100_shim_margin_ops`]: vt_100_shim_margin_ops
+//! [`vt_100_impl_margin_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_margin_ops
+//! [`vt_100_test_margin_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_margin_ops
+//! [`vt_100_shim_mode_ops`]: vt_100_shim_mode_ops
+//! [`vt_100_impl_mode_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_mode_ops
+//! [`vt_100_test_mode_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_mode_ops
+//! [`vt_100_shim_osc_ops`]: vt_100_shim_osc_ops
+//! [`vt_100_impl_osc_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_osc_ops
+//! [`vt_100_test_osc_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_osc_ops
+//! [`vt_100_shim_scroll_ops`]: vt_100_shim_scroll_ops
+//! [`vt_100_impl_scroll_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_scroll_ops
+//! [`vt_100_test_scroll_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_scroll_ops
+//! [`vt_100_shim_sgr_ops`]: vt_100_shim_sgr_ops
+//! [`vt_100_impl_sgr_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_sgr_ops
+//! [`vt_100_test_sgr_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_sgr_ops
+//! [`vt_100_shim_terminal_ops`]: vt_100_shim_terminal_ops
+//! [`vt_100_impl_terminal_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_terminal_ops
+//! [`vt_100_test_terminal_ops`]: mod@super::super::vt_100_ansi_conformance_tests::tests::vt_100_test_terminal_ops
 
-pub mod char_ops;
-pub mod control_ops;
-pub mod cursor_ops;
-pub mod dsr_ops;
-pub mod line_ops;
-pub mod margin_ops;
-pub mod mode_ops;
-pub mod osc_ops;
-pub mod scroll_ops;
-pub mod sgr_ops;
-pub mod terminal_ops;
+pub mod vt_100_shim_char_ops;
+pub mod vt_100_shim_control_ops;
+pub mod vt_100_shim_cursor_ops;
+pub mod vt_100_shim_dsr_ops;
+pub mod vt_100_shim_line_ops;
+pub mod vt_100_shim_margin_ops;
+pub mod vt_100_shim_mode_ops;
+pub mod vt_100_shim_osc_ops;
+pub mod vt_100_shim_scroll_ops;
+pub mod vt_100_shim_sgr_ops;
+pub mod vt_100_shim_terminal_ops;
 
 // Re-export all operations for easier access.
-pub use char_ops::*;
-pub use control_ops::*;
-pub use cursor_ops::*;
-pub use dsr_ops::*;
-pub use line_ops::*;
-pub use margin_ops::*;
-pub use mode_ops::*;
-pub use osc_ops::*;
-pub use scroll_ops::*;
-pub use sgr_ops::*;
-pub use terminal_ops::*;
+pub use vt_100_shim_char_ops::*;
+pub use vt_100_shim_control_ops::*;
+pub use vt_100_shim_cursor_ops::*;
+pub use vt_100_shim_dsr_ops::*;
+pub use vt_100_shim_line_ops::*;
+pub use vt_100_shim_margin_ops::*;
+pub use vt_100_shim_mode_ops::*;
+pub use vt_100_shim_osc_ops::*;
+pub use vt_100_shim_scroll_ops::*;
+pub use vt_100_shim_sgr_ops::*;
+pub use vt_100_shim_terminal_ops::*;

@@ -23,8 +23,8 @@
 //!
 //! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
 //! [`handle_hyperlink`]: crate::OffscreenBuffer::handle_hyperlink
-//! [`osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::osc_ops
-//! [`test_osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_osc_ops
+//! [`osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_osc_ops
+//! [`test_osc_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_osc_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

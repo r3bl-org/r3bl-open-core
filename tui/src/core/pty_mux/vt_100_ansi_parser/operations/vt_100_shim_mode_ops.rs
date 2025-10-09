@@ -1,14 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Line insertion and deletion operations.
+//! Mode setting operations (SM/RM).
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
 //! See the [module-level documentation] for details on the "shim → impl →
 //! test" architecture and naming conventions.
 //!
 //! **Related Files:**
-//! - **Implementation**: [`impl_line_ops`] - Business logic with unit tests
-//! - **Integration Tests**: [`test_line_ops`] - Full pipeline testing via public API
+//! - **Implementation**: [`impl_mode_ops`] - Business logic with unit tests
+//! - **Integration Tests**: [`test_mode_ops`] - Full pipeline testing via public API
 //!
 //! # Testing Strategy
 //!
@@ -47,7 +47,7 @@
 //! # CSI Sequence Processing Flow
 //!
 //! ```text
-//! Application sends "ESC[2L" (insert 2 lines)
+//! Application sends "ESC[?7h" (set autowrap mode)
 //!         ↓
 //!     PTY Slave (escape sequence)
 //!         ↓
@@ -60,55 +60,66 @@
 //!     Route to operations module:
 //!       - cursor_ops:: for movement (A,B,C,D,H)
 //!       - scroll_ops:: for scrolling (S,T)
-//!       - sgr_ops:: for styling (m)     ╭───────────╮
-//!       - line_ops:: for lines (L,M) <- │THIS MODULE│
-//!       - char_ops:: for chars (@,P,X)  ╰───────────╯
-//!         ↓
+//!       - sgr_ops:: for styling (m)
+//!       - line_ops:: for lines (L,M)
+//!       - char_ops:: for chars (@,P,X)  ╭───────────╮
+//!       - mode_ops:: for modes (h,l) <- │THIS MODULE│
+//!         ↓                             ╰───────────╯
 //!     Update OffscreenBuffer state
 //! ```
 //!
-//! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::impl_line_ops
-//! [`test_line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::test_line_ops
+//! [`impl_mode_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_mode_ops
+//! [`test_mode_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_mode_ops
 //! [module-level documentation]: super::super
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                   protocols::csi_codes::MovementCount};
+                   protocols::csi_codes::PrivateModeType};
+use vte::Params;
 
-/// Handle IL (Insert Line) - insert n blank lines at cursor position.
-/// Lines below cursor and within scroll region shift down.
-///
-/// This operation respects VT-100 scroll region boundaries.
-/// See [`OffscreenBuffer::insert_lines_at`] for detailed behavior and scroll region
-/// handling.
-///
-/// [`OffscreenBuffer::insert_lines_at`]: crate::OffscreenBuffer::insert_lines_at
-pub fn insert_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
-    let at = performer.ofs_buf.cursor_pos.row_index;
-    let result = performer.ofs_buf.insert_lines_at(at, how_many);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to insert {how_many:?} lines at row {at:?}",
-    );
+/// Handle Set Mode (CSI h) command.
+/// Supports both standard modes and private modes (with ? prefix).
+pub fn set_mode(
+    performer: &mut AnsiToOfsBufPerformer,
+    params: &Params,
+    intermediates: &[u8],
+) {
+    let is_private_mode = intermediates.contains(&b'?');
+    if is_private_mode {
+        let mode = PrivateModeType::from(params);
+        match mode {
+            PrivateModeType::AutoWrap => {
+                performer.ofs_buf.set_auto_wrap_mode(true);
+            }
+            _ => {
+                tracing::warn!("CSI ?{}h: Unhandled private mode", mode.as_u16());
+            }
+        }
+    } else {
+        tracing::warn!("CSI h: Standard mode setting not implemented");
+    }
 }
 
-/// Handle DL (Delete Line) - delete n lines starting at cursor position.
-/// Lines below cursor and within scroll region shift up.
-/// Blank lines are added at the bottom of the scroll region.
-///
-/// This operation respects VT-100 scroll region boundaries.
-/// See [`OffscreenBuffer::delete_lines_at`] for detailed behavior and scroll region
-/// handling.
-///
-/// [`OffscreenBuffer::delete_lines_at`]: crate::OffscreenBuffer::delete_lines_at
-pub fn delete_lines(performer: &mut AnsiToOfsBufPerformer, params: &vte::Params) {
-    let how_many = MovementCount::parse_first_as_row_height_non_zero(params);
-    let at = performer.ofs_buf.cursor_pos.row_index;
-    let result = performer.ofs_buf.delete_lines_at(at, how_many);
-    debug_assert!(
-        result.is_ok(),
-        "Failed to delete {how_many:?} lines at row {at:?}",
-    );
+/// Handle Reset Mode (CSI l) command.
+/// Supports both standard modes and private modes (with ? prefix).
+pub fn reset_mode(
+    performer: &mut AnsiToOfsBufPerformer,
+    params: &Params,
+    intermediates: &[u8],
+) {
+    let is_private_mode = intermediates.contains(&b'?');
+    if is_private_mode {
+        let mode = PrivateModeType::from(params);
+        match mode {
+            PrivateModeType::AutoWrap => {
+                performer.ofs_buf.set_auto_wrap_mode(false);
+            }
+            _ => {
+                tracing::warn!("CSI ?{}l: Unhandled private mode", mode.as_u16());
+            }
+        }
+    } else {
+        tracing::warn!("CSI l: Standard mode reset not implemented");
+    }
 }

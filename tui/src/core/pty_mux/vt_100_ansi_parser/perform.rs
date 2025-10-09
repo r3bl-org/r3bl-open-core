@@ -75,14 +75,14 @@
 //! clear organization and predictable code navigation:
 //!
 //! ```text
-//! vt_100_ansi_parser/operations/     offscreen_buffer/vt_100_ansi_impl/
-//! ├── char_ops.rs         →         ├── impl_char_ops.rs
-//! ├── control_ops.rs      →         ├── impl_control_ops.rs
-//! ├── cursor_ops.rs       →         ├── impl_cursor_ops.rs
-//! ├── line_ops.rs         →         ├── impl_line_ops.rs
-//! ├── scroll_ops.rs       →         ├── impl_scroll_ops.rs
-//! ├── terminal_ops.rs     →         ├── impl_terminal_ops.rs
-//! └── sgr_ops.rs          →         (inline in perform.rs)
+//! vt_100_ansi_parser/operations/             offscreen_buffer/vt_100_ansi_impl/
+//! ├── vt_100_shim_char_ops         →         ├── vt_100_impl_char_ops
+//! ├── vt_100_shim_control_ops      →         ├── vt_100_impl_control_ops
+//! ├── vt_100_shim_cursor_ops       →         ├── vt_100_impl_cursor_ops
+//! ├── vt_100_shim_line_ops         →         ├── vt_100_impl_line_ops
+//! ├── vt_100_shim_scroll_ops       →         ├── vt_100_impl_scroll_ops
+//! ├── vt_100_shim_terminal_ops     →         ├── vt_100_impl_terminal_ops
+//! └── vt_100_shim_sgr_ops          →         (inline in perform.rs)
 //! ```
 //!
 //! Each operations file contains **thin shim functions** that:
@@ -127,9 +127,12 @@
 
 // Import the operation modules.
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-            operations::{char_ops, control_ops, cursor_ops, dsr_ops, line_ops,
-                         margin_ops, mode_ops, osc_ops, scroll_ops, sgr_ops,
-                         terminal_ops},
+            operations::{vt_100_shim_char_ops, vt_100_shim_control_ops,
+                         vt_100_shim_cursor_ops, vt_100_shim_dsr_ops,
+                         vt_100_shim_line_ops, vt_100_shim_margin_ops,
+                         vt_100_shim_mode_ops, vt_100_shim_osc_ops,
+                         vt_100_shim_scroll_ops, vt_100_shim_sgr_ops,
+                         vt_100_shim_terminal_ops},
             protocols::{csi_codes::{self},
                         esc_codes}};
 use vte::{Params, Perform};
@@ -177,7 +180,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///   print('A') → writes at col 9, cursor moves to col 10
     ///   print('B') → overwrites at col 10, cursor stays at col 10
     /// ```
-    fn print(&mut self, ch: char) { char_ops::print_char(self, ch); }
+    fn print(&mut self, ch: char) { vt_100_shim_char_ops::print_char(self, ch); }
 
     /// Handle control characters (C0 set): backspace, tab, LF, CR.
     ///
@@ -216,16 +219,16 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     fn execute(&mut self, byte: u8) {
         match byte {
             esc_codes::BACKSPACE => {
-                control_ops::handle_backspace(self);
+                vt_100_shim_control_ops::handle_backspace(self);
             }
             esc_codes::TAB => {
-                control_ops::handle_tab(self);
+                vt_100_shim_control_ops::handle_tab(self);
             }
             esc_codes::LINE_FEED => {
-                control_ops::handle_line_feed(self);
+                vt_100_shim_control_ops::handle_line_feed(self);
             }
             esc_codes::CARRIAGE_RETURN => {
-                control_ops::handle_carriage_return(self);
+                vt_100_shim_control_ops::handle_carriage_return(self);
             }
             _ => {}
         }
@@ -302,50 +305,80 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         #[allow(clippy::match_same_arms)]
         match dispatch_char {
             // Cursor movement operations.
-            csi_codes::CUU_CURSOR_UP => cursor_ops::cursor_up(self, params),
-            csi_codes::CUD_CURSOR_DOWN => cursor_ops::cursor_down(self, params),
-            csi_codes::CUF_CURSOR_FORWARD => cursor_ops::cursor_forward(self, params),
-            csi_codes::CUB_CURSOR_BACKWARD => cursor_ops::cursor_backward(self, params),
+            csi_codes::CUU_CURSOR_UP => vt_100_shim_cursor_ops::cursor_up(self, params),
+            csi_codes::CUD_CURSOR_DOWN => {
+                vt_100_shim_cursor_ops::cursor_down(self, params)
+            }
+            csi_codes::CUF_CURSOR_FORWARD => {
+                vt_100_shim_cursor_ops::cursor_forward(self, params)
+            }
+            csi_codes::CUB_CURSOR_BACKWARD => {
+                vt_100_shim_cursor_ops::cursor_backward(self, params)
+            }
             csi_codes::CUP_CURSOR_POSITION | csi_codes::HVP_CURSOR_POSITION => {
-                cursor_ops::cursor_position(self, params);
+                vt_100_shim_cursor_ops::cursor_position(self, params);
             }
-            csi_codes::CNL_CURSOR_NEXT_LINE => cursor_ops::cursor_next_line(self, params),
-            csi_codes::CPL_CURSOR_PREV_LINE => cursor_ops::cursor_prev_line(self, params),
+            csi_codes::CNL_CURSOR_NEXT_LINE => {
+                vt_100_shim_cursor_ops::cursor_next_line(self, params)
+            }
+            csi_codes::CPL_CURSOR_PREV_LINE => {
+                vt_100_shim_cursor_ops::cursor_prev_line(self, params)
+            }
             csi_codes::CHA_CURSOR_COLUMN => {
-                cursor_ops::cursor_column(self, params);
+                vt_100_shim_cursor_ops::cursor_column(self, params);
             }
-            csi_codes::SCP_SAVE_CURSOR => cursor_ops::save_cursor_position(self),
-            csi_codes::RCP_RESTORE_CURSOR => cursor_ops::restore_cursor_position(self),
+            csi_codes::SCP_SAVE_CURSOR => {
+                vt_100_shim_cursor_ops::save_cursor_position(self)
+            }
+            csi_codes::RCP_RESTORE_CURSOR => {
+                vt_100_shim_cursor_ops::restore_cursor_position(self)
+            }
 
             // Scrolling operations.
-            csi_codes::SU_SCROLL_UP => scroll_ops::scroll_up(self, params),
-            csi_codes::SD_SCROLL_DOWN => scroll_ops::scroll_down(self, params),
+            csi_codes::SU_SCROLL_UP => vt_100_shim_scroll_ops::scroll_up(self, params),
+            csi_codes::SD_SCROLL_DOWN => {
+                vt_100_shim_scroll_ops::scroll_down(self, params)
+            }
 
             // Margin operations.
-            csi_codes::DECSTBM_SET_MARGINS => margin_ops::set_margins(self, params),
+            csi_codes::DECSTBM_SET_MARGINS => {
+                vt_100_shim_margin_ops::set_margins(self, params)
+            }
 
             // Device status operations.
-            csi_codes::DSR_DEVICE_STATUS => dsr_ops::status_report(self, params),
+            csi_codes::DSR_DEVICE_STATUS => {
+                vt_100_shim_dsr_ops::status_report(self, params)
+            }
 
             // Mode operations.
-            csi_codes::SM_SET_MODE => mode_ops::set_mode(self, params, intermediates),
-            csi_codes::RM_RESET_MODE => mode_ops::reset_mode(self, params, intermediates),
+            csi_codes::SM_SET_MODE => {
+                vt_100_shim_mode_ops::set_mode(self, params, intermediates)
+            }
+            csi_codes::RM_RESET_MODE => {
+                vt_100_shim_mode_ops::reset_mode(self, params, intermediates)
+            }
 
             // Graphics operations.
-            csi_codes::SGR_SET_GRAPHICS => sgr_ops::set_graphics_rendition(self, params),
+            csi_codes::SGR_SET_GRAPHICS => {
+                vt_100_shim_sgr_ops::set_graphics_rendition(self, params)
+            }
 
             // Line operations.
-            csi_codes::IL_INSERT_LINE => line_ops::insert_lines(self, params),
-            csi_codes::DL_DELETE_LINE => line_ops::delete_lines(self, params),
+            csi_codes::IL_INSERT_LINE => vt_100_shim_line_ops::insert_lines(self, params),
+            csi_codes::DL_DELETE_LINE => vt_100_shim_line_ops::delete_lines(self, params),
 
             // Character operations.
-            csi_codes::DCH_DELETE_CHAR => char_ops::delete_chars(self, params),
-            csi_codes::ICH_INSERT_CHAR => char_ops::insert_chars(self, params),
-            csi_codes::ECH_ERASE_CHAR => char_ops::erase_chars(self, params),
+            csi_codes::DCH_DELETE_CHAR => {
+                vt_100_shim_char_ops::delete_chars(self, params)
+            }
+            csi_codes::ICH_INSERT_CHAR => {
+                vt_100_shim_char_ops::insert_chars(self, params)
+            }
+            csi_codes::ECH_ERASE_CHAR => vt_100_shim_char_ops::erase_chars(self, params),
 
             // Additional cursor positioning.
             csi_codes::VPA_VERTICAL_POSITION => {
-                cursor_ops::vertical_position_absolute(self, params);
+                vt_100_shim_cursor_ops::vertical_position_absolute(self, params);
             }
 
             // Display control operations (explicitly ignored).
@@ -524,7 +557,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// Pushes SetTitleAndTab event
     /// ```
     fn osc_dispatch(&mut self, params: &[&[u8]], bell_terminated: bool) {
-        osc_ops::dispatch_osc(self, params, bell_terminated);
+        vt_100_shim_osc_ops::dispatch_osc(self, params, bell_terminated);
     }
 
     /// Handle escape sequences (not CSI or OSC).
@@ -631,35 +664,35 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
         match byte {
             esc_codes::DECSC_SAVE_CURSOR => {
                 // DECSC - Save current cursor position.
-                cursor_ops::save_cursor_position(self);
+                vt_100_shim_cursor_ops::save_cursor_position(self);
             }
             esc_codes::DECRC_RESTORE_CURSOR => {
                 // DECRC - Restore saved cursor position.
-                cursor_ops::restore_cursor_position(self);
+                vt_100_shim_cursor_ops::restore_cursor_position(self);
             }
             esc_codes::IND_INDEX_DOWN => {
                 // IND - Index (move down one line, scroll if at bottom).
-                scroll_ops::index_down(self);
+                vt_100_shim_scroll_ops::index_down(self);
             }
             esc_codes::RI_REVERSE_INDEX_UP => {
                 // RI - Reverse Index (move up one line, scroll if at top).
-                scroll_ops::reverse_index_up(self);
+                vt_100_shim_scroll_ops::reverse_index_up(self);
             }
             esc_codes::RIS_RESET_TERMINAL => {
                 // RIS - Reset to Initial State.
-                terminal_ops::reset_terminal(self);
+                vt_100_shim_terminal_ops::reset_terminal(self);
             }
             _ if intermediates == esc_codes::G0_CHARSET_INTERMEDIATE => {
                 // Character set selection G0.
                 match byte {
                     esc_codes::CHARSET_ASCII => {
                         // Select ASCII character set (normal mode).
-                        terminal_ops::select_ascii_character_set(self);
+                        vt_100_shim_terminal_ops::select_ascii_character_set(self);
                     }
                     esc_codes::CHARSET_DEC_GRAPHICS => {
                         // Select DEC Special Graphics character set.
                         // This enables box-drawing characters.
-                        terminal_ops::select_dec_graphics_character_set(self);
+                        vt_100_shim_terminal_ops::select_dec_graphics_character_set(self);
                     }
                     _ => {}
                 }
