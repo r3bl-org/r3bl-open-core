@@ -7,6 +7,7 @@
 - [x] [`task_make_editor_vt_100_parser_more_typesafe`](docs/done/task_make_editor_vt_100_parser_more_typesafe.md)
 - [x] [`task_task_scroll_viewport_selection_refactor`](docs/done/task_scroll_viewport_selection_refactor.md)
 - [x] 2025-10-07 review `bounds_check`, and make polished documentation & ergonomic API
+- [x] [`task_fix_params_ext`](docs/done/task_fix_params_ext.md)
 - [⌛] review `pty_mux`, `offscreen_buffer` and `ansi conformance tests`
 - [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
 - [⌛] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)

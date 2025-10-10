@@ -282,6 +282,36 @@ pub const SGR_BG_BRIGHT_CYAN: u16 = 106;
 /// Bright White background
 pub const SGR_BG_BRIGHT_WHITE: u16 = 107;
 
+// Extended Color Support (256-color and RGB).
+
+/// Extended foreground color (SGR 38)
+///
+/// Used in sequences like:
+/// - `ESC[38:5:nM` - 256-color foreground (n = 0-255)
+/// - `ESC[38:2:r:g:bM` - RGB foreground (r,g,b = 0-255)
+pub const SGR_FG_EXTENDED: u16 = 38;
+
+/// Extended background color (SGR 48)
+///
+/// Used in sequences like:
+/// - `ESC[48:5:nM` - 256-color background (n = 0-255)
+/// - `ESC[48:2:r:g:bM` - RGB background (r,g,b = 0-255)
+pub const SGR_BG_EXTENDED: u16 = 48;
+
+/// 256-color mode indicator
+///
+/// Second parameter in 256-color sequences:
+/// - `ESC[38:5:nM` - 256-color foreground
+/// - `ESC[48:5:nM` - 256-color background
+pub const SGR_COLOR_MODE_256: u16 = 5;
+
+/// RGB color mode indicator
+///
+/// Second parameter in RGB color sequences:
+/// - `ESC[38:2:r:g:bM` - RGB foreground
+/// - `ESC[48:2:r:g:bM` - RGB background
+pub const SGR_COLOR_MODE_RGB: u16 = 2;
+
 // Cursor Save/Restore (CSI versions).
 
 /// CSI s: Save Cursor Position (SCP)

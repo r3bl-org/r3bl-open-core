@@ -76,7 +76,10 @@
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer, protocols::csi_codes};
 // Import the StyleAttribute enum from the implementation module.
 // This will be available once we update the mod.rs file.
-use crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_sgr_ops::StyleAttribute;
+use crate::{
+    tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_sgr_ops::StyleAttribute,
+    ParamsExt,
+};
 use vte::Params;
 
 /// Reset all SGR attributes to default state.
@@ -186,10 +189,40 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 }
 
 /// Handle SGR (Select Graphic Rendition) parameters.
+///
+/// This function processes SGR parameters and applies them to the offscreen buffer.
+/// It supports:
+/// - Basic text attributes (bold, italic, underline, etc.)
+/// - 16-color ANSI colors (30-37, 40-47, 90-97, 100-107)
+/// - 256-color palette (ESC[38:5:nm or ESC[48:5:nm)
+/// - RGB true color (ESC[38:2:r:g:bm or ESC[48:2:r:g:bm)
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
-    for param_slice in params {
-        for &param in param_slice {
-            apply_sgr_param(performer, param);
+    let mut idx = 0;
+    while let Some(param_slice) = params.extract_nth_all(idx) {
+        // Check for extended color sequences first (they consume multiple positions).
+        if let Some((color, is_background)) =
+            csi_codes::ExtendedColorSequence::parse_from_slice(param_slice)
+        {
+            match color {
+                csi_codes::ExtendedColorSequence::Ansi256 { index } => {
+                    if is_background {
+                        performer.ofs_buf.set_background_ansi256(index);
+                    } else {
+                        performer.ofs_buf.set_foreground_ansi256(index);
+                    }
+                }
+                csi_codes::ExtendedColorSequence::Rgb { r, g, b } => {
+                    if is_background {
+                        performer.ofs_buf.set_background_rgb(r, g, b);
+                    } else {
+                        performer.ofs_buf.set_foreground_rgb(r, g, b);
+                    }
+                }
+            }
+        } else if let Some(&first_param) = param_slice.first() {
+            // Handle single parameters (existing behavior for basic SGR codes).
+            apply_sgr_param(performer, first_param);
         }
+        idx += 1;
     }
 }

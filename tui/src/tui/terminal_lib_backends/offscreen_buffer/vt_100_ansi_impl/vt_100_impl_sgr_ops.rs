@@ -42,7 +42,9 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{TuiStyle,
-            core::pty_mux::vt_100_ansi_parser::ansi_to_tui_color::ansi_to_tui_color,
+            core::pty_mux::vt_100_ansi_parser::ansi_to_tui_color::{
+                ansi256_to_tui_color, ansi_to_tui_color, rgb_to_tui_color,
+            },
             tui_style_attrib};
 
 impl OffscreenBuffer {
@@ -137,6 +139,62 @@ impl OffscreenBuffer {
     /// Reset background color to default.
     pub fn reset_background_color(&mut self) {
         self.ansi_parser_support.current_style.color_bg = None;
+    }
+
+    /// Set foreground color using 256-color palette index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - Palette index (0-255)
+    ///
+    /// # VT100 Sequences
+    ///
+    /// Used with: `ESC[38;5;nm` or `ESC[38:5:nm`
+    pub fn set_foreground_ansi256(&mut self, index: u8) {
+        self.ansi_parser_support.current_style.color_fg = Some(ansi256_to_tui_color(index));
+    }
+
+    /// Set background color using 256-color palette index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - Palette index (0-255)
+    ///
+    /// # VT100 Sequences
+    ///
+    /// Used with: `ESC[48;5;nm` or `ESC[48:5:nm`
+    pub fn set_background_ansi256(&mut self, index: u8) {
+        self.ansi_parser_support.current_style.color_bg = Some(ansi256_to_tui_color(index));
+    }
+
+    /// Set foreground color using RGB values.
+    ///
+    /// # Arguments
+    ///
+    /// * `r` - Red component (0-255)
+    /// * `g` - Green component (0-255)
+    /// * `b` - Blue component (0-255)
+    ///
+    /// # VT100 Sequences
+    ///
+    /// Used with: `ESC[38;2;r;g;bm` or `ESC[38:2:r:g:bm`
+    pub fn set_foreground_rgb(&mut self, r: u8, g: u8, b: u8) {
+        self.ansi_parser_support.current_style.color_fg = Some(rgb_to_tui_color(r, g, b));
+    }
+
+    /// Set background color using RGB values.
+    ///
+    /// # Arguments
+    ///
+    /// * `r` - Red component (0-255)
+    /// * `g` - Green component (0-255)
+    /// * `b` - Blue component (0-255)
+    ///
+    /// # VT100 Sequences
+    ///
+    /// Used with: `ESC[48;2;r;g;bm` or `ESC[48:2:r:g:bm`
+    pub fn set_background_rgb(&mut self, r: u8, g: u8, b: u8) {
+        self.ansi_parser_support.current_style.color_bg = Some(rgb_to_tui_color(r, g, b));
     }
 }
 

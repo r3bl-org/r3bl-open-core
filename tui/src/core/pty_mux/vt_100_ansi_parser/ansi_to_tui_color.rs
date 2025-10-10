@@ -1,11 +1,22 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! ANSI color code to `TuiColor` conversion utility.
+//!
+//! This module provides conversion functions from various ANSI color formats to the
+//! `TuiColor` type used throughout the TUI framework.
+//!
+//! # Supported Color Formats
+//!
+//! - **Basic 16 colors** (SGR 30-37, 40-47, 90-97, 100-107) - [`ansi_to_tui_color`]
+//! - **256-color palette** (SGR 38;5;n / 48;5;n) - [`ansi256_to_tui_color`]
+//! - **RGB true color** (SGR 38;2;r;g;b / 48;2;r;g;b) - [`rgb_to_tui_color`]
 
-use crate::{ANSIBasicColor, TuiColor};
+use crate::{ANSIBasicColor, AnsiValue, RgbValue, TuiColor};
 
 /// Convert ANSI color code to `TuiColor`.
+///
 /// Supports both standard (30-37, 40-47) and bright (90-97, 100-107) colors.
+/// This is used for basic 16-color ANSI sequences.
 #[must_use]
 pub fn ansi_to_tui_color(ansi_code: i64) -> TuiColor {
     match ansi_code {
@@ -31,6 +42,82 @@ pub fn ansi_to_tui_color(ansi_code: i64) -> TuiColor {
 
         _ => TuiColor::Reset,
     }
+}
+
+/// Convert 256-color palette index to `TuiColor`.
+///
+/// This function handles extended color sequences using the 256-color palette.
+/// The palette is structured as follows:
+///
+/// - **0-15**: Standard ANSI colors (same as basic 16 colors)
+/// - **16-231**: 6×6×6 RGB cube (216 colors)
+/// - **232-255**: Grayscale ramp (24 shades from dark to light)
+///
+/// # Arguments
+///
+/// * `index` - Palette index (0-255)
+///
+/// # Returns
+///
+/// `TuiColor::Ansi` variant containing the palette index
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::ansi256_to_tui_color;
+///
+/// // Red from the 216-color cube
+/// let color = ansi256_to_tui_color(196);
+///
+/// // Grayscale value
+/// let gray = ansi256_to_tui_color(240);
+/// ```
+///
+/// # VT100 Sequences
+///
+/// This is typically used with:
+/// - `ESC[38;5;nm` - Set foreground to palette index n
+/// - `ESC[48;5;nm` - Set background to palette index n
+#[must_use]
+pub fn ansi256_to_tui_color(index: u8) -> TuiColor {
+    TuiColor::Ansi(AnsiValue::new(index))
+}
+
+/// Convert RGB color values to `TuiColor`.
+///
+/// This function handles true color (24-bit) RGB sequences, providing access to
+/// 16.7 million colors. Each component (red, green, blue) can range from 0-255.
+///
+/// # Arguments
+///
+/// * `r` - Red component (0-255)
+/// * `g` - Green component (0-255)
+/// * `b` - Blue component (0-255)
+///
+/// # Returns
+///
+/// `TuiColor::Rgb` variant containing the RGB values
+///
+/// # Examples
+///
+/// ```
+/// use r3bl_tui::rgb_to_tui_color;
+///
+/// // Orange color
+/// let orange = rgb_to_tui_color(255, 128, 0);
+///
+/// // Pure cyan
+/// let cyan = rgb_to_tui_color(0, 255, 255);
+/// ```
+///
+/// # VT100 Sequences
+///
+/// This is typically used with:
+/// - `ESC[38;2;r;g;bm` - Set foreground to RGB(r, g, b)
+/// - `ESC[48;2;r;g;bm` - Set background to RGB(r, g, b)
+#[must_use]
+pub fn rgb_to_tui_color(r: u8, g: u8, b: u8) -> TuiColor {
+    TuiColor::Rgb(RgbValue::from_u8(r, g, b))
 }
 
 #[cfg(test)]

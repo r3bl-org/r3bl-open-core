@@ -77,7 +77,7 @@ impl From<u16> for PrivateModeType {
 impl From<&vte::Params> for PrivateModeType {
     fn from(params: &vte::Params) -> Self {
         use super::params::ParamsExt;
-        let mode_num = params.extract_nth_opt_raw(0).unwrap_or(0);
+        let mode_num = params.extract_nth_single_opt_raw(0).unwrap_or(0);
         mode_num.into()
     }
 }

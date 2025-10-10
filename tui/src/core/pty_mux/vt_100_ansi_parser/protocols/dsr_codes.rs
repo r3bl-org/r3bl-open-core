@@ -75,7 +75,7 @@ mod dsr_request_type_impl {
 
     impl From<&vte::Params> for DsrRequestType {
         fn from(params: &vte::Params) -> Self {
-            let first_param_or_zero = params.extract_nth_opt_raw(0).unwrap_or(0);
+            let first_param_or_zero = params.extract_nth_single_opt_raw(0).unwrap_or(0);
             first_param_or_zero.into()
         }
     }

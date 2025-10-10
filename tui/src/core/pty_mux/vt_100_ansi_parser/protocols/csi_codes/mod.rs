@@ -43,6 +43,7 @@
 //! [`esc_codes`]: crate::vt_100_ansi_parser::esc_codes
 
 // Attach private module to avoid naming conflicts (hide inner details).
+mod color_sequences;
 mod constants;
 mod margin;
 mod params;
@@ -53,6 +54,7 @@ mod sequence;
 pub mod csi_test_helpers;
 
 // Re-export public items for easier access.
+pub use color_sequences::*;
 pub use constants::*;
 pub use margin::*;
 pub use params::*;
