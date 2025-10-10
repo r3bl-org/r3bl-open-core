@@ -5,12 +5,11 @@
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, height,
             offscreen_buffer::test_fixtures_ofs_buf::*,
-            tui_style_attrib,
+            term_col, term_row, tui_style_attrib,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                  csi_codes::{CsiSequence,
                                              csi_test_helpers::csi_seq_cursor_pos},
-                                 esc_codes::EscSequence,
-                                 term_units::{term_col, term_row}},
+                                 esc_codes::EscSequence},
             width};
 
 /// Create a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal size).

@@ -1134,8 +1134,8 @@
 //! [`Range<Index>`]: std::ops::Range
 //! [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 //! [`to_exclusive()`]: crate::RangeConvertExt::to_exclusive
-//! [`TermRow`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermRow
-//! [`TermCol`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermCol
+//! [`TermRow`]: crate::TermRow
+//! [`TermCol`]: crate::TermCol
 //! [Exclusive vs Inclusive Range Comparison]: mod@crate::core::units::bounds_check::range_bounds_check_ext#exclusive-vs-inclusive-range-comparison
 //! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
 //! [`cursor_bounds_check.rs`]: mod@crate::cursor_bounds_check

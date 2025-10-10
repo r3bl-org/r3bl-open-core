@@ -28,8 +28,8 @@
 /// [`From<u16>`]), we allow types with construction constraints (like non-zero values)
 /// to participate in generic numeric operations without violating their invariants.
 ///
-/// [`TermRow`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermRow
-/// [`TermCol`]: crate::core::pty_mux::vt_100_ansi_parser::term_units::TermCol
+/// [`TermRow`]: crate::TermRow
+/// [`TermCol`]: crate::TermCol
 /// [`NonZeroU16`]: std::num::NonZeroU16
 /// [`as_usize`]: Self::as_usize
 /// [`as_u16`]: Self::as_u16

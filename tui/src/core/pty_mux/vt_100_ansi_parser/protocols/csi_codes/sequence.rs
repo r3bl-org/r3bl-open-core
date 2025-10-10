@@ -5,8 +5,7 @@
 //! This module provides the `CsiSequence` enum which represents various CSI control
 //! sequences and can serialize them into ANSI escape codes.
 
-use super::{super::{super::term_units::{TermCol, TermRow},
-                    dsr_codes::DsrRequestType},
+use super::{super::dsr_codes::DsrRequestType,
             constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE, CPL_CURSOR_PREV_LINE,
                         CSI_PARAM_SEPARATOR, CSI_PRIVATE_MODE_PREFIX,
                         CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
@@ -18,7 +17,7 @@ use super::{super::{super::term_units::{TermCol, TermRow},
                         SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE, SU_SCROLL_UP,
                         VPA_VERTICAL_POSITION},
             private_mode::PrivateModeType};
-use crate::{BufTextStorage, FastStringify};
+use crate::{BufTextStorage, FastStringify, TermCol, TermRow};
 use std::fmt::{self, Display};
 
 /// Builder for CSI (Control Sequence Introducer) sequences.

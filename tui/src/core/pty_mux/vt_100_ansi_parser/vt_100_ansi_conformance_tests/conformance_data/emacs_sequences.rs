@@ -13,9 +13,8 @@
 //! - Often employs more conservative styling
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{ANSIBasicColor, SgrCode,
-            vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
-                                 term_units::{term_col, term_row}}};
+use crate::{ANSIBasicColor, SgrCode, term_col, term_row,
+            vt_100_ansi_parser::protocols::csi_codes::CsiSequence};
 
 /// Generate Emacs-style mode line display.
 ///

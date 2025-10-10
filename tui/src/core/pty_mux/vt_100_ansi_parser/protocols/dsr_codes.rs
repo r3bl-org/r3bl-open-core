@@ -21,9 +21,8 @@
 //! - `ESC [ 0 n` - Terminal OK status
 //! - `ESC [ row ; col R` - Cursor position (1-based)
 
-use super::{super::term_units::{TermCol, TermRow},
-            csi_codes::CSI_PARAM_SEPARATOR};
-use crate::{ParamsExt,
+use super::csi_codes::CSI_PARAM_SEPARATOR;
+use crate::{ParamsExt, TermCol, TermRow,
             core::common::fast_stringify::{BufTextStorage, FastStringify}};
 use std::fmt::{self, Display};
 
@@ -252,10 +251,8 @@ pub mod dsr_test_helpers {
 #[cfg(test)]
 mod tests {
     use super::{dsr_test_helpers::dsr_cursor_position_response, *};
-    use crate::{
-        term_units::{term_col, term_row},
-        vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
-    };
+    use crate::{term_col, term_row,
+                vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
 
     #[test]
     fn test_dsr_sequence_status_ok_response() {

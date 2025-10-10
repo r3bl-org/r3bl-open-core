@@ -266,13 +266,10 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_scroll_vert_ops {
     use super::*;
-    use crate::{col,
-                core::pty_mux::vt_100_ansi_parser::{term_units::term_row,
-                                                     vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz},
-                height, idx, row,
+    use crate::{col, height, idx, row, term_row, width,
+                core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
-                                        create_test_buffer_with_size},
-                width};
+                                        create_test_buffer_with_size}};
 
     fn create_test_buffer() -> OffscreenBuffer {
         create_test_buffer_with_size(width(10), height(6))

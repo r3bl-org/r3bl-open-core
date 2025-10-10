@@ -17,10 +17,9 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{col, row, term_col,
+use crate::{col, row, term_col, term_row,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                                 protocols::csi_codes::CsiSequence,
-                                 term_units::term_row}};
+                                 protocols::csi_codes::CsiSequence}};
 
 /// Tests for Insert Line (IL) operations.
 pub mod insert_line {

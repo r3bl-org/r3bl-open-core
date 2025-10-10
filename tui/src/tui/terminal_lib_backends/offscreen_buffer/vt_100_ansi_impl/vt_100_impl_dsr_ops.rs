@@ -28,8 +28,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{DsrRequestFromPtyEvent,
-            core::pty_mux::vt_100_ansi_parser::term_units::{TermCol, TermRow}};
+use crate::{DsrRequestFromPtyEvent, TermCol, TermRow};
 
 impl OffscreenBuffer {
     /// Handle device status report request.

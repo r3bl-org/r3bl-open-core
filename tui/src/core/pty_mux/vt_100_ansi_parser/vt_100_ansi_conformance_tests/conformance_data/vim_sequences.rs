@@ -15,10 +15,9 @@
 //! parsers and buffer management.
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{ANSIBasicColor, LengthOps, SgrCode, height,
-            vt_100_ansi_parser::{protocols::{csi_codes::CsiSequence,
-                                             esc_codes::EscSequence},
-                                 term_units::{term_col, term_row}}};
+use crate::{ANSIBasicColor, LengthOps, SgrCode, height, term_col, term_row,
+            vt_100_ansi_parser::protocols::{csi_codes::CsiSequence,
+                                            esc_codes::EscSequence}};
 use std::num::NonZeroU16;
 
 /// Vim status line pattern with mode indicator.

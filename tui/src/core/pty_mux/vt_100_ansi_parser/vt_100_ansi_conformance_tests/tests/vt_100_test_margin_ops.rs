@@ -9,7 +9,7 @@
 //! - Scrolling behavior within set margins
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::vt_100_ansi_parser::{protocols::csi_codes::CsiSequence, term_units::term_row};
+use crate::{term_row, vt_100_ansi_parser::protocols::csi_codes::CsiSequence};
 
 /// Tests for DECSTBM (Set Top and Bottom Margins) operations.
 pub mod decstbm_margins {

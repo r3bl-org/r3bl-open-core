@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::super::{FlushKind, RenderOps};
-use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TuiStyle,
-            core::pty_mux::vt_100_ansi_parser::term_units::TermRow, osc::OscEvent};
+use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle,
+            osc::OscEvent};
 use std::fmt::Debug;
 
 /// Character set modes for terminal emulation.

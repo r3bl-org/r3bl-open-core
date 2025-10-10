@@ -28,8 +28,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::core::{pty_mux::vt_100_ansi_parser::term_units::TermRow,
-                  units::bounds_check::LengthOps};
+use crate::core::units::{TermRow, bounds_check::LengthOps};
 
 impl OffscreenBuffer {
     /// Reset scroll margins to full screen (no restrictions).
@@ -80,10 +79,8 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_margin_ops {
     use super::*;
-    use crate::{core::pty_mux::vt_100_ansi_parser::{
-                    term_units::term_row,
-                    vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
-                },
+    use crate::{core::{pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+                       units::term_row},
                 height, width};
 
     fn create_test_buffer() -> OffscreenBuffer {

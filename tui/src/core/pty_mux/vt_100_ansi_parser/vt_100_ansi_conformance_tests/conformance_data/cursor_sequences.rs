@@ -13,9 +13,9 @@
 //! - Absolute Positioning: VT100 User Guide Section 3.3.4
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::vt_100_ansi_parser::{protocols::{csi_codes::CsiSequence,
-                                            esc_codes::EscSequence},
-                                term_units::{term_col, term_row}};
+use crate::{term_col, term_row,
+            vt_100_ansi_parser::protocols::{csi_codes::CsiSequence,
+                                            esc_codes::EscSequence}};
 use std::num::NonZeroU16;
 
 /// Move cursor to absolute position (row, col).

@@ -1,74 +1,120 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Parameter parsing utilities for VT100-compliant CSI sequences.
-//!
-//! This module provides traits and structs for extracting and parsing parameters from
-//! CSI sequences according to VT100 specifications.
+//! Parameter parsing utilities for VT100-compliant CSI sequences. See [`ParamsExt`] for
+//! details.
 
-use super::super::super::term_units::{TermCol, TermRow, TermUnit};
-use crate::{ColIndex, ColWidth, Index, Length, RowHeight, RowIndex};
+use crate::{ColIndex, ColWidth, Index, Length, RowHeight, RowIndex, TermCol, TermRow,
+            TermUnit};
 use std::{cmp::max, num::NonZeroU16};
 
 /// Extension trait for [`vte::Params`] providing VT100-compliant parameter extraction.
+///
+/// This extension trait works around Rust's orphan rule, which prevents adding impl
+/// blocks directly to [`vte::Params`] (a type from an external crate).
+///
+/// # VT100 Parameter Structure
+///
+/// The [`vte::Params`] type handles CSI parameters with support for sub-parameters.
+/// Each parameter position is stored as a slice `[u16]` that can contain multiple
+/// values separated by colons:
+///
+/// ```text
+/// ESC[5;10H      → Simple params: [[5], [10]]
+/// ```
+///
+/// This sequence holds 2 simple parameters: `5` and `10`, each stored as a single-element
+/// slice.
+///
+/// ```text
+/// ESC[38:5:196m  → Sub-params: [[38, 5, 196]]
+/// ```
+///
+/// This sequence holds 1 parameter with 3 sub-parameters: `38`, `5`, and `196`.
+///
+/// Both methods in this trait extract the **primary value** (first element) from each
+/// parameter slice using `.first()`, which is the standard behavior for most VT100
+/// commands.
+///
+/// # Usage Examples
+///
+/// **Parameter indexing** (both methods use 0-based indexing):
+/// ```text
+/// params.extract_nth_non_zero(0)  → first parameter's primary value
+/// params.extract_nth_non_zero(1)  → second parameter's primary value
+/// params.extract_nth_opt_raw(0)   → first parameter's primary value (raw)
+/// params.extract_nth_opt_raw(1)   → second parameter's primary value (raw)
+/// ```
+///
+/// **Why these methods exist**: They handle the slice extraction (`.first()`) and
+/// VT100-compliant defaults automatically:
+///
+/// | Sequence | `extract_nth_non_zero(0)` | `extract_nth_opt_raw(0)` |
+/// |----------|---------------------------|--------------------------|
+/// | `ESC[A`  | 1                         | `None`                   |
+/// | `ESC[0A` | 1                         | `Some(0)`                |
+/// | `ESC[5A` | 5                         | `Some(5)`                |
+///
+/// # Method Selection Guide
+///
+/// **Use [`extract_nth_non_zero`]** when:
+/// - Missing/zero parameters should default to 1 (VT100 standard behavior)
+/// - Implementing cursor movement commands (`CUU`, `CUD`, `CUF`, `CUB`)
+/// - Implementing scroll operations (`SU`, `SD`)
+/// - The parameter represents a count or distance
+///
+/// **Use [`extract_nth_opt_raw`]** when:
+/// - Missing parameters have different semantics than zero parameters
+/// - Implementing scroll margin commands (`DECSTBM`) where missing params mean "use
+///   viewport bounds"
+/// - You need to distinguish between "parameter absent" vs "parameter is 0"
+///
+/// # Parameter Handling Rules
+///
+/// | Method                  | Missing Param | Zero Param | Non-Zero Param |
+/// |-------------------------|---------------|------------|----------------|
+/// | `extract_nth_non_zero`  | 1             | 1          | n              |
+/// | `extract_nth_opt_raw`   | `None`        | `Some(0)`  | `Some(n)`      |
+///
+/// [`extract_nth_non_zero`]: ParamsExt::extract_nth_non_zero
+/// [`extract_nth_opt_raw`]: ParamsExt::extract_nth_opt_raw
 pub trait ParamsExt {
+    /// Extract the nth parameter (0-based) with VT100-compliant default handling.
+    ///
+    /// Missing or zero parameters default to 1, ensuring VT100 compatibility.
+    ///
+    /// # Returns
+    /// [`NonZeroU16`] - Always returns a value `>= 1` per VT100 specification.
     fn extract_nth_non_zero(&self, arg_n: impl Into<Index>) -> NonZeroU16;
+
+    /// Extract the nth parameter (0-based) without default transformation.
+    ///
+    /// Preserves the distinction between missing and zero parameters.
+    ///
+    /// # Returns
+    /// - [`None`] if no parameter is present at index n
+    /// - [`Some(value)`] if a parameter is present (including 0)
+    ///
+    /// [`Some(value)`]: Option::Some
     fn extract_nth_opt_raw(&self, arg_n: impl Into<Index>) -> Option<u16>;
 }
 
 impl ParamsExt for vte::Params {
-    /// Extract the nth parameter (0-based) with VT100-compliant default handling.
-    ///
-    /// Here are some use cases:
-    /// - `extract_nth_param_non_zero(params, 0)` extracts the first parameter
-    /// - `extract_nth_param_non_zero(params, 1)` extracts the second parameter
-    /// - `ESC[A` (no param) → returns 1 for any n
-    /// - `ESC[0;5A` → returns 1 for n=0, 5 for n=1
-    ///
-    /// # Returns
-    /// [`NonZeroU16`] because VT100 spec guarantees parameter values are always `>= 1`.
-    /// Missing or zero parameters default to 1.
-    ///
-    /// ## Parameter Handling Rules
-    ///
-    /// | Input                     | Option      | Output |
-    /// |---------------------------|-------------|--------|
-    /// | **Missing parameters**    | `None`      | 1      |
-    /// | **Zero parameters**       | `Some(0)`   | 1      |
-    /// | **Non-zero parameters**   | `Some(n)`   | n      |
-    ///
-    /// This ensures compatibility with real VT100 terminals and modern terminal
-    /// emulators.
     fn extract_nth_non_zero(&self, arg_n: impl Into<Index>) -> NonZeroU16 {
         let n: Index = arg_n.into();
         let value = self
             .iter()
             .nth(n.as_usize())
-            .and_then(|p| p.first())
+            .and_then(|params_at_nth_pos| params_at_nth_pos.first())
             .copied()
             .map_or(
                 /* None -> 1 */ 1,
-                /* Some(0) -> 1 */ |it| max(1, it),
+                /* Some(x) -> max(1, x) */ |it| max(1, it),
             );
 
-        // SAFETY: max(1, x) guarantees value >= 1
         debug_assert!(value > 0);
         unsafe { NonZeroU16::new_unchecked(value) }
     }
 
-    /// Extract the nth parameter (0-based) without any default transformation.
-    ///
-    /// This is useful for cases where the parameter's absence has different
-    /// semantics than a default value. Here are some use cases:
-    /// - `extract_nth_optional_param(params, 0)` extracts the first parameter
-    /// - `extract_nth_optional_param(params, 1)` extracts the second parameter
-    /// - `ESC[5A` → returns Some(5) for n=0, None for n=1
-    /// - `ESC[0;7A` → returns Some(0) for n=0, Some(7) for n=1
-    ///
-    /// ## Returns
-    /// - [`None`] if no parameter is present at index n
-    /// - [`Some(value)`] if a parameter is present (including 0)
-    ///
-    /// [`Some(value)`]: Option::Some
     fn extract_nth_opt_raw(&self, arg_n: impl Into<Index>) -> Option<u16> {
         let n: Index = arg_n.into();
         self.iter()
@@ -201,6 +247,21 @@ impl From<&vte::Params> for CursorPositionRequest {
     }
 }
 
+/// Note: Why there are no direct tests for [`ParamsExt`] trait methods
+///
+/// The [`vte::Params`] type has private fields and cannot be meaningfully constructed
+/// with test data. While it implements `Default`, you can only populate it through
+/// the VTE parser by feeding it real escape sequences.
+///
+/// The [`ParamsExt`] methods are thoroughly tested indirectly through integration tests:
+/// - MovementCount tests exercise `extract_nth_non_zero(0)`
+/// - CursorPositionRequest tests exercise `extract_nth_non_zero(0)` and
+///   `extract_nth_non_zero(1)`
+/// - MarginRequest tests (in margin.rs) exercise `extract_nth_opt_raw`
+///
+/// This integration testing approach is preferred because it validates the entire
+/// parsing pipeline with real VTE parser output, ensuring correctness with actual
+/// terminal escape sequences rather than mocked data.
 #[cfg(test)]
 mod tests {
     use super::*;

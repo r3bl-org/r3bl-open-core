@@ -36,8 +36,9 @@
 //! - **[`ansi_parser_public_api`]**: Public API for ANSI sequence processing
 //! - **[`perform`]**: VTE `Perform` trait implementation with detailed architecture docs
 //! - **[`protocols`]**: ANSI sequence builders (`CsiSequence`, `EscSequence`, `SgrCode`)
-//! - **[`operations`]**: Modular operation handlers (cursor, SGR, scrolling, etc.)
-//! - **[`term_units`]**: Type-safe terminal coordinate system
+//! - **[`operations::char_ops`]**: Modular operation handlers (cursor, SGR, scrolling,
+//!   etc.)
+//! - **Terminal coordinates**: [`TermRow`], [`TermCol`] - Type-safe 1-based coordinates
 //!
 //! # Code Organization and Naming Convention
 //!
@@ -297,6 +298,8 @@
 //! [`vt_100_ansi_impl::impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`operations::char_ops`]: operations::vt_100_shim_char_ops
 //! [`vt_100_ansi_conformance_tests::tests::test_char_ops`]: vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
+//! [`TermRow`]: crate::TermRow
+//! [`TermCol`]: crate::TermCol
 
 // Attach.
 pub mod ansi_parser_public_api;
@@ -304,13 +307,11 @@ pub mod ansi_to_tui_color;
 pub mod operations;
 pub mod perform;
 pub mod protocols;
-pub mod term_units;
 
 // Re-export.
 pub use ansi_parser_public_api::*;
 pub use operations::*;
 pub use protocols::*;
-pub use term_units::*;
 
 // VT100 ANSI conformance test modules.
 #[cfg(any(test, doc))]

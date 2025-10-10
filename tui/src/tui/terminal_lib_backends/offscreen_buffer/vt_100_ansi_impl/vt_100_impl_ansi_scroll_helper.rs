@@ -7,9 +7,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{RowIndex,
-            core::{pty_mux::vt_100_ansi_parser::term_units::TermUnit,
-                   units::bounds_check::{IndexOps, LengthOps}},
+use crate::{RowIndex, TermUnit,
+            core::units::bounds_check::{IndexOps, LengthOps},
             row};
 
 impl OffscreenBuffer {
@@ -98,11 +97,8 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_bounds_check_ops {
     use super::*;
-    use crate::{core::pty_mux::vt_100_ansi_parser::{
-                    term_units::term_row,
-                    vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
-                },
-                height, width};
+    use crate::{height, term_row, width,
+                core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);

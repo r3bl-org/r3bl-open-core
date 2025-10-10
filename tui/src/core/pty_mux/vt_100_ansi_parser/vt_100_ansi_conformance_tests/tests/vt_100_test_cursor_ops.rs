@@ -5,14 +5,13 @@
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{Pos, col, height,
             offscreen_buffer::test_fixtures_ofs_buf::*,
-            row,
+            row, term_col, term_row,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                  protocols::{csi_codes::{CSI_PARAM_SEPARATOR,
                                                          CSI_START, CsiSequence,
                                                          csi_test_helpers::{csi_seq_cursor_pos,
                                                                             csi_seq_cursor_pos_alt}},
-                                             esc_codes},
-                                 term_units::{term_col, term_row}},
+                                             esc_codes}},
             width};
 use std::num::NonZeroU16;
 use vte::Perform;

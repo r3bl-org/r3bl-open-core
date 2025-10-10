@@ -10,7 +10,7 @@
 //! - CBT (Cursor Backward Tab) - CSI Z (placeholder for future implementation)
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::vt_100_ansi_parser::term_units::{term_col, term_row};
+use crate::{term_col, term_row};
 
 /// Tests for basic TAB character (0x09) functionality.
 /// The current implementation uses fixed 8-column tab stops.

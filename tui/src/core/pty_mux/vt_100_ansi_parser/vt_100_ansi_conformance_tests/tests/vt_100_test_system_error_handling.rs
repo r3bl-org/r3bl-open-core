@@ -32,9 +32,8 @@
 //! - Buffer overflow and performance stress scenarios
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{col, row,
-            vt_100_ansi_parser::{protocols::csi_codes::CsiSequence,
-                                 term_units::{term_col, term_row}}};
+use crate::{col, row, term_col, term_row,
+            vt_100_ansi_parser::protocols::csi_codes::CsiSequence};
 
 /// Tests for malformed CSI sequence handling.
 pub mod malformed_csi_sequences {

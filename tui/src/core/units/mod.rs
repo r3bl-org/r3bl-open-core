@@ -8,6 +8,7 @@ pub mod byte_offset;
 pub mod ch_unit;
 pub mod index;
 pub mod length;
+pub mod term_units;
 
 // Re-export.
 pub use bounds_check::*;
@@ -17,3 +18,4 @@ pub use byte_offset::*;
 pub use ch_unit::*;
 pub use index::*;
 pub use length::*;
+pub use term_units::*;

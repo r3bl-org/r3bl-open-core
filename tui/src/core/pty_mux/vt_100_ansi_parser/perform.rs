@@ -307,60 +307,60 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             // Cursor movement operations.
             csi_codes::CUU_CURSOR_UP => vt_100_shim_cursor_ops::cursor_up(self, params),
             csi_codes::CUD_CURSOR_DOWN => {
-                vt_100_shim_cursor_ops::cursor_down(self, params)
+                vt_100_shim_cursor_ops::cursor_down(self, params);
             }
             csi_codes::CUF_CURSOR_FORWARD => {
-                vt_100_shim_cursor_ops::cursor_forward(self, params)
+                vt_100_shim_cursor_ops::cursor_forward(self, params);
             }
             csi_codes::CUB_CURSOR_BACKWARD => {
-                vt_100_shim_cursor_ops::cursor_backward(self, params)
+                vt_100_shim_cursor_ops::cursor_backward(self, params);
             }
             csi_codes::CUP_CURSOR_POSITION | csi_codes::HVP_CURSOR_POSITION => {
                 vt_100_shim_cursor_ops::cursor_position(self, params);
             }
             csi_codes::CNL_CURSOR_NEXT_LINE => {
-                vt_100_shim_cursor_ops::cursor_next_line(self, params)
+                vt_100_shim_cursor_ops::cursor_next_line(self, params);
             }
             csi_codes::CPL_CURSOR_PREV_LINE => {
-                vt_100_shim_cursor_ops::cursor_prev_line(self, params)
+                vt_100_shim_cursor_ops::cursor_prev_line(self, params);
             }
             csi_codes::CHA_CURSOR_COLUMN => {
                 vt_100_shim_cursor_ops::cursor_column(self, params);
             }
             csi_codes::SCP_SAVE_CURSOR => {
-                vt_100_shim_cursor_ops::save_cursor_position(self)
+                vt_100_shim_cursor_ops::save_cursor_position(self);
             }
             csi_codes::RCP_RESTORE_CURSOR => {
-                vt_100_shim_cursor_ops::restore_cursor_position(self)
+                vt_100_shim_cursor_ops::restore_cursor_position(self);
             }
 
             // Scrolling operations.
             csi_codes::SU_SCROLL_UP => vt_100_shim_scroll_ops::scroll_up(self, params),
             csi_codes::SD_SCROLL_DOWN => {
-                vt_100_shim_scroll_ops::scroll_down(self, params)
+                vt_100_shim_scroll_ops::scroll_down(self, params);
             }
 
             // Margin operations.
             csi_codes::DECSTBM_SET_MARGINS => {
-                vt_100_shim_margin_ops::set_margins(self, params)
+                vt_100_shim_margin_ops::set_margins(self, params);
             }
 
             // Device status operations.
             csi_codes::DSR_DEVICE_STATUS => {
-                vt_100_shim_dsr_ops::status_report(self, params)
+                vt_100_shim_dsr_ops::status_report(self, params);
             }
 
             // Mode operations.
             csi_codes::SM_SET_MODE => {
-                vt_100_shim_mode_ops::set_mode(self, params, intermediates)
+                vt_100_shim_mode_ops::set_mode(self, params, intermediates);
             }
             csi_codes::RM_RESET_MODE => {
-                vt_100_shim_mode_ops::reset_mode(self, params, intermediates)
+                vt_100_shim_mode_ops::reset_mode(self, params, intermediates);
             }
 
             // Graphics operations.
             csi_codes::SGR_SET_GRAPHICS => {
-                vt_100_shim_sgr_ops::set_graphics_rendition(self, params)
+                vt_100_shim_sgr_ops::set_graphics_rendition(self, params);
             }
 
             // Line operations.
@@ -369,10 +369,10 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
 
             // Character operations.
             csi_codes::DCH_DELETE_CHAR => {
-                vt_100_shim_char_ops::delete_chars(self, params)
+                vt_100_shim_char_ops::delete_chars(self, params);
             }
             csi_codes::ICH_INSERT_CHAR => {
-                vt_100_shim_char_ops::insert_chars(self, params)
+                vt_100_shim_char_ops::insert_chars(self, params);
             }
             csi_codes::ECH_ERASE_CHAR => vt_100_shim_char_ops::erase_chars(self, params),
 

@@ -5,7 +5,7 @@
 //! This module handles scrolling region margin settings, which define the area
 //! where scrolling operations occur.
 
-use super::super::super::term_units::{TermRow, term_row};
+use crate::{TermRow, term_row};
 use std::{cmp::max, num::NonZeroU16};
 
 /// Margin request types for DECSTBM (Set Top and Bottom Margins) operations.

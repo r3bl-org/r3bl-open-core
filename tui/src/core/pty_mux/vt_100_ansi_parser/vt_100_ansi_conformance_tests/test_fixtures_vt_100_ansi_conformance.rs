@@ -84,7 +84,7 @@ pub fn assert_blank_line(buf: &OffscreenBuffer, row: usize) {
 ///
 /// # Examples
 /// ```rust
-/// use r3bl_tui::vt_100_ansi_parser::term_units::{term_row, term_col};
+/// use r3bl_tui::{term_col, term_row};
 /// use std::num::NonZeroU16;
 ///
 /// let row = term_row(NonZeroU16::new(5).unwrap());

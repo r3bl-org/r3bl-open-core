@@ -22,8 +22,8 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::vt_100_ansi_parser::{protocols::csi_codes::{CsiSequence, PrivateModeType},
-                                term_units::{term_col, term_row}};
+use crate::{term_col, term_row,
+            vt_100_ansi_parser::protocols::csi_codes::{CsiSequence, PrivateModeType}};
 
 /// Tests for DECAWM (Auto Wrap Mode) operations.
 pub mod auto_wrap_mode {
