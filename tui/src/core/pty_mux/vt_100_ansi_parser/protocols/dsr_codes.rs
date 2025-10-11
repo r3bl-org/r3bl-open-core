@@ -23,7 +23,8 @@
 
 use super::csi_codes::CSI_PARAM_SEPARATOR;
 use crate::{ParamsExt, TermCol, TermRow,
-            core::common::fast_stringify::{BufTextStorage, FastStringify}};
+            core::common::fast_stringify::{BufTextStorage, FastStringify},
+            impl_display_for_fast_stringify};
 use std::fmt::{self, Display};
 
 // DSR response sequence components.
@@ -157,15 +158,9 @@ mod dsr_sequence_impl {
             f.write_str(&acc.clone())
         }
     }
-
-    impl fmt::Display for DsrSequence {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let mut acc = BufTextStorage::new();
-            self.write_to_buf(&mut acc)?;
-            self.write_buf_to_fmt(&acc, f)
-        }
-    }
 }
+
+impl_display_for_fast_stringify!(DsrSequence);
 
 /// Represents a Device Status Report (DSR) request event received FROM the PTY child
 /// process that requires a response to be sent back TO the PTY.

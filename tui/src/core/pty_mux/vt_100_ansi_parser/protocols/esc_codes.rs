@@ -39,7 +39,7 @@
 //! - `ESC ( 0` - Switch to line-drawing character set
 //! - `ESC c` - Reset terminal to initial state
 
-use crate::{BufTextStorage, FastStringify};
+use crate::{BufTextStorage, FastStringify, impl_display_for_fast_stringify};
 use std::fmt;
 
 // Cursor Save/Restore Operations
@@ -162,14 +162,6 @@ pub enum EscSequence {
     SelectDECGraphics,
 }
 
-impl fmt::Display for EscSequence {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut acc = BufTextStorage::new();
-        self.write_to_buf(&mut acc)?;
-        self.write_buf_to_fmt(&acc, f)
-    }
-}
-
 impl FastStringify for EscSequence {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
         acc.push('\x1b');
@@ -199,6 +191,8 @@ impl FastStringify for EscSequence {
         f.write_str(&acc.clone())
     }
 }
+
+impl_display_for_fast_stringify!(EscSequence);
 
 #[cfg(test)]
 mod tests {

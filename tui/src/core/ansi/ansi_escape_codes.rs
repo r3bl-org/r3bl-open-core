@@ -40,8 +40,8 @@
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 
-use crate::{ANSIBasicColor, AnsiValue, BufTextStorage, FastStringify};
-use std::fmt::{Display, Formatter, Result};
+use crate::{ANSIBasicColor, AnsiValue, FastStringify, impl_display_for_fast_stringify};
+use std::fmt::Result;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SgrCode {
@@ -99,21 +99,13 @@ const U8_STRINGS: [&str; 256] = [
     "244", "245", "246", "247", "248", "249", "250", "251", "252", "253", "254", "255",
 ];
 
-impl Display for SgrCode {
-    /// SGR: set graphics mode command.
-    /// More info:
-    /// - <https://notes.burke.libbey.me/ansi-escape-codes/>
-    /// - <https://www.asciitable.com/>
-    /// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
-    /// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        // Delegate to FastStringify for consistency.
-        let mut acc = BufTextStorage::new();
-        self.write_to_buf(&mut acc)?;
-        self.write_buf_to_fmt(&acc, f)
-    }
-}
-
+/// SGR: set graphics mode command.
+/// More info:
+/// - <https://notes.burke.libbey.me/ansi-escape-codes/>
+/// - <https://www.asciitable.com/>
+/// - <https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg>
+/// - <https://en.wikipedia.org/wiki/ANSI_escape_code>
+///
 /// [`FastStringify`] implementation for optimized performance.
 /// Uses direct string concatenation and lookup tables to avoid formatting overhead.
 impl FastStringify for SgrCode {
@@ -315,6 +307,8 @@ impl FastStringify for SgrCode {
         }
     }
 }
+
+impl_display_for_fast_stringify!(SgrCode);
 
 #[cfg(test)]
 mod tests {

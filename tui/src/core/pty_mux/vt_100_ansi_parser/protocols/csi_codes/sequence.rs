@@ -17,8 +17,9 @@ use super::{super::dsr_codes::DsrRequestType,
                         SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE, SU_SCROLL_UP,
                         VPA_VERTICAL_POSITION},
             private_mode::PrivateModeType};
-use crate::{BufTextStorage, FastStringify, TermCol, TermRow};
-use std::fmt::{self, Display};
+use crate::{BufTextStorage, FastStringify, TermCol, TermRow,
+            impl_display_for_fast_stringify};
+use std::fmt::{Formatter, Result};
 
 /// Builder for CSI (Control Sequence Introducer) sequences.
 /// Similar to `SgrCode` but for cursor movement and other CSI commands.
@@ -81,17 +82,9 @@ pub enum CsiSequence {
     VerticalPositionAbsolute(u16),
 }
 
-impl Display for CsiSequence {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut acc = BufTextStorage::new();
-        self.write_to_buf(&mut acc)?;
-        self.write_buf_to_fmt(&acc, f)
-    }
-}
-
 impl FastStringify for CsiSequence {
     #[allow(clippy::too_many_lines)]
-    fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         acc.push_str("\x1b[");
         match self {
             CsiSequence::CursorUp(n) => {
@@ -208,11 +201,9 @@ impl FastStringify for CsiSequence {
         Ok(())
     }
 
-    fn write_buf_to_fmt(
-        &self,
-        acc: &BufTextStorage,
-        f: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
+    fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result {
         f.write_str(&acc.clone())
     }
 }
+
+impl_display_for_fast_stringify!(CsiSequence);

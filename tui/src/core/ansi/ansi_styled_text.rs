@@ -2,11 +2,12 @@
 
 use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
             InlineString, InlineVec, PixelChar, SPACER_GLYPH_CHAR, SgrCode, TuiStyle,
-            UNICODE_REPLACEMENT_CHAR, inline_string, tui_color,
+            UNICODE_REPLACEMENT_CHAR, impl_display_for_fast_stringify, inline_string,
+            tui_color,
             tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse, Strikethrough,
                                Underline}};
 use smallvec::{SmallVec, smallvec};
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::Result;
 use strum_macros::EnumCount;
 
 /// Please don't create this struct directly, use [`crate::ast()`], [`crate::ast_line`!],
@@ -776,19 +777,6 @@ mod convert_tui_style_to_vec_ast_style {
     }
 }
 
-mod style_impl {
-    use super::{ASTStyle, BufTextStorage, Display, FastStringify, Formatter, Result};
-
-    impl Display for ASTStyle {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Delegate to FastStringify for consistency.
-            let mut acc = BufTextStorage::new();
-            self.write_to_buf(&mut acc)?;
-            self.write_buf_to_fmt(&acc, f)
-        }
-    }
-}
-
 impl FastStringify for ASTStyle {
     fn write_to_buf(&self, buf: &mut BufTextStorage) -> Result {
         use super::{ColorSupport, TransformColor, global_color_support};
@@ -850,6 +838,8 @@ impl FastStringify for ASTStyle {
     }
 }
 
+impl_display_for_fast_stringify!(ASTStyle);
+
 impl FastStringify for ASText {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         // Write all styles to buffer.
@@ -867,20 +857,7 @@ impl FastStringify for ASText {
     }
 }
 
-mod display_trait_impl {
-    use super::{ASText, BufTextStorage, Display, FastStringify, Formatter, Result};
-
-    impl Display for ASText {
-        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-            // Use BufTextStorage buffer for building the complete output.
-            let mut acc = BufTextStorage::new();
-            self.write_to_buf(&mut acc)?;
-
-            // Single write to formatter.
-            self.write_buf_to_fmt(&acc, f)
-        }
-    }
-}
+impl_display_for_fast_stringify!(ASText);
 
 #[cfg(test)]
 mod tests {

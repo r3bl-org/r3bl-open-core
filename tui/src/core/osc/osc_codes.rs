@@ -79,7 +79,8 @@ pub const OSC_CODE_TITLE: &str = "2";
 /// OSC code 8: Hyperlink
 pub const OSC_CODE_HYPERLINK: &str = "8";
 
-use crate::core::common::fast_stringify::{BufTextStorage, FastStringify};
+use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
+            impl_display_for_fast_stringify};
 use std::fmt;
 
 /// OSC sequence builder enum that provides type-safe construction of Operating System
@@ -113,14 +114,6 @@ pub enum OscSequence {
     /// Format: `ESC ] 8 ; ; ST`
     /// This closes the hyperlink started by `HyperlinkStart`
     HyperlinkEnd,
-}
-
-impl fmt::Display for OscSequence {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut acc = BufTextStorage::new();
-        self.write_to_buf(&mut acc)?;
-        self.write_buf_to_fmt(&acc, f)
-    }
 }
 
 impl FastStringify for OscSequence {
@@ -170,6 +163,8 @@ impl FastStringify for OscSequence {
         f.write_str(&acc.clone())
     }
 }
+
+impl_display_for_fast_stringify!(OscSequence);
 
 #[cfg(test)]
 mod tests {

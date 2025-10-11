@@ -1,7 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Trait for high-performance string building for complex types. See [`FastStringify`]
-//! and [`BufTextStorage`] for details.
+//! Trait for high-performance string building for complex types. See [`FastStringify`],
+//! [`BufTextStorage`] and [`impl_display_for_fast_stringify!`] for details.
+//!
+//! [`impl_display_for_fast_stringify!`]: crate::impl_display_for_fast_stringify
 
 use std::fmt::{Display, Formatter, Result};
 
@@ -14,13 +16,18 @@ use std::fmt::{Display, Formatter, Result};
 ///
 /// # How to Implement
 ///
-/// Both [`FastStringify`] and [`Display`] must be implemented. Follow these steps:
+/// Both [`FastStringify`] and [`Display`] must be implemented, but the [`Display`]
+/// implementation is always the same boilerplate. Use the [`impl_display_for_fast_stringify!`]
+/// macro to generate it automatically.
 ///
-/// 1. **Implement [`write_to_buf()`]** - Build your string using [`push_str`] on the buffer:
+/// 1. **Implement [`write_to_buf()`]** with your custom formatting logic
+/// 2. **Call the macro** [`impl_display_for_fast_stringify!`] to generate the [`Display`] implementation
+///
+/// [`impl_display_for_fast_stringify!`]: crate::impl_display_for_fast_stringify
 ///
 ///    ```rust
-///    # use r3bl_tui::{FastStringify, BufTextStorage};
-///    # use std::fmt::{Display, Formatter, Result, Write};
+///    # use r3bl_tui::{FastStringify, BufTextStorage, impl_display_for_fast_stringify};
+///    # use std::fmt::{Result, Write};
 ///    # struct MyType { value: i32 }
 ///    impl FastStringify for MyType {
 ///        fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
@@ -30,37 +37,11 @@ use std::fmt::{Display, Formatter, Result};
 ///            Ok(())
 ///        }
 ///    }
-///    # impl Display for MyType {
-///    #     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-///    #         let mut buffer = BufTextStorage::new();
-///    #         self.write_to_buf(&mut buffer)?;
-///    #         self.write_buf_to_fmt(&buffer, f)
-///    #     }
-///    # }
+///
+///    // ✨ One line instead of 5-line Display impl!
+///    impl_display_for_fast_stringify!(MyType);
 ///    ```
 ///
-/// 2. **Implement [`Display`] (required)** - Call [`write_to_buf()`] then [`write_buf_to_fmt()`]:
-///
-///    ```rust
-///    # use r3bl_tui::{FastStringify, BufTextStorage};
-///    # use std::fmt::{Display, Formatter, Result, Write};
-///    # struct MyType { value: i32 }
-///    # impl FastStringify for MyType {
-///    #     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
-///    #         acc.push_str("MyType { value: ");
-///    #         write!(acc, "{}", self.value)?;
-///    #         acc.push_str(" }");
-///    #         Ok(())
-///    #     }
-///    # }
-///    impl Display for MyType {
-///        fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-///            let mut buffer = BufTextStorage::new();
-///            self.write_to_buf(&mut buffer)?;      // Build string in buffer
-///            self.write_buf_to_fmt(&buffer, f)     // Single write to formatter
-///        }
-///    }
-///    ```
 /// # Why Use This?
 ///
 /// The standard [`Display`] trait using [`Formatter`] has significant overhead for types
@@ -196,3 +177,87 @@ pub trait FastStringify: Display {
 /// [`SmallString<[u8; 64]>`]: `smallstr::SmallString`
 /// [`SmallString<[u8; 256]>`]: `smallstr::SmallString`
 pub type BufTextStorage = String;
+
+/// Macro to implement the boilerplate [`Display`] trait for types implementing
+/// [`FastStringify`].
+///
+/// This macro eliminates the repetitive 5-line [`Display`] implementation that's
+/// identical for all types using [`FastStringify`]. Instead of manually writing the
+/// [`Display`] impl, just call this macro after your [`FastStringify`] implementation.
+///
+/// # Basic Usage
+///
+/// ```rust
+/// # use r3bl_tui::{FastStringify, BufTextStorage, impl_display_for_fast_stringify};
+/// # use std::fmt::{Result, Write};
+/// struct MyType { value: i32 }
+///
+/// impl FastStringify for MyType {
+///     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+/// #       todo!()
+///     }
+/// }
+///
+/// // Single line instead of 5-line Display impl!
+/// impl_display_for_fast_stringify!(MyType);
+/// ```
+///
+/// [`Display`]: std::fmt::Display
+/// [`FastStringify`]: FastStringify
+#[macro_export]
+macro_rules! impl_display_for_fast_stringify {
+    // Basic case: non-generic type
+    ($type:ty) => {
+        impl ::std::fmt::Display for $type {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                let mut buffer = $crate::BufTextStorage::new();
+                self.write_to_buf(&mut buffer)?;
+                self.write_buf_to_fmt(&buffer, f)
+            }
+        }
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+    use std::fmt::Write;
+
+    // Test: Non-generic type using the macro.
+    struct SimpleType {
+        value: i32,
+    }
+
+    impl FastStringify for SimpleType {
+        fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+            acc.push_str("SimpleType { value: ");
+            write!(acc, "{}", self.value)?;
+            acc.push_str(" }");
+            Ok(())
+        }
+    }
+
+    impl_display_for_fast_stringify!(SimpleType);
+
+    #[test]
+    fn test_macro_non_generic() {
+        let obj = SimpleType { value: 42 };
+        assert_eq!(format!("{}", obj), "SimpleType { value: 42 }");
+    }
+
+    // Test: Empty output.
+    struct EmptyType;
+
+    impl FastStringify for EmptyType {
+        fn write_to_buf(&self, _acc: &mut BufTextStorage) -> Result { Ok(()) }
+    }
+
+    impl_display_for_fast_stringify!(EmptyType);
+
+    #[test]
+    fn test_macro_empty_output() {
+        let empty = EmptyType;
+        assert_eq!(format!("{}", empty), "");
+    }
+}

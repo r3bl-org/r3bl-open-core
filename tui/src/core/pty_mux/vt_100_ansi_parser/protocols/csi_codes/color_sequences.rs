@@ -76,8 +76,9 @@
 use super::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
                        SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
                        SGR_SET_GRAPHICS};
-use crate::core::common::fast_stringify::{BufTextStorage, FastStringify};
-use std::fmt::{self, Display};
+use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
+            impl_display_for_fast_stringify};
+use std::fmt::Result;
 
 /// Extended color sequence operation parsed from VT100 SGR parameters.
 ///
@@ -249,17 +250,17 @@ impl ExtendedColorSequence {
     }
 }
 
-// Sequence generation implementations (bidirectional pattern).
-//
-// Like DsrSequence and OscSequence, ExtendedColorSequence implements both parsing
-// (parse_from_slice) and generation (FastStringify + Display) for bidirectional use:
-// - Parsing: Convert incoming bytes → ExtendedColorSequence enum
-// - Generation: Convert ExtendedColorSequence enum → ANSI escape string
-//
-// This enables type-safe, infallible test sequence generation without raw escape strings.
-
+/// Sequence generation implementations (bidirectional pattern).
+///
+/// Like `DsrSequence` and `OscSequence`, `ExtendedColorSequence` implements both parsing
+/// (`parse_from_slice`) and generation (`FastStringify` + `Display`) for bidirectional use:
+/// - Parsing: Convert incoming bytes → `ExtendedColorSequence` enum
+/// - Generation: Convert `ExtendedColorSequence` enum → ANSI escape string
+///
+/// This enables type-safe, infallible test sequence generation without raw escape
+/// strings.
 impl FastStringify for ExtendedColorSequence {
-    fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         acc.push_str(CSI_START);
         match self {
             ExtendedColorSequence::SetForegroundAnsi256(index) => {
@@ -304,13 +305,7 @@ impl FastStringify for ExtendedColorSequence {
     }
 }
 
-impl Display for ExtendedColorSequence {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut acc = BufTextStorage::new();
-        self.write_to_buf(&mut acc)?;
-        self.write_buf_to_fmt(&acc, f)
-    }
-}
+impl_display_for_fast_stringify!(ExtendedColorSequence);
 
 #[cfg(test)]
 mod tests {
