@@ -7,7 +7,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{RowIndex, TermUnit,
+use crate::{RowIndex,
             core::units::bounds_check::{IndexOps, LengthOps},
             row};
 

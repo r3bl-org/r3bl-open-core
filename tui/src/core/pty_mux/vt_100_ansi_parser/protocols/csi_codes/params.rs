@@ -3,8 +3,7 @@
 //! Parameter parsing utilities for VT100-compliant CSI sequences. See [`ParamsExt`] for
 //! details.
 
-use crate::{ColIndex, ColWidth, Index, Length, RowHeight, RowIndex, TermCol, TermRow,
-            TermUnit};
+use crate::{ColIndex, ColWidth, Index, Length, RowHeight, RowIndex, TermCol, TermRow};
 use std::{cmp::max, num::NonZeroU16};
 
 /// Extension trait for [`vte::Params`] providing VT100-compliant parameter extraction.

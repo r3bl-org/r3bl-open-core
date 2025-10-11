@@ -2,34 +2,78 @@
 
 //! Type-safe 1-based terminal coordinates for ANSI escape sequences.
 //!
-//! This module provides the [`TermRow`] and [`TermCol`] types that implement the
-//! [`TermUnit`] trait. See trait documentation for detailed usage and examples.
+//! This module provides the [`TermRow`] and [`TermCol`] types for terminal coordinates.
+//! See type documentation for detailed usage and examples.
 //! The [`vt_100_ansi_parser`] is the primary consumer of these types, along with
 //! the [`offscreen_buffer`] module which uses them for VT 100 related operations.
 //!
 //! [`vt_100_ansi_parser`]: crate::core::pty_mux::vt_100_ansi_parser
 //! [`offscreen_buffer`]: crate::tui::terminal_lib_backends::offscreen_buffer
 
-use crate::{ColIndex, IndexOps, NumericConversions, NumericValue, RowIndex,
+use crate::{ColIndex, NumericConversions, RowIndex,
             vt_100_ansi_parser::protocols::csi_codes::CsiSequence};
-use std::{fmt::Display, num::NonZeroU16, ops::Add};
+use std::{num::NonZeroU16, ops::Add};
 
-/// Common behavior for 1-based terminal coordinate types.
+/// Internal macro to implement all necessary traits and methods for terminal coordinate
+/// types.
 ///
-/// This trait provides default implementations for coordinate conversion and display,
-/// eliminating code duplication between [`TermRow`] and [`TermCol`].
+/// This macro generates:
+/// - [`NumericConversions`] trait implementation for reading values
+/// - [`From<NonZeroU16>`] for construction
+/// - [`Display`] trait for formatting
+/// - [`new()`] constructor for creating instances
+/// - [`as_u16()`] for extracting the raw 1-based value
+/// - [`from_zero_based()`] for converting from 0-based buffer indices
+/// - [`to_zero_based()`] for converting to 0-based buffer indices
 ///
-/// > <div class="warning">
-/// >
-/// > `TermUnit` can't extend [`NumericValue`] because `TermUnit` must be non-zero.
-/// > - [`NumericValue`] requires [`From<u16>`], which would allow constructing zero
-/// > values.
-/// > - Instead, `TermUnit` extends [`NumericConversions`] (for reading values) and
-/// > requires [`From<NonZeroU16>`] (for safe construction).
-/// >
-/// > </div>
-///
-/// # Core Concept
+/// [`NumericConversions`]: crate::core::units::NumericConversions
+/// [`From<NonZeroU16>`]: std::convert::From
+/// [`Display`]: std::fmt::Display
+/// [`new()`]: Self::new
+/// [`as_u16()`]: Self::as_u16
+/// [`from_zero_based()`]: Self::from_zero_based
+/// [`to_zero_based()`]: Self::to_zero_based
+macro_rules! generate_impl_term_unit {
+    ($term_index_type:ty, $index_type:ty) => {
+        impl NumericConversions for $term_index_type {
+            fn as_usize(&self) -> usize { self.0.get() as usize }
+            fn as_u16(&self) -> u16 { self.0.get() }
+        }
+
+        impl ::std::fmt::Display for $term_index_type {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                write!(f, "{}", self.0.get())
+            }
+        }
+
+        impl $term_index_type {
+            /// Create a new 1-based terminal coordinate.
+            #[must_use]
+            pub const fn new(value: NonZeroU16) -> Self { Self(value) }
+
+            /// Get the raw 1-based value.
+            #[must_use]
+            pub const fn as_u16(self) -> u16 { self.0.get() }
+
+            /// Convert from 0-based index_type to 1-based terminal coordinate.
+            #[must_use]
+            pub fn from_zero_based(index: $index_type) -> Self {
+                let nz_value = index.as_u16() + 1;
+                // SAFETY: 0-based index_type + 1 is always >= 1
+                debug_assert!(nz_value >= 1);
+                Self::new(unsafe { NonZeroU16::new_unchecked(nz_value) })
+            }
+
+            /// Convert to 0-based index_type for buffer operations.
+            #[must_use]
+            pub fn to_zero_based(&self) -> $index_type {
+                <$index_type>::from(self.as_u16().saturating_sub(1))
+            }
+        }
+    };
+}
+
+/// # Core Concept: Two Coordinate Systems
 ///
 /// Terminal operations use two distinct coordinate systems that must never be mixed:
 ///
@@ -49,10 +93,10 @@ use std::{fmt::Display, num::NonZeroU16, ops::Add};
 /// where `(1,1)` is the top-left corner. Internal data structures use 0-based indexing
 /// where `(0,0)` is the top-left. Mixing these systems causes off-by-one errors.
 ///
-/// # Usage
+/// # Usage Example
 ///
 /// ```rust
-/// use r3bl_tui::{term_col, term_row, RowIndex, TermRow, TermUnit};
+/// use r3bl_tui::{term_col, term_row, RowIndex, TermRow};
 /// use std::num::NonZeroU16;
 ///
 /// // Create terminal coordinates for ANSI sequences
@@ -79,50 +123,6 @@ use std::{fmt::Display, num::NonZeroU16, ops::Add};
 ///   for buffers
 /// - **Missing conversion**: Converting to buffer coords is infallible (always safe), but
 ///   forgetting to convert leads to accessing wrong cells
-///
-/// # Primary Consumers
-/// See [module documentation] for primary consumers of these types.
-///
-/// [module documentation]: self
-pub trait TermUnit: NumericConversions + From<NonZeroU16> {
-    /// The corresponding 0-based index type (e.g., [`RowIndex`] or [`ColIndex`]).
-    type ZeroBasedIndex: IndexOps;
-
-    /// Access the wrapped [`NonZeroU16`] value.
-    fn inner(&self) -> NonZeroU16;
-
-    /// Wrap a [`NonZeroU16`] to create this terminal unit.
-    fn wrap(value: NonZeroU16) -> Self;
-
-    /// Create a new terminal coordinate (1-based).
-    #[must_use]
-    #[allow(dead_code)]
-    fn new(value: NonZeroU16) -> Self { Self::wrap(value) }
-
-    /// Get the raw 1-based value.
-    #[must_use]
-    #[allow(dead_code)]
-    fn as_u16(&self) -> u16 { self.inner().get() }
-
-    /// Convert from 0-based index to 1-based terminal coordinate.
-    #[must_use]
-    fn from_zero_based(index: Self::ZeroBasedIndex) -> Self
-    where
-        Self::ZeroBasedIndex: NumericValue,
-    {
-        let value = index.as_u16() + 1;
-        debug_assert!(value > 0);
-        // SAFETY: 0-based index + 1 is always >= 1
-        let nonzero = unsafe { NonZeroU16::new_unchecked(value) };
-        Self::wrap(nonzero)
-    }
-
-    /// Convert to 0-based index for buffer operations.
-    #[must_use]
-    fn to_zero_based(&self) -> Self::ZeroBasedIndex {
-        Self::ZeroBasedIndex::from(self.inner().get() - 1)
-    }
-}
 
 /// Create a [`TermRow`] from a [`NonZeroU16`] value.
 #[must_use]
@@ -140,44 +140,7 @@ pub const fn term_row(value: NonZeroU16) -> TermRow { TermRow::new(value) }
 /// [module documentation]: mod@super
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermRow(pub NonZeroU16);
-
-mod term_row_impl {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl NumericConversions for TermRow {
-        fn as_usize(&self) -> usize { self.0.get() as usize }
-        fn as_u16(&self) -> u16 { self.0.get() }
-    }
-
-    impl From<NonZeroU16> for TermRow {
-        fn from(value: NonZeroU16) -> Self { Self(value) }
-    }
-
-    impl TermUnit for TermRow {
-        type ZeroBasedIndex = RowIndex;
-
-        fn inner(&self) -> NonZeroU16 { self.0 }
-
-        fn wrap(value: NonZeroU16) -> Self { Self(value) }
-    }
-
-    impl TermRow {
-        /// Create a new 1-based terminal row.
-        #[must_use]
-        pub const fn new(value: NonZeroU16) -> Self { Self(value) }
-
-        /// Get the raw 1-based row value.
-        #[must_use]
-        pub const fn as_u16(self) -> u16 { self.0.get() }
-    }
-
-    impl Display for TermRow {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.0.get())
-        }
-    }
-}
+generate_impl_term_unit!(TermRow, RowIndex);
 
 /// Create a [`TermCol`] from a [`NonZeroU16`] value.
 #[must_use]
@@ -195,44 +158,7 @@ pub const fn term_col(value: NonZeroU16) -> TermCol { TermCol::new(value) }
 /// [module documentation]: mod@super
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermCol(pub NonZeroU16);
-
-mod term_col_impl {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl NumericConversions for TermCol {
-        fn as_usize(&self) -> usize { self.0.get() as usize }
-        fn as_u16(&self) -> u16 { self.0.get() }
-    }
-
-    impl From<NonZeroU16> for TermCol {
-        fn from(value: NonZeroU16) -> Self { Self(value) }
-    }
-
-    impl TermUnit for TermCol {
-        type ZeroBasedIndex = ColIndex;
-
-        fn inner(&self) -> NonZeroU16 { self.0 }
-
-        fn wrap(value: NonZeroU16) -> Self { Self(value) }
-    }
-
-    impl TermCol {
-        /// Create a new 1-based terminal column.
-        #[must_use]
-        pub const fn new(value: NonZeroU16) -> Self { Self(value) }
-
-        /// Get the raw 1-based column value.
-        #[must_use]
-        pub const fn as_u16(self) -> u16 { self.0.get() }
-    }
-
-    impl Display for TermCol {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.0.get())
-        }
-    }
-}
+generate_impl_term_unit!(TermCol, ColIndex);
 
 /// Safe conversions from buffer coordinates (0-based) to terminal coordinates (1-based).
 mod from_buffer_coords {
@@ -327,27 +253,15 @@ mod tests {
     }
 
     #[test]
-    fn test_term_row_from_nonzero() {
-        let row = TermRow::from(nz(10));
-        assert_eq!(row.as_u16(), 10);
-    }
-
-    #[test]
     fn test_term_row_helper_function() {
         let row = term_row(nz(7));
         assert_eq!(row, TermRow::new(nz(7)));
     }
 
     #[test]
-    fn test_term_row_inner() {
+    fn test_term_row_inner_field_access() {
         let row = term_row(nz(15));
-        assert_eq!(row.inner(), nz(15));
-    }
-
-    #[test]
-    fn test_term_row_wrap() {
-        let row = TermRow::wrap(nz(20));
-        assert_eq!(row.as_u16(), 20);
+        assert_eq!(row.0, nz(15));
     }
 
     // ========================================================================
@@ -361,27 +275,15 @@ mod tests {
     }
 
     #[test]
-    fn test_term_col_from_nonzero() {
-        let col = TermCol::from(nz(12));
-        assert_eq!(col.as_u16(), 12);
-    }
-
-    #[test]
     fn test_term_col_helper_function() {
         let col = term_col(nz(9));
         assert_eq!(col, TermCol::new(nz(9)));
     }
 
     #[test]
-    fn test_term_col_inner() {
+    fn test_term_col_inner_field_access() {
         let col = term_col(nz(25));
-        assert_eq!(col.inner(), nz(25));
-    }
-
-    #[test]
-    fn test_term_col_wrap() {
-        let col = TermCol::wrap(nz(30));
-        assert_eq!(col.as_u16(), 30);
+        assert_eq!(col.0, nz(25));
     }
 
     // ========================================================================
@@ -782,33 +684,15 @@ mod tests {
     #[test]
     fn test_term_row_term_unit_methods() {
         let row = term_row(nz(10));
-
-        // Test inner()
-        assert_eq!(row.inner(), nz(10));
-
-        // Test wrap()
-        let wrapped = TermRow::wrap(nz(15));
-        assert_eq!(wrapped.as_u16(), 15);
-
-        // Test new()
-        let new_row = TermRow::new(nz(20));
-        assert_eq!(new_row.as_u16(), 20);
+        assert_eq!(row.0, nz(10));
+        assert_eq!(row.as_u16(), 10);
     }
 
     #[test]
     fn test_term_col_term_unit_methods() {
         let col = term_col(nz(25));
-
-        // Test inner()
-        assert_eq!(col.inner(), nz(25));
-
-        // Test wrap()
-        let wrapped = TermCol::wrap(nz(30));
-        assert_eq!(wrapped.as_u16(), 30);
-
-        // Test new()
-        let new_col = TermCol::new(nz(35));
-        assert_eq!(new_col.as_u16(), 35);
+        assert_eq!(col.0, nz(25));
+        assert_eq!(col.as_u16(), 25);
     }
 
     // ========================================================================
