@@ -16,20 +16,21 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// The [`vte::Params`] type handles CSI parameters with support for sub-parameters.
 /// Each parameter position is stored as a slice `[u16]` that can contain multiple
-/// values separated by colons:
+/// values separated by colons.
 ///
-/// ```text
-/// ESC[5;10H      → Simple params: [[5], [10]]
-/// ```
+/// - The following sequence holds 2 simple parameters: `5` and `10`, each stored as a
+///   single-element slice:
 ///
-/// This sequence holds 2 simple parameters: `5` and `10`, each stored as a single-element
-/// slice.
+///   ```text
+///   ESC[5;10H      → Simple params: [[5], [10]]
+///   ```
 ///
-/// ```text
-/// ESC[38:5:196m  → Sub-params: [[38, 5, 196]]
-/// ```
+/// - The following sequence holds 1 parameter with 3 sub-parameters: `38`, `5`, and
+///   `196`:
 ///
-/// This sequence holds 1 parameter with 3 sub-parameters: `38`, `5`, and `196`.
+///   ```text
+///   ESC[38:5:196m  → Sub-params: [[38, 5, 196]]
+///   ```
 ///
 /// Both methods in this trait extract the **primary value** (first element) from each
 /// parameter slice using `.first()`, which is the standard behavior for most VT100

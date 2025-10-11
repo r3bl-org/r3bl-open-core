@@ -1,7 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! CSI sequence constants for terminal control operations.
-//!
 //! This module contains all the constant values used in CSI (Control Sequence Introducer)
 //! sequences, organized by functional category.
 
@@ -13,8 +11,24 @@ pub const CSI_START: &str = "\x1b[";
 /// Private mode prefix for CSI sequences
 pub const CSI_PRIVATE_MODE_PREFIX: char = '?';
 
-/// Parameter separator in CSI sequences
+/// Parameter separator in CSI sequences (semicolon)
+///
+/// Used to separate top-level parameters in CSI sequences:
+/// - `ESC[1;5H` - Cursor position (row 1, column 5)
+/// - `ESC[1;31m` - Bold + red foreground
 pub const CSI_PARAM_SEPARATOR: char = ';';
+
+/// Sub-parameter separator in CSI sequences (colon)
+///
+/// Used to separate sub-parameters within a single CSI parameter:
+/// - `ESC[38:5:196m` - 256-color foreground (38 = fg extended, 5 = palette mode, 196 =
+///   index)
+/// - `ESC[48:2:255:128:0m` - RGB background (48 = bg extended, 2 = RGB mode, 255:128:0 =
+///   RGB)
+///
+/// Per ITU-T Rec. T.416 (ISO 8613-6), the colon (`:`) is the recommended modern format
+/// for sub-parameters, while semicolon (`;`) is supported for legacy compatibility.
+pub const CSI_SUB_PARAM_SEPARATOR: char = ':';
 
 // Cursor Movement.
 

@@ -200,23 +200,21 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
     let mut idx = 0;
     while let Some(param_slice) = params.extract_nth_all(idx) {
         // Check for extended color sequences first (they consume multiple positions).
-        if let Some((color, is_background)) =
+        if let Some(color_seq) =
             csi_codes::ExtendedColorSequence::parse_from_slice(param_slice)
         {
-            match color {
-                csi_codes::ExtendedColorSequence::Ansi256 { index } => {
-                    if is_background {
-                        performer.ofs_buf.set_background_ansi256(index);
-                    } else {
-                        performer.ofs_buf.set_foreground_ansi256(index);
-                    }
+            match color_seq {
+                csi_codes::ExtendedColorSequence::SetForegroundAnsi256(index) => {
+                    performer.ofs_buf.set_foreground_ansi256(index);
                 }
-                csi_codes::ExtendedColorSequence::Rgb { r, g, b } => {
-                    if is_background {
-                        performer.ofs_buf.set_background_rgb(r, g, b);
-                    } else {
-                        performer.ofs_buf.set_foreground_rgb(r, g, b);
-                    }
+                csi_codes::ExtendedColorSequence::SetBackgroundAnsi256(index) => {
+                    performer.ofs_buf.set_background_ansi256(index);
+                }
+                csi_codes::ExtendedColorSequence::SetForegroundRgb(r, g, b) => {
+                    performer.ofs_buf.set_foreground_rgb(r, g, b);
+                }
+                csi_codes::ExtendedColorSequence::SetBackgroundRgb(r, g, b) => {
+                    performer.ofs_buf.set_background_rgb(r, g, b);
                 }
             }
         } else if let Some(&first_param) = param_slice.first() {

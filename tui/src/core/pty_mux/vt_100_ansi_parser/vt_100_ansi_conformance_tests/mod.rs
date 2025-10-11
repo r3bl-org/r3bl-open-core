@@ -132,6 +132,130 @@
 //! );
 //! ```
 //!
+//! ## Bidirectional Sequence Pattern
+//!
+//! Many sequence types in this codebase follow a **bidirectional pattern**: they can both
+//! **parse** incoming ANSI sequences and **generate** outgoing test sequences. This provides
+//! type-safe, infallible sequence construction for tests.
+//!
+//! ### Pattern Overview
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────────────┐
+//! │                        BIDIRECTIONAL ENUM                               │
+//! │  • Parsing:    ANSI bytes → Enum variant                                │
+//! │  • Generation: Enum variant → ANSI string (via Display/FastStringify)   │
+//! │  • Type-safe:  Compile-time validation, no raw escape string mistakes   │
+//! └─────────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ### Types Using This Pattern
+//!
+//! | Type | Parsing Method | Generation | Purpose |
+//! |------|----------------|------------|---------|
+//! | [`CsiSequence`] | Manual parsing | `Display` + `FastStringify` | CSI control sequences |
+//! | [`EscSequence`] | Manual parsing | `Display` + `FastStringify` | ESC control sequences |
+//! | [`OscSequence`] | Manual parsing | `Display` + `FastStringify` | OSC sequences (titles, hyperlinks) |
+//! | [`DsrSequence`] | Manual parsing | `Display` + `FastStringify` | Device Status Report responses |
+//! | [`ExtendedColorSequence`] | `parse_from_slice()` | `Display` + `FastStringify` | 256-color & RGB colors |
+//!
+//! ### Benefits of Bidirectional Pattern
+//!
+//! 1. **Infallible Generation**: Enums can only represent valid sequences
+//! 2. **Type Safety**: Compiler prevents invalid color indices, RGB values, etc.
+//! 3. **Self-Documenting**: Enum variants clearly describe what they do
+//! 4. **Consistent API**: Same types used for parsing and test data
+//! 5. **Easy Refactoring**: Changes to sequence format happen in one place
+//!
+//! ### Example: Extended Color Sequences
+//!
+//! ```rust,ignore
+//! use crate::protocols::csi_codes::{
+//!     ExtendedColorSequence,
+//!     extended_color_test_helpers::*
+//! };
+//!
+//! // ❌ Raw escape strings (error-prone, unclear)
+//! let bad_fg = "\x1b[38:5:196m";  // What color index? Typo-prone!
+//! let bad_bg = "\x1b[48:2:255:128:0m";  // RGB components unclear
+//!
+//! // ✅ Type-safe generation (compiler-validated)
+//! let good_fg = ExtendedColorSequence::SetForegroundAnsi256(196).to_string();
+//! let good_bg = ExtendedColorSequence::SetBackgroundRgb(255, 128, 0).to_string();
+//!
+//! // ✅ Even better: Use test helpers
+//! let helper_fg = fg_ansi256(196);
+//! let helper_bg = bg_rgb(255, 128, 0);
+//! ```
+//!
+//! ### FastStringify Trait
+//!
+//! The [`FastStringify`] trait provides efficient string building for complex sequences:
+//!
+//! ```rust,ignore
+//! pub trait FastStringify: Display {
+//!     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result;
+//!     fn write_buf_to_fmt(&self, acc: &BufTextStorage, f: &mut Formatter<'_>) -> Result;
+//! }
+//! ```
+//!
+//! - **Performance**: Builds string in a buffer, then writes once to formatter
+//! - **Required bound**: All `FastStringify` types must implement `Display`
+//! - **Usage**: Automatically available via `.to_string()` through `Display`
+//!
+//! ### Test Helper Functions
+//!
+//! Each bidirectional type provides ergonomic test helpers:
+//!
+//! ```rust,ignore
+//! // Extended colors
+//! use crate::protocols::csi_codes::extended_color_test_helpers::*;
+//! let fg = fg_ansi256(196);      // → "\x1b[38:5:196m"
+//! let bg = bg_rgb(255, 128, 0);  // → "\x1b[48:2:255:128:0m"
+//!
+//! // DSR sequences
+//! use crate::protocols::dsr_codes::dsr_test_helpers::*;
+//! let cursor_pos = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
+//!
+//! // CSI sequences (via Display)
+//! let cursor_move = CsiSequence::CursorPosition {
+//!     row: term_row(nz(5)),
+//!     col: term_col(nz(10))
+//! }.to_string();
+//! ```
+//!
+//! ### When to Use This Pattern
+//!
+//! Use bidirectional enums when:
+//! - ✅ The sequence has **multiple variants** (colors, positions, modes)
+//! - ✅ Sequences are **parameterized** (indices, RGB values, coordinates)
+//! - ✅ You need **type-safe test data** generation
+//! - ✅ Parsing and generation **share the same structure**
+//!
+//! Don't use when:
+//! - ❌ Sequences are **one-off** strings without structure
+//! - ❌ Parsing is handled entirely by [`vte`] library
+//! - ❌ No need for test sequence generation
+//!
+//! ### Adding a New Bidirectional Type
+//!
+//! 1. **Define the enum** with variants for each sequence type
+//! 2. **Implement parsing** (either `parse_from_*` methods or `From` traits)
+//! 3. **Implement `FastStringify`** for efficient string building
+//! 4. **Implement `Display`** using `FastStringify` methods
+//! 5. **Add test helpers** in a `#[cfg(any(test, doc))]` module
+//! 6. **Write comprehensive tests** for both parsing and generation
+//!
+//! See [`ExtendedColorSequence`] for a complete example implementation.
+//!
+//! [`CsiSequence`]: crate::protocols::csi_codes::CsiSequence
+//! [`EscSequence`]: crate::protocols::esc_codes::EscSequence
+//! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
+//! [`DsrSequence`]: crate::protocols::dsr_codes::DsrSequence
+//! [`ExtendedColorSequence`]: crate::protocols::csi_codes::ExtendedColorSequence
+//! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
+//! [`vte`]: https://docs.rs/vte
+//!
 //! ## VT100 Specification Mapping
 //!
 //! Each conformance data module includes specification references:

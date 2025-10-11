@@ -383,6 +383,195 @@ pub mod sgr_styling {
         // Second char should not have blink (should be plain text)
         assert_plain_char_at(&ofs_buf, 0, 1, 'B');
     }
+
+    #[test]
+    fn test_sgr_extended_256_colors() {
+        use crate::protocols::csi_codes::extended_color_test_helpers::*;
+
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+
+        // Test 256-color sequences (both colon and semicolon formats)
+        //
+        // Column:  0   1   2   3   4   5
+        //         ┌───┬───┬───┬───┬───┬───┐
+        // Row 0:  │ F │ B │ M │   │   │   │
+        //         └───┴───┴───┴───┴───┴───┘
+        //          └─┘ └─┘ └─┘
+        //           │   │   └─ M: index 21 fg + index 196 bg
+        //           │   └─ B: index 196 bg
+        //           └─ F: index 196 fg
+
+        performer.apply_ansi_bytes(format!(
+            "{fg_196}F{rst}{bg_196}B{rst}{fg_21}{bg_196}M{rst}",
+            fg_196 = fg_ansi256(196), // Bright red foreground
+            bg_196 = bg_ansi256(196), // Bright red background
+            fg_21 = fg_ansi256(21),   // Blue foreground
+            rst = SgrCode::Reset,
+        ));
+
+        // Verify 'F' has 256-color foreground (index 196)
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'F',
+            |style_from_buf| {
+                // 256-color index 196 should be stored in color_fg
+                style_from_buf.color_fg.is_some()
+            },
+            "256-color foreground (index 196)",
+        );
+
+        // Verify 'B' has 256-color background (index 196)
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'B',
+            |style_from_buf| {
+                // 256-color index 196 should be stored in color_bg
+                style_from_buf.color_bg.is_some()
+            },
+            "256-color background (index 196)",
+        );
+
+        // Verify 'M' has both 256-color foreground and background
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            2,
+            'M',
+            |style_from_buf| {
+                style_from_buf.color_fg.is_some() && style_from_buf.color_bg.is_some()
+            },
+            "256-color fg (index 21) + bg (index 196)",
+        );
+    }
+
+    #[test]
+    fn test_sgr_extended_rgb_colors() {
+        use crate::protocols::csi_codes::extended_color_test_helpers::*;
+
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+
+        // Test RGB color sequences (colon-separated format)
+        //
+        // Column:  0   1   2   3
+        //         ┌───┬───┬───┬───┐
+        // Row 0:  │ R │ G │ B │   │
+        //         └───┴───┴───┴───┘
+        //          └─┘ └─┘ └─┘
+        //           │   │   └─ B: RGB(0,128,255) fg + RGB(255,128,0) bg
+        //           │   └─ G: RGB(255,128,0) bg (orange)
+        //           └─ R: RGB(255,0,0) fg (red)
+
+        performer.apply_ansi_bytes(format!(
+            "{fg_red}R{rst}{bg_orange}G{rst}{fg_blue}{bg_orange}B{rst}",
+            fg_red = fg_rgb(255, 0, 0),       // Red foreground
+            bg_orange = bg_rgb(255, 128, 0),  // Orange background
+            fg_blue = fg_rgb(0, 128, 255),    // Blue foreground
+            rst = SgrCode::Reset,
+        ));
+
+        // Verify 'R' has RGB foreground
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'R',
+            |style_from_buf| style_from_buf.color_fg.is_some(),
+            "RGB foreground (255,0,0)",
+        );
+
+        // Verify 'G' has RGB background
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'G',
+            |style_from_buf| style_from_buf.color_bg.is_some(),
+            "RGB background (255,128,0)",
+        );
+
+        // Verify 'B' has both RGB foreground and background
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            2,
+            'B',
+            |style_from_buf| {
+                style_from_buf.color_fg.is_some() && style_from_buf.color_bg.is_some()
+            },
+            "RGB fg (0,128,255) + bg (255,128,0)",
+        );
+    }
+
+    #[test]
+    fn test_sgr_extended_colors_mixed() {
+        use crate::protocols::csi_codes::extended_color_test_helpers::*;
+
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+        let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
+
+        // Test mixing basic ANSI, 256-color, and RGB sequences
+        //
+        // Column:  0   1   2   3
+        //         ┌───┬───┬───┬───┐
+        // Row 0:  │ A │ B │ C │   │
+        //         └───┴───┴───┴───┘
+        //          └─┘ └─┘ └─┘
+        //           │   │   └─ C: RGB fg + basic bg
+        //           │   └─ B: 256-color fg + basic bg
+        //           └─ A: basic fg + 256-color bg
+
+        performer.apply_ansi_bytes(format!(
+            "{basic_fg}{ansi256_bg}A{rst}{ansi256_fg}{basic_bg}B{rst}{rgb_fg}{basic_bg}C{rst}",
+            basic_fg = SgrCode::ForegroundBasic(ANSIBasicColor::DarkRed),
+            ansi256_bg = bg_ansi256(21),
+            ansi256_fg = fg_ansi256(196),
+            basic_bg = SgrCode::BackgroundBasic(ANSIBasicColor::DarkGreen),
+            rgb_fg = fg_rgb(255, 128, 0),
+            rst = SgrCode::Reset,
+        ));
+
+        // Verify 'A' has basic fg + 256-color bg
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            0,
+            'A',
+            |style_from_buf| {
+                style_from_buf.color_fg.is_some() && style_from_buf.color_bg.is_some()
+            },
+            "basic fg + 256-color bg",
+        );
+
+        // Verify 'B' has 256-color fg + basic bg
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            1,
+            'B',
+            |style_from_buf| {
+                style_from_buf.color_fg.is_some() && style_from_buf.color_bg.is_some()
+            },
+            "256-color fg + basic bg",
+        );
+
+        // Verify 'C' has RGB fg + basic bg
+        assert_styled_char_at(
+            &ofs_buf,
+            0,
+            2,
+            'C',
+            |style_from_buf| {
+                style_from_buf.color_fg.is_some() && style_from_buf.color_bg.is_some()
+            },
+            "RGB fg + basic bg",
+        );
+    }
 }
 
 /// Tests for character set switching operations.
