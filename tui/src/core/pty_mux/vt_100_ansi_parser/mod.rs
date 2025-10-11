@@ -310,6 +310,7 @@ pub mod protocols;
 
 // Re-export.
 pub use ansi_parser_public_api::*;
+pub use ansi_to_tui_color::*;
 pub use operations::*;
 pub use protocols::*;
 

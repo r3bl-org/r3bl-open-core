@@ -248,9 +248,9 @@ impl OffscreenBuffer {
 mod tests {
     use crate::{ANSIBasicColor, SgrCode, col, row, term_col, term_row,
                 offscreen_buffer::test_fixtures_ofs_buf::*,
-                vt_100_ansi_parser::{protocols::csi_codes::{self,
-                                                            csi_test_helpers::csi_seq_cursor_pos},
-                                     vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz}}};
+                vt_100_ansi_parser::{protocols::csi_codes::{self},
+                                     vt_100_ansi_conformance_tests::{test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz},
+                                                                      test_sequence_builders::csi_builders::csi_seq_cursor_pos}}};
 
     #[test]
     #[allow(clippy::items_after_statements)]

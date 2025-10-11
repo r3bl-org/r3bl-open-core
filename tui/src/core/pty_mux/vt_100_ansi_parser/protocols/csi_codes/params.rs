@@ -172,38 +172,55 @@ pub trait ParamsExt {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use r3bl_tui::ParamsExt;
-    /// # use vte::{Parser, Perform, Params};
-    /// # struct TestPerformer;
-    /// # impl Perform for TestPerformer {
-    /// #     fn csi_dispatch(&mut self, params: &Params, _: &[u8], _: bool, _: char) {
-    /// #         // Simple parameter
-    /// #         if let Some(slice) = params.extract_nth_all(0) {
-    /// #             assert_eq!(slice, &[5]);
-    /// #         }
+    /// ```rust
+    /// # // Doc test for extract_nth_all demonstrating 256-color parsing
+    /// # use r3bl_tui::ParamsExt;
+    /// # use vte::{Parser, Perform};
+    /// #
+    /// # // Helper to test extract_nth_all with real VTE parser
+    /// # struct TestPerform {
+    /// #     result: Option<Vec<u16>>,
+    /// # }
+    /// #
+    /// # impl Perform for TestPerform {
+    /// #     fn csi_dispatch(&mut self, params: &vte::Params, _: &[u8], _: bool, _: char) {
+    /// #         // Extract all sub-parameters from first position
+    /// #         self.result = params.extract_nth_all(0).map(|s| s.to_vec());
     /// #     }
     /// #     fn print(&mut self, _: char) {}
     /// #     fn execute(&mut self, _: u8) {}
-    /// #     fn hook(&mut self, _: &Params, _: &[u8], _: bool, _: char) {}
+    /// #     fn hook(&mut self, _: &vte::Params, _: &[u8], _: bool, _: char) {}
     /// #     fn put(&mut self, _: u8) {}
     /// #     fn unhook(&mut self) {}
     /// #     fn osc_dispatch(&mut self, _: &[&[u8]], _: bool) {}
     /// #     fn esc_dispatch(&mut self, _: &[u8], _: bool, _: u8) {}
     /// # }
+    /// #
+    /// // Parse ESC[38:5:196m (256-color foreground sequence)
+    /// let mut parser = Parser::new();
+    /// let mut performer = TestPerform { result: None };
     ///
-    /// // In a CSI dispatch handler:
-    /// // ESC[38:5:196m → 256-color foreground
-    /// if let Some(slice) = params.extract_nth_all(0) {
+    /// for byte in b"\x1b[38:5:196m" {
+    ///     parser.advance(&mut performer, *byte);
+    /// }
+    ///
+    /// // extract_nth_all returns the complete sub-parameter slice
+    /// assert_eq!(performer.result, Some(vec![38, 5, 196]));
+    ///
+    /// // In a real CSI handler, you would pattern match:
+    /// if let Some(slice) = &performer.result {
     ///     if slice.len() >= 3 && slice[0] == 38 && slice[1] == 5 {
     ///         let color_index = slice[2];
+    ///         assert_eq!(color_index, 196);
     ///         // Apply 256-color foreground...
     ///     }
     /// }
     /// ```
     ///
-    /// [`Some(&[u16])`]: Option::Some
-    /// [`None`]: Option::None
+    /// [`Some`]`(&[u16])` - Reference to the sub-parameter slice (zero-copy)
+    /// [`None`] - No parameter exists at index n
+    ///
+    /// [`Some`]: Option::Some
     fn extract_nth_all(&self, arg_n: impl Into<Index>) -> Option<&[u16]>;
 }
 
@@ -371,12 +388,12 @@ impl From<&vte::Params> for CursorPositionRequest {
 /// The [`ParamsExt`] methods are thoroughly tested through integration tests in separate
 /// test modules:
 /// - [`extract_nth_all_tests`] - Tests `extract_nth_all()` with various parameter formats
-/// - [`movement_count_tests`] - Tests `extract_nth_single_non_zero()` via MovementCount
+/// - [`movement_count_tests`] - Tests `extract_nth_single_non_zero()` via `MovementCount`
 /// - [`absolute_position_tests`] - Tests `extract_nth_single_non_zero()` via
-///   AbsolutePosition
+///   `AbsolutePosition`
 /// - [`cursor_position_request_tests`] - Tests `extract_nth_single_non_zero()` with
 ///   multiple positions
-/// - MarginRequest tests (in margin.rs) exercise `extract_nth_single_opt_raw`
+/// - `MarginRequest` tests (in margin.rs) exercise `extract_nth_single_opt_raw`
 ///
 /// This integration testing approach is preferred because it validates the entire
 /// parsing pipeline with real VTE parser output, ensuring correctness with actual
@@ -587,14 +604,14 @@ pub mod vte_params_behavior_validation {
         process_csi_sequence_and_test("\x1b[A", |params| {
             *missing_result_opt_raw.borrow_mut() = params.extract_nth_single_opt_raw(0);
             *missing_result_all.borrow_mut() =
-                params.extract_nth_all(0).map(|s| s.to_vec());
+                params.extract_nth_all(0).map(<[u16]>::to_vec);
         });
 
         // Explicit zero
         process_csi_sequence_and_test("\x1b[0A", |params| {
             *explicit_result_opt_raw.borrow_mut() = params.extract_nth_single_opt_raw(0);
             *explicit_result_all.borrow_mut() =
-                params.extract_nth_all(0).map(|s| s.to_vec());
+                params.extract_nth_all(0).map(<[u16]>::to_vec);
         });
 
         // They MUST be identical

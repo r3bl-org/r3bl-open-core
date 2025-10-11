@@ -233,24 +233,10 @@ mod dsr_request_from_pty_event_impl {
     }
 }
 
-/// Test helper functions for DSR sequences.
-#[cfg(any(test, doc))]
-pub mod dsr_test_helpers {
-    use super::*;
-
-    #[must_use]
-    pub fn dsr_cursor_position_response(row: TermRow, col: TermCol) -> String {
-        format!(
-            "{DSR_RESPONSE_START}{}{CSI_PARAM_SEPARATOR}{}{DSR_CURSOR_POSITION_RESPONSE_END}",
-            row.as_u16(),
-            col.as_u16()
-        )
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{dsr_test_helpers::dsr_cursor_position_response, *};
+    use super::*;
+    use crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_sequence_builders::dsr_builders::dsr_cursor_position_response;
     use crate::{term_col, term_row,
                 vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
 

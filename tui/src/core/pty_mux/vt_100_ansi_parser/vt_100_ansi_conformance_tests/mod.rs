@@ -135,8 +135,8 @@
 //! ## Bidirectional Sequence Pattern
 //!
 //! Many sequence types in this codebase follow a **bidirectional pattern**: they can both
-//! **parse** incoming ANSI sequences and **generate** outgoing test sequences. This provides
-//! type-safe, infallible sequence construction for tests.
+//! **parse** incoming ANSI sequences and **generate** outgoing test sequences. This
+//! provides type-safe, infallible sequence construction for tests.
 //!
 //! ### Pattern Overview
 //!
@@ -170,10 +170,8 @@
 //! ### Example: Extended Color Sequences
 //!
 //! ```rust,ignore
-//! use crate::protocols::csi_codes::{
-//!     ExtendedColorSequence,
-//!     extended_color_test_helpers::*
-//! };
+//! use crate::protocols::csi_codes::ExtendedColorSequence;
+//! use crate::vt_100_ansi_conformance_tests::test_sequence_builders::extended_color_builders::*;
 //!
 //! // ❌ Raw escape strings (error-prone, unclear)
 //! let bad_fg = "\x1b[38:5:196m";  // What color index? Typo-prone!
@@ -188,7 +186,7 @@
 //! let helper_bg = bg_rgb(255, 128, 0);
 //! ```
 //!
-//! ### FastStringify Trait
+//! ### `FastStringify` Trait
 //!
 //! The [`FastStringify`] trait provides efficient string building for complex sequences:
 //!
@@ -209,12 +207,12 @@
 //!
 //! ```rust,ignore
 //! // Extended colors
-//! use crate::protocols::csi_codes::extended_color_test_helpers::*;
+//! use crate::vt_100_ansi_conformance_tests::test_sequence_builders::extended_color_builders::*;
 //! let fg = fg_ansi256(196);      // → "\x1b[38:5:196m"
 //! let bg = bg_rgb(255, 128, 0);  // → "\x1b[48:2:255:128:0m"
 //!
 //! // DSR sequences
-//! use crate::protocols::dsr_codes::dsr_test_helpers::*;
+//! use crate::vt_100_ansi_conformance_tests::test_sequence_builders::dsr_builders::*;
 //! let cursor_pos = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
 //!
 //! // CSI sequences (via Display)
@@ -327,6 +325,9 @@ pub mod conformance_data;
 
 #[cfg(any(test, doc))]
 pub mod test_fixtures_vt_100_ansi_conformance; // Re-export existing test fixtures
+
+#[cfg(any(test, doc))]
+pub mod test_sequence_builders; // Test-only convenience builders for ANSI sequences
 
 #[cfg(any(test, doc))]
 pub mod tests;

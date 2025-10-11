@@ -386,7 +386,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_extended_256_colors() {
-        use crate::protocols::csi_codes::extended_color_test_helpers::*;
+        use crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_sequence_builders::extended_color_builders::*;
 
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
@@ -451,7 +451,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_extended_rgb_colors() {
-        use crate::protocols::csi_codes::extended_color_test_helpers::*;
+        use crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_sequence_builders::extended_color_builders::*;
 
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
@@ -469,9 +469,9 @@ pub mod sgr_styling {
 
         performer.apply_ansi_bytes(format!(
             "{fg_red}R{rst}{bg_orange}G{rst}{fg_blue}{bg_orange}B{rst}",
-            fg_red = fg_rgb(255, 0, 0),       // Red foreground
-            bg_orange = bg_rgb(255, 128, 0),  // Orange background
-            fg_blue = fg_rgb(0, 128, 255),    // Blue foreground
+            fg_red = fg_rgb(255, 0, 0),      // Red foreground
+            bg_orange = bg_rgb(255, 128, 0), // Orange background
+            fg_blue = fg_rgb(0, 128, 255),   // Blue foreground
             rst = SgrCode::Reset,
         ));
 
@@ -510,7 +510,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_extended_colors_mixed() {
-        use crate::protocols::csi_codes::extended_color_test_helpers::*;
+        use crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_sequence_builders::extended_color_builders::*;
 
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);

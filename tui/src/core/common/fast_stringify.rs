@@ -20,7 +20,7 @@ use std::fmt::{Display, Formatter, Result};
 ///
 ///    ```rust
 ///    # use r3bl_tui::{FastStringify, BufTextStorage};
-///    # use std::fmt::{Result, Write};
+///    # use std::fmt::{Display, Formatter, Result, Write};
 ///    # struct MyType { value: i32 }
 ///    impl FastStringify for MyType {
 ///        fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
@@ -30,6 +30,13 @@ use std::fmt::{Display, Formatter, Result};
 ///            Ok(())
 ///        }
 ///    }
+///    # impl Display for MyType {
+///    #     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+///    #         let mut buffer = BufTextStorage::new();
+///    #         self.write_to_buf(&mut buffer)?;
+///    #         self.write_buf_to_fmt(&buffer, f)
+///    #     }
+///    # }
 ///    ```
 ///
 /// 2. **Implement [`Display`] (required)** - Call [`write_to_buf()`] then [`write_buf_to_fmt()`]:
@@ -172,9 +179,9 @@ pub trait FastStringify: Display {
 /// - Wasted: ~12 bytes on heap (better locality)
 /// ```
 ///
-/// ## When SmallString Would Win
+/// ## When [`smallstr::SmallString`] Would Win
 ///
-/// `SmallString` would be better if the buffer was:
+/// [`smallstr::SmallString`] would be better if the buffer was:
 /// - **Long-lived**: Amortizes stack allocation over many operations
 /// - **Predictable size**: 90%+ of strings fit in inline capacity
 /// - **Hot loop**: Allocator pressure becomes a bottleneck
@@ -186,6 +193,6 @@ pub trait FastStringify: Display {
 ///
 /// [`String`]: std::string::String
 /// [`Display::fmt`]: Display::fmt
-/// [`SmallString<[u8; 64]>`]: smallstr::SmallString
-/// [`SmallString<[u8; 256]>`]: smallstr::SmallString
+/// [`SmallString<[u8; 64]>`]: `smallstr::SmallString`
+/// [`SmallString<[u8; 256]>`]: `smallstr::SmallString`
 pub type BufTextStorage = String;

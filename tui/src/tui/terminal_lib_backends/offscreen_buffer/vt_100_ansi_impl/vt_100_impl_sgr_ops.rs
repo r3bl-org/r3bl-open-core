@@ -42,9 +42,9 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{TuiStyle,
-            core::pty_mux::vt_100_ansi_parser::ansi_to_tui_color::{
-                ansi256_to_tui_color, ansi_to_tui_color, rgb_to_tui_color,
-            },
+            core::pty_mux::vt_100_ansi_parser::ansi_to_tui_color::{ansi_to_tui_color,
+                                                                   ansi256_to_tui_color,
+                                                                   rgb_to_tui_color},
             tui_style_attrib};
 
 impl OffscreenBuffer {
@@ -151,7 +151,8 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[38;5;nm` or `ESC[38:5:nm`
     pub fn set_foreground_ansi256(&mut self, index: u8) {
-        self.ansi_parser_support.current_style.color_fg = Some(ansi256_to_tui_color(index));
+        self.ansi_parser_support.current_style.color_fg =
+            Some(ansi256_to_tui_color(index));
     }
 
     /// Set background color using 256-color palette index.
@@ -164,7 +165,8 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[48;5;nm` or `ESC[48:5:nm`
     pub fn set_background_ansi256(&mut self, index: u8) {
-        self.ansi_parser_support.current_style.color_bg = Some(ansi256_to_tui_color(index));
+        self.ansi_parser_support.current_style.color_bg =
+            Some(ansi256_to_tui_color(index));
     }
 
     /// Set foreground color using RGB values.

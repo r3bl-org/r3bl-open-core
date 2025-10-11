@@ -73,10 +73,9 @@
 //!
 //! [`ParamsExt`]: crate::ParamsExt
 
-use super::constants::{
-    CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED, SGR_COLOR_MODE_256,
-    SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED, SGR_SET_GRAPHICS,
-};
+use super::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
+                       SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
+                       SGR_SET_GRAPHICS};
 use crate::core::common::fast_stringify::{BufTextStorage, FastStringify};
 use std::fmt::{self, Display};
 
@@ -313,36 +312,6 @@ impl Display for ExtendedColorSequence {
     }
 }
 
-/// Test helper functions for extended color sequences.
-#[cfg(any(test, doc))]
-pub mod extended_color_test_helpers {
-    use super::*;
-
-    /// Generate 256-color foreground sequence: ESC[38:5:nm
-    #[must_use]
-    pub fn fg_ansi256(index: u8) -> String {
-        ExtendedColorSequence::SetForegroundAnsi256(index).to_string()
-    }
-
-    /// Generate 256-color background sequence: ESC[48:5:nm
-    #[must_use]
-    pub fn bg_ansi256(index: u8) -> String {
-        ExtendedColorSequence::SetBackgroundAnsi256(index).to_string()
-    }
-
-    /// Generate RGB foreground sequence: ESC[38:2:r:g:bm
-    #[must_use]
-    pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
-        ExtendedColorSequence::SetForegroundRgb(r, g, b).to_string()
-    }
-
-    /// Generate RGB background sequence: ESC[48:2:r:g:bm
-    #[must_use]
-    pub fn bg_rgb(r: u8, g: u8, b: u8) -> String {
-        ExtendedColorSequence::SetBackgroundRgb(r, g, b).to_string()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -527,18 +496,5 @@ mod tests {
             ExtendedColorSequence::parse_from_slice(&[48, 2, 255, 128, 0]).unwrap();
         let generated = parsed.to_string();
         assert_eq!(generated, "\x1b[48:2:255:128:0m");
-    }
-
-    #[test]
-    fn test_helper_functions() {
-        use super::extended_color_test_helpers::*;
-
-        // Test 256-color helpers
-        assert_eq!(fg_ansi256(196), "\x1b[38:5:196m");
-        assert_eq!(bg_ansi256(21), "\x1b[48:5:21m");
-
-        // Test RGB helpers
-        assert_eq!(fg_rgb(255, 128, 0), "\x1b[38:2:255:128:0m");
-        assert_eq!(bg_rgb(0, 128, 255), "\x1b[48:2:0:128:255m");
     }
 }
