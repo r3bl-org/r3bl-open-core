@@ -490,15 +490,17 @@ Other commands:
 
 ### Key Commands
 
-| Command                         | Description                                                     |
-| ------------------------------- | --------------------------------------------------------------- |
-| `fish run.fish all`             | Run all major checks (build, test, clippy, docs, audit, format) |
-| `fish run.fish build`           | Build the entire workspace                                      |
-| `fish run.fish test`            | Run all tests across the workspace                              |
-| `fish run.fish watch-all-tests` | Watch for file changes and run tests automatically              |
-| `fish run.fish run-examples`    | Run TUI examples interactively                                  |
-| `fish run.fish run-binaries`    | Run cmdr binaries (edi, giti, rc) interactively                 |
+| Command                          | Description                                                     |
+| -------------------------------- | --------------------------------------------------------------- |
+| `fish run.fish all`              | Run all major checks (build, test, clippy, docs, audit, format) |
+| `fish run.fish build`            | Build the entire workspace                                      |
+| `fish run.fish test`             | Run all tests across the workspace                              |
+| `fish run.fish watch-all-tests`  | Watch for file changes and run tests automatically              |
+| `fish run.fish run-examples`     | Run TUI examples interactively                                  |
+| `fish run.fish run-binaries`     | Run cmdr binaries (edi, giti, rc) interactively                 |
 | `fish run.fish update-toolchain` | Update Rust to month-old nightly toolchain with cleanup         |
+| `fish run.fish sync-toolchain`   | Sync Rust environment to match rust-toolchain.toml              |
+| `fish run.fish remove-toolchains`| Remove ALL toolchains (⚠️ destructive testing utility)         |
 
 ### Bacon Development Tools
 
@@ -622,47 +624,118 @@ rustflags = [
 
 ### Rust Toolchain Management
 
-This project uses an intelligent Rust toolchain management strategy to balance access to recent language features with stability. The `update-toolchain` command maintains a month-old nightly toolchain, avoiding bleeding-edge instability while staying current with Rust development.
+This project includes three complementary scripts for comprehensive Rust toolchain management, each serving a specific purpose in the development workflow:
+
+#### 1. rust-toolchain-update.fish - Automated Monthly Updates
+
+Updates the project to use a month-old nightly toolchain for stability while staying current.
 
 ```sh
+# Via run.fish command
 fish run.fish update-toolchain
+
+# Or directly
+./rust-toolchain-update.fish
 ```
 
 **What it does:**
 - Calculates a nightly toolchain date from exactly 1 month ago
-- Updates `rust-toolchain.toml` to use this stable-but-recent nightly
-- Installs the target toolchain if not already present
+- **Updates** `rust-toolchain.toml` to use this stable-but-recent nightly
+- Installs the target toolchain with rust-analyzer component (required by IDEs, cargo, and serena MCP server)
 - Performs aggressive cleanup by removing all old nightly toolchains except:
   - All stable toolchains (`stable-*`)
   - The newly targeted month-old nightly
 - Logs all operations to `/home/nazmul/Downloads/rust-toolchain-update.log`
 
-**Benefits:**
-- **Stability**: Month-old nightlies have proven stability while providing recent features
-- **Disk space savings**: Aggressive cleanup removes accumulated old toolchains
-- **Consistency**: Ensures all developers use the same Rust version
-- **Automation ready**: Designed to run weekly via systemd timer for hands-off maintenance
+**When to use:**
+- Weekly maintenance (can be automated via systemd timer)
+- When you want to update to the latest stable-ish nightly
+- When you want to clean up old toolchains
 
 **Example output:**
 ```text
-Target toolchain: nightly-2024-08-13
+Target toolchain: nightly-2025-09-11
 ✅ Successfully updated rust-toolchain.toml
-✅ Successfully installed/verified nightly-2024-08-13
+✅ Successfully installed/verified nightly-2025-09-11
+✅ Successfully installed rust-analyzer component
 Removed 3 old toolchain(s)
 Toolchains directory size before cleanup: 2.1G
 Toolchains directory size after cleanup: 1.4G
 ```
 
-#### Testing Toolchain Installation Progress
+#### 2. rust-toolchain-sync-to-toml.fish - Sync to Existing Config
 
-For developers working on the cmdr upgrade check feature:
+Syncs your Rust environment to match whatever is specified in `rust-toolchain.toml`.
 
-- **`remove_toolchains.sh`** - Removes ALL Rust toolchains (⚠️ DESTRUCTIVE)
-  - Purpose: Test the upgrade progress display in `edi` and `giti`
-  - Creates a clean slate to see full rustup installation progress
-  - Usage: `./remove_toolchains.sh` then `cargo run --bin edi`
-  - Recovery: `rustup toolchain install stable && rustup default stable`
-  - See: `cmdr/src/analytics_client/upgrade_check.rs` for implementation details
+```sh
+./rust-toolchain-sync-to-toml.fish
+```
+
+**What it does:**
+- **Reads** the channel value from `rust-toolchain.toml` (doesn't modify it)
+- Installs the exact toolchain specified in the TOML
+- Installs rust-analyzer and rust-src components automatically (required by IDEs, cargo, and serena MCP server)
+- Performs aggressive cleanup by removing all old nightly toolchains except:
+  - All stable toolchains (`stable-*`)
+  - The target toolchain from the TOML
+- Logs all operations to `/home/nazmul/Downloads/rust-toolchain-sync-to-toml.log`
+
+**When to use:**
+- After `git checkout/reset/pull` changes `rust-toolchain.toml`
+- When rust-analyzer is missing for the current toolchain
+- When your IDE shows "rust-analyzer failed to start"
+- When Claude Code's serena MCP server crashes with LSP initialization errors
+- After manually editing `rust-toolchain.toml`
+- When you need to stay on a specific nightly version
+
+**Key difference from update script:**
+- **This script (sync)**: Respects TOML → Installs what's specified
+- **Update script**: Modifies TOML → Installs "1 month ago" nightly
+
+**Example workflow:**
+```sh
+# Weekly script updates TOML to nightly-2025-09-11
+# But you need to stay on nightly-2025-09-05 for testing a specific feature
+git checkout rust-toolchain.toml  # Revert to 09-05
+./rust-toolchain-sync-to-toml.fish  # Install components for 09-05
+# Now rust-analyzer works for 09-05
+```
+
+#### 3. remove_toolchains.sh - Testing Utility
+
+Removes ALL Rust toolchains for testing upgrade progress display (⚠️ DESTRUCTIVE).
+
+```sh
+./remove_toolchains.sh
+```
+
+**What it does:**
+- Removes ALL Rust toolchains from your system
+- Cleans up toolchain directories completely
+- Creates a clean slate for testing rustup installation progress
+
+**When to use:**
+- When developing/testing the upgrade progress display in `edi` and `giti`
+- To see full rustup download and installation progress
+- For testing `cmdr/src/analytics_client/upgrade_check.rs` functionality
+
+**Recovery after testing:**
+```sh
+rustup toolchain install stable && rustup default stable
+# Or
+fish run.fish update-toolchain
+```
+
+**⚠️ Warning:** This is a destructive testing utility. Use only when you understand the implications and are prepared to reinstall toolchains.
+
+#### Toolchain Management Benefits
+
+**Stability**: Month-old nightlies have proven stability while providing recent features
+**Disk space savings**: Aggressive cleanup removes accumulated old toolchains
+**Consistency**: All developers use the same Rust version via `rust-toolchain.toml`
+**Automation ready**: `update` script designed to run weekly via systemd timer
+**Recovery ready**: `sync` script fixes environment after git operations
+**Testing support**: `remove` script enables testing upgrade workflows
 
 ### Unified Script Architecture
 

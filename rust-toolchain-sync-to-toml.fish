@@ -1,23 +1,27 @@
 #!/usr/bin/env fish
 
-# Rust Toolchain Update Script
+# Rust Toolchain Sync Script
 #
-# Purpose: Automatically updates the Rust toolchain to use a nightly version
-#          from 1 month ago, avoiding instability issues with the latest nightly.
-#          Also performs aggressive cleanup to save disk space.
+# Purpose: Syncs Rust environment to match the rust-toolchain.toml file
+#          This is the opposite of the update script - it respects what's in the TOML
+#          rather than updating it.
+#
+# Use Case: When rust-toolchain.toml changes (git checkout, manual edit, etc.)
+#           and you need to install the specified toolchain with all components.
 #
 # Strategy:
-# - Keep only: stable-* + nightly-YYYY-MM-DD (month-old)
-# - Remove: all other nightly toolchains, including generic "nightly"
-# - Installs rust-analyzer component (required by VSCode, RustRover, cargo, and serena MCP server)
+# - Read channel from rust-toolchain.toml
+# - Remove all toolchains except stable (safety) and the target nightly
+# - Install the target nightly toolchain
+# - Install rust-analyzer and rust-src components (required by VSCode, RustRover, cargo, and serena MCP server)
 #
-# This script is designed to run weekly via systemd timer.
+# This script is designed to be run manually or when rust-toolchain.toml changes.
 
 # ============================================================================
 # Global Variables
 # ============================================================================
 
-set -g LOG_FILE /home/nazmul/Downloads/rust-toolchain-update.log
+set -g LOG_FILE /home/nazmul/Downloads/rust-toolchain-sync-to-toml.log
 set -g PROJECT_DIR /home/nazmul/github/r3bl-open-core
 set -g TOOLCHAIN_FILE $PROJECT_DIR/rust-toolchain.toml
 set -g target_toolchain ""
@@ -29,11 +33,6 @@ set -g target_toolchain ""
 function log_message
     set -l message $argv[1]
     echo $message | tee -a $LOG_FILE
-end
-
-function log_message_no_newline
-    set -l message $argv[1]
-    echo -n $message | tee -a $LOG_FILE
 end
 
 function log_command_output
@@ -89,33 +88,27 @@ end
 # Core Logic Functions
 # ============================================================================
 
-function update_toolchain_config
-    log_message "Updating rust-toolchain.toml to use $target_toolchain..."
+function read_toolchain_from_toml
+    log_message "Reading toolchain from rust-toolchain.toml..."
 
-    # Validate the TOML file before updating
-    set -l channel_count (grep -c "^channel = " $TOOLCHAIN_FILE)
-    if test $channel_count -eq 0
-        log_message "WARNING: No uncommented channel entry found in rust-toolchain.toml"
-        log_message "This might indicate a malformed TOML file"
-    else if test $channel_count -gt 1
-        log_message "WARNING: Multiple uncommented channel entries found ($channel_count)"
-        log_message "Only the first one will be updated"
-    end
+    # Extract the channel value from the TOML file
+    # Looks for: channel = "nightly-YYYY-MM-DD"
+    set -l channel_line (grep '^channel = ' $TOOLCHAIN_FILE)
 
-    # Only replace the first uncommented channel line (preserves comments)
-    sed -i "0,/^channel = .*/s//channel = \"$target_toolchain\"/" $TOOLCHAIN_FILE
-
-    if test $status -eq 0
-        log_message "✅ Successfully updated rust-toolchain.toml"
-    else
-        log_message "❌ Failed to update rust-toolchain.toml"
+    if test -z "$channel_line"
+        log_message "ERROR: No channel entry found in rust-toolchain.toml"
         return 1
     end
 
-    # Show the updated content
-    log_message "Updated rust-toolchain.toml content:"
-    cat $TOOLCHAIN_FILE | tee -a $LOG_FILE
+    # Extract the value between quotes
+    set -g target_toolchain (echo $channel_line | sed -n 's/.*channel = "\([^"]*\)".*/\1/p')
 
+    if test -z "$target_toolchain"
+        log_message "ERROR: Failed to parse channel value from rust-toolchain.toml"
+        return 1
+    end
+
+    log_message "Target toolchain from TOML: $target_toolchain"
     return 0
 end
 
@@ -137,6 +130,19 @@ function install_rust_analyzer_component
     end
 
     log_message "✅ Successfully installed rust-analyzer component"
+    return 0
+end
+
+function install_additional_components
+    log_message "Installing additional components for $target_toolchain..."
+
+    # Install rust-src for better IDE support
+    if log_command_output "Adding rust-src component..." rustup component add rust-src --toolchain $target_toolchain
+        log_message "✅ Successfully installed rust-src component"
+    else
+        log_message "⚠️  Failed to install rust-src component (continuing anyway)"
+    end
+
     return 0
 end
 
@@ -166,7 +172,7 @@ function cleanup_old_toolchains
 
         # Keep our target nightly
         if string match -q "$target_toolchain*" $toolchain
-            log_message "  KEEPING: $toolchain (target month-old nightly)"
+            log_message "  KEEPING: $toolchain (target from rust-toolchain.toml)"
             continue
         end
 
@@ -196,22 +202,16 @@ end
 
 function main
     # Initialize
-    log_message "=== Rust Toolchain Update Started at "(date)" ==="
-
-    # Calculate the date from 1 month ago
-    set one_month_ago (date -d "1 month ago" "+%Y-%m-%d")
-    set -g target_toolchain "nightly-$one_month_ago"
-
-    log_message "Target toolchain: $target_toolchain"
+    log_message "=== Rust Toolchain Sync Started at "(date)" ==="
 
     # Execute workflow
     validate_prerequisites
     or return 1
 
-    show_current_state
-
-    update_toolchain_config
+    read_toolchain_from_toml
     or return 1
+
+    show_current_state
 
     install_target_toolchain
     or return 1
@@ -219,12 +219,22 @@ function main
     install_rust_analyzer_component
     or return 1
 
+    install_additional_components
+
     cleanup_old_toolchains
 
     verify_final_state
 
     # Cleanup
-    log_message "=== Rust Toolchain Update Completed at "(date)" ==="
+    log_message "=== Rust Toolchain Sync Completed at "(date)" ==="
+    log_message ""
+    log_message "✨ Your Rust environment is now synced to rust-toolchain.toml"
+    log_message "   Toolchain: $target_toolchain"
+    log_message "   Components: rust-analyzer, rust-src"
+    log_message ""
+    log_message "💡 Next steps:"
+    log_message "   - Restart your IDE/editor to pick up the new toolchain"
+    log_message "   - Run 'cargo check' to verify everything works"
     log_message ""
 
     return 0

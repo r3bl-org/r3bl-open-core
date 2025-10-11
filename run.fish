@@ -76,6 +76,10 @@ function main
             unmaintained
         case update-toolchain
             update-toolchain
+        case sync-toolchain
+            sync-toolchain
+        case remove-toolchains
+            remove-toolchains
         case help
             print-help all
         case build-server
@@ -130,6 +134,8 @@ function print-help
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
         echo "    "(set_color green)"unmaintained"(set_color normal)"         Check for unmaintained deps"
         echo "    "(set_color green)"update-toolchain"(set_color normal)"     Update Rust to month-old nightly"
+        echo "    "(set_color green)"sync-toolchain"(set_color normal)"       Sync environment to rust-toolchain.toml"
+        echo "    "(set_color green)"remove-toolchains"(set_color normal)"    Remove ALL toolchains (testing)"
         echo "    "(set_color green)"build-server"(set_color normal)"         Remote build server - uses rsync"
         echo ""
         echo (set_color cyan --bold)"Watch commands:"(set_color normal)
@@ -425,6 +431,7 @@ end
 # This function runs the rust-toolchain-update.fish script which automatically:
 # - Updates rust-toolchain.toml to use a nightly version from 1 month ago
 # - Installs the target toolchain if not already present
+# - Installs rust-analyzer component (required by VSCode, RustRover, cargo, and serena MCP server)
 # - Removes all other nightly toolchains (keeping only stable + target nightly)
 # - Performs aggressive cleanup to save disk space
 #
@@ -442,6 +449,54 @@ end
 #   fish run.fish update-toolchain
 function update-toolchain
     fish rust-toolchain-update.fish
+end
+
+# Syncs Rust environment to match the rust-toolchain.toml file.
+#
+# This function runs the rust-toolchain-sync-to-toml.fish script which:
+# - Reads the channel value from rust-toolchain.toml (doesn't modify it)
+# - Installs the exact toolchain specified in the TOML
+# - Installs rust-analyzer and rust-src components automatically (required by IDEs and serena MCP server)
+# - Removes all other nightly toolchains (keeping only stable + target from TOML)
+# - Performs aggressive cleanup to save disk space
+#
+# Use this when rust-toolchain.toml changes via git operations or manual edits
+# and you need to install the specified toolchain with all required components.
+# Also fixes serena MCP server crashes caused by missing rust-analyzer.
+#
+# Features:
+# - Respects existing rust-toolchain.toml value
+# - Automatic component installation
+# - Comprehensive logging to ~/Downloads/rust-toolchain-sync-to-toml.log
+# - Disk usage reporting before/after cleanup
+#
+# Usage:
+#   fish run.fish sync-toolchain
+function sync-toolchain
+    fish rust-toolchain-sync-to-toml.fish
+end
+
+# Removes ALL Rust toolchains for testing upgrade progress display.
+#
+# ⚠️ WARNING: This is a DESTRUCTIVE testing utility that removes ALL toolchains!
+#
+# This function runs the remove_toolchains.sh script which is used for testing
+# the upgrade progress display in cmdr apps (edi, giti). It creates a clean slate
+# by removing all toolchains so you can observe the full rustup installation process.
+#
+# Use case:
+# - Testing cmdr/src/analytics_client/upgrade_check.rs functionality
+# - Observing full rustup download and installation progress
+# - Debugging upgrade UI components
+#
+# Recovery after testing:
+#   rustup toolchain install stable && rustup default stable
+#   # Or: fish run.fish update-toolchain
+#
+# Usage:
+#   fish run.fish remove-toolchains
+function remove-toolchains
+    bash remove_toolchains.sh
 end
 
 function build
