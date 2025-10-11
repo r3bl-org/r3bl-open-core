@@ -76,7 +76,6 @@
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                    protocols::csi_codes::{AbsolutePosition, CursorPositionRequest,
                                           MovementCount}};
-use crate::{col, row};
 use vte::Params;
 
 /// Move cursor up by n lines.
@@ -121,10 +120,7 @@ pub fn cursor_backward(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
 /// Respects DECSTBM scroll region margins.
 pub fn cursor_position(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let request = CursorPositionRequest::from(params);
-    performer.ofs_buf.cursor_to_position(
-        row(/* 1-based ANSI */ request.row),
-        col(/* 1-based ANSI */ request.col),
-    );
+    performer.ofs_buf.cursor_to_position(request.row, request.col);
 }
 
 /// Handle CNL (Cursor Next Line) - move cursor to beginning of line n lines down.

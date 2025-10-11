@@ -354,27 +354,42 @@ impl AbsolutePosition {
 /// Missing or zero parameters default to 1.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CursorPositionRequest {
-    /// Row position (0-based, converted from 1-based VT100)
-    pub row: u16,
-    /// Column position (0-based, converted from 1-based VT100)
-    pub col: u16,
-}
-
-impl From<(NonZeroU16, NonZeroU16)> for CursorPositionRequest {
-    fn from((row_param, col_param): (NonZeroU16, NonZeroU16)) -> Self {
-        // Convert from 1-based VT100 coordinates to 0-based internal coordinates.
-        Self {
-            row: row_param.get().saturating_sub(1),
-            col: col_param.get().saturating_sub(1),
-        }
-    }
+    /// Row position (0-based index)
+    pub row: RowIndex,
+    /// Column position (0-based index)
+    pub col: ColIndex,
 }
 
 impl From<&vte::Params> for CursorPositionRequest {
+    /// Parse VT100 cursor position parameters and convert to 0-based buffer coordinates.
+    ///
+    /// # Conversion Flow
+    ///
+    /// ```text
+    /// VTE Params           1-based VT100        0-based Buffer
+    /// (from parser)        Coordinates          Indices
+    /// ─────────────        ───────────────      ──────────────
+    /// ESC[5;10H       →    TermRow(5)      →    RowIndex(4)
+    ///                 →    TermCol(10)     →    ColIndex(9)
+    ///     ↓                     ↓                     ↓
+    /// extract_nth_        wrap in             call
+    /// single_non_zero()   TermRow/TermCol     to_zero_based()
+    /// (ensures >= 1)      (1-based coords)    (for buffers)
+    /// ```
+    ///
+    /// **VT100 Spec**: Coordinates are 1-based; missing/zero parameters default to 1.
+    ///
+    /// **Result**: 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
     fn from(params: &vte::Params) -> Self {
+        // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
         let row_param = params.extract_nth_single_non_zero(0);
         let col_param = params.extract_nth_single_non_zero(1);
-        (row_param, col_param).into()
+
+        // Step 2: Convert 1-based → 0-based via type-safe conversion
+        Self {
+            row: TermRow::new(row_param).to_zero_based(), // 1-based → 0-based
+            col: TermCol::new(col_param).to_zero_based(), // 1-based → 0-based
+        }
     }
 }
 
@@ -953,14 +968,15 @@ mod absolute_position_tests {
 #[cfg(test)]
 mod cursor_position_request_tests {
     use super::{test_fixtures::process_csi_sequence_and_test, *};
+    use crate::{col, row};
 
     #[test]
     fn test_from_params_with_both_values() {
         process_csi_sequence_and_test("\x1b[5;10H", |params| {
             // CUP command
             let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row, 4); // Should be 0-based (5-1=4)
-            assert_eq!(result.col, 9); // Should be 0-based (10-1=9)
+            assert_eq!(result.row.as_u16(), 4); // Should be 0-based (5-1=4)
+            assert_eq!(result.col.as_u16(), 9); // Should be 0-based (10-1=9)
         });
     }
 
@@ -968,8 +984,8 @@ mod cursor_position_request_tests {
     fn test_from_params_with_only_row() {
         process_csi_sequence_and_test("\x1b[3H", |params| {
             let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row, 2); // Should be 0-based (3-1=2)
-            assert_eq!(result.col, 0); // Missing col defaults to 1, then 1-1=0
+            assert_eq!(result.row.as_u16(), 2); // Should be 0-based (3-1=2)
+            assert_eq!(result.col.as_u16(), 0); // Missing col defaults to 1, then 1-1=0
         });
     }
 
@@ -977,8 +993,8 @@ mod cursor_position_request_tests {
     fn test_from_params_with_empty() {
         process_csi_sequence_and_test("\x1b[H", |params| {
             let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row, 0); // Missing row defaults to 1, then 1-1=0
-            assert_eq!(result.col, 0); // Missing col defaults to 1, then 1-1=0
+            assert_eq!(result.row.as_u16(), 0); // Missing row defaults to 1, then 1-1=0
+            assert_eq!(result.col.as_u16(), 0); // Missing col defaults to 1, then 1-1=0
         });
     }
 
@@ -986,8 +1002,8 @@ mod cursor_position_request_tests {
     fn test_from_params_with_zeros() {
         process_csi_sequence_and_test("\x1b[0;0H", |params| {
             let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row, 0); // Zero becomes 1, then 1-1=0
-            assert_eq!(result.col, 0); // Zero becomes 1, then 1-1=0
+            assert_eq!(result.row.as_u16(), 0); // Zero becomes 1, then 1-1=0
+            assert_eq!(result.col.as_u16(), 0); // Zero becomes 1, then 1-1=0
         });
     }
 
@@ -996,24 +1012,37 @@ mod cursor_position_request_tests {
         process_csi_sequence_and_test("\x1b[;5H", |params| {
             // Empty row, col=5
             let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row, 0); // Missing row defaults to 1, then 1-1=0
-            assert_eq!(result.col, 4); // Should be 0-based (5-1=4)
+            assert_eq!(result.row.as_u16(), 0); // Missing row defaults to 1, then 1-1=0
+            assert_eq!(result.col.as_u16(), 4); // Should be 0-based (5-1=4)
         });
     }
 
     #[test]
-    fn test_from_tuple() {
+    fn test_direct_construction() {
         use crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz;
-        let result = CursorPositionRequest::from((nz(5), nz(10)));
-        assert_eq!(result.row, 4); // Tuple input is 1-based, so 5-1=4
-        assert_eq!(result.col, 9); // Tuple input is 1-based, so 10-1=9
+        // Construct directly by converting 1-based coordinates to 0-based
+        let result = CursorPositionRequest {
+            row: TermRow::new(nz(5)).to_zero_based(),
+            col: TermCol::new(nz(10)).to_zero_based(),
+        };
+        assert_eq!(result.row.as_u16(), 4); // 1-based → 0-based: 5-1=4
+        assert_eq!(result.col.as_u16(), 9); // 1-based → 0-based: 10-1=9
     }
 
     #[test]
     fn test_cursor_position_request_equality() {
-        let request1 = CursorPositionRequest { row: 5, col: 10 };
-        let request2 = CursorPositionRequest { row: 5, col: 10 };
-        let request3 = CursorPositionRequest { row: 5, col: 11 };
+        let request1 = CursorPositionRequest {
+            row: row(5),
+            col: col(10),
+        };
+        let request2 = CursorPositionRequest {
+            row: row(5),
+            col: col(10),
+        };
+        let request3 = CursorPositionRequest {
+            row: row(5),
+            col: col(11),
+        };
 
         assert_eq!(request1, request2);
         assert_ne!(request1, request3);
@@ -1021,10 +1050,13 @@ mod cursor_position_request_tests {
 
     #[test]
     fn test_cursor_position_request_debug() {
-        let request = CursorPositionRequest { row: 5, col: 10 };
+        let request = CursorPositionRequest {
+            row: row(5),
+            col: col(10),
+        };
         let debug_output = format!("{request:?}");
         assert!(debug_output.contains("CursorPositionRequest"));
-        assert!(debug_output.contains("row: 5"));
-        assert!(debug_output.contains("col: 10"));
+        assert!(debug_output.contains("row: RowIndex(5)"));
+        assert!(debug_output.contains("col: ColIndex(10)"));
     }
 }
