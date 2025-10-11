@@ -50,9 +50,6 @@ mod params;
 mod private_mode;
 mod sequence;
 
-#[cfg(any(test, doc))]
-pub mod csi_test_helpers;
-
 // Re-export public items for easier access.
 pub use color_sequences::*;
 pub use constants::*;

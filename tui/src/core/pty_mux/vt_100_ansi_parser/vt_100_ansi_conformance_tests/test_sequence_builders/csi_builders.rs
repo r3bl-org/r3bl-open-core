@@ -1,10 +1,15 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Test helper functions for CSI sequences.
+//! Test convenience builders for CSI sequences.
 //!
-//! This module provides utility functions for testing and working with [`CsiSequence`]
-//! in test and documentation contexts. These helpers are used across the
-//! `vt_100_ansi_parser` module for validating CSI sequence behavior.
+//! This module provides convenience functions for working with [`CsiSequence`] in tests.
+//! These are simple wrappers that validate or convert CSI sequence variants for
+//! ergonomic test code.
+//!
+//! # Purpose
+//!
+//! While [`CsiSequence`] can be constructed directly in production code, these builders
+//! provide validation and conversion utilities specifically for test scenarios.
 //!
 //! ## Provided Functions
 //!
@@ -12,21 +17,24 @@
 //! - [`csi_seq_cursor_pos_alt`] - Converts to or validates
 //!   [`CsiSequence::CursorPositionAlt`]
 //!
-//! ## Cross-Module Usage
+//! # Example Usage
 //!
-//! These test helpers are used in:
-//! - [`crate::vt_100_ansi_parser::ansi_parser_public_api`] - Unit tests
-//! - [`crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests`] - Integration
-//!   tests (collection of operation-specific test modules)
+//! ```rust,ignore
+//! use crate::vt_100_ansi_conformance_tests::test_sequence_builders::csi_builders::*;
 //!
-//! The module is conditionally compiled with `#[cfg(any(test, doc))]` to ensure
-//! test utilities are only available during testing and documentation generation.
+//! let cursor_pos = csi_seq_cursor_pos(
+//!     CsiSequence::CursorPosition {
+//!         row: term_row(nz(5)),
+//!         col: term_col(nz(10))
+//!     }
+//! );
+//! ```
 //!
-//! [`CsiSequence`]: super::sequence::CsiSequence
-//! [`CsiSequence::CursorPosition`]: super::sequence::CsiSequence::CursorPosition
-//! [`CsiSequence::CursorPositionAlt`]: super::sequence::CsiSequence::CursorPositionAlt
+//! [`CsiSequence`]: crate::protocols::csi_codes::CsiSequence
+//! [`CsiSequence::CursorPosition`]: crate::protocols::csi_codes::CsiSequence::CursorPosition
+//! [`CsiSequence::CursorPositionAlt`]: crate::protocols::csi_codes::CsiSequence::CursorPositionAlt
 
-use super::sequence::CsiSequence;
+use crate::protocols::csi_codes::CsiSequence;
 
 /// Helper function to create a `CsiSequence::CursorPosition`.
 ///

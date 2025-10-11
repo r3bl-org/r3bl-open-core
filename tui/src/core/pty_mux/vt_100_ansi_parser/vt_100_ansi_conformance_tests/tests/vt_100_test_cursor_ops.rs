@@ -8,10 +8,10 @@ use crate::{Pos, col, height,
             row, term_col, term_row,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                  protocols::{csi_codes::{CSI_PARAM_SEPARATOR,
-                                                         CSI_START, CsiSequence,
-                                                         csi_test_helpers::{csi_seq_cursor_pos,
+                                                         CSI_START, CsiSequence},
+                                             esc_codes},
+                                 vt_100_ansi_conformance_tests::test_sequence_builders::csi_builders::{csi_seq_cursor_pos,
                                                                             csi_seq_cursor_pos_alt}},
-                                             esc_codes}},
             width};
 use std::num::NonZeroU16;
 use vte::Perform;
