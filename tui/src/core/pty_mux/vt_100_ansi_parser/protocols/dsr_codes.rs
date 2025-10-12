@@ -24,7 +24,7 @@
 use super::csi_codes::CSI_PARAM_SEPARATOR;
 use crate::{ParamsExt, TermCol, TermRow,
             core::common::fast_stringify::{BufTextStorage, FastStringify},
-            impl_display_for_fast_stringify};
+            generate_impl_display_for_fast_stringify};
 use std::fmt::{self, Display};
 
 // DSR response sequence components.
@@ -160,7 +160,7 @@ mod dsr_sequence_impl {
     }
 }
 
-impl_display_for_fast_stringify!(DsrSequence);
+generate_impl_display_for_fast_stringify!(DsrSequence);
 
 /// Represents a Device Status Report (DSR) request event received FROM the PTY child
 /// process that requires a response to be sent back TO the PTY.

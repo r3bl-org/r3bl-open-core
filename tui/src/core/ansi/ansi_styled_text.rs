@@ -2,8 +2,8 @@
 
 use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
             InlineString, InlineVec, PixelChar, SPACER_GLYPH_CHAR, SgrCode, TuiStyle,
-            UNICODE_REPLACEMENT_CHAR, impl_display_for_fast_stringify, inline_string,
-            tui_color,
+            UNICODE_REPLACEMENT_CHAR, generate_impl_display_for_fast_stringify,
+            inline_string, tui_color,
             tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse, Strikethrough,
                                Underline}};
 use smallvec::{SmallVec, smallvec};
@@ -838,7 +838,7 @@ impl FastStringify for ASTStyle {
     }
 }
 
-impl_display_for_fast_stringify!(ASTStyle);
+generate_impl_display_for_fast_stringify!(ASTStyle);
 
 impl FastStringify for ASText {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
@@ -857,7 +857,7 @@ impl FastStringify for ASText {
     }
 }
 
-impl_display_for_fast_stringify!(ASText);
+generate_impl_display_for_fast_stringify!(ASText);
 
 #[cfg(test)]
 mod tests {

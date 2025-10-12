@@ -80,7 +80,7 @@ pub const OSC_CODE_TITLE: &str = "2";
 pub const OSC_CODE_HYPERLINK: &str = "8";
 
 use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
-            impl_display_for_fast_stringify};
+            generate_impl_display_for_fast_stringify};
 use std::fmt;
 
 /// OSC sequence builder enum that provides type-safe construction of Operating System
@@ -164,7 +164,7 @@ impl FastStringify for OscSequence {
     }
 }
 
-impl_display_for_fast_stringify!(OscSequence);
+generate_impl_display_for_fast_stringify!(OscSequence);
 
 #[cfg(test)]
 mod tests {

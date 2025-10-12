@@ -1,9 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Trait for high-performance string building for complex types. See [`FastStringify`],
-//! [`BufTextStorage`] and [`impl_display_for_fast_stringify!`] for details.
+//! [`BufTextStorage`] and [`generate_impl_display_for_fast_stringify!`] for details.
 //!
-//! [`impl_display_for_fast_stringify!`]: crate::impl_display_for_fast_stringify
+//! [`generate_impl_display_for_fast_stringify!`]: crate::generate_impl_display_for_fast_stringify
 
 use std::fmt::{Display, Formatter, Result};
 
@@ -17,16 +17,16 @@ use std::fmt::{Display, Formatter, Result};
 /// # How to Implement
 ///
 /// Both [`FastStringify`] and [`Display`] must be implemented, but the [`Display`]
-/// implementation is always the same boilerplate. Use the [`impl_display_for_fast_stringify!`]
+/// implementation is always the same boilerplate. Use the [`generate_impl_display_for_fast_stringify!`]
 /// macro to generate it automatically.
 ///
 /// 1. **Implement [`write_to_buf()`]** with your custom formatting logic
-/// 2. **Call the macro** [`impl_display_for_fast_stringify!`] to generate the [`Display`] implementation
+/// 2. **Call the macro** [`generate_impl_display_for_fast_stringify!`] to generate the [`Display`] implementation
 ///
-/// [`impl_display_for_fast_stringify!`]: crate::impl_display_for_fast_stringify
+/// [`generate_impl_display_for_fast_stringify!`]: crate::generate_impl_display_for_fast_stringify
 ///
-///    ```rust
-///    # use r3bl_tui::{FastStringify, BufTextStorage, impl_display_for_fast_stringify};
+/// ```rust
+///    # use r3bl_tui::{FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify};
 ///    # use std::fmt::{Result, Write};
 ///    # struct MyType { value: i32 }
 ///    impl FastStringify for MyType {
@@ -39,7 +39,7 @@ use std::fmt::{Display, Formatter, Result};
 ///    }
 ///
 ///    // ✨ One line instead of 5-line Display impl!
-///    impl_display_for_fast_stringify!(MyType);
+///    generate_impl_display_for_fast_stringify!(MyType);
 ///    ```
 ///
 /// # Why Use This?
@@ -188,24 +188,27 @@ pub type BufTextStorage = String;
 /// # Basic Usage
 ///
 /// ```rust
-/// # use r3bl_tui::{FastStringify, BufTextStorage, impl_display_for_fast_stringify};
+/// # use r3bl_tui::{FastStringify, BufTextStorage, generate_impl_display_for_fast_stringify};
 /// # use std::fmt::{Result, Write};
 /// struct MyType { value: i32 }
 ///
 /// impl FastStringify for MyType {
 ///     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
-/// #       todo!()
+///         acc.push_str("MyType { value: ");
+///         write!(acc, "{}", self.value)?;
+///         acc.push_str(" }");
+///         Ok(())
 ///     }
 /// }
 ///
 /// // Single line instead of 5-line Display impl!
-/// impl_display_for_fast_stringify!(MyType);
+/// generate_impl_display_for_fast_stringify!(MyType);
 /// ```
 ///
 /// [`Display`]: std::fmt::Display
 /// [`FastStringify`]: FastStringify
 #[macro_export]
-macro_rules! impl_display_for_fast_stringify {
+macro_rules! generate_impl_display_for_fast_stringify {
     // Basic case: non-generic type
     ($type:ty) => {
         impl ::std::fmt::Display for $type {
@@ -238,7 +241,7 @@ mod tests {
         }
     }
 
-    impl_display_for_fast_stringify!(SimpleType);
+    generate_impl_display_for_fast_stringify!(SimpleType);
 
     #[test]
     fn test_macro_non_generic() {
@@ -253,7 +256,7 @@ mod tests {
         fn write_to_buf(&self, _acc: &mut BufTextStorage) -> Result { Ok(()) }
     }
 
-    impl_display_for_fast_stringify!(EmptyType);
+    generate_impl_display_for_fast_stringify!(EmptyType);
 
     #[test]
     fn test_macro_empty_output() {

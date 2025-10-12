@@ -4,7 +4,7 @@
 
 use super::{ChUnit, Index, ch, idx};
 use crate::{ColWidth, LengthOps, NumericConversions, NumericValue, RowHeight,
-            create_numeric_arithmetic_operators};
+            generate_numeric_arithmetic_ops_impl};
 use std::{fmt::Debug,
           hash::Hash,
           ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
@@ -180,7 +180,7 @@ mod numeric_arithmetic_operators {
     use super::*;
 
     // Generate numeric operations using macro.
-    create_numeric_arithmetic_operators!(Length, len, [usize, u16, i32]);
+    generate_numeric_arithmetic_ops_impl!(Length, len, [usize, u16, i32]);
 }
 
 mod bounds_check_trait_impls {

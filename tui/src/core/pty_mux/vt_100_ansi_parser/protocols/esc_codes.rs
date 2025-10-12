@@ -39,7 +39,7 @@
 //! - `ESC ( 0` - Switch to line-drawing character set
 //! - `ESC c` - Reset terminal to initial state
 
-use crate::{BufTextStorage, FastStringify, impl_display_for_fast_stringify};
+use crate::{BufTextStorage, FastStringify, generate_impl_display_for_fast_stringify};
 use std::fmt;
 
 // Cursor Save/Restore Operations
@@ -192,7 +192,7 @@ impl FastStringify for EscSequence {
     }
 }
 
-impl_display_for_fast_stringify!(EscSequence);
+generate_impl_display_for_fast_stringify!(EscSequence);
 
 #[cfg(test)]
 mod tests {

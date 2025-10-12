@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ArrayBoundsCheck, ChUnit, ColWidth, IndexOps, Length, NumericConversions,
-            NumericValue, create_numeric_arithmetic_operators, usize, width};
+            NumericValue, generate_numeric_arithmetic_ops_impl, usize, width};
 use std::{fmt::Debug,
           ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
 
@@ -230,7 +230,7 @@ mod numeric_arithmetic_operators {
     use super::*;
 
     // Generate numeric operations using macro.
-    create_numeric_arithmetic_operators!(ColIndex, col, [usize, u16, i32]);
+    generate_numeric_arithmetic_ops_impl!(ColIndex, col, [usize, u16, i32]);
 }
 
 mod bounds_check_trait_impls {

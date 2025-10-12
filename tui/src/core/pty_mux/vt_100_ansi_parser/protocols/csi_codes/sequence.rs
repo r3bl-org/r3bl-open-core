@@ -18,7 +18,7 @@ use super::{super::dsr_codes::DsrRequestType,
                         VPA_VERTICAL_POSITION},
             private_mode::PrivateModeType};
 use crate::{BufTextStorage, FastStringify, TermCol, TermRow,
-            impl_display_for_fast_stringify};
+            generate_impl_display_for_fast_stringify};
 use std::fmt::{Formatter, Result};
 
 /// Builder for CSI (Control Sequence Introducer) sequences.
@@ -206,4 +206,4 @@ impl FastStringify for CsiSequence {
     }
 }
 
-impl_display_for_fast_stringify!(CsiSequence);
+generate_impl_display_for_fast_stringify!(CsiSequence);

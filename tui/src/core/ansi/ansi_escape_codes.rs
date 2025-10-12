@@ -40,7 +40,8 @@
 //! - <https://doc.rust-lang.org/reference/tokens.html#ascii-escapes>
 //! - <https://notes.burke.libbey.me/ansi-escape-codes/>
 
-use crate::{ANSIBasicColor, AnsiValue, FastStringify, impl_display_for_fast_stringify};
+use crate::{ANSIBasicColor, AnsiValue, FastStringify,
+            generate_impl_display_for_fast_stringify};
 use std::fmt::Result;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -308,7 +309,7 @@ impl FastStringify for SgrCode {
     }
 }
 
-impl_display_for_fast_stringify!(SgrCode);
+generate_impl_display_for_fast_stringify!(SgrCode);
 
 #[cfg(test)]
 mod tests {

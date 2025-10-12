@@ -42,8 +42,8 @@
 /// # Example Usage
 /// This macro is used internally by dimension types:
 /// ```ignore
-/// create_numeric_arithmetic_operators!(ColIndex, col, [usize, u16, i32]);
-/// create_numeric_arithmetic_operators!(RowIndex, row, [usize, u16, i32]);
+/// generate_numeric_arithmetic_ops_impl!(ColIndex, col, [usize, u16, i32]);
+/// generate_numeric_arithmetic_ops_impl!(RowIndex, row, [usize, u16, i32]);
 /// ```
 ///
 /// The generated implementations enable operations like:
@@ -62,14 +62,14 @@
 /// assert_eq!(index + (-5i32), col(10)); // negative i32 becomes 0
 /// ```
 #[macro_export]
-macro_rules! create_numeric_arithmetic_operators {
+macro_rules! generate_numeric_arithmetic_ops_impl {
     ($type:ty, $constructor:ident, [$($numeric_type:ident),*]) => {
         $(
             impl std::ops::Sub<$numeric_type> for $type {
                 type Output = $type;
 
                 fn sub(self, rhs: $numeric_type) -> Self::Output {
-                    create_numeric_arithmetic_operators!(@sub_impl self, rhs, $constructor, $numeric_type)
+                    generate_numeric_arithmetic_ops_impl!(@sub_impl self, rhs, $constructor, $numeric_type)
                 }
             }
 
@@ -83,7 +83,7 @@ macro_rules! create_numeric_arithmetic_operators {
                 type Output = $type;
 
                 fn add(self, rhs: $numeric_type) -> Self::Output {
-                    create_numeric_arithmetic_operators!(@add_impl self, rhs, $constructor, $numeric_type)
+                    generate_numeric_arithmetic_ops_impl!(@add_impl self, rhs, $constructor, $numeric_type)
                 }
             }
 
@@ -166,7 +166,7 @@ mod tests {
     }
 
     // Use the macro to generate operations for our test type.
-    create_numeric_arithmetic_operators!(TestIndex, test_index, [usize, u16, i32]);
+    generate_numeric_arithmetic_ops_impl!(TestIndex, test_index, [usize, u16, i32]);
 
     #[test]
     fn test_macro_generated_add_operations() {

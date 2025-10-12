@@ -7,6 +7,57 @@
 //! The [`vt_100_ansi_parser`] is the primary consumer of these types, along with
 //! the [`offscreen_buffer`] module which uses them for VT 100 related operations.
 //!
+//! # Core Concept: Two Coordinate Systems
+//!
+//! Terminal operations use two distinct coordinate systems that must never be mixed:
+//!
+//! ```text
+//! Terminal Coordinates (1-based)    Buffer Coordinates (0-based)
+//! ┌─────────────────────────┐      ┌─────────────────────────┐
+//! │ (1,1) (1,2) (1,3) ...   │      │ (0,0) (0,1) (0,2) ...   │
+//! │ (2,1) (2,2) (2,3) ...   │      │ (1,0) (1,1) (1,2) ...   │
+//! │ (3,1) (3,2) (3,3) ...   │      │ (2,0) (2,1) (2,2) ...   │
+//! │ ...                     │      │ ...                     │
+//! └─────────────────────────┘      └─────────────────────────┘
+//!   ANSI sequences                   Arrays/buffers/vectors
+//!   ESC[row;colH                     vec[row_idx][col_idx]
+//! ```
+//!
+//! **Why This Matters**: ANSI escape sequences like `ESC[5;10H` use 1-based indexing
+//! where `(1,1)` is the top-left corner. Internal data structures use 0-based indexing
+//! where `(0,0)` is the top-left. Mixing these systems causes off-by-one errors.
+//!
+//! # Usage Example
+//!
+//! ```rust
+//! use r3bl_tui::{term_col, term_row, RowIndex, TermRow};
+//! use std::num::NonZeroU16;
+//!
+//! // Create terminal coordinates for ANSI sequences
+//! let term_pos = (
+//!     term_row(NonZeroU16::new(5).unwrap()),
+//!     term_col(NonZeroU16::new(10).unwrap())
+//! );
+//! // Generates: ESC[5;10H (row 5, col 10 in terminal)
+//!
+//! // Convert to buffer coordinates for array access
+//! let buffer_row = term_pos.0.to_zero_based(); // RowIndex(4)
+//! let buffer_col = term_pos.1.to_zero_based(); // ColIndex(9)
+//! // Now safe to use: buffer[buffer_row.as_usize()][buffer_col.as_usize()]
+//!
+//! // Convert from buffer back to terminal
+//! let buffer_idx = RowIndex::new(4);
+//! let term_row = TermRow::from_zero_based(buffer_idx); // TermRow(5)
+//! ```
+//!
+//! # Common Pitfalls
+//!
+//! - **Off-by-one errors**: Always convert explicitly, never manually add/subtract 1
+//! - **Type confusion**: Use [`TermRow`]/[`TermCol`] for ANSI, [`RowIndex`]/[`ColIndex`]
+//!   for buffers
+//! - **Missing conversion**: Converting to buffer coords is infallible (always safe), but
+//!   forgetting to convert leads to accessing wrong cells
+//!
 //! [`vt_100_ansi_parser`]: crate::core::pty_mux::vt_100_ansi_parser
 //! [`offscreen_buffer`]: crate::tui::terminal_lib_backends::offscreen_buffer
 
@@ -73,61 +124,6 @@ macro_rules! generate_impl_term_unit {
     };
 }
 
-/// # Core Concept: Two Coordinate Systems
-///
-/// Terminal operations use two distinct coordinate systems that must never be mixed:
-///
-/// ```text
-/// Terminal Coordinates (1-based)    Buffer Coordinates (0-based)
-/// ┌─────────────────────────┐      ┌─────────────────────────┐
-/// │ (1,1) (1,2) (1,3) ...   │      │ (0,0) (0,1) (0,2) ...   │
-/// │ (2,1) (2,2) (2,3) ...   │      │ (1,0) (1,1) (1,2) ...   │
-/// │ (3,1) (3,2) (3,3) ...   │      │ (2,0) (2,1) (2,2) ...   │
-/// │ ...                     │      │ ...                     │
-/// └─────────────────────────┘      └─────────────────────────┘
-///   ANSI sequences                   Arrays/buffers/vectors
-///   ESC[row;colH                     vec[row_idx][col_idx]
-/// ```
-///
-/// **Why This Matters**: ANSI escape sequences like `ESC[5;10H` use 1-based indexing
-/// where `(1,1)` is the top-left corner. Internal data structures use 0-based indexing
-/// where `(0,0)` is the top-left. Mixing these systems causes off-by-one errors.
-///
-/// # Usage Example
-///
-/// ```rust
-/// use r3bl_tui::{term_col, term_row, RowIndex, TermRow};
-/// use std::num::NonZeroU16;
-///
-/// // Create terminal coordinates for ANSI sequences
-/// let term_pos = (
-///     term_row(NonZeroU16::new(5).unwrap()),
-///     term_col(NonZeroU16::new(10).unwrap())
-/// );
-/// // Generates: ESC[5;10H (row 5, col 10 in terminal)
-///
-/// // Convert to buffer coordinates for array access
-/// let buffer_row = term_pos.0.to_zero_based(); // RowIndex(4)
-/// let buffer_col = term_pos.1.to_zero_based(); // ColIndex(9)
-/// // Now safe to use: buffer[buffer_row.as_usize()][buffer_col.as_usize()]
-///
-/// // Convert from buffer back to terminal
-/// let buffer_idx = RowIndex::new(4);
-/// let term_row = TermRow::from_zero_based(buffer_idx); // TermRow(5)
-/// ```
-///
-/// # Common Pitfalls
-///
-/// - **Off-by-one errors**: Always convert explicitly, never manually add/subtract 1
-/// - **Type confusion**: Use [`TermRow`]/[`TermCol`] for ANSI, [`RowIndex`]/[`ColIndex`]
-///   for buffers
-/// - **Missing conversion**: Converting to buffer coords is infallible (always safe), but
-///   forgetting to convert leads to accessing wrong cells
-
-/// Create a [`TermRow`] from a [`NonZeroU16`] value.
-#[must_use]
-pub const fn term_row(value: NonZeroU16) -> TermRow { TermRow::new(value) }
-
 /// 1-based row coordinate for terminal ANSI sequences.
 ///
 /// Uses [`NonZeroU16`] as mandated by the VT-100 specification, which defines terminal
@@ -142,9 +138,9 @@ pub const fn term_row(value: NonZeroU16) -> TermRow { TermRow::new(value) }
 pub struct TermRow(pub NonZeroU16);
 generate_impl_term_unit!(TermRow, RowIndex);
 
-/// Create a [`TermCol`] from a [`NonZeroU16`] value.
+/// Create a [`TermRow`] from a [`NonZeroU16`] value.
 #[must_use]
-pub const fn term_col(value: NonZeroU16) -> TermCol { TermCol::new(value) }
+pub const fn term_row(value: NonZeroU16) -> TermRow { TermRow::new(value) }
 
 /// 1-based column coordinate for terminal ANSI sequences.
 ///
@@ -159,6 +155,10 @@ pub const fn term_col(value: NonZeroU16) -> TermCol { TermCol::new(value) }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermCol(pub NonZeroU16);
 generate_impl_term_unit!(TermCol, ColIndex);
+
+/// Create a [`TermCol`] from a [`NonZeroU16`] value.
+#[must_use]
+pub const fn term_col(value: NonZeroU16) -> TermCol { TermCol::new(value) }
 
 /// Safe conversions from buffer coordinates (0-based) to terminal coordinates (1-based).
 mod from_buffer_coords {

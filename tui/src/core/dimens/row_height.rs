@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ChUnit, LengthOps, NumericConversions, NumericValue, RowIndex, ch,
-            create_numeric_arithmetic_operators};
+            generate_numeric_arithmetic_ops_impl};
 use std::{fmt::{Debug, Formatter},
           ops::{Add, Deref, DerefMut, Div, Sub, SubAssign}};
 
@@ -150,7 +150,7 @@ mod numeric_arithmetic_operators {
     use super::*;
 
     // Generate numeric operations using macro.
-    create_numeric_arithmetic_operators!(RowHeight, height, [usize, u16, i32]);
+    generate_numeric_arithmetic_ops_impl!(RowHeight, height, [usize, u16, i32]);
 }
 
 mod bounds_check_trait_impls {
