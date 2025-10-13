@@ -45,6 +45,11 @@ need_stdout = false
 command = ["cargo", "test"]
 need_stdout = true
 
+# Run only doctests
+[jobs.doctests]
+command = ["cargo", "test", "--doc"]
+need_stdout = true
+
 # Nextest configuration for silent output
 # Docs: https://nexte.st/docs/running/
 #

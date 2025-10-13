@@ -391,7 +391,9 @@ fish run.fish install-cargo-tools
 
 ### R3BL VSCode Extensions
 
-For an optimal development experience with r3bl-open-core, we provide a custom VSCode extension pack specifically designed for Rust development. This extension pack is not available on the VSCode marketplace and must be installed manually.
+For an optimal development experience with r3bl-open-core, we provide a custom VSCode extension pack
+specifically designed for Rust development. This extension pack is not available on the VSCode
+marketplace and must be installed manually.
 
 **What's included:**
 
@@ -420,15 +422,18 @@ cd r3bl-vscode-extensions
 ```
 
 **Prerequisites:**
+
 - VSCode or VSCode Insiders installed
 - Bash shell (for running install.sh)
 
 **Post-installation:**
+
 1. Restart VSCode
 2. Select the R3BL Theme: `Ctrl+Shift+P` → "Preferences: Color Theme" → "R3BL Theme"
 3. Configure copyright settings if needed
 
-The extensions work seamlessly with the existing development tools mentioned in this guide, including rust-analyzer and bacon.
+The extensions work seamlessly with the existing development tools mentioned in this guide,
+including rust-analyzer and bacon.
 
 ## Build the workspace and run tests
 
@@ -490,59 +495,103 @@ Other commands:
 
 ### Key Commands
 
-| Command                          | Description                                                     |
-| -------------------------------- | --------------------------------------------------------------- |
-| `fish run.fish all`              | Run all major checks (build, test, clippy, docs, audit, format) |
-| `fish run.fish build`            | Build the entire workspace                                      |
-| `fish run.fish test`             | Run all tests across the workspace                              |
-| `fish run.fish watch-all-tests`  | Watch for file changes and run tests automatically              |
-| `fish run.fish run-examples`     | Run TUI examples interactively                                  |
-| `fish run.fish run-binaries`     | Run cmdr binaries (edi, giti, rc) interactively                 |
-| `fish run.fish update-toolchain` | Update Rust to month-old nightly toolchain with cleanup         |
-| `fish run.fish sync-toolchain`   | Sync Rust environment to match rust-toolchain.toml              |
-| `fish run.fish remove-toolchains`| Remove ALL toolchains (⚠️ destructive testing utility)         |
+| Command                           | Description                                                     |
+| --------------------------------- | --------------------------------------------------------------- |
+| `fish run.fish all`               | Run all major checks (build, test, clippy, docs, audit, format) |
+| `fish run.fish build`             | Build the entire workspace                                      |
+| `fish run.fish test`              | Run all tests across the workspace                              |
+| `fish run.fish watch-all-tests`   | Watch for file changes and run tests automatically              |
+| `fish run.fish run-examples`      | Run TUI examples interactively                                  |
+| `fish run.fish run-binaries`      | Run cmdr binaries (edi, giti, rc) interactively                 |
+| `fish run.fish update-toolchain`  | Update Rust to month-old nightly toolchain with cleanup         |
+| `fish run.fish sync-toolchain`    | Sync Rust environment to match rust-toolchain.toml              |
+| `fish run.fish remove-toolchains` | Remove ALL toolchains (⚠️ destructive testing utility)          |
 
 ### Bacon Development Tools
 
-This project includes [bacon](https://dystroy.org/bacon/) configuration for background code checking and testing. Bacon provides real-time feedback on code changes with two distinct workflows:
+This project includes [bacon](https://dystroy.org/bacon/) configuration for background code checking
+and testing. Bacon provides real-time feedback on code changes with two distinct workflows:
 
 **Interactive Workflow (Rich TUI with details):**
+
 - Full terminal UI with detailed output
 - Ctrl+click on errors and warnings to jump directly to source code (via OSC hyperlinks)
 - Perfect for active debugging and development
 
 **Background Workflow (Silent monitoring):**
+
 - Minimal output - just success/failure status
 - Answers simple yes/no questions like "do tests pass?" or "do docs build?"
 - Ideal for background monitoring while focusing on other tasks
 
-**Bacon commands:**
+**Available Bacon Commands:**
 
-| Command | Workflow | Description |
-| ------- | -------- | ----------- |
-| `bacon nextest` | Interactive | Rich TUI test runner with clickable errors, detailed output, and real-time updates |
-| `bacon nextest --headless --summary` | Background | Silent test runner providing only pass/fail status |
-| `bacon doc` | Interactive | Documentation builder with detailed output and error navigation |
-| `bacon doc --headless --summary` | Background | Silent doc builder answering "did docs generate?" with minimal output |
+**Code Quality & Checking:**
+
+| Command            | Description                                                 |
+| ------------------ | ----------------------------------------------------------- |
+| `bacon check`      | Fast typecheck of default target                            |
+| `bacon check-all`  | Typecheck all targets (lib, bins, tests, benches, examples) |
+| `bacon clippy`     | Run clippy lints on default target                          |
+| `bacon clippy-all` | Run clippy lints on all targets (keybinding: `c`)           |
+
+**Testing:**
+
+| Command                              | Workflow    | Description                                                              |
+| ------------------------------------ | ----------- | ------------------------------------------------------------------------ |
+| `bacon test`                         | Interactive | Run all tests with cargo test (includes unit, integration, and doctests) |
+| `bacon test -- <pattern>`            | Interactive | Run specific test matching pattern                                       |
+| `bacon doctests`                     | Interactive | Run only documentation tests (`cargo test --doc`)                        |
+| `bacon nextest`                      | Interactive | Rich TUI test runner using cargo-nextest (faster, no doctests)           |
+| `bacon nextest --headless --summary` | Background  | Silent test runner providing only pass/fail status                       |
+
+**Documentation:**
+
+| Command                          | Workflow    | Description                                       |
+| -------------------------------- | ----------- | ------------------------------------------------- |
+| `bacon doc`                      | Interactive | Generate documentation with detailed output       |
+| `bacon doc --headless --summary` | Background  | Silent doc builder answering "did docs generate?" |
+| `bacon doc-open`                 | Interactive | Generate docs and open in browser                 |
+
+**Running & Benchmarking:**
+
+| Command                      | Description                                                             |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `bacon run`                  | Build and run the project in background                                 |
+| `bacon run-long`             | Run long-running processes (e.g., servers) with auto-restart on changes |
+| `bacon ex -- <example_name>` | Run specific example (e.g., `bacon ex -- my-example`)                   |
+| `bacon bench`                | Run performance benchmarks                                              |
 
 Choose the workflow that matches your current needs:
-- Use **interactive** when actively debugging or wanting detailed feedback
-- Use **background** for continuous monitoring, CI/CD pipelines, or when you just need to know if things work
 
-**Note:** We use [`cargo-nextest`](https://nexte.st/) for running tests as it's significantly faster than `cargo test`. However, nextest does not run doctests (tests in documentation comments). To run doctests, use `cargo test --doc` separately.
+- Use **interactive** when actively debugging or wanting detailed feedback
+- Use **background** for continuous monitoring, CI/CD pipelines, or when you just need to know if
+  things work
+
+**Testing Notes:**
+
+- We use [`cargo-nextest`](https://nexte.st/) for running tests as it's significantly faster than
+  `cargo test`
+- However, nextest does **not** run doctests (tests in documentation comments)
+- Use `bacon doctests` or `bacon test` to run documentation tests
+- Use `bacon test --doc` is equivalent to `bacon doctests`
 
 ### Status Monitoring Scripts
 
-For developers who want ultra-minimal status monitoring, this project includes two bash scripts designed for integration with the [GNOME Executor extension](https://extensions.gnome.org/extension/2932/executor/). These scripts provide at-a-glance status indicators in your GNOME top bar.
+For developers who want ultra-minimal status monitoring, this project includes two bash scripts
+designed for integration with the
+[GNOME Executor extension](https://extensions.gnome.org/extension/2932/executor/). These scripts
+provide at-a-glance status indicators in your GNOME top bar.
 
 **Quick Status Scripts:**
 
-| Script | Purpose | Success Output | Failure Output |
-| ------ | ------- | -------------- | -------------- |
-| `test-status-one-line.bash` | Run tests and show emoji status | ` 🧪✔️` | ` 🧪❌` |
-| `doc-status-one-line.bash` | Build docs and show emoji status | ` 📚✔️` | ` 📚❌` |
+| Script                      | Purpose                          | Success Output | Failure Output |
+| --------------------------- | -------------------------------- | -------------- | -------------- |
+| `test-status-one-line.bash` | Run tests and show emoji status  | ` 🧪✔️`        | ` 🧪❌`        |
+| `doc-status-one-line.bash`  | Build docs and show emoji status | ` 📚✔️`        | ` 📚❌`        |
 
 **Key Features:**
+
 - **Single-line output**: Perfect for status bars and monitoring systems
 - **Emoji-only status**: Universal visual language requiring no text parsing
 - **Silent operation**: All cargo output is suppressed, only status emoji appears
@@ -550,6 +599,7 @@ For developers who want ultra-minimal status monitoring, this project includes t
 - **Fast execution**: Optimized for quick status checks without verbose output
 
 **Usage Examples:**
+
 ```sh
 # Quick test status check
 ./test-status-one-line.bash
@@ -561,12 +611,15 @@ For developers who want ultra-minimal status monitoring, this project includes t
 ```
 
 **Integration with Development Workflow:**
-- **Complements Bacon**: While bacon provides rich interactive feedback, these scripts offer minimal monitoring
+
+- **Complements Bacon**: While bacon provides rich interactive feedback, these scripts offer minimal
+  monitoring
 - **CI/CD friendly**: Perfect for automated pipelines requiring simple pass/fail status
 - **GNOME integration**: Designed specifically for desktop environment status bar integration
 - **Background monitoring**: Ideal for continuous status monitoring without interrupting workflow
 
-These scripts provide the same underlying functionality as the bacon workflows but with radically different output designed for external consumption rather than developer interaction.
+These scripts provide the same underlying functionality as the bacon workflows but with radically
+different output designed for external consumption rather than developer interaction.
 
 ### Build Cache (using sccache) Verification
 
@@ -600,15 +653,23 @@ There is no need to restart the server, as it is designed to be "lazy". And runn
 
 ### Wild Linker (Linux)
 
-This project uses the [Wild linker](https://github.com/davidlattimore/wild) as a fast alternative to the default linker on Linux systems. Wild can significantly reduce link times during iterative development, making builds faster and more responsive.
+This project uses the [Wild linker](https://github.com/davidlattimore/wild) as a fast alternative to
+the default linker on Linux systems. Wild can significantly reduce link times during iterative
+development, making builds faster and more responsive.
 
-**Automatic Configuration**: The build system automatically detects and configures Wild when both `clang` and `wild` are installed. If either tool is missing, the configuration gracefully falls back to standard parallel compilation without Wild.
+**Automatic Configuration**: The build system automatically detects and configures Wild when both
+`clang` and `wild` are installed. If either tool is missing, the configuration gracefully falls back
+to standard parallel compilation without Wild.
 
-**Installation**: The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script automatically installs both prerequisites:
+**Installation**: The
+[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script
+automatically installs both prerequisites:
+
 - `clang`: Required as the linker frontend
 - `wild-linker`: The fast linker implementation via `cargo-binstall`
 
 **Configuration**: When available, Wild is configured in `.cargo/config.toml` for Linux targets:
+
 ```toml
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
@@ -618,17 +679,21 @@ rustflags = [
 ]
 ```
 
-**Verification**: Check if Wild is active by looking for the configuration in `.cargo/config.toml` or by observing faster link times during development builds.
+**Verification**: Check if Wild is active by looking for the configuration in `.cargo/config.toml`
+or by observing faster link times during development builds.
 
-**Platform Support**: Wild linker is Linux-only. On other platforms, the build system uses standard parallel compilation without Wild.
+**Platform Support**: Wild linker is Linux-only. On other platforms, the build system uses standard
+parallel compilation without Wild.
 
 ### Rust Toolchain Management
 
-This project includes three complementary scripts for comprehensive Rust toolchain management, each serving a specific purpose in the development workflow:
+This project includes three complementary scripts for comprehensive Rust toolchain management, each
+serving a specific purpose in the development workflow:
 
-#### 1. rust-toolchain-update.fish - Automated Monthly Updates
+#### 1. rust-toolchain-update.fish - Smart Validated Toolchain Updates
 
-Updates the project to use a month-old nightly toolchain for stability while staying current.
+Intelligently finds and validates a stable nightly toolchain, preferring older versions for
+stability while ensuring they don't have ICE (Internal Compiler Error) bugs.
 
 ```sh
 # Via run.fish command
@@ -639,28 +704,73 @@ fish run.fish update-toolchain
 ```
 
 **What it does:**
-- Calculates a nightly toolchain date from exactly 1 month ago
-- **Updates** `rust-toolchain.toml` to use this stable-but-recent nightly
-- Installs the target toolchain with rust-analyzer component (required by IDEs, cargo, and serena MCP server)
+
+- **Smart search**: Tests nightly toolchains starting from 45 days ago, moving forward day-by-day
+  until finding a stable one (up to today)
+- **ICE validation**: Runs comprehensive validation suite on each candidate:
+  - `cargo clippy --all-targets`
+  - `cargo build`
+  - `cargo nextest run`
+  - `cargo test --doc`
+  - `cargo doc --no-deps`
+- **Toolchain vs code errors**: Distinguishes between:
+  - ❌ **ICE errors** (compiler crashes) → rejects toolchain, tries next day
+  - ✅ **Code errors** (compilation/test failures) → accepts toolchain (validates compiler works,
+    not your code)
+- **First stable wins**: Stops at the first toolchain without ICE errors (usually finds stable
+  toolchain in first attempt)
+- **Updates** `rust-toolchain.toml` to use the validated stable nightly
+- Installs the target toolchain with rust-analyzer component (required by IDEs, cargo, and serena
+  MCP server)
+- **Desktop notifications** (via notify-send):
+  - 🎉 Success notification when stable toolchain found (normal urgency)
+  - 🚨 Critical alert if no stable toolchain found in entire 45-day window (extremely rare)
 - Performs aggressive cleanup by removing all old nightly toolchains except:
   - All stable toolchains (`stable-*`)
-  - The newly targeted month-old nightly
+  - The newly validated nightly
+- **Final verification with fresh build**:
+  - Removes ICE failure files (`rustc-ice-*.txt`) generated during validation
+  - Cleans all caches: cargo cache, build artifacts, sccache
+  - Runs full verification: tests, doctests, and documentation build
+  - Ensures new toolchain works perfectly from scratch
 - Logs all operations to `/home/nazmul/Downloads/rust-toolchain-update.log`
 
 **When to use:**
+
 - Weekly maintenance (can be automated via systemd timer)
-- When you want to update to the latest stable-ish nightly
+- When you want to update to a validated stable nightly
 - When you want to clean up old toolchains
+- After encountering ICE errors with current toolchain
 
 **Example output:**
+
 ```text
-Target toolchain: nightly-2025-09-11
+═══════════════════════════════════════════════════════
+Starting search for stable toolchain
+Strategy: Start 45 days ago, try progressively newer up to today
+Search window: 2025-08-29 to 2025-10-13
+═══════════════════════════════════════════════════════
+
+Attempt 1/46
+Trying toolchain: nightly-2025-08-29 (45 days ago)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Validating toolchain: nightly-2025-08-29
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Running validation step: clippy
+  ⚠️  Command exited with code 101 (this is OK if not ICE)
+  ✅ No ICE detected - continuing validation
+...
+✅ Toolchain nightly-2025-08-29 is STABLE (no ICE detected)
+
+🎉 FOUND STABLE TOOLCHAIN: nightly-2025-08-29
+Success notification sent
+
 ✅ Successfully updated rust-toolchain.toml
-✅ Successfully installed/verified nightly-2025-09-11
 ✅ Successfully installed rust-analyzer component
-Removed 3 old toolchain(s)
-Toolchains directory size before cleanup: 2.1G
-Toolchains directory size after cleanup: 1.4G
+Removed 2 old toolchain(s)
+Toolchains directory size before cleanup: 5.3G
+Toolchains directory size after cleanup: 2.6G
 ```
 
 #### 2. rust-toolchain-sync-to-toml.fish - Sync to Existing Config
@@ -672,15 +782,18 @@ Syncs your Rust environment to match whatever is specified in `rust-toolchain.to
 ```
 
 **What it does:**
+
 - **Reads** the channel value from `rust-toolchain.toml` (doesn't modify it)
 - Installs the exact toolchain specified in the TOML
-- Installs rust-analyzer and rust-src components automatically (required by IDEs, cargo, and serena MCP server)
+- Installs rust-analyzer and rust-src components automatically (required by IDEs, cargo, and serena
+  MCP server)
 - Performs aggressive cleanup by removing all old nightly toolchains except:
   - All stable toolchains (`stable-*`)
   - The target toolchain from the TOML
 - Logs all operations to `/home/nazmul/Downloads/rust-toolchain-sync-to-toml.log`
 
 **When to use:**
+
 - After `git checkout/reset/pull` changes `rust-toolchain.toml`
 - When rust-analyzer is missing for the current toolchain
 - When your IDE shows "rust-analyzer failed to start"
@@ -689,10 +802,12 @@ Syncs your Rust environment to match whatever is specified in `rust-toolchain.to
 - When you need to stay on a specific nightly version
 
 **Key difference from update script:**
+
 - **This script (sync)**: Respects TOML → Installs what's specified
 - **Update script**: Modifies TOML → Installs "1 month ago" nightly
 
 **Example workflow:**
+
 ```sh
 # Weekly script updates TOML to nightly-2025-09-11
 # But you need to stay on nightly-2025-09-05 for testing a specific feature
@@ -710,32 +825,35 @@ Removes ALL Rust toolchains for testing upgrade progress display (⚠️ DESTRUC
 ```
 
 **What it does:**
+
 - Removes ALL Rust toolchains from your system
 - Cleans up toolchain directories completely
 - Creates a clean slate for testing rustup installation progress
 
 **When to use:**
+
 - When developing/testing the upgrade progress display in `edi` and `giti`
 - To see full rustup download and installation progress
 - For testing `cmdr/src/analytics_client/upgrade_check.rs` functionality
 
 **Recovery after testing:**
+
 ```sh
 rustup toolchain install stable && rustup default stable
 # Or
 fish run.fish update-toolchain
 ```
 
-**⚠️ Warning:** This is a destructive testing utility. Use only when you understand the implications and are prepared to reinstall toolchains.
+**⚠️ Warning:** This is a destructive testing utility. Use only when you understand the implications
+and are prepared to reinstall toolchains.
 
 #### Toolchain Management Benefits
 
-**Stability**: Month-old nightlies have proven stability while providing recent features
-**Disk space savings**: Aggressive cleanup removes accumulated old toolchains
-**Consistency**: All developers use the same Rust version via `rust-toolchain.toml`
-**Automation ready**: `update` script designed to run weekly via systemd timer
-**Recovery ready**: `sync` script fixes environment after git operations
-**Testing support**: `remove` script enables testing upgrade workflows
+**Stability**: Month-old nightlies have proven stability while providing recent features **Disk
+space savings**: Aggressive cleanup removes accumulated old toolchains **Consistency**: All
+developers use the same Rust version via `rust-toolchain.toml` **Automation ready**: `update` script
+designed to run weekly via systemd timer **Recovery ready**: `sync` script fixes environment after
+git operations **Testing support**: `remove` script enables testing upgrade workflows
 
 ### Unified Script Architecture
 
