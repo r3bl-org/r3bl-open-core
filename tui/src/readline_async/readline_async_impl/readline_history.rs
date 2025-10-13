@@ -1,11 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::collections::VecDeque;
-
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, HISTORY_SIZE_MAX,
-            core::units::{Index, idx, len}};
+            core::dimens::{Index, idx, len}};
+use std::collections::VecDeque;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 #[derive(Debug)]
 pub struct History {

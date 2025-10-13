@@ -7,9 +7,9 @@ use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelCo
                DialogEngineMode, EditMode, EditorComponent, EditorEngineConfig,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasEditorBuffers, HasFocus, InputEvent, Key,
-               KeyPress, LayoutDirection, LayoutManagement, LengthOps, LineMode,
-               ModifierKeysMask, PerformPositioningAndSizing, RenderOp, RenderPipeline,
-               Size, Surface, SurfaceProps, SurfaceRender, SyntaxHighlightMode,
+               KeyPress, LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
+               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
+               SurfaceProps, SurfaceRender, SyntaxHighlightMode,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,
                ZOrder, box_end, box_start, col, fg_green, fg_magenta, fg_red, glyphs,
                height, inline_string, new_style, render_component_in_current_box,
@@ -625,6 +625,7 @@ mod stylesheet {
 mod status_bar {
     #[allow(clippy::wildcard_imports)]
     use super::*;
+    use r3bl_tui::LengthOps;
 
     /// Shows helpful messages at the bottom row of the screen.
     pub fn render_status_bar(pipeline: &mut RenderPipeline, size: Size) {

@@ -5,8 +5,8 @@
 //! This module provides assertion functions that are used by various test modules
 //! to verify the state of the offscreen buffer contents.
 
-use crate::{ColWidth, OffscreenBuffer, PixelChar, PixelCharLine, RowHeight,
-            SPACER_GLYPH_CHAR, TuiStyle, col, core::units::bounds_check::LengthOps, row};
+use crate::{ColWidth, LengthOps, OffscreenBuffer, PixelChar, PixelCharLine, RowHeight,
+            SPACER_GLYPH_CHAR, TuiStyle, col, row};
 
 /// Assert that a plain character exists at the given position.
 /// This function checks that:

@@ -2,7 +2,7 @@
 use super::{SelectionList, history::EditorHistory, render_cache::RenderCache};
 use crate::{CaretRaw, CaretScrAdj, ColWidth, CursorPositionBoundsStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEFAULT_SYN_HI_FILE_EXT,
-            EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString,
+            EditorBufferMutWithDrop, GapBufferLine, GetMemSize, InlineString, LengthOps,
             MemoizedMemorySize, MemorySize, NumericValue, RowHeight, RowIndex, ScrOfs,
             SegStringOwned, Size, TinyInlineString, ZeroCopyGapBuffer,
             caret_locate::locate_col, format_as_kilobytes_with_commas, glyphs,

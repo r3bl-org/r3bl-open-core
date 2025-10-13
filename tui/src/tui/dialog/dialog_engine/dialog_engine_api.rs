@@ -5,9 +5,9 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             DialogChoice, DialogEngineArgs, DialogEvent, EditorEngineApplyEventResult,
             EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
             GradientGenerationPolicy, HasDialogBuffers, InlineString, InputEvent, Key,
-            MinSize, PartialFlexBox, Pos, RenderOp, RenderOps, RenderPipeline, Size,
-            SpecialKey, SurfaceBounds, SystemClipboard, TextColorizationPolicy,
-            TuiStyle, ZOrder, ch, col,
+            LengthOps, MinSize, PartialFlexBox, Pos, RenderOp, RenderOps,
+            RenderPipeline, Size, SpecialKey, SurfaceBounds, SystemClipboard,
+            TextColorizationPolicy, TuiStyle, ZOrder, ch, col,
             editor_engine::engine_public_api,
             height, inline_string, pc, render_ops, render_pipeline,
             render_tui_styled_texts_into, row,
@@ -481,7 +481,6 @@ mod internal_impl {
     mod render_results_panel_inner {
         #[allow(clippy::wildcard_imports)]
         use super::*;
-        use crate::core::units::bounds_check::LengthOps;
 
         pub fn paint_results(
             ops: &mut RenderOps,

@@ -7,9 +7,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{RowIndex,
-            core::units::bounds_check::{IndexOps, LengthOps},
-            row};
+use crate::{LengthOps, RowIndex, core::units::bounds_check::IndexOps, row};
 
 impl OffscreenBuffer {
     /// Get the scroll region as an inclusive range.

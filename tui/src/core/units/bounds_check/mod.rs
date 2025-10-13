@@ -1142,6 +1142,7 @@
 //! [`viewport_bounds_check.rs`]: mod@crate::viewport_bounds_check
 //! [`range_bounds_check_ext.rs`]: mod@crate::range_bounds_check_ext
 //! [`range_convert_ext.rs`]: mod@crate::range_convert_ext
+//! [Getting Started with Bounds Checking]: #getting-started-with-bounds-checking
 
 // Attach.
 pub mod array_bounds_check;

@@ -2,7 +2,7 @@
 
 use super::buffer_struct::EditorBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck,
-            CursorPositionBoundsStatus, NumericValue};
+            CursorPositionBoundsStatus, LengthOps, NumericValue};
 
 /// Represents the position of a row within a buffer.
 ///

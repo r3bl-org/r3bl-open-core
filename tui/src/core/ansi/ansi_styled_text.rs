@@ -1,9 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
-            InlineString, InlineVec, PixelChar, SPACER_GLYPH_CHAR, SgrCode, TuiStyle,
-            UNICODE_REPLACEMENT_CHAR, generate_impl_display_for_fast_stringify,
-            inline_string, tui_color,
+            InlineString, InlineVec, LengthOps, PixelChar, SPACER_GLYPH_CHAR, SgrCode,
+            TuiStyle, UNICODE_REPLACEMENT_CHAR,
+            generate_impl_display_for_fast_stringify, inline_string, tui_color,
             tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse, Strikethrough,
                                Underline}};
 use smallvec::{SmallVec, smallvec};
@@ -142,7 +142,6 @@ macro_rules! ast_lines {
 pub mod ansi_styled_text_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use crate::core::units::bounds_check::LengthOps;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct ASTextConvertOptions {

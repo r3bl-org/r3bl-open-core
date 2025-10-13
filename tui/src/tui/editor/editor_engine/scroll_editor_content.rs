@@ -75,7 +75,7 @@ pub fn inc_caret_col_by(
     if vp_width.is_overflowed_by(caret_raw.col_index) == ArrayOverflowResult::Overflowed {
         // The following is equivalent to:
         // `let diff_overflow = (caret_raw.col_index + ch!(1)) - vp_width;`
-        let diff_overflow = caret_raw.col_index.convert_to_width() /*+1*/ - vp_width;
+        let diff_overflow = caret_raw.col_index.convert_to_length() /*+1*/ - vp_width;
         scr_ofs.col_index += diff_overflow; // Activate horiz scroll.
         caret_raw.col_index -= diff_overflow; // Shift caret.
     }

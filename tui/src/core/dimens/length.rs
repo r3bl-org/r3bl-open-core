@@ -2,12 +2,8 @@
 
 //! One-based character size measurements for terminal UI - see [`Length`] type.
 
-use super::{ChUnit, Index, ch, idx};
-use crate::{ColWidth, LengthOps, NumericConversions, NumericValue, RowHeight,
-            generate_numeric_arithmetic_ops_impl};
-use std::{fmt::Debug,
-          hash::Hash,
-          ops::{Add, AddAssign, Deref, DerefMut, Div, Sub, SubAssign}};
+use crate::{ChUnit, ColWidth, Index, RowHeight, generate_length_type_impl};
+use std::hash::Hash;
 
 /// Represents a length measurement in character units.
 ///
@@ -37,180 +33,28 @@ use std::{fmt::Debug,
 /// ```
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Length(pub ChUnit);
+generate_length_type_impl!(Length, Index, len, idx);
 
-/// Creates a new [Length] from a value that can be converted into a Length.
-///
-/// This is a convenience function that is equivalent to calling [`Length::new`].
-///
-/// # Examples
-///
-/// ```
-/// use r3bl_tui::{Length, len};
-///
-/// let length = len(10);
-/// assert_eq!(length, Length::new(10));
-/// ```
-pub fn len(arg_length: impl Into<Length>) -> Length { arg_length.into() }
-
-impl Debug for Length {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Length({:?})", self.0)
-    }
+impl From<Length> for ColWidth {
+    fn from(val: Length) -> Self { val.0.into() }
 }
 
-mod impl_core {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Length {
-        pub fn new(arg_length: impl Into<Length>) -> Self { arg_length.into() }
-
-        #[must_use]
-        pub fn as_usize(&self) -> usize { self.0.into() }
-
-        /// This is for use with [crossterm] crate.
-        #[must_use]
-        pub fn as_u16(&self) -> u16 { self.0.into() }
-
-        /// Subtract 1 from length to get the last index. I.e.: `length = last index + 1`.
-        ///
-        /// The following are equivalent:
-        /// - index >= length
-        /// - index > length - 1 (which is this function)
-        ///
-        /// The following holds true:
-        /// - last index == length - 1 (which is this function)
-        #[must_use]
-        pub fn convert_to_index(&self) -> Index {
-            let it = self.0 - ch(1);
-            idx(it)
-        }
-    }
+impl From<ColWidth> for Length {
+    fn from(val: ColWidth) -> Self { val.0.into() }
 }
 
-mod impl_from_numeric {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<ChUnit> for Length {
-        fn from(ch_unit: ChUnit) -> Self { Length(ch_unit) }
-    }
-
-    impl From<usize> for Length {
-        fn from(width: usize) -> Self { Length(ch(width)) }
-    }
-
-    impl From<u16> for Length {
-        fn from(val: u16) -> Self { Length(val.into()) }
-    }
-
-    impl From<i32> for Length {
-        fn from(val: i32) -> Self { Length(val.into()) }
-    }
-
-    impl From<u8> for Length {
-        fn from(val: u8) -> Self { Length(val.into()) }
-    }
-
-    impl From<Length> for ColWidth {
-        fn from(val: Length) -> Self { val.0.into() }
-    }
-
-    impl From<ColWidth> for Length {
-        fn from(val: ColWidth) -> Self { val.0.into() }
-    }
-
-    impl From<Length> for RowHeight {
-        fn from(val: Length) -> Self { val.0.into() }
-    }
-
-    impl From<RowHeight> for Length {
-        fn from(val: RowHeight) -> Self { val.0.into() }
-    }
+impl From<Length> for RowHeight {
+    fn from(val: Length) -> Self { val.0.into() }
 }
 
-mod impl_deref {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Deref for Length {
-        type Target = ChUnit;
-
-        fn deref(&self) -> &Self::Target { &self.0 }
-    }
-
-    impl DerefMut for Length {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
-    }
-}
-
-mod dimension_arithmetic_operators {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Add<Length> for Length {
-        type Output = Length;
-
-        fn add(self, rhs: Length) -> Self::Output { Length(self.0 + rhs.0) }
-    }
-
-    impl AddAssign<Length> for Length {
-        fn add_assign(&mut self, rhs: Length) { *self = *self + rhs; }
-    }
-
-    impl Sub<Length> for Length {
-        type Output = Length;
-
-        fn sub(self, rhs: Length) -> Self::Output { Length(self.0 - rhs.0) }
-    }
-
-    impl SubAssign<Length> for Length {
-        fn sub_assign(&mut self, rhs: Length) { *self = *self - rhs; }
-    }
-
-    impl Div<Length> for Length {
-        type Output = Length;
-
-        fn div(self, rhs: Length) -> Self::Output { Length(self.0 / rhs.0) }
-    }
-}
-
-mod numeric_arithmetic_operators {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    // Generate numeric operations using macro.
-    generate_numeric_arithmetic_ops_impl!(Length, len, [usize, u16, i32]);
-}
-
-mod bounds_check_trait_impls {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl NumericConversions for Length {
-        fn as_usize(&self) -> usize { self.0.as_usize() }
-
-        fn as_u16(&self) -> u16 { self.0.as_u16() }
-    }
-
-    impl NumericValue for Length {}
-
-    impl LengthOps for Length {
-        type IndexType = Index;
-
-        fn convert_to_index(&self) -> Self::IndexType {
-            if self.0.value == 0 {
-                Index::new(0)
-            } else {
-                Index::new(self.0.value - 1)
-            }
-        }
-    }
+impl From<RowHeight> for Length {
+    fn from(val: RowHeight) -> Self { val.0.into() }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{LengthOps, ch, idx};
 
     #[test]
     fn test_length_creation() {

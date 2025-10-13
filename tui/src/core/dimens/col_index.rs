@@ -1,252 +1,71 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayBoundsCheck, ChUnit, ColWidth, IndexOps, Length, NumericConversions,
-            NumericValue, generate_numeric_arithmetic_ops_impl, usize, width};
-use std::{fmt::Debug,
-          ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
+use super::{ColWidth, Length, width};
+use crate::{ChUnit, Index, generate_index_type_impl};
+use std::{hash::Hash,
+          ops::{Add, AddAssign, Mul, Sub, SubAssign}};
 
 /// The horizontal index in a grid of characters, starting at 0, which is the first
 /// column.
-/// - This is one part of a [`Pos`] (position), and is different from [`ColWidth`], which
-///   is one part of a [`Size`].
-/// - You can use the [`col()`] to create a new instance.
 ///
-/// [`Pos`]: crate::Pos
-/// [`ColWidth`]: crate::ColWidth
-/// [`Size`]: crate::Size
-/// [`col()`]: crate::col
+/// This is one part of a [`Pos`] (position), and is different from [`ColWidth`], which
+/// is one part of a [`Size`]. You can use the [`col()`] to create a new instance.
 ///
 /// # Examples
-///
 /// ```
 /// use r3bl_tui::{ColIndex, col};
 /// let col = col(5);
 /// let col = ColIndex::new(5);
 /// ```
+///
+/// [`Pos`]: crate::Pos
+/// [`ColWidth`]: crate::ColWidth
+/// [`Size`]: crate::Size
+/// [`col()`]: crate::col
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct ColIndex(pub ChUnit);
+generate_index_type_impl!(
+    /* Add impl for this type */ ColIndex,
+    /* Use this associated type */ ColWidth,
+    /* Make this constructor fn */ col, /* Use this constructor fn */ width
+);
 
-/// [`ArrayBoundsCheck`] implementation for type-safe bounds checking.
-impl ArrayBoundsCheck<ColWidth> for ColIndex {}
+impl From<Index> for ColIndex {
+    fn from(index: Index) -> Self { ColIndex(index.0) }
+}
 
-impl Debug for ColIndex {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ColIndex({:?})", self.0)
+impl Sub<Length> for ColIndex {
+    type Output = ColIndex;
+    fn sub(self, rhs: Length) -> Self::Output {
+        let mut self_copy = self;
+        self_copy.0 -= rhs.0;
+        self_copy
     }
 }
 
-/// Creates a new [`ColIndex`] from any type that can be converted into it.
-///
-/// This is a convenience function that provides a shorter way to create
-/// column indices.
-///
-/// # Examples
-///
-/// ```
-/// use r3bl_tui::{ColIndex, col};
-/// let col = col(5_usize);
-/// assert_eq!(col, ColIndex::new(5));
-/// ```
-pub fn col(arg_col_index: impl Into<ColIndex>) -> ColIndex { arg_col_index.into() }
+impl SubAssign<Length> for ColIndex {
+    fn sub_assign(&mut self, rhs: Length) { self.0 -= rhs.0; }
+}
 
-mod impl_core {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl ColIndex {
-        pub fn new(arg_col_index: impl Into<ColIndex>) -> Self { arg_col_index.into() }
-
-        #[must_use]
-        pub fn as_usize(&self) -> usize { usize(self.0) }
-
-        /// This is for use with [crossterm] crate.
-        #[must_use]
-        pub fn as_u16(&self) -> u16 { self.0.into() }
-
-        /// Add 1 to the index to convert it to a width. The intention of this function is
-        /// to meaningfully convert a [`ColIndex`] to a [`ColWidth`]. This is useful in
-        /// situations where you need to find what the width is at this row index.
-        #[must_use]
-        pub fn convert_to_width(&self) -> ColWidth { width(self.0 + 1) }
+impl Add<Length> for ColIndex {
+    type Output = ColIndex;
+    fn add(self, rhs: Length) -> Self::Output {
+        let mut self_copy = self;
+        self_copy.0 += rhs.0;
+        self_copy
     }
 }
 
-mod impl_from_numeric {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<ChUnit> for ColIndex {
-        fn from(ch_unit: ChUnit) -> Self { ColIndex(ch_unit) }
-    }
-
-    impl From<usize> for ColIndex {
-        fn from(val: usize) -> Self { ColIndex(val.into()) }
-    }
-
-    impl From<ColIndex> for usize {
-        fn from(col: ColIndex) -> Self { col.as_usize() }
-    }
-
-    impl From<u16> for ColIndex {
-        fn from(val: u16) -> Self { ColIndex(val.into()) }
-    }
-
-    impl From<i32> for ColIndex {
-        fn from(val: i32) -> Self { ColIndex(val.into()) }
-    }
-
-    impl From<ColIndex> for u16 {
-        fn from(col: ColIndex) -> Self { col.as_u16() }
-    }
+impl AddAssign<Length> for ColIndex {
+    fn add_assign(&mut self, rhs: Length) { self.0 += rhs.0; }
 }
 
-mod impl_deref {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Deref for ColIndex {
-        type Target = ChUnit;
-
-        fn deref(&self) -> &Self::Target { &self.0 }
-    }
-
-    impl DerefMut for ColIndex {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
-    }
-}
-
-mod dimension_arithmetic_operators {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Sub<ColIndex> for ColIndex {
-        type Output = ColIndex;
-
-        fn sub(self, rhs: ColIndex) -> Self::Output { col(*self - *rhs) }
-    }
-
-    impl SubAssign<ColIndex> for ColIndex {
-        /// This simply subtracts the value of the RHS [`ColIndex`] instance from the LHS
-        /// [`ColIndex`].
-        fn sub_assign(&mut self, rhs: ColIndex) {
-            let diff = **self - *rhs;
-            *self = col(diff);
-        }
-    }
-
-    impl Add<ColIndex> for ColIndex {
-        type Output = ColIndex;
-
-        fn add(self, rhs: ColIndex) -> Self::Output {
-            let mut self_copy = self;
-            *self_copy += *rhs;
-            self_copy
-        }
-    }
-
-    impl AddAssign<ColIndex> for ColIndex {
-        fn add_assign(&mut self, rhs: ColIndex) { *self = *self + rhs; }
-    }
-
-    impl Sub<ColWidth> for ColIndex {
-        type Output = ColIndex;
-
-        fn sub(self, rhs: ColWidth) -> Self::Output {
-            let mut self_copy = self;
-            *self_copy -= *rhs;
-            self_copy
-        }
-    }
-
-    impl SubAssign<ColWidth> for ColIndex {
-        fn sub_assign(&mut self, rhs: ColWidth) { **self -= *rhs; }
-    }
-
-    impl Add<ColWidth> for ColIndex {
-        type Output = ColIndex;
-
-        fn add(self, rhs: ColWidth) -> Self::Output {
-            let mut self_copy = self;
-            *self_copy += *rhs;
-            self_copy
-        }
-    }
-
-    impl AddAssign<ColWidth> for ColIndex {
-        fn add_assign(&mut self, rhs: ColWidth) { *self = *self + rhs; }
-    }
-
-    impl Mul<ColWidth> for ColIndex {
-        type Output = ColIndex;
-
-        fn mul(self, rhs: ColWidth) -> Self::Output {
-            let mut self_copy = self;
-            *self_copy *= *rhs;
-            self_copy
-        }
-    }
-
-    impl Sub<Length> for ColIndex {
-        type Output = ColIndex;
-
-        fn sub(self, rhs: Length) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 -= rhs.0;
-            self_copy
-        }
-    }
-
-    impl SubAssign<Length> for ColIndex {
-        fn sub_assign(&mut self, rhs: Length) { self.0 -= rhs.0; }
-    }
-
-    impl Add<Length> for ColIndex {
-        type Output = ColIndex;
-
-        fn add(self, rhs: Length) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 += rhs.0;
-            self_copy
-        }
-    }
-
-    impl AddAssign<Length> for ColIndex {
-        fn add_assign(&mut self, rhs: Length) { self.0 += rhs.0; }
-    }
-
-    impl Mul<Length> for ColIndex {
-        type Output = ColIndex;
-
-        fn mul(self, rhs: Length) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 *= rhs.0;
-            self_copy
-        }
-    }
-}
-
-mod numeric_arithmetic_operators {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    // Generate numeric operations using macro.
-    generate_numeric_arithmetic_ops_impl!(ColIndex, col, [usize, u16, i32]);
-}
-
-mod bounds_check_trait_impls {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl NumericConversions for ColIndex {
-        fn as_usize(&self) -> usize { self.0.as_usize() }
-
-        fn as_u16(&self) -> u16 { self.0.as_u16() }
-    }
-
-    impl NumericValue for ColIndex {}
-
-    impl IndexOps for ColIndex {
-        type LengthType = ColWidth;
+impl Mul<Length> for ColIndex {
+    type Output = ColIndex;
+    fn mul(self, rhs: Length) -> Self::Output {
+        let mut self_copy = self;
+        self_copy.0 *= rhs.0;
+        self_copy
     }
 }
 
@@ -359,9 +178,9 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_to_width() {
+    fn test_convert_to_length() {
         let col = ColIndex::new(5);
-        assert_eq!(col.convert_to_width(), width(6));
+        assert_eq!(col.convert_to_length(), width(6));
     }
 
     #[test]

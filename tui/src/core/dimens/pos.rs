@@ -152,7 +152,7 @@ mod convert {
     }
 }
 
-mod ops {
+mod dimension_arithmetic_operators {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
@@ -315,6 +315,11 @@ mod ops {
     impl SubAssign<RowHeight> for Pos {
         fn sub_assign(&mut self, rhs: RowHeight) { *self = *self - rhs; }
     }
+}
+
+mod numeric_arithmetic_operators {
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl AddAssign<ChUnit> for Pos {
         fn add_assign(&mut self, rhs: ChUnit) {

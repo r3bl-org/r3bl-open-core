@@ -2,10 +2,9 @@
 
 use super::{FlushKind, RenderOp, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
-            LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
+            LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
             OffscreenBufferPaintImplCrossterm, Pos, Size, TERMINAL_LIB_BACKEND,
-            TerminalLibBackend, core::units::bounds_check::LengthOps,
-            diff_chunks::PixelCharDiffChunks};
+            TerminalLibBackend, diff_chunks::PixelCharDiffChunks};
 use std::fmt::Debug;
 
 pub trait PaintRenderOp {

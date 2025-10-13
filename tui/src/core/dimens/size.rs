@@ -182,8 +182,8 @@ mod debug {
     }
 }
 
-mod ops {
-    use super::{Add, AddAssign, ChUnit, Size, Sub, SubAssign};
+mod dimension_arithmetic_operators {
+    use super::{Add, Size, Sub};
 
     impl Sub<Size> for Size {
         type Output = Size;
@@ -206,6 +206,10 @@ mod ops {
             self_copy
         }
     }
+}
+
+mod numeric_arithmetic_operators {
+    use super::{Add, AddAssign, ChUnit, Size, Sub, SubAssign};
 
     impl SubAssign<ChUnit> for Size {
         fn sub_assign(&mut self, other: ChUnit) {

@@ -6,8 +6,6 @@ pub mod byte_index;
 pub mod byte_length;
 pub mod byte_offset;
 pub mod ch_unit;
-pub mod index;
-pub mod length;
 pub mod term_units;
 
 // Re-export.
@@ -16,6 +14,4 @@ pub use byte_index::*;
 pub use byte_length::*;
 pub use byte_offset::*;
 pub use ch_unit::*;
-pub use index::*;
-pub use length::*;
 pub use term_units::*;

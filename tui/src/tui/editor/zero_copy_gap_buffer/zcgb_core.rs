@@ -527,6 +527,7 @@ impl GraphemeDocMut for ZeroCopyGapBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::LengthOps;
 
     #[test]
     fn test_new_line_buffer() {

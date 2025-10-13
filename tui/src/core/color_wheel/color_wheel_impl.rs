@@ -1020,7 +1020,7 @@ mod color_wheel_navigation {
         gradient_len: usize,
     ) -> Option<TuiColor> {
         use crate::{ArrayBoundsCheck, ArrayOverflowResult,
-                    core::units::{idx, len}};
+                    core::dimens::{idx, len}};
 
         match *direction {
             ColorWheelDirection::Forward => {

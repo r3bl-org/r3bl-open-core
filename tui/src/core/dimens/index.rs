@@ -2,12 +2,9 @@
 
 //! Zero-based character position for terminal UI - see [`Index`] type.
 
-use super::{ChUnit, Length, ch};
-use crate::{IndexOps, NumericConversions, NumericValue, RowIndex,
-            generate_numeric_arithmetic_ops_impl};
-use std::{fmt::Debug,
-          hash::Hash,
-          ops::{Add, AddAssign, Deref, DerefMut, Mul, Sub, SubAssign}};
+use super::{Length, len};
+use crate::{ChUnit, RowIndex, generate_index_type_impl};
+use std::hash::Hash;
 
 /// Represents an index position in character units.
 ///
@@ -41,197 +38,19 @@ use std::{fmt::Debug,
 /// ```
 #[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
 pub struct Index(pub ChUnit);
+generate_index_type_impl!(
+    /* Add impl for this type */ Index, /* Use this associated type */ Length,
+    /* Make this constructor fn */ idx, /* Use this constructor fn */ len
+);
 
-/// Creates a new [`Index`] from a value that can be converted into an Index.
-///
-/// This is a convenience function that is equivalent to calling [`Index::new`].
-///
-/// # Examples
-///
-/// ```
-/// use r3bl_tui::{Index, idx};
-///
-/// let index = idx(5);
-/// assert_eq!(index, Index::new(5));
-/// ```
-pub fn idx(arg_index: impl Into<Index>) -> Index { arg_index.into() }
-
-impl Debug for Index {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Index({:?})", self.0)
-    }
+impl From<RowIndex> for Index {
+    fn from(row: RowIndex) -> Self { Index(row.0) }
 }
-
-mod impl_core {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Index {
-        pub fn new(arg_col_index: impl Into<Index>) -> Self { arg_col_index.into() }
-
-        #[must_use]
-        pub fn as_usize(&self) -> usize { self.0.into() }
-
-        /// This is for use with [crossterm] crate.
-        #[must_use]
-        pub fn as_u16(&self) -> u16 { self.0.into() }
-
-        /// Add 1 to the index (0 based) to convert it to a length (1 based). The
-        /// intention of this function is to meaningfully convert a [Index] to a
-        /// [Length]. This is useful in situations where you need to find what the
-        /// length is at this index.
-        #[must_use]
-        pub fn convert_to_length(&self) -> Length { Length(self.0 + ch(1)) }
-    }
-}
-
-mod impl_from_numeric {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl From<ChUnit> for Index {
-        fn from(ch_unit: ChUnit) -> Self { Index(ch_unit) }
-    }
-
-    impl From<usize> for Index {
-        fn from(val: usize) -> Self { Index(val.into()) }
-    }
-
-    impl From<Index> for usize {
-        fn from(col: Index) -> Self { col.as_usize() }
-    }
-
-    impl From<u16> for Index {
-        fn from(val: u16) -> Self { Index(val.into()) }
-    }
-
-    impl From<i32> for Index {
-        fn from(val: i32) -> Self { Index(val.into()) }
-    }
-
-    impl From<RowIndex> for Index {
-        fn from(row: RowIndex) -> Self { Index(row.0) }
-    }
-}
-
-mod impl_deref {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Deref for Index {
-        type Target = ChUnit;
-
-        fn deref(&self) -> &Self::Target { &self.0 }
-    }
-
-    impl DerefMut for Index {
-        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
-    }
-}
-
-mod dimension_arithmetic_operators {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl Add<Index> for Index {
-        type Output = Index;
-
-        fn add(self, rhs: Index) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 += rhs.0;
-            self_copy
-        }
-    }
-
-    impl AddAssign for Index {
-        fn add_assign(&mut self, rhs: Self) { self.0 += rhs.0; }
-    }
-
-    impl Sub<Index> for Index {
-        type Output = Index;
-
-        fn sub(self, rhs: Index) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 -= rhs.0;
-            self_copy
-        }
-    }
-
-    impl SubAssign<Index> for Index {
-        fn sub_assign(&mut self, rhs: Index) { self.0 -= rhs.0; }
-    }
-
-    impl Sub<Length> for Index {
-        type Output = Index;
-
-        fn sub(self, rhs: Length) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 -= rhs.0;
-            self_copy
-        }
-    }
-
-    impl SubAssign<Length> for Index {
-        fn sub_assign(&mut self, rhs: Length) { self.0 -= rhs.0; }
-    }
-
-    impl Add<Length> for Index {
-        type Output = Index;
-
-        fn add(self, rhs: Length) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 += rhs.0;
-            self_copy
-        }
-    }
-
-    impl AddAssign<Length> for Index {
-        fn add_assign(&mut self, rhs: Length) { self.0 += rhs.0; }
-    }
-
-    impl Mul<Length> for Index {
-        type Output = Index;
-
-        fn mul(self, rhs: Length) -> Self::Output {
-            let mut self_copy = self;
-            self_copy.0 *= rhs.0;
-            self_copy
-        }
-    }
-}
-
-mod numeric_arithmetic_operators {
-    #![allow(clippy::wildcard_imports)]
-    use super::*;
-
-    // Generate numeric operations using macro.
-    generate_numeric_arithmetic_ops_impl!(Index, idx, [usize, u16, i32]);
-}
-
-mod bounds_check_trait_impls {
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    impl NumericConversions for Index {
-        fn as_usize(&self) -> usize { self.0.as_usize() }
-
-        fn as_u16(&self) -> u16 { self.0.as_u16() }
-    }
-
-    impl NumericValue for Index {}
-
-    impl IndexOps for Index {
-        type LengthType = Length;
-    }
-}
-
-// ArrayBoundsCheck implementation for type-safe bounds checking
-impl crate::ArrayBoundsCheck<crate::Length> for Index {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ArrayBoundsCheck, ArrayOverflowResult, len};
+    use crate::{ArrayBoundsCheck, ArrayOverflowResult, LengthOps, ch};
     use std::hash::{DefaultHasher, Hasher};
 
     #[test]
@@ -532,17 +351,12 @@ mod tests {
         assert_eq!(index.overflows(length), ArrayOverflowResult::Overflowed);
     }
 
-    // Test for Index-to-Index comparison removed as this is no longer supported.
-    // ArrayBoundsCheck is now specifically for Index-to-Length comparisons only.
-
     #[test]
     fn test_index_bounds_check_edge_cases() {
         // Test with zero length - empty collections have no valid indices
         let index = idx(0);
         let length = len(0);
         assert_eq!(index.overflows(length), ArrayOverflowResult::Overflowed);
-
-        // Duplicate test removed - empty collections consistently have no valid indices
 
         // Test with non-zero index against zero length.
         let index = idx(1);

@@ -1,16 +1,14 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::io::{self, Write};
-
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, LINE_FEED_BYTE,
+            MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength,
+            core::dimens::idx, ok};
 use crossterm::{QueueableCommand, cursor,
                 event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
                 terminal::{Clear,
                            ClearType::{All, FromCursorDown}}};
+use std::io::{self, Write};
 use unicode_segmentation::UnicodeSegmentation;
-
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, LINE_FEED_BYTE,
-            MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength,
-            core::units::idx, ok};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LineStateLiveness {
@@ -891,10 +889,9 @@ mod apply_event_and_render_helper {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use super::*;
     use crate::{History, StdMutex, core::test_fixtures::StdoutMock};
+    use std::sync::Arc;
 
     #[tokio::test]
     #[allow(clippy::needless_return)]

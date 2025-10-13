@@ -33,8 +33,8 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use super::TAB_STOP_WIDTH;
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, NumericValue, RowIndex, col,
-            core::units::bounds_check::LengthOps};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, LengthOps, NumericValue, RowIndex,
+            col};
 
 impl OffscreenBuffer {
     /// Handle backspace control character (0x08).

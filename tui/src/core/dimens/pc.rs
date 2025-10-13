@@ -55,7 +55,10 @@ pub struct Pc {
     value: u8,
 }
 
-/// Create a [`crate::Pc`] instance from the given value. It returns a `Result` type.
+/// Create a [`Pc`] instance from the given value. It returns a [`Result`] type.
+///
+/// [`Pc`]: crate::Pc
+/// [`Result`]: std::result::Result
 #[macro_export]
 macro_rules! pc {
     (
@@ -75,7 +78,6 @@ impl Debug for Pc {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result { write!(f, "{}%", self.value) }
 }
 
-/// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<ChUnitPrimitiveType> for Pc {
     type Error = miette::Error;
     fn try_from(arg: ChUnitPrimitiveType) -> miette::Result<Pc> {
@@ -89,7 +91,6 @@ impl TryFrom<ChUnitPrimitiveType> for Pc {
     }
 }
 
-/// <https://doc.rust-lang.org/stable/std/convert/trait.TryFrom.html#>
 impl TryFrom<i32> for Pc {
     type Error = miette::Error;
     fn try_from(arg: i32) -> miette::Result<Pc> {
@@ -103,9 +104,13 @@ impl TryFrom<i32> for Pc {
     }
 }
 
-/// Try and convert the given ` ChUnit ` value to `pc`.
+/// Try and convert the given [`ChUnit`] value to [`pc`].
 ///
-/// Return `None` if the given value is not between 0 and 100.
+/// Return [`None`] if the given value is not between 0 and 100.
+///
+/// [`None`]: std::option::Option::None
+/// [`ChUnit`]: crate::ChUnit
+/// [`pc`]: crate::pc!
 impl Pc {
     pub fn try_and_convert(arg_num: impl Into<ChUnit>) -> Option<Pc> {
         let num = arg_num.into();

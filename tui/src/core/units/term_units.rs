@@ -85,7 +85,10 @@ use std::{num::NonZeroU16, ops::Add};
 /// [`from_zero_based()`]: Self::from_zero_based
 /// [`to_zero_based()`]: Self::to_zero_based
 macro_rules! generate_impl_term_unit {
-    ($term_index_type:ty, $index_type:ty) => {
+    (
+        /* Generate this 1 based type */ $term_index_type:ident,
+        /* Use this associated 0 based type for conversion */ $index_type:ident
+    ) => {
         impl NumericConversions for $term_index_type {
             fn as_usize(&self) -> usize { self.0.get() as usize }
             fn as_u16(&self) -> u16 { self.0.get() }
@@ -106,16 +109,16 @@ macro_rules! generate_impl_term_unit {
             #[must_use]
             pub const fn as_u16(self) -> u16 { self.0.get() }
 
-            /// Convert from 0-based index_type to 1-based terminal coordinate.
+            /// Convert from 0-based `index_type` to 1-based terminal coordinate.
             #[must_use]
             pub fn from_zero_based(index: $index_type) -> Self {
                 let nz_value = index.as_u16() + 1;
-                // SAFETY: 0-based index_type + 1 is always >= 1
+                // SAFETY: 0-based `index_type` + 1 is always >= 1
                 debug_assert!(nz_value >= 1);
                 Self::new(unsafe { NonZeroU16::new_unchecked(nz_value) })
             }
 
-            /// Convert to 0-based index_type for buffer operations.
+            /// Convert to 0-based `index_type` for buffer operations.
             #[must_use]
             pub fn to_zero_based(&self) -> $index_type {
                 <$index_type>::from(self.as_u16().saturating_sub(1))
@@ -136,7 +139,10 @@ macro_rules! generate_impl_term_unit {
 /// [module documentation]: mod@super
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermRow(pub NonZeroU16);
-generate_impl_term_unit!(TermRow, RowIndex);
+generate_impl_term_unit!(
+    /* Add impl to this 1-based type */ TermRow,
+    /* Use this associated 0-based type */ RowIndex
+);
 
 /// Create a [`TermRow`] from a [`NonZeroU16`] value.
 #[must_use]
@@ -154,7 +160,10 @@ pub const fn term_row(value: NonZeroU16) -> TermRow { TermRow::new(value) }
 /// [module documentation]: mod@super
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TermCol(pub NonZeroU16);
-generate_impl_term_unit!(TermCol, ColIndex);
+generate_impl_term_unit!(
+    /* Add impl to this 1-based type */ TermCol,
+    /* Use this associated 0-based type */ ColIndex
+);
 
 /// Create a [`TermCol`] from a [`NonZeroU16`] value.
 #[must_use]

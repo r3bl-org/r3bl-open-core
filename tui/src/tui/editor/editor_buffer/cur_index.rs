@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{Index, Length, NumericValue, idx};
+use crate::{Index, Length, LengthOps, NumericValue, idx};
 use std::{fmt::Debug,
           ops::{Deref, DerefMut}};
 
@@ -126,7 +126,7 @@ impl CurIndex {
     pub fn clear(&mut self) { self.0 = None; }
 }
 
-mod ops {
+mod impl_deref {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
