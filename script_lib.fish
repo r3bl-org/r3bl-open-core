@@ -41,22 +41,22 @@ function watch-files
     if test -z "$dir"
         set dir "."
     end
-    
+
     set watcher ""
     if test (uname) = "Darwin"
         set watcher "fswatch"
     else
         set watcher "inotifywait"
     end
-    
+
     if not command -v $watcher >/dev/null
         echo "Install $watcher first. Run ./bootstrap.sh to set up."
         return 1
     end
-    
+
     while true
         echo "Watching $dir for changes..."
-        
+
         if test (uname) = "Darwin"
             if not fswatch -r --exclude "target|.git" -1 $dir >/dev/null 2>&1
                 # User pressed Ctrl+C, exit gracefully
@@ -64,11 +64,11 @@ function watch-files
             end
         else
             if not inotifywait -r -e modify,create,delete,move --exclude "target|.git" $dir >/dev/null 2>&1
-                # User pressed Ctrl+C, exit gracefully  
+                # User pressed Ctrl+C, exit gracefully
                 return
             end
         end
-        
+
         echo "Running: $command"
         bash -c "$command"
     end
@@ -94,12 +94,103 @@ end
 function install_if_missing
     set tool $argv[1]
     set cmd $argv[2]
-    
+
     if not command -v $tool >/dev/null
         echo "Installing $tool..."
         bash -c "$cmd"
     else
         echo "✓ $tool installed"
+    end
+end
+
+# Generates cargo configuration based on available tools.
+#
+# This function creates a .cargo/config.toml file with optimized build settings:
+# - Uses sccache for faster compilation via build caching
+# - Enables parallel frontend compilation with 8 threads
+# - Configures Wild linker when both clang and wild are available
+# - Falls back to standard parallel compilation if Wild linker unavailable
+#
+# Features:
+# - Automatic detection of Wild linker availability
+# - Platform-specific configuration (Linux x86_64 and aarch64)
+# - Graceful fallback when tools are missing
+# - Clear user feedback about configuration choices
+#
+# Prerequisites:
+# - sccache should be installed for build caching
+# - clang and wild should be installed for optimal linking performance
+#
+# Usage:
+#   generate_cargo_config
+function generate_cargo_config
+    echo "Generating cargo configuration..."
+
+    # Base configuration with sccache and parallel compilation
+    echo '[build]
+rustc-wrapper = "sccache"
+rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler' > .cargo/config.toml
+
+    # Add Wild linker configuration if both clang and wild are available
+    if command -v clang >/dev/null && command -v wild >/dev/null
+        echo "✓ Wild linker available - adding to configuration"
+        echo '
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-Z", "threads=8",  # Parallel compilation
+    "-C", "link-arg=--ld-path=wild"  # Wild linker
+]' >> .cargo/config.toml
+    else
+        echo "✓ Wild linker not available - using default configuration"
+        echo '
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Z", "threads=8"]  # Parallel compilation only
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-Z", "threads=8"]  # Parallel compilation only' >> .cargo/config.toml
+    end
+
+    echo "✓ Cargo configuration generated"
+end
+
+# Installs a cargo tool using cargo-binstall with fallback to cargo install.
+#
+# This function provides a unified interface for installing cargo tools with
+# automatic detection of cargo-binstall availability for faster installations.
+#
+# Features:
+# - Uses cargo-binstall when available for faster binary downloads
+# - Falls back to cargo install with --locked flag for reproducible builds
+# - Idempotent - skips installation if tool already exists
+# - Consistent status messages for installation progress
+#
+# Prerequisites:
+# - cargo must be available in PATH
+# - cargo-binstall recommended for faster installations
+#
+# Usage:
+#   install_cargo_tool "bacon"
+#   install_cargo_tool "cargo-nextest"
+function install_cargo_tool --argument-names tool_name
+    if not command -v $tool_name >/dev/null
+        echo "Installing $tool_name..."
+        if command -v cargo-binstall >/dev/null
+            # Use cargo binstall for faster installation
+            cargo binstall -y $tool_name
+        else
+            # Fallback to cargo install with --locked for all tools
+            cargo install $tool_name --locked
+        end
+    else
+        echo "✓ $tool_name installed"
     end
 end
 
@@ -128,7 +219,7 @@ function get_package_manager
         echo "brew install"
         return
     end
-    
+
     if command -v apt-get >/dev/null
         echo "sudo apt install -y"
     else if command -v dnf >/dev/null
@@ -158,7 +249,7 @@ end
 function run_in_directory
     set dir $argv[1]
     set cmd $argv[2]
-    
+
     set original_dir $PWD
     cd $dir
     if bash -c "$cmd"
@@ -196,7 +287,7 @@ end
 # Note: Requires Docker to be installed and running
 function docker_stop_all_containers
     set running_containers (docker ps -aq 2>/dev/null | grep -v '^$')
-    
+
     if test (count $running_containers) -gt 0
         echo "Stopping "(count $running_containers)" running containers..."
         for container_id in $running_containers
@@ -229,7 +320,7 @@ end
 #   docker_remove_all_images
 function docker_remove_all_images
     set images (docker image ls -q 2>/dev/null | grep -v '^$')
-    
+
     if test (count $images) -gt 0
         echo "Removing "(count $images)" existing images..."
         for image_id in $images
@@ -301,18 +392,18 @@ function run_example
     # Extract the last two arguments as flags
     set release $argv[-2]
     set no_log $argv[-1]
-    
+
     # Everything except the last two arguments are the options
     set options $argv[1..-3]
-    
+
     set selection (printf '%s\n' $options | fzf --prompt 'Select an example to run: ')
     set fzf_status $status
-    
+
     if test $fzf_status -ne 0
         # User pressed Ctrl+C, exit gracefully without error
         return
     end
-    
+
     if test -z "$selection"
         echo "No example selected."
     else
@@ -320,12 +411,12 @@ function run_example
         if test "$release" = "true"
             set release_flag "--release"
         end
-        
+
         set log_flag ""
         if test "$no_log" = "true"
             set log_flag "--no-log"
         end
-        
+
         echo "Running example with options: $options, release: $release, selection: $selection, log: $no_log"
         echo "Current working directory: $PWD"
         echo "cargo run -q $release_flag --example $selection -- $log_flag"
@@ -360,14 +451,14 @@ end
 #   # Returns: multi_file simple complex
 function get_example_binaries
     set result
-    
+
     # Get folders first
     if test -d examples
         for dir in examples/*/
             set dir_name (basename $dir)
             set result $result $dir_name
         end
-        
+
         # Get .rs files
         for file in examples/*.rs
             if test -f $file
@@ -376,7 +467,7 @@ function get_example_binaries
             end
         end
     end
-    
+
     printf '%s\n' $result
 end
 
@@ -424,21 +515,21 @@ end
 # Note: The profiling-detailed profile must be defined in Cargo.toml
 function run_example_with_flamegraph_profiling_svg
     set options $argv
-    
+
     set selection (printf '%s\n' $options | fzf --prompt 'Select an example to run: ')
     set fzf_status $status
-    
+
     if test $fzf_status -ne 0
         # User pressed Ctrl+C, exit gracefully
         return
     end
-    
+
     if test -z "$selection"
         echo "No example selected."
     else
         echo "Running example with options: $options, selection: $selection"
         echo "Current working directory: $PWD"
-        
+
         # Check if required tools are available
         if not command -v perf >/dev/null
             echo "Error: perf is not installed."
@@ -447,20 +538,20 @@ function run_example_with_flamegraph_profiling_svg
             echo "  2. fish run.fish install-cargo-tools  # Installs cargo tools like flamegraph"
             return
         end
-        
+
         if not command -v cargo-flamegraph >/dev/null
             echo "Error: cargo-flamegraph is not installed."
             echo "Please run from the repo root:"
             echo "  fish run.fish install-cargo-tools"
             return
         end
-        
+
         echo "cargo flamegraph --profile profiling-detailed --example $selection"
-        
+
         # Change the kernel parameters to allow perf to access kernel symbols.
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
-        
+
         # Enhanced profiling with better symbol resolution using profiling-detailed profile
         # The profile settings handle debug symbols, LTO, and optimization level
         # RUSTFLAGS:
@@ -477,17 +568,17 @@ function run_example_with_flamegraph_profiling_svg
             --no-inline \
             -c "record -g --call-graph=fp,8 -F 99" \
             --example $selection
-        
+
         # Find PIDs for cargo flamegraph
         set flamegraph_pids (pgrep -f "cargo flamegraph" 2>/dev/null || true)
-        
+
         # Find PIDs for perf script
         set perf_script_pids (pgrep -f "perf script" 2>/dev/null || true)
-        
+
         # Combine all found PIDs and get only the unique ones
         set all_pids $flamegraph_pids $perf_script_pids
         set all_pids (printf '%s\n' $all_pids | sort -u)
-        
+
         if test (count $all_pids) -eq 0
             echo "No cargo flamegraph or perf script processes found to kill. 🧐"
         else
@@ -500,7 +591,7 @@ function run_example_with_flamegraph_profiling_svg
             end
             echo "All targeted processes should now be terminated. ✅"
         end
-        
+
         # Open the flamegraph in browser
         if not command -v firefox-beta >/dev/null
             echo "firefox-beta not found, using system default browser"
@@ -508,7 +599,7 @@ function run_example_with_flamegraph_profiling_svg
         else
             firefox-beta --new-window flamegraph.svg
         end
-        
+
         # Reset kernel parameters (optional but recommended for security)
         echo "Resetting kernel parameters..."
         sudo sysctl -w kernel.perf_event_paranoid=2 # Default paranoid level (often 2)
@@ -575,21 +666,21 @@ end
 #   inferno-diff-folded before.perf-folded after.perf-folded | flamegraph > diff.svg
 function run_example_with_flamegraph_profiling_perf_fold
     set options $argv
-    
+
     set selection (printf '%s\n' $options | fzf --prompt 'Select an example to run: ')
     set fzf_status $status
-    
+
     if test $fzf_status -ne 0
         # User pressed Ctrl+C, exit gracefully
         return
     end
-    
+
     if test -z "$selection"
         echo "No example selected."
     else
         echo "Running example to generate collapsed stacks: $selection"
         echo "Current working directory: $PWD"
-        
+
         # Check if required tools are available
         if not command -v perf >/dev/null
             echo "Error: perf is not installed."
@@ -598,40 +689,40 @@ function run_example_with_flamegraph_profiling_perf_fold
             echo "  2. fish run.fish install-cargo-tools  # Installs cargo tools like inferno"
             return
         end
-        
+
         # Change the kernel parameters to allow perf to access kernel symbols
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
-        
+
         # Build the example with profiling-detailed profile and same RUSTFLAGS as SVG version
         echo "Building example with profiling-detailed profile..."
         env RUSTFLAGS="-C force-frame-pointers=yes -C symbol-mangling-version=v0" \
             cargo build --profile profiling-detailed --example $selection
-        
+
         # Wait a moment for the build to complete
         sleep 1
-        
+
         # Get the binary path - target is in parent directory
         set binary_path "../target/profiling-detailed/examples/$selection"
-        
+
         # Check if the binary exists
         if not test -f $binary_path
             echo "Error: Binary not found at $binary_path"
             echo "Please ensure the example builds successfully."
             return
         end
-        
+
         # Run perf record with same options as the SVG version
         echo "Running perf record with enhanced symbol resolution..."
         sudo perf record -g --call-graph=fp,8 -F 99 -o perf.data -- $binary_path
-        
+
         # Fix ownership of perf.data files so they can be accessed without sudo
         set current_user $USER
         sudo chown "$current_user:$current_user" perf.data
         if test -f perf.data.old
             sudo chown "$current_user:$current_user" perf.data.old
         end
-        
+
         # Check if inferno-collapse-perf is available
         if not command -v inferno-collapse-perf >/dev/null
             echo "Error: inferno-collapse-perf is not installed."
@@ -639,18 +730,18 @@ function run_example_with_flamegraph_profiling_perf_fold
             echo "  fish run.fish install-cargo-tools"
             return
         end
-        
+
         # Convert perf data to collapsed stacks format using inferno (comes with cargo flamegraph)
         echo "Converting to collapsed stacks format..."
         sudo perf script -f -i perf.data | inferno-collapse-perf > flamegraph.perf-folded
-        
+
         # Fix ownership of generated files
         sudo chown "$current_user:$current_user" flamegraph.perf-folded
-        
+
         # Show file size comparison
         set folded_size (wc -c < flamegraph.perf-folded)
         echo "Generated flamegraph.perf-folded: $folded_size bytes"
-        
+
         # Count total samples (with error handling for empty files)
         if test $folded_size -gt 0
             set total_samples (awk '{sum += $NF} END {print sum}' flamegraph.perf-folded)
@@ -658,7 +749,7 @@ function run_example_with_flamegraph_profiling_perf_fold
         else
             echo "Warning: flamegraph.perf-folded is empty. Check if perf recording was successful."
         end
-        
+
         # Reset kernel parameters
         echo "Resetting kernel parameters..."
         sudo sysctl -w kernel.perf_event_paranoid=2

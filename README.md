@@ -362,13 +362,19 @@ cd r3bl-open-core
 ./bootstrap.sh
 ```
 
-The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script will:
+The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script handles **OS-level setup** with a clean main function structure and will:
 
-- Install Rust toolchain (rustup)
-- Install Fish shell and fzf
-- Install file watchers (inotifywait on Linux, fswatch on macOS)
-- Install all required cargo development tools
-- Detect your package manager automatically
+- **System Package Manager Detection**: Automatically detects apt, dnf, pacman, zypper, or brew
+- **Core Rust Installation**: Install Rust toolchain (rustup) and ensure cargo is in PATH
+- **Compiler Setup**: Install clang compiler (required by Wild linker)
+- **Development Shell**: Install Fish shell and fzf for interactive development
+- **File Watching**: Install file watchers (inotifywait on Linux, fswatch on macOS)
+- **Development Utilities**: Install htop, screen, tmux for system monitoring
+- **Node.js Ecosystem**: Install Node.js and npm for web tooling
+- **AI Integration**: Install Claude Code CLI with MCP server configuration
+- **Rust Development Tools Setup**: Call `fish run.fish install-cargo-tools` for all Rust-specific tooling
+
+**Architecture**: Uses clear function separation with main() orchestrator and dedicated functions for each concern (install_rustup, install_clang, install_shell_tools, etc.)
 
 ### Manual Setup
 
@@ -383,9 +389,21 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # macOS: brew install fish fzf
 # Or run ./bootstrap.sh for automatic detection
 
-# Install development tools
+# Install Rust development tools (after OS dependencies)
 fish run.fish install-cargo-tools
 ```
+
+**Note**: The manual approach requires you to install OS-level dependencies yourself. The `install-cargo-tools` command focuses specifically on **Rust development tools**:
+
+- **cargo-binstall**: Fast binary installer (installed first as foundation)
+- **uv**: Modern Python package manager (required for Serena semantic code MCP server)
+- **Core Development Tools**: bacon, cargo-nextest, flamegraph, inferno, sccache
+- **Workspace Management**: cargo-workspaces, cargo-cache, cargo-update
+- **Code Quality**: cargo-deny, cargo-unmaintained, cargo-expand, cargo-readme
+- **Wild Linker**: Fast linker with optimized .cargo/config.toml generation
+- **Language Server**: rust-analyzer component
+- **Smart Installation**: Uses cargo-binstall for speed with fallback to cargo install --locked
+- **Shared Utilities**: Leverages utility functions from script_lib.fish for consistency
 
 ## IDE Setup and Extensions
 
@@ -465,7 +483,7 @@ Workspace-wide commands:
     docs                 Generate docs for all
     serve-docs           Serve documentation
     rustfmt              Format all code
-    install-cargo-tools  Install development tools
+    install-cargo-tools  Install Rust development tools
     upgrade-deps         Upgrade dependencies
     audit-deps           Security audit
     unmaintained         Check for unmaintained deps
@@ -500,6 +518,7 @@ Other commands:
 | `fish run.fish all`               | Run all major checks (build, test, clippy, docs, audit, format) |
 | `fish run.fish build`             | Build the entire workspace                                      |
 | `fish run.fish test`              | Run all tests across the workspace                              |
+| `fish run.fish install-cargo-tools` | Install Rust development tools (cargo-binstall, uv, bacon, nextest, Wild linker, sccache, etc.) |
 | `fish run.fish watch-all-tests`   | Watch for file changes and run tests automatically              |
 | `fish run.fish run-examples`      | Run TUI examples interactively                                  |
 | `fish run.fish run-binaries`      | Run cmdr binaries (edi, giti, rc) interactively                 |
@@ -661,12 +680,10 @@ development, making builds faster and more responsive.
 `clang` and `wild` are installed. If either tool is missing, the configuration gracefully falls back
 to standard parallel compilation without Wild.
 
-**Installation**: The
-[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script
-automatically installs both prerequisites:
+**Installation**: The setup process automatically installs both prerequisites:
 
-- `clang`: Required as the linker frontend
-- `wild-linker`: The fast linker implementation via `cargo-binstall`
+- `clang`: Installed by [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) as a system dependency
+- `wild-linker`: Installed by `fish run.fish install-cargo-tools` via `cargo-binstall` (with fallback to `cargo install`)
 
 **Configuration**: When available, Wild is configured in `.cargo/config.toml` for Linux targets:
 
@@ -857,16 +874,29 @@ git operations **Testing support**: `remove` script enables testing upgrade work
 
 ### Unified Script Architecture
 
-The root-level `run.fish` script consolidates functionality that was previously scattered across
-multiple workspace-specific scripts. This unified approach provides:
+The project uses a clean separation of concerns across three main scripts:
 
+**[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh)** - **OS-Level Setup**
+- System package manager detection and OS dependencies
+- Rust toolchain installation via rustup
+- Development environment setup (Fish shell, fzf, file watchers)
+- Cross-platform compatibility (Linux, macOS)
+- Calls run.fish for Rust-specific tooling
+
+**[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish)** - **Rust Development Commands**
 - **Workspace-wide commands** that operate on the entire project
+- **Cargo tool installation** (install-cargo-tools with cargo-binstall, uv, bacon, nextest, etc.)
 - **TUI-specific commands** for running examples and benchmarks
 - **cmdr-specific commands** for binary management
 - **Cross-platform file watching** using inotifywait (Linux) or fswatch (macOS)
 - **Smart log monitoring** that detects and manages log files from different workspaces
 
-All commands work from the root directory, eliminating the need to navigate between subdirectories.
+**[`script_lib.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/script_lib.fish)** - **Shared Utilities**
+- Common functions used by both bootstrap.sh and run.fish
+- Utility functions: install_if_missing, generate_cargo_config, install_cargo_tool
+- Cross-platform package manager detection
+
+All commands work from the root directory, eliminating the need to navigate between subdirectories. This architecture ensures no redundancy - each tool is installed in exactly one place with clear ownership.
 
 ## Star History
 

@@ -251,122 +251,82 @@ end
 # Installs and configures all development tools needed for the workspace.
 #
 # This comprehensive installer sets up:
-# 1. Cargo tools for Rust development (bacon, nextest, flamegraph, etc.)
-# 2. System tools (docker, go)
-# 3. Claude Code CLI with MCP servers
-# 4. Language servers (rust-analyzer)
+# 1. cargo-binstall for fast binary installation
+# 2. uv package manager (required for Serena semantic code MCP server)
+# 3. Cargo tools for Rust development (bacon, nextest, flamegraph, etc.)
+# 4. Wild linker with .cargo/config.toml generation
+# 5. Language servers (rust-analyzer)
 #
 # Features:
-# - Cross-platform support (Windows, macOS, Linux)
-# - Automatic package manager detection
+# - Cross-platform support (macOS, Linux)
+# - Uses cargo-binstall for faster installations with fallback to cargo install --locked
 # - Idempotent - safe to run multiple times
-# - Configures Claude MCP servers for enhanced code assistance:
-#   - rust-analyzer: Language server protocol for Rust
-#   - serena: Semantic code analysis
+# - Generates optimized .cargo/config.toml with Wild linker support
+# - Uses shared utility functions from script_lib.fish
 #
 # Prerequisites:
-# - bootstrap.sh must be run first to install Rust, Cargo, and Fish
+# - bootstrap.sh must be run first to install Rust, Cargo, Fish, and OS dependencies
 #
 # Tools installed:
+# - cargo-binstall: Fast binary installer
+# - uv: Modern Python package manager (for Serena MCP server)
 # - bacon: Background rust code checker
+# - cargo-workspaces: Multi-crate workspace management
+# - cargo-cache: Cargo cache management
+# - cargo-outdated: Dependency version checker
+# - cargo-update: Update installed binaries
+# - cargo-deny: Supply chain security auditing
+# - cargo-unmaintained: Check for unmaintained dependencies
+# - cargo-expand: Show macro expansions
+# - cargo-readme: Generate README from doc comments
 # - cargo-nextest: Next-generation test runner
 # - flamegraph: Performance profiling visualization
+# - inferno: Fast stack trace visualizer
 # - sccache: Shared compilation cache for faster builds
-# - cargo-deny: Supply chain security auditing
-# - cargo-outdated: Dependency version checker
-# - And many more...
+# - wild: Fast linker (wild-linker package)
+# - rust-analyzer: Language server
 #
 # Usage:
 #   fish run.fish install-cargo-tools
 function install-cargo-tools
+    # Install cargo-binstall first for fast binary installation
+    install_if_missing "cargo-binstall" "curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash"
+
     # Install uv package manager (required for Serena semantic code MCP server).
     # https://github.com/oraios/serena
     # https://claudelog.com/addons/serena/
-    if not command -v uv >/dev/null
-        echo 'Installing uv...'
-        if test (uname) = Windows_NT
-            # Windows installation
-            powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-        else
-            # Linux and macOS installation
-            sh -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
-        end
-    else
-        echo '✓ uv installed'
-    end
+    install_if_missing "uv" "curl -LsSf https://astral.sh/uv/install.sh | sh"
 
-    # Cargo tools - some tools install binaries with different names
+    # Cargo tools - using cargo binstall with fallback to cargo install
     set cargo_tools \
-        "bacon|cargo install bacon" \
-        "cargo-workspaces|cargo install cargo-workspaces" \
-        "cargo-cache|cargo install cargo-cache" \
-        "cargo-outdated|cargo install cargo-outdated" \
-        "cargo-update|cargo install cargo-update" \
-        "cargo-deny|cargo install cargo-deny" \
-        "cargo-unmaintained|cargo install cargo-unmaintained" \
-        "cargo-expand|cargo install cargo-expand" \
-        "cargo-readme|cargo install cargo-readme" \
-        "cargo-nextest|cargo install cargo-nextest" \
-        "cargo-flamegraph|cargo install flamegraph" \
-        "inferno-flamegraph|cargo install inferno" \
-        "sccache|cargo install sccache --locked"
+        "bacon" \
+        "cargo-workspaces" \
+        "cargo-cache" \
+        "cargo-outdated" \
+        "cargo-update" \
+        "cargo-deny" \
+        "cargo-unmaintained" \
+        "cargo-expand" \
+        "cargo-readme" \
+        "cargo-nextest" \
+        "flamegraph" \
+        "inferno" \
+        "sccache"
 
-    for tool_info in $cargo_tools
-        set tool_parts (string split "|" $tool_info)
-        set check $tool_parts[1]
-        set install $tool_parts[2]
-        install_if_missing $check $install
+    for tool in $cargo_tools
+        install_cargo_tool $tool
     end
 
-    # Function to generate cargo configuration based on available tools
-    function generate_cargo_config
-        echo "Generating cargo configuration..."
-
-        # Base configuration with sccache and parallel compilation
-        echo '[build]
-rustc-wrapper = "sccache"
-rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler' > .cargo/config.toml
-
-        # Add Wild linker configuration if both clang and wild are available
-        if command -v clang >/dev/null && command -v wild >/dev/null
-            echo "✓ Wild linker available - adding to configuration"
-            echo '
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = [
-    "-Z", "threads=8",  # Parallel compilation
-    "-C", "link-arg=--ld-path=wild"  # Wild linker
-]
-
-[target.aarch64-unknown-linux-gnu]
-linker = "clang"
-rustflags = [
-    "-Z", "threads=8",  # Parallel compilation
-    "-C", "link-arg=--ld-path=wild"  # Wild linker
-]' >> .cargo/config.toml
-        else
-            echo "✓ Wild linker not available - using default configuration"
-            echo '
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-Z", "threads=8"]  # Parallel compilation only
-
-[target.aarch64-unknown-linux-gnu]
-rustflags = ["-Z", "threads=8"]  # Parallel compilation only' >> .cargo/config.toml
-        end
-
-        echo "✓ Cargo configuration generated"
-    end
-
-    # Install Wild linker via cargo-binstall (Linux only)
+    # Install Wild linker via cargo-binstall
     if command -v cargo-binstall >/dev/null
         install_if_missing "wild" "cargo binstall -y wild-linker"
-
-        # Generate appropriate cargo configuration after installation
-        generate_cargo_config
     else
-        echo "Warning: cargo-binstall not found. Run bootstrap.sh first"
-        return 1
+        echo "Warning: cargo-binstall not found. Cannot install Wild linker efficiently"
+        install_if_missing "wild" "cargo install wild-linker"
     end
+
+    # Generate appropriate cargo configuration after installation
+    generate_cargo_config
 
     # Rust components
     if not rustup component list --installed | grep -q rust-analyzer
@@ -375,17 +335,6 @@ rustflags = ["-Z", "threads=8"]  # Parallel compilation only' >> .cargo/config.t
     else
         echo '✓ rust-analyzer installed'
     end
-
-    # System tools (detect package manager)
-    set pkg_mgr (get_package_manager)
-
-    # Install go and docker if not already installed.
-    if test -n "$pkg_mgr"
-        install_if_missing docker "$pkg_mgr docker.io docker-compose"
-    end
-
-    # Install other tools.
-    # Note: Claude Code installation and MCP configuration moved to bootstrap.sh
 end
 
 # Runs all major checks and tasks for the entire workspace.
