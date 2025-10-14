@@ -9,7 +9,7 @@
 use super::ProcessManager;
 use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
             OffscreenBuffer, OutputDevice, PixelChar, Size, TuiColor, TuiStyle, col,
-            core::dimens::{idx, len},
+            core::coordinates::{idx, len},
             lock_output_device_as_mut,
             tui::terminal_lib_backends::{OffscreenBufferPaint,
                                          OffscreenBufferPaintImplCrossterm},

@@ -89,11 +89,11 @@
 //! }
 //! ```
 //!
-//! [`RangeBoundsExt`]: crate::core::units::bounds_check::RangeBoundsExt
+//! [`RangeBoundsExt`]: crate::core::coordinates::bounds_check::RangeBoundsExt
 
 use super::{OffscreenBuffer, PixelCharLine};
 use crate::{ColIndex, RangeValidityStatus, RowIndex,
-            core::units::bounds_check::RangeBoundsExt};
+            core::coordinates::bounds_check::RangeBoundsExt};
 use std::ops::Range;
 
 impl OffscreenBuffer {

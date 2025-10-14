@@ -232,6 +232,7 @@
     "runtimes",
     "rustc",
     "rustdoc",
+    "rustdocs",
     "rustflags",
     "rustfmt",
     "rustls",

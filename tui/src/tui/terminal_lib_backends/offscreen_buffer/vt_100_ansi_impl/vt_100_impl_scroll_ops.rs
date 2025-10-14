@@ -22,7 +22,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{ArrayBoundsCheck, ArrayUnderflowResult, RowHeight,
-            core::units::bounds_check::RangeConvertExt};
+            core::coordinates::bounds_check::RangeConvertExt};
 
 impl OffscreenBuffer {
     /// Move cursor down one line, scrolling the buffer if at bottom.

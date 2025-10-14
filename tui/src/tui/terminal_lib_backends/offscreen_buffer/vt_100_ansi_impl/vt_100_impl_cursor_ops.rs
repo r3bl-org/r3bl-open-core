@@ -21,7 +21,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::{ColIndex, ColWidth, Pos, RowHeight, RowIndex, col,
-            core::units::bounds_check::IndexOps};
+            core::coordinates::bounds_check::IndexOps};
 
 impl OffscreenBuffer {
     /// Move cursor up by n lines.

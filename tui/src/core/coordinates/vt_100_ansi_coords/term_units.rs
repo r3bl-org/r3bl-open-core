@@ -67,6 +67,10 @@
 //! This approach makes code self-documenting and grep-able—you can search for
 //! `from_raw_non_zero_value` to find all ANSI parsing entry points.
 //!
+//! > 💡 **See also**: For complete workflows showing VT-100 coordinate conversion and
+//! > integration with buffer coordinates, see the [coordinates module
+//! > documentation](crate::coordinates#common-workflows).
+//!
 //! # Common Pitfalls
 //!
 //! - **Off-by-one errors**: Always convert explicitly, never manually add/subtract 1
@@ -91,13 +95,14 @@ use std::{num::NonZeroU16, ops::Add};
 /// - [`NumericConversions`] trait implementation for reading values
 /// - [`From<NonZeroU16>`] for construction
 /// - [`Display`] trait for formatting
-/// - [`from_raw_non_zero_value()`] constructor for creating instances from raw `NonZeroU16`
+/// - [`from_raw_non_zero_value()`] constructor for creating instances from raw
+///   `NonZeroU16`
 /// - [`value()`] for extracting the inner `NonZeroU16`
 /// - [`as_u16()`] for extracting the raw 1-based value as `u16`
 /// - [`from_zero_based()`] for converting from 0-based buffer indices
 /// - [`to_zero_based()`] for converting to 0-based buffer indices
 ///
-/// [`NumericConversions`]: crate::core::units::NumericConversions
+/// [`NumericConversions`]: crate::core::coordinates::NumericConversions
 /// [`From<NonZeroU16>`]: std::convert::From
 /// [`Display`]: std::fmt::Display
 macro_rules! generate_impl_term_unit {
@@ -138,7 +143,8 @@ macro_rules! generate_impl_term_unit {
             ///
             /// This is a convenience method that extracts the underlying [`u16`] from
             /// the [`NonZeroU16`] wrapper. Most code should use [`as_usize()`] for
-            /// general numeric operations or [`value()`] for accessing the [`NonZeroU16`].
+            /// general numeric operations or [`value()`] for accessing the
+            /// [`NonZeroU16`].
             ///
             /// [`as_usize()`]: Self::as_usize
             /// [`value()`]: Self::value
@@ -172,12 +178,14 @@ macro_rules! generate_impl_term_unit {
 ///
 /// # Construction
 ///
-/// See the [module-level design philosophy](self#design-philosophy-private-fields-and-explicit-construction)
+/// See the [module-level design
+/// philosophy](self#design-philosophy-private-fields-and-explicit-construction)
 /// for why this type uses private fields and explicit constructors.
 ///
 /// Use these methods to create `TermRow` values:
 /// - [`from_raw_non_zero_value()`] - Wrap external `NonZeroU16` data (ANSI parameters)
-/// - [`from_zero_based()`] - Convert from 0-based [`RowIndex`] to 1-based terminal coordinate
+/// - [`from_zero_based()`] - Convert from 0-based [`RowIndex`] to 1-based terminal
+///   coordinate
 /// - [`term_row()`] - Convenience helper (primarily for tests)
 ///
 /// # Coordinate System
@@ -227,12 +235,14 @@ pub const fn term_row(value: NonZeroU16) -> TermRow {
 ///
 /// # Construction
 ///
-/// See the [module-level design philosophy](self#design-philosophy-private-fields-and-explicit-construction)
+/// See the [module-level design
+/// philosophy](self#design-philosophy-private-fields-and-explicit-construction)
 /// for why this type uses private fields and explicit constructors.
 ///
 /// Use these methods to create `TermCol` values:
 /// - [`from_raw_non_zero_value()`] - Wrap external `NonZeroU16` data (ANSI parameters)
-/// - [`from_zero_based()`] - Convert from 0-based [`ColIndex`] to 1-based terminal coordinate
+/// - [`from_zero_based()`] - Convert from 0-based [`ColIndex`] to 1-based terminal
+///   coordinate
 /// - [`term_col()`] - Convenience helper (primarily for tests)
 ///
 /// # Coordinate System

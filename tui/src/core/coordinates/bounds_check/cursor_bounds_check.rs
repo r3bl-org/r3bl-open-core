@@ -138,8 +138,8 @@ use std::ops::Add;
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
 /// [`IndexOps`]: crate::IndexOps
 /// [`LengthOps`]: crate::LengthOps
-/// [Module documentation]: mod@crate::core::units::bounds_check
-/// [Interval Notation]: mod@crate::core::units::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 /// [`eol_cursor_position()`]: CursorBoundsCheck::eol_cursor_position
 /// [`is_valid_cursor_position()`]: CursorBoundsCheck::is_valid_cursor_position
 /// [`clamp_cursor_position()`]: CursorBoundsCheck::clamp_cursor_position

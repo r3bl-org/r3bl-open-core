@@ -30,12 +30,12 @@
 //!
 //! These provide the fundamental operations used across all bounds checking patterns:
 //!
-//! | Trait                  | File                 | Key Methods                                                                                        |
-//! |------------------------|----------------------|----------------------------------------------------------------------------------------------------|
-//! | [`NumericConversions`] | [`numeric_value`]    | [`as_usize()`], [`as_u16()`]                                                                       |
-//! | [`NumericValue`]       | [`numeric_value`]    | Extends [`NumericConversions`], adds [`From`] conversions, [`is_zero()`]                           |
-//! | [`IndexOps`]           | [`index_ops.rs`]     | [`convert_to_length()`], [`clamp_to_max_length()`], [`clamp_to_min_index()`], [`clamp_to_range()`] |
-//! | [`LengthOps`]          | [`length_ops.rs`]    | [`convert_to_index()`], [`is_overflowed_by()`], [`remaining_from()`], [`clamp_to_max()`]           |
+//! | Trait                  | File              | Key Methods                                                                                        |
+//! |------------------------|-------------------|----------------------------------------------------------------------------------------------------|
+//! | [`NumericConversions`] | [`numeric_value`] | [`as_usize()`], [`as_u16()`]                                                                       |
+//! | [`NumericValue`]       | [`numeric_value`] | Extends [`NumericConversions`], adds [`From`] conversions, [`is_zero()`]                           |
+//! | [`IndexOps`]           | [`index_ops.rs`]  | [`convert_to_length()`], [`clamp_to_max_length()`], [`clamp_to_min_index()`], [`clamp_to_range()`] |
+//! | [`LengthOps`]          | [`length_ops.rs`] | [`convert_to_index()`], [`is_overflowed_by()`], [`remaining_from()`], [`clamp_to_max()`]           |
 //!
 //! ### Semantic Traits (Use Case Validation)
 //!
@@ -86,13 +86,13 @@
 //!
 //! ### Foundational Traits (Core Operations)
 //!
-//! | Task                               | Trait or enum                                           | File                | Key Question                                  |
-//! |------------------------------------|---------------------------------------------------------|---------------------|-----------------------------------------------|
-//! | Compare indices to each other      | [`IndexOps`]                                            | [`index_ops`]       | "How do indices relate to each other?"        |
-//! | Work with lengths/sizes            | [`LengthOps`]                                           | [`length_ops`]      | "What can I do with a length value?"          |
-//! | Read numeric values                | [`NumericConversions`]                                  | [`numeric_value`]   | "How do I read as usize/u16?"                 |
-//! | Construct & check numeric values   | [`NumericValue`]                                        | [`numeric_value`]   | "How do I create from integers & check zero?" |
-//! | Status return enum types           | [`ArrayOverflowResult`], [`CursorPositionBoundsStatus`] | [`result_enums.rs`] | "What status types are available?"            |
+//! | Task                             | Trait or enum                                           | File                | Key Question                                  |
+//! |----------------------------------|---------------------------------------------------------|---------------------|-----------------------------------------------|
+//! | Compare indices to each other    | [`IndexOps`]                                            | [`index_ops`]       | "How do indices relate to each other?"        |
+//! | Work with lengths/sizes          | [`LengthOps`]                                           | [`length_ops`]      | "What can I do with a length value?"          |
+//! | Read numeric values              | [`NumericConversions`]                                  | [`numeric_value`]   | "How do I read as usize/u16?"                 |
+//! | Construct & check numeric values | [`NumericValue`]                                        | [`numeric_value`]   | "How do I create from integers & check zero?" |
+//! | Status return enum types         | [`ArrayOverflowResult`], [`CursorPositionBoundsStatus`] | [`result_enums.rs`] | "What status types are available?"            |
 //!
 //! #### When to Use Foundational Traits Directly
 //!
@@ -1136,7 +1136,7 @@
 //! [`to_exclusive()`]: crate::RangeConvertExt::to_exclusive
 //! [`TermRow`]: crate::TermRow
 //! [`TermCol`]: crate::TermCol
-//! [Exclusive vs Inclusive Range Comparison]: mod@crate::core::units::bounds_check::range_bounds_check_ext#exclusive-vs-inclusive-range-comparison
+//! [Exclusive vs Inclusive Range Comparison]: mod@crate::core::coordinates::bounds_check::range_bounds_check_ext#exclusive-vs-inclusive-range-comparison
 //! [`array_bounds_check.rs`]: mod@crate::array_bounds_check
 //! [`cursor_bounds_check.rs`]: mod@crate::cursor_bounds_check
 //! [`viewport_bounds_check.rs`]: mod@crate::viewport_bounds_check

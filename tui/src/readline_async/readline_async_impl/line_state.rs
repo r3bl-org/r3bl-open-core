@@ -2,7 +2,7 @@
 
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, LINE_FEED_BYTE,
             MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength,
-            core::dimens::idx, ok};
+            core::coordinates::idx, ok};
 use crossterm::{QueueableCommand, cursor,
                 event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
                 terminal::{Clear,

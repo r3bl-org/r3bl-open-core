@@ -40,6 +40,10 @@ use std::ops::{Add, Deref, DerefMut, Range};
 /// - [`ByteLength`] = byte count/size (like "10 bytes long")
 /// - [`ByteOffset`] = byte displacement (like "5 bytes forward from here")
 ///
+/// > 💡 **See also**: For complete workflows showing `ByteIndex` used with UTF-8 string
+/// > operations and bounds checking, see the [coordinates module
+/// > documentation](crate::coordinates#common-workflows).
+///
 /// # Examples
 ///
 /// ```rust

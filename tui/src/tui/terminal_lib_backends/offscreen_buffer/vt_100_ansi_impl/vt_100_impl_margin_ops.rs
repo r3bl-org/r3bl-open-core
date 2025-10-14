@@ -28,7 +28,7 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::core::units::{TermRow, bounds_check::LengthOps};
+use crate::core::coordinates::{TermRow, bounds_check::LengthOps};
 use std::num::NonZeroU16;
 
 impl OffscreenBuffer {
@@ -81,7 +81,7 @@ impl OffscreenBuffer {
 mod tests_margin_ops {
     use super::*;
     use crate::{core::{pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
-                       units::term_row},
+                       coordinates::term_row},
                 height, width};
 
     fn create_test_buffer() -> OffscreenBuffer {

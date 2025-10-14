@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, CursorBoundsCheck, EditorArgsMut,
-            RangeBoundsResult, ch, core::units::bounds_check::ViewportBoundsCheck};
+            RangeBoundsResult, ch, core::coordinates::bounds_check::ViewportBoundsCheck};
 
 // Unicode glyphs links (for the ASCII diagrams):
 // - https://symbl.cc/en/unicode/blocks/box-drawing/

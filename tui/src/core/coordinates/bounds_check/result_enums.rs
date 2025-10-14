@@ -37,7 +37,7 @@
 ///
 /// [`overflows()`]: crate::ArrayBoundsCheck::overflows
 /// [`RangeBoundsResult`]: crate::RangeBoundsResult
-/// [Interval Notation]: mod@crate::core::units::bounds_check#interval-notation
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ArrayOverflowResult {
     /// Index is within valid bounds for array access.
@@ -107,7 +107,7 @@ pub enum ArrayUnderflowResult {
 ///
 /// [`check_index_is_within`]: crate::RangeBoundsExt::check_index_is_within
 /// [`ArrayOverflowResult`]: crate::ArrayOverflowResult
-/// [Interval Notation]: mod@crate::core::units::bounds_check#interval-notation
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum RangeBoundsResult {
     /// Index has underflowed (below minimum bounds).

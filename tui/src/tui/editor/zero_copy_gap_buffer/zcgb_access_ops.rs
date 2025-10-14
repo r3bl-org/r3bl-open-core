@@ -104,7 +104,7 @@
 use super::super::ZeroCopyGapBuffer;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndexRangeExt,
             RangeValidityStatus, RowIndex, byte_index,
-            core::units::bounds_check::{NumericValue, RangeBoundsExt}};
+            core::coordinates::bounds_check::{NumericValue, RangeBoundsExt}};
 use std::{ops::Range,
           str::{from_utf8, from_utf8_unchecked}};
 

@@ -224,8 +224,8 @@ use std::ops::{Add, Range, RangeInclusive};
 /// [`CursorBoundsCheck`]: crate::CursorBoundsCheck
 /// [`ViewportBoundsCheck`]: crate::ViewportBoundsCheck
 /// [`RangeConvertExt`]: crate::RangeConvertExt
-/// [Module documentation]: mod@crate::core::units::bounds_check
-/// [Interval Notation]: mod@crate::core::units::bounds_check#interval-notation
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 /// [`Range<Index>`]: std::ops::Range
 /// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 /// [`Range`]: std::ops::Range

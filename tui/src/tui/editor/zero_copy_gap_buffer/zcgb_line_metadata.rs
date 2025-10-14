@@ -9,7 +9,7 @@
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ColIndex, ColWidth,
             GCStringOwned, Length, LengthOps, NumericValue, RangeBoundsExt,
             RangeValidityStatus, Seg, SegIndex, SegStringOwned, SegmentArray,
-            byte_index, byte_len, core::units::byte_index::ByteIndexRangeExt};
+            byte_index, byte_len, core::coordinates::byte_index::ByteIndexRangeExt};
 use std::ops::Range;
 
 /// Metadata for a single line in the buffer.

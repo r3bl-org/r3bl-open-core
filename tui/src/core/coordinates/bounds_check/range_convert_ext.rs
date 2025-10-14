@@ -235,12 +235,12 @@ use std::ops::{Add, Range, RangeInclusive};
 ///
 /// [`to_exclusive()`]: RangeConvertExt::to_exclusive
 /// [`RangeBoundsExt`]: crate::RangeBoundsExt
-/// [Module documentation]: mod@crate::core::units::bounds_check
+/// [Module documentation]: mod@crate::core::coordinates::bounds_check
 /// [`RangeInclusive<Index>`]: std::ops::RangeInclusive
 /// [`Range<Index>`]: std::ops::Range
 /// [`RangeInclusive`]: std::ops::RangeInclusive
 /// [`Range`]: std::ops::Range
-/// [Interval Notation]: mod@crate::core::units::bounds_check#interval-notation
+/// [Interval Notation]: mod@crate::core::coordinates::bounds_check#interval-notation
 pub trait RangeConvertExt {
     /// The index type contained in this range.
     type IndexType: IndexOps;

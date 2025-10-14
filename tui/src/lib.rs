@@ -615,7 +615,7 @@
 //! - Advanced patterns (range validation, scroll regions, text selections)
 //!
 //! See the extensive and detailed [`bounds_check` module
-//! documentation](mod@crate::core::units::bounds_check).
+//! documentation](mod@crate::core::coordinates::bounds_check).
 //!
 //! # Grapheme support
 //!

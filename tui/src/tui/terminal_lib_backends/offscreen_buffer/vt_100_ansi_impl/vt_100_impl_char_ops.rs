@@ -35,7 +35,8 @@
 use super::super::*;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue,
             RowIndex, col,
-            core::units::bounds_check::{CursorBoundsCheck, LengthOps, RangeBoundsExt},
+            core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
+                                              RangeBoundsExt},
             height, len};
 
 impl OffscreenBuffer {

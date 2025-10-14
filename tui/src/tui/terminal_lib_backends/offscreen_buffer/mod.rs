@@ -293,10 +293,10 @@
 //!
 //! [`validate_col_range_mut()`]: OffscreenBuffer::validate_col_range_mut
 //! [`validate_row_range_mut()`]: OffscreenBuffer::validate_row_range_mut
-//! [`RangeBoundsExt`]: crate::core::units::bounds_check::RangeBoundsExt
-//! [`bounds_check`]: crate::core::units::bounds_check
-//! [`IndexOps`]: crate::core::units::bounds_check::IndexOps
-//! [`LengthOps`]: crate::core::units::bounds_check::LengthOps
+//! [`RangeBoundsExt`]: crate::core::coordinates::bounds_check::RangeBoundsExt
+//! [`bounds_check`]: crate::core::coordinates::bounds_check
+//! [`IndexOps`]: crate::core::coordinates::bounds_check::IndexOps
+//! [`LengthOps`]: crate::core::coordinates::bounds_check::LengthOps
 //! [`Pos`]: crate::Pos
 //! [`set_char()`]: OffscreenBuffer::set_char
 //! [`fill_char_range()`]: OffscreenBuffer::fill_char_range

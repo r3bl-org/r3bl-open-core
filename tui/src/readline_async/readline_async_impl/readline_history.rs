@@ -1,7 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, HISTORY_SIZE_MAX,
-            core::dimens::{Index, idx, len}};
+            core::coordinates::{Index, idx, len}};
 use std::collections::VecDeque;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
