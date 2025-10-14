@@ -1356,7 +1356,7 @@ pub mod boundary_validation {
             ofs_buf.ansi_parser_support.scroll_region_top,
             ofs_buf.ansi_parser_support.scroll_region_bottom,
         ) {
-            assert!(top.0 <= bottom.0); // Compare the inner u16 values
+            assert!(top.value() <= bottom.value()); // Compare the inner NonZeroU16 values
         }
     }
 
@@ -1377,7 +1377,7 @@ pub mod boundary_validation {
         // Implementation should clamp or ignore invalid bounds
         // We verify the system remains in a valid state
         if let Some(bottom) = ofs_buf.ansi_parser_support.scroll_region_bottom {
-            assert!(bottom.0.get() <= 10); // Compare the inner u16 value
+            assert!(bottom.value().get() <= 10); // Compare the inner u16 value
         }
     }
 

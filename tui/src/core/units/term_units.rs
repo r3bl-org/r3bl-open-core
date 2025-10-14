@@ -27,28 +27,45 @@
 //! where `(1,1)` is the top-left corner. Internal data structures use 0-based indexing
 //! where `(0,0)` is the top-left. Mixing these systems causes off-by-one errors.
 //!
-//! # Usage Example
+//! # Design Philosophy: Private Fields and Explicit Construction
+//!
+//! Both [`TermRow`] and [`TermCol`] use **private tuple fields** and provide **explicit
+//! named constructors** instead of a generic `new()` method. This design enforces clarity
+//! at call sites about the origin and semantics of coordinate data.
+//!
+//! ## Why Private Fields?
+//!
+//! The inner [`NonZeroU16`] fields are intentionally private to prevent ambiguous
+//! construction like `TermRow(some_nz)` where the data provenance is unclear. This is
+//! especially critical in a codebase managing two coordinate systems (1-based terminal,
+//! 0-based buffer).
+//!
+//! ## Constructor Methods
+//!
+//! | Constructor                    | Use When                                        | Example                       |
+//! |--------------------------------|-------------------------------------------------|-------------------------------|
+//! | [`from_raw_non_zero_value()`]  | Wrapping external `NonZeroU16` (ANSI params)    | VT-100 parser receives data   |
+//! | [`from_zero_based()`]          | Converting from buffer index to terminal coord  | `RowIndex(4)` → `TermRow(5)`  |
+//! | [`term_row()`]/[`term_col()`]  | Test code with known-safe values                | `term_row(nz(5))` in tests    |
+//!
+//! ## Benefits of This Design
 //!
 //! ```rust
-//! use r3bl_tui::{term_col, term_row, RowIndex, TermRow};
+//! use r3bl_tui::{TermRow, RowIndex};
 //! use std::num::NonZeroU16;
 //!
-//! // Create terminal coordinates for ANSI sequences
-//! let term_pos = (
-//!     term_row(NonZeroU16::new(5).unwrap()),
-//!     term_col(NonZeroU16::new(10).unwrap())
-//! );
-//! // Generates: ESC[5;10H (row 5, col 10 in terminal)
+//! // ✅ Clear: this is raw ANSI parameter data
+//! let from_ansi = TermRow::from_raw_non_zero_value(NonZeroU16::new(5).unwrap());
 //!
-//! // Convert to buffer coordinates for array access
-//! let buffer_row = term_pos.0.to_zero_based(); // RowIndex(4)
-//! let buffer_col = term_pos.1.to_zero_based(); // ColIndex(9)
-//! // Now safe to use: buffer[buffer_row.as_usize()][buffer_col.as_usize()]
+//! // ✅ Clear: this is converted from 0-based buffer coordinate
+//! let from_buffer = TermRow::from_zero_based(RowIndex::from(4));
 //!
-//! // Convert from buffer back to terminal
-//! let buffer_idx = RowIndex::new(4);
-//! let term_row = TermRow::from_zero_based(buffer_idx); // TermRow(5)
+//! // ❌ Won't compile: can't bypass named constructors
+//! // let ambiguous = TermRow(some_nz);  // Error: field is private
 //! ```
+//!
+//! This approach makes code self-documenting and grep-able—you can search for
+//! `from_raw_non_zero_value` to find all ANSI parsing entry points.
 //!
 //! # Common Pitfalls
 //!
@@ -58,6 +75,8 @@
 //! - **Missing conversion**: Converting to buffer coords is infallible (always safe), but
 //!   forgetting to convert leads to accessing wrong cells
 //!
+//! [`from_raw_non_zero_value()`]: TermRow::from_raw_non_zero_value
+//! [`from_zero_based()`]: TermRow::from_zero_based
 //! [`vt_100_ansi_parser`]: crate::core::pty_mux::vt_100_ansi_parser
 //! [`offscreen_buffer`]: crate::tui::terminal_lib_backends::offscreen_buffer
 
@@ -72,18 +91,15 @@ use std::{num::NonZeroU16, ops::Add};
 /// - [`NumericConversions`] trait implementation for reading values
 /// - [`From<NonZeroU16>`] for construction
 /// - [`Display`] trait for formatting
-/// - [`new()`] constructor for creating instances
-/// - [`as_u16()`] for extracting the raw 1-based value
+/// - [`from_raw_non_zero_value()`] constructor for creating instances from raw `NonZeroU16`
+/// - [`value()`] for extracting the inner `NonZeroU16`
+/// - [`as_u16()`] for extracting the raw 1-based value as `u16`
 /// - [`from_zero_based()`] for converting from 0-based buffer indices
 /// - [`to_zero_based()`] for converting to 0-based buffer indices
 ///
 /// [`NumericConversions`]: crate::core::units::NumericConversions
 /// [`From<NonZeroU16>`]: std::convert::From
 /// [`Display`]: std::fmt::Display
-/// [`new()`]: Self::new
-/// [`as_u16()`]: Self::as_u16
-/// [`from_zero_based()`]: Self::from_zero_based
-/// [`to_zero_based()`]: Self::to_zero_based
 macro_rules! generate_impl_term_unit {
     (
         /* Generate this 1 based type */ $term_index_type:ident,
@@ -101,11 +117,31 @@ macro_rules! generate_impl_term_unit {
         }
 
         impl $term_index_type {
-            /// Create a new 1-based terminal coordinate.
+            /// Create a 1-based terminal coordinate from a raw [`NonZeroU16`] value.
+            ///
+            /// Use this constructor when wrapping external [`NonZeroU16`] data, such as
+            /// values parsed from ANSI escape sequence parameters.
             #[must_use]
-            pub const fn new(value: NonZeroU16) -> Self { Self(value) }
+            pub const fn from_raw_non_zero_value(value: NonZeroU16) -> Self {
+                Self(value)
+            }
 
-            /// Get the raw 1-based value.
+            /// Get the inner [`NonZeroU16`] value.
+            ///
+            /// This provides access to the raw 1-based terminal coordinate value.
+            /// Use this when you need the [`NonZeroU16`] representation, for example
+            /// when serializing or passing to external APIs.
+            #[must_use]
+            pub const fn value(self) -> NonZeroU16 { self.0 }
+
+            /// Get the raw 1-based value as a [`u16`].
+            ///
+            /// This is a convenience method that extracts the underlying [`u16`] from
+            /// the [`NonZeroU16`] wrapper. Most code should use [`as_usize()`] for
+            /// general numeric operations or [`value()`] for accessing the [`NonZeroU16`].
+            ///
+            /// [`as_usize()`]: Self::as_usize
+            /// [`value()`]: Self::value
             #[must_use]
             pub const fn as_u16(self) -> u16 { self.0.get() }
 
@@ -115,7 +151,9 @@ macro_rules! generate_impl_term_unit {
                 let nz_value = index.as_u16() + 1;
                 // SAFETY: 0-based `index_type` + 1 is always >= 1
                 debug_assert!(nz_value >= 1);
-                Self::new(unsafe { NonZeroU16::new_unchecked(nz_value) })
+                Self::from_raw_non_zero_value(unsafe {
+                    NonZeroU16::new_unchecked(nz_value)
+                })
             }
 
             /// Convert to 0-based `index_type` for buffer operations.
@@ -132,13 +170,45 @@ macro_rules! generate_impl_term_unit {
 /// Uses [`NonZeroU16`] as mandated by the VT-100 specification, which defines terminal
 /// coordinates as 16-bit unsigned integers with valid values ranging from 1 to 65,535.
 ///
-/// See [self module documentation] for primary consumers of these types.
-/// See [module documentation] for coordinate system details and usage examples.
+/// # Construction
 ///
-/// [self module documentation]: mod@self
-/// [module documentation]: mod@super
+/// See the [module-level design philosophy](self#design-philosophy-private-fields-and-explicit-construction)
+/// for why this type uses private fields and explicit constructors.
+///
+/// Use these methods to create `TermRow` values:
+/// - [`from_raw_non_zero_value()`] - Wrap external `NonZeroU16` data (ANSI parameters)
+/// - [`from_zero_based()`] - Convert from 0-based [`RowIndex`] to 1-based terminal coordinate
+/// - [`term_row()`] - Convenience helper (primarily for tests)
+///
+/// # Coordinate System
+///
+/// `TermRow` represents **1-based terminal coordinates** used in ANSI escape sequences.
+/// This is distinct from:
+/// - [`RowIndex`] - 0-based buffer/array positions
+///
+/// # Example
+///
+/// ```rust
+/// use r3bl_tui::{TermRow, RowIndex, term_row};
+/// use std::num::NonZeroU16;
+///
+/// // Create from ANSI parameter
+/// let from_ansi = TermRow::from_raw_non_zero_value(NonZeroU16::new(5).unwrap());
+///
+/// // Convert from buffer index (0-based → 1-based)
+/// let from_buffer = TermRow::from_zero_based(RowIndex::from(4));
+/// assert_eq!(from_ansi, from_buffer); // Both represent row 5
+///
+/// // Convert to buffer index (1-based → 0-based)
+/// let buffer_idx = from_ansi.to_zero_based();
+/// assert_eq!(buffer_idx, RowIndex::from(4));
+/// ```
+///
+/// [`from_raw_non_zero_value()`]: Self::from_raw_non_zero_value
+/// [`from_zero_based()`]: Self::from_zero_based
+/// [`term_row()`]: term_row
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TermRow(pub NonZeroU16);
+pub struct TermRow(NonZeroU16);
 generate_impl_term_unit!(
     /* Add impl to this 1-based type */ TermRow,
     /* Use this associated 0-based type */ RowIndex
@@ -146,20 +216,54 @@ generate_impl_term_unit!(
 
 /// Create a [`TermRow`] from a [`NonZeroU16`] value.
 #[must_use]
-pub const fn term_row(value: NonZeroU16) -> TermRow { TermRow::new(value) }
+pub const fn term_row(value: NonZeroU16) -> TermRow {
+    TermRow::from_raw_non_zero_value(value)
+}
 
 /// 1-based column coordinate for terminal ANSI sequences.
 ///
 /// Uses [`NonZeroU16`] as mandated by the VT-100 specification, which defines terminal
 /// coordinates as 16-bit unsigned integers with valid values ranging from 1 to 65,535.
 ///
-/// See [self module documentation] for primary consumers of these types.
-/// See [module documentation] for coordinate system details and usage examples.
+/// # Construction
 ///
-/// [self module documentation]: mod@self
-/// [module documentation]: mod@super
+/// See the [module-level design philosophy](self#design-philosophy-private-fields-and-explicit-construction)
+/// for why this type uses private fields and explicit constructors.
+///
+/// Use these methods to create `TermCol` values:
+/// - [`from_raw_non_zero_value()`] - Wrap external `NonZeroU16` data (ANSI parameters)
+/// - [`from_zero_based()`] - Convert from 0-based [`ColIndex`] to 1-based terminal coordinate
+/// - [`term_col()`] - Convenience helper (primarily for tests)
+///
+/// # Coordinate System
+///
+/// `TermCol` represents **1-based terminal coordinates** used in ANSI escape sequences.
+/// This is distinct from:
+/// - [`ColIndex`] - 0-based buffer/array positions
+///
+/// # Example
+///
+/// ```rust
+/// use r3bl_tui::{TermCol, ColIndex, term_col};
+/// use std::num::NonZeroU16;
+///
+/// // Create from ANSI parameter
+/// let from_ansi = TermCol::from_raw_non_zero_value(NonZeroU16::new(10).unwrap());
+///
+/// // Convert from buffer index (0-based → 1-based)
+/// let from_buffer = TermCol::from_zero_based(ColIndex::from(9));
+/// assert_eq!(from_ansi, from_buffer); // Both represent column 10
+///
+/// // Convert to buffer index (1-based → 0-based)
+/// let buffer_idx = from_ansi.to_zero_based();
+/// assert_eq!(buffer_idx, ColIndex::from(9));
+/// ```
+///
+/// [`from_raw_non_zero_value()`]: Self::from_raw_non_zero_value
+/// [`from_zero_based()`]: Self::from_zero_based
+/// [`term_col()`]: term_col
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TermCol(pub NonZeroU16);
+pub struct TermCol(NonZeroU16);
 generate_impl_term_unit!(
     /* Add impl to this 1-based type */ TermCol,
     /* Use this associated 0-based type */ ColIndex
@@ -167,7 +271,9 @@ generate_impl_term_unit!(
 
 /// Create a [`TermCol`] from a [`NonZeroU16`] value.
 #[must_use]
-pub const fn term_col(value: NonZeroU16) -> TermCol { TermCol::new(value) }
+pub const fn term_col(value: NonZeroU16) -> TermCol {
+    TermCol::from_raw_non_zero_value(value)
+}
 
 /// Safe conversions from buffer coordinates (0-based) to terminal coordinates (1-based).
 mod from_buffer_coords {
@@ -196,15 +302,6 @@ mod add_ops_impl {
     use super::*;
 
     /// Add [`TermCol`] to [`TermRow`] to create a cursor position.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use r3bl_tui::{term_col, term_row};
-    /// use std::num::NonZeroU16;
-    ///
-    /// let position = term_row(NonZeroU16::new(5).unwrap()) + term_col(NonZeroU16::new(10).unwrap());
-    /// // This creates a CsiSequence::CursorPosition { row: TermRow(5), col: TermCol(10) }
-    /// ```
     impl Add<TermCol> for TermRow {
         type Output = CsiSequence;
 
@@ -217,15 +314,6 @@ mod add_ops_impl {
     }
 
     /// Add [`TermRow`] to [`TermCol`] to create a cursor position.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use r3bl_tui::{term_col, term_row};
-    /// use std::num::NonZeroU16;
-    ///
-    /// let position = term_col(NonZeroU16::new(10).unwrap()) + term_row(NonZeroU16::new(5).unwrap());
-    /// // This creates a CsiSequence::CursorPosition { row: TermRow(5), col: TermCol(10) }
-    /// ```
     impl Add<TermRow> for TermCol {
         type Output = CsiSequence;
 
@@ -257,20 +345,20 @@ mod tests {
 
     #[test]
     fn test_term_row_new() {
-        let row = TermRow::new(nz(5));
+        let row = TermRow::from_raw_non_zero_value(nz(5));
         assert_eq!(row.as_u16(), 5);
     }
 
     #[test]
     fn test_term_row_helper_function() {
         let row = term_row(nz(7));
-        assert_eq!(row, TermRow::new(nz(7)));
+        assert_eq!(row, TermRow::from_raw_non_zero_value(nz(7)));
     }
 
     #[test]
     fn test_term_row_inner_field_access() {
         let row = term_row(nz(15));
-        assert_eq!(row.0, nz(15));
+        assert_eq!(row.value(), nz(15));
     }
 
     // ========================================================================
@@ -279,20 +367,20 @@ mod tests {
 
     #[test]
     fn test_term_col_new() {
-        let col = TermCol::new(nz(8));
+        let col = TermCol::from_raw_non_zero_value(nz(8));
         assert_eq!(col.as_u16(), 8);
     }
 
     #[test]
     fn test_term_col_helper_function() {
         let col = term_col(nz(9));
-        assert_eq!(col, TermCol::new(nz(9)));
+        assert_eq!(col, TermCol::from_raw_non_zero_value(nz(9)));
     }
 
     #[test]
     fn test_term_col_inner_field_access() {
         let col = term_col(nz(25));
-        assert_eq!(col.0, nz(25));
+        assert_eq!(col.value(), nz(25));
     }
 
     // ========================================================================
@@ -693,14 +781,14 @@ mod tests {
     #[test]
     fn test_term_row_term_unit_methods() {
         let row = term_row(nz(10));
-        assert_eq!(row.0, nz(10));
+        assert_eq!(row.value(), nz(10));
         assert_eq!(row.as_u16(), 10);
     }
 
     #[test]
     fn test_term_col_term_unit_methods() {
         let col = term_col(nz(25));
-        assert_eq!(col.0, nz(25));
+        assert_eq!(col.value(), nz(25));
         assert_eq!(col.as_u16(), 25);
     }
 

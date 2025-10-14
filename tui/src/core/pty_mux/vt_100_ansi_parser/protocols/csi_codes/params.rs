@@ -329,7 +329,8 @@ impl AbsolutePosition {
     pub fn parse_first_as_row_index_non_zero_to_index_type(
         params: &vte::Params,
     ) -> RowIndex {
-        TermRow::new(params.extract_nth_single_non_zero(0)).to_zero_based()
+        TermRow::from_raw_non_zero_value(params.extract_nth_single_non_zero(0))
+            .to_zero_based()
     }
 
     /// Parse VT100 position parameter as a 0-based [`ColIndex`].
@@ -344,7 +345,8 @@ impl AbsolutePosition {
     pub fn parse_first_as_col_index_non_zero_to_index_type(
         params: &vte::Params,
     ) -> ColIndex {
-        TermCol::new(params.extract_nth_single_non_zero(0)).to_zero_based()
+        TermCol::from_raw_non_zero_value(params.extract_nth_single_non_zero(0))
+            .to_zero_based()
     }
 }
 
@@ -382,13 +384,13 @@ impl From<&vte::Params> for CursorPositionRequest {
     /// **Result**: 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
     fn from(params: &vte::Params) -> Self {
         // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
-        let row_param = params.extract_nth_single_non_zero(0);
-        let col_param = params.extract_nth_single_non_zero(1);
+        let row_param_nz = params.extract_nth_single_non_zero(0);
+        let col_param_nz = params.extract_nth_single_non_zero(1);
 
         // Step 2: Convert 1-based → 0-based via type-safe conversion
         Self {
-            row: TermRow::new(row_param).to_zero_based(), // 1-based → 0-based
-            col: TermCol::new(col_param).to_zero_based(), // 1-based → 0-based
+            row: TermRow::from_raw_non_zero_value(row_param_nz).to_zero_based(), /* 1-based → 0-based */
+            col: TermCol::from_raw_non_zero_value(col_param_nz).to_zero_based(), /* 1-based → 0-based */
         }
     }
 }
@@ -1022,8 +1024,8 @@ mod cursor_position_request_tests {
         use crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz;
         // Construct directly by converting 1-based coordinates to 0-based
         let result = CursorPositionRequest {
-            row: TermRow::new(nz(5)).to_zero_based(),
-            col: TermCol::new(nz(10)).to_zero_based(),
+            row: TermRow::from_raw_non_zero_value(nz(5)).to_zero_based(),
+            col: TermCol::from_raw_non_zero_value(nz(10)).to_zero_based(),
         };
         assert_eq!(result.row.as_u16(), 4); // 1-based → 0-based: 5-1=4
         assert_eq!(result.col.as_u16(), 9); // 1-based → 0-based: 10-1=9

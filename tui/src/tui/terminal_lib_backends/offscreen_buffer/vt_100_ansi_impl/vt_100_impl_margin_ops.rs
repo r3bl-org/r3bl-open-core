@@ -29,6 +29,7 @@
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
 use crate::core::units::{TermRow, bounds_check::LengthOps};
+use std::num::NonZeroU16;
 
 impl OffscreenBuffer {
     /// Reset scroll margins to full screen (no restrictions).
@@ -67,12 +68,12 @@ impl OffscreenBuffer {
         }
 
         // SAFETY: clamped_bottom_raw is a clamped RowHeight value, guaranteed >= 1
-        let clamped_bottom_nz =
-            unsafe { std::num::NonZeroU16::new_unchecked(clamped_bottom_raw) };
+        debug_assert!(clamped_bottom_raw >= 1);
+        let clamped_bottom_nz = unsafe { NonZeroU16::new_unchecked(clamped_bottom_raw) };
 
         self.ansi_parser_support.scroll_region_top = Some(top);
         self.ansi_parser_support.scroll_region_bottom =
-            Some(TermRow::new(clamped_bottom_nz));
+            Some(TermRow::from_raw_non_zero_value(clamped_bottom_nz));
     }
 }
 
