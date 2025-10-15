@@ -10,6 +10,38 @@ function detect_ice
     return 1
 end
 
+# Helper function to extract failed test count from nextest output
+function parse_nextest_failures
+    set -l output $argv[1]
+    # Extract the number before "failed" in nextest summary
+    set -l failed (echo "$output" | grep -oE '[0-9]+\s+failed' | grep -oE '[0-9]+' | tail -1)
+    if test -z "$failed"
+        echo "0"
+    else
+        echo $failed
+    end
+end
+
+# Helper function to extract failed doctest count
+function parse_doctest_failures
+    set -l output $argv[1]
+    # Extract the number before "failed" in doctest result
+    set -l failed (echo "$output" | grep -oE '[0-9]+\s+failed' | grep -oE '[0-9]+' | tail -1)
+    if test -z "$failed"
+        echo "0"
+    else
+        echo $failed
+    end
+end
+
+# Helper function to count warnings and errors in doc output
+function parse_doc_warnings_errors
+    set -l output $argv[1]
+    set -l warnings (echo "$output" | grep -c '^warning:')
+    set -l errors (echo "$output" | grep -c '^error:')
+    echo "$warnings warnings, $errors errors"
+end
+
 # Helper function to run cleanup after ICE
 function cleanup_after_ice
     echo "🧊 Internal Compiler Error detected! Running cleanup..."
@@ -41,7 +73,8 @@ function run_checks
         if detect_ice $nextest_output
             return 2  # ICE detected
         end
-        set -a failures "tests failed 😢"
+        set -l failed_count (parse_nextest_failures $nextest_output)
+        set -a failures "tests: $failed_count failed 😢"
     end
 
     # Run doctests
@@ -51,7 +84,8 @@ function run_checks
         if detect_ice $doctest_output
             return 2  # ICE detected
         end
-        set -a failures "doctests failed 😢"
+        set -l failed_count (parse_doctest_failures $doctest_output)
+        set -a failures "doctests: $failed_count failed 😢"
     end
 
     # Run doc build
@@ -61,7 +95,8 @@ function run_checks
         if detect_ice $doc_output
             return 2  # ICE detected
         end
-        set -a failures "build failed 😢"
+        set -l warning_error_counts (parse_doc_warnings_errors $doc_output)
+        set -a failures "build: $warning_error_counts 😢"
     end
 
     # Return results
