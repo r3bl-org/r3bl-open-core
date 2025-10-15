@@ -41,7 +41,7 @@
 //!
 //! The [`ExtendedColorSequence`] enum provides type-safe parsing of color parameters,
 //! ensuring that only valid color values are created. It works with the [`ParamsExt`]
-//! trait's `extract_nth_all()` method to access the complete parameter slice.
+//! trait's [`extract_nth_all_raw()`] method to access the complete parameter slice.
 //!
 //! # Examples
 //!
@@ -72,6 +72,7 @@
 //! ```
 //!
 //! [`ParamsExt`]: crate::ParamsExt
+//! [`extract_nth_all_raw()`]: crate::ParamsExt::extract_nth_all_raw
 
 use super::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
                        SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
@@ -173,7 +174,7 @@ impl ExtendedColorSequence {
     ///
     /// # Parameters
     ///
-    /// - `params`: The parameter slice from [`ParamsExt::extract_nth_all()`]
+    /// - `params`: The parameter slice from [`extract_nth_all_raw()`]
     ///
     /// # Returns
     ///
@@ -205,7 +206,7 @@ impl ExtendedColorSequence {
     /// assert_eq!(result, Some(ExtendedColorSequence::SetBackgroundRgb(255, 128, 0)));
     /// ```
     ///
-    /// [`ParamsExt::extract_nth_all()`]: crate::ParamsExt::extract_nth_all
+    /// [`extract_nth_all_raw()`]: crate::ParamsExt::extract_nth_all_raw
     #[must_use]
     #[allow(clippy::cast_possible_truncation)] // Values are validated <= 255 in guards
     pub fn parse_from_slice(params: &[u16]) -> Option<Self> {

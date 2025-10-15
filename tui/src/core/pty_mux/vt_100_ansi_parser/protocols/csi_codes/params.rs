@@ -3,7 +3,7 @@
 //! Parameter parsing utilities for VT100-compliant CSI sequences. See [`ParamsExt`] for
 //! details.
 
-use crate::{ColIndex, ColWidth, Index, Length, RowHeight, RowIndex, TermCol, TermRow};
+use crate::{ColIndex, Index, RowIndex, TermCol, TermRow};
 use std::{cmp::max, num::NonZeroU16};
 
 /// Extension trait for [`vte::Params`] providing VT100-compliant parameter extraction.
@@ -39,10 +39,10 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// **Parameter indexing** (both methods use 0-based indexing):
 /// ```text
-/// params.extract_nth_single_non_zero(0)  → first parameter's primary value
-/// params.extract_nth_single_non_zero(1)  → second parameter's primary value
-/// params.extract_nth_single_opt_raw(0)   → first parameter's primary value (raw)
-/// params.extract_nth_single_opt_raw(1)   → second parameter's primary value (raw)
+/// params.extract_nth_single_non_zero(0)   → first parameter's primary value
+/// params.extract_nth_single_non_zero(1)   → second parameter's primary value
+/// params.extract_nth_single_opt_raw(0)    → first parameter's primary value (raw)
+/// params.extract_nth_single_opt_raw(1)    → second parameter's primary value (raw)
 /// ```
 ///
 /// **Why these methods exist**: They handle the slice extraction (`.first()`) and
@@ -78,7 +78,7 @@ use std::{cmp::max, num::NonZeroU16};
 /// |--------------------------------|-----------------|----------------|----------------|---------------|-------------------|
 /// | `extract_nth_single_non_zero`  | 1               | 1              | n              | 1             | first value       |
 /// | `extract_nth_single_opt_raw`   | `Some(0)` ✎     | `Some(0)` ✎    | `Some(n)`      | `None`        | first value       |
-/// | `extract_nth_all`              | `Some(&[0])` ✎  | `Some(&[0])` ✎ | `Some(&[n])`   | `None`        | `Some(&[...all])` |
+/// | `extract_nth_all_raw`          | `Some(&[0])` ✎  | `Some(&[0])` ✎ | `Some(&[n])`   | `None`        | `Some(&[...all])` |
 ///
 /// ✎ VTE cannot distinguish missing parameters from explicit zeros - both produce `0`.
 ///
@@ -98,30 +98,32 @@ use std::{cmp::max, num::NonZeroU16};
 /// changes in a future version, the tests will immediately catch the discrepancy,
 /// alerting us that our documentation and implementation assumptions need updating.
 ///
+/// [`vte_params_behavior_validation`]: vte_params_behavior_validation
+///
 /// [`extract_nth_single_non_zero`]: ParamsExt::extract_nth_single_non_zero
 /// [`extract_nth_single_opt_raw`]: ParamsExt::extract_nth_single_opt_raw
-/// [`extract_nth_all`]: ParamsExt::extract_nth_all
+/// [`extract_nth_all_raw`]: ParamsExt::extract_nth_all_raw
 /// [`vte::Params`]: vte::Params
 pub trait ParamsExt {
     /// Extract the nth parameter (0-based) with VT100-compliant default handling.
     ///
     /// This method extracts only the **first** sub-parameter value (for simple
     /// parameters). For complex sequences with multiple sub-parameters, use
-    /// [`extract_nth_all`].
+    /// [`extract_nth_all_raw`].
     ///
     /// Missing or zero parameters default to 1, ensuring VT100 compatibility.
     ///
     /// # Returns
     /// [`NonZeroU16`] - Always returns a value `>= 1` per VT100 specification.
     ///
-    /// [`extract_nth_all`]: ParamsExt::extract_nth_all
+    /// [`extract_nth_all_raw`]: ParamsExt::extract_nth_all_raw
     fn extract_nth_single_non_zero(&self, arg_n: impl Into<Index>) -> NonZeroU16;
 
     /// Extract the nth parameter (0-based) without default transformation.
     ///
     /// This method extracts only the **first** sub-parameter value (for simple
     /// parameters). For complex sequences with multiple sub-parameters, use
-    /// [`extract_nth_all`].
+    /// [`extract_nth_all_raw`].
     ///
     /// Returns the raw parameter value without VT100's "treat 0 as 1" logic.
     /// **Note**: VTE normalizes missing parameters to `0`, so `ESC[A` and `ESC[0A`
@@ -132,7 +134,7 @@ pub trait ParamsExt {
     /// - [`Some(value)`] if position n exists (value may be 0 for missing/zero params)
     ///
     /// [`Some(value)`]: Option::Some
-    /// [`extract_nth_all`]: ParamsExt::extract_nth_all
+    /// [`extract_nth_all_raw`]: ParamsExt::extract_nth_all_raw
     fn extract_nth_single_opt_raw(&self, arg_n: impl Into<Index>) -> Option<u16>;
 
     /// Extract all (variable number of) sub-parameters at position n as a slice.
@@ -145,14 +147,14 @@ pub trait ParamsExt {
     ///
     /// **Extended color sequences** (256-color and RGB):
     /// ```text
-    /// ESC[38:5:196m    → extract_nth_all(0) = Some(&[38, 5, 196])
-    /// ESC[38:2:255:128:0m → extract_nth_all(0) = Some(&[38, 2, 255, 128, 0])
+    /// ESC[38:5:196m    → extract_nth_all_raw(0) = Some(&[38, 5, 196])
+    /// ESC[38:2:255:128:0m → extract_nth_all_raw(0) = Some(&[38, 2, 255, 128, 0])
     /// ```
     ///
     /// **Simple parameters** (single values):
     /// ```text
-    /// ESC[5A           → extract_nth_all(0) = Some(&[5])
-    /// ESC[1;31m        → extract_nth_all(0) = Some(&[1]), extract_nth_all(1) = Some(&[31])
+    /// ESC[5A           → extract_nth_all_raw(0) = Some(&[5])
+    /// ESC[1;31m        → extract_nth_all_raw(0) = Some(&[1]), extract_nth_all_raw(1) = Some(&[31])
     /// ```
     ///
     /// **Semicolon vs Colon format**:
@@ -172,11 +174,11 @@ pub trait ParamsExt {
     /// # Examples
     ///
     /// ```rust
-    /// # // Doc test for extract_nth_all demonstrating 256-color parsing
+    /// # // Doc test for extract_nth_all_raw demonstrating 256-color parsing
     /// # use r3bl_tui::ParamsExt;
     /// # use vte::{Parser, Perform};
     /// #
-    /// # // Helper to test extract_nth_all with real VTE parser
+    /// # // Helper to test extract_nth_all_raw with real VTE parser
     /// # struct TestPerform {
     /// #     result: Option<Vec<u16>>,
     /// # }
@@ -184,7 +186,7 @@ pub trait ParamsExt {
     /// # impl Perform for TestPerform {
     /// #     fn csi_dispatch(&mut self, params: &vte::Params, _: &[u8], _: bool, _: char) {
     /// #         // Extract all sub-parameters from first position
-    /// #         self.result = params.extract_nth_all(0).map(|s| s.to_vec());
+    /// #         self.result = params.extract_nth_all_raw(0).map(|s| s.to_vec());
     /// #     }
     /// #     fn print(&mut self, _: char) {}
     /// #     fn execute(&mut self, _: u8) {}
@@ -203,7 +205,7 @@ pub trait ParamsExt {
     ///     parser.advance(&mut performer, *byte);
     /// }
     ///
-    /// // extract_nth_all returns the complete sub-parameter slice
+    /// // extract_nth_all_raw returns the complete sub-parameter slice
     /// assert_eq!(performer.result, Some(vec![38, 5, 196]));
     ///
     /// // In a real CSI handler, you would pattern match:
@@ -220,7 +222,7 @@ pub trait ParamsExt {
     /// [`None`] - No parameter exists at index n
     ///
     /// [`Some`]: Option::Some
-    fn extract_nth_all(&self, arg_n: impl Into<Index>) -> Option<&[u16]>;
+    fn extract_nth_all_raw(&self, arg_n: impl Into<Index>) -> Option<&[u16]>;
 }
 
 impl ParamsExt for vte::Params {
@@ -249,150 +251,40 @@ impl ParamsExt for vte::Params {
             .copied()
     }
 
-    fn extract_nth_all(&self, arg_n: impl Into<Index>) -> Option<&[u16]> {
+    fn extract_nth_all_raw(&self, arg_n: impl Into<Index>) -> Option<&[u16]> {
         let n: Index = arg_n.into();
         self.iter().nth(n.as_usize())
     }
 }
 
-/// Movement count for cursor and scroll operations.
+/// Parse VT100 cursor position parameters and convert to 0-based buffer coordinates.
 ///
-/// VT100 specification: missing parameters or zero parameters default to 1.
-/// This type encapsulates that logic for all movement operations.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MovementCount(pub u16);
-
-impl MovementCount {
-    /// Parse VT100 movement parameters as a generic [`Length`].
-    ///
-    /// VT100 specification: missing parameters or zero parameters default to 1.
-    ///
-    /// # Returns
-    /// [`Length`] type for type-safe usage with the bounds checking system.
-    #[must_use]
-    pub fn parse_first_as_length_non_zero(params: &vte::Params) -> Length {
-        let count = params.extract_nth_single_non_zero(0);
-        count.get().into()
-    }
-
-    /// Parse VT100 movement parameters as a [`RowHeight`] for vertical operations.
-    ///
-    /// VT100 specification: missing parameters or zero parameters default to 1.
-    ///
-    /// # Returns
-    /// [`RowHeight`] type for type-safe usage with the bounds checking system.
-    #[must_use]
-    pub fn parse_first_as_row_height_non_zero(params: &vte::Params) -> RowHeight {
-        let count = params.extract_nth_single_non_zero(0);
-        count.get().into()
-    }
-
-    /// Parse VT100 movement parameters as a [`ColWidth`] for horizontal operations.
-    ///
-    /// VT100 specification: missing parameters or zero parameters default to 1.
-    ///
-    /// # Returns
-    /// [`ColWidth`] type for type-safe usage with the bounds checking system.
-    #[must_use]
-    pub fn parse_first_as_col_width_non_zero(params: &vte::Params) -> ColWidth {
-        let count = params.extract_nth_single_non_zero(0);
-        count.get().into()
-    }
-}
-
-impl From<&vte::Params> for MovementCount {
-    fn from(params: &vte::Params) -> Self {
-        let count = params.extract_nth_single_non_zero(0);
-        Self(count.get())
-    }
-}
-
-/// Absolute position for cursor positioning operations.
+/// # Conversion Flow
 ///
-/// VT100 specification: position parameters are 1-based, with
-/// missing/zero parameters defaulting to 1. This type encapsulates
-/// position parameters for absolute cursor positioning commands like
-/// CHA (Cursor Horizontal Absolute) and VPA (Vertical Position Absolute).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct AbsolutePosition(pub u16);
-
-impl AbsolutePosition {
-    /// Parse VT100 position parameter as a 0-based [`RowIndex`].
-    ///
-    /// VT100 specification: position parameters are 1-based, with missing/zero
-    /// parameters defaulting to 1. This method uses type-safe `TermRow` for the
-    /// 1-based value and converts it to 0-based `RowIndex`.
-    ///
-    /// # Returns
-    /// [`RowIndex`] with 0-based position ready for use in buffer operations.
-    #[must_use]
-    pub fn parse_first_as_row_index_non_zero_to_index_type(
-        params: &vte::Params,
-    ) -> RowIndex {
-        TermRow::from_raw_non_zero_value(params.extract_nth_single_non_zero(0))
-            .to_zero_based()
-    }
-
-    /// Parse VT100 position parameter as a 0-based [`ColIndex`].
-    ///
-    /// VT100 specification: position parameters are 1-based, with missing/zero
-    /// parameters defaulting to 1. This method uses type-safe `TermCol` for the
-    /// 1-based value and converts it to 0-based `ColIndex`.
-    ///
-    /// # Returns
-    /// [`ColIndex`] with 0-based position ready for use in buffer operations.
-    #[must_use]
-    pub fn parse_first_as_col_index_non_zero_to_index_type(
-        params: &vte::Params,
-    ) -> ColIndex {
-        TermCol::from_raw_non_zero_value(params.extract_nth_single_non_zero(0))
-            .to_zero_based()
-    }
-}
-
-/// Cursor position request for CUP (Cursor Position) operations.
+/// ```text
+/// VTE Params           1-based VT100        0-based Buffer
+/// (from parser)        Coordinates          Indices
+/// ─────────────        ───────────────      ──────────────
+/// ESC[5;10H       →    TermRow(5)      →    RowIndex(4)
+///                 →    TermCol(10)     →    ColIndex(9)
+///     ↓                     ↓                     ↓
+/// extract_nth_        wrap in             call
+/// single_non_zero()   TermRow/TermCol     to_zero_based()
+/// (ensures >= 1)      (1-based coords)    (for buffers)
+/// ```
 ///
-/// VT100 specification: coordinates are 1-based, but internally converted to 0-based.
-/// Missing or zero parameters default to 1.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct CursorPositionRequest {
-    /// Row position (0-based index)
-    pub row: RowIndex,
-    /// Column position (0-based index)
-    pub col: ColIndex,
-}
+/// **VT100 Spec**: Coordinates are 1-based; missing/zero parameters default to 1.
+///
+/// **Result**: 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
+pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
+    // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
+    let row_param_nz = params.extract_nth_single_non_zero(0);
+    let col_param_nz = params.extract_nth_single_non_zero(1);
 
-impl From<&vte::Params> for CursorPositionRequest {
-    /// Parse VT100 cursor position parameters and convert to 0-based buffer coordinates.
-    ///
-    /// # Conversion Flow
-    ///
-    /// ```text
-    /// VTE Params           1-based VT100        0-based Buffer
-    /// (from parser)        Coordinates          Indices
-    /// ─────────────        ───────────────      ──────────────
-    /// ESC[5;10H       →    TermRow(5)      →    RowIndex(4)
-    ///                 →    TermCol(10)     →    ColIndex(9)
-    ///     ↓                     ↓                     ↓
-    /// extract_nth_        wrap in             call
-    /// single_non_zero()   TermRow/TermCol     to_zero_based()
-    /// (ensures >= 1)      (1-based coords)    (for buffers)
-    /// ```
-    ///
-    /// **VT100 Spec**: Coordinates are 1-based; missing/zero parameters default to 1.
-    ///
-    /// **Result**: 0-based [`RowIndex`]/[`ColIndex`] ready for buffer operations.
-    fn from(params: &vte::Params) -> Self {
-        // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
-        let row_param_nz = params.extract_nth_single_non_zero(0);
-        let col_param_nz = params.extract_nth_single_non_zero(1);
-
-        // Step 2: Convert 1-based → 0-based via type-safe conversion
-        Self {
-            row: TermRow::from_raw_non_zero_value(row_param_nz).to_zero_based(), /* 1-based → 0-based */
-            col: TermCol::from_raw_non_zero_value(col_param_nz).to_zero_based(), /* 1-based → 0-based */
-        }
-    }
+    // Step 2: Convert 1-based → 0-based via type-safe conversion
+    let row = TermRow::from_raw_non_zero_value(row_param_nz).to_zero_based();
+    let col = TermCol::from_raw_non_zero_value(col_param_nz).to_zero_based();
+    (row, col)
 }
 
 /// # Why there are no direct tests for [`ParamsExt`] trait methods
@@ -403,12 +295,9 @@ impl From<&vte::Params> for CursorPositionRequest {
 ///
 /// The [`ParamsExt`] methods are thoroughly tested through integration tests in separate
 /// test modules:
-/// - [`extract_nth_all_tests`] - Tests `extract_nth_all()` with various parameter formats
-/// - [`movement_count_tests`] - Tests `extract_nth_single_non_zero()` via `MovementCount`
-/// - [`absolute_position_tests`] - Tests `extract_nth_single_non_zero()` via
-///   `AbsolutePosition`
-/// - [`cursor_position_request_tests`] - Tests `extract_nth_single_non_zero()` with
-///   multiple positions
+/// - [`extract_nth_all_tests`] - Tests `extract_nth_all_raw()` with various parameter formats
+/// - [`vte_params_behavior_validation`] - Validates VTE parser behavior assumptions
+/// - `parse_cursor_position` tests validate cursor position parameter parsing
 /// - `MarginRequest` tests (in margin.rs) exercise `extract_nth_single_opt_raw`
 ///
 /// This integration testing approach is preferred because it validates the entire
@@ -540,7 +429,7 @@ pub mod vte_params_behavior_validation {
     fn test_vte_behavior_missing_param_all() {
         // ASSUMPTION: VTE normalizes missing parameters to [0]
         process_csi_sequence_and_test("\x1b[A", |params| {
-            let result = params.extract_nth_all(0);
+            let result = params.extract_nth_all_raw(0);
             assert_eq!(
                 result,
                 Some(&[0][..]),
@@ -555,7 +444,7 @@ pub mod vte_params_behavior_validation {
         // ESC[m (SGR reset with missing parameter)
         process_csi_sequence_and_test("\x1b[m", |params| {
             assert_eq!(params.extract_nth_single_opt_raw(0), Some(0));
-            assert_eq!(params.extract_nth_all(0), Some(&[0][..]));
+            assert_eq!(params.extract_nth_all_raw(0), Some(&[0][..]));
         });
     }
 
@@ -581,7 +470,7 @@ pub mod vte_params_behavior_validation {
     fn test_vte_behavior_explicit_zero_all() {
         // ASSUMPTION: Explicit zero parameters are represented as [0]
         process_csi_sequence_and_test("\x1b[0A", |params| {
-            let result = params.extract_nth_all(0);
+            let result = params.extract_nth_all_raw(0);
             assert_eq!(
                 result,
                 Some(&[0][..]),
@@ -596,7 +485,7 @@ pub mod vte_params_behavior_validation {
         // ESC[0m (SGR reset with explicit 0)
         process_csi_sequence_and_test("\x1b[0m", |params| {
             assert_eq!(params.extract_nth_single_opt_raw(0), Some(0));
-            assert_eq!(params.extract_nth_all(0), Some(&[0][..]));
+            assert_eq!(params.extract_nth_all_raw(0), Some(&[0][..]));
         });
     }
 
@@ -620,14 +509,14 @@ pub mod vte_params_behavior_validation {
         process_csi_sequence_and_test("\x1b[A", |params| {
             *missing_result_opt_raw.borrow_mut() = params.extract_nth_single_opt_raw(0);
             *missing_result_all.borrow_mut() =
-                params.extract_nth_all(0).map(<[u16]>::to_vec);
+                params.extract_nth_all_raw(0).map(<[u16]>::to_vec);
         });
 
         // Explicit zero
         process_csi_sequence_and_test("\x1b[0A", |params| {
             *explicit_result_opt_raw.borrow_mut() = params.extract_nth_single_opt_raw(0);
             *explicit_result_all.borrow_mut() =
-                params.extract_nth_all(0).map(<[u16]>::to_vec);
+                params.extract_nth_all_raw(0).map(<[u16]>::to_vec);
         });
 
         // They MUST be identical
@@ -664,7 +553,7 @@ pub mod vte_params_behavior_validation {
     fn test_vte_behavior_out_of_bounds_all() {
         // ASSUMPTION: Accessing position that doesn't exist returns None
         process_csi_sequence_and_test("\x1b[5A", |params| {
-            let result = params.extract_nth_all(1);
+            let result = params.extract_nth_all_raw(1);
             assert_eq!(
                 result, None,
                 "VTE should return None for out-of-bounds access"
@@ -677,7 +566,7 @@ pub mod vte_params_behavior_validation {
         // ASSUMPTION: Even far out-of-bounds indices return None (not panic)
         process_csi_sequence_and_test("\x1b[5A", |params| {
             assert_eq!(params.extract_nth_single_opt_raw(10), None);
-            assert_eq!(params.extract_nth_all(10), None);
+            assert_eq!(params.extract_nth_all_raw(10), None);
         });
     }
 
@@ -688,11 +577,11 @@ pub mod vte_params_behavior_validation {
         process_csi_sequence_and_test("\x1b[A", |params| {
             // Position 0 exists (as [0])
             assert_eq!(params.extract_nth_single_opt_raw(0), Some(0));
-            assert_eq!(params.extract_nth_all(0), Some(&[0][..]));
+            assert_eq!(params.extract_nth_all_raw(0), Some(&[0][..]));
 
             // Position 1 doesn't exist
             assert_eq!(params.extract_nth_single_opt_raw(1), None);
-            assert_eq!(params.extract_nth_all(1), None);
+            assert_eq!(params.extract_nth_all_raw(1), None);
         });
     }
 
@@ -709,9 +598,9 @@ pub mod vte_params_behavior_validation {
             assert_eq!(params.extract_nth_single_opt_raw(1), Some(10));
             assert_eq!(params.extract_nth_single_opt_raw(2), None); // Out of bounds
 
-            assert_eq!(params.extract_nth_all(0), Some(&[5][..]));
-            assert_eq!(params.extract_nth_all(1), Some(&[10][..]));
-            assert_eq!(params.extract_nth_all(2), None); // Out of bounds
+            assert_eq!(params.extract_nth_all_raw(0), Some(&[5][..]));
+            assert_eq!(params.extract_nth_all_raw(1), Some(&[10][..]));
+            assert_eq!(params.extract_nth_all_raw(2), None); // Out of bounds
         });
     }
 
@@ -736,7 +625,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_simple_parameter() {
         process_csi_sequence_and_test("\x1b[5A", |params| {
             // Simple parameter: [[5]]
-            let result = params.extract_nth_all(0);
+            let result = params.extract_nth_all_raw(0);
             assert_eq!(result, Some(&[5][..]));
         });
     }
@@ -745,7 +634,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_colon_separated() {
         process_csi_sequence_and_test("\x1b[38:5:196m", |params| {
             // Colon format groups sub-parameters: [[38, 5, 196]]
-            let result = params.extract_nth_all(0);
+            let result = params.extract_nth_all_raw(0);
             assert_eq!(result, Some(&[38, 5, 196][..]));
         });
     }
@@ -754,9 +643,9 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_semicolon_separated() {
         process_csi_sequence_and_test("\x1b[38;5;196m", |params| {
             // Semicolon format creates separate positions: [[38], [5], [196]]
-            assert_eq!(params.extract_nth_all(0), Some(&[38][..]));
-            assert_eq!(params.extract_nth_all(1), Some(&[5][..]));
-            assert_eq!(params.extract_nth_all(2), Some(&[196][..]));
+            assert_eq!(params.extract_nth_all_raw(0), Some(&[38][..]));
+            assert_eq!(params.extract_nth_all_raw(1), Some(&[5][..]));
+            assert_eq!(params.extract_nth_all_raw(2), Some(&[196][..]));
         });
     }
 
@@ -764,7 +653,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_rgb_color() {
         process_csi_sequence_and_test("\x1b[38:2:255:128:0m", |params| {
             // RGB color: [[38, 2, 255, 128, 0]]
-            let result = params.extract_nth_all(0);
+            let result = params.extract_nth_all_raw(0);
             assert_eq!(result, Some(&[38, 2, 255, 128, 0][..]));
         });
     }
@@ -773,9 +662,9 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_mixed_sequence() {
         process_csi_sequence_and_test("\x1b[1;31;38:5:196m", |params| {
             // Mixed: [[1], [31], [38, 5, 196]]
-            assert_eq!(params.extract_nth_all(0), Some(&[1][..]));
-            assert_eq!(params.extract_nth_all(1), Some(&[31][..]));
-            assert_eq!(params.extract_nth_all(2), Some(&[38, 5, 196][..]));
+            assert_eq!(params.extract_nth_all_raw(0), Some(&[1][..]));
+            assert_eq!(params.extract_nth_all_raw(1), Some(&[31][..]));
+            assert_eq!(params.extract_nth_all_raw(2), Some(&[38, 5, 196][..]));
         });
     }
 
@@ -783,7 +672,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_out_of_bounds() {
         process_csi_sequence_and_test("\x1b[5A", |params| {
             // Only one parameter, index 1 doesn't exist
-            assert_eq!(params.extract_nth_all(1), None);
+            assert_eq!(params.extract_nth_all_raw(1), None);
         });
     }
 
@@ -792,273 +681,40 @@ mod extract_nth_all_tests {
         process_csi_sequence_and_test("\x1b[A", |params| {
             // Missing parameter - VTE represents this as [0]
             // This is consistent with VT100 spec where missing params often default to 0
-            let result = params.extract_nth_all(0);
+            let result = params.extract_nth_all_raw(0);
             assert_eq!(result, Some(&[0][..]));
         });
     }
 }
 
 #[cfg(test)]
-mod movement_count_tests {
-    use super::{test_fixtures::process_csi_sequence_and_test, *};
-
-    // # Implementation Note: Intentional Use of Raw `usize`
-    //
-    // Test assertions use `.as_usize()` for comparison with numeric literals.
-    // Type-safe `Length` values need conversion to `usize` for test validation.
-
-    #[test]
-    fn test_parse_first_as_length_non_zero_with_valid_value() {
-        process_csi_sequence_and_test("\x1b[5A", |params| {
-            let result = MovementCount::parse_first_as_length_non_zero(params);
-            assert_eq!(result.as_usize(), 5);
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_length_non_zero_with_missing_params() {
-        process_csi_sequence_and_test("\x1b[A", |params| {
-            let result = MovementCount::parse_first_as_length_non_zero(params);
-            assert_eq!(result.as_usize(), 1); // Should default to 1
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_length_non_zero_with_zero_param() {
-        process_csi_sequence_and_test("\x1b[0A", |params| {
-            let result = MovementCount::parse_first_as_length_non_zero(params);
-            assert_eq!(result.as_usize(), 1); // Zero should become 1
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_row_height_non_zero_with_valid_value() {
-        process_csi_sequence_and_test("\x1b[10A", |params| {
-            let result = MovementCount::parse_first_as_row_height_non_zero(params);
-            assert_eq!(result.as_u16(), 10);
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_row_height_non_zero_with_missing_params() {
-        process_csi_sequence_and_test("\x1b[A", |params| {
-            let result = MovementCount::parse_first_as_row_height_non_zero(params);
-            assert_eq!(result.as_u16(), 1); // Should default to 1
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_col_width_non_zero_with_valid_value() {
-        process_csi_sequence_and_test("\x1b[25C", |params| {
-            let result = MovementCount::parse_first_as_col_width_non_zero(params);
-            assert_eq!(result.as_u16(), 25);
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_col_width_non_zero_with_missing_params() {
-        process_csi_sequence_and_test("\x1b[C", |params| {
-            let result = MovementCount::parse_first_as_col_width_non_zero(params);
-            assert_eq!(result.as_u16(), 1); // Should default to 1
-        });
-    }
-
-    #[test]
-    fn test_from_params_trait() {
-        process_csi_sequence_and_test("\x1b[42A", |params| {
-            let movement_count = MovementCount::from(params);
-            assert_eq!(movement_count.0, 42);
-        });
-    }
-
-    #[test]
-    fn test_from_params_trait_with_empty() {
-        process_csi_sequence_and_test("\x1b[A", |params| {
-            let movement_count = MovementCount::from(params);
-            assert_eq!(movement_count.0, 1); // Should default to 1
-        });
-    }
-
-    #[test]
-    fn test_from_params_trait_with_zero() {
-        process_csi_sequence_and_test("\x1b[0A", |params| {
-            let movement_count = MovementCount::from(params);
-            assert_eq!(movement_count.0, 1); // Zero should become 1
-        });
-    }
-}
-
-#[cfg(test)]
-mod absolute_position_tests {
+mod parse_cursor_position_tests {
     use super::{test_fixtures::process_csi_sequence_and_test, *};
 
     #[test]
-    fn test_parse_first_as_row_index_non_zero_to_index_type_with_valid_value() {
-        process_csi_sequence_and_test("\x1b[5d", |params| {
-            // VPA command
-            let result =
-                AbsolutePosition::parse_first_as_row_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 4); // Should be 0-based (5-1=4)
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_row_index_non_zero_to_index_type_with_missing_params() {
-        process_csi_sequence_and_test("\x1b[d", |params| {
-            let result =
-                AbsolutePosition::parse_first_as_row_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 0); // Missing param defaults to 1, then 1-1=0
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_row_index_non_zero_to_index_type_with_zero() {
-        process_csi_sequence_and_test("\x1b[0d", |params| {
-            let result =
-                AbsolutePosition::parse_first_as_row_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 0); // Zero becomes 1, then 1-1=0
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_row_index_non_zero_to_index_type_with_one() {
-        process_csi_sequence_and_test("\x1b[1d", |params| {
-            let result =
-                AbsolutePosition::parse_first_as_row_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 0); // Should be 0-based (1-1=0)
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_col_index_non_zero_to_index_type_with_valid_value() {
-        process_csi_sequence_and_test("\x1b[10G", |params| {
-            // CHA command
-            let result =
-                AbsolutePosition::parse_first_as_col_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 9); // Should be 0-based (10-1=9)
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_col_index_non_zero_to_index_type_with_missing_params() {
-        process_csi_sequence_and_test("\x1b[G", |params| {
-            let result =
-                AbsolutePosition::parse_first_as_col_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 0); // Missing param defaults to 1, then 1-1=0
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_col_index_non_zero_to_index_type_with_zero() {
-        process_csi_sequence_and_test("\x1b[0G", |params| {
-            let result =
-                AbsolutePosition::parse_first_as_col_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 0); // Zero becomes 1, then 1-1=0
-        });
-    }
-
-    #[test]
-    fn test_parse_first_as_col_index_non_zero_to_index_type_large_value() {
-        process_csi_sequence_and_test("\x1b[100G", |params| {
-            let result =
-                AbsolutePosition::parse_first_as_col_index_non_zero_to_index_type(params);
-            assert_eq!(result.as_u16(), 99); // Should be 0-based (100-1=99)
-        });
-    }
-}
-
-#[cfg(test)]
-mod cursor_position_request_tests {
-    use super::{test_fixtures::process_csi_sequence_and_test, *};
-    use crate::{col, row};
-
-    #[test]
-    fn test_from_params_with_both_values() {
+    fn test_parse_cursor_position_with_both_values() {
         process_csi_sequence_and_test("\x1b[5;10H", |params| {
-            // CUP command
-            let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row.as_u16(), 4); // Should be 0-based (5-1=4)
-            assert_eq!(result.col.as_u16(), 9); // Should be 0-based (10-1=9)
+            let (row, col) = parse_cursor_position(params);
+            assert_eq!(row.as_u16(), 4); // Should be 0-based (5-1=4)
+            assert_eq!(col.as_u16(), 9); // Should be 0-based (10-1=9)
         });
     }
 
     #[test]
-    fn test_from_params_with_only_row() {
-        process_csi_sequence_and_test("\x1b[3H", |params| {
-            let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row.as_u16(), 2); // Should be 0-based (3-1=2)
-            assert_eq!(result.col.as_u16(), 0); // Missing col defaults to 1, then 1-1=0
-        });
-    }
-
-    #[test]
-    fn test_from_params_with_empty() {
+    fn test_parse_cursor_position_with_missing_params() {
         process_csi_sequence_and_test("\x1b[H", |params| {
-            let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row.as_u16(), 0); // Missing row defaults to 1, then 1-1=0
-            assert_eq!(result.col.as_u16(), 0); // Missing col defaults to 1, then 1-1=0
+            let (row, col) = parse_cursor_position(params);
+            assert_eq!(row.as_u16(), 0); // Missing row defaults to 1, then 1-1=0
+            assert_eq!(col.as_u16(), 0); // Missing col defaults to 1, then 1-1=0
         });
     }
 
     #[test]
-    fn test_from_params_with_zeros() {
+    fn test_parse_cursor_position_with_zeros() {
         process_csi_sequence_and_test("\x1b[0;0H", |params| {
-            let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row.as_u16(), 0); // Zero becomes 1, then 1-1=0
-            assert_eq!(result.col.as_u16(), 0); // Zero becomes 1, then 1-1=0
+            let (row, col) = parse_cursor_position(params);
+            assert_eq!(row.as_u16(), 0); // Zero becomes 1, then 1-1=0
+            assert_eq!(col.as_u16(), 0); // Zero becomes 1, then 1-1=0
         });
-    }
-
-    #[test]
-    fn test_from_params_with_column_only() {
-        process_csi_sequence_and_test("\x1b[;5H", |params| {
-            // Empty row, col=5
-            let result = CursorPositionRequest::from(params);
-            assert_eq!(result.row.as_u16(), 0); // Missing row defaults to 1, then 1-1=0
-            assert_eq!(result.col.as_u16(), 4); // Should be 0-based (5-1=4)
-        });
-    }
-
-    #[test]
-    fn test_direct_construction() {
-        use crate::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz;
-        // Construct directly by converting 1-based coordinates to 0-based
-        let result = CursorPositionRequest {
-            row: TermRow::from_raw_non_zero_value(nz(5)).to_zero_based(),
-            col: TermCol::from_raw_non_zero_value(nz(10)).to_zero_based(),
-        };
-        assert_eq!(result.row.as_u16(), 4); // 1-based → 0-based: 5-1=4
-        assert_eq!(result.col.as_u16(), 9); // 1-based → 0-based: 10-1=9
-    }
-
-    #[test]
-    fn test_cursor_position_request_equality() {
-        let request1 = CursorPositionRequest {
-            row: row(5),
-            col: col(10),
-        };
-        let request2 = CursorPositionRequest {
-            row: row(5),
-            col: col(10),
-        };
-        let request3 = CursorPositionRequest {
-            row: row(5),
-            col: col(11),
-        };
-
-        assert_eq!(request1, request2);
-        assert_ne!(request1, request3);
-    }
-
-    #[test]
-    fn test_cursor_position_request_debug() {
-        let request = CursorPositionRequest {
-            row: row(5),
-            col: col(10),
-        };
-        let debug_output = format!("{request:?}");
-        assert!(debug_output.contains("CursorPositionRequest"));
-        assert!(debug_output.contains("row: RowIndex(5)"));
-        assert!(debug_output.contains("col: ColIndex(10)"));
     }
 }
