@@ -3,17 +3,18 @@
 # Rust Toolchain Update Script
 #
 # Purpose: Automatically finds and installs a stable Rust nightly toolchain,
-#          preferring versions from ~1 month ago to avoid latest nightly instability.
-#          Validates each candidate toolchain by running comprehensive tests to detect
-#          ICE (Internal Compiler Error) issues before committing to it.
+#          biasing toward the latest nightly (today's snapshot) as most stable.
+#          Falls back to older versions only if ICE (Internal Compiler Error) detected.
+#          Validates each candidate toolchain by running comprehensive tests.
 #          Also performs aggressive cleanup to save disk space.
 #
 # Smart Validation Strategy:
-# - Search window: 45 days ago → today (46 total candidates)
-# - Start with nightly from 45 days ago (conservative, well-tested starting point)
+# - Search window: today → 45 days ago (46 total candidates)
+# - Philosophy: Latest nightly is usually most stable with newest bug fixes
+# - Start with today's nightly snapshot (optimistic approach)
 # - Run validation suite: clippy, build, nextest, doctests, docs
 # - Check for ICE (Internal Compiler Errors) - indicates toolchain bugs
-# - If ICE detected, try progressively newer nightlies until finding stable one
+# - If ICE detected, try progressively older nightlies until finding stable one
 # - Distinguish between toolchain issues (ICE) vs code issues (compilation/test failures)
 # - Once stable toolchain found, update rust-toolchain.toml
 # - Send desktop notifications (notify-send): success when found, critical alert if all fail
@@ -276,17 +277,17 @@ function validate_toolchain
 end
 
 function find_stable_toolchain
-    set -l search_window_days 45  # Search from 45 days ago to today (46 total attempts including today)
+    set -l search_window_days 45  # Search from today back to 45 days ago (46 total attempts including today)
 
     log_message "═══════════════════════════════════════════════════════"
     log_message "Starting search for stable toolchain"
-    log_message "Strategy: Start $search_window_days days ago, try progressively newer up to today"
-    log_message "Search window: "(date -d "$search_window_days days ago" "+%Y-%m-%d")" to "(date "+%Y-%m-%d")
+    log_message "Strategy: Start with today's snapshot, try progressively older up to $search_window_days days ago"
+    log_message "Search window: "(date "+%Y-%m-%d")" to "(date -d "$search_window_days days ago" "+%Y-%m-%d")
     log_message "═══════════════════════════════════════════════════════"
     log_message ""
 
     for i in (seq 0 $search_window_days)
-        set -l days_ago (math $search_window_days - $i)
+        set -l days_ago $i
 
         # Calculate the target date
         set -l target_date (date -d "$days_ago days ago" "+%Y-%m-%d")
@@ -333,7 +334,7 @@ function find_stable_toolchain
             return 0
         else
             log_message "Toolchain $candidate_toolchain is unstable (ICE detected)"
-            log_message "Will try a newer toolchain..."
+            log_message "Will try an older toolchain..."
             log_message ""
 
             # Uninstall the bad toolchain to save space
@@ -347,7 +348,7 @@ function find_stable_toolchain
     set -l total_attempts (math $search_window_days + 1)
     log_message "═══════════════════════════════════════════════════════"
     log_message "❌ ERROR: Could not find stable toolchain"
-    log_message "Tried $total_attempts candidates (from "(date -d "$search_window_days days ago" "+%Y-%m-%d")" to "(date "+%Y-%m-%d")")"
+    log_message "Tried $total_attempts candidates (from "(date "+%Y-%m-%d")" back to "(date -d "$search_window_days days ago" "+%Y-%m-%d")")"
     log_message "All tested nightlies had ICE errors or failed to install"
     log_message "═══════════════════════════════════════════════════════"
 
@@ -442,7 +443,7 @@ function cleanup_old_toolchains
 
         # Keep our target nightly
         if string match -q "$target_toolchain*" $toolchain
-            log_message "  KEEPING: $toolchain (target month-old nightly)"
+            log_message "  KEEPING: $toolchain (target nightly)"
             continue
         end
 
