@@ -3,7 +3,7 @@
 //! Functions that implement the public (re-exported in `mod.rs`) event based API of the
 //! editor engine. See [`mod@super::engine_internal_api`] for the internal and functional
 //! API.
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CommonResult,
+use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR,
             EditMode, EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine,
             HasFocus, InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp,
@@ -19,6 +19,20 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColWidth, CommonResult,
             throws, throws_with_return, try_get_syntax_ref, try_parse_and_highlight,
             tui_color, usize};
 use syntect::easy::HighlightLines;
+
+/// Check if we should stop rendering at this row index.
+///
+/// Uses [cursor-style bounds checking] (`index <= length`) because viewport rendering
+/// fills screen space and needs to render at positions [0, length] inclusive.
+///
+/// # Returns
+/// `true` if `row_index` is beyond the viewport (should stop rendering)
+///
+/// [Cursor-style bounds checking]: crate::CursorBoundsCheck
+fn should_stop_rendering(row_index: RowIndex, max_display_row_count: RowHeight) -> bool {
+    max_display_row_count.check_cursor_position_bounds(row_index)
+        == CursorPositionBoundsStatus::Beyond
+}
 
 fn triggers_undo_redo(editor_event: &EditorEvent) -> bool {
     matches!(
@@ -484,9 +498,7 @@ mod syn_hi_r3bl_path {
                 let row_index = row(row_index);
 
                 // Clip the content to max rows.
-                if row_index.overflows(max_display_row_count)
-                    == ArrayOverflowResult::Overflowed
-                {
+                if should_stop_rendering(row_index, max_display_row_count) {
                     break;
                 }
 
@@ -525,9 +537,7 @@ mod syn_hi_syntect_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index.overflows(max_display_row_count)
-                == ArrayOverflowResult::Overflowed
-            {
+            if should_stop_rendering(row_index, max_display_row_count) {
                 break;
             }
 
@@ -641,9 +651,7 @@ mod no_syn_hi_path {
             let row_index = row(row_index);
 
             // Clip the content to max rows.
-            if row_index.overflows(max_display_row_count)
-                == ArrayOverflowResult::Overflowed
-            {
+            if should_stop_rendering(row_index, max_display_row_count) {
                 break;
             }
 
@@ -714,8 +722,9 @@ mod no_syn_hi_path {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CaretDirection, EditorEngineConfig, List, ModifierKeysMask,
-                clipboard_service::clipboard_test_fixtures::TestClipboard, key_press};
+    use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, List, ModifierKeysMask,
+                Pos, clipboard_service::clipboard_test_fixtures::TestClipboard, key_press,
+                width};
 
     #[test]
     fn test_undo_redo_clears_ast_cache() {
@@ -896,5 +905,86 @@ mod tests {
         )));
         assert!(!triggers_undo_redo(&EditorEvent::Home));
         assert!(!triggers_undo_redo(&EditorEvent::End));
+    }
+
+    #[test]
+    fn test_renders_all_viewport_rows_inclusive() {
+        // Setup: Create buffer with 30 lines of content
+        let mut buffer = EditorBuffer::default();
+        for i in 0..30 {
+            buffer.content.lines.push_line(&format!("Line {}", i));
+        }
+
+        // Setup: Create engine with viewport height of 20 (should render rows 0-20 = 21 rows)
+        let mut engine = EditorEngine::default();
+        let viewport_height = height(20);
+        let viewport_width = width(80);
+
+        // Create FlexBox with the test viewport size
+        let current_box = FlexBox {
+            id: FlexBoxId::from(1),
+            style_adjusted_bounds_size: Size {
+                row_height: viewport_height,
+                col_width: viewport_width,
+            },
+            style_adjusted_origin_pos: Pos::default(),
+            ..Default::default()
+        };
+
+        // Setup: Create focus manager and give focus to the editor
+        let mut has_focus = HasFocus::default();
+        has_focus.set_id(FlexBoxId::from(1));
+
+        // Create window size (larger than viewport to ensure no constraints)
+        let window_size = Size {
+            row_height: height(50),
+            col_width: width(100),
+        };
+
+        // Execute: Render the editor
+        let pipeline = render_engine(
+            &mut engine,
+            &mut buffer,
+            current_box,
+            &mut has_focus,
+            window_size,
+        )
+        .expect("render_engine should succeed");
+
+        // Verify: Check that row 20 is rendered (the 21st row, 0-indexed)
+        // The bug would cause row 20 to be missing, only rendering rows 0-19
+        let has_row_20 = pipeline
+            .pipeline_map
+            .values()
+            .flat_map(|render_ops_vec| render_ops_vec.iter())
+            .flat_map(|render_ops| render_ops.list.iter())
+            .any(|op| {
+                matches!(op, RenderOp::MoveCursorPositionRelTo(_, pos)
+                    if pos.row_index == row(20))
+            });
+
+        assert!(
+            has_row_20,
+            "Should render row 20 when viewport height is 20. \
+             This verifies cursor-style bounds checking (index <= length) \
+             is used instead of array-style (index < length)."
+        );
+
+        // Additional verification: Ensure row 21 is NOT rendered (would overflow viewport)
+        let has_row_21 = pipeline
+            .pipeline_map
+            .values()
+            .flat_map(|render_ops_vec| render_ops_vec.iter())
+            .flat_map(|render_ops| render_ops.list.iter())
+            .any(|op| {
+                matches!(op, RenderOp::MoveCursorPositionRelTo(_, pos)
+                    if pos.row_index == row(21))
+            });
+
+        assert!(
+            !has_row_21,
+            "Should NOT render row 21 when viewport height is 20. \
+             This verifies bounds checking correctly stops at the viewport limit."
+        );
     }
 }
