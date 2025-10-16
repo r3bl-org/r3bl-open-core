@@ -522,6 +522,7 @@ Other commands:
 | `fish run.fish watch-all-tests`   | Watch for file changes and run tests automatically              |
 | `fish run.fish run-examples`      | Run TUI examples interactively                                  |
 | `fish run.fish run-binaries`      | Run cmdr binaries (edi, giti, rc) interactively                 |
+| `fish run.fish dev-dashboard`     | Start 4-pane tmux development dashboard (tests, docs, checks)  |
 | `fish run.fish update-toolchain`  | Update Rust to month-old nightly toolchain with cleanup         |
 | `fish run.fish sync-toolchain`    | Sync Rust environment to match rust-toolchain.toml              |
 | `fish run.fish remove-toolchains` | Remove ALL toolchains (⚠️ destructive testing utility)          |
@@ -594,6 +595,68 @@ Choose the workflow that matches your current needs:
 - However, nextest does **not** run doctests (tests in documentation comments)
 - Use `bacon doctests` or `bacon test` to run documentation tests
 - Use `bacon test --doc` is equivalent to `bacon doctests`
+
+### Tmux Development Dashboard
+
+For developers who want a comprehensive visual development environment, this project includes a tmux-based development dashboard that provides real-time monitoring of all major development tasks.
+
+**Comprehensive 4-Pane Development Dashboard:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Tmux Session: r3bl-dev (2x2 grid layout)                    │
+├──────────────────────┬──────────────────────────────────────┤
+│ Top-left:            │ Top-right:                           │
+│ bacon nextest        │ bacon doc                            │
+│ (Unit & Integration  │ (Documentation generation            │
+│  Tests)              │  with live feedback)                 │
+├──────────────────────┼──────────────────────────────────────┤
+│ Bottom-left:         │ Bottom-right:                        │
+│ bacon doctests       │ watch -n 60 ./check.fish             │
+│ (Documentation       │ (Periodic health check every 60s)    │
+│  Tests)              │                                      │
+└──────────────────────┴──────────────────────────────────────┘
+```
+
+**Key Features:**
+
+- **Persistent Session**: Session name "r3bl-dev" - reconnect from other terminals with `tmux attach-session -t r3bl-dev`
+- **Headless Monitoring**: Bacon runs in headless mode for minimal output while providing background monitoring
+- **Comprehensive Health Checks**: The `check.fish` script monitors:
+  - `cargo nextest run` (all unit and integration tests)
+  - `cargo test --doc` (documentation tests)
+  - `cargo doc --no-deps` (documentation generation)
+  - Automatic ICE (Internal Compiler Error) detection and recovery
+- **Real-time Updates**: Every 60 seconds, the health check pane updates with current status
+- **Interactive Multiplexing**: Full tmux keybindings for pane switching and layout customization
+
+**Usage:**
+
+```sh
+# Start the development dashboard
+fish run.fish dev-dashboard
+
+# Reconnect to existing session from another terminal
+tmux attach-session -t r3bl-dev
+
+# Kill the session when done
+tmux kill-session -t r3bl-dev
+```
+
+**Workflow Integration:**
+
+This dashboard complements other monitoring approaches:
+
+- **vs. Bacon interactive**: Dashboard provides passive monitoring of multiple concerns in one view, while bacon interactive provides detailed output when you need to focus on one aspect
+- **vs. Status scripts**: Dashboard shows rich real-time output across multiple checks, while status scripts provide minimal single-line indicators
+- **vs. Watch commands**: Dashboard provides structured layout with multiple independent monitors, while watch commands focus on one operation
+
+**Typical Development Session:**
+
+1. Start session: `fish run.fish dev-dashboard`
+2. Monitor panes to catch issues while coding
+3. Switch to specific pane for detailed investigation if needed
+4. All four monitors provide continuous feedback on code quality
 
 ### Status Monitoring Scripts
 

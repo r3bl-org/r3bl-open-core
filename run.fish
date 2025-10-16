@@ -103,6 +103,8 @@ function main
             # Unified commands
         case log
             log
+        case dev-dashboard
+            dev-dashboard
         case '*'
             echo "Unknown command: "(set_color red --bold)"$command"(set_color normal)
     end
@@ -154,6 +156,9 @@ function print-help
         echo "    "(set_color green)"run-binaries"(set_color normal)"         Run edi, giti, or rc"
         echo "    "(set_color green)"install-cmdr"(set_color normal)"         Install cmdr binaries"
         echo "    "(set_color green)"docker-build"(set_color normal)"         Build release in Docker"
+        echo ""
+        echo (set_color cyan --bold)"Development Session Commands:"(set_color normal)
+        echo "    "(set_color green)"dev-dashboard"(set_color normal)"        Start 4-pane tmux development dashboard"
         echo ""
         echo (set_color cyan --bold)"Other commands:"(set_color normal)
         echo "    "(set_color green)"log"(set_color normal)"                  Monitor log.txt in cmdr or tui directory"
@@ -915,6 +920,41 @@ function log
     if test -n "$log_file"
         tail -f -s 5 $log_file
     end
+end
+
+# Starts a 4-pane tmux development dashboard for comprehensive development monitoring.
+#
+# This function creates a persistent tmux session with four panes running in parallel:
+#
+# Layout: 2x2 grid
+#   ├─ Top-left:     bacon nextest --headless (run all tests)
+#   ├─ Top-right:    bacon doc --headless (generate documentation)
+#   ├─ Bottom-left:  bacon doctests --headless (run documentation tests)
+#   └─ Bottom-right: watch -n 60 ./check.fish (periodic health check every 60s)
+#
+# The check.fish script monitors:
+# - cargo nextest run (all unit and integration tests)
+# - cargo test --doc (documentation tests)
+# - cargo doc --no-deps (documentation generation)
+# - Automatic ICE (Internal Compiler Error) detection and recovery
+#
+# Features:
+# - Session name: "r3bl-dev" (can reconnect from other terminals)
+# - Headless bacon runs minimize output while providing background monitoring
+# - Health check provides comprehensive status updates
+# - Persistent session survives terminal disconnects
+# - Interactive tmux multiplexing with customizable layouts
+#
+# Usage:
+#   fish run.fish dev-dashboard
+#
+# To reconnect to an existing session:
+#   tmux attach-session -t r3bl-dev
+#
+# To kill the session:
+#   tmux kill-session -t r3bl-dev
+function dev-dashboard
+    fish tmux-r3bl-dev.fish
 end
 
 # Call main function with all arguments

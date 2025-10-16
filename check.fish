@@ -1,5 +1,81 @@
 #!/usr/bin/env fish
 
+# ============================================================================
+# Toolchain Validation Functions
+# ============================================================================
+
+# Helper function to read target toolchain from rust-toolchain.toml
+function read_target_toolchain_from_toml
+    set -l toolchain_file "./rust-toolchain.toml"
+
+    if not test -f $toolchain_file
+        echo "ERROR: rust-toolchain.toml not found" >&2
+        return 1
+    end
+
+    # Extract the channel value from the TOML file
+    set -l channel_line (grep '^channel = ' $toolchain_file)
+
+    if test -z "$channel_line"
+        echo "ERROR: No channel entry found in rust-toolchain.toml" >&2
+        return 1
+    end
+
+    # Extract the value between quotes
+    set -l toolchain (echo $channel_line | sed -n 's/.*channel = "\([^"]*\)".*/\1/p')
+
+    if test -z "$toolchain"
+        echo "ERROR: Failed to parse channel value" >&2
+        return 1
+    end
+
+    echo $toolchain
+    return 0
+end
+
+# Helper function to check if a toolchain is installed
+function is_toolchain_installed
+    set -l toolchain $argv[1]
+    rustup toolchain list | grep -q "^$toolchain"
+    return $status
+end
+
+# Helper function to ensure correct toolchain is installed
+function ensure_toolchain_installed
+    echo "🔍 Checking toolchain installation..."
+
+    set -l target_toolchain (read_target_toolchain_from_toml)
+    if test $status -ne 0
+        echo "❌ Failed to read toolchain from rust-toolchain.toml"
+        return 1
+    end
+
+    echo "📋 Target toolchain: $target_toolchain"
+
+    if is_toolchain_installed $target_toolchain
+        echo "✅ Toolchain $target_toolchain is installed"
+        return 0
+    else
+        echo "⚠️  Toolchain $target_toolchain is NOT installed"
+        echo "🔧 Running rust-toolchain-sync-to-toml.fish to install it..."
+        echo ""
+
+        if fish ./rust-toolchain-sync-to-toml.fish
+            echo ""
+            echo "✅ Toolchain installation complete"
+            return 0
+        else
+            echo ""
+            echo "❌ Toolchain installation failed"
+            return 1
+        end
+    end
+end
+
+# ============================================================================
+# ICE Detection and Recovery Functions
+# ============================================================================
+
 # Helper function to check for ICE in output
 function detect_ice
     set -l output $argv[1]
@@ -109,7 +185,18 @@ function run_checks
     end
 end
 
-# Main execution with retry logic
+# Main execution with toolchain validation and retry logic
+ensure_toolchain_installed
+if test $status -ne 0
+    echo ""
+    echo "❌ Cannot proceed without correct toolchain"
+    exit 1
+end
+
+echo ""
+echo "🚀 Running checks..."
+echo ""
+
 run_checks
 set -l result $status
 
