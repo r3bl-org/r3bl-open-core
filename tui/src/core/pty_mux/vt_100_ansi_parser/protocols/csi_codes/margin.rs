@@ -5,6 +5,7 @@
 //! This module handles scrolling region margin settings, which define the area
 //! where scrolling operations occur.
 
+        use crate::ParamsExt;
 use crate::{TermRow, term_row};
 use std::{cmp::max, num::NonZeroU16};
 
@@ -43,7 +44,6 @@ impl From<(Option<u16>, Option<u16>)> for MarginRequest {
 
 impl From<&vte::Params> for MarginRequest {
     fn from(params: &vte::Params) -> Self {
-        use super::params::ParamsExt;
         let maybe_top = params.extract_nth_single_opt_raw(0);
         let maybe_bottom = params.extract_nth_single_opt_raw(1);
         (maybe_top, maybe_bottom).into()

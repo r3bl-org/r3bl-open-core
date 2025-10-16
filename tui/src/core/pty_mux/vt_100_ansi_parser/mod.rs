@@ -34,7 +34,8 @@
 //! # Core Components
 //!
 //! - **[`ansi_parser_public_api`]**: Public API for ANSI sequence processing
-//! - **[`perform`]**: VTE `Perform` trait implementation with detailed architecture docs
+//! - **[`performer`]**: VTE `Perform` trait implementation with detailed architecture
+//!   docs
 //! - **[`protocols`]**: ANSI sequence builders (`CsiSequence`, `EscSequence`, `SgrCode`)
 //! - **[`operations::char_ops`]**: Modular operation handlers (cursor, SGR, scrolling,
 //!   etc.)
@@ -305,7 +306,7 @@
 pub mod ansi_parser_public_api;
 pub mod ansi_to_tui_color;
 pub mod operations;
-pub mod perform;
+pub mod performer;
 pub mod protocols;
 
 // Re-export.

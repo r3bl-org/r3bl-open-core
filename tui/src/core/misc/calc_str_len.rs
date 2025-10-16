@@ -83,7 +83,7 @@ impl StringLength {
         hasher.update(text);
         let result = hasher.finalize();
         let mut bytes = [0u8; 4];
-        bytes.copy_from_slice(&result.as_slice()[..4]);
+        bytes.copy_from_slice(&result[..4]);
         u32::from_le_bytes(bytes)
     }
 }

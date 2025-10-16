@@ -3,9 +3,9 @@
 mod tests {
     use crate::{CommonResult, FlexBoxId, FlexBoxProps, LayoutDirection,
                 LayoutManagement, Surface, SurfaceProps, TuiStylesheet, assert_eq2,
-                box_end, box_props, box_start, ch, col, console_log, get_tui_styles,
-                height, new_style, req_size_pc, row, throws, throws_with_return,
-                tui_color, tui_stylesheet, width};
+                box_end, box_start, ch, col, console_log, get_tui_styles, height,
+                new_style, req_size_pc, row, throws, throws_with_return, tui_color,
+                tui_stylesheet, width};
 
     #[test]
     fn test_surface_2_col_complex() -> CommonResult<()> {

@@ -439,8 +439,7 @@ mod tests {
 
     fn test_try_mkdir() {
         with_saved_pwd!({
-            use crate::{directory_create::{MkdirOptions::*, try_mkdir},
-                        fs_paths};
+            use crate::directory_create::{MkdirOptions::*, try_mkdir};
 
             // Create the root temp dir.
             let root = try_create_temp_dir().unwrap();

@@ -17,8 +17,7 @@ use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteIndexRangeExt,
             ColIndex, ColWidth, GCStringOwned, GapBufferLine, Length, NumericValue,
             RowIndex, SegIndex, byte_index, byte_offset, row, seg_index, seg_length,
             width};
-use std::{ops::Range,
-          str::{from_utf8, from_utf8_unchecked}};
+use std::ops::Range;
 
 impl ZeroCopyGapBuffer {
     // Line access methods.
@@ -53,7 +52,9 @@ impl ZeroCopyGapBuffer {
         #[cfg(debug_assertions)]
         {
             let content_range = line_info.content_range();
-            if let Err(e) = from_utf8(&self.buffer[content_range.to_usize_range()]) {
+            if let Err(e) =
+                std::str::from_utf8(&self.buffer[content_range.to_usize_range()])
+            {
                 panic!(
                     "Line {} contains invalid UTF-8 at byte {}: {}",
                     row_index.as_usize(),
@@ -65,7 +66,7 @@ impl ZeroCopyGapBuffer {
         // SAFETY: We maintain UTF-8 invariants via all buffer insertions using &str
         let content = unsafe {
             let content_range = line_info.content_range();
-            from_utf8_unchecked(&self.buffer[content_range.to_usize_range()])
+            std::str::from_utf8_unchecked(&self.buffer[content_range.to_usize_range()])
         };
         Some(GapBufferLine::new(content, line_info))
     }

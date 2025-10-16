@@ -2,10 +2,9 @@
 
 //! Internal implementation for ANSI/VT sequence processing.
 //!
-//! This parser is based on the `vte` crate's `Perform` trait, and is [VT100
-//! specifications](https://vt100.net/docs/vt100-ug/chapter3.html)
-//! compliant. It provides support to parse ANSI escape sequences and update
-//! an [`crate::OffscreenBuffer`] accordingly.
+//! This parser is based on the [vte] crate's [`Perform`] trait, and is [VT100
+//! specifications] compliant. It provides support to parse ANSI escape sequences and
+//! update an [`OffscreenBuffer`] accordingly.
 //!
 //! # PTY Output Processing Pipeline
 //!
@@ -26,16 +25,16 @@
 //! # Sequence Types & Dispatch Routing
 //!
 //! The VTE parser identifies different types of sequences and calls the appropriate
-//! method on this `Perform` implementation:
+//! method on this [`Perform`] implementation:
 //!
-//! | Sequence Type | Pattern        | Example           | Dispatch Method    | Purpose          |
-//! |---------------|----------------|-------------------|--------------------|------------------|
-//! | **Printable** | Regular chars  | `"Hello"`         | [`print()`]        | Display text     |
-//! | **Control**   | C0 bytes       | `\n`, `\t`, `\b`  | [`execute()`]      | Cursor control   |
-//! | **CSI**       | `ESC[...char`  | `ESC[2A`, `ESC[m` | [`csi_dispatch()`] | Complex commands |
-//! | **OSC**       | `ESC]...ST`    | `ESC]0;title`     | [`osc_dispatch()`] | OS integration   |
-//! | **ESC**       | `ESC char`     | `ESC c`, `ESC 7`  | [`esc_dispatch()`] | Simple commands  |
-//! | **DCS**       | `ESC P...ST`   | Ignored (stubs)   | [`hook()`]         | Device control   |
+//! | Sequence Type | Pattern         | Example            | Dispatch Method      | Purpose           |
+//! |---------------|-----------------|--------------------|----------------------|-------------------|
+//! | **Printable** | Regular chars   | `"Hello"`          | [`print()`]          | Display text      |
+//! | **Control**   | C0 bytes        | `\n`, `\t`, `\b`   | [`execute()`]        | Cursor control    |
+//! | **CSI**       | `ESC[...char`   | `ESC[2A`, `ESC[m`  | [`csi_dispatch()`]   | Complex commands  |
+//! | **OSC**       | `ESC]...ST`     | `ESC]0;title`      | [`osc_dispatch()`]   | OS integration    |
+//! | **ESC**       | `ESC char`      | `ESC c`, `ESC 7`   | [`esc_dispatch()`]   | Simple commands   |
+//! | **DCS**       | `ESC P...ST`    | Ignored (stubs)    | [`hook()`]           | Device control    |
 //!
 //! # VTE Parser State Machine
 //!
@@ -49,6 +48,69 @@
 //!
 //! Each method contains detailed architecture diagrams showing the specific flow
 //! for that sequence type.
+//!
+//! # Malformed Sequences and the `ignore` Parameter
+//!
+//! The VTE parser includes built-in limits to prevent resource exhaustion from
+//! maliciously crafted or corrupted sequences. When these limits are exceeded, the
+//! parser sets an `ignore` flag to signal that data was dropped during parsing.
+//!
+//! ## When `ignore` Becomes `true`
+//!
+//! The VTE parser sets `ignore = true` when either:
+//! - **Too many intermediate bytes**: More than 2 intermediate characters (e.g.,
+//!   `ESC[?>??>A`)
+//! - **Too many parameters**: Parameter count exceeds the parser's internal limit
+//!   (typically 16)
+//!
+//! When this happens, the parser:
+//! 1. Collects as much data as it can (up to the limit)
+//! 2. **Still calls the dispatch method** with the partial data
+//! 3. Sets `ignore = true` to warn that some data was dropped
+//!
+//! ## Example of Malformed Sequence
+//!
+//! ```text
+//! Application sends: ESC[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20H
+//!                    (Cursor position with 20 parameters - exceeds VTE's 16-param limit)
+//!
+//! VTE Parser processes:
+//!   ✓ Collects params[0..15] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+//!   ✗ Drops params[16..19] = [17,18,19,20]
+//!   ✓ Finds dispatch character 'H'
+//!   → Calls csi_dispatch(params[0..15], [], ignore=true, 'H')
+//!
+//! Correct Response: Discard the entire sequence (don't execute with partial data)
+//! Wrong Response:   Execute cursor_position(1,2) ignoring missing critical parameters
+//! ```
+//!
+//! ## Industry Best Practices
+//!
+//! All major terminal emulators **discard malformed sequences** entirely rather than
+//! risk executing commands with incorrect parameters:
+//!
+//! - **[Alacritty]**: Checks `ignore` flag, returns early without processing
+//!   ([source][alacritty-pr-2664])
+//! - **[kitty]**: Trashes entire control sequence when limits exceeded
+//! - **[st (suckless terminal)]**: Trashes entire control sequence
+//! - **[GNOME VTE]**: Trashes entire control sequence
+//!
+//! This approach is mandated by the [VT100 specification] and [ECMA-48 standard],
+//! which require terminals to ignore malformed sequences rather than execute
+//! potentially incorrect commands.
+//!
+//! ## Implementation in This Module
+//!
+//! The [`Perform`] trait methods that **process sequences** check the `ignore` parameter
+//! and discard malformed sequences before processing:
+//!
+//! - [`csi_dispatch()`]: Checks `ignore` flag, logs and returns early if true
+//! - [`esc_dispatch()`]: Checks `ignore` flag, logs and returns early if true
+//! - [`hook()`]: Does NOT check `ignore` - DCS sequences are not implemented at all, so
+//!   both well-formed and malformed DCS sequences are ignored equally
+//!
+//! This ensures robust handling of corrupted or malicious input while maintaining
+//! compatibility with terminal emulator best practices.
 //!
 //! # Design Architecture
 //!
@@ -79,15 +141,21 @@
 //! ├── vt_100_shim_char_ops         →         ├── vt_100_impl_char_ops
 //! ├── vt_100_shim_control_ops      →         ├── vt_100_impl_control_ops
 //! ├── vt_100_shim_cursor_ops       →         ├── vt_100_impl_cursor_ops
+//! ├── vt_100_shim_dsr_ops          →         ├── vt_100_impl_dsr_ops
 //! ├── vt_100_shim_line_ops         →         ├── vt_100_impl_line_ops
+//! ├── vt_100_shim_margin_ops       →         ├── vt_100_impl_margin_ops
+//! ├── vt_100_shim_mode_ops         →         ├── vt_100_impl_mode_ops
+//! ├── vt_100_shim_osc_ops          →         ├── vt_100_impl_osc_ops
 //! ├── vt_100_shim_scroll_ops       →         ├── vt_100_impl_scroll_ops
-//! ├── vt_100_shim_terminal_ops     →         ├── vt_100_impl_terminal_ops
-//! └── vt_100_shim_sgr_ops          →         (inline in perform.rs)
+//! ├── vt_100_shim_sgr_ops          →         ├── vt_100_impl_sgr_ops
+//! └── vt_100_shim_terminal_ops     →         └── vt_100_impl_terminal_ops
 //! ```
 //!
 //! Each operations file contains **thin shim functions** that:
-//! 1. Parse ANSI sequence parameters
-//! 2. Delegate to the corresponding [`OffscreenBuffer`] implementation
+//! 1. Parse ANSI sequence parameters, and act as the protocol boundary layer (using
+//!    [`vte::Params`] and [`ParamsExt`])
+//! 2. Delegate to the corresponding [`OffscreenBuffer`] implementation (which are not
+//!    aware of [`vte::Params`])
 //! 3. Provide clear documentation about the ANSI specification
 //!
 //! The [`OffscreenBuffer`] implementation files contain the **actual terminal logic**:
@@ -97,13 +165,6 @@
 //!
 //! This architecture ensures that ANSI parsing concerns are separated from terminal
 //! emulation logic while maintaining clear organizational correspondence.
-//!
-//! [`print()`]: AnsiToOfsBufPerformer::print
-//! [`execute()`]: AnsiToOfsBufPerformer::execute
-//! [`csi_dispatch()`]: AnsiToOfsBufPerformer::csi_dispatch
-//! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
-//! [`esc_dispatch()`]: AnsiToOfsBufPerformer::esc_dispatch
-//! [`hook()`]: AnsiToOfsBufPerformer::hook
 //!
 //! # Testing Strategy
 //!
@@ -124,6 +185,22 @@
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
+//! [`ParamsExt`]: crate::ParamsExt
+//! [`Perform`]: vte::Perform
+//! [`print()`]: AnsiToOfsBufPerformer::print
+//! [`execute()`]: AnsiToOfsBufPerformer::execute
+//! [`csi_dispatch()`]: AnsiToOfsBufPerformer::csi_dispatch
+//! [`osc_dispatch()`]: AnsiToOfsBufPerformer::osc_dispatch
+//! [`esc_dispatch()`]: AnsiToOfsBufPerformer::esc_dispatch
+//! [`hook()`]: AnsiToOfsBufPerformer::hook
+//! [vte]: https://docs.rs/vte/latest/vte/
+//! [Alacritty]: https://github.com/alacritty/alacritty
+//! [alacritty-pr-2664]: https://github.com/alacritty/alacritty/pull/2664
+//! [kitty]: https://sw.kovidgoyal.net/kitty/
+//! [st (suckless terminal)]: https://st.suckless.org/
+//! [GNOME VTE]: https://gitlab.gnome.org/GNOME/vte
+//! [VT100 specification]: https://vt100.net/docs/vt100-ug/chapter3.html
+//! [ECMA-48 standard]: https://www.ecma-international.org/publications-and-standards/standards/ecma-48/
 
 // Import the operation modules.
 use super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
@@ -287,21 +364,45 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     /// - `ESC[0S` (zero param) → scroll up 1 line (0 treated as 1)
     ///
     /// ## Supported Operations
-    /// - Cursor movements: CUU, CUD, CUF, CUB, CNL, CPL, CHA, CUP
+    /// - Cursor movements: CUU, CUD, CUF, CUB, CNL, CPL, CHA, CUP, HVP, VPA
     /// - Scrolling: SU (Scroll Up), SD (Scroll Down)
-    /// - Display control: ED, EL
+    /// - Line operations: IL (Insert Line), DL (Delete Line)
+    /// - Character operations: ICH (Insert Char), DCH (Delete Char), ECH (Erase Char)
+    /// - Display control: ED, EL (explicitly ignored - see comments)
     /// - Cursor save/restore: SCP, RCP
-    /// - Margins: DECSTBM
+    /// - Margins: DECSTBM (Set Top and Bottom Margins)
     /// - Modes: SM, RM (including private modes with ? prefix)
+    /// - Device status: DSR (Device Status Report)
     /// - Graphics: SGR (Select Graphic Rendition)
+    ///
+    /// ## Malformed Sequence Handling
+    ///
+    /// The `ignore` parameter signals when the VTE parser exceeded its limits during
+    /// parsing (too many parameters or intermediates). When `ignore = true`, this method
+    /// **discards the entire sequence** to prevent executing commands with incorrect
+    /// parameters.
+    ///
+    /// See the [module-level
+    /// documentation](self#malformed-sequences-and-the-ignore-parameter) for detailed
+    /// explanation of why discarding malformed sequences is the correct
+    /// approach, with references to industry best practices.
     #[allow(clippy::too_many_lines)]
     fn csi_dispatch(
         &mut self,
         params: &Params,
         intermediates: &[u8],
-        _ignore: bool,
+        ignore: bool,
         dispatch_char: char,
     ) {
+        // Discard malformed sequences - see module docs for rationale
+        if ignore {
+            tracing::warn!(
+                "CSI {}: Discarding malformed sequence (VTE parser exceeded limits)",
+                dispatch_char
+            );
+            return;
+        }
+
         #[allow(clippy::match_same_arms)]
         match dispatch_char {
             // Cursor movement operations.
@@ -660,7 +761,28 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///   → esc_dispatch() handles ESC 8
     ///   → Restores ofs_buf.my_pos = cursor_pos_for_esc_save_and_restore.unwrap_or() // (5,10) ✓
     /// ```
-    fn esc_dispatch(&mut self, intermediates: &[u8], _ignore: bool, byte: u8) {
+    ///
+    /// ## Malformed Sequence Handling
+    ///
+    /// The `ignore` parameter signals when the VTE parser exceeded its limits during
+    /// parsing (too many intermediate bytes). When `ignore = true`, this method
+    /// **discards the entire sequence** to prevent executing commands with incorrect
+    /// parameters.
+    ///
+    /// See the [module-level
+    /// documentation](self#malformed-sequences-and-the-ignore-parameter) for detailed
+    /// explanation of why discarding malformed sequences is the correct
+    /// approach, with references to industry best practices.
+    fn esc_dispatch(&mut self, intermediates: &[u8], ignore: bool, byte: u8) {
+        // Discard malformed sequences - see module docs for rationale
+        if ignore {
+            tracing::warn!(
+                "ESC {}: Discarding malformed sequence (VTE parser exceeded limits)",
+                byte as char
+            );
+            return;
+        }
+
         match byte {
             esc_codes::DECSC_SAVE_CURSOR => {
                 // DECSC - Save current cursor position.
@@ -719,12 +841,25 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// DCS sequences are used for:
     /// - Sixel graphics
-    /// - `ReGIS` graphics
+    /// - ReGIS graphics
     /// - Custom protocol extensions
     ///
     /// These are not needed for terminal multiplexing.
+    ///
+    /// ## Malformed Sequence Handling
+    ///
+    /// The `ignore` parameter is not checked in this method because DCS sequences
+    /// are not implemented at all in this multiplexer. Both well-formed and malformed
+    /// DCS sequences result in the same action: do nothing. The `ignore` flag is only
+    /// meaningful when deciding whether to process a sequence.
+    ///
+    /// See the [module-level
+    /// documentation](self#malformed-sequences-and-the-ignore-parameter)
+    /// for information about how `ignore` is used in `csi_dispatch()` and
+    /// `esc_dispatch()`, where it affects the decision to process or discard
+    /// sequences.
     fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _c: char) {
-        // Ignore DCS sequences.
+        // All DCS sequences are ignored - not implemented in terminal multiplexing
     }
 
     /// Handle DCS data by continuing to receive bytes for an active DCS sequence started

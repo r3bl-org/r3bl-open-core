@@ -9,8 +9,8 @@
 //! ## Raw Byte Sequences Usage
 //!
 //! **Important**: This test module intentionally uses raw byte sequences
-//! (e.g., `b"\x1b[L"`) instead of our type-safe builders (`CsiSequence`,
-//! `EscSequence`, etc.) because:
+//! (e.g., `b"\x1b[L"`) instead of our type-safe builders ([`CsiSequence`],
+//! [`EscSequence`], etc.) because:
 //!
 //! 1. **Malformed sequences cannot be created with type-safe enums** - The builders
 //!    enforce valid parameter ranges and proper formatting
@@ -30,6 +30,10 @@
 //! - Invalid UTF-8 sequences and control characters
 //! - Mixed valid/invalid sequence combinations
 //! - Buffer overflow and performance stress scenarios
+//! - VTE parser internal limit overflow (>16 params, >2 intermediates)
+//! 
+//! [`CsiSequence`]: crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence
+//! [`EscSequence`]: crate::vt_100_ansi_parser::protocols::esc_codes::EscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{col, row, term_col, term_row,
@@ -58,7 +62,7 @@ pub mod malformed_csi_sequences {
         ];
 
         for sequence in malformed_sequences {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Cursor should remain within valid bounds
             assert!(
@@ -89,7 +93,7 @@ pub mod malformed_csi_sequences {
         ];
 
         for sequence in malformed_sgr {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Parser should handle gracefully - no crash expected
             // Style state should remain valid
@@ -113,11 +117,11 @@ pub mod malformed_csi_sequences {
         ];
 
         for sequence in incomplete_sequences {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should not crash - VTE parser handles incomplete sequences
             // Write some text after to verify parser recovery
-            let _result = ofs_buf.apply_ansi_bytes("TEST");
+            let _unused = ofs_buf.apply_ansi_bytes("TEST");
         }
     }
 
@@ -127,7 +131,7 @@ pub mod malformed_csi_sequences {
 
         // CSI sequence with many parameters (stress test parameter parsing)
         let excessive_params = b"\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15H";
-        let _result = ofs_buf.apply_ansi_bytes(excessive_params);
+        let _unused = ofs_buf.apply_ansi_bytes(excessive_params);
 
         // Should not crash and cursor should remain in bounds
         assert!(ofs_buf.cursor_pos.row_index < row(10));
@@ -147,10 +151,10 @@ pub mod malformed_csi_sequences {
         ];
 
         for sequence in unknown_commands {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should handle gracefully and allow continued operation
-            let _result = ofs_buf.apply_ansi_bytes("OK");
+            let _unused = ofs_buf.apply_ansi_bytes("OK");
         }
     }
 }
@@ -172,10 +176,10 @@ pub mod malformed_osc_sequences {
         ];
 
         for sequence in incomplete_osc {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should not crash
-            let _result = ofs_buf.apply_ansi_bytes("RECOVERY");
+            let _unused = ofs_buf.apply_ansi_bytes("RECOVERY");
         }
     }
 
@@ -192,10 +196,10 @@ pub mod malformed_osc_sequences {
         ];
 
         for sequence in invalid_osc {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should handle gracefully
-            let _result = ofs_buf.apply_ansi_bytes("CONTINUE");
+            let _unused = ofs_buf.apply_ansi_bytes("CONTINUE");
         }
     }
 
@@ -212,10 +216,10 @@ pub mod malformed_osc_sequences {
         ];
 
         for sequence in malformed_hyperlinks {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should handle gracefully without corrupting state
-            let _result = ofs_buf.apply_ansi_bytes("Link text");
+            let _unused = ofs_buf.apply_ansi_bytes("Link text");
         }
     }
 }
@@ -238,10 +242,10 @@ pub mod invalid_character_handling {
         ];
 
         for sequence in invalid_controls {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should not crash or corrupt state
-            let _result = ofs_buf.apply_ansi_bytes("TEST");
+            let _unused = ofs_buf.apply_ansi_bytes("TEST");
         }
     }
 
@@ -259,7 +263,7 @@ pub mod invalid_character_handling {
             "Text after invalid color"
         );
 
-        let _result = ofs_buf.apply_ansi_bytes(mixed_sequence);
+        let _unused = ofs_buf.apply_ansi_bytes(mixed_sequence);
 
         // Should handle mixture gracefully
         assert!(ofs_buf.cursor_pos.row_index < row(10));
@@ -279,7 +283,7 @@ pub mod invalid_character_handling {
                 "\x1b]999;x\x07", // Invalid OSC
                 "X"               // Valid character
             );
-            let _result = ofs_buf.apply_ansi_bytes(malformed_batch);
+            let _unused = ofs_buf.apply_ansi_bytes(malformed_batch);
         }
 
         // Should maintain stability under stress
@@ -287,7 +291,7 @@ pub mod invalid_character_handling {
         assert!(ofs_buf.cursor_pos.col_index < col(10));
 
         // Should still accept valid input
-        let _result = ofs_buf.apply_ansi_bytes("FINAL");
+        let _unused = ofs_buf.apply_ansi_bytes("FINAL");
     }
 }
 
@@ -350,7 +354,7 @@ pub mod boundary_edge_cases {
         ) in test_cases
         {
             // Reset cursor to known position for each test
-            let _result = ofs_buf.apply_ansi_bytes(format!(
+            let _unused = ofs_buf.apply_ansi_bytes(format!(
                 "{}",
                 CsiSequence::CursorPosition {
                     row: start_row,
@@ -359,7 +363,7 @@ pub mod boundary_edge_cases {
             ));
 
             // Apply the zero-parameter movement command
-            let _result = ofs_buf.apply_ansi_bytes(movement_cmd.to_string());
+            let _unused = ofs_buf.apply_ansi_bytes(movement_cmd.to_string());
 
             // Per VT100 spec: parameter 0 is treated as 1 (minimum movement)
             assert_eq!(
@@ -385,7 +389,7 @@ pub mod boundary_edge_cases {
         ];
 
         for sequence in large_params {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Should clamp to valid ranges
             assert!(ofs_buf.cursor_pos.row_index < row(10));
@@ -423,7 +427,7 @@ pub mod boundary_edge_cases {
         ];
 
         for sequence in beyond_bounds {
-            let _result = ofs_buf.apply_ansi_bytes(sequence);
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
 
             // Positions should be clamped to buffer bounds
             assert!(
@@ -463,10 +467,10 @@ pub mod parser_resilience {
             }
         );
 
-        let _result = ofs_buf.apply_ansi_bytes(recovery_test);
+        let _unused = ofs_buf.apply_ansi_bytes(recovery_test);
 
         // Should be able to continue processing after malformed input
-        let _result = ofs_buf.apply_ansi_bytes("Final test");
+        let _unused = ofs_buf.apply_ansi_bytes("Final test");
 
         // Parser should be in a valid state
         assert!(ofs_buf.cursor_pos.row_index < row(10));
@@ -490,7 +494,7 @@ pub mod parser_resilience {
 
         // Send chunks separately (simulating network/buffer splits)
         for chunk in partial_chunks {
-            let _result = ofs_buf.apply_ansi_bytes(chunk);
+            let _unused = ofs_buf.apply_ansi_bytes(chunk);
         }
 
         // Should eventually process complete sequence
@@ -514,7 +518,7 @@ pub mod parser_resilience {
             "State check"        // Normal text
         );
 
-        let _result = ofs_buf.apply_ansi_bytes(adversarial_input);
+        let _unused = ofs_buf.apply_ansi_bytes(adversarial_input);
 
         // State should remain consistent
         assert!(ofs_buf.cursor_pos.row_index < row(10));
@@ -528,9 +532,297 @@ pub mod parser_resilience {
                 col: term_col(nz(3))
             }
         );
-        let _result = ofs_buf.apply_ansi_bytes(move_sequence);
+        let _unused = ofs_buf.apply_ansi_bytes(move_sequence);
 
         assert_eq!(ofs_buf.cursor_pos.row_index, row(2)); // 0-based
         assert_eq!(ofs_buf.cursor_pos.col_index, col(2)); // 0-based
+    }
+}
+
+/// Tests for VTE parser internal limit handling (`ignore` parameter).
+///
+/// These tests specifically validate the `ignore` parameter functionality added to
+/// [`performer.rs`]. The VTE parser sets `ignore = true` when its internal limits are
+/// exceeded:
+/// - More than 16 parameters in a CSI sequence
+/// - More than 2 intermediate bytes in CSI/ESC sequences
+///
+/// According to industry best practices (Alacritty, kitty, st, GNOME VTE), terminals
+/// should **discard the entire sequence** when these limits are exceeded, rather than
+/// execute commands with truncated parameters.
+///
+/// See the [performer module docs] for detailed rationale and references.
+///
+/// [`performer.rs`]: super::super::super::performer
+/// [performer module docs]: super::super::super::performer#malformed-sequences-and-the-ignore-parameter
+pub mod vte_parser_limit_exceeded {
+    use super::*;
+
+    #[test]
+    fn test_csi_excessive_parameters_ignored() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Set cursor to known position
+        let initial_pos = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(nz(5)),
+                col: term_col(nz(5))
+            }
+        );
+        let _unused = ofs_buf.apply_ansi_bytes(initial_pos);
+        assert_eq!(ofs_buf.cursor_pos.row_index, row(4));
+        assert_eq!(ofs_buf.cursor_pos.col_index, col(4));
+
+        // Send CSI sequence with many parameters (exceeds VTE's internal limit)
+        // VTE will collect up to its limit, set ignore=true, and call csi_dispatch()
+        // Our implementation should discard this entirely
+        // Note: Using 50 params to ensure we exceed whatever VTE's actual limit is
+        let excessive_params = b"\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50H";
+        let _unused = ofs_buf.apply_ansi_bytes(excessive_params);
+
+        // Cursor should NOT have moved - sequence was discarded
+        assert_eq!(
+            ofs_buf.cursor_pos.row_index,
+            row(4),
+            "Cursor should not move when CSI sequence exceeds parameter limit"
+        );
+        assert_eq!(
+            ofs_buf.cursor_pos.col_index,
+            col(4),
+            "Cursor should not move when CSI sequence exceeds parameter limit"
+        );
+
+        // Verify parser still works after ignored sequence
+        let valid_move = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(nz(2)),
+                col: term_col(nz(2))
+            }
+        );
+        let _unused = ofs_buf.apply_ansi_bytes(valid_move);
+        assert_eq!(
+            ofs_buf.cursor_pos.row_index,
+            row(1),
+            "Parser should recover and process valid sequences"
+        );
+        assert_eq!(
+            ofs_buf.cursor_pos.col_index,
+            col(1),
+            "Parser should recover and process valid sequences"
+        );
+    }
+
+    #[test]
+    fn test_csi_excessive_intermediates_ignored() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Set cursor to known position
+        let initial_pos = format!(
+            "{}",
+            CsiSequence::CursorPosition {
+                row: term_row(nz(3)),
+                col: term_col(nz(3))
+            }
+        );
+        let _unused = ofs_buf.apply_ansi_bytes(initial_pos);
+        assert_eq!(ofs_buf.cursor_pos.row_index, row(2));
+        assert_eq!(ofs_buf.cursor_pos.col_index, col(2));
+
+        // Send CSI sequence with too many intermediate bytes (>2)
+        // Format: ESC [ intermediates... final_char
+        // Using multiple '?' characters as intermediates (normally used for private
+        // modes)
+        let excessive_intermediates = b"\x1b[?>?>?>A"; // 4 intermediate bytes
+        let _unused = ofs_buf.apply_ansi_bytes(excessive_intermediates);
+
+        // Cursor should NOT have moved - sequence was discarded
+        assert_eq!(
+            ofs_buf.cursor_pos.row_index,
+            row(2),
+            "Cursor should not move when CSI has too many intermediates"
+        );
+        assert_eq!(
+            ofs_buf.cursor_pos.col_index,
+            col(2),
+            "Cursor should not move when CSI has too many intermediates"
+        );
+    }
+
+    #[test]
+    fn test_esc_excessive_intermediates_ignored() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Get initial character set state (should be ASCII by default)
+        use crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet;
+        let initial_charset = matches!(
+            ofs_buf.ansi_parser_support.character_set,
+            CharacterSet::Ascii
+        );
+
+        // Send ESC sequence with too many intermediate bytes
+        // Normal: ESC ( 0 (select DEC graphics)
+        // Excessive: ESC ( ( ( 0 (too many '(' intermediates)
+        let excessive_intermediates = b"\x1b(((0";
+        let _unused = ofs_buf.apply_ansi_bytes(excessive_intermediates);
+
+        // Character set should NOT have changed - sequence was discarded
+        let charset_after = matches!(
+            ofs_buf.ansi_parser_support.character_set,
+            CharacterSet::Ascii
+        );
+        assert_eq!(
+            charset_after, initial_charset,
+            "Character set should not change when ESC has too many intermediates"
+        );
+    }
+
+    #[test]
+    fn test_dcs_ignored_regardless_of_limits() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // DCS sequences are not implemented in the multiplexer, so they're ignored
+        // whether well-formed or malformed. This test verifies that excessive parameters
+        // in DCS don't cause crashes (hook() doesn't check ignore flag since all DCS
+        // are ignored)
+
+        // Send DCS with excessive parameters: ESC P params... data ESC \
+        let dcs_excessive_params =
+            b"\x1bP1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;data\x1b\\";
+        let _unused = ofs_buf.apply_ansi_bytes(dcs_excessive_params);
+
+        // Should not crash - verify by sending valid text
+        let _unused = ofs_buf.apply_ansi_bytes("TEXT");
+
+        // Cursor should have advanced for the printable text
+        assert!(
+            ofs_buf.cursor_pos.col_index >= col(4),
+            "Parser should continue working after ignored DCS"
+        );
+    }
+
+    #[test]
+    fn test_parser_recovery_after_ignore() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Send sequence that will be ignored, followed by valid sequences
+        let mixed_sequence = format!(
+            "{}{}{}",
+            "\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50H", /* Ignored */
+            "Recovery text", // Should be processed
+            CsiSequence::CursorPosition {
+                row: term_row(nz(7)),
+                col: term_col(nz(3))
+            }  // Should work
+        );
+
+        let _unused = ofs_buf.apply_ansi_bytes(mixed_sequence);
+
+        // Parser should have recovered and processed the valid cursor position
+        assert_eq!(
+            ofs_buf.cursor_pos.row_index,
+            row(6),
+            "Parser should recover and process valid sequences after ignored one"
+        );
+        assert_eq!(
+            ofs_buf.cursor_pos.col_index,
+            col(2),
+            "Parser should recover and process valid sequences after ignored one"
+        );
+    }
+
+    #[test]
+    fn test_mixed_valid_and_ignored_sequences() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Interleave valid and ignored sequences
+        let sequence = format!(
+            "{}{}{}{}{}",
+            CsiSequence::CursorPosition {
+                row: term_row(nz(2)),
+                col: term_col(nz(2))
+            }, // Valid - should execute
+            "\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50H", /* Ignored */
+            "TEXT",            // Valid text
+            "\x1b[?>?>?>?>5A", // Ignored (excessive intermediates)
+            CsiSequence::CursorPosition {
+                row: term_row(nz(5)),
+                col: term_col(nz(5))
+            }  // Valid - should execute
+        );
+
+        let _unused = ofs_buf.apply_ansi_bytes(sequence);
+
+        // Only the valid sequences should have executed
+        // Final position should be (5,5) from last valid cursor position
+        // (TEXT would have moved cursor but then final position overrides)
+        assert_eq!(
+            ofs_buf.cursor_pos.row_index,
+            row(4),
+            "Only valid sequences should execute, ignored ones discarded"
+        );
+        assert_eq!(
+            ofs_buf.cursor_pos.col_index,
+            col(4),
+            "Only valid sequences should execute, ignored ones discarded"
+        );
+    }
+
+    #[test]
+    fn test_excessive_params_different_csi_commands() {
+        let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
+
+        // Test that ignore parameter works for different CSI command types
+        // Using 50 params to ensure we exceed VTE's limit
+        let test_cases: Vec<(&[u8], &str)> = vec![
+            (
+                b"\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50H",
+                "CUP (Cursor Position)",
+            ),
+            (
+                b"\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50A",
+                "CUU (Cursor Up)",
+            ),
+            (
+                b"\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50m",
+                "SGR (Select Graphic Rendition)",
+            ),
+            (
+                b"\x1b[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37;38;39;40;41;42;43;44;45;46;47;48;49;50L",
+                "IL (Insert Line)",
+            ),
+        ];
+
+        for (sequence, description) in test_cases {
+            // Reset to known position
+            let _unused = ofs_buf.apply_ansi_bytes(format!(
+                "{}",
+                CsiSequence::CursorPosition {
+                    row: term_row(nz(5)),
+                    col: term_col(nz(5))
+                }
+            ));
+
+            // Send sequence with excessive parameters
+            let _unused = ofs_buf.apply_ansi_bytes(sequence);
+
+            // Position should remain unchanged for cursor commands
+            // (For SGR/IL, we just verify no crash)
+            if description.contains("Cursor") || description.contains("CUP") {
+                assert_eq!(
+                    ofs_buf.cursor_pos.row_index,
+                    row(4),
+                    "{} should be ignored when params exceed limit",
+                    description
+                );
+                assert_eq!(
+                    ofs_buf.cursor_pos.col_index,
+                    col(4),
+                    "{} should be ignored when params exceed limit",
+                    description
+                );
+            }
+        }
     }
 }

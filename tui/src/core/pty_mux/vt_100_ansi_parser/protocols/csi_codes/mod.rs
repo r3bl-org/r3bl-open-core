@@ -46,7 +46,6 @@
 mod color_sequences;
 mod constants;
 mod margin;
-mod params;
 mod private_mode;
 mod sequence;
 
@@ -54,6 +53,5 @@ mod sequence;
 pub use color_sequences::*;
 pub use constants::*;
 pub use margin::*;
-pub use params::*;
 pub use private_mode::*;
 pub use sequence::*;

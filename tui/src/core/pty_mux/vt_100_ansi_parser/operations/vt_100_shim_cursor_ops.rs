@@ -111,7 +111,7 @@
 //! [`ColIndex`]: crate::ColIndex
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                   protocols::csi_codes::parse_cursor_position};
+                   protocols::parse_cursor_position};
 use crate::{ParamsExt, TermCol, TermRow};
 use vte::Params;
 
