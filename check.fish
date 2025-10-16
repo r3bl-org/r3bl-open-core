@@ -40,33 +40,25 @@ function is_toolchain_installed
     return $status
 end
 
-# Helper function to ensure correct toolchain is installed
+# Helper function to ensure correct toolchain is installed (silent by default)
+# Returns 0 if toolchain is OK, 1 if error, 2 if toolchain was reinstalled
 function ensure_toolchain_installed
-    echo "🔍 Checking toolchain installation..."
-
     set -l target_toolchain (read_target_toolchain_from_toml)
     if test $status -ne 0
-        echo "❌ Failed to read toolchain from rust-toolchain.toml"
+        echo "❌ Failed to read toolchain from rust-toolchain.toml" >&2
         return 1
     end
 
-    echo "📋 Target toolchain: $target_toolchain"
-
     if is_toolchain_installed $target_toolchain
-        echo "✅ Toolchain $target_toolchain is installed"
+        # Toolchain already installed, return silently
         return 0
     else
-        echo "⚠️  Toolchain $target_toolchain is NOT installed"
-        echo "🔧 Running rust-toolchain-sync-to-toml.fish to install it..."
-        echo ""
-
+        # Toolchain missing, reinstall it
         if fish ./rust-toolchain-sync-to-toml.fish
-            echo ""
-            echo "✅ Toolchain installation complete"
-            return 0
+            echo "✅ Toolchain $target_toolchain was reinstalled"
+            return 2
         else
-            echo ""
-            echo "❌ Toolchain installation failed"
+            echo "❌ Toolchain installation failed" >&2
             return 1
         end
     end
@@ -113,9 +105,18 @@ end
 # Helper function to count warnings and errors in doc output
 function parse_doc_warnings_errors
     set -l output $argv[1]
-    set -l warnings (echo "$output" | grep -c '^warning:')
-    set -l errors (echo "$output" | grep -c '^error:')
-    echo "$warnings warnings, $errors errors"
+    # Count lines containing "warning:" (cargo format: "warning: ...")
+    set -l warnings (echo "$output" | grep -ic 'warning:')
+    # Count lines containing "error:" (cargo format: "error: ...")
+    set -l errors (echo "$output" | grep -ic 'error:')
+
+    # Only return if there are warnings or errors
+    if test $warnings -gt 0 -o $errors -gt 0
+        echo "$warnings warnings, $errors errors"
+        return 0
+    else
+        return 1
+    end
 end
 
 # Helper function to run cleanup after ICE
@@ -171,8 +172,19 @@ function run_checks
         if detect_ice $doc_output
             return 2  # ICE detected
         end
-        set -l warning_error_counts (parse_doc_warnings_errors $doc_output)
-        set -a failures "build: $warning_error_counts 😢"
+        # Check for warnings/errors in failed build
+        if parse_doc_warnings_errors $doc_output >/dev/null
+            set -l warning_error_counts (parse_doc_warnings_errors $doc_output)
+            set -a failures "build: $warning_error_counts 😢"
+        else
+            set -a failures "build: failed 😢"
+        end
+    else
+        # Even on success, check for warnings
+        if parse_doc_warnings_errors $doc_output >/dev/null
+            set -l warning_error_counts (parse_doc_warnings_errors $doc_output)
+            set -a failures "docs: $warning_error_counts ⚠️"
+        end
     end
 
     # Return results
@@ -187,12 +199,14 @@ end
 
 # Main execution with toolchain validation and retry logic
 ensure_toolchain_installed
-if test $status -ne 0
+set -l toolchain_status $status
+if test $toolchain_status -eq 1
     echo ""
     echo "❌ Cannot proceed without correct toolchain"
     exit 1
 end
 
+# toolchain_status can be 0 (OK) or 2 (was reinstalled, already printed message)
 echo ""
 echo "🚀 Running checks..."
 echo ""

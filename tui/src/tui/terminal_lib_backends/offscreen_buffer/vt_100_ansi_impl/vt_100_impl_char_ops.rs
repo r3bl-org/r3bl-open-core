@@ -36,8 +36,8 @@ use super::super::*;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, ColIndex, Length, NumericValue,
             RowIndex, col,
             core::coordinates::bounds_check::{CursorBoundsCheck, LengthOps,
-                                              RangeBoundsExt},
-            height, len};
+                                              RangeBoundsExt, RangeConvertExt},
+            height, width};
 
 impl OffscreenBuffer {
     /// Insert blank characters at cursor position (for ICH - Insert Character).
@@ -97,12 +97,14 @@ impl OffscreenBuffer {
         };
 
         // Copy characters to the right to make room for insertion.
-        // Calculate the end of the source range for copying.
-        // We need to copy from cursor position up to (but not including) the position
-        // that would overflow when shifted right by how_many_clamped.
-        // This is: last_valid_index - shift_amount + 1 (for exclusive range)
-        let source_end = max_width.convert_to_index() - how_many_clamped + len(1);
-        let copy_source_range = (at.col_index..source_end).clamp_range_to(max_width);
+        // Define inclusive range: from cursor through last position that won't overflow.
+        let copy_last_position = max_width.index_from_end(how_many_clamped);
+        let copy_source_range_inclusive = at.col_index..=copy_last_position;
+
+        // Convert to exclusive range for Rust's copy_within API.
+        let copy_source_range = copy_source_range_inclusive
+            .to_exclusive()
+            .clamp_range_to(max_width);
 
         // Type-safe checks:
         // 1. Destination must be within bounds.
@@ -197,17 +199,24 @@ impl OffscreenBuffer {
         );
 
         // Clear the vacated space at the end (overwriting duplicates and filling with
-        // spacers). Use type-safe range calculation.
-        let fill_start = max_width.convert_to_index() - how_many_clamped + len(1);
-        let fill_end = max_width.eol_cursor_position();
+        // spacers). Compute inclusive index range by converting length boundaries.
+        // We need to fill from (max_width - how_many_clamped + 1) through max_width.
+        // Convert to length domain for arithmetic, compute, then convert back to column
+        // domain.
+        let fill_start_as_length = max_width - width(how_many_clamped) + width(1);
+        let fill_range_inclusive =
+            width(fill_start_as_length).convert_to_index()..=max_width.convert_to_index();
+
+        // Convert to exclusive range for fill operation.
+        let fill_range = fill_range_inclusive.to_exclusive();
+
         let fill_result =
-            self.fill_char_range(at.row_index, fill_start..fill_end, PixelChar::Spacer);
+            self.fill_char_range(at.row_index, fill_range.clone(), PixelChar::Spacer);
         debug_assert!(
-            fill_result.is_ok() || fill_start >= fill_end,
-            "Failed to fill char range during delete_chars_at_cursor at row {:?}, fill range: {:?}..{:?}",
+            fill_result.is_ok() || fill_range.is_empty(),
+            "Failed to fill char range during delete_chars_at_cursor at row {:?}, fill range: {:?}",
             at.row_index,
-            fill_start,
-            fill_end
+            fill_range
         );
 
         Ok(())
@@ -353,10 +362,9 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_shifting_ops {
     use super::*;
-    use crate::{TuiStyle, row,
+    use crate::{TuiStyle, len, row,
                 test_fixtures_ofs_buf::{create_plain_test_char,
-                                        create_test_buffer_with_size},
-                width};
+                                        create_test_buffer_with_size}};
 
     fn create_test_buffer() -> OffscreenBuffer {
         create_test_buffer_with_size(width(6), height(3))
@@ -1008,7 +1016,7 @@ mod tests_shifting_ops {
 #[cfg(test)]
 mod tests_print_char {
     use super::*;
-    use crate::{row, test_fixtures_ofs_buf::create_test_buffer_with_size, width};
+    use crate::{row, test_fixtures_ofs_buf::create_test_buffer_with_size};
 
     #[test]
     fn test_print_char_basic() {

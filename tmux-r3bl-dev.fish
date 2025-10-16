@@ -59,7 +59,8 @@ function main
         run_in_pane "0.2" "cd ~/github/r3bl-open-core ; bacon doctests --headless"
 
         # Bottom-right: watch
-        run_in_pane "0.3" "cd ~/github/r3bl-open-core ; watch -n 60 ./check.fish"
+        # run_in_pane "0.3" "cd ~/github/r3bl-open-core ; watch -n 60 ./check.fish"
+        run_in_pane "0.3" "cd ~/github/r3bl-open-core ; bacon --headless"
 
         # Select the top-left pane as active
         tmux select-pane -t "$SESSION_NAME:0.0"
