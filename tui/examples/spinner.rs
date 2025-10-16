@@ -19,6 +19,10 @@ macro_rules! println_with_flush {
 
 #[tokio::main]
 #[allow(clippy::needless_return)]
+#[allow(clippy::unwrap_in_result)]
+// Note: The `tokio::main` macro internally calls `.expect("Failed building the Runtime")`
+// when initializing the Tokio runtime. This is unavoidable and safe, as runtime creation
+// failure is a fatal error that should panic. The lint must be suppressed here.
 pub async fn main() -> CommonResult<()> {
     set_mimalloc_in_main!();
 

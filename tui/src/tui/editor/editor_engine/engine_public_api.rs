@@ -723,8 +723,8 @@ mod no_syn_hi_path {
 mod tests {
     use super::*;
     use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, List, ModifierKeysMask,
-                Pos, clipboard_service::clipboard_test_fixtures::TestClipboard, key_press,
-                width};
+                Pos, clipboard_service::clipboard_test_fixtures::TestClipboard,
+                key_press, width};
 
     #[test]
     fn test_undo_redo_clears_ast_cache() {
@@ -912,10 +912,11 @@ mod tests {
         // Setup: Create buffer with 30 lines of content
         let mut buffer = EditorBuffer::default();
         for i in 0..30 {
-            buffer.content.lines.push_line(&format!("Line {}", i));
+            buffer.content.lines.push_line(&format!("Line {i}"));
         }
 
-        // Setup: Create engine with viewport height of 20 (should render rows 0-20 = 21 rows)
+        // Setup: Create engine with viewport height of 20 (should render rows 0-20 = 21
+        // rows)
         let mut engine = EditorEngine::default();
         let viewport_height = height(20);
         let viewport_width = width(80);
@@ -970,7 +971,8 @@ mod tests {
              is used instead of array-style (index < length)."
         );
 
-        // Additional verification: Ensure row 21 is NOT rendered (would overflow viewport)
+        // Additional verification: Ensure row 21 is NOT rendered (would overflow
+        // viewport)
         let has_row_21 = pipeline
             .pipeline_map
             .values()

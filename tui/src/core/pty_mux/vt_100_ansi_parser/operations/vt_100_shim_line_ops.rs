@@ -82,8 +82,9 @@
 //!
 //! ## Scroll Region Interaction
 //!
-//! Line insertion and deletion operations interact with the scrolling region set by DECSTBM.
-//! Lines are shifted within the region boundaries, with new/blank lines appearing at the opposite end.
+//! Line insertion and deletion operations interact with the scrolling region set by
+//! DECSTBM. Lines are shifted within the region boundaries, with new/blank lines
+//! appearing at the opposite end.
 //!
 //! [`impl_line_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_line_ops
 //! [`test_line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_line_ops

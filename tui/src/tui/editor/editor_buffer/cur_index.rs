@@ -163,6 +163,7 @@ mod convert {
 }
 
 #[cfg(test)]
+#[allow(clippy::useless_vec)]
 mod tests {
     use super::*;
     use crate::{EditorContent, len};

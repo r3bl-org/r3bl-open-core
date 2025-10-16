@@ -42,12 +42,12 @@
 //! [`generate_length_type_impl!`]: crate::generate_length_type_impl
 
 // Attach source files.
-pub mod index_and_length_impl_macros;
-pub mod index;
-pub mod length;
 pub mod caret;
 pub mod col_index;
 pub mod col_width;
+pub mod index;
+pub mod index_and_length_impl_macros;
+pub mod length;
 pub mod pos;
 pub mod row_height;
 pub mod row_index;
@@ -55,11 +55,11 @@ pub mod scr_ofs;
 pub mod size;
 
 // Re-export types and constructors.
-pub use index::*;
-pub use length::*;
 pub use caret::*;
 pub use col_index::*;
 pub use col_width::*;
+pub use index::*;
+pub use length::*;
 pub use pos::*;
 pub use row_height::*;
 pub use row_index::*;

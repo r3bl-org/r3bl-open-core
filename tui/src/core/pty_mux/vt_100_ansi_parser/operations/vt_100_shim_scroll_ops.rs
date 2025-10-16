@@ -84,7 +84,8 @@
 //! ## Scroll Region (DECSTBM)
 //!
 //! Scroll operations respect the scrolling region set by DECSTBM. The region bounds are
-//! maintained internally by [`OffscreenBuffer`] and applied automatically to all scroll operations.
+//! maintained internally by [`OffscreenBuffer`] and applied automatically to all scroll
+//! operations.
 //!
 //! [`impl_scroll_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_scroll_ops
 //! [`test_scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_scroll_ops

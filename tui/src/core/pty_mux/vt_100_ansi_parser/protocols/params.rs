@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Parameter parsing utilities for VT100-compliant escape sequences. See [`ParamsExt`] for
-//! details.
+//! Parameter parsing utilities for VT100-compliant escape sequences. See [`ParamsExt`]
+//! for details.
 
 use crate::{ColIndex, Index, RowIndex, TermCol, TermRow};
 use std::{cmp::max, num::NonZeroU16};
@@ -298,6 +298,7 @@ impl ParamsExt for vte::Params {
 ///
 /// [`RowIndex`]: crate::RowIndex
 /// [`ColIndex`]: crate::ColIndex
+#[must_use]
 pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
     // Step 1: Extract 1-based parameters (NonZeroU16, guaranteed >= 1)
     let row_param_nz = params.extract_nth_single_non_zero(0);

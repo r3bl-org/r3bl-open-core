@@ -824,6 +824,7 @@ mod apply_event_and_render_helper {
     }
 
     // Search for next history item, replace line if found.
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     fn handle_up(
         line_state: &mut LineState,
         term: &mut dyn Write,
@@ -840,6 +841,7 @@ mod apply_event_and_render_helper {
     }
 
     // Search for next history item, replace line if found.
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     fn handle_down(
         line_state: &mut LineState,
         term: &mut dyn Write,

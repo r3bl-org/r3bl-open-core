@@ -1,5 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// Enforce strict error handling in production library code only. Tests and examples are
+// allowed to use .unwrap() (workspace `Cargo.toml` config allows it). The cfg_attr
+// ensures test code within the library can also use .unwrap() freely.
+#![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
+
 //! # Why R3BL?
 //!
 //! <img src="https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/main/r3bl-term.svg?raw=true" height="256px">

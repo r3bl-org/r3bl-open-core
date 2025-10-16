@@ -63,18 +63,13 @@ use crate::OscEvent;
 use std::borrow::Cow;
 
 /// Cursor key mode for terminal compatibility.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CursorKeyMode {
     /// Normal mode (ANSI) - ESC[ sequences
     Normal,
     /// Application mode (VT52) - ESC O sequences
+    #[default]
     Application,
-}
-
-impl Default for CursorKeyMode {
-    fn default() -> Self {
-        Self::Application // Most PTY apps expect this
-    }
 }
 
 /// Terminal control sequences with mode-aware generation.

@@ -31,7 +31,7 @@
 //! - Mixed valid/invalid sequence combinations
 //! - Buffer overflow and performance stress scenarios
 //! - VTE parser internal limit overflow (>16 params, >2 intermediates)
-//! 
+//!
 //! [`CsiSequence`]: crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence
 //! [`EscSequence`]: crate::vt_100_ansi_parser::protocols::esc_codes::EscSequence
 
@@ -557,6 +557,7 @@ pub mod parser_resilience {
 /// [performer module docs]: super::super::super::performer#malformed-sequences-and-the-ignore-parameter
 pub mod vte_parser_limit_exceeded {
     use super::*;
+    use crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet;
 
     #[test]
     fn test_csi_excessive_parameters_ignored() {
@@ -655,7 +656,6 @@ pub mod vte_parser_limit_exceeded {
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
 
         // Get initial character set state (should be ASCII by default)
-        use crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet;
         let initial_charset = matches!(
             ofs_buf.ansi_parser_support.character_set,
             CharacterSet::Ascii
@@ -813,14 +813,12 @@ pub mod vte_parser_limit_exceeded {
                 assert_eq!(
                     ofs_buf.cursor_pos.row_index,
                     row(4),
-                    "{} should be ignored when params exceed limit",
-                    description
+                    "{description} should be ignored when params exceed limit"
                 );
                 assert_eq!(
                     ofs_buf.cursor_pos.col_index,
                     col(4),
-                    "{} should be ignored when params exceed limit",
-                    description
+                    "{description} should be ignored when params exceed limit"
                 );
             }
         }

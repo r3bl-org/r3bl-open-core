@@ -309,7 +309,8 @@ mod tests {
             .run()
             .await?;
 
-        // Disable commit signing to avoid issues with missing keys in the test environment.
+        // Disable commit signing to avoid issues with missing keys in the test
+        // environment.
         command!(program => "git", args => "config", "commit.gpgsign", "false")
             .run()
             .await?;
@@ -373,7 +374,8 @@ mod tests {
                     .run()
                     .await?;
 
-            // Disable commit signing to avoid issues with missing keys in the test environment.
+            // Disable commit signing to avoid issues with missing keys in the test
+            // environment.
             let _unused: Vec<_> =
                 command!(program => "git", args => "config", "commit.gpgsign", "false")
                     .run()

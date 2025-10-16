@@ -54,7 +54,14 @@ pedantic = { level = "warn", priority = -1 }
 missing_errors_doc = "warn"
 too_many_lines = "warn"
 match_same_arms = "warn"
-unwrap_in_result = "warn"
+# Note: unwrap_in_result is allowed at workspace level by default for all code.
+# This permits .unwrap() in:
+# - Examples (no lib.rs to override)
+# - Binaries (no lib.rs to override)
+# - Test code (when cfg_attr disables the lint)
+# Production library code overrides this with `#![cfg_attr(not(test), deny(clippy::unwrap_in_result))]`
+# in each lib.rs, which enforces strict error handling in production code only.
+unwrap_in_result = "allow"
 doc_markdown = "warn"
 redundant_closure = "warn"
 redundant_closure_for_method_calls = "warn"

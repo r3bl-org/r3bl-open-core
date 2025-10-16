@@ -68,9 +68,18 @@ end
 # ICE Detection and Recovery Functions
 # ============================================================================
 
-# Helper function to check for ICE in output
+# Helper function to check for ICE in output or exit code
+# Usage: detect_ice EXIT_CODE OUTPUT
 function detect_ice
-    set -l output $argv[1]
+    set -l exit_code $argv[1]
+    set -l output $argv[2]
+
+    # Check for exit code 101 (rustc ICE indicator)
+    if test $exit_code -eq 101
+        return 0
+    end
+
+    # Check for ICE text in output
     if string match -qi "*internal compiler error*" -- $output
         or string match -qi "*ICE*" -- $output
         return 0
@@ -147,7 +156,7 @@ function run_checks
     set -l nextest_output (cargo nextest run --all-targets 2>&1)
     set -l nextest_status $status
     if test $nextest_status -ne 0
-        if detect_ice $nextest_output
+        if detect_ice $nextest_status $nextest_output
             return 2  # ICE detected
         end
         set -l failed_count (parse_nextest_failures $nextest_output)
@@ -158,7 +167,7 @@ function run_checks
     set -l doctest_output (cargo test --doc 2>&1)
     set -l doctest_status $status
     if test $doctest_status -ne 0
-        if detect_ice $doctest_output
+        if detect_ice $doctest_status $doctest_output
             return 2  # ICE detected
         end
         set -l failed_count (parse_doctest_failures $doctest_output)
@@ -169,7 +178,7 @@ function run_checks
     set -l doc_output (cargo doc --no-deps 2>&1)
     set -l doc_status $status
     if test $doc_status -ne 0
-        if detect_ice $doc_output
+        if detect_ice $doc_status $doc_output
             return 2  # ICE detected
         end
         # Check for warnings/errors in failed build

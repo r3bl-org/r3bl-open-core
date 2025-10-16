@@ -841,7 +841,7 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
     ///
     /// DCS sequences are used for:
     /// - Sixel graphics
-    /// - ReGIS graphics
+    /// - `ReGIS` graphics
     /// - Custom protocol extensions
     ///
     /// These are not needed for terminal multiplexing.

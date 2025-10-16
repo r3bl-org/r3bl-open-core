@@ -1655,6 +1655,10 @@
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]
+// Enforce strict error handling in production library code only. Tests and examples are
+// allowed to use .unwrap() (workspace `Cargo.toml` config allows it). The cfg_attr
+// ensures test code within the library can also use .unwrap() freely.
+#![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
 
 // Attach.
 pub mod core;

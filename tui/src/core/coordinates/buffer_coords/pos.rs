@@ -14,7 +14,8 @@ use std::{fmt::{Debug, Formatter, Result},
 /// just a position after all, but semantically it is used for different reasons in the
 /// API. It is used to declare a different intention on how `Pos` is used.
 ///
-/// > 💡 **See also**: For complete workflows showing `Pos` used with other coordinate types
+/// > 💡 **See also**: For complete workflows showing `Pos` used with other coordinate
+/// > types
 /// > (e.g., VT-100 conversions, bounds checking), see the [coordinates module
 /// > documentation](crate::coordinates).
 ///

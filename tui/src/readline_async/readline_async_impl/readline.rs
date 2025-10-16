@@ -434,6 +434,7 @@ pub mod manage_shared_writer_output {
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails.
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn flush_internal(
         self_safe_is_paused_buffer: &SafePauseBuffer,
         is_paused: LineStateLiveness,
