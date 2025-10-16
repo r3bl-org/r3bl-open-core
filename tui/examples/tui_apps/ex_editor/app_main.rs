@@ -799,7 +799,7 @@ mod hud {
         };
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_index() - row(1); /* 1 row above bottom */
+        let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();

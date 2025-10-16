@@ -32,11 +32,11 @@ use std::{cmp::min, ops::Sub};
 ///   [`remaining_from()`]
 /// - **Size clamping**: Ensure lengths don't exceed bounds via [`clamp_to_max()`]
 /// - **Type-safe pairing**: Each length type pairs with a corresponding index type via
-///   [`IndexType`]
+///   [`Self::IndexType`]
 ///
 /// ## Type System Foundation
 ///
-/// Every `LengthOps` type has an associated [`IndexType`] that represents the
+/// Every `LengthOps` type has an associated [`Self::IndexType`] that represents the
 /// corresponding 0-based position measurement. This creates a bidirectional type-safe
 /// relationship preventing mismatched comparisons at compile time:
 ///
@@ -63,6 +63,9 @@ use std::{cmp::min, ops::Sub};
 /// ### Conversion
 /// - [`convert_to_index()`] - Convert 1-based length to 0-based index (length - 1). Use
 ///   when finding the last valid position in a container.
+/// - [`index_from_end()`] - Calculate an index positioned at a specific offset from the
+///   end. Use for positioning elements relative to container boundaries (status bars,
+///   bottom-aligned UI elements).
 ///
 /// ### Overflow Checking
 /// - [`is_overflowed_by()`] - "Does this length get overflowed by this index?" Same check
@@ -78,7 +81,7 @@ use std::{cmp::min, ops::Sub};
 ///
 /// ## Visual Reference
 ///
-/// ### Length-to-Index Conversion (`convert_to_index()`)
+/// ### Length-to-Index Conversion ([`convert_to_index()`])
 ///
 /// ```text
 /// Length=10 to index conversion:
@@ -92,7 +95,31 @@ use std::{cmp::min, ops::Sub};
 ///                                         convert_to_index() = 9
 /// ```
 ///
-/// ### Overflow Checking (`is_overflowed_by()`)
+/// ### Position from End Calculation ([`index_from_end()`])
+///
+/// ```text
+/// Computing index 2 units from end (length=10, offset=2):
+///
+///     0   1   2   3   4   5   6   7   8   9     (indices, 0-based)
+///   ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+///   │   │   │   │   │   │   │   │ ▓ │   │   │   ← result: index 7
+///   └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘
+///     1   2   3   4   5   6   7   8   9   10    (lengths, 1-based)
+///                                 └─ofs=2─┘
+///
+/// Calculation: (length=10 - offset=2).convert_to_index() = 8 - 1 = 7
+///
+/// Common use cases:
+/// • Status bars/HUDs positioned from screen bottom
+/// • Buffer navigation relative to end
+/// • Layout calculations from bottom edge
+///
+/// Semantic clarity comparison:
+/// ❌ Unclear: length.convert_to_index() - row(1)  // mixing domains
+/// ✓ Clear:   length.index_from_end(height(1))    // explicit intent
+/// ```
+///
+/// ### Overflow Checking ([`is_overflowed_by()`])
 ///
 /// ```text
 ///                                             boundary
@@ -113,7 +140,7 @@ use std::{cmp::min, ops::Sub};
 /// is_overflowed_by(11) = Overflowed (beyond boundary)
 /// ```
 ///
-/// ### Remaining Space Calculation (`remaining_from()`)
+/// ### Remaining Space Calculation ([`remaining_from()`])
 ///
 /// ```text
 /// With max_width=10:
@@ -132,7 +159,7 @@ use std::{cmp::min, ops::Sub};
 /// remaining_from(10) = 0 (at boundary, nothing remains)
 /// ```
 ///
-/// ### Length Clamping (`clamp_to_max()`)
+/// ### Length Clamping ([`clamp_to_max()`])
 ///
 /// ```text
 /// Clamping operation with max_length=7:
@@ -216,7 +243,7 @@ use std::{cmp::min, ops::Sub};
 /// - [`ArrayBoundsCheck`] - Array access safety using length constraints
 /// - [`CursorBoundsCheck`] - Cursor positioning using length constraints
 ///
-/// [`IndexType`]: Self::IndexType
+/// [`Self::IndexType`]: crate::IndexOps
 /// [`RowHeight`]: crate::RowHeight
 /// [`ColWidth`]: crate::ColWidth
 /// [`ByteLength`]: crate::ByteLength
@@ -236,8 +263,8 @@ use std::{cmp::min, ops::Sub};
 /// [`remaining_from()`]: LengthOps::remaining_from
 /// [`clamp_to_max()`]: LengthOps::clamp_to_max
 /// [`index.overflows(length)`]: crate::ArrayBoundsCheck::overflows
-/// [module-level comparison
-/// table](super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes)
+/// [module-level comparison table]: super#indexops-vs-lengthops-understanding-0-based-positions-vs-1-based-sizes
+/// [`index_from_end()`]: LengthOps::index_from_end
 pub trait LengthOps: NumericValue {
     /// The corresponding index type for this length type.
     ///
@@ -271,6 +298,43 @@ pub trait LengthOps: NumericValue {
     fn convert_to_index(&self) -> Self::IndexType {
         let value = self.as_usize().saturating_sub(1);
         Self::IndexType::from(value)
+    }
+
+    /// Calculate an index positioned a specific offset from the end of this length.
+    ///
+    /// This method provides a semantic way to position elements relative to the end of a
+    /// container, common in UI layouts (status bars, HUD elements) and buffer navigation.
+    /// Instead of manually computing `(length - offset).convert_to_index()`, this method
+    /// expresses the intent clearly.
+    ///
+    /// See the [trait documentation][Self] for visual diagrams showing how positions
+    /// from the end are calculated.
+    ///
+    /// # Examples
+    /// ```
+    /// use r3bl_tui::{LengthOps, len, idx};
+    ///
+    /// let length = len(10);
+    ///
+    /// // Position at the very end (last valid index)
+    /// assert_eq!(length.index_from_end(len(0)), idx(9));
+    ///
+    /// // Position one unit from the end
+    /// assert_eq!(length.index_from_end(len(1)), idx(8));
+    ///
+    /// // Position two units from the end
+    /// assert_eq!(length.index_from_end(len(2)), idx(7));
+    ///
+    /// // Edge case: offset equals length (results in beginning)
+    /// assert_eq!(length.index_from_end(len(10)), idx(0));
+    /// ```
+    #[must_use]
+    fn index_from_end(&self, arg_offset: impl Into<Self>) -> Self::IndexType
+    where
+        Self: Sub<Output = Self>,
+    {
+        let offset: Self = arg_offset.into();
+        (*self - offset).convert_to_index()
     }
 
     /// Check if the given index would overflow this length's bounds.
@@ -529,5 +593,20 @@ mod tests {
         // Remaining from overflow position
         let remaining_from_one = unit_length.remaining_from(one_index);
         assert_eq!(remaining_from_one.as_usize(), 0); // Nothing remains
+    }
+
+    #[test]
+    fn test_index_from_end() {
+        // Bottom position (offset=0)
+        assert_eq!(len(10).index_from_end(len(0)), idx(9));
+
+        // One from bottom (offset=1)
+        assert_eq!(len(10).index_from_end(len(1)), idx(8));
+
+        // Two from bottom (offset=2)
+        assert_eq!(len(10).index_from_end(len(2)), idx(7));
+
+        // Edge case: offset equals length
+        assert_eq!(len(5).index_from_end(len(5)), idx(0));
     }
 }

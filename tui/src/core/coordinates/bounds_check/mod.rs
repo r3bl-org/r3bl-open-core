@@ -30,12 +30,12 @@
 //!
 //! These provide the fundamental operations used across all bounds checking patterns:
 //!
-//! | Trait                  | File              | Key Methods                                                                                        |
-//! |------------------------|-------------------|----------------------------------------------------------------------------------------------------|
-//! | [`NumericConversions`] | [`numeric_value`] | [`as_usize()`], [`as_u16()`]                                                                       |
-//! | [`NumericValue`]       | [`numeric_value`] | Extends [`NumericConversions`], adds [`From`] conversions, [`is_zero()`]                           |
-//! | [`IndexOps`]           | [`index_ops.rs`]  | [`convert_to_length()`], [`clamp_to_max_length()`], [`clamp_to_min_index()`], [`clamp_to_range()`] |
-//! | [`LengthOps`]          | [`length_ops.rs`] | [`convert_to_index()`], [`is_overflowed_by()`], [`remaining_from()`], [`clamp_to_max()`]           |
+//! | Trait                  | File              | Key Methods                                                                                                    |
+//! |------------------------|-------------------|----------------------------------------------------------------------------------------------------------------|
+//! | [`NumericConversions`] | [`numeric_value`] | [`as_usize()`], [`as_u16()`]                                                                                   |
+//! | [`NumericValue`]       | [`numeric_value`] | Extends [`NumericConversions`], adds [`From`] conversions, [`is_zero()`]                                       |
+//! | [`IndexOps`]           | [`index_ops.rs`]  | [`convert_to_length()`], [`clamp_to_max_length()`], [`clamp_to_min_index()`], [`clamp_to_range()`]             |
+//! | [`LengthOps`]          | [`length_ops.rs`] | [`convert_to_index()`], [`index_from_end()`], [`is_overflowed_by()`], [`remaining_from()`], [`clamp_to_max()`] |
 //!
 //! ### Semantic Traits (Use Case Validation)
 //!
@@ -1143,6 +1143,7 @@
 //! [`range_bounds_check_ext.rs`]: mod@crate::range_bounds_check_ext
 //! [`range_convert_ext.rs`]: mod@crate::range_convert_ext
 //! [Getting Started with Bounds Checking]: #getting-started-with-bounds-checking
+//! [`index_from_end()`]: crate::LengthOps::index_from_end
 
 // Attach.
 pub mod array_bounds_check;

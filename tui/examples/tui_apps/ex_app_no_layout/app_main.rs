@@ -9,9 +9,9 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                InputEvent, Key, KeyPress, LengthOps, LolcatBuilder, RenderOp,
                RenderPipeline, SPACER_GLYPH, Size, SpecialKey,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-               defaults::get_default_gradient_stops, glyphs, inline_string, new_style,
-               render_ops, render_pipeline, render_tui_styled_texts_into, row,
-               send_signal, throws_with_return, tui_color, tui_styled_text,
+               defaults::get_default_gradient_stops, glyphs, height, inline_string,
+               new_style, render_ops, render_pipeline, render_tui_styled_texts_into,
+               row, send_signal, throws_with_return, tui_color, tui_styled_text,
                tui_styled_texts, width};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
@@ -503,7 +503,7 @@ mod hud {
         };
         let display_width = styled_texts.display_width();
         let col_idx = col(*(size.col_width - display_width) / 2);
-        let row_idx = size.row_height.convert_to_index() - row(1); /* 1 row above bottom */
+        let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
         let mut render_ops = render_ops!();
