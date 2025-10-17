@@ -1,5 +1,8 @@
 #!/usr/bin/env fish
 
+# Import shared toolchain utilities
+source script_lib.fish
+
 # Rust Toolchain Update Script
 #
 # Purpose: Automatically finds and installs a stable Rust nightly toolchain,
@@ -33,6 +36,12 @@
 #   - cargo test --doc
 #   - cargo doc --no-deps
 # - Ensures new toolchain works perfectly with fresh build from scratch
+#
+# Concurrency Safety:
+# - Uses mkdir (atomic directory creation) for mutual exclusion
+# - Atomic lock: check-and-create happens in ONE kernel operation (only one process succeeds)
+# - Safe to run alongside other toolchain scripts - they'll queue or abort gracefully
+# - Stale lock detection: Automatically removes locks older than 10 minutes (crashed processes)
 #
 # This script is designed to run weekly via systemd timer.
 
@@ -313,8 +322,8 @@ function find_stable_toolchain
         log_message "✅ Successfully installed $candidate_toolchain"
         log_message ""
 
-        # Validate the toolchain
-        if validate_toolchain $candidate_toolchain
+        # Validate the toolchain using consolidated validation script
+        if fish ./rust-toolchain-validate.fish complete 2>&1 | tee -a $LOG_FILE
             # Found a stable toolchain!
             set -g target_toolchain $candidate_toolchain
             log_message "═══════════════════════════════════════════════════════"
@@ -473,15 +482,28 @@ end
 # ============================================================================
 
 function main
+    # Acquire lock before proceeding
+    if not acquire_toolchain_lock
+        return 1
+    end
+
     # Initialize
     log_message "═══════════════════════════════════════════════════════"
     log_message "Rust Toolchain Update Started at "(date)
     log_message "═══════════════════════════════════════════════════════"
     log_message ""
 
+    # Output log file location to stdout for user visibility
+    echo ""
+    echo "📋 Detailed log: $LOG_FILE"
+    echo ""
+
     # Execute workflow
     validate_prerequisites
-    or return 1
+    or begin
+        release_toolchain_lock
+        return 1
+    end
 
     show_current_state
 
@@ -495,6 +517,7 @@ function main
     or begin
         log_message "❌ FATAL: Could not find a stable toolchain"
         log_message "Please check the log file for details: $LOG_FILE"
+        release_toolchain_lock
         return 1
     end
 
@@ -511,7 +534,10 @@ function main
 
     # Install rust-analyzer component
     install_rust_analyzer_component
-    or return 1
+    or begin
+        release_toolchain_lock
+        return 1
+    end
 
     log_message "═══════════════════════════════════════════════════════"
     log_message "Phase 3: Cleanup Old Toolchains"
@@ -533,6 +559,9 @@ function main
     log_message ""
 
     clean_and_verify_build
+
+    # Release lock after successful completion
+    release_toolchain_lock
 
     # Cleanup
     log_message "═══════════════════════════════════════════════════════"

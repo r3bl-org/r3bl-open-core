@@ -1,5 +1,8 @@
 #!/usr/bin/env fish
 
+# Import shared toolchain utilities
+source script_lib.fish
+
 # Rust Toolchain Sync Script
 #
 # Purpose: Syncs Rust environment to match the rust-toolchain.toml file
@@ -14,6 +17,12 @@
 # - Remove all toolchains except stable (safety) and the target nightly
 # - Install the target nightly toolchain
 # - Install rust-analyzer and rust-src components (required by VSCode, RustRover, cargo, and serena MCP server)
+#
+# Concurrency Safety:
+# - Uses mkdir (atomic directory creation) for mutual exclusion
+# - Atomic lock: check-and-create happens in ONE kernel operation (only one process succeeds)
+# - Safe to run alongside other toolchain scripts - they'll queue or abort gracefully
+# - Stale lock detection: Automatically removes locks older than 10 minutes (crashed processes)
 #
 # This script is designed to be run manually or when rust-toolchain.toml changes.
 
@@ -87,30 +96,6 @@ end
 # ============================================================================
 # Core Logic Functions
 # ============================================================================
-
-function read_toolchain_from_toml
-    log_message "Reading toolchain from rust-toolchain.toml..."
-
-    # Extract the channel value from the TOML file
-    # Looks for: channel = "nightly-YYYY-MM-DD"
-    set -l channel_line (grep '^channel = ' $TOOLCHAIN_FILE)
-
-    if test -z "$channel_line"
-        log_message "ERROR: No channel entry found in rust-toolchain.toml"
-        return 1
-    end
-
-    # Extract the value between quotes
-    set -g target_toolchain (echo $channel_line | sed -n 's/.*channel = "\([^"]*\)".*/\1/p')
-
-    if test -z "$target_toolchain"
-        log_message "ERROR: Failed to parse channel value from rust-toolchain.toml"
-        return 1
-    end
-
-    log_message "Target toolchain from TOML: $target_toolchain"
-    return 0
-end
 
 function install_target_toolchain
     if not log_command_output "Installing toolchain $target_toolchain (if not already installed)..." rustup toolchain install $target_toolchain
@@ -201,29 +186,75 @@ end
 # ============================================================================
 
 function main
+    # Acquire lock before proceeding
+    if not acquire_toolchain_lock
+        return 1
+    end
+
     # Initialize
     log_message "=== Rust Toolchain Sync Started at "(date)" ==="
 
+    # Output log file location to stdout for user visibility
+    echo ""
+    echo "📋 Detailed log: $LOG_FILE"
+    echo ""
+
     # Execute workflow
     validate_prerequisites
-    or return 1
+    or begin
+        release_toolchain_lock
+        return 1
+    end
 
-    read_toolchain_from_toml
-    or return 1
+    # Read toolchain from TOML using script_lib function
+    log_message "Reading toolchain from rust-toolchain.toml..."
+    set -g target_toolchain (read_toolchain_from_toml)
+    if test $status -ne 0
+        log_message "ERROR: Failed to read toolchain from rust-toolchain.toml"
+        release_toolchain_lock
+        return 1
+    end
+    log_message "Target toolchain from TOML: $target_toolchain"
 
     show_current_state
 
     install_target_toolchain
-    or return 1
+    or begin
+        release_toolchain_lock
+        return 1
+    end
 
     install_rust_analyzer_component
-    or return 1
+    or begin
+        release_toolchain_lock
+        return 1
+    end
 
     install_additional_components
 
     cleanup_old_toolchains
 
     verify_final_state
+
+    # Release lock after successful completion
+    release_toolchain_lock
+
+    # Validate installation using quick validation
+    log_message ""
+    log_message "═══════════════════════════════════════════════════════"
+    log_message "Validating final installation (quick check)..."
+    log_message "═══════════════════════════════════════════════════════"
+    log_message ""
+
+    if fish ./rust-toolchain-validate.fish quick 2>&1 | tee -a $LOG_FILE
+        log_message ""
+        log_message "✅ Validation passed - toolchain fully operational"
+    else
+        set -l validation_code $status
+        log_message ""
+        log_message "⚠️  Validation returned code $validation_code - check details above"
+    end
+    log_message ""
 
     # Cleanup
     log_message "=== Rust Toolchain Sync Completed at "(date)" ==="

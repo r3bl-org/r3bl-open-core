@@ -757,3 +757,203 @@ function run_example_with_flamegraph_profiling_perf_fold
         echo "Kernel parameters reset."
     end
 end
+
+# ============================================================================
+# Rust Toolchain Management Utilities
+# ============================================================================
+
+# Reads the toolchain channel from rust-toolchain.toml
+#
+# Returns: toolchain string (e.g., "nightly-2025-10-15")
+# Exit codes: 0=success, 1=error
+#
+# Usage:
+#   set toolchain (read_toolchain_from_toml)
+function read_toolchain_from_toml
+    set -l toolchain_file "./rust-toolchain.toml"
+
+    if not test -f $toolchain_file
+        echo "ERROR: rust-toolchain.toml not found" >&2
+        return 1
+    end
+
+    set -l channel_line (grep '^channel = ' $toolchain_file)
+
+    if test -z "$channel_line"
+        echo "ERROR: No channel entry found in rust-toolchain.toml" >&2
+        return 1
+    end
+
+    set -l toolchain (echo $channel_line | sed -n 's/.*channel = "\([^"]*\)".*/\1/p')
+
+    if test -z "$toolchain"
+        echo "ERROR: Failed to parse channel value" >&2
+        return 1
+    end
+
+    echo $toolchain
+    return 0
+end
+
+# Checks if a toolchain is installed via rustup
+#
+# Usage: is_toolchain_installed "nightly-2025-10-15"
+function is_toolchain_installed
+    set -l toolchain $argv[1]
+    rustup toolchain list | grep -q "^$toolchain"
+    return $status
+end
+
+# Checks if a component is installed for a toolchain
+#
+# Usage: is_component_installed "nightly-2025-10-15" "rust-analyzer"
+function is_component_installed
+    set -l toolchain $argv[1]
+    set -l component $argv[2]
+    rustup component list --toolchain $toolchain --installed 2>/dev/null | grep -q "^$component"
+    return $status
+end
+
+# Updates the channel value in rust-toolchain.toml
+#
+# Usage: set_toolchain_in_toml "nightly-2025-10-15"
+function set_toolchain_in_toml
+    set -l toolchain $argv[1]
+    set -l toolchain_file "./rust-toolchain.toml"
+
+    # Only replace the first uncommented channel line
+    sed -i "0,/^channel = .*/s//channel = \"$toolchain\"/" $toolchain_file
+    return $status
+end
+
+# ============================================================================
+# Toolchain Script Locking Utilities
+# ============================================================================
+
+# Gets the age of the lock in seconds by reading the timestamp file.
+#
+# Returns: age in seconds, or -1 if timestamp file is missing/invalid
+#
+# Usage:
+#   set age (get_lock_age_seconds)
+#   if test $age -gt 600  # 10 minutes
+#       echo "Lock is stale"
+#   end
+function get_lock_age_seconds
+    set -l lock_dir "./rust-toolchain-script.lock"
+    set -l timestamp_file "$lock_dir/timestamp"
+
+    # Check if timestamp file exists
+    if not test -f $timestamp_file
+        echo "-1"
+        return
+    end
+
+    # Read stored timestamp
+    set -l stored_time (cat $timestamp_file 2>/dev/null)
+    if test -z "$stored_time"
+        echo "-1"
+        return
+    end
+
+    # Get current time
+    set -l current_time (date +%s)
+
+    # Calculate age (current - stored)
+    set -l age (math "$current_time - $stored_time")
+    echo $age
+end
+
+# Acquires an exclusive lock for toolchain operations to prevent concurrent conflicts.
+#
+# This function ensures that only one toolchain operation runs at a time by using
+# mkdir (atomic directory creation). mkdir is atomic: check-and-create happens in ONE
+# indivisible kernel operation, preventing all race conditions.
+#
+# Why mkdir for locking:
+# - mkdir is ATOMIC: check-if-exists AND create happen in ONE kernel operation
+# - Only ONE process can successfully create a directory with a given name
+# - Stale lock detection: Automatically removes locks older than 10 minutes (600 seconds)
+# - Best practice for shell script locking (used by systemd, init systems, etc.)
+# - Works reliably across all Unix systems
+#
+# Lock mechanism with stale lock detection:
+# 1. Attempt to create lock directory with mkdir (fails if exists)
+# 2. If mkdir succeeds:
+#    - Write current timestamp to lock_dir/timestamp
+#    - This process has exclusive lock
+# 3. If mkdir fails (lock exists):
+#    - Check age of lock via timestamp file
+#    - If age > 10 minutes (600 seconds): Remove stale lock and retry once
+#    - If age <= 10 minutes: Lock is active, return failure
+# 4. Lock cleanup: Process removes directory (including timestamp) when done
+#
+# Returns: 0 = lock acquired, 1 = lock held by another operation
+#
+# Usage:
+#   acquire_toolchain_lock
+function acquire_toolchain_lock
+    set -l lock_dir "./rust-toolchain-script.lock"
+    set -l timestamp_file "$lock_dir/timestamp"
+    set -l stale_threshold_seconds 600  # 10 minutes
+
+    # Try to create lock directory (mkdir is atomic)
+    # Only ONE process can successfully create it - all others will fail
+    # This is the standard Unix pattern for shell script locking
+    if mkdir $lock_dir 2>/dev/null
+        # Successfully acquired lock - write timestamp
+        date +%s > $timestamp_file
+        echo "✅ Acquired toolchain operation lock" >&2
+        return 0
+    else
+        # Directory already exists - check if it's a stale lock
+        set -l lock_age (get_lock_age_seconds)
+
+        if test $lock_age -eq -1
+            # Can't determine age (missing/invalid timestamp)
+            echo "🔒 Another toolchain operation in progress (unknown age)" >&2
+            return 1
+        else if test $lock_age -gt $stale_threshold_seconds
+            # Stale lock detected - clean up and retry
+            set -l age_minutes (math "round($lock_age / 60)")
+            echo "🧹 Removing stale lock (age: $age_minutes minutes)" >&2
+            /bin/rm -rf $lock_dir 2>/dev/null
+
+            # Retry lock acquisition once (avoid infinite recursion)
+            if mkdir $lock_dir 2>/dev/null
+                date +%s > $timestamp_file
+                echo "✅ Acquired toolchain operation lock after stale lock cleanup" >&2
+                return 0
+            else
+                # Another process grabbed the lock during cleanup
+                echo "🔒 Another toolchain operation acquired lock during cleanup" >&2
+                return 1
+            end
+        else
+            # Active lock - show age for transparency
+            set -l age_minutes (math "round($lock_age / 60)")
+            echo "🔒 Another toolchain operation in progress (age: $age_minutes minutes)" >&2
+            return 1
+        end
+    end
+end
+
+# Releases the toolchain operation lock.
+#
+# Removes the lock directory that was created by acquire_toolchain_lock.
+# This allows other waiting processes to acquire the lock.
+#
+# Safe to call (idempotent) - won't error if lock doesn't exist.
+#
+# Usage:
+#   release_toolchain_lock
+function release_toolchain_lock
+    set -l lock_dir "./rust-toolchain-script.lock"
+
+    # Remove the lock directory (including timestamp file) if it exists
+    # Using rm -rf to handle directory with contents
+    if test -d $lock_dir
+        /bin/rm -rf $lock_dir 2>/dev/null
+        echo "🔓 Released toolchain operation lock" >&2
+    end
+end

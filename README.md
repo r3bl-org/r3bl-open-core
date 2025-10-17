@@ -362,7 +362,8 @@ cd r3bl-open-core
 ./bootstrap.sh
 ```
 
-The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script handles **OS-level setup** with a clean main function structure and will:
+The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) script
+handles **OS-level setup** with a clean main function structure and will:
 
 - **System Package Manager Detection**: Automatically detects apt, dnf, pacman, zypper, or brew
 - **Core Rust Installation**: Install Rust toolchain (rustup) and ensure cargo is in PATH
@@ -372,9 +373,11 @@ The [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootst
 - **Development Utilities**: Install htop, screen, tmux for system monitoring
 - **Node.js Ecosystem**: Install Node.js and npm for web tooling
 - **AI Integration**: Install Claude Code CLI with MCP server configuration
-- **Rust Development Tools Setup**: Call `fish run.fish install-cargo-tools` for all Rust-specific tooling
+- **Rust Development Tools Setup**: Call `fish run.fish install-cargo-tools` for all Rust-specific
+  tooling
 
-**Architecture**: Uses clear function separation with main() orchestrator and dedicated functions for each concern (install_rustup, install_clang, install_shell_tools, etc.)
+**Architecture**: Uses clear function separation with main() orchestrator and dedicated functions
+for each concern (install_rustup, install_clang, install_shell_tools, etc.)
 
 ### Manual Setup
 
@@ -393,7 +396,8 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 fish run.fish install-cargo-tools
 ```
 
-**Note**: The manual approach requires you to install OS-level dependencies yourself. The `install-cargo-tools` command focuses specifically on **Rust development tools**:
+**Note**: The manual approach requires you to install OS-level dependencies yourself. The
+`install-cargo-tools` command focuses specifically on **Rust development tools**:
 
 - **cargo-binstall**: Fast binary installer (installed first as foundation)
 - **uv**: Modern Python package manager (required for Serena semantic code MCP server)
@@ -513,19 +517,22 @@ Other commands:
 
 ### Key Commands
 
-| Command                           | Description                                                     |
-| --------------------------------- | --------------------------------------------------------------- |
-| `fish run.fish all`               | Run all major checks (build, test, clippy, docs, audit, format) |
-| `fish run.fish build`             | Build the entire workspace                                      |
-| `fish run.fish test`              | Run all tests across the workspace                              |
-| `fish run.fish install-cargo-tools` | Install Rust development tools (cargo-binstall, uv, bacon, nextest, Wild linker, sccache, etc.) |
-| `fish run.fish watch-all-tests`   | Watch for file changes and run tests automatically              |
-| `fish run.fish run-examples`      | Run TUI examples interactively                                  |
-| `fish run.fish run-binaries`      | Run cmdr binaries (edi, giti, rc) interactively                 |
-| `fish run.fish dev-dashboard`     | Start 4-pane tmux development dashboard (tests, docs, checks)  |
-| `fish run.fish update-toolchain`  | Update Rust to month-old nightly toolchain with cleanup         |
-| `fish run.fish sync-toolchain`    | Sync Rust environment to match rust-toolchain.toml              |
-| `fish run.fish remove-toolchains` | Remove ALL toolchains (⚠️ destructive testing utility)          |
+| Command                                     | Description                                                                                     |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `fish run.fish all`                         | Run all major checks (build, test, clippy, docs, audit, format)                                 |
+| `fish run.fish build`                       | Build the entire workspace                                                                      |
+| `fish run.fish test`                        | Run all tests across the workspace                                                              |
+| `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, nextest, Wild linker, sccache, etc.) |
+| `fish run.fish watch-all-tests`             | Watch for file changes and run tests automatically                                              |
+| `fish run.fish run-examples`                | Run TUI examples interactively                                                                  |
+| `fish run.fish run-binaries`                | Run cmdr binaries (edi, giti, rc) interactively                                                 |
+| `fish run.fish dev-dashboard`               | Start 4-pane tmux development dashboard (tests, docs, checks)                                   |
+| `fish run.fish check-full`                  | Run comprehensive checks (tests, doctests, docs, toolchain validation)                          |
+| `fish run.fish toolchain-validate`          | Quick toolchain validation (components only, ~1-2 seconds)                                      |
+| `fish run.fish toolchain-validate-complete` | Complete toolchain validation (full build+test, ~5-10 minutes)                                  |
+| `fish run.fish toolchain-update`            | Update Rust to month-old nightly toolchain with cleanup                                         |
+| `fish run.fish toolchain-sync`              | Sync Rust environment to match rust-toolchain.toml                                              |
+| `fish run.fish toolchain-remove`            | Remove ALL toolchains (⚠️ destructive testing utility)                                          |
 
 ### Bacon Development Tools
 
@@ -598,7 +605,8 @@ Choose the workflow that matches your current needs:
 
 ### Tmux Development Dashboard
 
-For developers who want a comprehensive visual development environment, this project includes a tmux-based development dashboard that provides real-time monitoring of all major development tasks.
+For developers who want a comprehensive visual development environment, this project includes a
+tmux-based development dashboard that provides real-time monitoring of all major development tasks.
 
 **Comprehensive 4-Pane Development Dashboard:**
 
@@ -620,13 +628,16 @@ For developers who want a comprehensive visual development environment, this pro
 
 **Key Features:**
 
-- **Persistent Session**: Session name "r3bl-dev" - reconnect from other terminals with `tmux attach-session -t r3bl-dev`
-- **Headless Monitoring**: Bacon runs in headless mode for minimal output while providing background monitoring
+- **Persistent Session**: Session name "r3bl-dev" - reconnect from other terminals with
+  `tmux attach-session -t r3bl-dev`
+- **Headless Monitoring**: Bacon runs in headless mode for minimal output while providing background
+  monitoring
 - **Comprehensive Health Checks**: The `check.fish` script monitors:
   - `cargo nextest run` (all unit and integration tests)
   - `cargo test --doc` (documentation tests)
   - `cargo doc --no-deps` (documentation generation)
   - Automatic ICE (Internal Compiler Error) detection and recovery
+  - Automatic toolchain validation, syncing with `rust-toolchain.toml` and reinstallation if needed
 - **Real-time Updates**: Every 60 seconds, the health check pane updates with current status
 - **Interactive Multiplexing**: Full tmux keybindings for pane switching and layout customization
 
@@ -647,9 +658,12 @@ tmux kill-session -t r3bl-dev
 
 This dashboard complements other monitoring approaches:
 
-- **vs. Bacon interactive**: Dashboard provides passive monitoring of multiple concerns in one view, while bacon interactive provides detailed output when you need to focus on one aspect
-- **vs. Status scripts**: Dashboard shows rich real-time output across multiple checks, while status scripts provide minimal single-line indicators
-- **vs. Watch commands**: Dashboard provides structured layout with multiple independent monitors, while watch commands focus on one operation
+- **vs. Bacon interactive**: Dashboard provides passive monitoring of multiple concerns in one view,
+  while bacon interactive provides detailed output when you need to focus on one aspect
+- **vs. Status scripts**: Dashboard shows rich real-time output across multiple checks, while status
+  scripts provide minimal single-line indicators
+- **vs. Watch commands**: Dashboard provides structured layout with multiple independent monitors,
+  while watch commands focus on one operation
 
 **Typical Development Session:**
 
@@ -745,8 +759,11 @@ to standard parallel compilation without Wild.
 
 **Installation**: The setup process automatically installs both prerequisites:
 
-- `clang`: Installed by [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) as a system dependency
-- `wild-linker`: Installed by `fish run.fish install-cargo-tools` via `cargo-binstall` (with fallback to `cargo install`)
+- `clang`: Installed by
+  [`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh) as a system
+  dependency
+- `wild-linker`: Installed by `fish run.fish install-cargo-tools` via `cargo-binstall` (with
+  fallback to `cargo install`)
 
 **Configuration**: When available, Wild is configured in `.cargo/config.toml` for Linux targets:
 
@@ -768,7 +785,73 @@ parallel compilation without Wild.
 ### Rust Toolchain Management
 
 This project includes three complementary scripts for comprehensive Rust toolchain management, each
-serving a specific purpose in the development workflow:
+serving a specific purpose in the development workflow.
+
+**Concurrency Safety:** Toolchain **modification** scripts (`rust-toolchain-update.fish` and `rust-toolchain-sync-to-toml.fish`) use `mkdir` (atomic directory creation) to ensure only one toolchain modification runs at a time. **Validation** scripts (`rust-toolchain-validate.fish` and `check.fish`) are lock-free since they only read toolchain state - multiple validations can run concurrently without conflict.
+
+#### Why mkdir for Locking?
+
+The key insight is understanding **atomicity** - when a system operation must check-and-act in a way that's guaranteed to be indivisible:
+
+**The Problem with File Existence Checks:**
+
+Traditional approaches try to check if a lock exists, then create it:
+
+```bash
+# UNSAFE - Race condition!
+if [ ! -f lock ]; then
+    echo "timestamp" > temp
+    mv temp lock  # TOCTOU race between check and move
+fi
+```
+
+Between the check (`[ ! -f lock ]`) and the move (`mv temp lock`), another process can slip in and also acquire the lock. This is called a **Time-Of-Check-Time-Of-Use (TOCTOU) race condition**.
+
+**How mkdir Works - Atomic Check-and-Create:**
+
+`mkdir` is different. It combines the check and create into ONE indivisible kernel operation:
+
+```bash
+# SAFE - Atomic operation
+mkdir lock_dir  # Check AND create in ONE kernel operation
+# Only ONE process succeeds; all others fail
+```
+
+When `mkdir` runs, the kernel does:
+1. **Check**: Does the directory exist?
+2. **Create**: If not, create it
+3. **Return**: With ONE atomic operation - not two separate steps
+
+Even with perfect timing and multiple processes starting simultaneously, only ONE can create the directory.
+
+**Technical Implementation:**
+
+```fish
+# In script_lib.fish
+if mkdir ./rust-toolchain-script.lock 2>/dev/null
+    # Lock acquired - this process has exclusive access
+else
+    # Lock held by another process
+fi
+```
+
+**Key Advantages:**
+
+- **Atomic**: Check-and-create in ONE kernel operation (impossible to race)
+- **Simple**: No file descriptors or special handling needed
+- **Reliable**: Works on all Unix systems (standard POSIX behavior)
+- **Stale lock detection**: Automatically removes locks older than 10 minutes (crashed processes)
+- **Crash-safe**: Abandoned locks are auto-cleaned after 10 minutes, or manually via `rm -rf rust-toolchain-script.lock`
+
+The locking mechanism uses:
+
+- **mkdir (atomic directory creation)**: Creates lock directory atomically - succeeds for one process, fails for all others
+- **Atomic kernel operation**: Check-and-create happens as ONE indivisible operation - the definition of mutual exclusion
+- **Timestamp tracking**: Stores creation time in `rust-toolchain-script.lock/timestamp` for age tracking
+- **Stale lock detection**: Checks lock age on collision - auto-removes if older than 10 minutes (600 seconds)
+- **Lock holder cleanup**: Process that acquired lock removes directory (including timestamp) when done
+- **Conflict detection**: Failed mkdir indicates lock is held - shows age for transparency
+- **Standard Unix pattern**: Used by systemd, init systems, and most Unix tools
 
 #### 1. rust-toolchain-update.fish - Smart Validated Toolchain Updates
 
@@ -777,7 +860,7 @@ stability while ensuring they don't have ICE (Internal Compiler Error) bugs.
 
 ```sh
 # Via run.fish command
-fish run.fish update-toolchain
+fish run.fish toolchain-update
 
 # Or directly
 ./rust-toolchain-update.fish
@@ -858,6 +941,10 @@ Toolchains directory size after cleanup: 2.6G
 Syncs your Rust environment to match whatever is specified in `rust-toolchain.toml`.
 
 ```sh
+# Via run.fish command
+fish run.fish toolchain-sync
+
+# Or directly
 ./rust-toolchain-sync-to-toml.fish
 ```
 
@@ -892,11 +979,81 @@ Syncs your Rust environment to match whatever is specified in `rust-toolchain.to
 # Weekly script updates TOML to nightly-2025-09-11
 # But you need to stay on nightly-2025-09-05 for testing a specific feature
 git checkout rust-toolchain.toml  # Revert to 09-05
-./rust-toolchain-sync-to-toml.fish  # Install components for 09-05
+fish run.fish toolchain-sync  # Install components for 09-05
 # Now rust-analyzer works for 09-05
 ```
 
-#### 3. remove_toolchains.sh - Testing Utility
+#### 3. rust-toolchain-validate.fish - Unified Toolchain Validation
+
+Consolidated validation script providing two modes: quick component check or comprehensive build+test validation.
+
+```sh
+# Quick mode: Fast component check (~1-2 seconds)
+fish run.fish toolchain-validate
+./rust-toolchain-validate.fish quick
+
+# Complete mode: Full build+test validation (~5-10 minutes)
+fish run.fish toolchain-validate-complete
+./rust-toolchain-validate.fish complete
+
+# View detailed help
+./rust-toolchain-validate.fish
+```
+
+**Mode Comparison:**
+
+| Aspect | Quick Mode | Complete Mode |
+|--------|-----------|----------------|
+| **Time** | ~1-2 seconds | ~5-10 minutes |
+| **Purpose** | Component verification | Stability verification |
+| **Use Case** | Fast health checks | Pre-nightly validation |
+| **Checks** | Installation + components + rustc works | Full build + clippy + tests + docs |
+| **ICE Detection** | No | Yes (critical for nightly selection) |
+
+**Quick Mode Validation:**
+- ✅ Toolchain is installed via rustup
+- ✅ rust-analyzer component is present
+- ✅ rust-src component is present
+- ✅ rustc --version works (not corrupted)
+
+**Complete Mode Validation:**
+- ✅ All quick mode checks
+- ✅ cargo clippy --all-targets (no ICE)
+- ✅ cargo build (no ICE)
+- ✅ cargo nextest run (no ICE)
+- ✅ cargo test --doc (no ICE)
+- ✅ cargo doc --no-deps (no ICE)
+
+**Return Codes:**
+- `0`: ✅ Valid (quick) or Stable (complete)
+- `1`: ❌ Not installed (quick) or ICE detected (complete)
+- `2`: ⚠️ Missing components (quick only)
+- `3`: 🔥 Corrupted - rustc fails (quick only)
+- `4`: ❌ Failed to read rust-toolchain.toml
+
+**When to use Quick Mode:**
+
+- After installing/repairing toolchain with `sync-toolchain`
+- Troubleshooting IDE issues (rust-analyzer not working?)
+- Pre-flight check before running tests
+- Regular health monitoring
+- Part of automated CI/CD pipelines
+
+**When to use Complete Mode:**
+
+- Verifying nightly toolchain stability before using it
+- Detecting Internal Compiler Errors (ICE) in compiler
+- Before committing code with new toolchain
+- During `toolchain-update` search (finding stable nightly)
+- After major Rust version updates
+
+**Integration with other toolchain scripts:**
+
+- **check.fish**: Uses quick mode to check toolchain before running tests; calls `toolchain-sync` if invalid
+- **rust-toolchain-sync-to-toml.fish**: Performs quick validation after installing components
+- **rust-toolchain-update.fish**: Uses complete mode to find stable nightly
+
+#### 4. remove_toolchains.sh - Testing Utility
 
 Removes ALL Rust toolchains for testing upgrade progress display (⚠️ DESTRUCTIVE).
 
@@ -921,32 +1078,68 @@ Removes ALL Rust toolchains for testing upgrade progress display (⚠️ DESTRUC
 ```sh
 rustup toolchain install stable && rustup default stable
 # Or
-fish run.fish update-toolchain
+fish run.fish toolchain-update
 ```
 
 **⚠️ Warning:** This is a destructive testing utility. Use only when you understand the implications
 and are prepared to reinstall toolchains.
 
-#### Toolchain Management Benefits
+#### Log File Output
 
-**Stability**: Month-old nightlies have proven stability while providing recent features **Disk
-space savings**: Aggressive cleanup removes accumulated old toolchains **Consistency**: All
-developers use the same Rust version via `rust-toolchain.toml` **Automation ready**: `update` script
-designed to run weekly via systemd timer **Recovery ready**: `sync` script fixes environment after
-git operations **Testing support**: `remove` script enables testing upgrade workflows
+All toolchain management scripts display detailed log file locations to stdout at startup:
+
+```
+📋 Detailed log: /home/nazmul/Downloads/rust-toolchain-sync-to-toml.log
+```
+
+This makes it easy to monitor progress and check detailed logs after operations complete:
+
+```sh
+# Watch logs in real-time
+tail -f /home/nazmul/Downloads/rust-toolchain-update.log
+
+# Or review after completion
+cat /home/nazmul/Downloads/rust-toolchain-sync-to-toml.log
+```
+
+#### Comprehensive Toolchain Management System
+
+The four scripts work together to provide a complete toolchain management solution:
+
+**Four complementary scripts:**
+
+- **validate** (`rust-toolchain-install-validate.fish`): Non-destructive validation of current toolchain
+- **update** (`rust-toolchain-update.fish`): Smart search for stable nightly with comprehensive validation
+- **sync** (`rust-toolchain-sync-to-toml.fish`): Install toolchain matching rust-toolchain.toml
+- **remove** (`remove_toolchains.sh`): Testing utility to clean all toolchains (destructive)
+
+**Key benefits:**
+
+- **Stability**: Month-old nightlies have proven stability while providing recent features
+- **Disk space savings**: Aggressive cleanup removes accumulated old toolchains
+- **Consistency**: All developers use the same Rust version via `rust-toolchain.toml`
+- **Automation ready**: `update` script designed to run weekly via systemd timer
+- **Recovery ready**: `sync` script fixes environment after git operations
+- **Validation ready**: `validate` script enables automated health checks in CI/CD pipelines
+- **Testing support**: `remove` script enables testing upgrade workflows
+- **Integrated monitoring**: `check.fish` automatically validates and repairs toolchain before running tests
 
 ### Unified Script Architecture
 
 The project uses a clean separation of concerns across three main scripts:
 
-**[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh)** - **OS-Level Setup**
+**[`bootstrap.sh`](https://github.com/r3bl-org/r3bl-open-core/blob/main/bootstrap.sh)** - **OS-Level
+Setup**
+
 - System package manager detection and OS dependencies
 - Rust toolchain installation via rustup
 - Development environment setup (Fish shell, fzf, file watchers)
 - Cross-platform compatibility (Linux, macOS)
 - Calls run.fish for Rust-specific tooling
 
-**[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish)** - **Rust Development Commands**
+**[`run.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/run.fish)** - **Rust Development
+Commands**
+
 - **Workspace-wide commands** that operate on the entire project
 - **Cargo tool installation** (install-cargo-tools with cargo-binstall, uv, bacon, nextest, etc.)
 - **TUI-specific commands** for running examples and benchmarks
@@ -954,12 +1147,16 @@ The project uses a clean separation of concerns across three main scripts:
 - **Cross-platform file watching** using inotifywait (Linux) or fswatch (macOS)
 - **Smart log monitoring** that detects and manages log files from different workspaces
 
-**[`script_lib.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/script_lib.fish)** - **Shared Utilities**
+**[`script_lib.fish`](https://github.com/r3bl-org/r3bl-open-core/blob/main/script_lib.fish)** -
+**Shared Utilities**
+
 - Common functions used by both bootstrap.sh and run.fish
 - Utility functions: install_if_missing, generate_cargo_config, install_cargo_tool
 - Cross-platform package manager detection
 
-All commands work from the root directory, eliminating the need to navigate between subdirectories. This architecture ensures no redundancy - each tool is installed in exactly one place with clear ownership.
+All commands work from the root directory, eliminating the need to navigate between subdirectories.
+This architecture ensures no redundancy - each tool is installed in exactly one place with clear
+ownership.
 
 ## Star History
 

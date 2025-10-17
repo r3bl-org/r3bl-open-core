@@ -1,66 +1,126 @@
 #!/usr/bin/env fish
 
+# Comprehensive Build and Test Verification Script
+#
+# Purpose: Runs a comprehensive suite of checks to ensure code quality, correctness, and builds properly.
+#          This includes toolchain validation, tests, doctests, and documentation building.
+#
+# Workflow:
+# 1. Validates Rust toolchain installation with all required components
+# 2. Automatically installs/repairs toolchain if issues detected
+# 3. Runs tests using cargo-nextest (faster than cargo test)
+# 4. Runs documentation tests
+# 5. Builds documentation
+# 6. Detects and recovers from Internal Compiler Errors (ICE)
+#
+# Toolchain Management:
+# - Automatically validates toolchain before running checks
+# - Calls rust-toolchain-install-validate.fish to verify installation
+# - If invalid, calls rust-toolchain-sync-to-toml.fish to reinstall
+# - Sends desktop notifications (notify-send) on success/failure
+#
+# ICE Detection and Recovery:
+# - Monitors for Internal Compiler Error indicators (exit code 101 or "ICE" in output)
+# - On ICE detection: cleans all caches, removes ICE dump files, and retries once
+# - Distinguishes between toolchain issues (ICE) vs code issues (compilation/test failures)
+#
+# Desktop Notifications:
+# - Success: "Toolchain Installation Complete" (normal urgency)
+# - Failure: "Toolchain Installation Failed" (critical urgency)
+# - Only triggered when toolchain is actually installed/repaired
+#
+# Concurrency Safety:
+# - check.fish itself doesn't use locks (it only reads toolchain state and runs cargo)
+# - Toolchain installation is delegated to rust-toolchain-sync-to-toml.fish which has its own lock
+# - Multiple check.fish instances can run simultaneously without conflict
+# - If toolchain installation is needed, sync script prevents concurrent modifications
+#
+# Exit Codes:
+# - 0: All checks passed ✅
+# - 1: Checks failed or toolchain installation failed ❌
+# - Specific check results shown in output
+#
+# Usage:
+#   ./check.fish
+#   fish ./check.fish
+
+# Import shared toolchain utilities
+source script_lib.fish
+
 # ============================================================================
 # Toolchain Validation Functions
 # ============================================================================
 
-# Helper function to read target toolchain from rust-toolchain.toml
-function read_target_toolchain_from_toml
-    set -l toolchain_file "./rust-toolchain.toml"
-
-    if not test -f $toolchain_file
-        echo "ERROR: rust-toolchain.toml not found" >&2
-        return 1
-    end
-
-    # Extract the channel value from the TOML file
-    set -l channel_line (grep '^channel = ' $toolchain_file)
-
-    if test -z "$channel_line"
-        echo "ERROR: No channel entry found in rust-toolchain.toml" >&2
-        return 1
-    end
-
-    # Extract the value between quotes
-    set -l toolchain (echo $channel_line | sed -n 's/.*channel = "\([^"]*\)".*/\1/p')
-
-    if test -z "$toolchain"
-        echo "ERROR: Failed to parse channel value" >&2
-        return 1
-    end
-
-    echo $toolchain
-    return 0
-end
-
-# Helper function to check if a toolchain is installed
-function is_toolchain_installed
-    set -l toolchain $argv[1]
-    rustup toolchain list | grep -q "^$toolchain"
-    return $status
-end
-
-# Helper function to ensure correct toolchain is installed (silent by default)
+# Helper function to ensure correct toolchain is installed with validation
 # Returns 0 if toolchain is OK, 1 if error, 2 if toolchain was reinstalled
+#
+# Uses library functions for validation, delegates to sync script for installation
+# No lock needed - validation is read-only, sync script manages its own lock
 function ensure_toolchain_installed
-    set -l target_toolchain (read_target_toolchain_from_toml)
+    set -l target_toolchain (read_toolchain_from_toml)
     if test $status -ne 0
         echo "❌ Failed to read toolchain from rust-toolchain.toml" >&2
         return 1
     end
 
-    if is_toolchain_installed $target_toolchain
-        # Toolchain already installed, return silently
-        return 0
-    else
-        # Toolchain missing, reinstall it
-        if fish ./rust-toolchain-sync-to-toml.fish
-            echo "✅ Toolchain $target_toolchain was reinstalled"
-            return 2
-        else
-            echo "❌ Toolchain installation failed" >&2
-            return 1
+    # Perform quick validation using library functions (read-only, no lock needed)
+    set -l validation_failed 0
+
+    # Check if toolchain is installed
+    if not is_toolchain_installed $target_toolchain
+        set validation_failed 1
+    end
+
+    # Check rust-analyzer component
+    if test $validation_failed -eq 0
+        if not is_component_installed $target_toolchain "rust-analyzer"
+            set validation_failed 1
         end
+    end
+
+    # Check rust-src component
+    if test $validation_failed -eq 0
+        if not is_component_installed $target_toolchain "rust-src"
+            set validation_failed 1
+        end
+    end
+
+    # Verify rustc works
+    if test $validation_failed -eq 0
+        if not rustup run $target_toolchain rustc --version >/dev/null 2>&1
+            set validation_failed 1
+        end
+    end
+
+    # If validation passed, we're done
+    if test $validation_failed -eq 0
+        return 0
+    end
+
+    # Validation failed - delegate to sync script for installation
+    # The sync script will acquire its own lock to prevent concurrent modifications
+    echo "⚠️  Toolchain validation failed, installing..."
+
+    if fish ./rust-toolchain-sync-to-toml.fish >/dev/null 2>&1
+        # Send success notification
+        if command -v notify-send >/dev/null 2>&1
+            notify-send --urgency=normal \
+                "Toolchain Installation Complete" \
+                "✅ Successfully installed: $target_toolchain with all components" \
+                2>/dev/null &
+        end
+        echo "✅ Toolchain $target_toolchain was installed/repaired"
+        return 2
+    else
+        # Send failure notification
+        if command -v notify-send >/dev/null 2>&1
+            notify-send --urgency=critical \
+                "Toolchain Installation Failed" \
+                "❌ Failed to install $target_toolchain" \
+                2>/dev/null &
+        end
+        echo "❌ Toolchain installation failed" >&2
+        return 1
     end
 end
 
@@ -206,28 +266,42 @@ function run_checks
     end
 end
 
-# Main execution with toolchain validation and retry logic
-ensure_toolchain_installed
-set -l toolchain_status $status
-if test $toolchain_status -eq 1
+# ============================================================================
+# Main Entry Point
+# ============================================================================
+
+function main
+    # Validate toolchain first
+    # No lock needed - validation is read-only, installation delegates to sync script
+    ensure_toolchain_installed
+    set -l toolchain_status $status
+    if test $toolchain_status -eq 1
+        echo ""
+        echo "❌ Cannot proceed without correct toolchain"
+        return 1
+    end
+
+    # toolchain_status can be 0 (OK) or 2 (was reinstalled, already printed message)
     echo ""
-    echo "❌ Cannot proceed without correct toolchain"
-    exit 1
-end
+    echo "🚀 Running checks..."
+    echo ""
 
-# toolchain_status can be 0 (OK) or 2 (was reinstalled, already printed message)
-echo ""
-echo "🚀 Running checks..."
-echo ""
-
-run_checks
-set -l result $status
-
-if test $result -eq 2
-    # ICE detected, cleanup and retry once
-    cleanup_after_ice
     run_checks
-    exit $status
-else
-    exit $result
+    set -l result $status
+
+    if test $result -eq 2
+        # ICE detected, cleanup and retry once
+        cleanup_after_ice
+        run_checks
+        set result $status
+    end
+
+    return $result
 end
+
+# ============================================================================
+# Script Execution
+# ============================================================================
+
+main
+exit $status

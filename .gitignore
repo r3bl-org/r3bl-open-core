@@ -12,3 +12,4 @@ crash_log.txt
 *.log
 .serena/cache
 rustc-ice-*.txt
+rust-toolchain-script.lock*

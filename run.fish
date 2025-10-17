@@ -72,14 +72,20 @@ function main
             serve-docs
         case audit-deps
             audit-deps
-        case unmaintained
-            unmaintained
-        case update-toolchain
-            update-toolchain
-        case sync-toolchain
-            sync-toolchain
-        case remove-toolchains
-            remove-toolchains
+        case toolchain-update
+            toolchain-update
+        case toolchain-sync
+            toolchain-sync
+        case toolchain-remove
+            toolchain-remove
+        case toolchain-validate
+            toolchain-validate
+        case toolchain-validate-complete
+            toolchain-validate-complete
+        case check-full
+            check-full
+        case unmaintained-deps
+            unmaintained-deps
         case help
             print-help all
         case build-server
@@ -134,10 +140,13 @@ function print-help
         echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install development tools"
         echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
-        echo "    "(set_color green)"unmaintained"(set_color normal)"         Check for unmaintained deps"
-        echo "    "(set_color green)"update-toolchain"(set_color normal)"     Update Rust to month-old nightly"
-        echo "    "(set_color green)"sync-toolchain"(set_color normal)"       Sync environment to rust-toolchain.toml"
-        echo "    "(set_color green)"remove-toolchains"(set_color normal)"    Remove ALL toolchains (testing)"
+        echo "    "(set_color green)"unmaintained-deps"(set_color normal)"    Check for unmaintained deps"
+        echo "    "(set_color green)"toolchain-update"(set_color normal)"     Update Rust to month-old nightly"
+        echo "    "(set_color green)"toolchain-sync"(set_color normal)"       Sync environment to rust-toolchain.toml"
+        echo "    "(set_color green)"toolchain-validate"(set_color normal)"        Quick toolchain validation (components only)"
+        echo "    "(set_color green)"toolchain-validate-complete"(set_color normal)"  Complete toolchain validation (full build+test)"
+        echo "    "(set_color green)"toolchain-remove"(set_color normal)"     Remove ALL toolchains (testing)"
+        echo "    "(set_color green)"check-full"(set_color normal)"           Run comprehensive checks (tests, docs, toolchain)"
         echo "    "(set_color green)"build-server"(set_color normal)"         Remote build server - uses rsync"
         echo ""
         echo (set_color cyan --bold)"Watch commands:"(set_color normal)
@@ -370,13 +379,13 @@ function all
     clippy
     docs
     audit-deps
-    unmaintained
+    unmaintained-deps
     rustfmt
 end
 
 # https://github.com/trailofbits/cargo-unmaintained
 # This is very slow to run.
-function unmaintained
+function unmaintained-deps
     cargo unmaintained --color always --fail-fast --tree --verbose
 end
 
@@ -400,8 +409,8 @@ end
 # - Disk usage reporting before/after cleanup
 #
 # Usage:
-#   fish run.fish update-toolchain
-function update-toolchain
+#   fish run.fish toolchain-update
+function toolchain-update
     fish rust-toolchain-update.fish
 end
 
@@ -425,8 +434,8 @@ end
 # - Disk usage reporting before/after cleanup
 #
 # Usage:
-#   fish run.fish sync-toolchain
-function sync-toolchain
+#   fish run.fish toolchain-sync
+function toolchain-sync
     fish rust-toolchain-sync-to-toml.fish
 end
 
@@ -445,12 +454,24 @@ end
 #
 # Recovery after testing:
 #   rustup toolchain install stable && rustup default stable
-#   # Or: fish run.fish update-toolchain
+#   # Or: fish run.fish toolchain-update
 #
 # Usage:
-#   fish run.fish remove-toolchains
-function remove-toolchains
+#   fish run.fish toolchain-remove
+function toolchain-remove
     bash remove_toolchains.sh
+end
+
+function toolchain-validate
+    fish rust-toolchain-validate.fish quick
+end
+
+function toolchain-validate-complete
+    fish rust-toolchain-validate.fish complete
+end
+
+function check-full
+    fish check.fish
 end
 
 function build
@@ -461,7 +482,7 @@ function build-full
     install-cargo-tools
     cargo cache -r all
     cargo clean
-    update-toolchain
+    toolchain-update
     cargo build
 end
 
