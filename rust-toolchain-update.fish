@@ -235,7 +235,8 @@ function validate_toolchain
     # We're checking for ICE (Internal Compiler Errors), not code correctness
     set -l validation_steps \
         "clippy:cargo clippy --all-targets" \
-        "build:cargo build" \
+        "build-prod-code:cargo build" \
+        "build-test-code:cargo test --no-run" \
         "nextest:cargo nextest run" \
         "doctest:cargo test --doc" \
         "doc:cargo doc --no-deps"

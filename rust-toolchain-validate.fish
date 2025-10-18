@@ -35,7 +35,7 @@ set -g TOOLCHAIN_FILE $PROJECT_DIR/rust-toolchain.toml
 
 # Validates basic toolchain installation and components
 # Time: ~1-2 seconds
-# Returns: 0 if valid, 1 if not installed, 2 if components missing, 3 if corrupted, 4 if can't read TOML
+# Returns: 0 if valid, 1 if not installed, 2 if components missing, 3 if corrupted, 4 if can't read TOML, 5 if wrong profile
 function validate_quick
     echo "🔍 Validating Rust toolchain installation (quick mode)..."
     echo ""
@@ -59,22 +59,28 @@ function validate_quick
     echo "   ✅ Toolchain installed"
     echo ""
 
-    # Step 3: Check rust-analyzer
+    # Step 3: Check rustup profile
+    echo "🔍 Checking rustup profile..."
+    set -l current_profile (rustup show profile 2>/dev/null)
+    if test $status -ne 0
+        echo "❌ Failed to get rustup profile"
+        return 5
+    end
+    if not string match -q -r "^(default|complete)\$" $current_profile
+        echo "❌ Unexpected rustup profile: $current_profile"
+        echo "   Expected: 'default' or 'complete'"
+        return 5
+    end
+    echo "   ✅ Rustup profile: $current_profile"
+    echo ""
+
+    # Step 4: Check rust-analyzer
     echo "🔍 Checking rust-analyzer component..."
     if not is_component_installed $toolchain "rust-analyzer"
         echo "❌ rust-analyzer component is MISSING"
         return 2
     end
     echo "   ✅ rust-analyzer installed"
-    echo ""
-
-    # Step 4: Check rust-src
-    echo "🔍 Checking rust-src component..."
-    if not is_component_installed $toolchain "rust-src"
-        echo "❌ rust-src component is MISSING"
-        return 2
-    end
-    echo "   ✅ rust-src installed"
     echo ""
 
     # Step 5: Verify not corrupted
@@ -98,39 +104,42 @@ end
 # Validates toolchain by running actual build+test suite
 # Detects ICE (Internal Compiler Errors) indicating toolchain instability
 # Time: ~5-10 minutes (full build + tests)
-# Returns: 0 if valid and stable, 1 if ICE detected or build failed, 4 if can't read TOML
+# Returns: quick validation exit code if prerequisites fail, 1 if ICE detected, 0 if stable
 function validate_complete
     echo "🔍 Validating Rust toolchain (comprehensive mode - this may take several minutes)..."
     echo ""
 
-    # Step 1: Read toolchain from TOML
-    echo "📖 Reading rust-toolchain.toml..."
-    set -l toolchain (read_toolchain_from_toml)
-    if test $status -ne 0
-        echo "❌ Failed to read rust-toolchain.toml"
-        return 4
-    end
-    echo "   Target toolchain: $toolchain"
+    # Step 1: Run quick validation first (prerequisites check)
+    echo "═══════════════════════════════════════════════════════"
+    echo "Phase 1: Quick Validation (Prerequisites)"
+    echo "═══════════════════════════════════════════════════════"
     echo ""
 
-    # Step 2: Check basic prerequisites
-    echo "🔍 Checking if toolchain is installed..."
-    if not is_toolchain_installed $toolchain
-        echo "❌ Toolchain $toolchain is NOT installed"
-        return 1
+    validate_quick
+    set -l quick_status $status
+
+    if test $quick_status -ne 0
+        echo ""
+        echo "❌ Quick validation failed with exit code $quick_status"
+        echo "   Cannot proceed with comprehensive validation"
+        return $quick_status
     end
-    echo "   ✅ Toolchain installed"
+
+    echo ""
+    echo "✅ Prerequisites validated - proceeding with ICE detection"
     echo ""
 
-    # Step 3: Run comprehensive validation tests
-    echo "🔍 Running comprehensive validation suite..."
-    echo "   This includes: clippy, build, tests, doctests, and docs"
+    # Step 2: Run comprehensive validation tests (ICE detection)
+    echo "═══════════════════════════════════════════════════════"
+    echo "Phase 2: ICE Detection (Build & Test Suite)"
+    echo "═══════════════════════════════════════════════════════"
     echo ""
 
     set -l temp_output /tmp/rust-toolchain-validation-(date +%s).log
     set -l validation_steps \
         "clippy:cargo clippy --all-targets" \
-        "build:cargo build" \
+        "build-prod-code:cargo build" \
+        "build-test-code:cargo test --no-run" \
         "nextest:cargo nextest run" \
         "doctest:cargo test --doc" \
         "doc:cargo doc --no-deps"
@@ -193,10 +202,11 @@ function print_help
     echo (set_color yellow)"MODES:"(set_color normal)
     echo ""
     echo "  "(set_color green)"quick"(set_color normal)"     (~1-2 seconds)"
-    echo "    • Toolchain installed, rust-analyzer, rust-src, rustc functional"
+    echo "    • Toolchain installed, profile check, rust-analyzer, rustc functional"
     echo ""
     echo "  "(set_color green)"complete"(set_color normal)" (~5-10 minutes)"
-    echo "    • clippy, build, nextest, doctests, docs (detects ICE)"
+    echo "    • Runs quick mode first, then ICE detection via:"
+    echo "    • clippy, build-prod, build-test, nextest, doctests, docs"
     echo ""
     echo (set_color yellow)"EXIT CODES:"(set_color normal)
     echo "  0 = Success"
@@ -204,6 +214,7 @@ function print_help
     echo "  2 = Missing components (quick only)"
     echo "  3 = Toolchain corrupted (quick only)"
     echo "  4 = Failed to read rust-toolchain.toml"
+    echo "  5 = Wrong rustup profile (quick only)"
     echo ""
 end
 
