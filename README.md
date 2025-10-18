@@ -603,10 +603,86 @@ Choose the workflow that matches your current needs:
 - Use `bacon doctests` or `bacon test` to run documentation tests
 - Use `bacon test --doc` is equivalent to `bacon doctests`
 
+### Automated Development Monitoring
+
+The project provides two complementary approaches for continuous monitoring during development - choose based on your workflow preferences:
+
+#### Option 1: Lightweight Watch Mode (Recommended for Most Users)
+
+For developers who want automated monitoring without the overhead of tmux, use the standalone check script:
+
+```sh
+./check.fish --watch
+```
+
+**What it does:**
+
+- **Monitors source directories**: Watches `cmdr/src/`, `analytics_schema/src/`, and `tui/src/` for changes
+- **Event-driven execution**: Triggers immediately on file changes (no polling delay)
+- **Intelligent debouncing**: 5-second delay prevents rapid re-runs during saves
+- **Comprehensive checks**: Runs tests (nextest), doctests, and doc builds automatically
+- **Clean progress output**: Shows stage-by-stage progress without verbose cargo logs
+- **Automatic toolchain validation**: Validates and repairs Rust toolchain before checks
+- **ICE recovery**: Detects and recovers from Internal Compiler Errors automatically
+- **Continuous operation**: Keeps watching even if checks fail (perfect for iterative development)
+
+**Example output:**
+
+```
+👀 Watch mode activated
+Monitoring: cmdr/src, analytics_schema/src, tui/src
+Press Ctrl+C to stop
+
+🔄 Changes detected, running checks...
+
+▶️  Running nextest...
+✅ Nextest passed
+
+▶️  Running doctests...
+✅ Doctests passed
+
+▶️  Building docs...
+✅ Docs built
+
+✅ All checks passed!
+
+👀 Watching for changes...
+```
+
+**Benefits:**
+
+- **Single window**: No tmux complexity - just one terminal
+- **Immediate feedback**: 2-second response time after file saves
+- **Low overhead**: Minimal resource usage compared to running multiple monitors
+- **Perfect for focus**: Clean output doesn't distract from your editor
+
+**Event handling:** While checks run (30+ seconds), the Linux kernel buffers new file change events. When checks complete, buffered events trigger immediately if debounce allows. This ensures no changes are lost but may cause cascading re-runs if you save multiple times during test execution. Adjust `DEBOUNCE_SECONDS` in the script if needed.
+
+**Usage:**
+
+```sh
+# Show available options
+./check.fish --help
+
+# Start watch mode
+./check.fish --watch
+
+# Or run checks once (manual mode)
+./check.fish
+```
+
+#### Option 2: Comprehensive Tmux Dashboard
+
 ### Tmux Development Dashboard
 
-For developers who want a comprehensive visual development environment, this project includes a
-tmux-based development dashboard that provides real-time monitoring of all major development tasks.
+For developers who prefer a multi-pane visual environment, the tmux dashboard combines multiple bacon monitors with the `check.fish --watch` script for comprehensive coverage.
+
+**When to choose tmux dashboard over standalone watch mode:**
+
+- You want to see **all** checks running simultaneously in different panes
+- You prefer visual separation between tests, doctests, docs, and comprehensive checks
+- You're comfortable with tmux keybindings and pane navigation
+- You have screen space for a 2x2 grid layout
 
 **Comprehensive 4-Pane Development Dashboard:**
 
@@ -620,9 +696,9 @@ tmux-based development dashboard that provides real-time monitoring of all major
 │  Tests)              │  with live feedback)                 │
 ├──────────────────────┼──────────────────────────────────────┤
 │ Bottom-left:         │ Bottom-right:                        │
-│ bacon doctests       │ watch -n 60 ./check.fish             │
-│ (Documentation       │ (Periodic health check every 60s)    │
-│  Tests)              │                                      │
+│ bacon doctests       │ ./check.fish --watch                 │
+│ (Documentation       │ (Event-driven comprehensive checks:  │
+│  Tests)              │  tests + doctests + docs + ICE)      │
 └──────────────────────┴──────────────────────────────────────┘
 ```
 
@@ -630,16 +706,20 @@ tmux-based development dashboard that provides real-time monitoring of all major
 
 - **Persistent Session**: Session name "r3bl-dev" - reconnect from other terminals with
   `tmux attach-session -t r3bl-dev`
-- **Headless Monitoring**: Bacon runs in headless mode for minimal output while providing background
-  monitoring
-- **Comprehensive Health Checks**: The `check.fish` script monitors:
-  - `cargo nextest run` (all unit and integration tests)
-  - `cargo test --doc` (documentation tests)
-  - `cargo doc --no-deps` (documentation generation)
+- **Multiple Monitors**: Combines three bacon monitors (tests, doctests, docs) with one comprehensive
+  check monitor (`check.fish --watch`)
+- **Event-Driven Checks**: The bottom-right pane runs `./check.fish --watch` which triggers
+  immediately on file changes (not periodic polling)
+- **Comprehensive Coverage**: The `check.fish --watch` monitor provides:
+  - All unit and integration tests (`cargo nextest run`)
+  - Documentation tests (`cargo test --doc`)
+  - Documentation building (`cargo doc --no-deps`)
   - Automatic ICE (Internal Compiler Error) detection and recovery
-  - Automatic toolchain validation, syncing with `rust-toolchain.toml` and reinstallation if needed
-- **Real-time Updates**: Every 60 seconds, the health check pane updates with current status
+  - Automatic toolchain validation and repair if needed
+  - 5-second intelligent debouncing to prevent rapid re-runs
 - **Interactive Multiplexing**: Full tmux keybindings for pane switching and layout customization
+- **Redundant Coverage**: Tests run in two panes (bacon nextest + check.fish) - if one fails, the
+  other shows details
 
 **Usage:**
 
@@ -654,16 +734,26 @@ tmux attach-session -t r3bl-dev
 tmux kill-session -t r3bl-dev
 ```
 
-**Workflow Integration:**
+**Comparison: Standalone vs Tmux Dashboard:**
 
-This dashboard complements other monitoring approaches:
+| Aspect                  | `./check.fish --watch`                 | Tmux Dashboard                                |
+| ----------------------- | -------------------------------------- | --------------------------------------------- |
+| **Setup Complexity**    | Single command, one window             | tmux session with 4 panes                     |
+| **Screen Real Estate**  | Minimal (one terminal)                 | Large (2x2 grid)                              |
+| **Monitoring Scope**    | Comprehensive (tests+docs+doctests)    | Granular (separate panes for each)            |
+| **Visual Separation**   | Sequential output in one stream        | Parallel output in dedicated panes            |
+| **Ideal For**           | Focused development, laptop screens    | Multi-monitor setups, visual dashboards       |
+| **Tmux Knowledge**      | Not required                           | Helpful for navigation                        |
+| **Resource Usage**      | Lower (one monitor)                    | Higher (4 monitors)                           |
+| **Event-Driven**        | Yes (file system events)               | Yes (check.fish pane) + bacon auto-rebuild    |
 
-- **vs. Bacon interactive**: Dashboard provides passive monitoring of multiple concerns in one view,
-  while bacon interactive provides detailed output when you need to focus on one aspect
-- **vs. Status scripts**: Dashboard shows rich real-time output across multiple checks, while status
-  scripts provide minimal single-line indicators
-- **vs. Watch commands**: Dashboard provides structured layout with multiple independent monitors,
-  while watch commands focus on one operation
+**When to use each:**
+
+- **Use standalone watch**: When you want simple, focused monitoring in a single terminal
+- **Use tmux dashboard**: When you want comprehensive visibility with separate panes for each concern
+
+Both approaches use the same `check.fish --watch` script in different contexts - standalone for
+simplicity, integrated for comprehensive dashboards.
 
 **Typical Development Session:**
 

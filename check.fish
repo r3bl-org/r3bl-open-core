@@ -35,6 +35,31 @@
 # - Multiple check.fish instances can run simultaneously without conflict
 # - If toolchain installation is needed, sync script prevents concurrent modifications
 #
+# Watch Mode & inotify Behavior:
+# Watch mode uses a sequential processing model with kernel-buffered events:
+#
+# 1. Script blocks waiting for file changes (inotifywait)
+# 2. When a change is detected, debounce timer is checked
+# 3. If debounce passes, full check suite runs (30+ seconds, NOT listening for new changes)
+# 4. While checks run, the Linux kernel buffers any new file change events
+# 5. When checks complete, inotifywait is called again and immediately returns buffered events
+# 6. Debounce check determines if another run happens immediately or is skipped
+#
+# Example Timeline:
+#   00:00  Save file #1 → triggers check
+#   00:00  ▶️ Tests start running (inotifywait NOT active)
+#   00:15  Save file #2 → buffered by kernel
+#   00:20  Save file #3 → buffered by kernel
+#   00:35  ✅ Tests complete, return to inotifywait
+#   00:35  inotifywait returns IMMEDIATELY with file #2 event
+#   00:35  Debounce: 35s > 5s ✓ → triggers another check
+#   01:10  ✅ Tests complete
+#   01:10  inotifywait returns IMMEDIATELY with file #3 event
+#   01:10  Debounce: 35s > 5s ✓ → triggers another check
+#
+# This ensures no changes are lost, but can cause cascading runs if multiple
+# saves occur during long test executions. Adjust DEBOUNCE_SECONDS if needed.
+#
 # Exit Codes:
 # - 0: All checks passed ✅
 # - 1: Checks failed or toolchain installation failed ❌
@@ -42,10 +67,280 @@
 #
 # Usage:
 #   ./check.fish
-#   fish ./check.fish
+#   ./check.fish --watch
+#   ./check.fish --help
 
 # Import shared toolchain utilities
 source script_lib.fish
+
+# ============================================================================
+# Configuration Constants
+# ============================================================================
+
+# Debounce delay in seconds for watch mode
+# Prevents rapid re-runs when multiple files are saved in quick succession
+# If a file change occurs within this window after the last check started,
+# it will be ignored. Increase this if you find checks running too frequently.
+set -g DEBOUNCE_SECONDS 5
+
+# ============================================================================
+# Argument Parsing
+# ============================================================================
+
+# Parse command line arguments and return the mode
+# Returns: "help", "watch", or "normal"
+function parse_arguments
+    if test (count $argv) -eq 0
+        echo "normal"
+        return 0
+    end
+
+    switch $argv[1]
+        case --help -h
+            echo "help"
+            return 0
+        case --watch -w
+            echo "watch"
+            return 0
+        case '*'
+            echo "❌ Unknown argument: $argv[1]" >&2
+            echo "Use --help for usage information" >&2
+            return 1
+    end
+end
+
+# ============================================================================
+# Help Display
+# ============================================================================
+
+# Display colorful help information
+function show_help
+    set_color green --bold
+    echo "check.fish"
+    set_color normal
+    echo ""
+
+    set_color yellow
+    echo "PURPOSE:"
+    set_color normal
+    echo "  Comprehensive build and test verification for r3bl-open-core"
+    echo "  Validates toolchain, runs tests, doctests, and builds documentation"
+    echo ""
+
+    set_color yellow
+    echo "USAGE:"
+    set_color normal
+    echo "  ./check.fish              Run checks once (default)"
+    echo "  ./check.fish --watch      Watch source files and run checks on changes"
+    echo "  ./check.fish --help       Show this help message"
+    echo ""
+
+    set_color yellow
+    echo "FEATURES:"
+    set_color normal
+    echo "  ✓ Automatic toolchain validation and repair"
+    echo "  ✓ Fast tests using cargo-nextest"
+    echo "  ✓ Documentation tests (doctests)"
+    echo "  ✓ Documentation building"
+    echo "  ✓ Internal Compiler Error (ICE) detection and recovery"
+    echo "  ✓ Desktop notifications on toolchain changes"
+    echo ""
+
+    set_color yellow
+    echo "WATCH MODE:"
+    set_color normal
+    echo "  Monitors: cmdr/src/, analytics_schema/src/, tui/src/"
+    echo "  Debouncing: $DEBOUNCE_SECONDS seconds (prevents rapid re-runs)"
+    echo "  Behavior: Continues watching even if checks fail"
+    echo "  Requirements: inotifywait (installed via bootstrap.sh)"
+    echo ""
+    echo "  Event Handling:"
+    echo "  • While tests run (30+ sec), new file changes are buffered by the kernel"
+    echo "  • When checks complete, buffered events trigger immediately (if debounce allows)"
+    echo "  • Multiple saves during test runs may cause cascading re-runs"
+    echo "  • Increase DEBOUNCE_SECONDS in script if this becomes disruptive"
+    echo ""
+
+    set_color yellow
+    echo "WORKFLOW:"
+    set_color normal
+    echo "  1. Validates Rust toolchain (nightly + components)"
+    echo "  2. Auto-installs/repairs if needed"
+    echo "  3. Runs nextest (faster than cargo test)"
+    echo "  4. Runs doctests"
+    echo "  5. Builds documentation"
+    echo "  6. Detects and recovers from ICE"
+    echo ""
+
+    set_color yellow
+    echo "EXIT CODES:"
+    set_color normal
+    echo "  0  All checks passed ✅"
+    echo "  1  Checks failed or toolchain installation failed ❌"
+    echo ""
+
+    set_color yellow
+    echo "EXAMPLES:"
+    set_color normal
+    echo "  # Run checks once"
+    echo "  ./check.fish"
+    echo ""
+    echo "  # Watch for changes and auto-run checks"
+    echo "  ./check.fish --watch"
+    echo ""
+    echo "  # Show this help"
+    echo "  ./check.fish --help"
+    echo ""
+end
+
+# ============================================================================
+# Watch Mode
+# ============================================================================
+
+# Watch source directories and run checks on file changes
+function watch_mode
+    # Check for inotifywait
+    if not command -v inotifywait >/dev/null 2>&1
+        echo "❌ Error: inotifywait not found" >&2
+        echo "Install with: ./bootstrap.sh" >&2
+        echo "Or manually: sudo apt-get install inotify-tools" >&2
+        return 1
+    end
+
+    # Define directories to watch
+    set -l watch_dirs cmdr/src analytics_schema/src tui/src
+
+    # Verify directories exist
+    for dir in $watch_dirs
+        if not test -d $dir
+            echo "⚠️  Warning: Directory $dir not found, skipping" >&2
+            set -e watch_dirs[(contains -i $dir $watch_dirs)]
+        end
+    end
+
+    if test (count $watch_dirs) -eq 0
+        echo "❌ Error: No valid directories to watch" >&2
+        return 1
+    end
+
+    echo ""
+    set_color cyan --bold
+    echo "👀 Watch mode activated"
+    set_color normal
+    echo "Monitoring: "(string join ", " $watch_dirs)
+    echo "Press Ctrl+C to stop"
+    echo ""
+
+    # Track last run time for debouncing (epoch seconds)
+    set -l last_run 0
+
+    # Run initial check
+    echo "🚀 Running initial checks..."
+    echo ""
+    run_full_check
+
+    echo ""
+    set_color cyan
+    echo "👀 Watching for changes..."
+    set_color normal
+    echo ""
+
+    # Watch loop with inotifywait
+    while true
+        # Wait for file changes
+        set -l changed_file (inotifywait -q -r -e modify,create,delete,move \
+            --format '%w%f' $watch_dirs 2>/dev/null)
+
+        # Get current time
+        set -l current_time (date +%s)
+
+        # Check debounce
+        set -l time_diff (math $current_time - $last_run)
+        if test $time_diff -lt $DEBOUNCE_SECONDS
+            continue
+        end
+
+        # Update last run time
+        set last_run $current_time
+
+        # Run checks
+        echo ""
+        set_color yellow
+        echo "🔄 Changes detected, running checks..."
+        set_color normal
+        echo ""
+
+        run_full_check
+
+        echo ""
+        set_color cyan
+        echo "👀 Watching for changes..."
+        set_color normal
+        echo ""
+    end
+end
+
+# Helper function to run full check cycle (toolchain + checks)
+# This version shows progress indicators but silences cargo output for watch mode
+function run_full_check
+    # Validate toolchain
+    ensure_toolchain_installed
+    set -l toolchain_status $status
+    if test $toolchain_status -eq 1
+        echo ""
+        echo "❌ Toolchain validation failed"
+        return 1
+    end
+
+    # Run checks with progress indicators (silent output)
+    echo ""
+    set_color cyan
+    echo "▶️  Running nextest..."
+    set_color normal
+    if not cargo nextest run --all-targets >/dev/null 2>&1
+        set_color red
+        echo "❌ Tests failed"
+        set_color normal
+        return 1
+    end
+    set_color green
+    echo "✅ Nextest passed"
+    set_color normal
+
+    echo ""
+    set_color cyan
+    echo "▶️  Running doctests..."
+    set_color normal
+    if not cargo test --doc >/dev/null 2>&1
+        set_color red
+        echo "❌ Doctests failed"
+        set_color normal
+        return 1
+    end
+    set_color green
+    echo "✅ Doctests passed"
+    set_color normal
+
+    echo ""
+    set_color cyan
+    echo "▶️  Building docs..."
+    set_color normal
+    if not cargo doc --no-deps >/dev/null 2>&1
+        set_color red
+        echo "❌ Doc build failed"
+        set_color normal
+        return 1
+    end
+    set_color green
+    echo "✅ Docs built"
+    set_color normal
+
+    echo ""
+    set_color green --bold
+    echo "✅ All checks passed!"
+    set_color normal
+    return 0
+end
 
 # ============================================================================
 # Toolchain Validation Functions
@@ -271,37 +566,55 @@ end
 # ============================================================================
 
 function main
-    # Validate toolchain first
-    # No lock needed - validation is read-only, installation delegates to sync script
-    ensure_toolchain_installed
-    set -l toolchain_status $status
-    if test $toolchain_status -eq 1
-        echo ""
-        echo "❌ Cannot proceed without correct toolchain"
+    # Parse command line arguments
+    set -l mode (parse_arguments $argv)
+    set -l parse_status $status
+    if test $parse_status -ne 0
         return 1
     end
 
-    # toolchain_status can be 0 (OK) or 2 (was reinstalled, already printed message)
-    echo ""
-    echo "🚀 Running checks..."
-    echo ""
+    # Branch based on mode
+    switch $mode
+        case help
+            show_help
+            return 0
+        case watch
+            watch_mode
+            return $status
+        case normal
+            # Normal mode: run checks once
+            # Validate toolchain first
+            # No lock needed - validation is read-only, installation delegates to sync script
+            ensure_toolchain_installed
+            set -l toolchain_status $status
+            if test $toolchain_status -eq 1
+                echo ""
+                echo "❌ Cannot proceed without correct toolchain"
+                return 1
+            end
 
-    run_checks
-    set -l result $status
+            # toolchain_status can be 0 (OK) or 2 (was reinstalled, already printed message)
+            echo ""
+            echo "🚀 Running checks..."
+            echo ""
 
-    if test $result -eq 2
-        # ICE detected, cleanup and retry once
-        cleanup_after_ice
-        run_checks
-        set result $status
+            run_checks
+            set -l result $status
+
+            if test $result -eq 2
+                # ICE detected, cleanup and retry once
+                cleanup_after_ice
+                run_checks
+                set result $status
+            end
+
+            return $result
     end
-
-    return $result
 end
 
 # ============================================================================
 # Script Execution
 # ============================================================================
 
-main
+main $argv
 exit $status
