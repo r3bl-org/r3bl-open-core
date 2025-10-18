@@ -29,6 +29,8 @@
       of text at the end and scroll to the left, and see the component painting outside of its
       bounds (on the right).
 
+# create robust atomic file based user configuration settings: https://github.com/nazmulidris/rust-scratch/issues/114
+
 # add analytics server to r3bl-cmdr: https://github.com/r3bl-org/r3bl-base/issues/6
 
 - [ ] with `shuttle.rs` gone, and homelab up and running, implement this, before launching too many
@@ -36,8 +38,6 @@
       about
 
 # incorporate TLS and tcp-api-server work into the codebase: https://github.com/r3bl-org/r3bl-base/issues/6
-
-# create robust atomic file based user configuration settings: https://github.com/nazmulidris/rust-scratch/issues/114
 
 # build and deploy r3bl-base backend (in homelab) for telemetry and analytics: https://github.com/r3bl-org/r3bl-base/issues/6
 
@@ -48,6 +48,10 @@
 # build `chi` binary in r3bl-cmdr
 
 - [ ] PRD [`task_prd_chi`](docs/task_prd_chi.md) to build `chi`
+
+# build `build-infra-tools` binary to replace all the fish scripts
+
+- [ ] PRD [`task_build_tools_infra_plan`](docs/task_build_tools_infra_plan.md) to build `build-infra-tools`
 
 # unify rendering paths
 
