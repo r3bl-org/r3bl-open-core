@@ -483,6 +483,9 @@ end
 # ============================================================================
 
 function main
+    # Truncate log file at start of script so each run gets a fresh log
+    echo -n "" > $LOG_FILE
+
     # Acquire lock before proceeding
     if not acquire_toolchain_lock
         return 1
