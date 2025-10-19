@@ -201,22 +201,10 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
         // Check for extended color sequences first (they consume multiple positions).
         if let Some(color_seq) =
-            csi_codes::ExtendedColorSequence::parse_from_slice(param_slice)
+            csi_codes::ExtendedColorSequence::parse_from_raw_slice(param_slice)
         {
-            match color_seq {
-                csi_codes::ExtendedColorSequence::SetForegroundAnsi256(index) => {
-                    performer.ofs_buf.set_foreground_ansi256(index);
-                }
-                csi_codes::ExtendedColorSequence::SetBackgroundAnsi256(index) => {
-                    performer.ofs_buf.set_background_ansi256(index);
-                }
-                csi_codes::ExtendedColorSequence::SetForegroundRgb(r, g, b) => {
-                    performer.ofs_buf.set_foreground_rgb(r, g, b);
-                }
-                csi_codes::ExtendedColorSequence::SetBackgroundRgb(r, g, b) => {
-                    performer.ofs_buf.set_background_rgb(r, g, b);
-                }
-            }
+            // Unified method handles routing to foreground/background automatically.
+            performer.ofs_buf.apply_extended_color_sequence(color_seq);
         } else if let Some(&first_param) = param_slice.first() {
             // Handle single parameters (existing behavior for basic SGR codes).
             apply_sgr_param(performer, first_param);

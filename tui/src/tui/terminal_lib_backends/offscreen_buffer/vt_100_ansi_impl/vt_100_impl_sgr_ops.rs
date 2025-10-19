@@ -41,11 +41,10 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{TuiStyle,
-            core::pty_mux::vt_100_ansi_parser::ansi_to_tui_color::{ansi_to_tui_color,
-                                                                   ansi256_to_tui_color,
-                                                                   rgb_to_tui_color},
-            tui_style_attrib};
+use crate::{
+    core::pty_mux::vt_100_ansi_parser::protocols::csi_codes::{ansi256_to_tui_color, rgb_to_tui_color},
+    AnsiValue, ColorTarget, ExtendedColorSequence, TuiColor, TuiStyle, tui_style_attrib,
+};
 
 impl OffscreenBuffer {
     /// Reset all SGR attributes to default state.
@@ -121,14 +120,12 @@ impl OffscreenBuffer {
 
     /// Set foreground color using ANSI color code.
     pub fn set_foreground_color(&mut self, ansi_color: u16) {
-        self.ansi_parser_support.current_style.color_fg =
-            Some(ansi_to_tui_color(ansi_color.into()));
+        self.ansi_parser_support.current_style.color_fg = Some(TuiColor::from(AnsiValue::from(ansi_color)));
     }
 
     /// Set background color using ANSI color code.
     pub fn set_background_color(&mut self, ansi_color: u16) {
-        self.ansi_parser_support.current_style.color_bg =
-            Some(ansi_to_tui_color(ansi_color.into()));
+        self.ansi_parser_support.current_style.color_bg = Some(TuiColor::from(AnsiValue::from(ansi_color)));
     }
 
     /// Reset foreground color to default.
@@ -198,6 +195,43 @@ impl OffscreenBuffer {
     pub fn set_background_rgb(&mut self, r: u8, g: u8, b: u8) {
         self.ansi_parser_support.current_style.color_bg = Some(rgb_to_tui_color(r, g, b));
     }
+    /// Apply an extended color sequence to the current style.
+    ///
+    /// This is a convenience method that takes an [`ExtendedColorSequence`] and
+    /// automatically routes it to the appropriate foreground or background color
+    /// setter based on the sequence's target layer.
+    ///
+    /// # Arguments
+    ///
+    /// * `color_seq` - The parsed extended color sequence
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use r3bl_tui::{ExtendedColorSequence, OffscreenBuffer, height, width};
+    ///
+    /// let mut buffer = OffscreenBuffer::new_empty(height(10) + width(20));
+    ///
+    /// // Parse an extended color sequence (256-color foreground)
+    /// let params = &[38, 5, 196];
+    /// if let Some(color_seq) = ExtendedColorSequence::parse_from_raw_slice(params) {
+    ///     // Apply to current style - automatically routes to foreground setter
+    ///     buffer.apply_extended_color_sequence(color_seq);
+    /// }
+    /// ```
+    ///
+    /// [`ExtendedColorSequence`]: ExtendedColorSequence
+    pub fn apply_extended_color_sequence(&mut self, color_seq: ExtendedColorSequence) {
+        let tui_color = TuiColor::from(color_seq);
+        match color_seq.target() {
+            ColorTarget::Foreground => {
+                self.ansi_parser_support.current_style.color_fg = Some(tui_color);
+            }
+            ColorTarget::Background => {
+                self.ansi_parser_support.current_style.color_bg = Some(tui_color);
+            }
+        }
+    }
 }
 
 /// Represents different style attributes that can be applied.
@@ -216,7 +250,7 @@ pub enum StyleAttribute {
 #[cfg(test)]
 mod tests_sgr_ops {
     use super::*;
-    use crate::{TuiColor, height, width};
+    use crate::{height, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);

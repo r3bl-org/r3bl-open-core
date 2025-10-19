@@ -304,14 +304,12 @@
 
 // Attach.
 pub mod ansi_parser_public_api;
-pub mod ansi_to_tui_color;
 pub mod operations;
 pub mod performer;
 pub mod protocols;
 
 // Re-export.
 pub use ansi_parser_public_api::*;
-pub use ansi_to_tui_color::*;
 pub use operations::*;
 pub use protocols::*;
 

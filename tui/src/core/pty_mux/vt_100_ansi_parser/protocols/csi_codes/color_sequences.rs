@@ -50,7 +50,7 @@
 //!
 //! // Parse 256-color foreground: ESC[38:5:196m
 //! let params = &[38, 5, 196];
-//! if let Some(color) = ExtendedColorSequence::parse_from_slice(params) {
+//! if let Some(color) = ExtendedColorSequence::parse_from_raw_slice(params) {
 //!     match color {
 //!         ExtendedColorSequence::SetForegroundAnsi256(index) => {
 //!             assert_eq!(index, 196);
@@ -61,7 +61,7 @@
 //!
 //! // Parse RGB background: ESC[48:2:255:128:0m
 //! let params = &[48, 2, 255, 128, 0];
-//! if let Some(color) = ExtendedColorSequence::parse_from_slice(params) {
+//! if let Some(color) = ExtendedColorSequence::parse_from_raw_slice(params) {
 //!     match color {
 //!         ExtendedColorSequence::SetBackgroundRgb(r, g, b) => {
 //!             assert_eq!((r, g, b), (255, 128, 0));
@@ -77,9 +77,67 @@
 use super::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
                        SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
                        SGR_SET_GRAPHICS};
-use crate::{core::common::fast_stringify::{BufTextStorage, FastStringify},
+use crate::{AnsiValue, RgbValue, TuiColor,
+            core::common::fast_stringify::{BufTextStorage, FastStringify},
             generate_impl_display_for_fast_stringify};
 use std::fmt::Result;
+
+/// Convert 256-color palette index to [`TuiColor`].
+///
+/// This function handles extended color sequences using the 256-color palette.
+/// The palette is structured as follows:
+/// - **0-15**: Standard ANSI colors (same as basic 16 colors)
+/// - **16-231**: 6×6×6 RGB cube (216 colors)
+/// - **232-255**: Grayscale ramp (24 shades from dark to light)
+///
+/// # Arguments
+/// * `index` - Palette index (0-255)
+///
+/// # Returns
+/// `TuiColor::Ansi` variant containing the palette index
+///
+/// # VT100 Sequences
+/// - `ESC[38;5;nm` - Set foreground to palette index n
+/// - `ESC[48;5;nm` - Set background to palette index n
+#[must_use]
+pub fn ansi256_to_tui_color(index: u8) -> TuiColor {
+    TuiColor::Ansi(AnsiValue::new(index))
+}
+
+/// Convert RGB color values to [`TuiColor`].
+///
+/// This function handles true color (24-bit) RGB sequences, providing access to
+/// 16.7 million colors. Each component (red, green, blue) can range from 0-255.
+///
+/// # Arguments
+/// * `r` - Red component (0-255)
+/// * `g` - Green component (0-255)
+/// * `b` - Blue component (0-255)
+///
+/// # Returns
+/// `TuiColor::Rgb` variant containing the RGB values
+///
+/// # VT100 Sequences
+/// - `ESC[38;2;r;g;bm` - Set foreground to RGB(r, g, b)
+/// - `ESC[48;2;r;g;bm` - Set background to RGB(r, g, b)
+#[must_use]
+pub fn rgb_to_tui_color(r: u8, g: u8, b: u8) -> TuiColor {
+    TuiColor::Rgb(RgbValue::from_u8(r, g, b))
+}
+
+/// Which layer (foreground or background) a color applies to.
+///
+/// This enum cleanly separates the **target layer** from the **color value**,
+/// enabling better composition with [`TuiColor`] and other color types.
+///
+/// [`TuiColor`]: TuiColor
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ColorTarget {
+    /// Apply color to foreground (text color)
+    Foreground,
+    /// Apply color to background (background color)
+    Background,
+}
 
 /// Extended color sequence operation parsed from VT100 SGR parameters.
 ///
@@ -178,18 +236,18 @@ impl ExtendedColorSequence {
     /// use r3bl_tui::ExtendedColorSequence;
     ///
     /// // 256-color foreground: [38, 5, 196]
-    /// let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 196]);
+    /// let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 5, 196]);
     /// assert_eq!(result, Some(ExtendedColorSequence::SetForegroundAnsi256(196)));
     ///
     /// // RGB background: [48, 2, r, g, b]
-    /// let result = ExtendedColorSequence::parse_from_slice(&[48, 2, 255, 128, 0]);
+    /// let result = ExtendedColorSequence::parse_from_raw_slice(&[48, 2, 255, 128, 0]);
     /// assert_eq!(result, Some(ExtendedColorSequence::SetBackgroundRgb(255, 128, 0)));
     /// ```
     ///
     /// [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
     #[must_use]
     #[allow(clippy::cast_possible_truncation)] // Values are validated <= 255 in guards
-    pub fn parse_from_slice(params: &[u16]) -> Option<Self> {
+    pub fn parse_from_raw_slice(params: &[u16]) -> Option<Self> {
         match params {
             // 256-color foreground: ESC[38:5:n or ESC[38;5;n
             [fg_or_bg, SGR_COLOR_MODE_256, index, ..]
@@ -227,6 +285,72 @@ impl ExtendedColorSequence {
 
             // Not an extended color sequence
             _ => None,
+        }
+    }
+
+    /// Get which layer (foreground or background) this sequence targets.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use r3bl_tui::{ExtendedColorSequence, ColorTarget};
+    ///
+    /// let seq = ExtendedColorSequence::SetForegroundAnsi256(42);
+    /// assert_eq!(seq.target(), ColorTarget::Foreground);
+    ///
+    /// let seq = ExtendedColorSequence::SetBackgroundRgb(255, 0, 0);
+    /// assert_eq!(seq.target(), ColorTarget::Background);
+    /// ```
+    #[must_use]
+    pub fn target(&self) -> ColorTarget {
+        match self {
+            Self::SetForegroundAnsi256(_) | Self::SetForegroundRgb(_, _, _) => {
+                ColorTarget::Foreground
+            }
+            Self::SetBackgroundAnsi256(_) | Self::SetBackgroundRgb(_, _, _) => {
+                ColorTarget::Background
+            }
+        }
+    }
+
+}
+
+impl From<ExtendedColorSequence> for TuiColor {
+    /// Convert an extended color sequence to a normalized [`TuiColor`].
+    ///
+    /// This converts both 256-color palette and RGB color sequences to their
+    /// corresponding `TuiColor` variants. The layer information (foreground/background)
+    /// is preserved separately via [`ExtendedColorSequence::target()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use r3bl_tui::{ExtendedColorSequence, TuiColor};
+    ///
+    /// // 256-color → TuiColor::Ansi
+    /// let seq = ExtendedColorSequence::SetForegroundAnsi256(196);
+    /// let color = TuiColor::from(seq);
+    /// assert!(matches!(color, TuiColor::Ansi(_)));
+    ///
+    /// // RGB → TuiColor::Rgb
+    /// let seq = ExtendedColorSequence::SetBackgroundRgb(255, 128, 0);
+    /// let color = TuiColor::from(seq);
+    /// assert!(matches!(color, TuiColor::Rgb(_)));
+    ///
+    /// // Or using into()
+    /// let color: TuiColor = ExtendedColorSequence::SetForegroundAnsi256(42).into();
+    /// assert!(matches!(color, TuiColor::Ansi(_)));
+    /// ```
+    fn from(seq: ExtendedColorSequence) -> Self {
+        match seq {
+            ExtendedColorSequence::SetForegroundAnsi256(index)
+            | ExtendedColorSequence::SetBackgroundAnsi256(index) => {
+                TuiColor::Ansi(AnsiValue::new(index))
+            }
+            ExtendedColorSequence::SetForegroundRgb(r, g, b)
+            | ExtendedColorSequence::SetBackgroundRgb(r, g, b) => {
+                TuiColor::Rgb(RgbValue::from_u8(r, g, b))
+            }
         }
     }
 }
@@ -295,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_parse_256_color_foreground() {
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 196]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 5, 196]);
         assert_eq!(
             result,
             Some(ExtendedColorSequence::SetForegroundAnsi256(196))
@@ -304,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_parse_256_color_background() {
-        let result = ExtendedColorSequence::parse_from_slice(&[48, 5, 196]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[48, 5, 196]);
         assert_eq!(
             result,
             Some(ExtendedColorSequence::SetBackgroundAnsi256(196))
@@ -313,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_parse_rgb_foreground() {
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 2, 255, 128, 0]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 2, 255, 128, 0]);
         assert_eq!(
             result,
             Some(ExtendedColorSequence::SetForegroundRgb(255, 128, 0))
@@ -322,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_parse_rgb_background() {
-        let result = ExtendedColorSequence::parse_from_slice(&[48, 2, 255, 128, 0]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[48, 2, 255, 128, 0]);
         assert_eq!(
             result,
             Some(ExtendedColorSequence::SetBackgroundRgb(255, 128, 0))
@@ -332,82 +456,82 @@ mod tests {
     #[test]
     fn test_parse_256_color_boundary_values() {
         // Valid: index 0
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 0]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 5, 0]);
         assert!(result.is_some());
 
         // Valid: index 255
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 255]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 5, 255]);
         assert!(result.is_some());
 
         // Invalid: index 256 (out of range)
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 256]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 5, 256]);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_parse_rgb_boundary_values() {
         // Valid: all zeros
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 2, 0, 0, 0]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 2, 0, 0, 0]);
         assert!(result.is_some());
 
         // Valid: all 255
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 2, 255, 255, 255]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 2, 255, 255, 255]);
         assert!(result.is_some());
 
         // Invalid: r out of range
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 2, 256, 0, 0]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 2, 256, 0, 0]);
         assert!(result.is_none());
 
         // Invalid: g out of range
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 2, 0, 256, 0]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 2, 0, 256, 0]);
         assert!(result.is_none());
 
         // Invalid: b out of range
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 2, 0, 0, 256]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 2, 0, 0, 256]);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_parse_invalid_mode() {
         // Invalid mode: 3 (neither 2 nor 5)
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 3, 100]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 3, 100]);
         assert!(result.is_none());
 
         // Invalid mode: 1
-        let result = ExtendedColorSequence::parse_from_slice(&[48, 1, 100]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[48, 1, 100]);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_parse_invalid_sequence_format() {
         // Too short for 256-color
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 5]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 5]);
         assert!(result.is_none());
 
         // Too short for RGB
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 2, 255, 128]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 2, 255, 128]);
         assert!(result.is_none());
 
         // Empty slice
-        let result = ExtendedColorSequence::parse_from_slice(&[]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[]);
         assert!(result.is_none());
 
         // Just the color mode
-        let result = ExtendedColorSequence::parse_from_slice(&[38]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38]);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_parse_with_extra_parameters() {
         // Extra parameters after 256-color should still parse
-        let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 196, 99, 88]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[38, 5, 196, 99, 88]);
         assert_eq!(
             result,
             Some(ExtendedColorSequence::SetForegroundAnsi256(196))
         );
 
         // Extra parameters after RGB should still parse
-        let result = ExtendedColorSequence::parse_from_slice(&[48, 2, 255, 128, 0, 99]);
+        let result = ExtendedColorSequence::parse_from_raw_slice(&[48, 2, 255, 128, 0, 99]);
         assert_eq!(
             result,
             Some(ExtendedColorSequence::SetBackgroundRgb(255, 128, 0))
@@ -464,13 +588,13 @@ mod tests {
         // but parsing accepts both.
 
         // 256-color foreground
-        let parsed = ExtendedColorSequence::parse_from_slice(&[38, 5, 196]).unwrap();
+        let parsed = ExtendedColorSequence::parse_from_raw_slice(&[38, 5, 196]).unwrap();
         let generated = parsed.to_string();
         assert_eq!(generated, "\x1b[38:5:196m");
 
         // RGB background
         let parsed =
-            ExtendedColorSequence::parse_from_slice(&[48, 2, 255, 128, 0]).unwrap();
+            ExtendedColorSequence::parse_from_raw_slice(&[48, 2, 255, 128, 0]).unwrap();
         let generated = parsed.to_string();
         assert_eq!(generated, "\x1b[48:2:255:128:0m");
     }

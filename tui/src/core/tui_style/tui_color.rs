@@ -39,6 +39,9 @@ use core::fmt::Debug;
 /// - `#zzzzzz` (invalid hex characters)
 ///
 /// For fallible hex color parsing, use [`RgbValue::try_from_hex_color`] instead.
+///
+/// [`TuiColor`]: crate::TuiColor
+/// [`RgbValue::try_from_hex_color`]: crate::RgbValue::try_from_hex_color
 #[macro_export]
 macro_rules! tui_color {
     (medium_gray) => {
@@ -234,32 +237,35 @@ macro_rules! tui_color {
 /// Please use the macro [`crate::tui_color`!] to create a new [`TuiColor`] instances,
 /// instead of directly manipulating this struct.
 ///
-/// A [`TuiColor`] can be `RgbValue`, `AnsiValue`, or `ANSIBasicColor`.
+/// A [`TuiColor`] can be [`RgbValue`], [`AnsiValue`], or [`ANSIBasicColor`].
 /// - It is safe to use just `RgbValue` since the library will degrade gracefully to ANSI
-///   256 or grayscale based on terminal emulator capabilities at runtime, which are
-///   provided by
-///   [`to_crossterm_color()`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/terminal_lib_backends/color_converter/fn.to_crossterm_color.html)
-///   and
-///   [`ColorSupport`](https://docs.rs/r3bl_tui/latest/r3bl_tui/tui/color_wheel/detect_color_support/enum.ColorSupport.html).
-/// - If a color is specified as `AnsiValue` or `ANSIBasicColor` then it will not be
+///   256 or grayscale based on terminal emulator capabilities at runtime, as determined
+///   by [`ColorSupport`].
+/// - If a color is specified as [`AnsiValue`] or [`ANSIBasicColor`] then it will not be
 ///   downgraded.
+///
+/// [`TuiColor`]: crate::TuiColor
+/// [`RgbValue`]: crate::RgbValue
+/// [`AnsiValue`]: crate::AnsiValue
+/// [`ANSIBasicColor`]: crate::ANSIBasicColor
+/// [`ColorSupport`]: crate::ColorSupport
 #[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TuiColor {
     /// Resets the terminal color.
     Reset,
     /// ANSI 16 basic colors.
     Basic(ANSIBasicColor),
-    /// An RGB color. See [RGB color model](https://en.wikipedia.org/wiki/RGB_color_model) for more
-    /// info.
+    /// An RGB color. See [RGB color model] for more info.
     ///
-    /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
-    /// notes](enum.Color.html#platform-specific-notes) for more info.
+    /// Most UNIX terminals and Windows 10 supported only.
+    ///
+    /// [RGB color model]: https://en.wikipedia.org/wiki/RGB_color_model
     Rgb(RgbValue),
-    /// An ANSI color. See [256 colors - cheat sheet](https://jonasjacek.github.io/colors/) for more
-    /// info.
+    /// An ANSI color. See [256 colors - cheat sheet] for more info.
     ///
-    /// Most UNIX terminals and Windows 10 supported only. See [Platform-specific
-    /// notes](enum.Color.html#platform-specific-notes) for more info.
+    /// Most UNIX terminals and Windows 10 supported only.
+    ///
+    /// [256 colors - cheat sheet]: https://jonasjacek.github.io/colors/
     Ansi(AnsiValue),
 }
 
@@ -327,7 +333,62 @@ mod convenience_conversions {
     }
 
     impl From<AnsiValue> for TuiColor {
-        fn from(ansi_value: AnsiValue) -> Self { TuiColor::Ansi(ansi_value) }
+        /// Convert a [`AnsiValue`] (256-color palette index or SGR code) to [`TuiColor`].
+        ///
+        /// This implementation handles two cases:
+        ///
+        /// 1. **SGR Color Codes (0-107)**: Basic ANSI color codes that are converted to
+        ///    [`TuiColor::Basic`] variants for standard 16-color terminal support.
+        ///    - Standard colors: 30-37 (foreground), 40-47 (background)
+        ///    - Bright colors: 90-97 (bright foreground), 100-107 (bright background)
+        ///
+        /// 2. **Palette Indices (0-255)**: Other values are treated as 256-color palette
+        ///    indices and wrapped in [`TuiColor::Ansi`].
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// use r3bl_tui::{TuiColor, AnsiValue};
+        ///
+        /// // SGR code 31 (red foreground) → Basic red
+        /// let color = TuiColor::from(AnsiValue::new(31));
+        /// assert!(matches!(color, TuiColor::Basic(_)));
+        ///
+        /// // Palette index 196 (bright red in 256-color) → Ansi color
+        /// let color = TuiColor::from(AnsiValue::new(196));
+        /// assert!(matches!(color, TuiColor::Ansi(_)));
+        /// ```
+        ///
+        /// [`AnsiValue`]: crate::AnsiValue
+        /// [`TuiColor`]: crate::TuiColor
+        /// [`TuiColor::Basic`]: crate::TuiColor::Basic
+        /// [`TuiColor::Ansi`]: crate::TuiColor::Ansi
+        fn from(ansi_value: AnsiValue) -> Self {
+            match ansi_value.index {
+                // Standard foreground colors (30-37)
+                30 | 40 => TuiColor::Basic(ANSIBasicColor::Black),
+                31 | 41 => TuiColor::Basic(ANSIBasicColor::DarkRed),
+                32 | 42 => TuiColor::Basic(ANSIBasicColor::DarkGreen),
+                33 | 43 => TuiColor::Basic(ANSIBasicColor::DarkYellow),
+                34 | 44 => TuiColor::Basic(ANSIBasicColor::DarkBlue),
+                35 | 45 => TuiColor::Basic(ANSIBasicColor::DarkMagenta),
+                36 | 46 => TuiColor::Basic(ANSIBasicColor::DarkCyan),
+                37 | 47 => TuiColor::Basic(ANSIBasicColor::Gray),
+
+                // Bright colors (90-97, 100-107)
+                90 | 100 => TuiColor::Basic(ANSIBasicColor::DarkGray),
+                91 | 101 => TuiColor::Basic(ANSIBasicColor::Red),
+                92 | 102 => TuiColor::Basic(ANSIBasicColor::Green),
+                93 | 103 => TuiColor::Basic(ANSIBasicColor::Yellow),
+                94 | 104 => TuiColor::Basic(ANSIBasicColor::Blue),
+                95 | 105 => TuiColor::Basic(ANSIBasicColor::Magenta),
+                96 | 106 => TuiColor::Basic(ANSIBasicColor::Cyan),
+                97 | 107 => TuiColor::Basic(ANSIBasicColor::White),
+
+                // All other values: treat as 256-color palette indices
+                _ => TuiColor::Ansi(ansi_value),
+            }
+        }
     }
 }
 
@@ -515,6 +576,28 @@ mod ansi_value_impl_block {
         fn from(index: u8) -> Self { Self { index } }
     }
 
+    impl From<u16> for AnsiValue {
+        fn from(value: u16) -> Self {
+            debug_assert!(
+                value <= 255,
+                "AnsiValue must represent a valid 256-color palette index (0-255), got {}",
+                value
+            );
+            Self { index: value as u8 }
+        }
+    }
+
+    impl From<i32> for AnsiValue {
+        fn from(value: i32) -> Self {
+            debug_assert!(
+                value >= 0 && value <= 255,
+                "AnsiValue must represent a valid 256-color palette index (0-255), got {}",
+                value
+            );
+            Self { index: value as u8 }
+        }
+    }
+
     impl TransformColor for AnsiValue {
         fn as_grayscale(&self) -> AnsiValue {
             let index = self.index as usize;
@@ -551,10 +634,13 @@ mod construct {
 }
 
 /// This is useful when you want to mix and match the two crates. For example, you can use
-/// a nice color from `tui_color!(lizard_green)` and then convert it to an `ASTColor`
-/// using `ASTColor::from(tui_color)`. So you're no longer limited to the basic colors
-/// when using `ASTColor` in your code (which happens when generating colorized log
+/// a nice color from `tui_color!(lizard_green)` and then convert it to an [`ASTColor`]
+/// using [`ASTColor::from`]. So you're no longer limited to the basic colors
+/// when using [`ASTColor`] in your code (which happens when generating colorized log
 /// output).
+///
+/// [`ASTColor`]: crate::ASTColor
+/// [`ASTColor::from`]: crate::ASTColor::from
 mod convert_to_ast_color {
     use super::{ASTColor, RgbValue, TuiColor};
 
@@ -585,6 +671,8 @@ mod convert_to_ast_color {
 
 /// This is useful when you want to go between different variants of the [`TuiColor`]
 /// enum.
+///
+/// [`TuiColor`]: crate::TuiColor
 mod convert_between_variants {
     use super::{AnsiValue, RgbValue, TransformColor, TuiColor};
 
