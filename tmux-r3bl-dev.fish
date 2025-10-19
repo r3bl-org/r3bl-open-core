@@ -2,13 +2,12 @@
 
 # r3bl Development Tmux Session
 #
-# Purpose: Creates a 4-pane tmux session for r3bl development
+# Purpose: Creates a 3-pane tmux session for r3bl development
 #
-# Layout: 2x2 grid
-#   ├─ Top-left:    nextest
-#   ├─ Top-right:   doc
-#   ├─ Bottom-left: doctests
-#   └─ Bottom-right: watch
+# Layout: 2 top panes + 1 bottom spanning pane
+#   ├─ Top-left:    watch-doc
+#   ├─ Top-right:   watch-test
+#   └─ Bottom:      (empty)
 #
 # Usage: ./tmux-r3bl-dev.fish
 #
@@ -32,35 +31,29 @@ function main
         # Create a new session with first pane
         tmux new-session -d -s $SESSION_NAME
 
-        # Split window vertically (left and right)
+        # Split window vertically (top and bottom)
+        tmux split-window -v
+
+        # Explicitly select the top pane
+        tmux select-pane -t "$SESSION_NAME:0.0"
+
+        # Split top pane horizontally (top-left and top-right)
         tmux split-window -h
 
-        # Split left pane horizontally (top-left and bottom-left)
-        tmux split-window -v -t "$SESSION_NAME:0.0"
-
-        # Split bottom-left pane horizontally (middle-left and bottom-left)
-        tmux split-window -v -t "$SESSION_NAME:0.2"
-
-        # Now we have 4 panes:
+        # Now we have 3 panes:
         # 0.0 = top-left
         # 0.1 = top-right
-        # 0.2 = bottom-left
-        # 0.3 = bottom-right
+        # 0.2 = bottom (spanning full width)
 
         echo "Running commands in panes..."
 
-        # Top-left: nextest
-        run_in_pane "0.0" "cd ~/github/r3bl-open-core ; bacon nextest --headless"
+        # Top-left: watch-doc
+        run_in_pane "0.0" "cd ~/github/r3bl-open-core ; ./check.fish --watch-doc"
 
-        # Top-right: doc
-        run_in_pane "0.1" "cd ~/github/r3bl-open-core ; bacon doc --headless"
+        # Top-right: watch-test
+        run_in_pane "0.1" "cd ~/github/r3bl-open-core ; ./check.fish --watch-test"
 
-        # Bottom-left: doctests
-        run_in_pane "0.2" "cd ~/github/r3bl-open-core ; bacon doctests --headless"
-
-        # Bottom-right: watch
-        run_in_pane "0.3" "cd ~/github/r3bl-open-core ; ./check.fish --watch"
-        #run_in_pane "0.3" "cd ~/github/r3bl-open-core ; bacon --headless"
+        # Bottom: empty (no command)
 
         # Select the top-left pane as active
         tmux select-pane -t "$SESSION_NAME:0.0"

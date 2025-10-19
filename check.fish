@@ -88,7 +88,7 @@ set -g DEBOUNCE_SECONDS 5
 # ============================================================================
 
 # Parse command line arguments and return the mode
-# Returns: "help", "watch", or "normal"
+# Returns: "help", "watch", "watch-test", "watch-doc", or "normal"
 function parse_arguments
     if test (count $argv) -eq 0
         echo "normal"
@@ -101,6 +101,12 @@ function parse_arguments
             return 0
         case --watch -w
             echo "watch"
+            return 0
+        case --watch-test
+            echo "watch-test"
+            return 0
+        case --watch-doc
+            echo "watch-doc"
             return 0
         case '*'
             echo "❌ Unknown argument: $argv[1]" >&2
@@ -131,7 +137,9 @@ function show_help
     echo "USAGE:"
     set_color normal
     echo "  ./check.fish              Run checks once (default)"
-    echo "  ./check.fish --watch      Watch source files and run checks on changes"
+    echo "  ./check.fish --watch      Watch source files and run all checks on changes"
+    echo "  ./check.fish --watch-test Watch source files and run tests/doctests only"
+    echo "  ./check.fish --watch-doc  Watch source files and run doc build only"
     echo "  ./check.fish --help       Show this help message"
     echo ""
 
@@ -147,15 +155,21 @@ function show_help
     echo ""
 
     set_color yellow
-    echo "WATCH MODE:"
+    echo "WATCH MODES:"
     set_color normal
+    echo "  --watch       Runs all checks: nextest, doctests, docs"
+    echo "  --watch-test  Runs tests only: nextest + doctests (faster, for test iteration)"
+    echo "  --watch-doc   Runs doc build only (for doc iteration)"
+    echo ""
+    echo "  Common options for all watch modes:"
     echo "  Monitors: cmdr/src/, analytics_schema/src/, tui/src/"
     echo "  Debouncing: $DEBOUNCE_SECONDS seconds (prevents rapid re-runs)"
+    echo "  Toolchain: Validated once at startup, before watch loop begins"
     echo "  Behavior: Continues watching even if checks fail"
     echo "  Requirements: inotifywait (installed via bootstrap.sh)"
     echo ""
     echo "  Event Handling:"
-    echo "  • While tests run (30+ sec), new file changes are buffered by the kernel"
+    echo "  • While checks run (30+ sec), new file changes are buffered by the kernel"
     echo "  • When checks complete, buffered events trigger immediately (if debounce allows)"
     echo "  • Multiple saves during test runs may cause cascading re-runs"
     echo "  • Increase DEBOUNCE_SECONDS in script if this becomes disruptive"
@@ -185,8 +199,14 @@ function show_help
     echo "  # Run checks once"
     echo "  ./check.fish"
     echo ""
-    echo "  # Watch for changes and auto-run checks"
+    echo "  # Watch for changes and auto-run all checks"
     echo "  ./check.fish --watch"
+    echo ""
+    echo "  # Watch for changes and auto-run tests/doctests only (faster iteration)"
+    echo "  ./check.fish --watch-test"
+    echo ""
+    echo "  # Watch for changes and auto-run doc build only"
+    echo "  ./check.fish --watch-doc"
     echo ""
     echo "  # Show this help"
     echo "  ./check.fish --help"
@@ -198,7 +218,10 @@ end
 # ============================================================================
 
 # Watch source directories and run checks on file changes
+# Parameters: check_type - "full", "test", or "doc"
 function watch_mode
+    set -l check_type $argv[1]
+
     # Check for inotifywait
     if not command -v inotifywait >/dev/null 2>&1
         echo "❌ Error: inotifywait not found" >&2
@@ -231,13 +254,25 @@ function watch_mode
     echo "Press Ctrl+C to stop"
     echo ""
 
+    # Validate toolchain BEFORE entering watch loop
+    echo "🔧 Validating toolchain..."
+    ensure_toolchain_installed
+    set -l toolchain_status $status
+    if test $toolchain_status -eq 1
+        echo ""
+        echo "❌ Toolchain validation failed"
+        return 1
+    end
+
     # Track last run time for debouncing (epoch seconds)
     set -l last_run 0
 
     # Run initial check
+    echo ""
     echo "🚀 Running initial checks..."
     echo ""
-    run_full_check
+    run_checks_for_type $check_type
+    set -l initial_result $status
 
     echo ""
     set_color cyan
@@ -270,7 +305,7 @@ function watch_mode
         set_color normal
         echo ""
 
-        run_full_check
+        run_checks_for_type $check_type
 
         echo ""
         set_color cyan
@@ -280,19 +315,66 @@ function watch_mode
     end
 end
 
-# Helper function to run full check cycle (toolchain + checks)
-# This version shows progress indicators but silences cargo output for watch mode
-function run_full_check
-    # Validate toolchain
-    ensure_toolchain_installed
-    set -l toolchain_status $status
-    if test $toolchain_status -eq 1
-        echo ""
-        echo "❌ Toolchain validation failed"
-        return 1
-    end
+# Helper function to run checks based on type
+# Parameters: check_type - "full", "test", or "doc"
+function run_checks_for_type
+    set -l check_type $argv[1]
 
-    # Run checks with progress indicators (silent output)
+    switch $check_type
+        case "full"
+            run_nextest_checks
+            if test $status -ne 0
+                return 1
+            end
+            run_doctest_checks
+            if test $status -ne 0
+                return 1
+            end
+            run_doc_checks
+            if test $status -ne 0
+                return 1
+            end
+            echo ""
+            set_color green --bold
+            echo "✅ All checks passed!"
+            set_color normal
+            return 0
+
+        case "test"
+            run_nextest_checks
+            if test $status -ne 0
+                return 1
+            end
+            run_doctest_checks
+            if test $status -ne 0
+                return 1
+            end
+            echo ""
+            set_color green --bold
+            echo "✅ All test checks passed!"
+            set_color normal
+            return 0
+
+        case "doc"
+            run_doc_checks
+            if test $status -ne 0
+                return 1
+            end
+            echo ""
+            set_color green --bold
+            echo "✅ Doc checks passed!"
+            set_color normal
+            return 0
+
+        case '*'
+            echo "❌ Unknown check type: $check_type" >&2
+            return 1
+    end
+end
+
+# Run nextest checks (shows progress, silences cargo output)
+# Returns: 0 on success, 1 on failure
+function run_nextest_checks
     echo ""
     set_color cyan
     echo "▶️  Running nextest..."
@@ -306,7 +388,12 @@ function run_full_check
     set_color green
     echo "✅ Nextest passed"
     set_color normal
+    return 0
+end
 
+# Run doctest checks (shows progress, silences cargo output)
+# Returns: 0 on success, 1 on failure
+function run_doctest_checks
     echo ""
     set_color cyan
     echo "▶️  Running doctests..."
@@ -320,7 +407,12 @@ function run_full_check
     set_color green
     echo "✅ Doctests passed"
     set_color normal
+    return 0
+end
 
+# Run doc build checks (shows progress, silences cargo output)
+# Returns: 0 on success, 1 on failure
+function run_doc_checks
     echo ""
     set_color cyan
     echo "▶️  Building docs..."
@@ -333,11 +425,6 @@ function run_full_check
     end
     set_color green
     echo "✅ Docs built"
-    set_color normal
-
-    echo ""
-    set_color green --bold
-    echo "✅ All checks passed!"
     set_color normal
     return 0
 end
@@ -579,7 +666,13 @@ function main
             show_help
             return 0
         case watch
-            watch_mode
+            watch_mode "full"
+            return $status
+        case watch-test
+            watch_mode "test"
+            return $status
+        case watch-doc
+            watch_mode "doc"
             return $status
         case normal
             # Normal mode: run checks once
