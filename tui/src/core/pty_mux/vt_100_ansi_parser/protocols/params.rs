@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! Parameter parsing utilities for VT100-compliant escape sequences. See [`ParamsExt`]
-//! for details.
+//! and [`parse_cursor_position`] for details.
 
 use crate::{ColIndex, Index, RowIndex, TermCol, TermRow};
 use std::{cmp::max, num::NonZeroU16};
@@ -13,33 +13,45 @@ use std::{cmp::max, num::NonZeroU16};
 ///
 /// # VT100 Parameter Structure
 ///
-/// The [`vte::Params`] type captures parameters for a **single command**.
-/// Within one command, parameters can have different structures:
-/// - A parameter can contain a single value (sub-parameter) or an array of values
-///   (sub-parameters) separated by colons.
-/// - Parameters themselves are separated by semicolons. If there is a single value or
-///   sub-param, there are no colons.
-/// - Each parameter position is stored as a slice `[u16]` that can contain multiple
-///   values separated by colons.
-/// - **Even if the parameter has a single value, it is still stored as a single-element
-///   slice (of size 1).**
+/// The [`vte::Params`] type captures parameters for a **single command** (after it is
+/// parsed from the bytes emitted from the child process running in PTY-slave). We have no
+/// control over this. The following is an overview of how VT100 parameters are
+/// structured, which informs how the [`vte::Params`] type organizes them.
+///
+/// > <div class="warning">
+/// >
+/// > The following is confusing, which is why `ParamsExt` exists. It cleans up
+/// > this complexity for us, by using clear methods and type-safe return values.
+/// >
+/// > </div>
+///
+/// Semicolons are used to separate parameters from each other, and this is where
+/// "positions" come in to play.
 ///
 /// | Separator | Purpose                       | Access Pattern           |
 /// |-----------|-------------------------------|--------------------------|
 /// |    `;`    | Separate parameter positions  | By position index        |
 /// |    `:`    | Group related parameters      | All at once in one slice |
 ///
+/// At a given "position", each parameter can contain a "single" value (no sub-parameters)
+/// or "many" values (sub-parameters) separated by colons.
+///
+/// | At a given "position" | Separator  | Represented as `&[u16]` |
+/// |-----------------------|------------|-------------------------|
+/// | "single" value        | None       | One-item slice          |
+/// | "many" values         | Colon      | Multi-item slice        |
+///
 /// Here are some examples of how different escape sequences are parsed:
 ///
-/// |         | `ESC[5;10H]`                                                             | `ESC[38:5:196m`                                                        |
-/// |---------|--------------------------------------------------------------------------|------------------------------------------------------------------------|
-/// | `[u16]` | `[[5], [10]]` - 2 params, each with a single sub-param                   | `[[38, 5, 196]]` - 1 param with 3 sub-params                           |
-/// | Details | 2 "single" params separated by `;` each stored as a single-element slice | 1 param with 3 sub-params separated by `:` stored as a 3 element slice |
+/// | Command         | `&[u16]`         | Details                                                                  |
+/// |-----------------|------------------|--------------------------------------------------------------------------|
+/// | `ESC[5;10H]`    | `[[5], [10]]`    | 2 "single" params separated by `;` each stored as a single-element slice |
+/// | `ESC[38:5:196m` | `[[38, 5, 196]]` | 1 param with 3 sub-params separated by `:` stored as a 3 element slice |
 ///
 /// - The `extract_nth_single_*` methods extract the **primary value** (first element)
 ///   from each parameter slice using `.first()`, which is the standard behavior for most
 ///   VT100 commands.
-/// - In contrast, `extract_nth_all_raw` method returns the complete slice, supporting
+/// - In contrast, `extract_nth_many_raw` method returns the complete slice, supporting
 ///   complex sequences like extended colors that need all sub-parameters.
 ///
 /// # Usage Examples
@@ -79,20 +91,31 @@ use std::{cmp::max, num::NonZeroU16};
 ///   line" and `None` means "use viewport bound"
 /// - You need to detect out-of-bounds parameter positions (`None`)
 ///
+/// **Use [`extract_nth_many_raw`]** when:
+/// - You need all sub-parameters at a given position, not just the first value, without
+///   the “treat 0 as 1” transformation
+/// - Implementing extended color commands (`SGR m`) with 256-color or RGB syntax
+/// - Handling sequences where colon-separated sub-parameters carry distinct meaning
+/// - The complete slice contains essential information (e.g., `38:5:196` for color index
+///   196)
+///
 /// # Parameter Handling Rules
 ///
 /// | Method                        | Missing Param   | Zero Param     | Non-Zero Param | Out-of-Bounds | Complex Param     |
 /// |-------------------------------|-----------------|----------------|----------------|---------------|-------------------|
-/// | `extract_nth_single_non_zero` | 1               | 1              | n              | 1             | first value       |
+/// | `extract_nth_single_non_zero` | 1               | 1              | n              | 1 ✎✎          | first value       |
 /// | `extract_nth_single_opt_raw`  | `Some(0)` ✎     | `Some(0)` ✎    | `Some(n)`      | `None`        | first value       |
-/// | `extract_nth_all_raw`         | `Some(&[0])` ✎  | `Some(&[0])` ✎ | `Some(&[n])`   | `None`        | `Some(&[...all])` |
+/// | `extract_nth_many_raw`        | `Some(&[0])` ✎  | `Some(&[0])` ✎ | `Some(&[n])`   | `None`        | `Some(&[...all])` |
 ///
-/// ✎ VTE cannot distinguish missing parameters from explicit zeros - both produce `0`.
+/// - ✎ VTE cannot distinguish missing parameters from explicit zeros - both produce `0`.
+/// - ✎✎ Out-of-bounds is treated as a missing parameter (defaults to 1) per VT100 spec.
+///   Use [`extract_nth_single_opt_raw`] if you need to distinguish missing from
+///   out-of-bounds.
 ///
 /// # Working Example
 ///
 /// The following example demonstrates parsing a 256-color escape sequence through the VTE
-/// parser and extracting its parameters using [`extract_nth_all_raw`]:
+/// parser and extracting its parameters using [`extract_nth_many_raw`]:
 ///
 /// ```rust
 /// # // Doc test for VT100 parameter parsing workflow
@@ -107,7 +130,7 @@ use std::{cmp::max, num::NonZeroU16};
 /// # impl Perform for TestPerform {
 /// #     fn csi_dispatch(&mut self, params: &vte::Params, _: &[u8], _: bool, _: char) {
 /// #         // Extract all sub-parameters from first position
-/// #         self.result = params.extract_nth_all_raw(0).map(|s| s.to_vec());
+/// #         self.result = params.extract_nth_many_raw(0).map(|s| s.to_vec());
 /// #     }
 /// #     fn print(&mut self, _: char) {}
 /// #     fn execute(&mut self, _: u8) {}
@@ -126,7 +149,7 @@ use std::{cmp::max, num::NonZeroU16};
 ///     parser.advance(&mut performer, *byte);
 /// }
 ///
-/// // extract_nth_all_raw returns the complete sub-parameter slice
+/// // extract_nth_many_raw returns the complete sub-parameter slice
 /// assert_eq!(performer.result, Some(vec![38, 5, 196]));
 ///
 /// // In a real CSI handler, you would pattern match:
@@ -164,11 +187,42 @@ use std::{cmp::max, num::NonZeroU16};
 /// changes in a future version, the tests will immediately catch the discrepancy,
 /// alerting us that our documentation and implementation assumptions need updating.
 ///
+/// # Related High-Level Parsers
+///
+/// While [`ParamsExt`] provides low-level parameter **extraction**, there are
+/// higher-level parsing functions that use these primitives to implement **semantic
+/// interpretation** for specific VT100 commands. These are distinct layers:
+///
+/// | Layer                              | Responsibility                                    | Example                            |
+/// |------------------------------------|---------------------------------------------------|------------------------------------|
+/// | **Extraction** (this trait)        | "How do I get raw parameter values?"              | [`extract_nth_single_non_zero(0)`] |
+/// | **Parsing** (standalone functions) | "What do these parameters mean for this command?" | [`parse_cursor_position()`]        |
+///
+/// ## Available Parsers
+///
+/// - [`parse_cursor_position()`] - Convert VT100 cursor position parameters (`ESC[5;10H`)
+///   to 0-based buffer coordinates ([`RowIndex(4)`], [`ColIndex(9)`])
+///
+/// ## Design Rationale
+///
+/// Parsers are intentionally **not** trait methods because:
+///
+/// 1. **Separation of concerns** - Each parser handles domain-specific logic (type
+///    conversion, bounds checking, VT100-spec interpretation)
+/// 2. **Scalability** - New parsers for other commands (`parse_sgr_attributes`,
+///    `parse_erase_region`, etc.) don't require trait modifications
+/// 3. **Composability** - Parsers can be used independently or combined
+/// 4. **Testability** - Each parser can be tested in isolation
+///
 /// [`extract_nth_single_non_zero`]: Self::extract_nth_single_non_zero
 /// [`extract_nth_single_opt_raw`]: Self::extract_nth_single_opt_raw
-/// [`extract_nth_all_raw`]: Self::extract_nth_all_raw
+/// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
 /// [`vte_params_behavior_validation`]: vte_params_behavior_validation
 /// [`vte::Params`]: vte::Params
+/// [`parse_cursor_position()`]: parse_cursor_position
+/// [`extract_nth_single_non_zero(0)`]: Self::extract_nth_single_non_zero
+/// [`RowIndex(4)`]: crate::RowIndex
+/// [`ColIndex(9)`]: crate::ColIndex
 pub trait ParamsExt {
     /// Extract the nth parameter (0-based) with VT100-compliant default handling.
     ///
@@ -178,14 +232,21 @@ pub trait ParamsExt {
     ///
     /// This method extracts only the **first** sub-parameter value (for simple
     /// parameters). For complex sequences with multiple sub-parameters, use
-    /// [`extract_nth_all_raw`].
-    ///
-    /// Missing or zero parameters default to 1, ensuring VT100 compatibility.
+    /// [`extract_nth_many_raw`].
     ///
     /// # Returns
     /// [`NonZeroU16`] - Always returns a value `>= 1` per VT100 specification.
     ///
-    /// [`extract_nth_all_raw`]: Self::extract_nth_all_raw
+    /// > <div class="warning">
+    /// >
+    /// > Missing or zero parameters default to 1, ensuring VT100 compatibility.
+    /// > Out-of-bounds parameter positions are also treated as missing and default to 1.
+    /// > If you need to distinguish between missing and out-of-bounds, use
+    /// > [`extract_nth_single_opt_raw`].
+    /// >
+    /// > </div>
+    ///
+    /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
     /// [`extract_nth_single_opt_raw`]: Self::extract_nth_single_opt_raw
     /// [VT100 Parameter Structure section]: ParamsExt#vt100-parameter-structure
     fn extract_nth_single_non_zero(&self, arg_nth_pos: impl Into<Index>) -> NonZeroU16;
@@ -198,18 +259,25 @@ pub trait ParamsExt {
     ///
     /// This method extracts only the **first** sub-parameter value (for simple
     /// parameters). For complex sequences with multiple sub-parameters, use
-    /// [`extract_nth_all_raw`].
+    /// [`extract_nth_many_raw`].
     ///
-    /// Returns the raw parameter value without VT100's "treat 0 as 1" logic.
-    /// **Note**: VTE normalizes missing parameters to `0`, so `ESC[A` and `ESC[0A`
-    /// both return `Some(0)`.
     ///
     /// # Returns
+    ///
+    /// The raw parameter value without VT100's "treat 0 as 1" logic.
+    ///
     /// - [`None`] if index n is out of bounds (position doesn't exist)
     /// - [`Some(value)`] if position n exists (value may be 0 for missing/zero params)
     ///
+    /// > <div class="warning">
+    /// >
+    /// > VTE normalizes missing parameters to `0`, so `ESC[A` and `ESC[0A`
+    /// > both return `Some(0)`.
+    /// >
+    /// > </div>
+    ///
     /// [`Some(value)`]: Option::Some
-    /// [`extract_nth_all_raw`]: Self::extract_nth_all_raw
+    /// [`extract_nth_many_raw`]: Self::extract_nth_many_raw
     /// [`extract_nth_single_non_zero`]: Self::extract_nth_single_non_zero
     /// [VT100 Parameter Structure section]: ParamsExt#vt100-parameter-structure
     fn extract_nth_single_opt_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<u16>;
@@ -217,7 +285,7 @@ pub trait ParamsExt {
     /// Extract all (variable number of) sub-parameters at position n as a slice.
     ///
     /// See the [VT100 Parameter Structure section] and
-    /// [Working Example section][working-example] at the trait level for comprehensive
+    /// [Working Example section] at the trait level for comprehensive
     /// documentation on parameter structure, examples with real escape sequences, and use
     /// cases for handling semicolon vs colon-separated formats.
     ///
@@ -235,13 +303,13 @@ pub trait ParamsExt {
     ///
     /// # Returns
     /// - [`None`] if no parameter exists at index n
-    /// - [`Some(&[u16])`] - A reference to the sub-parameter slice (zero-copy, no
+    /// - [`Some(slice)`] - A reference to the sub-parameter slice (zero-copy, no
     ///   allocation)
     ///
-    /// [`Some`]: Option::Some
     /// [VT100 Parameter Structure section]: ParamsExt#vt100-parameter-structure
-    /// [working-example]: ParamsExt#working-example
-    fn extract_nth_all_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]>;
+    /// [Working Example section]: ParamsExt#working-example
+    /// [`Some(slice)`]: Option::Some
+    fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]>;
 }
 
 impl ParamsExt for vte::Params {
@@ -270,7 +338,7 @@ impl ParamsExt for vte::Params {
             .copied()
     }
 
-    fn extract_nth_all_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]> {
+    fn extract_nth_many_raw(&self, arg_nth_pos: impl Into<Index>) -> Option<&[u16]> {
         let nth_pos: Index = arg_nth_pos.into();
         self.iter().nth(nth_pos.as_usize())
     }
@@ -318,7 +386,7 @@ pub fn parse_cursor_position(params: &vte::Params) -> (RowIndex, ColIndex) {
 ///
 /// The [`ParamsExt`] methods are thoroughly tested through integration tests in separate
 /// test modules:
-/// - [`extract_nth_all_tests`] - Tests `extract_nth_all_raw()` with various parameter
+/// - [`extract_nth_all_tests`] - Tests `extract_nth_many_raw()` with various parameter
 ///   formats
 /// - [`vte_params_behavior_validation`] - Validates VTE parser behavior assumptions
 /// - `parse_cursor_position` tests validate cursor position parameter parsing
@@ -453,7 +521,7 @@ pub mod vte_params_behavior_validation {
     fn test_vte_behavior_missing_param_all() {
         // ASSUMPTION: VTE normalizes missing parameters to [0]
         process_csi_sequence_and_test("\x1b[A", |params| {
-            let result = params.extract_nth_all_raw(0);
+            let result = params.extract_nth_many_raw(0);
             assert_eq!(
                 result,
                 Some(&[0][..]),
@@ -468,7 +536,7 @@ pub mod vte_params_behavior_validation {
         // ESC[m (SGR reset with missing parameter)
         process_csi_sequence_and_test("\x1b[m", |params| {
             assert_eq!(params.extract_nth_single_opt_raw(0), Some(0));
-            assert_eq!(params.extract_nth_all_raw(0), Some(&[0][..]));
+            assert_eq!(params.extract_nth_many_raw(0), Some(&[0][..]));
         });
     }
 
@@ -494,7 +562,7 @@ pub mod vte_params_behavior_validation {
     fn test_vte_behavior_explicit_zero_all() {
         // ASSUMPTION: Explicit zero parameters are represented as [0]
         process_csi_sequence_and_test("\x1b[0A", |params| {
-            let result = params.extract_nth_all_raw(0);
+            let result = params.extract_nth_many_raw(0);
             assert_eq!(
                 result,
                 Some(&[0][..]),
@@ -509,7 +577,7 @@ pub mod vte_params_behavior_validation {
         // ESC[0m (SGR reset with explicit 0)
         process_csi_sequence_and_test("\x1b[0m", |params| {
             assert_eq!(params.extract_nth_single_opt_raw(0), Some(0));
-            assert_eq!(params.extract_nth_all_raw(0), Some(&[0][..]));
+            assert_eq!(params.extract_nth_many_raw(0), Some(&[0][..]));
         });
     }
 
@@ -533,14 +601,14 @@ pub mod vte_params_behavior_validation {
         process_csi_sequence_and_test("\x1b[A", |params| {
             *missing_result_opt_raw.borrow_mut() = params.extract_nth_single_opt_raw(0);
             *missing_result_all.borrow_mut() =
-                params.extract_nth_all_raw(0).map(<[u16]>::to_vec);
+                params.extract_nth_many_raw(0).map(<[u16]>::to_vec);
         });
 
         // Explicit zero
         process_csi_sequence_and_test("\x1b[0A", |params| {
             *explicit_result_opt_raw.borrow_mut() = params.extract_nth_single_opt_raw(0);
             *explicit_result_all.borrow_mut() =
-                params.extract_nth_all_raw(0).map(<[u16]>::to_vec);
+                params.extract_nth_many_raw(0).map(<[u16]>::to_vec);
         });
 
         // They MUST be identical
@@ -577,7 +645,7 @@ pub mod vte_params_behavior_validation {
     fn test_vte_behavior_out_of_bounds_all() {
         // ASSUMPTION: Accessing position that doesn't exist returns None
         process_csi_sequence_and_test("\x1b[5A", |params| {
-            let result = params.extract_nth_all_raw(1);
+            let result = params.extract_nth_many_raw(1);
             assert_eq!(
                 result, None,
                 "VTE should return None for out-of-bounds access"
@@ -590,7 +658,7 @@ pub mod vte_params_behavior_validation {
         // ASSUMPTION: Even far out-of-bounds indices return None (not panic)
         process_csi_sequence_and_test("\x1b[5A", |params| {
             assert_eq!(params.extract_nth_single_opt_raw(10), None);
-            assert_eq!(params.extract_nth_all_raw(10), None);
+            assert_eq!(params.extract_nth_many_raw(10), None);
         });
     }
 
@@ -601,11 +669,11 @@ pub mod vte_params_behavior_validation {
         process_csi_sequence_and_test("\x1b[A", |params| {
             // Position 0 exists (as [0])
             assert_eq!(params.extract_nth_single_opt_raw(0), Some(0));
-            assert_eq!(params.extract_nth_all_raw(0), Some(&[0][..]));
+            assert_eq!(params.extract_nth_many_raw(0), Some(&[0][..]));
 
             // Position 1 doesn't exist
             assert_eq!(params.extract_nth_single_opt_raw(1), None);
-            assert_eq!(params.extract_nth_all_raw(1), None);
+            assert_eq!(params.extract_nth_many_raw(1), None);
         });
     }
 
@@ -622,9 +690,9 @@ pub mod vte_params_behavior_validation {
             assert_eq!(params.extract_nth_single_opt_raw(1), Some(10));
             assert_eq!(params.extract_nth_single_opt_raw(2), None); // Out of bounds
 
-            assert_eq!(params.extract_nth_all_raw(0), Some(&[5][..]));
-            assert_eq!(params.extract_nth_all_raw(1), Some(&[10][..]));
-            assert_eq!(params.extract_nth_all_raw(2), None); // Out of bounds
+            assert_eq!(params.extract_nth_many_raw(0), Some(&[5][..]));
+            assert_eq!(params.extract_nth_many_raw(1), Some(&[10][..]));
+            assert_eq!(params.extract_nth_many_raw(2), None); // Out of bounds
         });
     }
 
@@ -649,7 +717,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_simple_parameter() {
         process_csi_sequence_and_test("\x1b[5A", |params| {
             // Simple parameter: [[5]]
-            let result = params.extract_nth_all_raw(0);
+            let result = params.extract_nth_many_raw(0);
             assert_eq!(result, Some(&[5][..]));
         });
     }
@@ -658,7 +726,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_colon_separated() {
         process_csi_sequence_and_test("\x1b[38:5:196m", |params| {
             // Colon format groups sub-parameters: [[38, 5, 196]]
-            let result = params.extract_nth_all_raw(0);
+            let result = params.extract_nth_many_raw(0);
             assert_eq!(result, Some(&[38, 5, 196][..]));
         });
     }
@@ -667,9 +735,9 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_semicolon_separated() {
         process_csi_sequence_and_test("\x1b[38;5;196m", |params| {
             // Semicolon format creates separate positions: [[38], [5], [196]]
-            assert_eq!(params.extract_nth_all_raw(0), Some(&[38][..]));
-            assert_eq!(params.extract_nth_all_raw(1), Some(&[5][..]));
-            assert_eq!(params.extract_nth_all_raw(2), Some(&[196][..]));
+            assert_eq!(params.extract_nth_many_raw(0), Some(&[38][..]));
+            assert_eq!(params.extract_nth_many_raw(1), Some(&[5][..]));
+            assert_eq!(params.extract_nth_many_raw(2), Some(&[196][..]));
         });
     }
 
@@ -677,7 +745,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_rgb_color() {
         process_csi_sequence_and_test("\x1b[38:2:255:128:0m", |params| {
             // RGB color: [[38, 2, 255, 128, 0]]
-            let result = params.extract_nth_all_raw(0);
+            let result = params.extract_nth_many_raw(0);
             assert_eq!(result, Some(&[38, 2, 255, 128, 0][..]));
         });
     }
@@ -686,9 +754,9 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_mixed_sequence() {
         process_csi_sequence_and_test("\x1b[1;31;38:5:196m", |params| {
             // Mixed: [[1], [31], [38, 5, 196]]
-            assert_eq!(params.extract_nth_all_raw(0), Some(&[1][..]));
-            assert_eq!(params.extract_nth_all_raw(1), Some(&[31][..]));
-            assert_eq!(params.extract_nth_all_raw(2), Some(&[38, 5, 196][..]));
+            assert_eq!(params.extract_nth_many_raw(0), Some(&[1][..]));
+            assert_eq!(params.extract_nth_many_raw(1), Some(&[31][..]));
+            assert_eq!(params.extract_nth_many_raw(2), Some(&[38, 5, 196][..]));
         });
     }
 
@@ -696,7 +764,7 @@ mod extract_nth_all_tests {
     fn test_extract_nth_all_out_of_bounds() {
         process_csi_sequence_and_test("\x1b[5A", |params| {
             // Only one parameter, index 1 doesn't exist
-            assert_eq!(params.extract_nth_all_raw(1), None);
+            assert_eq!(params.extract_nth_many_raw(1), None);
         });
     }
 
@@ -705,7 +773,7 @@ mod extract_nth_all_tests {
         process_csi_sequence_and_test("\x1b[A", |params| {
             // Missing parameter - VTE represents this as [0]
             // This is consistent with VT100 spec where missing params often default to 0
-            let result = params.extract_nth_all_raw(0);
+            let result = params.extract_nth_many_raw(0);
             assert_eq!(result, Some(&[0][..]));
         });
     }

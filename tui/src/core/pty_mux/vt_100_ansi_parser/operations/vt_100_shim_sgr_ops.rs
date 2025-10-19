@@ -198,7 +198,7 @@ fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
 /// - RGB true color (ESC[38:2:r:g:bm or ESC[48:2:r:g:bm)
 pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Params) {
     let mut idx = 0;
-    while let Some(param_slice) = params.extract_nth_all_raw(idx) {
+    while let Some(param_slice) = params.extract_nth_many_raw(idx) {
         // Check for extended color sequences first (they consume multiple positions).
         if let Some(color_seq) =
             csi_codes::ExtendedColorSequence::parse_from_slice(param_slice)

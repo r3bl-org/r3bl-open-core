@@ -41,7 +41,7 @@
 //!
 //! The [`ExtendedColorSequence`] enum provides type-safe parsing of color parameters,
 //! ensuring that only valid color values are created. It works with the [`ParamsExt`]
-//! trait's [`extract_nth_all_raw()`] method to access the complete parameter slice.
+//! trait's [`extract_nth_many_raw()`] method to access the complete parameter slice.
 //!
 //! # Examples
 //!
@@ -72,7 +72,7 @@
 //! ```
 //!
 //! [`ParamsExt`]: crate::ParamsExt
-//! [`extract_nth_all_raw()`]: crate::ParamsExt::extract_nth_all_raw
+//! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
 
 use super::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
                        SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
@@ -159,54 +159,34 @@ pub enum ExtendedColorSequence {
 impl ExtendedColorSequence {
     /// Parse extended color sequence from a parameter slice.
     ///
-    /// This method parses both colon-separated and semicolon-separated formats,
-    /// directly returning the appropriate color operation variant.
-    ///
-    /// # Supported Formats
-    ///
-    /// **256-color:**
-    /// - `[38, 5, n]` → `SetForegroundAnsi256(n)` - Foreground, palette index n (0-255)
-    /// - `[48, 5, n]` → `SetBackgroundAnsi256(n)` - Background, palette index n (0-255)
-    ///
-    /// **RGB color:**
-    /// - `[38, 2, r, g, b]` → `SetForegroundRgb(r, g, b)` - Foreground RGB
-    /// - `[48, 2, r, g, b]` → `SetBackgroundRgb(r, g, b)` - Background RGB
+    /// Parses both colon-separated and semicolon-separated formats, returning
+    /// the appropriate color operation variant. See the module documentation for
+    /// comprehensive format details and usage examples.
     ///
     /// # Parameters
     ///
-    /// - `params`: The parameter slice from [`extract_nth_all_raw()`]
+    /// - `params`: The parameter slice from [`extract_nth_many_raw()`]
     ///
     /// # Returns
     ///
     /// - `Some(ExtendedColorSequence)` - Successfully parsed color operation
     /// - `None` - Invalid or unrecognized sequence
     ///
-    /// # Validation
-    ///
-    /// The method performs strict validation:
-    /// - 256-color indices must be ≤ 255
-    /// - RGB component values must be ≤ 255
-    /// - Invalid sequences (wrong mode, out-of-range values) return `None`
-    ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use r3bl_tui::ExtendedColorSequence;
     ///
-    /// // Valid 256-color foreground
+    /// // 256-color foreground: [38, 5, 196]
     /// let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 196]);
     /// assert_eq!(result, Some(ExtendedColorSequence::SetForegroundAnsi256(196)));
     ///
-    /// // Invalid: index out of range
-    /// let result = ExtendedColorSequence::parse_from_slice(&[38, 5, 256]);
-    /// assert!(result.is_none());
-    ///
-    /// // Valid RGB background
+    /// // RGB background: [48, 2, r, g, b]
     /// let result = ExtendedColorSequence::parse_from_slice(&[48, 2, 255, 128, 0]);
     /// assert_eq!(result, Some(ExtendedColorSequence::SetBackgroundRgb(255, 128, 0)));
     /// ```
     ///
-    /// [`extract_nth_all_raw()`]: crate::ParamsExt::extract_nth_all_raw
+    /// [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
     #[must_use]
     #[allow(clippy::cast_possible_truncation)] // Values are validated <= 255 in guards
     pub fn parse_from_slice(params: &[u16]) -> Option<Self> {
