@@ -306,6 +306,13 @@ function watch_mode
         echo ""
 
         run_checks_for_type $check_type
+        set -l result $status
+
+        # Handle ICE detected (status 2)
+        if test $result -eq 2
+            cleanup_after_ice
+            # Note: cleanup_after_ice will trigger another check, continuing naturally
+        end
 
         echo ""
         set_color cyan
@@ -317,38 +324,47 @@ end
 
 # Helper function to run checks based on type
 # Parameters: check_type - "full", "test", or "doc"
+# Returns: 0 = success, 1 = failure, 2 = ICE detected (triggers cleanup in watch loop)
 function run_checks_for_type
     set -l check_type $argv[1]
 
     switch $check_type
         case "full"
-            run_nextest_checks
-            if test $status -ne 0
-                return 1
+            # Full checks: all three
+            run_all_checks_with_recovery
+            set -l result $status
+
+            if test $result -eq 2
+                # ICE detected - let caller (watch loop) handle cleanup
+                return 2
             end
-            run_doctest_checks
-            if test $status -ne 0
-                return 1
+
+            if test $result -eq 0
+                echo ""
+                set_color green --bold
+                echo "✅ All checks passed!"
+                set_color normal
             end
-            run_doc_checks
-            if test $status -ne 0
-                return 1
-            end
-            echo ""
-            set_color green --bold
-            echo "✅ All checks passed!"
-            set_color normal
-            return 0
+            return $result
 
         case "test"
-            run_nextest_checks
+            # Test checks: nextest + doctests only
+            run_check_with_recovery check_nextest "nextest"
+            if test $status -eq 2
+                return 2  # ICE detected
+            end
             if test $status -ne 0
                 return 1
             end
-            run_doctest_checks
+
+            run_check_with_recovery check_doctests "doctests"
+            if test $status -eq 2
+                return 2  # ICE detected
+            end
             if test $status -ne 0
                 return 1
             end
+
             echo ""
             set_color green --bold
             echo "✅ All test checks passed!"
@@ -356,15 +372,22 @@ function run_checks_for_type
             return 0
 
         case "doc"
-            run_doc_checks
-            if test $status -ne 0
-                return 1
+            # Doc checks only
+            run_check_with_recovery check_docs "docs"
+            set -l result $status
+
+            if test $result -eq 2
+                # ICE detected - let caller (watch loop) handle cleanup
+                return 2
             end
-            echo ""
-            set_color green --bold
-            echo "✅ Doc checks passed!"
-            set_color normal
-            return 0
+
+            if test $result -eq 0
+                echo ""
+                set_color green --bold
+                echo "✅ Doc checks passed!"
+                set_color normal
+            end
+            return $result
 
         case '*'
             echo "❌ Unknown check type: $check_type" >&2
@@ -372,62 +395,153 @@ function run_checks_for_type
     end
 end
 
-# Run nextest checks (shows progress, silences cargo output)
-# Returns: 0 on success, 1 on failure
-function run_nextest_checks
+# ============================================================================
+# Level 1: Pure Check Functions
+# ============================================================================
+# These functions just run the command and return status code
+# They do NOT handle output formatting or ICE detection
+
+function check_nextest
+    cargo nextest run --all-targets
+end
+
+function check_doctests
+    cargo test --doc
+end
+
+function check_docs
+    cargo doc --no-deps
+end
+
+# ============================================================================
+# Level 2: ICE-Aware Wrapper Function
+# ============================================================================
+# Generic wrapper that handles output, formatting, and ICE detection
+# Can wrap ANY check function and apply consistent error handling
+#
+# Parameters:
+#   $argv[1]: Function name to wrap (e.g., "check_nextest")
+#   $argv[2]: Display label (e.g., "nextest")
+#
+# Returns:
+#   0 = Success
+#   1 = Failure (not ICE)
+#   2 = ICE detected
+function run_check_with_recovery
+    set -l check_func $argv[1]
+    set -l check_name $argv[2]
+
     echo ""
     set_color cyan
-    echo "▶️  Running nextest..."
+    echo "▶️  Running $check_name..."
     set_color normal
-    if not cargo nextest run --all-targets >/dev/null 2>&1
-        set_color red
-        echo "❌ Tests failed"
+
+    # Run and capture output for ICE detection
+    set -l output ($check_func 2>&1)
+    set -l exit_code $status
+
+    if test $exit_code -eq 0
+        set_color green
+        echo "✅ $check_name passed"
         set_color normal
+        return 0
+    end
+
+    # Check for ICE - the KEY centralized detection point
+    if detect_ice $exit_code $output
+        set_color red
+        echo "🧊 ICE detected"
+        set_color normal
+        return 2
+    end
+
+    # Regular failure (not ICE)
+    set_color red
+    echo "❌ $check_name failed"
+    set_color normal
+    return 1
+end
+
+# ============================================================================
+# Level 3: Orchestrator Function
+# ============================================================================
+# Composes multiple Level 2 wrappers
+# Aggregates results: ICE > Failure > Success
+#
+# Returns:
+#   0 = All checks passed
+#   1 = At least one check failed (not ICE)
+#   2 = At least one check had ICE
+function run_all_checks_with_recovery
+    set -l result_nextest 0
+    set -l result_doctest 0
+    set -l result_docs 0
+
+    run_check_with_recovery check_nextest "nextest"
+    set result_nextest $status
+
+    run_check_with_recovery check_doctests "doctests"
+    set result_doctest $status
+
+    run_check_with_recovery check_docs "docs"
+    set result_docs $status
+
+    # Aggregate: return 2 if ANY ICE, then 1 if ANY failure, else 0
+    if test $result_nextest -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
+        return 2
+    end
+
+    if test $result_nextest -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0
         return 1
     end
-    set_color green
-    echo "✅ Nextest passed"
-    set_color normal
+
     return 0
 end
 
-# Run doctest checks (shows progress, silences cargo output)
-# Returns: 0 on success, 1 on failure
-function run_doctest_checks
-    echo ""
-    set_color cyan
-    echo "▶️  Running doctests..."
-    set_color normal
-    if not cargo test --doc >/dev/null 2>&1
-        set_color red
-        echo "❌ Doctests failed"
-        set_color normal
-        return 1
+# ============================================================================
+# Level 4: Top-Level Recovery Function
+# ============================================================================
+# Handles ICE recovery with automatic cleanup and retry
+# Single entry point for both normal and watch modes
+#
+# Returns:
+#   0 = All checks passed
+#   1 = Checks failed
+function run_checks_with_ice_recovery
+    set -l max_retries 1
+    set -l retry_count 0
+
+    while test $retry_count -le $max_retries
+        run_all_checks_with_recovery
+        set -l result $status
+
+        # If not ICE, we're done
+        if test $result -ne 2
+            echo ""
+            if test $result -eq 0
+                set_color green --bold
+                echo "✅ All checks passed!"
+                set_color normal
+            else
+                set_color red --bold
+                echo "❌ Checks failed"
+                set_color normal
+            end
+            return $result
+        end
+
+        # ICE detected - cleanup and retry
+        cleanup_after_ice
+        set retry_count (math $retry_count + 1)
     end
-    set_color green
-    echo "✅ Doctests passed"
+
+    echo ""
+    set_color red --bold
+    echo "❌ Failed even after ICE recovery"
     set_color normal
-    return 0
+    return 1
 end
 
-# Run doc build checks (shows progress, silences cargo output)
-# Returns: 0 on success, 1 on failure
-function run_doc_checks
-    echo ""
-    set_color cyan
-    echo "▶️  Building docs..."
-    set_color normal
-    if not cargo doc --no-deps >/dev/null 2>&1
-        set_color red
-        echo "❌ Doc build failed"
-        set_color normal
-        return 1
-    end
-    set_color green
-    echo "✅ Docs built"
-    set_color normal
-    return 0
-end
 
 # ============================================================================
 # Toolchain Validation Functions
@@ -590,62 +704,13 @@ function cleanup_after_ice
     echo ""
 end
 
-# Main check function
+# Deprecated: run_checks
+# REFACTORED into composable architecture
+# Use run_checks_with_ice_recovery instead
+# Kept for backward compatibility only
 function run_checks
-    set -l failures
-
-    # Run nextest
-    set -l nextest_output (cargo nextest run --all-targets 2>&1)
-    set -l nextest_status $status
-    if test $nextest_status -ne 0
-        if detect_ice $nextest_status $nextest_output
-            return 2  # ICE detected
-        end
-        set -l failed_count (parse_nextest_failures $nextest_output)
-        set -a failures "tests: $failed_count failed 😢"
-    end
-
-    # Run doctests
-    set -l doctest_output (cargo test --doc 2>&1)
-    set -l doctest_status $status
-    if test $doctest_status -ne 0
-        if detect_ice $doctest_status $doctest_output
-            return 2  # ICE detected
-        end
-        set -l failed_count (parse_doctest_failures $doctest_output)
-        set -a failures "doctests: $failed_count failed 😢"
-    end
-
-    # Run doc build
-    set -l doc_output (cargo doc --no-deps 2>&1)
-    set -l doc_status $status
-    if test $doc_status -ne 0
-        if detect_ice $doc_status $doc_output
-            return 2  # ICE detected
-        end
-        # Check for warnings/errors in failed build
-        if parse_doc_warnings_errors $doc_output >/dev/null
-            set -l warning_error_counts (parse_doc_warnings_errors $doc_output)
-            set -a failures "build: $warning_error_counts 😢"
-        else
-            set -a failures "build: failed 😢"
-        end
-    else
-        # Even on success, check for warnings
-        if parse_doc_warnings_errors $doc_output >/dev/null
-            set -l warning_error_counts (parse_doc_warnings_errors $doc_output)
-            set -a failures "docs: $warning_error_counts ⚠️"
-        end
-    end
-
-    # Return results
-    if test (count $failures) -eq 0
-        echo "✅ OK!"
-        return 0
-    else
-        echo (string join ", " $failures)
-        return 1
-    end
+    echo "⚠️  run_checks is deprecated. Use run_checks_with_ice_recovery" >&2
+    run_checks_with_ice_recovery
 end
 
 # ============================================================================
@@ -689,19 +754,10 @@ function main
             # toolchain_status can be 0 (OK) or 2 (was reinstalled, already printed message)
             echo ""
             echo "🚀 Running checks..."
-            echo ""
 
-            run_checks
-            set -l result $status
-
-            if test $result -eq 2
-                # ICE detected, cleanup and retry once
-                cleanup_after_ice
-                run_checks
-                set result $status
-            end
-
-            return $result
+            # Use new composable architecture with automatic ICE recovery
+            run_checks_with_ice_recovery
+            return $status
     end
 end
 
