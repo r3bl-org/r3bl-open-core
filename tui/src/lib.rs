@@ -1659,6 +1659,9 @@
 // allowed to use .unwrap() (workspace `Cargo.toml` config allows it). The cfg_attr
 // ensures test code within the library can also use .unwrap() freely.
 #![cfg_attr(not(test), deny(clippy::unwrap_in_result))]
+// Allow large stack arrays in test code - buffers like DEFAULT_READ_BUFFER_SIZE (16384
+// bytes) are intentional and necessary for I/O operations.
+#![cfg_attr(test, allow(clippy::large_stack_arrays))]
 
 // Attach.
 pub mod core;

@@ -1,8 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ASTColor, AnsiValue, RgbValue, TransformColor,
-            common::{CommonError, CommonErrorType, CommonResult},
-            convert_rgb_into_ansi256};
+use crate::{ASTColor, AnsiValue, RgbValue, TransformColor, convert_rgb_into_ansi256};
 use core::fmt::Debug;
 
 /// Creates a [`TuiColor`] instance using various convenient syntaxes.
@@ -327,110 +325,93 @@ mod convenience_conversions {
     }
 }
 
-mod rgb_value_impl_block {
+mod basic_color_conversions {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl RgbValue {
-        /// # Errors
-        ///
-        /// Returns an error if the `TuiColor` is an index-based color that cannot be
-        /// converted to RGB.
-        pub fn try_from_tui_color(color: TuiColor) -> CommonResult<Self> {
-            match color {
-                // RGB values.
-                TuiColor::Rgb(it) => Ok(it),
-
-                // ANSI Basic 16.
-                TuiColor::Basic(basic_color) => {
-                    match basic_color {
-                        // ANSI values.
-                        ANSIBasicColor::Black => Ok(RgbValue {
-                            red: 0,
-                            green: 0,
-                            blue: 0,
-                        }),
-                        ANSIBasicColor::White => Ok(RgbValue {
-                            red: 255,
-                            green: 255,
-                            blue: 255,
-                        }),
-                        ANSIBasicColor::Gray => Ok(RgbValue {
-                            red: 128,
-                            green: 128,
-                            blue: 128,
-                        }),
-                        ANSIBasicColor::Red => Ok(RgbValue {
-                            red: 255,
-                            green: 0,
-                            blue: 0,
-                        }),
-                        ANSIBasicColor::Green => Ok(RgbValue {
-                            red: 0,
-                            green: 255,
-                            blue: 0,
-                        }),
-                        ANSIBasicColor::Blue => Ok(RgbValue {
-                            red: 0,
-                            green: 0,
-                            blue: 255,
-                        }),
-                        ANSIBasicColor::Yellow => Ok(RgbValue {
-                            red: 255,
-                            green: 255,
-                            blue: 0,
-                        }),
-                        ANSIBasicColor::Cyan => Ok(RgbValue {
-                            red: 0,
-                            green: 255,
-                            blue: 255,
-                        }),
-                        ANSIBasicColor::Magenta => Ok(RgbValue {
-                            red: 255,
-                            green: 0,
-                            blue: 255,
-                        }),
-                        ANSIBasicColor::DarkGray => Ok(RgbValue {
-                            red: 64,
-                            green: 64,
-                            blue: 64,
-                        }),
-                        ANSIBasicColor::DarkRed => Ok(RgbValue {
-                            red: 128,
-                            green: 0,
-                            blue: 0,
-                        }),
-                        ANSIBasicColor::DarkGreen => Ok(RgbValue {
-                            red: 0,
-                            green: 128,
-                            blue: 0,
-                        }),
-                        ANSIBasicColor::DarkBlue => Ok(RgbValue {
-                            red: 0,
-                            green: 0,
-                            blue: 128,
-                        }),
-                        ANSIBasicColor::DarkYellow => Ok(RgbValue {
-                            red: 128,
-                            green: 128,
-                            blue: 0,
-                        }),
-                        ANSIBasicColor::DarkMagenta => Ok(RgbValue {
-                            red: 128,
-                            green: 0,
-                            blue: 128,
-                        }),
-                        ANSIBasicColor::DarkCyan => Ok(RgbValue {
-                            red: 0,
-                            green: 128,
-                            blue: 128,
-                        }),
-                    }
-                }
-
-                TuiColor::Ansi(_) => CommonError::new_error_result_with_only_type(
-                    CommonErrorType::InvalidValue,
-                ),
+    impl From<ANSIBasicColor> for RgbValue {
+        fn from(basic: ANSIBasicColor) -> Self {
+            match basic {
+                ANSIBasicColor::Black => RgbValue {
+                    red: 0,
+                    green: 0,
+                    blue: 0,
+                },
+                ANSIBasicColor::White => RgbValue {
+                    red: 255,
+                    green: 255,
+                    blue: 255,
+                },
+                ANSIBasicColor::Gray => RgbValue {
+                    red: 128,
+                    green: 128,
+                    blue: 128,
+                },
+                ANSIBasicColor::Red => RgbValue {
+                    red: 255,
+                    green: 0,
+                    blue: 0,
+                },
+                ANSIBasicColor::Green => RgbValue {
+                    red: 0,
+                    green: 255,
+                    blue: 0,
+                },
+                ANSIBasicColor::Blue => RgbValue {
+                    red: 0,
+                    green: 0,
+                    blue: 255,
+                },
+                ANSIBasicColor::Yellow => RgbValue {
+                    red: 255,
+                    green: 255,
+                    blue: 0,
+                },
+                ANSIBasicColor::Cyan => RgbValue {
+                    red: 0,
+                    green: 255,
+                    blue: 255,
+                },
+                ANSIBasicColor::Magenta => RgbValue {
+                    red: 255,
+                    green: 0,
+                    blue: 255,
+                },
+                ANSIBasicColor::DarkGray => RgbValue {
+                    red: 64,
+                    green: 64,
+                    blue: 64,
+                },
+                ANSIBasicColor::DarkRed => RgbValue {
+                    red: 128,
+                    green: 0,
+                    blue: 0,
+                },
+                ANSIBasicColor::DarkGreen => RgbValue {
+                    red: 0,
+                    green: 128,
+                    blue: 0,
+                },
+                ANSIBasicColor::DarkBlue => RgbValue {
+                    red: 0,
+                    green: 0,
+                    blue: 128,
+                },
+                ANSIBasicColor::DarkYellow => RgbValue {
+                    red: 128,
+                    green: 128,
+                    blue: 0,
+                },
+                ANSIBasicColor::DarkMagenta => RgbValue {
+                    red: 128,
+                    green: 0,
+                    blue: 128,
+                },
+                ANSIBasicColor::DarkCyan => RgbValue {
+                    red: 0,
+                    green: 128,
+                    blue: 128,
+                },
             }
         }
     }
@@ -453,8 +434,7 @@ mod convert_to_ast_color {
                 TuiColor::Rgb(rgb) => ASTColor::Rgb(rgb),
                 TuiColor::Ansi(ansi) => ASTColor::Ansi(ansi),
                 TuiColor::Basic(basic) => {
-                    let rgb = RgbValue::try_from_tui_color(TuiColor::Basic(basic))
-                        .unwrap_or_default();
+                    let rgb: RgbValue = basic.into();
                     ASTColor::Rgb(rgb)
                 }
             }
@@ -497,11 +477,8 @@ mod convert_between_variants {
         fn from(tui_color: TuiColor) -> Self {
             match tui_color {
                 TuiColor::Rgb(rgb) => rgb,
-                TuiColor::Ansi(ansi) => RgbValue::from(ansi),
-                TuiColor::Basic(basic) => {
-                    RgbValue::try_from_tui_color(TuiColor::Basic(basic))
-                        .unwrap_or_default()
-                }
+                TuiColor::Ansi(ansi) => ansi.as_rgb(),
+                TuiColor::Basic(basic) => basic.into(),
             }
         }
     }
@@ -583,8 +560,7 @@ mod tests {
     #[test]
     fn test_rgb_passthrough() {
         assert_eq2!(
-            RgbValue::try_from_tui_color(TuiColor::Rgb(RgbValue::from_u8(1, 2, 3)))
-                .unwrap(),
+            RgbValue::from(TuiColor::Rgb(RgbValue::from_u8(1, 2, 3))),
             RgbValue {
                 red: 1,
                 green: 2,
@@ -599,10 +575,7 @@ mod tests {
     #[test_case(ANSIBasicColor::Red, RgbValue { red: 255, green: 0, blue: 0 })]
     #[test_case(ANSIBasicColor::Green, RgbValue { red: 0, green: 255, blue: 0 })]
     fn test_basic_color_to_rgb(color: ANSIBasicColor, expected: RgbValue) {
-        assert_eq2!(
-            RgbValue::try_from_tui_color(TuiColor::Basic(color)).unwrap(),
-            expected
-        );
+        assert_eq2!(RgbValue::from(TuiColor::Basic(color)), expected);
     }
 
     #[test_case(ANSIBasicColor::Black, RgbValue { red: 0, green: 0, blue: 0 })]
@@ -622,16 +595,13 @@ mod tests {
     #[test_case(ANSIBasicColor::White, RgbValue { red: 255, green: 255, blue: 255 })]
     #[test_case(ANSIBasicColor::Gray, RgbValue { red: 128, green: 128, blue: 128 })]
     fn test_basic_colors_macro(color: ANSIBasicColor, expected: RgbValue) {
-        assert_eq2!(
-            RgbValue::try_from_tui_color(TuiColor::Basic(color)).unwrap(),
-            expected
-        );
+        assert_eq2!(RgbValue::from(TuiColor::Basic(color)), expected);
     }
 
     #[test]
     fn test_custom_colors_macro() {
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(lizard_green)).unwrap(),
+            RgbValue::from(tui_color!(lizard_green)),
             RgbValue {
                 red: 20,
                 green: 244,
@@ -640,7 +610,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(slate_gray)).unwrap(),
+            RgbValue::from(tui_color!(slate_gray)),
             RgbValue {
                 red: 94,
                 green: 103,
@@ -649,7 +619,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(silver_metallic)).unwrap(),
+            RgbValue::from(tui_color!(silver_metallic)),
             RgbValue {
                 red: 213,
                 green: 217,
@@ -658,7 +628,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(frozen_blue)).unwrap(),
+            RgbValue::from(tui_color!(frozen_blue)),
             RgbValue {
                 red: 171,
                 green: 204,
@@ -667,7 +637,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(moonlight_blue)).unwrap(),
+            RgbValue::from(tui_color!(moonlight_blue)),
             RgbValue {
                 red: 31,
                 green: 36,
@@ -676,7 +646,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(night_blue)).unwrap(),
+            RgbValue::from(tui_color!(night_blue)),
             RgbValue {
                 red: 14,
                 green: 17,
@@ -685,7 +655,7 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(guards_red)).unwrap(),
+            RgbValue::from(tui_color!(guards_red)),
             RgbValue {
                 red: 200,
                 green: 1,
@@ -694,12 +664,20 @@ mod tests {
         );
 
         assert_eq2!(
-            RgbValue::try_from_tui_color(tui_color!(orange)).unwrap(),
+            RgbValue::from(tui_color!(orange)),
             RgbValue {
                 red: 255,
                 green: 132,
                 blue: 18
             }
         );
+    }
+
+    #[test]
+    fn test_ansi_to_rgb_conversion() {
+        // ANSI color 42 is rgb(0, 215, 135) per the 256-color palette
+        let ansi_color = tui_color!(ansi 42);
+        let rgb: RgbValue = ansi_color.into();
+        assert_eq2!(rgb, RgbValue::from_u8(0, 215, 135));
     }
 }

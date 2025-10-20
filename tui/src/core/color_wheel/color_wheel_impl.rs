@@ -863,26 +863,18 @@ impl ColorWheel {
         let maybe_next_bg_color = self.next_color();
 
         if let Some(next_bg_color) = maybe_next_bg_color {
-            let maybe_bg_color =
+            let (bg_red, bg_green, bg_blue) =
                 lolcat_bg_helper::convert_tui_color_to_rgb_tuple(next_bg_color);
-
-            if let Some((bg_red, bg_green, bg_blue)) = maybe_bg_color {
-                let (fg_red, fg_green, fg_blue) =
-                    color_wheel_helpers::calc_fg_color((bg_red, bg_green, bg_blue));
-                tui_styled_text!(
-                    @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(
-                        maybe_style,
-                        Some(tui_color!(fg_red, fg_green, fg_blue)),
-                        Some(tui_color!(bg_red, bg_green, bg_blue)),
-                    ),
-                    @text: text,
-                )
-            } else {
-                tui_styled_text!(
-                    @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(maybe_style, None, None,),
-                    @text: text,
-                )
-            }
+            let (fg_red, fg_green, fg_blue) =
+                color_wheel_helpers::calc_fg_color((bg_red, bg_green, bg_blue));
+            tui_styled_text!(
+                @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(
+                    maybe_style,
+                    Some(tui_color!(fg_red, fg_green, fg_blue)),
+                    Some(tui_color!(bg_red, bg_green, bg_blue)),
+                ),
+                @text: text,
+            )
         } else {
             tui_styled_text!(
                 @style: generate_styled_texts_helper::gen_style_fg_bg_color_for(maybe_style, None, None,),
@@ -1161,22 +1153,20 @@ mod lolcat_bg_helper {
     }
 
     /// Convert a [`TuiColor`] to an RGB tuple for use as background color.
-    pub fn convert_tui_color_to_rgb_tuple(color: TuiColor) -> Option<(u8, u8, u8)> {
+    pub fn convert_tui_color_to_rgb_tuple(color: TuiColor) -> (u8, u8, u8) {
         match color {
             TuiColor::Rgb(RgbValue {
                 red: bg_red,
                 green: bg_green,
                 blue: bg_blue,
-            }) => Some((bg_red, bg_green, bg_blue)),
+            }) => (bg_red, bg_green, bg_blue),
             TuiColor::Ansi(ansi_value) => {
                 let rgb_value = RgbValue::from(ansi_value);
-                Some((rgb_value.red, rgb_value.green, rgb_value.blue))
+                (rgb_value.red, rgb_value.green, rgb_value.blue)
             }
             TuiColor::Basic(basic_color) => {
-                match RgbValue::try_from_tui_color(TuiColor::Basic(basic_color)) {
-                    Ok(RgbValue { red, green, blue }) => Some((red, green, blue)),
-                    Err(_) => None,
-                }
+                let RgbValue { red, green, blue } = basic_color.into();
+                (red, green, blue)
             }
         }
     }

@@ -289,6 +289,7 @@ mod join_with_index_fmt_tests {
     }
 }
 
+#[allow(clippy::large_stack_arrays)]
 pub mod read_from_file {
     use crate::{DEFAULT_READ_BUFFER_SIZE, ok};
     use miette::{Context, IntoDiagnostic};
