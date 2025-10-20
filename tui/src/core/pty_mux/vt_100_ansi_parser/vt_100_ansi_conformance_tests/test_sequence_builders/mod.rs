@@ -3,7 +3,7 @@
 //! Test utilities for building VT100 ANSI sequences.
 //!
 //! This module provides convenience wrappers around the bidirectional sequence types
-//! ([`ExtendedColorSequence`], [`DsrSequence`], [`CsiSequence`], etc.) that enable
+//! ([`SgrColorSequence`], [`DsrSequence`], [`CsiSequence`], etc.) that enable
 //! ergonomic sequence generation in tests.
 //!
 //! # Purpose
@@ -17,7 +17,7 @@
 //!
 //! # Why Separate from Production Code?
 //!
-//! The underlying types (`ExtendedColorSequence`, `DsrSequence`, etc.) are production
+//! The underlying types (`SgrColorSequence`, `DsrSequence`, etc.) are production
 //! types that can generate sequences using `.to_string()`. However, these convenience
 //! functions:
 //! - Are only needed in tests (production code constructs enums directly)
@@ -48,7 +48,7 @@
 //! );
 //! ```
 //!
-//! [`ExtendedColorSequence`]: crate::protocols::csi_codes::ExtendedColorSequence
+//! [`SgrColorSequence`]: crate::protocols::csi_codes::SgrColorSequence
 //! [`DsrSequence`]: crate::protocols::dsr_codes::DsrSequence
 //! [`CsiSequence`]: crate::protocols::csi_codes::CsiSequence
 //! [`Display`]: std::fmt::Display

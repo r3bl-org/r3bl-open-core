@@ -4,11 +4,11 @@
 //!
 //! This module provides ergonomic functions for generating extended color ANSI sequences
 //! in tests. These are thin wrappers around the [`Display`] implementation for
-//! [`ExtendedColorSequence`] that provide shorter, more readable APIs for test code.
+//! [`SgrColorSequence`] that provide shorter, more readable APIs for test code.
 //!
 //! # Purpose
 //!
-//! While [`ExtendedColorSequence`] provides type-safe bidirectional sequence generation
+//! While [`SgrColorSequence`] provides type-safe bidirectional sequence generation
 //! (parsing + display), these builders offer convenience functions specifically for
 //! test scenarios where constructing the full enum variant would be verbose.
 //!
@@ -33,10 +33,10 @@
 //! let blue_bg = bg_rgb(0, 128, 255);         // → "\x1b[48:2:0:128:255m"
 //! ```
 //!
-//! [`ExtendedColorSequence`]: crate::protocols::csi_codes::ExtendedColorSequence
+//! [`SgrColorSequence`]: crate::protocols::csi_codes::SgrColorSequence
 //! [`Display`]: std::fmt::Display
 
-use crate::protocols::csi_codes::ExtendedColorSequence;
+use crate::protocols::csi_codes::SgrColorSequence;
 
 /// Generate 256-color foreground sequence: ESC[38:5:nm
 ///
@@ -58,7 +58,7 @@ use crate::protocols::csi_codes::ExtendedColorSequence;
 /// ```
 #[must_use]
 pub fn fg_ansi256(index: u8) -> String {
-    ExtendedColorSequence::SetForegroundAnsi256(index).to_string()
+    SgrColorSequence::SetForegroundAnsi256(index).to_string()
 }
 
 /// Generate 256-color background sequence: ESC[48:5:nm
@@ -78,7 +78,7 @@ pub fn fg_ansi256(index: u8) -> String {
 /// ```
 #[must_use]
 pub fn bg_ansi256(index: u8) -> String {
-    ExtendedColorSequence::SetBackgroundAnsi256(index).to_string()
+    SgrColorSequence::SetBackgroundAnsi256(index).to_string()
 }
 
 /// Generate RGB foreground sequence: ESC[38:2:r:g:bm
@@ -100,7 +100,7 @@ pub fn bg_ansi256(index: u8) -> String {
 /// ```
 #[must_use]
 pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
-    ExtendedColorSequence::SetForegroundRgb(r, g, b).to_string()
+    SgrColorSequence::SetForegroundRgb(r, g, b).to_string()
 }
 
 /// Generate RGB background sequence: ESC[48:2:r:g:bm
@@ -122,5 +122,5 @@ pub fn fg_rgb(r: u8, g: u8, b: u8) -> String {
 /// ```
 #[must_use]
 pub fn bg_rgb(r: u8, g: u8, b: u8) -> String {
-    ExtendedColorSequence::SetBackgroundRgb(r, g, b).to_string()
+    SgrColorSequence::SetBackgroundRgb(r, g, b).to_string()
 }

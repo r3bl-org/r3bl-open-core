@@ -4,10 +4,54 @@
 //! - <https://tintin.mudhalla.net/info/256color/>
 //! - <https://talyian.github.io/ansicolors/>
 
-use crate::{AnsiValue, LossyConvertToByte, RgbValue};
+use crate::{AnsiValue, RgbValue};
 use std::cmp::Ordering::Less;
 
-pub mod color_utils {
+#[must_use]
+pub fn convert_rgb_into_ansi256(rgb_color: RgbValue) -> AnsiValue {
+    use ansi_constants::{ANSI_COLOR_PALETTE, ANSI256_FROM_GRAY};
+    use cube_mapping::{CubeMappingResult, calculate_cube_mapping_for_rgb_color,
+                       calculate_luminance, calculate_relative_diff_between_colors};
+
+    let luminance_approximation: usize = calculate_luminance(rgb_color).into();
+    let gray_ansi256_index: u8 = ANSI256_FROM_GRAY[luminance_approximation];
+
+    let approximate_difference_to_grayscale = {
+        let gray_ansi256_index: usize = gray_ansi256_index.into();
+        let rgb_value_encoded_in_u32: u32 = ANSI_COLOR_PALETTE[gray_ansi256_index];
+        let gray_color = RgbValue::from(rgb_value_encoded_in_u32);
+        calculate_relative_diff_between_colors(rgb_color, gray_color)
+    };
+
+    let CubeMappingResult {
+        cube_ansi256_index,
+        cube_rgb_color,
+    } = calculate_cube_mapping_for_rgb_color(rgb_color);
+
+    let approximate_difference_to_cube_mapped_color =
+        calculate_relative_diff_between_colors(rgb_color, cube_rgb_color);
+
+    if let Less = approximate_difference_to_cube_mapped_color
+        .cmp(&approximate_difference_to_grayscale)
+    {
+        cube_ansi256_index.into()
+    } else {
+        gray_ansi256_index.into()
+    }
+}
+
+#[must_use]
+pub fn convert_rgb_into_grayscale(rgb_color: RgbValue) -> RgbValue {
+    let (r, g, b) = (rgb_color.red, rgb_color.green, rgb_color.blue);
+    let (gray_r, gray_g, gray_b) = color_utils::convert_grayscale((r, g, b));
+    RgbValue {
+        red: gray_r,
+        green: gray_g,
+        blue: gray_b,
+    }
+}
+
+mod color_utils {
     #[must_use]
     pub fn linear_to_srgb(intensity: f64) -> f64 {
         if intensity <= 0.003_130_8 {
@@ -49,41 +93,9 @@ pub mod color_utils {
     }
 }
 
-#[must_use]
-pub fn convert_rgb_into_ansi256(rgb_color: RgbValue) -> AnsiValue {
-    use ansi_constants::{ANSI_COLOR_PALETTE, ANSI256_FROM_GRAY};
-    use cube_mapping::{CubeMappingResult, calculate_cube_mapping_for_rgb_color,
-                       calculate_luminance, calculate_relative_diff_between_colors};
-
-    let luminance_approximation: usize = calculate_luminance(rgb_color).into();
-    let gray_ansi256_index: u8 = ANSI256_FROM_GRAY[luminance_approximation];
-
-    let approximate_difference_to_grayscale = {
-        let gray_ansi256_index: usize = gray_ansi256_index.into();
-        let rgb_value_encoded_in_u32: u32 = ANSI_COLOR_PALETTE[gray_ansi256_index];
-        let gray_color = RgbValue::from(rgb_value_encoded_in_u32);
-        calculate_relative_diff_between_colors(rgb_color, gray_color)
-    };
-
-    let CubeMappingResult {
-        cube_ansi256_index,
-        cube_rgb_color,
-    } = calculate_cube_mapping_for_rgb_color(rgb_color);
-
-    let approximate_difference_to_cube_mapped_color =
-        calculate_relative_diff_between_colors(rgb_color, cube_rgb_color);
-
-    if let Less = approximate_difference_to_cube_mapped_color
-        .cmp(&approximate_difference_to_grayscale)
-    {
-        cube_ansi256_index.into()
-    } else {
-        gray_ansi256_index.into()
-    }
-}
-
 mod cube_mapping {
-    use crate::RgbValue;
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     #[derive(Debug, Copy, Clone, PartialEq, Eq)]
     pub struct CubeMappingResult {
@@ -252,7 +264,8 @@ mod cube_mapping {
 }
 
 mod convert_between_rgb_and_u32 {
-    use super::{LossyConvertToByte, RgbValue};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl From<RgbValue> for u32 {
         fn from(rgb: RgbValue) -> Self {
@@ -269,18 +282,6 @@ mod convert_between_rgb_and_u32 {
             // Since these bit ranges **`don't overlap`**, `addition` (`+`) and `bitwise
             // OR` (`|`) produce the same result
             (u32::from(r) << 16) | (u32::from(g) << 8) | u32::from(b)
-        }
-    }
-
-    impl From<u32> for RgbValue {
-        fn from(rgb: u32) -> Self {
-            // The `as` keyword is the designated tool for primitive, potentially lossy
-            // conversions like f32 to u8.
-            RgbValue {
-                red: (rgb >> 16).to_u8_lossy(),
-                green: (rgb >> 8).to_u8_lossy(),
-                blue: (rgb).to_u8_lossy(),
-            }
         }
     }
 }
@@ -355,141 +356,32 @@ pub mod ansi_constants {
 mod tests {
     use crate::{AnsiValue, RgbValue, TransformColor};
     use pretty_assertions::assert_eq;
+    use test_case::test_case;
 
-    #[test]
-    fn convert_ansi265_into_rgb() {
+    #[test_case(0, 0, 0, 0)]
+    #[test_case(25, 0, 95, 175)]
+    #[test_case(50, 0, 255, 215)]
+    #[test_case(100, 135, 135, 0)]
+    #[test_case(200, 255, 0, 215)]
+    #[test_case(225, 255, 215, 255)]
+    #[test_case(255, 238, 238, 238)]
+    fn test_ansi_to_rgb(index: u8, red: u8, green: u8, blue: u8) {
         assert_eq!(
-            AnsiValue { index: 0 }.as_rgb(),
-            RgbValue {
-                red: 0,
-                green: 0,
-                blue: 0,
-            }
-        );
-
-        assert_eq!(
-            AnsiValue { index: 25 }.as_rgb(),
-            RgbValue {
-                red: 0,
-                green: 95,
-                blue: 175,
-            }
-        );
-
-        assert_eq!(
-            AnsiValue { index: 50 }.as_rgb(),
-            RgbValue {
-                red: 0,
-                green: 255,
-                blue: 215,
-            }
-        );
-
-        assert_eq!(
-            AnsiValue { index: 100 }.as_rgb(),
-            RgbValue {
-                red: 135,
-                green: 135,
-                blue: 0
-            }
-        );
-
-        assert_eq!(
-            AnsiValue { index: 200 }.as_rgb(),
-            RgbValue {
-                red: 255,
-                green: 0,
-                blue: 215,
-            }
-        );
-
-        assert_eq!(
-            AnsiValue { index: 225 }.as_rgb(),
-            RgbValue {
-                red: 255,
-                green: 215,
-                blue: 255,
-            }
-        );
-
-        assert_eq!(
-            AnsiValue { index: 255 }.as_rgb(),
-            RgbValue {
-                red: 238,
-                green: 238,
-                blue: 238,
-            }
+            AnsiValue { index }.as_rgb(),
+            RgbValue { red, green, blue }
         );
     }
 
-    #[test]
-    fn test_convert_rgb_into_ansi256() {
-        use crate::TransformColor;
-
+    #[test_case(0, 0, 0, 16)]
+    #[test_case(1, 2, 3, 16)]
+    #[test_case(25, 25, 25, 234)]
+    #[test_case(10, 25, 5, 233)]
+    #[test_case(50, 100, 200, 62)]
+    #[test_case(255, 255, 255, 231)]
+    fn test_rgb_to_ansi(red: u8, green: u8, blue: u8, expected_index: u8) {
         assert_eq!(
-            RgbValue {
-                red: 0,
-                green: 0,
-                blue: 0,
-            }
-            .as_ansi()
-            .index,
-            16
-        );
-
-        assert_eq!(
-            RgbValue {
-                red: 1,
-                green: 2,
-                blue: 3,
-            }
-            .as_ansi()
-            .index,
-            16
-        );
-
-        assert_eq!(
-            RgbValue {
-                red: 25,
-                green: 25,
-                blue: 25,
-            }
-            .as_ansi()
-            .index,
-            234
-        );
-
-        assert_eq!(
-            RgbValue {
-                red: 10,
-                green: 25,
-                blue: 5,
-            }
-            .as_ansi()
-            .index,
-            233
-        );
-
-        assert_eq!(
-            RgbValue {
-                red: 50,
-                green: 100,
-                blue: 200,
-            }
-            .as_ansi()
-            .index,
-            62
-        );
-
-        assert_eq!(
-            RgbValue {
-                red: 255,
-                green: 255,
-                blue: 255,
-            }
-            .as_ansi()
-            .index,
-            231
+            RgbValue { red, green, blue }.as_ansi().index,
+            expected_index
         );
     }
 }

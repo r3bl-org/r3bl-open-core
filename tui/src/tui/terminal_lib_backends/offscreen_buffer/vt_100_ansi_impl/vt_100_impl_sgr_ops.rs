@@ -41,10 +41,8 @@
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
-use crate::{
-    core::pty_mux::vt_100_ansi_parser::protocols::csi_codes::{ansi256_to_tui_color, rgb_to_tui_color},
-    AnsiValue, ColorTarget, ExtendedColorSequence, TuiColor, TuiStyle, tui_style_attrib,
-};
+use crate::{AnsiValue, ColorTarget, RgbValue, SgrColorSequence, TuiColor, TuiStyle,
+            tui_style_attrib};
 
 impl OffscreenBuffer {
     /// Reset all SGR attributes to default state.
@@ -120,12 +118,14 @@ impl OffscreenBuffer {
 
     /// Set foreground color using ANSI color code.
     pub fn set_foreground_color(&mut self, ansi_color: u16) {
-        self.ansi_parser_support.current_style.color_fg = Some(TuiColor::from(AnsiValue::from(ansi_color)));
+        self.ansi_parser_support.current_style.color_fg =
+            Some(TuiColor::from(AnsiValue::from(ansi_color)));
     }
 
     /// Set background color using ANSI color code.
     pub fn set_background_color(&mut self, ansi_color: u16) {
-        self.ansi_parser_support.current_style.color_bg = Some(TuiColor::from(AnsiValue::from(ansi_color)));
+        self.ansi_parser_support.current_style.color_bg =
+            Some(TuiColor::from(AnsiValue::from(ansi_color)));
     }
 
     /// Reset foreground color to default.
@@ -149,7 +149,7 @@ impl OffscreenBuffer {
     /// Used with: `ESC[38;5;nm` or `ESC[38:5:nm`
     pub fn set_foreground_ansi256(&mut self, index: u8) {
         self.ansi_parser_support.current_style.color_fg =
-            Some(ansi256_to_tui_color(index));
+            Some(TuiColor::Ansi(AnsiValue::new(index)));
     }
 
     /// Set background color using 256-color palette index.
@@ -163,7 +163,7 @@ impl OffscreenBuffer {
     /// Used with: `ESC[48;5;nm` or `ESC[48:5:nm`
     pub fn set_background_ansi256(&mut self, index: u8) {
         self.ansi_parser_support.current_style.color_bg =
-            Some(ansi256_to_tui_color(index));
+            Some(TuiColor::Ansi(AnsiValue::new(index)));
     }
 
     /// Set foreground color using RGB values.
@@ -178,7 +178,8 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[38;2;r;g;bm` or `ESC[38:2:r:g:bm`
     pub fn set_foreground_rgb(&mut self, r: u8, g: u8, b: u8) {
-        self.ansi_parser_support.current_style.color_fg = Some(rgb_to_tui_color(r, g, b));
+        self.ansi_parser_support.current_style.color_fg =
+            Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b)));
     }
 
     /// Set background color using RGB values.
@@ -193,11 +194,12 @@ impl OffscreenBuffer {
     ///
     /// Used with: `ESC[48;2;r;g;bm` or `ESC[48:2:r:g:bm`
     pub fn set_background_rgb(&mut self, r: u8, g: u8, b: u8) {
-        self.ansi_parser_support.current_style.color_bg = Some(rgb_to_tui_color(r, g, b));
+        self.ansi_parser_support.current_style.color_bg =
+            Some(TuiColor::Rgb(RgbValue::from_u8(r, g, b)));
     }
     /// Apply an extended color sequence to the current style.
     ///
-    /// This is a convenience method that takes an [`ExtendedColorSequence`] and
+    /// This is a convenience method that takes an [`SgrColorSequence`] and
     /// automatically routes it to the appropriate foreground or background color
     /// setter based on the sequence's target layer.
     ///
@@ -208,20 +210,20 @@ impl OffscreenBuffer {
     /// # Example
     ///
     /// ```
-    /// use r3bl_tui::{ExtendedColorSequence, OffscreenBuffer, height, width};
+    /// use r3bl_tui::{SgrColorSequence, OffscreenBuffer, height, width};
     ///
     /// let mut buffer = OffscreenBuffer::new_empty(height(10) + width(20));
     ///
     /// // Parse an extended color sequence (256-color foreground)
     /// let params = &[38, 5, 196];
-    /// if let Some(color_seq) = ExtendedColorSequence::parse_from_raw_slice(params) {
+    /// if let Some(color_seq) = SgrColorSequence::parse_from_raw_slice(params) {
     ///     // Apply to current style - automatically routes to foreground setter
     ///     buffer.apply_extended_color_sequence(color_seq);
     /// }
     /// ```
     ///
-    /// [`ExtendedColorSequence`]: ExtendedColorSequence
-    pub fn apply_extended_color_sequence(&mut self, color_seq: ExtendedColorSequence) {
+    /// [`SgrColorSequence`]: SgrColorSequence
+    pub fn apply_extended_color_sequence(&mut self, color_seq: SgrColorSequence) {
         let tui_color = TuiColor::from(color_seq);
         match color_seq.target() {
             ColorTarget::Foreground => {

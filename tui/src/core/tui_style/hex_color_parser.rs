@@ -4,7 +4,7 @@
 //! struct. The hex color string can be in the following format: `#RRGGBB`, eg: `#FF0000`
 //! for red.
 
-use super::RgbValue;
+use crate::RgbValue;
 use nom::{IResult, Parser,
           bytes::complete::{tag, take_while_m_n},
           combinator::map_res};

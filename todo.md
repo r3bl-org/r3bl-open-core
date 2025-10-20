@@ -51,7 +51,8 @@
 
 # build `build-infra-tools` binary to replace all the fish scripts
 
-- [ ] PRD [`task_build_tools_infra_plan`](docs/task_build_tools_infra_plan.md) to build `build-infra-tools`
+- [ ] PRD [`task_build_tools_infra_plan`](docs/task_build_tools_infra_plan.md) to build
+      `build-infra-tools`
 
 # unify rendering paths
 

@@ -28,14 +28,15 @@ macro_rules! set_mimalloc_in_main {
 ///
 /// # Panics
 ///
-/// This macro calls `.unwrap()` on thread creation and join operations, which will panic if:
+/// This macro calls `.unwrap()` on thread creation and join operations, which will panic
+/// if:
 /// - Thread spawning fails (e.g., insufficient system resources)
 /// - The spawned thread panics
 ///
 /// These are considered fatal errors for application startup, similar to how the
 /// `#[tokio::main]` macro handles runtime initialization failures. If you need to use
-/// this macro in a function that returns `Result`, suppress the `clippy::unwrap_in_result`
-/// lint on that function.
+/// this macro in a function that returns `Result`, suppress the
+/// `clippy::unwrap_in_result` lint on that function.
 ///
 /// # Usage
 ///

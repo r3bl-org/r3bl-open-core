@@ -157,7 +157,7 @@
 //! | [`EscSequence`] | Manual parsing | `Display` + `FastStringify` | ESC control sequences |
 //! | [`OscSequence`] | Manual parsing | `Display` + `FastStringify` | OSC sequences (titles, hyperlinks) |
 //! | [`DsrSequence`] | Manual parsing | `Display` + `FastStringify` | Device Status Report responses |
-//! | [`ExtendedColorSequence`] | `parse_from_slice()` | `Display` + `FastStringify` | 256-color & RGB colors |
+//! | [`SgrColorSequence`] | `parse_from_slice()` | `Display` + `FastStringify` | 256-color & RGB colors |
 //!
 //! ### Benefits of Bidirectional Pattern
 //!
@@ -170,7 +170,7 @@
 //! ### Example: Extended Color Sequences
 //!
 //! ```rust,ignore
-//! use crate::protocols::csi_codes::ExtendedColorSequence;
+//! use crate::protocols::csi_codes::SgrColorSequence;
 //! use crate::vt_100_ansi_conformance_tests::test_sequence_builders::extended_color_builders::*;
 //!
 //! // ❌ Raw escape strings (error-prone, unclear)
@@ -178,8 +178,8 @@
 //! let bad_bg = "\x1b[48:2:255:128:0m";  // RGB components unclear
 //!
 //! // ✅ Type-safe generation (compiler-validated)
-//! let good_fg = ExtendedColorSequence::SetForegroundAnsi256(196).to_string();
-//! let good_bg = ExtendedColorSequence::SetBackgroundRgb(255, 128, 0).to_string();
+//! let good_fg = SgrColorSequence::SetForegroundAnsi256(196).to_string();
+//! let good_bg = SgrColorSequence::SetBackgroundRgb(255, 128, 0).to_string();
 //!
 //! // ✅ Even better: Use test helpers
 //! let helper_fg = fg_ansi256(196);
@@ -244,13 +244,13 @@
 //! 5. **Add test helpers** in a `#[cfg(any(test, doc))]` module
 //! 6. **Write comprehensive tests** for both parsing and generation
 //!
-//! See [`ExtendedColorSequence`] for a complete example implementation.
+//! See [`SgrColorSequence`] for a complete example implementation.
 //!
 //! [`CsiSequence`]: crate::protocols::csi_codes::CsiSequence
 //! [`EscSequence`]: crate::protocols::esc_codes::EscSequence
 //! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
 //! [`DsrSequence`]: crate::protocols::dsr_codes::DsrSequence
-//! [`ExtendedColorSequence`]: crate::protocols::csi_codes::ExtendedColorSequence
+//! [`SgrColorSequence`]: crate::protocols::csi_codes::SgrColorSequence
 //! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 //! [`vte`]: https://docs.rs/vte
 //!

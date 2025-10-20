@@ -201,7 +201,7 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
         // Check for extended color sequences first (they consume multiple positions).
         if let Some(color_seq) =
-            csi_codes::ExtendedColorSequence::parse_from_raw_slice(param_slice)
+            csi_codes::SgrColorSequence::parse_from_raw_slice(param_slice)
         {
             // Unified method handles routing to foreground/background automatically.
             performer.ofs_buf.apply_extended_color_sequence(color_seq);
