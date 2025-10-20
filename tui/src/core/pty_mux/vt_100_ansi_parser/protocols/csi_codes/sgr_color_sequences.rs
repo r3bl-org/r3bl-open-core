@@ -6,6 +6,18 @@
 //! VT100-compliant terminal emulators. These sequences enable 256-color palette support
 //! and true RGB colors, going beyond the basic 16 ANSI colors.
 //!
+//! # Architecture Note
+//!
+//! **SGR (Select Graphic Rendition) is a subset of CSI sequences**, not a separate
+//! protocol. All SGR sequences:
+//! - Begin with the CSI introducer `ESC[`
+//! - Contain parameters for text attributes or colors
+//! - End with the 'm' character ([`SGR_SET_GRAPHICS`])
+//!
+//! This module lives in the `csi_codes` parent directory because SGR is conceptually part
+//! of the larger CSI protocol family. The [`SgrColorSequence`] type specifically handles
+//! the extended color subset of SGR (256-color and RGB modes).
+//!
 //! # Color Sequence Formats
 //!
 //! VT100 extended color sequences support two formats:
@@ -73,6 +85,7 @@
 //!
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
+//! [`SGR_SET_GRAPHICS`]: super::constants::SGR_SET_GRAPHICS
 
 use super::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
                        SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
@@ -87,7 +100,7 @@ use std::fmt::Result;
 /// This enum cleanly separates the **target layer** from the **color value**,
 /// enabling better composition with [`TuiColor`] and other color types.
 ///
-/// [`TuiColor`]: TuiColor
+/// [`TuiColor`]: crate::TuiColor
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ColorTarget {
     /// Apply color to foreground (text color)
@@ -97,6 +110,10 @@ pub enum ColorTarget {
 }
 
 /// Extended color sequence operation parsed from VT100 SGR parameters.
+///
+/// **Note**: SGR (Select Graphic Rendition) is a subset of CSI sequences. These sequences
+/// all follow the CSI format `ESC[...m` where the 'm' indicates SGR operations.
+/// See the module documentation for architectural context.
 ///
 /// This enum represents the four possible extended color operations that can be
 /// parsed from VT100-compliant color sequences, directly encoding both the color
