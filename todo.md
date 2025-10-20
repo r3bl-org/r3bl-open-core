@@ -17,6 +17,12 @@
   - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
   - using `OscController` to write to `OutputDevice`
 
+# submit talk for tokio conf 2026 proposal
+
+- [x] 2025-10-20 submit proposal for tokio conf 2026 talk on async TTY primitives in `r3bl_tui`
+  - [`task_tokio_conf_2026_proposal`](`docs/task_tokio_conf_2026_proposal`)
+  - [submitted](https://sessionize.com/app/speaker)
+
 # rearchitect how scrolling and rendering is done
 
 - [ ] Instead of having a single OffscreenBuffer for the terminal window, have 1 for each component.
