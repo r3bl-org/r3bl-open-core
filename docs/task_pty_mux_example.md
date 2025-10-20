@@ -1154,17 +1154,17 @@ impl Perform for AnsiToBufferProcessor<'_> {
     }
 }
 
-fn ansi_to_tui_color(ansi_code: i64) -> TuiColor {
+fn ansi_to_tui_color(ansi_code: i64) -> Option<TuiColor> {
     match ansi_code {
-        0 => TuiColor::Black,
-        1 => TuiColor::Red,
-        2 => TuiColor::Green,
-        3 => TuiColor::Yellow,
-        4 => TuiColor::Blue,
-        5 => TuiColor::Magenta,
-        6 => TuiColor::Cyan,
-        7 => TuiColor::White,
-        _ => TuiColor::Reset,
+        0 => Some(TuiColor::Black),
+        1 => Some(TuiColor::Red),
+        2 => Some(TuiColor::Green),
+        3 => Some(TuiColor::Yellow),
+        4 => Some(TuiColor::Blue),
+        5 => Some(TuiColor::Magenta),
+        6 => Some(TuiColor::Cyan),
+        7 => Some(TuiColor::White),
+        _ => None, // Use default/reset color
     }
 }
 ```

@@ -3,51 +3,11 @@
 use crate::{ANSIBasicColor, ASTColor, AnsiValue, ColorSupport, RgbValue, TransformColor,
             TuiColor, global_color_support};
 
-impl From<crossterm::style::Color> for TuiColor {
-    #[rustfmt::skip]
-    fn from(value: crossterm::style::Color) -> Self {
-        match value {
-            // Basic colors.
-            crossterm::style::Color::Reset       => TuiColor::Reset,
-            crossterm::style::Color::Black       => TuiColor::Basic(ANSIBasicColor::Black),
-            crossterm::style::Color::DarkGrey    => TuiColor::Basic(ANSIBasicColor::DarkGray),
-            crossterm::style::Color::Red         => TuiColor::Basic(ANSIBasicColor::Red),
-            crossterm::style::Color::DarkRed     => TuiColor::Basic(ANSIBasicColor::DarkRed),
-            crossterm::style::Color::Green       => TuiColor::Basic(ANSIBasicColor::Green),
-            crossterm::style::Color::DarkGreen   => TuiColor::Basic(ANSIBasicColor::DarkGreen),
-            crossterm::style::Color::Yellow      => TuiColor::Basic(ANSIBasicColor::Yellow),
-            crossterm::style::Color::DarkYellow  => TuiColor::Basic(ANSIBasicColor::DarkYellow),
-            crossterm::style::Color::Blue        => TuiColor::Basic(ANSIBasicColor::Blue),
-            crossterm::style::Color::DarkBlue    => TuiColor::Basic(ANSIBasicColor::DarkBlue),
-            crossterm::style::Color::Magenta     => TuiColor::Basic(ANSIBasicColor::Magenta),
-            crossterm::style::Color::DarkMagenta => TuiColor::Basic(ANSIBasicColor::DarkMagenta),
-            crossterm::style::Color::Cyan        => TuiColor::Basic(ANSIBasicColor::Cyan),
-            crossterm::style::Color::DarkCyan    => TuiColor::Basic(ANSIBasicColor::DarkCyan),
-            crossterm::style::Color::White       => TuiColor::Basic(ANSIBasicColor::White),
-            crossterm::style::Color::Grey        => TuiColor::Basic(ANSIBasicColor::Gray),
-
-            // RGB colors.
-            crossterm::style::Color::Rgb { r, g, b } => TuiColor::Rgb(RgbValue {
-                red: r,
-                green: g,
-                blue: b,
-            }),
-
-            // ANSI colors.
-            crossterm::style::Color::AnsiValue(number) => {
-                TuiColor::Ansi(AnsiValue::new(number))
-            }
-        }
-    }
-}
-
 /// Respect the color support of the terminal and downgrade the color if needed. This
 /// really only applies to the [`TuiColor::Rgb`] variant.
 impl From<TuiColor> for crossterm::style::Color {
     fn from(from_tui_color: TuiColor) -> Self {
         match from_tui_color {
-            TuiColor::Reset => crossterm::style::Color::Reset,
-
             TuiColor::Basic(from_basic_color) => match global_color_support::detect() {
                 // Convert to grayscale.
                 #[rustfmt::skip]

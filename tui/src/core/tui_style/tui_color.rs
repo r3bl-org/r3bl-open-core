@@ -141,10 +141,6 @@ macro_rules! tui_color {
         $crate::TuiColor::Rgb($crate::RgbValue::from_u8(255, 132, 18))
     };
 
-    (reset) => {
-        $crate::TuiColor::Reset
-    };
-
     (black) => {
         $crate::TuiColor::Basic($crate::ANSIBasicColor::Black)
     };
@@ -248,8 +244,6 @@ macro_rules! tui_color {
 /// [`ColorSupport`]: crate::ColorSupport
 #[derive(Clone, PartialEq, Eq, Copy, Hash)]
 pub enum TuiColor {
-    /// Resets the terminal color.
-    Reset,
     /// ANSI 16 basic colors.
     Basic(ANSIBasicColor),
     /// An RGB color. See [RGB color model] for more info.
@@ -334,13 +328,14 @@ mod convenience_conversions {
 }
 
 mod rgb_value_impl_block {
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// # Errors
-    ///
-    /// Returns an error if the `TuiColor` is an index-based color that cannot be
-    /// converted to RGB.
     impl RgbValue {
+        /// # Errors
+        ///
+        /// Returns an error if the `TuiColor` is an index-based color that cannot be
+        /// converted to RGB.
         pub fn try_from_tui_color(color: TuiColor) -> CommonResult<Self> {
             match color {
                 // RGB values.
@@ -433,7 +428,7 @@ mod rgb_value_impl_block {
                     }
                 }
 
-                _ => CommonError::new_error_result_with_only_type(
+                TuiColor::Ansi(_) => CommonError::new_error_result_with_only_type(
                     CommonErrorType::InvalidValue,
                 ),
             }
@@ -462,7 +457,6 @@ mod convert_to_ast_color {
                         .unwrap_or_default();
                     ASTColor::Rgb(rgb)
                 }
-                TuiColor::Reset => ASTColor::default(),
             }
         }
     }
@@ -508,7 +502,6 @@ mod convert_between_variants {
                     RgbValue::try_from_tui_color(TuiColor::Basic(basic))
                         .unwrap_or_default()
                 }
-                TuiColor::Reset => RgbValue::default(),
             }
         }
     }
@@ -526,7 +519,6 @@ mod impl_debug {
                 TuiColor::Ansi(ansi_value) => {
                     write!(f, "ansi_value({})", ansi_value.index)
                 }
-                TuiColor::Reset => write!(f, "reset"),
                 TuiColor::Basic(basic_color) => match basic_color {
                     ANSIBasicColor::Black => write!(f, "black"),
                     ANSIBasicColor::DarkGray => write!(f, "dark_gray"),
@@ -577,12 +569,6 @@ mod tests {
         {
             let tui_color = tui_color!(red);
             let expected_color = ASTColor::Rgb((255, 0, 0).into());
-            let converted_color = ASTColor::from(tui_color);
-            assert_eq!(converted_color, expected_color);
-        }
-        {
-            let tui_color = tui_color!(reset);
-            let expected_color = ASTColor::Rgb((0, 0, 0).into());
             let converted_color = ASTColor::from(tui_color);
             assert_eq!(converted_color, expected_color);
         }
@@ -715,10 +701,5 @@ mod tests {
                 blue: 18
             }
         );
-    }
-
-    #[test]
-    fn test_reset_macro_error() {
-        assert!(RgbValue::try_from_tui_color(tui_color!(reset)).is_err());
     }
 }

@@ -25,35 +25,6 @@ pub enum ASTColor {
     Ansi(AnsiValue),
 }
 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use test_case::test_case;
-
-    #[test_case(0, 0, 0)]
-    #[test_case(255, 125, 0)]
-    #[test_case(255, 255, 255)]
-    fn test_color_as_rgb(red: u8, green: u8, blue: u8) {
-        let rgb_color = ASTColor::Rgb((red, green, blue).into());
-        assert_eq!(rgb_color.as_rgb(), RgbValue { red, green, blue });
-    }
-
-    #[test_case(ASTColor::Rgb((255, 255, 255).into()), 231)]
-    #[test_case(ASTColor::Rgb((255, 128, 0).into()), 208)]
-    fn test_color_as_ansi256(rgb_color: ASTColor, index: u8) {
-        let expected_ansi = AnsiValue { index };
-        assert_eq!(rgb_color.as_ansi(), expected_ansi);
-    }
-
-    #[test_case(ASTColor::Rgb((0, 0, 0).into()), 16)]
-    #[test_case(ASTColor::Rgb((255, 128, 0).into()), 249)]
-    fn test_color_as_grayscale(rgb_color: ASTColor, index: u8) {
-        let expected_gray = AnsiValue { index };
-        assert_eq!(rgb_color.as_grayscale(), expected_gray);
-    }
-}
-
 impl Default for ASTColor {
     fn default() -> Self { ASTColor::Rgb((0, 0, 0).into()) }
 }
@@ -106,5 +77,33 @@ impl TransformColor for ASTColor {
                 ansi.as_grayscale()
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[test_case(0, 0, 0)]
+    #[test_case(255, 125, 0)]
+    #[test_case(255, 255, 255)]
+    fn test_color_as_rgb(red: u8, green: u8, blue: u8) {
+        let rgb_color = ASTColor::Rgb((red, green, blue).into());
+        assert_eq!(rgb_color.as_rgb(), RgbValue { red, green, blue });
+    }
+
+    #[test_case(ASTColor::Rgb((255, 255, 255).into()), 231)]
+    #[test_case(ASTColor::Rgb((255, 128, 0).into()), 208)]
+    fn test_color_as_ansi256(rgb_color: ASTColor, index: u8) {
+        let expected_ansi = AnsiValue { index };
+        assert_eq!(rgb_color.as_ansi(), expected_ansi);
+    }
+
+    #[test_case(ASTColor::Rgb((0, 0, 0).into()), 16)]
+    #[test_case(ASTColor::Rgb((255, 128, 0).into()), 249)]
+    fn test_color_as_grayscale(rgb_color: ASTColor, index: u8) {
+        let expected_gray = AnsiValue { index };
+        assert_eq!(rgb_color.as_grayscale(), expected_gray);
     }
 }

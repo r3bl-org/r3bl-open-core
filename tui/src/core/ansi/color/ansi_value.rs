@@ -26,8 +26,7 @@ impl From<u16> for AnsiValue {
     fn from(value: u16) -> Self {
         debug_assert!(
             value <= 255,
-            "AnsiValue must represent a valid 256-color palette index (0-255), got {}",
-            value
+            "AnsiValue must represent a valid 256-color palette index (0-255), got {value}"
         );
         #[allow(clippy::cast_possible_truncation)]
         let index = value as u8;
@@ -39,8 +38,7 @@ impl From<i32> for AnsiValue {
     fn from(value: i32) -> Self {
         debug_assert!(
             (0..=255).contains(&value),
-            "AnsiValue must represent a valid 256-color palette index (0-255), got {}",
-            value
+            "AnsiValue must represent a valid 256-color palette index (0-255), got {value}"
         );
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let index = value as u8;

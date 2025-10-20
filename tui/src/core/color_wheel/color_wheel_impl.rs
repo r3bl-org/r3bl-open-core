@@ -1178,7 +1178,6 @@ mod lolcat_bg_helper {
                     Err(_) => None,
                 }
             }
-            TuiColor::Reset => None,
         }
     }
 }

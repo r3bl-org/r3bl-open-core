@@ -366,10 +366,7 @@ mod tests {
     #[test_case(225, 255, 215, 255)]
     #[test_case(255, 238, 238, 238)]
     fn test_ansi_to_rgb(index: u8, red: u8, green: u8, blue: u8) {
-        assert_eq!(
-            AnsiValue { index }.as_rgb(),
-            RgbValue { red, green, blue }
-        );
+        assert_eq!(AnsiValue { index }.as_rgb(), RgbValue { red, green, blue });
     }
 
     #[test_case(0, 0, 0, 16)]
