@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ASTColor, BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
+use crate::{BufTextStorage, ColIndex, ColWidth, FastStringify, GCStringOwned,
             InlineString, InlineVec, LengthOps, PixelChar, SPACER_GLYPH_CHAR, SgrCode,
-            TuiStyle, UNICODE_REPLACEMENT_CHAR,
+            TuiColor, TuiStyle, UNICODE_REPLACEMENT_CHAR,
             generate_impl_display_for_fast_stringify, inline_string, tui_color,
             tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse, Strikethrough,
                                Underline}};
@@ -31,7 +31,7 @@ use strum_macros::EnumCount;
 /// # use r3bl_tui::{
 /// #     TuiStyle, tui_color, new_style,
 /// #     ast, fg_red, dim, ASText, fg_color,
-/// #     ASTStyle, ASTColor,
+/// #     ASTStyle, TuiColor,
 /// # };
 ///
 /// // Use ast() to create a styled text. Use this.
@@ -63,8 +63,8 @@ use strum_macros::EnumCount;
 ///         ASTStyle::Bold,
 ///         ASTStyle::Italic,
 ///         ASTStyle::Underline,
-///         ASTStyle::Foreground(ASTColor::Rgb((50, 50, 50).into())),
-///         ASTStyle::Background(ASTColor::Rgb((100, 200, 1).into())),
+///         ASTStyle::Foreground(TuiColor::Rgb((50, 50, 50).into())),
+///         ASTStyle::Background(TuiColor::Rgb((100, 200, 1).into())),
 ///     ],
 /// }
 /// .println();
@@ -325,7 +325,7 @@ pub fn dim_underline(text: impl AsRef<str>) -> ASText {
 // The following function is a convenience function for providing any color.
 
 #[must_use]
-pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> ASText {
+pub fn fg_color(arg_color: impl Into<TuiColor>, text: &str) -> ASText {
     ASText {
         text: text.into(),
         styles: smallvec!(ASTStyle::Foreground(arg_color.into())),
@@ -339,7 +339,7 @@ pub fn fg_color(arg_color: impl Into<ASTColor>, text: &str) -> ASText {
 pub fn fg_dark_gray(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(236.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(236.into()))),
     }
 }
 
@@ -348,7 +348,7 @@ pub fn fg_dark_gray(text: impl AsRef<str>) -> ASText {
 pub fn fg_black(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(0.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(0.into()))),
     }
 }
 
@@ -357,7 +357,7 @@ pub fn fg_black(text: impl AsRef<str>) -> ASText {
 pub fn fg_yellow(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(226.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(226.into()))),
     }
 }
 
@@ -366,7 +366,7 @@ pub fn fg_yellow(text: impl AsRef<str>) -> ASText {
 pub fn fg_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(34.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(34.into()))),
     }
 }
 
@@ -375,7 +375,7 @@ pub fn fg_green(text: impl AsRef<str>) -> ASText {
 pub fn fg_blue(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(27.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(27.into()))),
     }
 }
 
@@ -384,7 +384,7 @@ pub fn fg_blue(text: impl AsRef<str>) -> ASText {
 pub fn fg_red(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(196.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(196.into()))),
     }
 }
 
@@ -393,7 +393,7 @@ pub fn fg_red(text: impl AsRef<str>) -> ASText {
 pub fn fg_white(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(231.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(231.into()))),
     }
 }
 
@@ -402,7 +402,7 @@ pub fn fg_white(text: impl AsRef<str>) -> ASText {
 pub fn fg_cyan(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(51.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(51.into()))),
     }
 }
 
@@ -411,17 +411,17 @@ pub fn fg_cyan(text: impl AsRef<str>) -> ASText {
 pub fn fg_magenta(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(ASTColor::Ansi(201.into()))),
+        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(201.into()))),
     }
 }
 
-// The following colors are a convenience for using the [crate::tui_color!] macro.
+// The following colors are a convenience for using the tui_color! macro.
 
 #[must_use]
 pub fn fg_medium_gray(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(medium_gray).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(medium_gray))),
     }
 }
 
@@ -429,7 +429,7 @@ pub fn fg_medium_gray(text: impl AsRef<str>) -> ASText {
 pub fn fg_light_cyan(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(light_cyan).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(light_cyan))),
     }
 }
 
@@ -437,7 +437,7 @@ pub fn fg_light_cyan(text: impl AsRef<str>) -> ASText {
 pub fn fg_light_purple(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(light_purple).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(light_purple))),
     }
 }
 
@@ -445,7 +445,7 @@ pub fn fg_light_purple(text: impl AsRef<str>) -> ASText {
 pub fn fg_deep_purple(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(deep_purple).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(deep_purple))),
     }
 }
 
@@ -453,7 +453,7 @@ pub fn fg_deep_purple(text: impl AsRef<str>) -> ASText {
 pub fn fg_soft_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(soft_pink).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(soft_pink))),
     }
 }
 
@@ -461,7 +461,7 @@ pub fn fg_soft_pink(text: impl AsRef<str>) -> ASText {
 pub fn fg_hot_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(hot_pink).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(hot_pink))),
     }
 }
 
@@ -469,9 +469,7 @@ pub fn fg_hot_pink(text: impl AsRef<str>) -> ASText {
 pub fn fg_light_yellow_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(
-            crate::tui_color!(light_yellow_green).into()
-        )),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(light_yellow_green))),
     }
 }
 
@@ -479,7 +477,7 @@ pub fn fg_light_yellow_green(text: impl AsRef<str>) -> ASText {
 pub fn fg_dark_teal(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_teal).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_teal))),
     }
 }
 
@@ -487,7 +485,7 @@ pub fn fg_dark_teal(text: impl AsRef<str>) -> ASText {
 pub fn fg_bright_cyan(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(bright_cyan).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(bright_cyan))),
     }
 }
 
@@ -495,7 +493,7 @@ pub fn fg_bright_cyan(text: impl AsRef<str>) -> ASText {
 pub fn fg_dark_purple(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_purple).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_purple))),
     }
 }
 
@@ -503,7 +501,7 @@ pub fn fg_dark_purple(text: impl AsRef<str>) -> ASText {
 pub fn fg_sky_blue(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(sky_blue).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(sky_blue))),
     }
 }
 
@@ -511,7 +509,7 @@ pub fn fg_sky_blue(text: impl AsRef<str>) -> ASText {
 pub fn fg_lavender(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(lavender).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(lavender))),
     }
 }
 
@@ -519,9 +517,7 @@ pub fn fg_lavender(text: impl AsRef<str>) -> ASText {
 pub fn fg_dark_lizard_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(
-            crate::tui_color!(dark_lizard_green).into()
-        )),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_lizard_green))),
     }
 }
 
@@ -529,7 +525,7 @@ pub fn fg_dark_lizard_green(text: impl AsRef<str>) -> ASText {
 pub fn fg_orange(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(orange).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(orange))),
     }
 }
 
@@ -537,9 +533,7 @@ pub fn fg_orange(text: impl AsRef<str>) -> ASText {
 pub fn fg_silver_metallic(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(
-            crate::tui_color!(silver_metallic).into()
-        )),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(silver_metallic))),
     }
 }
 
@@ -547,7 +541,7 @@ pub fn fg_silver_metallic(text: impl AsRef<str>) -> ASText {
 pub fn fg_lizard_green(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(lizard_green).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(lizard_green))),
     }
 }
 
@@ -555,7 +549,7 @@ pub fn fg_lizard_green(text: impl AsRef<str>) -> ASText {
 pub fn fg_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(pink).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(pink))),
     }
 }
 
@@ -563,7 +557,7 @@ pub fn fg_pink(text: impl AsRef<str>) -> ASText {
 pub fn fg_dark_pink(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(dark_pink).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_pink))),
     }
 }
 
@@ -571,7 +565,7 @@ pub fn fg_dark_pink(text: impl AsRef<str>) -> ASText {
 pub fn fg_frozen_blue(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(frozen_blue).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(frozen_blue))),
     }
 }
 
@@ -579,7 +573,7 @@ pub fn fg_frozen_blue(text: impl AsRef<str>) -> ASText {
 pub fn fg_guards_red(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(guards_red).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(guards_red))),
     }
 }
 
@@ -587,7 +581,7 @@ pub fn fg_guards_red(text: impl AsRef<str>) -> ASText {
 pub fn fg_slate_gray(text: impl AsRef<str>) -> ASText {
     ASText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(crate::tui_color!(slate_gray).into())),
+        styles: smallvec!(ASTStyle::Foreground(tui_color!(slate_gray))),
     }
 }
 
@@ -617,15 +611,15 @@ impl ASText {
     }
 
     #[must_use]
-    pub fn bg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
-        let color: ASTColor = arg_color.into();
+    pub fn bg_color(mut self, arg_color: impl Into<TuiColor>) -> Self {
+        let color: TuiColor = arg_color.into();
         self.styles.push(ASTStyle::Background(color));
         self
     }
 
     #[must_use]
-    pub fn fg_color(mut self, arg_color: impl Into<ASTColor>) -> Self {
-        let color: ASTColor = arg_color.into();
+    pub fn fg_color(mut self, arg_color: impl Into<TuiColor>) -> Self {
+        let color: TuiColor = arg_color.into();
         self.styles.push(ASTStyle::Foreground(color));
         self
     }
@@ -633,49 +627,49 @@ impl ASText {
     #[must_use]
     pub fn bg_cyan(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(ASTColor::Ansi(51.into())));
+            .push(ASTStyle::Background(TuiColor::Ansi(51.into())));
         self
     }
 
     #[must_use]
     pub fn bg_yellow(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(ASTColor::Ansi(226.into())));
+            .push(ASTStyle::Background(TuiColor::Ansi(226.into())));
         self
     }
 
     #[must_use]
     pub fn bg_green(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(ASTColor::Ansi(34.into())));
+            .push(ASTStyle::Background(TuiColor::Ansi(34.into())));
         self
     }
 
     #[must_use]
     pub fn bg_slate_gray(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(crate::tui_color!(slate_gray).into()));
+            .push(ASTStyle::Background(tui_color!(slate_gray)));
         self
     }
 
     #[must_use]
     pub fn bg_dark_gray(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(ASTColor::Ansi(236.into())));
+            .push(ASTStyle::Background(TuiColor::Ansi(236.into())));
         self
     }
 
     #[must_use]
     pub fn bg_night_blue(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(tui_color!(night_blue).into()));
+            .push(ASTStyle::Background(tui_color!(night_blue)));
         self
     }
 
     #[must_use]
     pub fn bg_moonlight_blue(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(tui_color!(moonlight_blue).into()));
+            .push(ASTStyle::Background(tui_color!(moonlight_blue)));
         self
     }
 }
@@ -687,8 +681,8 @@ impl ASText {
 /// `.into()`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
 pub enum ASTStyle {
-    Foreground(ASTColor),
-    Background(ASTColor),
+    Foreground(TuiColor),
+    Background(TuiColor),
     Bold,
     Dim,
     Italic,
@@ -711,10 +705,10 @@ mod convert_vec_ast_style_to_tui_style {
             for style in styles {
                 match style {
                     ASTStyle::Foreground(color) => {
-                        tui_style.color_fg = Some(color.into());
+                        tui_style.color_fg = Some(color);
                     }
                     ASTStyle::Background(color) => {
-                        tui_style.color_bg = Some(color.into());
+                        tui_style.color_bg = Some(color);
                     }
                     ASTStyle::Bold => tui_style.attribs += Bold,
                     ASTStyle::Dim => tui_style.attribs += Dim,
@@ -766,10 +760,10 @@ mod convert_tui_style_to_vec_ast_style {
                 styles.push(ASTStyle::Strikethrough);
             }
             if let Some(color_fg) = tui_style.color_fg {
-                styles.push(ASTStyle::Foreground(color_fg.into()));
+                styles.push(ASTStyle::Foreground(color_fg));
             }
             if let Some(color_bg) = tui_style.color_bg {
-                styles.push(ASTStyle::Background(color_bg.into()));
+                styles.push(ASTStyle::Background(color_bg));
             }
             styles
         }
@@ -783,7 +777,7 @@ impl FastStringify for ASTStyle {
         // Helper function to convert color to appropriate SgrCode.
         fn color_to_sgr(
             color_support: ColorSupport,
-            color: ASTColor,
+            color: TuiColor,
             is_foreground: bool,
         ) -> SgrCode {
             match color_support {
@@ -861,8 +855,8 @@ generate_impl_display_for_fast_stringify!(ASText);
 #[cfg(test)]
 mod tests {
     use super::dim;
-    use crate::{ASTColor, ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport,
-                InlineVec, PixelChar, TuiColor, TuiStyle,
+    use crate::{ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport, InlineVec,
+                PixelChar, TuiColor, TuiStyle,
                 ansi::sizing::InlineVecASTextStyles,
                 ansi_styled_text::ansi_styled_text_impl::ASTextConvertOptions,
                 global_color_support, tui_color,
@@ -943,14 +937,14 @@ mod tests {
             text: "Hello".into(),
             styles: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
+                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
             ),
         };
         println!("{eg_1:?}");
         println!("{eg_1}");
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 }))] }"#
+            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(0,0,0)] }"#
         );
 
         let eg_2 = eg_1.bg_dark_gray();
@@ -958,7 +952,7 @@ mod tests {
         println!("{eg_2}");
         assert_eq!(
             format!("{:?}", eg_2),
-            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Ansi(AnsiValue { index: 236 }))] }"#
+            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(0,0,0), Background(ansi_value(236))] }"#
         );
     }
 
@@ -972,7 +966,7 @@ mod tests {
         println!("{eg_1}");
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "hello", styles: [Dim, Foreground(Rgb(RgbValue { red: 0, green: 0, blue: 0 })), Background(Rgb(RgbValue { red: 1, green: 1, blue: 1 }))] }"#
+            r#"AnsiStyledText { text: "hello", styles: [Dim, Foreground(0,0,0), Background(1,1,1)] }"#
         );
     }
 
@@ -985,8 +979,8 @@ mod tests {
             text: "Hello".into(),
             styles: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
-                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
+                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
+                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -999,8 +993,8 @@ mod tests {
             text: "World".into(),
             styles: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Ansi(150.into())),
-                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
+                ASTStyle::Foreground(TuiColor::Ansi(150.into())),
+                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1021,8 +1015,8 @@ mod tests {
             text: "Hello".into(),
             styles: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
-                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
+                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
+                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1035,8 +1029,8 @@ mod tests {
             text: "World".into(),
             styles: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Ansi(150.into())),
-                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
+                ASTStyle::Foreground(TuiColor::Ansi(150.into())),
+                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1057,8 +1051,8 @@ mod tests {
             text: "Hello".into(),
             styles: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb((0, 0, 0).into())),
-                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
+                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
+                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1073,8 +1067,8 @@ mod tests {
             text: "World".into(),
             styles: smallvec!(
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Ansi(150.into())),
-                ASTStyle::Background(ASTColor::Rgb((1, 1, 1).into())),
+                ASTStyle::Foreground(TuiColor::Ansi(150.into())),
+                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1094,9 +1088,9 @@ mod tests {
         // Test case 1: Mix of styles.
         let ast_styles_1: ASTextStyles = smallvec![
             ASTStyle::Bold,
-            ASTStyle::Foreground(ASTColor::Ansi(196.into())), // Red
+            ASTStyle::Foreground(TuiColor::Ansi(196.into())), // Red
             ASTStyle::Italic,
-            ASTStyle::Background(ASTColor::Rgb((50, 50, 50).into())), // Dark Gray RGB
+            ASTStyle::Background(TuiColor::Rgb((50, 50, 50).into())), // Dark Gray RGB
             ASTStyle::Underline,
             ASTStyle::Overline, // This should be ignored
         ];
@@ -1125,8 +1119,8 @@ mod tests {
 
         // Test case 3: Only colors.
         let ast_styles_3: ASTextStyles = smallvec![
-            ASTStyle::Foreground(ASTColor::Ansi(34.into())), // Green
-            ASTStyle::Background(ASTColor::Ansi(226.into())), // Yellow
+            ASTStyle::Foreground(TuiColor::Ansi(34.into())), // Green
+            ASTStyle::Background(TuiColor::Ansi(226.into())), // Yellow
         ];
         let expected_tui_style_3 = TuiStyle {
             color_fg: Some(TuiColor::Ansi(34.into())),
@@ -1710,8 +1704,8 @@ mod bench_tests {
         ASText {
             text: "Hello, World!".into(),
             styles: smallvec![
-                ASTStyle::Foreground(ASTColor::Ansi(196.into())),
-                ASTStyle::Background(ASTColor::Ansi(236.into())),
+                ASTStyle::Foreground(TuiColor::Ansi(196.into())),
+                ASTStyle::Background(TuiColor::Ansi(236.into())),
             ],
         }
     }
@@ -1721,8 +1715,8 @@ mod bench_tests {
             text: "Hello, World!".into(),
             styles: smallvec![
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Rgb((255, 0, 0).into())),
-                ASTStyle::Background(ASTColor::Rgb((0, 0, 255).into())),
+                ASTStyle::Foreground(TuiColor::Rgb((255, 0, 0).into())),
+                ASTStyle::Background(TuiColor::Rgb((0, 0, 255).into())),
             ],
         }
     }
@@ -1734,8 +1728,8 @@ mod bench_tests {
                 ASTStyle::Bold,
                 ASTStyle::Italic,
                 ASTStyle::Underline,
-                ASTStyle::Foreground(ASTColor::Rgb((255, 128, 0).into())),
-                ASTStyle::Background(ASTColor::Ansi(236.into())),
+                ASTStyle::Foreground(TuiColor::Rgb((255, 128, 0).into())),
+                ASTStyle::Background(TuiColor::Ansi(236.into())),
             ],
         }
     }
@@ -1749,7 +1743,7 @@ mod bench_tests {
             // <!-- cspell:enable -->
             styles: smallvec![
                 ASTStyle::Bold,
-                ASTStyle::Foreground(ASTColor::Ansi(34.into())),
+                ASTStyle::Foreground(TuiColor::Ansi(34.into())),
             ],
         }
     }

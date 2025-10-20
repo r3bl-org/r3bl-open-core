@@ -8,7 +8,7 @@
 
 use super::ProcessManager;
 use crate::{ANSIBasicColor, ArrayOverflowResult, FlushKind, IndexOps, LengthOps,
-            OffscreenBuffer, OutputDevice, PixelChar, Size, TuiColor, TuiStyle, col,
+            OffscreenBuffer, OutputDevice, PixelChar, Size, TuiStyle, col,
             core::coordinates::{idx, len},
             lock_output_device_as_mut,
             tui::terminal_lib_backends::{OffscreenBufferPaint,
@@ -106,8 +106,8 @@ impl OutputRenderer {
         // Write status text with appropriate style.
         let status_style = TuiStyle {
             attribs: tui_style_attribs(Bold),
-            color_fg: Some(TuiColor::Basic(ANSIBasicColor::White)),
-            color_bg: Some(TuiColor::Basic(ANSIBasicColor::Blue)),
+            color_fg: Some(ANSIBasicColor::White.into()),
+            color_bg: Some(ANSIBasicColor::Blue.into()),
             ..Default::default()
         };
 

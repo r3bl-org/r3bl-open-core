@@ -356,8 +356,8 @@ mod tests_sgr_ops {
         assert!(buffer.ansi_parser_support.current_style.color_fg.is_some());
         if let Some(color) = buffer.ansi_parser_support.current_style.color_fg {
             // Should be red color
-            // Red is ANSI color 31, which maps to standard red
-            assert!(matches!(color, TuiColor::Basic(_)));
+            // Red is ANSI color 31, which maps to palette index 9 (basic red)
+            assert!(matches!(color, TuiColor::Ansi(a) if a.index < 16));
         }
     }
 
@@ -370,8 +370,8 @@ mod tests_sgr_ops {
         assert!(buffer.ansi_parser_support.current_style.color_bg.is_some());
         if let Some(color) = buffer.ansi_parser_support.current_style.color_bg {
             // Should be green color
-            // Green is ANSI color 42, which maps to standard green
-            assert!(matches!(color, TuiColor::Basic(_)));
+            // Green is ANSI color 42, which maps to palette index 10 (basic green)
+            assert!(matches!(color, TuiColor::Ansi(a) if a.index < 16));
         }
     }
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{ASTColor, DefaultIoDevices, ItemsOwned, ast, choose, get_terminal_width,
+use r3bl_tui::{DefaultIoDevices, ItemsOwned, TuiColor, ast, choose, get_terminal_width,
                height, new_style,
                readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, usize, width};
@@ -65,8 +65,8 @@ pub async fn main() -> miette::Result<()> {
     let max_height_row_count: usize = 5;
 
     let mut score = 0;
-    let correct_answer_color = ASTColor::Rgb((255, 216, 9).into());
-    let incorrect_answer_color = ASTColor::Rgb((255, 70, 30).into());
+    let correct_answer_color = TuiColor::Rgb((255, 216, 9).into());
+    let incorrect_answer_color = TuiColor::Rgb((255, 70, 30).into());
     let line_length = 60;
 
     display_header(line_length);
@@ -118,8 +118,8 @@ enum Answer {
 impl Display for Answer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let color = match self {
-            Answer::Correct => ASTColor::Rgb((5, 236, 0).into()),
-            Answer::Incorrect => ASTColor::Rgb((234, 0, 196).into()),
+            Answer::Correct => TuiColor::Rgb((5, 236, 0).into()),
+            Answer::Incorrect => TuiColor::Rgb((234, 0, 196).into()),
         };
 
         let text = match self {
@@ -127,7 +127,7 @@ impl Display for Answer {
             Answer::Incorrect => "Incorrect",
         };
 
-        write!(f, "{}", ast(text, new_style!(color_fg: {color.into()})))
+        write!(f, "{}", ast(text, new_style!(color_fg: {color})))
     }
 }
 
@@ -153,24 +153,24 @@ fn check_answer(guess: &QuestionData, maybe_user_input: Option<&ItemsOwned>) -> 
 }
 
 fn display_header(line_length: usize) {
-    let color = ASTColor::Rgb((9, 183, 238).into());
+    let color = TuiColor::Rgb((9, 183, 238).into());
     println!();
     println!();
     ast(
         "👋 Welcome to the Simple Quiz with choose",
-        new_style!(color_fg: {color.into()}),
+        new_style!(color_fg: {color}),
     )
     .println();
 
     ast(
         "To request_shutdown the game, press 'Esc'",
-        new_style!(color_fg: {color.into()}),
+        new_style!(color_fg: {color}),
     )
     .println();
 
     ast(
         "─".to_string().as_str().repeat(line_length).as_str(),
-        new_style!(color_fg: {color.into()}),
+        new_style!(color_fg: {color}),
     )
     .println();
 }
@@ -181,13 +181,9 @@ fn display_footer(
     line_length: usize,
 ) {
     let line = "─".to_string().as_str().repeat(line_length - 2);
-    let color = ASTColor::Rgb((9, 183, 238).into());
+    let color = TuiColor::Rgb((9, 183, 238).into());
 
-    ast(
-        format!("╭{line}╮").as_str(),
-        new_style!(color_fg: {color.into()}),
-    )
-    .println();
+    ast(format!("╭{line}╮").as_str(), new_style!(color_fg: {color})).println();
 
     let vertical_line = "│".to_string();
     let mut score_text = Vec::<String>::new();
@@ -203,24 +199,16 @@ fn display_footer(
     score_text.push(" ".to_string().repeat(spaces_to_add));
     score_text.push(vertical_line.clone());
 
-    ast(
-        score_text.join("").as_str(),
-        new_style!(color_fg: {color.into()}),
-    )
-    .println();
+    ast(score_text.join("").as_str(), new_style!(color_fg: {color})).println();
 
-    ast(
-        format!("╰{line}╯").as_str(),
-        new_style!(color_fg: {color.into()}),
-    )
-    .println();
+    ast(format!("╰{line}╯").as_str(), new_style!(color_fg: {color})).println();
 }
 
 fn check_user_input_and_display_result(
     user_input: &ItemsOwned,
     question_data: &QuestionData,
-    correct_answer_color: ASTColor,
-    incorrect_answer_color: ASTColor,
+    correct_answer_color: TuiColor,
+    incorrect_answer_color: TuiColor,
     score: &mut i32,
     all_questions_and_answers: &[QuestionData],
 ) {
@@ -255,7 +243,7 @@ fn check_user_input_and_display_result(
         "{a} {b} {c}",
         a = ast(
             format!("{}. {}", question_number, &question_data.question),
-            new_style!(color_bg: {background_color.into()}),
+            new_style!(color_bg: {background_color}),
         ),
         b = user_input_str,
         c = correct_or_incorrect

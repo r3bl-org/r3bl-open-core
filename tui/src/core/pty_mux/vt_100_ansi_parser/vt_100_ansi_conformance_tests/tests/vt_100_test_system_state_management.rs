@@ -70,10 +70,7 @@ pub mod cursor_save_restore_with_attributes {
         // Attributes should remain as they were changed (not restored)
         // Current style should be green foreground from the change above
         let current_style = ofs_buf.ansi_parser_support.current_style;
-        assert_eq!(
-            current_style.color_fg,
-            Some(crate::TuiColor::Basic(ANSIBasicColor::Green))
-        );
+        assert_eq!(current_style.color_fg, Some(ANSIBasicColor::Green.into()));
     }
 
     #[test]
@@ -162,14 +159,8 @@ pub mod cursor_save_restore_with_attributes {
         // Should be written with the complex styling (red on yellow, underlined)
         let char_at_restore_pos = &ofs_buf.buffer[1][3];
         if let crate::PixelChar::PlainText { style, .. } = char_at_restore_pos {
-            assert_eq!(
-                style.color_fg,
-                Some(crate::TuiColor::Basic(ANSIBasicColor::Red))
-            );
-            assert_eq!(
-                style.color_bg,
-                Some(crate::TuiColor::Basic(ANSIBasicColor::Yellow))
-            );
+            assert_eq!(style.color_fg, Some(ANSIBasicColor::Red.into()));
+            assert_eq!(style.color_bg, Some(ANSIBasicColor::Yellow.into()));
             assert!(style.attribs.underline.is_some());
         } else {
             panic!("Expected PlainText with styling");

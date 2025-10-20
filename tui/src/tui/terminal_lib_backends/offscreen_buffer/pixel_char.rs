@@ -64,7 +64,7 @@ impl Debug for PixelChar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ANSIBasicColor, TuiColor, height, new_style,
+    use crate::{height, new_style,
                 tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer,
                 tui_color, tui_style_attrib::Underline, tui_style_attribs, width};
 
@@ -123,7 +123,7 @@ mod tests {
             } => {
                 assert_eq!(*display_char, 'b');
                 assert_eq!(style.attribs, tui_style_attribs(Underline));
-                assert_eq!(style.color_fg, Some(TuiColor::Basic(ANSIBasicColor::Red)));
+                assert_eq!(style.color_fg, Some(tui_color!(red)));
             }
             _ => panic!("Expected styled PlainText variant"),
         }
@@ -161,10 +161,7 @@ mod tests {
                 style: actual_style,
             } => {
                 assert_eq!(*display_char, ' ');
-                assert_eq!(
-                    actual_style.color_bg,
-                    Some(TuiColor::Basic(ANSIBasicColor::Blue))
-                );
+                assert_eq!(actual_style.color_bg, Some(tui_color!(blue)));
             }
             _ => panic!("Expected styled space"),
         }

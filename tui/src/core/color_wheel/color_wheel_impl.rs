@@ -1164,10 +1164,6 @@ mod lolcat_bg_helper {
                 let rgb_value = RgbValue::from(ansi_value);
                 (rgb_value.red, rgb_value.green, rgb_value.blue)
             }
-            TuiColor::Basic(basic_color) => {
-                let RgbValue { red, green, blue } = basic_color.into();
-                (red, green, blue)
-            }
         }
     }
 }

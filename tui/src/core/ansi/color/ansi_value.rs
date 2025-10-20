@@ -5,9 +5,9 @@
 //! This provides a good balance between color precision and terminal compatibility.
 //! Each index (0-255) maps to a specific color in the palette.
 
-use super::RgbValue;
-use crate::{TransformColor,
+use super::{RgbValue,
             convert::{ansi_constants::ANSI_COLOR_PALETTE, convert_rgb_into_grayscale}};
+use crate::TransformColor;
 
 /// Represents a color in the ANSI 256-color palette format.
 ///
@@ -64,7 +64,7 @@ impl TransformColor for AnsiValue {
 
 impl AnsiValue {
     #[must_use]
-    pub fn new(color: u8) -> Self { Self { index: color } }
+    pub const fn new(color: u8) -> Self { Self { index: color } }
 }
 
 #[cfg(test)]

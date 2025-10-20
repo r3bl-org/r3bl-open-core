@@ -18,9 +18,9 @@ mod ex_rc;
 
 // Use other crates.
 use miette::IntoDiagnostic;
-use r3bl_tui::{ASTColor, CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent,
-               TerminalWindow, fg_color, fg_frozen_blue, fg_pink, fg_slate_gray,
-               get_size, inline_string, key_press,
+use r3bl_tui::{CommonError, CommonResult, DEBUG_TUI_MOD, InputEvent, TerminalWindow,
+               fg_color, fg_frozen_blue, fg_pink, fg_slate_gray, get_size,
+               inline_string, key_press,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
@@ -60,7 +60,7 @@ async fn main_impl() -> CommonResult<()> {
 
     let msg = inline_string!("{}", &generate_help_msg());
 
-    let msg_fmt = fg_color(ASTColor::from(tui_color!(lizard_green)), &msg);
+    let msg_fmt = fg_color(tui_color!(lizard_green), &msg);
     rla_println!(rl_ctx, "{}", msg_fmt.to_string());
 
     // Ignore errors: https://doc.rust-lang.org/std/result/enum.Result.html#method.ok

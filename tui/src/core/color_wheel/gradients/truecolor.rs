@@ -145,7 +145,7 @@ mod tests {
                     )
                     .println();
                 }
-                _ => panic!("Unexpected color type"),
+                TuiColor::Ansi(_) => panic!("Unexpected color type"),
             });
     }
 
@@ -190,7 +190,7 @@ mod tests {
                     )
                     .println();
                 }
-                _ => panic!("Unexpected color type"),
+                TuiColor::Ansi(_) => panic!("Unexpected color type"),
             });
     }
 }

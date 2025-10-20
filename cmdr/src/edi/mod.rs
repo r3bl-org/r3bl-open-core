@@ -8,7 +8,7 @@ pub mod state;
 pub mod ui_str;
 pub mod ui_templates;
 
-// Reexport.
+// Re-export.
 pub use app_main::*;
 pub use clap_config::*;
 pub use launcher::*;

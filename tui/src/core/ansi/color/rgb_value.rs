@@ -4,10 +4,9 @@
 //!
 //! This is the most precise color representation supported by modern terminals.
 
-use super::AnsiValue;
+use super::{AnsiValue, convert::convert_rgb_into_ansi256};
 use crate::{TransformColor,
-            common::{CommonError, CommonErrorType, CommonResult},
-            convert::convert_rgb_into_ansi256};
+            common::{CommonError, CommonErrorType, CommonResult}};
 
 /// Represents a color in RGB (24-bit truecolor) format.
 ///

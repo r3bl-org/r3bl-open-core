@@ -37,7 +37,7 @@
 //! ```
 //! # use r3bl_tui::{
 //! #     fg_red, size, fg_color, tui_color, new_style, ast,
-//! #     RgbValue, ASTStyle, AnsiStyledText, ASTColor,
+//! #     RgbValue, ASTStyle, AnsiStyledText,
 //! # };
 //!
 //! // Use ast() to create a styled text.

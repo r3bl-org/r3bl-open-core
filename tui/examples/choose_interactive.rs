@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{ASTColor, ASTStyle, AnsiStyledText, DefaultIoDevices, InlineVec, ast,
+use r3bl_tui::{ASTStyle, AnsiStyledText, DefaultIoDevices, InlineVec, TuiColor, ast,
                ast_line, ast_lines, choose, get_size, get_terminal_width, height,
                inline_vec,
                log::try_initialize_logging_global,
@@ -596,16 +596,16 @@ fn single_select_instruction() -> InlineVec<InlineVec<AnsiStyledText>> {
         let return_key = ast(
             " Return:",
             smallvec![
-                ASTStyle::Foreground(ASTColor::Rgb((234, 0, 196).into())),
-                ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
+                ASTStyle::Foreground(TuiColor::Rgb((234, 0, 196).into())),
+                ASTStyle::Background(TuiColor::Rgb((14, 17, 23).into())),
             ],
         );
 
         let confirm = ast(
             "         confirm selection",
             smallvec![
-                ASTStyle::Foreground(ASTColor::Rgb((94, 103, 111).into())),
-                ASTStyle::Background(ASTColor::Rgb((14, 17, 23).into())),
+                ASTStyle::Foreground(TuiColor::Rgb((94, 103, 111).into())),
+                ASTStyle::Background(TuiColor::Rgb((14, 17, 23).into())),
             ],
         );
 
