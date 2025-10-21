@@ -7,7 +7,7 @@
 //! it uses crossterm's proper command system and `r3bl_tui`'s styled text with TUI colors
 //! for better maintainability and cross-platform compatibility.
 
-use crate::{ASText, TuiColor, lock_output_device_as_mut, terminal_io::OutputDevice};
+use crate::{CliText, TuiColor, lock_output_device_as_mut, terminal_io::OutputDevice};
 use crossterm::{ExecutableCommand,
                 cursor::MoveTo,
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
@@ -70,8 +70,8 @@ pub fn write_text(output_device: &OutputDevice, text: &str) {
     let _unused = write!(out, "{text}");
 }
 
-/// Write styled text using `r3bl_tui`'s `AnsiStyledText` system.
-pub fn write_styled_text(output_device: &OutputDevice, styled_text: &ASText) {
+/// Write styled text using `r3bl_tui`'s `CliText` system.
+pub fn write_styled_text(output_device: &OutputDevice, styled_text: &CliText) {
     let out = lock_output_device_as_mut!(output_device);
     let _unused = write!(out, "{styled_text}");
 }

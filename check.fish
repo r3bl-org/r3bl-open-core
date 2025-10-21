@@ -83,6 +83,11 @@ source script_lib.fish
 # it will be ignored. Increase this if you find checks running too frequently.
 set -g DEBOUNCE_SECONDS 5
 
+# Make sure that cargo has it's own folder to work on, so it does not wait for
+# lock on Claude Code, VSCode, or RustRoever (each of whom have their own
+# subfolder).
+set -gx CARGO_TARGET_DIR target/check
+
 # ============================================================================
 # Argument Parsing
 # ============================================================================

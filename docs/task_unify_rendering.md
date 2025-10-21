@@ -40,8 +40,8 @@
       - [**FAQ: What About Cursor/Clear Operations?**](#faq-what-about-cursorclear-operations)
       - [**Why This Matters**](#why-this-matters)
       - [**Success Criteria for Phase 0.5**](#success-criteria-for-phase-05)
-    - [Phase 1: Rename CliText (AnsiStyledText → CliText) and Extend PixelChar Support (NEXT)](#phase-1-rename-clitext-ansistyledtext-%E2%86%92-clitext-and-extend-pixelchar-support-next)
-    - [Phase 2: Create Unified ANSI Generator (NEXT after Phase 1)](#phase-2-create-unified-ansi-generator-next-after-phase-1)
+    - [Phase 1: Rename CliText (AnsiStyledText → CliText) and Extend PixelChar Support (✅ COMPLETE)](#phase-1-rename-clitext-ansistyledtext-%E2%86%92-clitext-and-extend-pixelchar-support-%E2%9C%85-complete)
+    - [Phase 2: Create Unified ANSI Generator (⏳ NEXT)](#phase-2-create-unified-ansi-generator-%E2%AD%95-next)
     - [Phase 3: Unified Rendering with OffscreenBuffer (NEXT after Phase 2)](#phase-3-unified-rendering-with-offscreenbuffer-next-after-phase-2)
     - [Phase 4: Update ASText Rendering (NEXT after Phase 3)](#phase-4-update-astext-rendering-next-after-phase-3)
     - [Phase 5: Update choose() and readline_async Implementations (NEXT after Phase 4)](#phase-5-update-choose-and-readline_async-implementations-next-after-phase-4)
@@ -71,8 +71,10 @@
   - [Status Update (October 21, 2025)](#status-update-october-21-2025)
     - [✅ Phase 0 Complete - Foundation Laid](#-phase-0-complete---foundation-laid)
     - [✅ Phase 0.5 Complete - ASText Consolidation Done](#-phase-05-complete---astext-consolidation-done)
-    - [🎯 Next Steps (After Phase 0.5 Complete)](#-next-steps-after-phase-05-complete)
+    - [🎯 Next Steps (After Phase 1 Complete)](#-next-steps-after-phase-1-complete)
     - [Key Insights](#key-insights)
+  - [Phase 1 Completion Update (October 21, 2025)](#phase-1-completion-update-october-21-2025)
+    - [✅ Phase 1 Complete - Type Renaming & Consolidation](#-phase-1-complete---type-renaming--consolidation)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -695,7 +697,7 @@ By standardizing on CliText for styling BEFORE Phase 1 rename:
 
 ---
 
-### Phase 1: Rename CliText (AnsiStyledText → CliText) and Extend PixelChar Support (NEXT)
+### Phase 1: Rename CliText (AnsiStyledText → CliText) and Extend PixelChar Support (✅ COMPLETE)
 
 **Rename tasks (codebase-wide):**
 
@@ -737,7 +739,7 @@ impl CliText {
 }
 ```
 
-### Phase 2: Create Unified ANSI Generator (NEXT after Phase 1)
+### Phase 2: Create Unified ANSI Generator (⏳ NEXT)
 
 **⚠️ IMPORTANT: In this phase, crossterm remains the I/O backend.** `PixelCharRenderer` generates
 ANSI byte sequences, which are then written to stdout through crossterm's `OutputDevice`
@@ -1262,17 +1264,23 @@ The groundwork for unified rendering has been established with commit e0d25552:
   - Updated `choose_impl/mod.rs` to directly attach `select_component` module
   - All 26 readline_async tests passing
 
-### 🎯 Next Steps (After Phase 0.5 Complete)
+### 🎯 Next Steps (After Phase 1 Complete)
 
-1. **Phase 1**: Rename `AnsiStyledText` → `CliText` and standardize to use `TuiStyleAttribs`
-   - Rename all related types and functions (see Phase 1 details above)
-   - Remove ambiguous "AST" prefix throughout codebase
+1. **✅ Phase 0**: ✅ COMPLETE - Consolidate style attributes (`TuiStyleAttribs`)
+2. **✅ Phase 0.5**: ✅ COMPLETE - Consolidate choose() and readline_async to use `CliText`
+3. **✅ Phase 1**: ✅ COMPLETE - Rename `AnsiStyledText` → `CliText` (Oct 21, 2025)
+   - All 2090 tests passing
+   - Clean naming, no backwards compat
+   - Foundation ready for Phase 2
 
-2. **Phase 2**: Build `PixelCharRenderer` module for unified ANSI generation
+4. **⏳ Phase 2**: Build `PixelCharRenderer` module for unified ANSI generation (NEXT)
+   - Create module structure
+   - Implement smart style diffing
+   - Write comprehensive tests
 
-3. **Phase 3**: Update both full TUI and choose() to use OffscreenBuffer → PixelCharRenderer
+5. **⏳ Phase 3**: Update both full TUI and choose() to use OffscreenBuffer → PixelCharRenderer
 
-4. **Phases 4-6**: Update CliText Display, choose() implementation, and RenderOp to use unified path
+6. **⏳ Phases 4-6**: Update CliText Display, choose() implementation, and RenderOp to use unified path
 
 ### Key Insights
 
@@ -1294,3 +1302,41 @@ renderer doesn't depend on crossterm internals, only on ANSI sequence generation
 - **This task**: Unified rendering (what ANSI to generate)
 - **Next task**: Unified I/O (how to get bytes to stdout)
 - No overlap or confusion about what each task accomplishes
+
+## Phase 1 Completion Update (October 21, 2025)
+
+### ✅ Phase 1 Complete - Type Renaming & Consolidation
+
+**Completion Status**: ✅ FULLY COMPLETE
+
+**What Was Done**:
+- Renamed `AnsiStyledText` → `CliText` across entire codebase
+- Renamed `ASTStyle` → `CliStyle` (removed ambiguous "AST" prefix)
+- Renamed type aliases: `ASTextLine` → `CliTextLine`, `ASTextLines` → `CliTextLines`
+- Renamed convenience function: `ast()` → `cli_text()`
+- Renamed macros: `ast_line!` → `cli_text_line!`, `ast_lines!` → `cli_text_lines!`
+- Removed all backwards compatibility aliases (clean break approach per user direction)
+- Updated all references across three rendering paths:
+  - Full TUI (RenderOps)
+  - choose() interactive selection
+  - readline_async (spinner + choose component)
+- Updated all example files and application code
+
+**Test Results**:
+- ✅ All 2090 tests passing
+- ✅ No regressions
+- ✅ Code compiles cleanly
+
+**Files Modified**:
+- Core library: `tui/src/core/ansi/ansi_styled_text.rs` (type definitions, macros, tests)
+- Module exports: `tui/src/core/ansi/mod.rs`
+- Terminal I/O: `tui/src/core/ansi/terminal_output.rs`
+- Examples: `tui/examples/choose_interactive.rs`, `tui/examples/choose_quiz_game.rs`
+- Application: Multiple cmdr module files updated
+- Tests: Updated test module imports and expectations
+
+**Why This Was Needed**:
+The "AST" prefix was ambiguous (could mean "Abstract Syntax Tree" or "AnsiStyledText"). Renaming to "CliText" clarifies that this is lightweight text representation for CLI applications, distinct from the more comprehensive `TuiStyledText` used by the full framework.
+
+**Foundation for Phase 2**:
+Phase 1 standardized the naming and consolidated the type system, providing a clean foundation for Phase 2 which will create the `PixelCharRenderer` unified ANSI generator. All three rendering paths now use consistent, clear naming conventions.

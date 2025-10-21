@@ -49,16 +49,25 @@ identified in `write_command_ansi` from flamegraph profiling.
 
 **This task depends on completion of [task_unify_rendering.md](task_unify_rendering.md):**
 
-| Unification Phase | Output | Used By | Notes |
-|---|---|---|---|
-| **0.5** (prerequisite) | CliText uses CliText abstraction for styling | Foundation | Standardizes styling before renaming |
-| **1** (rename) | AnsiStyledText → CliText | Foundation | Type rename across codebase |
-| **2** (core) | `PixelCharRenderer` module created | **This task** | Unified ANSI sequence generator |
-| **3-6** (integration) | All paths use PixelCharRenderer | **This task** | Cross-platform ANSI output ready |
+| Unification Phase | Output | Used By | Status | Notes |
+|---|---|---|---|---|
+| **0.5** (prerequisite) | CliText uses CliText abstraction for styling | Foundation | ✅ COMPLETE | Standardizes styling before renaming |
+| **1** (rename) | AnsiStyledText → CliText | Foundation | ✅ COMPLETE (October 21, 2025) | Type rename across codebase with all examples/cmdr updated |
+| **2** (core) | `PixelCharRenderer` module created | **This task** | ⏳ NEXT | Unified ANSI sequence generator |
+| **3-6** (integration) | All paths use PixelCharRenderer | **This task** | ⏳ PENDING | Cross-platform ANSI output ready |
 
 **Execution Order:**
-1. ✅ Complete all phases in task_unify_rendering.md (0.5 through 6)
-2. 🚀 Begin this task (task_remove_crossterm.md phases 1-3)
+1. ✅ Complete all phases in task_unify_rendering.md (0.5 through 1) - **DONE**
+2. ⏳ Continue task_unify_rendering.md phases 2-6 (PixelCharRenderer + integration)
+3. 🚀 Then begin this task (task_remove_crossterm.md phases 1-3)
+
+**Phase 1 Completion Summary (October 21, 2025):**
+- ✅ Core type renaming: `AnsiStyledText` → `CliText`, `ASTStyle` → `CliStyle`
+- ✅ Function/macro renaming: `ast()` → `cli_text()`, `ast_line!` → `cli_text_line!`, etc.
+- ✅ All 2,090 tests passing
+- ✅ Examples updated (choose_interactive.rs, choose_quiz_game.rs)
+- ✅ cmdr app fully updated (all ui_templates, choose_prompt, branch commands)
+- ✅ No backwards compatibility aliases (clean break for clarity)
 
 **Why this dependency matters:**
 - task_unify_rendering.md creates `PixelCharRenderer` that generates ANSI sequences

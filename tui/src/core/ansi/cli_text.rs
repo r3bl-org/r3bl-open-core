@@ -10,14 +10,14 @@ use smallvec::{SmallVec, smallvec};
 use std::fmt::Result;
 use strum_macros::EnumCount;
 
-/// Please don't create this struct directly, use [`crate::ast()`], [`crate::ast_line`!],
-/// [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
-/// [`fg_blue()`], etc.
+/// Please don't create this struct directly, use [`crate::cli_text()`],
+/// [`crate::cli_text_line`!], [`crate::cli_text_lines`!] or the constructor functions
+/// like [`fg_red()`], [`fg_green()`], [`fg_blue()`], etc.
 ///
-/// The main struct that we have to consider is `AnsiStyledText` or `AST`. It has two
+/// The main struct that we have to consider is `CliText`. It has two
 /// fields:
 /// - `text` - the text to print.
-/// - `styles` - a list of [`ASTStyle`] to apply to the text. This is owned in a stack
+/// - `styles` - a list of [`CliStyle`] to apply to the text. This is owned in a stack
 ///   allocated buffer, which can spill to the heap if it gets larger than
 ///   `sizing::MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE`.
 /// - Once created, either directly or using constructor functions like [`fg_red()`], you
@@ -30,12 +30,12 @@ use strum_macros::EnumCount;
 /// ```
 /// # use r3bl_tui::{
 /// #     TuiStyle, tui_color, new_style,
-/// #     ast, fg_red, dim, ASText, fg_color,
-/// #     ASTStyle, TuiColor,
+/// #     cli_text, fg_red, dim, CliText, fg_color,
+/// #     CliStyle, TuiColor,
 /// # };
 ///
-/// // Use ast() to create a styled text. Use this.
-/// let styled_text = ast("Hello", new_style!(bold));
+/// // Use cli_text() to create a styled text. Use this.
+/// let styled_text = cli_text("Hello", new_style!(bold));
 /// println!("{styled_text}");
 /// styled_text.println();
 ///
@@ -57,83 +57,85 @@ use strum_macros::EnumCount;
 /// blue_text_on_white.println();
 ///
 /// // Verbose struct construction (don't use this).
-/// ASText {
+/// CliText {
 ///     text: "Print a formatted (bold, italic, underline) string w/ ANSI color codes.".into(),
 ///     styles: smallvec::smallvec![
-///         ASTStyle::Bold,
-///         ASTStyle::Italic,
-///         ASTStyle::Underline,
-///         ASTStyle::Foreground(TuiColor::Rgb((50, 50, 50).into())),
-///         ASTStyle::Background(TuiColor::Rgb((100, 200, 1).into())),
+///         CliStyle::Bold,
+///         CliStyle::Italic,
+///         CliStyle::Underline,
+///         CliStyle::Foreground(TuiColor::Rgb((50, 50, 50).into())),
+///         CliStyle::Background(TuiColor::Rgb((100, 200, 1).into())),
 ///     ],
 /// }
 /// .println();
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AnsiStyledText {
+pub struct CliText {
     pub text: InlineString,
     /// You can supply this directly, or use [`crate::new_style`!] to create a
     /// [`crate::TuiStyle`] and convert it to this type using `.into()`.
-    pub styles: ASTextStyles,
+    pub styles: CliStyleList,
 }
 
 // Type aliases for better readability.
 
-pub type ASText = AnsiStyledText;
-pub type ASTextLine = InlineVec<AnsiStyledText>;
-pub type ASTextLines = InlineVec<ASTextLine>;
-pub type ASTextStyles = sizing::InlineVecASTextStyles;
+pub type CliTextLine = InlineVec<CliText>;
+pub type CliTextLines = InlineVec<CliTextLine>;
+pub type CliStyleList = sizing::InlineVecCliStyleList;
 
 pub(in crate::core::ansi) mod sizing {
-    use super::{ASTStyle, SmallVec};
+    use super::{CliStyle, SmallVec};
 
     /// Attributes are: `color_fg`, `color_bg`, bold, dim, italic, underline, reverse,
-    /// hidden, etc. which are in [`crate::ASTStyle`].
+    /// hidden, etc. which are in [`crate::CliStyle`].
     pub const MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE: usize = 12;
-    pub type InlineVecASTextStyles =
-        SmallVec<[ASTStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;
+    pub type InlineVecCliStyleList =
+        SmallVec<[CliStyle; MAX_ANSI_STYLED_TEXT_STYLE_ATTRIB_SIZE]>;
 }
 
-/// Easy to use constructor function, instead of creating a new [`AnsiStyledText`] struct
+/// Easy to use constructor function, instead of creating a new [`CliText`] struct
 /// directly. If you need to assemble a bunch of these together, you can use
-/// [`crate::ast_line!`] to create a list of them.
+/// [`crate::cli_text_line!`] to create a list of them.
 #[must_use]
-pub fn ast(arg_text: impl AsRef<str>, arg_styles: impl Into<ASTextStyles>) -> ASText {
-    ASText {
+pub fn cli_text(
+    arg_text: impl AsRef<str>,
+    arg_styles: impl Into<CliStyleList>,
+) -> CliText {
+    CliText {
         text: arg_text.as_ref().into(),
         styles: arg_styles.into(),
     }
 }
 
-/// String together a bunch of [`AnsiStyledText`] structs into a single
-/// [`crate::InlineVec<AnsiStyledText>`]. This is useful for creating a list of
-/// [`AnsiStyledText`] structs that can be printed on a single line.
+/// String together a bunch of [`CliText`] structs into a single
+/// [`crate::InlineVec<CliText>`]. This is useful for creating a list of
+/// [`CliText`] structs that can be printed on a single line.
 #[macro_export]
-macro_rules! ast_line {
+macro_rules! cli_text_line {
     (
-        $( $ast_chunk:expr ),* $(,)?
+        $( $cli_text_chunk:expr ),* $(,)?
     ) => {{
-        use $crate::{InlineVec, ASTextLine};
-        let mut acc: ASTextLine = InlineVec::new();
+        use $crate::{InlineVec, CliTextLine};
+        let mut acc: CliTextLine = InlineVec::new();
         $(
-            acc.push($ast_chunk);
+            acc.push($cli_text_chunk);
         )*
         acc
     }};
 }
 
 /// String together a bunch of formatted lines into a single
-/// [`crate::InlineVec<InlineVec<AnsiStyledText>>`]. This is useful for assembling
+/// [`crate::InlineVec<InlineVec<CliText>>`]. This is useful for assembling
 /// multiline formatted text which is used in multi line headers, for example.
 #[macro_export]
-macro_rules! ast_lines {
+macro_rules! cli_text_lines {
     (
-        $( $ast_line:expr ),* $(,)?
+        $( $cli_text_line:expr ),* $(,)?
     ) => {{
-        use $crate::{InlineVec, ASTextLines};
-        let mut acc: ASTextLines = InlineVec::new();
+        use $crate::{InlineVec, CliTextLines};
+        let mut acc: CliTextLines = InlineVec::new();
         $(
-            acc.push($ast_line);
+            acc.push($cli_text_line);
         )*
         acc
     }};
@@ -144,12 +146,12 @@ pub mod ansi_styled_text_impl {
     use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-    pub struct ASTextConvertOptions {
+    pub struct CliTextConvertOptions {
         pub start: Option<ColIndex>,
         pub end: Option<ColIndex>,
     }
 
-    impl From<ColWidth> for ASTextConvertOptions {
+    impl From<ColWidth> for CliTextConvertOptions {
         fn from(col_width: ColWidth) -> Self {
             Self {
                 start: Some(0.into()),
@@ -158,7 +160,7 @@ pub mod ansi_styled_text_impl {
         }
     }
 
-    impl AnsiStyledText {
+    impl CliText {
         pub fn println(&self) {
             println!("{self}");
         }
@@ -176,7 +178,7 @@ pub mod ansi_styled_text_impl {
         /// This is a convenience function to clip the text to a certain display width.
         /// You can also clip it to any given start and end index (inclusive).
         #[must_use]
-        pub fn clip(&self, arg_options: impl Into<ASTextConvertOptions>) -> ASText {
+        pub fn clip(&self, arg_options: impl Into<CliTextConvertOptions>) -> CliText {
             let ir_text = self.convert(arg_options);
 
             let mut acc = InlineString::with_capacity(self.text.len());
@@ -188,7 +190,7 @@ pub mod ansi_styled_text_impl {
                 acc.push(char_to_push);
             }
 
-            ASText {
+            CliText {
                 text: acc,
                 styles: self.styles.clone(),
             }
@@ -198,16 +200,16 @@ pub mod ansi_styled_text_impl {
         /// the text on the screen.
         /// - To clip the text to a certain display width you can pass in the [`ColWidth`]
         ///   to this function.
-        /// - To convert the entire text, just pass in [`ASTextConvertOptions::default()`]
-        ///   function.
+        /// - To convert the entire text, just pass in
+        ///   [`CliTextConvertOptions::default()`] function.
         /// - To convert a range of text, pass in the start and end indices. Note that it
         ///   will be inclusive (not the default Rust behavior), so the end index will be
         ///   included in the result.
         pub fn convert(
             &self,
-            arg_options: impl Into<ASTextConvertOptions>,
+            arg_options: impl Into<CliTextConvertOptions>,
         ) -> InlineVec<PixelChar> {
-            let ASTextConvertOptions { start, end } = arg_options.into();
+            let CliTextConvertOptions { start, end } = arg_options.into();
 
             // 1. Early return if the text is empty.
             if self.text.is_empty() {
@@ -275,60 +277,60 @@ pub mod ansi_styled_text_impl {
 // The following functions are convenience functions for providing ANSI attributes.
 
 #[must_use]
-pub fn bold(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn bold(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Bold),
+        styles: smallvec!(CliStyle::Bold),
     }
 }
 
 #[must_use]
-pub fn italic(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn italic(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Italic),
+        styles: smallvec!(CliStyle::Italic),
     }
 }
 
 #[must_use]
-pub fn underline(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn underline(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Underline),
+        styles: smallvec!(CliStyle::Underline),
     }
 }
 
 #[must_use]
-pub fn strikethrough(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn strikethrough(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Strikethrough),
+        styles: smallvec!(CliStyle::Strikethrough),
     }
 }
 
 #[must_use]
-pub fn dim(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn dim(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Dim),
+        styles: smallvec!(CliStyle::Dim),
     }
 }
 
 #[must_use]
-pub fn dim_underline(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn dim_underline(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Dim, ASTStyle::Underline),
+        styles: smallvec!(CliStyle::Dim, CliStyle::Underline),
     }
 }
 
 // The following function is a convenience function for providing any color.
 
 #[must_use]
-pub fn fg_color(arg_color: impl Into<TuiColor>, text: &str) -> ASText {
-    ASText {
+pub fn fg_color(arg_color: impl Into<TuiColor>, text: &str) -> CliText {
+    CliText {
         text: text.into(),
-        styles: smallvec!(ASTStyle::Foreground(arg_color.into())),
+        styles: smallvec!(CliStyle::Foreground(arg_color.into())),
     }
 }
 
@@ -336,340 +338,340 @@ pub fn fg_color(arg_color: impl Into<TuiColor>, text: &str) -> ASText {
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_dark_gray(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_dark_gray(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(236.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(236.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_black(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_black(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(0.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(0.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_yellow(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_yellow(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(226.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(226.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_green(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_green(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(34.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(34.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_blue(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_blue(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(27.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(27.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_red(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_red(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(196.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(196.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_white(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_white(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(231.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(231.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_cyan(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_cyan(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(51.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(51.into()))),
     }
 }
 
 /// More info: <https://www.ditig.com/256-colors-cheat-sheet>
 #[must_use]
-pub fn fg_magenta(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_magenta(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(TuiColor::Ansi(201.into()))),
+        styles: smallvec!(CliStyle::Foreground(TuiColor::Ansi(201.into()))),
     }
 }
 
 // The following colors are a convenience for using the tui_color! macro.
 
 #[must_use]
-pub fn fg_medium_gray(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_medium_gray(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(medium_gray))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(medium_gray))),
     }
 }
 
 #[must_use]
-pub fn fg_light_cyan(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_light_cyan(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(light_cyan))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(light_cyan))),
     }
 }
 
 #[must_use]
-pub fn fg_light_purple(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_light_purple(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(light_purple))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(light_purple))),
     }
 }
 
 #[must_use]
-pub fn fg_deep_purple(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_deep_purple(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(deep_purple))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(deep_purple))),
     }
 }
 
 #[must_use]
-pub fn fg_soft_pink(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_soft_pink(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(soft_pink))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(soft_pink))),
     }
 }
 
 #[must_use]
-pub fn fg_hot_pink(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_hot_pink(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(hot_pink))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(hot_pink))),
     }
 }
 
 #[must_use]
-pub fn fg_light_yellow_green(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_light_yellow_green(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(light_yellow_green))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(light_yellow_green))),
     }
 }
 
 #[must_use]
-pub fn fg_dark_teal(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_dark_teal(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_teal))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(dark_teal))),
     }
 }
 
 #[must_use]
-pub fn fg_bright_cyan(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_bright_cyan(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(bright_cyan))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(bright_cyan))),
     }
 }
 
 #[must_use]
-pub fn fg_dark_purple(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_dark_purple(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_purple))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(dark_purple))),
     }
 }
 
 #[must_use]
-pub fn fg_sky_blue(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_sky_blue(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(sky_blue))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(sky_blue))),
     }
 }
 
 #[must_use]
-pub fn fg_lavender(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_lavender(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(lavender))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(lavender))),
     }
 }
 
 #[must_use]
-pub fn fg_dark_lizard_green(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_dark_lizard_green(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_lizard_green))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(dark_lizard_green))),
     }
 }
 
 #[must_use]
-pub fn fg_orange(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_orange(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(orange))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(orange))),
     }
 }
 
 #[must_use]
-pub fn fg_silver_metallic(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_silver_metallic(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(silver_metallic))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(silver_metallic))),
     }
 }
 
 #[must_use]
-pub fn fg_lizard_green(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_lizard_green(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(lizard_green))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(lizard_green))),
     }
 }
 
 #[must_use]
-pub fn fg_pink(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_pink(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(pink))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(pink))),
     }
 }
 
 #[must_use]
-pub fn fg_dark_pink(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_dark_pink(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(dark_pink))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(dark_pink))),
     }
 }
 
 #[must_use]
-pub fn fg_frozen_blue(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_frozen_blue(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(frozen_blue))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(frozen_blue))),
     }
 }
 
 #[must_use]
-pub fn fg_guards_red(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_guards_red(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(guards_red))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(guards_red))),
     }
 }
 
 #[must_use]
-pub fn fg_slate_gray(text: impl AsRef<str>) -> ASText {
-    ASText {
+pub fn fg_slate_gray(text: impl AsRef<str>) -> CliText {
+    CliText {
         text: text.as_ref().into(),
-        styles: smallvec!(ASTStyle::Foreground(tui_color!(slate_gray))),
+        styles: smallvec!(CliStyle::Foreground(tui_color!(slate_gray))),
     }
 }
 
-impl ASText {
+impl CliText {
     #[must_use]
     pub fn dim(mut self) -> Self {
-        self.styles.push(ASTStyle::Dim);
+        self.styles.push(CliStyle::Dim);
         self
     }
 
     #[must_use]
     pub fn italic(mut self) -> Self {
-        self.styles.push(ASTStyle::Italic);
+        self.styles.push(CliStyle::Italic);
         self
     }
 
     #[must_use]
     pub fn bold(mut self) -> Self {
-        self.styles.push(ASTStyle::Bold);
+        self.styles.push(CliStyle::Bold);
         self
     }
 
     #[must_use]
     pub fn underline(mut self) -> Self {
-        self.styles.push(ASTStyle::Underline);
+        self.styles.push(CliStyle::Underline);
         self
     }
 
     #[must_use]
     pub fn bg_color(mut self, arg_color: impl Into<TuiColor>) -> Self {
         let color: TuiColor = arg_color.into();
-        self.styles.push(ASTStyle::Background(color));
+        self.styles.push(CliStyle::Background(color));
         self
     }
 
     #[must_use]
     pub fn fg_color(mut self, arg_color: impl Into<TuiColor>) -> Self {
         let color: TuiColor = arg_color.into();
-        self.styles.push(ASTStyle::Foreground(color));
+        self.styles.push(CliStyle::Foreground(color));
         self
     }
 
     #[must_use]
     pub fn bg_cyan(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(TuiColor::Ansi(51.into())));
+            .push(CliStyle::Background(TuiColor::Ansi(51.into())));
         self
     }
 
     #[must_use]
     pub fn bg_yellow(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(TuiColor::Ansi(226.into())));
+            .push(CliStyle::Background(TuiColor::Ansi(226.into())));
         self
     }
 
     #[must_use]
     pub fn bg_green(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(TuiColor::Ansi(34.into())));
+            .push(CliStyle::Background(TuiColor::Ansi(34.into())));
         self
     }
 
     #[must_use]
     pub fn bg_slate_gray(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(tui_color!(slate_gray)));
+            .push(CliStyle::Background(tui_color!(slate_gray)));
         self
     }
 
     #[must_use]
     pub fn bg_dark_gray(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(TuiColor::Ansi(236.into())));
+            .push(CliStyle::Background(TuiColor::Ansi(236.into())));
         self
     }
 
     #[must_use]
     pub fn bg_night_blue(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(tui_color!(night_blue)));
+            .push(CliStyle::Background(tui_color!(night_blue)));
         self
     }
 
     #[must_use]
     pub fn bg_moonlight_blue(mut self) -> Self {
         self.styles
-            .push(ASTStyle::Background(tui_color!(moonlight_blue)));
+            .push(CliStyle::Background(tui_color!(moonlight_blue)));
         self
     }
 }
@@ -680,7 +682,7 @@ impl ASText {
 /// [`crate::new_style`!] to create a [`TuiStyle`] and convert it to this type using
 /// `.into()`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
-pub enum ASTStyle {
+pub enum CliStyle {
     Foreground(TuiColor),
     Background(TuiColor),
     Bold,
@@ -699,28 +701,28 @@ mod convert_vec_ast_style_to_tui_style {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl From<ASTextStyles> for TuiStyle {
-        fn from(styles: ASTextStyles) -> Self {
+    impl From<CliStyleList> for TuiStyle {
+        fn from(styles: CliStyleList) -> Self {
             let mut tui_style = TuiStyle::default();
             for style in styles {
                 match style {
-                    ASTStyle::Foreground(color) => {
+                    CliStyle::Foreground(color) => {
                         tui_style.color_fg = Some(color);
                     }
-                    ASTStyle::Background(color) => {
+                    CliStyle::Background(color) => {
                         tui_style.color_bg = Some(color);
                     }
-                    ASTStyle::Bold => tui_style.attribs += Bold,
-                    ASTStyle::Dim => tui_style.attribs += Dim,
-                    ASTStyle::Italic => tui_style.attribs += Italic,
-                    ASTStyle::Underline => tui_style.attribs += Underline,
-                    ASTStyle::Invert => tui_style.attribs += Reverse,
-                    ASTStyle::Hidden => tui_style.attribs += Hidden,
-                    ASTStyle::Strikethrough => {
+                    CliStyle::Bold => tui_style.attribs += Bold,
+                    CliStyle::Dim => tui_style.attribs += Dim,
+                    CliStyle::Italic => tui_style.attribs += Italic,
+                    CliStyle::Underline => tui_style.attribs += Underline,
+                    CliStyle::Invert => tui_style.attribs += Reverse,
+                    CliStyle::Hidden => tui_style.attribs += Hidden,
+                    CliStyle::Strikethrough => {
                         tui_style.attribs += Strikethrough;
                     }
                     // TuiStyle doesn't have direct equivalents for these:
-                    ASTStyle::Overline | ASTStyle::RapidBlink | ASTStyle::SlowBlink => {}
+                    CliStyle::Overline | CliStyle::RapidBlink | CliStyle::SlowBlink => {}
                 }
             }
             tui_style
@@ -729,48 +731,48 @@ mod convert_vec_ast_style_to_tui_style {
 }
 
 mod convert_tui_style_to_vec_ast_style {
-    use super::{ASTStyle, TuiStyle, sizing, sizing::InlineVecASTextStyles};
+    use super::{CliStyle, TuiStyle, sizing, sizing::InlineVecCliStyleList};
 
-    impl From<TuiStyle> for sizing::InlineVecASTextStyles {
+    impl From<TuiStyle> for sizing::InlineVecCliStyleList {
         fn from(tui_style: TuiStyle) -> Self {
-            let mut styles = InlineVecASTextStyles::new();
+            let mut styles = InlineVecCliStyleList::new();
             if tui_style.attribs.bold.is_some() {
-                styles.push(ASTStyle::Bold);
+                styles.push(CliStyle::Bold);
             }
             if tui_style.attribs.dim.is_some() {
-                styles.push(ASTStyle::Dim);
+                styles.push(CliStyle::Dim);
             }
             if tui_style.attribs.italic.is_some() {
-                styles.push(ASTStyle::Italic);
+                styles.push(CliStyle::Italic);
             }
             if tui_style.attribs.underline.is_some() {
-                styles.push(ASTStyle::Underline);
+                styles.push(CliStyle::Underline);
             }
             if tui_style.attribs.reverse.is_some() {
-                styles.push(ASTStyle::Invert);
+                styles.push(CliStyle::Invert);
             }
             // Not supported:
             // - Overline,
             // - RapidBlink,
             // - SlowBlink,
             if tui_style.attribs.hidden.is_some() {
-                styles.push(ASTStyle::Hidden);
+                styles.push(CliStyle::Hidden);
             }
             if tui_style.attribs.strikethrough.is_some() {
-                styles.push(ASTStyle::Strikethrough);
+                styles.push(CliStyle::Strikethrough);
             }
             if let Some(color_fg) = tui_style.color_fg {
-                styles.push(ASTStyle::Foreground(color_fg));
+                styles.push(CliStyle::Foreground(color_fg));
             }
             if let Some(color_bg) = tui_style.color_bg {
-                styles.push(ASTStyle::Background(color_bg));
+                styles.push(CliStyle::Background(color_bg));
             }
             styles
         }
     }
 }
 
-impl FastStringify for ASTStyle {
+impl FastStringify for CliStyle {
     fn write_to_buf(&self, buf: &mut BufTextStorage) -> Result {
         use super::{ColorSupport, TransformColor, global_color_support};
 
@@ -811,29 +813,29 @@ impl FastStringify for ASTStyle {
         let color_support = global_color_support::detect();
 
         match self {
-            ASTStyle::Foreground(color) => {
+            CliStyle::Foreground(color) => {
                 color_to_sgr(color_support, *color, true).write_to_buf(buf)
             }
-            ASTStyle::Background(color) => {
+            CliStyle::Background(color) => {
                 color_to_sgr(color_support, *color, false).write_to_buf(buf)
             }
-            ASTStyle::Bold => SgrCode::Bold.write_to_buf(buf),
-            ASTStyle::Dim => SgrCode::Dim.write_to_buf(buf),
-            ASTStyle::Italic => SgrCode::Italic.write_to_buf(buf),
-            ASTStyle::Underline => SgrCode::Underline.write_to_buf(buf),
-            ASTStyle::SlowBlink => SgrCode::SlowBlink.write_to_buf(buf),
-            ASTStyle::RapidBlink => SgrCode::RapidBlink.write_to_buf(buf),
-            ASTStyle::Invert => SgrCode::Invert.write_to_buf(buf),
-            ASTStyle::Hidden => SgrCode::Hidden.write_to_buf(buf),
-            ASTStyle::Strikethrough => SgrCode::Strikethrough.write_to_buf(buf),
-            ASTStyle::Overline => SgrCode::Overline.write_to_buf(buf),
+            CliStyle::Bold => SgrCode::Bold.write_to_buf(buf),
+            CliStyle::Dim => SgrCode::Dim.write_to_buf(buf),
+            CliStyle::Italic => SgrCode::Italic.write_to_buf(buf),
+            CliStyle::Underline => SgrCode::Underline.write_to_buf(buf),
+            CliStyle::SlowBlink => SgrCode::SlowBlink.write_to_buf(buf),
+            CliStyle::RapidBlink => SgrCode::RapidBlink.write_to_buf(buf),
+            CliStyle::Invert => SgrCode::Invert.write_to_buf(buf),
+            CliStyle::Hidden => SgrCode::Hidden.write_to_buf(buf),
+            CliStyle::Strikethrough => SgrCode::Strikethrough.write_to_buf(buf),
+            CliStyle::Overline => SgrCode::Overline.write_to_buf(buf),
         }
     }
 }
 
-generate_impl_display_for_fast_stringify!(ASTStyle);
+generate_impl_display_for_fast_stringify!(CliStyle);
 
-impl FastStringify for ASText {
+impl FastStringify for CliText {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
         // Write all styles to buffer.
         for style in &self.styles {
@@ -850,15 +852,14 @@ impl FastStringify for ASText {
     }
 }
 
-generate_impl_display_for_fast_stringify!(ASText);
+generate_impl_display_for_fast_stringify!(CliText);
 
 #[cfg(test)]
 mod tests {
     use super::dim;
-    use crate::{ASTStyle, ASText, ASTextStyles, ColIndex, ColorSupport, InlineVec,
+    use crate::{CliStyle, CliStyleList, CliText, ColIndex, ColorSupport, InlineVec,
                 PixelChar, TuiColor, TuiStyle,
-                ansi::sizing::InlineVecASTextStyles,
-                ansi_styled_text::ansi_styled_text_impl::ASTextConvertOptions,
+                cli_text::ansi_styled_text_impl::CliTextConvertOptions,
                 global_color_support, tui_color,
                 tui_style::tui_style_attrib::{Bold, Dim, Hidden, Italic, Reverse,
                                               Strikethrough, Underline},
@@ -875,10 +876,10 @@ mod tests {
                 attribs: tui_style_attribs(Bold + Italic + Strikethrough),
                 ..Default::default()
             };
-            let ast_styles: InlineVecASTextStyles = tui_style.into();
+            let ast_styles: CliStyleList = tui_style.into();
             assert_eq!(
                 ast_styles.as_ref(),
-                &[ASTStyle::Bold, ASTStyle::Italic, ASTStyle::Strikethrough]
+                &[CliStyle::Bold, CliStyle::Italic, CliStyle::Strikethrough]
             );
         }
 
@@ -887,14 +888,14 @@ mod tests {
                 attribs: tui_style_attribs(Dim + Underline + Reverse + Hidden),
                 ..Default::default()
             };
-            let ast_styles: InlineVecASTextStyles = tui_style.into();
+            let ast_styles: CliStyleList = tui_style.into();
             assert_eq!(
                 ast_styles.as_ref(),
                 &[
-                    ASTStyle::Dim,
-                    ASTStyle::Underline,
-                    ASTStyle::Invert,
-                    ASTStyle::Hidden
+                    CliStyle::Dim,
+                    CliStyle::Underline,
+                    CliStyle::Invert,
+                    CliStyle::Hidden
                 ]
             );
         }
@@ -906,17 +907,17 @@ mod tests {
                 ),
                 ..Default::default()
             };
-            let ast_styles: InlineVecASTextStyles = tui_style.into();
+            let ast_styles: CliStyleList = tui_style.into();
             assert_eq!(
                 ast_styles.as_ref(),
                 &[
-                    ASTStyle::Bold,
-                    ASTStyle::Dim,
-                    ASTStyle::Italic,
-                    ASTStyle::Underline,
-                    ASTStyle::Invert,
-                    ASTStyle::Hidden,
-                    ASTStyle::Strikethrough
+                    CliStyle::Bold,
+                    CliStyle::Dim,
+                    CliStyle::Italic,
+                    CliStyle::Underline,
+                    CliStyle::Invert,
+                    CliStyle::Hidden,
+                    CliStyle::Strikethrough
                 ]
             );
         }
@@ -925,7 +926,7 @@ mod tests {
             let tui_style = TuiStyle {
                 ..Default::default()
             };
-            let ast_styles: InlineVecASTextStyles = tui_style.into();
+            let ast_styles: CliStyleList = tui_style.into();
             assert!(ast_styles.is_empty());
         }
     }
@@ -933,18 +934,18 @@ mod tests {
     #[serial]
     #[test]
     fn test_fg_color_on_bg_color() {
-        let eg_1 = ASText {
+        let eg_1 = CliText {
             text: "Hello".into(),
             styles: smallvec!(
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
             ),
         };
         println!("{eg_1:?}");
         println!("{eg_1}");
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(0,0,0)] }"#
+            r#"CliText { text: "Hello", styles: [Bold, Foreground(0,0,0)] }"#
         );
 
         let eg_2 = eg_1.bg_dark_gray();
@@ -952,7 +953,7 @@ mod tests {
         println!("{eg_2}");
         assert_eq!(
             format!("{:?}", eg_2),
-            r#"AnsiStyledText { text: "Hello", styles: [Bold, Foreground(0,0,0), Background(ansi_value(236))] }"#
+            r#"CliText { text: "Hello", styles: [Bold, Foreground(0,0,0), Background(ansi_value(236))] }"#
         );
     }
 
@@ -966,7 +967,7 @@ mod tests {
         println!("{eg_1}");
         assert_eq!(
             format!("{:?}", eg_1),
-            r#"AnsiStyledText { text: "hello", styles: [Dim, Foreground(0,0,0), Background(1,1,1)] }"#
+            r#"CliText { text: "hello", styles: [Dim, Foreground(0,0,0), Background(1,1,1)] }"#
         );
     }
 
@@ -975,12 +976,12 @@ mod tests {
     #[allow(clippy::missing_errors_doc)]
     fn test_formatted_string_creation_ansi256() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Ansi256);
-        let eg_1 = ASText {
+        let eg_1 = CliText {
             text: "Hello".into(),
             styles: smallvec!(
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
-                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
+                CliStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -989,12 +990,12 @@ mod tests {
             "\x1b[1m\x1b[38;5;16m\x1b[48;5;16mHello\x1b[0m".to_string()
         );
 
-        let eg_2 = ASText {
+        let eg_2 = CliText {
             text: "World".into(),
             styles: smallvec!(
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Ansi(150.into())),
-                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Ansi(150.into())),
+                CliStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1011,12 +1012,12 @@ mod tests {
     #[allow(clippy::missing_errors_doc)]
     fn test_formatted_string_creation_truecolor() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Truecolor);
-        let eg_1 = ASText {
+        let eg_1 = CliText {
             text: "Hello".into(),
             styles: smallvec!(
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
-                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
+                CliStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1025,12 +1026,12 @@ mod tests {
             "\x1b[1m\x1b[38;2;0;0;0m\x1b[48;2;1;1;1mHello\x1b[0m".to_string()
         );
 
-        let eg_2 = ASText {
+        let eg_2 = CliText {
             text: "World".into(),
             styles: smallvec!(
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Ansi(150.into())),
-                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Ansi(150.into())),
+                CliStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1047,12 +1048,12 @@ mod tests {
     #[allow(clippy::missing_errors_doc)]
     fn test_formatted_string_creation_grayscale() -> Result<(), String> {
         global_color_support::set_override(ColorSupport::Grayscale);
-        let eg_1 = ASText {
+        let eg_1 = CliText {
             text: "Hello".into(),
             styles: smallvec!(
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
-                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Rgb((0, 0, 0).into())),
+                CliStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1063,12 +1064,12 @@ mod tests {
             "\u{1b}[1m\u{1b}[38;5;16m\u{1b}[48;5;16mHello\u{1b}[0m".to_string()
         );
 
-        let eg_2 = ASText {
+        let eg_2 = CliText {
             text: "World".into(),
             styles: smallvec!(
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Ansi(150.into())),
-                ASTStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Ansi(150.into())),
+                CliStyle::Background(TuiColor::Rgb((1, 1, 1).into())),
             ),
         };
 
@@ -1086,13 +1087,13 @@ mod tests {
     #[test]
     fn test_convert_vec_ast_style_to_tui_style() {
         // Test case 1: Mix of styles.
-        let ast_styles_1: ASTextStyles = smallvec![
-            ASTStyle::Bold,
-            ASTStyle::Foreground(TuiColor::Ansi(196.into())), // Red
-            ASTStyle::Italic,
-            ASTStyle::Background(TuiColor::Rgb((50, 50, 50).into())), // Dark Gray RGB
-            ASTStyle::Underline,
-            ASTStyle::Overline, // This should be ignored
+        let ast_styles_1: CliStyleList = smallvec![
+            CliStyle::Bold,
+            CliStyle::Foreground(TuiColor::Ansi(196.into())), // Red
+            CliStyle::Italic,
+            CliStyle::Background(TuiColor::Rgb((50, 50, 50).into())), // Dark Gray RGB
+            CliStyle::Underline,
+            CliStyle::Overline, // This should be ignored
         ];
         let expected_tui_style_1 = TuiStyle {
             attribs: tui_style_attribs(Bold + Italic + Underline),
@@ -1104,11 +1105,11 @@ mod tests {
         assert_eq!(converted_tui_style_1, expected_tui_style_1);
 
         // Test case 2: Only attributes.
-        let ast_styles_2: ASTextStyles = smallvec![
-            ASTStyle::Dim,
-            ASTStyle::Strikethrough,
-            ASTStyle::Hidden,
-            ASTStyle::RapidBlink, // This should be ignored
+        let ast_styles_2: CliStyleList = smallvec![
+            CliStyle::Dim,
+            CliStyle::Strikethrough,
+            CliStyle::Hidden,
+            CliStyle::RapidBlink, // This should be ignored
         ];
         let expected_tui_style_2 = TuiStyle {
             attribs: tui_style_attribs(Dim + Strikethrough + Hidden),
@@ -1118,9 +1119,9 @@ mod tests {
         assert_eq!(converted_tui_style_2, expected_tui_style_2);
 
         // Test case 3: Only colors.
-        let ast_styles_3: ASTextStyles = smallvec![
-            ASTStyle::Foreground(TuiColor::Ansi(34.into())), // Green
-            ASTStyle::Background(TuiColor::Ansi(226.into())), // Yellow
+        let ast_styles_3: CliStyleList = smallvec![
+            CliStyle::Foreground(TuiColor::Ansi(34.into())), // Green
+            CliStyle::Background(TuiColor::Ansi(226.into())), // Yellow
         ];
         let expected_tui_style_3 = TuiStyle {
             color_fg: Some(TuiColor::Ansi(34.into())),
@@ -1131,13 +1132,13 @@ mod tests {
         assert_eq!(converted_tui_style_3, expected_tui_style_3);
 
         // Test case 4: Empty styles.
-        let ast_styles_4: ASTextStyles = smallvec![];
+        let ast_styles_4: CliStyleList = smallvec![];
         let expected_tui_style_4 = TuiStyle::default();
         let converted_tui_style_4: TuiStyle = ast_styles_4.into();
         assert_eq!(converted_tui_style_4, expected_tui_style_4);
 
         // Test case 5: Invert style.
-        let ast_styles_5: ASTextStyles = smallvec![ASTStyle::Invert];
+        let ast_styles_5: CliStyleList = smallvec![CliStyle::Invert];
         let expected_tui_style_5 = TuiStyle {
             attribs: tui_style_attribs(Reverse),
             ..Default::default()
@@ -1149,14 +1150,14 @@ mod tests {
     #[serial]
     #[test]
     fn test_ast_convert_options_struct() {
-        let options1 = ASTextConvertOptions {
+        let options1 = CliTextConvertOptions {
             start: Some(ColIndex::new(5)),
             end: Some(ColIndex::new(10)),
         };
         assert_eq!(options1.start, Some(ColIndex::new(5)));
         assert_eq!(options1.end, Some(ColIndex::new(10)));
 
-        let options2 = ASTextConvertOptions {
+        let options2 = CliTextConvertOptions {
             start: None,
             end: None,
         };
@@ -1168,13 +1169,13 @@ mod tests {
     #[test]
     fn test_from_col_width_for_ast_convert_options() {
         let col_width = width(20);
-        let options: ASTextConvertOptions = col_width.into();
+        let options: CliTextConvertOptions = col_width.into();
         assert_eq!(options.start, Some(ColIndex::new(0)));
         // ColWidth 20 means indices 0-19.
         assert_eq!(options.end, Some(ColIndex::new(19)));
 
         let col_width_zero = width(0);
-        let options_zero: ASTextConvertOptions = col_width_zero.into();
+        let options_zero: CliTextConvertOptions = col_width_zero.into();
         assert_eq!(options_zero.start, Some(ColIndex::new(0)));
         // ColWidth(0) converts to ColIndex(0), which is technically index 0.
         assert_eq!(options_zero.end, Some(ColIndex::new(0)));
@@ -1188,9 +1189,9 @@ mod tests {
             color_fg: Some(TuiColor::Ansi(196.into())), // Red.
             ..Default::default()
         };
-        let ast_style_vec: ASTextStyles = tui_style.into();
+        let ast_style_vec: CliStyleList = tui_style.into();
 
-        let styled_text = ASText {
+        let styled_text = CliText {
             text: "Hello World".into(),
             styles: ast_style_vec.clone(),
         };
@@ -1240,7 +1241,7 @@ mod tests {
         // Test case 2: Convert full text (None, None).
         {
             let res: InlineVec<PixelChar> =
-                styled_text.convert(ASTextConvertOptions::default());
+                styled_text.convert(CliTextConvertOptions::default());
             assert_eq!(res.len(), 11);
             assert_eq!(
                 res[0],
@@ -1260,7 +1261,7 @@ mod tests {
 
         // Test case 3: Convert partial text (start specified).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(6)),
                 end: None,
             };
@@ -1284,7 +1285,7 @@ mod tests {
 
         // Test case 4: Convert partial text (end specified).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: None,
                 end: Some(ColIndex::new(4)),
             };
@@ -1308,7 +1309,7 @@ mod tests {
 
         // Test case 5: Convert partial text (start and end specified).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(2)),
                 end: Some(ColIndex::new(8)),
             };
@@ -1332,23 +1333,23 @@ mod tests {
 
         // Test case 6: Empty text.
         {
-            let empty_text = ASText {
+            let empty_text = CliText {
                 text: "".into(),
                 styles: ast_style_vec.clone(),
             };
             let res: InlineVec<PixelChar> =
-                empty_text.convert(ASTextConvertOptions::default());
+                empty_text.convert(CliTextConvertOptions::default());
             assert!(res.is_empty());
         }
 
         // Test case 7: No styles.
         {
-            let no_style_text = ASText {
+            let no_style_text = CliText {
                 text: "Test".into(),
                 styles: smallvec![],
             };
             let res: InlineVec<PixelChar> =
-                no_style_text.convert(ASTextConvertOptions::default());
+                no_style_text.convert(CliTextConvertOptions::default());
             assert_eq!(res.len(), 4);
             assert_eq!(
                 res[0],
@@ -1368,7 +1369,7 @@ mod tests {
 
         // Test case 8: Invalid range (start > end).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(5)),
                 end: Some(ColIndex::new(3)),
             };
@@ -1378,7 +1379,7 @@ mod tests {
 
         // Test case 9: Invalid range (start out of bounds).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(11)),
                 end: Some(ColIndex::new(12)),
             };
@@ -1389,7 +1390,7 @@ mod tests {
         // Test case 10: Invalid range (end out of bounds, but start is valid).
         // The current implementation returns empty if end >= len().
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(8)),
                 end: Some(ColIndex::new(11)), /* index 11 is out of bounds for "Hello
                                                * World" (len 11) */
@@ -1400,7 +1401,7 @@ mod tests {
 
         // Test case 10.1: Valid range, end is last index.
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(8)),
                 end: Some(ColIndex::new(10)), // index 10 is the last valid index
             };
@@ -1424,7 +1425,7 @@ mod tests {
 
         // Test case 11: Single character range.
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(6)),
                 end: Some(ColIndex::new(6)),
             };
@@ -1441,11 +1442,11 @@ mod tests {
 
         // Test case 12: Unicode characters.
         {
-            let unicode_text = ASText {
+            let unicode_text = CliText {
                 text: "你好世界".into(), // "Hello World" in Chinese
                 styles: ast_style_vec.clone(),
             };
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(1)),
                 end: Some(ColIndex::new(2)),
             };
@@ -1506,9 +1507,9 @@ mod tests {
             color_fg: Some(TuiColor::Ansi(196.into())), // Red.
             ..Default::default()
         };
-        let ast_style_vec: ASTextStyles = tui_style.into();
+        let ast_style_vec: CliStyleList = tui_style.into();
 
-        let styled_text = ASText {
+        let styled_text = CliText {
             text: "Hello World".into(),
             styles: ast_style_vec.clone(),
         };
@@ -1523,14 +1524,14 @@ mod tests {
 
         // Test case 2: Clip full text (None, None).
         {
-            let clipped_text = styled_text.clip(ASTextConvertOptions::default());
+            let clipped_text = styled_text.clip(CliTextConvertOptions::default());
             assert_eq!(clipped_text.text, "Hello World");
             assert_eq!(clipped_text.styles, styled_text.styles);
         }
 
         // Test case 3: Clip partial text (start specified).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(6)),
                 end: None,
             };
@@ -1541,7 +1542,7 @@ mod tests {
 
         // Test case 4: Clip partial text (end specified).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: None,
                 end: Some(ColIndex::new(4)),
             };
@@ -1552,7 +1553,7 @@ mod tests {
 
         // Test case 5: Clip partial text (start and end specified).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(2)),
                 end: Some(ColIndex::new(8)),
             };
@@ -1563,29 +1564,29 @@ mod tests {
 
         // Test case 6: Empty text.
         {
-            let empty_text = ASText {
+            let empty_text = CliText {
                 text: "".into(),
                 styles: ast_style_vec.clone(),
             };
-            let clipped_text = empty_text.clip(ASTextConvertOptions::default());
+            let clipped_text = empty_text.clip(CliTextConvertOptions::default());
             assert!(clipped_text.text.is_empty());
             assert_eq!(clipped_text.styles, empty_text.styles);
         }
 
         // Test case 7: No styles.
         {
-            let no_style_text = ASText {
+            let no_style_text = CliText {
                 text: "Test".into(),
                 styles: smallvec![],
             };
-            let clipped_text = no_style_text.clip(ASTextConvertOptions::default());
+            let clipped_text = no_style_text.clip(CliTextConvertOptions::default());
             assert_eq!(clipped_text.text, "Test");
             assert_eq!(clipped_text.styles, no_style_text.styles);
         }
 
         // Test case 8: Invalid range (start > end).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(5)),
                 end: Some(ColIndex::new(3)),
             };
@@ -1596,7 +1597,7 @@ mod tests {
 
         // Test case 9: Invalid range (start out of bounds).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(11)),
                 end: Some(ColIndex::new(12)),
             };
@@ -1607,7 +1608,7 @@ mod tests {
 
         // Test case 10: Invalid range (end out of bounds, but start is valid).
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(8)),
                 end: Some(ColIndex::new(11)), // index 11 is out of bounds
             };
@@ -1618,7 +1619,7 @@ mod tests {
 
         // Test case 10.1: Valid range, end is last index.
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(8)),
                 end: Some(ColIndex::new(10)), // index 10 is the last valid index
             };
@@ -1629,7 +1630,7 @@ mod tests {
 
         // Test case 11: Single character range.
         {
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(6)),
                 end: Some(ColIndex::new(6)),
             };
@@ -1640,11 +1641,11 @@ mod tests {
 
         // Test case 12: Unicode characters.
         {
-            let unicode_text = ASText {
+            let unicode_text = CliText {
                 text: "你好世界".into(), // "Hello World" in Chinese
                 styles: ast_style_vec.clone(),
             };
-            let opt = ASTextConvertOptions {
+            let opt = CliTextConvertOptions {
                 start: Some(ColIndex::new(1)),
                 end: Some(ColIndex::new(2)),
             };
@@ -1679,71 +1680,71 @@ mod bench_tests {
     use test::Bencher;
 
     // Benchmark data setup.
-    fn simple_text() -> ASText {
-        ASText {
+    fn simple_text() -> CliText {
+        CliText {
             text: "Hello, World!".into(),
             styles: smallvec![],
         }
     }
 
-    fn single_style_text() -> ASText {
-        ASText {
+    fn single_style_text() -> CliText {
+        CliText {
             text: "Hello, World!".into(),
-            styles: smallvec![ASTStyle::Bold],
+            styles: smallvec![CliStyle::Bold],
         }
     }
 
-    fn multiple_styles_text() -> ASText {
-        ASText {
+    fn multiple_styles_text() -> CliText {
+        CliText {
             text: "Hello, World!".into(),
-            styles: smallvec![ASTStyle::Bold, ASTStyle::Italic, ASTStyle::Underline,],
+            styles: smallvec![CliStyle::Bold, CliStyle::Italic, CliStyle::Underline,],
         }
     }
 
-    fn colored_text() -> ASText {
-        ASText {
+    fn colored_text() -> CliText {
+        CliText {
             text: "Hello, World!".into(),
             styles: smallvec![
-                ASTStyle::Foreground(TuiColor::Ansi(196.into())),
-                ASTStyle::Background(TuiColor::Ansi(236.into())),
+                CliStyle::Foreground(TuiColor::Ansi(196.into())),
+                CliStyle::Background(TuiColor::Ansi(236.into())),
             ],
         }
     }
 
-    fn rgb_colored_text() -> ASText {
-        ASText {
+    fn rgb_colored_text() -> CliText {
+        CliText {
             text: "Hello, World!".into(),
             styles: smallvec![
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Rgb((255, 0, 0).into())),
-                ASTStyle::Background(TuiColor::Rgb((0, 0, 255).into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Rgb((255, 0, 0).into())),
+                CliStyle::Background(TuiColor::Rgb((0, 0, 255).into())),
             ],
         }
     }
 
-    fn complex_styled_text() -> ASText {
-        ASText {
+    fn complex_styled_text() -> CliText {
+        CliText {
             text: "Hello, World! This is a longer text with more content.".into(),
             styles: smallvec![
-                ASTStyle::Bold,
-                ASTStyle::Italic,
-                ASTStyle::Underline,
-                ASTStyle::Foreground(TuiColor::Rgb((255, 128, 0).into())),
-                ASTStyle::Background(TuiColor::Ansi(236.into())),
+                CliStyle::Bold,
+                CliStyle::Italic,
+                CliStyle::Underline,
+                CliStyle::Foreground(TuiColor::Rgb((255, 128, 0).into())),
+                CliStyle::Background(TuiColor::Ansi(236.into())),
             ],
         }
     }
 
-    fn long_text() -> ASText {
-        ASText {
+    fn long_text() -> CliText {
+        CliText {
             // <!-- cspell:disable -->
             text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. \
                    Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
                 .into(),
             // <!-- cspell:enable -->
             styles: smallvec![
-                ASTStyle::Bold,
-                ASTStyle::Foreground(TuiColor::Ansi(34.into())),
+                CliStyle::Bold,
+                CliStyle::Foreground(TuiColor::Ansi(34.into())),
             ],
         }
     }

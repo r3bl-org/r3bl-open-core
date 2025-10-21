@@ -98,8 +98,8 @@ use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
             generate_truecolor_gradient, get_gradient_array_for};
 use crate::{ChUnit, FastStringify, GCStringOwned, GradientGenerationPolicy, RgbValue,
             TextColorizationPolicy, TuiColor, TuiStyle, TuiStyledText, TuiStyledTexts,
-            ast, ch, glyphs::SPACER_GLYPH as SPACER, tui_color, tui_styled_text, u8,
-            usize};
+            ch, cli_text, glyphs::SPACER_GLYPH as SPACER, tui_color, tui_styled_text,
+            u8, usize};
 use sizing::VecConfigs;
 use smallvec::SmallVec;
 use std::{collections::hash_map::DefaultHasher,
@@ -647,7 +647,7 @@ impl ColorWheel {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
-            let ansi_styled_text = ast(text, style);
+            let ansi_styled_text = cli_text(text, style);
             // Use FastStringify trait for better performance.
             let _ = ansi_styled_text.write_to_buf(&mut buffer);
         }
@@ -677,7 +677,7 @@ impl ColorWheel {
             if let Some(default_style) = maybe_default_style {
                 style += default_style;
             }
-            let ansi_styled_text = ast(text, style);
+            let ansi_styled_text = cli_text(text, style);
             // Use FastStringify trait for better performance.
             let _ = ansi_styled_text.write_to_buf(&mut buffer);
         }

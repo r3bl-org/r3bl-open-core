@@ -2,7 +2,7 @@
 
 use crate::{get_scroll_adjusted_row_index,
             locate_cursor_in_viewport,
-            AnsiStyledText,
+            CliText,
             CalculateResizeHint,
             CaretVerticalViewportLocation,
             ChUnit,
@@ -37,7 +37,7 @@ pub enum Header {
     /// Single line header.
     SingleLine(InlineString),
     /// Multi line header.
-    MultiLine(InlineVec<InlineVec<AnsiStyledText>>),
+    MultiLine(InlineVec<InlineVec<CliText>>),
 }
 
 /// Convert various types to a header:
@@ -45,16 +45,16 @@ pub enum Header {
 /// - `InlineString`,
 /// - `String`, etc.
 mod convert_to_header {
-    use super::{AnsiStyledText, Header, InlineVec, InlineString};
+    use super::{CliText, Header, InlineVec, InlineString};
 
-    impl From<Vec<Vec<AnsiStyledText>>> for Header {
-        fn from(header: Vec<Vec<AnsiStyledText>>) -> Self {
+    impl From<Vec<Vec<CliText>>> for Header {
+        fn from(header: Vec<Vec<CliText>>) -> Self {
             Header::MultiLine(header.into_iter().map(InlineVec::from).collect())
         }
     }
 
-    impl From<InlineVec<InlineVec<AnsiStyledText>>> for Header {
-        fn from(header: InlineVec<InlineVec<AnsiStyledText>>) -> Self {
+    impl From<InlineVec<InlineVec<CliText>>> for Header {
+        fn from(header: InlineVec<InlineVec<CliText>>) -> Self {
             Header::MultiLine(header)
         }
     }
@@ -81,12 +81,12 @@ mod tests {
     use smallvec::smallvec;
 
     use super::*;
-    use crate::{assert_eq2, ast};
+    use crate::{assert_eq2, cli_text};
 
     #[test]
     fn test_header_enum() {
         let state = State {
-            header: Header::MultiLine(smallvec![smallvec![ast(
+            header: Header::MultiLine(smallvec![smallvec![cli_text(
                 "line1",
                 smallvec::smallvec![],
             )]]),
@@ -94,7 +94,7 @@ mod tests {
         };
         let lhs = state.header;
         let rhs =
-            Header::MultiLine(smallvec![smallvec![ast("line1", smallvec::smallvec![])]]);
+            Header::MultiLine(smallvec![smallvec![cli_text("line1", smallvec::smallvec![])]]);
         assert_eq2!(lhs, rhs);
     }
 }

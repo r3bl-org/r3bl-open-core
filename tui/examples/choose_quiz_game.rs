@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{DefaultIoDevices, ItemsOwned, TuiColor, ast, choose, get_terminal_width,
-               height, new_style,
+use r3bl_tui::{DefaultIoDevices, ItemsOwned, TuiColor, choose, cli_text,
+               get_terminal_width, height, new_style,
                readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, usize, width};
 use serde::{Deserialize, Serialize};
@@ -127,7 +127,7 @@ impl Display for Answer {
             Answer::Incorrect => "Incorrect",
         };
 
-        write!(f, "{}", ast(text, new_style!(color_fg: {color})))
+        write!(f, "{}", cli_text(text, new_style!(color_fg: {color})))
     }
 }
 
@@ -156,19 +156,19 @@ fn display_header(line_length: usize) {
     let color = TuiColor::Rgb((9, 183, 238).into());
     println!();
     println!();
-    ast(
+    cli_text(
         "👋 Welcome to the Simple Quiz with choose",
         new_style!(color_fg: {color}),
     )
     .println();
 
-    ast(
+    cli_text(
         "To request_shutdown the game, press 'Esc'",
         new_style!(color_fg: {color}),
     )
     .println();
 
-    ast(
+    cli_text(
         "─".to_string().as_str().repeat(line_length).as_str(),
         new_style!(color_fg: {color}),
     )
@@ -183,7 +183,7 @@ fn display_footer(
     let line = "─".to_string().as_str().repeat(line_length - 2);
     let color = TuiColor::Rgb((9, 183, 238).into());
 
-    ast(format!("╭{line}╮").as_str(), new_style!(color_fg: {color})).println();
+    cli_text(format!("╭{line}╮").as_str(), new_style!(color_fg: {color})).println();
 
     let vertical_line = "│".to_string();
     let mut score_text = Vec::<String>::new();
@@ -199,9 +199,9 @@ fn display_footer(
     score_text.push(" ".to_string().repeat(spaces_to_add));
     score_text.push(vertical_line.clone());
 
-    ast(score_text.join("").as_str(), new_style!(color_fg: {color})).println();
+    cli_text(score_text.join("").as_str(), new_style!(color_fg: {color})).println();
 
-    ast(format!("╰{line}╯").as_str(), new_style!(color_fg: {color})).println();
+    cli_text(format!("╰{line}╯").as_str(), new_style!(color_fg: {color})).println();
 }
 
 fn check_user_input_and_display_result(
@@ -241,7 +241,7 @@ fn check_user_input_and_display_result(
 
     println!(
         "{a} {b} {c}",
-        a = ast(
+        a = cli_text(
             format!("{}. {}", question_number, &question_data.question),
             new_style!(color_bg: {background_color}),
         ),

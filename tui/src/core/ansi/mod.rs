@@ -27,7 +27,7 @@
 //!
 //! # How to use it
 //!
-//! The main struct that we have to consider is `AnsiStyledText`. It has two fields:
+//! The main struct that we have to consider is `CliText`. It has two fields:
 //!
 //! - `text` - the text to print.
 //! - `style` - a list of styles to apply to the text.
@@ -36,20 +36,20 @@
 //!
 //! ```
 //! # use r3bl_tui::{
-//! #     fg_red, size, fg_color, tui_color, new_style, ast,
-//! #     RgbValue, ASTStyle, AnsiStyledText,
+//! #     fg_red, size, fg_color, tui_color, new_style, cli_text,
+//! #     RgbValue, CliStyle, CliText,
 //! # };
 //!
-//! // Use ast() to create a styled text.
-//! let styled_text = ast("Hello", new_style!(bold));
+//! // Use cli_text() to create a styled text.
+//! let styled_text = cli_text("Hello", new_style!(bold));
 //! println!("{styled_text}");
 //! styled_text.println();
 //! ```
 //!
-//! For more examples, please read the documentation for [`AnsiStyledText`]. Please don't
-//! create this struct directly, use [`crate::ast()`], [`crate::ast_line!`],
-//! [`crate::ast_lines`!] or the constructor functions like [`fg_red()`], [`fg_green()`],
-//! [`fg_blue()`], etc.
+//! For more examples, please read the documentation for [`CliText`]. Please don't
+//! create this struct directly, use [`crate::cli_text()`], [`crate::cli_text_line!`],
+//! [`crate::cli_text_lines!`] or the constructor functions like [`fg_red()`],
+//! [`fg_green()`], [`fg_blue()`], etc.
 //!
 //! # References
 //!
@@ -68,13 +68,13 @@
 
 // Attach.
 pub mod ansi_escape_codes;
-pub mod ansi_styled_text;
+pub mod cli_text;
 pub mod color;
 pub mod detect_color_support;
 pub mod terminal_output;
 
 pub use ansi_escape_codes::*;
-pub use ansi_styled_text::*;
+pub use cli_text::*;
 pub use color::*;
 pub use detect_color_support::*;
 pub use terminal_output::*;

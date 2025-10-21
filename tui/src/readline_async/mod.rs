@@ -255,7 +255,7 @@
 //!
 //! ```
 //! # use r3bl_tui::readline_async::ReadlineAsyncContext;
-//! # use r3bl_tui::{fg_magenta, AnsiStyledText, ok};
+//! # use r3bl_tui::{fg_magenta, CliText, ok};
 //! # pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
 //!         let user = "naz";

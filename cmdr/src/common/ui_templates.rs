@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{ASText, AnsiStyledText, InlineVec, TuiStyle, ast_line, ast_lines,
-               fg_lavender, fg_light_yellow_green, fg_sky_blue, new_style,
-               truncate_from_right, tui_color};
+use r3bl_tui::{CliText, InlineVec, TuiStyle, cli_text_line, cli_text_lines, fg_lavender,
+               fg_light_yellow_green, fg_sky_blue, new_style, truncate_from_right,
+               tui_color};
 
 /// Make the first column at least this wide, and pad with spaces if needed. It should not
 /// exceed this width either.
@@ -26,8 +26,8 @@ fn fmt_two_col(col_1: &str, col_2: &str) -> String {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn prefix_multi_select_instruction_header(
-    last_lines: InlineVec<InlineVec<ASText>>,
-) -> InlineVec<InlineVec<AnsiStyledText>> {
+    last_lines: InlineVec<InlineVec<CliText>>,
+) -> InlineVec<InlineVec<CliText>> {
     let text_up_and_down = fmt_two_col("Up or down:", "navigate");
     let text_space = fmt_two_col("Space:", "select or deselect item");
     let text_esc = fmt_two_col("Esc or Ctrl+C:", "request_shutdown program");
@@ -38,11 +38,11 @@ pub fn prefix_multi_select_instruction_header(
     let esc = fg_lavender(text_esc).bg_night_blue();
     let return_key = fg_sky_blue(text_return_key).bg_night_blue();
 
-    let mut acc = ast_lines![
-        ast_line![up_and_down],
-        ast_line![space],
-        ast_line![esc],
-        ast_line![return_key],
+    let mut acc = cli_text_lines![
+        cli_text_line![up_and_down],
+        cli_text_line![space],
+        cli_text_line![esc],
+        cli_text_line![return_key],
     ];
 
     last_lines.iter().for_each(|line| acc.push(line.clone()));
@@ -57,8 +57,8 @@ pub fn prefix_multi_select_instruction_header(
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn prefix_single_select_instruction_header(
-    last_lines: InlineVec<InlineVec<ASText>>,
-) -> InlineVec<InlineVec<ASText>> {
+    last_lines: InlineVec<InlineVec<CliText>>,
+) -> InlineVec<InlineVec<CliText>> {
     let text_up_or_down = fmt_two_col("Up or down:", "navigate");
     let text_esc = fmt_two_col("Esc or Ctrl+C:", "request_shutdown program");
     let text_return_key = fmt_two_col("Return:", "confirm selection");
@@ -68,7 +68,7 @@ pub fn prefix_single_select_instruction_header(
     let return_key = fg_sky_blue(text_return_key).bg_night_blue();
 
     let mut acc =
-        ast_lines![ast_line![up_or_down], ast_line![esc], ast_line![return_key],];
+        cli_text_lines![cli_text_line![up_or_down], cli_text_line![esc], cli_text_line![return_key],];
 
     last_lines.iter().for_each(|line| acc.push(line.clone()));
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AnsiStyledText, ChUnit, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
+use crate::{CliText, ChUnit, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
-            State, StyleSheet, TuiStyle, ast, ch, col,
+            State, StyleSheet, TuiStyle, cli_text, ch, col,
             core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
             inline_string, lock_output_device_as_mut, queue_commands, usize, width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
@@ -84,13 +84,13 @@ impl FunctionComponent<State> for SelectComponent {
 }
 
 mod render_helper {
-    use super::{AnsiStyledText, ChUnit, Clear, ClearType, CommonResult,
+    use super::{CliText, ChUnit, Clear, ClearType, CommonResult,
                 DEVELOPMENT_MODE, FunctionComponent, GCStringOwned, Header, HowToChoose,
                 IS_FOCUSED, IS_NOT_FOCUSED, InlineString, InlineVec,
                 MULTI_SELECT_IS_NOT_SELECTED, MULTI_SELECT_IS_SELECTED, MoveToColumn,
                 MoveToNextLine, MoveToPreviousLine, OutputDevice, Print, ResetColor,
                 SINGLE_SELECT_IS_NOT_SELECTED, SINGLE_SELECT_IS_SELECTED,
-                SelectComponent, State, StyleSheet, TuiStyle, ast, ch,
+                SelectComponent, State, StyleSheet, TuiStyle, cli_text, ch,
                 clip_string_to_width_with_ellipsis, col, fg_blue, get_spaces,
                 get_terminal_width, inline_string, queue_commands, usize, width};
 
@@ -193,7 +193,7 @@ mod render_helper {
         // Create styled text using ASText with all styling from header_style.
         // This embeds ANSI codes in the string, replacing the individual
         // choose_apply_style! calls that were previously used.
-        let styled_header = ast(&header_text, *header_style).to_string();
+        let styled_header = cli_text(&header_text, *header_style).to_string();
 
         queue_commands! {
             output_device,
@@ -216,7 +216,7 @@ mod render_helper {
 
     fn render_multi_line_header(
         output_device: &mut OutputDevice,
-        header_lines: &InlineVec<InlineVec<AnsiStyledText>>,
+        header_lines: &InlineVec<InlineVec<CliText>>,
         viewport_width: ChUnit,
     ) -> CommonResult<()> {
         // Subtract 3 from viewport width because we need to add "..." to the
@@ -226,7 +226,7 @@ mod render_helper {
         // This is the vector of vectors of AnsiStyledText we want to print to
         // the screen.
         let mut multi_line_header_clipped_vec =
-            InlineVec::<InlineVec<AnsiStyledText>>::with_capacity(header_lines.len());
+            InlineVec::<InlineVec<CliText>>::with_capacity(header_lines.len());
 
         let mut maybe_clipped_text_vec: InlineVec<InlineVec<InlineString>> =
             InlineVec::with_capacity(header_lines.len());
@@ -254,7 +254,7 @@ mod render_helper {
 
                 // If last item in the header, then fill the remaining
                 // space with spaces.
-                let maybe_header_line_last_span: Option<&AnsiStyledText> =
+                let maybe_header_line_last_span: Option<&CliText> =
                     header_line.last();
 
                 if let Some(header_line_last_span) = maybe_header_line_last_span {
@@ -282,10 +282,10 @@ mod render_helper {
         // the clipped text.
         let zipped = maybe_clipped_text_vec.iter().zip(header_lines.iter());
         zipped.for_each(|(clipped_text_vec, header_span_vec)| {
-            let mut ansi_styled_text_vec: InlineVec<AnsiStyledText> = InlineVec::new();
+            let mut ansi_styled_text_vec: InlineVec<CliText> = InlineVec::new();
             let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
             zipped.for_each(|(clipped_text, header_span)| {
-                ansi_styled_text_vec.push(ast(clipped_text, header_span.styles.clone()));
+                ansi_styled_text_vec.push(cli_text(clipped_text, header_span.styles.clone()));
             });
             multi_line_header_clipped_vec.push(ansi_styled_text_vec);
         });
@@ -498,9 +498,9 @@ mod render_helper {
         // Create styled text using ASText with all styling from data_style.
         // This embeds ANSI codes in the string, replacing the individual
         // choose_apply_style! calls that were previously used.
-        let styled_item = ast(&data_item, *data_style).to_string();
+        let styled_item = cli_text(&data_item, *data_style).to_string();
         // Apply the same style to padding to ensure background color extends.
-        let styled_padding = ast(&padding_right, *data_style).to_string();
+        let styled_padding = cli_text(&padding_right, *data_style).to_string();
 
         queue_commands! {
             output_device,

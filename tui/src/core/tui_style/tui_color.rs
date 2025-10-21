@@ -30,24 +30,24 @@ use core::fmt::Debug;
 /// supported by terminal emulators. These will not be degraded to a lower color support
 /// level:
 ///
-/// | Index  | Name         |
-/// |--------|--------------|
-/// | 0      | black        |
-/// | 1      | red          |
-/// | 2      | green        |
-/// | 3      | yellow       |
-/// | 4      | blue         |
-/// | 5      | magenta      |
-/// | 6      | cyan         |
-/// | 7      | white        |
-/// | 8      | dark_gray    |
-/// | 9      | dark_red     |
-/// | 10     | dark_green   |
-/// | 11     | dark_yellow  |
-/// | 12     | dark_blue    |
-/// | 13     | dark_magenta |
-/// | 14     | dark_cyan    |
-/// | 15     | gray         |
+/// | Index  | Name           |
+/// |--------|----------------|
+/// | 0      | `black`        |
+/// | 1      | `red`          |
+/// | 2      | `green`        |
+/// | 3      | `yellow`       |
+/// | 4      | `blue`         |
+/// | 5      | `magenta`      |
+/// | 6      | `cyan`         |
+/// | 7      | `white`        |
+/// | 8      | `dark_gray`    |
+/// | 9      | `dark_red`     |
+/// | 10     | `dark_green`   |
+/// | 11     | `dark_yellow`  |
+/// | 12     | `dark_blue`    |
+/// | 13     | `dark_magenta` |
+/// | 14     | `dark_cyan`    |
+/// | 15     | `gray`         |
 ///
 /// # Panics
 ///
