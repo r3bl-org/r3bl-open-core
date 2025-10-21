@@ -285,7 +285,10 @@ pub mod sgr_styling {
                 0,
                 col,
                 expected_char,
-                |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
+                |style_from_buf| {
+                    style_from_buf.attribs.blink
+                        == tui_style_attrib::BlinkMode::Slow.into()
+                },
                 "slow blink",
             );
         }
@@ -310,7 +313,10 @@ pub mod sgr_styling {
                 0,
                 col,
                 expected_char,
-                |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
+                |style_from_buf| {
+                    style_from_buf.attribs.blink
+                        == tui_style_attrib::BlinkMode::Rapid.into()
+                },
                 "rapid blink",
             );
         }
@@ -342,7 +348,9 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
+            |style_from_buf| {
+                style_from_buf.attribs.blink == tui_style_attrib::BlinkMode::Slow.into()
+            },
             "slow blink should work",
         );
 
@@ -351,7 +359,9 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
+            |style_from_buf| {
+                style_from_buf.attribs.blink == tui_style_attrib::BlinkMode::Rapid.into()
+            },
             "rapid blink should work equivalently",
         );
     }
@@ -376,7 +386,9 @@ pub mod sgr_styling {
             0,
             0,
             'A',
-            |style_from_buf| style_from_buf.attribs == tui_style_attrib::Blink.into(),
+            |style_from_buf| {
+                style_from_buf.attribs.blink == tui_style_attrib::BlinkMode::Slow.into()
+            },
             "blink enabled",
         );
 

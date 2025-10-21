@@ -157,6 +157,9 @@ mod addition {
             if other.attribs.strikethrough.is_some() {
                 new_style.attribs.strikethrough = other.attribs.strikethrough;
             }
+            if other.attribs.overline.is_some() {
+                new_style.attribs.overline = other.attribs.overline;
+            }
             // Apply padding (not part of attribs)
             if other.padding.is_some() {
                 new_style.padding = other.padding;
@@ -242,8 +245,11 @@ mod style_helper {
                 acc_attrs.push("underline");
             }
 
-            if self.attribs.blink.is_some() {
-                acc_attrs.push("blink");
+            if let Some(blink) = self.attribs.blink {
+                match blink {
+                    tui_style_attrib::BlinkMode::Slow => acc_attrs.push("blink_slow"),
+                    tui_style_attrib::BlinkMode::Rapid => acc_attrs.push("blink_rapid"),
+                }
             }
 
             if self.attribs.reverse.is_some() {
@@ -256,6 +262,10 @@ mod style_helper {
 
             if self.attribs.strikethrough.is_some() {
                 acc_attrs.push("strikethrough");
+            }
+
+            if self.attribs.overline.is_some() {
+                acc_attrs.push("overline");
             }
 
             let attrs_str = join!(
@@ -301,8 +311,11 @@ mod style_helper {
                 acc.push("und");
             }
 
-            if self.attribs.blink.is_some() {
-                acc.push("blk");
+            if let Some(blink) = self.attribs.blink {
+                match blink {
+                    tui_style_attrib::BlinkMode::Slow => acc.push("blk_slow"),
+                    tui_style_attrib::BlinkMode::Rapid => acc.push("blk_rapid"),
+                }
             }
 
             if self.attribs.reverse.is_some() {
@@ -315,6 +328,10 @@ mod style_helper {
 
             if self.attribs.strikethrough.is_some() {
                 acc.push("str");
+            }
+
+            if self.attribs.overline.is_some() {
+                acc.push("ovl");
             }
 
             if self.color_fg.is_some() {

@@ -81,10 +81,11 @@ pub struct TuiStyleAttribs {
     pub italic: Option<tui_style_attrib::Italic>,
     pub dim: Option<tui_style_attrib::Dim>,
     pub underline: Option<tui_style_attrib::Underline>,
-    pub blink: Option<tui_style_attrib::Blink>,
+    pub blink: Option<tui_style_attrib::BlinkMode>,
     pub reverse: Option<tui_style_attrib::Reverse>,
     pub hidden: Option<tui_style_attrib::Hidden>,
     pub strikethrough: Option<tui_style_attrib::Strikethrough>,
+    pub overline: Option<tui_style_attrib::Overline>,
 }
 
 impl TuiStyleAttribs {
@@ -114,6 +115,7 @@ impl TuiStyleAttribs {
             && self.reverse.is_none()
             && self.hidden.is_none()
             && self.strikethrough.is_none()
+            && self.overline.is_none()
     }
 
     /// Resets all style attributes to `None`, returning the struct to its default state.
@@ -141,6 +143,7 @@ impl TuiStyleAttribs {
         self.reverse = None;
         self.hidden = None;
         self.strikethrough = None;
+        self.overline = None;
     }
 }
 
@@ -170,7 +173,18 @@ pub mod tui_style_attrib {
     pub struct Strikethrough;
 
     #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
-    pub struct Blink;
+    pub struct Overline;
+
+    /// Represents blinking text. Distinguishes between slow and rapid blink speeds.
+    /// - Slow (SGR code 5)
+    /// - Rapid (SGR code 6)
+    #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+    pub enum BlinkMode {
+        /// Slow blink (SGR code 5)
+        Slow,
+        /// Rapid blink (SGR code 6)
+        Rapid,
+    }
 
     #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
     pub struct Computed;
@@ -195,6 +209,7 @@ impl Add for TuiStyleAttribs {
             reverse: self.reverse.or(rhs.reverse),
             hidden: self.hidden.or(rhs.hidden),
             strikethrough: self.strikethrough.or(rhs.strikethrough),
+            overline: self.overline.or(rhs.overline),
         }
     }
 }
@@ -272,10 +287,11 @@ define_attrib_operations!(
     (tui_style_attrib::Italic, italic),
     (tui_style_attrib::Dim, dim),
     (tui_style_attrib::Underline, underline),
-    (tui_style_attrib::Blink, blink),
+    (tui_style_attrib::BlinkMode, blink),
     (tui_style_attrib::Reverse, reverse),
     (tui_style_attrib::Hidden, hidden),
-    (tui_style_attrib::Strikethrough, strikethrough)
+    (tui_style_attrib::Strikethrough, strikethrough),
+    (tui_style_attrib::Overline, overline)
 );
 
 macro_rules! impl_add_assign_for_attrib {
@@ -290,7 +306,8 @@ impl_add_assign_for_attrib!(tui_style_attrib::Bold, bold);
 impl_add_assign_for_attrib!(tui_style_attrib::Italic, italic);
 impl_add_assign_for_attrib!(tui_style_attrib::Dim, dim);
 impl_add_assign_for_attrib!(tui_style_attrib::Underline, underline);
-impl_add_assign_for_attrib!(tui_style_attrib::Blink, blink);
+impl_add_assign_for_attrib!(tui_style_attrib::BlinkMode, blink);
 impl_add_assign_for_attrib!(tui_style_attrib::Reverse, reverse);
 impl_add_assign_for_attrib!(tui_style_attrib::Hidden, hidden);
 impl_add_assign_for_attrib!(tui_style_attrib::Strikethrough, strikethrough);
+impl_add_assign_for_attrib!(tui_style_attrib::Overline, overline);

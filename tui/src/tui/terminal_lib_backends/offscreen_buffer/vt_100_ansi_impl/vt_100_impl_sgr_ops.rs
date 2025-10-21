@@ -39,10 +39,8 @@
 //! [`sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_sgr_ops
 //! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_sgr_ops
 
-#[allow(clippy::wildcard_imports)]
-use super::super::*;
-use crate::{AnsiValue, ColorTarget, RgbValue, SgrColorSequence, TuiColor, TuiStyle,
-            tui_style_attrib};
+use crate::{AnsiValue, ColorTarget, OffscreenBuffer, RgbValue, SgrColorSequence,
+            TuiColor, TuiStyle, TuiStyleAttribs};
 
 impl OffscreenBuffer {
     /// Reset all SGR attributes to default state.
@@ -50,69 +48,41 @@ impl OffscreenBuffer {
         self.ansi_parser_support.current_style = TuiStyle::default();
     }
 
-    /// Apply a style attribute to the current style.
-    pub fn apply_style_attribute(&mut self, attribute: StyleAttribute) {
-        let style = &mut self.ansi_parser_support.current_style;
-
-        match attribute {
-            StyleAttribute::Bold => {
-                style.attribs.bold = Some(tui_style_attrib::Bold);
-            }
-            StyleAttribute::Dim => {
-                style.attribs.dim = Some(tui_style_attrib::Dim);
-            }
-            StyleAttribute::Italic => {
-                style.attribs.italic = Some(tui_style_attrib::Italic);
-            }
-            StyleAttribute::Underline => {
-                style.attribs.underline = Some(tui_style_attrib::Underline);
-            }
-            StyleAttribute::Blink => {
-                style.attribs.blink = Some(tui_style_attrib::Blink);
-            }
-            StyleAttribute::Reverse => {
-                style.attribs.reverse = Some(tui_style_attrib::Reverse);
-            }
-            StyleAttribute::Hidden => {
-                style.attribs.hidden = Some(tui_style_attrib::Hidden);
-            }
-            StyleAttribute::Strikethrough => {
-                style.attribs.strikethrough = Some(tui_style_attrib::Strikethrough);
-            }
-        }
+    /// Apply style attributes to the current style by merging with new attributes.
+    pub fn apply_style_attribute(&mut self, attribs: TuiStyleAttribs) {
+        self.ansi_parser_support.current_style.attribs =
+            self.ansi_parser_support.current_style.attribs + attribs;
     }
 
-    /// Reset a specific style attribute.
-    pub fn reset_style_attribute(&mut self, attribute: StyleAttribute) {
+    /// Reset specific style attributes. Only fields that are `Some` in the input are
+    /// reset.
+    pub fn reset_style_attribute(&mut self, attribs: TuiStyleAttribs) {
         let style = &mut self.ansi_parser_support.current_style;
 
-        match attribute {
-            StyleAttribute::Bold => {
-                style.attribs.bold = None;
-                style.attribs.dim = None; // Bold and dim are mutually exclusive
-            }
-            StyleAttribute::Dim => {
-                style.attribs.dim = None;
-                style.attribs.bold = None; // Bold and dim are mutually exclusive
-            }
-            StyleAttribute::Italic => {
-                style.attribs.italic = None;
-            }
-            StyleAttribute::Underline => {
-                style.attribs.underline = None;
-            }
-            StyleAttribute::Blink => {
-                style.attribs.blink = None;
-            }
-            StyleAttribute::Reverse => {
-                style.attribs.reverse = None;
-            }
-            StyleAttribute::Hidden => {
-                style.attribs.hidden = None;
-            }
-            StyleAttribute::Strikethrough => {
-                style.attribs.strikethrough = None;
-            }
+        if attribs.bold.is_some() || attribs.dim.is_some() {
+            style.attribs.bold = None;
+            style.attribs.dim = None; // Bold and dim are mutually exclusive
+        }
+        if attribs.italic.is_some() {
+            style.attribs.italic = None;
+        }
+        if attribs.underline.is_some() {
+            style.attribs.underline = None;
+        }
+        if attribs.blink.is_some() {
+            style.attribs.blink = None;
+        }
+        if attribs.reverse.is_some() {
+            style.attribs.reverse = None;
+        }
+        if attribs.hidden.is_some() {
+            style.attribs.hidden = None;
+        }
+        if attribs.strikethrough.is_some() {
+            style.attribs.strikethrough = None;
+        }
+        if attribs.overline.is_some() {
+            style.attribs.overline = None;
         }
     }
 
@@ -236,23 +206,10 @@ impl OffscreenBuffer {
     }
 }
 
-/// Represents different style attributes that can be applied.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StyleAttribute {
-    Bold,
-    Dim,
-    Italic,
-    Underline,
-    Blink,
-    Reverse,
-    Hidden,
-    Strikethrough,
-}
-
 #[cfg(test)]
 mod tests_sgr_ops {
     use super::*;
-    use crate::{height, width};
+    use crate::{height, tui_style_attrib, width};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);
@@ -264,7 +221,7 @@ mod tests_sgr_ops {
         let mut buffer = create_test_buffer();
 
         // Set some attributes first
-        buffer.apply_style_attribute(StyleAttribute::Bold);
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Bold));
         buffer.set_foreground_color(31); // Red
 
         // Verify they're set
@@ -291,7 +248,7 @@ mod tests_sgr_ops {
     fn test_apply_style_attribute_bold() {
         let mut buffer = create_test_buffer();
 
-        buffer.apply_style_attribute(StyleAttribute::Bold);
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Bold));
 
         assert!(
             buffer
@@ -307,7 +264,7 @@ mod tests_sgr_ops {
     fn test_apply_style_attribute_italic() {
         let mut buffer = create_test_buffer();
 
-        buffer.apply_style_attribute(StyleAttribute::Italic);
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Italic));
 
         assert!(
             buffer
@@ -323,11 +280,11 @@ mod tests_sgr_ops {
     fn test_reset_style_attribute_bold_and_dim() {
         let mut buffer = create_test_buffer();
 
-        buffer.apply_style_attribute(StyleAttribute::Bold);
-        buffer.apply_style_attribute(StyleAttribute::Dim);
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Bold));
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Dim));
 
         // Reset bold should also reset dim (they're mutually exclusive)
-        buffer.reset_style_attribute(StyleAttribute::Bold);
+        buffer.reset_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Bold));
 
         assert!(
             buffer
@@ -401,9 +358,9 @@ mod tests_sgr_ops {
     fn test_multiple_attributes() {
         let mut buffer = create_test_buffer();
 
-        buffer.apply_style_attribute(StyleAttribute::Bold);
-        buffer.apply_style_attribute(StyleAttribute::Italic);
-        buffer.apply_style_attribute(StyleAttribute::Underline);
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Bold));
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Italic));
+        buffer.apply_style_attribute(TuiStyleAttribs::from(tui_style_attrib::Underline));
 
         let style = &buffer.ansi_parser_support.current_style;
         assert!(style.attribs.bold.is_some());
