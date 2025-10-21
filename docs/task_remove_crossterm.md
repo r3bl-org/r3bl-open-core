@@ -3,6 +3,7 @@
 
 - [Task: Remove Crossterm - Direct ANSI Terminal Control](#task-remove-crossterm---direct-ansi-terminal-control)
   - [Overview](#overview)
+    - [⚠️ DEPENDENCY: Requires task_unify_rendering.md Completion](#-dependency-requires-task_unify_renderingmd-completion)
   - [Current Architecture Analysis](#current-architecture-analysis)
     - [Render Pipeline Flow](#render-pipeline-flow)
     - [Performance Bottleneck](#performance-bottleneck)
@@ -43,6 +44,27 @@ sequence generation for terminal control. This optimization targets the 15M samp
 identified in `write_command_ansi` from flamegraph profiling.
 
 **Platform Support**: Linux, macOS, and Windows 10+ (all modern platforms with ANSI support).
+
+### ⚠️ DEPENDENCY: Requires task_unify_rendering.md Completion
+
+**This task depends on completion of [task_unify_rendering.md](task_unify_rendering.md):**
+
+| Unification Phase | Output | Used By | Notes |
+|---|---|---|---|
+| **0.5** (prerequisite) | CliText uses CliText abstraction for styling | Foundation | Standardizes styling before renaming |
+| **1** (rename) | AnsiStyledText → CliText | Foundation | Type rename across codebase |
+| **2** (core) | `PixelCharRenderer` module created | **This task** | Unified ANSI sequence generator |
+| **3-6** (integration) | All paths use PixelCharRenderer | **This task** | Cross-platform ANSI output ready |
+
+**Execution Order:**
+1. ✅ Complete all phases in task_unify_rendering.md (0.5 through 6)
+2. 🚀 Begin this task (task_remove_crossterm.md phases 1-3)
+
+**Why this dependency matters:**
+- task_unify_rendering.md creates `PixelCharRenderer` that generates ANSI sequences
+- This task takes those ANSI sequences and outputs them directly instead of through crossterm
+- Without PixelCharRenderer, we're just replacing the entire rendering logic (too risky)
+- With PixelCharRenderer, we're only replacing the I/O backend (safe and focused)
 
 ## Current Architecture Analysis
 

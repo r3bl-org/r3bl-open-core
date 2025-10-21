@@ -17,6 +17,12 @@
   - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
   - using `OscController` to write to `OutputDevice`
 
+# unify rendering paths
+
+- [⌛] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
+  `ASText`, `TuiStyledText`, and `readline_async` into a single, optimized rendering pipeline that
+  works for both use cases while preparing for the future removal of crossterm dependency
+
 # submit talk for tokio conf 2026 proposal
 
 - [x] 2025-10-20 submit proposal for tokio conf 2026 talk on async TTY primitives in `r3bl_tui`
@@ -59,12 +65,6 @@
 
 - [ ] PRD [`task_build_tools_infra_plan`](docs/task_build_tools_infra_plan.md) to build
       `build-infra-tools`
-
-# unify rendering paths
-
-- [ ] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
-      `ASText` and `TuiStyledText` into a single, optimized rendering pipeline that works for both
-      use cases while preparing for the future removal of crossterm dependency
 
 # remove crossterm
 
