@@ -2,6 +2,7 @@
 
 use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor,
             global_color_support};
+use crossterm::style::Color;
 
 /// Respect the color support of the terminal and downgrade the color if needed. This
 /// really only applies to the [`TuiColor::Rgb`] variant.
@@ -117,4 +118,31 @@ impl From<TuiColor> for crossterm::style::Color {
 fn convert_rgb_to_ansi_grayscale(r: u8, g: u8, b: u8) -> crossterm::style::Color {
     let ansi = TuiColor::Rgb((r, g, b).into()).as_grayscale();
     crossterm::style::Color::AnsiValue(ansi.index)
+}
+
+/// Convert from [`crossterm::style::Color`] to [`TuiColor`].
+impl From<crossterm::style::Color> for TuiColor {
+    fn from(crossterm_color: crossterm::style::Color) -> Self {
+        match crossterm_color {
+            Color::Rgb { r, g, b } => TuiColor::Rgb((r, g, b).into()),
+            Color::AnsiValue(val) => TuiColor::Ansi(val.into()),
+            // Map standard crossterm colors to ANSI basic colors (0-15)
+            Color::Black | Color::Reset => TuiColor::Ansi(0.into()),
+            Color::Red => TuiColor::Ansi(1.into()),
+            Color::Green => TuiColor::Ansi(2.into()),
+            Color::Yellow => TuiColor::Ansi(3.into()),
+            Color::Blue => TuiColor::Ansi(4.into()),
+            Color::Magenta => TuiColor::Ansi(5.into()),
+            Color::Cyan => TuiColor::Ansi(6.into()),
+            Color::White => TuiColor::Ansi(7.into()),
+            Color::DarkGrey => TuiColor::Ansi(8.into()),
+            Color::DarkRed => TuiColor::Ansi(9.into()),
+            Color::DarkGreen => TuiColor::Ansi(10.into()),
+            Color::DarkYellow => TuiColor::Ansi(11.into()),
+            Color::DarkBlue => TuiColor::Ansi(12.into()),
+            Color::DarkMagenta => TuiColor::Ansi(13.into()),
+            Color::DarkCyan => TuiColor::Ansi(14.into()),
+            Color::Grey => TuiColor::Ansi(15.into()),
+        }
+    }
 }

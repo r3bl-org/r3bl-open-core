@@ -48,20 +48,20 @@
 #![warn(clippy::unwrap_in_result)]
 #![warn(rust_2018_idioms)]
 
-pub mod components;
 pub mod crossterm_macros;
 pub mod event_loop;
 pub mod function_component;
 pub mod keypress_reader_sync;
 pub mod scroll;
+pub mod select_component;
 pub mod state;
 pub mod style;
 
-pub use components::*;
 pub use event_loop::*;
 pub use function_component::*;
 pub use keypress_reader_sync::*;
 pub use scroll::*;
+pub use select_component::*;
 pub use state::*;
 pub use style::*;
 

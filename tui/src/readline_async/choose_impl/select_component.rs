@@ -1,15 +1,14 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
-                style::{Print, ResetColor, SetBackgroundColor, SetForegroundColor},
-                terminal::{Clear, ClearType}};
-use miette::IntoDiagnostic;
-
 use crate::{AnsiStyledText, ChUnit, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
-            State, StyleSheet, TuiStyle, ast, ch, choose_apply_style, col,
+            State, StyleSheet, TuiStyle, ast, ch, col,
             core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
             inline_string, lock_output_device_as_mut, queue_commands, usize, width};
+use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
+                style::{Print, ResetColor},
+                terminal::{Clear, ClearType}};
+use miette::IntoDiagnostic;
 
 #[allow(missing_debug_implementations)]
 pub struct SelectComponent {
@@ -91,8 +90,7 @@ mod render_helper {
                 MULTI_SELECT_IS_NOT_SELECTED, MULTI_SELECT_IS_SELECTED, MoveToColumn,
                 MoveToNextLine, MoveToPreviousLine, OutputDevice, Print, ResetColor,
                 SINGLE_SELECT_IS_NOT_SELECTED, SINGLE_SELECT_IS_SELECTED,
-                SelectComponent, SetBackgroundColor, SetForegroundColor, State,
-                StyleSheet, TuiStyle, ast, ch, choose_apply_style,
+                SelectComponent, State, StyleSheet, TuiStyle, ast, ch,
                 clip_string_to_width_with_ellipsis, col, fg_blue, get_spaces,
                 get_terminal_width, inline_string, queue_commands, usize, width};
 
@@ -192,44 +190,21 @@ mod render_helper {
 
         header_text = clip_string_to_width_with_ellipsis(header_text, viewport_width);
 
+        // Create styled text using ASText with all styling from header_style.
+        // This embeds ANSI codes in the string, replacing the individual
+        // choose_apply_style! calls that were previously used.
+        let styled_header = ast(&header_text, *header_style).to_string();
+
         queue_commands! {
             output_device,
             // Bring the caret back to the start of line.
             MoveToColumn(0),
             // Reset the colors that may have been set by the previous command.
             ResetColor,
-        };
-
-        if let Some(fg) = header_style.color_fg {
-            queue_commands! {
-                output_device,
-                // Set the fg color for the text.
-                choose_apply_style!(fg => fg),
-            };
-        }
-
-        if let Some(bg) = header_style.color_bg {
-            queue_commands! {
-                output_device,
-                // Set the bg color for the text.
-                choose_apply_style!(bg => bg),
-            };
-        }
-
-        queue_commands! {
-            output_device,
-            // Style the text.
-            choose_apply_style!(header_style => bold),
-            choose_apply_style!(header_style => italic),
-            choose_apply_style!(header_style => dim),
-            choose_apply_style!(header_style => underline),
-            choose_apply_style!(header_style => reverse),
-            choose_apply_style!(header_style => hidden),
-            choose_apply_style!(header_style => strikethrough),
             // Clear the current line.
             Clear(ClearType::CurrentLine),
-            // Print the text.
-            Print(header_text),
+            // Print the styled text (ANSI codes already embedded).
+            Print(styled_header),
             // Move to next line.
             MoveToNextLine(1),
             // Reset the colors.
@@ -520,6 +495,13 @@ mod render_helper {
             get_spaces(0)
         };
 
+        // Create styled text using ASText with all styling from data_style.
+        // This embeds ANSI codes in the string, replacing the individual
+        // choose_apply_style! calls that were previously used.
+        let styled_item = ast(&data_item, *data_style).to_string();
+        // Apply the same style to padding to ensure background color extends.
+        let styled_padding = ast(&padding_right, *data_style).to_string();
+
         queue_commands! {
             output_device,
             // Bring the caret back to the start of line.
@@ -528,38 +510,10 @@ mod render_helper {
             ResetColor,
             // Clear the current line.
             Clear(ClearType::CurrentLine),
-        };
-
-        if let Some(fg) = data_style.color_fg {
-            queue_commands! {
-                output_device,
-                // Set the fg color for the text.
-                choose_apply_style!(fg => fg),
-            };
-        }
-
-        if let Some(bg) = data_style.color_bg {
-            queue_commands! {
-                output_device,
-                // Set the bg color for the text.
-                choose_apply_style!(bg => bg),
-            };
-        }
-
-        queue_commands! {
-            output_device,
-            // Style the text.
-            choose_apply_style!(data_style => bold),
-            choose_apply_style!(data_style => italic),
-            choose_apply_style!(data_style => dim),
-            choose_apply_style!(data_style => underline),
-            choose_apply_style!(data_style => reverse),
-            choose_apply_style!(data_style => hidden),
-            choose_apply_style!(data_style => strikethrough),
-            // Print the text.
-            Print(data_item),
-            // Print the padding text.
-            Print(padding_right),
+            // Print the styled text (ANSI codes already embedded).
+            Print(styled_item),
+            // Print the styled padding (ensures bg color extends).
+            Print(styled_padding),
             // Move to next line.
             MoveToNextLine(1),
             // Reset the colors.
@@ -601,12 +555,11 @@ fn clip_string_to_width_with_ellipsis(
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-    use serial_test::serial;
-
     use super::*;
     use crate::{ColorSupport, ItemsOwned, OutputDeviceExt,
                 global_color_support::{clear_override, set_override}};
+    use pretty_assertions::assert_eq;
+    use serial_test::serial;
 
     #[test]
     fn test_clip_string_to_width_with_ellipsis() {
@@ -652,7 +605,10 @@ mod tests {
 
         println!("generated_output = writer.get_buffer(): \n\n{generated_output:#?}\n\n");
 
-        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[38;5;153m\u{1b}[48;5;235m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m\u{1b}[2K Header\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◉ Item 1                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 2                              \u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[21m\u{1b}[23m\u{1b}[22m\u{1b}[24m\u{1b}[27m\u{1b}[28m\u{1b}[29m  ◌ Item 3                              \u{1b}[1E\u{1b}[0m\u{1b}[4F";
+        // Updated expected output: now uses ASText for styling, which only emits ANSI codes
+        // for attributes that are set (more efficient than the old choose_apply_style! macro
+        // which emitted explicit reset codes for every attribute).
+        let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;153m\u{1b}[48;5;235m Header\u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m  ◉ Item 1\u{1b}[0m\u{1b}[38;5;46m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 2\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 3\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(generated_output, expected_output);
 
         clear_override();
