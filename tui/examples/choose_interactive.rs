@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CliStyle, CliText, DefaultIoDevices, InlineVec, TuiColor, cli_text_line,
-               cli_text_lines, choose, cli_text, get_size, get_terminal_width, height,
-               inline_vec,
+use r3bl_tui::{CliStyle, CliText, DefaultIoDevices, InlineVec, TuiColor, choose,
+               cli_text, cli_text_line, cli_text_lines, get_size, get_terminal_width,
+               height, inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
                readline_async::{DEVELOPMENT_MODE, HowToChoose, style::StyleSheet},

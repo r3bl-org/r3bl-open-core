@@ -67,8 +67,11 @@ pub fn prefix_single_select_instruction_header(
     let esc = fg_lavender(text_esc).bg_night_blue();
     let return_key = fg_sky_blue(text_return_key).bg_night_blue();
 
-    let mut acc =
-        cli_text_lines![cli_text_line![up_or_down], cli_text_line![esc], cli_text_line![return_key],];
+    let mut acc = cli_text_lines![
+        cli_text_line![up_or_down],
+        cli_text_line![esc],
+        cli_text_line![return_key],
+    ];
 
     last_lines.iter().for_each(|line| acc.push(line.clone()));
 

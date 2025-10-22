@@ -63,8 +63,35 @@ impl TransformColor for AnsiValue {
 }
 
 impl AnsiValue {
+    /// Create a new ANSI color value.
     #[must_use]
     pub const fn new(color: u8) -> Self { Self { index: color } }
+
+    /// Check if this is a basic ANSI color (indices 0-15).
+    ///
+    /// Basic ANSI colors (indices 0-15) have special handling:
+    /// - They represent the standard 16 terminal colors
+    /// - Color degradation treats them differently than extended colors (16-255)
+    /// - When converting to grayscale, we convert via RGB first
+    ///
+    /// # Returns
+    ///
+    /// `true` if this is a basic color (0-15), `false` for extended colors (16-255)
+    #[must_use]
+    pub const fn is_basic(&self) -> bool { self.index < 16 }
+
+    /// Check if this is an extended ANSI color (indices 16-255).
+    ///
+    /// Extended ANSI colors (indices 16-255) are from the 256-color palette:
+    /// - Indices 16-231: 6×6×6 RGB color cube (216 colors)
+    /// - Indices 232-255: Grayscale ramp (24 shades)
+    /// - They don't have the special handling that basic colors (0-15) require
+    ///
+    /// # Returns
+    ///
+    /// `true` if this is an extended color (16-255), `false` for basic colors (0-15)
+    #[must_use]
+    pub const fn is_extended(&self) -> bool { !self.is_basic() }
 }
 
 #[cfg(test)]
@@ -118,5 +145,59 @@ mod tests {
     fn test_ansi_value_from_i32() {
         let ansi = AnsiValue::from(150i32);
         assert_eq2!(ansi.index, 150);
+    }
+
+    #[test]
+    fn test_is_basic_color() {
+        // All basic colors (0-15) should return true
+        for i in 0..16 {
+            let ansi = AnsiValue::from(i);
+            assert!(ansi.is_basic(), "AnsiValue({i}) should be basic");
+        }
+
+        // Extended colors (16-255) should return false
+        let extended_colors = [16, 50, 100, 196, 255];
+        for &i in &extended_colors {
+            let ansi = AnsiValue::from(i);
+            assert!(!ansi.is_basic(), "AnsiValue({i}) should not be basic");
+        }
+    }
+
+    #[test]
+    fn test_is_extended_color() {
+        // All basic colors (0-15) should return false
+        for i in 0..16 {
+            let ansi = AnsiValue::from(i);
+            assert!(!ansi.is_extended(), "AnsiValue({i}) should not be extended");
+        }
+
+        // Extended colors (16-255) should return true
+        let extended_colors = [16, 50, 100, 196, 232, 255];
+        for &i in &extended_colors {
+            let ansi = AnsiValue::from(i);
+            assert!(ansi.is_extended(), "AnsiValue({i}) should be extended");
+        }
+    }
+
+    #[test]
+    fn test_is_basic_and_extended_are_complementary() {
+        // Every color is either basic or extended, not both
+        for i in 0..=255 {
+            let ansi = AnsiValue::from(i);
+            let is_basic = ansi.is_basic();
+            let is_extended = ansi.is_extended();
+
+            // They should be mutually exclusive
+            assert_ne!(
+                is_basic, is_extended,
+                "AnsiValue({i}) cannot be both basic and extended"
+            );
+
+            // One of them must be true
+            assert!(
+                is_basic || is_extended,
+                "AnsiValue({i}) must be either basic or extended"
+            );
+        }
     }
 }

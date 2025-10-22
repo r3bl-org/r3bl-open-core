@@ -50,12 +50,30 @@ Table of contents:
   - [R3BL VSCode Extensions](#r3bl-vscode-extensions)
 - [Build the workspace and run tests](#build-the-workspace-and-run-tests)
   - [Key Commands](#key-commands)
+  - [Cargo Target Directory Isolation for IDE/Tool Performance](#cargo-target-directory-isolation-for-idetool-performance)
+    - [The Problem: Cargo Lock Contention](#the-problem-cargo-lock-contention)
+    - [The Solution: Separate Build Artifacts](#the-solution-separate-build-artifacts)
+    - [Configuration by Tool](#configuration-by-tool)
+    - [Benefits](#benefits)
+    - [Example Workflow Setup](#example-workflow-setup)
+    - [Disk Space Management](#disk-space-management)
+    - [Troubleshooting](#troubleshooting)
   - [Bacon Development Tools](#bacon-development-tools)
+  - [Automated Development Monitoring](#automated-development-monitoring)
+    - [Option 1: Lightweight Watch Mode (Recommended for Most Users)](#option-1-lightweight-watch-mode-recommended-for-most-users)
+    - [Option 2: Comprehensive Tmux Dashboard](#option-2-comprehensive-tmux-dashboard)
+  - [Tmux Development Dashboard](#tmux-development-dashboard)
   - [Status Monitoring Scripts](#status-monitoring-scripts)
   - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
   - [Wild Linker (Linux)](#wild-linker-linux)
   - [Rust Toolchain Management](#rust-toolchain-management)
-    - [Testing Toolchain Installation Progress](#testing-toolchain-installation-progress)
+    - [Why mkdir for Locking?](#why-mkdir-for-locking)
+    - [1. rust-toolchain-update.fish - Smart Validated Toolchain Updates](#1-rust-toolchain-updatefish---smart-validated-toolchain-updates)
+    - [2. rust-toolchain-sync-to-toml.fish - Sync to Existing Config](#2-rust-toolchain-sync-to-tomlfish---sync-to-existing-config)
+    - [3. rust-toolchain-validate.fish - Unified Toolchain Validation](#3-rust-toolchain-validatefish---unified-toolchain-validation)
+    - [4. remove_toolchains.sh - Testing Utility](#4-remove_toolchainssh---testing-utility)
+    - [Log File Output](#log-file-output)
+    - [Comprehensive Toolchain Management System](#comprehensive-toolchain-management-system)
   - [Unified Script Architecture](#unified-script-architecture)
 - [Star History](#star-history)
 - [Archive](#archive)
@@ -534,6 +552,164 @@ Other commands:
 | `fish run.fish toolchain-sync`              | Sync Rust environment to match rust-toolchain.toml                                              |
 | `fish run.fish toolchain-remove`            | Remove ALL toolchains (⚠️ destructive testing utility)                                          |
 
+### Cargo Target Directory Isolation for IDE/Tool Performance
+
+**Critical Optimization**: When multiple development tools run cargo simultaneously (IDE, terminal,
+file watcher, CI), they compete for locks on the shared `target/` directory. This causes severe
+responsiveness issues as each tool waits for others to complete. Isolating build artifacts by tool
+eliminates this bottleneck completely.
+
+#### The Problem: Cargo Lock Contention
+
+When you have multiple `cargo` instances running:
+
+- **VSCode rust-analyzer**: Runs `cargo check` continuously in background
+- **RustRover**: Runs `cargo check` continuously in background
+- **File watcher** (`check.fish`, `bacon`): Triggers cargo tests, doc builds, etc. on every file
+  save
+- **Terminal**: You run manual `cargo` commands, and `Claude Code` is running commands
+
+All these access the same `target/` directory:
+
+```
+target/
+├── debug/
+├── release/
+└── .rustc_info.json  # ← Lock contention here
+```
+
+When one tool locks `target/`, all others wait. This cascades into a "traffic jam" where everything
+becomes unresponsive.
+
+#### The Solution: Separate Build Artifacts
+
+Configure each tool to use its own target directory. Rust supports this via the `CARGO_TARGET_DIR`
+environment variable:
+
+```
+target/
+├── vscode/      # VSCode rust-analyzer builds
+├── rustrover/   # JetBrains IDE builds
+├── claude/      # Claude Code builds
+├── check/       # check.fish file watcher builds
+└── cli/         # Terminal manual builds (optional)
+```
+
+Now tools build in parallel without interfering with each other.
+
+#### Configuration by Tool
+
+Generally speaking you can just add `CARGO_TARGET_DIR=target/XYZ` in the command, for eg you can run
+the following in your terminal to run `claude` with the `CARGO_TARGET_DIR` env var set, and all the
+`cargo` commands spawned by `claude` will have their own taret directory to work with:
+
+```bash
+CARGO_TARGET_DIR=target/claude $argv
+```
+
+You can add this to an alias, add it to scripts (like `check.fish` does via
+`set -gx CARGO_TARGET_DIR target/check`) or you can configure settings in your tool of choice.
+
+In VSCode, you can add the following to `.vscode/settings.json`:
+
+```json
+{
+  "rust-analyzer.cargo.targetDir": true
+}
+```
+
+In RustRover, you can go to "Settings -> Rust -> Environment Variables" and add this
+`CARGO_TARGET_DIR=target/rustrover`
+
+#### Benefits
+
+| Benefit              | Impact                                                                      |
+| -------------------- | --------------------------------------------------------------------------- |
+| **Zero Contention**  | Tools run in parallel without waiting on locks                              |
+| **Responsive IDE**   | rust-analyzer completes checks while you code (not blocked by file watcher) |
+| **Faster Feedback**  | Terminal cargo commands complete instantly (not queued behind IDE checks)   |
+| **Parallel Testing** | bacon + check.fish both run, providing redundant test feedback              |
+| **Disk Space**       | ~2-3GB per tool (manageable with sccache + cleanup)                         |
+
+#### Example Workflow Setup
+
+Here's a typical productive development workflow setup:
+
+```bash
+# Terminal 1: Running your IDE (VSCode with rust-analyzer)
+CARGO_TARGET_DIR=target/vscode code .
+
+# Terminal 2: File watcher with automatic tests
+check.fish --watch-tests # Runs with: CARGO_TARGET_DIR=target/check
+
+# Terminal 3: Run claude code
+CARGO_TARGET_DIR=target/claude claude
+
+# Terminal 4: Run bacon
+CARGO_TARGET_DIR=target/bacon bacon doc --headless
+
+# Result: All three run in parallel, zero blocking
+```
+
+Before this optimization, Terminal 3 would hang waiting for Terminals 1-2 to release the `target/`
+lock.
+
+#### Disk Space Management
+
+Each tool caches ~2-3GB of build artifacts. With 4 tools, expect ~10-12GB total (plus ~5GB for
+sccache). To manage:
+
+```bash
+# View size of each target directory
+du -sh target/*/
+
+# Clean individual tool builds
+rm -rf target/vscode
+rm -rf target/rustrover
+rm -rf target/claude
+rm -rf target/check
+
+# Full cleanup (nuclear option)
+rm -rf target/
+
+# Clear sccache
+sccache --zero-stats
+rm -rf ~/.cache/sccache
+```
+
+#### Troubleshooting
+
+**Syntax errors still appear in IDE but code works in terminal?**
+
+Your IDE and terminal are using different target directories. Verify `CARGO_TARGET_DIR`
+configuration:
+
+```bash
+# Check what each tool sees
+echo $CARGO_TARGET_DIR  # Terminal value
+# VSCode: Check .vscode/settings.json
+# RustRover: Check IDE settings
+```
+
+**Build artifacts aren't being reused across tools?**
+
+Each tool has its own `target/` directory by design. This is correct - the slight disk space
+overhead is worth the responsiveness gain. If you need to share builds, unset `CARGO_TARGET_DIR`
+(not recommended for development).
+
+**"Target directory not found" error?**
+
+Cargo automatically creates the directory. If you see this error, verify the path is writable and
+the environment variable is set correctly:
+
+```bash
+# Verify the variable is actually set
+env | grep CARGO_TARGET_DIR
+
+# Test with explicit path
+CARGO_TARGET_DIR=/tmp/test cargo build
+```
+
 ### Bacon Development Tools
 
 This project includes [bacon](https://dystroy.org/bacon/) configuration for background code checking
@@ -605,11 +781,13 @@ Choose the workflow that matches your current needs:
 
 ### Automated Development Monitoring
 
-The project provides two complementary approaches for continuous monitoring during development - choose based on your workflow preferences:
+The project provides two complementary approaches for continuous monitoring during development -
+choose based on your workflow preferences:
 
 #### Option 1: Lightweight Watch Mode (Recommended for Most Users)
 
-For developers who want automated monitoring without the overhead of tmux, use the standalone check script:
+For developers who want automated monitoring without the overhead of tmux, use the standalone check
+script:
 
 ```sh
 ./check.fish --watch
@@ -617,7 +795,8 @@ For developers who want automated monitoring without the overhead of tmux, use t
 
 **What it does:**
 
-- **Monitors source directories**: Watches `cmdr/src/`, `analytics_schema/src/`, and `tui/src/` for changes
+- **Monitors source directories**: Watches `cmdr/src/`, `analytics_schema/src/`, and `tui/src/` for
+  changes
 - **Event-driven execution**: Triggers immediately on file changes (no polling delay)
 - **Intelligent debouncing**: 5-second delay prevents rapid re-runs during saves
 - **Comprehensive checks**: Runs tests (nextest), doctests, and doc builds automatically
@@ -656,7 +835,10 @@ Press Ctrl+C to stop
 - **Low overhead**: Minimal resource usage compared to running multiple monitors
 - **Perfect for focus**: Clean output doesn't distract from your editor
 
-**Event handling:** While checks run (30+ seconds), the Linux kernel buffers new file change events. When checks complete, buffered events trigger immediately if debounce allows. This ensures no changes are lost but may cause cascading re-runs if you save multiple times during test execution. Adjust `DEBOUNCE_SECONDS` in the script if needed.
+**Event handling:** While checks run (30+ seconds), the Linux kernel buffers new file change events.
+When checks complete, buffered events trigger immediately if debounce allows. This ensures no
+changes are lost but may cause cascading re-runs if you save multiple times during test execution.
+Adjust `DEBOUNCE_SECONDS` in the script if needed.
 
 **Usage:**
 
@@ -675,7 +857,8 @@ Press Ctrl+C to stop
 
 ### Tmux Development Dashboard
 
-For developers who prefer a multi-pane visual environment, the tmux dashboard combines multiple bacon monitors with the `check.fish --watch` script for comprehensive coverage.
+For developers who prefer a multi-pane visual environment, the tmux dashboard combines multiple
+bacon monitors with the `check.fish --watch` script for comprehensive coverage.
 
 **When to choose tmux dashboard over standalone watch mode:**
 
@@ -706,8 +889,8 @@ For developers who prefer a multi-pane visual environment, the tmux dashboard co
 
 - **Persistent Session**: Session name "r3bl-dev" - reconnect from other terminals with
   `tmux attach-session -t r3bl-dev`
-- **Multiple Monitors**: Combines three bacon monitors (tests, doctests, docs) with one comprehensive
-  check monitor (`check.fish --watch`)
+- **Multiple Monitors**: Combines three bacon monitors (tests, doctests, docs) with one
+  comprehensive check monitor (`check.fish --watch`)
 - **Event-Driven Checks**: The bottom-right pane runs `./check.fish --watch` which triggers
   immediately on file changes (not periodic polling)
 - **Comprehensive Coverage**: The `check.fish --watch` monitor provides:
@@ -736,21 +919,22 @@ tmux kill-session -t r3bl-dev
 
 **Comparison: Standalone vs Tmux Dashboard:**
 
-| Aspect                  | `./check.fish --watch`                 | Tmux Dashboard                                |
-| ----------------------- | -------------------------------------- | --------------------------------------------- |
-| **Setup Complexity**    | Single command, one window             | tmux session with 4 panes                     |
-| **Screen Real Estate**  | Minimal (one terminal)                 | Large (2x2 grid)                              |
-| **Monitoring Scope**    | Comprehensive (tests+docs+doctests)    | Granular (separate panes for each)            |
-| **Visual Separation**   | Sequential output in one stream        | Parallel output in dedicated panes            |
-| **Ideal For**           | Focused development, laptop screens    | Multi-monitor setups, visual dashboards       |
-| **Tmux Knowledge**      | Not required                           | Helpful for navigation                        |
-| **Resource Usage**      | Lower (one monitor)                    | Higher (4 monitors)                           |
-| **Event-Driven**        | Yes (file system events)               | Yes (check.fish pane) + bacon auto-rebuild    |
+| Aspect                 | `./check.fish --watch`              | Tmux Dashboard                             |
+| ---------------------- | ----------------------------------- | ------------------------------------------ |
+| **Setup Complexity**   | Single command, one window          | tmux session with 4 panes                  |
+| **Screen Real Estate** | Minimal (one terminal)              | Large (2x2 grid)                           |
+| **Monitoring Scope**   | Comprehensive (tests+docs+doctests) | Granular (separate panes for each)         |
+| **Visual Separation**  | Sequential output in one stream     | Parallel output in dedicated panes         |
+| **Ideal For**          | Focused development, laptop screens | Multi-monitor setups, visual dashboards    |
+| **Tmux Knowledge**     | Not required                        | Helpful for navigation                     |
+| **Resource Usage**     | Lower (one monitor)                 | Higher (4 monitors)                        |
+| **Event-Driven**       | Yes (file system events)            | Yes (check.fish pane) + bacon auto-rebuild |
 
 **When to use each:**
 
 - **Use standalone watch**: When you want simple, focused monitoring in a single terminal
-- **Use tmux dashboard**: When you want comprehensive visibility with separate panes for each concern
+- **Use tmux dashboard**: When you want comprehensive visibility with separate panes for each
+  concern
 
 Both approaches use the same `check.fish --watch` script in different contexts - standalone for
 simplicity, integrated for comprehensive dashboards.
@@ -877,11 +1061,16 @@ parallel compilation without Wild.
 This project includes three complementary scripts for comprehensive Rust toolchain management, each
 serving a specific purpose in the development workflow.
 
-**Concurrency Safety:** Toolchain **modification** scripts (`rust-toolchain-update.fish` and `rust-toolchain-sync-to-toml.fish`) use `mkdir` (atomic directory creation) to ensure only one toolchain modification runs at a time. **Validation** scripts (`rust-toolchain-validate.fish` and `check.fish`) are lock-free since they only read toolchain state - multiple validations can run concurrently without conflict.
+**Concurrency Safety:** Toolchain **modification** scripts (`rust-toolchain-update.fish` and
+`rust-toolchain-sync-to-toml.fish`) use `mkdir` (atomic directory creation) to ensure only one
+toolchain modification runs at a time. **Validation** scripts (`rust-toolchain-validate.fish` and
+`check.fish`) are lock-free since they only read toolchain state - multiple validations can run
+concurrently without conflict.
 
 #### Why mkdir for Locking?
 
-The key insight is understanding **atomicity** - when a system operation must check-and-act in a way that's guaranteed to be indivisible:
+The key insight is understanding **atomicity** - when a system operation must check-and-act in a way
+that's guaranteed to be indivisible:
 
 **The Problem with File Existence Checks:**
 
@@ -895,7 +1084,8 @@ if [ ! -f lock ]; then
 fi
 ```
 
-Between the check (`[ ! -f lock ]`) and the move (`mv temp lock`), another process can slip in and also acquire the lock. This is called a **Time-Of-Check-Time-Of-Use (TOCTOU) race condition**.
+Between the check (`[ ! -f lock ]`) and the move (`mv temp lock`), another process can slip in and
+also acquire the lock. This is called a **Time-Of-Check-Time-Of-Use (TOCTOU) race condition**.
 
 **How mkdir Works - Atomic Check-and-Create:**
 
@@ -908,11 +1098,13 @@ mkdir lock_dir  # Check AND create in ONE kernel operation
 ```
 
 When `mkdir` runs, the kernel does:
+
 1. **Check**: Does the directory exist?
 2. **Create**: If not, create it
 3. **Return**: With ONE atomic operation - not two separate steps
 
-Even with perfect timing and multiple processes starting simultaneously, only ONE can create the directory.
+Even with perfect timing and multiple processes starting simultaneously, only ONE can create the
+directory.
 
 **Technical Implementation:**
 
@@ -931,15 +1123,21 @@ fi
 - **Simple**: No file descriptors or special handling needed
 - **Reliable**: Works on all Unix systems (standard POSIX behavior)
 - **Stale lock detection**: Automatically removes locks older than 10 minutes (crashed processes)
-- **Crash-safe**: Abandoned locks are auto-cleaned after 10 minutes, or manually via `rm -rf rust-toolchain-script.lock`
+- **Crash-safe**: Abandoned locks are auto-cleaned after 10 minutes, or manually via
+  `rm -rf rust-toolchain-script.lock`
 
 The locking mechanism uses:
 
-- **mkdir (atomic directory creation)**: Creates lock directory atomically - succeeds for one process, fails for all others
-- **Atomic kernel operation**: Check-and-create happens as ONE indivisible operation - the definition of mutual exclusion
-- **Timestamp tracking**: Stores creation time in `rust-toolchain-script.lock/timestamp` for age tracking
-- **Stale lock detection**: Checks lock age on collision - auto-removes if older than 10 minutes (600 seconds)
-- **Lock holder cleanup**: Process that acquired lock removes directory (including timestamp) when done
+- **mkdir (atomic directory creation)**: Creates lock directory atomically - succeeds for one
+  process, fails for all others
+- **Atomic kernel operation**: Check-and-create happens as ONE indivisible operation - the
+  definition of mutual exclusion
+- **Timestamp tracking**: Stores creation time in `rust-toolchain-script.lock/timestamp` for age
+  tracking
+- **Stale lock detection**: Checks lock age on collision - auto-removes if older than 10 minutes
+  (600 seconds)
+- **Lock holder cleanup**: Process that acquired lock removes directory (including timestamp) when
+  done
 - **Conflict detection**: Failed mkdir indicates lock is held - shows age for transparency
 - **Standard Unix pattern**: Used by systemd, init systems, and most Unix tools
 
@@ -1075,7 +1273,8 @@ fish run.fish toolchain-sync  # Install components for 09-05
 
 #### 3. rust-toolchain-validate.fish - Unified Toolchain Validation
 
-Consolidated validation script providing two modes: quick component check or comprehensive build+test validation.
+Consolidated validation script providing two modes: quick component check or comprehensive
+build+test validation.
 
 ```sh
 # Quick mode: Fast component check (~1-2 seconds)
@@ -1092,21 +1291,23 @@ fish run.fish toolchain-validate-complete
 
 **Mode Comparison:**
 
-| Aspect | Quick Mode | Complete Mode |
-|--------|-----------|----------------|
-| **Time** | ~1-2 seconds | ~5-10 minutes |
-| **Purpose** | Component verification | Stability verification |
-| **Use Case** | Fast health checks | Pre-nightly validation |
-| **Checks** | Installation + components + rustc works | Full build + clippy + tests + docs |
-| **ICE Detection** | No | Yes (critical for nightly selection) |
+| Aspect            | Quick Mode                              | Complete Mode                        |
+| ----------------- | --------------------------------------- | ------------------------------------ |
+| **Time**          | ~1-2 seconds                            | ~5-10 minutes                        |
+| **Purpose**       | Component verification                  | Stability verification               |
+| **Use Case**      | Fast health checks                      | Pre-nightly validation               |
+| **Checks**        | Installation + components + rustc works | Full build + clippy + tests + docs   |
+| **ICE Detection** | No                                      | Yes (critical for nightly selection) |
 
 **Quick Mode Validation:**
+
 - ✅ Toolchain is installed via rustup
 - ✅ rust-analyzer component is present
 - ✅ rust-src component is present
 - ✅ rustc --version works (not corrupted)
 
 **Complete Mode Validation:**
+
 - ✅ All quick mode checks
 - ✅ cargo clippy --all-targets (no ICE)
 - ✅ cargo build (no ICE)
@@ -1115,6 +1316,7 @@ fish run.fish toolchain-validate-complete
 - ✅ cargo doc --no-deps (no ICE)
 
 **Return Codes:**
+
 - `0`: ✅ Valid (quick) or Stable (complete)
 - `1`: ❌ Not installed (quick) or ICE detected (complete)
 - `2`: ⚠️ Missing components (quick only)
@@ -1139,7 +1341,8 @@ fish run.fish toolchain-validate-complete
 
 **Integration with other toolchain scripts:**
 
-- **check.fish**: Uses quick mode to check toolchain before running tests; calls `toolchain-sync` if invalid
+- **check.fish**: Uses quick mode to check toolchain before running tests; calls `toolchain-sync` if
+  invalid
 - **rust-toolchain-sync-to-toml.fish**: Performs quick validation after installing components
 - **rust-toolchain-update.fish**: Uses complete mode to find stable nightly
 
@@ -1198,8 +1401,10 @@ The four scripts work together to provide a complete toolchain management soluti
 
 **Four complementary scripts:**
 
-- **validate** (`rust-toolchain-install-validate.fish`): Non-destructive validation of current toolchain
-- **update** (`rust-toolchain-update.fish`): Smart search for stable nightly with comprehensive validation
+- **validate** (`rust-toolchain-install-validate.fish`): Non-destructive validation of current
+  toolchain
+- **update** (`rust-toolchain-update.fish`): Smart search for stable nightly with comprehensive
+  validation
 - **sync** (`rust-toolchain-sync-to-toml.fish`): Install toolchain matching rust-toolchain.toml
 - **remove** (`remove_toolchains.sh`): Testing utility to clean all toolchains (destructive)
 
@@ -1212,7 +1417,8 @@ The four scripts work together to provide a complete toolchain management soluti
 - **Recovery ready**: `sync` script fixes environment after git operations
 - **Validation ready**: `validate` script enables automated health checks in CI/CD pipelines
 - **Testing support**: `remove` script enables testing upgrade workflows
-- **Integrated monitoring**: `check.fish` automatically validates and repairs toolchain before running tests
+- **Integrated monitoring**: `check.fish` automatically validates and repairs toolchain before
+  running tests
 
 ### Unified Script Architecture
 

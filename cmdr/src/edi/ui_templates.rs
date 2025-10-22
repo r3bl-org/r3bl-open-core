@@ -3,7 +3,7 @@
 use super::CLIArg;
 use crate::{common, edi::ui_str, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, InlineVec, StyleSheet,
-               cli_text_line, choose, cli_text, height, inline_vec};
+               choose, cli_text, cli_text_line, height, inline_vec};
 
 /// Ask the user to select a file to edit, and return the selected file path (if there is
 /// one).

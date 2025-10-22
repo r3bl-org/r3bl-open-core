@@ -6,8 +6,8 @@ use crate::{common,
                    get_giti_command_subcommand_names, handle_branch_checkout_command,
                    handle_branch_delete_command, handle_branch_new_command, ui_str}};
 use clap::ValueEnum;
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, cli_text_line, choose,
-               cli_text, height, inline_vec,
+use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, choose, cli_text,
+               cli_text_line, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 
 /// The main function to for `giti branch` command. This is the main routing function that

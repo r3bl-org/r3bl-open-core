@@ -8,7 +8,8 @@ use crate::{AnalyticsAction, common,
                    ui_str::{self}},
             report_analytics};
 use r3bl_tui::{CliText, CommandRunResult, CommonResult, DefaultIoDevices, InlineString,
-               InlineVec, ItemsOwned, cli_text_line, choose, cli_text, height, inline_vec,
+               InlineVec, ItemsOwned, choose, cli_text, cli_text_line, height,
+               inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 

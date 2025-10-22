@@ -45,7 +45,7 @@
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
-               SpinnerStyle, StyleSheet, cli_text_line, choose, cli_text,
+               SpinnerStyle, StyleSheet, choose, cli_text, cli_text_line,
                core::pty::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
                            pty_to_std_exit_status},
                height, inline_string,

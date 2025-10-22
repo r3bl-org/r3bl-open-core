@@ -4,8 +4,9 @@ use super::{CLIArg, image_handler, prompt_history,
             types::{ChResult, HistoryItem, ImageContent},
             ui_str};
 use crate::prefix_single_select_instruction_header;
-use r3bl_tui::{CommonResult, DefaultIoDevices, InlineString, TTYResult, cli_text_line,
-               choose, cli_text, height, inline_vec, is_fully_uninteractive_terminal,
+use r3bl_tui::{CommonResult, DefaultIoDevices, InlineString, TTYResult, choose,
+               cli_text, cli_text_line, height, inline_vec,
+               is_fully_uninteractive_terminal,
                readline_async::{HowToChoose, StyleSheet},
                tui::editor::editor_buffer::{clipboard_service::SystemClipboard,
                                             clipboard_support::ClipboardService}};
