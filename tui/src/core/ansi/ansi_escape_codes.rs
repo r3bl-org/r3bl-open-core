@@ -75,6 +75,18 @@ pub enum SgrCode {
 const CSI: &str = "\x1b[";
 const SGR: &str = "m";
 
+/// SGR Reset sequence bytes.
+///
+/// Resets all text attributes (color, bold, italic, etc.) to default.
+/// This constant provides zero-overhead access for performance-critical paths.
+/// The test `test_sgr_reset_bytes_matches_enum` ensures this stays in sync with
+/// [`SgrCode::Reset`].
+pub const SGR_RESET_BYTES: &[u8] = b"\x1b[0m";
+
+/// CRLF (Carriage Return + Line Feed) sequence for terminal line endings.
+/// Used to move cursor to beginning of next line in terminal output.
+pub const CRLF_BYTES: &[u8] = b"\r\n";
+
 /// Lookup table for u8 to string conversion to avoid runtime formatting overhead.
 /// Pre-computed at compile time for all possible u8 values (0-255).
 const U8_STRINGS: [&str; 256] = [
@@ -538,6 +550,22 @@ mod tests {
             SgrCode::ForegroundBasic(ANSIBasicColor::Cyan).to_string(),
             "\x1b[96m"
         );
+    }
+
+    #[test]
+    fn test_sgr_reset_bytes_matches_enum() {
+        // Ensure the constant matches what SgrCode::Reset produces
+        let reset_from_enum = SgrCode::Reset.to_string();
+        let reset_from_const = std::str::from_utf8(SGR_RESET_BYTES).unwrap();
+        assert_eq!(
+            reset_from_enum, reset_from_const,
+            "SGR_RESET_BYTES constant must match SgrCode::Reset output"
+        );
+    }
+
+    #[test]
+    fn test_crlf_bytes() {
+        assert_eq!(CRLF_BYTES, b"\r\n");
     }
 }
 

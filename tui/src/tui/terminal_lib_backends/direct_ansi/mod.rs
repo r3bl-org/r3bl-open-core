@@ -2,6 +2,8 @@
 
 // Attach.
 mod pixel_char_renderer;
+mod render_to_ansi;
 
 // Re-export.
 pub use pixel_char_renderer::*;
+pub use render_to_ansi::RenderToAnsi;

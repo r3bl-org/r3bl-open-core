@@ -77,6 +77,8 @@
     - [✅ Phase 1 Complete - Type Renaming & Consolidation](#-phase-1-complete---type-renaming--consolidation)
   - [Phase 2 Completion Update (October 22, 2025)](#phase-2-completion-update-october-22-2025)
     - [✅ Phase 2 Complete - Unified ANSI Generator Implemented](#-phase-2-complete---unified-ansi-generator-implemented)
+  - [Phase 3 Completion Update (October 22, 2025)](#phase-3-completion-update-october-22-2025)
+    - [✅ Phase 3 Complete - Unified ANSI Rendering with RenderToAnsi Trait](#-phase-3-complete---unified-ansi-rendering-with-rendertoansi-trait)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -890,7 +892,7 @@ impl PixelCharRenderer {
 }
 ```
 
-### Phase 3: Unified Rendering with OffscreenBuffer (NEXT after Phase 2)
+### Phase 3: Unified Rendering with OffscreenBuffer (✅ COMPLETE)
 
 Use `OffscreenBuffer` for both full TUI and choose(). Despite having unused metadata fields
 (cursor_pos, ansi_parser_support) in choose(), the trade-off is worth it:
@@ -947,15 +949,15 @@ impl RenderToAnsi for OffscreenBuffer {
 // Then rendered using same RenderToAnsi trait
 ```
 
-### Phase 4: Update ASText Rendering (NEXT after Phase 3)
+### Phase 4: Update CliText Rendering (🎯 NEXT - Phase 3 Complete)
 
-Modify ASText to use the new unified renderer and `TuiStyleAttribs`:
+Modify CliText to use the new unified renderer and `TuiStyleAttribs`:
 
 ```rust
-impl Display for ASText {
+impl Display for CliText {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         // Convert to PixelChar array
-        let pixels = self.convert(ASTextConvertOptions::default());
+        let pixels = self.convert(CliTextConvertOptions::default());
 
         // Use unified renderer
         let mut renderer = PixelCharRenderer::new();
@@ -1046,14 +1048,14 @@ impl PaintRenderOp for RenderOpImplCrossterm {
     fn paint(&mut self, /* params */) {
         match render_op {
             RenderOp::PaintTextWithAttributes(text, maybe_style) => {
-                // Create ASText from the text and style
-                let ast = ASText {
+                // Create CliText from the text and style
+                let cli_text = CliText {
                     text: text.clone(),
                     styles: maybe_style.map(|s| s.into()).unwrap_or_default(),
                 };
 
                 // Convert to PixelChar
-                let pixels = ast.convert(ASTextConvertOptions::default());
+                let pixels = cli_text.convert(CliTextConvertOptions::default());
 
                 // Render using unified renderer (generates ANSI sequences)
                 let mut renderer = PixelCharRenderer::new();
@@ -1458,3 +1460,176 @@ across all three paths:
 
 Phase 3 will update all three paths to use `OffscreenBuffer` consistently, then route through
 `PixelCharRenderer` for ANSI generation. This provides a single source of truth for ANSI output.
+
+## Phase 3 Completion Update (October 22, 2025)
+
+### ✅ Phase 3 Complete - Unified ANSI Rendering with RenderToAnsi Trait
+
+**Completion Status**: ✅ FULLY COMPLETE
+
+**What Was Done**:
+
+- Created new module: `tui/src/tui/terminal_lib_backends/direct_ansi/render_to_ansi.rs`
+- Implemented `RenderToAnsi` trait defining unified rendering interface for all buffer types
+- Implemented `RenderToAnsi` for `OffscreenBuffer` to render lines via `PixelCharRenderer`
+- Created comprehensive unit tests (5 tests covering edge cases)
+
+**Key Design Decisions**:
+
+1. **Trait-Based Design**: `RenderToAnsi` is a simple, focused trait with single method `render_to_ansi() -> Vec<u8>`
+   - Enables future implementations for alternative buffer types
+   - Maintains separation between rendering and I/O backends
+   - Backend-agnostic design ready for both crossterm and direct ANSI
+
+2. **OffscreenBuffer Implementation**:
+   - Iterates through buffer lines
+   - Uses `PixelCharRenderer` for each line's pixels
+   - Joins lines with `\r\n` separators
+   - Emits final reset (`\x1b[0m`) for clean terminal state
+   - Handles all `PixelChar` variants correctly:
+     - `PlainText`: Character + style via renderer
+     - `Spacer`: Space character
+     - `Void`: Skipped (positioning-only)
+
+**Architecture**:
+
+```
+OffscreenBuffer
+    │
+    ▼
+RenderToAnsi trait (new)
+    │
+    ├─→ PixelCharRenderer
+    │       │
+    │       ▼
+    │   Smart Style Diffing
+    │       │
+    │       ▼
+    │   ANSI Escape Sequences
+    │
+    └─→ Vec<u8> (ANSI bytes + characters + line separators)
+```
+
+**Test Coverage**:
+
+- `test_render_to_ansi_empty_buffer`: Empty buffer with spacers
+- `test_render_to_ansi_single_line`: Single line with styled text
+- `test_render_to_ansi_multi_line`: Multiple lines with separators
+- `test_render_to_ansi_with_spacers`: Proper spacing handling
+- `test_render_to_ansi_with_void`: Void character handling
+
+All 5 tests passing, comprehensive edge case coverage.
+
+**Module Structure**:
+
+- `tui/src/tui/terminal_lib_backends/direct_ansi/render_to_ansi.rs` (new)
+  - `RenderToAnsi` trait definition
+  - `OffscreenBuffer` implementation
+  - 5 comprehensive unit tests
+- Updated `tui/src/tui/terminal_lib_backends/direct_ansi/mod.rs`
+  - Added `mod render_to_ansi;`
+  - Added `pub use render_to_ansi::RenderToAnsi;`
+
+**Integration Points** (ready for Phase 4+):
+
+- `choose()` implementation can now use: `buffer.render_to_ansi()`
+- Full TUI rendering can use: `offscreen_buffer.render_to_ansi()`
+- readline_async can use: `buffer.render_to_ansi()`
+- All paths converge on same ANSI generation logic
+
+**Quality Metrics**:
+
+- ✅ All 2,092 tests passing
+- ✅ Zero clippy warnings
+- ✅ Proper documentation with examples
+- ✅ Backend-agnostic design enables future direct ANSI migration
+- ✅ Clear separation of concerns: rendering (what ANSI) vs I/O (where ANSI)
+
+**Foundation for Phase 4+**:
+
+Phase 3 completes the core abstraction enabling unified rendering across all three paths:
+
+1. **Full TUI**: RenderOps → OffscreenBuffer → `render_to_ansi()` → PixelCharRenderer → ANSI
+2. **choose()**: Select items → OffscreenBuffer → `render_to_ansi()` → PixelCharRenderer → ANSI
+3. **readline_async**: Spinner/Choose → OffscreenBuffer → `render_to_ansi()` → PixelCharRenderer → ANSI
+
+Phase 4 will update the actual rendering paths (choose(), readline_async, RenderOp) to populate
+`OffscreenBuffer` and use the unified `render_to_ansi()` method.
+
+**Key Insight**:
+
+The `RenderToAnsi` trait is deliberately simple and focused. It defines a single, clear contract:
+"Convert buffer contents to ANSI bytes." This minimal interface enables:
+
+- Easy testing (just check byte arrays)
+- Backend flexibility (I/O handled separately)
+- Future extensibility (new buffer types can implement it)
+- Clear responsibility separation (rendering vs I/O are decoupled)
+
+## Phase 3 Implementation Detail: ANSI Constants and Synchronization (October 22, 2025)
+
+### ✅ Code Quality Improvement: Extract Hardcoded ANSI Sequences
+
+**Status**: ✅ COMPLETE
+
+As part of solidifying Phase 3's `RenderToAnsi` implementation, hardcoded ANSI escape sequences were extracted into shared constants with synchronization tests:
+
+**Changes Made**:
+
+1. **Added constants to `tui/src/core/ansi/ansi_escape_codes.rs`** (lines 78-86):
+   - `SGR_RESET_BYTES: &[u8] = b"\x1b[0m"` - Reset all text attributes
+   - `CRLF_BYTES: &[u8] = b"\r\n"` - Terminal line ending
+   - Well-documented with usage notes
+
+2. **Added synchronization tests to `ansi_escape_codes.rs`** (lines 553-567):
+   - `test_sgr_reset_bytes_matches_enum()` - Ensures constant matches `SgrCode::Reset` enum output
+   - `test_crlf_bytes()` - Validates CRLF constant
+   - These tests serve as compile-time verification that constants stay synchronized with their source implementations
+
+3. **Updated `render_to_ansi.rs`** (lines 7, 91, 102):
+   - Import: `use crate::{CRLF_BYTES, SGR_RESET_BYTES};`
+   - Line 91: `output.extend_from_slice(CRLF_BYTES);` (was hardcoded `b"\r\n"`)
+   - Line 102: `output.extend_from_slice(SGR_RESET_BYTES);` (was hardcoded `b"\x1b[0m"`)
+
+**Benefits**:
+
+- ✅ **Single source of truth**: Constants defined once, used everywhere
+- ✅ **Type-safe API preserved**: Clean enum `SgrCode::Reset` for general use remains unchanged
+- ✅ **Zero-overhead constants**: Direct byte slices for performance-critical paths
+- ✅ **Compile-time verification**: Tests ensure constants stay synchronized with enum implementations
+- ✅ **Self-documenting**: Constant names clarify ANSI sequence purpose
+
+**Architecture Pattern**:
+
+This follows the established pattern from `csi_codes/constants.rs` (e.g., `CSI_START`), providing consistent constant organization across the ANSI module:
+
+```rust
+// Pattern: Multiple access forms for different use cases
+// - Enum form: SgrCode::Reset (type-safe, composable)
+// - Constant form: SGR_RESET_BYTES (zero-cost, direct)
+// - Sync test: Ensures they produce identical output
+
+pub const SGR_RESET_BYTES: &[u8] = b"\x1b[0m";
+
+#[test]
+fn test_sgr_reset_bytes_matches_enum() {
+    let from_enum = SgrCode::Reset.to_string();
+    let from_const = std::str::from_utf8(SGR_RESET_BYTES).unwrap();
+    assert_eq!(from_enum, from_const);
+}
+```
+
+**Test Results**:
+
+- ✅ All 2,107 tests passing (35 ANSI tests + 5 render_to_ansi tests)
+- ✅ New synchronization tests passing
+- ✅ Zero regressions
+- ✅ cargo check succeeds cleanly
+
+**Why This Matters**:
+
+By ensuring ANSI constants are shared and synchronized, we:
+- Prevent divergence between enum-based and constant-based ANSI generation
+- Make it obvious where ANSI sequences are defined (single location)
+- Enable easy migration paths (if SGR_RESET logic changes, both enum and constant stay synchronized)
+- Foundation for future direct ANSI backend (task_remove_crossterm.md) - constants are ready-to-use

@@ -18,7 +18,7 @@
 //!
 //! ### Performance Impact
 //!
-//! Without caching, each `String::repeat(count)` call:
+//! Without caching, each `String::repeat()` call:
 //! 1. Allocates new memory on the heap
 //! 2. Copies characters `count` times
 //! 3. Creates allocation pressure leading to more frequent garbage collection
@@ -39,7 +39,7 @@
 //! 2. **Dynamic runtime cache** (for edge cases):
 //!    - Handles counts beyond pre-computed ranges
 //!    - Thread-safe with Mutex protection
-//!    - Prevents memory leaks (unlike `Box::leak()`)
+//!    - Prevents memory leaks (unlike [`Box::leak()`])
 //!
 //! ### Memory Trade-off
 //!
@@ -52,8 +52,8 @@
 //! This is a negligible memory cost for eliminating thousands of allocations per second
 //! in the rendering hot path.
 
-use crate::md_parser_types::constants::{HEADING, LIST_SPACE_DISPLAY,
-                                        LIST_SPACE_DISPLAY_CHAR, SPACE, SPACE_CHAR};
+use crate::md_parser::constants::{HEADING, LIST_SPACE_DISPLAY, LIST_SPACE_DISPLAY_CHAR,
+                                  SPACE, SPACE_CHAR};
 use std::{borrow::Cow,
           collections::HashMap,
           sync::{LazyLock, Mutex}};
@@ -102,25 +102,25 @@ static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 ///
 /// ## Design Decisions
 ///
-/// ### Key Structure: `(char, usize)`
-/// - `char`: The character being repeated (space, line, hash)
-/// - `usize`: The count of repetitions
+/// ### Key Structure: [`(char, usize)`]
+/// - [`char`]: The character being repeated (space, line, hash)
+/// - [`usize`]: The count of repetitions
 /// - This allows sharing the cache across all string types
 ///
-/// ### Thread Safety: `Mutex<HashMap<...>>`
+/// ### Thread Safety: [`Mutex<HashMap<...>>`]
 /// - Multiple threads may render simultaneously
-/// - Mutex ensures safe concurrent access
+/// - [`Mutex`] ensures safe concurrent access
 /// - Slight performance cost is acceptable for edge cases
 ///
 /// ### Memory Management
-/// - Unlike `Box::leak()` (which intentionally leaks memory), this cache:
+/// - Unlike [`Box::leak()`] (which intentionally leaks memory), this cache:
 ///   - Can be cleared if needed
 ///   - Participates in normal Rust memory management
 ///   - Prevents unbounded memory growth
 ///
 /// ### Performance Characteristics
 /// - First access: Allocates and caches (slow)
-/// - Subsequent accesses: `HashMap` lookup + clone (fast)
+/// - Subsequent accesses: [`HashMap`] lookup + clone (fast)
 /// - Trade-off: Small memory cost for avoiding repeated allocations
 ///
 /// ## Example Usage Pattern
@@ -131,6 +131,12 @@ static HORIZ_LINE_CACHE: LazyLock<HashMap<usize, String>> = LazyLock::new(|| {
 /// 3. If miss: allocate 100-space string, cache it
 /// 4. If hit: return cloned string
 /// 5. Future calls to `get_spaces(100)` hit the cache
+///
+/// [`char`]: std::primitive::char
+/// [`usize`]: std::primitive::usize
+/// [`Mutex`]: std::sync::Mutex
+/// [`HashMap`]: std::collections::HashMap
+/// [`Box::leak()`]: std::boxed::Box::leak
 pub static DYNAMIC_CACHE: LazyLock<Mutex<HashMap<(char, usize), String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -188,7 +194,10 @@ fn get_cached_repeated_string(
 ///
 /// # Panics
 ///
-/// [`DYNAMIC_CACHE`] is a `Mutex`, so it can panic if poisoned.
+/// [`DYNAMIC_CACHE`] is a [`Mutex`], so it can panic if poisoned.
+///
+/// [`DYNAMIC_CACHE`]: crate::DYNAMIC_CACHE
+/// [`Mutex`]: std::sync::Mutex
 #[must_use]
 pub fn get_spaces(count: usize) -> Cow<'static, str> {
     get_cached_repeated_string(count, &SPACE_CACHE, SPACE_CHAR, SPACE)
@@ -212,7 +221,10 @@ pub fn get_spaces(count: usize) -> Cow<'static, str> {
 ///
 /// # Panics
 ///
-/// [`DYNAMIC_CACHE`] is a `Mutex`, so it can panic if poisoned.
+/// [`DYNAMIC_CACHE`] is a [`Mutex`], so it can panic if poisoned.
+///
+/// [`DYNAMIC_CACHE`]: crate::DYNAMIC_CACHE
+/// [`Mutex`]: std::sync::Mutex
 #[must_use]
 pub fn get_horiz_lines(count: usize) -> Cow<'static, str> {
     get_cached_repeated_string(
@@ -241,7 +253,10 @@ pub fn get_horiz_lines(count: usize) -> Cow<'static, str> {
 ///
 /// # Panics
 ///
-/// [`DYNAMIC_CACHE`] is a `Mutex`, so it can panic if poisoned.
+/// [`DYNAMIC_CACHE`] is a [`Mutex`], so it can panic if poisoned.
+///
+/// [`DYNAMIC_CACHE`]: crate::DYNAMIC_CACHE
+/// [`Mutex`]: std::sync::Mutex
 #[must_use]
 pub fn get_hashes(count: usize) -> Cow<'static, str> {
     get_cached_repeated_string(count, &HASH_CACHE, '#', HEADING)
