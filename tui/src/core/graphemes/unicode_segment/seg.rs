@@ -10,8 +10,8 @@ pub type SegmentArray = Vec<Seg>;
 /// `Seg` represents a grapheme cluster segment within a [`crate::GCStringOwned`].
 ///
 /// This struct is the bridge between the three types of indices used in Unicode text
-/// handling. Each `Seg` contains all the information needed to convert between
-/// [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
+/// handling. Each `Seg` contains all the information needed to
+/// convert between [`ByteIndex`], [`SegIndex`], and [`ColIndex`].
 ///
 /// A Unicode "grapheme" is a user-perceived character.
 /// - For `UTF-8` encoded text, a grapheme can be a single byte or up to 4 bytes.

@@ -304,8 +304,8 @@ fn create_controller_input_writer_task(
         output_evt_ch_tx_half.clone(),
     );
 
-    // [🛫 SPAWN 4] Spawn a bridge task to convert async input channel to sync
-    // channel for input handler. This allows async input from your
+    // [🛫 SPAWN 4] Spawn a bridge task to convert async input
+    // channel to sync channel for input handler. This allows async input from your
     // program to be processed by the blocking input handler.
     let input_writer_bridge_handle = spawn_async_to_sync_bridge_task(
         input_evt_ch_rx_half,
@@ -321,7 +321,8 @@ fn create_controller_input_writer_task(
     })
 }
 
-/// Spawns a bridge task to convert async input channel to sync channel.
+/// Spawns a bridge task to convert async input channel to sync
+/// channel.
 ///
 /// Flow: your program → async input channel → this task → sync channel → writer task
 ///

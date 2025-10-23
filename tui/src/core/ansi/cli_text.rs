@@ -14,16 +14,16 @@ use strum_macros::EnumCount;
 /// [`fg_blue`], etc.
 ///
 /// [`CliTextInline`] represents a **text fragment** that can appear inline within a line.
-/// Multiple fragments compose into a [`CliTextLine`], and multiple lines compose into
+/// Multiple fragments combine into a [`CliTextLine`], and multiple lines combine into
 /// [`CliTextLines`]. This structure is optimized for stack allocation to avoid heap
 /// overhead for typical CLI text.
 ///
 /// The struct has four fields:
-/// - [`text`](Self::text) - the text content to display.
-/// - [`attribs`](Self::attribs) - text attributes (bold, italic, dim, underline, etc.) to apply to the
+/// - [`text`] - the text content to display.
+/// - [`attribs`] - text attributes (bold, italic, dim, underline, etc.) to apply to the
 ///   text.
-/// - [`color_fg`](Self::color_fg) - optional foreground color.
-/// - [`color_bg`](Self::color_bg) - optional background color.
+/// - [`color_fg`] - optional foreground color.
+/// - [`color_bg`] - optional background color.
 ///
 /// Once created, either directly or using constructor functions like [`fg_red`], you
 /// can then use [`bg_dark_gray`] to add a background color to the text.
@@ -71,6 +71,10 @@ use strum_macros::EnumCount;
 /// .println();
 /// ```
 ///
+/// [`text`]: Self::text
+/// [`attribs`]: Self::attribs
+/// [`color_fg`]: Self::color_fg
+/// [`color_bg`]: Self::color_bg
 /// [`cli_text_inline`]: crate::cli_text_inline
 /// [`cli_text_line!`]: crate::cli_text_line
 /// [`cli_text_lines!`]: crate::cli_text_lines
@@ -214,8 +218,9 @@ pub mod cli_text_inline_impl {
         /// - `start`: 0-based index of the first character to include
         /// - `width`: Number of characters to include, or None for "to end of text"
         ///
-        /// This is optimized to avoid the wasteful [`convert()`](Self::convert) call by directly
-        /// slicing the text using grapheme clustering.
+        /// This is optimized to avoid the wasteful
+        /// [`convert()`](Self::convert) call by
+        /// directly slicing the text using grapheme clustering.
         #[must_use]
         pub fn clip(
             &self,
@@ -277,7 +282,8 @@ pub mod cli_text_inline_impl {
         /// - To convert the entire text, just pass in
         ///   [`CliTextConvertOptions::default()`].
         /// - To clip the text to a certain display width, pass in the [`ColWidth`] via
-        ///   [`From<ColWidth>`] or explicitly set the [`width`](CliTextConvertOptions::width) field.
+        ///   [`From<ColWidth>`] or explicitly set the
+        ///   [`width`](CliTextConvertOptions::width) field.
         /// - Uses (start, width) semantics where:
         ///   - `start`: 0-based display column index of the first column to include
         ///   - `width`: Display width in columns to include, or None for "to end of text"
@@ -817,8 +823,8 @@ impl CliTextInline {
 /// This enum isn't the same as the [`TuiStyle`] struct. This enum can only hold a single
 /// variant. The [`TuiStyle`] struct can hold multiple variants. This is a low level enum
 /// that shouldn't be used directly. It is best to use [`TuiStyle`] and
-/// [`crate::new_style`!] to create a [`TuiStyle`] and convert it to this type using
-/// `.into()`.
+/// [`crate::new_style`!] to create a [`TuiStyle`] and convert it
+/// to this type using `.into()`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumCount)]
 pub enum CliStyle {
     Foreground(TuiColor),
@@ -839,7 +845,8 @@ impl FastStringify for CliStyle {
     fn write_to_buf(&self, buf: &mut BufTextStorage) -> Result {
         use super::{ColorSupport, TransformColor, global_color_support};
 
-        // Helper function to convert color to appropriate SgrCode.
+        // Helper function to convert color to appropriate
+        // SgrCode.
         fn color_to_sgr(
             color_support: ColorSupport,
             color: TuiColor,

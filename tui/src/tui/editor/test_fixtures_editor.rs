@@ -6,7 +6,7 @@ pub mod mock_real_objects_for_editor {
                 OutputDevice, OutputDeviceExt, PartialFlexBox, Size, SpinnerHelper, col,
                 core::test_fixtures::StdoutMock, height, row,
                 telemetry::telemetry_sizing::TelemetryReportLineStorage, width};
-    use std::fmt::Debug;
+    use std::{collections::HashMap, fmt::Debug};
     use tokio::sync::mpsc;
 
     #[must_use]
@@ -32,6 +32,7 @@ pub mod mock_real_objects_for_editor {
             offscreen_buffer_pool,
             hud_report: TelemetryReportLineStorage::new(),
             spinner_helper: SpinnerHelper::default(),
+            memoized_text_widths: HashMap::new(),
         };
 
         (global_data, stdout_mock)

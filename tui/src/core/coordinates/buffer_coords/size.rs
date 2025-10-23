@@ -32,7 +32,7 @@
 //!   in any order.
 //! - Just using the [Add] `+` operator ([`RowHeight`] and [`ColWidth`] can be in any
 //!   order):
-//!     - You can use [Add] to convert: [`ColWidth`] + [`RowHeight`], into: a [Size].
+//!     - You can use [Add] to compose [`ColWidth`] + [`RowHeight`] into a [Size].
 //!
 //! # Examples
 //!

@@ -5,22 +5,28 @@ use crate::{PartialFlexBox, Size, StyleUSSpanLines, get_cached_syntax_set,
 use std::fmt::Debug;
 use syntect::{highlighting::Theme, parsing::SyntaxSet};
 
-/// Do not create this struct directly. Please use [`new()`](EditorEngine::new) instead.
+/// Do not create this struct directly. Please use [`new()`] instead.
 ///
 /// Holds data related to rendering in between render calls. This struct is mutable when
 /// render is called. That is not the case with state, which is immutable during render
 /// phase.
 ///
-/// 1. This is not stored in the [`crate::EditorBuffer`] struct, which lives in the app's
-///    state. The state provides the underlying document or buffer struct that holds the
-///    actual document.
-/// 2. Rather, this struct is stored in the [`crate::EditorComponent`] struct, which lives
-///    inside of the [`crate::App`].
+/// 1. This is not stored in the [`EditorBuffer`] struct, which lives in the app's state.
+///    The state provides the underlying document or buffer struct that holds the actual
+///    document.
+/// 2. Rather, this struct is stored in the [`EditorComponent`] struct, which lives inside
+///    of the [`crate::App`].
 ///
-/// In order to change the document, you can use the
-/// [`crate::engine_public_api::apply_event`] method which takes [`crate::InputEvent`] and
-/// tries to convert it to an [`crate::EditorEvent`] and then execute them against this
-/// buffer.
+/// In order to change the document, you can use the [`apply_event`] method which takes
+/// [`InputEvent`] and tries to convert it to an [`EditorEvent`] and then execute them
+/// against this buffer.
+///
+/// [`InputEvent`]: crate::InputEvent
+/// [`EditorEvent`]: crate::EditorEvent
+/// [`EditorBuffer`]: crate::EditorBuffer
+/// [`EditorComponent`]: crate::EditorComponent
+/// [`apply_event`]: crate::engine_public_api::apply_event
+/// [`new()`]: Self::new
 #[derive(Debug)]
 pub struct EditorEngine {
     /// Set by [`crate::engine_public_api::render_engine`].

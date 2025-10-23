@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{OffscreenBuffer, RenderOp, RenderPipeline, sanitize_and_save_abs_pos};
 use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
-            GCStringOwned, PixelChar, PixelCharLine, Pos, RenderOpsLocalData, Size,
-            TuiStyle, ZOrder, ch,
+            GCStringOwned, MemoizedLenMap, PixelChar, PixelCharLine, Pos,
+            RenderOpsLocalData, Size, StringLength, TuiStyle, ZOrder, ch,
             glyphs::{self, SPACER_GLYPH},
             inline_string, usize, width};
 
@@ -13,10 +13,11 @@ impl RenderPipeline {
     /// 2. This is the intermediate representation (IR) of a [`RenderPipeline`]. In order
     ///    to turn this IR into actual paint commands for the terminal, you must use the
     ///    [`super::OffscreenBufferPaint`] trait implementations.
-    pub fn convert(
+    pub fn compose_render_ops_into_ofs_buf(
         &self,
         window_size: Size,
         ofs_buf: &mut OffscreenBuffer, /* Pass in the locked buffer. */
+        memoized_len_map: &mut MemoizedLenMap, /* Memoized text width calculations. */
     ) {
         let mut render_local_data = RenderOpsLocalData::default();
 
@@ -29,6 +30,7 @@ impl RenderPipeline {
                             window_size,
                             ofs_buf,
                             &mut render_local_data,
+                            memoized_len_map,
                         );
                     }
                 }
@@ -50,10 +52,113 @@ pub fn process_render_op(
     window_size: Size,
     ofs_buf: &mut OffscreenBuffer,
     render_local_data: &mut RenderOpsLocalData,
+    memoized_len_map: &mut MemoizedLenMap,
 ) {
     match render_op {
-        // Don't process these.
-        RenderOp::Noop | RenderOp::EnterRawMode | RenderOp::ExitRawMode => {}
+        // ===== Terminal Mode State Operations =====
+        // These operations update the OffscreenBuffer's terminal mode state while also
+        // being executed by the terminal backend to affect actual terminal behavior.
+        RenderOp::EnterRawMode => {
+            ofs_buf.terminal_mode.is_raw_mode = true;
+        }
+        RenderOp::ExitRawMode => {
+            ofs_buf.terminal_mode.is_raw_mode = false;
+        }
+        RenderOp::EnterAlternateScreen => {
+            ofs_buf.terminal_mode.alternate_screen_active = true;
+        }
+        RenderOp::ExitAlternateScreen => {
+            ofs_buf.terminal_mode.alternate_screen_active = false;
+        }
+        RenderOp::EnableMouseTracking => {
+            ofs_buf.terminal_mode.mouse_tracking_enabled = true;
+        }
+        RenderOp::DisableMouseTracking => {
+            ofs_buf.terminal_mode.mouse_tracking_enabled = false;
+        }
+        RenderOp::EnableBracketedPaste => {
+            ofs_buf.terminal_mode.bracketed_paste_enabled = true;
+        }
+        RenderOp::DisableBracketedPaste => {
+            ofs_buf.terminal_mode.bracketed_paste_enabled = false;
+        }
+        // No-op operations
+        RenderOp::Noop => {}
+        // ===== Incremental Rendering Operations - Complete implementation
+        // These operations are executed both by the backend AND need to
+        // update buffer state for consistency and future extensibility (e.g., if
+        // choose() or readline_async migrates to use OffscreenBuffer).
+        RenderOp::MoveCursorToColumn(col_index) => {
+            ofs_buf.cursor_pos.col_index = *col_index;
+        }
+        RenderOp::MoveCursorToNextLine(row_height) => {
+            ofs_buf.cursor_pos.row_index += *row_height;
+            ofs_buf.cursor_pos.col_index = crate::col(0);
+        }
+        RenderOp::MoveCursorToPreviousLine(row_height) => {
+            ofs_buf.cursor_pos.row_index -= *row_height;
+            ofs_buf.cursor_pos.col_index = crate::col(0);
+        }
+        RenderOp::ClearCurrentLine => {
+            // Clear the current line in the buffer
+            let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
+            if let Some(line) = ofs_buf.buffer.get_mut(row_idx) {
+                for pixel_char in line.iter_mut() {
+                    *pixel_char = PixelChar::Spacer;
+                }
+            }
+        }
+        RenderOp::ClearToEndOfLine => {
+            // Clear from cursor position to end of current line
+            let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
+            let col_idx = ofs_buf.cursor_pos.col_index.as_usize();
+            if let Some(line) = ofs_buf.buffer.get_mut(row_idx) {
+                for col in col_idx..line.len() {
+                    if let Some(pixel_char) = line.get_mut(col) {
+                        *pixel_char = PixelChar::Spacer;
+                    }
+                }
+            }
+        }
+        RenderOp::ClearToStartOfLine => {
+            // Clear from start of current line to cursor position (inclusive)
+            let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
+            let col_idx = ofs_buf.cursor_pos.col_index.as_usize();
+            if let Some(line) = ofs_buf.buffer.get_mut(row_idx) {
+                for col in 0..=col_idx {
+                    if let Some(pixel_char) = line.get_mut(col) {
+                        *pixel_char = PixelChar::Spacer;
+                    }
+                }
+            }
+        }
+        RenderOp::PrintStyledText(text) => {
+            // This operation is for pre-styled text that already contains ANSI escape
+            // codes. We update the cursor position based on the visible character width
+            // AFTER stripping ANSI codes, but don't try to parse the ANSI codes back
+            // into PixelChar styles (that would be backwards). The actual
+            // buffer content update happens at the backend level
+            // when the ANSI sequences are interpreted.
+            //
+            // This approach ensures the cursor position stays in sync with actual output,
+            // which is important for consistency and future use cases (e.g., if choose()
+            // or readline_async migrates to use OffscreenBuffer).
+
+            // Calculate visible text width using memoized ANSI stripping (70x speedup).
+            // StringLength::StripAnsi strips ANSI codes and calculates Unicode width,
+            // with memoization for repeated text patterns.
+            let text_width =
+                StringLength::StripAnsi.calculate(text.as_str(), memoized_len_map);
+            ofs_buf.cursor_pos.col_index += text_width;
+
+            // Validate and clamp cursor position to window bounds
+            sanitize_and_save_abs_pos(ofs_buf.cursor_pos, window_size, render_local_data);
+        }
+        // Terminal-only state operations - no buffer effect needed
+        RenderOp::ShowCursor
+        | RenderOp::HideCursor
+        | RenderOp::SaveCursorPosition
+        | RenderOp::RestoreCursorPosition => {}
         // Do process these.
         RenderOp::ClearScreen => {
             ofs_buf.clear();
@@ -369,7 +474,7 @@ mod print_text_with_attributes_helper {
     /// Processes and renders individual character segments to the line buffer.
     /// Returns the updated insertion column index and total inserted display width.
     pub fn process_character_segments(
-        text_gcs: &crate::GCStringOwned,
+        text_gcs: &GCStringOwned,
         maybe_style: Option<TuiStyle>,
         line_copy: &mut PixelCharLine,
         mut insertion_col_index: usize,
@@ -492,6 +597,7 @@ mod print_text_with_attributes_helper {
 mod tests {
     use super::*;
     use crate::{assert_eq2, col, height, new_style, render_pipeline, row, tui_color};
+    use std::collections::HashMap;
 
     #[allow(clippy::too_many_lines)]
     #[test]
@@ -919,7 +1025,12 @@ mod tests {
         //     9: ╳
 
         let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
-        pipeline.convert(window_size, &mut ofs_buf);
+        let mut memoized_len_map = HashMap::new();
+        pipeline.compose_render_ops_into_ofs_buf(
+            window_size,
+            &mut ofs_buf,
+            &mut memoized_len_map,
+        );
 
         // println!("my_offscreen_buffer: \n{:#?}", my_offscreen_buffer);
         assert_eq2!(ofs_buf.buffer.len(), 2);
@@ -983,7 +1094,12 @@ mod tests {
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
         let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
-        pipeline.convert(window_size, &mut ofs_buf);
+        let mut memoized_len_map = HashMap::new();
+        pipeline.compose_render_ops_into_ofs_buf(
+            window_size,
+            &mut ofs_buf,
+            &mut memoized_len_map,
+        );
         // my_offscreen_buffer:
         // window_size: [width:10, height:2],
         // row_index: [0]
@@ -1085,7 +1201,12 @@ mod tests {
         );
 
         let mut ofs_buf = OffscreenBuffer::new_empty(window_size);
-        pipeline.convert(window_size, &mut ofs_buf);
+        let mut memoized_len_map = HashMap::new();
+        pipeline.compose_render_ops_into_ofs_buf(
+            window_size,
+            &mut ofs_buf,
+            &mut memoized_len_map,
+        );
         println!(
             "ofs_buf:
 {ofs_buf:#?}"

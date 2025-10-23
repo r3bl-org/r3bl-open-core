@@ -96,7 +96,11 @@ pub fn paint<S, AS>(
         panic!("All offscreen buffers are currently taken. This should never happen.");
     };
 
-    pipeline.convert(window_size, &mut buffer_from_pool);
+    pipeline.compose_render_ops_into_ofs_buf(
+        window_size,
+        &mut buffer_from_pool,
+        &mut global_data.memoized_text_widths,
+    );
 
     match maybe_saved_ofs_buf {
         None => {
@@ -148,7 +152,7 @@ pub fn paint<S, AS>(
 /// 3. This also saves the clamped [Pos] to [`RenderOpsLocalData`].
 ///
 /// Note that printing [`crate::SPACER_GLYPH`] by
-/// [`crate::render_pipeline_to_offscreen_buffer::process_render_op`] will trigger
+/// [`crate::compositor_render_ops_to_ofs_buf::process_render_op`] will trigger
 /// clipping the [Pos] to the nearest edge of the window. This is OK. This is because the
 /// spacer is painted at the very last column of the terminal window due to the way in
 /// which the spacers are repeated. No checks are supposed to be done when

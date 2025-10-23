@@ -309,9 +309,11 @@ pub mod ansi_constants {
 
     /// ANSI Color Palette.
     /// - `u32` value encodes R (u8), G (u8), B(u8).
-    /// - [`RgbValue::from`](crate::RgbValue::from) can be used to convert `u32` into
-    ///   `RgbValue`.
+    /// - [`RgbValue::from`] can be used to convert `u32` into [`RgbValue`].
     /// - Hex literals are in the format `0xRRGGBB` without separators for consistency.
+    ///
+    /// [`RgbValue::from`]: crate::RgbValue::from
+    /// [`RgbValue`]: crate::RgbValue
     #[allow(clippy::unreadable_literal)]
     pub static ANSI_COLOR_PALETTE: [u32; 256] = [
         // The 16 system colors as by xterm (the default).

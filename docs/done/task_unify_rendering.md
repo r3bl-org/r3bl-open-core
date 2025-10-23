@@ -961,7 +961,7 @@ impl RenderToAnsi for OffscreenBuffer {
 // output_device.write_all(&ansi_output)?;
 
 // Usage in full TUI:
-// Same path - OffscreenBuffer is filled by RenderPipeline::convert()
+// Same path - OffscreenBuffer is filled by RenderPipeline::compose_render_ops_into_ofs_buf()
 // Then rendered using same RenderToAnsi trait
 ```
 

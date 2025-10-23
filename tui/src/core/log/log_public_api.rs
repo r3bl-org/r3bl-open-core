@@ -11,8 +11,9 @@ use tracing::dispatcher;
 /// complex arguments to the [`try_initialize_logging_global`] and
 /// [`try_initialize_logging_thread_local`] functions, they both receive a type that
 /// implements the [`Into<TracingConfig>`] trait. This is a very powerful pattern since it
-/// can be used to convert many different types into a [`TracingConfig`] type while
-/// retaining a simple function signature. Here are some examples of what is possible:
+/// can be used to convert many different types into a
+/// [`TracingConfig`] type while retaining a simple function signature. Here are some
+/// examples of what is possible:
 ///
 /// ```no_run
 /// use r3bl_tui::log::{
@@ -104,8 +105,8 @@ pub mod tracing_config_options {
     ///
     /// If a field is not set (set to `None`) and it is on the `lhs`, it will be
     /// overwritten with a non-`None` value. This is a largely arbitrary decision, but
-    /// there has to be a single rule to reason about the code and compose the
-    /// configurations.
+    /// there has to be a single rule to reason about the code and
+    /// convert the configurations.
     impl Add<WriterConfig> for WriterConfig {
         type Output = Self;
 

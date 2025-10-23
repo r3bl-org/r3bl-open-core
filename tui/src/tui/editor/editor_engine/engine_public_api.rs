@@ -413,12 +413,15 @@ mod syn_hi_r3bl_path {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Try convert [Vec] of [US] to [`MdDocument`]:
+    /// Try to convert [`ZeroCopyGapBuffer`] to [`MdDocument`]:
     /// - Step 1: Get the lines from the buffer using
     ///   [`editor_buffer.get_lines()`](EditorBuffer::get_lines()).
     /// - Step 2: Convert the lines into a [List] of [`StyleUSSpanLine`] using
     ///   [`try_parse_and_highlight()`]. If this fails then take the path of no syntax
     ///   highlighting else take the path of syntax highlighting.
+    ///
+    /// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+    /// [`MDDocument`]: crate::markdown_parser::MDDocument
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
@@ -426,7 +429,7 @@ mod syn_hi_r3bl_path {
         editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) {
-        // Try to parse the Vec<US> into an MDDocument & render it.
+        // Try to parse the ZeroCopyGapBuffer into an MDDocument & render it.
         try_render_content(
             editor_buffer,
             max_display_row_count,

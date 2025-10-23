@@ -201,8 +201,8 @@ impl OffscreenBuffer {
         // Clear the vacated space at the end (overwriting duplicates and filling with
         // spacers). Compute inclusive index range by converting length boundaries.
         // We need to fill from (max_width - how_many_clamped + 1) through max_width.
-        // Convert to length domain for arithmetic, compute, then convert back to column
-        // domain.
+        // Convert to length domain for arithmetic, compute, then
+        // convert back to column domain.
         let fill_start_as_length = max_width - width(how_many_clamped) + width(1);
         let fill_range_inclusive =
             width(fill_start_as_length).convert_to_index()..=max_width.convert_to_index();

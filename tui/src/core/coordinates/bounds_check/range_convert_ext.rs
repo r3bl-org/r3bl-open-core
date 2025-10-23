@@ -164,7 +164,7 @@ use std::ops::{Add, Range, RangeInclusive};
 /// ## VT-100 Scroll Region Example
 ///
 /// VT-100 terminals define scroll regions with inclusive bounds. Here's how to
-/// convert them for Rust buffer operations:
+/// compose them for Rust buffer operations:
 ///
 /// ```text
 /// Terminal Buffer (10 rows):

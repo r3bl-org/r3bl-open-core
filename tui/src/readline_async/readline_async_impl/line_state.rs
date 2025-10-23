@@ -188,8 +188,8 @@ impl LineState {
             self.line_cursor_grapheme =
                 new_position.clamp_to_max_length(count_length).as_usize();
         } else {
-            // Use unsigned_abs() to convert negative change to positive amount to
-            // subtract.
+            // Use unsigned_abs() to convert negative change to
+            // positive amount to subtract.
             let change_idx = idx(change.unsigned_abs());
             let current_idx = idx(self.line_cursor_grapheme);
             self.line_cursor_grapheme = if change_idx

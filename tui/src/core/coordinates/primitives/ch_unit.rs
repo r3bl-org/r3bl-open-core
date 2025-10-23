@@ -266,8 +266,9 @@ pub mod convert_to_other_types_from_ch {
 pub mod convert_from_other_types_to_ch {
     use super::{ChUnit, ChUnitPrimitiveType};
 
-    /// Safely convert the f64 to u16 by rounding it. The conversion can fail if the value
-    /// is out of range of u16 (negative number or greater than max u16 capacity).
+    /// Safely convert the [`f64`] to [`u16`] by rounding it. The
+    /// conversion can fail if the value is out of range of [`u16`] (negative number or
+    /// greater than max [`u16`] capacity).
     ///
     /// This is what happens if an error occurs:
     /// - Generate a tracing error if the conversion fails.

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 //! This module handles conversion of [usize] to a fixed size [u8] array. This is useful
-//! when you want to convert a [usize] to a string slice without heap allocation. The
-//! maximum number of digits that a [usize] can have is 20.
+//! when you want to convert a [usize] to a string slice without
+//! heap allocation. The maximum number of digits that a [usize] can have is 20.
 //! - This is because the maximum value of [usize] is [`std::usize::MAX`] which is 2^64 -
 //!   1.
 //! - The number of digits needed to represent this number is 20.

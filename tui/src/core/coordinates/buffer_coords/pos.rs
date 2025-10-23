@@ -43,8 +43,8 @@ use std::{fmt::{Debug, Formatter, Result},
 /// - You can use [`pos()`] function and pass it a [`RowIndex`] and [`ColIndex`] tuple, or
 ///   pass a sequence of them with the [Add] `+` operator.
 /// - Just using the [Add] `+` operator:
-///     - You can use [Add] to convert: [`RowIndex`] + [`ColIndex`], into: a `Pos`.
-///     - You can use [Add] to convert: [`ColIndex`] + [`RowIndex`], into: a `Pos`.
+///     - You can use [Add] to compose: [`RowIndex`] + [`ColIndex`], into: a `Pos`.
+///     - You can use [Add] to compose: [`ColIndex`] + [`RowIndex`], into: a `Pos`.
 ///
 /// # Examples
 ///

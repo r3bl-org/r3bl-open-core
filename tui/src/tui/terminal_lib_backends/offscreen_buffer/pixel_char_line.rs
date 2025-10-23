@@ -74,24 +74,24 @@ impl Debug for PixelCharLine {
         // the output.
         {
             if !void_count.is_empty() {
-                write!(f, "void [ ")?;
+                f.write_str("void [ ")?;
                 fmt_impl_index_values(&void_indices, f)?;
-                write!(f, " ]")?;
+                f.write_str(" ]")?;
 
                 // Add spacer divider if spacer count exists (next).
                 if !spacer_count.is_empty() {
-                    write!(f, " | ")?;
+                    f.write_str(" | ")?;
                 }
             }
 
             if !spacer_count.is_empty() {
                 // Add comma divider if void count exists (previous).
                 if !void_count.is_empty() {
-                    write!(f, ", ")?;
+                    f.write_str(", ")?;
                 }
-                write!(f, "spacer [ ")?;
+                f.write_str("spacer [ ")?;
                 fmt_impl_index_values(&spacer_indices, f)?;
-                write!(f, " ]")?;
+                f.write_str(" ]")?;
             }
         }
 

@@ -63,8 +63,8 @@ mod convert {
 
     /// Convert a `byte_index` to a `seg_index`.
     ///
-    /// Try and convert a [`GCStringOwned`] + [`ByteIndex`] to a grapheme index
-    /// [`SegIndex`].
+    /// Try and convert a [`GCStringOwned`] + [`ByteIndex`] to a
+    /// grapheme index [`SegIndex`].
     impl Add<ByteIndex> for &GCStringOwned {
         type Output = Option<SegIndex>;
 
@@ -85,8 +85,8 @@ mod convert {
 
     /// Convert a `display_col_index` to a `seg_index`.
     ///
-    /// Try and convert a [`GCStringOwned`] + [`ColIndex`] (display column index) to a
-    /// grapheme index [`SegIndex`].
+    /// Try and convert a [`GCStringOwned`] + [`ColIndex`]
+    /// (display column index) to a grapheme index [`SegIndex`].
     impl Add<ColIndex> for &GCStringOwned {
         type Output = Option<SegIndex>;
 
@@ -108,8 +108,8 @@ mod convert {
 
     /// Convert a `seg_index` to `display_col_index`.
     ///
-    /// Try and convert a [`GCStringOwned`] + [`SegIndex`] to a [`ColIndex`] (display
-    /// column index).
+    /// Try and convert a [`GCStringOwned`] + [`SegIndex`] to a
+    /// [`ColIndex`] (display column index).
     impl Add<SegIndex> for &GCStringOwned {
         type Output = Option<ColIndex>;
 

@@ -5,8 +5,8 @@
 /// Base trait for reading numeric values from wrapper types.
 ///
 /// `NumericConversions` provides the foundational conversion methods that enable all
-/// numeric types in the bounds checking system to convert to standard Rust integer types.
-/// It separates the concern of "reading values" from "constructing values".
+/// numeric types in the bounds checking system to convert to standard Rust integer
+/// types. It separates the concern of "reading values" from "constructing values".
 ///
 /// ## Purpose
 ///

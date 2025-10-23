@@ -207,7 +207,8 @@ pub mod telemetry_constructor {
 
     impl<const N: usize> Telemetry<N> {
         pub fn new(arg_opts: impl Into<ResponseTimesRingBufferOptions>) -> Self {
-            // "Dynamically" convert the options argument into the actual options struct.
+            // "Dynamically" convert the options argument into the
+            // actual options struct.
             let options: ResponseTimesRingBufferOptions = arg_opts.into();
             Self {
                 ring_buffer: RingBufferStack::new(),

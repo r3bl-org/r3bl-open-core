@@ -1,24 +1,20 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use crate::{CHANNEL_CAPACITY, CommonResultWithError, History, InputDevice, LineState,
+            LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
+            SafeHistory, SafeLineState, SafePauseBuffer, SendRawTerminal, SharedWriter,
+            StdMutex, execute_commands_no_lock, join, lock_output_device_as_mut};
+use crossterm::{ExecutableCommand, QueueableCommand, cursor,
+                terminal::{self, Clear, disable_raw_mode}};
+use miette::Report as ErrorReport;
 use std::{io::{self, Write},
           sync::Arc,
           time::Duration};
-
-use crossterm::{cursor,
-                terminal::{self, disable_raw_mode, Clear},
-                ExecutableCommand, QueueableCommand};
-use miette::Report as ErrorReport;
 use thiserror::Error;
 use tokio::{select, spawn,
             sync::{broadcast,
                    mpsc::{self, UnboundedReceiver, UnboundedSender}},
             task::JoinHandle,
             time::sleep};
-
-use crate::{execute_commands_no_lock, join, lock_output_device_as_mut,
-            CommonResultWithError, History, InputDevice, LineState,
-            LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
-            SafeHistory, SafeLineState, SafePauseBuffer, SendRawTerminal, SharedWriter,
-            StdMutex, CHANNEL_CAPACITY};
 
 /// This is an artificial delay amount that is added to hide the jank of displaying the
 /// cursor to the terminal when the prompt is first printed, after the terminal is put
@@ -206,8 +202,8 @@ pub enum ReadlineError {
     Closed,
 }
 
-/// For convenience, convert [`ErrorReport`] to [`ReadlineError`], so that
-/// `into_diagnostic()` works.
+/// For convenience, convert [`ErrorReport`] to [`ReadlineError`],
+/// so that `into_diagnostic()` works.
 impl From<ErrorReport> for ReadlineError {
     fn from(report: ErrorReport) -> Self {
         ReadlineError::IO(io::Error::other(format!("{report}")))
@@ -270,10 +266,10 @@ pub enum ControlFlowLimited<E> {
 /// [`PauseBuffer`]. When the terminal is resumed, the buffer is drained and the output is
 /// written to the terminal.
 pub mod manage_shared_writer_output {
-    use super::{broadcast, io, join, lock_output_device_as_mut, mpsc, spawn, Arc,
-                CommonResultWithError, ControlFlowLimited, JoinHandle, LineState,
+    use super::{Arc, CommonResultWithError, ControlFlowLimited, JoinHandle, LineState,
                 LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
-                ReadlineError, SafeLineState, SafePauseBuffer, SendRawTerminal, StdMutex};
+                ReadlineError, SafeLineState, SafePauseBuffer, SendRawTerminal,
+                StdMutex, broadcast, io, join, lock_output_device_as_mut, mpsc, spawn};
 
     /// - Receiver end of the channel, which does the actual writing to the terminal.
     /// - The sender end of the channel is in [`crate::SharedWriter`].
@@ -293,7 +289,8 @@ pub mod manage_shared_writer_output {
                 let maybe_line_control_signal = line_control_channel_receiver.recv();
 
                 // Channel is open.
-                // if-let scope has changed in Rust 2024, so use match here and not if-let.
+                // if-let scope has changed in Rust 2024, so use match here and not
+                // if-let.
                 #[allow(clippy::single_match_else)]
                 match maybe_line_control_signal.await {
                     Some(maybe_line_control_signal) => {
@@ -751,8 +748,8 @@ impl Readline {
 }
 
 pub mod readline_internal {
-    use super::{broadcast, Arc, ControlFlowExtended, ReadlineError, ReadlineEvent,
-                SafeHistory, SafeLineState, StdMutex, Write, CTRL_C, CTRL_D};
+    use super::{Arc, CTRL_C, CTRL_D, ControlFlowExtended, ReadlineError, ReadlineEvent,
+                SafeHistory, SafeLineState, StdMutex, Write, broadcast};
 
     /// # Panics
     ///
@@ -775,12 +772,13 @@ pub mod readline_internal {
                 let is_spinner_active =
                     self_safe_is_spinner_active.lock().unwrap().take();
                 if (crossterm_event == CTRL_C || crossterm_event == CTRL_D)
-                    && let Some(spinner_shutdown_sender) = is_spinner_active {
-                        // Send signal to SharedWriter spinner shutdown channel.
-                        // We don't care about the result of this operation.
-                        spinner_shutdown_sender.send(()).ok();
-                        return ControlFlowExtended::Continue;
-                    }
+                    && let Some(spinner_shutdown_sender) = is_spinner_active
+                {
+                    // Send signal to SharedWriter spinner shutdown channel.
+                    // We don't care about the result of this operation.
+                    spinner_shutdown_sender.send(()).ok();
+                    return ControlFlowExtended::Continue;
+                }
 
                 // Regular readline event handling.
                 let result_maybe_readline_event = line_state.apply_event_and_render(
@@ -812,10 +810,9 @@ pub mod readline_internal {
 
 #[cfg(test)]
 pub mod readline_test_fixtures {
+    use crate::{CrosstermEventResult, InlineVec};
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
     use smallvec::smallvec;
-
-    use crate::{CrosstermEventResult, InlineVec};
 
     pub(super) fn get_input_vec() -> InlineVec<CrosstermEventResult> {
         smallvec![
@@ -845,12 +842,12 @@ pub mod readline_test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use super::{broadcast, lock_output_device_as_mut, readline_internal,
-                readline_test_fixtures::get_input_vec, sleep, Arc, ControlFlowExtended,
-                Duration, History, InputDevice, LineStateControlSignal,
-                LineStateLiveness, OutputDevice, Readline, ReadlineEvent, StdMutex};
-    use crate::{return_if_not_interactive_terminal, InputDeviceExtMock, OutputDeviceExt,
-                TTYResult};
+    use super::{Arc, ControlFlowExtended, Duration, History, InputDevice,
+                LineStateControlSignal, LineStateLiveness, OutputDevice, Readline,
+                ReadlineEvent, StdMutex, broadcast, lock_output_device_as_mut,
+                readline_internal, readline_test_fixtures::get_input_vec, sleep};
+    use crate::{InputDeviceExtMock, OutputDeviceExt, TTYResult,
+                return_if_not_interactive_terminal};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -1033,10 +1030,9 @@ mod test_readline {
 
 #[cfg(test)]
 mod test_streams {
-    use test_streams::readline_test_fixtures::get_input_vec;
-
     use super::*;
     use crate::core::test_fixtures::gen_input_stream;
+    use test_streams::readline_test_fixtures::get_input_vec;
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -1056,12 +1052,10 @@ mod test_streams {
 
 #[cfg(test)]
 mod test_pause_and_resume_support {
-    use std::sync::Mutex;
-
-    use manage_shared_writer_output::flush_internal;
-
     use super::*;
     use crate::core::test_fixtures::StdoutMock;
+    use manage_shared_writer_output::flush_internal;
+    use std::sync::Mutex;
 
     #[test]
     fn test_flush_internal_paused() {

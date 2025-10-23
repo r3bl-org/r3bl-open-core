@@ -17,9 +17,9 @@
 //!   [`CaretRaw`], [`CaretScrAdj`] struct respectively. These functions can take a
 //!   sequence of [Add]ed [Pos] and [`ScrOfs`] as input, or tuples of them in any order.
 //! - Just using using the [Add] `+` operator:
-//!     - You can use [Add] to convert: [`ScrOfs`] + [`CaretRaw`], into: a
+//!     - You can use [Add] to compose: [`ScrOfs`] + [`CaretRaw`], into: a
 //!       [`CaretScrAdj`].
-//!     - You can use [Add] to convert: [`CaretScrAdj`] + [`ScrOfs`], into: a
+//!     - You can use [Add] to compose: [`CaretScrAdj`] + [`ScrOfs`], into: a
 //!       [`CaretRaw`].
 //!
 //! # Examples

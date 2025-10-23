@@ -570,10 +570,10 @@ pub mod access_and_mutate {
         /// text editor and not binary editor, it operates on UTF-8 encoded text files and
         /// not binary files (which just contain `u8`s).
         ///
-        /// You can convert a `&[u8]` to a `&str` using [`std::str::from_utf8`].
-        /// Initializes the buffer with the given lines, clearing all state including
-        /// history. This is meant to be used when loading a new file or
-        /// completely replacing buffer content.
+        /// You can convert a `&[u8]` to a `&str` using
+        /// [`std::str::from_utf8`]. Initializes the buffer with the given lines,
+        /// clearing all state including history. This is meant to be used when
+        /// loading a new file or completely replacing buffer content.
         ///
         /// For normal editing operations that preserve history, use [`Self::get_mut()`]
         /// and the mutation API [`mod@crate::content_mut`].

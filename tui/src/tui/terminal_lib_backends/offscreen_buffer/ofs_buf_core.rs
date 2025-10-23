@@ -169,6 +169,82 @@ impl Default for AnsiParserSupport {
     }
 }
 
+/// Terminal mode state tracking for terminal control sequences.
+///
+/// This struct groups together all terminal mode flags that track the state of
+/// various terminal features that can be controlled via escape sequences.
+/// These modes affect how the terminal processes and displays output.
+///
+/// ## Terminal Modes
+///
+/// - **Raw Mode**: Direct input/output without line buffering (POSIX raw mode)
+/// - **Alternate Screen**: Secondary screen buffer for full-screen applications
+/// - **Mouse Tracking**: Capability to capture mouse events
+/// - **Bracketed Paste**: Ability to distinguish pasted text from keyboard input
+///
+/// Used by render pipeline and ANSI parser performer to maintain complete
+/// terminal state information.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TerminalModeState {
+    /// Raw mode status (POSIX non-canonical mode).
+    ///
+    /// When enabled, terminal input is processed character-by-character without
+    /// line buffering. This is essential for interactive TUI applications that
+    /// need immediate character feedback.
+    ///
+    /// Set via:
+    /// - `RenderOp::EnterRawMode` (enables)
+    /// - `RenderOp::ExitRawMode` (disables)
+    pub is_raw_mode: bool,
+
+    /// Alternate screen buffer status.
+    ///
+    /// When enabled, terminal output is redirected to an alternate screen buffer,
+    /// preserving the original screen content. This is used by full-screen
+    /// applications (vim, less, etc.) to avoid cluttering the shell history.
+    ///
+    /// Set via:
+    /// - `RenderOp::EnterAlternateScreen` (enables)
+    /// - `RenderOp::ExitAlternateScreen` (disables)
+    pub alternate_screen_active: bool,
+
+    /// Mouse event tracking status.
+    ///
+    /// When enabled, terminal sends mouse click, movement, and scroll events.
+    /// This enables interactive mouse support in TUI applications.
+    ///
+    /// Set via:
+    /// - `RenderOp::EnableMouseTracking` (enables)
+    /// - `RenderOp::DisableMouseTracking` (disables)
+    pub mouse_tracking_enabled: bool,
+
+    /// Bracketed paste mode status.
+    ///
+    /// When enabled, text pasted from clipboard is wrapped with special escape
+    /// sequences (OSC 52), allowing applications to distinguish pasted text from
+    /// keyboard input. This prevents misinterpretation of pasted content.
+    ///
+    /// Set via:
+    /// - `RenderOp::EnableBracketedPaste` (enables)
+    /// - `RenderOp::DisableBracketedPaste` (disables)
+    pub bracketed_paste_enabled: bool,
+}
+
+impl Default for TerminalModeState {
+    /// Creates a new `TerminalModeState` with VT100-compliant defaults.
+    ///
+    /// All modes are disabled by default, representing a standard terminal state
+    /// before any special features are activated.
+    fn default() -> Self {
+        Self {
+            is_raw_mode: false,
+            alternate_screen_active: false,
+            mouse_tracking_enabled: false,
+            bracketed_paste_enabled: false,
+        }
+    }
+}
+
 /// Core terminal screen buffer structure with VT100/ANSI support.
 ///
 /// For comprehensive architectural overview and integration details, see the
@@ -190,6 +266,8 @@ impl Default for AnsiParserSupport {
 /// The struct is organized into logical groups:
 /// - **Core Buffer**: The 2D grid and window dimensions
 /// - **Cursor Management**: Primary cursor position for all subsystems
+/// - **Terminal Mode State**: Tracking of terminal control modes (raw, alternate screen,
+///   etc.)
 /// - **ANSI Support**: Terminal state for escape sequence processing
 /// - **Performance**: Pre-calculated memory usage tracking
 #[derive(Clone, PartialEq)]
@@ -216,6 +294,13 @@ pub struct OffscreenBuffer {
     ///
     /// [`cursor_pos_for_esc_save_and_restore`]: AnsiParserSupport::cursor_pos_for_esc_save_and_restore
     pub cursor_pos: Pos,
+
+    /// Terminal mode state tracking (raw mode, alternate screen, mouse tracking, etc.).
+    ///
+    /// This field tracks the state of various terminal control modes that affect
+    /// how the terminal processes input and displays output. These modes are set
+    /// via control escape sequences or render operations.
+    pub terminal_mode: TerminalModeState,
 
     /// Pre-calculated memory size of this buffer.
     /// Since the buffer has fixed dimensions and each cell is a fixed-size enum,
@@ -372,6 +457,7 @@ impl OffscreenBuffer {
             buffer,
             window_size,
             cursor_pos: Pos::default(),
+            terminal_mode: TerminalModeState::default(),
             memory_size,
             ansi_parser_support: super::AnsiParserSupport::default(),
         }

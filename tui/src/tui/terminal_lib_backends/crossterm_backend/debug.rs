@@ -1,11 +1,17 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DebugFormatRenderOp, RenderOp,
-            RenderOp::{ApplyColors, ClearScreen,
-                       CompositorNoClipTruncPaintTextWithAttributes, EnterRawMode,
-                       ExitRawMode, MoveCursorPositionAbs, MoveCursorPositionRelTo,
-                       Noop, PaintTextWithAttributes, ResetColor, SetBgColor,
-                       SetFgColor},
+            RenderOp::{ApplyColors, ClearCurrentLine, ClearScreen, ClearToEndOfLine,
+                       ClearToStartOfLine,
+                       CompositorNoClipTruncPaintTextWithAttributes,
+                       DisableBracketedPaste, DisableMouseTracking,
+                       EnableBracketedPaste, EnableMouseTracking, EnterAlternateScreen,
+                       EnterRawMode, ExitAlternateScreen, ExitRawMode, HideCursor,
+                       MoveCursorPositionAbs, MoveCursorPositionRelTo,
+                       MoveCursorToColumn, MoveCursorToNextLine,
+                       MoveCursorToPreviousLine, Noop, PaintTextWithAttributes,
+                       PrintStyledText, ResetColor, RestoreCursorPosition,
+                       SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor},
             TuiStyle};
 use std::fmt::{Formatter, Result};
 
@@ -15,21 +21,11 @@ pub struct CrosstermDebugFormatRenderOp;
 impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
     fn fmt_debug(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result {
         match this {
-            Noop => {
-                write!(f, "Noop")
-            }
-            EnterRawMode => {
-                write!(f, "EnterRawMode")
-            }
-            ExitRawMode => {
-                write!(f, "ExitRawMode")
-            }
-            ClearScreen => {
-                write!(f, "ClearScreen")
-            }
-            ResetColor => {
-                write!(f, "ResetColor")
-            }
+            Noop => f.write_str("Noop"),
+            EnterRawMode => f.write_str("EnterRawMode"),
+            ExitRawMode => f.write_str("ExitRawMode"),
+            ClearScreen => f.write_str("ClearScreen"),
+            ResetColor => f.write_str("ResetColor"),
             SetFgColor(fg_color) => {
                 write!(f, "SetFgColor({fg_color:?})")
             }
@@ -38,7 +34,7 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
             }
             ApplyColors(maybe_style) => match maybe_style {
                 Some(style) => write!(f, "ApplyColors({style:?})"),
-                None => write!(f, "ApplyColors(None)"),
+                None => f.write_str("ApplyColors(None)"),
             },
             MoveCursorPositionAbs(pos) => {
                 write!(f, "MoveCursorPositionAbs({pos:?})")
@@ -53,6 +49,33 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
             PaintTextWithAttributes(text, maybe_style) => {
                 format_print_text(f, "PrintTextWithAttributes", text, *maybe_style)
             }
+            // ===== Incremental Rendering Operations (Phase 1) =====
+            MoveCursorToColumn(col_index) => {
+                write!(f, "MoveCursorToColumn({col_index:?})")
+            }
+            MoveCursorToNextLine(row_height) => {
+                write!(f, "MoveCursorToNextLine({row_height:?})")
+            }
+            MoveCursorToPreviousLine(row_height) => {
+                write!(f, "MoveCursorToPreviousLine({row_height:?})")
+            }
+            ClearCurrentLine => f.write_str("ClearCurrentLine"),
+            ClearToEndOfLine => f.write_str("ClearToEndOfLine"),
+            ClearToStartOfLine => f.write_str("ClearToStartOfLine"),
+            PrintStyledText(text) => {
+                write!(f, "PrintStyledText({} bytes)", text.len())
+            }
+            ShowCursor => f.write_str("ShowCursor"),
+            HideCursor => f.write_str("HideCursor"),
+            SaveCursorPosition => f.write_str("SaveCursorPosition"),
+            RestoreCursorPosition => f.write_str("RestoreCursorPosition"),
+            // ===== Terminal Mode Operations =====
+            EnterAlternateScreen => f.write_str("EnterAlternateScreen"),
+            ExitAlternateScreen => f.write_str("ExitAlternateScreen"),
+            EnableMouseTracking => f.write_str("EnableMouseTracking"),
+            DisableMouseTracking => f.write_str("DisableMouseTracking"),
+            EnableBracketedPaste => f.write_str("EnableBracketedPaste"),
+            DisableBracketedPaste => f.write_str("DisableBracketedPaste"),
         }
     }
 }
@@ -63,8 +86,12 @@ fn format_print_text(
     text: &str,
     maybe_style: Option<TuiStyle>,
 ) -> Result {
+    f.write_str(op_name)?;
+    f.write_str("(")?;
+    write!(f, "{}", text.len())?;
+    f.write_str(" bytes, ")?;
     match maybe_style {
-        Some(style) => write!(f, "{op_name}({} bytes, {style:?})", text.len()),
-        None => write!(f, "{op_name}({} bytes, None)", text.len()),
+        Some(style) => write!(f, "{style:?})"),
+        None => f.write_str("None)"),
     }
 }

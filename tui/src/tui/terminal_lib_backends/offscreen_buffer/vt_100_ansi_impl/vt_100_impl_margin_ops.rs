@@ -51,7 +51,8 @@ impl OffscreenBuffer {
         let top_value = top.as_u16();
         let bottom_value = bottom.as_u16();
 
-        // Use type-safe bounds checking: convert TermRow to RowHeight for clamping.
+        // Use type-safe bounds checking: convert TermRow to
+        // RowHeight for clamping.
         let bottom_as_height = crate::RowHeight::from(bottom_value);
         let clamped_bottom_height = bottom_as_height.clamp_to_max(buffer_height);
         let clamped_bottom_raw: u16 = clamped_bottom_height.into();

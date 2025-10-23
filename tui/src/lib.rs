@@ -1160,9 +1160,9 @@
 //!   - This is why the state must implement the trait [`HasEditorBuffers`] which is where
 //!     the document data is stored (the key is the id of the flex box in which the editor
 //!     component is placed).
-//!   - The [`EditorBuffer`] contains the text content in a `Vec` of `UnicodeString`.
-//!     Where each line is represented by a `UnicodeString`. It also contains the scroll
-//!     offset, caret position, and file extension for syntax highlighting.
+//!   - The [`EditorBuffer`] contains the text content in a [`ZeroCopyGapBuffer`]. This
+//!     provides efficient, zero-copy access to editor content. It also contains the
+//!     scroll offset, caret position, and file extension for syntax highlighting.
 //!
 //! In other words,
 //!

@@ -344,7 +344,8 @@ impl ParamsExt for vte::Params {
     }
 }
 
-/// Parse VT100 cursor position parameters and convert to 0-based buffer coordinates.
+/// Parse VT100 cursor position parameters and convert to 0-based
+/// buffer coordinates.
 ///
 /// # Conversion Flow
 ///

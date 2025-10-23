@@ -68,6 +68,7 @@ pub enum TerminalLibBackend {
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 
 // Attach source files.
+pub mod compositor_render_ops_to_ofs_buf;
 pub mod crossterm_backend;
 pub mod direct_ansi;
 pub mod enhanced_keys;
@@ -82,12 +83,12 @@ pub mod paint;
 pub mod raw_mode;
 pub mod render_op;
 pub mod render_pipeline;
-pub mod render_pipeline_to_offscreen_buffer;
 pub mod render_tui_styled_texts;
 pub mod termion_backend;
 pub mod z_order;
 
 // Re-export.
+pub use compositor_render_ops_to_ofs_buf::*;
 pub use crossterm_backend::*;
 pub use direct_ansi::*;
 pub use enhanced_keys::*;
@@ -102,7 +103,6 @@ pub use paint::*;
 pub use raw_mode::*;
 pub use render_op::*;
 pub use render_pipeline::*;
-pub use render_pipeline_to_offscreen_buffer::*;
 pub use render_tui_styled_texts::*;
 pub use z_order::*;
 

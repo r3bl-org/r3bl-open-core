@@ -9,9 +9,9 @@ use std::{fmt::{Debug, Formatter, Result},
 /// it, since it has to validate that the value is between 0 and 100. You can create it
 /// one of two ways (depending on how you want to handle out-of-range errors):
 ///
-/// 1. Using the [`crate::pc`!] macro, which returns a [Result] type so that you can
+/// 1. Using the [`crate::pc`!] macro, which returns a [`Result`] type so that you can
 ///    handle any conversion-out-of-range errors.
-/// 2. Using the [`Pc::try_and_convert`] method, which returns an [Option] type, so that
+/// 2. Using the [`Pc::try_and_convert`] method, which returns an [`Option`] type, so that
 ///    you can handle any conversion-out-of-range errors.
 ///
 /// # Fields
@@ -19,18 +19,32 @@ use std::{fmt::{Debug, Formatter, Result},
 ///
 /// # Traits Implementations
 ///
-/// - [Deref]: Dereferences to [u8].
+/// - [`Deref`]: Dereferences to [`u8`].
 /// - [`std::fmt::Debug`]: Formats the percentage value followed by a `%` sign.
-/// - [`TryFrom`]: Attempts to convert a [`ChUnitPrimitiveType`] to a `pc`.
-/// - [`TryFrom`]: Attempts to convert an [i32] to a `pc`.
+/// - [`TryFrom`]: Attempts to convert a [`ChUnitPrimitiveType`] to a [`pc`].
+/// - [`TryFrom`]: Attempts to convert an [`i32`] to a [`pc`].
 ///
 /// # How to use it
 ///
-/// - [`crate::pc`!]: A macro that attempts to convert a given expression to `pc`. Returns
-///   [Err] if the value is not between 0 and 100.
-/// - [`Pc::try_and_convert`]: Attempts to convert a given [`ChUnit`] value to `pc`.
-///   Returns [None] if the value is not between 0 and 100.
+/// - [`crate::pc`!]: A macro that attempts to convert a given expression to [`pc`].
+///   Returns [`Err`] if the value is not between 0 and 100.
+/// - [`Pc::try_and_convert`]: Attempts to convert a given [`ChUnit`] value to [`pc`].
+///   Returns [`None`] if the value is not between 0 and 100.
 /// - [`Pc::apply_to`]: Returns the calculated percentage of the given value.
+///
+/// [`crate::pc`!]: crate::pc!
+/// [`Result`]: std::result::Result
+/// [`Option`]: std::option::Option
+/// [`Deref`]: std::ops::Deref
+/// [`u8`]: u8
+/// [`std::fmt::Debug`]: std::fmt::Debug
+/// [`TryFrom`]: std::convert::TryFrom
+/// [`ChUnitPrimitiveType`]: crate::ChUnitPrimitiveType
+/// [`pc`]: crate::Pc
+/// [`i32`]: i32
+/// [`Err`]: std::result::Result::Err
+/// [`ChUnit`]: crate::ChUnit
+/// [`None`]: std::option::Option::None
 ///
 /// # Example
 ///
@@ -108,9 +122,9 @@ impl TryFrom<i32> for Pc {
 ///
 /// Return [`None`] if the given value is not between 0 and 100.
 ///
-/// [`None`]: std::option::Option::None
 /// [`ChUnit`]: crate::ChUnit
 /// [`pc`]: crate::pc!
+/// [`None`]: std::option::Option::None
 impl Pc {
     pub fn try_and_convert(arg_num: impl Into<ChUnit>) -> Option<Pc> {
         let num = arg_num.into();

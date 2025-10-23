@@ -1,20 +1,31 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! This module provides adapters to convert various input formats to
-//! [`ZeroCopyGapBuffer`] for compatibility with the new parser that requires
-//! `ZeroCopyGapBuffer` input.
+//! This module provides adapters to convert various input formats
+//! to [`ZeroCopyGapBuffer`] for compatibility with the new parser that requires
+//! [`ZeroCopyGapBuffer`] input.
 //!
 //! This is an interim solution until the editor is fully migrated to use
-//! `ZeroCopyGapBuffer`.
+//! [`ZeroCopyGapBuffer`].
 //!
-//! The module implements the [`From`] trait for both `&str` and `&[GCString]` to allow
-//! idiomatic conversions:
-//! - `ZeroCopyGapBuffer::from("some text")` - Converts `&str` to `ZeroCopyGapBuffer`
-//! - `ZeroCopyGapBuffer::from(&[GCString])` - Converts `&[GCString]` to
-//!   `ZeroCopyGapBuffer`
+//! The module implements the [`From`] trait for both [`&str`] and [`&[GCString]`] to
+//! allow idiomatic conversions:
+//! - [`ZeroCopyGapBuffer::from("some text")`] - Converts [`&str`] to
+//!   [`ZeroCopyGapBuffer`]
+//! - [`ZeroCopyGapBuffer::from(&[GCString])`] - Converts [`&[GCString]`] to
+//!   [`ZeroCopyGapBuffer`]
 //!
-//! The underlying adapter functions `gap_buffer_from_lines()` and `gap_buffer_from_str()`
-//! are private implementation details and should not be used directly.
+//! The underlying adapter functions [`gap_buffer_from_lines()`] and
+//! [`gap_buffer_from_str()`] are private implementation details and should not be used
+//! directly.
+//!
+//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+//! [`From`]: std::convert::From
+//! [`&str`]: str
+//! [`&[GCString]`]: crate::GCStringOwned
+//! [`ZeroCopyGapBuffer::from("some text")`]: std::convert::From::from
+//! [`ZeroCopyGapBuffer::from(&[GCString])`]: std::convert::From::from
+//! [`gap_buffer_from_lines()`]: gap_buffer_from_lines
+//! [`gap_buffer_from_str()`]: gap_buffer_from_str
 
 use crate::{GCStringOwned, NumericValue, SegIndex, ZeroCopyGapBuffer,
             md_parser::constants::NEW_LINE_CHAR};
@@ -111,9 +122,9 @@ fn gap_buffer_from_str(text: &str) -> ZeroCopyGapBuffer {
 impl From<&str> for ZeroCopyGapBuffer {
     /// Convert a string slice into a `ZeroCopyGapBuffer`.
     ///
-    /// This is a more idiomatic Rust way to convert string data into a gap buffer,
-    /// allowing usage like `ZeroCopyGapBuffer::from("some text")` or `"some
-    /// text".into()`.
+    /// This is a more idiomatic Rust way to convert string data
+    /// into a gap buffer, allowing usage like `ZeroCopyGapBuffer::from("some text")`
+    /// or `"some text".into()`.
     ///
     /// # Example
     /// ```rust,ignore
@@ -126,8 +137,9 @@ impl From<&str> for ZeroCopyGapBuffer {
 impl From<&[GCStringOwned]> for ZeroCopyGapBuffer {
     /// Convert a slice of `GCString` lines into a `ZeroCopyGapBuffer`.
     ///
-    /// This is a more idiomatic Rust way to convert editor lines into a gap buffer,
-    /// allowing usage like `ZeroCopyGapBuffer::from(&lines)` or `(&lines).into()`.
+    /// This is a more idiomatic Rust way to convert editor lines
+    /// into a gap buffer, allowing usage like `ZeroCopyGapBuffer::from(&lines)` or
+    /// `(&lines).into()`.
     ///
     /// # Example
     /// ```rust,ignore

@@ -2,10 +2,11 @@
 
 use super::TerminalWindowMainThreadSignal;
 use crate::{ChUnit, CommonResult, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_MOD, InlineString,
-            OffscreenBuffer, OffscreenBufferPool, OutputDevice, Size, SpinnerStyle,
-            TelemetryHudReport, ok, spinner_impl,
+            MemoizedLenMap, OffscreenBuffer, OffscreenBufferPool, OutputDevice, Size,
+            SpinnerStyle, TelemetryHudReport, ok, spinner_impl,
             telemetry::telemetry_sizing::TelemetryReportLineStorage};
-use std::fmt::{Debug, Formatter};
+use std::{collections::HashMap,
+          fmt::{Debug, Formatter}};
 use tokio::sync::mpsc::Sender;
 
 /// This is a global data structure that holds state for the entire application
@@ -34,6 +35,9 @@ where
     /// pre-allocated to avoid heap allocations.
     pub hud_report: TelemetryReportLineStorage,
     pub spinner_helper: SpinnerHelper,
+    /// Memoized text width calculations for styled text (70x speedup for repeated text).
+    /// Persists across frames to enable caching of repeated text patterns.
+    pub memoized_text_widths: MemoizedLenMap,
 }
 
 #[derive(Debug, Default)]
@@ -95,6 +99,7 @@ where
             offscreen_buffer_pool,
             hud_report: TelemetryReportLineStorage::new(),
             spinner_helper: SpinnerHelper::default(),
+            memoized_text_widths: HashMap::new(),
         };
 
         it.set_size(initial_size);

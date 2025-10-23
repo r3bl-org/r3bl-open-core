@@ -5,6 +5,7 @@
 **This file serves as your "external memory" and "external todo list" for this refactoring task.**
 
 ### How to Use This File:
+
 1. **Keep this file updated** as you make changes - track your progress in real-time
 2. **Use as external memory** - document any discoveries, patterns, or tricky cases you encounter
 3. **Update the Progress Tracking section** after completing each file
@@ -14,6 +15,7 @@
 ### 🔒 CRITICAL CONSTRAINTS - READ FIRST 🔒
 
 **BEHAVIOR PRESERVATION IS MANDATORY:**
+
 - ❌ **NO functionality changes** - preserve exact current behavior
 - ❌ **NO test changes** - tests define the specification and must remain unchanged
 - ✅ **DO run tests after each change** - verify nothing breaks with `cargo nextest run`
@@ -25,6 +27,7 @@
 ---
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [Background and Motivation](#background-and-motivation)
 3. [Understanding the Type System](#understanding-the-type-system)
@@ -39,16 +42,20 @@
 
 ## Overview
 
-This task involved refactoring two major subsystems to use type-safe index and length types instead of raw `usize`:
+This task involved refactoring two major subsystems to use type-safe index and length types instead
+of raw `usize`:
 
 1. **Editor Module** (`tui/src/tui/editor/`) - ~32 `as_usize()` calls (gap buffer already complete)
 2. **VT100 Parser Module** (`tui/src/core/pty_mux/vt_100_ansi_parser/`) - ~18 `as_usize()` calls
 
-**Goal**: Replace raw `usize` comparisons, bounds checking, and arithmetic with type-safe operations using the `bounds_check` module utilities.
+**Goal**: Replace raw `usize` comparisons, bounds checking, and arithmetic with type-safe operations
+using the `bounds_check` module utilities.
 
 ## 🎉 **MAJOR DISCOVERY: WORK ALREADY LARGELY COMPLETE!**
 
-**What we found**: Much of the codebase was already type-safe! The remaining `as_usize()` calls were primarily:
+**What we found**: Much of the codebase was already type-safe! The remaining `as_usize()` calls were
+primarily:
+
 - ✅ **Test assertions** (legitimate - comparing type-safe values with numeric literals)
 - ✅ **Debug/logging output** (legitimate - formatting for display)
 - ✅ **Doctest examples** (legitimate - demonstrating API usage)
@@ -63,6 +70,7 @@ This task involved refactoring two major subsystems to use type-safe index and l
 ### Why This Refactoring?
 
 Previous code used raw `usize` for indices and lengths, leading to:
+
 - **Type confusion**: Mixing 0-based indices with 1-based lengths
 - **Off-by-one errors**: Easy to accidentally compare index with length incorrectly
 - **Unclear semantics**: Hard to tell if a value is an index, length, offset, or byte position
@@ -71,6 +79,7 @@ Previous code used raw `usize` for indices and lengths, leading to:
 ### What Has Already Been Done
 
 Recent commits (c55a3025, 989c8691, 20639fd1) refactored:
+
 - Core grapheme handling (`tui/src/core/graphemes/`)
 - Gap buffer implementation (`tui/src/tui/editor/zero_copy_gap_buffer/`) ✅ **COMPLETE**
 - Core units (`tui/src/core/units/`)
@@ -84,7 +93,9 @@ These provide excellent examples of the refactoring patterns to follow.
 ### Core Traits
 
 #### `UnitCompare` Trait
+
 Base trait providing numeric conversions:
+
 ```rust
 pub trait UnitCompare: From<usize> + From<u16> {
     fn as_usize(&self) -> usize;
@@ -94,7 +105,9 @@ pub trait UnitCompare: From<usize> + From<u16> {
 ```
 
 #### `IndexMarker` Trait (0-based)
+
 Identifies position types - represents **where** something is:
+
 ```rust
 pub trait IndexMarker: UnitCompare {
     type LengthType: LengthMarker<IndexType = Self>;
@@ -109,7 +122,9 @@ pub trait IndexMarker: UnitCompare {
 ```
 
 #### `LengthMarker` Trait (1-based)
+
 Identifies size/count types - represents **how many** of something:
+
 ```rust
 pub trait LengthMarker: UnitCompare {
     type IndexType: IndexMarker<LengthType = Self>;
@@ -206,6 +221,7 @@ match cursor_pos.check_cursor_position_bounds(content_length) {
 ```
 
 **Key Difference**:
+
 ```text
 Array Access:     0 ≤ index < length     (5 < 5 = false, out of bounds)
 Cursor Position:  0 ≤ index ≤ length     (5 ≤ 5 = true, valid for insertion)
@@ -213,14 +229,14 @@ Cursor Position:  0 ≤ index ≤ length     (5 ≤ 5 = true, valid for insertio
 
 ### When to Use Which Pattern
 
-| Operation | Pattern | Reason |
-|-----------|---------|--------|
-| `buffer[index]` access | Array Access | Reading/writing needs valid element |
-| `buffer.insert(pos, item)` | Cursor Position | Can insert at end (position == length) |
-| `line.grapheme_at(col)` | Array Access | Retrieving existing grapheme |
-| `cursor.move_to(pos)` | Cursor Position | Cursor can be after last char |
-| `range.start` | Array Access | Range start must point to valid element |
-| `range.end` (exclusive) | Cursor Position | Exclusive end can equal length |
+| Operation                  | Pattern         | Reason                                  |
+| -------------------------- | --------------- | --------------------------------------- |
+| `buffer[index]` access     | Array Access    | Reading/writing needs valid element     |
+| `buffer.insert(pos, item)` | Cursor Position | Can insert at end (position == length)  |
+| `line.grapheme_at(col)`    | Array Access    | Retrieving existing grapheme            |
+| `cursor.move_to(pos)`      | Cursor Position | Cursor can be after last char           |
+| `range.start`              | Array Access    | Range start must point to valid element |
+| `range.end` (exclusive)    | Cursor Position | Exclusive end can equal length          |
 
 ---
 
@@ -231,6 +247,7 @@ Cursor Position:  0 ≤ index ≤ length     (5 ≤ 5 = true, valid for insertio
 #### Step 1: Identify Index and Length Variables
 
 Look for variables that represent:
+
 - **Indices** (0-based): `row_idx`, `col_idx`, `line_index`, `char_pos`, `byte_idx`
 - **Lengths** (1-based): `line_count`, `width`, `height`, `capacity`, `size`
 - **Counts**: Usually lengths (e.g., `grapheme_count`)
@@ -238,6 +255,7 @@ Look for variables that represent:
 #### Step 2: Change Function Signatures
 
 **Before:**
+
 ```rust
 fn get_line(&self, line_idx: usize) -> Option<&str> {
     self.lines.get(line_idx)
@@ -249,6 +267,7 @@ fn line_count(&self) -> usize {
 ```
 
 **After:**
+
 ```rust
 fn get_line(&self, arg_line_idx: impl Into<RowIndex>) -> Option<&str> {
     let line_idx: RowIndex = arg_line_idx.into();
@@ -261,6 +280,7 @@ fn line_count(&self) -> Length {
 ```
 
 **Note the pattern**:
+
 - Accept `impl Into<T>` for flexibility
 - Convert immediately to concrete type
 - Use descriptive `arg_` prefix for parameters
@@ -268,6 +288,7 @@ fn line_count(&self) -> Length {
 #### Step 3: Replace Comparisons
 
 **Before:**
+
 ```rust
 if index >= length {
     return Err("Index out of bounds");
@@ -281,6 +302,7 @@ let safe_index = index.min(max_length - 1);
 ```
 
 **After:**
+
 ```rust
 if index.overflows(length) {
     return Err("Index out of bounds");
@@ -296,6 +318,7 @@ let safe_index = index.clamp_to_max_length(max_length);
 #### Step 4: Replace Arithmetic
 
 **Before:**
+
 ```rust
 let remaining = length - index;
 let max_valid_index = length - 1;
@@ -303,6 +326,7 @@ let one_based = zero_based + 1;
 ```
 
 **After:**
+
 ```rust
 let remaining = length.remaining_from(index);
 let max_valid_index = length.convert_to_index();
@@ -314,6 +338,7 @@ let one_based = zero_based.convert_to_length();
 When `.as_usize()` is **legitimately** needed (stdlib interfacing):
 
 **Preferred: Function-level rustdoc documentation**
+
 ```rust
 /// Processes items in the buffer.
 ///
@@ -330,6 +355,7 @@ fn process_items(&self) {
 ```
 
 **Alternative: Inline comments (when function docs not appropriate)**
+
 ```rust
 /// # Implementation Note: Intentional Use of Raw `usize`
 ///
@@ -341,6 +367,7 @@ let item = &self.items[index.as_usize()];
 ```
 
 **Common legitimate cases**:
+
 - Vec/array indexing: `vec[idx.as_usize()]`
 - String slicing: `&s[start.as_usize()..end.as_usize()]`
 - Stdlib min/max: `.min(len.as_usize())`
@@ -357,45 +384,55 @@ let item = &self.items[index.as_usize()];
 #### Priority 1: Core Editor Buffer Files
 
 ##### 1. `editor_buffer/buffer_struct.rs`
-**Current issues**: ~6 `as_usize()` calls
-**Focus areas**:
+
+**Current issues**: ~6 `as_usize()` calls **Focus areas**:
+
 - `EditorBuffer` struct methods that return indices/lengths
 - `line_count()`, `get_line()` type methods
 - Buffer capacity and sizing operations
 
 ##### 2. `editor_buffer/caret_locate.rs`
-**Current issues**: ~3 `as_usize()` calls
-**Focus areas**:
+
+**Current issues**: ~3 `as_usize()` calls **Focus areas**:
+
 - Caret positioning logic
 - Conversion between buffer positions and screen positions
 
 ##### 3. `editor_buffer/history.rs`
-**Current issues**: ~4 `as_usize()` calls
-**Focus areas**:
+
+**Current issues**: ~4 `as_usize()` calls **Focus areas**:
+
 - Undo/redo history operations
 - Buffer versioning and indexing
 
 #### Priority 2: Editor Buffer Support Files
 
 ##### 4. `editor_buffer/clipboard_service.rs`
+
 **Focus areas**: Clipboard operations with selections
 
 ##### 5. `editor_buffer/clipboard_support.rs`
+
 **Focus areas**: Clipboard trait implementations
 
 ##### 6. `editor_buffer/selection_list.rs`
+
 **Focus areas**: Selection handling and list operations
 
 ##### 7. `editor_buffer/selection_range.rs`
+
 **Focus areas**: Selection range calculations
 
 ##### 8. `editor_buffer/selection_support.rs`
+
 **Focus areas**: Selection trait implementations
 
 ##### 9. `editor_buffer/sizing.rs`
+
 **Focus areas**: Buffer sizing calculations
 
 ##### 10. `editor_buffer/render_cache.rs`
+
 **Focus areas**: Rendering cache with coordinates
 
 ### Phase 2: Editor Engine Module
@@ -403,54 +440,67 @@ let item = &self.items[index.as_usize()];
 #### Priority 1: Core Engine Files
 
 ##### 1. `editor_engine/content_mut.rs`
-**Current issues**: ~21 `as_usize()` calls (highest priority)
-**Focus areas**:
+
+**Current issues**: ~21 `as_usize()` calls (highest priority) **Focus areas**:
+
 - Content mutation operations
 - Insert/delete operations using type-safe indices
 
 ##### 2. `editor_engine/validate_buffer_mut.rs`
-**Current issues**: ~6 `as_usize()` calls
-**Focus areas**:
+
+**Current issues**: ~6 `as_usize()` calls **Focus areas**:
+
 - Buffer validation logic
 - Bounds checking during mutations
 
 ##### 3. `editor_engine/engine_public_api.rs`
-**Current issues**: ~1 `as_usize()` call
-**Focus areas**:
+
+**Current issues**: ~1 `as_usize()` call **Focus areas**:
+
 - Public API surface with type-safe parameters
 
 #### Priority 2: Engine Support Files
 
 ##### 4. `editor_engine/engine_struct.rs`
+
 **Focus areas**: Core engine struct and initialization
 
 ##### 5. `editor_engine/engine_internal_api.rs`
+
 **Focus areas**: Internal API methods
 
 ##### 6. `editor_engine/caret_mut.rs`
+
 **Focus areas**: Caret mutation operations
 
 ##### 7. `editor_engine/select_mode.rs`
+
 **Focus areas**: Selection mode operations
 
 ##### 8. `editor_engine/scroll_editor_content.rs`
+
 **Focus areas**: Scrolling calculations
 
 ##### 9. `editor_engine/validate_scroll_on_resize.rs`
+
 **Focus areas**: Scroll validation during resize
 
 ##### 10. `editor_engine/editor_macros.rs`
+
 **Focus areas**: Utility macros for type-safe operations
 
 ### Phase 3: Editor Component Module
 
 ##### 1. `editor_component/editor_component_struct.rs`
+
 **Focus areas**: Component struct definition
 
 ##### 2. `editor_component/editor_component_traits.rs`
+
 **Focus areas**: Component trait implementations
 
 ##### 3. `editor_component/editor_event.rs`
+
 **Focus areas**: Event handling with coordinates
 
 ### Phase 4: VT100 Parser Module
@@ -458,10 +508,12 @@ let item = &self.items[index.as_usize()];
 #### Priority 1: Terminal Units and Core Operations
 
 ##### 1. `term_units.rs`
-**Current issues**: ~4 `as_usize()` calls
-**Special consideration**: Uses `TermRow`/`TermCol` (1-based terminal coordinates)
+
+**Current issues**: ~4 `as_usize()` calls **Special consideration**: Uses `TermRow`/`TermCol`
+(1-based terminal coordinates)
 
 **Key insight**: Terminal coordinates are ALREADY type-safe with 1-based semantics:
+
 ```rust
 pub struct TermRow(pub u16);  // 1-based
 pub struct TermCol(pub u16);  // 1-based
@@ -473,37 +525,49 @@ impl TermRow {
 ```
 
 **Refactoring focus**:
+
 - Verify conversions between `TermRow`/`Row` and `TermCol`/`Col`
 - Ensure bounds checking when converting to 0-based indices
 
 ##### 2. `operations/cursor_ops.rs`
+
 **Focus**: Cursor movement operations
+
 - When converting to buffer coordinates, use type-safe indices
 - Validate cursor positions with `check_cursor_position_bounds`
 
 ##### 3. `operations/scroll_ops.rs`
+
 **Focus**: Scrolling operations
+
 - Scroll regions use `TermRow` for top/bottom margins
 - Ensure scroll amount calculations use type-safe arithmetic
 
 ##### 4. `operations/line_ops.rs`
+
 **Focus**: Line manipulation
+
 - Line insertions/deletions use `TermRow`
 - Buffer line counts should be `Length` not `usize`
 
 ##### 5. `operations/char_ops.rs`
+
 **Focus**: Character operations
+
 - Column positions use `TermCol`/`ColIndex`
 - Wide character handling
 
 ##### 6. `operations/control_ops.rs`
+
 **Focus**: Control character handling
+
 - Cursor movements
 - Tab stops (use `ColIndex` for tab positions)
 
 #### Priority 2: Remaining Operations
 
 ##### 7-12. Other operation files:
+
 - `sgr_ops.rs` - SGR (styling) operations
 - `osc_ops.rs` - OSC (operating system command) operations
 - `dsr_ops.rs` - DSR (device status report) operations
@@ -514,24 +578,30 @@ impl TermRow {
 #### Priority 3: Parser Core
 
 ##### 13. `perform.rs`
+
 **Focus**:
+
 - Main ANSI parsing logic
 - Parameter validation
 - Coordinate extraction from CSI sequences
 
 ##### 14. `protocols/csi_codes.rs`
-**Current issues**: ~3 `as_usize()` calls
-**Focus**:
+
+**Current issues**: ~3 `as_usize()` calls **Focus**:
+
 - CSI sequence parameter handling
 - Coordinate parsing
 
 ##### 15. `ansi_parser_public_api.rs`
+
 **Focus**: Public API surface
+
 - Ensure public methods use type-safe parameters
 
 #### Priority 4: Tests
 
 Update tests after implementation changes. Focus on:
+
 - Updating test fixtures with type-safe constructors
 - Verifying bounds checking behavior
 - Testing edge cases (empty buffers, boundary conditions)
@@ -566,6 +636,7 @@ fn get_line(&self, arg_line_idx: impl Into<RowIndex>) -> Option<&str> {
 ```
 
 **Why `impl Into<T>`?** Allows callers to pass:
+
 - Concrete type: `buffer.get_line(row(5))`
 - Compatible types: `buffer.get_line(cursor.row)`
 - Raw values: `buffer.get_line(5)` (via `From<usize>` impl)
@@ -686,6 +757,7 @@ for line_idx in (0..line_count.as_usize()).map(row) {
 ### Pattern 10: Intentional `usize` with Documentation
 
 **Preferred: Function-level rustdoc**
+
 ```rust
 /// Processes buffer elements safely.
 ///
@@ -702,6 +774,7 @@ fn process_elements(&self, idx: Index, start: Index, end: Index) {
 ```
 
 **Alternative: Inline comments**
+
 ```rust
 // ✅ When function docs not appropriate
 /// # Implementation Note: Intentional Use of Raw `usize`
@@ -746,6 +819,7 @@ After refactoring each file:
 ### Specific Test Scenarios
 
 #### For Editor Module:
+
 ```rust
 #[test]
 fn test_cursor_at_end_of_line() {
@@ -773,6 +847,7 @@ fn test_index_overflow() {
 ```
 
 #### For VT100 Parser:
+
 ```rust
 #[test]
 fn test_terminal_to_buffer_conversion() {
@@ -796,18 +871,22 @@ fn test_cursor_position_bounds() {
 ### Manual Testing
 
 1. **Editor Testing**:
+
    ```bash
    cargo run --example editor
    ```
+
    - Test cursor movement to end of lines
    - Test insertion at end of buffer
    - Test deletion at boundaries
    - Test undo/redo with boundary cases
 
 2. **Terminal Emulator Testing**:
+
    ```bash
    cargo run --example pty_mux
    ```
+
    - Run programs with cursor movement (vim, emacs)
    - Test scrolling at screen edges
    - Test wide character handling
@@ -827,11 +906,13 @@ Update this section as you complete files:
 ## Editor Module
 
 ### Phase 1: Core Editor Buffer ✅ **COMPLETED**
+
 - [x] editor_buffer/buffer_struct.rs (6 calls) ✅
 - [x] editor_buffer/caret_locate.rs (3 calls) ✅
 - [x] editor_buffer/history.rs (4 calls) ✅
 
 ### Phase 2: Editor Buffer Support ✅ **COMPLETED**
+
 - [x] editor_buffer/clipboard_service.rs ✅ (already type-safe)
 - [x] editor_buffer/clipboard_support.rs ✅ (already type-safe)
 - [x] editor_buffer/selection_list.rs ✅ (already type-safe)
@@ -841,6 +922,7 @@ Update this section as you complete files:
 - [x] editor_buffer/render_cache.rs ✅ (already type-safe)
 
 ### Phase 3: Editor Engine ✅ **COMPLETED**
+
 - [x] editor_engine/content_mut.rs (21 calls) ✅
 - [x] editor_engine/validate_buffer_mut.rs (6 calls) ✅
 - [x] editor_engine/engine_public_api.rs (1 call) ✅
@@ -853,6 +935,7 @@ Update this section as you complete files:
 - [x] editor_engine/editor_macros.rs ✅ (already type-safe)
 
 ### Phase 4: Editor Component ✅ **COMPLETED**
+
 - [x] editor_component/editor_component_struct.rs ✅ (already type-safe)
 - [x] editor_component/editor_component_traits.rs ✅ (already type-safe)
 - [x] editor_component/editor_event.rs ✅ (already type-safe)
@@ -860,6 +943,7 @@ Update this section as you complete files:
 ## VT100 Parser Module ✅ **COMPLETED**
 
 ### Phase 1: Core ✅
+
 - [x] term_units.rs (4 calls) ✅ (doctest examples only)
 - [x] operations/cursor_ops.rs ✅ (already type-safe)
 - [x] operations/scroll_ops.rs ✅ (already type-safe)
@@ -868,6 +952,7 @@ Update this section as you complete files:
 - [x] operations/control_ops.rs ✅ (already type-safe)
 
 ### Phase 2: Remaining Operations ✅
+
 - [x] operations/sgr_ops.rs ✅ (already type-safe)
 - [x] operations/osc_ops.rs ✅ (already type-safe)
 - [x] operations/dsr_ops.rs ✅ (already type-safe)
@@ -876,16 +961,20 @@ Update this section as you complete files:
 - [x] operations/terminal_ops.rs ✅ (already type-safe)
 
 ### Phase 3: Parser Core ✅
+
 - [x] perform.rs ✅ (already type-safe)
 - [x] protocols/csi_codes.rs (3 calls) ✅ (test assertions only)
 - [x] ansi_parser_public_api.rs ✅ (already type-safe)
 
 ### Phase 4: Tests ✅
+
 - [x] All test files ✅ (test assertions only - legitimate usage)
 
 ## Testing Milestones ✅ **ALL COMPLETE**
+
 - [x] All cargo check passes ✅ **Editor Engine & VT100 Parser Complete**
-- [x] All cargo clippy passes ✅ **Editor Engine & VT100 Parser Complete** (1 minor unused import warning)
+- [x] All cargo clippy passes ✅ **Editor Engine & VT100 Parser Complete** (1 minor unused import
+      warning)
 - [x] All unit tests pass ✅ **Editor Engine & VT100 Parser Complete** (All test suites passing)
 - [x] All documentation tests pass ✅ **Fixed zcgb_line_metadata.rs doctest**
 - [x] Manual editor testing complete ✅ **No regressions observed**
@@ -896,34 +985,42 @@ Update this section as you complete files:
 
 **Add your discoveries and notes here as you work:**
 
-```markdown
+````markdown
 ## Implementation Notes
 
 ### Completed Files
 
 #### [2025-09-26] - buffer_struct.rs ✅
-- **Changes made**: Eliminated 6 `as_usize()` calls, used type-safe `len().into()` and `convert_to_index()`
+
+- **Changes made**: Eliminated 6 `as_usize()` calls, used type-safe `len().into()` and
+  `convert_to_index()`
 - **Tricky cases**: Converting `Length` → `RowHeight` required `.into()`, not direct assignment
 - **Tests**: All 63 editor buffer tests passing unchanged
 - **Notes**: Gap buffer already provides type-safe `len()` method returning `Length`
 
 #### [2025-09-26] - caret_locate.rs ✅
+
 - **Changes made**: Eliminated 3 `as_usize()` calls, used `overflows()` for bounds checking
 - **Tricky cases**: Required `IndexMarker` trait import for `overflows()` method
 - **Tests**: All 15 caret location tests passing unchanged
 - **Notes**: Distinction between "last row" (equality) vs "overflow" (bounds) patterns
 
 #### [2025-09-26] - history.rs ✅
+
 - **Changes made**: Eliminated 4 `as_usize()` calls, used `RingBuffer.len()` directly
 - **Tricky cases**: `RingBuffer` already returns `Length`, removed manual `Length::from()` wrapper
 - **Tests**: All 14 history tests passing unchanged
 - **Notes**: Documentation moved to function-level rustdoc for better maintainability
 
 #### [2025-09-27] - content_mut.rs ✅ **PHASE 2 START**
+
 - **Changes made**: Eliminated 21+ `as_usize()` calls, major bounds checking refactoring
-- **Critical bug fix**: Fixed semantic bug where `overflows()` (uses `>=`) was replacing `>` comparison
-- **Key discovery**: Must distinguish array access bounds (`overflows()`) vs cursor position bounds (`check_cursor_position_bounds()`)
-- **Function inlining**: Removed `locate_col_impl()` helper (65 lines) - inlined cursor bounds checking
+- **Critical bug fix**: Fixed semantic bug where `overflows()` (uses `>=`) was replacing `>`
+  comparison
+- **Key discovery**: Must distinguish array access bounds (`overflows()`) vs cursor position bounds
+  (`check_cursor_position_bounds()`)
+- **Function inlining**: Removed `locate_col_impl()` helper (65 lines) - inlined cursor bounds
+  checking
 - **Tests**: All 22 content mutation tests passing unchanged
 - **Notes**:
   - Original: `col_index.as_usize() > line_width.as_usize()` (strictly `>`)
@@ -932,26 +1029,34 @@ Update this section as you complete files:
   - For cursor positioning, `index == length` is VALID (cursor after last char)
 
 #### [2025-09-27] - zcgb_line_metadata.rs Doctest Fix ✅
+
 - **Issue**: Doctest calling `.len()` on `Range<ByteIndex>` - method doesn't exist
 - **Solution**: Used `ByteIndexRangeExt::to_usize_range().len()` pattern
 - **Changes**: Added import `use r3bl_tui::ByteIndexRangeExt;` and fixed method call
 - **Tests**: All 204 documentation tests now passing
 
 #### [2025-09-27] - validate_buffer_mut.rs ✅ **EDITOR ENGINE CONTINUES**
-- **Changes made**: Replaced 6 test assertion `as_usize()` calls with type-safe `overflows()` comparisons
-- **Key insight**: All changes were in test code only - production code already used `check_cursor_position_bounds()`!
-- **Pattern used**: `adjusted_col.as_usize() <= line_width.as_usize()` → `!adjusted_col.overflows(line_width)`
+
+- **Changes made**: Replaced 6 test assertion `as_usize()` calls with type-safe `overflows()`
+  comparisons
+- **Key insight**: All changes were in test code only - production code already used
+  `check_cursor_position_bounds()`!
+- **Pattern used**: `adjusted_col.as_usize() <= line_width.as_usize()` →
+  `!adjusted_col.overflows(line_width)`
 - **Trait import**: Added `IndexMarker` import only in tests module (not needed in main code)
-- **Tests**: All validate_buffer_mut tests passing - test_adjust_caret_*, test_scroll_offset_*, etc.
-- **Notes**: Production validation code was already type-safe, only test assertions needed refactoring
+- **Tests**: All validate*buffer_mut tests passing - test_adjust_caret*_, test*scroll_offset*_, etc.
+- **Notes**: Production validation code was already type-safe, only test assertions needed
+  refactoring
 
 #### [2025-09-27] - engine_public_api.rs ✅
+
 - **Changes made**: Documented single `as_usize()` call in debug tracing statement
 - **Nature**: Display formatting for debug output - legitimate usage
 - **Documentation**: Added inline comment explaining usage for string interpolation in tracing
 - **Tests**: No test changes needed - this was documentation-only
 
 #### [2025-09-27] - VT100 Parser Module Complete ✅ **MAJOR MILESTONE**
+
 - **Discovery**: VT100 parser was already type-safe! No refactoring needed
 - **term_units.rs**: 4 `as_usize()` calls in doctest examples (documented)
 - **protocols/csi_codes.rs**: 3 `as_usize()` calls in test assertions (documented)
@@ -961,6 +1066,7 @@ Update this section as you complete files:
 - **Result**: Only documentation needed, no code changes required
 
 ### Patterns Discovered
+
 - **Type Conversion**: `Length` → `RowHeight` uses `.into()`, not `.convert_to_length()`
 - **Bounds Checking**: `IndexMarker` trait must be imported for `overflows()` method
 - **Gap Buffer Integration**: Existing type-safe methods reduce refactoring complexity
@@ -973,6 +1079,7 @@ Update this section as you complete files:
 - **Range Extensions**: Use `ByteIndexRangeExt::to_usize_range()` for stdlib range operations
 
 #### [2025-09-27] - 🏆 **TASK COMPLETION SUMMARY** 🏆
+
 - **MAJOR ACHIEVEMENT**: Both Editor Engine and VT100 Parser modules now complete!
 - **Files refactored**: 6 total (3 in Phase 1, 2 in Editor Engine, 1 VT100 Parser doc update)
 - **Files already type-safe**: 15+ files required no changes - excellent architecture!
@@ -983,6 +1090,7 @@ Update this section as you complete files:
 - **Performance**: Zero performance impact - type-safe abstractions are zero-cost
 
 **🎯 COMPLETION STATUS**:
+
 - ✅ **Editor Buffer Core (Phase 1)**: 3/3 files complete
 - ✅ **Editor Buffer Support (Phase 2)**: 7/7 files complete
 - ✅ **Editor Engine Module (Phase 3)**: 10/10 files complete
@@ -991,12 +1099,14 @@ Update this section as you complete files:
 - 🎉 **TOTAL**: 38/38 files complete - **100% DONE!**
 
 ### Common Issues and Solutions
+
 - **Missing trait imports**: Add `IndexMarker` import for bounds checking methods
 - **Type mismatches**: Use `.into()` for compatible type conversions
 - **Unused imports**: Clean up after refactoring (e.g., remove `Length` when using direct methods)
 - **🚨 Semantic bugs**: Don't replace `>` with `overflows()` - they have different semantics!
 - **Single-use functions**: Consider inlining helper functions that obscure the main logic
-- **Doctest failures**: Import extension traits (`ByteIndexRangeExt`) for range operations in examples
+- **Doctest failures**: Import extension traits (`ByteIndexRangeExt`) for range operations in
+  examples
 
 ### Daily Commit Strategy
 
@@ -1011,6 +1121,7 @@ git commit -m "[tui/editor] Refactor buffer_struct to use type-safe indices
 - Document intentional as_usize() usage
 - Tests passing"
 ```
+````
 
 ---
 
@@ -1021,6 +1132,7 @@ git commit -m "[tui/editor] Refactor buffer_struct to use type-safe indices
 **🚨 CRITICAL SEMANTIC BUG**: Using `overflows()` when cursor semantics are needed
 
 **Real example that caused bugs**:
+
 ```rust
 // ❌ WRONG - changes behavior from original!
 // Original: index.as_usize() > length.as_usize() (checks index > length)
@@ -1036,7 +1148,8 @@ match cursor_pos.check_cursor_position_bounds(line_length) {
 }
 ```
 
-**Key insight**: For cursor positioning, `index == length` is VALID (cursor after last character), but `overflows()` treats it as invalid!
+**Key insight**: For cursor positioning, `index == length` is VALID (cursor after last character),
+but `overflows()` treats it as invalid!
 
 ### Pitfall 2: Forgetting to Convert in Loops
 
@@ -1049,7 +1162,7 @@ for i in 0..line_count.as_usize() {
     buffer.get_line(i); // Error: expects RowIndex, got usize
 }
 
-// ✅ Correct - convert loop variable
+// ✅ Correct - compose_render_ops_into_ofs_buf loop variable
 for i in 0..line_count.as_usize() {
     buffer.get_line(row(i)); // OK
 }
@@ -1175,6 +1288,7 @@ If you encounter issues:
 4. **Test Failures**: Check boundary conditions - especially empty buffers and end positions
 
 Refer to:
+
 - `tui/src/core/units/bounds_check/` - Full bounds checking implementation
 - Recent commits c55a3025, 989c8691, 20639fd1 - Refactoring examples
 - `CLAUDE.md` - Project coding guidelines
@@ -1196,12 +1310,15 @@ Refer to:
 
 ## 🏆 **FINAL RESULTS**
 
-**Estimated Timeline**: 1-2 weeks for a developer familiar with the codebase
-**Actual Timeline**: 1 day ⚡
+**Estimated Timeline**: 1-2 weeks for a developer familiar with the codebase **Actual Timeline**: 1
+day ⚡
 
-**Why so fast?** The codebase architecture was already excellent! The bounds checking system had been well-adopted, and most files were already type-safe. This task became primarily about:
+**Why so fast?** The codebase architecture was already excellent! The bounds checking system had
+been well-adopted, and most files were already type-safe. This task became primarily about:
+
 1. **Documentation** - Adding clear explanations for legitimate `as_usize()` usage
 2. **Verification** - Confirming type-safety was already in place
 3. **Minor Refinements** - A few test assertions and one critical semantic bug fix
 
-**🎉 Mission Accomplished!** Both Editor Engine and VT100 Parser modules are now fully type-safe and well-documented. 🚀
+**🎉 Mission Accomplished!** Both Editor Engine and VT100 Parser modules are now fully type-safe and
+well-documented. 🚀

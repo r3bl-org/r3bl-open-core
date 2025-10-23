@@ -194,7 +194,8 @@ pub(crate) mod converters {
     }
 
     impl From<MouseEvent> for InputEvent {
-        /// Typecast / convert [`MouseEvent`] to [`InputEvent::Mouse`].
+        /// Typecast / convert [`MouseEvent`] to
+        /// [`InputEvent::Mouse`].
         fn from(mouse_event: MouseEvent) -> Self { InputEvent::Mouse(mouse_event.into()) }
     }
 

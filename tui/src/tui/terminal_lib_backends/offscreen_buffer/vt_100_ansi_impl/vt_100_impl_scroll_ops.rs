@@ -148,7 +148,8 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the scroll operation fails.
     pub fn scroll_buffer_up(&mut self) -> miette::Result<()> {
-        // Get scroll region as an inclusive range and convert to exclusive for iteration.
+        // Get scroll region as an inclusive range and convert to
+        // exclusive for iteration.
         let scroll_region = self.get_scroll_range_inclusive();
 
         // Use shift_lines_up to shift lines up within the scroll region.
@@ -167,7 +168,8 @@ impl OffscreenBuffer {
     ///
     /// Returns an error if the scroll operation fails.
     pub fn scroll_buffer_down(&mut self) -> miette::Result<()> {
-        // Get scroll region as an inclusive range and convert to exclusive for iteration.
+        // Get scroll region as an inclusive range and convert to
+        // exclusive for iteration.
         let scroll_region = self.get_scroll_range_inclusive();
 
         // Use shift_lines_down to shift lines down within the scroll region.

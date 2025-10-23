@@ -32,6 +32,7 @@ pub mod mock_real_objects_for_dialog {
             offscreen_buffer_pool,
             hud_report: TelemetryReportLineStorage::new(),
             spinner_helper,
+            memoized_text_widths: HashMap::new(),
         };
 
         (global_data, stdout_mock)

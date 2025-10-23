@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::TERMINAL_LIB_BACKEND;
-use crate::{CrosstermDebugFormatRenderOp, InlineString, InlineVec, LockedOutputDevice,
-            PaintRenderOp, PaintRenderOpImplCrossterm, Pos, Size, TerminalLibBackend,
-            TuiColor, TuiStyle, ok};
+use crate::{ColIndex, CrosstermDebugFormatRenderOp, InlineString, InlineVec,
+            LockedOutputDevice, PaintRenderOp, PaintRenderOpImplCrossterm, Pos,
+            RowHeight, Size, TerminalLibBackend, TuiColor, TuiStyle, ok};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
@@ -306,18 +306,24 @@ pub mod render_ops_impl {
             let mut iter = self.iter();
 
             // We don't care about the result of this operation.
-            write!(f, "RenderOps.len(): {}", self.list.len()).ok();
+            f.write_str("RenderOps.len(): ").ok();
+            write!(f, "{}", self.list.len()).ok();
 
             // First line.
             if let Some(first) = iter.next() {
                 // We don't care about the result of this operation.
-                write!(f, "[{first:?}]").ok();
+                f.write_str("[").ok();
+                write!(f, "{first:?}").ok();
+                f.write_str("]").ok();
             }
 
             // Subsequent lines.
             for item in iter {
                 // We don't care about the result of this operation.
-                write!(f, "{DELIM}[{item:?}]").ok();
+                f.write_str(DELIM).ok();
+                f.write_str("[").ok();
+                write!(f, "{item:?}").ok();
+                f.write_str("]").ok();
             }
 
             ok!()
@@ -399,6 +405,289 @@ pub enum RenderOp {
     /// created the two render ops above were used which already handle the clipping and
     /// padding.
     CompositorNoClipTruncPaintTextWithAttributes(InlineString, Option<TuiStyle>),
+
+    /// Move cursor to specific column in current row (leaving row unchanged).
+    ///
+    /// Maps to CSI `<n>G` ANSI sequence (1-indexed).
+    ///
+    /// Useful for incremental rendering operations in `choose()` and `readline_async()`
+    /// where you need precise horizontal cursor positioning without affecting the row.
+    ///
+    /// # Example
+    ///
+    /// Move cursor to column 10:
+    /// ```ignore
+    /// RenderOp::MoveCursorToColumn(col!(10))
+    /// ```
+    MoveCursorToColumn(ColIndex),
+
+    /// Move cursor down by N lines and to column 0 (start of line).
+    ///
+    /// Maps to CSI `<n>E` ANSI sequence.
+    ///
+    /// Equivalent to moving down N rows and then moving to column 0. Used for
+    /// line-by-line incremental rendering where each operation starts at column 0.
+    ///
+    /// # Example
+    ///
+    /// Move cursor to next line:
+    /// ```ignore
+    /// RenderOp::MoveCursorToNextLine(height!(1))
+    /// ```
+    MoveCursorToNextLine(RowHeight),
+
+    /// Move cursor up by N lines and to column 0 (start of line).
+    ///
+    /// Maps to CSI `<n>F` ANSI sequence.
+    ///
+    /// Useful for updating content above the current cursor position, with safe
+    /// bounds checking to prevent moving above row 0.
+    ///
+    /// # Example
+    ///
+    /// Move cursor to previous line:
+    /// ```ignore
+    /// RenderOp::MoveCursorToPreviousLine(height!(1))
+    /// ```
+    MoveCursorToPreviousLine(RowHeight),
+
+    /// Clear current line only, leaving cursor position unchanged.
+    ///
+    /// Maps to CSI `2K` ANSI sequence. Erases the entire line from start to end,
+    /// but preserves the current cursor column position.
+    ///
+    /// Used in `choose()` and `readline_async()` to refresh a single line without
+    /// affecting cursor position or adjacent lines.
+    ///
+    /// # Example
+    ///
+    /// Clear the current line:
+    /// ```ignore
+    /// RenderOp::ClearCurrentLine
+    /// ```
+    ClearCurrentLine,
+
+    /// Clear from cursor to end of line (inclusive).
+    ///
+    /// Maps to CSI `0K` (or `CSI K`) ANSI sequence. Erases from the cursor position
+    /// to the end of the line, leaving the cursor position unchanged.
+    ///
+    /// Useful for partial line updates where you want to preserve content to the left
+    /// of the cursor but clear everything to the right.
+    ///
+    /// # Example
+    ///
+    /// Clear rest of line:
+    /// ```ignore
+    /// RenderOp::ClearToEndOfLine
+    /// ```
+    ClearToEndOfLine,
+
+    /// Clear from cursor to beginning of line (inclusive).
+    ///
+    /// Maps to CSI `1K` ANSI sequence. Erases from the start of the line to the
+    /// cursor position (inclusive), leaving the cursor position unchanged.
+    ///
+    /// Useful for left-side clearing operations in incremental rendering.
+    ///
+    /// # Example
+    ///
+    /// Clear from line start to cursor:
+    /// ```ignore
+    /// RenderOp::ClearToStartOfLine
+    /// ```
+    ClearToStartOfLine,
+
+    /// Print text that already contains ANSI escape codes (pre-styled text).
+    ///
+    /// No additional styling applied - text is rendered exactly as provided.
+    ///
+    /// This variant is used when `CliTextInline` or other text formatting
+    /// has already generated the final ANSI-escaped output. The text is printed
+    /// as-is without any additional processing, attribute application, or color
+    /// application.
+    ///
+    /// # Important
+    ///
+    /// - You are responsible for ensuring the text doesn't exceed terminal bounds
+    /// - ANSI sequences in the text are NOT counted toward display width
+    /// - The cursor position after rendering depends on the visible characters only
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let styled = "Hello \x1b[1mWorld\x1b[0m".into();
+    /// RenderOp::PrintStyledText(styled)
+    /// ```
+    PrintStyledText(InlineString),
+
+    /// Show cursor (make it visible).
+    ///
+    /// Maps to CSI `?25h` ANSI sequence (DEC Private Mode Set).
+    ///
+    /// Restores cursor visibility after it has been hidden with [`RenderOp::HideCursor`].
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::ShowCursor
+    /// ```
+    ShowCursor,
+
+    /// Hide cursor (make it invisible).
+    ///
+    /// Maps to CSI `?25l` ANSI sequence (DEC Private Mode Reset).
+    ///
+    /// Useful for animations or rendering where cursor visibility would be distracting.
+    /// Remember to call [`RenderOp::ShowCursor`] before normal operation resumes.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::HideCursor
+    /// ```
+    HideCursor,
+
+    /// Save cursor position to be restored later.
+    ///
+    /// Maps to CSI `s` ANSI sequence (also known as DECSC - save cursor).
+    ///
+    /// Saves the current cursor position (row and column) in terminal memory.
+    /// Use with [`RenderOp::RestoreCursorPosition`] to return to this position.
+    ///
+    /// # Important
+    ///
+    /// Some terminals may not support this sequence. Use with caution in
+    /// cross-platform applications.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::SaveCursorPosition
+    /// // ... do something ...
+    /// RenderOp::RestoreCursorPosition
+    /// ```
+    SaveCursorPosition,
+
+    /// Restore cursor position previously saved with [`RenderOp::SaveCursorPosition`].
+    ///
+    /// Maps to CSI `u` ANSI sequence (also known as DECRC - restore cursor).
+    ///
+    /// Restores the cursor to the position that was previously saved.
+    ///
+    /// # Important
+    ///
+    /// Some terminals may not support this sequence. Must be preceded by
+    /// a corresponding [`RenderOp::SaveCursorPosition`] call.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::SaveCursorPosition
+    /// // ... do something ...
+    /// RenderOp::RestoreCursorPosition
+    /// ```
+    RestoreCursorPosition,
+
+    /// Switches to alternate screen buffer for full-screen applications.
+    ///
+    /// When enabled, the terminal saves the current screen content and switches to an
+    /// alternate buffer. This is used by full-screen applications (vim, less, etc.) to
+    /// preserve shell history and avoid cluttering the original screen.
+    ///
+    /// Maps to CSI `?1049h` ANSI sequence (DEC Private Mode Set).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::EnterAlternateScreen
+    /// // ... render full-screen content ...
+    /// RenderOp::ExitAlternateScreen  // Restore original screen
+    /// ```
+    EnterAlternateScreen,
+
+    /// Exits alternate screen buffer and restores original screen content.
+    ///
+    /// Restores the screen content that was saved when [`RenderOp::EnterAlternateScreen`]
+    /// was called. Should always be called before returning to normal shell operation.
+    ///
+    /// Maps to CSI `?1049l` ANSI sequence (DEC Private Mode Reset).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::EnterAlternateScreen
+    /// // ... render content ...
+    /// RenderOp::ExitAlternateScreen
+    /// ```
+    ExitAlternateScreen,
+
+    /// Enables mouse event tracking (clicks, movement, scroll).
+    ///
+    /// When enabled, the terminal reports mouse events to the application.
+    /// This includes mouse clicks, movements, and scroll wheel events.
+    ///
+    /// Maps to CSI `?1000h` ANSI sequence (DEC Private Mode Set for mouse tracking).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::EnableMouseTracking
+    /// // ... handle mouse events ...
+    /// RenderOp::DisableMouseTracking
+    /// ```
+    EnableMouseTracking,
+
+    /// Disables mouse event tracking.
+    ///
+    /// Restores normal mouse behavior where the terminal no longer reports mouse events
+    /// to the application. Called to restore normal operation after mouse tracking is
+    /// no longer needed.
+    ///
+    /// Maps to CSI `?1000l` ANSI sequence (DEC Private Mode Reset).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::EnableMouseTracking
+    /// // ... use mouse ...
+    /// RenderOp::DisableMouseTracking
+    /// ```
+    DisableMouseTracking,
+
+    /// Enables bracketed paste mode for distinguishing pasted text.
+    ///
+    /// When enabled, text pasted from the clipboard is wrapped with special escape
+    /// sequences, allowing the application to distinguish pasted content from keyboard
+    /// input. This prevents pasted content from being misinterpreted as commands.
+    ///
+    /// Maps to CSI `?2004h` ANSI sequence (DEC Private Mode Set for bracketed paste).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::EnableBracketedPaste
+    /// // ... text between CSI 200~ and CSI 201~ is pasted ...
+    /// RenderOp::DisableBracketedPaste
+    /// ```
+    EnableBracketedPaste,
+
+    /// Disables bracketed paste mode.
+    ///
+    /// Restores normal paste behavior where the terminal doesn't wrap pasted text
+    /// with special escape sequences. Called when clipboard detection is no longer
+    /// needed.
+    ///
+    /// Maps to CSI `?2004l` ANSI sequence (DEC Private Mode Reset).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// RenderOp::EnableBracketedPaste
+    /// // ... handle paste events ...
+    /// RenderOp::DisableBracketedPaste
+    /// ```
+    DisableBracketedPaste,
 
     /// No-operation render operation that does nothing when executed for `Default` impl.
     ///

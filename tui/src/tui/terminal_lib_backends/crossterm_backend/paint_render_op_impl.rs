@@ -129,6 +129,110 @@ mod impl_trait_paint_render_op {
                         locked_output_device,
                     );
                 }
+                // ===== Incremental Rendering Operations (Phase 1) =====
+                RenderOp::MoveCursorToColumn(col_index) => {
+                    PaintRenderOpImplCrossterm::move_cursor_to_column(
+                        *col_index,
+                        render_local_data,
+                        locked_output_device,
+                    );
+                }
+                RenderOp::MoveCursorToNextLine(row_height) => {
+                    PaintRenderOpImplCrossterm::move_cursor_to_next_line(
+                        *row_height,
+                        render_local_data,
+                        locked_output_device,
+                    );
+                }
+                RenderOp::MoveCursorToPreviousLine(row_height) => {
+                    PaintRenderOpImplCrossterm::move_cursor_to_previous_line(
+                        *row_height,
+                        render_local_data,
+                        locked_output_device,
+                    );
+                }
+                RenderOp::ClearCurrentLine => {
+                    queue_terminal_command!(
+                        locked_output_device,
+                        "ClearCurrentLine",
+                        Clear(ClearType::CurrentLine),
+                    );
+                }
+                RenderOp::ClearToEndOfLine => {
+                    PaintRenderOpImplCrossterm::clear_to_end_of_line(
+                        locked_output_device,
+                    );
+                }
+                RenderOp::ClearToStartOfLine => {
+                    PaintRenderOpImplCrossterm::clear_to_start_of_line(
+                        locked_output_device,
+                    );
+                }
+                RenderOp::PrintStyledText(text) => {
+                    PaintRenderOpImplCrossterm::print_styled_text(
+                        text,
+                        locked_output_device,
+                    );
+                }
+                RenderOp::ShowCursor => {
+                    queue_terminal_command!(locked_output_device, "ShowCursor", Show,);
+                }
+                RenderOp::HideCursor => {
+                    queue_terminal_command!(locked_output_device, "HideCursor", Hide,);
+                }
+                RenderOp::SaveCursorPosition => {
+                    PaintRenderOpImplCrossterm::save_cursor_position(
+                        locked_output_device,
+                    );
+                }
+                RenderOp::RestoreCursorPosition => {
+                    PaintRenderOpImplCrossterm::restore_cursor_position(
+                        locked_output_device,
+                    );
+                }
+                // ===== Terminal Mode Operations =====
+                RenderOp::EnterAlternateScreen => {
+                    queue_terminal_command!(
+                        locked_output_device,
+                        "EnterAlternateScreen",
+                        EnterAlternateScreen
+                    );
+                }
+                RenderOp::ExitAlternateScreen => {
+                    queue_terminal_command!(
+                        locked_output_device,
+                        "ExitAlternateScreen",
+                        LeaveAlternateScreen
+                    );
+                }
+                RenderOp::EnableMouseTracking => {
+                    queue_terminal_command!(
+                        locked_output_device,
+                        "EnableMouseTracking",
+                        EnableMouseCapture
+                    );
+                }
+                RenderOp::DisableMouseTracking => {
+                    queue_terminal_command!(
+                        locked_output_device,
+                        "DisableMouseTracking",
+                        DisableMouseCapture
+                    );
+                }
+                RenderOp::EnableBracketedPaste => {
+                    queue_terminal_command!(
+                        locked_output_device,
+                        "EnableBracketedPaste",
+                        EnableBracketedPaste
+                    );
+                }
+                RenderOp::DisableBracketedPaste => {
+                    queue_terminal_command!(
+                        locked_output_device,
+                        "DisableBracketedPaste",
+                        DisableBracketedPaste
+                    );
+                }
             }
         }
     }
@@ -347,6 +451,124 @@ mod impl_self {
                         SetForegroundColor(color_fg),
                     );
                 }
+            }
+        }
+
+        // ===== Incremental Rendering Operations (Phase 1) =====
+
+        /// Move cursor to specific column in current row (row unchanged).
+        /// Maps to CSI `<n>G` ANSI sequence.
+        pub fn move_cursor_to_column(
+            col_index: crate::ColIndex,
+            render_local_data: &mut RenderOpsLocalData,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
+            use crossterm::cursor::MoveToColumn;
+
+            let col = col_index.as_u16();
+            render_local_data.cursor_pos.col_index = col_index;
+
+            queue_terminal_command!(
+                locked_output_device,
+                "MoveCursorToColumn",
+                MoveToColumn(col),
+            );
+        }
+
+        /// Move cursor down by N lines and to column 0.
+        /// Maps to CSI `<n>E` ANSI sequence.
+        pub fn move_cursor_to_next_line(
+            row_height: crate::RowHeight,
+            render_local_data: &mut RenderOpsLocalData,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
+            use crate::col;
+            use crossterm::cursor::MoveToNextLine;
+
+            let n = row_height.as_u16();
+            // Add RowHeight to current RowIndex position
+            render_local_data.cursor_pos.row_index += row_height;
+            render_local_data.cursor_pos.col_index = col(0);
+
+            queue_terminal_command!(
+                locked_output_device,
+                "MoveCursorToNextLine",
+                MoveToNextLine(n),
+            );
+        }
+
+        /// Move cursor up by N lines and to column 0.
+        /// Maps to CSI `<n>F` ANSI sequence.
+        pub fn move_cursor_to_previous_line(
+            row_height: crate::RowHeight,
+            render_local_data: &mut RenderOpsLocalData,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
+            use crate::col;
+            use crossterm::cursor::MoveToPreviousLine;
+
+            let n = row_height.as_u16();
+            // Subtract RowHeight from current RowIndex position
+            render_local_data.cursor_pos.row_index -= row_height;
+            render_local_data.cursor_pos.col_index = col(0);
+
+            queue_terminal_command!(
+                locked_output_device,
+                "MoveCursorToPreviousLine",
+                MoveToPreviousLine(n),
+            );
+        }
+
+        /// Clear from cursor to end of line.
+        /// Maps to CSI `0K` (or `CSI K`) ANSI sequence.
+        pub fn clear_to_end_of_line(locked_output_device: LockedOutputDevice<'_>) {
+            queue_terminal_command!(
+                locked_output_device,
+                "ClearToEndOfLine",
+                Clear(ClearType::UntilNewLine),
+            );
+        }
+
+        /// Clear from cursor to beginning of line.
+        /// Maps to CSI `1K` ANSI sequence.
+        pub fn clear_to_start_of_line(locked_output_device: LockedOutputDevice<'_>) {
+            queue_terminal_command!(
+                locked_output_device,
+                "ClearToStartOfLine",
+                Clear(ClearType::FromCursorUp),
+            );
+        }
+
+        /// Print text that already contains ANSI escape codes.
+        /// No additional styling applied - text rendered as-is.
+        pub fn print_styled_text(
+            text: &str,
+            locked_output_device: LockedOutputDevice<'_>,
+        ) {
+            use crossterm::style::Print;
+
+            queue_terminal_command!(locked_output_device, "PrintStyledText", Print(text),);
+        }
+
+        /// Save cursor position to be restored later.
+        /// Maps to CSI `s` ANSI sequence (DECSC - save cursor).
+        pub fn save_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
+            // crossterm doesn't have a direct SaveCursorPosition command,
+            // so we write the ANSI sequence directly.
+            if let Err(e) = locked_output_device.write_all(b"\x1b[s") {
+                eprintln!("Failed to write SaveCursorPosition ANSI sequence: {e}");
+            }
+        }
+
+        /// Restore cursor position previously saved with [`SaveCursorPosition`].
+        /// Maps to CSI `u` ANSI sequence (DECRC - restore cursor).
+        ///
+        /// [`SaveCursorPosition`]: PaintRenderOpImplCrossterm::save_cursor_position
+        pub fn restore_cursor_position(locked_output_device: LockedOutputDevice<'_>) {
+            // crossterm doesn't have a direct RestoreCursorPosition command,
+            // so we write the ANSI sequence directly.
+            if let Err(e) = locked_output_device.write_all(b"\x1b[u") {
+                eprintln!("Failed to write RestoreCursorPosition ANSI sequence: {e}");
             }
         }
     }

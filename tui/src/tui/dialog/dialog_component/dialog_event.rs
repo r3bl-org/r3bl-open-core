@@ -17,7 +17,8 @@ mod dialog_event_impl {
     use super::{DialogEvent, InputEvent, Key, KeyPress, SpecialKey};
 
     impl DialogEvent {
-        /// Tries to convert the given [`InputEvent`] into a [`DialogEvent`].
+        /// Tries to convert the given [`InputEvent`] into a
+        /// [`DialogEvent`].
         /// - Enter and Esc are also matched against to return
         ///   [`DialogEvent::EnterPressed`] and [`DialogEvent::EscPressed`]
         /// - Otherwise, [Err] is returned.

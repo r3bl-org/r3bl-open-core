@@ -322,7 +322,7 @@ where
         let size = arg_size.into();
         let capacity = size.area();
 
-        // Create as Vec, then convert to Box<[T]> for fixed-size buffer
+        // Create as Vec, then compose_render_ops_into_ofs_buf to Box<[T]> for fixed-size buffer
         // Note: Vec allocations are automatically aligned for SIMD operations
         // The allocator ensures proper alignment for the element type
         let data = vec![T::default(); capacity].into_boxed_slice();

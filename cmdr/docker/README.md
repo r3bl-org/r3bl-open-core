@@ -8,14 +8,14 @@ cd cmdr && fish run.fish docker-build
 
 ```shell
 sudo apt update
-sudo apt install -y docker.io docker-compose
+sudo apt install -y docker.io docker-compose_render_ops_into_ofs_buf
 ```
 
 # Verify install of docker & docker compose
 
 ```shell
 sudo docker run hello-world
-docker compose version
+docker compose_render_ops_into_ofs_buf version
 ```
 
 # Run docker without sudo, requires logout
@@ -36,7 +36,7 @@ sudo systemctl enable docker
 
 ```shell
 # Remove Docker Engine
-sudo apt purge -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo apt purge -y docker-ce docker-ce-cli containerd.io docker-compose_render_ops_into_ofs_buf-plugin
 
 # Remove Docker data (be careful, this removes all containers, images, volumes)
 sudo rm -rf /var/lib/docker

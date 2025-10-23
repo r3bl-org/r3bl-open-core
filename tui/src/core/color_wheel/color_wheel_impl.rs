@@ -150,8 +150,8 @@ mod color_wheel_cache {
     /// - -0.0 == 0.0 but have different bit representations.
     /// - Denormalized numbers can have multiple representations.
     ///
-    /// To work around this, we convert f64 to bits for hashing, which gives us
-    /// deterministic hashing at the cost of treating -0.0 and 0.0 as different.
+    /// To work around this, we convert `f64` to bits for hashing, which gives us
+    /// deterministic hashing at the cost of treating `-0.0` and `0.0` as different.
     pub(super) mod hashing_helpers {
         #[allow(clippy::wildcard_imports)]
         use super::*;
@@ -501,8 +501,9 @@ impl ColorWheel {
 
     /// This method will return the length of the gradient. This is
     /// [`GradientLengthKind::NotCalculatedYet`] if the gradient has not been computed &
-    /// memoized yet via a call to
-    /// [`generate_color_wheel`](ColorWheel::generate_color_wheel).
+    /// memoized yet via a call to [`generate_color_wheel`].
+    ///
+    /// [`generate_color_wheel`]: ColorWheel::generate_color_wheel
     #[must_use]
     pub fn get_gradient_len(&self) -> GradientLengthKind { self.gradient_length_kind }
 

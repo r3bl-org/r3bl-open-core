@@ -3,12 +3,13 @@
 use super::{InlineString, InlineVec};
 use std::ops::{Deref, DerefMut};
 
-// XMARK: Clever Rust, use of newtype pattern to convert various types to `ItemsOwned`.
+// XMARK: Clever Rust, use of newtype pattern to convert various
+// types to `ItemsOwned`.
 
-/// The primary reason this module exists is to be able to easily convert from a borrowed
-/// type to an owned type. This module is built to make it easy to use
-/// `[r3bl_tui::readline_async::choose()]`. The `choose()` needs a list of items to allow
-/// the user to choose from.
+/// The primary reason this module exists is to be able to easily
+/// convert from a borrowed type to an owned type. This module is
+/// built to make it easy to use `[r3bl_tui::readline_async::choose()]`. The `choose()`
+/// needs a list of items to allow the user to choose from.
 ///
 /// This list of items can be easily constructed from:
 /// - Case 1: `vec!["one", "two", "three"]`
@@ -124,8 +125,8 @@ mod convert_into_items_owned {
     }
 
     impl From<&[&str]> for ItemsOwned {
-        /// The slice implementation is used to convert from a slice of `&str` to
-        /// `ItemsOwned`.
+        /// The slice implementation is used to convert from a
+        /// slice of `&str` to `ItemsOwned`.
         fn from(items: &[&str]) -> Self {
             let mut inline_vec = InlineVec::with_capacity(items.len());
             for item in items {
