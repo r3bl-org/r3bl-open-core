@@ -87,7 +87,7 @@ pub fn process_render_op(
             _arg_text_ref,
             _maybe_style_ref,
         ) => {
-            // This is a no-op. This operation is executed by RenderOpImplCrossterm.
+            // This is a no-op. This operation is executed by PaintRenderOpImplCrossterm.
         }
         RenderOp::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
             let result_new_pos = print_text_with_attributes(
@@ -146,9 +146,9 @@ pub fn process_render_op(
 /// ```text
 ///             my_pos.col_index
 ///             ↓
+/// C0123456789012345678901234567890123456789012345678901234567890
 ///             <------------------ usable space ----------------->
 /// <---------------- maybe_max_display_col_count ---------------->
-/// C0123456789012345678901234567890123456789012345678901234567890
 /// ```
 /// # Returns
 ///
@@ -413,7 +413,7 @@ mod print_text_with_attributes_helper {
                 }
 
                 // Deal w/ the display width of the `PixelChar` > 1. This is the
-                // equivalent of `jump_cursor()` in RenderOpImplCrossterm.
+                // equivalent of `jump_cursor()` in PaintRenderOpImplCrossterm.
                 //
                 // Move cursor "manually" to cover "extra" (display) width of a single
                 // character. This is a necessary precautionary measure, to make

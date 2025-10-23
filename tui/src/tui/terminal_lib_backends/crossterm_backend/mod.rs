@@ -3,9 +3,9 @@
 // Attach.
 pub mod debug;
 pub mod offscreen_buffer_paint_impl;
-pub mod render_op_impl;
+pub mod paint_render_op_impl;
 
 // Re-export.
 pub use debug::*;
 pub use offscreen_buffer_paint_impl::*;
-pub use render_op_impl::*;
+pub use paint_render_op_impl::*;

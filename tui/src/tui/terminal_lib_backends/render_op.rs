@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::TERMINAL_LIB_BACKEND;
 use crate::{CrosstermDebugFormatRenderOp, InlineString, InlineVec, LockedOutputDevice,
-            PaintRenderOp, Pos, RenderOpImplCrossterm, Size, TerminalLibBackend,
+            PaintRenderOp, PaintRenderOpImplCrossterm, Pos, Size, TerminalLibBackend,
             TuiColor, TuiStyle, ok};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
@@ -271,7 +271,7 @@ pub mod render_ops_impl {
         ) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}.paint(
+                    PaintRenderOpImplCrossterm {}.paint(
                         skip_flush,
                         render_op,
                         window_size,
@@ -419,7 +419,7 @@ mod render_op_impl {
 
     impl Debug for RenderOp {
         /// When [`crate::RenderPipeline`] is printed as debug, each [`RenderOp`] is
-        /// printed using this method. Also [`crate::queue_render_op`!] does not
+        /// printed using this method. Also [`crate::queue_terminal_command`!] does not
         /// use this; it has its own way of logging output.
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             match TERMINAL_LIB_BACKEND {
@@ -444,7 +444,7 @@ mod render_op_impl_trait_flush {
         fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}.flush(locked_output_device);
+                    PaintRenderOpImplCrossterm {}.flush(locked_output_device);
                 }
                 TerminalLibBackend::Termion => unimplemented!(),
             }
@@ -453,7 +453,8 @@ mod render_op_impl_trait_flush {
         fn clear_before_flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
             match TERMINAL_LIB_BACKEND {
                 TerminalLibBackend::Crossterm => {
-                    RenderOpImplCrossterm {}.clear_before_flush(locked_output_device);
+                    PaintRenderOpImplCrossterm {}
+                        .clear_before_flush(locked_output_device);
                 }
                 TerminalLibBackend::Termion => unimplemented!(),
             }

@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{ColorSupport, DefaultIoDevices, ItemsOwned, TuiColor, choose,
-               cli_text_inline, get_terminal_width, global_color_support, height,
-               new_style,
+use r3bl_tui::{DefaultIoDevices, ItemsOwned, TuiColor, choose, cli_text_inline,
+               get_terminal_width, height, new_style,
                readline_async::{HowToChoose, StyleSheet},
                set_mimalloc_in_main, usize, width};
 use serde::{Deserialize, Serialize};

@@ -13,17 +13,17 @@ use strum_macros::EnumCount;
 /// [`cli_text_lines!`] or the constructor functions like [`fg_red`], [`fg_green`],
 /// [`fg_blue`], etc.
 ///
-/// `CliTextInline` represents a **text fragment** that can appear inline within a line.
+/// [`CliTextInline`] represents a **text fragment** that can appear inline within a line.
 /// Multiple fragments compose into a [`CliTextLine`], and multiple lines compose into
 /// [`CliTextLines`]. This structure is optimized for stack allocation to avoid heap
 /// overhead for typical CLI text.
 ///
 /// The struct has four fields:
-/// - `text` - the text content to display.
-/// - `attribs` - text attributes (bold, italic, dim, underline, etc.) to apply to the
+/// - [`text`](Self::text) - the text content to display.
+/// - [`attribs`](Self::attribs) - text attributes (bold, italic, dim, underline, etc.) to apply to the
 ///   text.
-/// - `color_fg` - optional foreground color.
-/// - `color_bg` - optional background color.
+/// - [`color_fg`](Self::color_fg) - optional foreground color.
+/// - [`color_bg`](Self::color_bg) - optional background color.
 ///
 /// Once created, either directly or using constructor functions like [`fg_red`], you
 /// can then use [`bg_dark_gray`] to add a background color to the text.
@@ -151,7 +151,7 @@ pub mod cli_text_inline_impl {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    /// Options for converting or clipping `CliTextInline` to a range.
+    /// Options for converting or clipping [`CliTextInline`] to a range.
     ///
     /// Uses (start, width) semantics with display-width awareness to correctly handle
     /// Unicode characters of varying widths (e.g., CJK characters that occupy 2 columns):
@@ -159,7 +159,7 @@ pub mod cli_text_inline_impl {
     /// - `width`: Display width in columns to include, or None for "to end of text"
     ///
     /// # Display Width Handling
-    /// This uses the same semantics as `GCStringOwned::clip()`, accounting for:
+    /// This uses the same semantics as [`GCStringOwned::clip()`], accounting for:
     /// - Wide characters (CJK) that occupy multiple columns
     /// - Zero-width characters (combining marks)
     /// - Accurate terminal column positioning
@@ -214,7 +214,7 @@ pub mod cli_text_inline_impl {
         /// - `start`: 0-based index of the first character to include
         /// - `width`: Number of characters to include, or None for "to end of text"
         ///
-        /// This is optimized to avoid the wasteful `convert()` call by directly
+        /// This is optimized to avoid the wasteful [`convert()`](Self::convert) call by directly
         /// slicing the text using grapheme clustering.
         #[must_use]
         pub fn clip(
@@ -277,7 +277,7 @@ pub mod cli_text_inline_impl {
         /// - To convert the entire text, just pass in
         ///   [`CliTextConvertOptions::default()`].
         /// - To clip the text to a certain display width, pass in the [`ColWidth`] via
-        ///   [`From<ColWidth>`] or explicitly set the `width` field.
+        ///   [`From<ColWidth>`] or explicitly set the [`width`](CliTextConvertOptions::width) field.
         /// - Uses (start, width) semantics where:
         ///   - `start`: 0-based display column index of the first column to include
         ///   - `width`: Display width in columns to include, or None for "to end of text"
@@ -909,7 +909,7 @@ impl FastStringify for CliTextInline {
 
         // Write the ANSI-encoded output to the buffer
         // ansi_output is UTF-8 valid since it contains ANSI codes and UTF-8 characters
-        acc.push_str(std::str::from_utf8(ansi_output).unwrap());
+        acc.push_str(std::str::from_utf8(ansi_output).map_err(|_| std::fmt::Error)?);
 
         // Emit final reset code (consistent with old behavior - always emitted)
         SgrCode::Reset.write_to_buf(acc)?;

@@ -10,18 +10,27 @@
 - [x] [`task_fix_params_ext`](docs/done/task_fix_params_ext.md)
 - [⌛] review `pty_mux`, `offscreen_buffer` and `ansi conformance tests`
 - [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
-- [⌛] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)
 - [ ] extend `main_event_loop.rs` to support OSC output to terminal emulator (main window)
   - via `GlobalData::main_thread_channel_sender` -> add a variant to
     `TerminalWindowMainThreadSignal`
   - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
   - using `OscController` to write to `OutputDevice`
 
+# optimize offscreen buffer
+
+- [ ] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)
+
+# remove crossterm
+
+- [⌛] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
+  `r3bl_open_core` codebase
+
 # unify rendering paths
 
-- [⌛] use [`task_unify_rendering`](docs/task_unify_rendering.md) to unify the rendering paths of
-  `ASText`, `TuiStyledText`, and `readline_async` into a single, optimized rendering pipeline that
-  works for both use cases while preparing for the future removal of crossterm dependency
+- [x] 2025-10-22 use [`task_unify_rendering`](docs/done/task_unify_rendering.md) to unify the
+      rendering paths of `ASText`, `TuiStyledText`, and `readline_async` into a single, optimized
+      rendering pipeline that works for both use cases while preparing for the future removal of
+      crossterm dependency
 
 # submit talk for tokio conf 2026 proposal
 
@@ -65,11 +74,6 @@
 
 - [ ] PRD [`task_build_tools_infra_plan`](docs/task_build_tools_infra_plan.md) to build
       `build-infra-tools`
-
-# remove crossterm
-
-- [ ] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
-      `r3bl_open_core` codebase
 
 # refactor or rewrite the UI layout, sizing, and styling code
 

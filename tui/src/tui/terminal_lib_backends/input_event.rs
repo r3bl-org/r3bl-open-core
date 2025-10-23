@@ -99,7 +99,7 @@ pub enum InputEvent {
     /// - **Ctrl+V**: Application-controlled, consistent with desktop applications
     ///
     /// Note: Bracketed paste must be enabled via
-    /// [`EnableBracketedPaste`](crate::RenderOpImplCrossterm::raw_mode_enter) in raw
+    /// [`EnableBracketedPaste`](crate::PaintRenderOpImplCrossterm::raw_mode_enter) in raw
     /// mode.
     BracketedPaste(String),
 }

@@ -13,7 +13,7 @@
     - [Solution](#solution)
   - [Current State Analysis](#current-state-analysis)
     - [Path 1: Full TUI Rendering](#path-1-full-tui-rendering)
-    - [Path 2: Direct CliTextInline Rendering](#path-2-direct-clitext-rendering)
+    - [Path 2: Direct CliTextInline Rendering](#path-2-direct-clitextinline-rendering)
     - [Path 3: readline_async Components](#path-3-readline_async-components)
       - [**Spinner Rendering** (`spinner_impl/spinner_render.rs`)](#spinner-rendering-spinner_implspinner_renderrs)
       - [**Choose Component** (`choose_impl/components/select_component.rs`)](#choose-component-choose_implcomponentsselect_componentrs)
@@ -30,7 +30,7 @@
     - [Benefits Already Realized](#benefits-already-realized)
   - [Implementation Plan](#implementation-plan)
     - [Phase 0: ✅ COMPLETE - Consolidate Style Attributes (Committed)](#phase-0--complete---consolidate-style-attributes-committed)
-    - [Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliTextInline Consistently](#phase-05--prerequisite---consolidate-choose-and-readline_async-to-use-clitext-consistently)
+    - [Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliTextInline Consistently](#phase-05--prerequisite---consolidate-choose-and-readline_async-to-use-clitextinline-consistently)
       - [**Problem to Fix**](#problem-to-fix)
       - [**Goal of Phase 0.5**](#goal-of-phase-05)
       - [**Tasks in Phase 0.5**](#tasks-in-phase-05)
@@ -40,12 +40,14 @@
       - [**FAQ: What About Cursor/Clear Operations?**](#faq-what-about-cursorclear-operations)
       - [**Why This Matters**](#why-this-matters)
       - [**Success Criteria for Phase 0.5**](#success-criteria-for-phase-05)
-    - [Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support (✅ COMPLETE)](#phase-1-rename-clitext-ansistyledtext-%E2%86%92-clitext-and-extend-pixelchar-support--complete)
+    - [Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support (✅ COMPLETE)](#phase-1-rename-clitextinline-ansistyledtext-%E2%86%92-clitextinline-and-extend-pixelchar-support--complete)
     - [Phase 2: Create Unified ANSI Generator (✅ COMPLETE)](#phase-2-create-unified-ansi-generator--complete)
-    - [Phase 3: Unified Rendering with OffscreenBuffer (NEXT after Phase 2)](#phase-3-unified-rendering-with-offscreenbuffer-next-after-phase-2)
-    - [Phase 4: Update ASText Rendering (NEXT after Phase 3)](#phase-4-update-astext-rendering-next-after-phase-3)
-    - [Phase 5: Update choose() and readline_async Implementations (NEXT after Phase 4)](#phase-5-update-choose-and-readline_async-implementations-next-after-phase-4)
-    - [Phase 6: Update RenderOp Implementation (FINAL - after Phase 5)](#phase-6-update-renderop-implementation-final---after-phase-5)
+    - [Phase 3: Unified Rendering with OffscreenBuffer (✅ COMPLETE)](#phase-3-unified-rendering-with-offscreenbuffer--complete)
+    - [Phase 4: Update CliTextInline Rendering (✅ COMPLETE - October 22, 2025)](#phase-4-update-clitextinline-rendering--complete---october-22-2025)
+    - [Phase 5: Update choose() and readline_async Implementations (⏸️ DEFERRED - Will be done in task_remove_crossterm.md)](#phase-5-update-choose-and-readline_async-implementations--deferred---will-be-done-in-task_remove_crosstermmd)
+    - [Phase 6: Update RenderOp Implementation (✅ COMPLETE - October 22, 2025)](#phase-6-update-renderop-implementation--complete---october-22-2025)
+    - [Phase 6 Completion Summary (October 22, 2025)](#phase-6-completion-summary-october-22-2025)
+    - [Architectural Impact](#architectural-impact)
   - [Integration with Direct ANSI Plan](#integration-with-direct-ansi-plan)
     - [Phasing and Responsibility](#phasing-and-responsibility)
       - [THIS TASK: task_unify_rendering.md (Phases 0-6)](#this-task-task_unify_renderingmd-phases-0-6)
@@ -79,6 +81,18 @@
     - [✅ Phase 2 Complete - Unified ANSI Generator Implemented](#-phase-2-complete---unified-ansi-generator-implemented)
   - [Phase 3 Completion Update (October 22, 2025)](#phase-3-completion-update-october-22-2025)
     - [✅ Phase 3 Complete - Unified ANSI Rendering with RenderToAnsi Trait](#-phase-3-complete---unified-ansi-rendering-with-rendertoansi-trait)
+  - [Phase 3 Implementation Detail: ANSI Constants and Synchronization (October 22, 2025)](#phase-3-implementation-detail-ansi-constants-and-synchronization-october-22-2025)
+    - [✅ Code Quality Improvement: Extract Hardcoded ANSI Sequences](#-code-quality-improvement-extract-hardcoded-ansi-sequences)
+  - [Phase 4-6 Architectural Clarifications (October 22, 2025)](#phase-4-6-architectural-clarifications-october-22-2025)
+    - [Strategic Decision: Phase 5 Deferred, Phase 6 as Current Work](#strategic-decision-phase-5-deferred-phase-6-as-current-work)
+      - [Why Phase 5 is Deferred](#why-phase-5-is-deferred)
+      - [Phase 6 Completion (October 22, 2025)](#phase-6-completion-october-22-2025)
+    - [Architectural Insights: Control Ops vs Display Ops](#architectural-insights-control-ops-vs-display-ops)
+      - [Two Types of RenderOp Operations](#two-types-of-renderop-operations)
+      - [Why This Split Matters](#why-this-split-matters)
+    - [Ultimate Architecture Vision](#ultimate-architecture-vision)
+    - [Execution Timeline: Why This Order Works](#execution-timeline-why-this-order-works)
+    - [Key Achievement: Three Unified Rendering Paths](#key-achievement-three-unified-rendering-paths)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -951,130 +965,196 @@ impl RenderToAnsi for OffscreenBuffer {
 // Then rendered using same RenderToAnsi trait
 ```
 
-### Phase 4: Update CliTextInline Rendering (🎯 NEXT - Phase 3 Complete)
+### Phase 4: Update CliTextInline Rendering (✅ COMPLETE - October 22, 2025)
 
-Modify CliTextInline to use the new unified renderer and `TuiStyleAttribs`:
+**Status**: This phase is already complete! CliTextInline uses the unified renderer via the
+`FastStringify` trait.
+
+**Implementation** (see `tui/src/core/ansi/cli_text.rs:897-909`):
 
 ```rust
-impl Display for CliTextInline {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        // Convert to PixelChar array
+impl FastStringify for CliTextInline {
+    fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
+        // Convert to PixelChar array using the unified representation
         let pixels = self.convert(CliTextConvertOptions::default());
 
-        // Use unified renderer
+        // Use unified renderer for ANSI generation
         let mut renderer = PixelCharRenderer::new();
         let ansi_output = renderer.render_line(&pixels);
 
-        // Write to formatter
-        f.write_str(std::str::from_utf8(ansi_output).unwrap())
-    }
-}
-```
-
-### Phase 5: Update choose() and readline_async Implementations (NEXT after Phase 4)
-
-Migrate both the main choose() SelectComponent AND readline_async components to use the unified
-rendering pipeline with `PixelCharRenderer`:
-
-**Components to update:**
-
-1. `choose_impl/components/select_component.rs` - main choose UI component
-2. `readline_async/spinner_impl/spinner_render.rs` - spinner text generation
-3. `readline_async/choose_impl/components/select_component.rs` - readline choose component
-   (duplicate UI)
-
-**Example migration for SelectComponent:**
-
-```rust
-impl FunctionComponent<State> for SelectComponent {
-    fn render(&mut self, state: &mut State) -> CommonResult<()> {
-        // Create lightweight buffer
-        let mut buffer = OffscreenBuffer::with_capacity(
-            state.items.len() + 1,
-            viewport_width.as_usize()
-        );
-
-        // Render header using CliTextInline (renamed from ASText)
-        match &state.header {
-            Header::SingleLine(text) => {
-                let header_text = cli_text(text, self.style.header_style.into());
-                let pixels = header_text.convert(viewport_width);
-                buffer.push_line(pixels);
-            }
-            Header::MultiLine(lines) => {
-                for line in lines {
-                    let mut line_pixels = Vec::new();
-                    for cli_text_span in line {
-                        let pixels = cli_text_span.convert(CliTextConvertOptions::default());
-                        line_pixels.extend(pixels);
-                    }
-                    buffer.push_line(line_pixels);
-                }
-            }
-        }
-
-        // Render items using CliTextInline
-        for (idx, item) in state.visible_items().enumerate() {
-            let style = determine_item_style(idx, state, &self.style);
-            let prefix = create_item_prefix(idx, state);
-            let item_text = cli_text(&format!("{}{}", prefix, item), style.into());
-            let pixels = item_text.convert(viewport_width);
-            buffer.push_line(pixels);
-        }
-
-        // Render to ANSI using unified PixelCharRenderer
-        let mut renderer = PixelCharRenderer::new();
-        let ansi_output = renderer.render_buffer(&buffer);
-
-        // Write directly to output device
-        self.output_device.write_all(&ansi_output)?;
-        self.output_device.flush()?;
-
+        // Write the ANSI-encoded output to the buffer
+        // ansi_output is UTF-8 valid since it contains ANSI codes and UTF-8 characters
+        acc.push_str(std::str::from_utf8(ansi_output).unwrap());
         Ok(())
     }
 }
+
+// Display trait is auto-generated via: generate_impl_display_for_fast_stringify!(CliTextInline);
 ```
 
-### Phase 6: Update RenderOp Implementation (FINAL - after Phase 5)
+**Key Achievement**: All direct CliTextInline rendering (in choose(), readline_async, utilities) now
+uses `PixelCharRenderer` for ANSI generation. This is a major unification point!
 
-**⚠️ IMPORTANT: At the end of Phase 6, crossterm is still the I/O backend.** We're unifying the ANSI
-generation logic, not replacing the backend yet.
+### Phase 5: Update choose() and readline_async Implementations (⏸️ DEFERRED - Will be done in task_remove_crossterm.md)
 
-This phase remains with `RenderOpImplCrossterm` (note the name). The switch to direct ANSI backend
-happens separately in task_remove_crossterm.md (Phase 1), which creates `RenderOpImplDirectAnsi`.
+**Status**: This phase is **intentionally deferred** because the proper architectural migration
+belongs in the crossterm removal task.
 
-Modify RenderOp::PaintTextWithAttributes to use the unified renderer and `TuiStyleAttribs`:
+**Why deferred:**
+
+1. **Already using unified renderer** ✅: choose() and readline_async already use `CliTextInline`,
+   which uses `PixelCharRenderer` (see Phase 4 completion)
+2. **Migration path is RenderOps** 🎯: The architectural pattern for these components is to migrate
+   to `RenderOps` with `RenderOp::PrintStyledText`, not to use `OffscreenBuffer`
+3. **Avoids throwaway work** 🗑️: Migrating to `OffscreenBuffer` now would be wasteful when we're
+   immediately changing them to use `RenderOps`
+
+**What will happen instead:**
+
+In **task_remove_crossterm.md Phase 3**, these components will be migrated to:
+
+- Use `RenderOps` as the rendering abstraction
+- Emit `RenderOp::PrintStyledText(styled_text)` with pre-rendered ANSI
+- Emit control ops (`MoveCursorToColumn`, `ClearCurrentLine`, etc.) for incremental updates
+- Use the DirectAnsi backend instead of crossterm macros
+
+**Current state is acceptable:**
+
+- `choose()` renders text via `CliTextInline.to_string()` → unified renderer
+- `readline_async()` renders text via `CliTextInline.to_string()` → unified renderer
+- Both components already benefit from `PixelCharRenderer` improvements
+- The text→ANSI path is optimized at the `PixelCharRenderer` level
+
+### Phase 6: Update RenderOp Implementation (✅ COMPLETE - October 22, 2025)
+
+**Status**: Complete! Phase 6 has been successfully implemented and cleaned up. Phase 5 remains
+intentionally deferred (see above).
+
+**⚠️ ARCHITECTURAL CLARIFICATION:**
+
+RenderOp handles **two types of operations:**
+
+1. **Control ops**: Cursor movement, screen clearing, attributes (crossterm operations)
+2. **Display ops**: Text rendering with styling (PixelCharRenderer operations)
+
+**Phase 6 scope:** Modify ONLY the display ops to use `PixelCharRenderer`. Control ops remain with
+crossterm until task_remove_crossterm.md.
+
+**Why this matters:**
+
+- **Control ops** → `RenderOp::MoveCursorPositionAbs`, `ClearScreen`, `SetFgColor`, etc.
+- **Display ops** → `RenderOp::CompositorNoClipTruncPaintTextWithAttributes` (called by compositor)
+- The compositor extracts changed text regions as strings (from pre-calculated PixelChars)
+- We accept the text→PixelChar round-trip as technical debt during this transition
+
+**At the end of Phase 6:**
+
+- ✅ All rendering paths use `PixelCharRenderer` for ANSI generation
+- ✅ Crossterm is still the I/O backend (writes to stdout)
+- ✅ Creates clean abstraction for later backend replacement
+
+**Later in task_remove_crossterm.md:**
+
+- A new `RenderOpImplDirectAnsi` will be created (parallel to `RenderOpImplCrossterm`)
+- Uses same `PixelCharRenderer` output
+- Writes directly to stdout (no crossterm)
+- Control ops emit raw ANSI sequences
+
+**Implementation for paint_text_with_attributes()**:
+
+File: `tui/src/tui/terminal_lib_backends/crossterm_backend/render_op_impl.rs`
 
 ```rust
-impl PaintRenderOp for RenderOpImplCrossterm {
-    fn paint(&mut self, /* params */) {
-        match render_op {
-            RenderOp::PaintTextWithAttributes(text, maybe_style) => {
-                // Create CliTextInline from the text and style
-                let cli_text = CliTextInline {
-                    text: text.clone(),
-                    styles: maybe_style.map(|s| s.into()).unwrap_or_default(),
-                };
+impl RenderOpImplCrossterm {
+    pub fn paint_text_with_attributes(
+        text_arg: &str,
+        maybe_style: Option<TuiStyle>,
+        window_size: Size,
+        render_local_data: &mut RenderOpsLocalData,
+        locked_output_device: LockedOutputDevice<'_>,
+    ) {
+        use crate::CliTextInline;
 
-                // Convert to PixelChar
-                let pixels = cli_text.convert(CliTextConvertOptions::default());
+        // Create CliTextInline from the text and style
+        let style = maybe_style.unwrap_or_default();
+        let cli_text = CliTextInline {
+            text: text_arg.into(),
+            attribs: style.attribs,
+            color_fg: style.color_fg,
+            color_bg: style.color_bg,
+        };
 
-                // Render using unified renderer (generates ANSI sequences)
-                let mut renderer = PixelCharRenderer::new();
-                let ansi_output = renderer.render_line(&pixels);
+        // Convert to PixelChar array
+        let pixels = cli_text.convert(CliTextConvertOptions::default());
 
-                // Write to output device (crossterm writes to stdout)
-                locked_output_device.write_all(ansi_output).ok();
-            }
-            // ... other ops
-        }
+        // Use unified renderer to generate ANSI bytes
+        let mut renderer = PixelCharRenderer::new();
+        let ansi_output = renderer.render_line(&pixels);
+
+        // Write ANSI-encoded output to the output device
+        locked_output_device.write_all(ansi_output).ok();
+
+        // Update cursor position tracking (existing logic)
+        let text_display_width = GCStringOwned::from(text_arg).width();
+        *render_local_data.cursor_pos.col_index += *text_display_width;
+        sanitize_and_save_abs_pos(
+            render_local_data.cursor_pos,
+            window_size,
+            render_local_data,
+        );
     }
 }
-
-// Later in task_remove_crossterm.md, a new RenderOpImplDirectAnsi will be created
-// that uses the same PixelCharRenderer but writes directly to stdout instead of
-// through crossterm's OutputDevice
 ```
+
+**Key changes from current code:**
+
+1. Replace `style_to_attribute()` helper calls with CliTextInline conversion
+2. Remove `SetAttribute` queueing (was emitting individual ANSI codes)
+3. Remove `paint_style_and_text()` delegation
+4. Use `PixelCharRenderer` directly (same as full TUI now uses)
+5. Keep cursor position tracking logic unchanged
+
+### Phase 6 Completion Summary (October 22, 2025)
+
+**Implementation Commit**: `1a389e3f` "[tui] Phase 6: Implement unified PixelCharRenderer in
+RenderOpImplCrossterm"
+
+Phase 6 has been successfully completed with the following deliverables:
+
+1. **Modified Method**: `RenderOpImplCrossterm::paint_text_with_attributes()`
+   - Now uses unified `PixelCharRenderer` for ANSI generation
+   - Replaced individual crossterm command queueing with smart ANSI byte generation
+   - Maintains cursor position tracking and window size bounds checking
+
+2. **Test Validation**:
+   - All 2092 cargo tests pass ✅
+   - Zero compiler warnings ✅
+   - No regressions in existing functionality ✅
+
+3. **Cleanup Commit**: `827c37b5` "[tui] Phase 6 cleanup: Remove dead code and improve
+   documentation"
+   - Removed `perform_paint` module (~95 lines of dead code)
+   - Cleaned up unused imports: `InlineVec`, `Attribute`, `Print`, `SetAttribute`,
+     `smallvec::smallvec`, `std::borrow::Cow`, `std::borrow::Cow`
+   - Updated code comments to document two execution paths for `RenderOp::PaintTextWithAttributes`:
+     - **COMPOSITOR PATH**: Apps → RenderOp → render_pipeline_to_offscreen_buffer →
+       CompositorNoClipTruncPaintTextWithAttributes → PixelCharRenderer
+     - **DIRECT PATH**: Apps or code directly execute RenderOp without compositor (edge cases,
+       tests)
+   - All tests continue to pass with cleanup changes ✅
+
+### Architectural Impact
+
+Phase 6 completes the unification of rendering paths:
+
+- ✅ Full TUI compositor path uses `PixelCharRenderer`
+- ✅ Direct text painting uses `PixelCharRenderer`
+- ✅ Dialog system already uses `PixelCharRenderer` (via CliTextInline)
+- ✅ All paths generate consistent ANSI output through unified renderer
+
+This establishes a clean abstraction boundary between RenderOps (logical operations) and ANSI output
+generation (PixelCharRenderer), enabling seamless migration to direct ANSI backend in
+task_remove_crossterm.md.
 
 ## Integration with Direct ANSI Plan
 
@@ -1643,3 +1723,193 @@ By ensuring ANSI constants are shared and synchronized, we:
 - Make it obvious where ANSI sequences are defined (single location)
 - Enable easy migration paths (if SGR_RESET logic changes, both enum and constant stay synchronized)
 - Foundation for future direct ANSI backend (task_remove_crossterm.md) - constants are ready-to-use
+
+## Phase 4-6 Architectural Clarifications (October 22, 2025)
+
+### Strategic Decision: Phase 5 Deferred, Phase 6 as Current Work
+
+After comprehensive architectural analysis involving all three rendering paths, the following
+strategic decision was made to maximize efficiency and minimize throwaway work:
+
+#### Why Phase 5 is Deferred
+
+**Current State Analysis:**
+
+- choose() already uses `CliTextInline.to_string()` → `PixelCharRenderer` ✅
+- readline_async already uses `CliTextInline.to_string()` → `PixelCharRenderer` ✅
+- Both paths benefit from unified renderer improvements automatically
+
+**The Architectural Problem with Phase 5 as Planned:**
+
+1. **OffscreenBuffer migration** would require:
+   - Rebuilding full layout logic for choose() UI
+   - Migrating incremental rendering to buffer-based rendering
+   - Duplicating the compositor's work just for choose()
+
+2. **Better approach exists**: RenderOps
+   - task_remove_crossterm.md Phase 3 will migrate these components to RenderOps
+   - This is the correct long-term architectural pattern
+   - Attempting OffscreenBuffer migration now would be wasteful
+
+**Decision**: Skip Phase 5 architectural changes. Current CliTextInline approach is sufficient.
+Proper migration happens in task_remove_crossterm.md Phase 3 (RenderOps + DirectAnsi backend).
+
+#### Phase 6 Completion (October 22, 2025)
+
+**Phase 6 successfully validated the unified renderer** in the full TUI render loop before the big
+crossterm removal:
+
+**What Phase 6 Accomplished:**
+
+- ✅ Tested `PixelCharRenderer` in production code path (compositor output)
+- ✅ Demonstrated that all three paths can use same ANSI generation
+- ✅ Completed small, focused change (one function modification + cleanup)
+- ✅ Provided safe rollback point (all tests passing, zero warnings)
+- ✅ Identified and removed dead code (`perform_paint` module, ~95 lines)
+
+**Implementation Details:**
+
+- Modified `RenderOpImplCrossterm::paint_text_with_attributes()`
+- Changes: text → CliTextInline → PixelChars → PixelCharRenderer → ANSI
+- Kept all control ops with crossterm (for now, handled in task_remove_crossterm.md)
+- Maintained full backward compatibility and test coverage
+
+### Architectural Insights: Control Ops vs Display Ops
+
+#### Two Types of RenderOp Operations
+
+**Control Operations** (remain with crossterm in Phase 6):
+
+```
+RenderOp::MoveCursorPositionAbs → MoveToPosition(row, col)
+RenderOp::ClearScreen → Clear(All)
+RenderOp::SetFgColor → SetForegroundColor
+RenderOp::SetBgColor → SetBackgroundColor
+```
+
+These stay as crossterm calls until task_remove_crossterm.md Phase 1-2 extends RenderOp enum.
+
+**Display Operations** (changed in Phase 6):
+
+```
+RenderOp::CompositorNoClipTruncPaintTextWithAttributes(text, style)
+  → text → CliTextInline → PixelChars → PixelCharRenderer → ANSI
+```
+
+This is the only variant modified in Phase 6.
+
+#### Why This Split Matters
+
+The compositor works with **text extracted from PixelChars**:
+
+1. Full TUI fills OffscreenBuffer with PixelChars
+2. Diff algorithm identifies changed regions
+3. Compositor receives: `CompositorNoClipTruncPaintTextWithAttributes(text, style)`
+4. We accept the text→PixelChar round-trip as **technical debt during transition**
+
+This is efficient enough because:
+
+- PixelCharRenderer optimizations still apply
+- Conversion happens once per changed region (not per-character)
+- DirectAnsi backend can optimize further if needed
+
+### Ultimate Architecture Vision
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Application                           │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+          ┌────────────▼───────────┐
+          │     RenderOps          │
+          │  (layout abstraction)  │
+          └────────────┬───────────┘
+                       │
+          ┌────────────▼───────────┐
+          │  OffscreenBuffer       │
+          │  (materialized state)  │
+          │  Contains: PixelChar[] │
+          └────────────┬───────────┘
+                       │
+                       ├─→ Diff algorithm
+                       │
+      ┌────────────────▼────────────────────┐
+      │  CompositorNoClipTrunc...           │
+      │  Extracts changed text + style      │
+      └──────────────┬──────────────────────┘
+                     │
+                     │ (Phase 6)
+         ┌───────────▼───────────────┐
+         │  CliTextInline conversion │
+         │  text + style → PixelChar │
+         └──────────────┬────────────┘
+                        │
+         ┌──────────────▼─────────┐
+         │  PixelCharRenderer     │
+         │ (unified ANSI gen)     │
+         │ Smart style diffing    │
+         └──────────────┬─────────┘
+                        │
+         ┌──────────────▼─────────┐
+         │  ANSI bytes (UTF-8)    │
+         │ Ready for any backend  │
+         └──────────────┬─────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼ (Now)         ▼ (Phase 2)     ▼ (Phase 3)
+    Crossterm       DirectAnsi       DirectAnsi
+    OutputDevice    Backend          Backend
+       (Phase 6)    (Pending)        (Pending)
+        │               │               │
+        └───────────────┼───────────────┘
+                        │
+                        ▼
+                      stdout
+```
+
+### Execution Timeline: Why This Order Works
+
+**Phase 6 (NOW)**: Validate PixelCharRenderer in full TUI
+
+- Change: RenderOpImplCrossterm uses PixelCharRenderer
+- Test: Verify all three paths unified
+- Risk: Low (one function, clear rollback)
+
+**Then: task_remove_crossterm.md Phase 1-3**: Complete backend migration
+
+- Phase 1: Extend RenderOp enum with control ops (MoveCursorToColumn, ClearCurrentLine, etc.)
+- Phase 2: Create RenderOpImplDirectAnsi backend
+- Phase 3: Migrate choose()/readline_async to RenderOps, remove crossterm
+
+**Result**:
+
+- All rendering uses PixelCharRenderer ✅
+- All I/O uses DirectAnsi backend ✅
+- Crossterm dependency removed ✅
+- Two independent, well-scoped tasks ✅
+
+### Key Achievement: Three Unified Rendering Paths
+
+After Phase 6 completion, all three paths use the same ANSI generation:
+
+**Path 1: Full TUI**
+
+```
+RenderOps → OffscreenBuffer → Compositor → PixelCharRenderer → ANSI
+```
+
+**Path 2: choose() (deferred migration in task_remove_crossterm)**
+
+```
+SelectComponent → CliTextInline → PixelCharRenderer → ANSI
+```
+
+**Path 3: readline_async (deferred migration in task_remove_crossterm)**
+
+```
+Spinner/Choose → CliTextInline → PixelCharRenderer → ANSI
+```
+
+All three converge on `PixelCharRenderer` for ANSI generation. The differences are in how they
+organize content before rendering, not in how they generate ANSI output.

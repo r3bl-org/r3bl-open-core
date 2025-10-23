@@ -13,19 +13,47 @@
     - [RenderOp as Universal Language](#renderop-as-universal-language)
     - [Architectural Symmetry](#architectural-symmetry)
     - [Benefits of This Approach](#benefits-of-this-approach)
+    - [Architectural Alignment with task_unify_rendering.md](#architectural-alignment-with-task_unify_renderingmd)
   - [Implementation Plan](#implementation-plan)
     - [Phase 1: Extend RenderOp for Incremental Rendering](#phase-1-extend-renderop-for-incremental-rendering)
     - [Phase 2: Implement DirectAnsi Backend](#phase-2-implement-directansi-backend)
+      - [2.1 Add DirectAnsi Backend Enum Variant](#21-add-directansi-backend-enum-variant)
+      - [2.2 Create ANSI Sequence Generator](#22-create-ansi-sequence-generator)
+      - [2.3 Implement RenderOpImplDirectAnsi](#23-implement-renderopimpldirectansi)
+      - [2.4 Update Routing Logic](#24-update-routing-logic)
     - [Phase 3: Migrate choose() and readline_async() to RenderOps](#phase-3-migrate-choose-and-readline_async-to-renderops)
+      - [3.1 Update Macros](#31-update-macros)
+      - [3.2 Migrate select_component.rs](#32-migrate-select_componentrs)
+      - [3.3 Update Imports](#33-update-imports)
     - [Phase 4: Input Handling with mio + VT-100 Parser](#phase-4-input-handling-with-mio--vt-100-parser)
+      - [4.1 Create Async Stdin Reader with mio](#41-create-async-stdin-reader-with-mio)
+      - [4.2 Create VT-100 Input Parser](#42-create-vt-100-input-parser)
+      - [4.3 Integrate with InputDevice](#43-integrate-with-inputdevice)
     - [Phase 5: Testing & Validation](#phase-5-testing--validation)
+      - [5.1 Unit Tests for DirectAnsi Backend](#51-unit-tests-for-directansi-backend)
+      - [5.2 Integration Tests with Mock OutputDevice](#52-integration-tests-with-mock-outputdevice)
+      - [5.3 Visual Testing Examples](#53-visual-testing-examples)
     - [Phase 6: Remove Crossterm Dependency](#phase-6-remove-crossterm-dependency)
+      - [6.1 Update Cargo.toml](#61-update-cargotoml)
+      - [6.2 Remove Crossterm Code](#62-remove-crossterm-code)
+      - [6.3 Update Documentation](#63-update-documentation)
   - [File Structure](#file-structure)
+    - [New Files to Create](#new-files-to-create)
+    - [Files to Modify](#files-to-modify)
+    - [Files to Remove](#files-to-remove)
   - [Code Size Estimates](#code-size-estimates)
   - [Migration Timeline](#migration-timeline)
   - [Platform Compatibility](#platform-compatibility)
+    - [ANSI Support by Platform](#ansi-support-by-platform)
+    - [Windows Virtual Terminal Processing](#windows-virtual-terminal-processing)
+    - [Cross-Platform Testing](#cross-platform-testing)
   - [Risks and Mitigation](#risks-and-mitigation)
   - [Success Metrics](#success-metrics)
+    - [Performance](#performance)
+    - [Correctness](#correctness)
+    - [Compatibility](#compatibility)
+    - [Code Quality](#code-quality)
+    - [Migration Completeness](#migration-completeness)
   - [Conclusion](#conclusion)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -45,19 +73,24 @@ input.
 
 ### ⚠️ DEPENDENCY: Requires task_unify_rendering.md Completion
 
-**This task depends on completion of [task_unify_rendering.md](task_unify_rendering.md):**
+**This task depends on completion of [task_unify_rendering.md](done/task_unify_rendering.md):**
 
-| Unification Phase      | Output                                                   | Status                         | Notes                                |
-| ---------------------- | -------------------------------------------------------- | ------------------------------ | ------------------------------------ |
-| **0.5** (prerequisite) | CliTextInline uses CliTextInline abstraction for styling | ✅ COMPLETE                    | Standardizes styling before renaming |
-| **1** (rename)         | AnsiStyledText → CliTextInline                           | ✅ COMPLETE (October 21, 2025) | Type rename across codebase          |
-| **2** (core)           | `PixelCharRenderer` module created                       | ⏳ COMPLETE                    | Unified ANSI sequence generator      |
-| **3-6** (integration)  | All paths use PixelCharRenderer                          | ✅ COMPLETE                    | Ready for DirectAnsi backend         |
+| Unification Phase      | Output                                                   | Status                              | Notes                                  |
+|------------------------|----------------------------------------------------------|------------------------------------|----------------------------------------|
+| **0.5** (prerequisite) | CliTextInline uses CliTextInline abstraction for styling | ✅ COMPLETE                         | Standardizes styling before renaming   |
+| **1** (rename)         | AnsiStyledText → CliTextInline                           | ✅ COMPLETE (October 21, 2025)      | Type rename across codebase            |
+| **2** (core)           | `PixelCharRenderer` module created                       | ✅ COMPLETE (October 22, 2025)      | Unified ANSI sequence generator        |
+| **3** (integration)    | `RenderToAnsi` trait for unified buffer rendering        | ✅ COMPLETE (October 22, 2025)      | Ready for DirectAnsi backend           |
+| **4** (CURRENT)        | `CliTextInline` uses `PixelCharRenderer` via traits      | ✅ COMPLETE (October 22, 2025)      | All direct text rendering unified      |
+| **5** (DEFERRED)       | choose()/readline_async to OffscreenBuffer               | ⏸️ DEFERRED to Phase 3 of this task | Proper migration is via RenderOps      |
+| **6** (COMPLETE)       | `RenderOpImplCrossterm` uses `PixelCharRenderer`         | ✅ COMPLETE (October 22, 2025)      | Unified renderer validated in full TUI |
 
 **Execution Order:**
 
-1. ✅ Complete task_unify_rendering.md (all phases)
-2. 🚀 Begin this task (task_remove_crossterm.md)
+1. ✅ Complete task_unify_rendering.md (Phases 0-4, 6)
+2. ⏸️ Skip Phase 5 (will be done in Phase 3 of this task)
+3. ✅ Complete task_unify_rendering.md Phase 6 (validated PixelCharRenderer in full TUI)
+4. 🚀 Ready to begin this task (task_remove_crossterm.md Phase 1-3)
 
 **Why this dependency matters:**
 
@@ -68,8 +101,8 @@ input.
 ### Architectural Vision
 
 ```
-┌─────────────────────────────────────────────────────┐
-│              All Three Rendering Paths               │
+┌────────────────────────────────────────────────────┐
+│              All Three Rendering Paths             │
 │  ┌──────────┐  ┌──────────┐  ┌─────────────────┐   │
 │  │ Full TUI │  │ choose() │  │ readline_async()│   │
 │  └────┬─────┘  └────┬─────┘  └────────┬────────┘   │
@@ -77,19 +110,19 @@ input.
         │             │                 │
         └─────────────┴─────────────────┘
                       │
-                      ▼
-              ┌───────────────┐
+                      │
+              ┌───────▼───────┐
               │   RenderOps   │  ← Universal rendering language
               └───────┬───────┘
                       │
-                      ▼
-              ┌───────────────────┐
+                      │
+              ┌───────▼───────────┐
               │ DirectAnsi Backend│  ← Replaces crossterm
               │ (AnsiSequenceGen) │
               └───────┬───────────┘
                       │
-                      ▼
-              ┌───────────────────┐
+                      │
+              ┌───────▼───────────┐
               │   OutputDevice    │  ← Unchanged (testability)
               └───────┬───────────┘
                       │
@@ -101,6 +134,60 @@ input.
 
 ```
      stdin → mio async read → VT-100 Parser → Events → InputDevice → Application
+```
+
+#### Ultimate Architecture Vision
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Application                           │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+          ┌────────────▼───────────┐
+          │     RenderOps          │
+          │  (layout abstraction)  │
+          └────────────┬───────────┘
+                       │
+          ┌────────────▼───────────┐
+          │  OffscreenBuffer       │
+          │  (materialized state)  │
+          │  Contains: PixelChar[] │
+          └────────────┬───────────┘
+                       │
+                       ├─→ Diff algorithm
+                       │
+      ┌────────────────▼────────────────────┐
+      │  CompositorNoClipTrunc...           │
+      │  Extracts changed text + style      │
+      └──────────────┬──────────────────────┘
+                     │
+                     │ (Phase 6)
+         ┌───────────▼───────────────┐
+         │  CliTextInline conversion │
+         │  text + style → PixelChar │
+         └──────────────┬────────────┘
+                        │
+         ┌──────────────▼─────────┐
+         │  PixelCharRenderer     │
+         │ (unified ANSI gen)     │
+         │ Smart style diffing    │
+         └──────────────┬─────────┘
+                        │
+         ┌──────────────▼─────────┐
+         │  ANSI bytes (UTF-8)    │
+         │ Ready for any backend  │
+         └──────────────┬─────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼ (Now)         ▼ (Phase 2)     ▼ (Phase 3)
+    Crossterm       DirectAnsi       DirectAnsi
+    OutputDevice    Backend          Backend
+       (Phase 6)    (Pending)        (Pending)
+        │               │               │
+        └───────────────┼───────────────┘
+                        │
+                        ▼
+                      stdout
 ```
 
 ## Current Architecture Analysis
@@ -195,6 +282,47 @@ stdin → ANSI bytes → VT-100 Parser → Events → InputDevice → Applicatio
 4. **Testability**: Can mock RenderOps execution easily
 5. **Extensibility**: Easy to add new backends (Termion, SSH optimization, etc.)
 6. **Performance**: Direct ANSI generation eliminates crossterm overhead
+
+### Architectural Alignment with task_unify_rendering.md
+
+**Critical insight**: This task is specifically designed to leverage `PixelCharRenderer` created in
+task_unify_rendering.md Phase 2-3.
+
+**Why Phase 6 of task_unify_rendering.md Comes First:**
+
+task_unify_rendering.md Phase 6 modifies `RenderOpImplCrossterm::paint_text_with_attributes()` to
+use `PixelCharRenderer`. This validation step:
+
+- ✅ Tests PixelCharRenderer in production full TUI render loop
+- ✅ Proves all three rendering paths can share ANSI generation
+- ✅ Provides safe rollback point before big crossterm removal
+- ✅ Creates confidence that the abstraction works end-to-end
+
+**Then this task can confidently:**
+
+- Create `RenderOpImplDirectAnsi` using same `PixelCharRenderer`
+- Migrate choose()/readline_async to RenderOps (Phase 3 here = Phase 5 deferred in
+  task_unify_rendering.md)
+- Remove crossterm dependency knowing the abstraction is proven
+
+**The Critical Architectural Pattern:**
+
+```
+RenderOp abstraction → PixelCharRenderer → ANSI bytes → OutputDevice implementation
+                       ↑
+                  Backend-agnostic
+                  Can switch OutputDevice between:
+                  - Crossterm (task_unify_rendering.md Phase 6)
+                  - DirectAnsi (this task Phase 2)
+                  - Future: Termion, SSH optimization, etc.
+```
+
+**Why this is safe:**
+
+1. `PixelCharRenderer` has no crossterm dependencies
+2. ANSI generation logic is identical across backends
+3. Only OutputDevice implementation differs
+4. Each backend can be tested independently
 
 ## Implementation Plan
 
