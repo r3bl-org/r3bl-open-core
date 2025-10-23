@@ -27,7 +27,7 @@
 //!
 //! # How to use it
 //!
-//! The main struct that we have to consider is `CliText`. It has two fields:
+//! The main struct that we have to consider is `CliTextInline`. It has two fields:
 //!
 //! - `text` - the text to print.
 //! - `style` - a list of styles to apply to the text.
@@ -36,20 +36,20 @@
 //!
 //! ```
 //! # use r3bl_tui::{
-//! #     fg_red, size, fg_color, tui_color, new_style, cli_text,
-//! #     RgbValue, CliStyle, CliText,
+//! #     fg_red, size, fg_color, tui_color, new_style, cli_text_inline,
+//! #     RgbValue, CliStyle, CliTextInline,
 //! # };
 //!
-//! // Use cli_text() to create a styled text.
-//! let styled_text = cli_text("Hello", new_style!(bold));
+//! // Use cli_text_inline() to create a styled text.
+//! let styled_text = cli_text_inline("Hello", new_style!(bold));
 //! println!("{styled_text}");
 //! styled_text.println();
 //! ```
 //!
-//! For more examples, please read the documentation for [`CliText`]. Please don't
-//! create this struct directly, use [`crate::cli_text()`], [`crate::cli_text_line!`],
-//! [`crate::cli_text_lines!`] or the constructor functions like [`fg_red()`],
-//! [`fg_green()`], [`fg_blue()`], etc.
+//! For more examples, please read the documentation for [`CliTextInline`]. Please don't
+//! create this struct directly, use [`crate::cli_text_inline()`],
+//! [`crate::cli_text_line!`], [`crate::cli_text_lines!`] or the constructor functions
+//! like [`fg_red()`], [`fg_green()`], [`fg_blue()`], etc.
 //!
 //! # References
 //!

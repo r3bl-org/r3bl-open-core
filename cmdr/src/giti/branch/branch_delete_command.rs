@@ -7,9 +7,9 @@ use crate::{AnalyticsAction, common,
                    local_branch_ops::BranchExists,
                    ui_str::{self}},
             report_analytics};
-use r3bl_tui::{CliText, CommandRunResult, CommonResult, DefaultIoDevices, InlineString,
-               InlineVec, ItemsOwned, choose, cli_text, cli_text_line, height,
-               inline_vec,
+use r3bl_tui::{CliTextInline, CommandRunResult, CommonResult, DefaultIoDevices,
+               InlineString, InlineVec, ItemsOwned, choose, cli_text_inline,
+               cli_text_line, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 
@@ -137,7 +137,7 @@ mod user_interaction {
         branch_options: ItemsOwned,
     ) -> CommonResult<ItemsOwned> {
         let header_with_instructions = {
-            let last_line = cli_text_line![cli_text(
+            let last_line = cli_text_line![cli_text_inline(
                 ui_str::branch_delete_display::select_branches_msg_raw(),
                 common::ui_templates::header_style_default()
             )];
@@ -204,10 +204,11 @@ mod user_interaction {
         // of the lines. Then prefix with the instruction header.
         let header_with_instructions = {
             let mut header_last_lines = header_text.lines();
-            let mut header_last_lines_fmt: InlineVec<InlineVec<CliText>> = smallvec![];
+            let mut header_last_lines_fmt: InlineVec<InlineVec<CliTextInline>> =
+                smallvec![];
 
             if let Some(first_line) = header_last_lines.next() {
-                let first_line = cli_text_line![cli_text(
+                let first_line = cli_text_line![cli_text_inline(
                     first_line,
                     crate::common::ui_templates::header_style_default()
                 )];
@@ -215,7 +216,7 @@ mod user_interaction {
             }
 
             for line in header_last_lines {
-                let line = cli_text_line![cli_text(
+                let line = cli_text_line![cli_text_inline(
                     line,
                     crate::common::ui_templates::header_style_primary()
                 )];

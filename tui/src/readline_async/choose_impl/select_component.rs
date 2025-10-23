@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CliText, ChUnit, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
+use crate::{ChUnit, CliTextInline, CommonResult, DEVELOPMENT_MODE, FunctionComponent,
             GCStringOwned, Header, HowToChoose, InlineString, InlineVec, OutputDevice,
-            State, StyleSheet, TuiStyle, cli_text, ch, col,
+            State, StyleSheet, TuiStyle, ch, cli_text_inline, col,
             core::common::string_repeat_cache::get_spaces, fg_blue, get_terminal_width,
             inline_string, lock_output_device_as_mut, queue_commands, usize, width};
 use crossterm::{cursor::{MoveToColumn, MoveToNextLine, MoveToPreviousLine},
@@ -84,13 +84,13 @@ impl FunctionComponent<State> for SelectComponent {
 }
 
 mod render_helper {
-    use super::{CliText, ChUnit, Clear, ClearType, CommonResult,
-                DEVELOPMENT_MODE, FunctionComponent, GCStringOwned, Header, HowToChoose,
-                IS_FOCUSED, IS_NOT_FOCUSED, InlineString, InlineVec,
-                MULTI_SELECT_IS_NOT_SELECTED, MULTI_SELECT_IS_SELECTED, MoveToColumn,
-                MoveToNextLine, MoveToPreviousLine, OutputDevice, Print, ResetColor,
+    use super::{ChUnit, Clear, ClearType, CliTextInline, CommonResult, DEVELOPMENT_MODE,
+                FunctionComponent, GCStringOwned, Header, HowToChoose, IS_FOCUSED,
+                IS_NOT_FOCUSED, InlineString, InlineVec, MULTI_SELECT_IS_NOT_SELECTED,
+                MULTI_SELECT_IS_SELECTED, MoveToColumn, MoveToNextLine,
+                MoveToPreviousLine, OutputDevice, Print, ResetColor,
                 SINGLE_SELECT_IS_NOT_SELECTED, SINGLE_SELECT_IS_SELECTED,
-                SelectComponent, State, StyleSheet, TuiStyle, cli_text, ch,
+                SelectComponent, State, StyleSheet, TuiStyle, ch, cli_text_inline,
                 clip_string_to_width_with_ellipsis, col, fg_blue, get_spaces,
                 get_terminal_width, inline_string, queue_commands, usize, width};
 
@@ -193,7 +193,7 @@ mod render_helper {
         // Create styled text using ASText with all styling from header_style.
         // This embeds ANSI codes in the string, replacing the individual
         // choose_apply_style! calls that were previously used.
-        let styled_header = cli_text(&header_text, *header_style).to_string();
+        let styled_header = cli_text_inline(&header_text, *header_style).to_string();
 
         queue_commands! {
             output_device,
@@ -216,7 +216,7 @@ mod render_helper {
 
     fn render_multi_line_header(
         output_device: &mut OutputDevice,
-        header_lines: &InlineVec<InlineVec<CliText>>,
+        header_lines: &InlineVec<InlineVec<CliTextInline>>,
         viewport_width: ChUnit,
     ) -> CommonResult<()> {
         // Subtract 3 from viewport width because we need to add "..." to the
@@ -226,7 +226,7 @@ mod render_helper {
         // This is the vector of vectors of AnsiStyledText we want to print to
         // the screen.
         let mut multi_line_header_clipped_vec =
-            InlineVec::<InlineVec<CliText>>::with_capacity(header_lines.len());
+            InlineVec::<InlineVec<CliTextInline>>::with_capacity(header_lines.len());
 
         let mut maybe_clipped_text_vec: InlineVec<InlineVec<InlineString>> =
             InlineVec::with_capacity(header_lines.len());
@@ -254,7 +254,7 @@ mod render_helper {
 
                 // If last item in the header, then fill the remaining
                 // space with spaces.
-                let maybe_header_line_last_span: Option<&CliText> =
+                let maybe_header_line_last_span: Option<&CliTextInline> =
                     header_line.last();
 
                 if let Some(header_line_last_span) = maybe_header_line_last_span {
@@ -282,10 +282,17 @@ mod render_helper {
         // the clipped text.
         let zipped = maybe_clipped_text_vec.iter().zip(header_lines.iter());
         zipped.for_each(|(clipped_text_vec, header_span_vec)| {
-            let mut ansi_styled_text_vec: InlineVec<CliText> = InlineVec::new();
+            let mut ansi_styled_text_vec: InlineVec<CliTextInline> = InlineVec::new();
             let zipped = clipped_text_vec.iter().zip(header_span_vec.iter());
             zipped.for_each(|(clipped_text, header_span)| {
-                ansi_styled_text_vec.push(cli_text(clipped_text, header_span.styles.clone()));
+                // Convert the CliTextInline's fields back to a TuiStyle
+                let style = TuiStyle {
+                    attribs: header_span.attribs,
+                    color_fg: header_span.color_fg,
+                    color_bg: header_span.color_bg,
+                    ..Default::default()
+                };
+                ansi_styled_text_vec.push(cli_text_inline(clipped_text, style));
             });
             multi_line_header_clipped_vec.push(ansi_styled_text_vec);
         });
@@ -498,9 +505,9 @@ mod render_helper {
         // Create styled text using ASText with all styling from data_style.
         // This embeds ANSI codes in the string, replacing the individual
         // choose_apply_style! calls that were previously used.
-        let styled_item = cli_text(&data_item, *data_style).to_string();
+        let styled_item = cli_text_inline(&data_item, *data_style).to_string();
         // Apply the same style to padding to ensure background color extends.
-        let styled_padding = cli_text(&padding_right, *data_style).to_string();
+        let styled_padding = cli_text_inline(&padding_right, *data_style).to_string();
 
         queue_commands! {
             output_device,
@@ -605,9 +612,10 @@ mod tests {
 
         println!("generated_output = writer.get_buffer(): \n\n{generated_output:#?}\n\n");
 
-        // Updated expected output: now uses ASText for styling, which only emits ANSI codes
-        // for attributes that are set (more efficient than the old choose_apply_style! macro
-        // which emitted explicit reset codes for every attribute).
+        // Updated expected output: now uses ASText for styling, which only emits ANSI
+        // codes for attributes that are set (more efficient than the old
+        // choose_apply_style! macro which emitted explicit reset codes for every
+        // attribute).
         let expected_output = "\u{1b}[4F\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;153m\u{1b}[48;5;235m Header\u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K\u{1b}[38;5;46m  ◉ Item 1\u{1b}[0m\u{1b}[38;5;46m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 2\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[1G\u{1b}[0m\u{1b}[2K  ◌ Item 3\u{1b}[0m                              \u{1b}[0m\u{1b}[1E\u{1b}[0m\u{1b}[4F";
         assert_eq!(generated_output, expected_output);
 

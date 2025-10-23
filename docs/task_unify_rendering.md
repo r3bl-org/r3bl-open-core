@@ -13,7 +13,7 @@
     - [Solution](#solution)
   - [Current State Analysis](#current-state-analysis)
     - [Path 1: Full TUI Rendering](#path-1-full-tui-rendering)
-    - [Path 2: Direct CliText Rendering](#path-2-direct-clitext-rendering)
+    - [Path 2: Direct CliTextInline Rendering](#path-2-direct-clitext-rendering)
     - [Path 3: readline_async Components](#path-3-readline_async-components)
       - [**Spinner Rendering** (`spinner_impl/spinner_render.rs`)](#spinner-rendering-spinner_implspinner_renderrs)
       - [**Choose Component** (`choose_impl/components/select_component.rs`)](#choose-component-choose_implcomponentsselect_componentrs)
@@ -30,7 +30,7 @@
     - [Benefits Already Realized](#benefits-already-realized)
   - [Implementation Plan](#implementation-plan)
     - [Phase 0: ✅ COMPLETE - Consolidate Style Attributes (Committed)](#phase-0--complete---consolidate-style-attributes-committed)
-    - [Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliText Consistently](#phase-05--prerequisite---consolidate-choose-and-readline_async-to-use-clitext-consistently)
+    - [Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliTextInline Consistently](#phase-05--prerequisite---consolidate-choose-and-readline_async-to-use-clitext-consistently)
       - [**Problem to Fix**](#problem-to-fix)
       - [**Goal of Phase 0.5**](#goal-of-phase-05)
       - [**Tasks in Phase 0.5**](#tasks-in-phase-05)
@@ -40,7 +40,7 @@
       - [**FAQ: What About Cursor/Clear Operations?**](#faq-what-about-cursorclear-operations)
       - [**Why This Matters**](#why-this-matters)
       - [**Success Criteria for Phase 0.5**](#success-criteria-for-phase-05)
-    - [Phase 1: Rename CliText (AnsiStyledText → CliText) and Extend PixelChar Support (✅ COMPLETE)](#phase-1-rename-clitext-ansistyledtext-%E2%86%92-clitext-and-extend-pixelchar-support--complete)
+    - [Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support (✅ COMPLETE)](#phase-1-rename-clitext-ansistyledtext-%E2%86%92-clitext-and-extend-pixelchar-support--complete)
     - [Phase 2: Create Unified ANSI Generator (✅ COMPLETE)](#phase-2-create-unified-ansi-generator--complete)
     - [Phase 3: Unified Rendering with OffscreenBuffer (NEXT after Phase 2)](#phase-3-unified-rendering-with-offscreenbuffer-next-after-phase-2)
     - [Phase 4: Update ASText Rendering (NEXT after Phase 3)](#phase-4-update-astext-rendering-next-after-phase-3)
@@ -88,10 +88,10 @@
 
 ### What We're Doing
 
-**CliText and TuiStyledText will remain separate** (they solve different problems):
+**CliTextInline and TuiStyledText will remain separate** (they solve different problems):
 
-- **CliText**: Lightweight styled text for simple CLI output (choose(), utilities) - renamed from
-  `AnsiStyledText`/`ASText`
+- **CliTextInline**: Lightweight styled text for simple CLI output (choose(), utilities) - renamed
+  from `AnsiStyledText`/`ASText`
 - **TuiStyledText**: Framework-based text with full compositioning support
 
 **But we unify how they render** by making all paths converge on a single ANSI generation path:
@@ -109,8 +109,8 @@
           │                           │                            │
           ▼                           ▼                            ▼
    ┌──────────────┐          ┌─────────────────┐        ┌─────────────────────┐
-   │ CliText      │          │ RenderOps       │        │ Spinner:Stylize     │
-   │ (domain)     │          │ (domain)        │        │ Choose: CliText+    │
+   │ CliTextInline      │          │ RenderOps       │        │ Spinner:Stylize     │
+   │ (domain)     │          │ (domain)        │        │ Choose: CliTextInline+    │
    │              │          │                 │        │ queue_commands!     │
    └──────┬───────┘          └────────┬────────┘        └──────────┬──────────┘
           │                           │                            │
@@ -149,10 +149,10 @@
 
 ### Key Insight
 
-The unification happens **at the rendering layer, not the domain layer**. CliText and TuiStyledText
-remain semantically distinct abstractions for different use cases (CLI vs TUI), but both funnel
-through `PixelCharRenderer` for ANSI generation. This eliminates code duplication while preserving
-domain separation.
+The unification happens **at the rendering layer, not the domain layer**. CliTextInline and
+TuiStyledText remain semantically distinct abstractions for different use cases (CLI vs TUI), but
+both funnel through `PixelCharRenderer` for ANSI generation. This eliminates code duplication while
+preserving domain separation.
 
 ## Critical Findings: Three Rendering Paths with Inconsistent Abstractions
 
@@ -162,19 +162,19 @@ The codebase contains **THREE separate rendering paths**, not two. readline_asyn
 overlooked:
 
 1. **Path 1 (Full TUI)**: ✅ Uses RenderOps → OffscreenBuffer (proper abstraction)
-2. **Path 2 (choose())**: ⚠️ Uses CliText but partially (some code uses it, some bypasses it)
+2. **Path 2 (choose())**: ⚠️ Uses CliTextInline but partially (some code uses it, some bypasses it)
 3. **Path 3 (readline_async)**: ❌ **Completely bypasses abstractions**
-   - **Spinner**: Uses crossterm `Stylize` trait directly (NOT CliText, NOT RenderOps)
-   - **Choose component**: Imports CliText but ignores it, queues crossterm commands directly
+   - **Spinner**: Uses crossterm `Stylize` trait directly (NOT CliTextInline, NOT RenderOps)
+   - **Choose component**: Imports CliTextInline but ignores it, queues crossterm commands directly
 
 ### The Problem This Creates
 
 - `spinner_impl/spinner_render.rs:apply_color()` generates ANSI via `style(output).with(color)` -
   crossterm direct
 - `readline_async/choose_impl/components/select_component.rs:render_helper` queues crossterm
-  commands instead of using CliText's abstraction
+  commands instead of using CliTextInline's abstraction
 - `choose_impl/components/select_component.rs` (the main one) also uses queue_commands! instead of
-  CliText rendering
+  CliTextInline rendering
 
 **Result**: Style logic is duplicated across THREE different approaches. A color change must be
 updated in:
@@ -207,15 +207,15 @@ The two plans work together:
 Currently, ANSI generation logic is split across **three separate paths**:
 
 1. **Path 1**: Full TUI App → RenderOps → OffscreenBuffer → crossterm painter → stdout
-2. **Path 2**: choose() → CliText (partially used) → crossterm queue_commands! → stdout
+2. **Path 2**: choose() → CliTextInline (partially used) → crossterm queue_commands! → stdout
 3. **Path 3**: readline_async → mixed approach:
    - Spinner: crossterm's `Stylize` trait + embedded ANSI codes → stdout
-   - Choose component: CliText (imported but unused) + crossterm queue_commands! → stdout
+   - Choose component: CliTextInline (imported but unused) + crossterm queue_commands! → stdout
    - Readline: Output buffering + control flow management
 
 This creates significant maintenance burden: style changes, ANSI code generation, and escape
 sequence logic must be kept in sync across three separate implementations. Additionally,
-readline_async doesn't fully leverage the CliText abstraction it imports.
+readline_async doesn't fully leverage the CliTextInline abstraction it imports.
 
 ### Solution
 
@@ -235,9 +235,9 @@ backend without code changes.
 - **OffscreenBuffer**: Grid of `PixelChar` structs containing styled characters
 - **Features**: Compositor, z-ordering, diffing, caching, clipping
 
-### Path 2: Direct CliText Rendering
+### Path 2: Direct CliTextInline Rendering
 
-- **AnsiStyledText (CliText)**: Lightweight styled text type (to be renamed from ASText)
+- **AnsiStyledText (CliTextInline)**: Lightweight styled text type (to be renamed from ASText)
 - **Direct rendering**: Bypasses full TUI pipeline for performance
 - **Used by**: choose() API and other simple text output needs
 - **Implementation**: Display trait that generates ANSI escape sequences
@@ -252,22 +252,22 @@ This is a **mixed approach** with inconsistent abstraction levels:
 - **Current implementation**: Uses crossterm's `Stylize` trait directly
 - **Function**: `apply_color(output: &str, color: &mut SpinnerColor) -> InlineString`
   - Calls: `style(output).with(color)` - crossterm direct styling
-  - Returns: InlineString with embedded ANSI codes (NOT using CliText)
+  - Returns: InlineString with embedded ANSI codes (NOT using CliTextInline)
   - Called by: `Spinner::try_start_task()` in `spinner.rs:309`
 - **Problem**: Bypasses all abstractions, generates ANSI inline
 - **Files involved**: `spinner_render.rs`, `spinner_print.rs` (queues the output)
 
 #### **Choose Component** (`choose_impl/components/select_component.rs`)
 
-- **Current implementation**: Mixed - imports CliText but doesn't use it
-- **What it imports**: `AnsiStyledText` (line 88) - the type that should become CliText
+- **Current implementation**: Mixed - imports CliTextInline but doesn't use it
+- **What it imports**: `AnsiStyledText` (line 88) - the type that should become CliTextInline
 - **What it does**: Uses `queue_commands!` macro to queue crossterm commands directly
   - Line 195-237: Uses `queue_commands!` with `MoveToColumn`, `Clear`, `Print`,
     `SetForegroundColor`, etc.
   - Line 244: Uses `InlineVec<InlineVec<AnsiStyledText>>` for multi-line headers
   - Line 313: Uses `ast()` helper to create AnsiStyledText (but then discards it)
-  - Line 329-342: Queues commands instead of using CliText rendering
-- **Problem**: Has CliText type available but doesn't leverage its abstraction
+  - Line 329-342: Queues commands instead of using CliTextInline rendering
+- **Problem**: Has CliTextInline type available but doesn't leverage its abstraction
 - **Files involved**: `select_component.rs`, `apply_style_macro.rs` (style macro definitions),
   `crossterm_macros.rs` (command queuing)
 
@@ -282,13 +282,13 @@ This is a **mixed approach** with inconsistent abstraction levels:
 
 - **Summary of what readline_async is doing**:
   1. Spinner: Generates ANSI directly via crossterm Stylize trait
-  2. Choose: Queues crossterm commands (partially imports unused CliText)
+  2. Choose: Queues crossterm commands (partially imports unused CliTextInline)
   3. Readline: Routes output through components above
 
 - **Why this is a problem**:
   - No unified representation (PixelChars)
   - No single ANSI generator (three different approaches)
-  - CliText is imported but not used by choose_impl
+  - CliTextInline is imported but not used by choose_impl
   - Style changes must be synchronized in two different places
 
 ### Why the Fork Exists
@@ -377,30 +377,30 @@ Foundation work completed:
 
 **Ready for**: Phase 0.5 - Standardize abstraction usage
 
-### Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliText Consistently
+### Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliTextInline Consistently
 
 ⚠️ **CRITICAL PREREQUISITE** before Phase 1. Currently, both choose() and readline_async bypass the
-CliText abstraction. This phase standardizes them on CliText so Phase 1 (renaming) and Phase 2
-(unification) have a consistent foundation.
+CliTextInline abstraction. This phase standardizes them on CliTextInline so Phase 1 (renaming) and
+Phase 2 (unification) have a consistent foundation.
 
 #### **Problem to Fix**
 
 Currently there are THREE completely different rendering approaches:
 
 1. Full TUI: Uses RenderOps (abstracted)
-2. choose(): Has CliText available but uses `queue_commands!` directly instead
+2. choose(): Has CliTextInline available but uses `queue_commands!` directly instead
 3. readline_async spinner: Uses crossterm `Stylize` trait directly
-4. readline_async choose: Imports CliText but queues crossterm commands directly
+4. readline_async choose: Imports CliTextInline but queues crossterm commands directly
 
 #### **Goal of Phase 0.5**
 
-Make ALL paths use CliText as the abstraction layer before ANSI generation:
+Make ALL paths use CliTextInline as the abstraction layer before ANSI generation:
 
 ```
 Path 1: RenderOps → (already works)
-Path 2: choose() → CliText → ✅ [FIX THIS]
-Path 3a: Spinner → CliText → ✅ [FIX THIS]
-Path 3b: readline_async choose → CliText → ✅ [FIX THIS]
+Path 2: choose() → CliTextInline → ✅ [FIX THIS]
+Path 3a: Spinner → CliTextInline → ✅ [FIX THIS]
+Path 3b: readline_async choose → CliTextInline → ✅ [FIX THIS]
 ```
 
 #### **Tasks in Phase 0.5**
@@ -432,8 +432,8 @@ fn spinner_color_to_tui_color(spinner_color: &mut SpinnerColor) -> Option<TuiCol
 fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
     match spinner_color_to_tui_color(color) {
         Some(tui_color) => {
-            // Use CliText's Display impl instead of crossterm Stylize
-            let styled_text = fg_color(tui_color, output);  // CliText with foreground color
+            // Use CliTextInline's Display impl instead of crossterm Stylize
+            let styled_text = fg_color(tui_color, output);  // CliTextInline with foreground color
             inline_string!("{styled_text}")
         }
         None => InlineString::from(output),
@@ -444,14 +444,15 @@ fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
 **Tasks**:
 
 - [ ] Create `spinner_color_to_tui_color()` helper function
-- [ ] Replace `apply_color()` implementation to use `fg_color()` (CliText constructor)
+- [ ] Replace `apply_color()` implementation to use `fg_color()` (CliTextInline constructor)
 - [ ] Verify output is identical to before (compare ANSI sequences)
 - [ ] Run spinner tests to ensure no visual regressions
 
 **2. Fix readline_async choose component**
 (`readline_async/choose_impl/components/select_component.rs`)
 
-⚠️ **CRITICAL**: This component must consolidate text + styling through CliText BEFORE queuing:
+⚠️ **CRITICAL**: This component must consolidate text + styling through CliTextInline BEFORE
+queuing:
 
 **Current pattern** (lines 195-237, 329-342):
 
@@ -466,9 +467,9 @@ queue_commands! {
 **New pattern**:
 
 ```rust
-// 1. Build styled text with CliText
+// 1. Build styled text with CliTextInline
 let styled_output = {
-    let mut styled = ast(text);  // Create CliText
+    let mut styled = ast(text);  // Create CliTextInline
     if let Some(fg) = header_style.color_fg {
         styled = styled.fg_color(fg);
     }
@@ -488,45 +489,45 @@ queue_commands! {
 **Tasks**:
 
 - [ ] In `render_single_line_header()` (line 183): Replace SetForegroundColor/SetBackgroundColor
-      pattern with CliText rendering
+      pattern with CliTextInline rendering
 - [ ] In `render_single_item()` (line 505): Apply same pattern
-- [ ] In `render_multi_line_header()` (line 242): Use CliText for header content (lines 313 already
-      has `ast()` call)
+- [ ] In `render_multi_line_header()` (line 242): Use CliTextInline for header content (lines 313
+      already has `ast()` call)
 - [ ] Keep cursor movement (MoveToColumn, MoveToNextLine, MoveToPreviousLine) as-is - those are NOT
       styling
 - [ ] Keep Clear commands as-is - those are NOT styling
 - [ ] Verify: only SetForegroundColor, SetBackgroundColor, SetAttribute calls are removed and
-      replaced with CliText
+      replaced with CliTextInline
 - [ ] Run choose tests to ensure no visual regressions
 
 **3. Verify main choose() component** (`choose_impl/components/select_component.rs`)
 
-- Audit that it's already using CliText consistently
+- Audit that it's already using CliTextInline consistently
 - Fix any inconsistencies found
 
 #### **CRITICAL: Phase 0.5 Scope Definition**
 
 **Phase 0.5 addresses ONLY styling abstraction. Cursor/clear operations are OUT OF SCOPE.**
 
-| Operation Type                                                     | Current          | Phase 0.5             | Phase 2+                           |
-| ------------------------------------------------------------------ | ---------------- | --------------------- | ---------------------------------- |
-| **Styling** (SetForegroundColor, SetBackgroundColor, SetAttribute) | crossterm direct | ➜ CliText abstraction | ➜ PixelCharRenderer                |
-| **Cursor ops** (MoveToColumn, MoveToPreviousLine, etc.)            | crossterm        | ✓ Keep unchanged      | Handled by future phases           |
-| **Clear ops** (Clear, ClearType::CurrentLine)                      | crossterm        | ✓ Keep unchanged      | Handled by future phases           |
-| **I/O backend** (OutputDevice, crossterm::execute)                 | crossterm        | ✓ Keep unchanged      | ➜ Removed in task_remove_crossterm |
+| Operation Type                                                     | Current          | Phase 0.5                   | Phase 2+                           |
+| ------------------------------------------------------------------ | ---------------- | --------------------------- | ---------------------------------- |
+| **Styling** (SetForegroundColor, SetBackgroundColor, SetAttribute) | crossterm direct | ➜ CliTextInline abstraction | ➜ PixelCharRenderer                |
+| **Cursor ops** (MoveToColumn, MoveToPreviousLine, etc.)            | crossterm        | ✓ Keep unchanged            | Handled by future phases           |
+| **Clear ops** (Clear, ClearType::CurrentLine)                      | crossterm        | ✓ Keep unchanged            | Handled by future phases           |
+| **I/O backend** (OutputDevice, crossterm::execute)                 | crossterm        | ✓ Keep unchanged            | ➜ Removed in task_remove_crossterm |
 
 **Why this scope is correct:**
 
 1. **Full TUI** already has RenderOps abstraction layer (handles all operations)
 2. **choose()** still needs crossterm for cursor/clear (Phase 2 will address via OffscreenBuffer)
 3. **spinner/readline_async** still needs crossterm for cursor/clear (same - Phase 2 handles it)
-4. **Styling** is the part we can standardize NOW through CliText
+4. **Styling** is the part we can standardize NOW through CliTextInline
 5. **Cursor/clear abstraction** is a separate concern handled in Phase 2/3 and
    task_remove_crossterm.md
 
 **This is NOT a limitation - it's correct layering:**
 
-- Phase 0.5: Abstract styling layer (CliText)
+- Phase 0.5: Abstract styling layer (CliTextInline)
 - Phase 2: Create unified ANSI generator (PixelCharRenderer - still uses crossterm I/O)
 - Phase 3: Create flexible buffers (may handle cursor/clear primitives)
 - Future task: Remove crossterm entirely (all operations -> direct ANSI)
@@ -548,17 +549,17 @@ migration needed.
 
 **readline_async Choose Component** (`readline_async/choose_impl/components/select_component.rs`):
 
-- [x] Update `render_single_line_header()` to use CliText for styling ONLY
-- [x] Update `render_single_item()` to use CliText for styling ONLY
-- [x] Verify `render_multi_line_header()` uses CliText for all styled spans
-- [x] Replace: SetForegroundColor/SetBackgroundColor/SetAttribute calls → CliText
+- [x] Update `render_single_line_header()` to use CliTextInline for styling ONLY
+- [x] Update `render_single_item()` to use CliTextInline for styling ONLY
+- [x] Verify `render_multi_line_header()` uses CliTextInline for all styled spans
+- [x] Replace: SetForegroundColor/SetBackgroundColor/SetAttribute calls → CliTextInline
 - [x] Keep unchanged: MoveToColumn, Clear, MoveToNextLine, MoveToPreviousLine commands
 - [x] Keep unchanged: Hide/Show cursor commands (line_state.rs handles this)
 - [x] Test: choose output identical to before (visually identical, ANSI more efficient - see note
       below)
 
 **✅ COMPLETED - October 21, 2025**: The readline_async choose component has been successfully
-refactored to use ASText (CliText) for all styling operations. Key findings:
+refactored to use ASText (CliTextInline) for all styling operations. Key findings:
 
 - **ANSI Output Improvement**: ASText generates more efficient ANSI sequences than the old
   `choose_apply_style!` macro. The old code emitted explicit reset codes for every attribute (e.g.,
@@ -584,8 +585,8 @@ refactored to use ASText (CliText) for all styling operations. Key findings:
 
 #### **Testing Strategy for Phase 0.5 Verification**
 
-**The Critical Requirement**: CliText must generate **byte-for-byte identical ANSI sequences** to
-the current code.
+**The Critical Requirement**: CliTextInline must generate **byte-for-byte identical ANSI sequences**
+to the current code.
 
 **Testing Approach**:
 
@@ -601,7 +602,7 @@ fn test_spinner_apply_color_ansi_equivalence() {
         output.to_string()  // Raw ANSI bytes
     };
 
-    // AFTER: Get ANSI output using CliText approach
+    // AFTER: Get ANSI output using CliTextInline approach
     let after = {
         let spinner_color = SpinnerColor::ColorWheel(/* ... */);
         let output = apply_color_NEW("test", &spinner_color);  // New code
@@ -622,7 +623,7 @@ fn test_choose_render_ansi_equivalence() {
     // Render with current code
     let before_ansi = capture_ansi_output(/* current render_single_item */);
 
-    // Render with CliText-based code
+    // Render with CliTextInline-based code
     let after_ansi = capture_ansi_output(/* new render_single_item */);
 
     assert_eq!(before_ansi, after_ansi);
@@ -661,7 +662,7 @@ Why cursor/clear operations are out of scope for Phase 0.5:
 1. **Styling is the primary pain point**: Multiple paths generating ANSI styling differently
 2. **Cursor/clear is secondary**: These are structural (not styling) and less frequently changed
 3. **Correct layering**: Each phase solves one problem:
-   - Phase 0.5: Styling abstraction (CliText)
+   - Phase 0.5: Styling abstraction (CliTextInline)
    - Phase 2: Unified ANSI generator (PixelCharRenderer - handles both styling AND structural ops)
    - Future: Remove crossterm backend (all operations go direct ANSI)
 
@@ -671,27 +672,28 @@ Why cursor/clear operations are out of scope for Phase 0.5:
 
 **So yes, it's completely OK and correct:**
 
-- Phase 0.5: ✅ Replace styling with CliText, leave cursor/clear as crossterm
+- Phase 0.5: ✅ Replace styling with CliTextInline, leave cursor/clear as crossterm
 - Phase 2: ✅ Cursor/clear will be handled by PixelCharRenderer pattern
 - Future (task_remove_crossterm): ✅ All operations (styling + cursor/clear) go direct ANSI
 
 #### **Why This Matters**
 
-By standardizing on CliText for styling BEFORE Phase 1 rename:
+By standardizing on CliTextInline for styling BEFORE Phase 1 rename:
 
 1. **Simpler rename**: Phase 1 can just rename the type, no behavior changes
 2. **Better Phase 2**: All paths already use unified abstraction for styling, so PixelCharRenderer
    integration is straightforward
-3. **Clearer logic**: Readers of future code see: "styling converts to CliText first, then renders"
-4. **Easier testing**: Test that CliText styling is identical to current output, then swap to
+3. **Clearer logic**: Readers of future code see: "styling converts to CliTextInline first, then
+   renders"
+4. **Easier testing**: Test that CliTextInline styling is identical to current output, then swap to
    PixelCharRenderer
-5. **Foundation for backend switch**: Once we know CliText generates identical ANSI, Phase 2 can be
-   confident integrating PixelCharRenderer
+5. **Foundation for backend switch**: Once we know CliTextInline generates identical ANSI, Phase 2
+   can be confident integrating PixelCharRenderer
 6. **Correct scope**: Phase 0.5 is focused, manageable, and low-risk (only touches styling)
 
 #### **Success Criteria for Phase 0.5**
 
-- ✅ All three rendering paths (TUI, choose, spinner) use CliText abstraction exclusively
+- ✅ All three rendering paths (TUI, choose, spinner) use CliTextInline abstraction exclusively
 - ✅ **Byte-for-byte ANSI equality**: Current code and new code produce identical escape sequences
 - ✅ All 2,058 existing tests pass
 - ✅ New equivalence tests added and passing
@@ -701,12 +703,12 @@ By standardizing on CliText for styling BEFORE Phase 1 rename:
 
 ---
 
-### Phase 1: Rename CliText (AnsiStyledText → CliText) and Extend PixelChar Support (✅ COMPLETE)
+### Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support (✅ COMPLETE)
 
 **Rename tasks (codebase-wide):**
 
-- Rename `AnsiStyledText` type to `CliText` to clarify it's for CLI applications
-- Rename type alias `ASText` to `CliText` (remove the ambiguous "AST" prefix)
+- Rename `AnsiStyledText` type to `CliTextInline` to clarify it's for CLI applications
+- Rename type alias `ASText` to `CliTextInline` (remove the ambiguous "AST" prefix)
 - Rename related types: `ASTStyle` → `CliStyle`, `ASTextLine` → `CliTextLine`, `ASTextLines` →
   `CliTextLines`
 - Rename conversion options: `ASTextConvertOptions` → `CliTextConvertOptions`
@@ -714,28 +716,28 @@ By standardizing on CliText for styling BEFORE Phase 1 rename:
 
 **Update references across ALL three rendering paths:**
 
-- `choose_api.rs` and related choose() files - update `AnsiStyledText` → `CliText` references
+- `choose_api.rs` and related choose() files - update `AnsiStyledText` → `CliTextInline` references
 - `readline_async/choose_impl/components/select_component.rs` - uses `AnsiStyledText` (line 88)
 - `readline_async/spinner_impl/spinner_render.rs` - update related type references if any
 
 **Implementation:**
 
-- CliText already has a `convert()` method that generates PixelChar arrays
+- CliTextInline already has a `convert()` method that generates PixelChar arrays
 - Make this the primary rendering path and ensure it uses unified `TuiStyleAttribs`
 - Standardize `CliStyle` to use `TuiStyleAttribs` internally (instead of separate style enum)
 
 **Scope verification - THREE rendering paths identified:**
 
-- ✅ **Path 1**: Full TUI uses CliText indirectly via RenderOps
-- ✅ **Path 2**: choose() uses CliText but bypasses it with queue_commands!
+- ✅ **Path 1**: Full TUI uses CliTextInline indirectly via RenderOps
+- ✅ **Path 2**: choose() uses CliTextInline but bypasses it with queue_commands!
 - ✅ **Path 3**: readline_async uses mixed approach:
-  - Spinner: Uses crossterm Stylize trait directly (NOT CliText)
-  - Choose component: Imports but doesn't use CliText, uses queue_commands!
+  - Spinner: Uses crossterm Stylize trait directly (NOT CliTextInline)
+  - Choose component: Imports but doesn't use CliTextInline, uses queue_commands!
   - This rename phase will update all references so next phase can unify rendering
 
 ```rust
 // After rename and consolidation
-impl CliText {
+impl CliTextInline {
     pub fn convert(&self, options: impl Into<CliTextConvertOptions>) -> InlineVec<PixelChar> {
         // Converts text + styles to PixelChar array
         // Uses unified TuiStyleAttribs internally
@@ -949,12 +951,12 @@ impl RenderToAnsi for OffscreenBuffer {
 // Then rendered using same RenderToAnsi trait
 ```
 
-### Phase 4: Update CliText Rendering (🎯 NEXT - Phase 3 Complete)
+### Phase 4: Update CliTextInline Rendering (🎯 NEXT - Phase 3 Complete)
 
-Modify CliText to use the new unified renderer and `TuiStyleAttribs`:
+Modify CliTextInline to use the new unified renderer and `TuiStyleAttribs`:
 
 ```rust
-impl Display for CliText {
+impl Display for CliTextInline {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         // Convert to PixelChar array
         let pixels = self.convert(CliTextConvertOptions::default());
@@ -992,7 +994,7 @@ impl FunctionComponent<State> for SelectComponent {
             viewport_width.as_usize()
         );
 
-        // Render header using CliText (renamed from ASText)
+        // Render header using CliTextInline (renamed from ASText)
         match &state.header {
             Header::SingleLine(text) => {
                 let header_text = cli_text(text, self.style.header_style.into());
@@ -1011,7 +1013,7 @@ impl FunctionComponent<State> for SelectComponent {
             }
         }
 
-        // Render items using CliText
+        // Render items using CliTextInline
         for (idx, item) in state.visible_items().enumerate() {
             let style = determine_item_style(idx, state, &self.style);
             let prefix = create_item_prefix(idx, state);
@@ -1048,8 +1050,8 @@ impl PaintRenderOp for RenderOpImplCrossterm {
     fn paint(&mut self, /* params */) {
         match render_op {
             RenderOp::PaintTextWithAttributes(text, maybe_style) => {
-                // Create CliText from the text and style
-                let cli_text = CliText {
+                // Create CliTextInline from the text and style
+                let cli_text = CliTextInline {
                     text: text.clone(),
                     styles: maybe_style.map(|s| s.into()).unwrap_or_default(),
                 };
@@ -1271,8 +1273,8 @@ The groundwork for unified rendering has been established with commit e0d25552:
 ### 🎯 Next Steps (After Phase 2 Complete)
 
 1. **✅ Phase 0**: ✅ COMPLETE - Consolidate style attributes (`TuiStyleAttribs`)
-2. **✅ Phase 0.5**: ✅ COMPLETE - Consolidate choose() and readline_async to use `CliText`
-3. **✅ Phase 1**: ✅ COMPLETE - Rename `AnsiStyledText` → `CliText` (Oct 21, 2025)
+2. **✅ Phase 0.5**: ✅ COMPLETE - Consolidate choose() and readline_async to use `CliTextInline`
+3. **✅ Phase 1**: ✅ COMPLETE - Rename `AnsiStyledText` → `CliTextInline` (Oct 21, 2025)
    - All 2090 tests passing
    - Clean naming, no backwards compat
    - Foundation ready for Phase 2
@@ -1287,8 +1289,8 @@ The groundwork for unified rendering has been established with commit e0d25552:
 5. **⏳ Phase 3**: Update both full TUI and choose() to use OffscreenBuffer → PixelCharRenderer
    (NEXT)
 
-6. **⏳ Phases 4-6**: Update CliText Display, choose() implementation, and RenderOp to use unified
-   path
+6. **⏳ Phases 4-6**: Update CliTextInline Display, choose() implementation, and RenderOp to use
+   unified path
 
 ### Key Insights
 
@@ -1319,7 +1321,7 @@ renderer doesn't depend on crossterm internals, only on ANSI sequence generation
 
 **What Was Done**:
 
-- Renamed `AnsiStyledText` → `CliText` across entire codebase
+- Renamed `AnsiStyledText` → `CliTextInline` across entire codebase
 - Renamed `ASTStyle` → `CliStyle` (removed ambiguous "AST" prefix)
 - Renamed type aliases: `ASTextLine` → `CliTextLine`, `ASTextLines` → `CliTextLines`
 - Renamed convenience function: `ast()` → `cli_text()`
@@ -1347,8 +1349,9 @@ renderer doesn't depend on crossterm internals, only on ANSI sequence generation
 - Tests: Updated test module imports and expectations
 
 **Why This Was Needed**: The "AST" prefix was ambiguous (could mean "Abstract Syntax Tree" or
-"AnsiStyledText"). Renaming to "CliText" clarifies that this is lightweight text representation for
-CLI applications, distinct from the more comprehensive `TuiStyledText` used by the full framework.
+"AnsiStyledText"). Renaming to "CliTextInline" clarifies that this is lightweight text
+representation for CLI applications, distinct from the more comprehensive `TuiStyledText` used by
+the full framework.
 
 **Foundation for Phase 2**: Phase 1 standardized the naming and consolidated the type system,
 providing a clean foundation for Phase 2 which will create the `PixelCharRenderer` unified ANSI
@@ -1476,7 +1479,8 @@ Phase 3 will update all three paths to use `OffscreenBuffer` consistently, then 
 
 **Key Design Decisions**:
 
-1. **Trait-Based Design**: `RenderToAnsi` is a simple, focused trait with single method `render_to_ansi() -> Vec<u8>`
+1. **Trait-Based Design**: `RenderToAnsi` is a simple, focused trait with single method
+   `render_to_ansi() -> Vec<u8>`
    - Enables future implementations for alternative buffer types
    - Maintains separation between rendering and I/O backends
    - Backend-agnostic design ready for both crossterm and direct ANSI
@@ -1551,7 +1555,8 @@ Phase 3 completes the core abstraction enabling unified rendering across all thr
 
 1. **Full TUI**: RenderOps → OffscreenBuffer → `render_to_ansi()` → PixelCharRenderer → ANSI
 2. **choose()**: Select items → OffscreenBuffer → `render_to_ansi()` → PixelCharRenderer → ANSI
-3. **readline_async**: Spinner/Choose → OffscreenBuffer → `render_to_ansi()` → PixelCharRenderer → ANSI
+3. **readline_async**: Spinner/Choose → OffscreenBuffer → `render_to_ansi()` → PixelCharRenderer →
+   ANSI
 
 Phase 4 will update the actual rendering paths (choose(), readline_async, RenderOp) to populate
 `OffscreenBuffer` and use the unified `render_to_ansi()` method.
@@ -1572,7 +1577,8 @@ The `RenderToAnsi` trait is deliberately simple and focused. It defines a single
 
 **Status**: ✅ COMPLETE
 
-As part of solidifying Phase 3's `RenderToAnsi` implementation, hardcoded ANSI escape sequences were extracted into shared constants with synchronization tests:
+As part of solidifying Phase 3's `RenderToAnsi` implementation, hardcoded ANSI escape sequences were
+extracted into shared constants with synchronization tests:
 
 **Changes Made**:
 
@@ -1584,7 +1590,8 @@ As part of solidifying Phase 3's `RenderToAnsi` implementation, hardcoded ANSI e
 2. **Added synchronization tests to `ansi_escape_codes.rs`** (lines 553-567):
    - `test_sgr_reset_bytes_matches_enum()` - Ensures constant matches `SgrCode::Reset` enum output
    - `test_crlf_bytes()` - Validates CRLF constant
-   - These tests serve as compile-time verification that constants stay synchronized with their source implementations
+   - These tests serve as compile-time verification that constants stay synchronized with their
+     source implementations
 
 3. **Updated `render_to_ansi.rs`** (lines 7, 91, 102):
    - Import: `use crate::{CRLF_BYTES, SGR_RESET_BYTES};`
@@ -1596,12 +1603,14 @@ As part of solidifying Phase 3's `RenderToAnsi` implementation, hardcoded ANSI e
 - ✅ **Single source of truth**: Constants defined once, used everywhere
 - ✅ **Type-safe API preserved**: Clean enum `SgrCode::Reset` for general use remains unchanged
 - ✅ **Zero-overhead constants**: Direct byte slices for performance-critical paths
-- ✅ **Compile-time verification**: Tests ensure constants stay synchronized with enum implementations
+- ✅ **Compile-time verification**: Tests ensure constants stay synchronized with enum
+  implementations
 - ✅ **Self-documenting**: Constant names clarify ANSI sequence purpose
 
 **Architecture Pattern**:
 
-This follows the established pattern from `csi_codes/constants.rs` (e.g., `CSI_START`), providing consistent constant organization across the ANSI module:
+This follows the established pattern from `csi_codes/constants.rs` (e.g., `CSI_START`), providing
+consistent constant organization across the ANSI module:
 
 ```rust
 // Pattern: Multiple access forms for different use cases
@@ -1629,6 +1638,7 @@ fn test_sgr_reset_bytes_matches_enum() {
 **Why This Matters**:
 
 By ensuring ANSI constants are shared and synchronized, we:
+
 - Prevent divergence between enum-based and constant-based ANSI generation
 - Make it obvious where ANSI sequences are defined (single location)
 - Enable easy migration paths (if SGR_RESET logic changes, both enum and constant stay synchronized)

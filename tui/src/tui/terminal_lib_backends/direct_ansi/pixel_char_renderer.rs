@@ -65,7 +65,7 @@ use crate::{FastStringify, PixelChar, SgrCode, TuiColor, TuiStyle, degrade_color
 /// ## Integration Points
 ///
 /// - `OffscreenBuffer::render_to_ansi()` will call this renderer
-/// - `CliText::Display` will use this renderer
+/// - `CliTextInline::Display` will use this renderer
 /// - `choose()` and `readline_async` will use this renderer
 /// - `RenderOp::PaintTextWithAttributes` will use this renderer
 ///
@@ -342,6 +342,14 @@ impl PixelCharRenderer {
             }
         }
     }
+
+    /// Returns whether any style codes have been emitted.
+    ///
+    /// This is useful for determining if a final reset code is needed when
+    /// converting to string format. Returns `true` if style codes have been applied,
+    /// `false` otherwise.
+    #[must_use]
+    pub fn has_active_style(&self) -> bool { self.has_active_style }
 }
 
 impl Default for PixelCharRenderer {

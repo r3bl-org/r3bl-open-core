@@ -5,7 +5,7 @@ use super::{CLIArg, image_handler, prompt_history,
             ui_str};
 use crate::prefix_single_select_instruction_header;
 use r3bl_tui::{CommonResult, DefaultIoDevices, InlineString, TTYResult, choose,
-               cli_text, cli_text_line, height, inline_vec,
+               cli_text_inline, cli_text_line, height, inline_vec,
                is_fully_uninteractive_terminal,
                readline_async::{HowToChoose, StyleSheet},
                tui::editor::editor_buffer::{clipboard_service::SystemClipboard,
@@ -64,7 +64,7 @@ pub async fn handle_ch_command(_cli_arg: CLIArg) -> CommonResult<ChResult> {
 
     // Create header with project information.
     let header_with_instructions = {
-        let last_line = cli_text_line![cli_text(
+        let last_line = cli_text_line![cli_text_inline(
             ui_str::select_prompt_header_msg_raw(&project_path, display_prompts.len()),
             crate::common::ui_templates::header_style_default()
         )];

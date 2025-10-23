@@ -3,8 +3,8 @@ use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, RepoStatus,
                    git::{self},
                    try_is_working_directory_clean, ui_str},
             prefix_single_select_instruction_header};
-use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, choose, cli_text,
-               cli_text_line, height, inline_vec,
+use r3bl_tui::{CommandRunResult, CommonResult, DefaultIoDevices, choose,
+               cli_text_inline, cli_text_line, height, inline_vec,
                readline_async::{HowToChoose, StyleSheet}};
 
 /// The main function for `giti branch checkout` command.
@@ -147,7 +147,7 @@ mod user_interaction {
         }
 
         let header_with_instructions = {
-            let last_line = cli_text_line![cli_text(
+            let last_line = cli_text_line![cli_text_inline(
                 ui_str::branch_checkout_display::select_branch_to_switch_to_msg_raw(),
                 crate::common::ui_templates::header_style_default()
             )];

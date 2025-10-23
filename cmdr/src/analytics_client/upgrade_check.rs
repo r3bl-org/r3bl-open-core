@@ -45,7 +45,7 @@
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT_MOD, prefix_single_select_instruction_header};
 use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscEvent, OutputDevice,
-               SpinnerStyle, StyleSheet, choose, cli_text, cli_text_line,
+               SpinnerStyle, StyleSheet, choose, cli_text_inline, cli_text_line,
                core::pty::{PtyCommandBuilder, PtyConfigOption, PtyReadOnlyOutputEvent,
                            pty_to_std_exit_status},
                height, inline_string,
@@ -159,7 +159,7 @@ pub async fn show_exit_message(context: ExitContext) {
             ui_str::upgrade_check::no_msg_raw(),
         ];
         let header_with_instructions = {
-            let last_line = cli_text_line![cli_text(
+            let last_line = cli_text_line![cli_text_inline(
                 ui_str::upgrade_check::ask_user_msg_raw(),
                 crate::common::ui_templates::header_style_default()
             )];

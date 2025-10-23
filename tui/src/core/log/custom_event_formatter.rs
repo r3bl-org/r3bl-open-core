@@ -135,7 +135,7 @@
 //! - Empty field values are skipped to avoid blank lines
 
 use crate::{ColWidth, ColorWheel, GCStringOwned, InlineString, OrderedMap, RgbValue,
-            TuiColor, TuiStyle, cli_text, fg_color, get_terminal_width, glyphs,
+            TuiColor, TuiStyle, cli_text_inline, fg_color, get_terminal_width, glyphs,
             inline_string, new_style, remove_escaped_quotes, truncate_from_right,
             tui_color, tui_style_attrib, usize, width};
 use chrono::Local;
@@ -272,7 +272,7 @@ mod helpers {
             ts = timestamp.format("%I:%M%P"),
             sp = spacer
         );
-        let timestamp_str_fmt = cli_text(
+        let timestamp_str_fmt = cli_text_inline(
             timestamp_str,
             new_style!(
                 italic
@@ -295,7 +295,7 @@ mod helpers {
         match ctx.lookup_current() {
             Some(scope) => {
                 let scope_str = inline_string!("[{}] ", scope.name());
-                let scope_str_fmt = cli_text(
+                let scope_str_fmt = cli_text_inline(
                     scope_str,
                     new_style!(
                         italic
@@ -349,7 +349,7 @@ mod helpers {
         spacer: &str,
     ) -> fmt::Result {
         let (level_str, style) = helpers::get_level_info(event, spacer);
-        let level_str_fmt = cli_text(level_str, style);
+        let level_str_fmt = cli_text_inline(level_str, style);
         write!(f, "{level_str_fmt}")
     }
 
@@ -448,7 +448,7 @@ mod helpers {
                 // main event loop.
                 let truncated_body_line =
                     truncate_from_right(body_line, max_display_width, false);
-                let body_line_fmt = cli_text(
+                let body_line_fmt = cli_text_inline(
                     truncated_body_line.as_ref(),
                     new_style!(
                         color_fg: {TuiColor::Rgb(BODY_FG_COLOR)}

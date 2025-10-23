@@ -1,16 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{get_scroll_adjusted_row_index,
-            locate_cursor_in_viewport,
-            CliText,
-            CalculateResizeHint,
-            CaretVerticalViewportLocation,
-            ChUnit,
-            HowToChoose,
-            InlineString,
-            InlineVec,
-            ItemsOwned,
-            Size};
+use crate::{CalculateResizeHint, CaretVerticalViewportLocation, ChUnit, CliTextInline,
+            HowToChoose, InlineString, InlineVec, ItemsOwned, Size,
+            get_scroll_adjusted_row_index, locate_cursor_in_viewport};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct State {
@@ -37,7 +29,7 @@ pub enum Header {
     /// Single line header.
     SingleLine(InlineString),
     /// Multi line header.
-    MultiLine(InlineVec<InlineVec<CliText>>),
+    MultiLine(InlineVec<InlineVec<CliTextInline>>),
 }
 
 /// Convert various types to a header:
@@ -45,16 +37,16 @@ pub enum Header {
 /// - `InlineString`,
 /// - `String`, etc.
 mod convert_to_header {
-    use super::{CliText, Header, InlineVec, InlineString};
+    use super::{CliTextInline, Header, InlineString, InlineVec};
 
-    impl From<Vec<Vec<CliText>>> for Header {
-        fn from(header: Vec<Vec<CliText>>) -> Self {
+    impl From<Vec<Vec<CliTextInline>>> for Header {
+        fn from(header: Vec<Vec<CliTextInline>>) -> Self {
             Header::MultiLine(header.into_iter().map(InlineVec::from).collect())
         }
     }
 
-    impl From<InlineVec<InlineVec<CliText>>> for Header {
-        fn from(header: InlineVec<InlineVec<CliText>>) -> Self {
+    impl From<InlineVec<InlineVec<CliTextInline>>> for Header {
+        fn from(header: InlineVec<InlineVec<CliTextInline>>) -> Self {
             Header::MultiLine(header)
         }
     }
@@ -78,23 +70,24 @@ mod convert_to_header {
 
 #[cfg(test)]
 mod tests {
-    use smallvec::smallvec;
-
     use super::*;
-    use crate::{assert_eq2, cli_text};
+    use crate::{assert_eq2, cli_text_inline, TuiStyle};
+    use smallvec::smallvec;
 
     #[test]
     fn test_header_enum() {
         let state = State {
-            header: Header::MultiLine(smallvec![smallvec![cli_text(
+            header: Header::MultiLine(smallvec![smallvec![cli_text_inline(
                 "line1",
-                smallvec::smallvec![],
+                TuiStyle::default(),
             )]]),
             ..Default::default()
         };
         let lhs = state.header;
-        let rhs =
-            Header::MultiLine(smallvec![smallvec![cli_text("line1", smallvec::smallvec![])]]);
+        let rhs = Header::MultiLine(smallvec![smallvec![cli_text_inline(
+            "line1",
+            TuiStyle::default()
+        )]]);
         assert_eq2!(lhs, rhs);
     }
 }

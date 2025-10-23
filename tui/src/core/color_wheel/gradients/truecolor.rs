@@ -121,7 +121,7 @@ mod random_color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TuiColor, assert_eq2, cli_text, new_style, usize};
+    use crate::{TuiColor, assert_eq2, cli_text_inline, new_style, usize};
 
     #[test]
     fn test_generate_random_truecolor_gradient() {
@@ -135,7 +135,7 @@ mod tests {
             .enumerate()
             .for_each(|(index, color)| match color {
                 TuiColor::Rgb(c) => {
-                    cli_text(
+                    cli_text_inline(
                         format!(
                             " {index}                                                   "
                         ),
@@ -180,7 +180,7 @@ mod tests {
             .enumerate()
             .for_each(|(index, color)| match color {
                 TuiColor::Rgb(c) => {
-                    cli_text(
+                    cli_text_inline(
                         format!(
                             " {index}                                                   "
                         ),

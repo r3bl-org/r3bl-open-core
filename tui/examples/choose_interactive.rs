@@ -1,13 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CliStyle, CliText, DefaultIoDevices, InlineVec, TuiColor, choose,
-               cli_text, cli_text_line, cli_text_lines, get_size, get_terminal_width,
-               height, inline_vec,
+use r3bl_tui::{CliTextInline, DefaultIoDevices, InlineVec, TuiColor, TuiStyle, choose,
+               cli_text_inline, cli_text_line, cli_text_lines, get_size,
+               get_terminal_width, height, inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
                readline_async::{DEVELOPMENT_MODE, HowToChoose, style::StyleSheet},
                set_mimalloc_in_main, throws, tui_color, usize, width};
-use smallvec::smallvec;
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -127,7 +126,7 @@ async fn main() -> miette::Result<()> {
 
 // Multi line header.
 async fn multi_line_header() -> miette::Result<()> {
-    let header = cli_text(
+    let header = cli_text_inline(
         " Please select one or more items. This is a really long heading that just keeps going and if your terminal viewport is small enough, this heading will be clipped",
         new_style!(
             color_fg: {tui_color!(171, 204, 242)}
@@ -226,7 +225,7 @@ async fn single_line_header() -> miette::Result<()> {
 /// Multiple select, single item.
 async fn multiple_select_single_item() -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
-    let header = cli_text(
+    let header = cli_text_inline(
         " Please select one or more items",
         new_style!(
             color_fg: {tui_color!(171, 204, 242)}
@@ -267,7 +266,7 @@ async fn multiple_select_13_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
-    let header = cli_text(
+    let header = cli_text_inline(
         " Please select one or more items",
         new_style!(
             color_fg: {tui_color!(229, 239, 123)}
@@ -328,7 +327,7 @@ async fn multiple_select_2_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = multi_select_instructions();
-    let header = cli_text(
+    let header = cli_text_inline(
         " Please select one or more items",
         new_style!(
             color_fg: {tui_color!(229, 239, 123)}
@@ -427,7 +426,7 @@ async fn single_select_2_items_vph_5(
     style: StyleSheet,
 ) -> miette::Result<()> {
     let mut instructions = single_select_instruction();
-    let header = cli_text(
+    let header = cli_text_inline(
         " Please select one item",
         new_style!(
             color_fg: {tui_color!(171, 204, 242)}
@@ -467,9 +466,9 @@ async fn single_select_2_items_vph_5(
     ok!()
 }
 
-fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
+fn multi_select_instructions() -> InlineVec<InlineVec<CliTextInline>> {
     let line_1 = {
-        let up_and_down = cli_text(
+        let up_and_down = cli_text_inline(
             " Up or down:",
             new_style!(
                 color_fg: {tui_color!(9, 238, 211)}
@@ -477,7 +476,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
             ),
         );
 
-        let navigate = cli_text(
+        let navigate = cli_text_inline(
             "     navigate",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
@@ -489,7 +488,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
     };
 
     let line_2 = {
-        let space = cli_text(
+        let space = cli_text_inline(
             " Space:",
             new_style!(
                 color_fg: {tui_color!(255, 216, 9)}
@@ -497,7 +496,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
             ),
         );
 
-        let select = cli_text(
+        let select = cli_text_inline(
             "          select or deselect item",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
@@ -509,7 +508,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
     };
 
     let line_3 = {
-        let esc = cli_text(
+        let esc = cli_text_inline(
             " Esc or Ctrl+C:",
             new_style!(
                 color_fg: {tui_color!(255, 132, 18)}
@@ -517,7 +516,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
             ),
         );
 
-        let exit = cli_text(
+        let exit = cli_text_inline(
             "  request_shutdown program",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
@@ -529,7 +528,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
     };
 
     let line_4 = {
-        let return_key = cli_text(
+        let return_key = cli_text_inline(
             " Return:",
             new_style!(
                 color_fg: {tui_color!(234, 0, 196)}
@@ -537,7 +536,7 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
             ),
         );
 
-        let confirm = cli_text(
+        let confirm = cli_text_inline(
             "         confirm selection",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
@@ -551,9 +550,9 @@ fn multi_select_instructions() -> InlineVec<InlineVec<CliText>> {
     cli_text_lines![line_1, line_2, line_3, line_4]
 }
 
-fn single_select_instruction() -> InlineVec<InlineVec<CliText>> {
+fn single_select_instruction() -> InlineVec<InlineVec<CliTextInline>> {
     let line_1 = {
-        let up_and_down = cli_text(
+        let up_and_down = cli_text_inline(
             " Up or down:",
             new_style!(
                 color_fg: {tui_color!(9, 238, 211)}
@@ -561,7 +560,7 @@ fn single_select_instruction() -> InlineVec<InlineVec<CliText>> {
             ),
         );
 
-        let navigate = cli_text(
+        let navigate = cli_text_inline(
             "     navigate",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
@@ -573,7 +572,7 @@ fn single_select_instruction() -> InlineVec<InlineVec<CliText>> {
     };
 
     let line_2 = {
-        let esc = cli_text(
+        let esc = cli_text_inline(
             " Esc or Ctrl+C:",
             new_style!(
                 color_fg: {tui_color!(255, 132, 18)}
@@ -581,7 +580,7 @@ fn single_select_instruction() -> InlineVec<InlineVec<CliText>> {
             ),
         );
 
-        let exit = cli_text(
+        let exit = cli_text_inline(
             "  request_shutdown program",
             new_style!(
                 color_fg: {tui_color!(94, 103, 111)}
@@ -593,20 +592,22 @@ fn single_select_instruction() -> InlineVec<InlineVec<CliText>> {
     };
 
     let line_3 = {
-        let return_key = cli_text(
+        let return_key = cli_text_inline(
             " Return:",
-            smallvec![
-                CliStyle::Foreground(TuiColor::Rgb((234, 0, 196).into())),
-                CliStyle::Background(TuiColor::Rgb((14, 17, 23).into())),
-            ],
+            TuiStyle {
+                color_fg: Some(TuiColor::Rgb((234, 0, 196).into())),
+                color_bg: Some(TuiColor::Rgb((14, 17, 23).into())),
+                ..Default::default()
+            },
         );
 
-        let confirm = cli_text(
+        let confirm = cli_text_inline(
             "         confirm selection",
-            smallvec![
-                CliStyle::Foreground(TuiColor::Rgb((94, 103, 111).into())),
-                CliStyle::Background(TuiColor::Rgb((14, 17, 23).into())),
-            ],
+            TuiStyle {
+                color_fg: Some(TuiColor::Rgb((94, 103, 111).into())),
+                color_bg: Some(TuiColor::Rgb((14, 17, 23).into())),
+                ..Default::default()
+            },
         );
 
         cli_text_line![return_key, confirm]

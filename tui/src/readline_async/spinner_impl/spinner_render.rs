@@ -1,9 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use crate::{BLOCK_DOTS, BRAILLE_DOTS, ColWidth, GCStringOwned, InlineString,
+            SpinnerColor, SpinnerStyle, SpinnerTemplate, contains_ansi_escape_sequence,
+            fg_color, inline_string, width};
 use std::ops::Not;
-
-use crate::{contains_ansi_escape_sequence, fg_color, GCStringOwned, inline_string, width,
-            ColWidth, InlineString, SpinnerColor, SpinnerStyle, SpinnerTemplate, BLOCK_DOTS,
-            BRAILLE_DOTS};
 
 pub fn render_tick(
     style: &mut SpinnerStyle,
@@ -73,10 +72,11 @@ pub fn get_next_tick_glyph(style: &SpinnerStyle, count: usize) -> InlineString {
 }
 fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
     if let SpinnerColor::ColorWheel(color_wheel) = color
-        && let Some(tui_color) = color_wheel.next_color() {
-            // Use CliText to apply the color
-            let styled_text = fg_color(tui_color, output);
-            return inline_string!("{styled_text}");
-        }
+        && let Some(tui_color) = color_wheel.next_color()
+    {
+        // Use CliTextInline to apply the color
+        let styled_text = fg_color(tui_color, output);
+        return inline_string!("{styled_text}");
+    }
     InlineString::from(output)
 }

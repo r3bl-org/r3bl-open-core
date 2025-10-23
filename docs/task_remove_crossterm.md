@@ -47,18 +47,20 @@ input.
 
 **This task depends on completion of [task_unify_rendering.md](task_unify_rendering.md):**
 
-| Unification Phase | Output | Status | Notes |
-|---|---|---|---|
-| **0.5** (prerequisite) | CliText uses CliText abstraction for styling | ✅ COMPLETE | Standardizes styling before renaming |
-| **1** (rename) | AnsiStyledText → CliText | ✅ COMPLETE (October 21, 2025) | Type rename across codebase |
-| **2** (core) | `PixelCharRenderer` module created | ⏳ COMPLETE | Unified ANSI sequence generator |
-| **3-6** (integration) | All paths use PixelCharRenderer | ✅ COMPLETE | Ready for DirectAnsi backend |
+| Unification Phase      | Output                                                   | Status                         | Notes                                |
+| ---------------------- | -------------------------------------------------------- | ------------------------------ | ------------------------------------ |
+| **0.5** (prerequisite) | CliTextInline uses CliTextInline abstraction for styling | ✅ COMPLETE                    | Standardizes styling before renaming |
+| **1** (rename)         | AnsiStyledText → CliTextInline                           | ✅ COMPLETE (October 21, 2025) | Type rename across codebase          |
+| **2** (core)           | `PixelCharRenderer` module created                       | ⏳ COMPLETE                    | Unified ANSI sequence generator      |
+| **3-6** (integration)  | All paths use PixelCharRenderer                          | ✅ COMPLETE                    | Ready for DirectAnsi backend         |
 
 **Execution Order:**
+
 1. ✅ Complete task_unify_rendering.md (all phases)
 2. 🚀 Begin this task (task_remove_crossterm.md)
 
 **Why this dependency matters:**
+
 - `PixelCharRenderer` already generates ANSI sequences from `PixelChar[]`
 - We're replacing crossterm's output backend, not the entire rendering logic
 - This keeps the change focused and lower risk
@@ -96,6 +98,7 @@ input.
 ```
 
 **Input symmetry:**
+
 ```
      stdin → mio async read → VT-100 Parser → Events → InputDevice → Application
 ```
@@ -105,12 +108,14 @@ input.
 ### Correct Render Pipeline Flow
 
 **Full TUI (already optimal):**
+
 ```
 RenderOps → OffscreenBuffer → PixelCharRenderer → ANSI → stdout
   (layout)    (materialized)      (encoding)
 ```
 
 **RenderOps Purpose:**
+
 - **Layout abstraction**: Positioning, sizing, layering, z-order management
 - **Compositor input**: Feeds the OffscreenBuffer compositor
 - **NOT an intermediate format**: OffscreenBuffer is the final materialized state before ANSI
@@ -127,6 +132,7 @@ the final abstraction, which PixelCharRenderer directly encodes to ANSI bytes.
 4. **Input handling**: Uses `crossterm::event::read()` for keyboard/mouse events
 
 **Crossterm usage in choose()/readline_async():**
+
 ```rust
 // Current code (crossterm-specific):
 queue_commands! {
@@ -158,8 +164,9 @@ crossterm-compatible shim, we:
 3. **Migrate all paths** to speak RenderOps instead of crossterm
 
 **Key advantages:**
-- RenderOp is higher-level than crossterm (supports TUI concepts like z-order, relative
-  positioning, styled text)
+
+- RenderOp is higher-level than crossterm (supports TUI concepts like z-order, relative positioning,
+  styled text)
 - RenderOp already has infrastructure to route to different backends
 - RenderOp is something we own and control
 - No need to maintain crossterm compatibility layer
@@ -167,11 +174,13 @@ crossterm-compatible shim, we:
 ### Architectural Symmetry
 
 **Output Path** (all three rendering paths):
+
 ```
 Application → RenderOps → DirectAnsi Backend → ANSI bytes → stdout
 ```
 
 **Input Path** (reuse VT-100 parser for symmetry):
+
 ```
 stdin → ANSI bytes → VT-100 Parser → Events → InputDevice → Application
 ```
@@ -231,7 +240,7 @@ pub enum RenderOp {
 
     /// Print text that already contains ANSI escape codes
     /// No additional styling applied, text rendered as-is
-    /// Used when CliText has already generated styled output
+    /// Used when CliTextInline has already generated styled output
     PrintStyledText(InlineString),
 
     /// Show cursor (maps to CSI ?25h)
@@ -249,6 +258,7 @@ pub enum RenderOp {
 ```
 
 **Testing**:
+
 - Unit tests for each new variant
 - Verify correct ANSI sequence generation
 - Integration tests with mock OutputDevice
@@ -722,7 +732,7 @@ pub fn route_paint_render_op_to_backend(
 
 Deprecate crossterm macros and create RenderOps-based replacements:
 
-```rust
+````rust
 /// DEPRECATED: Use render_ops! macro instead
 ///
 /// This macro is kept for backwards compatibility during migration.
@@ -756,7 +766,7 @@ macro_rules! queue_render_ops {
         $ops.execute_all(&mut skip_flush, window_size, locked_output, false);
     }};
 }
-```
+````
 
 **Estimated LOC**: ~100 lines (macro updates + deprecation warnings)
 
@@ -767,6 +777,7 @@ macro_rules! queue_render_ops {
 Example migration:
 
 **Before (crossterm):**
+
 ```rust
 queue_commands! {
     output_device,
@@ -780,6 +791,7 @@ queue_commands! {
 ```
 
 **After (RenderOps):**
+
 ```rust
 let mut ops = render_ops!(
     @new
@@ -794,6 +806,7 @@ queue_render_ops!(output_device, ops);
 ```
 
 **Files to migrate:**
+
 - `tui/src/readline_async/choose_impl/select_component.rs`
 - `tui/src/readline_async/choose_impl/function_component.rs`
 - `tui/src/readline_async/choose_impl/event_loop.rs`
@@ -807,6 +820,7 @@ queue_render_ops!(output_device, ops);
 Replace crossterm imports with RenderOp imports:
 
 **Before:**
+
 ```rust
 use crossterm::{
     cursor::{MoveToColumn, MoveToNextLine},
@@ -816,6 +830,7 @@ use crossterm::{
 ```
 
 **After:**
+
 ```rust
 use crate::{
     RenderOp, RenderOps, render_ops,
@@ -929,7 +944,7 @@ impl StdinReader {
 
 **File**: `tui/src/core/terminal_io/vt100_input_parser/mod.rs` (NEW)
 
-```rust
+````rust
 /// VT-100 input parser for stdin events
 ///
 /// This is a **separate parser** from the PTY VT-100 parser, specialized for parsing
@@ -1223,7 +1238,7 @@ impl Vt100InputParser {
         None
     }
 }
-```
+````
 
 **Estimated LOC**: ~800 lines (parser state machine + CSI/key/mouse parsing + tests)
 
@@ -1545,10 +1560,12 @@ windows = { version = "0.52", features = [
 #### 6.2 Remove Crossterm Code
 
 **Files to remove:**
+
 - `tui/src/tui/terminal_lib_backends/crossterm/` (entire directory)
 - `tui/src/readline_async/choose_impl/crossterm_macros.rs` (replace with render_ops macros)
 
 **Files to update:**
+
 - Remove all `use crossterm::*` imports
 - Remove `RenderOpImplCrossterm` references
 - Update `TERMINAL_LIB_BACKEND` default to `DirectAnsi`
@@ -1556,6 +1573,7 @@ windows = { version = "0.52", features = [
 #### 6.3 Update Documentation
 
 **Files to update:**
+
 - `README.md` - Update dependencies section
 - `CHANGELOG.md` - Document crossterm removal
 - `docs/architecture.md` - Update rendering architecture diagrams
@@ -1622,33 +1640,33 @@ tui/src/tui/terminal_lib_backends/crossterm/
 
 ## Code Size Estimates
 
-| Component | New Code | Modified Code | Total |
-|-----------|----------|---------------|-------|
-| **Phase 1: RenderOp extensions** | 200 | 50 | 250 |
-| **Phase 2: DirectAnsi backend** | 1,800 | 50 | 1,850 |
-| **Phase 3: Partial TUI migration** | 100 | 320 | 420 |
-| **Phase 4: Input handling** | 1,000 | 100 | 1,100 |
-| **Phase 5: Testing** | 850 | 0 | 850 |
-| **Phase 6: Cleanup** | 0 | 120 | 120 |
-| **TOTAL** | **3,950** | **640** | **4,590** |
+| Component                          | New Code  | Modified Code | Total     |
+| ---------------------------------- | --------- | ------------- | --------- |
+| **Phase 1: RenderOp extensions**   | 200       | 50            | 250       |
+| **Phase 2: DirectAnsi backend**    | 1,800     | 50            | 1,850     |
+| **Phase 3: Partial TUI migration** | 100       | 320           | 420       |
+| **Phase 4: Input handling**        | 1,000     | 100           | 1,100     |
+| **Phase 5: Testing**               | 850       | 0             | 850       |
+| **Phase 6: Cleanup**               | 0         | 120           | 120       |
+| **TOTAL**                          | **3,950** | **640**       | **4,590** |
 
-**Total new code**: ~4,000 lines
-**Total modified code**: ~650 lines
-**Net code change**: ~4,600 lines (including extensive documentation and tests)
+**Total new code**: ~4,000 lines **Total modified code**: ~650 lines **Net code change**: ~4,600
+lines (including extensive documentation and tests)
 
 ## Migration Timeline
 
-| Phase | Description | Duration | Dependencies |
-|-------|-------------|----------|--------------|
-| **Phase 1** | Extend RenderOp | 2-3 days | None |
-| **Phase 2** | DirectAnsi backend | 5-7 days | Phase 1 |
-| **Phase 3** | Migrate choose()/readline | 3-4 days | Phase 2 |
-| **Phase 4** | Input handling | 5-7 days | Phase 3 |
-| **Phase 5** | Testing & validation | 3-5 days | Phase 4 |
-| **Phase 6** | Remove crossterm | 1-2 days | Phase 5 |
-| **TOTAL** | End-to-end migration | **3-4 weeks** | |
+| Phase       | Description               | Duration      | Dependencies |
+| ----------- | ------------------------- | ------------- | ------------ |
+| **Phase 1** | Extend RenderOp           | 2-3 days      | None         |
+| **Phase 2** | DirectAnsi backend        | 5-7 days      | Phase 1      |
+| **Phase 3** | Migrate choose()/readline | 3-4 days      | Phase 2      |
+| **Phase 4** | Input handling            | 5-7 days      | Phase 3      |
+| **Phase 5** | Testing & validation      | 3-5 days      | Phase 4      |
+| **Phase 6** | Remove crossterm          | 1-2 days      | Phase 5      |
+| **TOTAL**   | End-to-end migration      | **3-4 weeks** |              |
 
 **Parallelization opportunities:**
+
 - Phase 1 + Phase 4 (input) can overlap partially
 - Phase 5 (testing) can begin during Phase 3-4
 
@@ -1658,11 +1676,11 @@ tui/src/tui/terminal_lib_backends/crossterm/
 
 ### ANSI Support by Platform
 
-| Platform | ANSI Support | Raw Mode Implementation | Notes |
-|----------|--------------|-------------------------|-------|
-| **Linux** | Native | `termios` via `libc` | Full support, all terminals |
-| **macOS** | Native | `termios` via `libc` | Full support, all terminals |
-| **Windows 10+** | Native (with VT enable) | Windows Console API | Enable Virtual Terminal Processing |
+| Platform        | ANSI Support            | Raw Mode Implementation | Notes                              |
+| --------------- | ----------------------- | ----------------------- | ---------------------------------- |
+| **Linux**       | Native                  | `termios` via `libc`    | Full support, all terminals        |
+| **macOS**       | Native                  | `termios` via `libc`    | Full support, all terminals        |
+| **Windows 10+** | Native (with VT enable) | Windows Console API     | Enable Virtual Terminal Processing |
 
 ### Windows Virtual Terminal Processing
 
@@ -1690,6 +1708,7 @@ fn enable_virtual_terminal_processing() -> std::io::Result<()> {
 ### Cross-Platform Testing
 
 **Required test environments:**
+
 - **Linux**: Ubuntu 22.04+, Fedora 38+, Arch Linux
 - **macOS**: macOS 12+ (Monterey and newer)
 - **Windows**: Windows 10 21H2+, Windows 11
@@ -1697,17 +1716,18 @@ fn enable_virtual_terminal_processing() -> std::io::Result<()> {
 
 ## Risks and Mitigation
 
-| Risk | Impact | Probability | Mitigation |
-|------|--------|-------------|------------|
-| **Platform compatibility issues** | High | Medium | Extensive testing on all platforms before release |
-| **Windows Console quirks** | Medium | Medium | Enable VT processing, test on multiple Windows terminals |
-| **Input parsing edge cases** | Medium | Medium | Comprehensive test suite, handle unknown sequences gracefully |
-| **Raw mode differences** | Medium | Low | Abstract platform differences in dedicated module |
-| **ANSI sequence variations** | Low | Low | Stick to well-supported subset of ANSI standard |
-| **Performance regression** | High | Low | Benchmark before/after, profile with flamegraph |
-| **Breaking existing apps** | High | Low | Extensive testing, gradual rollout with feature flags |
+| Risk                              | Impact | Probability | Mitigation                                                    |
+| --------------------------------- | ------ | ----------- | ------------------------------------------------------------- |
+| **Platform compatibility issues** | High   | Medium      | Extensive testing on all platforms before release             |
+| **Windows Console quirks**        | Medium | Medium      | Enable VT processing, test on multiple Windows terminals      |
+| **Input parsing edge cases**      | Medium | Medium      | Comprehensive test suite, handle unknown sequences gracefully |
+| **Raw mode differences**          | Medium | Low         | Abstract platform differences in dedicated module             |
+| **ANSI sequence variations**      | Low    | Low         | Stick to well-supported subset of ANSI standard               |
+| **Performance regression**        | High   | Low         | Benchmark before/after, profile with flamegraph               |
+| **Breaking existing apps**        | High   | Low         | Extensive testing, gradual rollout with feature flags         |
 
 **Mitigation strategies:**
+
 1. **Feature flag approach**: Keep crossterm as fallback during initial rollout
 2. **Extensive testing**: Platform-specific CI/CD testing
 3. **Gradual migration**: Enable DirectAnsi for new code first, migrate existing code incrementally
@@ -1762,6 +1782,7 @@ success criteria. The estimated timeline is 3-4 weeks with a total of ~4,600 lin
 modified code.
 
 **Next steps:**
+
 1. Review this plan with the team
 2. Begin Phase 1 (RenderOp extensions)
 3. Set up platform-specific testing infrastructure
@@ -1769,7 +1790,5 @@ modified code.
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: January 2025
-**Author**: Architecture team
-**Status**: Ready for implementation
+**Document Version**: 1.0 **Last Updated**: January 2025 **Author**: Architecture team **Status**:
+Ready for implementation

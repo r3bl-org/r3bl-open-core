@@ -22,7 +22,9 @@
       <sourceFolder url="file://$MODULE_DIR$/test_fixtures/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/log/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/script/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/cmdr/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/tui/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

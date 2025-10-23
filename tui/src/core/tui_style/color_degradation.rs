@@ -71,7 +71,7 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 ///
 /// - **crossterm converter**: `From<TuiColor> for crossterm::style::Color`
 /// - **ANSI output generator**: `PixelCharRenderer.color_to_sgr()`
-/// - **CLI text rendering**: `CliText` and related structures
+/// - **CLI text rendering**: `CliTextInline` and related structures
 ///
 /// This module is used in both places to ensure colors are degraded consistently.
 ///
@@ -117,7 +117,8 @@ pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
         TuiColor::Ansi(ansi) => {
             // Extended colors (indices 16-255)
             match color_support {
-                // Keep as is for full color support
+                // Keep as is for full color support (Truecolor terminals support ANSI
+                // extended colors)
                 ColorSupport::Truecolor | ColorSupport::Ansi256 => TuiColor::Ansi(ansi),
 
                 // Terminal has no color support

@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CliText, InlineVec, TuiStyle, cli_text_line, cli_text_lines, fg_lavender,
-               fg_light_yellow_green, fg_sky_blue, new_style, truncate_from_right,
-               tui_color};
+use r3bl_tui::{CliTextInline, InlineVec, TuiStyle, cli_text_line, cli_text_lines,
+               fg_lavender, fg_light_yellow_green, fg_sky_blue, new_style,
+               truncate_from_right, tui_color};
 
 /// Make the first column at least this wide, and pad with spaces if needed. It should not
 /// exceed this width either.
@@ -26,8 +26,8 @@ fn fmt_two_col(col_1: &str, col_2: &str) -> String {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn prefix_multi_select_instruction_header(
-    last_lines: InlineVec<InlineVec<CliText>>,
-) -> InlineVec<InlineVec<CliText>> {
+    last_lines: InlineVec<InlineVec<CliTextInline>>,
+) -> InlineVec<InlineVec<CliTextInline>> {
     let text_up_and_down = fmt_two_col("Up or down:", "navigate");
     let text_space = fmt_two_col("Space:", "select or deselect item");
     let text_esc = fmt_two_col("Esc or Ctrl+C:", "request_shutdown program");
@@ -57,8 +57,8 @@ pub fn prefix_multi_select_instruction_header(
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn prefix_single_select_instruction_header(
-    last_lines: InlineVec<InlineVec<CliText>>,
-) -> InlineVec<InlineVec<CliText>> {
+    last_lines: InlineVec<InlineVec<CliTextInline>>,
+) -> InlineVec<InlineVec<CliTextInline>> {
     let text_up_or_down = fmt_two_col("Up or down:", "navigate");
     let text_esc = fmt_two_col("Esc or Ctrl+C:", "request_shutdown program");
     let text_return_key = fmt_two_col("Return:", "confirm selection");

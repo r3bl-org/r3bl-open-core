@@ -317,7 +317,7 @@ mod truncate_from_left_helper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{cli_text, new_style, tui_color, width};
+    use crate::{cli_text_inline, new_style, tui_color, width};
 
     #[test]
     fn test_contains_ansi_escape_sequence() {
@@ -334,7 +334,7 @@ mod tests {
 
         assert_eq2!(
         contains_ansi_escape_sequence(
-            &cli_text(
+            &cli_text_inline(
                 "Print a formatted (bold, italic, underline) string w/ ANSI color codes.",
                 new_style!(
                     bold italic underline
