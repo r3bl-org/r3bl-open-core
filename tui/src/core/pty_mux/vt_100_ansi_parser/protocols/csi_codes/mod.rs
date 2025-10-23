@@ -40,7 +40,7 @@
 //! - `ESC[31m` - Set text color to red
 //! - `ESC[1A` - Move cursor up 1 line
 //!
-//! [`esc_codes`]: crate::vt_100_ansi_parser::esc_codes
+//! [`esc_codes`]: crate::vt_100_ansi_parser::protocols::esc_codes
 
 // Attach private module to avoid naming conflicts (hide inner details).
 mod constants;

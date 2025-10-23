@@ -18,14 +18,14 @@
 //! [`gap_buffer_from_str()`] are private implementation details and should not be used
 //! directly.
 //!
-//! [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
-//! [`From`]: std::convert::From
-//! [`&str`]: str
-//! [`&[GCString]`]: crate::GCStringOwned
-//! [`ZeroCopyGapBuffer::from("some text")`]: std::convert::From::from
-//! [`ZeroCopyGapBuffer::from(&[GCString])`]: std::convert::From::from
-//! [`gap_buffer_from_lines()`]: gap_buffer_from_lines
-//! [`gap_buffer_from_str()`]: gap_buffer_from_str
+//! [`ZeroCopyGapBuffer`]: `crate::ZeroCopyGapBuffer`
+//! [`From`]: `std::convert::From`
+//! [`&str`]: `str`
+//! [`&[GCString]`]: `crate::GCStringOwned`
+//! [`ZeroCopyGapBuffer::from("some text")`]: `std::convert::From::from`
+//! [`ZeroCopyGapBuffer::from(&[GCString])`]: `std::convert::From::from`
+//! [`gap_buffer_from_lines()`]: `gap_buffer_from_lines`
+//! [`gap_buffer_from_str()`]: `gap_buffer_from_str`
 
 use crate::{GCStringOwned, NumericValue, SegIndex, ZeroCopyGapBuffer,
             md_parser::constants::NEW_LINE_CHAR};

@@ -7,7 +7,7 @@
 
 use super::{super::dsr_codes::DsrRequestType,
             constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE, CPL_CURSOR_PREV_LINE,
-                        CSI_PARAM_SEPARATOR, CSI_PRIVATE_MODE_PREFIX,
+                        CSI_PARAM_SEPARATOR, CSI_PRIVATE_MODE_PREFIX, CSI_START,
                         CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
                         CUP_CURSOR_POSITION, CUU_CURSOR_UP, DCH_DELETE_CHAR,
                         DECSTBM_SET_MARGINS, DL_DELETE_LINE, DSR_DEVICE_STATUS,
@@ -85,7 +85,7 @@ pub enum CsiSequence {
 impl FastStringify for CsiSequence {
     #[allow(clippy::too_many_lines)]
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> Result {
-        acc.push_str("\x1b[");
+        acc.push_str(CSI_START);
         match self {
             CsiSequence::CursorUp(n) => {
                 acc.push_str(&n.to_string());

@@ -328,6 +328,43 @@ impl From<SgrColorSequence> for TuiColor {
     }
 }
 
+impl From<(TuiColor, ColorTarget)> for SgrColorSequence {
+    /// Convert a [`TuiColor`] and [`ColorTarget`] to an SGR color sequence.
+    ///
+    /// This convenience trait provides a succinct way to convert both the color value
+    /// and the target layer in one operation using tuple syntax.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use r3bl_tui::{SgrColorSequence, TuiColor, ColorTarget, AnsiValue};
+    ///
+    /// let color = TuiColor::Ansi(AnsiValue::new(196));
+    /// let seq: SgrColorSequence = (color, ColorTarget::Foreground).into();
+    /// assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(196));
+    ///
+    /// let color = TuiColor::Rgb(r3bl_tui::RgbValue::from_u8(255, 128, 0));
+    /// let seq: SgrColorSequence = (color, ColorTarget::Background).into();
+    /// assert_eq!(seq, SgrColorSequence::SetBackgroundRgb(255, 128, 0));
+    /// ```
+    fn from((color, target): (TuiColor, ColorTarget)) -> Self {
+        match color {
+            TuiColor::Ansi(val) => match target {
+                ColorTarget::Foreground => Self::SetForegroundAnsi256(val.index),
+                ColorTarget::Background => Self::SetBackgroundAnsi256(val.index),
+            },
+            TuiColor::Rgb(val) => match target {
+                ColorTarget::Foreground => {
+                    Self::SetForegroundRgb(val.red, val.green, val.blue)
+                }
+                ColorTarget::Background => {
+                    Self::SetBackgroundRgb(val.red, val.green, val.blue)
+                }
+            },
+        }
+    }
+}
+
 /// Sequence generation implementations (bidirectional pattern).
 ///
 /// Like `DsrSequence` and `OscSequence`, `SgrColorSequence` implements both parsing
@@ -561,5 +598,158 @@ mod tests {
             SgrColorSequence::parse_from_raw_slice(&[48, 2, 255, 128, 0]).unwrap();
         let generated = parsed.to_string();
         assert_eq!(generated, "\x1b[48:2:255:128:0m");
+    }
+
+    // Tests for TuiColor ↔ SgrColorSequence conversions
+
+    #[test]
+    fn test_tuicolor_to_sgr_ansi256_foreground() {
+        let color = TuiColor::Ansi(AnsiValue::new(196));
+        let seq: SgrColorSequence = (color, ColorTarget::Foreground).into();
+        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(196));
+    }
+
+    #[test]
+    fn test_tuicolor_to_sgr_ansi256_background() {
+        let color = TuiColor::Ansi(AnsiValue::new(42));
+        let seq: SgrColorSequence = (color, ColorTarget::Background).into();
+        assert_eq!(seq, SgrColorSequence::SetBackgroundAnsi256(42));
+    }
+
+    #[test]
+    fn test_tuicolor_to_sgr_rgb_foreground() {
+        let color = TuiColor::Rgb(RgbValue::from_u8(255, 128, 0));
+        let seq: SgrColorSequence = (color, ColorTarget::Foreground).into();
+        assert_eq!(seq, SgrColorSequence::SetForegroundRgb(255, 128, 0));
+    }
+
+    #[test]
+    fn test_tuicolor_to_sgr_rgb_background() {
+        let color = TuiColor::Rgb(RgbValue::from_u8(100, 200, 50));
+        let seq: SgrColorSequence = (color, ColorTarget::Background).into();
+        assert_eq!(seq, SgrColorSequence::SetBackgroundRgb(100, 200, 50));
+    }
+
+    #[test]
+    fn test_tuicolor_to_sgr_with_target_foreground() {
+        let color = TuiColor::Ansi(AnsiValue::new(196));
+        let seq = SgrColorSequence::from((color, ColorTarget::Foreground));
+        assert_eq!(seq, SgrColorSequence::SetForegroundAnsi256(196));
+    }
+
+    #[test]
+    fn test_tuicolor_to_sgr_with_target_background() {
+        let color = TuiColor::Rgb(RgbValue::from_u8(255, 128, 0));
+        let seq = SgrColorSequence::from((color, ColorTarget::Background));
+        assert_eq!(seq, SgrColorSequence::SetBackgroundRgb(255, 128, 0));
+    }
+
+    #[test]
+    fn test_sgr_to_tuicolor_ansi256() {
+        // Foreground variant
+        let seq = SgrColorSequence::SetForegroundAnsi256(196);
+        let color = TuiColor::from(seq);
+        assert!(matches!(color, TuiColor::Ansi(AnsiValue { index: 196 })));
+
+        // Background variant
+        let seq = SgrColorSequence::SetBackgroundAnsi256(42);
+        let color = TuiColor::from(seq);
+        assert!(matches!(color, TuiColor::Ansi(AnsiValue { index: 42 })));
+    }
+
+    #[test]
+    fn test_sgr_to_tuicolor_rgb() {
+        // Foreground variant
+        let seq = SgrColorSequence::SetForegroundRgb(255, 128, 0);
+        let color = TuiColor::from(seq);
+        assert!(matches!(
+            color,
+            TuiColor::Rgb(RgbValue {
+                red: 255,
+                green: 128,
+                blue: 0
+            })
+        ));
+
+        // Background variant
+        let seq = SgrColorSequence::SetBackgroundRgb(100, 200, 50);
+        let color = TuiColor::from(seq);
+        assert!(matches!(
+            color,
+            TuiColor::Rgb(RgbValue {
+                red: 100,
+                green: 200,
+                blue: 50
+            })
+        ));
+    }
+
+    #[test]
+    fn test_roundtrip_tuicolor_to_sgr_to_tuicolor_ansi256() {
+        // Test that converting TuiColor → SgrColorSequence → TuiColor preserves the
+        // color value (though we lose the target layer info)
+        let original = TuiColor::Ansi(AnsiValue::new(123));
+
+        // Convert to sequence (foreground) using tuple From impl
+        let seq: SgrColorSequence = (original, ColorTarget::Foreground).into();
+        // Convert back to color
+        let recovered = TuiColor::from(seq);
+
+        // The color values should match
+        assert_eq!(recovered, original);
+    }
+
+    #[test]
+    fn test_roundtrip_tuicolor_to_sgr_to_tuicolor_rgb() {
+        // Test that converting TuiColor → SgrColorSequence → TuiColor preserves the
+        // RGB values (though we lose the target layer info)
+        let original = TuiColor::Rgb(RgbValue::from_u8(255, 100, 50));
+
+        // Convert to sequence (background) using tuple From impl
+        let seq: SgrColorSequence = (original, ColorTarget::Background).into();
+        // Convert back to color
+        let recovered = TuiColor::from(seq);
+
+        // The color values should match
+        assert_eq!(recovered, original);
+    }
+
+    #[test]
+    fn test_target_matches_colortarget_enum() {
+        // Verify that the target layer from SgrColorSequence matches expected
+        let color = TuiColor::Ansi(AnsiValue::new(196));
+
+        // Foreground conversion using tuple From impl
+        let seq_fg: SgrColorSequence = (color, ColorTarget::Foreground).into();
+        assert_eq!(seq_fg.target(), ColorTarget::Foreground);
+
+        // Background conversion using tuple From impl
+        let seq_bg: SgrColorSequence = (color, ColorTarget::Background).into();
+        assert_eq!(seq_bg.target(), ColorTarget::Background);
+    }
+
+    #[test]
+    fn test_boundary_values_ansi256() {
+        // Test with minimum and maximum ANSI 256 color indices
+        let color_min = TuiColor::Ansi(AnsiValue::new(0));
+        let seq_min: SgrColorSequence = (color_min, ColorTarget::Foreground).into();
+        assert_eq!(seq_min, SgrColorSequence::SetForegroundAnsi256(0));
+
+        let color_max = TuiColor::Ansi(AnsiValue::new(255));
+        let seq_max: SgrColorSequence = (color_max, ColorTarget::Background).into();
+        assert_eq!(seq_max, SgrColorSequence::SetBackgroundAnsi256(255));
+    }
+
+    #[test]
+    fn test_boundary_values_rgb() {
+        // Test with black (0,0,0)
+        let black = TuiColor::Rgb(RgbValue::from_u8(0, 0, 0));
+        let seq_black: SgrColorSequence = (black, ColorTarget::Foreground).into();
+        assert_eq!(seq_black, SgrColorSequence::SetForegroundRgb(0, 0, 0));
+
+        // Test with white (255,255,255)
+        let white = TuiColor::Rgb(RgbValue::from_u8(255, 255, 255));
+        let seq_white: SgrColorSequence = (white, ColorTarget::Background).into();
+        assert_eq!(seq_white, SgrColorSequence::SetBackgroundRgb(255, 255, 255));
     }
 }

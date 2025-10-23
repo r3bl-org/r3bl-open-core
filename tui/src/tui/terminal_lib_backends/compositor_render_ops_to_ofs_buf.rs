@@ -1,5 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use super::{OffscreenBuffer, RenderOp, RenderPipeline, sanitize_and_save_abs_pos};
+use super::{AlternateScreenState, BracketedPasteState, MouseTrackingState,
+            OffscreenBuffer, RawModeState, RenderOp, RenderPipeline,
+            sanitize_and_save_abs_pos};
 use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
             GCStringOwned, MemoizedLenMap, PixelChar, PixelCharLine, Pos,
             RenderOpsLocalData, Size, StringLength, TuiStyle, ZOrder, ch,
@@ -47,6 +49,7 @@ impl RenderPipeline {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn process_render_op(
     render_op: &RenderOp,
     window_size: Size,
@@ -59,31 +62,29 @@ pub fn process_render_op(
         // These operations update the OffscreenBuffer's terminal mode state while also
         // being executed by the terminal backend to affect actual terminal behavior.
         RenderOp::EnterRawMode => {
-            ofs_buf.terminal_mode.is_raw_mode = true;
+            ofs_buf.terminal_mode.raw_mode = RawModeState::Enabled;
         }
         RenderOp::ExitRawMode => {
-            ofs_buf.terminal_mode.is_raw_mode = false;
+            ofs_buf.terminal_mode.raw_mode = RawModeState::Disabled;
         }
         RenderOp::EnterAlternateScreen => {
-            ofs_buf.terminal_mode.alternate_screen_active = true;
+            ofs_buf.terminal_mode.alternate_screen = AlternateScreenState::Active;
         }
         RenderOp::ExitAlternateScreen => {
-            ofs_buf.terminal_mode.alternate_screen_active = false;
+            ofs_buf.terminal_mode.alternate_screen = AlternateScreenState::Inactive;
         }
         RenderOp::EnableMouseTracking => {
-            ofs_buf.terminal_mode.mouse_tracking_enabled = true;
+            ofs_buf.terminal_mode.mouse_tracking = MouseTrackingState::Enabled;
         }
         RenderOp::DisableMouseTracking => {
-            ofs_buf.terminal_mode.mouse_tracking_enabled = false;
+            ofs_buf.terminal_mode.mouse_tracking = MouseTrackingState::Disabled;
         }
         RenderOp::EnableBracketedPaste => {
-            ofs_buf.terminal_mode.bracketed_paste_enabled = true;
+            ofs_buf.terminal_mode.bracketed_paste = BracketedPasteState::Enabled;
         }
         RenderOp::DisableBracketedPaste => {
-            ofs_buf.terminal_mode.bracketed_paste_enabled = false;
+            ofs_buf.terminal_mode.bracketed_paste = BracketedPasteState::Disabled;
         }
-        // No-op operations
-        RenderOp::Noop => {}
         // ===== Incremental Rendering Operations - Complete implementation
         // These operations are executed both by the backend AND need to
         // update buffer state for consistency and future extensibility (e.g., if
@@ -154,8 +155,9 @@ pub fn process_render_op(
             // Validate and clamp cursor position to window bounds
             sanitize_and_save_abs_pos(ofs_buf.cursor_pos, window_size, render_local_data);
         }
-        // Terminal-only state operations - no buffer effect needed
-        RenderOp::ShowCursor
+        // Terminal-only state operations and no-op operations - no buffer effect needed
+        RenderOp::Noop
+        | RenderOp::ShowCursor
         | RenderOp::HideCursor
         | RenderOp::SaveCursorPosition
         | RenderOp::RestoreCursorPosition => {}

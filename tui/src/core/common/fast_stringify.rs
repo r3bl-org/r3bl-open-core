@@ -211,8 +211,8 @@ pub type BufTextStorage = String;
 macro_rules! generate_impl_display_for_fast_stringify {
     // Basic case: non-generic type
     ($type:ty) => {
-        impl ::std::fmt::Display for $type {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        impl std::fmt::Display for $type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 let mut buffer = $crate::BufTextStorage::new();
                 self.write_to_buf(&mut buffer)?;
                 self.write_buf_to_fmt(&buffer, f)

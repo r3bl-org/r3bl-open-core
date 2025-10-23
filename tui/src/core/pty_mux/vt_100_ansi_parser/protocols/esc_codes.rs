@@ -20,7 +20,7 @@
 //! - `ESC 7` / `ESC 8` (this module) vs `ESC[s` / `ESC[u` (CSI equivalent)
 //! - `ESC D` (move down 1 line) vs `ESC[1B` or `ESC[5B` (move down N lines)
 //!
-//! [`csi_codes`]: crate::vt_100_ansi_parser::csi_codes
+//! [`csi_codes`]: crate::vt_100_ansi_parser::protocols::csi_codes
 //!
 //! ## Structure
 //! ESC sequences follow simpler patterns than CSI:
@@ -140,6 +140,14 @@ pub const LINE_FEED: u8 = b'\n';
 /// Moves cursor to beginning of current line
 pub const CARRIAGE_RETURN: u8 = b'\r';
 
+// ESC sequence start and selection characters.
+
+/// ESC sequence start: ESC (0x1B)
+pub const ESC_START: char = '\x1b';
+
+/// G0 character set selector intermediate
+pub const CHARSET_SELECTOR_G0: char = '(';
+
 // ESC sequence builder following the same pattern as SgrCode.
 
 /// Builder for ESC (direct escape) sequences.
@@ -164,7 +172,7 @@ pub enum EscSequence {
 
 impl FastStringify for EscSequence {
     fn write_to_buf(&self, acc: &mut BufTextStorage) -> fmt::Result {
-        acc.push('\x1b');
+        acc.push(ESC_START);
         match self {
             EscSequence::SaveCursor => acc.push(DECSC_SAVE_CURSOR as char),
             EscSequence::RestoreCursor => acc.push(DECRC_RESTORE_CURSOR as char),
@@ -172,11 +180,11 @@ impl FastStringify for EscSequence {
             EscSequence::ReverseIndex => acc.push(RI_REVERSE_INDEX_UP as char),
             EscSequence::ResetTerminal => acc.push(RIS_RESET_TERMINAL as char),
             EscSequence::SelectAscii => {
-                acc.push('(');
+                acc.push(CHARSET_SELECTOR_G0);
                 acc.push(CHARSET_ASCII as char);
             }
             EscSequence::SelectDECGraphics => {
-                acc.push('(');
+                acc.push(CHARSET_SELECTOR_G0);
                 acc.push(CHARSET_DEC_GRAPHICS as char);
             }
         }

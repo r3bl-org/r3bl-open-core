@@ -169,6 +169,57 @@ impl Default for AnsiParserSupport {
     }
 }
 
+/// Raw mode state for terminal input processing.
+///
+/// Raw mode (POSIX non-canonical mode) controls whether terminal input is processed
+/// character-by-character without line buffering. This is essential for interactive
+/// TUI applications that need immediate character feedback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RawModeState {
+    /// Raw mode enabled - input processed character-by-character
+    Enabled,
+    /// Raw mode disabled - input processed line-by-line with buffering
+    Disabled,
+}
+
+/// Alternate screen buffer state.
+///
+/// Controls whether terminal output is redirected to an alternate screen buffer,
+/// preserving the original screen content. This is used by full-screen applications
+/// (vim, less, etc.) to avoid cluttering the shell history.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlternateScreenState {
+    /// Alternate screen buffer active
+    Active,
+    /// Alternate screen buffer inactive, using primary screen
+    Inactive,
+}
+
+/// Mouse event tracking state.
+///
+/// Controls whether the terminal captures mouse click, movement, and scroll events.
+/// This enables interactive mouse support in TUI applications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MouseTrackingState {
+    /// Mouse tracking enabled - terminal sends mouse events
+    Enabled,
+    /// Mouse tracking disabled
+    Disabled,
+}
+
+/// Bracketed paste mode state.
+///
+/// Controls whether text pasted from clipboard is wrapped with special escape
+/// sequences (OSC 52), allowing applications to distinguish pasted text from
+/// keyboard input. This prevents misinterpretation of pasted content.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BracketedPasteState {
+    /// Bracketed paste mode enabled
+    Enabled,
+    /// Bracketed paste mode disabled
+    Disabled,
+}
+
 /// Terminal mode state tracking for terminal control sequences.
 ///
 /// This struct groups together all terminal mode flags that track the state of
@@ -195,18 +246,18 @@ pub struct TerminalModeState {
     /// Set via:
     /// - `RenderOp::EnterRawMode` (enables)
     /// - `RenderOp::ExitRawMode` (disables)
-    pub is_raw_mode: bool,
+    pub raw_mode: RawModeState,
 
     /// Alternate screen buffer status.
     ///
-    /// When enabled, terminal output is redirected to an alternate screen buffer,
+    /// When active, terminal output is redirected to an alternate screen buffer,
     /// preserving the original screen content. This is used by full-screen
     /// applications (vim, less, etc.) to avoid cluttering the shell history.
     ///
     /// Set via:
-    /// - `RenderOp::EnterAlternateScreen` (enables)
-    /// - `RenderOp::ExitAlternateScreen` (disables)
-    pub alternate_screen_active: bool,
+    /// - `RenderOp::EnterAlternateScreen` (activates)
+    /// - `RenderOp::ExitAlternateScreen` (deactivates)
+    pub alternate_screen: AlternateScreenState,
 
     /// Mouse event tracking status.
     ///
@@ -216,7 +267,7 @@ pub struct TerminalModeState {
     /// Set via:
     /// - `RenderOp::EnableMouseTracking` (enables)
     /// - `RenderOp::DisableMouseTracking` (disables)
-    pub mouse_tracking_enabled: bool,
+    pub mouse_tracking: MouseTrackingState,
 
     /// Bracketed paste mode status.
     ///
@@ -227,7 +278,7 @@ pub struct TerminalModeState {
     /// Set via:
     /// - `RenderOp::EnableBracketedPaste` (enables)
     /// - `RenderOp::DisableBracketedPaste` (disables)
-    pub bracketed_paste_enabled: bool,
+    pub bracketed_paste: BracketedPasteState,
 }
 
 impl Default for TerminalModeState {
@@ -237,10 +288,10 @@ impl Default for TerminalModeState {
     /// before any special features are activated.
     fn default() -> Self {
         Self {
-            is_raw_mode: false,
-            alternate_screen_active: false,
-            mouse_tracking_enabled: false,
-            bracketed_paste_enabled: false,
+            raw_mode: RawModeState::Disabled,
+            alternate_screen: AlternateScreenState::Inactive,
+            mouse_tracking: MouseTrackingState::Disabled,
+            bracketed_paste: BracketedPasteState::Disabled,
         }
     }
 }

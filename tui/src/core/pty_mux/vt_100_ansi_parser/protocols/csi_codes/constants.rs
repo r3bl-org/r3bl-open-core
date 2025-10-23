@@ -83,6 +83,31 @@ pub const ED_ERASE_DISPLAY: char = 'J';
 /// 2 = erase entire line
 pub const EL_ERASE_LINE: char = 'K';
 
+// Erase Display Parameters (ED).
+
+/// Erase from cursor to end of screen (default for ED)
+pub const ED_ERASE_TO_END: u16 = 0;
+
+/// Erase from start of screen to cursor
+pub const ED_ERASE_FROM_START: u16 = 1;
+
+/// Erase entire screen
+pub const ED_ERASE_ALL: u16 = 2;
+
+/// Erase entire screen and scrollback
+pub const ED_ERASE_ALL_AND_SCROLLBACK: u16 = 3;
+
+// Erase Line Parameters (EL).
+
+/// Erase from cursor to end of line (default for EL)
+pub const EL_ERASE_TO_END: u16 = 0;
+
+/// Erase from start of line to cursor
+pub const EL_ERASE_FROM_START: u16 = 1;
+
+/// Erase entire line
+pub const EL_ERASE_ALL: u16 = 2;
+
 // Scrolling.
 
 /// CSI S: Scroll Up (SU)
@@ -365,32 +390,13 @@ pub const RM_RESET_PRIVATE_MODE: char = 'l';
 
 // Common Private Mode Numbers.
 
-/// Cursor visibility (DECTCEM)
-pub const DECCKM_CURSOR_KEYS: u16 = 1;
-
-/// Application cursor keys
-pub const DECANM_VT52_MODE: u16 = 2;
-
-/// 132 column mode
-pub const DECCOLM_132_COLUMN: u16 = 3;
-
-/// Smooth scroll
-pub const DECSCLM_SMOOTH_SCROLL: u16 = 4;
-
-/// Reverse video
-pub const DECSCNM_REVERSE_VIDEO: u16 = 5;
-
-/// Origin mode
-pub const DECOM_ORIGIN_MODE: u16 = 6;
-
-/// Auto wrap
-pub const DECAWM_AUTO_WRAP: u16 = 7;
-
-/// Show cursor
+/// Show cursor (DECTCEM)
 pub const DECTCEM_SHOW_CURSOR: u16 = 25;
 
-/// Save cursor
-pub const SAVE_CURSOR_DEC: u16 = 1048;
-
-/// Alternate screen buffer
-pub const ALT_SCREEN_BUFFER: u16 = 1049;
+// NOTE: General terminal mode constants (DEC modes 1-7, alternate screen buffer,
+// mouse tracking, bracketed paste, etc.) are defined in the parent `protocols`
+// module constants file (`protocols/constants.rs`) rather than here.
+//
+// This separation reflects the architectural distinction:
+// - **This file (`csi_codes/constants.rs`)**: CSI-specific sequencing details
+// - **Parent file (`protocols/constants.rs`)**: General ANSI/terminal feature constants

@@ -21,6 +21,7 @@ mod impl_trait_paint_render_op {
     use super::*;
 
     impl PaintRenderOp for PaintRenderOpImplCrossterm {
+        #[allow(clippy::too_many_lines)]
         fn paint(
             &mut self,
             skip_flush: &mut bool,

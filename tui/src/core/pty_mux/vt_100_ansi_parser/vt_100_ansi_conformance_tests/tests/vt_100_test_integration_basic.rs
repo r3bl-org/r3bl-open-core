@@ -7,8 +7,8 @@ use crate::{ANSIBasicColor, OffscreenBuffer, SgrCode, height,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             term_col, term_row, tui_style_attrib,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                                 csi_codes::CsiSequence,
-                                 esc_codes::EscSequence,
+                                 protocols::csi_codes::CsiSequence,
+                                 protocols::esc_codes::EscSequence,
                                  vt_100_ansi_conformance_tests::test_sequence_builders::csi_builders::csi_seq_cursor_pos},
             width};
 

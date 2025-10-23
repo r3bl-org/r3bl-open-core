@@ -7,7 +7,7 @@ use crate::{ANSIBasicColor, CharacterSet, SgrCode,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             tui_style_attrib::{self},
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                                 esc_codes}};
+                                 protocols::esc_codes}};
 use vte::Perform;
 
 /// Tests for SGR (Select Graphic Rendition) styling operations.
