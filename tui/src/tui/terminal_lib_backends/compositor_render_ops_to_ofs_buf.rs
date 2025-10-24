@@ -1,4 +1,44 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+//! # Pipeline Stage 3: Compositor
+//!
+//! # You Are Here
+//!
+//! ```text
+//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] ← YOU ARE HERE
+//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+//! ```
+//!
+//! **Input**: [`RenderPipeline`] organized by Z-order
+//! **Output**: [`OffscreenBuffer`] (virtual 2D terminal grid with styled pixels)
+//! **Role**: Execute rendering operations to create a frame-sized virtual terminal buffer
+//!
+//! > **For the complete rendering architecture**, see [`super`] (parent module).
+//!
+//! ## What This Stage Does
+//!
+//! The Compositor is the **rendering engine** of R3BL TUI. It processes the organized render
+//! operations from the pipeline and writes the results to an offscreen buffer—a 2D grid
+//! representing the entire terminal screen.
+//!
+//! ### Key Responsibilities
+//! - **Execute Operations**: Process [`RenderOpIR`] sequentially in Z-order
+//! - **Apply Clipping**: Respect bounds to prevent off-screen writes
+//! - **Handle Unicode**: Correctly calculate display width for emoji and wide characters
+//! - **Manage State**: Track cursor position, colors, and terminal modes
+//! - **Write Pixels**: Store styled characters in the [`OffscreenBuffer`]
+//!
+//! ### The Offscreen Buffer
+//! The output is a 2D grid (not a stream) where each cell contains:
+//! - The character to display
+//! - Foreground color
+//! - Background color
+//! - Text attributes (bold, italic, underline, etc.)
+//!
+//! ### Diff Optimization
+//! The buffer can be compared with the previous frame to determine what changed,
+//! enabling selective redraw in the next stage.
+
 use super::{AlternateScreenState, BracketedPasteState, MouseTrackingState,
             OffscreenBuffer, RawModeState, RenderOpCommon, RenderOpIR, RenderPipeline,
             sanitize_and_save_abs_pos};

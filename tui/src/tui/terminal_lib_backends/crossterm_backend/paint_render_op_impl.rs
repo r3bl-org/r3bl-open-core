@@ -1,3 +1,32 @@
+//! # Pipeline Stage 5: Backend Executor (Crossterm Implementation)
+//!
+//! # You Are Here
+//!
+//! ```text
+//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
+//! [S4: Backend Converter] → [S5: Backend Executor] ← YOU ARE HERE
+//! [S6: Terminal]
+//! ```
+//!
+//! **Input**: [`RenderOpsOutput`] (from backend converter)
+//! **Output**: ANSI escape sequences to terminal
+//! **Role**: Execute rendering operations via Crossterm backend
+//!
+//! > **For the complete rendering architecture**, see [`super::super`] (parent parent module).
+//!
+//! ## What This Stage Does
+//!
+//! The Backend Executor translates [`RenderOpsOutput`] into actual terminal commands:
+//! - Moves cursor to positions
+//! - Sets foreground/background colors
+//! - Paints styled text
+//! - Manages raw mode, alternate screen, mouse tracking
+//! - Uses [`RenderOpsLocalData`] to avoid redundant commands
+//! - Flushes output to ensure immediate display
+//!
+//! This is the final stage before terminal output. The Crossterm library handles
+//! converting commands to ANSI escape sequences appropriate for the terminal.
+
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{CliTextInline, Flush, GCStringOwned, LockedOutputDevice, PaintRenderOp, Pos,
             RenderOpCommon, RenderOpIR, RenderOpsLocalData, Size, TuiColor, TuiStyle,
@@ -11,7 +40,7 @@ use crossterm::{cursor::{Hide, MoveTo, Show},
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 
-/// Struct representing the implementation of [`RenderOp`] for crossterm terminal backend.
+/// Struct representing the Crossterm implementation of [`PaintRenderOp`] trait.
 /// This empty struct is needed since the [Flush] trait needs to be implemented.
 #[derive(Debug)]
 pub struct PaintRenderOpImplCrossterm;

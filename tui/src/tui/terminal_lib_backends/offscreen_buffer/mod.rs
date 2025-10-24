@@ -2,10 +2,34 @@
 
 //! Offscreen buffer module for terminal rendering and VT100/ANSI terminal emulation.
 //!
-//! This module provides a comprehensive terminal screen buffer implementation that works
-//! seamlessly with both the render pipeline and VT100/ANSI escape sequences. The buffer
-//! is organized as a flexible grid of pixel characters with full support for
-//! variable-width characters (like emojis and Unicode).
+//! # You Are Here
+//!
+//! ```
+//! [STAGE 1: App/Component] → [STAGE 2: Pipeline] → [STAGE 3: Compositor] →
+//! [STAGE 4: Backend Converter] → [STAGE 5: Backend Executor] → [STAGE 6: Terminal]
+//!                                       ▲
+//!                    ┌──────────────────┴──────────────────┐
+//!                    │  OffscreenBuffer  (YOU ARE HERE)    │
+//!                    │  (Virtual terminal grid)            │
+//!                    └─────────────────────────────────────┘
+//! ```
+//!
+//! **Input**: Written to by the Compositor (Stage 3)
+//! **Output**: Read by the Backend Converter (Stage 4) for diff and optimization
+//! **Role**: The 2D virtual terminal that bridges rendering and execution
+//!
+//! > **For the complete pipeline architecture**, see [`super`] (parent module).
+//!
+//! ## What This Structure Is
+//!
+//! The `OffscreenBuffer` is a **2D grid representing the entire terminal screen**. Each cell
+//! contains a styled character. This is not a stream of escape sequences (like traditional
+//! terminal output), but a 2D array that can be easily compared frame-to-frame to determine
+//! what changed.
+//!
+//! This module serves **two integration points**:
+//! 1. **As the Compositor's Output**: Receives rendering operations from the pipeline
+//! 2. **As a VT100/ANSI Terminal Emulator**: Processes escape sequences from child processes
 //!
 //! # Architecture Overview
 //!

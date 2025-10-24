@@ -1,5 +1,69 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! # Rendering Pipeline Architecture
+//!
+//! Here's the flow:
+//! App -> Component -> RenderOpsIR -> RenderPipeline (to OffscreenBuffer) -> RenderOpsOutput -> Terminal
+//!
+//! ```text
+//! ┌───────────────────────────────────────┐
+//! │ Application/Component Layer           │
+//! │ (Generates RenderOpsIR with clipping) │
+//! └────────────────┬──────────────────────┘
+//!                  │
+//! ┌────────────────▼───────────────────────────┐
+//! │ RenderPipeline                             │
+//! │ (Collects & organizes RenderOps by ZOrder) │
+//! └────────────────┬───────────────────────────┘
+//!                  │
+//! ┌────────────────▼─────────────────────────┐
+//! │ Compositor                               │
+//! │ (Renders RenderOpsIR to OffscreenBuffer) │
+//! └────────────────┬─────────────────────────┘
+//!                  │
+//! ┌────────────────▼────────────────────────────────┐
+//! │ Backend Converter Layer                         │
+//! │ (Render OffscreenBuffer to RenderOpsOutput;     │
+//! │  handle diff calculation for selective redraw)  │
+//! │ - OffscreenBufferPaint trait implementation     │
+//! │ - Converts PixelChars to styled text operations │
+//! └────────────────┬────────────────────────────────┘
+//!                  │
+//! ┌────────────────▼──────────────────────────┐
+//! │ Backend Executor                          │
+//! │ (Execute RenderOps via Crossterm)         │
+//! │ - PaintRenderOp trait (Crossterm impl)    │
+//! │ - Cursor movement, colors, text painting  │
+//! │ - Raw mode management & terminal flushing │
+//! └────────────────┬──────────────────────────┘
+//!                  │
+//! ┌────────────────▼───────────────────┐
+//! │ Terminal Output                    │
+//! │ (Rendered content visible to user) │
+//! └────────────────────────────────────┘
+//! ```
+//!
+//! ## Module Map
+//!
+//! **Each module below has a "You are here" breadcrumb showing its place in this flow.**
+//!
+//! ### Core Data Types (Cross-Stage)
+//! - [`render_op`] - RenderOpIR, RenderOpOutput, RenderOpCommon, RenderOpsLocalData
+//!
+//! ### Pipeline Stages
+//! - [`render_pipeline`] - Collects & organizes RenderOps by Z-order
+//! - [`compositor_render_ops_to_ofs_buf`] - Renders RenderOpsIR to OffscreenBuffer
+//! - [`offscreen_buffer`] - Virtual terminal buffer (2D grid of styled PixelChars)
+//! - [`crossterm_backend::offscreen_buffer_paint_impl`] - Converts buffer → optimized operations
+//! - [`crossterm_backend::paint_render_op_impl`] - Executes operations via Crossterm
+//!
+//! ### Supporting Modules
+//! - [`offscreen_buffer_pool`] - Buffer pooling for efficiency
+//! - [`z_order`] - Z-order layer management
+//! - [`raw_mode`] - Terminal raw mode setup/teardown
+//! - [`paint`] - Text painting utilities
+//! - [`direct_ansi`] - Direct ANSI escape sequence generation
+//!
 //! # Background information on terminals PTY, TTY, VT100, ANSI, ASCII
 //!
 //! crossterm:

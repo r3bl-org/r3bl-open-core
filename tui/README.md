@@ -723,6 +723,102 @@ Each `PixelChar` can be one of 4 things:
    which is smart enough to "stack" styles that appear beside each other for quicker
    rendering in terminals.
 
+### Complete Rendering Pipeline Architecture
+
+The R3BL TUI rendering system is organized into 6 distinct stages, each with a clear responsibility:
+
+```
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ STAGE 1: Application/Component Layer (App Code)                               │
+│ ───────────────────────────────────────────────────────────────────────────── │
+│ Generates: RenderOpsIR with built-in clipping info                            │
+│ Module: render_op - Contains type definitions                                 │
+│                                                                               │
+│ Components produce draw commands describing *what* to render and *where*.     │
+│ Each operation carries clipping information to ensure safe rendering.         │
+└────────────────┬──────────────────────────────────────────────────────────────┘
+                 │
+┌────────────────▼───────────────────────────────────────────────────────────────┐
+│ STAGE 2: Render Pipeline Collection (Organization Layer)                       │
+│ ─────────────────────────────────────────────────────────────────────────────  │
+│ Collects RenderOpsIR into organized structures by Z-order                      │
+│ Module: render_pipeline                                                        │
+│                                                                                │
+│ The pipeline aggregates render operations from multiple components and         │
+│ organizes them by Z-order (layer depth). This ensures correct visual stacking  │
+│ when components overlap. No rendering happens yet—just organization.           │
+└────────────────┬───────────────────────────────────────────────────────────────┘
+                 │
+┌────────────────▼───────────────────────────────────────────────────────────────┐
+│ STAGE 3: Compositor (Rendering to Offscreen Buffer)                            │
+│ ─────────────────────────────────────────────────────────────────────────────  │
+│ Processes RenderOpsIR → writes to OffscreenBuffer                              │
+│ Module: compositor_render_ops_to_ofs_buf                                       │
+│                                                                                │
+│ The Compositor is the rendering engine. It:                                    │
+│ - Executes RenderOpsIR operations sequentially                                 │
+│ - Applies clipping and Unicode/emoji width handling                            │
+│ - Writes rendered PixelChars to an offscreen buffer                            │
+│ - Manages cursor position and color state                                      │
+│ - Acts as an intermediate "virtual terminal"                                   │
+│                                                                                │
+│ Output: A complete 2D grid (OffscreenBuffer) representing the rendered frame.  │
+│ This buffer can be analyzed to determine what changed since the last frame.    │
+└────────────────┬───────────────────────────────────────────────────────────────┘
+                 │
+┌────────────────▼───────────────────────────────────────────────────────────────┐
+│ STAGE 4: Backend Converter (Diff & Optimization Layer)                         │
+│ ─────────────────────────────────────────────────────────────────────────────  │
+│ Scans OffscreenBuffer → generates RenderOpsOutput                              │
+│ Module: crossterm_backend/offscreen_buffer_paint_impl                          │
+│         (Backend-specific implementation of OffscreenBufferPaint trait)        │
+│                                                                                │
+│ The Backend Converter:                                                         │
+│ - Compares current OffscreenBuffer with previous frame (optional)              │
+│ - Generates only the operations needed for selective redraw                    │
+│ - Converts PixelChar grid into optimized text painting operations              │
+│ - Produces RenderOpsOutput (no clipping needed—already handled)                │
+│ - Eliminates redundant operations for performance                              │
+│                                                                                │
+│ Input: OffscreenBuffer (what we rendered)                                      │
+│ Output: RenderOpsOutput (optimized operations to display it)                   │
+└────────────────┬───────────────────────────────────────────────────────────────┘
+                 │
+┌────────────────▼───────────────────────────────────────────────────────────────┐
+│ STAGE 5: Backend Executor (Terminal Output Layer)                              │
+│ ─────────────────────────────────────────────────────────────────────────────  │
+│ Executes RenderOpsOutput via backend library (Crossterm/Termion)               │
+│ Module: crossterm_backend/paint_render_op_impl                                 │
+│         (Backend-specific trait: PaintRenderOp)                                │
+│                                                                                │
+│ The Backend Executor:                                                          │
+│ - Translates RenderOpsOutput to terminal escape sequences                      │
+│ - Manages raw mode, cursor visibility, colors, mouse events                    │
+│ - Handles terminal-specific optimizations (e.g., state tracking)               │
+│ - Sends commands to Crossterm/Termion for actual terminal manipulation         │
+│ - Flushes output to ensure immediate display                                   │
+│                                                                                │
+│ Uses: RenderOpsLocalData to avoid redundant state changes                      │
+│       (e.g., don't resend "set color to red" if already red)                   │
+└────────────────┬───────────────────────────────────────────────────────────────┘
+                 │
+┌────────────────▼───────────────────────────────────────────────────────────────┐
+│ STAGE 6: Terminal Output (User Visible)                                        │
+│ ─────────────────────────────────────────────────────────────────────────────  │
+│ Rendered content displayed in the terminal                                     │
+│                                                                                │
+│ The final result: User sees the rendered UI with correct colors, text,         │
+│ and cursor position, updated efficiently without full redraws.                 │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Design Benefits:**
+- **Type Safety**: RenderOpIR and RenderOpOutput enums ensure operations are used in the correct context
+- **Modularity**: Each stage has clear inputs/outputs and single responsibility
+- **Performance**: Diff-based approach means only changed pixels are rendered
+- **Flexibility**: Stages can be implemented for different backends (Crossterm, Termion, etc.)
+- **Maintainability**: Clear pipeline structure makes code easier to understand and modify
+
 ### Render pipeline
 
 The following diagram provides a high level overview of how apps (that contain

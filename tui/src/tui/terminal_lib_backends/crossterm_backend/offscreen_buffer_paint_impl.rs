@@ -1,3 +1,31 @@
+//! # Pipeline Stage 4: Backend Converter
+//!
+//! # You Are Here
+//!
+//! ```text
+//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
+//! [S4: Backend Converter] ← YOU ARE HERE
+//! [S5: Backend Executor] → [S6: Terminal]
+//! ```
+//!
+//! **Input**: [`OffscreenBuffer`] (rendered pixels from compositor)
+//! **Output**: [`RenderOpsOutput`] (optimized terminal operations)
+//! **Role**: Convert offscreen buffer to backend-specific rendering operations
+//!
+//! > **For the complete rendering architecture**, see [`super::super`] (parent parent module).
+//!
+//! ## What This Stage Does
+//!
+//! The Backend Converter scans the [`OffscreenBuffer`] and generates optimized [`RenderOpsOutput`]
+//! operations ready for terminal execution. It can:
+//! - Perform diff calculations against the previous buffer for selective redraw
+//! - Convert [`PixelChar`] grid to styled text painting operations
+//! - Optimize by grouping adjacent operations with the same styling
+//! - Handle backend-specific optimizations (e.g., state tracking via [`RenderOpsLocalData`])
+//!
+//! This stage is crucial for performance: by diffing buffers, only changed pixels are
+//! rendered in subsequent frames, eliminating unnecessary terminal updates.
+
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, Flush, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,

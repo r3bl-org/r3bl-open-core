@@ -1,5 +1,35 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! # Pipeline Stage 2: Collection & Organization
+//!
+//! # You Are Here
+//!
+//! ```text
+//! [S1: App/Component] → [S2: Pipeline] ← YOU ARE HERE
+//! [S3: Compositor] → [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+//! ```
+//!
+//! **Input**: [`RenderOpsIR`] operations from components
+//! **Output**: Organized operations sorted by [`ZOrder`] (layer depth)
+//! **Role**: Aggregate and organize rendering operations before compositor processing
+//!
+//! > **For the complete rendering architecture**, see [`super`] (parent module).
+//!
+//! ## What This Stage Does
+//!
+//! The `RenderPipeline` collects render operations from multiple components and organizes them
+//! into layers by Z-order. This ensures that when the compositor renders to the offscreen buffer,
+//! components are drawn in the correct visual order (background to foreground).
+//!
+//! ### Key Operations
+//! - **Collect**: Aggregate [`RenderOpsIR`] from multiple components
+//! - **Organize**: Group by [`ZOrder`] to establish visual stacking
+//! - **Prepare**: Structure data for the compositor's next stage
+//!
+//! ### No Rendering Yet
+//! This stage is purely organizational. No actual rendering to the terminal (or even to the
+//! offscreen buffer) happens here. That's the compositor's job.
+
 use super::{ZOrder, paint::paint};
 use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOpsIR, ok,
             tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};

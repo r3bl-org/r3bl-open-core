@@ -1,3 +1,24 @@
+//! # Rendering Pipeline Orchestration
+//!
+//! # You Are Here
+//!
+//! ```text
+//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
+//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+//!
+//! ↑ paint.rs coordinates all these stages ↑
+//! (Orchestration: ties everything together)
+//! ```
+//!
+//! This module orchestrates the entire rendering pipeline:
+//! 1. Takes [`RenderPipeline`] from the app
+//! 2. Feeds it through the Compositor to create [`OffscreenBuffer`]
+//! 3. Performs diff calculations for selective redraw
+//! 4. Routes operations to the appropriate backend (Crossterm/Termion)
+//! 5. Manages flushing and display synchronization
+//!
+//! > **For the complete rendering architecture**, see [`super`] (parent module).
+
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{FlushKind, RenderOpIR, RenderOpsLocalData, RenderPipeline};
