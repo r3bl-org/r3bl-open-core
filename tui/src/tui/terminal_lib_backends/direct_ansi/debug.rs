@@ -1,16 +1,16 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DebugFormatRenderOp, RenderOpCommon,
-            RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen, ClearToEndOfLine,
-                             ClearToStartOfLine,
+            RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen,
+                             ClearToEndOfLine, ClearToStartOfLine,
                              DisableBracketedPaste, DisableMouseTracking,
-                             EnableBracketedPaste, EnableMouseTracking, EnterAlternateScreen,
-                             EnterRawMode, ExitAlternateScreen, ExitRawMode, HideCursor,
-                             MoveCursorPositionAbs, MoveCursorPositionRelTo,
-                             MoveCursorToColumn, MoveCursorToNextLine,
-                             MoveCursorToPreviousLine, Noop, PrintStyledText, ResetColor,
-                             RestoreCursorPosition, SaveCursorPosition, SetBgColor, SetFgColor,
-                             ShowCursor}};
+                             EnableBracketedPaste, EnableMouseTracking,
+                             EnterAlternateScreen, EnterRawMode, ExitAlternateScreen,
+                             ExitRawMode, HideCursor, MoveCursorPositionAbs,
+                             MoveCursorPositionRelTo, MoveCursorToColumn,
+                             MoveCursorToNextLine, MoveCursorToPreviousLine, Noop,
+                             PrintStyledText, ResetColor, RestoreCursorPosition,
+                             SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor}};
 use std::fmt::{Formatter, Result};
 
 #[derive(Debug)]

@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DEBUG_MD_PARSER_STDOUT, fg_green, fg_red, md_parser::md_parser_constants::NEW_LINE};
+use crate::{DEBUG_MD_PARSER_STDOUT, fg_green, fg_red,
+            md_parser::md_parser_constants::NEW_LINE};
 use nom::{IResult, Parser,
           bytes::complete::{tag, take_until},
           combinator::map,

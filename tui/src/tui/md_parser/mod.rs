@@ -223,10 +223,10 @@
 
 // Attach.
 pub mod block;
-pub mod md_parser_constants;
 pub mod convert_to_plain_text;
 pub mod extended;
 pub mod fragment;
+pub mod md_parser_constants;
 pub mod md_parser_types;
 pub mod parse_markdown;
 pub mod single_line;
@@ -241,10 +241,10 @@ pub mod parser_snapshot_tests;
 
 // Re-export.
 pub use block::*;
-pub use md_parser_constants::*;
 pub use convert_to_plain_text::*;
 pub use extended::*;
 pub use fragment::*;
+pub use md_parser_constants::*;
 pub use md_parser_types::*;
 pub use parse_markdown::*;
 pub use single_line::*;

@@ -60,7 +60,8 @@ pub fn parse_unique_kv_opt_eol<'a>(
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use super::*;
-    use crate::{assert_eq2, fg_black, inline_string, md_parser::md_parser_constants::TITLE};
+    use crate::{assert_eq2, fg_black, inline_string,
+                md_parser::md_parser_constants::TITLE};
 
     #[test]
     fn test_not_quoted_no_eol() {

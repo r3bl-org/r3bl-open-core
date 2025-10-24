@@ -1,8 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::fmt::{Formatter, Result};
-
 use crate::RenderOpCommon;
+use std::fmt::{Formatter, Result};
 
 /// Trait for formatting [`RenderOpCommon`] instances in debug output.
 ///

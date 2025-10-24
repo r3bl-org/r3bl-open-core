@@ -4,7 +4,7 @@
 //!
 //! # You Are Here
 //!
-//! ```
+//! ```text
 //! [STAGE 1: App/Component] → [STAGE 2: Pipeline] → [STAGE 3: Compositor] →
 //! [STAGE 4: Backend Converter] → [STAGE 5: Backend Executor] → [STAGE 6: Terminal]
 //!                                       ▲
@@ -22,14 +22,15 @@
 //!
 //! ## What This Structure Is
 //!
-//! The `OffscreenBuffer` is a **2D grid representing the entire terminal screen**. Each cell
-//! contains a styled character. This is not a stream of escape sequences (like traditional
-//! terminal output), but a 2D array that can be easily compared frame-to-frame to determine
-//! what changed.
+//! The `OffscreenBuffer` is a **2D grid representing the entire terminal screen**. Each
+//! cell contains a styled character. This is not a stream of escape sequences (like
+//! traditional terminal output), but a 2D array that can be easily compared
+//! frame-to-frame to determine what changed.
 //!
 //! This module serves **two integration points**:
 //! 1. **As the Compositor's Output**: Receives rendering operations from the pipeline
-//! 2. **As a VT100/ANSI Terminal Emulator**: Processes escape sequences from child processes
+//! 2. **As a VT100/ANSI Terminal Emulator**: Processes escape sequences from child
+//!    processes
 //!
 //! # Architecture Overview
 //!

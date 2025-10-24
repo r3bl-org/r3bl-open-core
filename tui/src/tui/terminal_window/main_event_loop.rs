@@ -1,4 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+use std::ops::AddAssign;
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
             MainEventLoopFuture};
 use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
@@ -6,10 +7,10 @@ use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             DefaultSize, DefaultTiming, Flush, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt,
             InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
-            RawMode, RenderOpCommon, RenderOpIR, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
-            TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-            glyphs, height, inline_string, lock_output_device_as_mut, new_style, ok,
-            render_pipeline, row,
+            RawMode, RenderOpCommon, RenderOpIR, RenderPipeline, Size, SufficientSize,
+            TelemetryAtomHint, TerminalWindowMainThreadSignal, TextColorizationPolicy,
+            ZOrder, ch, col, glyphs, height, inline_string, lock_output_device_as_mut,
+            new_style, ok, render_pipeline, row,
             telemetry::{Telemetry, telemetry_default_constants},
             telemetry_record, width};
 use smallvec::smallvec;
@@ -819,14 +820,13 @@ mod tests {
                 ComponentRegistryMap, CrosstermEventResult, EventPropagation,
                 GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
                 InlineVec, InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress,
-                OutputDevice, OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIR, RenderOpsIR, RenderPipeline,
-                SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
+                OutputDevice, OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIRVec,
+                RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
                 TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
                 ch, col, defaults::get_default_gradient_stops, height, inline_string,
                 is_fully_uninteractive_terminal, key_press, main_event_loop_impl,
-                new_style, ok, render_pipeline,
-                render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,
-                tui_styled_text, width};
+                new_style, ok, render_pipeline, render_tui_styled_texts_into,
+                send_signal, tui_color, tui_style_attrib, tui_styled_text, width};
     use smallvec::smallvec;
     use std::{fmt::{Debug, Display, Formatter},
               time::Duration};
@@ -1066,14 +1066,14 @@ mod tests {
                     let mut pipeline = render_pipeline!();
 
                     pipeline.push(ZOrder::Normal, {
-                        let mut acc_render_op = RenderOpsIR::new();
-                        acc_render_op.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+                        let mut acc_render_op = RenderOpIRVec::new();
+                        acc_render_op.push(RenderOpCommon::ResetColor);
 
                         // Render using color_wheel_rgb.
-                        acc_render_op.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
+                        acc_render_op.push(RenderOpCommon::MoveCursorPositionAbs(Pos {
                             col_index: col_idx,
                             row_index: row_idx,
-                        })));
+                        }));
 
                         let index = data.color_wheel_rgb.get_index();
                         let len = match data.color_wheel_rgb.get_gradient_len() {
@@ -1248,8 +1248,8 @@ mod tests {
             let row_bottom = size.row_height.convert_to_index();
             let center = col(col_center) + row_bottom;
 
-            let mut render_ops = RenderOpsIR::new();
-            render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(center)));
+            let mut render_ops = RenderOpIRVec::new();
+            render_ops  += (RenderOpCommon::MoveCursorPositionAbs(center));
             render_tui_styled_texts_into(&styled_texts, &mut render_ops);
             pipeline.push(ZOrder::Normal, render_ops);
         }

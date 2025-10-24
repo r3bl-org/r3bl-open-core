@@ -399,4 +399,5 @@ pub const DECTCEM_SHOW_CURSOR: u16 = 25;
 //
 // This separation reflects the architectural distinction:
 // - **This file (`csi_codes/csi_constants.rs`)**: CSI-specific sequencing details
-// - **Parent file (`protocols/generic_ansi_constants.rs`)**: General ANSI/terminal feature constants
+// - **Parent file (`protocols/generic_ansi_constants.rs`)**: General ANSI/terminal
+//   feature constants

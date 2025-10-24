@@ -28,12 +28,14 @@
 
 // Attach.
 mod ansi_sequence_generator;
+mod debug;
 mod paint_render_op_impl;
 mod pixel_char_renderer;
 mod render_to_ansi;
 
 // Re-exports
 pub use ansi_sequence_generator::*;
+pub use debug::*;
 pub use paint_render_op_impl::*;
 pub use pixel_char_renderer::*;
 pub use render_to_ansi::*;

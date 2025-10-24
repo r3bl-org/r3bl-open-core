@@ -5,12 +5,12 @@ use crate::{ColorWheel, CommonError, CommonErrorType, CommonResult, DialogBuffer
             DialogChoice, DialogEngineArgs, DialogEvent, EditorEngineApplyEventResult,
             EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
             GradientGenerationPolicy, HasDialogBuffers, InlineString, InputEvent, Key,
-            LengthOps, MinSize, PartialFlexBox, Pos, RenderOpCommon, RenderOpIR, RenderOpsIR,
-            RenderPipeline, Size, SpecialKey, SurfaceBounds, SystemClipboard,
-            TextColorizationPolicy, TuiStyle, ZOrder, ch, col,
+            LengthOps, MinSize, PartialFlexBox, Pos, RenderOpCommon, RenderOpIR,
+            RenderOpIRVec, RenderPipeline, Size, SpecialKey, SurfaceBounds,
+            SystemClipboard, TextColorizationPolicy, TuiStyle, ZOrder, ch, col,
             editor_engine::engine_public_api,
-            height, inline_string, pc, render_pipeline,
-            render_tui_styled_texts_into, row,
+            height, inline_string, pc, render_pipeline, render_tui_styled_texts_into,
+            row,
             terminal_lib_backends::KeyPress,
             throws_with_return,
             tui_style_attrib::{Dim, Underline},
@@ -423,13 +423,13 @@ mod internal_impl {
                 .get_as_string_with_comma_instead_of_newlines()
                 == ""
         {
-            let mut ops = RenderOpsIR::new();
+            let mut ops = RenderOpIRVec::new();
             let msg = "Press <Esc> to close, or <Enter> to accept".to_string();
 
-            ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
-            ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+            ops.push(RenderOpCommon::ResetColor);
+            ops.push(RenderOpCommon::MoveCursorPositionAbs(
                 flex_box.style_adjusted_origin_pos,
-            )));
+            ));
 
             ops.push(RenderOpIR::PaintTextWithAttributes(
                 msg.into(),
@@ -456,11 +456,11 @@ mod internal_impl {
         dialog_engine: &DialogEngine,
         self_id: FlexBoxId,
         state: &mut S,
-    ) -> RenderOpsIR
+    ) -> RenderOpIRVec
     where
         S: Default + Clone + Debug + Sync + Send + HasDialogBuffers,
     {
-        let mut it = RenderOpsIR::new();
+        let mut it = RenderOpIRVec::new();
 
         if let Some(dialog_buffer) = state.get_mut_dialog_buffer(self_id)
             && let Some(results) = dialog_buffer.maybe_results.as_ref()
@@ -483,7 +483,7 @@ mod internal_impl {
         use super::*;
 
         pub fn paint_results(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             origin_pos: Pos,
             bounds_size: Size,
             results: &[InlineString],
@@ -545,11 +545,11 @@ mod internal_impl {
                     break;
                 }
 
-                ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
-                ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
+                ops.push(RenderOpCommon::ResetColor);
+                ops.push(RenderOpCommon::MoveCursorPositionRelTo(
                     origin_pos,
                     rel_insertion_pos,
-                )));
+                ));
 
                 // Set style to underline if selected row & paint.
                 if selected_row_index.eq(&row_index) {
@@ -569,7 +569,7 @@ mod internal_impl {
                         }
                         .into();
                     // Paint the text for the row.
-                    ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(my_selected_style)));
+                    ops.push(RenderOpCommon::ApplyColors(my_selected_style));
                     ops.push(RenderOpIR::PaintTextWithAttributes(
                         clipped_text.into_owned(),
                         my_selected_style,
@@ -577,9 +577,9 @@ mod internal_impl {
                 } else {
                     // Regular row, not selected.
                     // Paint the text for the row.
-                    ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(
+                    ops.push(RenderOpCommon::ApplyColors(
                         dialog_engine.dialog_options.maybe_style_results_panel,
-                    )));
+                    ));
                     ops.push(RenderOpIR::PaintTextWithAttributes(
                         clipped_text.into_owned(),
                         dialog_engine.dialog_options.maybe_style_results_panel,
@@ -594,8 +594,8 @@ mod internal_impl {
         bounds_size: Size,
         title: &str,
         dialog_engine: &mut DialogEngine,
-    ) -> RenderOpsIR {
-        let mut ops = RenderOpsIR::new();
+    ) -> RenderOpIRVec {
+        let mut ops = RenderOpIRVec::new();
 
         let row_pos = {
             let col_index = origin_pos.col_index + 1;
@@ -607,11 +607,11 @@ mod internal_impl {
         let title_content_clipped =
             title_gcs.trunc_end_to_fit(bounds_size.col_width - width(2));
 
-        ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
-        ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(row_pos)));
-        ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(
+        ops.push(RenderOpCommon::ResetColor);
+        ops.push(RenderOpCommon::MoveCursorPositionAbs(row_pos));
+        ops.push(RenderOpCommon::ApplyColors(
             dialog_engine.dialog_options.maybe_style_title,
-        )));
+        ));
 
         // Apply lolcat override (if enabled) to the fg_color of text_content.
         lolcat_from_style(
@@ -627,7 +627,7 @@ mod internal_impl {
     /// Only Colorizes text in-place if [Style]'s `lolcat` field is true. Otherwise leaves
     /// `text` alone.
     fn lolcat_from_style(
-        ops: &mut RenderOpsIR,
+        ops: &mut RenderOpIRVec,
         color_wheel: &mut ColorWheel,
         maybe_style: Option<&TuiStyle>,
         text: &str,
@@ -657,8 +657,8 @@ mod internal_impl {
         origin_pos: Pos,
         bounds_size: Size,
         dialog_engine: &mut DialogEngine,
-    ) -> RenderOpsIR {
-        let mut ops = RenderOpsIR::new();
+    ) -> RenderOpIRVec {
+        let mut ops = RenderOpIRVec::new();
         let maybe_style = dialog_engine.dialog_options.maybe_style_border;
 
         render_border_helper::render_border_lines(
@@ -681,13 +681,13 @@ mod internal_impl {
 
     mod render_border_helper {
         use super::{ColorWheel, DialogEngine, DialogEngineMode, DisplayConstants, Pos,
-                    RenderOpCommon, RenderOpIR, RenderOpsIR, Size, TuiStyle, col, lolcat_from_style, row,
-                    u16};
+                    RenderOpCommon, RenderOpIRVec, Size, TuiStyle, col,
+                    lolcat_from_style, row, u16};
         use crate::border_cache;
 
         /// Renders all border lines for the dialog
         pub fn render_border_lines(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             origin_pos: Pos,
             bounds_size: Size,
             maybe_style: Option<TuiStyle>,
@@ -709,7 +709,7 @@ mod internal_impl {
 
         /// Renders a single border line at the specified row index
         fn render_single_border_line(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             origin_pos: Pos,
             bounds_size: Size,
             row_idx: u16,
@@ -761,18 +761,18 @@ mod internal_impl {
 
         /// Sets up common render operations for a line
         fn setup_render_ops_for_line(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             row_pos: Pos,
             maybe_style: Option<TuiStyle>,
         ) {
-            ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
-            ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(row_pos)));
-            ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(maybe_style)));
+            ops.push(RenderOpCommon::ResetColor);
+            ops.push(RenderOpCommon::MoveCursorPositionAbs(row_pos));
+            ops.push(RenderOpCommon::ApplyColors(maybe_style));
         }
 
         /// Renders the top border line
         fn render_top_border_line(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             bounds_size: Size,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
@@ -784,7 +784,7 @@ mod internal_impl {
 
         /// Renders a middle border line (vertical sides with spaces)
         fn render_middle_border_line(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             bounds_size: Size,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
@@ -797,7 +797,7 @@ mod internal_impl {
 
         /// Renders the bottom border line
         fn render_bottom_border_line(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             bounds_size: Size,
             maybe_style: Option<TuiStyle>,
             color_wheel: &mut ColorWheel,
@@ -810,7 +810,7 @@ mod internal_impl {
 
         /// Renders the separator line for autocomplete mode
         pub fn render_autocomplete_separator(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             origin_pos: Pos,
             bounds_size: Size,
             dialog_engine: &mut DialogEngine,
@@ -831,7 +831,7 @@ mod internal_impl {
 
         /// Renders the actual separator line for autocomplete mode
         fn render_separator_line(
-            ops: &mut RenderOpsIR,
+            ops: &mut RenderOpIRVec,
             origin_pos: Pos,
             bounds_size: Size,
             maybe_style: Option<TuiStyle>,
@@ -841,8 +841,11 @@ mod internal_impl {
 
             let separator_pos = calculate_separator_position();
 
-            ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
-            ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(origin_pos, separator_pos)));
+            ops.push(RenderOpCommon::ResetColor);
+            ops.push(RenderOpCommon::MoveCursorPositionRelTo(
+                origin_pos,
+                separator_pos,
+            ));
 
             lolcat_from_style(ops, color_wheel, maybe_style.as_ref(), &text_content);
         }

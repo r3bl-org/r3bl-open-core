@@ -203,7 +203,21 @@
 //! [ECMA-48 standard]: https://www.ecma-international.org/publications-and-standards/standards/ecma-48/
 
 // Import the operation modules.
-use super::*;
+use super::{AnsiToOfsBufPerformer, BACKSPACE, CARRIAGE_RETURN, CHA_CURSOR_COLUMN,
+            CHARSET_ASCII, CHARSET_DEC_GRAPHICS, CNL_CURSOR_NEXT_LINE,
+            CPL_CURSOR_PREV_LINE, CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN,
+            CUF_CURSOR_FORWARD, CUP_CURSOR_POSITION, CUU_CURSOR_UP, DCH_DELETE_CHAR,
+            DECRC_RESTORE_CURSOR, DECSC_SAVE_CURSOR, DECSTBM_SET_MARGINS,
+            DL_DELETE_LINE, DSR_DEVICE_STATUS, ECH_ERASE_CHAR, ED_ERASE_DISPLAY,
+            EL_ERASE_LINE, G0_CHARSET_INTERMEDIATE, HVP_CURSOR_POSITION,
+            ICH_INSERT_CHAR, IL_INSERT_LINE, IND_INDEX_DOWN, LINE_FEED,
+            RCP_RESTORE_CURSOR, RI_REVERSE_INDEX_UP, RIS_RESET_TERMINAL, RM_RESET_MODE,
+            SCP_SAVE_CURSOR, SD_SCROLL_DOWN, SGR_SET_GRAPHICS, SM_SET_MODE,
+            SU_SCROLL_UP, TAB, VPA_VERTICAL_POSITION, vt_100_shim_char_ops,
+            vt_100_shim_control_ops, vt_100_shim_cursor_ops, vt_100_shim_dsr_ops,
+            vt_100_shim_line_ops, vt_100_shim_margin_ops, vt_100_shim_mode_ops,
+            vt_100_shim_osc_ops, vt_100_shim_scroll_ops, vt_100_shim_sgr_ops,
+            vt_100_shim_terminal_ops};
 use vte::{Params, Perform};
 
 /// Internal methods for `AnsiToOfsBufPerformer` to implement [`Perform`] trait.

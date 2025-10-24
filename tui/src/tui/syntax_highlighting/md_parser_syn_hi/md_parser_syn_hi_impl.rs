@@ -16,11 +16,13 @@ use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             get_foreground_dim_style, get_foreground_style, get_inline_code_style,
             get_italic_style, get_link_text_style, get_link_url_style,
             get_list_bullet_style, join, new_style, parse_markdown, try_get_syntax_ref,
-            tui::md_parser::md_parser_constants::{CODE_BLOCK_START_PARTIAL, AUTHORS, BACK_TICK, CHECKED_OUTPUT, DATE,
-                                         LEFT_BRACKET, LEFT_IMAGE, LEFT_PARENTHESIS,
-                                         NEW_LINE, RIGHT_BRACKET, RIGHT_IMAGE,
-                                         RIGHT_PARENTHESIS, STAR, TAGS, TITLE,
-                                         UNCHECKED_OUTPUT, UNDERSCORE}};
+            tui::md_parser::md_parser_constants::{AUTHORS, BACK_TICK, CHECKED_OUTPUT,
+                                                  CODE_BLOCK_START_PARTIAL, DATE,
+                                                  LEFT_BRACKET, LEFT_IMAGE,
+                                                  LEFT_PARENTHESIS, NEW_LINE,
+                                                  RIGHT_BRACKET, RIGHT_IMAGE,
+                                                  RIGHT_PARENTHESIS, STAR, TAGS, TITLE,
+                                                  UNCHECKED_OUTPUT, UNDERSCORE}};
 use smallvec::smallvec;
 use syntect::{easy::HighlightLines, highlighting::Theme, parsing::SyntaxSet};
 

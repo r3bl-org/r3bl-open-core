@@ -15,8 +15,7 @@
 //! - Boundary condition validation
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{ANSIBasicColor, SgrCode, term_col, term_row,
-            vt_100_ansi_parser::CsiSequence};
+use crate::{ANSIBasicColor, SgrCode, term_col, term_row, vt_100_ansi_parser::CsiSequence};
 use std::fmt::Write;
 
 /// Generate a very long text sequence to test buffer handling.

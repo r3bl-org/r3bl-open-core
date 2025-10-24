@@ -5,10 +5,11 @@
 //! This module handles the various private mode settings that control terminal behavior,
 //! such as cursor visibility, auto-wrap, and alternate screen buffer.
 
-use super::{super::generic_ansi_constants::{ALT_SCREEN_BUFFER, DECANM_VT52_MODE, DECAWM_AUTO_WRAP,
-                                          DECCKM_CURSOR_KEYS, DECCOLM_132_COLUMN,
-                                          DECOM_ORIGIN_MODE, DECSCLM_SMOOTH_SCROLL,
-                                          DECSCNM_REVERSE_VIDEO, SAVE_CURSOR_DEC},
+use super::{super::generic_ansi_constants::{ALT_SCREEN_BUFFER, DECANM_VT52_MODE,
+                                            DECAWM_AUTO_WRAP, DECCKM_CURSOR_KEYS,
+                                            DECCOLM_132_COLUMN, DECOM_ORIGIN_MODE,
+                                            DECSCLM_SMOOTH_SCROLL,
+                                            DECSCNM_REVERSE_VIDEO, SAVE_CURSOR_DEC},
             csi_constants::DECTCEM_SHOW_CURSOR};
 use crate::ParamsExt;
 

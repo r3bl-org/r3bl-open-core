@@ -3,8 +3,10 @@
 //! Tests for control sequences and edge cases.
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{AnsiToOfsBufPerformer, col, offscreen_buffer::test_fixtures_ofs_buf::*, row,
-            vt_100_ansi_parser::{CARRIAGE_RETURN, LINE_FEED, TAB, BACKSPACE}};
+use crate::{AnsiToOfsBufPerformer, col,
+            offscreen_buffer::test_fixtures_ofs_buf::*,
+            row,
+            vt_100_ansi_parser::{BACKSPACE, CARRIAGE_RETURN, LINE_FEED, TAB}};
 use vte::Perform;
 
 /// Tests for C0 control characters (CR, LF, Tab, Backspace, etc.).

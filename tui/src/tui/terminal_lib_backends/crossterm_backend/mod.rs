@@ -4,16 +4,16 @@
 //!
 //! # You Are Here
 //!
-//! ```
+//! ```text
 //! [STAGE 1: App/Component] → [STAGE 2: Pipeline] → [STAGE 3: Compositor] →
 //! [STAGE 4: Backend Converter] ← YOU ARE HERE → [STAGE 5: Backend Executor] ← YOU ARE HERE
 //! [STAGE 6: Terminal]
 //! ```
 //!
 //! **Input (Stage 4)**: [`OffscreenBuffer`] (2D grid of styled characters)
-//! **Output (Stage 4)**: [`RenderOpsOutput`] (optimized terminal operations)
+//! **Output (Stage 4)**: [`RenderOpOutputVec`] (optimized terminal operations)
 //!
-//! **Input (Stage 5)**: [`RenderOpsOutput`] operations to execute
+//! **Input (Stage 5)**: [`RenderOpOutputVec`] operations to execute
 //! **Output (Stage 5)**: Terminal state changes via Crossterm
 //!
 //! **Role**: Convert high-level rendering data to low-level terminal commands
@@ -22,17 +22,18 @@
 //!
 //! ## Module Organization
 //!
-//! This module contains the **Crossterm-specific backend implementation** with two key stages:
+//! This module contains the **Crossterm-specific backend implementation** with two key
+//! stages:
 //!
 //! ### Stage 4: Backend Converter (`offscreen_buffer_paint_impl`)
 //! - Implements [`OffscreenBufferPaint`] trait
-//! - Scans the [`OffscreenBuffer`] and generates [`RenderOpsOutput`]
+//! - Scans the [`OffscreenBuffer`] and generates [`RenderOpOutputVec`]
 //! - Computes diffs for selective redraw optimization
 //! - Converts 2D pixel grid to optimized text painting operations
 //!
 //! ### Stage 5: Backend Executor (`paint_render_op_impl`)
 //! - Implements [`PaintRenderOp`] trait
-//! - Executes [`RenderOpsOutput`] operations
+//! - Executes [`RenderOpOutputVec`] operations
 //! - Translates operations to Crossterm API calls
 //! - Manages terminal modes (raw mode, cursor visibility, mouse tracking)
 //! - Uses [`RenderOpsLocalData`] for state tracking (avoid redundant commands)

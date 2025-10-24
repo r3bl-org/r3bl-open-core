@@ -2,14 +2,15 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{RenderOpCommon, RenderOpIR, RenderOpsIR,
-                RenderPipeline, ZOrder, assert_eq2, render_pipeline};
+    use std::ops::AddAssign;
+    use crate::{RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline, ZOrder,
+                assert_eq2, render_pipeline};
 
     #[test]
     fn render_ops_macro() {
-        let mut render_ops = RenderOpsIR::new();
-        render_ops.push(RenderOpIR::Common(RenderOpCommon::ClearScreen));
-        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        let mut render_ops = RenderOpIRVec::new();
+        render_ops  += (RenderOpCommon::ClearScreen);
+        render_ops  += (RenderOpCommon::ResetColor);
         assert_eq2!(render_ops.len(), 2);
     }
 
@@ -106,9 +107,6 @@ mod tests {
 
         assert_eq2!(pipeline.len(), 1);
         assert_eq2!(pipeline.get(&ZOrder::Normal), None);
-        assert_eq2!(
-            pipeline.get_all_render_op_in(ZOrder::Glass).unwrap(),
-            2
-        );
+        assert_eq2!(pipeline.get_all_render_op_in(ZOrder::Glass).unwrap(), 2);
     }
 }

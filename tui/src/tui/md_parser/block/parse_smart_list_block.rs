@@ -2,9 +2,10 @@
 use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, List, MdLineFragment,
             SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces, list,
             md_parser::md_parser_constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
-                                   NEWLINE_OR_NULL, NULL_CHAR,
-                                   ORDERED_LIST_PARTIAL_PREFIX, SPACE, SPACE_CHAR,
-                                   UNCHECKED, UNORDERED_LIST_PREFIX},
+                                             NEWLINE_OR_NULL, NULL_CHAR,
+                                             ORDERED_LIST_PARTIAL_PREFIX, SPACE,
+                                             SPACE_CHAR, UNCHECKED,
+                                             UNORDERED_LIST_PREFIX},
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
             parse_null_padded_line::is,
             tiny_inline_string};

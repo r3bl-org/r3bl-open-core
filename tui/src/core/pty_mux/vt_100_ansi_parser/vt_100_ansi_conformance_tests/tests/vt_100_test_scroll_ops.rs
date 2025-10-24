@@ -16,8 +16,9 @@ use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{TuiStyle, col,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             row, term_col, term_row,
-            vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                                 CsiSequence, PrivateModeType, EscSequence, IND_INDEX_DOWN, RI_REVERSE_INDEX_UP}};
+            vt_100_ansi_parser::{CsiSequence, EscSequence, IND_INDEX_DOWN,
+                                 PrivateModeType, RI_REVERSE_INDEX_UP,
+                                 ansi_parser_public_api::AnsiToOfsBufPerformer}};
 use vte::Perform;
 
 fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {

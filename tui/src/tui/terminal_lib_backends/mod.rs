@@ -3,7 +3,8 @@
 //! # Rendering Pipeline Architecture
 //!
 //! Here's the flow:
-//! App -> Component -> RenderOpsIR -> RenderPipeline (to OffscreenBuffer) -> RenderOpsOutput -> Terminal
+//! App -> Component -> `RenderOpsIR` -> `RenderPipeline` (to `OffscreenBuffer`) ->
+//! `RenderOpsOutput` -> Terminal
 //!
 //! ```text
 //! ┌───────────────────────────────────────┐
@@ -48,13 +49,15 @@
 //! **Each module below has a "You are here" breadcrumb showing its place in this flow.**
 //!
 //! ### Core Data Types (Cross-Stage)
-//! - [`render_op`] - RenderOpIR, RenderOpOutput, RenderOpCommon, RenderOpsLocalData
+//! - [`render_op`] - `RenderOpIR`, `RenderOpOutput`, `RenderOpCommon`,
+//!   `RenderOpsLocalData`
 //!
 //! ### Pipeline Stages
-//! - [`render_pipeline`] - Collects & organizes RenderOps by Z-order
-//! - [`compositor_render_ops_to_ofs_buf`] - Renders RenderOpsIR to OffscreenBuffer
-//! - [`offscreen_buffer`] - Virtual terminal buffer (2D grid of styled PixelChars)
-//! - [`crossterm_backend::offscreen_buffer_paint_impl`] - Converts buffer → optimized operations
+//! - [`render_pipeline`] - Collects & organizes `RenderOps` by Z-order
+//! - [`compositor_render_ops_to_ofs_buf`] - Renders `RenderOpsIR` to `OffscreenBuffer`
+//! - [`offscreen_buffer`] - Virtual terminal buffer (2D grid of styled `PixelChars`)
+//! - [`crossterm_backend::offscreen_buffer_paint_impl`] - Converts buffer → optimized
+//!   operations
 //! - [`crossterm_backend::paint_render_op_impl`] - Executes operations via Crossterm
 //!
 //! ### Supporting Modules

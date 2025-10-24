@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::super::{FlushKind, RenderOpsIR};
+use super::super::{FlushKind, RenderOpIRVec};
 use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle,
             osc::OscEvent};
 use std::fmt::Debug;
@@ -379,16 +379,16 @@ pub use super::{pixel_char::PixelChar, pixel_char_line::PixelCharLine,
 
 /// Trait for painting offscreen buffer content to terminal output.
 pub trait OffscreenBufferPaint {
-    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOpsIR;
+    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOpIRVec;
 
     fn render_diff(
         &mut self,
         diff_chunks: &super::diff_chunks::PixelCharDiffChunks,
-    ) -> RenderOpsIR;
+    ) -> RenderOpIRVec;
 
     fn paint(
         &mut self,
-        render_ops: RenderOpsIR,
+        render_ops: RenderOpIRVec,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
@@ -397,7 +397,7 @@ pub trait OffscreenBufferPaint {
 
     fn paint_diff(
         &mut self,
-        render_ops: RenderOpsIR,
+        render_ops: RenderOpIRVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,

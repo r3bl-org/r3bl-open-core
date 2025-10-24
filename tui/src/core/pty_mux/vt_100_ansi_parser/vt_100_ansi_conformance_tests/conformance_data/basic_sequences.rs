@@ -13,8 +13,7 @@
 //! - Basic movement: VT100 User Guide Section 3.3.2
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
-use crate::{LengthOps, len, term_col, term_row,
-            vt_100_ansi_parser::CsiSequence};
+use crate::{LengthOps, len, term_col, term_row, vt_100_ansi_parser::CsiSequence};
 use std::num::NonZeroU16;
 
 /// Clear entire screen and return cursor to home position (1,1).

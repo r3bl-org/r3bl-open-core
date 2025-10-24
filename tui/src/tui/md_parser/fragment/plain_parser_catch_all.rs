@@ -18,8 +18,9 @@
 //! tests in [`crate::parse_fragments_in_a_line`].
 
 use crate::{DEBUG_MD_PARSER_STDOUT, fg_blue, fg_magenta, fg_red, is_any_of,
-            md_parser::md_parser_constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE, NEW_LINE,
-                                   NEW_LINE_CHAR, NULL_CHAR, NULL_STR, STAR, UNDERSCORE},
+            md_parser::md_parser_constants::{BACK_TICK, LEFT_BRACKET, LEFT_IMAGE,
+                                             NEW_LINE, NEW_LINE_CHAR, NULL_CHAR,
+                                             NULL_STR, STAR, UNDERSCORE},
             specialized_parser_delim_matchers};
 use nom::{IResult, Parser,
           branch::alt,

@@ -2,12 +2,13 @@
 
 //! [`DirectAnsi`] implementation of the [`PaintRenderOp`] trait
 //!
-//! This implements the [`PaintRenderOp`] trait to execute all [`RenderOpIR`] variants using
-//! [`AnsiSequenceGenerator`]. It tracks cursor position and colors to skip redundant ANSI
-//! sequences for optimization.
+//! This implements the [`PaintRenderOp`] trait to execute all [`RenderOpIR`] variants
+//! using [`AnsiSequenceGenerator`]. It tracks cursor position and colors to skip
+//! redundant ANSI sequences for optimization.
 
 use super::AnsiSequenceGenerator;
-use crate::{Flush, LockedOutputDevice, PaintRenderOp, RenderOpIR, RenderOpsLocalData, Size};
+use crate::{Flush, LockedOutputDevice, PaintRenderOp, RenderOpIR, RenderOpsLocalData,
+            Size};
 
 /// Implements [`PaintRenderOp`] trait using direct ANSI sequence generation
 #[derive(Debug)]

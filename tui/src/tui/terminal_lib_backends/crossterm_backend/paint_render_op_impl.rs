@@ -8,15 +8,16 @@
 //! [S6: Terminal]
 //! ```
 //!
-//! **Input**: [`RenderOpsOutput`] (from backend converter)
+//! **Input**: [`RenderOpOutputVec`] (from backend converter)
 //! **Output**: ANSI escape sequences to terminal
 //! **Role**: Execute rendering operations via Crossterm backend
 //!
-//! > **For the complete rendering architecture**, see [`super::super`] (parent parent module).
+//! > **For the complete rendering architecture**, see [`super::super`] (parent parent
+//! > module).
 //!
 //! ## What This Stage Does
 //!
-//! The Backend Executor translates [`RenderOpsOutput`] into actual terminal commands:
+//! The Backend Executor translates [`RenderOpOutputVec`] into actual terminal commands:
 //! - Moves cursor to positions
 //! - Sets foreground/background colors
 //! - Paints styled text
@@ -64,7 +65,7 @@ impl PaintRenderOp for PaintRenderOpImplCrossterm {
                     render_local_data,
                     locked_output_device,
                     is_mock,
-                )
+                );
             }
             RenderOpIR::PaintTextWithAttributes(text, maybe_style) => {
                 PaintRenderOpImplCrossterm::paint_text_with_attributes(

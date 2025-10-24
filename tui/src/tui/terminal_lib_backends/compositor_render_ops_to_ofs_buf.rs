@@ -17,9 +17,9 @@
 //!
 //! ## What This Stage Does
 //!
-//! The Compositor is the **rendering engine** of R3BL TUI. It processes the organized render
-//! operations from the pipeline and writes the results to an offscreen buffer—a 2D grid
-//! representing the entire terminal screen.
+//! The Compositor is the **rendering engine** of R3BL TUI. It processes the organized
+//! render operations from the pipeline and writes the results to an offscreen buffer—a 2D
+//! grid representing the entire terminal screen.
 //!
 //! ### Key Responsibilities
 //! - **Execute Operations**: Process [`RenderOpIR`] sequentially in Z-order
@@ -247,7 +247,10 @@ fn process_common_render_op(
             ofs_buf.cursor_pos =
                 sanitize_and_save_abs_pos(*new_abs_pos, window_size, render_local_data);
         }
-        RenderOpCommon::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
+        RenderOpCommon::MoveCursorPositionRelTo(
+            box_origin_pos_ref,
+            content_rel_pos_ref,
+        ) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
             ofs_buf.cursor_pos =
                 sanitize_and_save_abs_pos(new_abs_pos, window_size, render_local_data);

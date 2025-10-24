@@ -57,12 +57,10 @@
 //!
 //! All types are re-exported at the module level for ergonomic imports.
 
-// Re-export TERMINAL_LIB_BACKEND constant from parent module.
-pub use super::TERMINAL_LIB_BACKEND;
-
 // Private modules - implementation details.
 mod render_op_common;
 mod render_op_common_ext;
+mod render_op_debug;
 mod render_op_flush;
 mod render_op_ir;
 mod render_op_local_data;
@@ -71,23 +69,8 @@ mod render_op_output;
 // Public re-exports - stable API surface.
 pub use render_op_common::*;
 pub use render_op_common_ext::*;
+pub use render_op_debug::*;
 pub use render_op_flush::*;
 pub use render_op_ir::*;
 pub use render_op_local_data::*;
 pub use render_op_output::*;
-// Re-export trait for formatting debug output (used by backend implementations).
-use std::fmt::{Formatter, Result};
-
-/// Trait for formatting [`RenderOpCommon`] instances in debug output.
-///
-/// This trait abstracts debug formatting logic, allowing different
-/// terminal backends to provide their own specialized debug representations
-/// of common render operations.
-pub trait DebugFormatRenderOp {
-    /// Formats the `RenderOpCommon` for debug output.
-    ///
-    /// # Errors
-    ///
-    /// Returns a formatting error if writing to the formatter fails.
-    fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result;
-}

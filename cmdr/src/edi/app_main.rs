@@ -1,5 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+use std::ops::AddAssign;
 use crate::edi::State;
 use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
@@ -8,7 +9,7 @@ use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelCo
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasEditorBuffers, HasFocus, InputEvent, Key,
                KeyPress, LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
-               PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpsIR,
+               PerformPositioningAndSizing, RenderOpCommon, RenderOpIRVec,
                RenderPipeline, Size, Surface, SurfaceProps, SurfaceRender,
                SyntaxHighlightMode, TerminalWindowMainThreadSignal,
                TextColorizationPolicy, TuiStyledTexts, ZOrder, box_end, box_start, col,
@@ -674,8 +675,8 @@ mod status_bar {
         let row_bottom = size.row_height.convert_to_index();
         let center = col(col_center) + row_bottom;
 
-        let mut render_ops = RenderOpsIR::new();
-        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(center)));
+        let mut render_ops = RenderOpIRVec::new();
+        render_ops  += (RenderOpCommon::MoveCursorPositionAbs(center));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }

@@ -1,8 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CodeBlockLine, CodeBlockLineContent, CodeBlockLines, List,
-            md_parser::md_parser_constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL, NEW_LINE,
-                                   NEWLINE_OR_NULL, NULL_CHAR},
+            md_parser::md_parser_constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL,
+                                             NEW_LINE, NEWLINE_OR_NULL, NULL_CHAR},
             parse_null_padded_line::{is, trim_optional_leading_newline_and_nulls}};
 use nom::{IResult, Parser,
           branch::alt,

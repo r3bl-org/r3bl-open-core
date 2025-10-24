@@ -1,16 +1,16 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DebugFormatRenderOp, RenderOpCommon,
-            RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen, ClearToEndOfLine,
-                             ClearToStartOfLine,
+            RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen,
+                             ClearToEndOfLine, ClearToStartOfLine,
                              DisableBracketedPaste, DisableMouseTracking,
-                             EnableBracketedPaste, EnableMouseTracking, EnterAlternateScreen,
-                             EnterRawMode, ExitAlternateScreen, ExitRawMode, HideCursor,
-                             MoveCursorPositionAbs, MoveCursorPositionRelTo,
-                             MoveCursorToColumn, MoveCursorToNextLine,
-                             MoveCursorToPreviousLine, Noop, PrintStyledText, ResetColor,
-                             RestoreCursorPosition, SaveCursorPosition, SetBgColor, SetFgColor,
-                             ShowCursor},
+                             EnableBracketedPaste, EnableMouseTracking,
+                             EnterAlternateScreen, EnterRawMode, ExitAlternateScreen,
+                             ExitRawMode, HideCursor, MoveCursorPositionAbs,
+                             MoveCursorPositionRelTo, MoveCursorToColumn,
+                             MoveCursorToNextLine, MoveCursorToPreviousLine, Noop,
+                             PrintStyledText, ResetColor, RestoreCursorPosition,
+                             SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor},
             TuiStyle};
 use std::fmt::{Formatter, Result};
 
@@ -73,29 +73,17 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
     }
 }
 
-// Helper for formatting OutputOp's CompositorNoClipTruncPaintTextWithAttributes
+/// Helper for formatting [`OutputOp`]'s [`CompositorNoClipTruncPaintTextWithAttributes`].
+///
+/// # Errors
+///
+/// Returns a formatting error if writing to the formatter fails.
 pub fn format_output_paint_text(
     f: &mut Formatter<'_>,
     text: &str,
     maybe_style: Option<TuiStyle>,
 ) -> Result {
     f.write_str("Compositor..PrintText...")?;
-    f.write_str("(")?;
-    write!(f, "{}", text.len())?;
-    f.write_str(" bytes, ")?;
-    match maybe_style {
-        Some(style) => write!(f, "{style:?})"),
-        None => f.write_str("None)"),
-    }
-}
-
-fn format_print_text(
-    f: &mut Formatter<'_>,
-    op_name: &str,
-    text: &str,
-    maybe_style: Option<TuiStyle>,
-) -> Result {
-    f.write_str(op_name)?;
     f.write_str("(")?;
     write!(f, "{}", text.len())?;
     f.write_str(" bytes, ")?;

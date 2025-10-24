@@ -59,7 +59,8 @@
 #[cfg(test)]
 mod render_op_benchmarks {
     extern crate test;
-    use crate::{AnsiValue, InlineString, Pos, RenderOpCommon, RenderOpIR, RgbValue, TuiColor, TuiStyle, ch};
+    use crate::{AnsiValue, InlineString, Pos, RenderOpCommon, RenderOpIR, RgbValue,
+                TuiColor, TuiStyle, ch};
     use smallvec::SmallVec;
     use test::Bencher;
 
@@ -76,8 +77,12 @@ mod render_op_benchmarks {
                 row_index: ch(10).into(),
                 col_index: ch(20).into(),
             })),
-            RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 128, 64)))),
-            RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(42)))),
+            RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(
+                RgbValue::from_u8(255, 128, 64),
+            ))),
+            RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(
+                AnsiValue::new(42),
+            ))),
             RenderOpIR::PaintTextWithAttributes(
                 InlineString::from("Hello, World!"),
                 Some(TuiStyle {
@@ -243,7 +248,10 @@ mod render_op_benchmarks {
                     RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos)) => {
                         sum += pos.row_index.value + pos.col_index.value;
                     }
-                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(p1, p2)) => {
+                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
+                        p1,
+                        p2,
+                    )) => {
                         sum += p1.row_index.value
                             + p1.col_index.value
                             + p2.row_index.value
@@ -269,7 +277,10 @@ mod render_op_benchmarks {
                     RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos)) => {
                         sum += pos.row_index.value + pos.col_index.value;
                     }
-                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(p1, p2)) => {
+                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
+                        p1,
+                        p2,
+                    )) => {
                         sum += p1.row_index.value
                             + p1.col_index.value
                             + p2.row_index.value
@@ -314,15 +325,19 @@ mod render_op_benchmarks {
     fn bench_smallvec_text_line_render(b: &mut Bencher) {
         b.iter(|| {
             let mut ops = RenderOpsSmallVec::new();
-            ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
-                row_index: ch(5).into(),
-                col_index: ch(10).into(),
-            })));
+            ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(
+                Pos {
+                    row_index: ch(5).into(),
+                    col_index: ch(10).into(),
+                },
+            )));
             ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
-            ops.push(RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(
-                255, 255, 255,
-            )))));
-            ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(232)))));
+            ops.push(RenderOpIR::Common(RenderOpCommon::SetFgColor(
+                TuiColor::Rgb(RgbValue::from_u8(255, 255, 255)),
+            )));
+            ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(
+                TuiColor::Ansi(AnsiValue::new(232)),
+            )));
             ops.push(RenderOpIR::PaintTextWithAttributes(
                 InlineString::from("This is a line of text in the editor"),
                 None,
@@ -341,8 +356,12 @@ mod render_op_benchmarks {
                     col_index: ch(10).into(),
                 })),
                 RenderOpIR::Common(RenderOpCommon::ResetColor),
-                RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255)))),
-                RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(232)))),
+                RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(
+                    RgbValue::from_u8(255, 255, 255),
+                ))),
+                RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(
+                    AnsiValue::new(232),
+                ))),
                 RenderOpIR::PaintTextWithAttributes(
                     InlineString::from("This is a line of text in the editor"),
                     None,
@@ -362,8 +381,12 @@ mod render_op_benchmarks {
                     col_index: ch(10).into(),
                 })),
                 RenderOpIR::Common(RenderOpCommon::ResetColor),
-                RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255)))),
-                RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(232)))),
+                RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(
+                    RgbValue::from_u8(255, 255, 255),
+                ))),
+                RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(
+                    AnsiValue::new(232),
+                ))),
                 RenderOpIR::PaintTextWithAttributes(
                     InlineString::from("This is a line of text in the editor"),
                     None,

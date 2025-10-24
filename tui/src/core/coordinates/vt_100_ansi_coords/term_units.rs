@@ -84,8 +84,7 @@
 //! [`vt_100_ansi_parser`]: crate::core::pty_mux::vt_100_ansi_parser
 //! [`offscreen_buffer`]: crate::tui::terminal_lib_backends::offscreen_buffer
 
-use crate::{ColIndex, NumericConversions, RowIndex,
-            vt_100_ansi_parser::CsiSequence};
+use crate::{ColIndex, NumericConversions, RowIndex, vt_100_ansi_parser::CsiSequence};
 use std::{num::NonZeroU16, ops::Add};
 
 /// Internal macro to implement all necessary traits and methods for terminal coordinate

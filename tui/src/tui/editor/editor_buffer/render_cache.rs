@@ -12,8 +12,8 @@
 //! can be implemented as a [`crate::RingBuffer`] or [`crate::InlineVec`] of
 //! [`CacheEntry`] structs.
 
-use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOpsIR, ScrOfs, Size,
-            engine_public_api};
+use crate::{EditorBuffer, EditorEngine, HasFocus, RenderArgs, RenderOpIRVec, ScrOfs,
+            Size, engine_public_api};
 use std::ops::{Deref, DerefMut};
 
 pub(in crate::tui::editor::editor_buffer) mod key {
@@ -46,10 +46,10 @@ pub(in crate::tui::editor::editor_buffer) mod cache_entry {
 
     /// Cache entry is a combination of a single key and single value.
     #[derive(Clone, Debug, PartialEq)]
-    pub struct CacheEntry(pub Key, pub RenderOpsIR);
+    pub struct CacheEntry(pub Key, pub RenderOpIRVec);
 
     impl CacheEntry {
-        pub fn new(arg_key: impl Into<Key>, value: RenderOpsIR) -> Self {
+        pub fn new(arg_key: impl Into<Key>, value: RenderOpIRVec) -> Self {
             Self(arg_key.into(), value)
         }
     }
@@ -88,7 +88,7 @@ mod render_cache_impl_block {
     impl RenderCache {
         pub fn clear(&mut self) { self.entry = None; }
 
-        pub fn get(&self, arg_key: impl Into<Key>) -> Option<&RenderOpsIR> {
+        pub fn get(&self, arg_key: impl Into<Key>) -> Option<&RenderOpIRVec> {
             let key: Key = arg_key.into();
             if key == self.entry.as_ref()?.0 {
                 Some(&self.entry.as_ref()?.1)
@@ -99,7 +99,7 @@ mod render_cache_impl_block {
 
         /// This cache only holds a single entry. So if there is an existing entry, it is
         /// replaced with the new entry.
-        pub fn insert(&mut self, arg_key: impl Into<Key>, value: RenderOpsIR) {
+        pub fn insert(&mut self, arg_key: impl Into<Key>, value: RenderOpIRVec) {
             let key: Key = arg_key.into();
             self.entry = Some(CacheEntry::new(key, value));
         }
@@ -116,7 +116,7 @@ mod render_cache_impl_block {
             engine: &mut EditorEngine,
             window_size: Size,
             has_focus: &mut HasFocus,
-            render_ops: &mut RenderOpsIR,
+            render_ops: &mut RenderOpIRVec,
             use_cache: UseRenderCache,
         ) {
             // Cache enabled & hit so early return.
@@ -157,15 +157,15 @@ mod render_cache_impl_block {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{RenderOpCommon, RenderOpIR, assert_eq2, col,
-                editor::test_fixtures_editor::mock_real_objects_for_editor, height,
-                row, scr_ofs, width};
+    use crate::{RenderOpCommon, assert_eq2, col,
+                editor::test_fixtures_editor::mock_real_objects_for_editor, height, row,
+                scr_ofs, width};
 
     /// Fake `render_ops` to be used in the tests.
-    fn get_render_ops_og() -> RenderOpsIR {
-        let mut ops = RenderOpsIR::new();
-        ops.push(RenderOpIR::Common(RenderOpCommon::ClearScreen));
-        ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+    fn get_render_ops_og() -> RenderOpIRVec {
+        let mut ops = RenderOpIRVec::new();
+        ops.push(RenderOpCommon::ClearScreen);
+        ops.push(RenderOpCommon::ResetColor);
         ops
     }
 

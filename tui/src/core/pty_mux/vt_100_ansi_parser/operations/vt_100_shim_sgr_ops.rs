@@ -73,7 +73,14 @@
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
-use super::super::*;
+use super::super::{AnsiToOfsBufPerformer, ParamsExt, SGR_BG_BLACK, SGR_BG_BRIGHT_BLACK,
+                   SGR_BG_BRIGHT_WHITE, SGR_BG_DEFAULT, SGR_BG_WHITE, SGR_BLINK,
+                   SGR_BOLD, SGR_DIM, SGR_FG_BLACK, SGR_FG_BRIGHT_BLACK,
+                   SGR_FG_BRIGHT_WHITE, SGR_FG_DEFAULT, SGR_FG_WHITE, SGR_HIDDEN,
+                   SGR_ITALIC, SGR_RAPID_BLINK, SGR_RESET, SGR_RESET_BLINK,
+                   SGR_RESET_BOLD_DIM, SGR_RESET_HIDDEN, SGR_RESET_ITALIC,
+                   SGR_RESET_REVERSE, SGR_RESET_STRIKETHROUGH, SGR_RESET_UNDERLINE,
+                   SGR_REVERSE, SGR_STRIKETHROUGH, SGR_UNDERLINE, SgrColorSequence};
 use crate::tui_style_attrib;
 use vte::Params;
 
@@ -202,9 +209,7 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
     let mut idx = 0;
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
         // Check for extended color sequences first (they consume multiple positions).
-        if let Some(color_seq) =
-            SgrColorSequence::parse_from_raw_slice(param_slice)
-        {
+        if let Some(color_seq) = SgrColorSequence::parse_from_raw_slice(param_slice) {
             // Unified method handles routing to foreground/background automatically.
             performer.ofs_buf.apply_extended_color_sequence(color_seq);
         } else if let Some(&first_param) = param_slice.first() {

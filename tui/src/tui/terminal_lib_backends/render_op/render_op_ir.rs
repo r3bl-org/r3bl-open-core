@@ -13,7 +13,7 @@
 //! ```
 //!
 //! Components produce [`RenderOpIR`] operations with built-in clipping info.
-//! These get processed by the Compositor (Stage 3) to populate the OffscreenBuffer.
+//! These get processed by the Compositor (Stage 3) to populate the `OffscreenBuffer`.
 //!
 //! # Type Safety
 //!
@@ -23,8 +23,9 @@
 
 use super::{RenderOpCommon, RenderOpsLocalData};
 use crate::{InlineString, InlineVec, LockedOutputDevice, PaintRenderOpImplCrossterm,
-            Size, TerminalLibBackend, TuiStyle, ok};
-use std::ops::{AddAssign, Deref, DerefMut};
+            Size, TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok};
+use std::{fmt::{Debug, Formatter, Result},
+          ops::{AddAssign, Deref, DerefMut}};
 
 /// Intermediate Representation operations for app/component layer.
 ///
@@ -62,12 +63,13 @@ pub enum RenderOpIR {
 /// This type wraps `RenderOpIR` values and provides ergonomic collection methods.
 /// Used throughout the app/component layer and passed to the compositor.
 #[derive(Clone, Default, PartialEq, Eq)]
-pub struct RenderOpsIR {
+pub struct RenderOpIRVec {
     pub list: InlineVec<RenderOpIR>,
 }
 
-impl RenderOpsIR {
+impl RenderOpIRVec {
     /// Create a new empty collection of IR operations.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             list: InlineVec::new(),
@@ -75,7 +77,9 @@ impl RenderOpsIR {
     }
 
     /// Add a single operation to the collection.
-    pub fn push(&mut self, op: RenderOpIR) { self.list.push(op); }
+    pub fn push(&mut self, arg_op: impl Into<RenderOpIR>) {
+        self.list.push(arg_op.into());
+    }
 
     /// Add multiple operations to the collection.
     pub fn extend(&mut self, ops: impl IntoIterator<Item = RenderOpIR>) {
@@ -83,9 +87,11 @@ impl RenderOpsIR {
     }
 
     /// Get the number of operations in the collection.
+    #[must_use]
     pub fn len(&self) -> usize { self.list.len() }
 
     /// Check if the collection is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool { self.list.is_empty() }
 
     /// Iterate over the operations.
@@ -111,7 +117,7 @@ impl RenderOpsIR {
     ) {
         let mut render_local_data = RenderOpsLocalData::default();
         for render_op_ir in &self.list {
-            RenderOpsIR::route_paint_render_op_ir_to_backend(
+            RenderOpIRVec::route_paint_render_op_ir_to_backend(
                 &mut render_local_data,
                 skip_flush,
                 render_op_ir,
@@ -143,7 +149,7 @@ impl RenderOpsIR {
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
-        match super::TERMINAL_LIB_BACKEND {
+        match TERMINAL_LIB_BACKEND {
             TerminalLibBackend::Crossterm => {
                 // Convert RenderOpIR to something the paint method can understand.
                 // For now, we'll implement this in Phase 5+ when we handle the
@@ -180,22 +186,55 @@ impl RenderOpsIR {
     }
 }
 
-impl Deref for RenderOpsIR {
+impl From<RenderOpCommon> for RenderOpIR {
+    fn from(op: RenderOpCommon) -> Self { RenderOpIR::Common(op) }
+}
+
+impl Deref for RenderOpIRVec {
     type Target = InlineVec<RenderOpIR>;
 
     fn deref(&self) -> &Self::Target { &self.list }
 }
 
-impl DerefMut for RenderOpsIR {
+impl DerefMut for RenderOpIRVec {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.list }
 }
 
-impl AddAssign<RenderOpIR> for RenderOpsIR {
+/// Ergonomic operator for adding a single operation to the collection.
+///
+/// This allows using the `+=` operator instead of `.push()` for more readable and
+/// concise code. The `Into<RenderOpIR>` conversion is automatically applied, so types
+/// like `RenderOpCommon` can be used directly.
+///
+/// # Example
+///
+/// ```no_run
+/// # use r3bl_tui::{RenderOpCommon, RenderOpIRVec, Position};
+/// let mut render_ops = RenderOpIRVec::new();
+///
+/// // Using += operator (more ergonomic)
+/// render_ops += RenderOpCommon::MoveCursorPositionAbs(Position::new(5, 10));
+///
+/// assert_eq!(render_ops.len(), 1);
+/// ```
+impl AddAssign<RenderOpIR> for RenderOpIRVec {
     fn add_assign(&mut self, rhs: RenderOpIR) { self.list.push(rhs); }
 }
 
-impl std::fmt::Debug for RenderOpsIR {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl AddAssign<RenderOpCommon> for RenderOpIRVec {
+    fn add_assign(&mut self, rhs: RenderOpCommon) { self.list.push(RenderOpIR::Common(rhs)); }
+}
+
+impl AddAssign<RenderOpIR> for &mut RenderOpIRVec {
+    fn add_assign(&mut self, rhs: RenderOpIR) { self.list.push(rhs); }
+}
+
+impl AddAssign<RenderOpCommon> for &mut RenderOpIRVec {
+    fn add_assign(&mut self, rhs: RenderOpCommon) { self.list.push(RenderOpIR::Common(rhs)); }
+}
+
+impl Debug for RenderOpIRVec {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         const DELIM: &str = "\n  - ";
 
         let mut iter = self.iter();
@@ -225,14 +264,125 @@ impl std::fmt::Debug for RenderOpsIR {
     }
 }
 
-impl From<Vec<RenderOpIR>> for RenderOpsIR {
+impl From<Vec<RenderOpIR>> for RenderOpIRVec {
     fn from(ops: Vec<RenderOpIR>) -> Self { Self { list: ops.into() } }
 }
 
-impl FromIterator<RenderOpIR> for RenderOpsIR {
+impl FromIterator<RenderOpIR> for RenderOpIRVec {
     fn from_iter<I: IntoIterator<Item = RenderOpIR>>(iter: I) -> Self {
         Self {
             list: iter.into_iter().collect(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_assign_single_op_via_render_op_ir() {
+        let mut render_ops = RenderOpIRVec::new();
+        assert_eq!(render_ops.len(), 0);
+
+        // Add a single RenderOpIR variant
+        let op = RenderOpIR::Common(RenderOpCommon::EnterRawMode);
+        render_ops += op.clone();
+
+        assert_eq!(render_ops.len(), 1);
+        assert_eq!(render_ops[0], op);
+    }
+
+    #[test]
+    fn test_add_assign_converts_render_op_common_to_ir() {
+        let mut render_ops = RenderOpIRVec::new();
+
+        // Add via Into conversion from RenderOpCommon
+        let op_common = RenderOpCommon::ExitRawMode;
+        render_ops += RenderOpIR::Common(op_common.clone());
+
+        assert_eq!(render_ops.len(), 1);
+        match &render_ops[0] {
+            RenderOpIR::Common(RenderOpCommon::ExitRawMode) => {
+                // Test passed - the operation was converted and stored correctly
+            }
+            _ => panic!("Expected ExitRawMode"),
+        }
+    }
+
+    #[test]
+    fn test_add_assign_multiple_operations() {
+        let mut render_ops = RenderOpIRVec::new();
+
+        // Add multiple operations using += operator
+        let op1 = RenderOpCommon::EnterRawMode;
+        let op2 = RenderOpCommon::ExitRawMode;
+        let op3 = RenderOpCommon::ClearScreen;
+
+        render_ops += RenderOpIR::Common(op1);
+        render_ops += RenderOpIR::Common(op2);
+        render_ops += RenderOpIR::Common(op3);
+
+        assert_eq!(render_ops.len(), 3);
+    }
+
+    #[test]
+    fn test_add_assign_vs_push_are_equivalent() {
+        let mut render_ops_push = RenderOpIRVec::new();
+        let mut render_ops_add_assign = RenderOpIRVec::new();
+
+        let op = RenderOpCommon::ClearScreen;
+
+        // Using push
+        render_ops_push.push(op.clone());
+
+        // Using += operator
+        render_ops_add_assign += RenderOpIR::Common(op);
+
+        // Both should produce the same result
+        assert_eq!(render_ops_push.len(), render_ops_add_assign.len());
+        assert_eq!(render_ops_push[0], render_ops_add_assign[0]);
+    }
+
+    #[test]
+    fn test_add_assign_is_ergonomic() {
+        let mut render_ops = RenderOpIRVec::new();
+
+        // This demonstrates the ergonomic improvement over .push()
+        render_ops += RenderOpIR::Common(RenderOpCommon::EnterRawMode);
+
+        assert_eq!(render_ops.len(), 1);
+    }
+
+    #[test]
+    fn test_push_and_add_assign_work_together() {
+        let mut render_ops = RenderOpIRVec::new();
+
+        // Mix push() and += operator
+        render_ops.push(RenderOpCommon::EnterRawMode);
+        render_ops += RenderOpIR::Common(RenderOpCommon::ExitRawMode);
+        render_ops.push(RenderOpCommon::ClearScreen);
+
+        assert_eq!(render_ops.len(), 3);
+    }
+
+    #[test]
+    fn test_add_assign_render_op_common_directly() {
+        let mut render_ops = RenderOpIRVec::new();
+
+        // Add RenderOpCommon directly without wrapping in RenderOpIR::Common
+        render_ops += RenderOpCommon::EnterRawMode;
+        render_ops += RenderOpCommon::ExitRawMode;
+        render_ops += RenderOpCommon::ClearScreen;
+
+        assert_eq!(render_ops.len(), 3);
+
+        // Verify the operations were wrapped correctly
+        match &render_ops[0] {
+            RenderOpIR::Common(RenderOpCommon::EnterRawMode) => {
+                // First operation is correct
+            }
+            _ => panic!("Expected EnterRawMode at index 0"),
         }
     }
 }

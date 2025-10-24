@@ -1,7 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{HeadingData, HeadingLevel,
-            md_parser::md_parser_constants::{HEADING_CHAR, NEW_LINE, NULL_CHAR, NULL_STR, SPACE},
+            md_parser::md_parser_constants::{HEADING_CHAR, NEW_LINE, NULL_CHAR,
+                                             NULL_STR, SPACE},
             parse_null_padded_line::is};
 use nom::{IResult, Parser,
           branch::alt,

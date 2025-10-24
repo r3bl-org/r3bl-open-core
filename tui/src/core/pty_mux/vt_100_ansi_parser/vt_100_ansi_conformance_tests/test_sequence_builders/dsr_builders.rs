@@ -26,8 +26,8 @@
 //!
 //! [`DsrSequence`]: crate::DsrSequence
 
-use crate::{TermCol, TermRow, CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END,
-            DSR_RESPONSE_START};
+use crate::{CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END, DSR_RESPONSE_START,
+            TermCol, TermRow};
 
 /// Generate DSR cursor position response: ESC[row;colR
 ///
