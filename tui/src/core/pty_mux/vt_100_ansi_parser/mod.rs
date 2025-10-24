@@ -308,10 +308,10 @@ pub mod operations;
 pub mod performer;
 pub mod protocols;
 
-// Re-export (but not the constants module to avoid namespace pollution).
+// Re-export (but not the constants modules to avoid namespace pollution).
 pub use ansi_parser_public_api::*;
 pub use operations::*;
-pub use protocols::{csi_codes::*, dsr_codes::*, esc_codes::*, params_ext::*};
+pub use protocols::*;
 
 // VT100 ANSI conformance test modules.
 #[cfg(any(test, doc))]

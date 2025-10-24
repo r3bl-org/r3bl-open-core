@@ -246,11 +246,11 @@
 //!
 //! See [`SgrColorSequence`] for a complete example implementation.
 //!
-//! [`CsiSequence`]: crate::protocols::csi_codes::CsiSequence
-//! [`EscSequence`]: crate::protocols::esc_codes::EscSequence
+//! [`CsiSequence`]: crate::CsiSequence
+//! [`EscSequence`]: crate::EscSequence
 //! [`OscSequence`]: crate::core::osc::osc_codes::OscSequence
-//! [`DsrSequence`]: crate::protocols::dsr_codes::DsrSequence
-//! [`SgrColorSequence`]: crate::protocols::csi_codes::SgrColorSequence
+//! [`DsrSequence`]: crate::DsrSequence
+//! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 //! [`vte`]: https://docs.rs/vte
 //!

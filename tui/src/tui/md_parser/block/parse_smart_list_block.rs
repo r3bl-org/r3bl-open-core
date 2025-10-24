@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, List, MdLineFragment,
             SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces, list,
-            md_parser::constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
+            md_parser::md_parser_constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
                                    NEWLINE_OR_NULL, NULL_CHAR,
                                    ORDERED_LIST_PARTIAL_PREFIX, SPACE, SPACE_CHAR,
                                    UNCHECKED, UNORDERED_LIST_PREFIX},

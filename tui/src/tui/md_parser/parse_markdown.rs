@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{List, MdDocument, MdElement, ZeroCopyGapBuffer,
-            md_parser::constants::{AUTHORS, DATE, NULL_CHAR, TAGS, TITLE},
+            md_parser::md_parser_constants::{AUTHORS, DATE, NULL_CHAR, TAGS, TITLE},
             parse_block_markdown_text_with_or_without_new_line, parse_csv_opt_eol,
             parse_fenced_code_block, parse_heading_in_single_line,
             parse_null_padded_line::is,

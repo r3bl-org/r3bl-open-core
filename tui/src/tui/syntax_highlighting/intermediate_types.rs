@@ -20,7 +20,7 @@ use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineStrin
             get_foreground_dim_style, get_metadata_tags_marker_style,
             get_metadata_tags_values_style, get_metadata_title_marker_style,
             get_metadata_title_value_style,
-            md_parser::constants::{COLON, COMMA, SPACE},
+            md_parser::md_parser_constants::{COLON, COMMA, SPACE},
             tiny_inline_string, tui_styled_text, width};
 
 /// Spans are chunks of a text that have an associated style. There are usually multiple

@@ -43,14 +43,14 @@
 //! [`esc_codes`]: crate::vt_100_ansi_parser::protocols::esc_codes
 
 // Attach private module to avoid naming conflicts (hide inner details).
-mod constants;
+mod csi_constants;
 mod margin;
 mod private_mode;
 mod sequence;
 mod sgr_color_sequences;
 
 // Re-export public items for easier access.
-pub use constants::*;
+pub use csi_constants::*;
 pub use margin::*;
 pub use private_mode::*;
 pub use sequence::*;

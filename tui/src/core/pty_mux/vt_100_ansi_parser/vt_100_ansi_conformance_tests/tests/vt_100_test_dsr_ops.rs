@@ -4,9 +4,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz};
 use crate::{DsrRequestFromPtyEvent, col,
-            core::pty_mux::vt_100_ansi_parser::{protocols::{csi_codes::CsiSequence,
-                                                    dsr_codes::{DSR_STATUS_OK_FULL_RESPONSE,
-                                                                DsrRequestType}},
+            core::pty_mux::vt_100_ansi_parser::{CsiSequence, DSR_STATUS_OK_FULL_RESPONSE, DsrRequestType,
                                                 vt_100_ansi_conformance_tests::test_sequence_builders::dsr_builders::dsr_cursor_position_response},
             row, term_col, term_row};
 

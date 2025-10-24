@@ -17,7 +17,7 @@
 //! [parser module docs]: super::super
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
-use crate::{TuiStyle, vt_100_ansi_parser::protocols::csi_codes::CsiSequence};
+use crate::{TuiStyle, vt_100_ansi_parser::CsiSequence};
 
 /// Helper to create a buffer with "ABCDEFGHIJ" in the first row.
 fn create_alphabet_buffer() -> crate::OffscreenBuffer {

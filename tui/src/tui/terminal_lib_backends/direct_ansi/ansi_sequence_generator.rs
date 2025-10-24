@@ -4,26 +4,26 @@
 
 use crate::{ColIndex, RowHeight, RowIndex, TuiColor, TuiStyle,
             core::{coordinates::{TermCol, TermRow},
-                   pty_mux::vt_100_ansi_parser::protocols::{constants::{APPLICATION_MOUSE_TRACKING,
-                                                                        BRACKETED_PASTE_MODE,
-                                                                        SGR_MOUSE_MODE,
-                                                                        URXVT_MOUSE_EXTENSION},
-                                                            csi_codes::{CSI_PARAM_SEPARATOR,
-                                                                        CSI_START,
-                                                                        ColorTarget,
-                                                                        CsiSequence,
-                                                                        ED_ERASE_ALL,
-                                                                        EL_ERASE_ALL,
-                                                                        EL_ERASE_FROM_START,
-                                                                        EL_ERASE_TO_END,
-                                                                        PrivateModeType,
-                                                                        SGR_BOLD,
-                                                                        SGR_DIM,
-                                                                        SGR_ITALIC,
-                                                                        SGR_SET_GRAPHICS,
-                                                                        SGR_STRIKETHROUGH,
-                                                                        SGR_UNDERLINE,
-                                                                        SgrColorSequence}}}};
+                   pty_mux::vt_100_ansi_parser::{APPLICATION_MOUSE_TRACKING,
+                                                 BRACKETED_PASTE_MODE,
+                                                 CSI_PARAM_SEPARATOR,
+                                                 CSI_START,
+                                                 ColorTarget,
+                                                 CsiSequence,
+                                                 ED_ERASE_ALL,
+                                                 EL_ERASE_ALL,
+                                                 EL_ERASE_FROM_START,
+                                                 EL_ERASE_TO_END,
+                                                 PrivateModeType,
+                                                 SGR_BOLD,
+                                                 SGR_DIM,
+                                                 SGR_ITALIC,
+                                                 SGR_MOUSE_MODE,
+                                                 SGR_SET_GRAPHICS,
+                                                 SGR_STRIKETHROUGH,
+                                                 SGR_UNDERLINE,
+                                                 SgrColorSequence,
+                                                 URXVT_MOUSE_EXTENSION}}};
 
 /// Generates ANSI escape sequence strings for terminal operations
 ///
@@ -81,8 +81,8 @@ use crate::{ColIndex, RowHeight, RowIndex, TuiColor, TuiStyle,
 ///
 /// [`vt_100_ansi_parser`]: crate::core::pty_mux::vt_100_ansi_parser
 /// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
-/// [`CsiSequence`]: crate::core::pty_mux::vt_100_ansi_parser::protocols::csi_codes::CsiSequence
-/// [`SgrColorSequence`]: crate::core::pty_mux::vt_100_ansi_parser::protocols::csi_codes::SgrColorSequence
+/// [`CsiSequence`]: crate::CsiSequence
+/// [`SgrColorSequence`]: crate::SgrColorSequence
 #[derive(Debug)]
 pub struct AnsiSequenceGenerator;
 

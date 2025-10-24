@@ -15,7 +15,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, SgrCode, term_col, term_row,
-            vt_100_ansi_parser::protocols::csi_codes::CsiSequence};
+            vt_100_ansi_parser::CsiSequence};
 
 /// Generate tmux-style status bar display.
 ///

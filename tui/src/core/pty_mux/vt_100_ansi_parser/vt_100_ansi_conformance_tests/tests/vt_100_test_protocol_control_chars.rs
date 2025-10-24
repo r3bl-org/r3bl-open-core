@@ -4,7 +4,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{AnsiToOfsBufPerformer, col, offscreen_buffer::test_fixtures_ofs_buf::*, row,
-            vt_100_ansi_parser::protocols::esc_codes};
+            vt_100_ansi_parser::{CARRIAGE_RETURN, LINE_FEED, TAB, BACKSPACE}};
 use vte::Perform;
 
 /// Tests for C0 control characters (CR, LF, Tab, Backspace, etc.).
@@ -21,7 +21,7 @@ fn test_control_characters() {
     performer.print('C');
 
     // Carriage return should move to start of line.
-    performer.execute(esc_codes::CARRIAGE_RETURN);
+    performer.execute(CARRIAGE_RETURN);
     assert_eq!(
         performer.ofs_buf.cursor_pos,
         row(0) + col(0),
@@ -30,7 +30,7 @@ fn test_control_characters() {
     performer.print('X'); // Should overwrite 'A'
 
     // Line feed should move to next line, but same column.
-    performer.execute(esc_codes::LINE_FEED);
+    performer.execute(LINE_FEED);
     assert_eq!(
         performer.ofs_buf.cursor_pos,
         row(1) + col(1),
@@ -42,7 +42,7 @@ fn test_control_characters() {
     performer.print('Y');
 
     // Tab should advance cursor.
-    performer.execute(esc_codes::TAB);
+    performer.execute(TAB);
     assert_eq!(
         performer.ofs_buf.cursor_pos,
         row(1) + col(8),
@@ -53,7 +53,7 @@ fn test_control_characters() {
     // Backspace should move cursor back.
     performer.ofs_buf.cursor_pos.col_index = col(3);
     performer.print('M');
-    performer.execute(esc_codes::BACKSPACE); // Backspace
+    performer.execute(BACKSPACE); // Backspace
     assert_eq!(
         performer.ofs_buf.cursor_pos,
         row(1) + col(3),

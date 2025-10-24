@@ -1,6 +1,6 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::md_parser::constants::NEW_LINE;
+use crate::md_parser::md_parser_constants::NEW_LINE;
 use nom::{Parser,
           branch::alt,
           bytes::complete::tag,

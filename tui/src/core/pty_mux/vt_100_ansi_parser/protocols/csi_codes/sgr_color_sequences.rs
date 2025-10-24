@@ -85,11 +85,11 @@
 //!
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`extract_nth_many_raw()`]: crate::ParamsExt::extract_nth_many_raw
-//! [`SGR_SET_GRAPHICS`]: super::constants::SGR_SET_GRAPHICS
+//! [`SGR_SET_GRAPHICS`]: super::csi_constants::SGR_SET_GRAPHICS
 
-use super::constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
-                       SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
-                       SGR_SET_GRAPHICS};
+use super::csi_constants::{CSI_START, CSI_SUB_PARAM_SEPARATOR, SGR_BG_EXTENDED,
+                           SGR_COLOR_MODE_256, SGR_COLOR_MODE_RGB, SGR_FG_EXTENDED,
+                           SGR_SET_GRAPHICS};
 use crate::{AnsiValue, RgbValue, TuiColor,
             core::common::fast_stringify::{BufTextStorage, FastStringify},
             generate_impl_display_for_fast_stringify};

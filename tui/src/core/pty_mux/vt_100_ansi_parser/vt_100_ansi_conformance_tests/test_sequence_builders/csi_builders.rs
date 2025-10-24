@@ -30,11 +30,11 @@
 //! );
 //! ```
 //!
-//! [`CsiSequence`]: crate::protocols::csi_codes::CsiSequence
-//! [`CsiSequence::CursorPosition`]: crate::protocols::csi_codes::CsiSequence::CursorPosition
-//! [`CsiSequence::CursorPositionAlt`]: crate::protocols::csi_codes::CsiSequence::CursorPositionAlt
+//! [`CsiSequence`]: crate::CsiSequence
+//! [`CsiSequence::CursorPosition`]: crate::CsiSequence::CursorPosition
+//! [`CsiSequence::CursorPositionAlt`]: crate::CsiSequence::CursorPositionAlt
 
-use crate::protocols::csi_codes::CsiSequence;
+use crate::CsiSequence;
 
 /// Helper function to create a `CsiSequence::CursorPosition`.
 ///

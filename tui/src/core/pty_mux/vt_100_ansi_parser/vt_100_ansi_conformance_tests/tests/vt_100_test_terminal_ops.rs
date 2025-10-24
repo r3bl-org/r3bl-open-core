@@ -10,7 +10,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{CharacterSet, ColIndex, Pos, RowIndex, TuiStyle, ch,
-            vt_100_ansi_parser::protocols::esc_codes::EscSequence};
+            vt_100_ansi_parser::EscSequence};
 
 /// Tests for RIS (Reset to Initial State) operations.
 pub mod reset_initial_state {

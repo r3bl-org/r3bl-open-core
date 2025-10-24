@@ -38,7 +38,7 @@ pub mod basic_tab_operations {
         // Move cursor to column 3
         let move_sequence = format!(
             "{}",
-            crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+            crate::CsiSequence::CursorPosition {
                 row: term_row(nz(1)),
                 col: term_col(nz(4)) // 1-based column 4 = 0-based column 3
             }
@@ -60,7 +60,7 @@ pub mod basic_tab_operations {
         // Move cursor to column 8 (already at a tab stop)
         let move_sequence = format!(
             "{}",
-            crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+            crate::CsiSequence::CursorPosition {
                 row: term_row(nz(1)),
                 col: term_col(nz(9)) // 1-based column 9 = 0-based column 8
             }
@@ -98,7 +98,7 @@ pub mod basic_tab_operations {
         // Move cursor to column 9 (near right margin)
         let move_sequence = format!(
             "{}",
-            crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+            crate::CsiSequence::CursorPosition {
                 row: term_row(nz(1)),
                 col: term_col(nz(10)) // 1-based column 10 = 0-based column 9
             }
@@ -163,7 +163,7 @@ pub mod basic_tab_operations {
                 .expect("start_col + 1 is always >= 1");
             let move_sequence = format!(
                 "{}",
-                crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+                crate::CsiSequence::CursorPosition {
                     row: term_row(nz(1)),
                     col: term_col(col_nz) // Convert to 1-based
                 }
@@ -199,7 +199,7 @@ pub mod tab_edge_cases {
         // Move to last column
         let move_sequence = format!(
             "{}",
-            crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+            crate::CsiSequence::CursorPosition {
                 row: term_row(nz(1)),
                 col: term_col(nz(10)) // 1-based column 10 = 0-based column 9
             }
@@ -220,8 +220,8 @@ pub mod tab_edge_cases {
         // Disable auto-wrap mode
         let disable_wrap = format!(
             "{}",
-            crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::DisablePrivateMode(
-                crate::vt_100_ansi_parser::protocols::csi_codes::PrivateModeType::AutoWrap
+            crate::CsiSequence::DisablePrivateMode(
+                crate::PrivateModeType::AutoWrap
             )
         );
         let _result = ofs_buf.apply_ansi_bytes(disable_wrap);
@@ -229,7 +229,7 @@ pub mod tab_edge_cases {
         // Move near right edge and tab
         let move_sequence = format!(
             "{}",
-            crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence::CursorPosition {
+            crate::CsiSequence::CursorPosition {
                 row: term_row(nz(1)),
                 col: term_col(nz(7)) // 1-based column 7 = 0-based column 6
             }

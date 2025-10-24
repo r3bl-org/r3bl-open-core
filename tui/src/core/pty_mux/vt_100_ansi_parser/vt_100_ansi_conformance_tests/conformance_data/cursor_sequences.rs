@@ -14,8 +14,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{term_col, term_row,
-            vt_100_ansi_parser::protocols::{csi_codes::CsiSequence,
-                                            esc_codes::EscSequence}};
+            vt_100_ansi_parser::{CsiSequence, EscSequence}};
 use std::num::NonZeroU16;
 
 /// Move cursor to absolute position (row, col).

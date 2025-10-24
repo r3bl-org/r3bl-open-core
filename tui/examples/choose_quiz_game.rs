@@ -260,6 +260,7 @@ fn check_user_input_and_display_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use r3bl_tui::{ColorSupport, global_color_support};
     use serial_test::serial;
 
     #[serial]

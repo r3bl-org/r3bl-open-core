@@ -24,12 +24,10 @@
 //! assert_eq!(cursor_response, "\x1b[10;25R");
 //! ```
 //!
-//! [`DsrSequence`]: crate::protocols::dsr_codes::DsrSequence
+//! [`DsrSequence`]: crate::DsrSequence
 
-use crate::{TermCol, TermRow,
-            protocols::{csi_codes::CSI_PARAM_SEPARATOR,
-                        dsr_codes::{DSR_CURSOR_POSITION_RESPONSE_END,
-                                    DSR_RESPONSE_START}}};
+use crate::{TermCol, TermRow, CSI_PARAM_SEPARATOR, DSR_CURSOR_POSITION_RESPONSE_END,
+            DSR_RESPONSE_START};
 
 /// Generate DSR cursor position response: ESC[row;colR
 ///

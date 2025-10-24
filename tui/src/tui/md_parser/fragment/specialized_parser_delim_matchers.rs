@@ -1,14 +1,14 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! For use with specialized parsers for: [`crate::constants::UNDERSCORE`],
-//! [`crate::constants::STAR`], and [`crate::constants::BACK_TICK`]. See:
+//! For use with specialized parsers for: [`crate::UNDERSCORE`],
+//! [`crate::STAR`], and [`crate::BACK_TICK`]. See:
 //! [`crate::parse_fragment_plain_text_no_new_line()`].
 //!
 //! To see this in action, set the [`DEBUG_MD_PARSER_STDOUT`] to true, and run all the
 //! tests in [`crate::parse_fragments_in_a_line`].
 
 use crate::{DEBUG_MD_PARSER_STDOUT, fg_blue, fg_green, fg_red,
-            md_parser::constants::NEW_LINE, take_text_between_delims_err_on_new_line};
+            md_parser::md_parser_constants::NEW_LINE, take_text_between_delims_err_on_new_line};
 use nom::{IResult, Parser, bytes::complete::tag, combinator::recognize, multi::many1};
 
 /// Returns tuple:

@@ -68,6 +68,8 @@ function main
             rustfmt
         case upgrade-deps
             upgrade-deps
+        case update-cargo-tools
+            update-cargo-tools
         case serve-docs
             serve-docs
         case audit-deps
@@ -139,6 +141,7 @@ function print-help
         echo "    "(set_color green)"rustfmt"(set_color normal)"              Format all code"
         echo "    "(set_color green)"install-cargo-tools"(set_color normal)"  Install development tools"
         echo "    "(set_color green)"upgrade-deps"(set_color normal)"         Upgrade dependencies"
+        echo "    "(set_color green)"update-cargo-tools"(set_color normal)"   Update cargo dev tools"
         echo "    "(set_color green)"audit-deps"(set_color normal)"           Security audit"
         echo "    "(set_color green)"unmaintained-deps"(set_color normal)"    Check for unmaintained deps"
         echo "    "(set_color green)"toolchain-update"(set_color normal)"     Update Rust to month-old nightly"
@@ -612,6 +615,66 @@ function upgrade-deps
         cargo outdated --workspace --verbose
         cargo upgrade --verbose
         cd ..
+    end
+end
+
+# Updates all installed cargo development tools to their latest versions.
+#
+# This function checks for and installs updates to all cargo-installed binaries
+# using cargo-update (cargo install-update). It provides a simple way to keep
+# development tools current with latest bug fixes and features.
+#
+# Features:
+# - Automatic update process (uses --all flag)
+# - Updates all installed cargo tools in one command
+# - Only updates tools that have newer versions available
+# - Provides clear feedback on update status
+# - Safe to run regularly (idempotent)
+#
+# Tools updated include:
+# - cargo-nextest: Fast test runner
+# - flamegraph & inferno: Performance profiling
+# - bacon: Background task runner
+# - cargo-deny: Security auditing
+# - wild-linker: Fast linker
+# - And all other cargo-installed tools
+#
+# Prerequisites:
+# - cargo-update must be installed (installed via install-cargo-tools)
+#
+# Usage:
+#   fish run.fish update-cargo-tools
+#
+# This command is also called automatically by:
+# - rust-toolchain-update.fish (weekly systemd timer)
+function update-cargo-tools
+    echo (set_color cyan --bold)"Checking for cargo tool updates..."(set_color normal)
+    echo ""
+
+    # Check if cargo-update is installed
+    if not command -v cargo-install-update >/dev/null
+        echo (set_color red)"Error: cargo-update not installed"(set_color normal)
+        echo "Run: "(set_color yellow)"fish run.fish install-cargo-tools"(set_color normal)
+        return 1
+    end
+
+    # Show what needs updating
+    echo (set_color magenta)"≡ Current status ≡"(set_color normal)
+    cargo install-update --list
+
+    echo ""
+    echo (set_color cyan --bold)"Updating all cargo tools..."(set_color normal)
+
+    # Update all tools
+    # Note: --all updates all packages, no --force means only update if newer version exists
+    if cargo install-update --all
+        echo ""
+        echo (set_color green)"✓ All cargo tools updated successfully!"(set_color normal)
+        return 0
+    else
+        echo ""
+        echo (set_color red)"⚠️  Some updates may have failed. Check output above."(set_color normal)
+        return 1
     end
 end
 

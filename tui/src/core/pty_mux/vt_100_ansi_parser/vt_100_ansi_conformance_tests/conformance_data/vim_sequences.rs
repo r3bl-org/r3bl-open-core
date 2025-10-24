@@ -16,8 +16,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::nz;
 use crate::{ANSIBasicColor, LengthOps, SgrCode, height, term_col, term_row,
-            vt_100_ansi_parser::protocols::{csi_codes::CsiSequence,
-                                            esc_codes::EscSequence}};
+            vt_100_ansi_parser::{CsiSequence, EscSequence}};
 use std::num::NonZeroU16;
 
 /// Vim status line pattern with mode indicator.

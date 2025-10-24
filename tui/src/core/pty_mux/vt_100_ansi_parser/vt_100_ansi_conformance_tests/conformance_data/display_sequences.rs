@@ -5,7 +5,7 @@
 //! This module provides sequences for screen clearing, scrolling, line operations,
 //! and other display management functions commonly used by terminal applications.
 
-use crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence;
+use crate::CsiSequence;
 
 /// Clear entire screen (placeholder - to be expanded).
 #[must_use]

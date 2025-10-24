@@ -10,7 +10,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{ANSIBasicColor, SgrCode, col, row, term_col, term_row,
-            vt_100_ansi_parser::protocols::csi_codes::{CsiSequence, PrivateModeType}};
+            vt_100_ansi_parser::{CsiSequence, PrivateModeType}};
 
 /// Tests for cursor save/restore with active SGR styling attributes.
 pub mod cursor_save_restore_with_attributes {

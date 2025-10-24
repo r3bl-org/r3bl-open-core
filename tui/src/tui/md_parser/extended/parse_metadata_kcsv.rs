@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{InlineVec, List, list,
-            md_parser::constants::{COLON, COMMA, SPACE},
+            md_parser::md_parser_constants::{COLON, COMMA, SPACE},
             parse_null_padded_line::trim_optional_leading_newline_and_nulls,
             take_text_in_single_line};
 use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
@@ -107,7 +107,7 @@ fn parse_comma_separated_list(input: &str) -> IResult<&str, InlineVec<&str>> {
 #[cfg(test)]
 mod test_parse_tags_opt_eol {
     use super::*;
-    use crate::{assert_eq2, md_parser::constants::TAGS};
+    use crate::{assert_eq2, md_parser::md_parser_constants::TAGS};
 
     #[test]
     fn test_not_quoted_no_eol() {

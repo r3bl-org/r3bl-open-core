@@ -4,7 +4,7 @@ use crate::{CalculateResizeHint, ColWidth, DEVELOPMENT_MODE, EventLoopResult, He
             InputDevice, InputEvent, ItemsOwned, Key, KeyPress, KeyState,
             LineStateControlSignal, ModifierKeysMask, OutputDevice, RowHeight,
             SelectComponent, SharedWriter, SpecialKey, State, StyleSheet, ch,
-            constants::SPACE_CHAR, enter_event_loop_async, get_size};
+            tui::md_parser::md_parser_constants::SPACE_CHAR, enter_event_loop_async, get_size};
 use clap::ValueEnum;
 use miette::IntoDiagnostic;
 use std::pin::Pin;

@@ -7,7 +7,7 @@ use crate::{ANSIBasicColor, CharacterSet, SgrCode,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             tui_style_attrib::{self},
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                                 protocols::esc_codes}};
+                                 EscSequence}};
 use vte::Perform;
 
 /// Tests for SGR (Select Graphic Rendition) styling operations.
@@ -597,11 +597,11 @@ pub mod character_sets {
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
 
         // Start with ASCII mode and write 'q'.
-        performer.apply_ansi_bytes(esc_codes::EscSequence::SelectAscii.to_string());
+        performer.apply_ansi_bytes(EscSequence::SelectAscii.to_string());
         performer.print('q');
 
         // Switch to DEC graphics mode.
-        performer.apply_ansi_bytes(esc_codes::EscSequence::SelectDECGraphics.to_string());
+        performer.apply_ansi_bytes(EscSequence::SelectDECGraphics.to_string());
 
         assert_eq!(
             ofs_buf.ansi_parser_support.character_set,
@@ -618,7 +618,7 @@ pub mod character_sets {
         performer.print('x');
 
         // Switch back to ASCII.
-        performer.apply_ansi_bytes(esc_codes::EscSequence::SelectAscii.to_string());
+        performer.apply_ansi_bytes(EscSequence::SelectAscii.to_string());
 
         // Write 'q' again (should be normal 'q')
         performer.print('q');

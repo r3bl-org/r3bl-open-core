@@ -395,8 +395,8 @@ pub const DECTCEM_SHOW_CURSOR: u16 = 25;
 
 // NOTE: General terminal mode constants (DEC modes 1-7, alternate screen buffer,
 // mouse tracking, bracketed paste, etc.) are defined in the parent `protocols`
-// module constants file (`protocols/constants.rs`) rather than here.
+// module constants file (`protocols/generic_ansi_constants.rs`) rather than here.
 //
 // This separation reflects the architectural distinction:
-// - **This file (`csi_codes/constants.rs`)**: CSI-specific sequencing details
-// - **Parent file (`protocols/constants.rs`)**: General ANSI/terminal feature constants
+// - **This file (`csi_codes/csi_constants.rs`)**: CSI-specific sequencing details
+// - **Parent file (`protocols/generic_ansi_constants.rs`)**: General ANSI/terminal feature constants

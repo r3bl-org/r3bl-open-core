@@ -7,9 +7,7 @@ use crate::{Pos, col, height,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             row, term_col, term_row,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                                 protocols::{csi_codes::{CSI_PARAM_SEPARATOR,
-                                                         CSI_START, CsiSequence},
-                                             esc_codes},
+                                 CSI_PARAM_SEPARATOR, CSI_START, CsiSequence, EscSequence,
                                  vt_100_ansi_conformance_tests::test_sequence_builders::csi_builders::{csi_seq_cursor_pos,
                                                                             csi_seq_cursor_pos_alt}},
             width};
@@ -657,7 +655,7 @@ pub mod save_restore {
         );
 
         // Save cursor position at (r:3,c:6) using ESC 7
-        performer.apply_ansi_bytes(esc_codes::EscSequence::SaveCursor.to_string());
+        performer.apply_ansi_bytes(EscSequence::SaveCursor.to_string());
 
         // Move cursor elsewhere and write 'B'.
         performer.ofs_buf.cursor_pos = row(7) + col(2);
@@ -669,7 +667,7 @@ pub mod save_restore {
         );
 
         // Restore cursor position using ESC 8.
-        performer.apply_ansi_bytes(esc_codes::EscSequence::RestoreCursor.to_string());
+        performer.apply_ansi_bytes(EscSequence::RestoreCursor.to_string());
 
         // Verify cursor was restored.
         assert_eq!(

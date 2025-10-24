@@ -248,7 +248,7 @@ impl OffscreenBuffer {
 mod tests {
     use crate::{ANSIBasicColor, SgrCode, col, row, term_col, term_row,
                 offscreen_buffer::test_fixtures_ofs_buf::*,
-                vt_100_ansi_parser::{protocols::csi_codes::{self},
+                vt_100_ansi_parser::{CsiSequence,
                                      vt_100_ansi_conformance_tests::{test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz},
                                                                       test_sequence_builders::csi_builders::csi_seq_cursor_pos}}};
 
@@ -368,8 +368,8 @@ mod tests {
         // Test cursor movement sequences.
         let (osc_events, dsr_responses) = ofs_buf.apply_ansi_bytes(format!(
             "A{right_2}B{up_1}D",
-            right_2 = csi_codes::CsiSequence::CursorForward(2),
-            up_1 = csi_codes::CsiSequence::CursorUp(1),
+            right_2 = CsiSequence::CursorForward(2),
+            up_1 = CsiSequence::CursorUp(1),
         ));
 
         // Should not produce any OSC events.

@@ -75,7 +75,7 @@
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
 use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                   protocols::csi_codes::PrivateModeType};
+                   PrivateModeType};
 use vte::Params;
 
 /// Handle Set Mode (CSI h) command.

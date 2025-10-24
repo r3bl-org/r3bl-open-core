@@ -17,8 +17,7 @@ use crate::{TuiStyle, col,
             offscreen_buffer::test_fixtures_ofs_buf::*,
             row, term_col, term_row,
             vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
-                                 protocols::{csi_codes::{CsiSequence, PrivateModeType},
-                                             esc_codes::{self, EscSequence}}}};
+                                 CsiSequence, PrivateModeType, EscSequence, IND_INDEX_DOWN, RI_REVERSE_INDEX_UP}};
 use vte::Perform;
 
 fn fill_buffer_with_lines(ofs_buf: &mut crate::OffscreenBuffer) {
@@ -350,7 +349,7 @@ pub mod scrolling {
         performer.ofs_buf.cursor_pos.row_index = row(9);
 
         // Execute Index (ESC D)
-        performer.esc_dispatch(&[], false, esc_codes::IND_INDEX_DOWN);
+        performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
 
         // Verify buffer scrolled up: "Line-0" is gone, "Line-1" is now at row 0.
         assert_plain_text_at(&ofs_buf, 0, 0, "Line-1");
@@ -385,7 +384,7 @@ pub mod scrolling {
         performer.ofs_buf.cursor_pos.row_index = row(0);
 
         // Execute Reverse Index (ESC M)
-        performer.esc_dispatch(&[], false, esc_codes::RI_REVERSE_INDEX_UP);
+        performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
 
         // Verify buffer scrolled down: first line is now empty
         for col in 0..10 {
@@ -546,7 +545,7 @@ pub mod scrolling {
         performer.ofs_buf.cursor_pos = row(5) + col(0);
 
         // Execute Index (ESC D) - should just move cursor down
-        performer.esc_dispatch(&[], false, esc_codes::IND_INDEX_DOWN);
+        performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(6) + col(0),
@@ -555,7 +554,7 @@ pub mod scrolling {
         assert_plain_text_at(performer.ofs_buf, 5, 0, "Line-5");
 
         // Execute Reverse Index (ESC M) - should just move cursor up
-        performer.esc_dispatch(&[], false, esc_codes::RI_REVERSE_INDEX_UP);
+        performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(5) + col(0),
@@ -617,7 +616,7 @@ pub mod scrolling {
 
         // Test ESC D (Index) at bottom - cursor should remain at bottom
         performer.ofs_buf.cursor_pos = row(9) + col(5);
-        performer.esc_dispatch(&[], false, esc_codes::IND_INDEX_DOWN);
+        performer.esc_dispatch(&[], false, IND_INDEX_DOWN);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(9) + col(5),
@@ -626,7 +625,7 @@ pub mod scrolling {
 
         // Test ESC M (Reverse Index) at top - cursor should remain at top
         performer.ofs_buf.cursor_pos = row(0) + col(3);
-        performer.esc_dispatch(&[], false, esc_codes::RI_REVERSE_INDEX_UP);
+        performer.esc_dispatch(&[], false, RI_REVERSE_INDEX_UP);
         assert_eq!(
             performer.ofs_buf.cursor_pos,
             row(0) + col(3),

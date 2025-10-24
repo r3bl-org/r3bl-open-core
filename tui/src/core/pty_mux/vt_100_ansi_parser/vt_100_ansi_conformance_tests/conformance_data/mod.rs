@@ -56,7 +56,7 @@
 //! Basic operations using single commands:
 //!
 //! ```rust,ignore
-//! use crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence;
+//! use crate::CsiSequence;
 //!
 //! pub fn clear_screen() -> String {
 //!     CsiSequence::EraseDisplay(2).to_string()

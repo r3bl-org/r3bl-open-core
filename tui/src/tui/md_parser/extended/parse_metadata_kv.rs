@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{md_parser::constants::{COLON, SPACE},
+use crate::{md_parser::md_parser_constants::{COLON, SPACE},
             parse_null_padded_line::trim_optional_leading_newline_and_nulls,
             take_text_in_single_line, tiny_inline_string};
 use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
@@ -60,7 +60,7 @@ pub fn parse_unique_kv_opt_eol<'a>(
 #[cfg(test)]
 mod test_parse_title_no_eol {
     use super::*;
-    use crate::{assert_eq2, fg_black, inline_string, md_parser::constants::TITLE};
+    use crate::{assert_eq2, fg_black, inline_string, md_parser::md_parser_constants::TITLE};
 
     #[test]
     fn test_not_quoted_no_eol() {

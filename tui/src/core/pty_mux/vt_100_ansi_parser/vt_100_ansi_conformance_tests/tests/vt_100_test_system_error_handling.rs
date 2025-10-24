@@ -32,12 +32,12 @@
 //! - Buffer overflow and performance stress scenarios
 //! - VTE parser internal limit overflow (>16 params, >2 intermediates)
 //!
-//! [`CsiSequence`]: crate::vt_100_ansi_parser::protocols::csi_codes::CsiSequence
-//! [`EscSequence`]: crate::vt_100_ansi_parser::protocols::esc_codes::EscSequence
+//! [`CsiSequence`]: crate::CsiSequence
+//! [`EscSequence`]: crate::vt_100_ansi_parser::EscSequence
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{col, row, term_col, term_row,
-            vt_100_ansi_parser::protocols::csi_codes::CsiSequence};
+            vt_100_ansi_parser::CsiSequence};
 
 /// Tests for malformed CSI sequence handling.
 pub mod malformed_csi_sequences {
@@ -363,7 +363,7 @@ pub mod boundary_edge_cases {
             ));
 
             // Apply the zero-parameter movement command
-            let _unused = ofs_buf.apply_ansi_bytes(movement_cmd.to_string());
+            let _unused = ofs_buf.apply_ansi_bytes(format!("{}", movement_cmd));
 
             // Per VT100 spec: parameter 0 is treated as 1 (minimum movement)
             assert_eq!(

@@ -73,113 +73,113 @@
 //! [operations module documentation]: super
 //! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
 
-use super::super::{ansi_parser_public_api::AnsiToOfsBufPerformer, protocols::csi_codes};
-use crate::{ParamsExt, tui_style_attrib};
+use super::super::*;
+use crate::tui_style_attrib;
 use vte::Params;
 
 /// Apply a single SGR parameter.
 #[allow(clippy::too_many_lines)]
 fn apply_sgr_param(performer: &mut AnsiToOfsBufPerformer, param: u16) {
     match param {
-        csi_codes::SGR_RESET => {
+        SGR_RESET => {
             performer.ofs_buf.reset_all_style_attributes();
         }
-        csi_codes::SGR_BOLD => {
+        SGR_BOLD => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::Bold.into());
         }
-        csi_codes::SGR_DIM => {
+        SGR_DIM => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::Dim.into());
         }
-        csi_codes::SGR_ITALIC => {
+        SGR_ITALIC => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::Italic.into());
         }
-        csi_codes::SGR_UNDERLINE => {
+        SGR_UNDERLINE => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::Underline.into());
         }
-        csi_codes::SGR_BLINK => {
+        SGR_BLINK => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::BlinkMode::Slow.into());
         }
-        csi_codes::SGR_RAPID_BLINK => {
+        SGR_RAPID_BLINK => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::BlinkMode::Rapid.into());
         }
-        csi_codes::SGR_REVERSE => {
+        SGR_REVERSE => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::Reverse.into());
         }
-        csi_codes::SGR_HIDDEN => {
+        SGR_HIDDEN => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::Hidden.into());
         }
-        csi_codes::SGR_STRIKETHROUGH => {
+        SGR_STRIKETHROUGH => {
             performer
                 .ofs_buf
                 .apply_style_attribute(tui_style_attrib::Strikethrough.into());
         }
-        csi_codes::SGR_RESET_BOLD_DIM => {
+        SGR_RESET_BOLD_DIM => {
             performer
                 .ofs_buf
                 .reset_style_attribute(tui_style_attrib::Bold.into());
         }
-        csi_codes::SGR_RESET_ITALIC => {
+        SGR_RESET_ITALIC => {
             performer
                 .ofs_buf
                 .reset_style_attribute(tui_style_attrib::Italic.into());
         }
-        csi_codes::SGR_RESET_UNDERLINE => {
+        SGR_RESET_UNDERLINE => {
             performer
                 .ofs_buf
                 .reset_style_attribute(tui_style_attrib::Underline.into());
         }
-        csi_codes::SGR_RESET_BLINK => {
+        SGR_RESET_BLINK => {
             performer
                 .ofs_buf
                 .reset_style_attribute(tui_style_attrib::BlinkMode::Slow.into());
         }
-        csi_codes::SGR_RESET_REVERSE => {
+        SGR_RESET_REVERSE => {
             performer
                 .ofs_buf
                 .reset_style_attribute(tui_style_attrib::Reverse.into());
         }
-        csi_codes::SGR_RESET_HIDDEN => {
+        SGR_RESET_HIDDEN => {
             performer
                 .ofs_buf
                 .reset_style_attribute(tui_style_attrib::Hidden.into());
         }
-        csi_codes::SGR_RESET_STRIKETHROUGH => {
+        SGR_RESET_STRIKETHROUGH => {
             performer
                 .ofs_buf
                 .reset_style_attribute(tui_style_attrib::Strikethrough.into());
         }
-        csi_codes::SGR_FG_BLACK..=csi_codes::SGR_FG_WHITE => {
+        SGR_FG_BLACK..=SGR_FG_WHITE => {
             performer.ofs_buf.set_foreground_color(param);
         }
-        csi_codes::SGR_FG_DEFAULT => {
+        SGR_FG_DEFAULT => {
             performer.ofs_buf.reset_foreground_color();
         }
-        csi_codes::SGR_BG_BLACK..=csi_codes::SGR_BG_WHITE => {
+        SGR_BG_BLACK..=SGR_BG_WHITE => {
             performer.ofs_buf.set_background_color(param);
         }
-        csi_codes::SGR_BG_DEFAULT => {
+        SGR_BG_DEFAULT => {
             performer.ofs_buf.reset_background_color();
         }
-        csi_codes::SGR_FG_BRIGHT_BLACK..=csi_codes::SGR_FG_BRIGHT_WHITE => {
+        SGR_FG_BRIGHT_BLACK..=SGR_FG_BRIGHT_WHITE => {
             performer.ofs_buf.set_foreground_color(param);
         }
-        csi_codes::SGR_BG_BRIGHT_BLACK..=csi_codes::SGR_BG_BRIGHT_WHITE => {
+        SGR_BG_BRIGHT_BLACK..=SGR_BG_BRIGHT_WHITE => {
             performer.ofs_buf.set_background_color(param);
         }
         _ => {
@@ -203,7 +203,7 @@ pub fn set_graphics_rendition(performer: &mut AnsiToOfsBufPerformer, params: &Pa
     while let Some(param_slice) = params.extract_nth_many_raw(idx) {
         // Check for extended color sequences first (they consume multiple positions).
         if let Some(color_seq) =
-            csi_codes::SgrColorSequence::parse_from_raw_slice(param_slice)
+            SgrColorSequence::parse_from_raw_slice(param_slice)
         {
             // Unified method handles routing to foreground/background automatically.
             performer.ofs_buf.apply_extended_color_sequence(color_seq);

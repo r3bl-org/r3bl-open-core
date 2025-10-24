@@ -26,7 +26,7 @@ use nom::{IResult, Parser, branch::alt, combinator::map};
 // XMARK: Parser for a single line of markdown
 
 /// Parse a single chunk of Markdown text (found in a single line of text) into a
-/// [`MdLineFragment`]. If there is no [`crate::constants::NEW_LINE`] character, then parse
+/// [`MdLineFragment`]. If there is no [`crate::NEW_LINE`] character, then parse
 /// the entire input.
 ///
 /// Here's an example of the runtime iterations that may occur, which repeatedly run by

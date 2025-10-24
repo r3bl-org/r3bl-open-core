@@ -1,11 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-pub mod constants;
-pub mod csi_codes;
-pub mod dsr_codes;
-pub mod esc_codes;
-pub mod params_ext;
+mod generic_ansi_constants;
+mod csi_codes;
+mod dsr_codes;
+mod esc_codes;
+mod params_ext;
 
+pub use generic_ansi_constants::*;
 pub use csi_codes::*;
 pub use dsr_codes::*;
 pub use esc_codes::*;

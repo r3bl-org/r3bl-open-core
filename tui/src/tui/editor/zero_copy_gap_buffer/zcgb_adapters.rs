@@ -28,9 +28,9 @@
 //! [`gap_buffer_from_str()`]: `gap_buffer_from_str`
 
 use crate::{GCStringOwned, NumericValue, SegIndex, ZeroCopyGapBuffer,
-            md_parser::constants::NEW_LINE_CHAR};
+            md_parser::md_parser_constants::NEW_LINE_CHAR};
 #[cfg(test)]
-use crate::{len, md_parser::constants::NULL_CHAR};
+use crate::{len, md_parser::md_parser_constants::NULL_CHAR};
 
 /// Convert a slice of [`GCString`] lines into a [`ZeroCopyGapBuffer`].
 ///

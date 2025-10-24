@@ -1,7 +1,7 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{List, MdLineFragments,
-            md_parser::constants::{NEW_LINE, NULL_CHAR},
+            md_parser::md_parser_constants::{NEW_LINE, NULL_CHAR},
             md_parser_types::CheckboxParsePolicy,
             parse_inline_fragments_until_eol_or_eoi,
             parse_null_padded_line::is};

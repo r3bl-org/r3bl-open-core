@@ -48,9 +48,9 @@
 //! );
 //! ```
 //!
-//! [`SgrColorSequence`]: crate::protocols::csi_codes::SgrColorSequence
-//! [`DsrSequence`]: crate::protocols::dsr_codes::DsrSequence
-//! [`CsiSequence`]: crate::protocols::csi_codes::CsiSequence
+//! [`SgrColorSequence`]: crate::SgrColorSequence
+//! [`DsrSequence`]: crate::DsrSequence
+//! [`CsiSequence`]: crate::CsiSequence
 //! [`Display`]: std::fmt::Display
 //! [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 

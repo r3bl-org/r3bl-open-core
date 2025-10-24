@@ -37,6 +37,12 @@ source script_lib.fish
 #   - cargo doc --no-deps
 # - Ensures new toolchain works perfectly with fresh build from scratch
 #
+# Cargo Tools Update:
+# - Updates all cargo development tools (nextest, bacon, flamegraph, etc.)
+# - Uses cargo install-update to check and install latest versions
+# - Keeps development tools current with bug fixes and features
+# - Non-blocking: continues even if some tool updates fail
+#
 # Concurrency Safety:
 # - Uses mkdir (atomic directory creation) for mutual exclusion
 # - Atomic lock: check-and-create happens in ONE kernel operation (only one process succeeds)
@@ -563,6 +569,20 @@ function main
     log_message ""
 
     clean_and_verify_build
+
+    log_message "═══════════════════════════════════════════════════════"
+    log_message "Phase 6: Update Cargo Development Tools"
+    log_message "═══════════════════════════════════════════════════════"
+    log_message ""
+
+    # Update all cargo tools (nextest, bacon, flamegraph, etc.)
+    log_message "Updating cargo development tools to latest versions..."
+    if fish run.fish update-cargo-tools 2>&1 | tee -a $LOG_FILE
+        log_message "✅ Cargo tools updated successfully"
+    else
+        log_message "⚠️  Cargo tools update had issues (non-critical, continuing)"
+    end
+    log_message ""
 
     # Release lock after successful completion
     release_toolchain_lock

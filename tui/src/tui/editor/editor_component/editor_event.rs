@@ -4,7 +4,7 @@ use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut, EditorBuff
             EditorEngine, InputEvent, Key, KeyState, ModifierKeysMask, SelectMode, Size,
             SpecialKey, clipboard_support::ClipboardService,
             editor_engine::engine_internal_api, fg_green, inline_string,
-            md_parser::constants::NEW_LINE_CHAR, terminal_lib_backends::KeyPress,
+            md_parser::md_parser_constants::NEW_LINE_CHAR, terminal_lib_backends::KeyPress,
             validate_scroll_on_resize};
 use std::fmt::Debug;
 

@@ -9,13 +9,13 @@
 //!
 //! ## Distinction from CSI-Specific Constants
 //!
-//! **This module** (`protocols/constants.rs`):
+//! **This module** (`protocols/generic_ansi_constants.rs`):
 //! - Terminal modes and features (raw mode, alternate screen, mouse, paste)
 //! - DEC private mode numbers that apply at the terminal level
 //! - Constants used by multiple protocol layers
 //! - Feature configuration flags
 //!
-//! **CSI module** (`csi_codes/constants.rs`):
+//! **CSI module** (`csi_codes/csi_constants.rs`):
 //! - CSI-specific sequencing (command characters, CSI components)
 //! - SGR parameter values for text formatting
 //! - Cursor movement and erase command definitions
@@ -25,8 +25,7 @@
 //!
 //! Setting up terminal modes:
 //! ```rust
-//! use r3bl_tui::vt_100_ansi_parser::protocols::csi_codes::{CsiSequence, PrivateModeType};
-//! use r3bl_tui::vt_100_ansi_parser::protocols::constants::{SGR_MOUSE_MODE, BRACKETED_PASTE_MODE};
+//! use r3bl_tui::{CsiSequence, PrivateModeType, SGR_MOUSE_MODE, BRACKETED_PASTE_MODE};
 //!
 //! // Enable mouse tracking
 //! let seq1 = CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE));

@@ -6,7 +6,7 @@
 use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement,
             MdLineFragment, PrettyPrintDebug, convert_to_string_slice, get_hashes,
             get_horiz_lines, get_spaces, inline_string, join, join_fmt, join_with_index,
-            md_parser::constants::{BACK_TICK, CHECKED, LEFT_BRACKET, LEFT_IMAGE,
+            md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET, LEFT_IMAGE,
                                    LEFT_PARENTHESIS, LIST_SPACE_DISPLAY,
                                    LIST_SPACE_END_DISPLAY_FIRST_LINE,
                                    LIST_SPACE_END_DISPLAY_REST_LINE, NEW_LINE, PERIOD,

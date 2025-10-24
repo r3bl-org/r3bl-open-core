@@ -33,10 +33,10 @@
 //! let blue_bg = bg_rgb(0, 128, 255);         // → "\x1b[48:2:0:128:255m"
 //! ```
 //!
-//! [`SgrColorSequence`]: crate::protocols::csi_codes::SgrColorSequence
+//! [`SgrColorSequence`]: crate::SgrColorSequence
 //! [`Display`]: std::fmt::Display
 
-use crate::protocols::csi_codes::SgrColorSequence;
+use crate::SgrColorSequence;
 
 /// Generate 256-color foreground sequence: ESC[38:5:nm
 ///

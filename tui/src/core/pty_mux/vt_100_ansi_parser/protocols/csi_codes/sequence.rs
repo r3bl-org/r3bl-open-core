@@ -6,16 +6,16 @@
 //! sequences and can serialize them into ANSI escape codes.
 
 use super::{super::dsr_codes::DsrRequestType,
-            constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE, CPL_CURSOR_PREV_LINE,
-                        CSI_PARAM_SEPARATOR, CSI_PRIVATE_MODE_PREFIX, CSI_START,
-                        CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
-                        CUP_CURSOR_POSITION, CUU_CURSOR_UP, DCH_DELETE_CHAR,
-                        DECSTBM_SET_MARGINS, DL_DELETE_LINE, DSR_DEVICE_STATUS,
-                        ECH_ERASE_CHAR, ED_ERASE_DISPLAY, EL_ERASE_LINE,
-                        HVP_CURSOR_POSITION, ICH_INSERT_CHAR, IL_INSERT_LINE,
-                        RCP_RESTORE_CURSOR, RM_RESET_PRIVATE_MODE, SCP_SAVE_CURSOR,
-                        SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE, SU_SCROLL_UP,
-                        VPA_VERTICAL_POSITION},
+            csi_constants::{CHA_CURSOR_COLUMN, CNL_CURSOR_NEXT_LINE, CPL_CURSOR_PREV_LINE,
+                            CSI_PARAM_SEPARATOR, CSI_PRIVATE_MODE_PREFIX, CSI_START,
+                            CUB_CURSOR_BACKWARD, CUD_CURSOR_DOWN, CUF_CURSOR_FORWARD,
+                            CUP_CURSOR_POSITION, CUU_CURSOR_UP, DCH_DELETE_CHAR,
+                            DECSTBM_SET_MARGINS, DL_DELETE_LINE, DSR_DEVICE_STATUS,
+                            ECH_ERASE_CHAR, ED_ERASE_DISPLAY, EL_ERASE_LINE,
+                            HVP_CURSOR_POSITION, ICH_INSERT_CHAR, IL_INSERT_LINE,
+                            RCP_RESTORE_CURSOR, RM_RESET_PRIVATE_MODE, SCP_SAVE_CURSOR,
+                            SD_SCROLL_DOWN, SM_SET_PRIVATE_MODE, SU_SCROLL_UP,
+                            VPA_VERTICAL_POSITION},
             private_mode::PrivateModeType};
 use crate::{BufTextStorage, FastStringify, TermCol, TermRow,
             generate_impl_display_for_fast_stringify};
