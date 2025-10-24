@@ -28,15 +28,15 @@
 
 // Attach.
 mod ansi_sequence_generator;
+mod paint_render_op_impl;
 mod pixel_char_renderer;
-mod render_op_impl_direct_ansi;
 mod render_to_ansi;
 
 // Re-exports
-pub use ansi_sequence_generator::AnsiSequenceGenerator;
+pub use ansi_sequence_generator::*;
+pub use paint_render_op_impl::*;
 pub use pixel_char_renderer::*;
-pub use render_op_impl_direct_ansi::RenderOpImplDirectAnsi;
-pub use render_to_ansi::RenderToAnsi;
+pub use render_to_ansi::*;
 
 // Tests
 #[cfg(test)]

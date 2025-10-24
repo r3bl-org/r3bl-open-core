@@ -24,10 +24,57 @@
       - [1.5 Code Quality](#15-code-quality)
       - [Actual Accomplishments vs. Original Plan](#actual-accomplishments-vs-original-plan)
     - [Phase 2: Implement DirectAnsi Backend](#phase-2-implement-directansi-backend)
-      - [2.1 Add DirectAnsi Backend Enum Variant](#21-add-directansi-backend-enum-variant)
-      - [2.2 Create ANSI Sequence Generator](#22-create-ansi-sequence-generator)
-      - [2.3 Implement RenderOpImplDirectAnsi](#23-implement-renderopimpldirectansi)
-      - [2.4 Update Routing Logic](#24-update-routing-logic)
+    - [Progress Summary](#progress-summary)
+      - [✅ Step 1: DirectAnsi Module Structure - COMPLETE](#-step-1-directansi-module-structure---complete)
+      - [✅ Step 2: AnsiSequenceGenerator Implementation - COMPLETE (ENHANCED APPROACH)](#-step-2-ansisequencegenerator-implementation---complete-enhanced-approach)
+  - [Architecture Overview: Leveraging VT-100 Infrastructure](#architecture-overview-leveraging-vt-100-infrastructure)
+  - [Step 1: Create DirectAnsi Module Structure (30 min) ✅ COMPLETE](#step-1-create-directansi-module-structure-30-min--complete)
+  - [Step 2: Implement AnsiSequenceGenerator (3-4 hours) ✅ COMPLETE](#step-2-implement-ansisequencegenerator-3-4-hours--complete)
+    - [Key Design Achievement: Semantic ANSI Generation with VT-100 Infrastructure](#key-design-achievement-semantic-ansi-generation-with-vt-100-infrastructure)
+    - [Implementation: Leveraging Type-Safe Enums](#implementation-leveraging-type-safe-enums)
+      - [Section A: Cursor Movement Operations (Using CsiSequence)](#section-a-cursor-movement-operations-using-csisequence)
+      - [Section B: Screen Clearing Operations](#section-b-screen-clearing-operations)
+      - [Section C: Color Operations (Using SgrColorSequence)](#section-c-color-operations-using-sgrcolorsequence)
+      - [Section D: Cursor Visibility Operations](#section-d-cursor-visibility-operations)
+      - [Section E: Cursor Save/Restore Operations](#section-e-cursor-saverestore-operations)
+      - [Section F: Terminal Mode Operations](#section-f-terminal-mode-operations)
+      - [Section G: Module Documentation](#section-g-module-documentation)
+  - [Step 3: Complete RenderOpImplDirectAnsi (4-5 hours)](#step-3-complete-renderopimpldirectansi-4-5-hours)
+    - [Current State](#current-state)
+    - [Objective](#objective)
+    - [Complete RenderOp Variant List (29 total)](#complete-renderop-variant-list-29-total)
+      - [Group A: Platform/Mode Operations (3 variants)](#group-a-platformmode-operations-3-variants)
+      - [Group B: Cursor Movement (5 variants) - **WITH OPTIMIZATION**](#group-b-cursor-movement-5-variants---with-optimization)
+      - [Group C: Screen Clearing (4 variants)](#group-c-screen-clearing-4-variants)
+      - [Group D: Color Operations (4 variants) - **WITH OPTIMIZATION**](#group-d-color-operations-4-variants---with-optimization)
+      - [Group E: Text Rendering (3 variants)](#group-e-text-rendering-3-variants)
+      - [Group F: Cursor Visibility (2 variants)](#group-f-cursor-visibility-2-variants)
+      - [Group G: Cursor Save/Restore (2 variants)](#group-g-cursor-saverestore-2-variants)
+      - [Group H: Terminal Modes (6 variants)](#group-h-terminal-modes-6-variants)
+    - [Key Implementation Details](#key-implementation-details)
+    - [Subtasks for Step 3](#subtasks-for-step-3)
+  - [Step 4: Implement OffscreenBufferPaintImplDirectAnsi (1-2 hours) **NEW DISCOVERY**](#step-4-implement-offscreenbufferpaintimpldirectansi-1-2-hours-new-discovery)
+    - [Why This Is Needed](#why-this-is-needed)
+    - [The Good News: Nearly 100% Copy-Paste](#the-good-news-nearly-100%25-copy-paste)
+    - [File to Create](#file-to-create)
+    - [Implementation Strategy](#implementation-strategy)
+    - [Changes from Crossterm Implementation](#changes-from-crossterm-implementation)
+    - [Why This Works](#why-this-works)
+    - [Subtasks for Step 4](#subtasks-for-step-4)
+  - [Step 5: Update Backend Routing (1-2 hours)](#step-5-update-backend-routing-1-2-hours)
+    - [Three Files Need Updates](#three-files-need-updates)
+      - [File 1: Add DirectAnsi Enum Variant](#file-1-add-directansi-enum-variant)
+      - [File 2: Route Full TUI Rendering](#file-2-route-full-tui-rendering)
+      - [File 3: Route Individual RenderOp Execution](#file-3-route-individual-renderop-execution)
+    - [Subtasks for Step 5](#subtasks-for-step-5)
+  - [Step 6: Create Comprehensive Test Suites (4-5 hours)](#step-6-create-comprehensive-test-suites-4-5-hours)
+    - [Part A: Unit Tests (`tests.rs`)](#part-a-unit-tests-testsrs)
+    - [Part B: Integration Tests (`integration_tests.rs`)](#part-b-integration-tests-integration_testsrs)
+  - [Step 7: Cross-Platform Validation (2-3 hours)](#step-7-cross-platform-validation-2-3-hours)
+    - [Subtasks](#subtasks)
+  - [Implementation Checklist](#implementation-checklist)
+  - [Critical Success Factors](#critical-success-factors)
+  - [Effort Summary (Updated with Step 4 Discovery)](#effort-summary-updated-with-step-4-discovery)
     - [Phase 3: Migrate choose() and readline_async() to RenderOps](#phase-3-migrate-choose-and-readline_async-to-renderops)
       - [3.1 Update Macros](#31-update-macros)
       - [3.2 Migrate select_component.rs](#32-migrate-select_componentrs)
@@ -454,19 +501,22 @@ crossterm's implementation.
 ### Progress Summary
 
 #### ✅ Step 1: DirectAnsi Module Structure - COMPLETE
+
 - Created `tui/src/tui/terminal_lib_backends/direct_ansi/` directory
 - Implemented `mod.rs` with proper re-exports and Phase 1/2 organization
 - Created all implementation files with proper documentation
 - `cargo check` passes cleanly
 
 #### ✅ Step 2: AnsiSequenceGenerator Implementation - COMPLETE (ENHANCED APPROACH)
+
 - **All 40+ methods implemented** using semantic ANSI generation (not raw format!)
 - **Key Achievement**: Replaced raw `format!()` calls with semantic typed enums
 - **Leveraged VT-100 Infrastructure**:
   - `CsiSequence` enums for cursor movement, screen clearing, save/restore
   - `SgrColorSequence` enums for foreground/background colors (256-color and RGB)
   - `PrivateModeType` enums for terminal modes (cursor visibility, alternate screen, mouse, paste)
-  - `SGR_BOLD`, `SGR_DIM`, `SGR_ITALIC`, `SGR_UNDERLINE`, `SGR_STRIKETHROUGH` constants for text attributes
+  - `SGR_BOLD`, `SGR_DIM`, `SGR_ITALIC`, `SGR_UNDERLINE`, `SGR_STRIKETHROUGH` constants for text
+    attributes
   - `TermRow::from_zero_based()` / `TermCol::from_zero_based()` methods for coordinate conversion
 - **Type Safety**: All sequences are type-safe with compile-time guarantees
 - **Return Type**: Methods return `String` (more efficient than `Vec<u8>`, avoids extra allocation)
@@ -499,6 +549,7 @@ DirectAnsi Backend (new, one-way: RenderOp → ANSI bytes)
 ```
 
 **Key Insight**: The VT-100 parser already has everything needed for **sequence generation**:
+
 - `SgrColorSequence` enum with `FastStringify` trait for generating color sequences
 - All ANSI constants (SGR_BOLD, SGR_ITALIC, etc.) already defined
 - Architecture proven in parser—we're inverting it for generation
@@ -508,6 +559,7 @@ DirectAnsi Backend (new, one-way: RenderOp → ANSI bytes)
 ## Step 1: Create DirectAnsi Module Structure (30 min) ✅ COMPLETE
 
 **Files Created**:
+
 ```
 tui/src/tui/terminal_lib_backends/direct_ansi/
 ├── mod.rs                          # Module coordinator with re-exports (✅)
@@ -518,6 +570,7 @@ tui/src/tui/terminal_lib_backends/direct_ansi/
 ```
 
 **Completed Subtasks**:
+
 - [x] Create directory: `tui/src/tui/terminal_lib_backends/direct_ansi/`
 - [x] Create `mod.rs` with module declarations and re-exports
 - [x] Create implementation files with proper documentation
@@ -544,7 +597,8 @@ pub use render_op_impl_direct_ansi::RenderOpImplDirectAnsi;
 
 ### Key Design Achievement: Semantic ANSI Generation with VT-100 Infrastructure
 
-This module generates ANSI escape sequences using **semantic types** (not raw format!) for each terminal operation. All methods return `String` for efficiency.
+This module generates ANSI escape sequences using **semantic types** (not raw format!) for each
+terminal operation. All methods return `String` for efficiency.
 
 ### Implementation: Leveraging Type-Safe Enums
 
@@ -579,7 +633,8 @@ impl AnsiSequenceGenerator {
 }
 ```
 
-**VT-100 Types Used**: `CsiSequence` enum, `TermRow::from_zero_based()`, `TermCol::from_zero_based()`
+**VT-100 Types Used**: `CsiSequence` enum, `TermRow::from_zero_based()`,
+`TermCol::from_zero_based()`
 
 #### Section B: Screen Clearing Operations
 
@@ -690,7 +745,8 @@ impl AnsiSequenceGenerator {
 }
 ```
 
-**Reference Constants**: `SGR_RESET`, `SGR_BOLD`, `SGR_DIM`, `SGR_ITALIC`, `SGR_UNDERLINE`, `SGR_STRIKETHROUGH`
+**Reference Constants**: `SGR_RESET`, `SGR_BOLD`, `SGR_DIM`, `SGR_ITALIC`, `SGR_UNDERLINE`,
+`SGR_STRIKETHROUGH`
 
 #### Section D: Cursor Visibility Operations
 
@@ -769,6 +825,7 @@ impl AnsiSequenceGenerator {
 Add comprehensive rustdoc at the module level with ANSI sequence reference table and examples.
 
 **Subtasks for Step 2**:
+
 - [ ] Section A: Cursor movement (4 methods, ~80 LOC)
 - [ ] Section B: Screen clearing (4 methods, ~50 LOC)
 - [ ] Section C: Colors using SgrColorSequence (3+1 methods, ~150 LOC)
@@ -785,202 +842,322 @@ Add comprehensive rustdoc at the module level with ANSI sequence reference table
 
 ---
 
-## Step 3: Implement RenderOpImplDirectAnsi (4-5 hours)
+## Step 3: Complete RenderOpImplDirectAnsi (4-5 hours)
+
+**Status**: ⏳ IN PROGRESS
 
 **File**: `tui/src/tui/terminal_lib_backends/direct_ansi/render_op_impl_direct_ansi.rs`
 
-This implements the `PaintRenderOp` trait to execute all RenderOp variants using AnsiSequenceGenerator.
+### Current State
 
-### High-Level Structure
+- **Existing LOC**: 53 lines
+- **Target LOC**: ~500 lines (+447 lines)
+- **✅ Already Complete**:
+  - Struct definition: `RenderOpImplDirectAnsi`
+  - `Flush` trait fully implemented (`flush()` and `clear_before_flush()`)
+  - Trait skeleton for `PaintRenderOp`
+- **⏳ Needs Work**: Fill in `paint()` method with all 29 RenderOp variants
+
+### Objective
+
+This implements the `PaintRenderOp` trait to execute all RenderOp variants using
+AnsiSequenceGenerator, with state-based optimizations to skip redundant ANSI sequences.
+
+### Complete RenderOp Variant List (29 total)
+
+#### Group A: Platform/Mode Operations (3 variants)
+
+1. **EnterRawMode** → `return` (platform-specific, handled elsewhere)
+2. **ExitRawMode** → `return` (platform-specific, handled elsewhere)
+3. **Noop** → `return` (no-op)
+
+#### Group B: Cursor Movement (5 variants) - **WITH OPTIMIZATION**
+
+4. **MoveCursorPositionAbs(Pos)** → `AnsiSequenceGenerator::cursor_position()`
+   - ✨ Optimization: Skip if `render_local_data.cursor_pos == pos`
+   - Update: `render_local_data.cursor_pos = pos`
+5. **MoveCursorPositionRelTo(Pos, Pos)** → Calculate absolute, then use `cursor_position()`
+   - Calculate: `abs_pos = origin + offset`
+   - ✨ Same optimization as above
+6. **MoveCursorToColumn(ColIndex)** → `AnsiSequenceGenerator::cursor_to_column()`
+   - Update: `render_local_data.cursor_pos.col_index = col`
+7. **MoveCursorToNextLine(RowHeight)** → `AnsiSequenceGenerator::cursor_next_line()`
+   - Update: `render_local_data.cursor_pos.row_index += height`
+   - Update: `render_local_data.cursor_pos.col_index = 0`
+8. **MoveCursorToPreviousLine(RowHeight)** → `AnsiSequenceGenerator::cursor_previous_line()`
+   - Update: `render_local_data.cursor_pos.row_index.saturating_sub(height)`
+   - Update: `render_local_data.cursor_pos.col_index = 0`
+
+#### Group C: Screen Clearing (4 variants)
+
+9. **ClearScreen** → `AnsiSequenceGenerator::clear_screen()`
+10. **ClearCurrentLine** → `AnsiSequenceGenerator::clear_current_line()`
+11. **ClearToEndOfLine** → `AnsiSequenceGenerator::clear_to_end_of_line()`
+12. **ClearToStartOfLine** → `AnsiSequenceGenerator::clear_to_start_of_line()`
+
+#### Group D: Color Operations (4 variants) - **WITH OPTIMIZATION**
+
+13. **SetFgColor(TuiColor)** → `AnsiSequenceGenerator::fg_color()`
+    - ✨ Optimization: Skip if `render_local_data.fg_color == Some(color)`
+    - Update: `render_local_data.fg_color = Some(color)`
+14. **SetBgColor(TuiColor)** → `AnsiSequenceGenerator::bg_color()`
+    - ✨ Optimization: Skip if `render_local_data.bg_color == Some(color)`
+    - Update: `render_local_data.bg_color = Some(color)`
+15. **ResetColor** → `AnsiSequenceGenerator::reset_color()`
+    - Update: `render_local_data.fg_color = None`
+    - Update: `render_local_data.bg_color = None`
+16. **ApplyColors(Option<TuiStyle>)** → Extract fg/bg from style, apply both
+    - Apply fg if Some, apply bg if Some, with optimizations
+
+#### Group E: Text Rendering (3 variants)
+
+17. **PaintTextWithAttributes(InlineString, Option<TuiStyle>)** → Apply style wrapper
+    - Generate style attrs → append text → generate reset (if style was Some)
+18. **CompositorNoClipTruncPaintTextWithAttributes(InlineString, Option<TuiStyle>)** → Same as above
+    - (Compositor variant - same rendering logic)
+19. **PrintStyledText(InlineString)** → Pass through as-is
+    - Text already contains ANSI codes, write directly
+
+#### Group F: Cursor Visibility (2 variants)
+
+20. **ShowCursor** → `AnsiSequenceGenerator::show_cursor()`
+21. **HideCursor** → `AnsiSequenceGenerator::hide_cursor()`
+
+#### Group G: Cursor Save/Restore (2 variants)
+
+22. **SaveCursorPosition** → `AnsiSequenceGenerator::save_cursor_position()`
+23. **RestoreCursorPosition** → `AnsiSequenceGenerator::restore_cursor_position()`
+
+#### Group H: Terminal Modes (6 variants)
+
+24. **EnterAlternateScreen** → `AnsiSequenceGenerator::enter_alternate_screen()`
+25. **ExitAlternateScreen** → `AnsiSequenceGenerator::exit_alternate_screen()`
+26. **EnableMouseTracking** → `AnsiSequenceGenerator::enable_mouse_tracking()`
+27. **DisableMouseTracking** → `AnsiSequenceGenerator::disable_mouse_tracking()`
+28. **EnableBracketedPaste** → `AnsiSequenceGenerator::enable_bracketed_paste()`
+29. **DisableBracketedPaste** → `AnsiSequenceGenerator::disable_bracketed_paste()`
+
+### Key Implementation Details
+
+**Output Pattern** (end of paint method):
 
 ```rust
-use super::AnsiSequenceGenerator;
-use crate::{
-    PaintRenderOp, Flush, RenderOp, RenderOpsLocalData,
-    LockedOutputDevice, Size, TuiColor,
-};
-use std::io::Write;
-
-pub struct RenderOpImplDirectAnsi;
-
-impl PaintRenderOp for RenderOpImplDirectAnsi {
-    fn paint(
-        &self,
-        skip_flush: &mut bool,
-        render_op: &RenderOp,
-        _window_size: Size,
-        render_local_data: &mut RenderOpsLocalData,
-        mut locked_output_device: LockedOutputDevice,
-        is_mock: bool,
-    ) {
-        if is_mock { return; }
-
-        // Match all RenderOp variants and generate ANSI bytes
-        let bytes = match render_op {
-            // Cursor movement with optimization
-            RenderOp::MoveCursorPositionAbs(pos) => {
-                if render_local_data.cursor_pos == *pos {
-                    return;  // Skip if already at position
-                }
-                render_local_data.cursor_pos = *pos;
-                AnsiSequenceGenerator::cursor_position(pos.row_index, pos.col_index)
-            }
-            RenderOp::MoveCursorToColumn(col) => {
-                render_local_data.cursor_pos.col_index = *col;
-                AnsiSequenceGenerator::cursor_to_column(*col)
-            }
-            RenderOp::MoveCursorToNextLine(height) => {
-                render_local_data.cursor_pos.row_index += *height;
-                render_local_data.cursor_pos.col_index = col!(0);
-                AnsiSequenceGenerator::cursor_next_line(*height)
-            }
-            RenderOp::MoveCursorToPreviousLine(height) => {
-                render_local_data.cursor_pos.row_index =
-                    render_local_data.cursor_pos.row_index.saturating_sub(*height);
-                render_local_data.cursor_pos.col_index = col!(0);
-                AnsiSequenceGenerator::cursor_previous_line(*height)
-            }
-
-            // Screen clearing operations
-            RenderOp::ClearScreen => AnsiSequenceGenerator::clear_screen(),
-            RenderOp::ClearCurrentLine => AnsiSequenceGenerator::clear_current_line(),
-            RenderOp::ClearToEndOfLine => AnsiSequenceGenerator::clear_to_end_of_line(),
-            RenderOp::ClearToStartOfLine => AnsiSequenceGenerator::clear_to_start_of_line(),
-
-            // Color operations with optimization
-            RenderOp::SetFgColor(color) => {
-                if render_local_data.fg_color.as_ref() == Some(color) {
-                    return;  // Skip if color unchanged
-                }
-                render_local_data.fg_color = Some(*color);
-                AnsiSequenceGenerator::fg_color(*color)
-            }
-            RenderOp::SetBgColor(color) => {
-                if render_local_data.bg_color.as_ref() == Some(color) {
-                    return;
-                }
-                render_local_data.bg_color = Some(*color);
-                AnsiSequenceGenerator::bg_color(*color)
-            }
-            RenderOp::ResetColor => {
-                render_local_data.fg_color = None;
-                render_local_data.bg_color = None;
-                AnsiSequenceGenerator::reset_color()
-            }
-
-            // Text rendering
-            RenderOp::PrintStyledText(text) => {
-                text.as_bytes().to_vec()  // Already has ANSI codes
-            }
-            RenderOp::PaintTextWithAttributes(text, style_opt) => {
-                let mut bytes = Vec::new();
-                if let Some(style) = style_opt {
-                    bytes.extend(AnsiSequenceGenerator::text_attributes(style));
-                }
-                bytes.extend(text.as_bytes());
-                if style_opt.is_some() {
-                    bytes.extend(AnsiSequenceGenerator::reset_color());
-                }
-                bytes
-            }
-
-            // Cursor visibility
-            RenderOp::ShowCursor => AnsiSequenceGenerator::show_cursor(),
-            RenderOp::HideCursor => AnsiSequenceGenerator::hide_cursor(),
-
-            // Cursor save/restore
-            RenderOp::SaveCursorPosition => AnsiSequenceGenerator::save_cursor_position(),
-            RenderOp::RestoreCursorPosition => AnsiSequenceGenerator::restore_cursor_position(),
-
-            // Terminal modes
-            RenderOp::EnterAlternateScreen => AnsiSequenceGenerator::enter_alternate_screen(),
-            RenderOp::ExitAlternateScreen => AnsiSequenceGenerator::exit_alternate_screen(),
-            RenderOp::EnableMouseTracking => AnsiSequenceGenerator::enable_mouse_tracking(),
-            RenderOp::DisableMouseTracking => AnsiSequenceGenerator::disable_mouse_tracking(),
-
-            // Platform-specific (handled elsewhere)
-            RenderOp::EnterRawMode | RenderOp::ExitRawMode => return,
-            RenderOp::Noop => return,
-
-            _ => Vec::new(),  // Other variants
-        };
-
-        if !bytes.is_empty() {
-            locked_output_device.write_all(&bytes)
-                .expect("Failed to write ANSI bytes");
-        }
-
-        *skip_flush = false;
-    }
+if !bytes.is_empty() {
+    locked_output_device.write_all(&bytes)
+        .expect("Failed to write ANSI bytes to output device");
 }
-
-impl Flush for RenderOpImplDirectAnsi {
-    fn flush(&mut self, mut locked_output_device: LockedOutputDevice<'_>) {
-        locked_output_device.flush()
-            .expect("Failed to flush output device");
-    }
-
-    fn clear_before_flush(&mut self, mut locked_output_device: LockedOutputDevice<'_>) {
-        let clear_bytes = AnsiSequenceGenerator::clear_screen();
-        locked_output_device.write_all(&clear_bytes)
-            .expect("Failed to write clear screen sequence");
-        locked_output_device.flush()
-            .expect("Failed to flush output device");
-    }
-}
+*skip_flush = false;
 ```
 
-**Subtasks for Step 3**:
-- [ ] Implement PaintRenderOp::paint() method with all match arms (cursor, clearing, colors, text, visibility, modes)
-- [ ] Implement Flush::flush() method
-- [ ] Implement Flush::clear_before_flush() method
-- [ ] Add state tracking (cursor_pos, fg_color, bg_color optimization)
-- [ ] Add comprehensive documentation
-- [ ] Run `cargo check` for type correctness
-- [ ] Run `cargo clippy` for lint compliance
+**State Tracking** (for optimizations):
 
-**Estimated Total**: ~600 LOC
+- `render_local_data.cursor_pos: Pos`
+- `render_local_data.fg_color: Option<TuiColor>`
+- `render_local_data.bg_color: Option<TuiColor>`
 
-**Checkpoint**: RenderOpImplDirectAnsi compiles, all RenderOp variants handled
+### Subtasks for Step 3
+
+- [ ] Implement Group A: Platform/Mode (3 variants - early returns)
+- [ ] Implement Group B: Cursor movement with optimization (5 variants)
+- [ ] Implement Group C: Screen clearing (4 variants)
+- [ ] Implement Group D: Color operations with state caching (4 variants)
+- [ ] Implement Group E: Text rendering (3 variants)
+- [ ] Implement Group F: Cursor visibility (2 variants)
+- [ ] Implement Group G: Cursor save/restore (2 variants)
+- [ ] Implement Group H: Terminal modes (6 variants)
+- [ ] Add comprehensive rustdoc comments
+- [ ] Run `cargo check` - verify compilation
+- [ ] Run `cargo clippy --all-targets` - fix warnings
+
+**Estimated**: 4-5 hours, 447 new LOC
+
+**Checkpoint**: RenderOpImplDirectAnsi compiles, all 29 RenderOp variants handled exhaustively
 
 ---
 
-## Step 4: Update Backend Routing (1-2 hours)
+## Step 4: Implement OffscreenBufferPaintImplDirectAnsi (1-2 hours) **NEW DISCOVERY**
 
-**File 1**: `tui/src/tui/terminal_lib_backends/mod.rs`
+**Status**: ⏳ PENDING
+
+### Why This Is Needed
+
+The full TUI rendering pipeline requires `OffscreenBufferPaint` trait implementation to convert
+`OffscreenBuffer` → `RenderOps`. Currently hard-coded to crossterm in `paint.rs` (lines 51-63,
+73-86).
+
+### The Good News: Nearly 100% Copy-Paste
+
+The logic is **completely backend-agnostic** - we're just converting PixelChar data to RenderOps,
+which then route to our DirectAnsi backend automatically.
+
+### File to Create
+
+**Path**: `tui/src/tui/terminal_lib_backends/direct_ansi/offscreen_buffer_paint_impl.rs`
+
+**LOC**: ~300 lines
+
+### Implementation Strategy
 
 ```rust
-// Add DirectAnsi to the enum
+use crate::{/* same imports as crossterm impl */};
+
+#[derive(Debug)]
+pub struct OffscreenBufferPaintImplDirectAnsi;
+
+impl OffscreenBufferPaint for OffscreenBufferPaintImplDirectAnsi {
+    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOps {
+        // ✅ Copy directly from crossterm implementation
+        // This is 100% backend-agnostic:
+        // - Iterate through PixelChar[] in OffscreenBuffer
+        // - Accumulate text runs with same style
+        // - Generate RenderOps (MoveCursor, SetColor, PaintText)
+        // - Return RenderOps
+    }
+
+    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
+        // ✅ Copy directly from crossterm implementation
+        // This is 100% backend-agnostic:
+        // - For each changed PixelChar position
+        // - Generate MoveCursor + ApplyColors + PaintText
+        // - Return RenderOps
+    }
+
+    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind,
+             window_size: Size, locked_output_device: LockedOutputDevice,
+             is_mock: bool) {
+        // ✅ Copy directly from crossterm implementation
+        // Backend routing happens automatically in execute_all()
+        let mut skip_flush = false;
+
+        if let FlushKind::ClearBeforeFlush = flush_kind {
+            RenderOp::default().clear_before_flush(locked_output_device);
+        }
+
+        render_ops.execute_all(&mut skip_flush, window_size,
+                               locked_output_device, is_mock);
+
+        if !skip_flush {
+            RenderOp::default().flush(locked_output_device);
+        }
+    }
+
+    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size,
+                  locked_output_device: LockedOutputDevice, is_mock: bool) {
+        // ✅ Copy directly from crossterm implementation
+        // Same pattern as paint(), just no clear_before_flush
+    }
+}
+
+// ✅ Copy render_helper module directly (Context struct, helper functions)
+mod render_helper {
+    // Identical to crossterm - no changes needed
+}
+```
+
+### Changes from Crossterm Implementation
+
+**Only 2 changes needed:**
+
+1. Struct name: `OffscreenBufferPaintImplCrossterm` → `OffscreenBufferPaintImplDirectAnsi`
+2. Debug strings: Replace `"crossterm"` → `"direct_ansi"` in tracing logs
+
+### Why This Works
+
+The rendering pipeline has perfect separation of concerns:
+
+```
+OffscreenBuffer → [render()] → RenderOps → [execute_all()] → [routing] → RenderOpImplDirectAnsi
+     ^                              ^                                              ^
+  pixel data              backend-agnostic                    our DirectAnsi impl
+```
+
+### Subtasks for Step 4
+
+- [ ] Create `offscreen_buffer_paint_impl.rs` file
+- [ ] Copy crossterm implementation (300 LOC)
+- [ ] Update struct name to `OffscreenBufferPaintImplDirectAnsi`
+- [ ] Update debug/tracing strings (`crossterm` → `direct_ansi`)
+- [ ] Add to `direct_ansi/mod.rs` exports
+- [ ] Run `cargo check` - verify compilation
+- [ ] **Validation**: Generated RenderOps should be identical to crossterm
+
+**Estimated**: 1-2 hours (mostly copy-paste + verification)
+
+**Checkpoint**: OffscreenBufferPaintImplDirectAnsi compiles, produces identical RenderOps to
+crossterm
+
+---
+
+## Step 5: Update Backend Routing (1-2 hours)
+
+### Three Files Need Updates
+
+#### File 1: Add DirectAnsi Enum Variant
+
+**Path**: `tui/src/tui/terminal_lib_backends/mod.rs`
+
+```rust
 pub enum TerminalLibBackend {
     Crossterm,
     Termion,
-    DirectAnsi,  // ← NEW
+    DirectAnsi,  // ← ADD THIS
 }
 
-// Keep Crossterm as default for now (safe during development)
+// Keep Crossterm as default during development
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 
 // Add module declaration
 pub mod direct_ansi;
-pub use direct_ansi::{AnsiSequenceGenerator, RenderOpImplDirectAnsi};
+pub use direct_ansi::{
+    AnsiSequenceGenerator,
+    RenderOpImplDirectAnsi,
+    OffscreenBufferPaintImplDirectAnsi,  // ← ADD THIS
+};
 ```
 
-**File 2**: `tui/src/tui/terminal_lib_backends/render_op.rs`
+#### File 2: Route Full TUI Rendering
 
-Update the routing function:
+**Path**: `tui/src/tui/terminal_lib_backends/paint.rs` (lines 45-87)
+
+Add DirectAnsi arms to both `perform_diff_paint()` and `perform_full_paint()`:
 
 ```rust
-pub fn route_paint_render_op_to_backend(
-    render_local_data: &mut RenderOpsLocalData,
-    skip_flush: &mut bool,
-    render_op: &RenderOp,
-    window_size: Size,
-    locked_output_device: LockedOutputDevice<'_>,
-    is_mock: bool,
-) {
+fn perform_diff_paint(...) {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => { /* existing */ }
+        TerminalLibBackend::DirectAnsi => {
+            let mut direct_ansi_impl = OffscreenBufferPaintImplDirectAnsi {};
+            let render_ops = direct_ansi_impl.render_diff(diff_chunks);
+            direct_ansi_impl.paint_diff(render_ops, window_size,
+                                        locked_output_device, is_mock);
+        }
+        TerminalLibBackend::Termion => unimplemented!(),
+    }
+}
+
+fn perform_full_paint(...) {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => { /* existing */ }
+        TerminalLibBackend::DirectAnsi => {
+            let mut direct_ansi_impl = OffscreenBufferPaintImplDirectAnsi {};
+            let render_ops = direct_ansi_impl.render(ofs_buf);
+            direct_ansi_impl.paint(render_ops, flush_kind, window_size,
+                                   locked_output_device, is_mock);
+        }
+        TerminalLibBackend::Termion => unimplemented!(),
+    }
+}
+```
+
+#### File 3: Route Individual RenderOp Execution
+
+**Path**: `tui/src/tui/terminal_lib_backends/render_op.rs` (line 271)
+
+```rust
+pub fn route_paint_render_op_to_backend(...) {
     match TERMINAL_LIB_BACKEND {
         TerminalLibBackend::Crossterm => {
-            RenderOpImplCrossterm {}.paint(
+            PaintRenderOpImplCrossterm {}.paint(
                 skip_flush, render_op, window_size,
                 render_local_data, locked_output_device, is_mock,
             );
@@ -996,27 +1173,30 @@ pub fn route_paint_render_op_to_backend(
 }
 ```
 
-**Subtasks for Step 4**:
+### Subtasks for Step 5
+
 - [ ] Add `DirectAnsi` variant to `TerminalLibBackend` enum
-- [ ] Add `pub mod direct_ansi;` declaration to mod.rs
-- [ ] Add re-exports for `AnsiSequenceGenerator` and `RenderOpImplDirectAnsi`
-- [ ] Update `route_paint_render_op_to_backend()` match statement with DirectAnsi arm
-- [ ] Run `cargo check` to verify routing compiles
-- [ ] Verify `cargo clippy` passes
+- [ ] Export `OffscreenBufferPaintImplDirectAnsi` in `mod.rs`
+- [ ] Update `perform_diff_paint()` in `paint.rs`
+- [ ] Update `perform_full_paint()` in `paint.rs`
+- [ ] Update `route_paint_render_op_to_backend()` in `render_op.rs`
+- [ ] Run `cargo check` - verify all match statements exhaustive
+- [ ] Run `cargo clippy` - verify no warnings
 
-**Estimated Total**: ~100 LOC
+**Estimated**: 1-2 hours, ~150 LOC changes
 
-**Checkpoint**: Routing compiles, match is exhaustive
+**Checkpoint**: Routing compiles, all match statements exhaustive, backend switching functional
 
 ---
 
-## Step 5: Create Comprehensive Test Suites (4-5 hours)
+## Step 6: Create Comprehensive Test Suites (4-5 hours)
 
 ### Part A: Unit Tests (`tests.rs`)
 
 Test all methods in `AnsiSequenceGenerator` for correct ANSI output:
 
 **Subtasks**:
+
 - [ ] Cursor positioning tests (4 variants, boundary values)
 - [ ] Screen clearing tests (all 4 variants)
 - [ ] Color tests (RGB, 256-color, reset)
@@ -1032,6 +1212,7 @@ Test all methods in `AnsiSequenceGenerator` for correct ANSI output:
 Test `RenderOpImplDirectAnsi` executing full sequences:
 
 **Subtasks**:
+
 - [ ] Full RenderOp sequences produce valid ANSI
 - [ ] Color optimization works (skip redundant changes)
 - [ ] Cursor position optimization works
@@ -1040,7 +1221,8 @@ Test `RenderOpImplDirectAnsi` executing full sequences:
 
 **Target**: ~300 LOC, 15+ test cases
 
-**Subtasks for Step 5**:
+**Subtasks for Step 6**:
+
 - [ ] Write unit tests for AnsiSequenceGenerator (all methods)
 - [ ] Write integration tests for RenderOp execution
 - [ ] Achieve >90% code coverage
@@ -1053,11 +1235,12 @@ Test `RenderOpImplDirectAnsi` executing full sequences:
 
 ---
 
-## Step 6: Cross-Platform Validation (2-3 hours)
+## Step 7: Cross-Platform Validation (2-3 hours)
 
 ### Subtasks
 
 **Linux Testing**:
+
 - [ ] Test on xterm
 - [ ] Test on gnome-terminal
 - [ ] Test on alacritty
@@ -1066,22 +1249,26 @@ Test `RenderOpImplDirectAnsi` executing full sequences:
 - [ ] Verify no garbled output
 
 **macOS Testing**:
+
 - [ ] Test on Terminal.app
 - [ ] Test on iTerm2 (if available)
 - [ ] Same validations as Linux
 
 **Windows Testing**:
+
 - [ ] Test on Windows Terminal
 - [ ] Test on PowerShell console
 - [ ] Verify Virtual Terminal Processing works
 - [ ] Verify color output
 
 **Performance**:
+
 - [ ] Run flamegraph benchmark
 - [ ] Compare vs crossterm backend
 - [ ] Target: <5% difference in flamegraph samples
 
 **Edge Cases**:
+
 - [ ] Max row/col indices
 - [ ] Rapid color changes
 - [ ] Large batches of RenderOps
@@ -1113,28 +1300,37 @@ Step 2: AnsiSequenceGenerator (~600 LOC, 3-4 hours)
   ☐ cargo check + cargo clippy pass
   ☐ All constants properly imported from vt_100_ansi_parser
 
-Step 3: RenderOpImplDirectAnsi (~600 LOC, 4-5 hours)
-  ☐ Implement PaintRenderOp::paint() trait
-  ☐ Cursor movement match arms with optimization
-  ☐ Screen clearing match arms
-  ☐ Color operations with state optimization
-  ☐ Text rendering match arms
-  ☐ Cursor visibility match arms
-  ☐ Cursor save/restore match arms
-  ☐ Terminal modes match arms
-  ☐ Platform-specific handling (raw mode)
-  ☐ Implement Flush trait (flush + clear_before_flush)
+Step 3: RenderOpImplDirectAnsi (~447 LOC, 4-5 hours)
+  ☐ Implement Group A: Platform/Mode (3 variants)
+  ☐ Implement Group B: Cursor movement with optimization (5 variants)
+  ☐ Implement Group C: Screen clearing (4 variants)
+  ☐ Implement Group D: Color operations with state caching (4 variants)
+  ☐ Implement Group E: Text rendering (3 variants)
+  ☐ Implement Group F: Cursor visibility (2 variants)
+  ☐ Implement Group G: Cursor save/restore (2 variants)
+  ☐ Implement Group H: Terminal modes (6 variants)
   ☐ cargo check + cargo clippy pass
-  ☐ All 17 RenderOp variants covered
+  ☐ All 29 RenderOp variants covered exhaustively
 
-Step 4: Backend Routing (~100 LOC, 1-2 hours)
+Step 4: OffscreenBufferPaintImplDirectAnsi (~300 LOC, 1-2 hours) **NEW**
+  ☐ Create offscreen_buffer_paint_impl.rs file
+  ☐ Copy crossterm implementation structure
+  ☐ Update struct name to OffscreenBufferPaintImplDirectAnsi
+  ☐ Update debug/tracing strings (crossterm → direct_ansi)
+  ☐ Add to direct_ansi/mod.rs exports
+  ☐ cargo check passes
+  ☐ Validation: Generated RenderOps identical to crossterm
+
+Step 5: Backend Routing (~150 LOC, 1-2 hours)
   ☐ Add DirectAnsi to TerminalLibBackend enum
-  ☐ Add pub mod direct_ansi; declaration
-  ☐ Update route_paint_render_op_to_backend() function
-  ☐ Verify match is exhaustive
+  ☐ Export OffscreenBufferPaintImplDirectAnsi in mod.rs
+  ☐ Update perform_diff_paint() in paint.rs
+  ☐ Update perform_full_paint() in paint.rs
+  ☐ Update route_paint_render_op_to_backend() in render_op.rs
+  ☐ Verify all match statements exhaustive
   ☐ cargo check passes
 
-Step 5: Test Suites (~700 LOC, 4-5 hours)
+Step 6: Test Suites (~700 LOC, 4-5 hours)
   ☐ Unit tests: 60+ tests for AnsiSequenceGenerator
   ☐ Integration tests: 15+ tests for RenderOp execution
   ☐ Test cursor positioning (all variants)
@@ -1146,7 +1342,7 @@ Step 5: Test Suites (~700 LOC, 4-5 hours)
   ☐ cargo test passes (all tests)
   ☐ >90% code coverage
 
-Step 6: Cross-Platform Validation (2-3 hours)
+Step 7: Cross-Platform Validation (2-3 hours)
   ☐ Linux: Test on xterm, gnome-terminal, alacritty
   ☐ macOS: Test on Terminal.app, iTerm2
   ☐ Windows: Test on Windows Terminal, PowerShell
@@ -1169,40 +1365,52 @@ Final Quality Checks
 ## Critical Success Factors
 
 ✅ **Architectural Alignment**:
+
 - Reuse `SgrColorSequence` + `FastStringify` from VT-100 parser
 - Use all existing ANSI constants (SGR_BOLD, etc.)
 - Don't reinvent ANSI generation
 
 ✅ **Optimization Strategy**:
+
 - Skip redundant cursor moves (track cursor_pos in RenderOpsLocalData)
 - Skip redundant color changes (track fg_color, bg_color)
 - Zero allocations for `Noop` operations
 
 ✅ **Test Coverage**:
+
 - Unit tests for every AnsiSequenceGenerator method
 - Integration tests for realistic RenderOp sequences
-- >90% code coverage target
+- > 90% code coverage target
 
 ✅ **Cross-Platform**:
+
 - Validate on Linux, macOS, Windows 10+
 - Auto-enable Windows VT processing (Phase 4 improvement)
 - Performance within 5% of crossterm backend
 
 ---
 
-## Effort Summary
+## Effort Summary (Updated with Step 4 Discovery)
 
-| Component | LOC | Hours | Risk |
-|-----------|-----|-------|------|
-| Step 1: Module Structure | 50 | 0.5h | MINIMAL |
-| Step 2: AnsiSequenceGenerator | 600 | 3-4h | LOW |
-| Step 3: RenderOpImplDirectAnsi | 600 | 4-5h | LOW |
-| Step 4: Backend Routing | 100 | 1-2h | MINIMAL |
-| Step 5: Test Suites | 700 | 4-5h | LOW |
-| Step 6: Cross-Platform Validation | - | 2-3h | MEDIUM |
-| **TOTAL** | **2,050** | **15-20h** | **LOW** |
+| Component                                      | LOC        | Hours      | Risk        | Status         |
+| ---------------------------------------------- | ---------- | ---------- | ----------- | -------------- |
+| Step 1: Module Structure                       | 50         | 0.5h       | MINIMAL     | ✅ COMPLETE    |
+| Step 2: AnsiSequenceGenerator                  | 273        | 3-4h       | LOW         | ✅ COMPLETE    |
+| Step 3: RenderOpImplDirectAnsi                 | 447        | 4-5h       | LOW         | ⏳ IN PROGRESS |
+| **Step 4: OffscreenBufferPaintImplDirectAnsi** | **300**    | **1-2h**   | **MINIMAL** | **⏳ NEW**     |
+| Step 5: Backend Routing (3 files)              | 150        | 1-2h       | MINIMAL     | ⏳ PENDING     |
+| Step 6: Test Suites                            | 700        | 4-5h       | LOW         | ⏳ PENDING     |
+| Step 7: Cross-Platform Validation              | -          | 2-3h       | MEDIUM      | ⏳ PENDING     |
+| **TOTAL**                                      | **~1,920** | **16-22h** | **LOW**     | **Phase 2**    |
 
-**Timeline**: 5-7 business days (depending on testing thoroughness)
+**Timeline**: 2-3 weeks (3-4 hours/day)
+
+**Key Changes from Original Plan:**
+
+- ✅ Steps 1-2 already complete
+- 🆕 Added Step 4: OffscreenBufferPaintImplDirectAnsi (+1-2 hours)
+- 📊 Updated LOC estimates based on actual code analysis
+- ⏱️ Total effort increased by 1-2 hours (still LOW risk)
 
 ---
 
@@ -2178,7 +2386,8 @@ of backend incompatibility later.
 - Phase 2 development can begin immediately with crossterm validation layer in place
 
 - **Critical path**: Phase 1 (✅) → Phase 2 (→) → Phase 3 (→) → Phase 6 (→)
-- **Dependency resolved**: Phase 1 provides validated implementation foundation - Phase 2 implementation risk is eliminated
+- **Dependency resolved**: Phase 1 provides validated implementation foundation - Phase 2
+  implementation risk is eliminated
 
 ## Platform Compatibility
 
