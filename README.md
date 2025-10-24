@@ -704,6 +704,38 @@ env | grep CARGO_TARGET_DIR
 CARGO_TARGET_DIR=/tmp/test cargo build
 ```
 
+#### Incremental Compilation Management
+
+When using separate target directories with `check.fish`, incremental compilation can sometimes cause
+issues with the rustc dependency graph on nightly builds. The `check.fish` script automatically
+disables incremental compilation for its isolated builds to ensure stability:
+
+```fish
+# Configured in check.fish
+set -gx CARGO_INCREMENTAL 0
+```
+
+**Why disable incremental for check.fish?**
+
+- The nightly compiler occasionally has bugs with the dep graph in incremental mode
+- `check.fish` runs full test suites, which benefit less from incremental builds
+- The separate `target/check` directory means full rebuilds don't impact regular development
+- **Regular builds** (IDE, terminal) continue using incremental compilation for speed
+
+**If you encounter ICE errors** like "dep graph node does not have an unique index":
+
+```bash
+# Clear the corrupted cache
+rm -rf target/check
+cargo clean
+
+# check.fish will rebuild cleanly without incremental artifacts
+./check.fish
+```
+
+The `check.fish` script handles this automatically on ICE detection, so manual intervention is rarely
+needed.
+
 ### Bacon Development Tools
 
 This project includes [bacon](https://dystroy.org/bacon/) configuration for background code checking

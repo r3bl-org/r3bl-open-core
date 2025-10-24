@@ -24,6 +24,13 @@
 # - On ICE detection: cleans all caches, removes ICE dump files, and retries once
 # - Distinguishes between toolchain issues (ICE) vs code issues (compilation/test failures)
 #
+# Incremental Compilation Management:
+# - Disables incremental compilation for check.fish builds (set CARGO_INCREMENTAL=0)
+# - Rationale: Nightly rustc has occasional dep graph bugs in incremental mode
+# - Separate target/check directory means full rebuilds don't impact dev workflow
+# - Regular IDE/terminal builds continue using incremental compilation for speed
+# - If ICE occurs anyway (shouldn't), cleanup_after_ice removes corrupted incremental cache
+#
 # Desktop Notifications:
 # - Success: "Toolchain Installation Complete" (normal urgency)
 # - Failure: "Toolchain Installation Failed" (critical urgency)
@@ -87,6 +94,12 @@ set -g DEBOUNCE_SECONDS 5
 # lock on Claude Code, VSCode, or RustRoever (each of whom have their own
 # subfolder).
 set -gx CARGO_TARGET_DIR target/check
+
+# Disable incremental compilation for check.fish builds to avoid ICE with rustc dep graph.
+# The nightly compiler has a bug where the dep graph gets corrupted in incremental mode,
+# causing "mir_drops_elaborated_and_const_checked" dep node panics.
+# Full rebuilds in check.fish are acceptable since they run in a separate target dir.
+set -gx CARGO_INCREMENTAL 0
 
 # ============================================================================
 # Argument Parsing
