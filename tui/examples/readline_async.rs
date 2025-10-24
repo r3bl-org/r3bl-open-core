@@ -1,9 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use miette::{IntoDiagnostic, miette};
-use r3bl_tui::{InlineVec, OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
-               bold, fg_color, fg_red, fg_slate_gray, inline_string,
+use r3bl_tui::{InlineVec, LineStateControlSignal, OutputDevice, SendRawTerminal,
+               SharedWriter, SpinnerStyle, bold, fg_color, fg_red, fg_slate_gray,
+               inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
-               readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
+               readline_async::{CHANNEL_CAPACITY, Readline, ReadlineAsyncContext,
+                                ReadlineEvent, Spinner},
                rla_println, set_mimalloc_in_main, tui_color};
 use smallvec::smallvec;
 use std::{fs,
@@ -614,12 +616,43 @@ pub mod file_walker {
     }
 }
 
+/// Tests `file_walker::display_tree` with proper channel synchronization.
+///
+/// This test mirrors the production initialization order used in `Readline::try_new()`:
+/// 1. Create channel
+/// 2. Spawn receiver task (guarantees it's polling before any writes)
+/// 3. Create `SharedWriter`
+///
+/// This ordering prevents race conditions in `cargo nextest` where `SharedWriter` uses
+/// non-blocking `try_send()` that fails if the receiver isn't polling yet.
+///
+/// # Buffer Size
+///
+/// This test uses the production channel capacity of [`CHANNEL_CAPACITY`] (~100 KB),
+/// which is sized generously to handle burst traffic scenarios like this filesystem
+/// traversal that can easily generate thousands of messages rapidly.
+///
+/// [`CHANNEL_CAPACITY`]: crate::readline_async::CHANNEL_CAPACITY
 #[tokio::test]
 async fn test_display_tree() -> miette::Result<()> {
-    let (line_sender, mut line_receiver) = tokio::sync::mpsc::channel(1_000);
-    let mut shared_writer = SharedWriter::new(line_sender);
-
     let (path, _) = file_walker::get_current_working_directory()?;
+    let (line_sender, line_receiver) = tokio::sync::mpsc::channel(CHANNEL_CAPACITY);
+
+    let collector_task = tokio::spawn(async move {
+        let mut output_lines: Vec<String> = vec![];
+        let mut receiver = line_receiver;
+
+        while let Some(signal) = receiver.recv().await {
+            if let LineStateControlSignal::Line(it) = signal {
+                let string = String::from_utf8_lossy(it.as_ref()).to_string();
+                print!("{string}");
+                output_lines.push(string);
+            }
+        }
+        output_lines
+    });
+
+    let mut shared_writer = SharedWriter::new(line_sender);
 
     file_walker::display_tree(path, &mut shared_writer, false)
         .await
@@ -627,20 +660,8 @@ async fn test_display_tree() -> miette::Result<()> {
 
     assert_eq!(shared_writer.buffer.len(), 0);
 
-    // Print everything in line_receiver.
-    let mut output_lines: Vec<String> = vec![];
-    loop {
-        let it = line_receiver.try_recv().into_diagnostic();
-        match it {
-            Ok(r3bl_tui::LineStateControlSignal::Line(it)) => {
-                let string = String::from_utf8_lossy(it.as_ref()).to_string();
-                print!("{string}");
-                output_lines.push(string);
-            }
-            _ => break,
-        }
-    }
-
+    drop(shared_writer);
+    let output_lines = collector_task.await.unwrap();
     assert_ne!(output_lines.len(), 0);
 
     Ok(())

@@ -361,6 +361,14 @@ pub const DEFAULT_PAUSE_BUFFER_SIZE: usize = 128;
 pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;
 
 // Constants.
-pub const CHANNEL_CAPACITY: usize = 1_000;
+/// Channel buffer capacity for the readline async loop.
+///
+/// This is set to 2,500 to provide a ~100 KB buffer. Since each [`LineStateControlSignal`]
+/// message is approximately 40 bytes, 2,500 messages ≈ 100 KB of RAM. This generous
+/// buffer prevents `try_send()` failures during burst traffic scenarios, such as filesystem
+/// traversal operations that generate thousands of messages in rapid succession.
+///
+/// [`LineStateControlSignal`]: crate::LineStateControlSignal
+pub const CHANNEL_CAPACITY: usize = 2_500;
 pub const HISTORY_SIZE_MAX: usize = 1_000;
 
