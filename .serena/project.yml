@@ -6,7 +6,9 @@
 language: rust
 
 # Maximum characters for tool responses (especially search results)
+# raise the limit of search tool results
 max_answer_chars: 1000000
+default_max_tool_answer_chars: 1000000
 
 # whether to use the project's gitignore file to ignore files
 # Added on 2025-04-07
