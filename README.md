@@ -706,35 +706,33 @@ CARGO_TARGET_DIR=/tmp/test cargo build
 
 #### Incremental Compilation Management
 
-When using separate target directories with `check.fish`, incremental compilation can sometimes cause
-issues with the rustc dependency graph on nightly builds. The `check.fish` script automatically
-disables incremental compilation for its isolated builds to ensure stability:
+Incremental compilation is disabled globally (`incremental = false` in `.cargo/config.toml`) to avoid
+issues with the rustc dependency graph on nightly builds:
 
-```fish
-# Configured in check.fish
-set -gx CARGO_INCREMENTAL 0
+```toml
+# .cargo/config.toml
+[build]
+incremental = false  # Disable to avoid rustc dep graph ICE on nightly
 ```
 
-**Why disable incremental for check.fish?**
+**Why disable incremental compilation?**
 
-- The nightly compiler occasionally has bugs with the dep graph in incremental mode
-- `check.fish` runs full test suites, which benefit less from incremental builds
-- The separate `target/check` directory means full rebuilds don't impact regular development
-- **Regular builds** (IDE, terminal) continue using incremental compilation for speed
+- The nightly compiler has occasional bugs with the dependency graph in incremental mode
+- These bugs can cause Internal Compiler Errors (ICE) like "mir_drops_elaborated_and_const_checked"
+- Disabling it globally ensures stable builds across all cargo invocations
+- The performance impact is acceptable for development workflows
 
-**If you encounter ICE errors** like "dep graph node does not have an unique index":
+**If you encounter ICE errors anyway:**
 
 ```bash
-# Clear the corrupted cache
-rm -rf target/check
-cargo clean
+# Clear any corrupted incremental artifacts
+rm -rf target/check target/debug target/release
 
-# check.fish will rebuild cleanly without incremental artifacts
-./check.fish
+# Rebuild cleanly
+cargo check  # or cargo build, cargo test, etc.
 ```
 
-The `check.fish` script handles this automatically on ICE detection, so manual intervention is rarely
-needed.
+The `check.fish` script also explicitly sets `CARGO_INCREMENTAL=0` as a redundant safeguard.
 
 ### Bacon Development Tools
 

@@ -25,11 +25,11 @@
 # - Distinguishes between toolchain issues (ICE) vs code issues (compilation/test failures)
 #
 # Incremental Compilation Management:
-# - Disables incremental compilation for check.fish builds (set CARGO_INCREMENTAL=0)
+# - Incremental compilation is disabled globally in .cargo/config.toml
+# - This script also explicitly sets CARGO_INCREMENTAL=0 as a redundant safeguard
 # - Rationale: Nightly rustc has occasional dep graph bugs in incremental mode
-# - Separate target/check directory means full rebuilds don't impact dev workflow
-# - Regular IDE/terminal builds continue using incremental compilation for speed
-# - If ICE occurs anyway (shouldn't), cleanup_after_ice removes corrupted incremental cache
+# - Disabling globally prevents ICE across all cargo invocations
+# - If ICE occurs anyway (shouldn't), cleanup_after_ice removes corrupted artifacts
 #
 # Desktop Notifications:
 # - Success: "Toolchain Installation Complete" (normal urgency)
@@ -95,10 +95,10 @@ set -g DEBOUNCE_SECONDS 5
 # subfolder).
 set -gx CARGO_TARGET_DIR target/check
 
-# Disable incremental compilation for check.fish builds to avoid ICE with rustc dep graph.
-# The nightly compiler has a bug where the dep graph gets corrupted in incremental mode,
-# causing "mir_drops_elaborated_and_const_checked" dep node panics.
-# Full rebuilds in check.fish are acceptable since they run in a separate target dir.
+# Explicitly disable incremental compilation for check.fish (redundant safeguard).
+# Incremental is already disabled globally in .cargo/config.toml, but we set it here
+# for explicit clarity. The nightly compiler has a bug where the dep graph gets
+# corrupted in incremental mode, causing "mir_drops_elaborated_and_const_checked" panics.
 set -gx CARGO_INCREMENTAL 0
 
 # ============================================================================
