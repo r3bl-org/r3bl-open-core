@@ -64,7 +64,6 @@ Table of contents:
     - [Option 2: Comprehensive Tmux Dashboard](#option-2-comprehensive-tmux-dashboard)
   - [Tmux Development Dashboard](#tmux-development-dashboard)
   - [Status Monitoring Scripts](#status-monitoring-scripts)
-  - [Build Cache (using sccache) Verification](#build-cache-using-sccache-verification)
   - [Wild Linker (Linux)](#wild-linker-linux)
   - [Rust Toolchain Management](#rust-toolchain-management)
     - [Why mkdir for Locking?](#why-mkdir-for-locking)
@@ -419,7 +418,7 @@ fish run.fish install-cargo-tools
 
 - **cargo-binstall**: Fast binary installer (installed first as foundation)
 - **uv**: Modern Python package manager (required for Serena semantic code MCP server)
-- **Core Development Tools**: bacon, cargo-nextest, flamegraph, inferno, sccache
+- **Core Development Tools**: bacon, cargo-nextest, flamegraph, inferno
 - **Workspace Management**: cargo-workspaces, cargo-cache, cargo-update
 - **Code Quality**: cargo-deny, cargo-unmaintained, cargo-expand, cargo-readme
 - **Wild Linker**: Fast linker with optimized .cargo/config.toml generation
@@ -540,7 +539,7 @@ Other commands:
 | `fish run.fish all`                         | Run all major checks (build, test, clippy, docs, audit, format)                                 |
 | `fish run.fish build`                       | Build the entire workspace                                                                      |
 | `fish run.fish test`                        | Run all tests across the workspace                                                              |
-| `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, nextest, Wild linker, sccache, etc.) |
+| `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, nextest, Wild linker, etc.) |
 | `fish run.fish watch-all-tests`             | Watch for file changes and run tests automatically                                              |
 | `fish run.fish run-examples`                | Run TUI examples interactively                                                                  |
 | `fish run.fish run-binaries`                | Run cmdr binaries (edi, giti, rc) interactively                                                 |
@@ -629,7 +628,7 @@ In RustRover, you can go to "Settings -> Rust -> Environment Variables" and add 
 | **Responsive IDE**   | rust-analyzer completes checks while you code (not blocked by file watcher) |
 | **Faster Feedback**  | Terminal cargo commands complete instantly (not queued behind IDE checks)   |
 | **Parallel Testing** | bacon + check.fish both run, providing redundant test feedback              |
-| **Disk Space**       | ~2-3GB per tool (manageable with sccache + cleanup)                         |
+| **Disk Space**       | ~2-3GB per tool (manageable with cleanup)                                   |
 
 #### Example Workflow Setup
 
@@ -656,8 +655,7 @@ lock.
 
 #### Disk Space Management
 
-Each tool caches ~2-3GB of build artifacts. With 4 tools, expect ~10-12GB total (plus ~5GB for
-sccache). To manage:
+Each tool caches ~2-3GB of build artifacts. With 4 tools, expect ~10-12GB total. To manage:
 
 ```bash
 # View size of each target directory
@@ -671,10 +669,6 @@ rm -rf target/check
 
 # Full cleanup (nuclear option)
 rm -rf target/
-
-# Clear sccache
-sccache --zero-stats
-rm -rf ~/.cache/sccache
 ```
 
 #### Troubleshooting
@@ -991,36 +985,6 @@ provide at-a-glance status indicators in your GNOME top bar.
 These scripts provide the same underlying functionality as the bacon workflows but with radically
 different output designed for external consumption rather than developer interaction.
 
-### Build Cache (using sccache) Verification
-
-This project uses [sccache](https://github.com/mozilla/sccache) to speed up Rust compilation by
-caching build artifacts (configured in the `.cargo/config.toml` file). After running
-`fish run.fish install-cargo-tools`, you can verify sccache is working:
-
-```sh
-sccache --show-stats
-# Copy to clipboard for easy sharing
-sccache --show-status 2>&1 | setclip
-```
-
-This will display cache hit rates and storage information. Higher cache hit percentages indicate
-faster builds through cached compilation results.
-
-To reset the cache, you can run:
-
-```sh
-# Complete reset
-sccache --zero-stats
-sccache --stop-server
-rm -rf ~/.cache/sccache
-
-# Server starts automatically on next use
-cargo build  # or sccache --show-stats
-```
-
-There is no need to restart the server, as it is designed to be "lazy". And running `cargo build` or
-`sccache --show-stats` will automatically start the server if it is stopped.
-
 ### Wild Linker (Linux)
 
 This project uses the [Wild linker](https://github.com/davidlattimore/wild) as a fast alternative to
@@ -1181,7 +1145,7 @@ fish run.fish toolchain-update
   - The newly validated nightly
 - **Final verification with fresh build**:
   - Removes ICE failure files (`rustc-ice-*.txt`) generated during validation
-  - Cleans all caches: cargo cache, build artifacts, sccache
+  - Cleans all caches: cargo cache, build artifacts
   - Runs full verification: tests, doctests, and documentation build
   - Ensures new toolchain works perfectly from scratch
 - Logs all operations to `/home/nazmul/Downloads/rust-toolchain-update.log`

@@ -299,7 +299,6 @@ end
 # - cargo-nextest: Next-generation test runner
 # - flamegraph: Performance profiling visualization
 # - inferno: Fast stack trace visualizer
-# - sccache: Shared compilation cache for faster builds
 # - wild: Fast linker (wild-linker package)
 # - rust-analyzer: Language server
 #
@@ -327,8 +326,7 @@ function install-cargo-tools
         "cargo-readme" \
         "cargo-nextest" \
         "flamegraph" \
-        "inferno" \
-        "sccache"
+        "inferno"
 
     for tool in $cargo_tools
         install_cargo_tool $tool

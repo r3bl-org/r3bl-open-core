@@ -30,7 +30,7 @@ source script_lib.fish
 #
 # Final Verification:
 # - Remove ICE failure files (rustc-ice-*.txt) generated during validation
-# - Clean all caches: cargo cache, build artifacts (cargo clean), sccache
+# - Clean all caches: cargo cache, build artifacts (cargo clean)
 # - Run full verification build with new toolchain:
 #   - cargo nextest run --all-targets
 #   - cargo test --doc
@@ -151,27 +151,6 @@ function clean_and_verify_build
     log_message ""
     if not log_command_output "Running cargo clean..." cargo clean
         log_message "⚠️  cargo clean failed (non-critical)"
-    end
-
-    # Clear sccache
-    log_message ""
-    log_message "Clearing sccache..."
-    if command -v sccache >/dev/null 2>&1
-        if not log_command_output "Running sccache --zero-stats..." sccache --zero-stats
-            log_message "⚠️  sccache --zero-stats failed (non-critical)"
-        end
-        if not log_command_output "Running sccache --stop-server..." sccache --stop-server
-            log_message "⚠️  sccache --stop-server failed (non-critical)"
-        end
-        # Remove sccache cache directory
-        set -l sccache_dir ~/.cache/sccache
-        if test -d $sccache_dir
-            log_message "Removing sccache cache directory: $sccache_dir"
-            rm -rf $sccache_dir
-            log_message "✅ sccache cache directory removed"
-        end
-    else
-        log_message "⚠️  sccache not installed, skipping sccache cleanup"
     end
 
     log_message ""

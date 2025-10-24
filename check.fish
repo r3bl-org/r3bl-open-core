@@ -703,7 +703,6 @@ function cleanup_after_ice
     # Clean cargo caches and build artifacts
     cargo cache -r all
     cargo clean
-    sccache --stop-server 2>/dev/null
 
     echo "✨ Cleanup complete. Retrying checks..."
     echo ""

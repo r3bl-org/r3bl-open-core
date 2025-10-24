@@ -106,7 +106,6 @@ end
 # Generates cargo configuration based on available tools.
 #
 # This function creates a .cargo/config.toml file with optimized build settings:
-# - Uses sccache for faster compilation via build caching
 # - Enables parallel frontend compilation with 8 threads
 # - Configures Wild linker when both clang and wild are available
 # - Falls back to standard parallel compilation if Wild linker unavailable
@@ -118,7 +117,6 @@ end
 # - Clear user feedback about configuration choices
 #
 # Prerequisites:
-# - sccache should be installed for build caching
 # - clang and wild should be installed for optimal linking performance
 #
 # Usage:
@@ -126,9 +124,8 @@ end
 function generate_cargo_config
     echo "Generating cargo configuration..."
 
-    # Base configuration with sccache and parallel compilation
+    # Base configuration with parallel compilation
     echo '[build]
-rustc-wrapper = "sccache"
 rustflags = ["-Z", "threads=8"]  # Parallel frontend compiler' > .cargo/config.toml
 
     # Add Wild linker configuration if both clang and wild are available
