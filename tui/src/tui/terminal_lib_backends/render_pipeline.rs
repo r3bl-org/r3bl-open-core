@@ -1,7 +1,7 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{ZOrder, paint::paint, render_op::RenderOp};
-use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOps, ok,
+use super::{ZOrder, paint::paint};
+use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOpsIR, ok,
             tui::DEBUG_TUI_SHOW_PIPELINE_EXPANDED};
 use smallvec::smallvec;
 use std::{collections::{HashMap, hash_map::Entry},
@@ -17,7 +17,7 @@ use std::{collections::{HashMap, hash_map::Entry},
 /// 3. [`get_render_order()`](ZOrder::get_render_order) contains the priority that is used
 ///    to paint the different groups of [`RenderOp`] items.
 ///
-/// This adds given [`RenderOp`]s to a [`RenderOps`] and adds that the the pipeline, but
+/// This adds given [`RenderOp`]s to a [`RenderOpsIR`] and adds that the the pipeline, but
 /// does not flush anything. It will return a [`RenderPipeline`].
 ///
 /// Here's an example.
@@ -73,7 +73,7 @@ macro_rules! render_pipeline {
     ) => {
         /* Enclose the expansion in a block so that we can use multiple statements. */
         {
-        let mut render_ops = $crate::RenderOps::default();
+        let mut render_ops = $crate::RenderOpsIR::default();
         /* Start a repetition. */
         $(
             /* Each repeat will contain the following statement, with $arg_render_op replaced. */
@@ -92,7 +92,7 @@ macro_rules! render_pipeline {
         at $arg_z_order: expr
         => $($arg_render_op: expr),+
     ) => {
-        let mut render_ops = $crate::RenderOps::default();
+        let mut render_ops = $crate::RenderOpsIR::default();
         $(
         /* Each repeat will contain the following statement, with $arg_render_op replaced. */
         render_ops.push($arg_render_op);
@@ -121,13 +121,13 @@ macro_rules! render_pipeline {
         at $arg_z_order: expr
         => $arg_styled_texts: expr
       ) => {
-        let mut render_ops = $crate::RenderOps::default();
+        let mut render_ops = $crate::RenderOpsIR::default();
         $crate::render_tui_styled_texts_into(&$arg_styled_texts, &mut render_ops);
         $arg_pipeline.push($arg_z_order, render_ops);
       };
 }
 
-type PipelineMap = HashMap<ZOrder, InlineVec<RenderOps>>;
+type PipelineMap = HashMap<ZOrder, InlineVec<RenderOpsIR>>;
 
 /// See [`render_pipeline`!] for the documentation. Also consider using it instead of this
 /// struct directly for convenience.
@@ -138,14 +138,22 @@ type PipelineMap = HashMap<ZOrder, InlineVec<RenderOps>>;
 /// use r3bl_tui::*;
 ///
 /// let mut pipeline = render_pipeline!();
-/// pipeline.push(ZOrder::Normal, render_ops!(@new RenderOp::ClearScreen));
-/// pipeline.push(ZOrder::Glass, render_ops!(@new RenderOp::ClearScreen));
+/// pipeline.push(ZOrder::Normal, {
+///     let mut ops = RenderOpsIR::new();
+///     ops.push(RenderOpIR::Common(RenderOpCommon::ClearScreen));
+///     ops
+/// });
+/// pipeline.push(ZOrder::Glass, {
+///     let mut ops = RenderOpsIR::new();
+///     ops.push(RenderOpIR::Common(RenderOpCommon::ClearScreen));
+///     ops
+/// });
 /// let len = pipeline.len();
 /// let iter = pipeline.iter();
 /// ```
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct RenderPipeline {
-    /// [`RenderOps`] to paint for each [`ZOrder`].
+    /// [`RenderOpsIR`] to paint for each [`ZOrder`].
     pub pipeline_map: PipelineMap,
 }
 
@@ -168,8 +176,8 @@ impl RenderPipeline {
         }
     }
 
-    /// Add the given [`RenderOps`] to the pipeline at the given [`ZOrder`].
-    pub fn push(&mut self, z_order: ZOrder, render_ops: RenderOps) {
+    /// Add the given [`RenderOpsIR`] to the pipeline at the given [`ZOrder`].
+    pub fn push(&mut self, z_order: ZOrder, render_ops: RenderOpsIR) {
         match self.pipeline_map.entry(z_order) {
             // Insert render_ops into existing set.
             Entry::Occupied(mut existing_entry) => {
@@ -183,19 +191,17 @@ impl RenderPipeline {
         }
     }
 
-    /// At the given [`ZOrder`] there can be a [`InlineVec`] of [`RenderOps`]. Grab
-    /// all the [`RenderOps`] in the set, get all their [`RenderOp`] and return them in a
-    /// [`InlineVec`].
+    /// At the given [`ZOrder`] there can be a [`InlineVec`] of [`RenderOpsIR`]. Grab
+    /// Count all the render operations in the set for the given z_order.
+    /// Returns the total count of all individual RenderOpIR operations across all collections.
     #[must_use]
-    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<InlineVec<RenderOp>> {
+    pub fn get_all_render_op_in(&self, z_order: ZOrder) -> Option<usize> {
         let vec_render_ops = self.pipeline_map.get(&z_order)?;
-        let mut vec_render_op: InlineVec<RenderOp> = smallvec![];
+        let mut total_count = 0;
         for render_ops in vec_render_ops {
-            for render_op in render_ops.iter() {
-                vec_render_op.push(render_op.clone());
-            }
+            total_count += render_ops.len();
         }
-        Some(vec_render_op)
+        Some(total_count)
     }
 
     pub fn paint<S, AS>(
@@ -212,7 +218,7 @@ impl RenderPipeline {
         // FUTURE: support termion, along w/ crossterm, by providing another impl of this
     }
 
-    /// Move the [`RenderOps`] in the 'from' [`ZOrder`] (in self) to the 'to' [`ZOrder`]
+    /// Move the [`RenderOpsIR`] in the 'from' [`ZOrder`] (in self) to the 'to' [`ZOrder`]
     /// (in self).
     pub fn hoist(&mut self, z_order_from: ZOrder, z_order_to: ZOrder) {
         // If the 'from' [ZOrder] is not in the pipeline, then there's nothing to do.
@@ -220,7 +226,7 @@ impl RenderPipeline {
             return;
         }
 
-        // Move the [RenderOps] from the 'from' [ZOrder] to the 'to' [ZOrder].
+        // Move the [RenderOpsIR] from the 'from' [ZOrder] to the 'to' [ZOrder].
         let mut from = self.pipeline_map.remove(&z_order_from).unwrap_or_default();
 
         match self.pipeline_map.entry(z_order_to) {
@@ -261,7 +267,7 @@ impl Debug for RenderPipeline {
             if DEBUG_TUI_SHOW_PIPELINE_EXPANDED {
                 write!(f, "[{z_order:?}] {vec_render_ops:?}")?;
             } else {
-                write!(f, "[{z_order:?}] {:?} RenderOps", vec_render_ops.len())?;
+                write!(f, "[{z_order:?}] {:?} RenderOpsIR", vec_render_ops.len())?;
             }
         }
 

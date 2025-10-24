@@ -6,13 +6,12 @@ use r3bl_tui::{Animator, Ansi256GradientIndex, App, BoxedSafeApp, ColorChangeSpe
                ColorWheel, ColorWheelConfig, ColorWheelSpeed, Colorize, CommonResult,
                ComponentRegistryMap, EventPropagation, GCStringOwned, GlobalData,
                GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec,
-               InputEvent, Key, KeyPress, LengthOps, LolcatBuilder, RenderOp,
-               RenderPipeline, SPACER_GLYPH, Size, SpecialKey,
+               InputEvent, Key, KeyPress, LengthOps, LolcatBuilder, RenderOpCommon,
+               RenderOpIR, RenderOpsIR, RenderPipeline, SPACER_GLYPH, Size, SpecialKey,
                TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
                defaults::get_default_gradient_stops, glyphs, height, inline_string,
-               new_style, render_ops, render_pipeline, render_tui_styled_texts_into,
-               row, send_signal, throws_with_return, tui_color, tui_styled_text,
-               tui_styled_texts, width};
+               new_style, render_pipeline, render_tui_styled_texts_into, row, send_signal,
+               throws_with_return, tui_color, tui_styled_text, tui_styled_texts, width};
 use smallvec::smallvec;
 use tokio::{sync::mpsc::Sender, time::Duration};
 
@@ -357,10 +356,8 @@ mod app_main_impl_trait_app {
                 let mut pipeline = render_pipeline!();
 
                 pipeline.push(ZOrder::Normal, {
-                    let mut acc_render_ops = render_ops! {
-                        @new
-                        RenderOp::ResetColor,
-                    };
+                    let mut acc_render_ops = RenderOpsIR::new();
+                    acc_render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
 
                     // Render many rows using color_wheel_ansi_vec.
                     for color_wheel_index in 0..data.color_wheel_ansi_vec.len() {
@@ -380,8 +377,7 @@ mod app_main_impl_trait_app {
 
                         let text_gcs = text.into();
 
-                        acc_render_ops +=
-                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
+                        acc_render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx)));
 
                         let texts = color_wheel.colorize_into_styled_texts(
                             &text_gcs,
@@ -395,8 +391,7 @@ mod app_main_impl_trait_app {
 
                     // Render 1 row using color_wheel_rgb.
                     {
-                        acc_render_ops +=
-                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
+                        acc_render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx)));
 
                         let text = {
                             let index = data.color_wheel_rgb.get_index();
@@ -423,8 +418,7 @@ mod app_main_impl_trait_app {
 
                     // Render 1 row using lolcat_fg.
                     {
-                        acc_render_ops +=
-                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
+                        acc_render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx)));
 
                         let text = {
                             inline_string!("{state_string}, gradient: [index: _, len: _]")
@@ -444,8 +438,7 @@ mod app_main_impl_trait_app {
 
                     // Render 1 row using lolcat_bg.
                     {
-                        acc_render_ops +=
-                            RenderOp::MoveCursorPositionAbs(col_idx + row_idx);
+                        acc_render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col_idx + row_idx)));
 
                         let text = {
                             inline_string!("{state_string}, gradient: [index: _, len: _]")
@@ -506,16 +499,16 @@ mod hud {
         let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
-        let mut render_ops = render_ops!();
-        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::SetBgColor(color_bg));
-        render_ops.push(RenderOp::PaintTextWithAttributes(
+        let mut render_ops = RenderOpsIR::new();
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx)));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(color_bg)));
+        render_ops.push(RenderOpIR::PaintTextWithAttributes(
             SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
             None,
         ));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(cursor)));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
@@ -561,16 +554,16 @@ mod status_bar {
         let row_idx = size.row_height.convert_to_index(); /* Bottom row */
         let cursor = col_idx + row_idx;
 
-        let mut render_ops = render_ops!();
-        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::SetBgColor(color_bg));
-        render_ops.push(RenderOp::PaintTextWithAttributes(
+        let mut render_ops = RenderOpsIR::new();
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx)));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(color_bg)));
+        render_ops.push(RenderOpIR::PaintTextWithAttributes(
             SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
             None,
         ));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(cursor)));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }

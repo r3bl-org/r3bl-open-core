@@ -1,17 +1,16 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DebugFormatRenderOp, RenderOp,
-            RenderOp::{ApplyColors, ClearCurrentLine, ClearScreen, ClearToEndOfLine,
-                       ClearToStartOfLine,
-                       CompositorNoClipTruncPaintTextWithAttributes,
-                       DisableBracketedPaste, DisableMouseTracking,
-                       EnableBracketedPaste, EnableMouseTracking, EnterAlternateScreen,
-                       EnterRawMode, ExitAlternateScreen, ExitRawMode, HideCursor,
-                       MoveCursorPositionAbs, MoveCursorPositionRelTo,
-                       MoveCursorToColumn, MoveCursorToNextLine,
-                       MoveCursorToPreviousLine, Noop, PaintTextWithAttributes,
-                       PrintStyledText, ResetColor, RestoreCursorPosition,
-                       SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor},
+use crate::{DebugFormatRenderOp, RenderOpCommon,
+            RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen, ClearToEndOfLine,
+                             ClearToStartOfLine,
+                             DisableBracketedPaste, DisableMouseTracking,
+                             EnableBracketedPaste, EnableMouseTracking, EnterAlternateScreen,
+                             EnterRawMode, ExitAlternateScreen, ExitRawMode, HideCursor,
+                             MoveCursorPositionAbs, MoveCursorPositionRelTo,
+                             MoveCursorToColumn, MoveCursorToNextLine,
+                             MoveCursorToPreviousLine, Noop, PrintStyledText, ResetColor,
+                             RestoreCursorPosition, SaveCursorPosition, SetBgColor, SetFgColor,
+                             ShowCursor},
             TuiStyle};
 use std::fmt::{Formatter, Result};
 
@@ -19,7 +18,7 @@ use std::fmt::{Formatter, Result};
 pub struct CrosstermDebugFormatRenderOp;
 
 impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
-    fn fmt_debug(&self, this: &RenderOp, f: &mut Formatter<'_>) -> Result {
+    fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result {
         match this {
             Noop => f.write_str("Noop"),
             EnterRawMode => f.write_str("EnterRawMode"),
@@ -43,11 +42,8 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
                 f,
                 "MoveCursorPositionRelTo({box_origin_pos:?}, {content_rel_pos:?})"
             ),
-            CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
-                format_print_text(f, "Compositor..PrintText...", text, *maybe_style)
-            }
-            PaintTextWithAttributes(text, maybe_style) => {
-                format_print_text(f, "PrintTextWithAttributes", text, *maybe_style)
+            PrintStyledText(text) => {
+                write!(f, "PrintStyledText({} bytes)", text.len())
             }
             // ===== Incremental Rendering Operations (Phase 1) =====
             MoveCursorToColumn(col_index) => {
@@ -62,9 +58,6 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
             ClearCurrentLine => f.write_str("ClearCurrentLine"),
             ClearToEndOfLine => f.write_str("ClearToEndOfLine"),
             ClearToStartOfLine => f.write_str("ClearToStartOfLine"),
-            PrintStyledText(text) => {
-                write!(f, "PrintStyledText({} bytes)", text.len())
-            }
             ShowCursor => f.write_str("ShowCursor"),
             HideCursor => f.write_str("HideCursor"),
             SaveCursorPosition => f.write_str("SaveCursorPosition"),
@@ -77,6 +70,22 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
             EnableBracketedPaste => f.write_str("EnableBracketedPaste"),
             DisableBracketedPaste => f.write_str("DisableBracketedPaste"),
         }
+    }
+}
+
+// Helper for formatting OutputOp's CompositorNoClipTruncPaintTextWithAttributes
+pub fn format_output_paint_text(
+    f: &mut Formatter<'_>,
+    text: &str,
+    maybe_style: Option<TuiStyle>,
+) -> Result {
+    f.write_str("Compositor..PrintText...")?;
+    f.write_str("(")?;
+    write!(f, "{}", text.len())?;
+    f.write_str(" bytes, ")?;
+    match maybe_style {
+        Some(style) => write!(f, "{style:?})"),
+        None => f.write_str("None)"),
     }
 }
 

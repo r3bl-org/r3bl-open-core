@@ -1,9 +1,9 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, Flush, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
-            OffscreenBufferPaint, PixelChar, RenderOp, RenderOps, RowIndex, Size,
-            TuiStyle, ch, col, diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH,
-            render_ops, row};
+            OffscreenBufferPaint, PaintRenderOpImplCrossterm, PixelChar, RenderOpCommon,
+            RenderOpIR, RenderOpsIR, RowIndex, Size, TuiStyle, ch, col,
+            diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH, row};
 
 #[derive(Debug)]
 pub struct OffscreenBufferPaintImplCrossterm;
@@ -11,7 +11,7 @@ pub struct OffscreenBufferPaintImplCrossterm;
 impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     fn paint(
         &mut self,
-        render_ops: RenderOps,
+        render_ops: RenderOpsIR,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
@@ -20,7 +20,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         let mut skip_flush = false;
 
         if let FlushKind::ClearBeforeFlush = flush_kind {
-            RenderOp::default().clear_before_flush(locked_output_device);
+            PaintRenderOpImplCrossterm.clear_before_flush(locked_output_device);
         }
 
         // Execute each RenderOp.
@@ -33,7 +33,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush(locked_output_device);
+            PaintRenderOpImplCrossterm.flush(locked_output_device);
         }
 
         // Debug output.
@@ -48,7 +48,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
     fn paint_diff(
         &mut self,
-        render_ops: RenderOps,
+        render_ops: RenderOpsIR,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
@@ -65,7 +65,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
         // Flush everything to the terminal.
         if !skip_flush {
-            RenderOp::default().flush(locked_output_device);
+            PaintRenderOpImplCrossterm.flush(locked_output_device);
         }
 
         // Debug output.
@@ -78,8 +78,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    /// Process each [`PixelChar`] in [`OffscreenBuffer`] and generate a [`RenderOp`] for
-    /// it. Return a [`RenderOps`] containing all the [`RenderOp`]s.
+    /// Process each [`PixelChar`] in [`OffscreenBuffer`] and generate a [`RenderOpIR`] for
+    /// it. Return a [`RenderOpsIR`] containing all the [`RenderOpIR`]s.
     ///
     /// > Note that each [PixelChar] gets the full [TuiStyle] embedded in it (not just a
     /// > part of it that is different than the previous char). This means that it is
@@ -96,7 +96,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ///   - Make sure to flush at the:
     ///     - End of line.
     ///     - When style changes.
-    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOps {
+    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpsIR {
         use render_helper::Context;
 
         let mut context = Context::new();
@@ -134,16 +134,16 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
                 // Deal w/: fg and bg colors | text attrib style.
                 if is_first_loop_iteration || !is_style_same_as_prev {
-                    context.render_ops.push(RenderOp::ResetColor);
+                    context.render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
                     if let Some(style) = pixel_char_style
                         && let Some(color) = style.color_fg
                     {
-                        context.render_ops.push(RenderOp::SetFgColor(color));
+                        context.render_ops.push(RenderOpIR::Common(RenderOpCommon::SetFgColor(color)));
                     }
                     if let Some(style) = pixel_char_style
                         && let Some(color) = style.color_bg
                     {
-                        context.render_ops.push(RenderOp::SetBgColor(color));
+                        context.render_ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(color)));
                     }
                     // Update prev_style.
                     context.prev_style = pixel_char_style;
@@ -168,7 +168,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         context.render_ops
     }
 
-    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
+    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOpsIR {
         DEBUG_TUI_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
@@ -177,15 +177,15 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             );
         });
 
-        let mut it = render_ops!();
+        let mut it = RenderOpsIR::new();
 
         for (position, pixel_char) in diff_chunks.iter() {
-            it.push(RenderOp::MoveCursorPositionAbs(*position));
-            it.push(RenderOp::ResetColor);
+            it.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(*position)));
+            it.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
             match pixel_char {
                 PixelChar::Void => { /* continue */ }
                 PixelChar::Spacer => {
-                    it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+                    it.push(RenderOpIR::PaintTextWithAttributes(
                         SPACER_GLYPH.into(),
                         None,
                     ));
@@ -195,8 +195,8 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
                     style,
                     ..
                 } => {
-                    it.push(RenderOp::ApplyColors(Some(*style)));
-                    it.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+                    it.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(Some(*style))));
+                    it.push(RenderOpIR::PaintTextWithAttributes(
                         InlineString::from_str(&display_char.to_string()),
                         Some(*style),
                     ));
@@ -218,7 +218,7 @@ mod render_helper {
         pub display_row_index: RowIndex,
         pub buffer_plain_text: InlineString,
         pub prev_style: Option<TuiStyle>,
-        pub render_ops: RenderOps,
+        pub render_ops: RenderOpsIR,
     }
 
     impl Context {
@@ -226,7 +226,7 @@ mod render_helper {
             Context {
                 display_col_index_for_line: col(0),
                 buffer_plain_text: InlineString::new(),
-                render_ops: render_ops!(),
+                render_ops: RenderOpsIR::new(),
                 display_row_index: row(0),
                 prev_style: None,
             }
@@ -272,18 +272,18 @@ mod render_helper {
     }
 
     pub fn flush_plain_text_line_buffer(context: &mut Context) {
-        // Generate `RenderOps` for each `PixelChar` and add it to `render_ops`.
+        // Generate `RenderOpsIR` for each `PixelChar` and add it to `render_ops`.
         let pos = context.display_col_index_for_line + context.display_row_index;
 
         // Deal w/ position.
         context
             .render_ops
-            .push(RenderOp::MoveCursorPositionAbs(pos));
+            .push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos)));
 
         // Deal w/ style attribs & actually paint the `temp_line_buffer`.
         context
             .render_ops
-            .push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+            .push(RenderOpIR::PaintTextWithAttributes(
                 context.buffer_plain_text.clone(),
                 context.prev_style,
             ));
@@ -381,41 +381,41 @@ mod tests {
         // - [PrintTextWithAttributes(10 bytes, None)]
 
         assert_eq2!(render_ops.len(), 10);
-        assert_eq2!(render_ops[0], RenderOp::ResetColor);
-        assert_eq2!(render_ops[1], RenderOp::SetFgColor(tui_color!(green)));
-        assert_eq2!(render_ops[2], RenderOp::SetBgColor(tui_color!(blue)));
+        assert_eq2!(render_ops[0], RenderOpIR::Common(RenderOpCommon::ResetColor));
+        assert_eq2!(render_ops[1], RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green))));
+        assert_eq2!(render_ops[2], RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue))));
         assert_eq2!(
             render_ops[3],
-            RenderOp::MoveCursorPositionAbs(col(0) + row(0))
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row(0)))
         );
         assert_eq2!(
             render_ops[4],
-            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+            RenderOpIR::PaintTextWithAttributes(
                 "hello1234".into(),
                 Some(
                     new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
                 )
             )
         );
-        assert_eq2!(render_ops[5], RenderOp::ResetColor);
+        assert_eq2!(render_ops[5], RenderOpIR::Common(RenderOpCommon::ResetColor));
         assert_eq2!(
             render_ops[6],
-            RenderOp::MoveCursorPositionAbs(col(9) + row(0))
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(9) + row(0)))
         );
         assert_eq2!(
             render_ops[7],
-            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+            RenderOpIR::PaintTextWithAttributes(
                 SPACER_GLYPH.into(),
                 None
             )
         );
         assert_eq2!(
             render_ops[8],
-            RenderOp::MoveCursorPositionAbs(col(0) + row(1))
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row(1)))
         );
         assert_eq2!(
             render_ops[9],
-            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
+            RenderOpIR::PaintTextWithAttributes(
                 (SPACER_GLYPH.repeat(10)).into(),
                 None
             )

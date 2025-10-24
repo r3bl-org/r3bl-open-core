@@ -2,16 +2,14 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{InlineVec, RenderOp, RenderPipeline, ZOrder, assert_eq2, render_ops,
-                render_pipeline};
-    use smallvec::smallvec;
+    use crate::{RenderOpCommon, RenderOpIR, RenderOpsIR,
+                RenderPipeline, ZOrder, assert_eq2, render_pipeline};
 
     #[test]
     fn render_ops_macro() {
-        let render_ops = render_ops!(
-          @new
-          RenderOp::ClearScreen, RenderOp::ResetColor
-        );
+        let mut render_ops = RenderOpsIR::new();
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ClearScreen));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
         assert_eq2!(render_ops.len(), 2);
     }
 
@@ -23,22 +21,17 @@ mod tests {
         render_pipeline!(
           @push_into pipeline
           at ZOrder::Normal =>
-            RenderOp::ClearScreen,
-            RenderOp::ResetColor
+            RenderOpIR::Common(RenderOpCommon::ClearScreen),
+            RenderOpIR::Common(RenderOpCommon::ResetColor)
         );
         assert_eq2!(pipeline.len(), 1);
 
         let render_ops_set = pipeline.get(&ZOrder::Normal).unwrap();
         assert_eq2!(render_ops_set.len(), 1);
 
-        let render_op_vec = pipeline.get_all_render_op_in(ZOrder::Normal).unwrap();
+        let render_op_count = pipeline.get_all_render_op_in(ZOrder::Normal).unwrap();
 
-        assert_eq2!(render_op_vec.len(), 2);
-        assert_eq2!(render_op_vec, {
-            let expected: InlineVec<RenderOp> =
-                smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
-            expected
-        });
+        assert_eq2!(render_op_count, 2);
     }
 
     #[test]
@@ -47,24 +40,17 @@ mod tests {
         let pipeline_1: RenderPipeline = {
             let mut it = render_pipeline!(@new ZOrder::Normal
               =>
-                RenderOp::ClearScreen,
-                RenderOp::ResetColor
+                RenderOpIR::Common(RenderOpCommon::ClearScreen),
+                RenderOpIR::Common(RenderOpCommon::ResetColor)
             );
 
             render_pipeline!(@push_into it at ZOrder::High =>
-              RenderOp::ResetColor
+              RenderOpIR::Common(RenderOpCommon::ResetColor)
             );
 
-            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), {
-                let expected: InlineVec<RenderOp> =
-                    smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
-                expected
-            });
+            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), 2);
 
-            assert_eq2!(it.get_all_render_op_in(ZOrder::High).unwrap(), {
-                let expected: InlineVec<RenderOp> = smallvec![RenderOp::ResetColor];
-                expected
-            });
+            assert_eq2!(it.get_all_render_op_in(ZOrder::High).unwrap(), 1);
 
             it
         };
@@ -73,15 +59,11 @@ mod tests {
         let pipeline_2: RenderPipeline = {
             let it = render_pipeline!(@new ZOrder::Normal
               =>
-                RenderOp::ClearScreen,
-                RenderOp::ResetColor
+                RenderOpIR::Common(RenderOpCommon::ClearScreen),
+                RenderOpIR::Common(RenderOpCommon::ResetColor)
             );
 
-            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), {
-                let expected: InlineVec<RenderOp> =
-                    smallvec![RenderOp::ClearScreen, RenderOp::ResetColor];
-                expected
-            });
+            assert_eq2!(it.get_all_render_op_in(ZOrder::Normal).unwrap(), 2);
 
             it
         };
@@ -100,22 +82,11 @@ mod tests {
                 pipeline_merged
                     .get_all_render_op_in(ZOrder::Normal)
                     .unwrap(),
-                {
-                    let expected: InlineVec<RenderOp> = smallvec![
-                        RenderOp::ClearScreen,
-                        RenderOp::ResetColor,
-                        RenderOp::ClearScreen,
-                        RenderOp::ResetColor
-                    ];
-                    expected
-                }
+                4
             );
             assert_eq2!(
                 pipeline_merged.get_all_render_op_in(ZOrder::High).unwrap(),
-                {
-                    let expected: InlineVec<RenderOp> = smallvec![RenderOp::ResetColor];
-                    expected
-                }
+                1
             );
 
             pipeline_merged
@@ -127,8 +98,8 @@ mod tests {
         let mut pipeline = render_pipeline!();
 
         render_pipeline!(@push_into pipeline at ZOrder::Normal =>
-          RenderOp::ClearScreen,
-          RenderOp::ResetColor
+          RenderOpIR::Common(RenderOpCommon::ClearScreen),
+          RenderOpIR::Common(RenderOpCommon::ResetColor)
         );
 
         pipeline.hoist(ZOrder::Normal, ZOrder::Glass);
@@ -136,7 +107,7 @@ mod tests {
         assert_eq2!(pipeline.len(), 1);
         assert_eq2!(pipeline.get(&ZOrder::Normal), None);
         assert_eq2!(
-            pipeline.get_all_render_op_in(ZOrder::Glass).unwrap().len(),
+            pipeline.get_all_render_op_in(ZOrder::Glass).unwrap(),
             2
         );
     }

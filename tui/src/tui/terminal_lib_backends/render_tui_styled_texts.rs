@@ -1,31 +1,31 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{RenderOp, RenderOps, TuiStyledTexts};
+use crate::{RenderOpCommon, RenderOpIR, RenderOpsIR, TuiStyledTexts};
 
-pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut RenderOps) {
+pub fn render_tui_styled_texts_into(texts: &TuiStyledTexts, render_ops: &mut RenderOpsIR) {
     for styled_text in &texts.inner {
         let style = styled_text.get_style();
-        render_ops.push(RenderOp::ApplyColors(Some(*style)));
-        render_ops.push(RenderOp::PaintTextWithAttributes(
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(Some(*style))));
+        render_ops.push(RenderOpIR::PaintTextWithAttributes(
             styled_text.get_text().into(),
             Some(*style),
         ));
-        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CommonResult, InlineVec, TuiStylesheet, ZOrder, assert_eq2, console_log,
-                new_style, render_ops, render_pipeline, throws, throws_with_return,
+    use crate::{CommonResult, InlineVec, RenderOpsIR, TuiStylesheet, ZOrder, assert_eq2,
+                console_log, new_style, render_pipeline, throws, throws_with_return,
                 tui_color, tui_styled_text, tui_styled_texts, tui_stylesheet};
 
     #[test]
     fn test_styled_text_renders_correctly() -> CommonResult<()> {
         throws!({
             let texts = test_helper::create_styled_text()?;
-            let mut render_ops = render_ops!();
+            let mut render_ops = RenderOpsIR::new();
             render_tui_styled_texts_into(&texts, &mut render_ops);
 
             let mut pipeline = render_pipeline!();
@@ -34,14 +34,14 @@ mod tests {
             console_log!(pipeline);
             assert_eq2!(pipeline.len(), 1);
 
-            let set: &InlineVec<RenderOps> = pipeline.get(&ZOrder::Normal).unwrap();
+            let set: &InlineVec<RenderOpsIR> = pipeline.get(&ZOrder::Normal).unwrap();
 
             // "Hello" and "World" together.
             assert_eq2!(set.len(), 1);
 
             // 3 RenderOp each for "Hello" & "World".
             assert_eq2!(
-                pipeline.get_all_render_op_in(ZOrder::Normal).unwrap().len(),
+                pipeline.get_all_render_op_in(ZOrder::Normal).unwrap(),
                 6
             );
         })

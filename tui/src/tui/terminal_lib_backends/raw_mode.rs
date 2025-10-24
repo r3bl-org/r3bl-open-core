@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{RenderOp, RenderOps, RenderOpsLocalData};
+use super::{RenderOpCommon, RenderOpIR, RenderOpsIR, RenderOpsLocalData};
 use crate::{LockedOutputDevice, Size};
 
 /// To use this directly, you need to make sure to create an instance using
@@ -16,10 +16,10 @@ impl RawMode {
         is_mock: bool,
     ) {
         let mut skip_flush = false;
-        RenderOps::route_paint_render_op_to_backend(
+        RenderOpsIR::route_paint_render_op_ir_to_backend(
             &mut RenderOpsLocalData::default(),
             &mut skip_flush,
-            &RenderOp::EnterRawMode,
+            &RenderOpIR::Common(RenderOpCommon::EnterRawMode),
             window_size,
             locked_output_device,
             is_mock,
@@ -32,10 +32,10 @@ impl RawMode {
         is_mock: bool,
     ) {
         let mut skip_flush = false;
-        RenderOps::route_paint_render_op_to_backend(
+        RenderOpsIR::route_paint_render_op_ir_to_backend(
             &mut RenderOpsLocalData::default(),
             &mut skip_flush,
-            &RenderOp::ExitRawMode,
+            &RenderOpIR::Common(RenderOpCommon::ExitRawMode),
             window_size,
             locked_output_device,
             is_mock,

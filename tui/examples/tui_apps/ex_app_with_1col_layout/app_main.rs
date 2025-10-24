@@ -3,13 +3,12 @@ use super::{AppSignal, SingleColumnComponent, State};
 use r3bl_tui::{App, BoxedSafeApp, CommonResult, ComponentRegistry, ComponentRegistryMap,
                ContainsResult, EventPropagation, FlexBoxId, GlobalData, HasFocus,
                InputEvent, LayoutDirection, LayoutManagement, LengthOps,
-               PerformPositioningAndSizing, RenderOp, RenderPipeline, SPACER_GLYPH,
-               Size, Surface, SurfaceProps, SurfaceRender, TuiStylesheet, ZOrder,
-               box_end, box_start, ch, col, height, new_style,
-               render_component_in_current_box, render_ops,
-               render_tui_styled_texts_into, req_size_pc, row, surface, throws,
-               throws_with_return, tui_color, tui_styled_text, tui_styled_texts,
-               tui_stylesheet};
+               PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpsIR,
+               RenderPipeline, SPACER_GLYPH, Size, Surface, SurfaceProps, SurfaceRender,
+               TuiStylesheet, ZOrder, box_end, box_start, ch, col, height, new_style,
+               render_component_in_current_box, render_tui_styled_texts_into, req_size_pc,
+               row, surface, throws, throws_with_return, tui_color, tui_styled_text,
+               tui_styled_texts, tui_stylesheet};
 
 // Constants for the ids.
 #[repr(u8)]
@@ -265,16 +264,16 @@ mod hud {
         let row_idx = size.row_height.index_from_end(height(1)); /* 1 row above bottom */
         let cursor = col_idx + row_idx;
 
-        let mut render_ops = render_ops!();
-        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::SetBgColor(color_bg));
-        render_ops.push(RenderOp::PaintTextWithAttributes(
+        let mut render_ops = RenderOpsIR::new();
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx)));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(color_bg)));
+        render_ops.push(RenderOpIR::PaintTextWithAttributes(
             SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
             None,
         ));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(cursor)));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }
@@ -320,16 +319,16 @@ mod status_bar {
         let row_idx = size.row_height.convert_to_index(); /* Bottom row */
         let cursor = col_idx + row_idx;
 
-        let mut render_ops = render_ops!();
-        render_ops.push(RenderOp::MoveCursorPositionAbs(col(0) + row_idx));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::SetBgColor(color_bg));
-        render_ops.push(RenderOp::PaintTextWithAttributes(
+        let mut render_ops = RenderOpsIR::new();
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row_idx)));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(color_bg)));
+        render_ops.push(RenderOpIR::PaintTextWithAttributes(
             SPACER_GLYPH.repeat(size.col_width.as_usize()).into(),
             None,
         ));
-        render_ops.push(RenderOp::ResetColor);
-        render_ops.push(RenderOp::MoveCursorPositionAbs(cursor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(cursor)));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }

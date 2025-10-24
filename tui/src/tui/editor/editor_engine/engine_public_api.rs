@@ -6,15 +6,15 @@
 use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR,
             EditMode, EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine,
-            HasFocus, InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOp,
-            RenderOps, RenderPipeline, RowHeight, RowIndex,
+            HasFocus, InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOpCommon,
+            RenderOpIR, RenderOpsIR, RenderPipeline, RowHeight, RowIndex,
             ScrollOffsetColLocationInRange, SegStringOwned, SelectionRange, Size,
             SpecialKey, StyleUSSpanLines, SyntaxHighlightMode, ZOrder, caret_scr_adj,
             clipboard_support::ClipboardService,
             col, convert_syntect_to_styled_text, fg_green, get_selection_style, glyphs,
             height, inline_string, new_style,
             render_cache::{RenderCache, UseRenderCache},
-            render_ops, render_pipeline, render_tui_styled_texts_into, row,
+            render_pipeline, render_tui_styled_texts_into, row,
             terminal_lib_backends::KeyPress,
             throws, throws_with_return, try_get_syntax_ref, try_parse_and_highlight,
             tui_color, usize};
@@ -145,7 +145,7 @@ pub fn render_engine(
                 has_focus,
             })
         } else {
-            let mut render_ops = render_ops!();
+            let mut render_ops = RenderOpsIR::new();
 
             RenderCache::render_content(
                 buffer,
@@ -180,7 +180,7 @@ pub fn render_engine(
     })
 }
 
-pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
+pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOpsIR) {
     let RenderArgs {
         buffer: editor_buffer,
         engine: editor_engine,
@@ -242,7 +242,7 @@ pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
 }
 
 // XMARK: Render selection
-pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
+pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOpsIR) {
     let RenderArgs {
         buffer: editor_buffer,
         engine: editor_engine,
@@ -300,24 +300,24 @@ pub fn render_selection(render_args: RenderArgs<'_>, render_ops: &mut RenderOps)
                 raw_col_index + raw_row_index
             };
 
-            render_ops.push(RenderOp::MoveCursorPositionRelTo(
+            render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
                 editor_engine.current_box.style_adjusted_origin_pos,
                 position,
-            ));
+            )));
 
-            render_ops.push(RenderOp::ApplyColors(Some(get_selection_style())));
+            render_ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(Some(get_selection_style()))));
 
-            render_ops.push(RenderOp::PaintTextWithAttributes(
+            render_ops.push(RenderOpIR::PaintTextWithAttributes(
                 selection_holder.into(),
                 None,
             ));
 
-            render_ops.push(RenderOp::ResetColor);
+            render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
         }
     }
 }
 
-pub fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
+pub fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOpsIR) {
     let RenderArgs {
         buffer,
         engine,
@@ -332,19 +332,19 @@ pub fn render_caret(render_args: RenderArgs<'_>, render_ops: &mut RenderOps) {
             None => DEFAULT_CURSOR_CHAR.into(),
         };
 
-        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
             engine.current_box.style_adjusted_origin_pos,
             *buffer.get_caret_raw(),
-        ));
-        render_ops.push(RenderOp::PaintTextWithAttributes(
+        )));
+        render_ops.push(RenderOpIR::PaintTextWithAttributes(
             str_at_caret.string,
             Some(new_style!(reverse)),
         ));
-        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
             engine.current_box.style_adjusted_origin_pos,
             *buffer.get_caret_raw(),
-        ));
-        render_ops.push(RenderOp::ResetColor);
+        )));
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
     }
 }
 
@@ -364,15 +364,15 @@ pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
             @push_into pipeline
             at ZOrder::Normal
             =>
-            RenderOp::MoveCursorPositionRelTo(
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
                 editor_engine.current_box.style_adjusted_origin_pos,
                 col(0) + row(0)
-            ),
-            RenderOp::ApplyColors(
+            )),
+            RenderOpIR::Common(RenderOpCommon::ApplyColors(
                 Some(new_style!(dim color_fg: {tui_color!(green)}))
-            ),
-            RenderOp::PaintTextWithAttributes("📝 Please start typing your MD content.".into(), None),
-            RenderOp::ResetColor
+            )),
+            RenderOpIR::PaintTextWithAttributes("📝 Please start typing your MD content.".into(), None),
+            RenderOpIR::Common(RenderOpCommon::ResetColor)
         };
 
         // Paint line 2.
@@ -388,15 +388,15 @@ pub fn render_empty_state(render_args: RenderArgs<'_>) -> RenderPipeline {
           @push_into pipeline
           at ZOrder::Normal
           =>
-            RenderOp::MoveCursorPositionRelTo(
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
                 editor_engine.current_box.style_adjusted_origin_pos,
                 content_cursor_pos,
-            ),
-            RenderOp::ApplyColors(
+            )),
+            RenderOpIR::Common(RenderOpCommon::ApplyColors(
                 Some(new_style!(dim color_fg: {tui_color!(dark_gray)}))
-            ),
-            RenderOp::PaintTextWithAttributes("🧭 Ctrl+S: Save your work. Ctrl+Q: Exit the app.".into(), None),
-            RenderOp::ResetColor
+            )),
+            RenderOpIR::PaintTextWithAttributes("🧭 Ctrl+S: Save your work. Ctrl+Q: Exit the app.".into(), None),
+            RenderOpIR::Common(RenderOpCommon::ResetColor)
         };
     }
 
@@ -425,7 +425,7 @@ mod syn_hi_r3bl_path {
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
         editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) {
@@ -449,7 +449,7 @@ mod syn_hi_r3bl_path {
     fn try_render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
         editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) -> CommonResult<()> {
@@ -506,13 +506,13 @@ mod syn_hi_r3bl_path {
                 }
 
                 // Render each line.
-                render_ops.push(RenderOp::MoveCursorPositionRelTo(
+                render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
                     box_pos,
                     col(0) + row_index,
-                ));
+                )));
                 let styled_texts = line.clip(scr_ofs, max_display_col_count);
                 render_tui_styled_texts_into(&styled_texts, render_ops);
-                render_ops.push(RenderOp::ResetColor);
+                render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
             }
         });
     }
@@ -525,7 +525,7 @@ mod syn_hi_syntect_path {
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
         editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) {
@@ -556,17 +556,17 @@ mod syn_hi_syntect_path {
     }
 
     fn render_single_line(
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
         line: GapBufferLine<'_>,
         max_display_col_count: ColWidth,
     ) {
-        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
             editor_engine.current_box.style_adjusted_origin_pos,
             col(0) + row_index,
-        ));
+        )));
 
         let line_content = line.content();
         let it =
@@ -600,7 +600,7 @@ mod syn_hi_syntect_path {
         syntect_highlighted_line: Vec<(syntect::highlighting::Style, &str)>,
         editor_buffer: &EditorBuffer,
         max_display_col_count: ColWidth,
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
     ) {
         let scr_ofs = editor_buffer.get_scr_ofs();
         let line =
@@ -609,7 +609,7 @@ mod syn_hi_syntect_path {
             );
         let styled_texts = line.clip(scr_ofs, max_display_col_count);
         render_tui_styled_texts_into(&styled_texts, render_ops);
-        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
     }
 
     /// Try and load syntax highlighting for the current line. It might seem lossy to
@@ -639,7 +639,7 @@ mod no_syn_hi_path {
     pub fn render_content(
         editor_buffer: &EditorBuffer,
         max_display_row_count: RowHeight,
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
         editor_engine: &mut EditorEngine,
         max_display_col_count: ColWidth,
     ) {
@@ -670,17 +670,17 @@ mod no_syn_hi_path {
     }
 
     fn render_single_line(
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
         row_index: RowIndex,
         editor_engine: &mut EditorEngine,
         editor_buffer: &EditorBuffer,
         line: GapBufferLine<'_>,
         max_display_col_count: ColWidth,
     ) {
-        render_ops.push(RenderOp::MoveCursorPositionRelTo(
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
             editor_engine.current_box.style_adjusted_origin_pos,
             col(0) + row_index,
-        ));
+        )));
 
         no_syn_hi_path::render_line_no_syntax_highlight(
             line,
@@ -696,7 +696,7 @@ mod no_syn_hi_path {
         line: GapBufferLine<'_>,
         editor_buffer: &EditorBuffer,
         max_display_col_count: ColWidth,
-        render_ops: &mut RenderOps,
+        render_ops: &mut RenderOpsIR,
         editor_engine: &mut EditorEngine,
     ) {
         let scroll_offset_col_index = editor_buffer.get_scr_ofs().col_index;
@@ -709,16 +709,16 @@ mod no_syn_hi_path {
             max_display_col_count,
         );
 
-        render_ops.push(RenderOp::ApplyColors(
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(
             editor_engine.current_box.get_computed_style(),
-        ));
+        )));
 
-        render_ops.push(RenderOp::PaintTextWithAttributes(
+        render_ops.push(RenderOpIR::PaintTextWithAttributes(
             line_trunc.into(),
             editor_engine.current_box.get_computed_style(),
         ));
 
-        render_ops.push(RenderOp::ResetColor);
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
     }
 }
 
@@ -963,7 +963,7 @@ mod tests {
             .flat_map(|render_ops_vec| render_ops_vec.iter())
             .flat_map(|render_ops| render_ops.list.iter())
             .any(|op| {
-                matches!(op, RenderOp::MoveCursorPositionRelTo(_, pos)
+                matches!(op, RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(_, pos))
                     if pos.row_index == row(20))
             });
 
@@ -982,7 +982,7 @@ mod tests {
             .flat_map(|render_ops_vec| render_ops_vec.iter())
             .flat_map(|render_ops| render_ops.list.iter())
             .any(|op| {
-                matches!(op, RenderOp::MoveCursorPositionRelTo(_, pos)
+                matches!(op, RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(_, pos))
                     if pos.row_index == row(21))
             });
 

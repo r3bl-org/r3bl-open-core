@@ -6,7 +6,7 @@ use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             DefaultSize, DefaultTiming, Flush, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt,
             InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
-            RawMode, RenderOp, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
+            RawMode, RenderOpCommon, RenderOpIR, RenderPipeline, Size, SufficientSize, TelemetryAtomHint,
             TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
             glyphs, height, inline_string, lock_output_device_as_mut, new_style, ok,
             render_pipeline, row,
@@ -732,7 +732,8 @@ where
 
         match render_result {
             Err(error) => {
-                RenderOp::default().flush(locked_output_device);
+                let mut painter = crate::PaintRenderOpImplCrossterm {};
+                painter.flush(locked_output_device);
 
                 // Print debug message w/ error.
                 DEBUG_TUI_MOD.then(|| {
@@ -790,8 +791,8 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
         @push_into pipeline
         at ZOrder::Normal
         =>
-            RenderOp::ResetColor,
-            RenderOp::MoveCursorPositionAbs(col_pos + row_pos)
+            RenderOpIR::Common(RenderOpCommon::ResetColor),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col_pos + row_pos))
     }
 
     render_pipeline! {
@@ -818,12 +819,12 @@ mod tests {
                 ComponentRegistryMap, CrosstermEventResult, EventPropagation,
                 GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
                 InlineVec, InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress,
-                OutputDevice, OutputDeviceExt, PixelChar, RenderOp, RenderPipeline,
+                OutputDevice, OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIR, RenderOpsIR, RenderPipeline,
                 SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
                 TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
                 ch, col, defaults::get_default_gradient_stops, height, inline_string,
                 is_fully_uninteractive_terminal, key_press, main_event_loop_impl,
-                new_style, ok, render_ops, render_pipeline,
+                new_style, ok, render_pipeline,
                 render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib,
                 tui_styled_text, width};
     use smallvec::smallvec;
@@ -1065,16 +1066,14 @@ mod tests {
                     let mut pipeline = render_pipeline!();
 
                     pipeline.push(ZOrder::Normal, {
-                        let mut acc_render_op = render_ops! {
-                            @new
-                            RenderOp::ResetColor,
-                        };
+                        let mut acc_render_op = RenderOpsIR::new();
+                        acc_render_op.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
 
                         // Render using color_wheel_rgb.
-                        acc_render_op += RenderOp::MoveCursorPositionAbs(Pos {
+                        acc_render_op.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
                             col_index: col_idx,
                             row_index: row_idx,
-                        });
+                        })));
 
                         let index = data.color_wheel_rgb.get_index();
                         let len = match data.color_wheel_rgb.get_gradient_len() {
@@ -1090,14 +1089,13 @@ mod tests {
 
                         let string_gcs = string.into();
 
-                        render_ops!(
-                            @render_styled_texts_into acc_render_op
-                            =>
-                            data.color_wheel_rgb.colorize_into_styled_texts(
+                        render_tui_styled_texts_into(
+                            &data.color_wheel_rgb.colorize_into_styled_texts(
                                 &string_gcs,
                                 GradientGenerationPolicy::ReuseExistingGradientAndIndex,
                                 TextColorizationPolicy::ColorEachWord(None),
-                            )
+                            ),
+                            &mut acc_render_op,
                         );
 
                         *row_idx += 1;
@@ -1250,8 +1248,8 @@ mod tests {
             let row_bottom = size.row_height.convert_to_index();
             let center = col(col_center) + row_bottom;
 
-            let mut render_ops = render_ops!();
-            render_ops.push(RenderOp::MoveCursorPositionAbs(center));
+            let mut render_ops = RenderOpsIR::new();
+            render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(center)));
             render_tui_styled_texts_into(&styled_texts, &mut render_ops);
             pipeline.push(ZOrder::Normal, render_ops);
         }

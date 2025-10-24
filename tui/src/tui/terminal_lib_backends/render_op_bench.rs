@@ -59,26 +59,26 @@
 #[cfg(test)]
 mod render_op_benchmarks {
     extern crate test;
-    use crate::{AnsiValue, InlineString, Pos, RenderOp, RgbValue, TuiColor, TuiStyle, ch};
+    use crate::{AnsiValue, InlineString, Pos, RenderOpCommon, RenderOpIR, RgbValue, TuiColor, TuiStyle, ch};
     use smallvec::SmallVec;
     use test::Bencher;
 
     // Type aliases for clarity.
-    type RenderOpsSmallVec = SmallVec<[RenderOp; 8]>;
-    type RenderOpsVec = Vec<RenderOp>;
+    type RenderOpsSmallVec = SmallVec<[RenderOpIR; 8]>;
+    type RenderOpsVec = Vec<RenderOpIR>;
 
     // Helper to create a variety of RenderOps that simulate real usage.
-    fn create_test_render_ops() -> Vec<RenderOp> {
+    fn create_test_render_ops() -> Vec<RenderOpIR> {
         vec![
-            RenderOp::ClearScreen,
-            RenderOp::ResetColor,
-            RenderOp::MoveCursorPositionAbs(Pos {
+            RenderOpIR::Common(RenderOpCommon::ClearScreen),
+            RenderOpIR::Common(RenderOpCommon::ResetColor),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
                 row_index: ch(10).into(),
                 col_index: ch(20).into(),
-            }),
-            RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 128, 64))),
-            RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(42))),
-            RenderOp::PaintTextWithAttributes(
+            })),
+            RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 128, 64)))),
+            RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(42)))),
+            RenderOpIR::PaintTextWithAttributes(
                 InlineString::from("Hello, World!"),
                 Some(TuiStyle {
                     color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(200, 200, 200))),
@@ -86,7 +86,7 @@ mod render_op_benchmarks {
                     ..Default::default()
                 }),
             ),
-            RenderOp::MoveCursorPositionRelTo(
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(
                 Pos {
                     row_index: ch(5).into(),
                     col_index: ch(10).into(),
@@ -95,12 +95,12 @@ mod render_op_benchmarks {
                     row_index: ch(2).into(),
                     col_index: ch(3).into(),
                 },
-            ),
-            RenderOp::ApplyColors(Some(TuiStyle {
+            )),
+            RenderOpIR::Common(RenderOpCommon::ApplyColors(Some(TuiStyle {
                 color_fg: Some(TuiColor::Rgb(RgbValue::from_u8(100, 100, 100))),
                 color_bg: Some(TuiColor::Ansi(AnsiValue::new(16))),
                 ..Default::default()
-            })),
+            }))),
         ]
     }
 
@@ -240,10 +240,10 @@ mod render_op_benchmarks {
             let mut sum = 0;
             for op in &collection {
                 match op {
-                    RenderOp::MoveCursorPositionAbs(pos) => {
+                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos)) => {
                         sum += pos.row_index.value + pos.col_index.value;
                     }
-                    RenderOp::MoveCursorPositionRelTo(p1, p2) => {
+                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(p1, p2)) => {
                         sum += p1.row_index.value
                             + p1.col_index.value
                             + p2.row_index.value
@@ -266,10 +266,10 @@ mod render_op_benchmarks {
             let mut sum = 0;
             for op in &collection {
                 match op {
-                    RenderOp::MoveCursorPositionAbs(pos) => {
+                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos)) => {
                         sum += pos.row_index.value + pos.col_index.value;
                     }
-                    RenderOp::MoveCursorPositionRelTo(p1, p2) => {
+                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(p1, p2)) => {
                         sum += p1.row_index.value
                             + p1.col_index.value
                             + p2.row_index.value
@@ -314,20 +314,20 @@ mod render_op_benchmarks {
     fn bench_smallvec_text_line_render(b: &mut Bencher) {
         b.iter(|| {
             let mut ops = RenderOpsSmallVec::new();
-            ops.push(RenderOp::MoveCursorPositionAbs(Pos {
+            ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
                 row_index: ch(5).into(),
                 col_index: ch(10).into(),
-            }));
-            ops.push(RenderOp::ResetColor);
-            ops.push(RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(
+            })));
+            ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+            ops.push(RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(
                 255, 255, 255,
-            ))));
-            ops.push(RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(232))));
-            ops.push(RenderOp::PaintTextWithAttributes(
+            )))));
+            ops.push(RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(232)))));
+            ops.push(RenderOpIR::PaintTextWithAttributes(
                 InlineString::from("This is a line of text in the editor"),
                 None,
             ));
-            ops.push(RenderOp::ResetColor);
+            ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
             test::black_box(ops)
         });
     }
@@ -336,18 +336,18 @@ mod render_op_benchmarks {
     fn bench_vec_text_line_render(b: &mut Bencher) {
         b.iter(|| {
             let ops = vec![
-                RenderOp::MoveCursorPositionAbs(Pos {
+                RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
                     row_index: ch(5).into(),
                     col_index: ch(10).into(),
-                }),
-                RenderOp::ResetColor,
-                RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255))),
-                RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(232))),
-                RenderOp::PaintTextWithAttributes(
+                })),
+                RenderOpIR::Common(RenderOpCommon::ResetColor),
+                RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255)))),
+                RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(232)))),
+                RenderOpIR::PaintTextWithAttributes(
                     InlineString::from("This is a line of text in the editor"),
                     None,
                 ),
-                RenderOp::ResetColor,
+                RenderOpIR::Common(RenderOpCommon::ResetColor),
             ];
             test::black_box(ops)
         });
@@ -357,18 +357,18 @@ mod render_op_benchmarks {
     fn bench_vec_with_capacity_text_line_render(b: &mut Bencher) {
         b.iter(|| {
             let ops = vec![
-                RenderOp::MoveCursorPositionAbs(Pos {
+                RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(Pos {
                     row_index: ch(5).into(),
                     col_index: ch(10).into(),
-                }),
-                RenderOp::ResetColor,
-                RenderOp::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255))),
-                RenderOp::SetBgColor(TuiColor::Ansi(AnsiValue::new(232))),
-                RenderOp::PaintTextWithAttributes(
+                })),
+                RenderOpIR::Common(RenderOpCommon::ResetColor),
+                RenderOpIR::Common(RenderOpCommon::SetFgColor(TuiColor::Rgb(RgbValue::from_u8(255, 255, 255)))),
+                RenderOpIR::Common(RenderOpCommon::SetBgColor(TuiColor::Ansi(AnsiValue::new(232)))),
+                RenderOpIR::PaintTextWithAttributes(
                     InlineString::from("This is a line of text in the editor"),
                     None,
                 ),
-                RenderOp::ResetColor,
+                RenderOpIR::Common(RenderOpCommon::ResetColor),
             ];
             test::black_box(ops)
         });

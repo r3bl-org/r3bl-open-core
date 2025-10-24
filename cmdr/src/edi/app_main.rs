@@ -8,13 +8,14 @@ use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelCo
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasEditorBuffers, HasFocus, InputEvent, Key,
                KeyPress, LayoutDirection, LayoutManagement, LineMode, ModifierKeysMask,
-               PerformPositioningAndSizing, RenderOp, RenderPipeline, Size, Surface,
-               SurfaceProps, SurfaceRender, SyntaxHighlightMode,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyledTexts,
-               ZOrder, box_end, box_start, col, fg_green, fg_magenta, fg_red, glyphs,
-               height, inline_string, new_style, render_component_in_current_box,
-               render_component_in_given_box, render_ops, render_tui_styled_texts_into,
-               req_size_pc, row, surface, tui_color, tui_styled_text, tui_stylesheet};
+               PerformPositioningAndSizing, RenderOpCommon, RenderOpIR, RenderOpsIR,
+               RenderPipeline, Size, Surface, SurfaceProps, SurfaceRender,
+               SyntaxHighlightMode, TerminalWindowMainThreadSignal,
+               TextColorizationPolicy, TuiStyledTexts, ZOrder, box_end, box_start, col,
+               fg_green, fg_magenta, fg_red, glyphs, height, inline_string, new_style,
+               render_component_in_current_box, render_component_in_given_box,
+               render_tui_styled_texts_into, req_size_pc, row, surface, tui_color,
+               tui_styled_text, tui_stylesheet};
 use smallvec::smallvec;
 use tokio::sync::mpsc::Sender;
 
@@ -673,8 +674,8 @@ mod status_bar {
         let row_bottom = size.row_height.convert_to_index();
         let center = col(col_center) + row_bottom;
 
-        let mut render_ops = render_ops!();
-        render_ops.push(RenderOp::MoveCursorPositionAbs(center));
+        let mut render_ops = RenderOpsIR::new();
+        render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(center)));
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }

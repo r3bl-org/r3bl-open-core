@@ -4,9 +4,9 @@ use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelC
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
                EventPropagation, FlexBox, FlexBoxId, GCStringOwned, GlobalData,
                GradientGenerationPolicy, HasFocus, InputEvent, Key, KeyPress, LengthOps,
-               Pos, RenderOp, RenderPipeline, SpecialKey, SurfaceBounds,
-               TerminalWindowMainThreadSignal, TextColorizationPolicy, ZOrder, ch, col,
-               glyphs, inline_string, render_ops, render_pipeline, row, send_signal,
+               Pos, RenderOpCommon, RenderOpIR, RenderOpsIR, RenderPipeline, SpecialKey,
+               SurfaceBounds, TerminalWindowMainThreadSignal, TextColorizationPolicy,
+               ZOrder, ch, col, glyphs, inline_string, render_pipeline, row, send_signal,
                throws_with_return};
 use smallvec::smallvec;
 
@@ -153,7 +153,7 @@ mod column_render_component_impl_component_trait {
                 let mut row_index = row(0);
                 let mut col_index = col(0);
 
-                let mut render_ops = render_ops!();
+                let mut render_ops = RenderOpsIR::new();
 
                 let line_1_gcs = GCStringOwned::from(line_1);
                 let line_1_trunc_str = line_1_gcs.trunc_end_to_fit(box_bounds_size);
@@ -165,40 +165,34 @@ mod column_render_component_impl_component_trait {
 
                 // Line 1.
                 {
-                    render_ops! {
-                        @add_to render_ops =>
-                        RenderOp::ResetColor,
-                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index),
-                        RenderOp::ApplyColors(current_box.get_computed_style()),
-                    };
-                    render_ops! {
-                        @render_styled_texts_into render_ops =>
-                        color_wheel.colorize_into_styled_texts(
-                            &line_1_trunc_gcs,
-                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                            TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
-                        )
-                    }
-                    render_ops += RenderOp::ResetColor;
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index)));
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(current_box.get_computed_style())));
+
+                    let styled_texts = color_wheel.colorize_into_styled_texts(
+                        &line_1_trunc_gcs,
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
+                    );
+                    r3bl_tui::render_tui_styled_texts_into(&styled_texts, &mut render_ops);
+
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
                 }
 
                 // Line 2.
                 {
                     *row_index += 1;
-                    render_ops! {
-                        @add_to render_ops =>
-                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index),
-                        RenderOp::ApplyColors(current_box.get_computed_style()),
-                    };
-                    render_ops! {
-                        @render_styled_texts_into render_ops =>
-                        color_wheel.colorize_into_styled_texts(
-                            &line_2_trunc_gcs,
-                            GradientGenerationPolicy::ReuseExistingGradientAndIndex,
-                            TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
-                        )
-                    }
-                    render_ops += RenderOp::ResetColor;
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index)));
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(current_box.get_computed_style())));
+
+                    let styled_texts = color_wheel.colorize_into_styled_texts(
+                        &line_2_trunc_gcs,
+                        GradientGenerationPolicy::ReuseExistingGradientAndIndex,
+                        TextColorizationPolicy::ColorEachCharacter(current_box.get_computed_style()),
+                    );
+                    r3bl_tui::render_tui_styled_texts_into(&styled_texts, &mut render_ops);
+
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
                 }
 
                 // Paint is_focused.
@@ -206,17 +200,13 @@ mod column_render_component_impl_component_trait {
                     *row_index += 1;
                     col_index =
                         (line_2_trunc_gcs.display_width / ch(2)).convert_to_index();
-                    render_ops! {
-                        @add_to render_ops =>
-                        RenderOp::ResetColor,
-                        RenderOp::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index),
-                        if has_focus.does_current_box_have_focus(current_box) {
-                            RenderOp::PaintTextWithAttributes("👀".into(), None)
-                        }
-                        else {
-                            RenderOp::PaintTextWithAttributes(" ".into(), None)
-                        }
-                    };
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::ResetColor));
+                    render_ops.push(RenderOpIR::Common(RenderOpCommon::MoveCursorPositionRelTo(box_origin_pos, col_index + row_index)));
+                    if has_focus.does_current_box_have_focus(current_box) {
+                        render_ops.push(RenderOpIR::PaintTextWithAttributes("👀".into(), None));
+                    } else {
+                        render_ops.push(RenderOpIR::PaintTextWithAttributes(" ".into(), None));
+                    }
                 }
 
                 // Add render_ops to pipeline.

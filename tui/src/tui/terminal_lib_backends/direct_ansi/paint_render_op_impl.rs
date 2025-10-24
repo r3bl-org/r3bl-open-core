@@ -2,12 +2,12 @@
 
 //! [`DirectAnsi`] implementation of the [`PaintRenderOp`] trait
 //!
-//! This implements the [`PaintRenderOp`] trait to execute all [`RenderOp`] variants using
+//! This implements the [`PaintRenderOp`] trait to execute all [`RenderOpIR`] variants using
 //! [`AnsiSequenceGenerator`]. It tracks cursor position and colors to skip redundant ANSI
 //! sequences for optimization.
 
 use super::AnsiSequenceGenerator;
-use crate::{Flush, LockedOutputDevice, PaintRenderOp, RenderOp, RenderOpsLocalData, Size};
+use crate::{Flush, LockedOutputDevice, PaintRenderOp, RenderOpIR, RenderOpsLocalData, Size};
 
 /// Implements [`PaintRenderOp`] trait using direct ANSI sequence generation
 #[derive(Debug)]
@@ -17,7 +17,7 @@ impl PaintRenderOp for RenderOpImplDirectAnsi {
     fn paint(
         &mut self,
         skip_flush: &mut bool,
-        _render_op: &RenderOp,
+        _render_op: &RenderOpIR,
         _window_size: Size,
         _render_local_data: &mut RenderOpsLocalData,
         _locked_output_device: LockedOutputDevice<'_>,
@@ -27,7 +27,7 @@ impl PaintRenderOp for RenderOpImplDirectAnsi {
             return; // Skip rendering in mock mode
         }
 
-        // TODO: Implement all RenderOp variants
+        // TODO: Implement all RenderOpIR variants
         // This is a stub for now
         *skip_flush = false;
     }

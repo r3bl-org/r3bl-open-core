@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use super::{AlternateScreenState, BracketedPasteState, MouseTrackingState,
-            OffscreenBuffer, RawModeState, RenderOp, RenderPipeline,
+            OffscreenBuffer, RawModeState, RenderOpCommon, RenderOpIR, RenderPipeline,
             sanitize_and_save_abs_pos};
 use crate::{ColWidth, CommonError, CommonErrorType, CommonResult, DEBUG_TUI_COMPOSITOR,
             GCStringOwned, MemoizedLenMap, PixelChar, PixelCharLine, Pos,
@@ -51,56 +51,94 @@ impl RenderPipeline {
 
 #[allow(clippy::too_many_lines)]
 pub fn process_render_op(
-    render_op: &RenderOp,
+    render_op_ir: &RenderOpIR,
     window_size: Size,
     ofs_buf: &mut OffscreenBuffer,
     render_local_data: &mut RenderOpsLocalData,
     memoized_len_map: &mut MemoizedLenMap,
 ) {
-    match render_op {
+    match render_op_ir {
+        // IR-specific: PaintTextWithAttributes handles clipping and Unicode width
+        RenderOpIR::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
+            let result_new_pos = print_text_with_attributes(
+                arg_text_ref,
+                maybe_style_ref.as_ref(),
+                ofs_buf,
+                None,
+                render_local_data,
+            );
+            if let Ok(new_pos) = result_new_pos {
+                ofs_buf.cursor_pos =
+                    sanitize_and_save_abs_pos(new_pos, window_size, render_local_data);
+            }
+        }
+        // Common operations: shared between IR and Output
+        RenderOpIR::Common(common_op) => {
+            process_common_render_op(
+                common_op,
+                window_size,
+                ofs_buf,
+                render_local_data,
+                memoized_len_map,
+            );
+        }
+    }
+}
+
+/// Process a common render operation in the offscreen buffer.
+///
+/// These operations work identically in both IR and Output contexts.
+fn process_common_render_op(
+    common_op: &RenderOpCommon,
+    window_size: Size,
+    ofs_buf: &mut OffscreenBuffer,
+    render_local_data: &mut RenderOpsLocalData,
+    memoized_len_map: &mut MemoizedLenMap,
+) {
+    match common_op {
         // ===== Terminal Mode State Operations =====
         // These operations update the OffscreenBuffer's terminal mode state while also
         // being executed by the terminal backend to affect actual terminal behavior.
-        RenderOp::EnterRawMode => {
+        RenderOpCommon::EnterRawMode => {
             ofs_buf.terminal_mode.raw_mode = RawModeState::Enabled;
         }
-        RenderOp::ExitRawMode => {
+        RenderOpCommon::ExitRawMode => {
             ofs_buf.terminal_mode.raw_mode = RawModeState::Disabled;
         }
-        RenderOp::EnterAlternateScreen => {
+        RenderOpCommon::EnterAlternateScreen => {
             ofs_buf.terminal_mode.alternate_screen = AlternateScreenState::Active;
         }
-        RenderOp::ExitAlternateScreen => {
+        RenderOpCommon::ExitAlternateScreen => {
             ofs_buf.terminal_mode.alternate_screen = AlternateScreenState::Inactive;
         }
-        RenderOp::EnableMouseTracking => {
+        RenderOpCommon::EnableMouseTracking => {
             ofs_buf.terminal_mode.mouse_tracking = MouseTrackingState::Enabled;
         }
-        RenderOp::DisableMouseTracking => {
+        RenderOpCommon::DisableMouseTracking => {
             ofs_buf.terminal_mode.mouse_tracking = MouseTrackingState::Disabled;
         }
-        RenderOp::EnableBracketedPaste => {
+        RenderOpCommon::EnableBracketedPaste => {
             ofs_buf.terminal_mode.bracketed_paste = BracketedPasteState::Enabled;
         }
-        RenderOp::DisableBracketedPaste => {
+        RenderOpCommon::DisableBracketedPaste => {
             ofs_buf.terminal_mode.bracketed_paste = BracketedPasteState::Disabled;
         }
         // ===== Incremental Rendering Operations - Complete implementation
         // These operations are executed both by the backend AND need to
         // update buffer state for consistency and future extensibility (e.g., if
         // choose() or readline_async migrates to use OffscreenBuffer).
-        RenderOp::MoveCursorToColumn(col_index) => {
+        RenderOpCommon::MoveCursorToColumn(col_index) => {
             ofs_buf.cursor_pos.col_index = *col_index;
         }
-        RenderOp::MoveCursorToNextLine(row_height) => {
+        RenderOpCommon::MoveCursorToNextLine(row_height) => {
             ofs_buf.cursor_pos.row_index += *row_height;
             ofs_buf.cursor_pos.col_index = crate::col(0);
         }
-        RenderOp::MoveCursorToPreviousLine(row_height) => {
+        RenderOpCommon::MoveCursorToPreviousLine(row_height) => {
             ofs_buf.cursor_pos.row_index -= *row_height;
             ofs_buf.cursor_pos.col_index = crate::col(0);
         }
-        RenderOp::ClearCurrentLine => {
+        RenderOpCommon::ClearCurrentLine => {
             // Clear the current line in the buffer
             let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
             if let Some(line) = ofs_buf.buffer.get_mut(row_idx) {
@@ -109,7 +147,7 @@ pub fn process_render_op(
                 }
             }
         }
-        RenderOp::ClearToEndOfLine => {
+        RenderOpCommon::ClearToEndOfLine => {
             // Clear from cursor position to end of current line
             let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
             let col_idx = ofs_buf.cursor_pos.col_index.as_usize();
@@ -121,7 +159,7 @@ pub fn process_render_op(
                 }
             }
         }
-        RenderOp::ClearToStartOfLine => {
+        RenderOpCommon::ClearToStartOfLine => {
             // Clear from start of current line to cursor position (inclusive)
             let row_idx = ofs_buf.cursor_pos.row_index.as_usize();
             let col_idx = ofs_buf.cursor_pos.col_index.as_usize();
@@ -133,7 +171,7 @@ pub fn process_render_op(
                 }
             }
         }
-        RenderOp::PrintStyledText(text) => {
+        RenderOpCommon::PrintStyledText(text) => {
             // This operation is for pre-styled text that already contains ANSI escape
             // codes. We update the cursor position based on the visible character width
             // AFTER stripping ANSI codes, but don't try to parse the ANSI codes back
@@ -156,57 +194,38 @@ pub fn process_render_op(
             sanitize_and_save_abs_pos(ofs_buf.cursor_pos, window_size, render_local_data);
         }
         // Terminal-only state operations and no-op operations - no buffer effect needed
-        RenderOp::Noop
-        | RenderOp::ShowCursor
-        | RenderOp::HideCursor
-        | RenderOp::SaveCursorPosition
-        | RenderOp::RestoreCursorPosition => {}
+        RenderOpCommon::Noop
+        | RenderOpCommon::ShowCursor
+        | RenderOpCommon::HideCursor
+        | RenderOpCommon::SaveCursorPosition
+        | RenderOpCommon::RestoreCursorPosition => {}
         // Do process these.
-        RenderOp::ClearScreen => {
+        RenderOpCommon::ClearScreen => {
             ofs_buf.clear();
         }
-        RenderOp::MoveCursorPositionAbs(new_abs_pos) => {
+        RenderOpCommon::MoveCursorPositionAbs(new_abs_pos) => {
             ofs_buf.cursor_pos =
                 sanitize_and_save_abs_pos(*new_abs_pos, window_size, render_local_data);
         }
-        RenderOp::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
+        RenderOpCommon::MoveCursorPositionRelTo(box_origin_pos_ref, content_rel_pos_ref) => {
             let new_abs_pos = *box_origin_pos_ref + *content_rel_pos_ref;
             ofs_buf.cursor_pos =
                 sanitize_and_save_abs_pos(new_abs_pos, window_size, render_local_data);
         }
-        RenderOp::SetFgColor(fg_color_ref) => {
+        RenderOpCommon::SetFgColor(fg_color_ref) => {
             render_local_data.fg_color = Some(*fg_color_ref);
         }
-        RenderOp::SetBgColor(bg_color_ref) => {
+        RenderOpCommon::SetBgColor(bg_color_ref) => {
             render_local_data.bg_color = Some(*bg_color_ref);
         }
-        RenderOp::ResetColor => {
+        RenderOpCommon::ResetColor => {
             render_local_data.fg_color = None;
             render_local_data.bg_color = None;
         }
-        RenderOp::ApplyColors(maybe_style_ref) => {
+        RenderOpCommon::ApplyColors(maybe_style_ref) => {
             if let Some(style_ref) = maybe_style_ref {
                 render_local_data.fg_color = style_ref.color_fg;
                 render_local_data.bg_color = style_ref.color_bg;
-            }
-        }
-        RenderOp::CompositorNoClipTruncPaintTextWithAttributes(
-            _arg_text_ref,
-            _maybe_style_ref,
-        ) => {
-            // This is a no-op. This operation is executed by PaintRenderOpImplCrossterm.
-        }
-        RenderOp::PaintTextWithAttributes(arg_text_ref, maybe_style_ref) => {
-            let result_new_pos = print_text_with_attributes(
-                arg_text_ref,
-                maybe_style_ref.as_ref(),
-                ofs_buf,
-                None,
-                render_local_data,
-            );
-            if let Ok(new_pos) = result_new_pos {
-                ofs_buf.cursor_pos =
-                    sanitize_and_save_abs_pos(new_pos, window_size, render_local_data);
             }
         }
     }
@@ -995,14 +1014,14 @@ mod tests {
         //         cols. There are 2 extra PixelChar::Empty at display cols 8 & 9.
         //       - [ResetColor]
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
-            RenderOp::ClearScreen,
-            RenderOp::ResetColor,
-            RenderOp::SetFgColor(tui_color!(green)),
-            RenderOp::SetBgColor(tui_color!(blue)),
-            RenderOp::MoveCursorPositionAbs(col(0) + row(0)),
-            RenderOp::PaintTextWithAttributes(
+            RenderOpIR::Common(RenderOpCommon::ClearScreen),
+            RenderOpIR::Common(RenderOpCommon::ResetColor),
+            RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green))),
+            RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row(0))),
+            RenderOpIR::PaintTextWithAttributes(
                 "hello12😃".into(), Some(new_style!(dim bold))),
-            RenderOp::ResetColor
+            RenderOpIR::Common(RenderOpCommon::ResetColor)
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
@@ -1078,20 +1097,20 @@ mod tests {
         //     ],
         // )
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
-            RenderOp::ClearScreen,
-            RenderOp::ResetColor,
-            RenderOp::SetFgColor(tui_color!(green)),
-            RenderOp::SetBgColor(tui_color!(blue)),
-            RenderOp::MoveCursorPositionAbs(col(2) + row(0)),
-            RenderOp::PaintTextWithAttributes(
+            RenderOpIR::Common(RenderOpCommon::ClearScreen),
+            RenderOpIR::Common(RenderOpCommon::ResetColor),
+            RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green))),
+            RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(2) + row(0))),
+            RenderOpIR::PaintTextWithAttributes(
                 "hello😃".into(), Some(new_style!(dim bold))),
-            RenderOp::ResetColor,
-            RenderOp::SetFgColor(tui_color!(green)),
-            RenderOp::SetBgColor(tui_color!(blue)),
-            RenderOp::MoveCursorPositionAbs(col(4) + row(1)),
-            RenderOp::PaintTextWithAttributes(
+            RenderOpIR::Common(RenderOpCommon::ResetColor),
+            RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green))),
+            RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue))),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(4) + row(1))),
+            RenderOpIR::PaintTextWithAttributes(
                 "world".into(), Some(new_style!(dim bold))),
-            RenderOp::ResetColor,
+            RenderOpIR::Common(RenderOpCommon::ResetColor),
         );
         // println!("pipeline: \n{:#?}", pipeline.get_all_render_op_in(ZOrder::Normal));
 
@@ -1187,14 +1206,14 @@ mod tests {
         let window_size = width(max_col) + height(max_row);
 
         let pipeline = render_pipeline!(@new ZOrder::Normal =>
-            RenderOp::MoveCursorPositionAbs(col(max_col) + row(0)),
-            RenderOp::PaintTextWithAttributes(
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(max_col) + row(0))),
+            RenderOpIR::PaintTextWithAttributes(
                 "h".into(), Some(new_style! ( dim bold ))),
-            RenderOp::ResetColor,
-            RenderOp::MoveCursorPositionAbs(col(max_col+1) + row(1)),
-            RenderOp::PaintTextWithAttributes(
+            RenderOpIR::Common(RenderOpCommon::ResetColor),
+            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(max_col+1) + row(1))),
+            RenderOpIR::PaintTextWithAttributes(
                 "i".into(), Some(new_style! ( dim bold ))),
-            RenderOp::ResetColor
+            RenderOpIR::Common(RenderOpCommon::ResetColor)
         );
 
         println!(

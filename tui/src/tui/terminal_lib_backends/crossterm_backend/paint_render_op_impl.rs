@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{CliTextInline, Flush, GCStringOwned, LockedOutputDevice, PaintRenderOp, Pos,
-            RenderOp, RenderOpsLocalData, Size, TuiColor, TuiStyle,
+            RenderOpCommon, RenderOpIR, RenderOpsLocalData, Size, TuiColor, TuiStyle,
             cli_text_inline_impl::CliTextConvertOptions, disable_raw_mode_now,
             enable_raw_mode_now, flush_now, queue_terminal_command,
             sanitize_and_save_abs_pos,
@@ -17,189 +17,33 @@ use crossterm::{cursor::{Hide, MoveTo, Show},
 pub struct PaintRenderOpImplCrossterm;
 
 impl PaintRenderOp for PaintRenderOpImplCrossterm {
-    #[allow(clippy::too_many_lines)]
     fn paint(
         &mut self,
         skip_flush: &mut bool,
-        command_ref: &RenderOp,
+        render_op: &RenderOpIR,
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
-        match command_ref {
-            RenderOp::Noop => {}
-            RenderOp::EnterRawMode => {
-                PaintRenderOpImplCrossterm::raw_mode_enter(
+        match render_op {
+            RenderOpIR::Common(common_op) => {
+                self.paint_common(
                     skip_flush,
-                    locked_output_device,
-                    is_mock,
-                );
-            }
-            RenderOp::ExitRawMode => {
-                PaintRenderOpImplCrossterm::raw_mode_exit(
-                    skip_flush,
-                    locked_output_device,
-                    is_mock,
-                );
-            }
-            RenderOp::MoveCursorPositionAbs(abs_pos) => {
-                PaintRenderOpImplCrossterm::move_cursor_position_abs(
-                    *abs_pos,
+                    common_op,
                     window_size,
                     render_local_data,
                     locked_output_device,
-                );
+                    is_mock,
+                )
             }
-            RenderOp::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
-                PaintRenderOpImplCrossterm::move_cursor_position_rel_to(
-                    *box_origin_pos,
-                    *content_rel_pos,
-                    window_size,
-                    render_local_data,
-                    locked_output_device,
-                );
-            }
-            RenderOp::ClearScreen => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "ClearScreen",
-                    Clear(ClearType::All),
-                );
-            }
-            RenderOp::SetFgColor(color) => {
-                PaintRenderOpImplCrossterm::set_fg_color(*color, locked_output_device);
-            }
-            RenderOp::SetBgColor(color) => {
-                PaintRenderOpImplCrossterm::set_bg_color(*color, locked_output_device);
-            }
-            RenderOp::ResetColor => {
-                queue_terminal_command!(locked_output_device, "ResetColor", ResetColor);
-            }
-            RenderOp::ApplyColors(style) => {
-                PaintRenderOpImplCrossterm::apply_colors(*style, locked_output_device);
-            }
-            RenderOp::CompositorNoClipTruncPaintTextWithAttributes(text, maybe_style) => {
+            RenderOpIR::PaintTextWithAttributes(text, maybe_style) => {
                 PaintRenderOpImplCrossterm::paint_text_with_attributes(
                     text,
                     *maybe_style,
                     window_size,
                     render_local_data,
                     locked_output_device,
-                );
-            }
-            RenderOp::PaintTextWithAttributes(text, maybe_style) => {
-                // Phase 6: Handle direct text painting with unified renderer.
-                //
-                // There are two execution paths for PaintTextWithAttributes:
-                // 1. COMPOSITOR PATH (normal): Apps create PaintTextWithAttributes →
-                //    render_pipeline_to_offscreen_buffer processes them → generates
-                //    CompositorNoClipTruncPaintTextWithAttributes operations → executed
-                //    here
-                // 2. DIRECT PATH (edge cases, tests): Apps or code directly execute
-                //    PaintTextWithAttributes operations without going through compositor
-                //
-                // This handler supports both paths using the unified
-                // PixelCharRenderer.
-                PaintRenderOpImplCrossterm::paint_text_with_attributes(
-                    text,
-                    *maybe_style,
-                    window_size,
-                    render_local_data,
-                    locked_output_device,
-                );
-            }
-            // ===== Incremental Rendering Operations (Phase 1) =====
-            RenderOp::MoveCursorToColumn(col_index) => {
-                PaintRenderOpImplCrossterm::move_cursor_to_column(
-                    *col_index,
-                    render_local_data,
-                    locked_output_device,
-                );
-            }
-            RenderOp::MoveCursorToNextLine(row_height) => {
-                PaintRenderOpImplCrossterm::move_cursor_to_next_line(
-                    *row_height,
-                    render_local_data,
-                    locked_output_device,
-                );
-            }
-            RenderOp::MoveCursorToPreviousLine(row_height) => {
-                PaintRenderOpImplCrossterm::move_cursor_to_previous_line(
-                    *row_height,
-                    render_local_data,
-                    locked_output_device,
-                );
-            }
-            RenderOp::ClearCurrentLine => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "ClearCurrentLine",
-                    Clear(ClearType::CurrentLine),
-                );
-            }
-            RenderOp::ClearToEndOfLine => {
-                PaintRenderOpImplCrossterm::clear_to_end_of_line(locked_output_device);
-            }
-            RenderOp::ClearToStartOfLine => {
-                PaintRenderOpImplCrossterm::clear_to_start_of_line(locked_output_device);
-            }
-            RenderOp::PrintStyledText(text) => {
-                PaintRenderOpImplCrossterm::print_styled_text(text, locked_output_device);
-            }
-            RenderOp::ShowCursor => {
-                queue_terminal_command!(locked_output_device, "ShowCursor", Show,);
-            }
-            RenderOp::HideCursor => {
-                queue_terminal_command!(locked_output_device, "HideCursor", Hide,);
-            }
-            RenderOp::SaveCursorPosition => {
-                PaintRenderOpImplCrossterm::save_cursor_position(locked_output_device);
-            }
-            RenderOp::RestoreCursorPosition => {
-                PaintRenderOpImplCrossterm::restore_cursor_position(locked_output_device);
-            }
-            // ===== Terminal Mode Operations =====
-            RenderOp::EnterAlternateScreen => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "EnterAlternateScreen",
-                    EnterAlternateScreen
-                );
-            }
-            RenderOp::ExitAlternateScreen => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "ExitAlternateScreen",
-                    LeaveAlternateScreen
-                );
-            }
-            RenderOp::EnableMouseTracking => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "EnableMouseTracking",
-                    EnableMouseCapture
-                );
-            }
-            RenderOp::DisableMouseTracking => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "DisableMouseTracking",
-                    DisableMouseCapture
-                );
-            }
-            RenderOp::EnableBracketedPaste => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "EnableBracketedPaste",
-                    EnableBracketedPaste
-                );
-            }
-            RenderOp::DisableBracketedPaste => {
-                queue_terminal_command!(
-                    locked_output_device,
-                    "DisableBracketedPaste",
-                    DisableBracketedPaste
                 );
             }
         }
@@ -222,6 +66,168 @@ impl Flush for PaintRenderOpImplCrossterm {
 }
 
 impl PaintRenderOpImplCrossterm {
+    /// Paint a single common render operation.
+    ///
+    /// This method handles rendering of `RenderOpCommon` operations, which are shared
+    /// between IR (app/component) and Output (backend) contexts. This is called by the
+    /// render pipeline when executing IR-level operations that have been routed to the
+    /// backend.
+    #[allow(clippy::too_many_lines)]
+    pub fn paint_common(
+        &mut self,
+        skip_flush: &mut bool,
+        command_ref: &RenderOpCommon,
+        window_size: Size,
+        render_local_data: &mut RenderOpsLocalData,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
+        match command_ref {
+            RenderOpCommon::Noop => {}
+            RenderOpCommon::EnterRawMode => {
+                PaintRenderOpImplCrossterm::raw_mode_enter(
+                    skip_flush,
+                    locked_output_device,
+                    is_mock,
+                );
+            }
+            RenderOpCommon::ExitRawMode => {
+                PaintRenderOpImplCrossterm::raw_mode_exit(
+                    skip_flush,
+                    locked_output_device,
+                    is_mock,
+                );
+            }
+            RenderOpCommon::MoveCursorPositionAbs(abs_pos) => {
+                PaintRenderOpImplCrossterm::move_cursor_position_abs(
+                    *abs_pos,
+                    window_size,
+                    render_local_data,
+                    locked_output_device,
+                );
+            }
+            RenderOpCommon::MoveCursorPositionRelTo(box_origin_pos, content_rel_pos) => {
+                PaintRenderOpImplCrossterm::move_cursor_position_rel_to(
+                    *box_origin_pos,
+                    *content_rel_pos,
+                    window_size,
+                    render_local_data,
+                    locked_output_device,
+                );
+            }
+            RenderOpCommon::ClearScreen => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "ClearScreen",
+                    Clear(ClearType::All),
+                );
+            }
+            RenderOpCommon::SetFgColor(color) => {
+                PaintRenderOpImplCrossterm::set_fg_color(*color, locked_output_device);
+            }
+            RenderOpCommon::SetBgColor(color) => {
+                PaintRenderOpImplCrossterm::set_bg_color(*color, locked_output_device);
+            }
+            RenderOpCommon::ResetColor => {
+                queue_terminal_command!(locked_output_device, "ResetColor", ResetColor);
+            }
+            RenderOpCommon::ApplyColors(style) => {
+                PaintRenderOpImplCrossterm::apply_colors(*style, locked_output_device);
+            }
+            RenderOpCommon::PrintStyledText(text) => {
+                PaintRenderOpImplCrossterm::print_styled_text(text, locked_output_device);
+            }
+            RenderOpCommon::MoveCursorToColumn(col_index) => {
+                PaintRenderOpImplCrossterm::move_cursor_to_column(
+                    *col_index,
+                    render_local_data,
+                    locked_output_device,
+                );
+            }
+            RenderOpCommon::MoveCursorToNextLine(row_height) => {
+                PaintRenderOpImplCrossterm::move_cursor_to_next_line(
+                    *row_height,
+                    render_local_data,
+                    locked_output_device,
+                );
+            }
+            RenderOpCommon::MoveCursorToPreviousLine(row_height) => {
+                PaintRenderOpImplCrossterm::move_cursor_to_previous_line(
+                    *row_height,
+                    render_local_data,
+                    locked_output_device,
+                );
+            }
+            RenderOpCommon::ClearCurrentLine => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "ClearCurrentLine",
+                    Clear(ClearType::CurrentLine),
+                );
+            }
+            RenderOpCommon::ClearToEndOfLine => {
+                PaintRenderOpImplCrossterm::clear_to_end_of_line(locked_output_device);
+            }
+            RenderOpCommon::ClearToStartOfLine => {
+                PaintRenderOpImplCrossterm::clear_to_start_of_line(locked_output_device);
+            }
+            RenderOpCommon::ShowCursor => {
+                queue_terminal_command!(locked_output_device, "ShowCursor", Show,);
+            }
+            RenderOpCommon::HideCursor => {
+                queue_terminal_command!(locked_output_device, "HideCursor", Hide,);
+            }
+            RenderOpCommon::SaveCursorPosition => {
+                PaintRenderOpImplCrossterm::save_cursor_position(locked_output_device);
+            }
+            RenderOpCommon::RestoreCursorPosition => {
+                PaintRenderOpImplCrossterm::restore_cursor_position(locked_output_device);
+            }
+            RenderOpCommon::EnterAlternateScreen => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "EnterAlternateScreen",
+                    EnterAlternateScreen
+                );
+            }
+            RenderOpCommon::ExitAlternateScreen => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "ExitAlternateScreen",
+                    LeaveAlternateScreen
+                );
+            }
+            RenderOpCommon::EnableMouseTracking => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "EnableMouseTracking",
+                    EnableMouseCapture
+                );
+            }
+            RenderOpCommon::DisableMouseTracking => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "DisableMouseTracking",
+                    DisableMouseCapture
+                );
+            }
+            RenderOpCommon::EnableBracketedPaste => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "EnableBracketedPaste",
+                    EnableBracketedPaste
+                );
+            }
+            RenderOpCommon::DisableBracketedPaste => {
+                queue_terminal_command!(
+                    locked_output_device,
+                    "DisableBracketedPaste",
+                    DisableBracketedPaste
+                );
+            }
+        }
+    }
+
     pub fn move_cursor_position_rel_to(
         box_origin_pos: Pos,
         content_rel_pos: Pos,
