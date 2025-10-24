@@ -1,5 +1,4 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::ops::AddAssign;
 use super::{AppSignal, State};
 use r3bl_tui::{Ansi256GradientIndex, BoxedSafeComponent, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, CommonResult, Component, DEBUG_TUI_MOD,
@@ -166,14 +165,14 @@ mod column_render_component_impl_component_trait {
 
                 // Line 1.
                 {
-                    render_ops  += (RenderOpCommon::ResetColor);
-                    render_ops  += (RenderOpCommon::MoveCursorPositionRelTo(
+                    render_ops += RenderOpCommon::ResetColor;
+                    render_ops += RenderOpCommon::MoveCursorPositionRelTo(
                         box_origin_pos,
                         col_index + row_index,
-                    ));
-                    render_ops  += (RenderOpIR::Common(RenderOpCommon::ApplyColors(
+                    );
+                    render_ops += RenderOpIR::Common(RenderOpCommon::ApplyColors(
                         current_box.get_computed_style(),
-                    )));
+                    ));
 
                     let styled_texts = color_wheel.colorize_into_styled_texts(
                         &line_1_trunc_gcs,
@@ -187,19 +186,19 @@ mod column_render_component_impl_component_trait {
                         &mut render_ops,
                     );
 
-                    render_ops  += (RenderOpCommon::ResetColor);
+                    render_ops += RenderOpCommon::ResetColor;
                 }
 
                 // Line 2.
                 {
                     *row_index += 1;
-                    render_ops  += (RenderOpCommon::MoveCursorPositionRelTo(
+                    render_ops += RenderOpCommon::MoveCursorPositionRelTo(
                         box_origin_pos,
                         col_index + row_index,
-                    ));
-                    render_ops  += (RenderOpIR::Common(RenderOpCommon::ApplyColors(
+                    );
+                    render_ops += RenderOpIR::Common(RenderOpCommon::ApplyColors(
                         current_box.get_computed_style(),
-                    )));
+                    ));
 
                     let styled_texts = color_wheel.colorize_into_styled_texts(
                         &line_2_trunc_gcs,
@@ -213,7 +212,7 @@ mod column_render_component_impl_component_trait {
                         &mut render_ops,
                     );
 
-                    render_ops  += (RenderOpCommon::ResetColor);
+                    render_ops += RenderOpCommon::ResetColor;
                 }
 
                 // Paint is_focused.
@@ -221,11 +220,11 @@ mod column_render_component_impl_component_trait {
                     *row_index += 1;
                     col_index =
                         (line_2_trunc_gcs.display_width / ch(2)).convert_to_index();
-                    render_ops  += (RenderOpCommon::ResetColor);
-                    render_ops  += (RenderOpCommon::MoveCursorPositionRelTo(
+                    render_ops += RenderOpCommon::ResetColor;
+                    render_ops += RenderOpCommon::MoveCursorPositionRelTo(
                         box_origin_pos,
                         col_index + row_index,
-                    ));
+                    );
                     if has_focus.does_current_box_have_focus(current_box) {
                         render_ops
                             .push(RenderOpIR::PaintTextWithAttributes("👀".into(), None));

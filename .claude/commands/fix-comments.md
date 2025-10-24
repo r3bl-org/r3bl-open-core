@@ -1,4 +1,5 @@
-In the file currently open in the IDE:
+In the file currently open in the IDE, or the files in the curent working tree or for files that
+have documentation warnings from (cargo doc --no-deps), apply the following fixes:
 
 1. In all the rustdoc comments use reference style links for symbols that are enclosed in backticks
    (where this is possible). For example: `[`SomeSymbol`](path/to/some_symbol)` becomes

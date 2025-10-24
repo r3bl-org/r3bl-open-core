@@ -1,5 +1,4 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use std::ops::AddAssign;
 use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagation,
             MainEventLoopFuture};
 use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
@@ -1249,7 +1248,7 @@ mod tests {
             let center = col(col_center) + row_bottom;
 
             let mut render_ops = RenderOpIRVec::new();
-            render_ops  += (RenderOpCommon::MoveCursorPositionAbs(center));
+            render_ops += RenderOpCommon::MoveCursorPositionAbs(center);
             render_tui_styled_texts_into(&styled_texts, &mut render_ops);
             pipeline.push(ZOrder::Normal, render_ops);
         }

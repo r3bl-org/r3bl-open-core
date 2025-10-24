@@ -725,7 +725,26 @@ Each `PixelChar` can be one of 4 things:
 
 ### Complete Rendering Pipeline Architecture
 
-The R3BL TUI rendering system is organized into 6 distinct stages, each with a clear responsibility:
+Here's a brief overview of the complete rendering pipeline architecture used in the R3BL
+TUI engine. This pipeline efficiently allows for rendering terminal UIs with minimal
+redraws by leveraging an offscreen buffer, and diffing mechanism, along with algorithms to
+remove needless output and control commands being sent to the terminal as output.
+
+```text
+App -> Component -> RenderOpsIR -> RenderPipeline (to OffscreenBuffer) -> RenderOpsOutput -> Terminal
+```
+
+This is very much like a compiler pipeline with multiple stages. The first stage take the
+App and Component code and generates a RenderOpsIR (intermediate representation) which is
+output. This "output" becomes the "source code" for the next stage in the pipeline, which
+takes the IR and compiles it to a RenderOpsOutput (where redundant operations have been
+removed). This output is then executed by the terminal backend to produce the final
+rendered output in the terminal. This flexible architecture allows us to plugin in
+different backends (our own `Direct ANSI`, `crossterm`, `termion`, etc.) and the
+optimizations are applied in a backend agnostic way.
+
+The R3BL TUI rendering system is organized into 6 distinct stages, each with a clear
+responsibility:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐

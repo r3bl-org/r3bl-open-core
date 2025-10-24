@@ -73,7 +73,10 @@ impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
     }
 }
 
-/// Helper for formatting [`OutputOp`]'s [`CompositorNoClipTruncPaintTextWithAttributes`].
+/// Helper for formatting styled text output from the compositor.
+///
+/// This function formats text content with optional styling information
+/// for display in the terminal backend.
 ///
 /// # Errors
 ///

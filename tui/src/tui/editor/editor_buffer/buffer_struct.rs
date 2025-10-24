@@ -13,48 +13,42 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// Stores the data for a single editor buffer using [`ZeroCopyGapBuffer`] for efficient
 /// text storage.
 ///
-/// Please do not construct this struct directly and use
-/// [`new_empty`] instead.
-///
-/// [`new_empty`]: EditorBuffer::new_empty
+/// Please do not construct this struct directly and use [`new_empty`] instead.
 ///
 /// As of 2025, `EditorBuffer` uses [`ZeroCopyGapBuffer`] directly as a concrete type
 /// for efficient content storage with zero-copy access.
 ///
 /// 1. This struct is stored in the app's state.
-/// 2. And it is paired w/ [`crate::EditorEngine`] at runtime; which is responsible for
+/// 2. And it is paired w/ [`EditorEngine`] at runtime; which is responsible for
 ///    rendering it to TUI, and handling user input.
 ///
 /// # Change state during render
 ///
 /// This struct is not mutable during render phase. If you need to make changes during
-/// the render phase, then you should use the [`crate::EditorEngine`] struct, which is
+/// the render phase, then you should use the [`EditorEngine`] struct, which is
 /// mutable during render phase.
 ///
 /// # Modifying the buffer
 ///
-/// [`crate::InputEvent`] is converted into an [`crate::EditorEvent`] (by
-/// [`crate::engine_public_api::apply_event`], which is then used to modify the
-/// [`EditorBuffer`] via:
-/// 1. [`crate::EditorEvent::apply_editor_event`]
-/// 2. [`crate::EditorEvent::apply_editor_events`]
+/// [`InputEvent`] is converted into an [`EditorEvent`] (by [`apply_event`], which is
+/// then used to modify the [`EditorBuffer`] via:
+/// 1. [`apply_editor_event`]
+/// 2. [`apply_editor_events`]
 ///
 /// In order for the commands to be executed, the functions in
-/// [`mod@crate::editor_engine::engine_internal_api`] are used.
+/// [`engine_internal_api`] are used.
 ///
 /// These functions take any one of the following args:
-/// 1. [`crate::EditorArgsMut`]
-/// 3. [`EditorBuffer`] and [`crate::EditorEngine`]
+/// 1. [`EditorArgsMut`]
+/// 3. [`EditorBuffer`] and [`EditorEngine`]
 ///
 /// # Accessing and mutating the fields (w/ validation)
 ///
 /// All the fields in this struct are private. In order to access them you have to use the
-/// accessor associated functions. To mutate them, you have to use the
-/// [`get_mut`] method, which returns a struct of mutable
-/// references to the fields. This struct [`crate::EditorBufferMut`] implements the [Drop]
-/// trait, which allows for validation
-/// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`] operations to
-/// be applied post mutation.
+/// accessor associated functions. To mutate them, you have to use the [`get_mut`] method,
+/// which returns a struct of mutable references to the fields. This struct
+/// [`EditorBufferMut`] implements the [`Drop`] trait, which allows for validation
+/// [`perform_validation_checks_after_mutation`] operations to be applied post mutation.
 ///
 /// # Kinds of caret positions
 ///
@@ -67,10 +61,7 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// # Fields
 ///
 /// Please don't mutate these fields directly, they are not marked `pub` to guard from
-/// unintentional mutation. To mutate or access it, use
-/// [`get_mut`].
-///
-/// [`get_mut`]: EditorBuffer::get_mut
+/// unintentional mutation. To mutate or access it, use [`get_mut`].
 ///
 /// ## `lines`
 ///
@@ -79,11 +70,10 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// ## `caret_raw`
 ///
 /// This is the "display" col index (grapheme-cluster-based) and not "logical" col index
-/// (byte-based) position (both are defined in [`crate::graphemes`]).
+/// (byte-based) position (both are defined in [`graphemes_module`]).
 ///
-/// > Please review [`crate::graphemes::GCStringOwned`], specifically the
-/// > methods in [mod@crate::graphemes::gc_string] for more details on how
-/// > the conversion between "display" and "logical" indices is done.
+/// > Please review [`GCStringOwned`], specifically the methods in [`gc_string`] for more
+/// > details on how the conversion between "display" and "logical" indices is done.
 /// >
 /// > This results from the fact that `UTF-8` is a variable width text encoding scheme,
 /// > that can use between 1 and 4 bytes to represent a single character. So the width a
@@ -94,11 +84,10 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// > - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?)
 /// > - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA)
 ///
-/// 1. It represents the current caret position (relative to the
-///    [`style_adjusted_origin_pos`] of the enclosing [`crate::FlexBox`]).
+/// 1. It represents the current caret position (relative to the [`style_adjusted_origin_pos`]
+///    of the enclosing [`FlexBox`]).
 ///
-/// [`style_adjusted_origin_pos`]: crate::FlexBox::style_adjusted_origin_pos
-/// 2. It works w/ [`crate::RenderOp::MoveCursorPositionRelTo`] as well.
+/// 2. It works w/ [`MoveCursorPositionRelTo`] as well.
 ///
 /// > 💡 For the diagrams below, the caret is where `⮬` and `❱` intersects.
 ///
@@ -169,14 +158,41 @@ use std::fmt::{Debug, Display, Formatter, Result};
 ///
 /// This is used for syntax highlighting. It is a 2-character string, eg: `rs` or `md`
 /// that is used to look up the syntax highlighting rules for the language in
-/// [`find_syntax_by_extension`[`syntect::parsing::SyntaxSet::find_syntax_by_extension`].
+/// [`find_syntax_by_extension`].
 ///
 /// ## `selection_map`
 ///
 /// The [`SelectionList`] is used to keep track of the selections in the buffer. Each
 /// entry in the list represents a row of text in the buffer.
-/// - The row index is the key [`crate::RowIndex`].
-/// - The value is the [`crate::SelectionRange`].
+/// - The row index is the key [`RowIndex`].
+/// - The value is the [`SelectionRange`].
+///
+/// [`new_empty`]: EditorBuffer::new_empty
+/// [`ZeroCopyGapBuffer`]: crate::ZeroCopyGapBuffer
+/// [`EditorEngine`]: crate::EditorEngine
+/// [`InputEvent`]: crate::InputEvent
+/// [`EditorEvent`]: crate::EditorEvent
+/// [`apply_event`]: crate::engine_public_api::apply_event
+/// [`apply_editor_event`]: crate::EditorEvent::apply_editor_event
+/// [`apply_editor_events`]: crate::EditorEvent::apply_editor_events
+/// [`engine_internal_api`]: mod@crate::editor_engine::engine_internal_api
+/// [`EditorArgsMut`]: crate::EditorArgsMut
+/// [`get_mut`]: EditorBuffer::get_mut
+/// [`EditorBufferMut`]: crate::EditorBufferMut
+/// [`Drop`]: https://doc.rust-lang.org/std/ops/trait.Drop.html
+/// [`perform_validation_checks_after_mutation`]: crate::validate_buffer_mut::perform_validation_checks_after_mutation
+/// [`CaretRaw`]: crate::CaretRaw
+/// [`CaretScrAdj`]: crate::CaretScrAdj
+/// [`graphemes_module`]: crate::graphemes
+/// [`GCStringOwned`]: crate::graphemes::GCStringOwned
+/// [`gc_string`]: mod@crate::graphemes::gc_string
+/// [`style_adjusted_origin_pos`]: crate::FlexBox::style_adjusted_origin_pos
+/// [`FlexBox`]: crate::FlexBox
+/// [`MoveCursorPositionRelTo`]: crate::RenderOpCommon::MoveCursorPositionRelTo
+/// [`find_syntax_by_extension`]: syntect::parsing::SyntaxSet::find_syntax_by_extension
+/// [`SelectionList`]: crate::SelectionList
+/// [`RowIndex`]: crate::RowIndex
+/// [`SelectionRange`]: crate::SelectionRange
 #[derive(Clone, PartialEq, Default)]
 pub struct EditorBuffer {
     pub content: EditorContent,

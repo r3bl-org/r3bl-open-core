@@ -8,13 +8,11 @@ pub fn render_tui_styled_texts_into(
 ) {
     for styled_text in &texts.inner {
         let style = styled_text.get_style();
-        render_ops += RenderOpCommon::ApplyColors(Some(
-            *style,
-        ));
-        render_ops += (RenderOpIR::PaintTextWithAttributes(
+        render_ops += RenderOpCommon::ApplyColors(Some(*style));
+        render_ops += RenderOpIR::PaintTextWithAttributes(
             styled_text.get_text().into(),
             Some(*style),
-        ));
+        );
         render_ops += RenderOpCommon::ResetColor;
     }
 }

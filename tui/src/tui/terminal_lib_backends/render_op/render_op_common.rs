@@ -40,7 +40,9 @@ pub enum RenderOpCommon {
     /// Move cursor to absolute position. This is always painted on top.
     ///
     /// Position is the absolute column and row on the terminal screen.
-    /// Uses [`super::sanitize_and_save_abs_pos`] to clean up the given position.
+    /// The compositor uses [`sanitize_and_save_abs_pos`] to clean up the given position.
+    ///
+    /// [`sanitize_and_save_abs_pos`]: crate::paint::sanitize_and_save_abs_pos
     MoveCursorPositionAbs(/* absolute position */ Pos),
 
     /// Move cursor relative to origin. 1st position is origin, 2nd is offset.

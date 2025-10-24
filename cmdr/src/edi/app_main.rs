@@ -1,6 +1,5 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::ops::AddAssign;
 use crate::edi::State;
 use r3bl_tui::{Ansi256GradientIndex, App, BoxedSafeApp, ColorWheel, ColorWheelConfig,
                ColorWheelSpeed, ComponentRegistry, ComponentRegistryMap, DEBUG_TUI_MOD,
@@ -676,7 +675,7 @@ mod status_bar {
         let center = col(col_center) + row_bottom;
 
         let mut render_ops = RenderOpIRVec::new();
-        render_ops  += (RenderOpCommon::MoveCursorPositionAbs(center));
+        render_ops += RenderOpCommon::MoveCursorPositionAbs(center);
         render_tui_styled_texts_into(&styled_texts, &mut render_ops);
         pipeline.push(ZOrder::Normal, render_ops);
     }

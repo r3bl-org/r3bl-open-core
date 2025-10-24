@@ -27,6 +27,9 @@
 //!
 //! This is the final stage before terminal output. The Crossterm library handles
 //! converting commands to ANSI escape sequences appropriate for the terminal.
+//!
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{CliTextInline, Flush, GCStringOwned, LockedOutputDevice, PaintRenderOp, Pos,
@@ -41,8 +44,8 @@ use crossterm::{cursor::{Hide, MoveTo, Show},
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 
-/// Struct representing the Crossterm implementation of [`PaintRenderOp`] trait.
-/// This empty struct is needed since the [Flush] trait needs to be implemented.
+/// Struct representing the Crossterm implementation of `PaintRenderOp` trait.
+/// This empty struct is needed since the [`Flush`] trait needs to be implemented.
 #[derive(Debug)]
 pub struct PaintRenderOpImplCrossterm;
 

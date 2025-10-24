@@ -3,8 +3,10 @@
 //! # Rendering Pipeline Architecture
 //!
 //! Here's the flow:
-//! App -> Component -> `RenderOpsIR` -> `RenderPipeline` (to `OffscreenBuffer`) ->
-//! `RenderOpsOutput` -> Terminal
+//!
+//! ```text
+//! App -> Component -> `RenderOpsIR` -> `RenderPipeline` (to `OffscreenBuffer`) -> `RenderOpsOutput` -> Terminal
+//! ```
 //!
 //! ```text
 //! ┌───────────────────────────────────────┐
@@ -64,7 +66,7 @@
 //! - [`offscreen_buffer_pool`] - Buffer pooling for efficiency
 //! - [`z_order`] - Z-order layer management
 //! - [`raw_mode`] - Terminal raw mode setup/teardown
-//! - [`paint`] - Text painting utilities
+//! - [`mod@paint`] - Text painting utilities
 //! - [`direct_ansi`] - Direct ANSI escape sequence generation
 //!
 //! # Background information on terminals PTY, TTY, VT100, ANSI, ASCII
@@ -174,9 +176,13 @@ pub use render_tui_styled_texts::*;
 pub use z_order::*;
 
 // Tests.
+#[cfg(test)]
 mod test_input_event;
+#[cfg(test)]
 mod test_keypress;
+#[cfg(test)]
 mod test_mouse_input;
+#[cfg(test)]
 mod test_render_pipeline;
 
 // Benchmarks.

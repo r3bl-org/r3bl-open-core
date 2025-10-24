@@ -38,6 +38,12 @@
 //! - Manages terminal modes (raw mode, cursor visibility, mouse tracking)
 //! - Uses [`RenderOpsLocalData`] for state tracking (avoid redundant commands)
 //! - Handles colors, cursor movement, and text output
+//!
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`OffscreenBufferPaint`]: crate::OffscreenBufferPaint
+//! [`PaintRenderOp`]: crate::PaintRenderOp
+//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 // Attach.
 pub mod debug;

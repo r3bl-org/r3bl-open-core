@@ -723,11 +723,11 @@
 //! # Layout, rendering, and event handling
 //!
 //! The current render pipeline flow is:
-//! 1. Input Event → State generation → [App] renders to [`RenderOps`]
-//! 2. [`RenderOps`] → Rendered to [`OffscreenBuffer`] ([`PixelChar`] grid)
+//! 1. Input Event → State generation → [App] renders to [`RenderOpIRVec`]
+//! 2. [`RenderOpIRVec`] → Rendered to [`OffscreenBuffer`] ([`PixelChar`] grid)
 //! 3. [`OffscreenBuffer`] → Diffed with previous buffer → Generate diff chunks
-//! 4. Diff chunks → Converted back to [`RenderOps`] for painting
-//! 5. [`RenderOps`] execution → Each op routed through crossterm backend
+//! 4. Diff chunks → Converted back to [`RenderOpOutputVec`] for painting
+//! 5. [`RenderOpOutputVec`] execution → Each op routed through crossterm backend
 //! 6. Crossterm → Converts to ANSI escape sequences → Queued to stdout → Flushed
 //!
 //! ```text
@@ -972,8 +972,8 @@
 //!    can give them a direction and even relative sizing out of 100%).
 //! 2. As you approach the "leaf" nodes of your layout, you will find [Component] trait
 //!    objects. These are black boxes which are sized, positioned, and painted _relative_
-//!    to their parent box. They get to handle input events and render [`RenderOp`]s into
-//!    a [`RenderPipeline`]. This is kind of like virtual DOM in React. This queue of
+//!    to their parent box. They get to handle input events and render [`RenderOpIR`]s
+//!    into a [`RenderPipeline`]. This is kind of like virtual DOM in React. This queue of
 //!    commands is collected from all the components and ultimately painted to the screen,
 //!    for each render! Your app's state is mutable and is stored in the [`GlobalData`]
 //!    struct. You can handle out of band events as well using the signal mechanism.
@@ -1049,13 +1049,13 @@
 //! 078 S ░░░░░░░╳░░░░░░░░079 S ░░░░░░░╳░░░░░░░░080 S ░░░░░░░╳░░░░░░░░spacer [ 0, 16-80 ]
 //! ```
 //!
-//! When [`RenderOps`] are executed and used to create an [`OffscreenBuffer`] that maps to
-//! the size of the terminal window, clipping is performed automatically. This means that
-//! it isn't possible to move the caret outside of the bounds of the viewport (terminal
-//! window size). And it isn't possible to paint text that is larger than the size of the
-//! offscreen buffer. The buffer really represents the current state of the viewport.
-//! Scrolling has to be handled by the component itself (an example of this is the editor
-//! component).
+//! When [`RenderOpIRVec`] are executed and used to create an [`OffscreenBuffer`] that
+//! maps to the size of the terminal window, clipping is performed automatically. This
+//! means that it isn't possible to move the caret outside of the bounds of the viewport
+//! (terminal window size). And it isn't possible to paint text that is larger than the
+//! size of the offscreen buffer. The buffer really represents the current state of the
+//! viewport. Scrolling has to be handled by the component itself (an example of this is
+//! the editor component).
 //!
 //! Each [`PixelChar`] can be one of 4 things:
 //!
@@ -1104,14 +1104,14 @@
 //! <!-- https://asciiflow.com/#/share/eJyrVspLzE1VssorzcnRUcpJrEwtUrJSqo5RqohRsrK0MNaJUaoEsozMTYGsktSKEiAnRunRlD10QzExeUBSwTk%2FryQxMy%2B1SAEHQCglCBBKSXKJAonKUawBeiBHwRDhAAW4oBGSIKoWNDcrYBUkUgulETFtl0JQal5KalFAZkFqDjAicMYUKS4nJaJoaCgdkjExgUkLH9PK2Gl7FLRBJFWMpUqo0ilL4wpirOIklEg4BP3T0oqTi1JT85xK09IgpR%2FcXLohUv1M2MM49FIhFSjVKtUCAEVNQq0%3D) -->
 //!
 //! Each component produces a [`RenderPipeline`], which is a map of [`ZOrder`] and
-//! `Vec<`[`RenderOps`]`>`. [`RenderOps`] are the instructions that are grouped together,
-//! such as move the caret to a position, set a color, and paint some text.
+//! `Vec<`[`RenderOpIR`]`>`. [`RenderOpIR`] are the instructions that are grouped
+//! together, such as move the caret to a position, set a color, and paint some text.
 //!
-//! Inside of each [`RenderOps`] the caret is stateful, meaning that the caret position is
-//! remembered after each [`RenderOp`] is executed. However, once a new [`RenderOps`] is
-//! executed, the caret position reset just for that [`RenderOps`]. Caret position is not
-//! stored globally. You should read more about "atomic paint operations" in the
-//! [`RenderOp`] documentation.
+//! Inside of each [`RenderOpIRVec`] the caret is stateful, meaning that the caret
+//! position is remembered after each [`RenderOpIR`] is executed. However, once a new
+//! [`RenderOpIRVec`] is executed, the caret position reset just for that
+//! [`RenderOpIRVec`]. Caret position is not stored globally. You should read more about
+//! "atomic paint operations" in the [`RenderOpIR`] documentation.
 //!
 //! Once a set of these [`RenderPipeline`]s have been generated, typically after the user
 //! enters some input event, and that produces a new state which then has to be rendered,
@@ -1611,8 +1611,9 @@
 //! [GlobalData]: crate::GlobalData
 //! [EventPropagation]: crate::EventPropagation
 //!
-//! [RenderOp]: crate::RenderOp
-//! [RenderOps]: crate::RenderOps
+//! [RenderOpCommon]: crate::RenderOpCommon
+//! [RenderOpIRVec]: crate::RenderOpIRVec
+//! [RenderOpOutputVec]: crate::RenderOpOutputVec
 //! [RenderPipeline]: crate::RenderPipeline
 //! [OffscreenBuffer]: crate::OffscreenBuffer
 //! [PixelChar]: crate::PixelChar

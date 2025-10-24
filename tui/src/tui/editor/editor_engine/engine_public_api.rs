@@ -180,7 +180,7 @@ pub fn render_engine(
     })
 }
 
-pub fn render_content(render_args: RenderArgs<'_>, mut render_ops: &mut RenderOpIRVec) {
+pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOpIRVec) {
     let RenderArgs {
         buffer: editor_buffer,
         engine: editor_engine,
@@ -300,19 +300,15 @@ pub fn render_selection(render_args: RenderArgs<'_>, mut render_ops: &mut Render
                 raw_col_index + raw_row_index
             };
 
-            render_ops += (RenderOpCommon::MoveCursorPositionRelTo(
+            render_ops += RenderOpCommon::MoveCursorPositionRelTo(
                 editor_engine.current_box.style_adjusted_origin_pos,
                 position,
-            ));
+            );
 
-            render_ops += RenderOpCommon::ApplyColors(Some(
-                get_selection_style(),
-            ));
+            render_ops += RenderOpCommon::ApplyColors(Some(get_selection_style()));
 
-            render_ops += (RenderOpIR::PaintTextWithAttributes(
-                selection_holder.into(),
-                None,
-            ));
+            render_ops +=
+                RenderOpIR::PaintTextWithAttributes(selection_holder.into(), None);
 
             render_ops += RenderOpCommon::ResetColor;
         }
@@ -338,10 +334,10 @@ pub fn render_caret(render_args: RenderArgs<'_>, mut render_ops: &mut RenderOpIR
             engine.current_box.style_adjusted_origin_pos,
             *buffer.get_caret_raw(),
         );
-        render_ops += (RenderOpIR::PaintTextWithAttributes(
+        render_ops += RenderOpIR::PaintTextWithAttributes(
             str_at_caret.string,
             Some(new_style!(reverse)),
-        ));
+        );
         render_ops += RenderOpCommon::MoveCursorPositionRelTo(
             engine.current_box.style_adjusted_origin_pos,
             *buffer.get_caret_raw(),
@@ -508,9 +504,9 @@ mod syn_hi_r3bl_path {
                 }
 
                 // Render each line.
-                render_ops += (RenderOpIR::Common(
+                render_ops += RenderOpIR::Common(
                     RenderOpCommon::MoveCursorPositionRelTo(box_pos, col(0) + row_index),
-                ));
+                );
                 let styled_texts = line.clip(scr_ofs, max_display_col_count);
                 render_tui_styled_texts_into(&styled_texts, render_ops);
                 render_ops += RenderOpCommon::ResetColor;
@@ -710,14 +706,13 @@ mod no_syn_hi_path {
             max_display_col_count,
         );
 
-        render_ops += RenderOpCommon::ApplyColors(
-            editor_engine.current_box.get_computed_style(),
-        );
+        render_ops +=
+            RenderOpCommon::ApplyColors(editor_engine.current_box.get_computed_style());
 
-        render_ops += (RenderOpIR::PaintTextWithAttributes(
+        render_ops += RenderOpIR::PaintTextWithAttributes(
             line_trunc.into(),
             editor_engine.current_box.get_computed_style(),
-        ));
+        );
 
         render_ops += RenderOpCommon::ResetColor;
     }

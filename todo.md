@@ -22,7 +22,7 @@
 
 # remove crossterm
 
-- [⌛] use [`task_clean_render_ops_type_design`](docs/task_clean_render_ops_type_design.md) to clean
+- [x] use [`task_clean_render_ops_type_design`](docs/done/task_clean_render_ops_type_design.md) to clean
   up `RenderOp` type ambiguity between "output" and "ir" contexts. The render pipeline is actually:
   `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
 

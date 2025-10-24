@@ -128,6 +128,7 @@ pub fn process_render_op(
 /// Process a common render operation in the offscreen buffer.
 ///
 /// These operations work identically in both IR and Output contexts.
+#[allow(clippy::too_many_lines)]
 fn process_common_render_op(
     common_op: &RenderOpCommon,
     window_size: Size,

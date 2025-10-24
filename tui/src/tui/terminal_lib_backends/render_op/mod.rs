@@ -21,8 +21,7 @@
 //! **Output**: These types are consumed by all downstream stages
 //! **Role**: Define the contract between all layers
 //!
-//! > **For the complete rendering architecture**, see [`super`] (parent module) and
-//! > [`super::super::README.md`].
+//! > **For the complete rendering architecture**, see [`mod@super`] (parent module).
 //!
 //! ## What This Module Provides
 //!
@@ -37,10 +36,11 @@
 //!
 //! # Type Safety Benefits
 //!
-//! The split between `RenderOpIR` and `RenderOpOutput` provides compile-time guarantees:
+//! The split between [`RenderOpIR`] and [`RenderOpOutput`] provides compile-time
+//! guarantees:
 //!
-//! - **Component code** uses `RenderOpIR` with clipping-aware operations
-//! - **Backend code** uses `RenderOpOutput` with post-clipping operations
+//! - **Component code** uses [`RenderOpIR`] with clipping-aware operations
+//! - **Backend code** uses [`RenderOpOutput`] with post-clipping operations
 //! - **Impossible to mix** IR and Output operations incorrectly
 //!
 //! # Module Organization

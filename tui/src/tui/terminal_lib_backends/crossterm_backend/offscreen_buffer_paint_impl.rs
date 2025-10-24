@@ -1,3 +1,5 @@
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 //! # Pipeline Stage 4: Backend Converter
 //!
 //! # You Are Here
@@ -10,7 +12,7 @@
 //!
 //! **Input**: [`OffscreenBuffer`] (rendered pixels from compositor)
 //! **Output**: [`RenderOpOutputVec`] (optimized terminal operations)
-//! **Role**: Convert offscreen buffer to backend-specific rendering operations
+//! **Role**: Convert [`OffscreenBuffer`] to backend-specific rendering operations
 //!
 //! > **For the complete rendering architecture**, see [`super::super`] (parent parent
 //! > module).
@@ -20,13 +22,17 @@
 //! The Backend Converter scans the [`OffscreenBuffer`] and generates optimized
 //! [`RenderOpOutputVec`] operations ready for terminal execution. It can:
 //! - Perform diff calculations against the previous buffer for selective redraw
-//! - Convert [`PixelChar`] grid to styled text painting operations
+//! - Convert grid of styled characters to styled text painting operations
 //! - Optimize by grouping adjacent operations with the same styling
 //! - Handle backend-specific optimizations (e.g., state tracking via
 //!   [`RenderOpsLocalData`])
 //!
 //! This stage is crucial for performance: by diffing buffers, only changed pixels are
 //! rendered in subsequent frames, eliminating unnecessary terminal updates.
+//!
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, Flush, FlushKind,
@@ -108,24 +114,31 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         });
     }
 
-    /// Process each [`PixelChar`] in [`OffscreenBuffer`] and generate a [`RenderOpIR`]
-    /// for it. Return a [`RenderOpsIR`] containing all the [`RenderOpIR`]s.
+    /// Process each [`PixelChar`] and generate a [`RenderOpOutput`]
+    /// for it. Return a [`RenderOpOutputVec`] containing all the [`RenderOpOutput`]s.
     ///
-    /// > Note that each [PixelChar] gets the full [TuiStyle] embedded in it (not just a
-    /// > part of it that is different than the previous char). This means that it is
-    /// > possible to quickly "diff" between 2 of them, since the [TuiStyle] is part of
-    /// > the [PixelChar]. This is important for selective re-rendering of the
-    /// > [OffscreenBuffer].
+    /// > Note that each [`PixelChar`] gets the full [`TuiStyle`] embedded in it (not just
+    /// > a part of it that is different than the previous char). This means that it is
+    /// > possible to quickly "diff" between 2 of them, since the [`TuiStyle`] is part of
+    /// > the [`PixelChar`]. This is important for selective re-rendering of the
+    /// > offscreen buffer.
     ///
     /// Here's the algorithm used in this function using pseudo-code:
-    /// - When going thru every `PixelChar` in a line:
-    ///   - If the `PixelChar` is `Void`, `Spacer`, or `PlainText` then handle
-    ///     (`pixel_char_str`, `pixel_char_style`)
-    ///     - `temp_line_buffer`: accumulates over loop iterations.
-    ///     - `flush_temp_line_buffer()`: flushes.
+    /// - When going thru every [`PixelChar`] in a line:
+    ///   - If the [`PixelChar`] is [`Void`], [`Spacer`], or [`PlainText`] then handle
+    ///     (display character, [`TuiStyle`])
+    ///     - line buffer -  accumulates over loop iterations.
+    ///     - `render_helper::flush_all_buffers()` - flushes.
     ///   - Make sure to flush at the:
     ///     - End of line.
     ///     - When style changes.
+    ///
+    /// [`RenderOpOutput`]: crate::RenderOpOutput
+    /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+    /// [`TuiStyle`]: crate::TuiStyle
+    /// [`Void`]: PixelChar::Void
+    /// [`Spacer`]: PixelChar::Spacer
+    /// [`PlainText`]: PixelChar::PlainText
     fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpIRVec {
         use render_helper::Context;
 
@@ -164,16 +177,16 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
                 // Deal w/: fg and bg colors | text attrib style.
                 if is_first_loop_iteration || !is_style_same_as_prev {
-                    context.render_ops += (RenderOpCommon::ResetColor);
+                    context.render_ops += RenderOpCommon::ResetColor;
                     if let Some(style) = pixel_char_style
                         && let Some(color) = style.color_fg
                     {
-                        context.render_ops += (RenderOpCommon::SetFgColor(color));
+                        context.render_ops += RenderOpCommon::SetFgColor(color);
                     }
                     if let Some(style) = pixel_char_style
                         && let Some(color) = style.color_bg
                     {
-                        context.render_ops += (RenderOpCommon::SetBgColor(color));
+                        context.render_ops += RenderOpCommon::SetBgColor(color);
                     }
                     // Update prev_style.
                     context.prev_style = pixel_char_style;
@@ -308,13 +321,13 @@ mod render_helper {
         let pos = context.display_col_index_for_line + context.display_row_index;
 
         // Deal w/ position.
-        context.render_ops += (RenderOpCommon::MoveCursorPositionAbs(pos));
+        context.render_ops += RenderOpCommon::MoveCursorPositionAbs(pos);
 
         // Deal w/ style attribs & actually paint the `temp_line_buffer`.
-        context.render_ops += (RenderOpIR::PaintTextWithAttributes(
+        context.render_ops += RenderOpIR::PaintTextWithAttributes(
             context.buffer_plain_text.clone(),
             context.prev_style,
-        ));
+        );
 
         // Update `display_col_index_for_line`.
         let display_width = GCStringOwned::from(&context.buffer_plain_text).width();

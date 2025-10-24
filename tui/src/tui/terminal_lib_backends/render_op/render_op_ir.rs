@@ -208,12 +208,12 @@ impl DerefMut for RenderOpIRVec {
 ///
 /// # Example
 ///
-/// ```no_run
-/// # use r3bl_tui::{RenderOpCommon, RenderOpIRVec, Position};
+/// ```
+/// # use r3bl_tui::{RenderOpCommon, RenderOpIRVec, Pos, row, col};
 /// let mut render_ops = RenderOpIRVec::new();
 ///
 /// // Using += operator (more ergonomic)
-/// render_ops += RenderOpCommon::MoveCursorPositionAbs(Position::new(5, 10));
+/// render_ops += RenderOpCommon::MoveCursorPositionAbs(Pos::new((row(5), col(10))));
 ///
 /// assert_eq!(render_ops.len(), 1);
 /// ```
@@ -222,7 +222,9 @@ impl AddAssign<RenderOpIR> for RenderOpIRVec {
 }
 
 impl AddAssign<RenderOpCommon> for RenderOpIRVec {
-    fn add_assign(&mut self, rhs: RenderOpCommon) { self.list.push(RenderOpIR::Common(rhs)); }
+    fn add_assign(&mut self, rhs: RenderOpCommon) {
+        self.list.push(RenderOpIR::Common(rhs));
+    }
 }
 
 impl AddAssign<RenderOpIR> for &mut RenderOpIRVec {
@@ -230,7 +232,9 @@ impl AddAssign<RenderOpIR> for &mut RenderOpIRVec {
 }
 
 impl AddAssign<RenderOpCommon> for &mut RenderOpIRVec {
-    fn add_assign(&mut self, rhs: RenderOpCommon) { self.list.push(RenderOpIR::Common(rhs)); }
+    fn add_assign(&mut self, rhs: RenderOpCommon) {
+        self.list.push(RenderOpIR::Common(rhs));
+    }
 }
 
 impl Debug for RenderOpIRVec {

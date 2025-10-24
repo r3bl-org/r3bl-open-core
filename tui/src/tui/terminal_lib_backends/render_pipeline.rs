@@ -39,16 +39,15 @@ use std::{collections::{HashMap, hash_map::Entry},
           fmt::Debug,
           ops::{AddAssign, Deref, DerefMut}};
 
-/// Macro to make it easier to create a [`RenderPipeline`]. It works w/ [`RenderOp`]
+/// Macro to make it easier to create a [`RenderPipeline`]. It works w/ [`RenderOpIR`]
 /// items. It allows them to be added in sequence, and then flushed at the end.
-/// 1. This pipeline is meant to hold a list of [`RenderOp`] items.
-/// 2. Once all the [`RenderOp`] items are added to the correct [`ZOrder`]s they can then
-///    be flushed at the end in order to [paint](RenderPipeline::paint()) them to the
-///    screen.
-/// 3. [`get_render_order()`](ZOrder::get_render_order) contains the priority that is used
-///    to paint the different groups of [`RenderOp`] items.
+/// 1. This pipeline is meant to hold a list of [`RenderOpIR`] items.
+/// 2. Once all the [`RenderOpIR`] items are added to the correct [`ZOrder`]s they can
+///    then be flushed at the end in order to paint them to the screen.
+/// 3. [`ZOrder::get_render_order`] contains the priority that is used to paint the
+///    different groups of render operation items.
 ///
-/// This adds given [`RenderOp`]s to a [`RenderOpIRVec`] and adds that the the pipeline,
+/// This adds given [`RenderOpIR`]s to a [`RenderOpIRVec`] and adds that the the pipeline,
 /// but does not flush anything. It will return a [`RenderPipeline`].
 ///
 /// Here's an example.
@@ -81,8 +80,11 @@ use std::{collections::{HashMap, hash_map::Entry},
 /// Decl macro docs:
 /// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
 ///
-/// `HashMap` docs:
-/// - <https://doc.rust-lang.org/std/collections/struct.HashMap.html#examples>
+/// [`RenderOpIR`]: crate::RenderOpIR
+/// [`RenderPipeline`]: crate::RenderPipeline
+/// [`ZOrder`]: crate::ZOrder
+/// [`RenderOpIRVec`]: crate::RenderOpIRVec
+/// [`ZOrder::get_render_order`]: crate::ZOrder::get_render_order
 #[macro_export]
 macro_rules! render_pipeline {
     // No args. Returns a new default pipeline.

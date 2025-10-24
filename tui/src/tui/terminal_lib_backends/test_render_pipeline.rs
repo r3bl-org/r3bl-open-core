@@ -2,15 +2,14 @@
 
 #[cfg(test)]
 mod tests {
-    use std::ops::AddAssign;
     use crate::{RenderOpCommon, RenderOpIR, RenderOpIRVec, RenderPipeline, ZOrder,
                 assert_eq2, render_pipeline};
 
     #[test]
     fn render_ops_macro() {
         let mut render_ops = RenderOpIRVec::new();
-        render_ops  += (RenderOpCommon::ClearScreen);
-        render_ops  += (RenderOpCommon::ResetColor);
+        render_ops += RenderOpCommon::ClearScreen;
+        render_ops += RenderOpCommon::ResetColor;
         assert_eq2!(render_ops.len(), 2);
     }
 

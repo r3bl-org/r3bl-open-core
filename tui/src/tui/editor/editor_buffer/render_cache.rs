@@ -5,8 +5,8 @@
 //! content of the editor buffer changes, or if the scroll offset or window size changes.
 //!
 //! - The key is derived from the scroll offset and window size.
-//! - The value is a [`RenderOps`] struct that contains the render operations to render
-//!   the content of the editor buffer to the screen.
+//! - The value is a [`RenderOpIRVec`] struct that contains the render operations to
+//!   render the content of the editor buffer to the screen.
 //!
 //! In the future, if there is a need to store multiple entries in the cache, the cache
 //! can be implemented as a [`crate::RingBuffer`] or [`crate::InlineVec`] of

@@ -42,19 +42,25 @@ pub trait PaintRenderOp {
     );
 }
 
-/// Paint the render pipeline. The render pipeline contains a list of [`crate::RenderOps`]
-/// for each [`crate::ZOrder`]. This function is responsible for:
-/// 1. Actually executing those [`crate::RenderOps`] in the correct order.
+/// Paint the render pipeline. The render pipeline contains a list of
+/// [`RenderOpOutputVec`] for each [`ZOrder`]. This function is responsible
+/// for:
+/// 1. Actually executing those [`RenderOpOutputVec`] in the correct order.
 /// 2. And routing the execution to the correct backend specified in
 ///    [`TERMINAL_LIB_BACKEND`].
 ///
-/// See [`crate::RenderOps`] for more details of "atomic paint operations".
+/// See [`RenderOpCommon`] for more details of "atomic paint operations".
 ///
 /// # Panics
 ///
 /// This will panic if the lock is poisoned, which can happen if a thread
 /// panics while holding the lock. To avoid panics, ensure that the code that
 /// locks the mutex does not panic while holding the lock.
+///
+/// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+/// [`ZOrder`]: crate::ZOrder
+/// [`crate::RenderOpCommon`]: crate::RenderOpCommon
+/// [`RenderOpCommon`]: crate::RenderOpCommon
 pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,
