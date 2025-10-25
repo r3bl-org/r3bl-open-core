@@ -22,12 +22,18 @@
 
 # remove crossterm
 
-- [x] use [`task_clean_render_ops_type_design`](docs/done/task_clean_render_ops_type_design.md) to clean
-  up `RenderOp` type ambiguity between "output" and "ir" contexts. The render pipeline is actually:
-  `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
+- [x] use [`task_clean_render_ops_type_design`](docs/done/task_clean_render_ops_type_design.md) to
+      clean up `RenderOp` type ambiguity between "output" and "ir" contexts. The render pipeline is
+      actually:
+      `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
 
 - [⌛] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
   `r3bl_open_core` codebase
+
+- [⌛] use [`task_render_path_2_add_ofs_buf`](docs/task_render_path_2_add_ofs_buf.md) to add use
+  `OffscreenBuffer` to radically simplify hybrid / partial TUI codepaths! This paves the way for
+  having each Component paint into its own OffscreenBuffer, and then composing them together for
+  automatic scrolling and z-index handling
 
 # unify rendering paths
 
