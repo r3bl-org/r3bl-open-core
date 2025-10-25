@@ -1,9 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use miette::{IntoDiagnostic, miette};
-use r3bl_tui::{InlineVec, OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
+use r3bl_tui::{InlineVec, LineStateControlSignal, OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
                bold, fg_color, fg_red, fg_slate_gray, inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
-               readline_async::{Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
+               readline_async::{CHANNEL_CAPACITY, Readline, ReadlineAsyncContext, ReadlineEvent, Spinner},
                rla_println, set_mimalloc_in_main, tui_color};
 use smallvec::smallvec;
 use std::{fs,

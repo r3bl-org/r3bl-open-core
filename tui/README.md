@@ -747,15 +747,15 @@ The R3BL TUI rendering system is organized into 6 distinct stages, each with a c
 responsibility:
 
 ```
-┌───────────────────────────────────────────────────────────────────────────────┐
-│ STAGE 1: Application/Component Layer (App Code)                               │
-│ ───────────────────────────────────────────────────────────────────────────── │
-│ Generates: RenderOpsIR with built-in clipping info                            │
-│ Module: render_op - Contains type definitions                                 │
-│                                                                               │
-│ Components produce draw commands describing *what* to render and *where*.     │
-│ Each operation carries clipping information to ensure safe rendering.         │
-└────────────────┬──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ STAGE 1: Application/Component Layer (App Code)                                │
+│ ────────────────────────────────────────────────────────────────────────────── │
+│ Generates: RenderOpsIR with built-in clipping info                             │
+│ Module: render_op - Contains type definitions                                  │
+│                                                                                │
+│ Components produce draw commands describing *what* to render and *where*.      │
+│ Each operation carries clipping information to ensure safe rendering.          │
+└────────────────┬───────────────────────────────────────────────────────────────┘
                  │
 ┌────────────────▼───────────────────────────────────────────────────────────────┐
 │ STAGE 2: Render Pipeline Collection (Organization Layer)                       │

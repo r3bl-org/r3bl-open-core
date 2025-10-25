@@ -76,8 +76,6 @@
 //! - [TUI Development Workflow](#tui-development-workflow)
 //!   - [TUI-Specific Commands](#tui-specific-commands)
 //!   - [Testing and Development](#testing-and-development)
-//!     - [VT100 ANSI Conformance Testing](#vt100-ansi-conformance-testing)
-//!     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
 //!   - [Performance Analysis Features](#performance-analysis-features)
 //! - [Examples to get you started](#examples-to-get-you-started)
 //!   - [Video of the demo in action](#video-of-the-demo-in-action)
@@ -110,6 +108,8 @@
 //! - [Input event specificity](#input-event-specificity)
 //! - [Rendering and painting](#rendering-and-painting)
 //!   - [Offscreen buffer](#offscreen-buffer)
+//!   - [Complete Rendering Pipeline
+//!     Architecture](#complete-rendering-pipeline-architecture)
 //!   - [Render pipeline](#render-pipeline)
 //!   - [First render](#first-render)
 //!   - [Subsequent render](#subsequent-render)
@@ -443,6 +443,69 @@
 //! The conformance tests ensure the parser correctly handles both standard markdown
 //! syntax and R3BL extensions while maintaining performance and reliability.
 //!
+//! ### VT100 ANSI Conformance Testing
+//!
+//! The TUI library includes comprehensive VT100/ANSI escape sequence conformance tests
+//! that validate the terminal emulation pipeline:
+//!
+//! ```bash
+//! # Run all VT100 ANSI conformance tests
+//! cargo test vt_100_ansi_conformance_tests
+//!
+//! # Run specific conformance test categories
+//! cargo test test_real_world_scenarios     # vim, emacs, tmux patterns
+//! cargo test test_cursor_operations        # cursor positioning & movement
+//! cargo test test_sgr_and_character_sets   # text styling & colors
+//! ```
+//!
+//! **Testing Architecture Features:**
+//! - **Type-safe sequence builders**: Uses [`CsiSequence`], [`EscSequence`], and
+//!   [`SgrCode`] builders instead of hardcoded escape strings
+//! - **Real-world scenarios**: Tests realistic terminal applications (vim, emacs, tmux)
+//!   with authentic 80x25 terminal dimensions
+//! - **VT100 specification compliance**: Comprehensive coverage of ANSI escape sequences
+//!   with proper bounds checking and edge case handling
+//! - **Conformance data modules**: Organized sequence patterns for different terminal
+//!   applications and use cases
+//!
+//! The conformance tests ensure the ANSI parser correctly processes sequences from
+//! real terminal applications and maintains compatibility with VT100 specifications.
+//!
+//! ### Markdown Parser Conformance Testing
+//!
+//! The markdown parser includes a comprehensive conformance test suite with organized
+//! test data that validates parsing correctness across diverse markdown content:
+//!
+//! ```bash
+//! # Run all markdown parser tests
+//! cargo test md_parser
+//!
+//! # Run specific test categories
+//! cargo test parser_snapshot_tests     # Snapshot testing for parser output
+//! cargo test parser_bench_tests        # Performance benchmarks
+//! cargo test conformance_test_data     # Conformance test data validation
+//! ```
+//!
+//! **Testing Infrastructure Features:**
+//! - **Conformance test data organization**: Test inputs organized by complexity
+//!   (invalid, small, medium, large, jumbo)
+//! - **Snapshot testing**: Validates parser output structure and correctness using insta
+//!   snapshots
+//! - **Performance benchmarks**: Ensures parser maintains efficient performance across
+//!   content sizes
+//! - **Real-world documents**: Tests with authentic markdown files including complex
+//!   nested structures
+//!
+//! **Test Data Categories:**
+//! - **Invalid inputs**: Edge cases and malformed syntax for error handling validation
+//! - **Valid small inputs**: Simple formatting and single-line markdown
+//! - **Valid medium inputs**: Multi-paragraph content and structured documents
+//! - **Valid large inputs**: Complex nested structures and advanced features
+//! - **Valid jumbo inputs**: Real-world files and comprehensive documents
+//!
+//! The conformance tests ensure the parser correctly handles both standard markdown
+//! syntax and R3BL extensions while maintaining performance and reliability.
+//!
 //! For complete development setup and all available commands, see the
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
 //!
@@ -467,6 +530,258 @@
 //! app built using this TUI engine.
 //!
 //! ![rc](https://user-images.githubusercontent.com/2966499/234949476-98ad595a-3b72-497f-8056-84b6acda80e2.gif)
+//!
+//! # Type-safe bounds checking
+//!
+//! The R3BL TUI engine uses a comprehensive type-safe bounds checking system that
+//! eliminates off-by-one errors and prevents mixing incompatible index types (like
+//! comparing row positions with column widths) at compile time.
+//!
+//! ## The Problem
+//!
+//! Off-by-one errors and index confusion have plagued programming since its inception.
+//! UI and layout development (web, mobile, desktop, GUI, TUI) amplifies these challenges
+//! with multiple sources of confusion:
+//!
+//! - **0-based vs 1-based**: Mixing indices (positions, 0-based) with lengths (sizes,
+//!   1-based)
+//! - **Dimension confusion**: Mixing row and column types
+//! - **Semantic ambiguity**: Is this value a position, a size, or a count?
+//! - **Range boundary confusion**: Inclusive `[min, max]` vs exclusive `[start, end)` vs
+//!   position+size `[start, start+width)` - different use cases demand different
+//!   semantics
+//!
+//! ```rust,should_panic
+//! // ❌ Unsafe: raw integers hide these distinctions
+//! let cursor_row: usize = 5;        // Is this 0-based or 1-based?
+//! let viewport_width: usize = 80;   // Is this a size or position?
+//! let buffer_size: usize = 100;     // Can I use this as an index?
+//! let buffer: Vec<u8> = vec![0; 100];
+//!
+//! // Problem 1: Dimension confusion
+//! if cursor_row < viewport_width { /* Mixing row index with column size! */ }
+//!
+//! // Problem 2: 0-based vs 1-based confusion
+//! if buffer_size > 0 {
+//!     let last = buffer[buffer_size];  /* Off-by-one: size is 1-based! PANICS! */
+//! }
+//!
+//! // Problem 3: Range boundary confusion
+//! let scroll_region_start = 2_usize;
+//! let scroll_region_end = 5_usize;
+//! // Is this [2, 5] inclusive or [2, 5) exclusive?
+//! // VT-100 uses inclusive, but iteration needs exclusive!
+//! for row in scroll_region_start..scroll_region_end {
+//!     // Processes rows 2, 3, 4 (exclusive end)
+//!     // But VT-100 scroll region 2..=5 includes row 5!
+//!     // Easy to create off-by-one errors when converting
+//! }
+//! ```
+//!
+//! ## The Solution
+//!
+//! Use strongly-typed indices and lengths with semantic validation:
+//!
+//! ```rust
+//! use r3bl_tui::{row, height, ArrayBoundsCheck, ArrayOverflowResult};
+//!
+//! let cursor_row = row(5);          // RowIndex (0-based position)
+//! let viewport_height = height(24); // RowHeight (1-based size)
+//!
+//! // ✅ Type-safe: Compiler prevents row/column confusion
+//! if cursor_row.overflows(viewport_height) == ArrayOverflowResult::Within {
+//!     // Safe to access buffer[cursor_row]
+//! }
+//! ```
+//!
+//! ## Key Benefits
+//!
+//! 1. **Compile-time safety**: Impossible to compare [`RowIndex`] with [`ColWidth`]
+//! 2. **Semantic clarity**: Code intent is explicit (position vs size, row vs column)
+//! 3. **Zero-cost abstraction**: No runtime overhead compared to raw integers
+//! 4. **Comprehensive coverage**: Handles array access, cursor positioning, viewport
+//!    visibility, and range validation
+//!
+//! ## Architecture
+//!
+//! The system uses a two-tier trait architecture:
+//!
+//! - **Foundational traits**: Core operations ([`IndexOps`], [`LengthOps`]) that work
+//!   with any index/length type
+//! - **Semantic traits**: Use-case specific validation ([`ArrayBoundsCheck`],
+//!   [`CursorBoundsCheck`], [`ViewportBoundsCheck`], [`RangeBoundsExt`],
+//!   [`RangeConvertExt`])
+//!
+//! ## Common Patterns
+//!
+//! **Array/buffer access** (strict bounds):
+//! ```rust
+//! use r3bl_tui::{col, width, ArrayBoundsCheck, ArrayOverflowResult};
+//! # let buffer: Vec<char> = vec!['a'; 10];
+//! let index = col(5);
+//! let buffer_width = width(10);
+//!
+//! // Check before accessing
+//! if index.overflows(buffer_width) == ArrayOverflowResult::Within {
+//!     let ch = buffer[index.as_usize()]; // Safe access
+//! }
+//! ```
+//!
+//! **Text cursor positioning** (allows end-of-line):
+//! ```rust
+//! use r3bl_tui::{col, width, CursorBoundsCheck, CursorPositionBoundsStatus};
+//! let cursor_col = col(10);
+//! let line_width = width(10);
+//!
+//! // Cursor can be placed after last character (position == length)
+//! match line_width.check_cursor_position_bounds(cursor_col) {
+//!     CursorPositionBoundsStatus::AtEnd => { /* Valid: cursor after last char */ }
+//!     CursorPositionBoundsStatus::Within => { /* Valid: cursor on character */ }
+//!     CursorPositionBoundsStatus::Beyond => { /* Invalid: out of bounds */ }
+//!     _ => {}
+//! }
+//! ```
+//!
+//! **Viewport visibility** (rendering optimization):
+//! ```rust
+//! use r3bl_tui::{row, height, ViewportBoundsCheck, RangeBoundsResult};
+//! let content_row = row(15);
+//! let viewport_start = row(10);
+//! let viewport_size = height(20);
+//!
+//! // Check if content is visible before rendering
+//! if content_row.check_viewport_bounds(viewport_start, viewport_size) == RangeBoundsResult::Within {
+//!     // Render this row
+//! }
+//! ```
+//!
+//! **Range boundary handling** (inclusive vs exclusive):
+//! ```rust
+//! use r3bl_tui::{row, RangeConvertExt};
+//!
+//! // VT-100 scroll region: inclusive bounds [2, 5] means rows 2,3,4,5
+//! let scroll_region = row(2)..=row(5);
+//!
+//! // Convert to exclusive for Rust iteration: [2, 6) means rows 2,3,4,5
+//! let iter_range = scroll_region.to_exclusive();  // row(2)..row(6)
+//!
+//! // Now safe to use for iteration - no off-by-one errors!
+//! // for row in iter_range { /* process rows 2,3,4,5 */ }
+//! ```
+//!
+//! ## Learn More
+//!
+//! For comprehensive documentation including:
+//! - Complete trait reference and method details
+//! - Decision trees for choosing the right trait
+//! - Common pitfalls and best practices
+//! - Advanced patterns (range validation, scroll regions, text selections)
+//!
+//! See the extensive and detailed [`bounds_check` module
+//! documentation](mod@crate::core::coordinates::bounds_check).
+//!
+//! # Grapheme support
+//!
+//! The R3BL TUI engine provides comprehensive Unicode support through grapheme cluster
+//! handling, ensuring correct text manipulation regardless of character complexity.
+//!
+//! ## The Challenge
+//!
+//! Unicode text contains characters that may:
+//! - Occupy multiple bytes (UTF-8 encoding: 1-4 bytes per character)
+//! - Occupy multiple display columns (e.g., emoji take 2 columns, CJK characters)
+//! - Be composed of multiple codepoints (e.g., `👨🏾‍🤝‍👨🏿` is 5 codepoints combined)
+//!
+//! This creates a fundamental mismatch between:
+//! - **Memory layout** (byte indices in UTF-8)
+//! - **Logical structure** (user-perceived characters)
+//! - **Visual display** (terminal column positions)
+//!
+//! Traditional string indexing fails with such text:
+//!
+//! ```rust,should_panic
+//! // ❌ Unsafe: byte indexing can split multi-byte characters
+//! let text = "Hello 👋🏽";  // Wave emoji with skin tone modifier
+//! let byte_len = text.len();        // 14 bytes (not 7 characters!)
+//! let _substring = &text[0..7];     // PANICS! Splits 👋 emoji mid-character
+//! ```
+//!
+//! ## The Solution: Three Index Types
+//!
+//! The grapheme system uses three distinct index types to handle text correctly:
+//!
+//! 1. **[`ByteIndex`]** - Memory position (UTF-8 byte offset)
+//!    - For string slicing at valid UTF-8 boundaries
+//!    - Example: In "H😀!", 'H' at byte 0, '😀' at byte 1, '!' at byte 5
+//!
+//! 2. **[`SegIndex`]** - Logical position (grapheme cluster index)
+//!    - For cursor movement and text editing
+//!    - Example: In "H😀!", 3 segments: seg\[0\]='H', seg\[1\]='😀', seg\[2\]='!'
+//!
+//! 3. **[`ColIndex`]** - Display position (terminal column)
+//!    - For rendering and visual positioning
+//!    - Example: In "H😀!", 'H' at col 0, '😀' spans cols 1-2, '!' at col 3
+//!
+//! ### Visual Example
+//!
+//! ```text
+//! String: "H😀!"
+//!
+//! ByteIndex: 0 1 2 3 4 5
+//! Content:  [H][😀----][!]
+//!
+//! SegIndex:  0    1     2
+//! Segments: [H] [😀]  [!]
+//!
+//! ColIndex:  0  1  2   3
+//! Display:  [H][😀--] [!]
+//! ```
+//!
+//! ## Type-Safe String Handling
+//!
+//! Use [`GCStringOwned`] for grapheme-aware string operations:
+//!
+//! ```rust
+//! use r3bl_tui::*;
+//!
+//! let text = GCStringOwned::new("Hello 👋🏽");
+//! let grapheme_count = text.len();           // 7 grapheme clusters
+//! let display_width = text.display_width;    // Actual terminal columns needed
+//!
+//! // Safe conversions between index types
+//! // ByteIndex → SegIndex: find which character contains a byte
+//! // ColIndex → SegIndex: find which character is at a column
+//! // SegIndex → ColIndex: find the display column of a character
+//! ```
+//!
+//! ## Key Features
+//!
+//! - **Grapheme cluster awareness**: Correctly handles composed characters
+//!   - Emoji with modifiers: `👋🏽` (wave + skin tone)
+//!   - Complex emoji: `👨🏾‍🤝‍👨🏿` (5 codepoints, 1 user-perceived character)
+//!   - Accented letters: `é` (may be 1 or 2 codepoints)
+//!
+//! - **Display width calculation**: Accurately computes terminal column width
+//!   - ASCII: 'H' = 1 column
+//!   - Emoji: '😀' = 2 columns
+//!   - CJK: '中' = 2 columns
+//!
+//! - **Safe slicing**: Substring operations never split multi-byte characters
+//!   - Conversion methods return [`Option<SegIndex>`] for invalid indices
+//!   - [`ByteIndex`] in the middle of a character → `None`
+//!
+//! - **Iterator support**: Iterate over graphemes, not bytes or codepoints
+//!
+//! ## Learn More
+//!
+//! For comprehensive documentation including:
+//! - Detailed explanations of the three index types and conversions
+//! - Platform-specific terminal rendering differences (Linux/macOS/Windows)
+//! - Performance optimization details (memory latency considerations)
+//! - Complete API reference for [`GCStringOwned`]
+//!
+//! See the extensive and detailed [`graphemes` module
+//! documentation](mod@crate::core::graphemes) documentation.
 //!
 //! # Type-safe bounds checking
 //!
@@ -997,12 +1312,12 @@
 //!
 //! The [`HasFocus`] struct takes care of this. This provides 2 things:
 //!
-//! 1. It holds an `id` of a [`FlexBox`] / [`Component`] that has focus.
-//! 2. It also holds a map that holds a [`crate::Pos`] for each `id`. This is used to
-//!    represent a cursor (whatever that means to your app & component). This cursor is
-//!    maintained for each `id`. This allows a separate cursor for each [Component] that
-//!    has focus. This is needed to build apps like editors and viewers that maintains a
-//!    cursor position between focus switches.
+//! - It holds an `id` of a [`FlexBox`] / [`Component`] that has focus.
+//! - It also holds a map that holds a [`crate::Pos`] for each `id`. This is used to
+//!   represent a cursor (whatever that means to your app & component). This cursor is
+//!   maintained for each `id`. This allows a separate cursor for each [Component] that
+//!   has focus. This is needed to build apps like editors and viewers that maintains a
+//!   cursor position between focus switches.
 //!
 //! Another thing to keep in mind is that the [App] and [`TerminalWindow`] is persistent
 //! between re-renders.
@@ -1017,12 +1332,95 @@
 //!
 //! # Rendering and painting
 //!
-//! The R3BL TUI engine uses a high performance compositor to render the UI to the
-//! terminal. This ensures that only "pixels" that have changed are painted to the
-//! terminal. This is done by creating a concept of [`PixelChar`] which represents a
-//! single "pixel" in the terminal screen at a given col and row index position. There are
-//! only as many [`PixelChar`]s as there are rows and cols in a terminal screen. And the
-//! index maps directly to the position of the pixel in the terminal screen.
+//! The R3BL TUI engine provides two complementary rendering architectures optimized for
+//! different use cases. Both leverage a high-performance [`PixelChar`] concept which
+//! represents a single "pixel" in the terminal screen at a given col and row index
+//! position. There are only as many [`PixelChar`]s as there are rows and cols in a
+//! terminal screen, and the index maps directly to the position of the pixel in the
+//! terminal screen.
+//!
+//! ## Dual Rendering Paths
+//!
+//! The R3BL TUI engine supports two distinct rendering approaches, each optimized for
+//! different use cases and complexity levels:
+//!
+//! ### Path 1: Composed Component Pipeline (Complex, Responsive Layouts and Full TUI)
+//!
+//! - **Use Case**: Full-screen interactive applications, responsive layouts, complex
+//!   hierarchies
+//! - **Example**: Full-featured text editor, dashboard app, terminal multiplexer
+//! - **Pipeline**: `RenderOpsIR` → `OffscreenBuffer` → (diff) → `RenderOpsOutput` →
+//!   Terminal
+//! - **Benefits**:
+//!   - **High performance** through diff-based optimization (only changed pixels to
+//!     terminal)
+//!   - Type-safe rendering context via enum-based operation types
+//!   - Z-order management and proper layering of overlapping components
+//!   - Responsive to terminal resize events
+//!   - Complex component composition and nesting
+//! - **Trade-off**: More sophisticated infrastructure required
+//!
+//! ### Path 2: Direct Interactive Path (Simple CLI, Hybrid/Partial-TUI)
+//!
+//! - **Use Case**: Simple interactive prompts, CLI tools with basic interaction,
+//!   partial-TUI
+//! - **Example**: Readline input, interactive selection menus (`choose()`), form inputs
+//! - **Pipeline**: `CliTextInline` → `PixelChar[]` → `PixelCharRenderer` → ANSI bytes →
+//!   Terminal
+//! - **Benefits**:
+//!   - **Simple, straightforward architecture** - easy to understand and maintain
+//!   - **Minimal setup cost** - no buffer allocation or diff machinery
+//!   - **Good for one-off interactions** - quick responses without composition overhead
+//! - **Trade-off**: Limited to simple interactive scenarios, no complex composition
+//!
+//! ## Unified ANSI Generation: PixelCharRenderer
+//!
+//! Both rendering paths ultimately need to convert styled text into ANSI escape
+//! sequences. The [`PixelCharRenderer`] handles this conversion in a unified way across
+//! both paths:
+//!
+//! - **Input**: `PixelChar[]` (array of styled characters)
+//! - **Output**: Raw ANSI escape sequence bytes
+//! - **Features**:
+//!   - Smart style diffing (~30% output reduction by only emitting ANSI codes when styles
+//!     change)
+//!   - Proper handling of Unicode/emoji width
+//!   - Used by both composed and direct rendering paths
+//!
+//! This enables:
+//! 1. **Composed Path**: `RenderOpsOutput` execution → `PixelCharRenderer` → bytes
+//! 2. **Direct Path**: `CliTextInline` → `PixelChar[]` → `PixelCharRenderer` → bytes
+//!
+//! ## CliTextInline: Styled Text Fragments
+//!
+//! For direct rendering paths, [`CliTextInline`] represents a fragment of text with
+//! styling information:
+//!
+//! - Text content
+//! - Foreground color
+//! - Background color
+//! - Text attributes (bold, italic, underline, etc.)
+//! - Display-width aware (handles Unicode grapheme clusters correctly)
+//!
+//! When converted to a string (via the `FastStringify` trait), it automatically:
+//! 1. Converts to `PixelChar[]` array
+//! 2. Uses [`PixelCharRenderer`] to generate ANSI bytes
+//! 3. Automatically resets styles at the end
+//!
+//! This hidden conversion enables ergonomic styling in interactive components without
+//! requiring explicit knowledge of the underlying rendering machinery.
+//!
+//! ## OutputDevice: Thread-Safe Terminal Output
+//!
+//! Interactive components (Path 2) use [`OutputDevice`] for coordinated terminal output:
+//!
+//! - Provides atomic write operations to stdout
+//! - Handles mutual exclusion between components to prevent interspersed output
+//! - Abstracts over raw `std::io::Stdout`
+//! - Integrates with both crossterm commands and raw ANSI bytes
+//!
+//! This allows multiple components to safely write to the terminal without race
+//! conditions or interleaved output.
 //!
 //! ## Offscreen buffer
 //!
@@ -1059,28 +1457,147 @@
 //!
 //! Each [`PixelChar`] can be one of 4 things:
 //!
-//! 1. **Space**. This is just an empty space. There is no flickering in the TUI engine.
-//!    When a new offscreen buffer is created, it is fulled with spaces. Then components
-//!    paint over the spaces. Then the diffing algorithm only paints over the pixels that
-//!    have changed. You don't have to worry about clearing the screen and painting, which
-//!    typically will cause flickering in terminals. You also don't have to worry about
-//!    printing empty spaces over areas that you would like to clear between renders. All
-//!    of this handled by the TUI engine.
-//! 2. **Void**. This is a special pixel that is used to indicate that the pixel should be
-//!    ignored. It is used to indicate a wide emoji is to the left somewhere. Most
-//!    terminals don't support emojis, so there's a discrepancy between the display width
-//!    of the character and its index in the string.
-//! 3. **Plain text**. This is a normal pixel which wraps a single character that maybe a
-//!    grapheme cluster segment. Styling information is encoded in each
-//!    `PixelChar::PlainText` and is used to paint the screen via the diffing algorithm
-//!    which is smart enough to "stack" styles that appear beside each other for quicker
-//!    rendering in terminals.
+//! - **Space**. This is just an empty space. There is no flickering in the TUI engine.
+//!   When a new offscreen buffer is created, it is fulled with spaces. Then components
+//!   paint over the spaces. Then the diffing algorithm only paints over the pixels that
+//!   have changed. You don't have to worry about clearing the screen and painting, which
+//!   typically will cause flickering in terminals. You also don't have to worry about
+//!   printing empty spaces over areas that you would like to clear between renders. All
+//!   of this handled by the TUI engine.
+//! - **Void**. This is a special pixel that is used to indicate that the pixel should be
+//!   ignored. It is used to indicate a wide emoji is to the left somewhere. Most
+//!   terminals don't support emojis, so there's a discrepancy between the display width
+//!   of the character and its index in the string.
+//! - **Plain text**. This is a normal pixel which wraps a single character that maybe a
+//!   grapheme cluster segment. Styling information is encoded in each
+//!   `PixelChar::PlainText` and is used to paint the screen via the diffing algorithm
+//!   which is smart enough to "stack" styles that appear beside each other for quicker
+//!   rendering in terminals.
 //!
-//! ## Render pipeline
+//! ## Complete Rendering Pipeline Architecture (Path 1: Composed Component Pipeline)
+//!
+//! Here's a detailed overview of the complete rendering pipeline architecture used for
+//! complex, full-screen TUI applications (Path 1). This pipeline efficiently allows for
+//! rendering terminal UIs with minimal redraws by leveraging an offscreen buffer and
+//! diffing mechanism, along with algorithms to remove needless output and control
+//! commands being sent to the terminal as output.
+//!
+//! ```text
+//! App -> Component -> RenderOpsIR -> RenderPipeline (to OffscreenBuffer) -> RenderOpsOutput -> Terminal
+//! ```
+//!
+//! This is very much like a compiler pipeline with multiple stages. The first stage takes
+//! the App and Component code and generates a `RenderOpsIR` (intermediate representation)
+//! which is output. This "output" becomes the "source code" for the next stage in the
+//! pipeline, which takes the IR and compiles it to a `RenderOpsOutput` (where redundant
+//! operations have been removed). This output is then executed by the terminal backend to
+//! produce the final rendered output in the terminal. This flexible architecture allows
+//! us to plugin in different backends (our own `Direct ANSI`, `crossterm`, `termion`,
+//! etc.) and the optimizations are applied in a backend agnostic way.
+//!
+//! The R3BL TUI rendering system for Path 1 is organized into 6 distinct stages, each
+//! with a clear responsibility:
+//!
+//! ```text
+//! ┌────────────────────────────────────────────────────────────────────────────────┐
+//! │ STAGE 1: Application/Component Layer (App Code)                                │
+//! │ ────────────────────────────────────────────────────────────────────────────── │
+//! │ Generates: RenderOpsIR with built-in clipping info                             │
+//! │ Module: render_op - Contains type definitions                                  │
+//! │                                                                                │
+//! │ Components produce draw commands describing *what* to render and *where*.      │
+//! │ Each operation carries clipping information to ensure safe rendering.          │
+//! └────────────────┬───────────────────────────────────────────────────────────────┘
+//!                  │
+//! ┌────────────────▼───────────────────────────────────────────────────────────────┐
+//! │ STAGE 2: Render Pipeline Collection (Organization Layer)                       │
+//! │ ─────────────────────────────────────────────────────────────────────────────  │
+//! │ Collects RenderOpsIR into organized structures by Z-order                      │
+//! │ Module: render_pipeline                                                        │
+//! │                                                                                │
+//! │ The pipeline aggregates render operations from multiple components and         │
+//! │ organizes them by Z-order (layer depth). This ensures correct visual stacking  │
+//! │ when components overlap. No rendering happens yet—just organization.           │
+//! └────────────────┬───────────────────────────────────────────────────────────────┘
+//!                  │
+//! ┌────────────────▼───────────────────────────────────────────────────────────────┐
+//! │ STAGE 3: Compositor (Rendering to Offscreen Buffer)                            │
+//! │ ─────────────────────────────────────────────────────────────────────────────  │
+//! │ Processes RenderOpsIR → writes to OffscreenBuffer                              │
+//! │ Module: compositor_render_ops_to_ofs_buf                                       │
+//! │                                                                                │
+//! │ The Compositor is the rendering engine. It:                                    │
+//! │ - Executes RenderOpsIR operations sequentially                                 │
+//! │ - Applies clipping and Unicode/emoji width handling                            │
+//! │ - Writes rendered PixelChars to an offscreen buffer                            │
+//! │ - Manages cursor position and color state                                      │
+//! │ - Acts as an intermediate "virtual terminal"                                   │
+//! │                                                                                │
+//! │ Output: A complete 2D grid (OffscreenBuffer) representing the rendered frame.  │
+//! │ This buffer can be analyzed to determine what changed since the last frame.    │
+//! └────────────────┬───────────────────────────────────────────────────────────────┘
+//!                  │
+//! ┌────────────────▼───────────────────────────────────────────────────────────────┐
+//! │ STAGE 4: Backend Converter (Diff & Optimization Layer)                         │
+//! │ ─────────────────────────────────────────────────────────────────────────────  │
+//! │ Scans OffscreenBuffer → generates RenderOpsOutput                              │
+//! │ Module: crossterm_backend/offscreen_buffer_paint_impl                          │
+//! │         (Backend-specific implementation of OffscreenBufferPaint trait)        │
+//! │                                                                                │
+//! │ The Backend Converter:                                                         │
+//! │ - Compares current OffscreenBuffer with previous frame (optional)              │
+//! │ - Generates only the operations needed for selective redraw                    │
+//! │ - Converts PixelChar grid into optimized text painting operations              │
+//! │ - Produces RenderOpsOutput (no clipping needed—already handled)                │
+//! │ - Eliminates redundant operations for performance                              │
+//! │                                                                                │
+//! │ Input: OffscreenBuffer (what we rendered)                                      │
+//! │ Output: RenderOpsOutput (optimized operations to display it)                   │
+//! └────────────────┬───────────────────────────────────────────────────────────────┘
+//!                  │
+//! ┌────────────────▼───────────────────────────────────────────────────────────────┐
+//! │ STAGE 5: Backend Executor (Terminal Output Layer)                              │
+//! │ ─────────────────────────────────────────────────────────────────────────────  │
+//! │ Executes RenderOpsOutput via backend library (Crossterm/Termion)               │
+//! │ Module: crossterm_backend/paint_render_op_impl                                 │
+//! │         (Backend-specific trait: PaintRenderOp)                                │
+//! │                                                                                │
+//! │ The Backend Executor:                                                          │
+//! │ - Translates RenderOpsOutput to terminal escape sequences                      │
+//! │ - Manages raw mode, cursor visibility, colors, mouse events                    │
+//! │ - Handles terminal-specific optimizations (e.g., state tracking)               │
+//! │ - Sends commands to Crossterm/Termion for actual terminal manipulation         │
+//! │ - Flushes output to ensure immediate display                                   │
+//! │                                                                                │
+//! │ Uses: RenderOpsLocalData to avoid redundant state changes                      │
+//! │       (e.g., don't resend "set color to red" if already red)                   │
+//! └────────────────┬───────────────────────────────────────────────────────────────┘
+//!                  │
+//! ┌────────────────▼───────────────────────────────────────────────────────────────┐
+//! │ STAGE 6: Terminal Output (User Visible)                                        │
+//! │ ─────────────────────────────────────────────────────────────────────────────  │
+//! │ Rendered content displayed in the terminal                                     │
+//! │                                                                                │
+//! │ The final result: User sees the rendered UI with correct colors, text,         │
+//! │ and cursor position, updated efficiently without full redraws.                 │
+//! └────────────────────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! **Key Design Benefits:**
+//! - **Type Safety**: RenderOpIR and RenderOpOutput enums ensure operations are used in
+//!   the correct context
+//! - **Modularity**: Each stage has clear inputs/outputs and single responsibility
+//! - **Performance**: Diff-based approach means only changed pixels are rendered
+//! - **Flexibility**: Stages can be implemented for different backends (Crossterm,
+//!   Termion, etc.)
+//! - **Maintainability**: Clear pipeline structure makes code easier to understand and
+//!   modify
+//!
+//! ## Render pipeline (Path 1: Composed Component Pipeline)
 //!
 //! The following diagram provides a high level overview of how apps (that contain
 //! components, which may contain components, and so on) are rendered to the terminal
-//! screen.
+//! screen using the composed component pipeline (Path 1).
 //!
 //! ```text
 //! ╭──────────────────────────────────╮
@@ -1117,14 +1634,15 @@
 //! enters some input event, and that produces a new state which then has to be rendered,
 //! they are combined and painted into an [`OffscreenBuffer`].
 //!
-//! ## First render
+//! ## First render (Path 1)
 //!
 //! The `paint.rs` file contains the `paint` function, which is the entry point for all
-//! rendering. Once the first render occurs, the [`OffscreenBuffer`] that is generated is
-//! saved to `GlobalSharedState`. The following table shows the various tasks that have to
-//! be performed in order to render to an [`OffscreenBuffer`]. There is a different code
-//! path that is taken for ANSI text and plain text (which includes `StyledText` which is
-//! just plain text with a color). Syntax highlighted text is also just `StyledText`.
+//! rendering in the composed component pipeline (Path 1). Once the first render occurs,
+//! the [`OffscreenBuffer`] that is generated is saved to `GlobalSharedState`. The
+//! following table shows the various tasks that have to be performed in order to render
+//! to an [`OffscreenBuffer`]. There is a different code path that is taken for ANSI text
+//! and plain text (which includes `StyledText` which is just plain text with a color).
+//! Syntax highlighted text is also just `StyledText`.
 //!
 //! | UTF-8 | Task                                                                                                           |
 //! | ----- | -------------------------------------------------------------------------------------------------------------- |
@@ -1136,13 +1654,14 @@
 //! this process is really simple making it very easy to swap out other terminal libraries
 //! such as `termion`, or even a GUI backend, or some other custom output driver.
 //!
-//! ## Subsequent render
+//! ## Subsequent render (Path 1)
 //!
-//! Since the [`OffscreenBuffer`] is cached in `GlobalSharedState` a diff to be performed
-//! for subsequent renders. And only those diff chunks are painted to the screen. This
-//! ensures that there is no flicker when the content of the screen changes. It also
-//! minimizes the amount of work that the terminal or terminal emulator has to do put the
-//! [`PixelChar`]s on the screen.
+//! Since the [`OffscreenBuffer`] is cached in `GlobalSharedState`, a diff can be
+//! performed for subsequent renders. And only those diff chunks are painted to the
+//! screen. This ensures that there is no flicker when the content of the screen changes.
+//! It also minimizes the amount of work that the terminal or terminal emulator has to do
+//! in order to render the [`PixelChar`]s on the screen. This diff-based optimization is
+//! what gives Path 1 its high performance characteristics compared to Path 2.
 //!
 //! # How does the editor component work?
 //!
