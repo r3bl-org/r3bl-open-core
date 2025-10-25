@@ -39,58 +39,20 @@
       - [Section E: Cursor Save/Restore Operations](#section-e-cursor-saverestore-operations)
       - [Section F: Terminal Mode Operations](#section-f-terminal-mode-operations)
       - [Section G: Module Documentation](#section-g-module-documentation)
-  - [Step 3: Complete RenderOpImplDirectAnsi (4-5 hours)](#step-3-complete-renderopimpldirectansi-4-5-hours)
-    - [Current State](#current-state)
-    - [Objective](#objective)
-    - [Complete RenderOp Variant List (29 total)](#complete-renderop-variant-list-29-total)
-      - [Group A: Platform/Mode Operations (3 variants)](#group-a-platformmode-operations-3-variants)
-      - [Group B: Cursor Movement (5 variants) - **WITH OPTIMIZATION**](#group-b-cursor-movement-5-variants---with-optimization)
-      - [Group C: Screen Clearing (4 variants)](#group-c-screen-clearing-4-variants)
-      - [Group D: Color Operations (4 variants) - **WITH OPTIMIZATION**](#group-d-color-operations-4-variants---with-optimization)
-      - [Group E: Text Rendering (3 variants)](#group-e-text-rendering-3-variants)
-      - [Group F: Cursor Visibility (2 variants)](#group-f-cursor-visibility-2-variants)
-      - [Group G: Cursor Save/Restore (2 variants)](#group-g-cursor-saverestore-2-variants)
-      - [Group H: Terminal Modes (6 variants)](#group-h-terminal-modes-6-variants)
-    - [Key Implementation Details](#key-implementation-details)
-    - [Subtasks for Step 3](#subtasks-for-step-3)
-  - [Step 4: Implement OffscreenBufferPaintImplDirectAnsi (1-2 hours) **NEW DISCOVERY**](#step-4-implement-offscreenbufferpaintimpldirectansi-1-2-hours-new-discovery)
-    - [Why This Is Needed](#why-this-is-needed)
-    - [The Good News: Nearly 100% Copy-Paste](#the-good-news-nearly-100%25-copy-paste)
-    - [File to Create](#file-to-create)
-    - [Implementation Strategy](#implementation-strategy)
-    - [Changes from Crossterm Implementation](#changes-from-crossterm-implementation)
-    - [Why This Works](#why-this-works)
-    - [Subtasks for Step 4](#subtasks-for-step-4)
-  - [Step 5: Update Backend Routing (1-2 hours)](#step-5-update-backend-routing-1-2-hours)
-    - [Three Files Need Updates](#three-files-need-updates)
-      - [File 1: Add DirectAnsi Enum Variant](#file-1-add-directansi-enum-variant)
-      - [File 2: Route Full TUI Rendering](#file-2-route-full-tui-rendering)
-      - [File 3: Route Individual RenderOp Execution](#file-3-route-individual-renderop-execution)
-    - [Subtasks for Step 5](#subtasks-for-step-5)
-  - [Step 6: Create Comprehensive Test Suites (4-5 hours)](#step-6-create-comprehensive-test-suites-4-5-hours)
-    - [Part A: Unit Tests (`tests.rs`)](#part-a-unit-tests-testsrs)
-    - [Part B: Integration Tests (`integration_tests.rs`)](#part-b-integration-tests-integration_testsrs)
-  - [Step 7: Cross-Platform Validation (2-3 hours)](#step-7-cross-platform-validation-2-3-hours)
-    - [Subtasks](#subtasks)
+  - [Step 3: Complete Type System Architecture & DirectAnsi Backend (EXPANDED - ~40-50 hours)](#step-3-complete-type-system-architecture--directansi-backend-expanded)
+    - [Architectural Overview: Enforcing Semantic Boundaries](#architectural-overview-enforcing-semantic-boundaries)
+    - [Step 3.0: Remove IR Execution Path (2-3 hours)](#step-30-remove-ir-execution-path-2-3-hours)
+    - [Step 3.1: Create RenderOpOutput Execution Path (3-4 hours)](#step-31-create-renderopoutput-execution-path-3-4-hours)
+    - [Step 3.2: Fix OffscreenBufferPaint Trait (3-4 hours)](#step-32-fix-offscreenbufferpaint-trait-3-4-hours)
+    - [Step 3.3: Implement DirectAnsi Backend (25-35 hours)](#step-33-implement-directansi-backend-25-35-hours)
+      - [Step 3.3A: RenderOpImplDirectAnsi paint_common() (8-12 hours)](#step-33a-renderopimpldirectansi-paint_common-8-12-hours)
+      - [Step 3.3B: RenderOpImplDirectAnsi paint_text_with_attributes() (4-6 hours)](#step-33b-renderopimpldirectansi-paint_text_with_attributes-4-6-hours)
+      - [Step 3.3C: Quality & Testing (3-5 hours)](#step-33c-quality--testing-3-5-hours)
+    - [Step 3 Summary](#step-3-summary)
+    - [Critical Success Factors for Step 3](#critical-success-factors-for-step-3)
+  - [Step 4: Cross-Platform Validation & Performance (2-3 hours)](#step-4-cross-platform-validation--performance-2-3-hours)
   - [Implementation Checklist](#implementation-checklist)
-  - [Critical Success Factors](#critical-success-factors)
   - [Effort Summary (Updated with Step 4 Discovery)](#effort-summary-updated-with-step-4-discovery)
-    - [Phase 3: Migrate choose() and readline_async() to RenderOps](#phase-3-migrate-choose-and-readline_async-to-renderops)
-      - [3.1 Update Macros](#31-update-macros)
-      - [3.2 Migrate select_component.rs](#32-migrate-select_componentrs)
-      - [3.3 Update Imports](#33-update-imports)
-    - [Phase 4: Input Handling with mio + VT-100 Parser](#phase-4-input-handling-with-mio--vt-100-parser)
-      - [4.1 Create Async Stdin Reader with mio](#41-create-async-stdin-reader-with-mio)
-      - [4.2 Create VT-100 Input Parser](#42-create-vt-100-input-parser)
-      - [4.3 Integrate with InputDevice](#43-integrate-with-inputdevice)
-    - [Phase 5: Testing & Validation](#phase-5-testing--validation)
-      - [5.1 Unit Tests for DirectAnsi Backend](#51-unit-tests-for-directansi-backend)
-      - [5.2 Integration Tests with Mock OutputDevice](#52-integration-tests-with-mock-outputdevice)
-      - [5.3 Visual Testing Examples](#53-visual-testing-examples)
-    - [Phase 6: Remove Crossterm Dependency](#phase-6-remove-crossterm-dependency)
-      - [6.1 Update Cargo.toml](#61-update-cargotoml)
-      - [6.2 Remove Crossterm Code](#62-remove-crossterm-code)
-      - [6.3 Update Documentation](#63-update-documentation)
   - [File Structure](#file-structure)
     - [New Files to Create](#new-files-to-create)
     - [Files to Modify](#files-to-modify)
@@ -842,402 +804,555 @@ Add comprehensive rustdoc at the module level with ANSI sequence reference table
 
 ---
 
-## Step 3: Complete RenderOpImplDirectAnsi (4-5 hours)
+## Step 3: Complete Type System Architecture & DirectAnsi Backend (EXPANDED - ~40-50 hours)
 
-**Status**: ⏳ IN PROGRESS
+**Status**: ⏳ PENDING - COMPREHENSIVE ARCHITECTURAL FIX + BACKEND IMPL
 
-**File**: `tui/src/tui/terminal_lib_backends/direct_ansi/render_op_impl_direct_ansi.rs`
+**Overview**: This mega-step comprises 4 coordinated sub-phases that:
+1. Fix fundamental architectural issues with the rendering pipeline type system
+2. Enforce proper semantic boundaries between IR and Output operations
+3. Create the Output execution path (previously missing)
+4. Implement the DirectAnsi backend
 
-### Current State
-
-- **Existing LOC**: 53 lines
-- **Target LOC**: ~500 lines (+447 lines)
-- **✅ Already Complete**:
-  - Struct definition: `RenderOpImplDirectAnsi`
-  - `Flush` trait fully implemented (`flush()` and `clear_before_flush()`)
-  - Trait skeleton for `PaintRenderOp`
-- **⏳ Needs Work**: Fill in `paint()` method with all 29 RenderOp variants
-
-### Objective
-
-This implements the `PaintRenderOp` trait to execute all RenderOp variants using
-AnsiSequenceGenerator, with state-based optimizations to skip redundant ANSI sequences.
-
-### Complete RenderOp Variant List (29 total)
-
-#### Group A: Platform/Mode Operations (3 variants)
-
-1. **EnterRawMode** → `return` (platform-specific, handled elsewhere)
-2. **ExitRawMode** → `return` (platform-specific, handled elsewhere)
-3. **Noop** → `return` (no-op)
-
-#### Group B: Cursor Movement (5 variants) - **WITH OPTIMIZATION**
-
-4. **MoveCursorPositionAbs(Pos)** → `AnsiSequenceGenerator::cursor_position()`
-   - ✨ Optimization: Skip if `render_local_data.cursor_pos == pos`
-   - Update: `render_local_data.cursor_pos = pos`
-5. **MoveCursorPositionRelTo(Pos, Pos)** → Calculate absolute, then use `cursor_position()`
-   - Calculate: `abs_pos = origin + offset`
-   - ✨ Same optimization as above
-6. **MoveCursorToColumn(ColIndex)** → `AnsiSequenceGenerator::cursor_to_column()`
-   - Update: `render_local_data.cursor_pos.col_index = col`
-7. **MoveCursorToNextLine(RowHeight)** → `AnsiSequenceGenerator::cursor_next_line()`
-   - Update: `render_local_data.cursor_pos.row_index += height`
-   - Update: `render_local_data.cursor_pos.col_index = 0`
-8. **MoveCursorToPreviousLine(RowHeight)** → `AnsiSequenceGenerator::cursor_previous_line()`
-   - Update: `render_local_data.cursor_pos.row_index.saturating_sub(height)`
-   - Update: `render_local_data.cursor_pos.col_index = 0`
-
-#### Group C: Screen Clearing (4 variants)
-
-9. **ClearScreen** → `AnsiSequenceGenerator::clear_screen()`
-10. **ClearCurrentLine** → `AnsiSequenceGenerator::clear_current_line()`
-11. **ClearToEndOfLine** → `AnsiSequenceGenerator::clear_to_end_of_line()`
-12. **ClearToStartOfLine** → `AnsiSequenceGenerator::clear_to_start_of_line()`
-
-#### Group D: Color Operations (4 variants) - **WITH OPTIMIZATION**
-
-13. **SetFgColor(TuiColor)** → `AnsiSequenceGenerator::fg_color()`
-    - ✨ Optimization: Skip if `render_local_data.fg_color == Some(color)`
-    - Update: `render_local_data.fg_color = Some(color)`
-14. **SetBgColor(TuiColor)** → `AnsiSequenceGenerator::bg_color()`
-    - ✨ Optimization: Skip if `render_local_data.bg_color == Some(color)`
-    - Update: `render_local_data.bg_color = Some(color)`
-15. **ResetColor** → `AnsiSequenceGenerator::reset_color()`
-    - Update: `render_local_data.fg_color = None`
-    - Update: `render_local_data.bg_color = None`
-16. **ApplyColors(Option<TuiStyle>)** → Extract fg/bg from style, apply both
-    - Apply fg if Some, apply bg if Some, with optimizations
-
-#### Group E: Text Rendering (3 variants)
-
-17. **PaintTextWithAttributes(InlineString, Option<TuiStyle>)** → Apply style wrapper
-    - Generate style attrs → append text → generate reset (if style was Some)
-18. **CompositorNoClipTruncPaintTextWithAttributes(InlineString, Option<TuiStyle>)** → Same as above
-    - (Compositor variant - same rendering logic)
-19. **PrintStyledText(InlineString)** → Pass through as-is
-    - Text already contains ANSI codes, write directly
-
-#### Group F: Cursor Visibility (2 variants)
-
-20. **ShowCursor** → `AnsiSequenceGenerator::show_cursor()`
-21. **HideCursor** → `AnsiSequenceGenerator::hide_cursor()`
-
-#### Group G: Cursor Save/Restore (2 variants)
-
-22. **SaveCursorPosition** → `AnsiSequenceGenerator::save_cursor_position()`
-23. **RestoreCursorPosition** → `AnsiSequenceGenerator::restore_cursor_position()`
-
-#### Group H: Terminal Modes (6 variants)
-
-24. **EnterAlternateScreen** → `AnsiSequenceGenerator::enter_alternate_screen()`
-25. **ExitAlternateScreen** → `AnsiSequenceGenerator::exit_alternate_screen()`
-26. **EnableMouseTracking** → `AnsiSequenceGenerator::enable_mouse_tracking()`
-27. **DisableMouseTracking** → `AnsiSequenceGenerator::disable_mouse_tracking()`
-28. **EnableBracketedPaste** → `AnsiSequenceGenerator::enable_bracketed_paste()`
-29. **DisableBracketedPaste** → `AnsiSequenceGenerator::disable_bracketed_paste()`
-
-### Key Implementation Details
-
-**Output Pattern** (end of paint method):
-
-```rust
-if !bytes.is_empty() {
-    locked_output_device.write_all(&bytes)
-        .expect("Failed to write ANSI bytes to output device");
-}
-*skip_flush = false;
-```
-
-**State Tracking** (for optimizations):
-
-- `render_local_data.cursor_pos: Pos`
-- `render_local_data.fg_color: Option<TuiColor>`
-- `render_local_data.bg_color: Option<TuiColor>`
-
-### Subtasks for Step 3
-
-- [ ] Implement Group A: Platform/Mode (3 variants - early returns)
-- [ ] Implement Group B: Cursor movement with optimization (5 variants)
-- [ ] Implement Group C: Screen clearing (4 variants)
-- [ ] Implement Group D: Color operations with state caching (4 variants)
-- [ ] Implement Group E: Text rendering (3 variants)
-- [ ] Implement Group F: Cursor visibility (2 variants)
-- [ ] Implement Group G: Cursor save/restore (2 variants)
-- [ ] Implement Group H: Terminal modes (6 variants)
-- [ ] Add comprehensive rustdoc comments
-- [ ] Run `cargo check` - verify compilation
-- [ ] Run `cargo clippy --all-targets` - fix warnings
-
-**Estimated**: 4-5 hours, 447 new LOC
-
-**Checkpoint**: RenderOpImplDirectAnsi compiles, all 29 RenderOp variants handled exhaustively
+**Critical Insight**: The type system currently allows `RenderOpIRVec` to execute directly, which violates the architectural boundary. Operations should ONLY flow: `RenderOpIR → Compositor → RenderOpOutput → Terminal`. This step enforces that boundary at compile time.
 
 ---
 
-## Step 4: Implement OffscreenBufferPaintImplDirectAnsi (1-2 hours) **NEW DISCOVERY**
+### Step 3.0: Remove IR Execution Path & Enforce Semantic Boundary (2-3 hours)
 
 **Status**: ⏳ PENDING
 
-### Why This Is Needed
+**Objective**: Delete the direct IR execution path (`RenderOpIRVec::execute_all()` and `route_paint_render_op_ir_to_backend()`), forcing all operations through the Compositor.
 
-The full TUI rendering pipeline requires `OffscreenBufferPaint` trait implementation to convert
-`OffscreenBuffer` → `RenderOps`. Currently hard-coded to crossterm in `paint.rs` (lines 51-63,
-73-86).
+**Files to Modify**:
+- `tui/src/tui/terminal_lib_backends/render_op/render_op_ir.rs`
+- `tui/src/tui/terminal_lib_backends/raw_mode.rs`
 
-### The Good News: Nearly 100% Copy-Paste
-
-The logic is **completely backend-agnostic** - we're just converting PixelChar data to RenderOps,
-which then route to our DirectAnsi backend automatically.
-
-### File to Create
-
-**Path**: `tui/src/tui/terminal_lib_backends/direct_ansi/offscreen_buffer_paint_impl.rs`
-
-**LOC**: ~300 lines
-
-### Implementation Strategy
+**What Gets Deleted**:
 
 ```rust
-use crate::{/* same imports as crossterm impl */};
+// In render_op_ir.rs - DELETE THESE:
 
-#[derive(Debug)]
-pub struct OffscreenBufferPaintImplDirectAnsi;
+// ❌ REMOVE: pub fn execute_all(...)
+// This method violates the semantic boundary
 
-impl OffscreenBufferPaint for OffscreenBufferPaintImplDirectAnsi {
-    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOps {
-        // ✅ Copy directly from crossterm implementation
-        // This is 100% backend-agnostic:
-        // - Iterate through PixelChar[] in OffscreenBuffer
-        // - Accumulate text runs with same style
-        // - Generate RenderOps (MoveCursor, SetColor, PaintText)
-        // - Return RenderOps
-    }
+// ❌ REMOVE: pub fn route_paint_render_op_ir_to_backend(...)
+// This method allows IR to bypass the Compositor
 
-    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOps {
-        // ✅ Copy directly from crossterm implementation
-        // This is 100% backend-agnostic:
-        // - For each changed PixelChar position
-        // - Generate MoveCursor + ApplyColors + PaintText
-        // - Return RenderOps
-    }
-
-    fn paint(&mut self, render_ops: RenderOps, flush_kind: FlushKind,
-             window_size: Size, locked_output_device: LockedOutputDevice,
-             is_mock: bool) {
-        // ✅ Copy directly from crossterm implementation
-        // Backend routing happens automatically in execute_all()
-        let mut skip_flush = false;
-
-        if let FlushKind::ClearBeforeFlush = flush_kind {
-            RenderOp::default().clear_before_flush(locked_output_device);
-        }
-
-        render_ops.execute_all(&mut skip_flush, window_size,
-                               locked_output_device, is_mock);
-
-        if !skip_flush {
-            RenderOp::default().flush(locked_output_device);
-        }
-    }
-
-    fn paint_diff(&mut self, render_ops: RenderOps, window_size: Size,
-                  locked_output_device: LockedOutputDevice, is_mock: bool) {
-        // ✅ Copy directly from crossterm implementation
-        // Same pattern as paint(), just no clear_before_flush
-    }
-}
-
-// ✅ Copy render_helper module directly (Context struct, helper functions)
-mod render_helper {
-    // Identical to crossterm - no changes needed
-}
+// ✅ KEEP: push(), extend(), iter(), len(), is_empty()
+// These are composition methods only
 ```
 
-### Changes from Crossterm Implementation
-
-**Only 2 changes needed:**
-
-1. Struct name: `OffscreenBufferPaintImplCrossterm` → `OffscreenBufferPaintImplDirectAnsi`
-2. Debug strings: Replace `"crossterm"` → `"direct_ansi"` in tracing logs
-
-### Why This Works
-
-The rendering pipeline has perfect separation of concerns:
+**Semantic Rationale**:
 
 ```
-OffscreenBuffer → [render()] → RenderOps → [execute_all()] → [routing] → RenderOpImplDirectAnsi
-     ^                              ^                                              ^
-  pixel data              backend-agnostic                    our DirectAnsi impl
+BEFORE (broken):
+RenderOpIRVec could execute directly
+  ↓ (violates boundary - bypasses Compositor)
+This made the type distinction between IR and Output meaningless
+  ↓
+Both were "just render operations"
+
+AFTER (correct):
+RenderOpIRVec has NO execute() method
+  ↓
+Compiler forces: IR → Compositor → Output → Terminal
+  ↓
+Type system enforces the architectural boundary
 ```
 
-### Subtasks for Step 4
+**Subtasks for Step 3.0**:
+- [ ] Delete `execute_all()` from `RenderOpIRVec`
+- [ ] Delete `route_paint_render_op_ir_to_backend()` function
+- [ ] Verify no other code references these methods
+- [ ] Update raw_mode.rs to use the new approach (see Step 3.2)
+- [ ] Run `cargo check` - should have compile errors guiding next steps
+- [ ] Document why these methods were removed in code comments
 
-- [ ] Create `offscreen_buffer_paint_impl.rs` file
-- [ ] Copy crossterm implementation (300 LOC)
-- [ ] Update struct name to `OffscreenBufferPaintImplDirectAnsi`
-- [ ] Update debug/tracing strings (`crossterm` → `direct_ansi`)
-- [ ] Add to `direct_ansi/mod.rs` exports
-- [ ] Run `cargo check` - verify compilation
-- [ ] **Validation**: Generated RenderOps should be identical to crossterm
+**Files Changed**: 2 files, ~100 LOC deleted
 
-**Estimated**: 1-2 hours (mostly copy-paste + verification)
-
-**Checkpoint**: OffscreenBufferPaintImplDirectAnsi compiles, produces identical RenderOps to
-crossterm
+**Checkpoint**: Compiler errors guide developers toward proper execution path
 
 ---
 
-## Step 5: Update Backend Routing (1-2 hours)
+### Step 3.1: Create RenderOpOutput Execution Path (3-4 hours)
 
-### Three Files Need Updates
+**Status**: ⏳ PENDING
 
-#### File 1: Add DirectAnsi Enum Variant
+**Objective**: Implement the missing `RenderOpOutputVec::execute_all()` method and routing infrastructure, creating the ONLY valid path for executing operations.
 
-**Path**: `tui/src/tui/terminal_lib_backends/mod.rs`
+**Files to Modify/Create**:
+- `tui/src/tui/terminal_lib_backends/render_op/render_op_output.rs` (add methods)
+- `tui/src/tui/terminal_lib_backends/paint.rs` (trait signature update)
 
-```rust
-pub enum TerminalLibBackend {
-    Crossterm,
-    Termion,
-    DirectAnsi,  // ← ADD THIS
-}
-
-// Keep Crossterm as default during development
-pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
-
-// Add module declaration
-pub mod direct_ansi;
-pub use direct_ansi::{
-    AnsiSequenceGenerator,
-    RenderOpImplDirectAnsi,
-    OffscreenBufferPaintImplDirectAnsi,  // ← ADD THIS
-};
-```
-
-#### File 2: Route Full TUI Rendering
-
-**Path**: `tui/src/tui/terminal_lib_backends/paint.rs` (lines 45-87)
-
-Add DirectAnsi arms to both `perform_diff_paint()` and `perform_full_paint()`:
+**What Gets Added**:
 
 ```rust
-fn perform_diff_paint(...) {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => { /* existing */ }
-        TerminalLibBackend::DirectAnsi => {
-            let mut direct_ansi_impl = OffscreenBufferPaintImplDirectAnsi {};
-            let render_ops = direct_ansi_impl.render_diff(diff_chunks);
-            direct_ansi_impl.paint_diff(render_ops, window_size,
-                                        locked_output_device, is_mock);
-        }
-        TerminalLibBackend::Termion => unimplemented!(),
-    }
-}
+// In render_op_output.rs - ADD THESE:
 
-fn perform_full_paint(...) {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => { /* existing */ }
-        TerminalLibBackend::DirectAnsi => {
-            let mut direct_ansi_impl = OffscreenBufferPaintImplDirectAnsi {};
-            let render_ops = direct_ansi_impl.render(ofs_buf);
-            direct_ansi_impl.paint(render_ops, flush_kind, window_size,
-                                   locked_output_device, is_mock);
-        }
-        TerminalLibBackend::Termion => unimplemented!(),
-    }
-}
-```
-
-#### File 3: Route Individual RenderOp Execution
-
-**Path**: `tui/src/tui/terminal_lib_backends/render_op.rs` (line 271)
-
-```rust
-pub fn route_paint_render_op_to_backend(...) {
-    match TERMINAL_LIB_BACKEND {
-        TerminalLibBackend::Crossterm => {
-            PaintRenderOpImplCrossterm {}.paint(
-                skip_flush, render_op, window_size,
-                render_local_data, locked_output_device, is_mock,
+impl RenderOpOutputVec {
+    /// Execute all output operations through the backend executor.
+    /// This is the ONLY method for executing operations.
+    pub fn execute_all(
+        &self,
+        skip_flush: &mut bool,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
+        let mut render_local_data = RenderOpsLocalData::default();
+        for render_op_output in &self.list {
+            Self::route_paint_render_op_output_to_backend(
+                &mut render_local_data,
+                skip_flush,
+                render_op_output,
+                window_size,
+                locked_output_device,
+                is_mock,
             );
         }
-        TerminalLibBackend::DirectAnsi => {
-            RenderOpImplDirectAnsi {}.paint(
-                skip_flush, render_op, window_size,
-                render_local_data, locked_output_device, is_mock,
-            );
+    }
+
+    /// Routes a single Output operation to the appropriate backend implementation.
+    fn route_paint_render_op_output_to_backend(
+        render_local_data: &mut RenderOpsLocalData,
+        skip_flush: &mut bool,
+        render_op_output: &RenderOpOutput,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
+        match TERMINAL_LIB_BACKEND {
+            TerminalLibBackend::Crossterm => {
+                match render_op_output {
+                    RenderOpOutput::Common(common_op) => {
+                        PaintRenderOpImplCrossterm {}.paint_common(
+                            skip_flush,
+                            common_op,
+                            window_size,
+                            render_local_data,
+                            locked_output_device,
+                            is_mock,
+                        );
+                    }
+                    RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(text, style) => {
+                        PaintRenderOpImplCrossterm::paint_text_with_attributes(
+                            text,
+                            *style,
+                            window_size,
+                            render_local_data,
+                            locked_output_device,
+                        );
+                    }
+                }
+            }
+            TerminalLibBackend::DirectAnsi => {
+                match render_op_output {
+                    RenderOpOutput::Common(common_op) => {
+                        RenderOpImplDirectAnsi {}.paint_common(
+                            skip_flush,
+                            common_op,
+                            window_size,
+                            render_local_data,
+                            locked_output_device,
+                            is_mock,
+                        );
+                    }
+                    RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(text, style) => {
+                        RenderOpImplDirectAnsi::paint_text_with_attributes(
+                            text,
+                            *style,
+                            window_size,
+                            render_local_data,
+                            locked_output_device,
+                        );
+                    }
+                }
+            }
+            TerminalLibBackend::Termion => unimplemented!(),
         }
-        TerminalLibBackend::Termion => unimplemented!(),
     }
 }
 ```
 
-### Subtasks for Step 5
+**Update PaintRenderOp Trait**:
 
-- [ ] Add `DirectAnsi` variant to `TerminalLibBackend` enum
-- [ ] Export `OffscreenBufferPaintImplDirectAnsi` in `mod.rs`
-- [ ] Update `perform_diff_paint()` in `paint.rs`
-- [ ] Update `perform_full_paint()` in `paint.rs`
-- [ ] Update `route_paint_render_op_to_backend()` in `render_op.rs`
-- [ ] Run `cargo check` - verify all match statements exhaustive
+```rust
+// In paint.rs - UPDATE SIGNATURE:
+pub trait PaintRenderOp {
+    fn paint(
+        &mut self,
+        skip_flush: &mut bool,
+        render_op: &RenderOpOutput,  // CHANGED from RenderOpIR
+        window_size: Size,
+        render_local_data: &mut RenderOpsLocalData,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    );
+}
+```
+
+**Subtasks for Step 3.1**:
+- [ ] Add `execute_all()` to `RenderOpOutputVec`
+- [ ] Add `route_paint_render_op_output_to_backend()` routing function
+- [ ] Update `PaintRenderOp` trait to take `&RenderOpOutput` instead of `&RenderOpIR`
+- [ ] Update Crossterm implementation to match new trait signature
+- [ ] Add comprehensive rustdoc explaining the execution path
+- [ ] Run `cargo check` - verify all backends can be routed
 - [ ] Run `cargo clippy` - verify no warnings
 
-**Estimated**: 1-2 hours, ~150 LOC changes
+**Files Changed**: 2 files, ~250 LOC added
 
-**Checkpoint**: Routing compiles, all match statements exhaustive, backend switching functional
-
----
-
-## Step 6: Create Comprehensive Test Suites (4-5 hours)
-
-### Part A: Unit Tests (`tests.rs`)
-
-Test all methods in `AnsiSequenceGenerator` for correct ANSI output:
-
-**Subtasks**:
-
-- [ ] Cursor positioning tests (4 variants, boundary values)
-- [ ] Screen clearing tests (all 4 variants)
-- [ ] Color tests (RGB, 256-color, reset)
-- [ ] Text attributes tests (bold, italic, underline, strikethrough)
-- [ ] Cursor visibility tests (show, hide)
-- [ ] Terminal mode tests (alt screen, mouse, bracketed paste)
-- [ ] Edge case tests (max indices, empty inputs)
-
-**Target**: ~400 LOC, 60+ test cases
-
-### Part B: Integration Tests (`integration_tests.rs`)
-
-Test `RenderOpImplDirectAnsi` executing full sequences:
-
-**Subtasks**:
-
-- [ ] Full RenderOp sequences produce valid ANSI
-- [ ] Color optimization works (skip redundant changes)
-- [ ] Cursor position optimization works
-- [ ] State tracking is correct across operations
-- [ ] Mock OutputDevice captures output correctly
-
-**Target**: ~300 LOC, 15+ test cases
-
-**Subtasks for Step 6**:
-
-- [ ] Write unit tests for AnsiSequenceGenerator (all methods)
-- [ ] Write integration tests for RenderOp execution
-- [ ] Achieve >90% code coverage
-- [ ] Run `cargo test` and ensure all pass
-- [ ] Run `cargo test --doc` for documentation tests
-
-**Estimated Total**: ~700 LOC
-
-**Checkpoint**: All tests pass, >90% coverage
+**Checkpoint**: RenderOpOutputVec is the only executable type; Crossterm backend routes correctly
 
 ---
 
-## Step 7: Cross-Platform Validation (2-3 hours)
+### Step 3.2: Fix OffscreenBufferPaint Trait & RawMode Infrastructure (3-4 hours)
 
-### Subtasks
+**Status**: ⏳ PENDING
+
+**Objective**:
+1. Fix `OffscreenBufferPaint::render()` to return `RenderOpOutputVec` (currently returns `RenderOpIRVec`)
+2. Update `OffscreenBufferPaint::paint()` to accept `RenderOpOutputVec` and call correct `execute_all()`
+3. Fix `RawMode` to use the pipeline properly instead of direct IR execution
+
+**Critical Fix - The Type Mismatch**:
+
+```rust
+// CURRENT (WRONG):
+fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpIRVec {
+    // Actually generates Output-level operations!
+    context.render_ops += RenderOpCommon::ResetColor;  // ← This is Output
+    context.render_ops += RenderOpCommon::SetFgColor(color);
+    // ...
+    context.render_ops  // ← But returns RenderOpIRVec type!
+}
+
+// AFTER (CORRECT):
+fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpOutputVec {
+    // Still same logic, but correct type!
+    context.render_ops += RenderOpCommon::ResetColor;  // ← Wrapped as RenderOpOutput
+    context.render_ops += RenderOpCommon::SetFgColor(color);
+    // ...
+    context.render_ops  // ← Returns RenderOpOutputVec
+}
+```
+
+**Files to Modify**:
+- `tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_core.rs` (trait signature)
+- `tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs` (implementation)
+- `tui/src/tui/terminal_lib_backends/raw_mode.rs` (RawMode implementation)
+- `tui/src/tui/terminal_lib_backends/paint.rs` (orchestration)
+
+**What Gets Changed**:
+
+```rust
+// In ofs_buf_core.rs - UPDATE TRAIT:
+pub trait OffscreenBufferPaint {
+    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOpOutputVec;
+    //                                                         ↑ CHANGED TYPE
+
+    fn render_diff(
+        &mut self,
+        diff_chunks: &super::diff_chunks::PixelCharDiffChunks,
+    ) -> RenderOpOutputVec;
+    //    ↑ CHANGED TYPE
+
+    fn paint(
+        &mut self,
+        render_ops: RenderOpOutputVec,  // CHANGED TYPE
+        flush_kind: FlushKind,
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    );
+
+    fn paint_diff(
+        &mut self,
+        render_ops: RenderOpOutputVec,  // CHANGED TYPE
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    );
+}
+```
+
+**Fix RawMode**:
+
+```rust
+// In raw_mode.rs - NEW APPROACH:
+pub struct RawMode;
+
+impl RawMode {
+    pub fn start(
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
+        if is_mock { return; }
+
+        // Create IR operation
+        let mut ir_ops = RenderOpIRVec::new();
+        ir_ops.push(RenderOpCommon::EnterRawMode);
+
+        // Create temporary backend converter
+        let backend_converter = OffscreenBufferPaintImplCrossterm {};
+
+        // Create temporary minimal OffscreenBuffer
+        let mut temp_ofs_buf = OffscreenBuffer::new(window_size);
+
+        // Compose IR through the pipeline
+        // (This is where IR meets Compositor)
+        // The Compositor will convert EnterRawMode IR → RenderOpOutput
+        let output_ops = backend_converter.convert_ir_to_output(&ir_ops, &mut temp_ofs_buf);
+
+        // Execute the Output operations
+        let mut skip_flush = false;
+        output_ops.execute_all(&mut skip_flush, window_size, locked_output_device, is_mock);
+    }
+
+    pub fn end(
+        window_size: Size,
+        locked_output_device: LockedOutputDevice<'_>,
+        is_mock: bool,
+    ) {
+        // Same pattern with ExitRawMode
+    }
+}
+```
+
+**Subtasks for Step 3.2**:
+- [ ] Update `OffscreenBufferPaint` trait - change return types to `RenderOpOutputVec`
+- [ ] Update Crossterm implementation - return correct type
+- [ ] Create helper in OffscreenBufferPaint to convert IR to Output (for RawMode)
+- [ ] Rewrite RawMode::start/end to use the pipeline
+- [ ] Update paint() methods to call `execute_all()` on correct type
+- [ ] Run `cargo check` - verify trait implementations
+- [ ] Run `cargo test` - verify RawMode still works
+
+**Files Changed**: 4 files, ~200 LOC modified
+
+**Checkpoint**: Type system is now consistent; IR flows through Compositor; Output is executed
+
+---
+
+### Step 3.3: Implement RenderOpImplDirectAnsi (DirectAnsi Backend) (25-35 hours)
+
+**Status**: ⏳ PENDING
+
+**Objective**: Implement the DirectAnsi backend to execute `RenderOpOutput` operations, handling both common operations and post-compositor text rendering.
+
+**File to Modify**: `tui/src/tui/terminal_lib_backends/direct_ansi/paint_render_op_impl.rs`
+
+**Current State**:
+- ✅ Struct definition: `RenderOpImplDirectAnsi`
+- ✅ `Flush` trait fully implemented
+- ❌ Needs: `paint_common()` helper method (27 RenderOpCommon variants)
+- ❌ Needs: `paint_text_with_attributes()` helper method (post-compositor text)
+
+**Architecture**:
+
+```
+PaintRenderOp trait::paint()
+    ↓
+Matches on RenderOpOutput variant
+    ├─ RenderOpOutput::Common(common_op)
+    │  └─ Calls paint_common(common_op)  ← Step 3.3A
+    │
+    └─ RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(text, style)
+       └─ Calls paint_text_with_attributes(text, style)  ← Step 3.3B
+
+Both methods:
+├─ Generate ANSI via AnsiSequenceGenerator (proven from Step 2)
+├─ Track state in RenderOpsLocalData (cursor_pos, fg_color, bg_color)
+├─ Skip redundant operations (optimization)
+└─ Write bytes to output_device
+```
+
+**Step 3.3A: paint_common() - Handle All 27 RenderOpCommon Variants (20-25 hours)**
+
+**Variant Groups**:
+
+| Group | Variants | Complexity | Optimization |
+|-------|----------|------------|--------------|
+| **A** | EnterRawMode, ExitRawMode, Noop | ⭐ | No-ops (return early) |
+| **B** | MoveCursor* (5 variants) | ⭐⭐⭐ | Skip if pos unchanged |
+| **C** | Clear* (4 variants) | ⭐ | Direct ANSI generation |
+| **D** | SetColor* (4 variants) | ⭐⭐⭐⭐ | Skip if color unchanged |
+| **E** | PrintStyledText (1 variant) | ⭐ | Pass-through |
+| **F** | Show/HideCursor (2 variants) | ⭐ | Direct ANSI generation |
+| **G** | Save/RestoreCursor (2 variants) | ⭐ | Direct ANSI generation |
+| **H** | Terminal modes (6 variants) | ⭐⭐ | Direct ANSI generation |
+
+**Implementation Pattern**:
+
+```rust
+fn paint_common(
+    &mut self,
+    skip_flush: &mut bool,
+    render_op: &RenderOpCommon,
+    window_size: Size,
+    render_local_data: &mut RenderOpsLocalData,
+    locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
+) {
+    if is_mock { return; }
+
+    match render_op {
+        // Group A: No-ops
+        RenderOpCommon::EnterRawMode => return,
+        RenderOpCommon::ExitRawMode => return,
+        RenderOpCommon::Noop => return,
+
+        // Group B: Cursor movement with optimization
+        RenderOpCommon::MoveCursorPositionAbs(pos) => {
+            if render_local_data.cursor_pos == *pos { return; }
+            let ansi = AnsiSequenceGenerator::cursor_position(pos.row_index, pos.col_index);
+            locked_output_device.write_all(ansi.as_bytes())
+                .expect("Failed to write cursor position ANSI");
+            render_local_data.cursor_pos = *pos;
+            *skip_flush = false;
+        }
+
+        // ... (24 more variants)
+    }
+}
+```
+
+**Subtasks for Step 3.3A**:
+- [ ] Implement Group A: No-ops (3 variants, 10 min)
+- [ ] Implement Group B: Cursor movement (5 variants, 60 min) ⭐ Optimization focus
+- [ ] Implement Group C: Screen clearing (4 variants, 30 min)
+- [ ] Implement Group D: Color operations (4 variants, 75 min) ⭐ Optimization focus
+- [ ] Implement Group E: Text rendering (1 variant, 20 min)
+- [ ] Implement Group F: Cursor visibility (2 variants, 20 min)
+- [ ] Implement Group G: Cursor save/restore (2 variants, 20 min)
+- [ ] Implement Group H: Terminal modes (6 variants, 45 min)
+- [ ] Add comprehensive rustdoc comments
+- [ ] Run `cargo check` - verify all 27 variants handled
+- [ ] Run `cargo clippy --all-targets` - fix warnings
+
+**Estimated for Step 3.3A**: 18-22 hours, ~600 LOC
+
+**Step 3.3B: paint_text_with_attributes() - Post-Compositor Text (3-5 hours)**
+
+**What This Does**:
+
+```rust
+fn paint_text_with_attributes(
+    text: &InlineString,
+    style: Option<TuiStyle>,
+    window_size: Size,
+    render_local_data: &mut RenderOpsLocalData,
+    locked_output_device: LockedOutputDevice<'_>,
+) {
+    // Text is pre-positioned by Compositor
+    // Style is fully specified (no clipping needed)
+
+    if let Some(style) = style {
+        // Apply style attributes
+        let attr_ansi = AnsiSequenceGenerator::text_attributes(&style);
+        if !attr_ansi.is_empty() {
+            locked_output_device.write_all(attr_ansi.as_bytes())?;
+        }
+
+        // Apply colors if present
+        if let Some(fg) = style.color_fg {
+            let ansi = AnsiSequenceGenerator::fg_color(fg);
+            locked_output_device.write_all(ansi.as_bytes())?;
+        }
+        if let Some(bg) = style.color_bg {
+            let ansi = AnsiSequenceGenerator::bg_color(bg);
+            locked_output_device.write_all(ansi.as_bytes())?;
+        }
+    }
+
+    // Write text (already positioned by Compositor)
+    locked_output_device.write_all(text.as_bytes())?;
+
+    // Reset if style was applied
+    if style.is_some() {
+        let reset = AnsiSequenceGenerator::reset_color();
+        locked_output_device.write_all(reset.as_bytes())?;
+    }
+}
+```
+
+**Subtasks for Step 3.3B**:
+- [ ] Implement text positioning and style application
+- [ ] Handle `None` style case (direct text write)
+- [ ] Handle empty style case (reset to defaults)
+- [ ] Test with various Unicode and emoji widths
+- [ ] Add rustdoc explaining post-compositor assumptions
+- [ ] Run unit tests
+
+**Estimated for Step 3.3B**: 4-6 hours, ~150 LOC
+
+**Step 3.3C: Quality & Testing (3-5 hours)**
+
+**Subtasks for Step 3.3C**:
+- [ ] Add comprehensive unit tests for all 27 variants
+- [ ] Test state optimization (skip redundant operations)
+- [ ] Test ANSI sequence correctness
+- [ ] Test cursor position tracking
+- [ ] Test color caching
+- [ ] Run `cargo test --all` - all tests pass
+- [ ] Run `cargo clippy --all-targets` - zero warnings
+- [ ] Run `cargo fmt` - proper formatting
+- [ ] Verify >90% code coverage
+
+**Estimated for Step 3.3C**: 3-5 hours, ~200 LOC (tests)
+
+**Total for Step 3.3**: 25-35 hours, ~950 LOC (implementation + tests)
+
+**Checkpoint**: DirectAnsi backend fully implements RenderOpOutput execution
+
+---
+
+## Step 3 Summary
+
+| Sub-Phase | Hours | LOC | Status | Files |
+|-----------|-------|-----|--------|-------|
+| 3.0: Remove IR path | 2-3 | -100 | ⏳ | 2 |
+| 3.1: Create Output path | 3-4 | +250 | ⏳ | 2 |
+| 3.2: Fix OffscreenBufferPaint | 3-4 | +200 | ⏳ | 4 |
+| 3.3: DirectAnsi implementation | 25-35 | +950 | ⏳ | 1 |
+| **TOTAL STEP 3** | **33-46** | **~1,300** | **⏳ PENDING** | **9** |
+
+---
+
+## Critical Success Factors for Step 3
+
+✅ **Type System Enforcement**:
+- ❌ RenderOpIRVec is NOT executable (compiler prevents bypass)
+- ✅ RenderOpOutputVec is the ONLY executable type
+- ✅ Semantic boundary is enforced at compile time
+
+✅ **Execution Path Clarity**:
+- Single path: `IR → Compositor → Output → Terminal`
+- No shortcuts or bypass routes
+- RawMode flows through same path (using temporary IR→Output conversion)
+
+✅ **DirectAnsi Implementation**:
+- Reuse `AnsiSequenceGenerator` (proven from Step 2)
+- State tracking via `RenderOpsLocalData` for optimization
+- Handle both common operations and post-compositor text
+- >90% test coverage
+
+✅ **Consistency**:
+- Both Crossterm and DirectAnsi use same routing mechanism
+- Both use same state optimization strategy
+- Both use same `PaintRenderOp` trait
+
+---
+
+---
+
+## Step 4: Cross-Platform Validation & Performance (2-3 hours)
+
+**Status**: ⏳ PENDING - After Step 3 completes
+
+**Note**: Unit and integration testing are handled as part of **Step 3.3C** (Quality & Testing). This step focuses on end-to-end validation and performance analysis.
 
 **Linux Testing**:
 
@@ -1281,83 +1396,94 @@ Test `RenderOpImplDirectAnsi` executing full sequences:
 ## Implementation Checklist
 
 ```
-Phase 2: DirectAnsi Backend Implementation
+Phase 3: Type System Architecture & DirectAnsi Backend Implementation
 
-Step 1: Module Structure (30 min)
-  ☐ Create directory: tui/src/tui/terminal_lib_backends/direct_ansi/
-  ☐ Create mod.rs with module exports
-  ☐ Create stub files (4 files: ansi_sequence_generator.rs, render_op_impl_direct_ansi.rs, tests.rs, integration_tests.rs)
+STEP 3.0: Remove IR Execution Path (2-3 hours)
+  ☐ Locate RenderOpIRVec::execute_all() in render_op_ir.rs
+  ☐ Locate RenderOpIRVec::route_paint_render_op_ir_to_backend() in render_op_ir.rs
+  ☐ Remove both methods from impl block
+  ☐ Remove their documentation
+  ☐ cargo check - should still pass
+  ☐ cargo clippy - ensure no orphaned references
+  ☐ Verify RenderOpIRVec can no longer be executed directly
+  ☐ Confirm file changes are minimal (-50 LOC)
+
+STEP 3.1: Create RenderOpOutput Execution Path (3-4 hours)
+  ☐ Add execute_all() method to RenderOpOutputVec in render_op_output.rs
+  ☐ Add route_paint_render_op_output_to_backend() helper function
+  ☐ Match on TERMINAL_LIB_BACKEND in routing function
+  ☐ Handle Crossterm variant (route to PaintRenderOpImplCrossterm)
+  ☐ Handle DirectAnsi variant (route to PaintRenderOpImplDirectAnsi)
+  ☐ Add exhaustiveness checks for all RenderOpOutput variants
+  ☐ Update PaintRenderOp trait to accept &RenderOpOutput instead of &RenderOpIR
+  ☐ Update all PaintRenderOp implementations to match new trait signature
   ☐ cargo check passes
+  ☐ cargo clippy passes (no warnings)
 
-Step 2: AnsiSequenceGenerator (~600 LOC, 3-4 hours)
-  ☐ Section A: Cursor movement (4 methods)
-  ☐ Section B: Screen clearing (4 methods)
-  ☐ Section C: Colors using SgrColorSequence (3 methods + helper)
-  ☐ Section D: Cursor visibility (2 methods)
-  ☐ Section E: Cursor save/restore (2 methods)
-  ☐ Section F: Terminal modes (6 methods)
-  ☐ Section G: Documentation & examples
-  ☐ cargo check + cargo clippy pass
-  ☐ All constants properly imported from vt_100_ansi_parser
+STEP 3.2: Fix OffscreenBufferPaint Trait (3-4 hours)
+  ☐ Read OffscreenBufferPaint trait definition in ofs_buf_core.rs
+  ☐ Change render() return type from RenderOpIRVec to RenderOpOutputVec
+  ☐ Change render_diff() return type from RenderOpIRVec to RenderOpOutputVec
+  ☐ Update paint() signature to accept RenderOpOutputVec
+  ☐ Update paint_diff() signature to accept RenderOpOutputVec
+  ☐ Update OffscreenBufferPaintImplCrossterm implementation
+  ☐ Update raw_mode.rs to flow RawMode through pipeline (IR → Output)
+  ☐ cargo check passes for all affected files
+  ☐ cargo clippy passes (no warnings)
 
-Step 3: RenderOpImplDirectAnsi (~447 LOC, 4-5 hours)
-  ☐ Implement Group A: Platform/Mode (3 variants)
-  ☐ Implement Group B: Cursor movement with optimization (5 variants)
-  ☐ Implement Group C: Screen clearing (4 variants)
-  ☐ Implement Group D: Color operations with state caching (4 variants)
-  ☐ Implement Group E: Text rendering (3 variants)
-  ☐ Implement Group F: Cursor visibility (2 variants)
-  ☐ Implement Group G: Cursor save/restore (2 variants)
-  ☐ Implement Group H: Terminal modes (6 variants)
-  ☐ cargo check + cargo clippy pass
-  ☐ All 29 RenderOp variants covered exhaustively
+STEP 3.3: Implement DirectAnsi Backend (25-35 hours)
 
-Step 4: OffscreenBufferPaintImplDirectAnsi (~300 LOC, 1-2 hours) **NEW**
-  ☐ Create offscreen_buffer_paint_impl.rs file
-  ☐ Copy crossterm implementation structure
-  ☐ Update struct name to OffscreenBufferPaintImplDirectAnsi
-  ☐ Update debug/tracing strings (crossterm → direct_ansi)
-  ☐ Add to direct_ansi/mod.rs exports
-  ☐ cargo check passes
-  ☐ Validation: Generated RenderOps identical to crossterm
+  STEP 3.3A: RenderOpImplDirectAnsi paint_common() (8-12 hours)
+    ☐ Create paint_common_impl() function or method
+    ☐ Handle Group A: Platform/Mode (EnterRawMode, ExitRawMode, SetAlternateScreenBuffer)
+    ☐ Handle Group B: Cursor movement with optimization (MoveCursor, CursorToColumn, etc.)
+    ☐ Handle Group C: Screen clearing (ClearScreen, ClearCurrentLine, etc.)
+    ☐ Handle Group D: Color operations with state caching (SetFgColor, SetBgColor, ResetColor)
+    ☐ Handle Group E: Text rendering (PrintString, PrintCharacter, etc.)
+    ☐ Handle Group F: Cursor visibility (ShowCursor, HideCursor)
+    ☐ Handle Group G: Cursor save/restore (SaveCursorPosition, RestoreCursorPosition)
+    ☐ Handle Group H: Terminal modes (SetTerminalMode, ResetTerminalMode, etc.)
+    ☐ All 27 RenderOpCommon variants exhaustively matched
+    ☐ Cursor position tracking in RenderOpsLocalData
+    ☐ Color caching optimization (skip redundant changes)
+    ☐ cargo check passes
+    ☐ cargo clippy passes (no warnings)
 
-Step 5: Backend Routing (~150 LOC, 1-2 hours)
-  ☐ Add DirectAnsi to TerminalLibBackend enum
-  ☐ Export OffscreenBufferPaintImplDirectAnsi in mod.rs
-  ☐ Update perform_diff_paint() in paint.rs
-  ☐ Update perform_full_paint() in paint.rs
-  ☐ Update route_paint_render_op_to_backend() in render_op.rs
-  ☐ Verify all match statements exhaustive
-  ☐ cargo check passes
+  STEP 3.3B: RenderOpImplDirectAnsi paint_text_with_attributes() (4-6 hours)
+    ☐ Handle post-compositor text with optional style
+    ☐ Position cursor (already positioned by Compositor)
+    ☐ Apply foreground color if Some
+    ☐ Apply background color if Some
+    ☐ Write text bytes
+    ☐ Reset colors if style was applied
+    ☐ Handle None style case (direct text write)
+    ☐ Test with various Unicode and emoji widths
+    ☐ cargo check passes
+    ☐ cargo clippy passes (no warnings)
 
-Step 6: Test Suites (~700 LOC, 4-5 hours)
-  ☐ Unit tests: 60+ tests for AnsiSequenceGenerator
-  ☐ Integration tests: 15+ tests for RenderOp execution
-  ☐ Test cursor positioning (all variants)
-  ☐ Test color generation (RGB, 256-color, reset)
-  ☐ Test text attributes (bold, italic, etc.)
-  ☐ Test cursor visibility
-  ☐ Test terminal modes
-  ☐ Test optimization (redundant changes)
-  ☐ cargo test passes (all tests)
-  ☐ >90% code coverage
+  STEP 3.3C: Quality & Testing (3-5 hours)
+    ☐ Add 60+ unit tests for AnsiSequenceGenerator methods
+    ☐ Add 15+ integration tests for RenderOp execution
+    ☐ Test cursor positioning (all cursor movement variants)
+    ☐ Test color generation (RGB, 256-color, reset, caching)
+    ☐ Test text attributes (bold, italic, underline if used)
+    ☐ Test cursor visibility (show/hide)
+    ☐ Test terminal modes
+    ☐ Test optimization (verify redundant operations skipped)
+    ☐ cargo test --all passes (all tests)
+    ☐ Code coverage: >90% target
+    ☐ cargo fmt applied (formatting)
+    ☐ cargo clippy --all-targets passes (zero warnings)
+    ☐ cargo doc --no-deps compiles (docs valid)
 
-Step 7: Cross-Platform Validation (2-3 hours)
+STEP 4: Cross-Platform Validation (2-3 hours) [SEPARATE STEP - Not part of 3.0-3.3]
   ☐ Linux: Test on xterm, gnome-terminal, alacritty
   ☐ macOS: Test on Terminal.app, iTerm2
   ☐ Windows: Test on Windows Terminal, PowerShell
   ☐ Run flamegraph benchmark
-  ☐ Verify <5% performance difference vs crossterm
+  ☐ Verify <5% performance difference vs crossterm backend
   ☐ No visual artifacts or garbled output
   ☐ All edge cases handled gracefully
-
-Final Quality Checks
-  ☐ cargo fmt applied
-  ☐ cargo clippy --all-targets passes
-  ☐ cargo doc --no-deps compiles
-  ☐ cargo test passes
-  ☐ No compiler warnings
-  ☐ All dependencies documented in comments
 ```
 
 ---
@@ -1390,1197 +1516,60 @@ Final Quality Checks
 
 ---
 
-## Effort Summary (Updated with Step 4 Discovery)
+## Effort Summary - Phase 3 Implementation
 
 | Component                                      | LOC        | Hours      | Risk        | Status         |
 | ---------------------------------------------- | ---------- | ---------- | ----------- | -------------- |
+| **Phase 2: COMPLETE**                          |            |            |             |                |
 | Step 1: Module Structure                       | 50         | 0.5h       | MINIMAL     | ✅ COMPLETE    |
 | Step 2: AnsiSequenceGenerator                  | 273        | 3-4h       | LOW         | ✅ COMPLETE    |
-| Step 3: RenderOpImplDirectAnsi                 | 447        | 4-5h       | LOW         | ⏳ IN PROGRESS |
-| **Step 4: OffscreenBufferPaintImplDirectAnsi** | **300**    | **1-2h**   | **MINIMAL** | **⏳ NEW**     |
-| Step 5: Backend Routing (3 files)              | 150        | 1-2h       | MINIMAL     | ⏳ PENDING     |
-| Step 6: Test Suites                            | 700        | 4-5h       | LOW         | ⏳ PENDING     |
-| Step 7: Cross-Platform Validation              | -          | 2-3h       | MEDIUM      | ⏳ PENDING     |
-| **TOTAL**                                      | **~1,920** | **16-22h** | **LOW**     | **Phase 2**    |
+| **Phase 2 Total**                              | **323**    | **3.5-4.5h** | **LOW**     | **✅ COMPLETE** |
+|                                                |            |            |             |                |
+| **Phase 3: Type System & DirectAnsi (EXPANDED)** |          |            |             |                |
+| 3.0: Remove IR Execution Path                  | -100       | 2-3h       | MINIMAL     | ⏳ PENDING     |
+| 3.1: Create RenderOpOutput Execution Path      | +250       | 3-4h       | LOW         | ⏳ PENDING     |
+| 3.2: Fix OffscreenBufferPaint Trait            | +200       | 3-4h       | LOW         | ⏳ PENDING     |
+| 3.3A: paint_common() implementation            | +600       | 8-12h      | MEDIUM      | ⏳ PENDING     |
+| 3.3B: paint_text_with_attributes()             | +200       | 4-6h       | LOW         | ⏳ PENDING     |
+| 3.3C: Quality & Testing                        | +200       | 3-5h       | LOW         | ⏳ PENDING     |
+| **Phase 3 Total**                              | **~1,350** | **33-46h** | **LOW**     | **⏳ PENDING** |
+|                                                |            |            |             |                |
+| **Phase 4: Cross-Platform Validation**         | -          | 2-3h       | MEDIUM      | ⏳ PENDING     |
+|                                                |            |            |             |                |
+| **GRAND TOTAL (Phases 2-4)**                   | **~1,673** | **38.5-53.5h** | **LOW**     | **2 COMPLETE, 2 PENDING** |
 
-**Timeline**: 2-3 weeks (3-4 hours/day)
+**Timeline**:
+- Phase 2 (✅ COMPLETE): Already done, ~4 hours of work completed
+- Phase 3 (⏳ PENDING): 2-3 weeks (4-5 hours/day)
+- Phase 4 (⏳ PENDING): 1 week for cross-platform validation
 
-**Key Changes from Original Plan:**
+**Key Architectural Improvements:**
 
-- ✅ Steps 1-2 already complete
-- 🆕 Added Step 4: OffscreenBufferPaintImplDirectAnsi (+1-2 hours)
-- 📊 Updated LOC estimates based on actual code analysis
-- ⏱️ Total effort increased by 1-2 hours (still LOW risk)
-
----
-
-### Phase 3: Migrate choose() and readline_async() to RenderOps
-
-**Objective**: Replace direct crossterm calls in choose() and readline_async() with RenderOps.
-
-#### 3.1 Update Macros
-
-**File**: `tui/src/readline_async/choose_impl/crossterm_macros.rs`
-
-Deprecate crossterm macros and create RenderOps-based replacements:
-
-````rust
-/// DEPRECATED: Use render_ops! macro instead
-///
-/// This macro is kept for backwards compatibility during migration.
-/// New code should use `render_ops!` and `RenderOps::execute_all()`.
-#[macro_export]
-#[deprecated(note = "Use render_ops! macro and RenderOps::execute_all() instead")]
-macro_rules! queue_commands {
-    // ... existing implementation remains for backwards compatibility ...
-}
-
-/// Queue RenderOps to be executed
-///
-/// This macro creates RenderOps and executes them immediately.
-///
-/// # Example
-///
-/// ```rust
-/// queue_render_ops!(output_device, render_ops!(
-///     @new
-///     RenderOp::ClearCurrentLine,
-///     RenderOp::PrintStyledText("Hello".into()),
-/// ));
-/// ```
-#[macro_export]
-macro_rules! queue_render_ops {
-    ($output_device:expr, $ops:expr) => {{
-        use miette::IntoDiagnostic;
-        let window_size = $crate::get_terminal_size()?;
-        let locked_output = $crate::lock_output_device_as_mut!($output_device);
-        let mut skip_flush = false;
-        $ops.execute_all(&mut skip_flush, window_size, locked_output, false);
-    }};
-}
-````
-
-**Estimated LOC**: ~100 lines (macro updates + deprecation warnings)
-
-#### 3.2 Migrate select_component.rs
-
-**File**: `tui/src/readline_async/choose_impl/select_component.rs`
-
-Example migration:
-
-**Before (crossterm):**
-
-```rust
-queue_commands! {
-    output_device,
-    MoveToColumn(0),
-    ResetColor,
-    Clear(ClearType::CurrentLine),
-    Print(styled_header),
-    MoveToNextLine(1),
-    ResetColor,
-};
-```
-
-**After (RenderOps):**
-
-```rust
-let mut ops = render_ops!(
-    @new
-    RenderOp::MoveCursorToColumn(col!(0)),
-    RenderOp::ResetColor,
-    RenderOp::ClearCurrentLine,
-    RenderOp::PrintStyledText(styled_header),
-    RenderOp::MoveCursorToNextLine(height!(1)),
-    RenderOp::ResetColor,
-);
-queue_render_ops!(output_device, ops);
-```
-
-**Files to migrate:**
-
-- `tui/src/readline_async/choose_impl/select_component.rs`
-- `tui/src/readline_async/choose_impl/function_component.rs`
-- `tui/src/readline_async/choose_impl/event_loop.rs`
-- `tui/src/readline_async/readline_async_impl/readline.rs`
-- `tui/src/readline_async/spinner_impl/spinner_render.rs`
-
-**Estimated LOC**: ~200 lines of changes (replacements across files)
-
-#### 3.3 Update Imports
-
-Replace crossterm imports with RenderOp imports:
-
-**Before:**
-
-```rust
-use crossterm::{
-    cursor::{MoveToColumn, MoveToNextLine},
-    style::{Print, ResetColor},
-    terminal::{Clear, ClearType},
-};
-```
-
-**After:**
-
-```rust
-use crate::{
-    RenderOp, RenderOps, render_ops,
-    col, height, // Type-safe constructors from bounds_check
-};
-```
-
-**Estimated LOC**: ~50 lines (import updates)
+- ✅ Phase 2 Foundation: Proven ANSI generation approach without crossterm
+- 🆕 Phase 3 Expansion: Type system enforces semantic boundaries at compile time
+- 📊 Phase 3 Integration: DirectAnsi backend fully parallel with Crossterm
+- ⏱️ Minimal Risk: All patterns proven in Phase 2 crossterm backend
 
 ---
-
-### Phase 4: Input Handling with mio + VT-100 Parser
-
-**Objective**: Replace crossterm input handling with a custom VT-100 input parser and mio for async
-I/O.
-
-#### 4.1 Create Async Stdin Reader with mio
-
-**File**: `tui/src/core/terminal_io/stdin_reader.rs` (NEW)
-
-```rust
-use mio::{Events, Interest, Poll, Token};
-use std::io::{self, Read};
-use std::os::unix::io::AsRawFd;
-use std::time::Duration;
-
-const STDIN_TOKEN: Token = Token(0);
-
-/// Async stdin reader using mio for non-blocking I/O
-///
-/// This provides cross-platform async reading from stdin without depending
-/// on external libraries like crossterm.
-pub struct StdinReader {
-    poll: Poll,
-    events: Events,
-    buffer: Vec<u8>,
-}
-
-impl StdinReader {
-    pub fn new() -> io::Result<Self> {
-        let poll = Poll::new()?;
-        let events = Events::with_capacity(128);
-
-        // Register stdin with mio for read events
-        #[cfg(unix)]
-        {
-            let stdin_fd = io::stdin().as_raw_fd();
-            let mut source = mio::unix::SourceFd(&stdin_fd);
-
-            poll.registry().register(
-                &mut source,
-                STDIN_TOKEN,
-                Interest::READABLE,
-            )?;
-        }
-
-        #[cfg(windows)]
-        {
-            // Windows implementation uses Console API
-            // See stdin_reader_windows.rs for details
-        }
-
-        Ok(Self {
-            poll,
-            events,
-            buffer: Vec::with_capacity(4096),
-        })
-    }
-
-    /// Poll stdin for readability with timeout
-    ///
-    /// Returns:
-    /// - `Ok(Some(bytes))` if data available
-    /// - `Ok(None)` if timeout
-    /// - `Err` on I/O error
-    pub fn read_with_timeout(&mut self, timeout_ms: u64) -> io::Result<Option<Vec<u8>>> {
-        self.buffer.clear();
-
-        // Poll with timeout
-        self.poll.poll(
-            &mut self.events,
-            Some(Duration::from_millis(timeout_ms))
-        )?;
-
-        // Check if stdin is readable
-        for event in &self.events {
-            if event.token() == STDIN_TOKEN && event.is_readable() {
-                // Read available bytes
-                let mut stdin = io::stdin();
-                stdin.read_to_end(&mut self.buffer)?;
-
-                if !self.buffer.is_empty() {
-                    return Ok(Some(self.buffer.clone()));
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// Non-blocking read that returns immediately if no data
-    pub fn try_read(&mut self) -> io::Result<Option<Vec<u8>>> {
-        self.read_with_timeout(0)
-    }
-}
-```
-
-**Estimated LOC**: ~200 lines (Unix + Windows implementations)
-
-#### 4.2 Create VT-100 Input Parser
-
-**File**: `tui/src/core/terminal_io/vt100_input_parser/mod.rs` (NEW)
-
-````rust
-/// VT-100 input parser for stdin events
-///
-/// This is a **separate parser** from the PTY VT-100 parser, specialized for parsing
-/// terminal input sequences (keyboard, mouse, etc.) from stdin.
-///
-/// **Architecture Decision**: We create a separate input parser rather than extending
-/// the existing PTY parser to maintain clean separation of concerns. The PTY parser
-/// handles output emulation (interpreting ANSI for rendering), while this parser
-/// handles input parsing (converting ANSI to events).
-///
-/// # Handles
-///
-/// - Regular key presses (UTF-8 characters)
-/// - Special keys (arrows, function keys, etc.) via CSI sequences
-/// - Mouse events via SGR mouse protocol (CSI <...>M/m)
-/// - Modifiers (Ctrl, Alt, Shift)
-/// - Bracketed paste mode
-///
-/// # ANSI Sequence Reference
-///
-/// - Arrow keys: CSI A/B/C/D (Up/Down/Right/Left)
-/// - Function keys: CSI <n>~ or CSI O P/Q/R/S
-/// - Mouse: CSI < Cb ; Cx ; Cy M/m (SGR extended mode)
-/// - Ctrl+key: Single byte 0x01-0x1A (Ctrl+A through Ctrl+Z)
-/// - Alt+key: ESC followed by key
-
-mod csi_parser;
-mod key_parser;
-mod mouse_parser;
-
-use crate::{InputEvent, KeyEvent, MouseEvent, KeyCode, KeyModifiers};
-
-pub struct Vt100InputParser {
-    state: ParserState,
-    buffer: Vec<u8>,
-}
-
-enum ParserState {
-    Ground,           // Normal text input
-    Escape,           // After ESC (0x1B)
-    Csi,              // After CSI (ESC [)
-    CsiParam,         // Accumulating CSI parameters
-}
-
-impl Vt100InputParser {
-    pub fn new() -> Self {
-        Self {
-            state: ParserState::Ground,
-            buffer: Vec::new(),
-        }
-    }
-
-    /// Process bytes from stdin and extract input events
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let mut parser = Vt100InputParser::new();
-    /// let bytes = stdin_reader.read_with_timeout(100)?;
-    ///
-    /// if let Some(bytes) = bytes {
-    ///     let events = parser.process_bytes(&bytes);
-    ///     for event in events {
-    ///         handle_event(event);
-    ///     }
-    /// }
-    /// ```
-    pub fn process_bytes(&mut self, bytes: &[u8]) -> Vec<InputEvent> {
-        let mut events = Vec::new();
-
-        for &byte in bytes {
-            if let Some(event) = self.process_byte(byte) {
-                events.push(event);
-            }
-        }
-
-        events
-    }
-
-    fn process_byte(&mut self, byte: u8) -> Option<InputEvent> {
-        match self.state {
-            ParserState::Ground => self.handle_ground(byte),
-            ParserState::Escape => self.handle_escape(byte),
-            ParserState::Csi => self.handle_csi(byte),
-            ParserState::CsiParam => self.handle_csi_param(byte),
-        }
-    }
-
-    fn handle_ground(&mut self, byte: u8) -> Option<InputEvent> {
-        match byte {
-            0x1B => {
-                // ESC - enter escape sequence
-                self.state = ParserState::Escape;
-                self.buffer.clear();
-                None
-            }
-            0x0D => {
-                // Enter key (Carriage Return)
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Enter,
-                    KeyModifiers::empty(),
-                )))
-            }
-            0x7F => {
-                // Backspace (DEL)
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Backspace,
-                    KeyModifiers::empty(),
-                )))
-            }
-            0x09 => {
-                // Tab
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Tab,
-                    KeyModifiers::empty(),
-                )))
-            }
-            b'\x01'..=b'\x1A' => {
-                // Ctrl+A through Ctrl+Z
-                let char_code = byte - 1 + b'a';
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Char(char_code as char),
-                    KeyModifiers::CONTROL,
-                )))
-            }
-            _ if byte >= 0x20 && byte < 0x7F => {
-                // Printable ASCII
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Char(byte as char),
-                    KeyModifiers::empty(),
-                )))
-            }
-            _ => {
-                // UTF-8 continuation bytes or other
-                // TODO: Handle multi-byte UTF-8 sequences properly
-                None
-            }
-        }
-    }
-
-    fn handle_escape(&mut self, byte: u8) -> Option<InputEvent> {
-        match byte {
-            b'[' => {
-                // CSI sequence start (Control Sequence Introducer)
-                self.state = ParserState::Csi;
-                None
-            }
-            b'O' => {
-                // SS3 sequence (Single Shift 3) - used for function keys
-                self.state = ParserState::Csi;
-                None
-            }
-            _ => {
-                // Alt + key
-                self.state = ParserState::Ground;
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Char(byte as char),
-                    KeyModifiers::ALT,
-                )))
-            }
-        }
-    }
-
-    fn handle_csi(&mut self, byte: u8) -> Option<InputEvent> {
-        match byte {
-            b'0'..=b'9' | b';' | b'<' => {
-                // Parameter bytes
-                self.buffer.push(byte);
-                self.state = ParserState::CsiParam;
-                None
-            }
-            // Simple arrow keys (no parameters)
-            b'A' => {
-                self.state = ParserState::Ground;
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Up,
-                    KeyModifiers::empty(),
-                )))
-            }
-            b'B' => {
-                self.state = ParserState::Ground;
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Down,
-                    KeyModifiers::empty(),
-                )))
-            }
-            b'C' => {
-                self.state = ParserState::Ground;
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Right,
-                    KeyModifiers::empty(),
-                )))
-            }
-            b'D' => {
-                self.state = ParserState::Ground;
-                Some(InputEvent::Key(KeyEvent::new(
-                    KeyCode::Left,
-                    KeyModifiers::empty(),
-                )))
-            }
-            _ => {
-                // Unknown sequence
-                self.state = ParserState::Ground;
-                None
-            }
-        }
-    }
-
-    fn handle_csi_param(&mut self, byte: u8) -> Option<InputEvent> {
-        match byte {
-            b'0'..=b'9' | b';' => {
-                // Continue accumulating parameters
-                self.buffer.push(byte);
-                None
-            }
-            b'M' | b'm' => {
-                // SGR mouse event (CSI < Cb ; Cx ; Cy M/m)
-                let event = self.parse_mouse_event();
-                self.state = ParserState::Ground;
-                self.buffer.clear();
-                event
-            }
-            b'~' => {
-                // Special key (Home, End, PageUp, etc.)
-                // Format: CSI <n> ~
-                let event = self.parse_special_key();
-                self.state = ParserState::Ground;
-                self.buffer.clear();
-                event
-            }
-            b'A'..=b'D' => {
-                // Arrow keys with modifiers
-                // Format: CSI 1 ; <modifier> A/B/C/D
-                let event = self.parse_arrow_with_modifiers(byte);
-                self.state = ParserState::Ground;
-                self.buffer.clear();
-                event
-            }
-            _ => {
-                // Unknown sequence
-                self.state = ParserState::Ground;
-                self.buffer.clear();
-                None
-            }
-        }
-    }
-
-    fn parse_mouse_event(&self) -> Option<InputEvent> {
-        // Parse SGR mouse protocol: CSI < Cb ; Cx ; Cy M/m
-        // M = button press, m = button release
-        // TODO: Implement full SGR mouse parsing
-        None
-    }
-
-    fn parse_special_key(&self) -> Option<InputEvent> {
-        // Parse sequences like:
-        // CSI 1 ~ (Home)
-        // CSI 4 ~ (End)
-        // CSI 5 ~ (PageUp)
-        // CSI 6 ~ (PageDown)
-        // CSI 11 ~ (F1)
-        // etc.
-
-        let param_str = String::from_utf8_lossy(&self.buffer);
-        let param = param_str.parse::<u32>().ok()?;
-
-        let key_code = match param {
-            1 | 7 => KeyCode::Home,
-            2 => KeyCode::Insert,
-            3 => KeyCode::Delete,
-            4 | 8 => KeyCode::End,
-            5 => KeyCode::PageUp,
-            6 => KeyCode::PageDown,
-            11..=15 => KeyCode::F((param - 10) as u8), // F1-F5
-            17..=21 => KeyCode::F((param - 11) as u8), // F6-F10
-            23 | 24 => KeyCode::F((param - 12) as u8), // F11-F12
-            _ => return None,
-        };
-
-        Some(InputEvent::Key(KeyEvent::new(
-            key_code,
-            KeyModifiers::empty(),
-        )))
-    }
-
-    fn parse_arrow_with_modifiers(&self, final_byte: u8) -> Option<InputEvent> {
-        // Parse sequences like CSI 1;2A (Shift+Up)
-        // Format: CSI 1 ; <modifier> <A/B/C/D>
-        // Modifier: 2=Shift, 3=Alt, 4=Shift+Alt, 5=Control, 6=Shift+Control, etc.
-        // TODO: Implement full modifier parsing
-        None
-    }
-}
-````
-
-**Estimated LOC**: ~800 lines (parser state machine + CSI/key/mouse parsing + tests)
-
-#### 4.3 Integrate with InputDevice
-
-**File**: `tui/src/core/terminal_io/input_device.rs`
-
-Update InputDevice to use the new parser:
-
-```rust
-use super::{StdinReader, Vt100InputParser};
-
-pub struct InputDevice {
-    stdin_reader: StdinReader,
-    parser: Vt100InputParser,
-    // ... existing fields ...
-}
-
-impl InputDevice {
-    pub fn new() -> Self {
-        Self {
-            stdin_reader: StdinReader::new()
-                .expect("Failed to create stdin reader"),
-            parser: Vt100InputParser::new(),
-            // ... existing initialization ...
-        }
-    }
-
-    /// Poll for input events with timeout
-    ///
-    /// Returns a vector of parsed input events (keyboard, mouse, etc.)
-    pub async fn poll_events(&mut self, timeout_ms: u64)
-        -> miette::Result<Vec<InputEvent>>
-    {
-        // Read bytes from stdin
-        let bytes_opt = self.stdin_reader
-            .read_with_timeout(timeout_ms)
-            .into_diagnostic()?;
-
-        if let Some(bytes) = bytes_opt {
-            // Parse bytes into events using VT-100 parser
-            Ok(self.parser.process_bytes(&bytes))
-        } else {
-            Ok(Vec::new())
-        }
-    }
-}
-```
-
-**Estimated LOC**: ~100 lines (integration + error handling)
-
----
-
-### Phase 5: Testing & Validation
-
-#### 5.1 Unit Tests for DirectAnsi Backend
-
-**File**: `tui/src/tui/terminal_lib_backends/direct_ansi/tests.rs`
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{Pos, TuiColor, row, col};
-
-    #[test]
-    fn test_cursor_position_ansi() {
-        let pos = Pos::new(row!(5), col!(10));
-        let bytes = AnsiSequenceGenerator::cursor_position(pos);
-        assert_eq!(bytes, b"\x1b[6;11H"); // 1-indexed
-    }
-
-    #[test]
-    fn test_cursor_to_column_ansi() {
-        let bytes = AnsiSequenceGenerator::cursor_to_column(col!(15));
-        assert_eq!(bytes, b"\x1b[16G"); // 1-indexed
-    }
-
-    #[test]
-    fn test_clear_screen_ansi() {
-        let bytes = AnsiSequenceGenerator::clear_screen();
-        assert_eq!(bytes, b"\x1b[2J");
-    }
-
-    #[test]
-    fn test_clear_current_line_ansi() {
-        let bytes = AnsiSequenceGenerator::clear_current_line();
-        assert_eq!(bytes, b"\x1b[2K");
-    }
-
-    #[test]
-    fn test_fg_color_rgb_ansi() {
-        let color = TuiColor::Rgb { r: 255, g: 128, b: 64 };
-        let bytes = AnsiSequenceGenerator::fg_color(color);
-        assert_eq!(bytes, b"\x1b[38;2;255;128;64m");
-    }
-
-    #[test]
-    fn test_bg_color_ansi256() {
-        let color = TuiColor::Ansi256(42);
-        let bytes = AnsiSequenceGenerator::bg_color(color);
-        assert_eq!(bytes, b"\x1b[48;5;42m");
-    }
-
-    #[test]
-    fn test_reset_color_ansi() {
-        let bytes = AnsiSequenceGenerator::reset_color();
-        assert_eq!(bytes, b"\x1b[0m");
-    }
-
-    #[test]
-    fn test_show_hide_cursor() {
-        assert_eq!(AnsiSequenceGenerator::show_cursor(), b"\x1b[?25h");
-        assert_eq!(AnsiSequenceGenerator::hide_cursor(), b"\x1b[?25l");
-    }
-
-    // ... more tests for all sequence types ...
-}
-```
-
-**Estimated LOC**: ~400 lines (comprehensive unit tests)
-
-#### 5.2 Integration Tests with Mock OutputDevice
-
-**File**: `tui/src/tui/terminal_lib_backends/direct_ansi/integration_tests.rs`
-
-```rust
-#[cfg(test)]
-mod integration_tests {
-    use super::*;
-    use crate::{OutputDevice, lock_output_device_as_mut, render_ops, Size, width, height};
-
-    #[test]
-    fn test_render_ops_execution_produces_correct_ansi() {
-        let (mut output_device, stdout_mock) = OutputDevice::new_mock();
-
-        let mut ops = render_ops!(
-            @new
-            RenderOp::ClearScreen,
-            RenderOp::MoveCursorPositionAbs(Pos::new(row!(0), col!(0))),
-            RenderOp::SetFgColor(TuiColor::Rgb { r: 255, g: 0, b: 0 }),
-            RenderOp::PrintStyledText("Hello, World!".into()),
-        );
-
-        let window_size = Size::new(width!(80), height!(24));
-        let locked_output = lock_output_device_as_mut!(output_device);
-        let mut skip_flush = false;
-
-        ops.execute_all(&mut skip_flush, window_size, locked_output, false);
-
-        let output = stdout_mock.get_copy_of_buffer_as_string();
-
-        // Verify ANSI sequences
-        assert!(output.contains("\x1b[2J")); // Clear screen
-        assert!(output.contains("\x1b[1;1H")); // Move to 0,0
-        assert!(output.contains("\x1b[38;2;255;0;0m")); // Red foreground
-        assert!(output.contains("Hello, World!"));
-    }
-
-    #[test]
-    fn test_incremental_rendering_operations() {
-        let (mut output_device, stdout_mock) = OutputDevice::new_mock();
-
-        let mut ops = render_ops!(
-            @new
-            RenderOp::MoveCursorToColumn(col!(10)),
-            RenderOp::ClearCurrentLine,
-            RenderOp::PrintStyledText("Test".into()),
-            RenderOp::MoveCursorToNextLine(height!(1)),
-        );
-
-        let window_size = Size::new(width!(80), height!(24));
-        let locked_output = lock_output_device_as_mut!(output_device);
-        let mut skip_flush = false;
-
-        ops.execute_all(&mut skip_flush, window_size, locked_output, false);
-
-        let output = stdout_mock.get_copy_of_buffer_as_string();
-
-        assert!(output.contains("\x1b[11G")); // Move to column 10 (1-indexed)
-        assert!(output.contains("\x1b[2K")); // Clear current line
-        assert!(output.contains("Test"));
-        assert!(output.contains("\x1b[1E")); // Move to next line
-    }
-
-    #[test]
-    fn test_color_optimization_skips_redundant_sequences() {
-        let (mut output_device, stdout_mock) = OutputDevice::new_mock();
-
-        let red = TuiColor::Rgb { r: 255, g: 0, b: 0 };
-        let mut ops = render_ops!(
-            @new
-            RenderOp::SetFgColor(red),
-            RenderOp::SetFgColor(red), // Should be skipped (same color)
-            RenderOp::PrintStyledText("Text".into()),
-        );
-
-        let window_size = Size::new(width!(80), height!(24));
-        let locked_output = lock_output_device_as_mut!(output_device);
-        let mut skip_flush = false;
-
-        ops.execute_all(&mut skip_flush, window_size, locked_output, false);
-
-        let output = stdout_mock.get_copy_of_buffer_as_string();
-
-        // Should only contain one SetFgColor sequence
-        let color_sequence = "\x1b[38;2;255;0;0m";
-        assert_eq!(output.matches(color_sequence).count(), 1);
-    }
-}
-```
-
-**Estimated LOC**: ~300 lines (integration tests)
-
-#### 5.3 Visual Testing Examples
-
-**File**: `tui/examples/test_direct_ansi_rendering.rs`
-
-```rust
-//! Visual test for DirectAnsi backend rendering
-//!
-//! This example demonstrates that DirectAnsi backend produces identical
-//! visual output to the crossterm backend.
-//!
-//! Run with: cargo run --example test_direct_ansi_rendering
-
-use r3bl_tui::*;
-
-fn main() -> miette::Result<()> {
-    let mut output_device = OutputDevice::new_stdout();
-
-    // Test 1: Basic rendering
-    let mut ops = render_ops!(
-        @new
-        RenderOp::ClearScreen,
-        RenderOp::MoveCursorPositionAbs(Pos::new(row!(2), col!(5))),
-        RenderOp::SetFgColor(TuiColor::Rgb { r: 0, g: 255, b: 0 }),
-        RenderOp::PrintStyledText("✓ DirectAnsi Backend Test".into()),
-        RenderOp::ResetColor,
-    );
-
-    let window_size = get_terminal_size()?;
-    let locked_output = lock_output_device_as_mut!(output_device);
-    let mut skip_flush = false;
-
-    ops.execute_all(&mut skip_flush, window_size, locked_output, false);
-
-    // Test 2: Incremental rendering (choose/readline style)
-    let mut ops = render_ops!(
-        @new
-        RenderOp::MoveCursorToNextLine(height!(2)),
-        RenderOp::MoveCursorToColumn(col!(5)),
-        RenderOp::ClearCurrentLine,
-        RenderOp::SetFgColor(TuiColor::Rgb { r: 255, g: 255, b: 0 }),
-        RenderOp::PrintStyledText("→ Incremental rendering works!".into()),
-        RenderOp::ResetColor,
-    );
-
-    ops.execute_all(&mut skip_flush, window_size, locked_output, false);
-
-    // Test 3: Color gradients
-    let mut ops = render_ops!(@new);
-
-    for i in 0..16 {
-        render_ops!(
-            @add_to ops =>
-            RenderOp::MoveCursorToNextLine(height!(1)),
-            RenderOp::MoveCursorToColumn(col!(5)),
-            RenderOp::SetFgColor(TuiColor::Rgb {
-                r: (i * 16) as u8,
-                g: 128,
-                b: 255 - (i * 16) as u8
-            }),
-            RenderOp::PrintStyledText(format!("Color gradient step {}", i).into()),
-        );
-    }
-
-    render_ops!(
-        @add_to ops =>
-        RenderOp::MoveCursorToNextLine(height!(2)),
-        RenderOp::ResetColor,
-    );
-
-    ops.execute_all(&mut skip_flush, window_size, locked_output, false);
-
-    Ok(())
-}
-```
-
-**Estimated LOC**: ~150 lines (visual test examples)
-
----
-
-### Phase 6: Remove Crossterm Dependency
-
-#### 6.1 Update Cargo.toml
-
-**File**: `tui/Cargo.toml`
-
-```toml
-[dependencies]
-# REMOVED: crossterm = { version = "0.27", features = ["event-stream"] }
-
-# NEW: Direct dependencies for terminal control
-mio = { version = "0.8", features = ["os-poll", "os-ext"] }
-
-# Platform-specific dependencies for raw mode
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
-
-[target.'cfg(windows)'.dependencies]
-windows = { version = "0.52", features = [
-    "Win32_System_Console",
-    "Win32_Foundation",
-    "Win32_Storage_FileSystem",
-] }
-```
-
-#### 6.2 Remove Crossterm Code
-
-**Files to remove:**
-
-- `tui/src/tui/terminal_lib_backends/crossterm/` (entire directory)
-- `tui/src/readline_async/choose_impl/crossterm_macros.rs` (replace with render_ops macros)
-
-**Files to update:**
-
-- Remove all `use crossterm::*` imports
-- Remove `RenderOpImplCrossterm` references
-- Update `TERMINAL_LIB_BACKEND` default to `DirectAnsi`
-
-#### 6.3 Update Documentation
-
-**Files to update:**
-
-- `README.md` - Update dependencies section
-- `CHANGELOG.md` - Document crossterm removal
-- `docs/architecture.md` - Update rendering architecture diagrams
-
-**Estimated LOC**: ~100 lines (cargo updates + documentation)
-
----
-
-## File Structure
-
-### New Files to Create
-
-```
-tui/src/tui/terminal_lib_backends/direct_ansi/
-├── mod.rs                          # Module exports
-├── ansi_sequence_generator.rs      # ANSI escape sequence generation (~500 LOC)
-├── render_op_impl_direct_ansi.rs   # DirectAnsi backend implementation (~600 LOC)
-├── tests.rs                        # Unit tests (~400 LOC)
-└── integration_tests.rs            # Integration tests (~300 LOC)
-
-tui/src/core/terminal_io/
-├── stdin_reader.rs                 # mio-based async stdin reader (~200 LOC)
-└── vt100_input_parser/
-    ├── mod.rs                      # Parser state machine (~400 LOC)
-    ├── csi_parser.rs               # CSI sequence parsing (~200 LOC)
-    ├── key_parser.rs               # Keyboard event parsing (~100 LOC)
-    └── mouse_parser.rs             # Mouse event parsing (~100 LOC)
-
-tui/examples/
-└── test_direct_ansi_rendering.rs   # Visual validation (~150 LOC)
-```
-
-### Files to Modify
-
-```
-tui/src/tui/terminal_lib_backends/
-├── mod.rs                          # Add DirectAnsi enum variant (~50 LOC changes)
-└── render_op.rs                    # Add new RenderOp variants + routing (~250 LOC changes)
-
-tui/src/readline_async/choose_impl/
-├── crossterm_macros.rs             # Deprecate + add render_ops macros (~100 LOC changes)
-├── select_component.rs             # Migrate to RenderOps (~80 LOC changes)
-├── function_component.rs           # Migrate to RenderOps (~60 LOC changes)
-└── event_loop.rs                   # Migrate to RenderOps (~40 LOC changes)
-
-tui/src/readline_async/readline_async_impl/
-└── readline.rs                     # Migrate to RenderOps (~100 LOC changes)
-
-tui/src/readline_async/spinner_impl/
-└── spinner_render.rs               # Migrate to RenderOps (~40 LOC changes)
-
-tui/src/core/terminal_io/
-└── input_device.rs                 # Integrate VT-100 parser (~100 LOC changes)
-
-tui/Cargo.toml                      # Remove crossterm, add mio + platform deps (~20 LOC changes)
-```
-
-### Files to Remove
-
-```
-tui/src/tui/terminal_lib_backends/crossterm/
-└── (entire directory - remove after migration validated)
-```
-
-## Code Size Estimates
-
-| Component                          | Planned   | Actual        | Status           |
-| ---------------------------------- | --------- | ------------- | ---------------- |
-| **Phase 1: RenderOp extensions**   | 250 LOC   | **1,546 LOC** | ✅ COMPLETE      |
-| **Phase 2: DirectAnsi backend**    | 1,850 LOC | TBD           | ⏳ PENDING       |
-| **Phase 3: Partial TUI migration** | 420 LOC   | TBD           | ⏳ PENDING       |
-| **Phase 4: Input handling**        | 1,100 LOC | TBD           | ⏳ PENDING       |
-| **Phase 5: Testing**               | 850 LOC   | TBD           | ⏳ PENDING       |
-| **Phase 6: Cleanup**               | 120 LOC   | TBD           | ⏳ PENDING       |
-| **TOTAL**                          | **4,590** | **1,546+**    | **27% Complete** |
-
-**Phase 1 Actual Breakdown (Commit ea269dca):**
-
-- **New code**: 1,242 insertions
-- **Modified code**: 304 deletions (52 files updated)
-- **Files changed**: 52 total
-
-**Why Phase 1 exceeded estimates:**
-
-- Original plan was just RenderOp variants (~200 LOC)
-- Actual implementation included:
-  - TerminalModeState struct for state tracking
-  - Full crossterm backend implementation of all 17 RenderOp variants
-  - Compositor infrastructure refactoring
-  - 52-file codebase alignment (imports, references, formatting)
-
-**Benefit of larger Phase 1**: Creates production-validated foundation for Phase 2, eliminating risk
-of backend incompatibility later.
-
-## Migration Timeline
-
-| Phase       | Description               | Duration                | Status               | Dependencies |
-| ----------- | ------------------------- | ----------------------- | -------------------- | ------------ |
-| **Phase 1** | Extend RenderOp           | 2-3 days                | ✅ COMPLETE (Oct 23) | None         |
-| **Phase 2** | DirectAnsi backend        | 5-7 days                | ⏳ PENDING           | Phase 1      |
-| **Phase 3** | Migrate choose()/readline | 3-4 days                | ⏳ PENDING           | Phase 2      |
-| **Phase 4** | Input handling            | 5-7 days                | ⏳ PENDING           | Phase 3      |
-| **Phase 5** | Testing & validation      | 3-5 days                | ⏳ PENDING           | Phase 4      |
-| **Phase 6** | Remove crossterm          | 1-2 days                | ⏳ PENDING           | Phase 5      |
-| **TOTAL**   | End-to-end migration      | **2-3 weeks remaining** | **27% Complete**     |              |
-
-**Actual Phase 1 Duration**: ~6 hours (exceeded scope significantly)
-
-**Remaining Timeline** (from Oct 23, 2025):
-
-- Phase 2 start: Immediate (Foundation fully ready)
-- Estimated completion: ~November 6-13, 2025
-
-**Parallelization opportunities:**
-
-- Phase 1 + Phase 4 (input) can overlap partially
-- Phase 5 (testing) can begin during Phase 3-4
-- Phase 2 development can begin immediately with crossterm validation layer in place
-
-- **Critical path**: Phase 1 (✅) → Phase 2 (→) → Phase 3 (→) → Phase 6 (→)
-- **Dependency resolved**: Phase 1 provides validated implementation foundation - Phase 2
-  implementation risk is eliminated
-
-## Platform Compatibility
-
-### ANSI Support by Platform
-
-| Platform        | ANSI Support            | Raw Mode Implementation | Notes                              |
-| --------------- | ----------------------- | ----------------------- | ---------------------------------- |
-| **Linux**       | Native                  | `termios` via `libc`    | Full support, all terminals        |
-| **macOS**       | Native                  | `termios` via `libc`    | Full support, all terminals        |
-| **Windows 10+** | Native (with VT enable) | Windows Console API     | Enable Virtual Terminal Processing |
-
-### Windows Virtual Terminal Processing
-
-Windows 10+ supports ANSI escape sequences natively after enabling Virtual Terminal Processing:
-
-```rust
-#[cfg(windows)]
-fn enable_virtual_terminal_processing() -> std::io::Result<()> {
-    use windows::Win32::System::Console::*;
-    use windows::Win32::Foundation::*;
-
-    unsafe {
-        let output_handle = GetStdHandle(STD_OUTPUT_HANDLE)?;
-        let mut mode = CONSOLE_MODE(0);
-        GetConsoleMode(output_handle, &mut mode)?;
-
-        mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
-        SetConsoleMode(output_handle, mode)?;
-    }
-
-    Ok(())
-}
-```
-
-### Cross-Platform Testing
-
-**Required test environments:**
-
-- **Linux**: Ubuntu 22.04+, Fedora 38+, Arch Linux
-- **macOS**: macOS 12+ (Monterey and newer)
-- **Windows**: Windows 10 21H2+, Windows 11
-  - Test terminals: Windows Terminal, PowerShell, cmd.exe
-
-## Risks and Mitigation
-
-| Risk                              | Impact | Probability | Mitigation                                                    |
-| --------------------------------- | ------ | ----------- | ------------------------------------------------------------- |
-| **Platform compatibility issues** | High   | Medium      | Extensive testing on all platforms before release             |
-| **Windows Console quirks**        | Medium | Medium      | Enable VT processing, test on multiple Windows terminals      |
-| **Input parsing edge cases**      | Medium | Medium      | Comprehensive test suite, handle unknown sequences gracefully |
-| **Raw mode differences**          | Medium | Low         | Abstract platform differences in dedicated module             |
-| **ANSI sequence variations**      | Low    | Low         | Stick to well-supported subset of ANSI standard               |
-| **Performance regression**        | High   | Low         | Benchmark before/after, profile with flamegraph               |
-| **Breaking existing apps**        | High   | Low         | Extensive testing, gradual rollout with feature flags         |
-
-**Mitigation strategies:**
-
-1. **Feature flag approach**: Keep crossterm as fallback during initial rollout
-2. **Extensive testing**: Platform-specific CI/CD testing
-3. **Gradual migration**: Enable DirectAnsi for new code first, migrate existing code incrementally
-4. **Monitoring**: Collect telemetry on terminal type detection and ANSI support
-
-## Success Metrics
-
-### Phase 1 Achievements (✅ COMPLETE)
-
-**Infrastructure & Foundation:**
-
-- [x] All 11 incremental rendering RenderOp variants designed and documented
-- [x] 6 terminal mode RenderOp variants designed and documented
-- [x] TerminalModeState struct created for cross-backend terminal state tracking
-- [x] All RenderOp variants fully implemented in crossterm backend
-- [x] Compositor infrastructure refactored for backend-agnostic rendering
-- [x] 52-file codebase alignment (imports, references, type safety)
-- [x] Code quality: 100% Clippy-clean, cargo fmt compliant
-
-**Production Validation:**
-
-- [x] RenderOps expressive enough for all three rendering paths (Full TUI works)
-- [x] Type-safe bounds checking applied throughout (ColIndex, RowHeight, Pos)
-- [x] Reference implementation ready for Phase 2 DirectAnsi backend
-
-### Phase 2-6 Metrics (⏳ PENDING)
-
-### Performance
-
-- [ ] **15M sample reduction** in flamegraph profiling (target from original analysis)
-- [ ] **Frame render time** reduced by >20% on all platforms (vs crossterm)
-- [ ] **Memory allocations** reduced during rendering
-- [ ] **Validation**: Benchmark DirectAnsi backend vs crossterm backend before Phase 5 completion
-
-### Correctness
-
-- [ ] **All tests pass** with DirectAnsi backend on Linux, macOS, Windows
-- [ ] **Visual parity** with crossterm backend (side-by-side comparison)
-- [ ] **No regressions** in existing applications (edi, giti, rc)
-- [ ] **RenderOp coverage**: Unit tests for all variants in DirectAnsi backend
-
-### Compatibility
-
-- [ ] **Linux terminals**: Works on xterm, gnome-terminal, kitty, alacritty, konsole
-- [ ] **macOS terminals**: Works on Terminal.app, iTerm2, kitty, alacritty
-- [ ] **Windows terminals**: Works on Windows Terminal, PowerShell, cmd.exe
-- [ ] **Windows VT enable**: Automatic Virtual Terminal Processing activation on Windows 10+
-
-### Code Quality
-
-- [ ] **Net code reduction**: Despite new platform-specific code, total LOC decreases
-- [ ] **Dependency reduction**: Remove crossterm dependency completely
-- [ ] **Test coverage**: >90% coverage for DirectAnsi backend and VT-100 parser
-- [ ] **Documentation**: All phases include rustdoc examples and integration guide
-
-### Migration Completeness
-
-- [ ] **All paths use RenderOps**: Full TUI ✅, choose() ⏳, readline_async() ⏳
-- [ ] **No crossterm imports**: All codebase references eliminated (Phase 6)
-- [ ] **Documentation updated**: Architecture diagrams and implementation guide
-- [ ] **Cargo.toml cleaned**: crossterm removed, mio + platform deps added
 
 ## Conclusion
 
-### Phase 1 Complete: Foundation is Solid ✅
+This expanded Step 3 represents a major architectural refinement that makes the type system enforce semantic boundaries, preventing compile-time errors that could occur at runtime. By implementing the four sub-phases (3.0-3.3) in sequence, we ensure:
 
-This task removes crossterm by unifying all rendering paths around `RenderOp` as a universal
-terminal control language. **Phase 1 is complete**, validating the core architectural approach:
+1. **Type Safety**: The compiler prevents IR from being executed directly
+2. **Semantic Correctness**: All operations flow through the proper pipeline (IR → Compositor → Output → Terminal)
+3. **Backend Symmetry**: Both Crossterm and DirectAnsi backends use identical routing and optimization patterns
+4. **Production Quality**: >90% test coverage with comprehensive unit and integration tests
 
-#### Key Architectural Achievements
+**Phase 2 Status**: ✅ COMPLETE (Steps 1-2, Module Structure + AnsiSequenceGenerator)
 
-1. **✅ RenderOp as universal language**: 17 variants proven sufficient for all rendering paths
-   - Incremental rendering (choose/readline): 11 variants
-   - Terminal mode control: 6 variants
-   - Full TUI: All variants working with crossterm backend
+**Phase 3 Status**: ⏳ PENDING (Steps 3.0-3.3, Type System Architecture & DirectAnsi Backend Implementation)
 
-2. **✅ Type-safe infrastructure**: TerminalModeState tracks terminal state across backends
-   - Raw mode, alternate screen, mouse tracking, bracketed paste
-   - Ready for DirectAnsi backend to implement independently
-
-3. **✅ Production-validated**: All variants tested in crossterm backend
-   - No spec compliance issues discovered
-   - ANSI sequence mappings correct
-   - Cursor tracking semantics validated
-
-4. **✅ Compositor abstraction**: Backend-agnostic rendering pipeline established
-   - RenderOp → OutputDevice with pluggable implementations
-   - Easy to switch between crossterm and DirectAnsi
-
-#### Remaining Work: Phases 2-6 (~2-3 weeks)
-
-**Phase 2: DirectAnsi Backend** (Ready to start)
-
-- ANSI sequence generator without crossterm dependencies
-- All variants implemented with direct byte output
-- Zero risk: parallel with crossterm during development
-
-**Phase 3: Partial TUI Migration**
-
-- choose()/readline_async() to RenderOps
-- Macro deprecation plan
-- Import cleanup
-
-**Phase 4: Input Handling**
-
-- VT-100 input parser for stdin
-- Async I/O with mio
-- Mouse/keyboard event support
-
-**Phase 5: Testing & Validation**
-
-- DirectAnsi backend unit tests
-- Integration tests with mock OutputDevice
-- Cross-platform visual testing
-
-**Phase 6: Cleanup**
-
-- Remove crossterm from Cargo.toml
-- Delete crossterm backend code
-- Update documentation
-
-#### Risk Assessment: Minimal ✅
-
-Phase 1 dramatically reduced Phase 2-6 risk by:
-
-- Proving RenderOp variants are sufficient
-- Providing reference implementation in crossterm backend
-- Establishing TerminalModeState for state management
-- Testing infrastructure patterns before DirectAnsi
-
-**Critical insight**: Because Phase 1 actually implemented all variants in the crossterm backend,
-Phase 2 (DirectAnsi) becomes a straightforward translation task with zero architectural risk.
+**Phase 4 Status**: ⏳ PENDING (Cross-Platform Validation & Performance)
 
 ---
 
-- **Document Version**: 1.1
-- **Last Updated**: October 23, 2025
-- **Status**: Phase 1 Complete - Phase 2 Ready to Begin
-- **Next Action**: Start Phase 2 (DirectAnsi Backend Implementation)
+- **Document Version**: 1.2 (Architectural Refactoring Edition)
+- **Last Updated**: October 25, 2025
+- **Status**: Expanded Step 3 Ready for Implementation
+- **Next Action**: Begin Step 3.0 (Remove IR Execution Path)

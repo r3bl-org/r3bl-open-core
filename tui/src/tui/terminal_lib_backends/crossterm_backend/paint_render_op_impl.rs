@@ -44,7 +44,7 @@ use crossterm::{cursor::{Hide, MoveTo, Show},
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 
-/// Struct representing the Crossterm implementation of `PaintRenderOp` trait.
+/// Struct representing the Crossterm implementation of [`PaintRenderOp`] trait.
 /// This empty struct is needed since the [`Flush`] trait needs to be implemented.
 #[derive(Debug)]
 pub struct PaintRenderOpImplCrossterm;
