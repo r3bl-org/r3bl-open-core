@@ -702,6 +702,18 @@ function parse_doc_warnings_errors
     end
 end
 
+# Helper function to clean target folder
+# Removes all build artifacts and caches to ensure a clean rebuild
+# This is important because various parts of the cache (incremental, metadata, etc.)
+# can become corrupted and cause compiler panics or other mysterious failures
+function cleanup_target_folder
+    echo "🧹 Cleaning target folders..."
+
+    if test -d target
+        rm -rf target
+    end
+end
+
 # Helper function to run cleanup after ICE
 function cleanup_after_ice
     echo "🧊 Internal Compiler Error detected! Running cleanup..."
@@ -713,9 +725,11 @@ function cleanup_after_ice
         rm -f rustc-ice-*.txt
     end
 
-    # Clean cargo caches and build artifacts
+    # Remove all target folders (build artifacts and caches can become corrupted)
+    cleanup_target_folder
+
+    # Clean cargo caches
     cargo cache -r all
-    cargo clean
 
     echo "✨ Cleanup complete. Retrying checks..."
     echo ""
