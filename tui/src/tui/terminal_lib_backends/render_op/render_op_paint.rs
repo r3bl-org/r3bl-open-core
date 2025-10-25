@@ -90,6 +90,32 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// 3. **Consistent behavior** across different terminal library backends
 /// 4. **Easy addition** of new backends without changing core pipeline
 ///
+/// # About the `is_mock` Parameter
+///
+/// The `is_mock: bool` parameter is present in all implementations for **API
+/// consistency** across different backends. However, actual mock behavior is handled at
+/// the I/O boundary:
+///
+/// - **Source of Truth**: [`OutputDevice::is_mock`] is the definitive source of mock
+///   status
+/// - **Paint Functions**: Always execute fully; they do NOT check `is_mock` and return
+///   early
+/// - **I/O Boundary**: The `OutputDevice` decides whether to actually write terminal
+///   commands
+///
+/// **Why keep the parameter if backends don't use it?**
+/// - **Backend Flexibility**: Some backends (like DirectAnsi) may use it in the future
+/// - **API Stability**: Consistent signature across all implementations
+/// - **Test Infrastructure**: Allows test harnesses to pass backend-specific mock flags
+/// - **Future-Proofing**: Avoids breaking API changes if a backend later needs it
+///
+/// **Example scenarios:**
+/// - `crossterm`: Ignores `is_mock`, relies on `OutputDevice.is_mock` (current behavior)
+/// - [`DirectAnsi`]: May use `is_mock` to skip operations (not yet implemented)
+/// - `termion`: (future) May or may not use `is_mock` depending on architecture
+///
+/// [`OutputDevice::is_mock`]: crate::OutputDevice
+///
 /// # Implementations
 ///
 /// - `PaintRenderOpImplCrossterm` - Crossterm backend
@@ -123,10 +149,13 @@ pub trait RenderOpPaint {
     /// - `locked_output_device`: Thread-safe access to terminal output
     ///   - Backend queues commands to this output device
     ///   - Operations are buffered, not immediately flushed
+    ///   - The actual `OutputDevice` contains the authoritative `is_mock` flag
     ///
-    /// - `is_mock`: Testing flag
-    ///   - If `true`, backend may skip actual terminal I/O
-    ///   - Used for unit tests and benchmarks
+    /// - `is_mock`: Backend-specific mock flag (see trait docs for details)
+    ///   - Not checked by paint functions themselves
+    ///   - Included for API consistency across all backend implementations
+    ///   - Some backends may use this in the future (e.g., DirectAnsi)
+    ///   - Crossterm currently ignores this and relies on `OutputDevice.is_mock`
     ///
     /// # Behavior
     ///

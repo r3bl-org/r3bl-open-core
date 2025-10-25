@@ -638,10 +638,10 @@ macro_rules! crossterm_op {
     ) => {{
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
 
-        // Conditionally skip execution if mock.
-        if $arg_is_mock {
-            return;
-        }
+        // Mock mode is handled at the OutputDevice level.
+        // This macro always executes the operation; the I/O boundary decides whether
+        // output is actually written.
+        let _ = $arg_is_mock;
 
         match $op {
             Ok(_) => {

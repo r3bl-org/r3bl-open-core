@@ -28,9 +28,10 @@ impl RenderOpPaint for RenderOpImplDirectAnsi {
         _locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
-        if is_mock {
-            return; // Skip rendering in mock mode
-        }
+        // Mock mode is handled at the OutputDevice level.
+        // This function always executes fully; the I/O boundary decides whether
+        // output is actually written.
+        let _ = is_mock;
 
         // TODO: Implement all RenderOpOutput variants
         // This is a stub for now - implementation happens in Step 3.3
