@@ -23,23 +23,77 @@
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{FlushKind, RenderOpIR, RenderOpsLocalData, RenderPipeline};
+use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
             LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
             OffscreenBufferPaintImplCrossterm, Pos, Size, TERMINAL_LIB_BACKEND,
             TerminalLibBackend, diff_chunks::PixelCharDiffChunks};
 use std::fmt::Debug;
 
-pub trait PaintRenderOp {
-    fn paint(
-        &mut self,
-        skip_flush: &mut bool,
-        render_op: &RenderOpIR,
-        window_size: Size,
-        render_local_data: &mut RenderOpsLocalData,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    );
+fn perform_diff_paint(
+    diff_chunks: &PixelCharDiffChunks,
+    window_size: Size,
+    locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
+) {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => {
+            let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
+            let render_ops = crossterm_impl.render_diff(diff_chunks);
+            crossterm_impl.paint_diff(
+                render_ops,
+                window_size,
+                locked_output_device,
+                is_mock,
+            );
+        }
+        TerminalLibBackend::DirectAnsi => {
+            // DirectAnsi uses the same converter as Crossterm
+            // (OffscreenBuffer → RenderOpOutput)
+            // The difference is only in execution (via routing in render_op_output.rs)
+            let mut converter = OffscreenBufferPaintImplCrossterm {};
+            let render_ops = converter.render_diff(diff_chunks);
+            converter.paint_diff(render_ops, window_size, locked_output_device, is_mock);
+        }
+        TerminalLibBackend::Termion => unimplemented!(),
+    }
+}
+
+fn perform_full_paint(
+    ofs_buf: &OffscreenBuffer,
+    flush_kind: FlushKind,
+    window_size: Size,
+    locked_output_device: LockedOutputDevice<'_>,
+    is_mock: bool,
+) {
+    match TERMINAL_LIB_BACKEND {
+        TerminalLibBackend::Crossterm => {
+            let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
+            let render_ops = crossterm_impl.render(ofs_buf);
+            crossterm_impl.paint(
+                render_ops,
+                flush_kind,
+                window_size,
+                locked_output_device,
+                is_mock,
+            );
+        }
+        TerminalLibBackend::DirectAnsi => {
+            // DirectAnsi uses the same converter as Crossterm
+            // (OffscreenBuffer → RenderOpOutput)
+            // The difference is only in execution (via routing in render_op_output.rs)
+            let mut converter = OffscreenBufferPaintImplCrossterm {};
+            let render_ops = converter.render(ofs_buf);
+            converter.paint(
+                render_ops,
+                flush_kind,
+                window_size,
+                locked_output_device,
+                is_mock,
+            );
+        }
+        TerminalLibBackend::Termion => unimplemented!(),
+    }
 }
 
 /// Paint the render pipeline. The render pipeline contains a list of
@@ -57,6 +111,9 @@ pub trait PaintRenderOp {
 /// panics while holding the lock. To avoid panics, ensure that the code that
 /// locks the mutex does not panic while holding the lock.
 ///
+/// This will also panic if all offscreen buffers are currently taken, which
+/// indicates a bug in the buffer pool management.
+///
 /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 /// [`ZOrder`]: crate::ZOrder
 /// [`crate::RenderOpCommon`]: crate::RenderOpCommon
@@ -71,50 +128,6 @@ pub fn paint<S, AS>(
     S: Debug + Default + Clone + Sync + Send,
     AS: Debug + Default + Clone + Sync + Send,
 {
-    fn perform_diff_paint(
-        diff_chunks: &PixelCharDiffChunks,
-        window_size: Size,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    ) {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-                let render_ops = crossterm_impl.render_diff(diff_chunks);
-                crossterm_impl.paint_diff(
-                    render_ops,
-                    window_size,
-                    locked_output_device,
-                    is_mock,
-                );
-            }
-            TerminalLibBackend::Termion => unimplemented!(),
-        }
-    }
-
-    fn perform_full_paint(
-        ofs_buf: &OffscreenBuffer,
-        flush_kind: FlushKind,
-        window_size: Size,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    ) {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                let mut crossterm_impl = OffscreenBufferPaintImplCrossterm {};
-                let render_ops = crossterm_impl.render(ofs_buf);
-                crossterm_impl.paint(
-                    render_ops,
-                    flush_kind,
-                    window_size,
-                    locked_output_device,
-                    is_mock,
-                );
-            }
-            TerminalLibBackend::Termion => unimplemented!(),
-        }
-    }
-
     // If this is None, then a full paint will be performed & the offscreen buffer will be
     // saved to global_data.
     let maybe_saved_ofs_buf = global_data.maybe_saved_ofs_buf.clone();

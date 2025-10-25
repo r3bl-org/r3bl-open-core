@@ -8,7 +8,13 @@ use std::fmt::{Formatter, Result};
 /// This trait abstracts debug formatting logic, allowing different
 /// terminal backends to provide their own specialized debug representations
 /// of common render operations.
-pub trait DebugFormatRenderOp {
+///
+/// # Backend Specialization
+///
+/// Different terminal backends can provide custom debug output formats for
+/// [`RenderOpCommon`] variants, enabling backend-specific insights into
+/// rendering operations.
+pub trait RenderOpDebugFormat {
     /// Formats the `RenderOpCommon` for debug output.
     ///
     /// # Errors

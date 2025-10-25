@@ -1,3 +1,4 @@
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 //! # Pipeline Stage 5: Backend Executor (Crossterm Implementation)
 //!
 //! # You Are Here
@@ -32,35 +33,37 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{CliTextInline, Flush, GCStringOwned, LockedOutputDevice, PaintRenderOp, Pos,
-            RenderOpCommon, RenderOpIR, RenderOpsLocalData, Size, TuiColor, TuiStyle,
-            cli_text_inline_impl::CliTextConvertOptions, disable_raw_mode_now,
-            enable_raw_mode_now, flush_now, queue_terminal_command,
-            sanitize_and_save_abs_pos,
-            tui::terminal_lib_backends::direct_ansi::PixelCharRenderer};
+use crate::{CliTextInline, GCStringOwned, LockedOutputDevice, Pos, RenderOpCommon,
+            RenderOpFlush, RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size,
+            TuiColor, TuiStyle, cli_text_inline_impl::CliTextConvertOptions,
+            disable_raw_mode_now, enable_raw_mode_now, flush_now,
+            queue_terminal_command, sanitize_and_save_abs_pos,
+            tui::terminal_lib_backends::direct_to_ansi::PixelCharRenderer};
 use crossterm::{cursor::{Hide, MoveTo, Show},
                 event::{DisableBracketedPaste, DisableMouseCapture,
                         EnableBracketedPaste, EnableMouseCapture},
                 style::{ResetColor, SetBackgroundColor, SetForegroundColor},
                 terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 
-/// Struct representing the Crossterm implementation of [`PaintRenderOp`] trait.
-/// This empty struct is needed since the [`Flush`] trait needs to be implemented.
+/// Struct representing the Crossterm implementation of [`RenderOpPaint`] trait.
+/// This empty struct is needed since the `RenderOpFlush` trait needs to be implemented.
+///
+/// [`RenderOpPaint`]: crate::RenderOpPaint
 #[derive(Debug)]
 pub struct PaintRenderOpImplCrossterm;
 
-impl PaintRenderOp for PaintRenderOpImplCrossterm {
+impl RenderOpPaint for PaintRenderOpImplCrossterm {
     fn paint(
         &mut self,
         skip_flush: &mut bool,
-        render_op: &RenderOpIR,
+        render_op: &RenderOpOutput,
         window_size: Size,
         render_local_data: &mut RenderOpsLocalData,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
         match render_op {
-            RenderOpIR::Common(common_op) => {
+            RenderOpOutput::Common(common_op) => {
                 self.paint_common(
                     skip_flush,
                     common_op,
@@ -70,7 +73,10 @@ impl PaintRenderOp for PaintRenderOpImplCrossterm {
                     is_mock,
                 );
             }
-            RenderOpIR::PaintTextWithAttributes(text, maybe_style) => {
+            RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
+                text,
+                maybe_style,
+            ) => {
                 PaintRenderOpImplCrossterm::paint_text_with_attributes(
                     text,
                     *maybe_style,
@@ -83,7 +89,7 @@ impl PaintRenderOp for PaintRenderOpImplCrossterm {
     }
 }
 
-impl Flush for PaintRenderOpImplCrossterm {
+impl RenderOpFlush for PaintRenderOpImplCrossterm {
     fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
         flush_now!(locked_output_device, "flush() -> output_device");
     }
@@ -632,10 +638,10 @@ macro_rules! crossterm_op {
     ) => {{
         use $crate::tui::DEBUG_TUI_SHOW_TERMINAL_BACKEND;
 
-        // Conditionally skip execution if mock.
-        if $arg_is_mock {
-            return;
-        }
+        // Mock mode is handled at the OutputDevice level.
+        // This macro always executes the operation; the I/O boundary decides whether
+        // output is actually written.
+        let _ = $arg_is_mock;
 
         match $op {
             Ok(_) => {

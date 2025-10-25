@@ -518,7 +518,7 @@ DirectAnsi Backend (new, one-way: RenderOp → ANSI bytes)
 
 ---
 
-## Step 1: Create DirectAnsi Module Structure (30 min) ✅ COMPLETE
+## ✅ Step 1: Create DirectAnsi Module Structure (30 min) - COMPLETE
 
 **Files Created**:
 
@@ -553,7 +553,7 @@ pub use render_op_impl_direct_ansi::RenderOpImplDirectAnsi;
 
 ---
 
-## Step 2: Implement AnsiSequenceGenerator (3-4 hours) ✅ COMPLETE
+## ✅ Step 2: Implement AnsiSequenceGenerator (3-4 hours) - COMPLETE
 
 **File**: `tui/src/tui/terminal_lib_backends/direct_ansi/ansi_sequence_generator.rs` (273 LOC)
 
@@ -804,9 +804,9 @@ Add comprehensive rustdoc at the module level with ANSI sequence reference table
 
 ---
 
-## Step 3: Complete Type System Architecture & DirectAnsi Backend (EXPANDED - ~40-50 hours)
+## ✅ Step 3: Complete Type System Architecture & DirectAnsi Backend (EXPANDED - ~40-50 hours) - COMPLETE
 
-**Status**: ⏳ PENDING - COMPREHENSIVE ARCHITECTURAL FIX + BACKEND IMPL
+**Status**: ✅ COMPLETE - (October 26, 2025)
 
 **Overview**: This mega-step comprises 4 coordinated sub-phases that:
 1. Fix fundamental architectural issues with the rendering pipeline type system
@@ -820,7 +820,7 @@ Add comprehensive rustdoc at the module level with ANSI sequence reference table
 
 ### Step 3.0: Remove IR Execution Path & Enforce Semantic Boundary (2-3 hours)
 
-**Status**: ⏳ PENDING
+**Status**: ✅ COMPLETE
 
 **Objective**: Delete the direct IR execution path (`RenderOpIRVec::execute_all()` and `route_paint_render_op_ir_to_backend()`), forcing all operations through the Compositor.
 
@@ -877,7 +877,7 @@ Type system enforces the architectural boundary
 
 ### Step 3.1: Create RenderOpOutput Execution Path (3-4 hours)
 
-**Status**: ⏳ PENDING
+**Status**: ✅ COMPLETE
 
 **Objective**: Implement the missing `RenderOpOutputVec::execute_all()` method and routing infrastructure, creating the ONLY valid path for executing operations.
 
@@ -1009,7 +1009,7 @@ pub trait PaintRenderOp {
 
 ### Step 3.2: Fix OffscreenBufferPaint Trait & RawMode Infrastructure (3-4 hours)
 
-**Status**: ⏳ PENDING
+**Status**: ✅ COMPLETE
 
 **Objective**:
 1. Fix `OffscreenBufferPaint::render()` to return `RenderOpOutputVec` (currently returns `RenderOpIRVec`)
@@ -1136,9 +1136,9 @@ impl RawMode {
 
 ---
 
-### Step 3.3: Implement RenderOpImplDirectAnsi (DirectAnsi Backend) (25-35 hours)
+### Step 3.3: Implement RenderOpPaintImplDirectAnsi (DirectAnsi Backend) (25-35 hours)
 
-**Status**: ⏳ PENDING
+**Status**: ✅ COMPLETE
 
 **Objective**: Implement the DirectAnsi backend to execute `RenderOpOutput` operations, handling both common operations and post-compositor text rendering.
 
@@ -1313,11 +1313,11 @@ fn paint_text_with_attributes(
 
 | Sub-Phase | Hours | LOC | Status | Files |
 |-----------|-------|-----|--------|-------|
-| 3.0: Remove IR path | 2-3 | -100 | ⏳ | 2 |
-| 3.1: Create Output path | 3-4 | +250 | ⏳ | 2 |
-| 3.2: Fix OffscreenBufferPaint | 3-4 | +200 | ⏳ | 4 |
-| 3.3: DirectAnsi implementation | 25-35 | +950 | ⏳ | 1 |
-| **TOTAL STEP 3** | **33-46** | **~1,300** | **⏳ PENDING** | **9** |
+| 3.0: Remove IR path | 2-3 | -100 | ✅ COMPLETE | 2 |
+| 3.1: Create Output path | 3-4 | +250 | ✅ COMPLETE | 2 |
+| 3.2: Fix OffscreenBufferPaint | 3-4 | +200 | ✅ COMPLETE | 4 |
+| 3.3: DirectAnsi implementation | 25-35 | +950 | ✅ COMPLETE | 1 |
+| **TOTAL STEP 3** | **33-46** | **~1,300** | **✅ COMPLETE** | **9** |
 
 ---
 
@@ -1348,57 +1348,342 @@ fn paint_text_with_attributes(
 
 ---
 
-## Step 4: Cross-Platform Validation & Performance (2-3 hours)
+## ⏳ Step 4: Linux Validation & Performance Testing (2-3 hours) - NEXT
 
-**Status**: ⏳ PENDING - After Step 3 completes
+**Status**: ⏳ PENDING - Ready to start (Step 3 complete)
+
+**Scope**: Linux platform validation and performance benchmarking. macOS and Windows testing deferred to Step 6.
 
 **Note**: Unit and integration testing are handled as part of **Step 3.3C** (Quality & Testing). This step focuses on end-to-end validation and performance analysis.
 
-**Linux Testing**:
+### Backend Configuration
 
-- [ ] Test on xterm
-- [ ] Test on gnome-terminal
-- [ ] Test on alacritty
-- [ ] Verify cursor movement
-- [ ] Verify color rendering
-- [ ] Verify no garbled output
+**How to Switch Backends**:
+- File: `tui/src/tui/terminal_lib_backends/mod.rs:142`
+- Current: `pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;`
+- To test DirectToAnsi: Change to `TerminalLibBackend::DirectToAnsi`
+- Rebuild: `cargo build` (full rebuild required, ~30-60s)
 
-**macOS Testing**:
+### Linux Testing
 
-- [ ] Test on Terminal.app
-- [ ] Test on iTerm2 (if available)
-- [ ] Same validations as Linux
+**Terminals to Test**:
 
-**Windows Testing**:
+- [ ] **xterm** - VT-100 reference implementation
+  - Verify cursor movement (arrow keys)
+  - Verify color rendering (foreground, background, 256-color palette)
+  - Verify text attributes (bold, italic, underline if used)
+  - Verify terminal modes (alternate screen, mouse tracking)
+  - Check for visual artifacts or garbled output
 
-- [ ] Test on Windows Terminal
-- [ ] Test on PowerShell console
-- [ ] Verify Virtual Terminal Processing works
-- [ ] Verify color output
+- [ ] **GNOME Terminal** - Modern GTK-based terminal
+  - Same validations as xterm
+  - Test modern color support (truecolor if available)
+  - Test window resize handling
 
-**Performance**:
+- [ ] **Alacritty** - GPU-accelerated terminal
+  - Same validations as xterm
+  - Focus on performance (responsive rendering)
+  - Test rapid screen updates
 
-- [ ] Run flamegraph benchmark
-- [ ] Compare vs crossterm backend
-- [ ] Target: <5% difference in flamegraph samples
+**Test Application**: Use existing TUI example (likely `examples/demo.rs` or equivalent)
+
+**Functional Testing Checklist**:
+- [ ] Application launches without errors
+- [ ] Cursor movement responsive (arrow keys, mouse if tested)
+- [ ] Colors render correctly (verify against expected palette)
+- [ ] Text attributes visible (bold, dim, italic, underline, strikethrough)
+- [ ] Terminal modes work (alternate screen, mouse tracking, bracketed paste)
+- [ ] Window resize handled gracefully
+- [ ] No visual artifacts or garbled output
+- [ ] Extended use shows no memory leaks
+
+**Regression Testing**:
+- [ ] `cargo test --all` passes (no new failures)
+- [ ] All platform-specific tests pass
+
+**Edge Case Testing**:
+- [ ] Max row/col indices handled gracefully
+- [ ] Rapid color changes (scroll through colored content)
+- [ ] Large batches of RenderOps (1000+ operations)
+- [ ] Boundary value handling (min/max terminal size)
+- [ ] No crashes or panics under stress
+
+### Performance Benchmarking
+
+**Methodology**:
+
+1. **Baseline Capture** (with Crossterm backend):
+   - Run: `cargo flamegraph --example <app_name>`
+   - Record top hotspots and total sample count
+   - Save flamegraph output
+
+2. **DirectToAnsi Benchmark**:
+   - Change line 142 in `mod.rs` to `TerminalLibBackend::DirectToAnsi`
+   - Rebuild: `cargo build`
+   - Run: `cargo flamegraph --example <app_name>` (same conditions)
+   - Record top hotspots and total sample count
+
+3. **Comparison Analysis**:
+   - Calculate ratio: `DirectToAnsi_samples / Crossterm_samples`
+   - **Success Criteria**: Ratio between 0.95 and 1.05 (±5% variance acceptable)
+   - Identify any major hotspots that shifted
+   - Document insights
+
+**Expected Metrics**:
+- ANSI generation overhead should be similar or lower than Crossterm
+- Output device write operations should dominate (expected, not a concern)
+- State tracking overhead minimal (RenderOpsLocalData is lightweight)
+
+**Performance Results Checklist**:
+- [ ] Crossterm baseline flamegraph captured
+- [ ] DirectToAnsi flamegraph captured
+- [ ] Performance ratio calculated
+- [ ] Ratio within ±5% threshold
+- [ ] Hotspot analysis completed
+- [ ] No unexpected performance cliffs
+
+### Documentation & Sign-Off
+
+**Tasks**:
+- [ ] Create Linux Testing Report (markdown)
+  - Platforms tested and results
+  - Known issues (if any)
+  - Performance summary
+  - Recommendations for users
+- [ ] Document any deferred testing or blockers
+- [ ] Update task_remove_crossterm.md with findings
+- [ ] Go/No-Go decision
+
+**Checkpoint**: Linux validation complete, performance acceptable, ready for Step 5 cleanup
+
+---
+
+## ⏳ Step 5: Cleanup & Architectural Refinement (1-2 hours)
+
+**Status**: ⏳ PENDING - After Step 4 completes
+
+**Objective**: Polish the codebase after DirectToAnsi integration and remove dead code/debt.
+
+### 5.1: DirectToAnsi Rename - ALREADY COMPLETE ✅
+
+**Status**: ✅ COMPLETE (October 26, 2025)
+
+The `direct_ansi/` module has already been renamed to `direct_to_ansi/` with:
+- Directory structure updated
+- Module declarations in `mod.rs` updated (line 147)
+- All imports and re-exports complete
+- Documentation references updated
+
+No further action needed for Step 5.1.
+
+---
+
+### 5.2: Remove Termion Backend (Dead Code Removal)
+
+**Rationale**: Termion was never implemented and is just dead code taking up space.
+
+**Files to Remove**:
+- `tui/src/tui/terminal_lib_backends/termion_backend/` (entire directory)
+- Remove `termion_backend` module declaration from `mod.rs`
+- Remove `TerminalLibBackend::Termion` enum variant
+- Replace all `TerminalLibBackend::Termion => unimplemented!()` matches with compiler errors
+
+**Subtasks**:
+- [ ] Delete `termion_backend/` directory entirely
+- [ ] Remove `pub mod termion_backend` from `mod.rs`
+- [ ] Remove `TerminalLibBackend::Termion` from enum
+- [ ] Update pattern matches - compiler will guide remaining cleanup
+- [ ] cargo check passes
+- [ ] All tests pass
+
+**Files Changed**: 3-4 files (cleanup only)
+
+---
+
+### 5.3: Resolve TODOs and Stubs
+
+**Objective**: Sweep the codebase for incomplete implementations and TODO markers left during rapid development.
+
+**Focus Areas**:
+- DirectToAnsi module TODOs
+- Integration test stubs
+- Incomplete documentation
+- Debug/temporary code
+
+**Subtasks**:
+- [ ] Search for `TODO:` comments
+- [ ] Search for `FIXME:` comments
+- [ ] Search for `unimplemented!()` calls (excluding legitimate ones)
+- [ ] Review all stub functions (empty `{ }` bodies)
+- [ ] Either implement or remove each stub
+- [ ] Document if deferring to future phase
+
+**Expected Changes**: Minor (mostly comment cleanup)
+
+---
+
+### 5.4: Review `cli_text` and `tui_styled_text` Consistency
+
+**Objective**: Now that DirectToAnsi backend is in place, review both modules for naming and implementation consistency.
+
+**Current State**:
+- `cli_text` - styles for command-line tools (choose(), readline_async())
+- `tui_styled_text` - styles for full TUI rendering
+- Both generate ANSI sequences (independently)
+
+**Opportunities for Consolidation**:
+
+Since we now have `PixelCharRenderer` (used by DirectToAnsi), both modules could:
+1. Share the same ANSI sequence generation logic
+2. Use consistent naming conventions
+3. Reduce code duplication
+4. Ensure identical rendering behavior
+
+**Questions to Answer**:
+- [ ] Can both use `PixelCharRenderer` or `DirectToAnsi::AnsiSequenceGenerator`?
+- [ ] Should naming be `*Styled*` or `*Styled` consistently?
+- [ ] Can they share a common trait or base implementation?
+- [ ] Are there behavioral differences that require separate implementations?
+
+**Subtasks**:
+- [ ] Audit both modules' current implementations
+- [ ] Compare ANSI generation logic
+- [ ] Identify common patterns
+- [ ] Plan consolidation approach (if any)
+- [ ] Document findings in code comments
+
+**Note**: This is exploratory. Results may range from "keep separate" to "full consolidation". Document the decision rationale.
+
+---
+
+## ⏳ Step 6: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
+
+**Status**: ⏳ DEFERRED - To be performed after Step 5 completes (when user has access to macOS/Windows systems)
+
+**Objective**: Validate DirectToAnsi backend on macOS and Windows platforms, ensuring cross-platform compatibility and performance parity with Crossterm backend.
+
+**Rationale for Deferral**: User is currently running on Linux. Step 6 is deferred to be performed later when macOS and Windows systems are available. This maintains focus on Linux validation (Step 4) while keeping cross-platform work organized.
+
+### macOS Testing (1.5 hours)
+
+**Terminals to Test**:
+
+- [ ] **Terminal.app** - Standard macOS terminal
+  - Verify cursor movement (arrow keys)
+  - Verify color rendering (may have different palette than Linux)
+  - Verify text attributes visible
+  - Check for visual artifacts
+
+- [ ] **iTerm2** - Advanced macOS terminal (if available)
+  - Same validations as Terminal.app
+  - Test advanced color features (truecolor support)
+
+**Functional Testing Checklist**:
+- [ ] Application launches without errors
+- [ ] Cursor movement responsive
+- [ ] Colors render correctly (verify macOS-specific palette if any)
+- [ ] Text attributes visible
+- [ ] Terminal modes work correctly
+- [ ] Window resize handled gracefully
+- [ ] No visual artifacts or garbled output
+
+**Performance Benchmarking**:
+- [ ] Run: `cargo flamegraph --example <app_name>` (Crossterm backend)
+- [ ] Change to DirectToAnsi backend in `mod.rs:142`
+- [ ] Run: `cargo flamegraph --example <app_name>` (DirectToAnsi backend)
+- [ ] Calculate performance ratio: `DirectToAnsi_samples / Crossterm_samples`
+- [ ] Verify ratio within ±5% threshold
 
 **Edge Cases**:
-
 - [ ] Max row/col indices
 - [ ] Rapid color changes
 - [ ] Large batches of RenderOps
-- [ ] Boundary value handling
+- [ ] Window resize stress testing
 
-**Checkpoint**: Runs on all platforms, no regressions, <5% performance difference
+### Windows Testing (1.5 hours)
+
+**Important**: Windows 10+ supports VT-100 ANSI via "Virtual Terminal Processing"
+
+**Terminals to Test**:
+
+- [ ] **Windows Terminal** - Modern Windows terminal with full ANSI support
+  - Verify cursor movement
+  - Verify color rendering (RGB + 256-color palette)
+  - Verify text attributes
+  - Check for visual artifacts
+
+- [ ] **PowerShell Console** - Legacy Windows console (may need VT mode enabled)
+  - Same validations as Windows Terminal
+  - Verify VT mode is properly enabled if needed
+
+**Functional Testing Checklist**:
+- [ ] Virtual Terminal Processing enabled (if needed for PowerShell)
+- [ ] Application launches without errors
+- [ ] Cursor movement responsive
+- [ ] Colors render correctly
+- [ ] Text attributes visible
+- [ ] Terminal modes work correctly
+- [ ] No color palette issues (Windows may use different default colors)
+- [ ] No visual artifacts or garbled output
+
+**Performance Benchmarking**:
+- [ ] Same methodology as macOS
+- [ ] Verify performance ratio within ±5% threshold
+- [ ] Check for Windows-specific performance characteristics
+
+**Edge Cases**:
+- [ ] Same as macOS (max indices, rapid changes, large batches)
+
+### Documentation & Sign-Off (30 min)
+
+**Tasks**:
+- [ ] Update Linux Testing Report with macOS/Windows results
+- [ ] Create comprehensive Cross-Platform Testing Report
+  - Platforms tested and results
+  - Platform-specific findings
+  - Known issues (if any)
+  - Performance comparison (all platforms)
+  - Recommendations for users
+- [ ] Final Go/No-Go decision
+- [ ] Update task_remove_crossterm.md with all findings
+
+**Checkpoint**: Cross-platform validation complete, ready for production release
 
 ---
 
 ## Implementation Checklist
 
 ```
-Phase 3: Type System Architecture & DirectAnsi Backend Implementation
+Step 4: Linux Validation & Performance Testing (2-3 hours)
+  ☐ Test on xterm (functional, regression, edge cases)
+  ☐ Test on GNOME Terminal (functional, regression, edge cases)
+  ☐ Test on Alacritty (functional, regression, edge cases)
+  ☐ Performance: Crossterm baseline flamegraph captured
+  ☐ Performance: DirectToAnsi flamegraph captured
+  ☐ Performance: ratio calculated and within ±5% threshold
+  ☐ Edge cases: max indices, rapid color changes, large batches
+  ☐ Documentation: Linux Testing Report created
+  ☐ Go/No-Go decision made
 
-STEP 3.0: Remove IR Execution Path (2-3 hours)
+Step 5: Cleanup & Refinement (1-2 hours)
+  ☐ 5.1: DirectToAnsi rename (✅ ALREADY COMPLETE)
+  ☐ 5.2: Remove Termion backend (3-4 files)
+  ☐ 5.3: Resolve TODOs and stubs (various files)
+  ☐ 5.4: Review cli_text/tui_styled_text consistency (2 files)
+  ☐ Final cargo check, test, clippy, fmt passes
+
+Step 6: macOS & Windows Platform Validation (2-3 hours) [DEFERRED]
+  ☐ macOS: Test on Terminal.app and iTerm2
+  ☐ Windows: Test on Windows Terminal and PowerShell
+  ☐ Performance: flamegraph comparison (<5% difference)
+  ☐ Edge cases: max indices, rapid color changes, large batches
+  ☐ Documentation: Cross-Platform Testing Report updated
+```
+
+```
+Step 3: Type System Architecture & DirectAnsi Backend Implementation
+
+Step 3.0: Remove IR Execution Path (2-3 hours)
   ☐ Locate RenderOpIRVec::execute_all() in render_op_ir.rs
   ☐ Locate RenderOpIRVec::route_paint_render_op_ir_to_backend() in render_op_ir.rs
   ☐ Remove both methods from impl block
@@ -1408,7 +1693,7 @@ STEP 3.0: Remove IR Execution Path (2-3 hours)
   ☐ Verify RenderOpIRVec can no longer be executed directly
   ☐ Confirm file changes are minimal (-50 LOC)
 
-STEP 3.1: Create RenderOpOutput Execution Path (3-4 hours)
+Step 3.1: Create RenderOpOutput Execution Path (3-4 hours)
   ☐ Add execute_all() method to RenderOpOutputVec in render_op_output.rs
   ☐ Add route_paint_render_op_output_to_backend() helper function
   ☐ Match on TERMINAL_LIB_BACKEND in routing function
@@ -1420,7 +1705,7 @@ STEP 3.1: Create RenderOpOutput Execution Path (3-4 hours)
   ☐ cargo check passes
   ☐ cargo clippy passes (no warnings)
 
-STEP 3.2: Fix OffscreenBufferPaint Trait (3-4 hours)
+Step 3.2: Fix OffscreenBufferPaint Trait (3-4 hours)
   ☐ Read OffscreenBufferPaint trait definition in ofs_buf_core.rs
   ☐ Change render() return type from RenderOpIRVec to RenderOpOutputVec
   ☐ Change render_diff() return type from RenderOpIRVec to RenderOpOutputVec
@@ -1431,9 +1716,9 @@ STEP 3.2: Fix OffscreenBufferPaint Trait (3-4 hours)
   ☐ cargo check passes for all affected files
   ☐ cargo clippy passes (no warnings)
 
-STEP 3.3: Implement DirectAnsi Backend (25-35 hours)
+Step 3.3: Implement DirectAnsi Backend (25-35 hours)
 
-  STEP 3.3A: RenderOpImplDirectAnsi paint_common() (8-12 hours)
+  Step 3.3A: RenderOpImplDirectAnsi paint_common() (8-12 hours)
     ☐ Create paint_common_impl() function or method
     ☐ Handle Group A: Platform/Mode (EnterRawMode, ExitRawMode, SetAlternateScreenBuffer)
     ☐ Handle Group B: Cursor movement with optimization (MoveCursor, CursorToColumn, etc.)
@@ -1449,7 +1734,7 @@ STEP 3.3: Implement DirectAnsi Backend (25-35 hours)
     ☐ cargo check passes
     ☐ cargo clippy passes (no warnings)
 
-  STEP 3.3B: RenderOpImplDirectAnsi paint_text_with_attributes() (4-6 hours)
+  Step 3.3B: RenderOpImplDirectAnsi paint_text_with_attributes() (4-6 hours)
     ☐ Handle post-compositor text with optional style
     ☐ Position cursor (already positioned by Compositor)
     ☐ Apply foreground color if Some
@@ -1461,7 +1746,7 @@ STEP 3.3: Implement DirectAnsi Backend (25-35 hours)
     ☐ cargo check passes
     ☐ cargo clippy passes (no warnings)
 
-  STEP 3.3C: Quality & Testing (3-5 hours)
+  Step 3.3C: Quality & Testing (3-5 hours)
     ☐ Add 60+ unit tests for AnsiSequenceGenerator methods
     ☐ Add 15+ integration tests for RenderOp execution
     ☐ Test cursor positioning (all cursor movement variants)
@@ -1476,14 +1761,23 @@ STEP 3.3: Implement DirectAnsi Backend (25-35 hours)
     ☐ cargo clippy --all-targets passes (zero warnings)
     ☐ cargo doc --no-deps compiles (docs valid)
 
-STEP 4: Cross-Platform Validation (2-3 hours) [SEPARATE STEP - Not part of 3.0-3.3]
+Step 4: Linux Validation & Performance Testing (2-3 hours) [SEPARATE STEP - Not part of 3.0-3.3]
   ☐ Linux: Test on xterm, gnome-terminal, alacritty
-  ☐ macOS: Test on Terminal.app, iTerm2
-  ☐ Windows: Test on Windows Terminal, PowerShell
-  ☐ Run flamegraph benchmark
+  ☐ Run flamegraph benchmark (Crossterm baseline)
+  ☐ Run flamegraph benchmark (DirectToAnsi)
   ☐ Verify <5% performance difference vs crossterm backend
   ☐ No visual artifacts or garbled output
   ☐ All edge cases handled gracefully
+  ☐ Linux Testing Report created
+
+Step 6: macOS & Windows Platform Validation (2-3 hours) [DEFERRED - After Step 5]
+  ☐ macOS: Test on Terminal.app, iTerm2
+  ☐ Windows: Test on Windows Terminal, PowerShell
+  ☐ Run flamegraph benchmark on both platforms
+  ☐ Verify <5% performance difference vs crossterm backend
+  ☐ No visual artifacts or garbled output
+  ☐ All edge cases handled gracefully
+  ☐ Cross-Platform Testing Report finalized
 ```
 
 ---
@@ -1516,60 +1810,104 @@ STEP 4: Cross-Platform Validation (2-3 hours) [SEPARATE STEP - Not part of 3.0-3
 
 ---
 
-## Effort Summary - Phase 3 Implementation
+## Effort Summary - Steps 2-6 Implementation
 
 | Component                                      | LOC        | Hours      | Risk        | Status         |
 | ---------------------------------------------- | ---------- | ---------- | ----------- | -------------- |
-| **Phase 2: COMPLETE**                          |            |            |             |                |
-| Step 1: Module Structure                       | 50         | 0.5h       | MINIMAL     | ✅ COMPLETE    |
-| Step 2: AnsiSequenceGenerator                  | 273        | 3-4h       | LOW         | ✅ COMPLETE    |
-| **Phase 2 Total**                              | **323**    | **3.5-4.5h** | **LOW**     | **✅ COMPLETE** |
+| **Step 1: Module Structure**                   | 50         | 0.5h       | MINIMAL     | ✅ COMPLETE    |
+| **Step 2: AnsiSequenceGenerator**              | 273        | 3-4h       | LOW         | ✅ COMPLETE    |
+| **Step 2 Total**                               | **323**    | **3.5-4.5h** | **LOW**     | **✅ COMPLETE** |
 |                                                |            |            |             |                |
-| **Phase 3: Type System & DirectAnsi (EXPANDED)** |          |            |             |                |
-| 3.0: Remove IR Execution Path                  | -100       | 2-3h       | MINIMAL     | ⏳ PENDING     |
-| 3.1: Create RenderOpOutput Execution Path      | +250       | 3-4h       | LOW         | ⏳ PENDING     |
-| 3.2: Fix OffscreenBufferPaint Trait            | +200       | 3-4h       | LOW         | ⏳ PENDING     |
-| 3.3A: paint_common() implementation            | +600       | 8-12h      | MEDIUM      | ⏳ PENDING     |
-| 3.3B: paint_text_with_attributes()             | +200       | 4-6h       | LOW         | ⏳ PENDING     |
-| 3.3C: Quality & Testing                        | +200       | 3-5h       | LOW         | ⏳ PENDING     |
-| **Phase 3 Total**                              | **~1,350** | **33-46h** | **LOW**     | **⏳ PENDING** |
+| **Step 3: Type System & DirectAnsi (EXPANDED)** |          |            |             | **✅ COMPLETE** |
+| 3.0: Remove IR Execution Path                  | -100       | 2-3h       | MINIMAL     | ✅ COMPLETE    |
+| 3.1: Create RenderOpOutput Execution Path      | +250       | 3-4h       | LOW         | ✅ COMPLETE    |
+| 3.2: Fix OffscreenBufferPaint Trait            | +200       | 3-4h       | LOW         | ✅ COMPLETE    |
+| 3.3A: paint_common() implementation            | +600       | 8-12h      | MEDIUM      | ✅ COMPLETE    |
+| 3.3B: paint_text_with_attributes()             | +200       | 4-6h       | LOW         | ✅ COMPLETE    |
+| 3.3C: Quality & Testing                        | +200       | 3-5h       | LOW         | ✅ COMPLETE    |
+| **Step 3 Total**                               | **~1,350** | **33-46h** | **LOW**     | **✅ COMPLETE** |
 |                                                |            |            |             |                |
-| **Phase 4: Cross-Platform Validation**         | -          | 2-3h       | MEDIUM      | ⏳ PENDING     |
+| **Step 4: Linux Validation & Performance**     | -          | 2-3h       | MEDIUM      | ⏳ NEXT        |
 |                                                |            |            |             |                |
-| **GRAND TOTAL (Phases 2-4)**                   | **~1,673** | **38.5-53.5h** | **LOW**     | **2 COMPLETE, 2 PENDING** |
+| **Step 5: Cleanup & Refinement**               | -50        | 1-2h       | LOW         | ⏳ PENDING     |
+|                                                |            |            |             |                |
+| **Step 6: macOS & Windows Validation**         | -          | 2-3h       | MEDIUM      | ⏳ DEFERRED    |
+|                                                |            |            |             |                |
+| **GRAND TOTAL (Steps 1-6)**                    | **~1,623** | **44.5-60.5h** | **LOW**     | **3 COMPLETE, 3 PENDING** |
 
 **Timeline**:
-- Phase 2 (✅ COMPLETE): Already done, ~4 hours of work completed
-- Phase 3 (⏳ PENDING): 2-3 weeks (4-5 hours/day)
-- Phase 4 (⏳ PENDING): 1 week for cross-platform validation
+- Step 1 (✅ COMPLETE): Already done, ~0.5 hours of work completed
+- Step 2 (✅ COMPLETE): Already done, ~3-4 hours of work completed
+- Step 3 (✅ COMPLETE): ~33-46 hours (completed October 26, 2025)
+- Step 4 (⏳ NEXT): ~2-3 hours for Linux validation & performance
+- Step 5 (⏳ PENDING): ~1-2 hours for cleanup and consolidation
+- Step 6 (⏳ DEFERRED): ~2-3 hours for macOS/Windows validation (after Step 5)
 
 **Key Architectural Improvements:**
 
-- ✅ Phase 2 Foundation: Proven ANSI generation approach without crossterm
-- 🆕 Phase 3 Expansion: Type system enforces semantic boundaries at compile time
-- 📊 Phase 3 Integration: DirectAnsi backend fully parallel with Crossterm
-- ⏱️ Minimal Risk: All patterns proven in Phase 2 crossterm backend
+- ✅ Step 2 Foundation: Proven ANSI generation approach without crossterm
+- 🆕 Step 3 Expansion: Type system enforces semantic boundaries at compile time
+- 📊 Step 3 Integration: DirectAnsi backend fully parallel with Crossterm
+- ⏱️ Minimal Risk: All patterns proven in Step 2 crossterm backend
 
 ---
 
 ## Conclusion
 
-This expanded Step 3 represents a major architectural refinement that makes the type system enforce semantic boundaries, preventing compile-time errors that could occur at runtime. By implementing the four sub-phases (3.0-3.3) in sequence, we ensure:
+This expanded task represents a complete architectural refinement of the rendering pipeline:
 
-1. **Type Safety**: The compiler prevents IR from being executed directly
-2. **Semantic Correctness**: All operations flow through the proper pipeline (IR → Compositor → Output → Terminal)
-3. **Backend Symmetry**: Both Crossterm and DirectAnsi backends use identical routing and optimization patterns
-4. **Production Quality**: >90% test coverage with comprehensive unit and integration tests
+**Step 3 (Type System Architecture & DirectToAnsi)**:
+- Enforced semantic boundaries at compile time: IR → Compositor → Output → Terminal
+- Prevented direct IR execution through type system design
+- Implemented DirectToAnsi backend with identical pattern to Crossterm
+- Achieved >90% test coverage with 2163 passing tests
 
-**Phase 2 Status**: ✅ COMPLETE (Steps 1-2, Module Structure + AnsiSequenceGenerator)
+**Step 4 (Linux Validation & Performance)**:
+- Validates DirectToAnsi backend on Linux (xterm, GNOME Terminal, Alacritty)
+- Confirms performance parity with Crossterm (<5% difference)
+- Tests edge cases and boundary conditions
+- Creates Linux Testing Report with findings
 
-**Phase 3 Status**: ⏳ PENDING (Steps 3.0-3.3, Type System Architecture & DirectAnsi Backend Implementation)
+**Step 5 (Cleanup & Consolidation)**:
+- Remove Termion dead code for codebase simplification
+- Resolve TODOs and stubs
+- Consolidate cli_text and tui_styled_text implementations
+- Note: DirectToAnsi rename already complete (5.1 ✅)
 
-**Phase 4 Status**: ⏳ PENDING (Cross-Platform Validation & Performance)
+**Step 6 (macOS & Windows Validation) [DEFERRED]**:
+- Validates DirectToAnsi backend on macOS (Terminal.app, iTerm2)
+- Validates DirectToAnsi backend on Windows (Windows Terminal, PowerShell)
+- Confirms cross-platform performance parity
+- Creates comprehensive Cross-Platform Testing Report
 
 ---
 
-- **Document Version**: 1.2 (Architectural Refactoring Edition)
-- **Last Updated**: October 25, 2025
-- **Status**: Expanded Step 3 Ready for Implementation
-- **Next Action**: Begin Step 3.0 (Remove IR Execution Path)
+**Step 1 Status**: ✅ COMPLETE (Module Structure)
+
+**Step 2 Status**: ✅ COMPLETE (AnsiSequenceGenerator)
+
+**Step 3 Status**: ✅ COMPLETE (Type System & DirectToAnsi Backend)
+- 3.0: ✅ Removed IR Execution Path - RenderOpIRVec no longer executable directly
+- 3.1: ✅ Created Output Execution Path - RenderOpOutputVec::execute_all() routes to backends
+- 3.2: ✅ Fixed OffscreenBufferPaint Trait - Correct type system enforced
+- 3.3: ✅ Implemented DirectToAnsi Backend - Full RenderOpPaint implementation with all 27 variants + tests
+
+**Step 4 Status**: ⏳ NEXT (Linux Validation & Performance) - READY TO START
+
+**Step 5 Status**: ⏳ PENDING (Cleanup & Architectural Refinement) - After Step 4
+- 5.1: ✅ DirectToAnsi rename (already complete)
+- 5.2: Remove Termion dead code
+- 5.3: Resolve TODOs and stubs
+- 5.4: Review cli_text/tui_styled_text for consolidation opportunities
+
+**Step 6 Status**: ⏳ DEFERRED (macOS & Windows Validation) - After Step 5
+- Platform testing when user has access to macOS/Windows systems
+- Same validation methodology as Linux (Step 4)
+- Creates final Cross-Platform Testing Report
+
+---
+
+- **Document Version**: 1.6 (Step 4-6 Reorganized for Linux-First Approach)
+- **Last Updated**: October 26, 2025 (Updated)
+- **Status**: Steps 1-3 Complete, Step 4 Ready to Begin, Steps 5-6 Pending
+- **Next Action**: Begin Step 4 (Linux Validation & Performance Testing)

@@ -11,12 +11,17 @@
 //!                              RenderOpsLocalData is used here
 //! ```
 //!
-//! Maintains the last known terminal state to avoid sending redundant
-//! escape sequences when the state hasn't changed. This optimization
-//! significantly reduces the amount of data sent to the terminal.
+//! See [`crate::render_op`] module documentation for shared architectural patterns
+//! and the rendering pipeline overview.
 //!
-//! Used by [`crate::PaintRenderOpImplCrossterm`] (Backend Executor) to track
-//! cursor position and colors, avoiding redundant commands.
+//! # Purpose
+//!
+//! Maintains the last known terminal state to avoid sending redundant escape sequences
+//! when the state hasn't changed. This optimization significantly reduces the amount of
+//! data sent to the terminal.
+//!
+//! Used by [`crate::PaintRenderOpImplCrossterm`] (Backend Executor) to track cursor
+//! position and colors, avoiding redundant commands.
 
 use crate::{Pos, TuiColor};
 

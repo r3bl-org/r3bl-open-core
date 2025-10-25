@@ -16,7 +16,7 @@ use crate::{ColIndex, RowHeight, RowIndex, TuiColor, TuiStyle,
                                                  SGR_UNDERLINE, SgrColorSequence,
                                                  URXVT_MOUSE_EXTENSION}}};
 
-/// Generates ANSI escape sequence strings for terminal operations
+/// Generates ANSI escape sequence strings for terminal operations.
 ///
 /// This module generates raw ANSI escape sequence bytes for terminal operations using
 /// the semantic types and traits from the [`vt_100_ansi_parser`] module.
@@ -46,7 +46,7 @@ use crate::{ColIndex, RowHeight, RowIndex, TuiColor, TuiStyle,
 /// We now use semantic enums (✅ CURRENT APPROACH):
 /// ```rust
 /// # use r3bl_tui::{row, col};
-/// # use r3bl_tui::terminal_lib_backends::direct_ansi::AnsiSequenceGenerator;
+/// # use r3bl_tui::terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator;
 /// let row_idx = row(5);
 /// let col_idx = col(10);
 /// let seq = AnsiSequenceGenerator::cursor_position(row_idx, col_idx);

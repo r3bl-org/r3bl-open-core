@@ -32,7 +32,7 @@
 //! - Converts 2D pixel grid to optimized text painting operations
 //!
 //! ### Stage 5: Backend Executor (`paint_render_op_impl`)
-//! - Implements [`PaintRenderOp`] trait
+//! - Implements [`RenderOpPaint`] trait
 //! - Executes [`RenderOpOutputVec`] operations
 //! - Translates operations to Crossterm API calls
 //! - Manages terminal modes (raw mode, cursor visibility, mouse tracking)
@@ -42,7 +42,7 @@
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`OffscreenBufferPaint`]: crate::OffscreenBufferPaint
-//! [`PaintRenderOp`]: crate::PaintRenderOp
+//! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 // Attach.

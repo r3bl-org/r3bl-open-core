@@ -35,7 +35,7 @@
 //! ┌────────────────▼──────────────────────────┐
 //! │ Backend Executor                          │
 //! │ (Execute RenderOps via Crossterm)         │
-//! │ - PaintRenderOp trait (Crossterm impl)    │
+//! │ - RenderOpPaint trait (Crossterm impl)    │
 //! │ - Cursor movement, colors, text painting  │
 //! │ - Raw mode management & terminal flushing │
 //! └────────────────┬──────────────────────────┘
@@ -67,7 +67,7 @@
 //! - [`z_order`] - Z-order layer management
 //! - [`raw_mode`] - Terminal raw mode setup/teardown
 //! - [`mod@paint`] - Text painting utilities
-//! - [`direct_ansi`] - Direct ANSI escape sequence generation
+//! - [`direct_to_ansi`] - Direct ANSI escape sequence generation
 //!
 //! # Background information on terminals PTY, TTY, VT100, ANSI, ASCII
 //!
@@ -107,6 +107,7 @@
 /// the backend that best fits their needs. Currently supported backends include:
 ///
 /// - **Crossterm**: Cross-platform terminal library (default and recommended)
+/// - **`DirectAnsi`**: Pure Rust ANSI sequence generation without external dependencies
 /// - **Termion**: Unix-specific terminal library with minimal overhead
 ///
 /// # Example
@@ -117,6 +118,7 @@
 /// let backend = TerminalLibBackend::Crossterm;
 /// match backend {
 ///     TerminalLibBackend::Crossterm => println!("Using Crossterm backend"),
+///     TerminalLibBackend::DirectAnsi => println!("Using DirectAnsi backend"),
 ///     TerminalLibBackend::Termion => println!("Using Termion backend"),
 /// }
 /// ```
@@ -125,6 +127,9 @@ pub enum TerminalLibBackend {
     /// Crossterm backend - cross-platform terminal library supporting Windows, macOS, and
     /// Linux. This is the default and recommended backend for most applications.
     Crossterm,
+    /// `DirectAnsi` backend - Pure Rust ANSI sequence generation without external
+    /// dependencies. Generates ANSI escape sequences directly for terminal control.
+    DirectAnsi,
     /// Termion backend - Unix-specific terminal library with minimal overhead.
     /// Only available on Unix-like systems (Linux, macOS).
     Termion,
@@ -139,7 +144,7 @@ pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crosste
 // Attach source files.
 pub mod compositor_render_ops_to_ofs_buf;
 pub mod crossterm_backend;
-pub mod direct_ansi;
+pub mod direct_to_ansi;
 pub mod enhanced_keys;
 pub mod input_device_ext;
 pub mod input_event;
@@ -159,7 +164,7 @@ pub mod z_order;
 // Re-export.
 pub use compositor_render_ops_to_ofs_buf::*;
 pub use crossterm_backend::*;
-pub use direct_ansi::*;
+pub use direct_to_ansi::*;
 pub use enhanced_keys::*;
 pub use input_device_ext::*;
 pub use input_event::*;

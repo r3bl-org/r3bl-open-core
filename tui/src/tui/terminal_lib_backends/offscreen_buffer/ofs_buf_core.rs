@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::super::{FlushKind, RenderOpIRVec};
+use super::super::{FlushKind, RenderOpOutputVec};
 use crate::{GetMemSize, LockedOutputDevice, MemorySize, Pos, Size, TermRow, TuiStyle,
             osc::OscEvent};
 use std::fmt::Debug;
@@ -378,26 +378,40 @@ pub use super::{pixel_char::PixelChar, pixel_char_line::PixelCharLine,
                 pixel_char_lines::PixelCharLines};
 
 /// Trait for painting offscreen buffer content to terminal output.
+///
+/// This trait converts an [`OffscreenBuffer`] (post-Compositor) into
+/// [`RenderOpOutputVec`] (terminal-executable operations), then executes them on the
+/// terminal.
+///
+/// # Type Safety Note
+///
+/// This trait works with `RenderOpOutputVec` (post-Compositor operations), not
+/// `RenderOpIRVec`. The Compositor has already applied all necessary transformations
+/// (clipping, Unicode handling, etc.) when these methods are called.
 pub trait OffscreenBufferPaint {
-    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOpIRVec;
+    /// Convert offscreen buffer to terminal operations.
+    fn render(&mut self, offscreen_buffer: &OffscreenBuffer) -> RenderOpOutputVec;
 
+    /// Convert diff chunks to terminal operations (for selective redraw).
     fn render_diff(
         &mut self,
         diff_chunks: &super::diff_chunks::PixelCharDiffChunks,
-    ) -> RenderOpIRVec;
+    ) -> RenderOpOutputVec;
 
+    /// Execute terminal operations on the display.
     fn paint(
         &mut self,
-        render_ops: RenderOpIRVec,
+        render_ops: RenderOpOutputVec,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     );
 
+    /// Execute diff operations on the display (selective redraw).
     fn paint_diff(
         &mut self,
-        render_ops: RenderOpIRVec,
+        render_ops: RenderOpOutputVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,

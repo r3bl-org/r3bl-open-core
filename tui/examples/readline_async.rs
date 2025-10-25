@@ -1,4 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+#![allow(unused_imports)]
+
 use miette::{IntoDiagnostic, miette};
 use r3bl_tui::{CHANNEL_CAPACITY, InlineVec, LineStateControlSignal, OutputDevice,
                SendRawTerminal, SharedWriter, SpinnerStyle, bold, fg_color, fg_red,
@@ -624,7 +626,8 @@ pub mod file_walker {
 ///
 /// This ordering prevents race conditions where `SharedWriter` uses non-blocking
 /// `try_send()` that fails if the receiver isn't polling yet. We no longer use
-/// cargo-nextest due to incompatibilities with this test. We switched to cargo test instead.
+/// cargo-nextest due to incompatibilities with this test. We switched to cargo test
+/// instead.
 ///
 /// # Buffer Size
 ///

@@ -19,8 +19,8 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// for efficient content storage with zero-copy access.
 ///
 /// 1. This struct is stored in the app's state.
-/// 2. And it is paired w/ [`EditorEngine`] at runtime; which is responsible for
-///    rendering it to TUI, and handling user input.
+/// 2. And it is paired w/ [`EditorEngine`] at runtime; which is responsible for rendering
+///    it to TUI, and handling user input.
 ///
 /// # Change state during render
 ///
@@ -84,8 +84,8 @@ use std::fmt::{Debug, Display, Formatter, Result};
 /// > - [Live coding video on Rust String](https://youtu.be/7I11degAElQ?)
 /// > - [UTF-8 encoding video](https://youtu.be/wIVmDPc16wA)
 ///
-/// 1. It represents the current caret position (relative to the [`style_adjusted_origin_pos`]
-///    of the enclosing [`FlexBox`]).
+/// 1. It represents the current caret position (relative to the
+///    [`style_adjusted_origin_pos`] of the enclosing [`FlexBox`]).
 ///
 /// 2. It works w/ [`MoveCursorPositionRelTo`] as well.
 ///

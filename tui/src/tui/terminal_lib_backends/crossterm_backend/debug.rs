@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DebugFormatRenderOp, RenderOpCommon,
+use crate::{RenderOpCommon,
             RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen,
                              ClearToEndOfLine, ClearToStartOfLine,
                              DisableBracketedPaste, DisableMouseTracking,
@@ -11,13 +11,13 @@ use crate::{DebugFormatRenderOp, RenderOpCommon,
                              MoveCursorToNextLine, MoveCursorToPreviousLine, Noop,
                              PrintStyledText, ResetColor, RestoreCursorPosition,
                              SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor},
-            TuiStyle};
+            RenderOpDebugFormat, TuiStyle};
 use std::fmt::{Formatter, Result};
 
 #[derive(Debug)]
 pub struct CrosstermDebugFormatRenderOp;
 
-impl DebugFormatRenderOp for CrosstermDebugFormatRenderOp {
+impl RenderOpDebugFormat for CrosstermDebugFormatRenderOp {
     fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result {
         match this {
             Noop => f.write_str("Noop"),

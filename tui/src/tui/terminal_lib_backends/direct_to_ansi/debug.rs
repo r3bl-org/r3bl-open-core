@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{DebugFormatRenderOp, RenderOpCommon,
+use crate::{RenderOpCommon,
             RenderOpCommon::{ApplyColors, ClearCurrentLine, ClearScreen,
                              ClearToEndOfLine, ClearToStartOfLine,
                              DisableBracketedPaste, DisableMouseTracking,
@@ -10,13 +10,14 @@ use crate::{DebugFormatRenderOp, RenderOpCommon,
                              MoveCursorPositionRelTo, MoveCursorToColumn,
                              MoveCursorToNextLine, MoveCursorToPreviousLine, Noop,
                              PrintStyledText, ResetColor, RestoreCursorPosition,
-                             SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor}};
+                             SaveCursorPosition, SetBgColor, SetFgColor, ShowCursor},
+            RenderOpDebugFormat};
 use std::fmt::{Formatter, Result};
 
 #[derive(Debug)]
 pub struct DirectAnsiDebugFormatRenderOp;
 
-impl DebugFormatRenderOp for DirectAnsiDebugFormatRenderOp {
+impl RenderOpDebugFormat for DirectAnsiDebugFormatRenderOp {
     fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result {
         match this {
             Noop => f.write_str("Noop"),

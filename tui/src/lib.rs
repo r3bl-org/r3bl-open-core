@@ -1058,7 +1058,7 @@
 //!   - **Good for one-off interactions** - quick responses without composition overhead
 //! - **Trade-off**: Limited to simple interactive scenarios, no complex composition
 //!
-//! ## Unified ANSI Generation: PixelCharRenderer
+//! ## Unified ANSI Generation: `PixelCharRenderer`
 //!
 //! Both rendering paths ultimately need to convert styled text into ANSI escape
 //! sequences. The [`PixelCharRenderer`] handles this conversion in a unified way across
@@ -1076,7 +1076,7 @@
 //! - **Composed Path**: `RenderOpsOutput` execution → `PixelCharRenderer` → bytes
 //! - **Direct Path**: `CliTextInline` → `PixelChar[]` → `PixelCharRenderer` → bytes
 //!
-//! ## CliTextInline: Styled Text Fragments
+//! ## `CliTextInline`: Styled Text Fragments
 //!
 //! For direct rendering paths, [`CliTextInline`] represents a fragment of text with
 //! styling information:
@@ -1095,7 +1095,7 @@
 //! This hidden conversion enables ergonomic styling in interactive components without
 //! requiring explicit knowledge of the underlying rendering machinery.
 //!
-//! ## OutputDevice: Thread-Safe Terminal Output
+//! ## `OutputDevice`: Thread-Safe Terminal Output
 //!
 //! Interactive components (Path 2) use [`OutputDevice`] for coordinated terminal output:
 //!
@@ -1269,8 +1269,8 @@
 //! ```
 //!
 //! **Key Design Benefits:**
-//! - **Type Safety**: RenderOpIR and RenderOpOutput enums ensure operations are used in
-//!   the correct context
+//! - **Type Safety**: `RenderOpIR` and `RenderOpOutput` enums ensure operations are used
+//!   in the correct context
 //! - **Modularity**: Each stage has clear inputs/outputs and single responsibility
 //! - **Performance**: Diff-based approach means only changed pixels are rendered
 //! - **Flexibility**: Stages can be implemented for different backends (Crossterm,

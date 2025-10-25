@@ -7,7 +7,7 @@
 #[cfg(test)]
 mod cursor_positioning_tests {
     use crate::{col, height, row,
-                terminal_lib_backends::direct_ansi::AnsiSequenceGenerator};
+                terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator};
 
     #[test]
     fn test_cursor_position_absolute() {
@@ -43,7 +43,7 @@ mod cursor_positioning_tests {
 
 #[cfg(test)]
 mod screen_clearing_tests {
-    use crate::terminal_lib_backends::direct_ansi::AnsiSequenceGenerator;
+    use crate::terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator;
 
     #[test]
     fn test_clear_screen() {
@@ -72,7 +72,7 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::terminal_lib_backends::direct_ansi::AnsiSequenceGenerator;
+    use crate::terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator;
 
     #[test]
     fn test_reset_color() {
@@ -85,7 +85,7 @@ mod color_tests {
 
 #[cfg(test)]
 mod cursor_visibility_tests {
-    use crate::terminal_lib_backends::direct_ansi::AnsiSequenceGenerator;
+    use crate::terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator;
 
     #[test]
     fn test_show_cursor() {
@@ -102,7 +102,7 @@ mod cursor_visibility_tests {
 
 #[cfg(test)]
 mod terminal_mode_tests {
-    use crate::terminal_lib_backends::direct_ansi::AnsiSequenceGenerator;
+    use crate::terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator;
 
     #[test]
     fn test_enter_alternate_screen() {

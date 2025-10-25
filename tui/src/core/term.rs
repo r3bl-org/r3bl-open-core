@@ -116,11 +116,12 @@ pub fn is_fully_uninteractive_terminal() -> TTYResult {
     }
 }
 
-/// Returns [`TTYResult::IsNotInteractive`] if *any* of stdout or stderr are non-interactive.
+/// Returns [`TTYResult::IsNotInteractive`] if *any* of stdout or stderr are
+/// non-interactive.
 ///
 /// This is useful for tests that need to skip when output is redirected or piped, even if
-/// stdin is still interactive. For example, when running tests through a script that redirects
-/// output to a file: `command >file 2>&1`
+/// stdin is still interactive. For example, when running tests through a script that
+/// redirects output to a file: `command >file 2>&1`
 ///
 /// In this case:
 /// - stdin: still a TTY (interactive)

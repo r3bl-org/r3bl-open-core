@@ -56,21 +56,51 @@
 //! - `render_op_flush` - Terminal output flushing control
 //!
 //! All types are re-exported at the module level for ergonomic imports.
+//!
+//! # Architectural Patterns Used Across Submodules
+//!
+//! ## The "You Are Here" Diagram
+//!
+//! Each submodule includes a simplified "You Are Here" diagram showing where in the
+//! rendering pipeline that module's types are used. This helps orient developers
+//! when reading individual files. The complete diagram above shows the full context.
+//!
+//! ## Semantic Boundaries
+//!
+//! The design enforces critical architectural boundaries through the type system:
+//!
+//! - **[`RenderOpIR`] cannot be executed** - must flow through Compositor first
+//! - **[`RenderOpOutput`] cannot be created by components** - only by backend converters
+//! - **[`RenderOpsExec`] trait only on Output** - prevents bypassing the Compositor
+//!
+//! These boundaries ensure data flows correctly through the pipeline and guarantees
+//! (like text clipping and style application) are maintained.
+//!
+//! ## Ergonomic Factory Methods
+//!
+//! The [`RenderOpCommonExt`] trait provides factory methods for common operations,
+//! available on both IR and Output types. This avoids repetitive wrapping like
+//! `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))` in favor of
+//! `RenderOpIR::move_cursor(pos)`.
 
 // Private modules - implementation details.
 mod render_op_common;
 mod render_op_common_ext;
-mod render_op_debug;
+mod render_op_debug_format;
 mod render_op_flush;
 mod render_op_ir;
-mod render_op_local_data;
 mod render_op_output;
+mod render_op_paint;
+mod render_ops_exec;
+mod render_ops_local_data;
 
 // Public re-exports - stable API surface.
 pub use render_op_common::*;
 pub use render_op_common_ext::*;
-pub use render_op_debug::*;
+pub use render_op_debug_format::*;
 pub use render_op_flush::*;
 pub use render_op_ir::*;
-pub use render_op_local_data::*;
 pub use render_op_output::*;
+pub use render_op_paint::*;
+pub use render_ops_exec::*;
+pub use render_ops_local_data::*;
