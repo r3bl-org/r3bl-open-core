@@ -12,7 +12,7 @@
 //!
 //! The module consists of:
 //! 1. [`AnsiSequenceGenerator`]: Generates raw ANSI escape sequence bytes
-//! 2. [`RenderOpImplDirectAnsi`]: Implements [`PaintRenderOp`] trait for executing render
+//! 2. [`RenderOpImplDirectAnsi`]: Implements [`RenderOpPaint`] trait for executing render
 //!    operations: [`RenderOpIR`], [`RenderOpOutput`], and [`RenderOpCommon`]
 //! 3. [`PixelCharRenderer`]: converts styled text to ANSI
 //! 4. [`RenderToAnsi`]: trait for rendering to ANSI
@@ -25,7 +25,7 @@
 //! [`RenderOpImplDirectAnsi`]: crate::RenderOpImplDirectAnsi
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`RenderToAnsi`]: crate::RenderToAnsi
-//! [`PaintRenderOp`]: crate::PaintRenderOp
+//! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpIR`]: crate::RenderOpIR
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 

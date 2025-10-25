@@ -35,11 +35,12 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, Flush, FlushKind,
+use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
             GCStringOwned, InlineString, LockedOutputDevice, OffscreenBuffer,
             OffscreenBufferPaint, PaintRenderOpImplCrossterm, PixelChar, RenderOpCommon,
-            RenderOpIR, RenderOpIRVec, RowIndex, Size, TuiStyle, ch, col,
-            diff_chunks::PixelCharDiffChunks, glyphs::SPACER_GLYPH, row};
+            RenderOpFlush, RenderOpOutput, RenderOpOutputVec, RenderOpsExec, RowIndex,
+            Size, TuiStyle, ch, col, diff_chunks::PixelCharDiffChunks,
+            glyphs::SPACER_GLYPH, row};
 
 #[derive(Debug)]
 pub struct OffscreenBufferPaintImplCrossterm;
@@ -47,7 +48,7 @@ pub struct OffscreenBufferPaintImplCrossterm;
 impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     fn paint(
         &mut self,
-        render_ops: RenderOpIRVec,
+        render_ops: RenderOpOutputVec,
         flush_kind: FlushKind,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
@@ -59,7 +60,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             PaintRenderOpImplCrossterm.clear_before_flush(locked_output_device);
         }
 
-        // Execute each RenderOp.
+        // Execute each RenderOp using the ExecutableRenderOps trait.
         render_ops.execute_all(
             &mut skip_flush,
             window_size,
@@ -84,14 +85,14 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
 
     fn paint_diff(
         &mut self,
-        render_ops: RenderOpIRVec,
+        render_ops: RenderOpOutputVec,
         window_size: Size,
         locked_output_device: LockedOutputDevice<'_>,
         is_mock: bool,
     ) {
         let mut skip_flush = false;
 
-        // Execute each RenderOp.
+        // Execute each RenderOp using the ExecutableRenderOps trait.
         render_ops.execute_all(
             &mut skip_flush,
             window_size,
@@ -139,7 +140,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     /// [`Void`]: PixelChar::Void
     /// [`Spacer`]: PixelChar::Spacer
     /// [`PlainText`]: PixelChar::PlainText
-    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpIRVec {
+    fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpOutputVec {
         use render_helper::Context;
 
         let mut context = Context::new();
@@ -211,7 +212,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
         context.render_ops
     }
 
-    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOpIRVec {
+    fn render_diff(&mut self, diff_chunks: &PixelCharDiffChunks) -> RenderOpOutputVec {
         DEBUG_TUI_COMPOSITOR.then(|| {
             // % is Display, ? is Debug.
             tracing::info!(
@@ -220,7 +221,7 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             );
         });
 
-        let mut it = RenderOpIRVec::new();
+        let mut it = RenderOpOutputVec::new();
 
         for (position, pixel_char) in diff_chunks.iter() {
             it.push(RenderOpCommon::MoveCursorPositionAbs(*position));
@@ -228,23 +229,25 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
             match pixel_char {
                 PixelChar::Void => { /* continue */ }
                 PixelChar::Spacer => {
-                    it.push(RenderOpIR::PaintTextWithAttributes(
-                        SPACER_GLYPH.into(),
-                        None,
-                    ));
+                    it.push(
+                        RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
+                            SPACER_GLYPH.into(),
+                            None,
+                        ),
+                    );
                 }
                 PixelChar::PlainText {
                     display_char,
                     style,
                     ..
                 } => {
-                    it.push(RenderOpIR::Common(RenderOpCommon::ApplyColors(Some(
-                        *style,
-                    ))));
-                    it.push(RenderOpIR::PaintTextWithAttributes(
-                        InlineString::from_str(&display_char.to_string()),
-                        Some(*style),
-                    ));
+                    it.push(RenderOpCommon::ApplyColors(Some(*style)));
+                    it.push(
+                        RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
+                            InlineString::from_str(&display_char.to_string()),
+                            Some(*style),
+                        ),
+                    );
                 }
             }
         }
@@ -263,7 +266,7 @@ mod render_helper {
         pub display_row_index: RowIndex,
         pub buffer_plain_text: InlineString,
         pub prev_style: Option<TuiStyle>,
-        pub render_ops: RenderOpIRVec,
+        pub render_ops: RenderOpOutputVec,
     }
 
     impl Context {
@@ -271,7 +274,7 @@ mod render_helper {
             Context {
                 display_col_index_for_line: col(0),
                 buffer_plain_text: InlineString::new(),
-                render_ops: RenderOpIRVec::new(),
+                render_ops: RenderOpOutputVec::new(),
                 display_row_index: row(0),
                 prev_style: None,
             }
@@ -317,17 +320,18 @@ mod render_helper {
     }
 
     pub fn flush_plain_text_line_buffer(context: &mut Context) {
-        // Generate `RenderOpsIR` for each `PixelChar` and add it to `render_ops`.
+        // Generate `RenderOpsOutput` for each `PixelChar` and add it to `render_ops`.
         let pos = context.display_col_index_for_line + context.display_row_index;
 
         // Deal w/ position.
         context.render_ops += RenderOpCommon::MoveCursorPositionAbs(pos);
 
         // Deal w/ style attribs & actually paint the `temp_line_buffer`.
-        context.render_ops += RenderOpIR::PaintTextWithAttributes(
-            context.buffer_plain_text.clone(),
-            context.prev_style,
-        );
+        context.render_ops +=
+            RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
+                context.buffer_plain_text.clone(),
+                context.prev_style,
+            );
 
         // Update `display_col_index_for_line`.
         let display_width = GCStringOwned::from(&context.buffer_plain_text).width();
@@ -424,23 +428,25 @@ mod tests {
         assert_eq2!(render_ops.len(), 10);
         assert_eq2!(
             render_ops[0],
-            RenderOpIR::Common(RenderOpCommon::ResetColor)
+            RenderOpOutput::Common(RenderOpCommon::ResetColor)
         );
         assert_eq2!(
             render_ops[1],
-            RenderOpIR::Common(RenderOpCommon::SetFgColor(tui_color!(green)))
+            RenderOpOutput::Common(RenderOpCommon::SetFgColor(tui_color!(green)))
         );
         assert_eq2!(
             render_ops[2],
-            RenderOpIR::Common(RenderOpCommon::SetBgColor(tui_color!(blue)))
+            RenderOpOutput::Common(RenderOpCommon::SetBgColor(tui_color!(blue)))
         );
         assert_eq2!(
             render_ops[3],
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row(0)))
+            RenderOpOutput::Common(RenderOpCommon::MoveCursorPositionAbs(
+                col(0) + row(0)
+            ))
         );
         assert_eq2!(
             render_ops[4],
-            RenderOpIR::PaintTextWithAttributes(
+            RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
                 "hello1234".into(),
                 Some(
                     new_style!(dim bold color_fg:{tui_color!(green)} color_bg:{tui_color!(blue)})
@@ -449,23 +455,33 @@ mod tests {
         );
         assert_eq2!(
             render_ops[5],
-            RenderOpIR::Common(RenderOpCommon::ResetColor)
+            RenderOpOutput::Common(RenderOpCommon::ResetColor)
         );
         assert_eq2!(
             render_ops[6],
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(9) + row(0)))
+            RenderOpOutput::Common(RenderOpCommon::MoveCursorPositionAbs(
+                col(9) + row(0)
+            ))
         );
         assert_eq2!(
             render_ops[7],
-            RenderOpIR::PaintTextWithAttributes(SPACER_GLYPH.into(), None)
+            RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
+                SPACER_GLYPH.into(),
+                None
+            )
         );
         assert_eq2!(
             render_ops[8],
-            RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(col(0) + row(1)))
+            RenderOpOutput::Common(RenderOpCommon::MoveCursorPositionAbs(
+                col(0) + row(1)
+            ))
         );
         assert_eq2!(
             render_ops[9],
-            RenderOpIR::PaintTextWithAttributes((SPACER_GLYPH.repeat(10)).into(), None)
+            RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(
+                (SPACER_GLYPH.repeat(10)).into(),
+                None
+            )
         );
     }
 

@@ -23,24 +23,12 @@
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::{FlushKind, RenderOpIR, RenderOpsLocalData, RenderPipeline};
+use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
             LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
             OffscreenBufferPaintImplCrossterm, Pos, Size, TERMINAL_LIB_BACKEND,
             TerminalLibBackend, diff_chunks::PixelCharDiffChunks};
 use std::fmt::Debug;
-
-pub trait PaintRenderOp {
-    fn paint(
-        &mut self,
-        skip_flush: &mut bool,
-        render_op: &RenderOpIR,
-        window_size: Size,
-        render_local_data: &mut RenderOpsLocalData,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    );
-}
 
 /// Paint the render pipeline. The render pipeline contains a list of
 /// [`RenderOpOutputVec`] for each [`ZOrder`]. This function is responsible

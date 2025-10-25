@@ -9,15 +9,17 @@
 //! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
 //! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
 //!
-//! This type is used throughout all stages
-//! ```
+//! See [`crate::render_op`] module documentation for shared architectural patterns,
+//! type safety guarantees, and the rendering pipeline overview.
 //!
-//! These 27 shared operations appear in both:
+//! # Context
+//!
+//! These 27 shared operations are used identically in:
 //! - [`crate::RenderOpIR`] - IR layer for components/app (with clipping info)
 //! - [`crate::RenderOpOutput`] - Output layer for backend (post-clipping)
 //!
 //! The enum defines operations like cursor movement, colors, text, and screen control
-//! that every stage needs to understand.
+//! that every stage of the pipeline needs to understand.
 
 use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 

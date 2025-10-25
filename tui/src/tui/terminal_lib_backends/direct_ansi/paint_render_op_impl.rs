@@ -1,24 +1,28 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! [`DirectAnsi`] implementation of the [`PaintRenderOp`] trait
+//! [`DirectAnsi`] implementation of the [`RenderOpPaint`] trait
 //!
-//! This implements the [`PaintRenderOp`] trait to execute all [`RenderOpIR`] variants
+//! This implements the [`RenderOpPaint`] trait to execute all [`RenderOpOutput`] variants
 //! using [`AnsiSequenceGenerator`]. It tracks cursor position and colors to skip
 //! redundant ANSI sequences for optimization.
+//!
+//! [`RenderOpPaint`]: crate::RenderOpPaint
 
 use super::AnsiSequenceGenerator;
-use crate::{Flush, LockedOutputDevice, PaintRenderOp, RenderOpIR, RenderOpsLocalData,
-            Size};
+use crate::{LockedOutputDevice, RenderOpFlush, RenderOpOutput, RenderOpPaint,
+            RenderOpsLocalData, Size};
 
-/// Implements [`PaintRenderOp`] trait using direct ANSI sequence generation
+/// Implements [`RenderOpPaint`] trait using direct ANSI sequence generation
+///
+/// [`RenderOpPaint`]: crate::RenderOpPaint
 #[derive(Debug)]
 pub struct RenderOpImplDirectAnsi;
 
-impl PaintRenderOp for RenderOpImplDirectAnsi {
+impl RenderOpPaint for RenderOpImplDirectAnsi {
     fn paint(
         &mut self,
         skip_flush: &mut bool,
-        _render_op: &RenderOpIR,
+        _render_op: &RenderOpOutput,
         _window_size: Size,
         _render_local_data: &mut RenderOpsLocalData,
         _locked_output_device: LockedOutputDevice<'_>,
@@ -28,13 +32,13 @@ impl PaintRenderOp for RenderOpImplDirectAnsi {
             return; // Skip rendering in mock mode
         }
 
-        // TODO: Implement all RenderOpIR variants
-        // This is a stub for now
+        // TODO: Implement all RenderOpOutput variants
+        // This is a stub for now - implementation happens in Step 3.3
         *skip_flush = false;
     }
 }
 
-impl Flush for RenderOpImplDirectAnsi {
+impl RenderOpFlush for RenderOpImplDirectAnsi {
     fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
         locked_output_device
             .flush()

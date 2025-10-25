@@ -1,22 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Traits and types for controlling terminal output flushing behavior.
-//!
-//! # You Are Here
-//!
-//! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
-//!                                                       ↓↓↓↓
-//!                          Flush trait is called here to display output
-//! ```
-//!
-//! Provides the [`Flush`] trait for managing when and how terminal output
-//! is flushed to the screen, along with [`FlushKind`] for different behaviors.
-//!
-//! Used by [`crate::PaintRenderOpImplCrossterm`] (Backend Executor) to control
-//! when rendered content is actually displayed to the user.
-
 use crate::LockedOutputDevice;
 
 /// Controls the behavior when flushing terminal output.
@@ -36,7 +19,27 @@ pub enum FlushKind {
 /// This trait provides methods to flush pending terminal output and optionally
 /// clear the terminal before flushing. Essential for ensuring that render
 /// operations are actually displayed on the terminal.
-pub trait Flush {
+///
+/// # You Are Here
+///
+/// ```text
+/// [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
+/// [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+///                                                       ↓↓↓↓
+///                          Flush trait is called here to display output
+/// ```
+///
+/// See [`crate::render_op`] module documentation for shared architectural patterns
+/// and the rendering pipeline overview.
+///
+/// # Purpose
+///
+/// Provides methods for managing when and how terminal output is flushed
+/// to the screen, along with [`FlushKind`] for different behaviors.
+///
+/// Used by [`crate::PaintRenderOpImplCrossterm`] (Backend Executor) to control when
+/// rendered content is actually displayed to the user.
+pub trait RenderOpFlush {
     /// Flushes pending output to the terminal.
     ///
     /// This method ensures that all buffered terminal output is written

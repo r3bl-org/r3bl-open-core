@@ -1,28 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Trait providing ergonomic helper methods for common operations.
-//!
-//! # You Are Here
-//!
-//! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
-//!
-//! RenderOpCommonExt is used throughout all stages
-//! ```
-//!
-//! Implemented by both `RenderOpIR` and `RenderOpOutput` to avoid code duplication.
-//! Provides 27 ergonomic factory methods that wrap `RenderOpCommon` variants.
-//!
-//! # Usage
-//!
-//! ```ignore
-//! use r3bl_tui::{RenderOpIR, RenderOpCommonExt, Pos};
-//!
-//! // Instead of: RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))
-//! let op = RenderOpIR::move_cursor(pos);
-//! ```
-
 use super::{RenderOpCommon, RenderOpIR, RenderOpOutput};
 use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 
@@ -31,13 +8,29 @@ use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 /// Implemented by both `RenderOpIR` and `RenderOpOutput` to avoid code duplication.
 /// Provides factory methods that wrap `RenderOpCommon` variants in the appropriate type.
 ///
+/// # You Are Here
+///
+/// ```text
+/// [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
+/// [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+///
+/// RenderOpCommonExt is used throughout all stages
+/// ```
+///
+/// See [`crate::render_op`] module documentation for shared architectural patterns
+/// and the rendering pipeline overview.
+///
+/// # Purpose
+///
+/// Provides 27 ergonomic factory methods that wrap `RenderOpCommon` variants.
+/// Used throughout the rendering pipeline to create render operations conveniently.
+///
 /// # Usage
 ///
 /// ```ignore
 /// use r3bl_tui::{RenderOpIR, RenderOpCommonExt, Pos};
 ///
 /// // Instead of: RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))
-/// // Use the helper:
 /// let op = RenderOpIR::move_cursor(pos);
 /// ```
 pub trait RenderOpCommonExt: Sized {

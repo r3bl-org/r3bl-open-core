@@ -12,18 +12,38 @@
 //! RenderOpIR is used by components and app layer
 //! ```
 //!
+//! See [`crate::render_op`] module documentation for shared architectural patterns
+//! and the rendering pipeline overview.
+//!
 //! Components produce [`RenderOpIR`] operations with built-in clipping info.
 //! These get processed by the Compositor (Stage 3) to populate the `OffscreenBuffer`.
 //!
-//! # Type Safety
+//! # Type Safety & Semantic Boundary
 //!
 //! This enum type ensures only IR-appropriate operations are used in component code.
 //! Operations like `PaintTextWithAttributes` (which handles clipping) are IR-specific
 //! and cannot be accidentally used in backend code.
+//!
+//! ## Architectural Note
+//!
+//! `execute_all()` and execution methods do **not** exist on [`RenderOpIR`] or
+//! [`RenderOpIRVec`] to enforce a semantic boundary.
+//!
+//! **Why?** [`RenderOpIR`] operations must **NOT** be executed directly. All operations
+//! must flow through the proper pipeline:
+//!
+//! ```text
+//! RenderOpIR → Compositor → RenderOpOutput → Terminal
+//! ```
+//!
+//! Removing these methods prevents IR from bypassing the compositor. The compositor is
+//! critical for:
+//! - Handling text clipping to terminal width
+//! - Managing Unicode and emoji display widths
+//! - Applying style information correctly
 
-use super::{RenderOpCommon, RenderOpsLocalData};
-use crate::{InlineString, InlineVec, LockedOutputDevice, PaintRenderOpImplCrossterm,
-            Size, TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok};
+use super::RenderOpCommon;
+use crate::{InlineString, InlineVec, TuiStyle, ok};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 
@@ -96,94 +116,6 @@ impl RenderOpIRVec {
 
     /// Iterate over the operations.
     pub fn iter(&self) -> impl Iterator<Item = &RenderOpIR> { self.list.iter() }
-
-    /// Executes all render operations in the collection sequentially.
-    ///
-    /// This method processes each [`RenderOpIR`] in the list, maintaining local state
-    /// for optimization and routing each operation to the appropriate backend
-    /// implementation based on the configured terminal library.
-    ///
-    /// # Parameters
-    /// - `skip_flush`: Mutable reference to control flush behavior
-    /// - `window_size`: Current terminal window dimensions
-    /// - `locked_output_device`: Locked terminal output for thread-safe writing
-    /// - `is_mock`: Whether this is a mock execution for testing
-    pub fn execute_all(
-        &self,
-        skip_flush: &mut bool,
-        window_size: Size,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    ) {
-        let mut render_local_data = RenderOpsLocalData::default();
-        for render_op_ir in &self.list {
-            RenderOpIRVec::route_paint_render_op_ir_to_backend(
-                &mut render_local_data,
-                skip_flush,
-                render_op_ir,
-                window_size,
-                locked_output_device,
-                is_mock,
-            );
-        }
-    }
-
-    /// Routes a single IR render operation to the appropriate backend implementation.
-    ///
-    /// This method acts as a dispatcher, selecting the correct terminal library
-    /// backend (currently Crossterm) and delegating the actual rendering work
-    /// to the backend-specific implementation.
-    ///
-    /// # Parameters
-    /// - `render_local_data`: Mutable state for render optimization
-    /// - `skip_flush`: Mutable reference to control flush behavior
-    /// - `render_op_ir`: The specific IR operation to execute
-    /// - `window_size`: Current terminal window dimensions
-    /// - `locked_output_device`: Locked terminal output for thread-safe writing
-    /// - `is_mock`: Whether this is a mock execution for testing
-    pub fn route_paint_render_op_ir_to_backend(
-        render_local_data: &mut RenderOpsLocalData,
-        skip_flush: &mut bool,
-        render_op_ir: &RenderOpIR,
-        window_size: Size,
-        locked_output_device: LockedOutputDevice<'_>,
-        is_mock: bool,
-    ) {
-        match TERMINAL_LIB_BACKEND {
-            TerminalLibBackend::Crossterm => {
-                // Convert RenderOpIR to something the paint method can understand.
-                // For now, we'll implement this in Phase 5+ when we handle the
-                // compositor. This is a placeholder that will be
-                // filled in later.
-                match render_op_ir {
-                    RenderOpIR::Common(common_op) => {
-                        PaintRenderOpImplCrossterm {}.paint_common(
-                            skip_flush,
-                            common_op,
-                            window_size,
-                            render_local_data,
-                            locked_output_device,
-                            is_mock,
-                        );
-                    }
-                    RenderOpIR::PaintTextWithAttributes(text, style) => {
-                        // IR-level text painting with clipping handled by Compositor
-                        // The Compositor has already applied clipping, so we just
-                        // paint the text as-is using the
-                        // unified renderer.
-                        PaintRenderOpImplCrossterm::paint_text_with_attributes(
-                            text,
-                            *style,
-                            window_size,
-                            render_local_data,
-                            locked_output_device,
-                        );
-                    }
-                }
-            }
-            TerminalLibBackend::Termion => unimplemented!(),
-        }
-    }
 }
 
 impl From<RenderOpCommon> for RenderOpIR {

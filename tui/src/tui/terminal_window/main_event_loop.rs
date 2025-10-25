@@ -3,13 +3,13 @@ use super::{BoxedSafeApp, Continuation, DefaultInputEventHandler, EventPropagati
             MainEventLoopFuture};
 use crate::{Ansi256GradientIndex, ColorWheel, ColorWheelConfig, ColorWheelSpeed,
             CommonResult, ComponentRegistryMap, DEBUG_TUI_MOD, DISPLAY_LOG_TELEMETRY,
-            DefaultSize, DefaultTiming, Flush, FlushKind, GCStringOwned, GetMemSize,
+            DefaultSize, DefaultTiming, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputDeviceExt,
             InputEvent, LockedOutputDevice, MinSize, OffscreenBufferPool, OutputDevice,
-            RawMode, RenderOpCommon, RenderOpIR, RenderPipeline, Size, SufficientSize,
-            TelemetryAtomHint, TerminalWindowMainThreadSignal, TextColorizationPolicy,
-            ZOrder, ch, col, glyphs, height, inline_string, lock_output_device_as_mut,
-            new_style, ok, render_pipeline, row,
+            RawMode, RenderOpCommon, RenderOpFlush, RenderOpIR, RenderPipeline, Size,
+            SufficientSize, TelemetryAtomHint, TerminalWindowMainThreadSignal,
+            TextColorizationPolicy, ZOrder, ch, col, glyphs, height, inline_string,
+            lock_output_device_as_mut, new_style, ok, render_pipeline, row,
             telemetry::{Telemetry, telemetry_default_constants},
             telemetry_record, width};
 use smallvec::smallvec;

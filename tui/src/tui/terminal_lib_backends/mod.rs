@@ -35,7 +35,7 @@
 //! ┌────────────────▼──────────────────────────┐
 //! │ Backend Executor                          │
 //! │ (Execute RenderOps via Crossterm)         │
-//! │ - PaintRenderOp trait (Crossterm impl)    │
+//! │ - RenderOpPaint trait (Crossterm impl)    │
 //! │ - Cursor movement, colors, text painting  │
 //! │ - Raw mode management & terminal flushing │
 //! └────────────────┬──────────────────────────┘
