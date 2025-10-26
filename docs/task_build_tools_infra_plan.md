@@ -97,7 +97,7 @@ This transforms the project from "script replacement" to "product development":
 // Multi-pane watch dashboard (using pty_mux)
 $ r3bl-build dev-dashboard
 ┌─────────────────────┬─────────────────────┐
-│ bacon nextest       │ bacon clippy        │
+│ bacon test          │ bacon clippy        │
 │ ✓ 342 tests passed  │ ⚠ 3 warnings        │
 ├─────────────────────┼─────────────────────┤
 │ cargo doc           │ ./check.fish        │
@@ -141,9 +141,9 @@ use r3bl_tui::script::CommandBuilder;
 async fn run_dev_dashboard() {
     let mut mux = PtyMux::new();
 
-    // Top-left: nextest
+    // Top-left: tests
     mux.spawn_pane(CommandBuilder::new("bacon")
-        .arg("nextest")
+        .arg("test")
         .arg("--headless"));
 
     // Top-right: clippy
@@ -532,7 +532,7 @@ pub async fn run_dev_dashboard() -> Result<()> {
     mux.add_pane(PaneConfig {
         title: "Tests".into(),
         command: "bacon".into(),
-        args: vec!["nextest".into(), "--headless".into()],
+        args: vec!["test".into(), "--headless".into()],
         auto_restart: true,
     });
 
@@ -639,7 +639,7 @@ async fn main() -> Result<()> {
 
         // Dashboard
         .dashboard(|d| {
-            d.pane("tests", "cargo nextest run")
+            d.pane("tests", "cargo test --all-targets")
              .pane("clippy", "cargo clippy --workspace")
              .pane("docs", "cargo doc --no-deps")
              .pane("watch", "watch -n 60 ./check.sh")

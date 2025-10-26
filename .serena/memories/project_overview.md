@@ -61,7 +61,7 @@ A comprehensive Rust TUI (Terminal User Interface) framework and tools, featurin
 - `cargo clippy --all-targets` - Find lints
 - `cargo clippy --fix --allow-dirty` - Auto-fix lints
 - `cargo doc --no-deps` - Generate docs
-- `cargo nextest run` - Run tests (excludes doctests)
+- `cargo test --all-targets` - Run tests (excludes doctests)
 - `cargo test --doc` - Run doctests
 
 ### Performance Analysis

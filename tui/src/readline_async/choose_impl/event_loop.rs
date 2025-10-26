@@ -6,7 +6,7 @@ use miette::IntoDiagnostic;
 
 use super::KeyPressReader;
 use crate::{execute_commands,
-            return_if_not_interactive_terminal,
+            is_partially_uninteractive_terminal,
             CalculateResizeHint,
             CommonResult,
             FunctionComponent,
@@ -38,7 +38,9 @@ pub async fn enter_event_loop_async<S: CalculateResizeHint>(
 ) -> CommonResult<EventLoopResult> {
     use EventLoopResult::ExitWithError;
 
-    return_if_not_interactive_terminal!(Ok(ExitWithError));
+    if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        return Ok(ExitWithError);
+    }
 
     run_before_event_loop(state, function_component)?;
 
@@ -77,7 +79,9 @@ pub fn enter_event_loop_sync<S: CalculateResizeHint>(
 ) -> CommonResult<EventLoopResult> {
     use EventLoopResult::ExitWithError;
 
-    return_if_not_interactive_terminal!(Ok(ExitWithError));
+    if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+        return Ok(ExitWithError);
+    }
 
     run_before_event_loop(state, function_component)?;
 

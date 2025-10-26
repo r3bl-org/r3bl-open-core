@@ -380,7 +380,7 @@ mod tests {
 
     use super::{Duration, LineStateControlSignal, SharedWriter, Spinner, SpinnerStyle,
                 TTYResult};
-    use crate::{return_if_not_interactive_terminal, OutputDevice, OutputDeviceExt,
+    use crate::{is_partially_uninteractive_terminal, OutputDevice, OutputDeviceExt,
                 SpinnerColor, SpinnerTemplate};
 
     type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
@@ -391,7 +391,9 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_color() {
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
 
@@ -463,7 +465,9 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_no_color() {
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
 
@@ -535,7 +539,9 @@ mod tests {
     #[tokio::test]
     #[allow(clippy::needless_return)]
     async fn test_spinner_message_update() {
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         let (output_device_mock, stdout_mock) = OutputDevice::new_mock();
 

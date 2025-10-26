@@ -418,7 +418,7 @@ fish run.fish install-cargo-tools
 
 - **cargo-binstall**: Fast binary installer (installed first as foundation)
 - **uv**: Modern Python package manager (required for Serena semantic code MCP server)
-- **Core Development Tools**: bacon, cargo-nextest, flamegraph, inferno
+- **Core Development Tools**: bacon, flamegraph, inferno
 - **Workspace Management**: cargo-workspaces, cargo-cache, cargo-update
 - **Code Quality**: cargo-deny, cargo-unmaintained, cargo-expand, cargo-readme
 - **Wild Linker**: Fast linker with optimized .cargo/config.toml generation
@@ -539,7 +539,7 @@ Other commands:
 | `fish run.fish all`                         | Run all major checks (build, test, clippy, docs, audit, format)                                 |
 | `fish run.fish build`                       | Build the entire workspace                                                                      |
 | `fish run.fish test`                        | Run all tests across the workspace                                                              |
-| `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, nextest, Wild linker, etc.) |
+| `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, Wild linker, etc.) |
 | `fish run.fish watch-all-tests`             | Watch for file changes and run tests automatically                                              |
 | `fish run.fish run-examples`                | Run TUI examples interactively                                                                  |
 | `fish run.fish run-binaries`                | Run cmdr binaries (edi, giti, rc) interactively                                                 |
@@ -769,8 +769,7 @@ and testing. Bacon provides real-time feedback on code changes with two distinct
 | `bacon test`                         | Interactive | Run all tests with cargo test (includes unit, integration, and doctests) |
 | `bacon test -- <pattern>`            | Interactive | Run specific test matching pattern                                       |
 | `bacon doctests`                     | Interactive | Run only documentation tests (`cargo test --doc`)                        |
-| `bacon nextest`                      | Interactive | Rich TUI test runner using cargo-nextest (faster, no doctests)           |
-| `bacon nextest --headless --summary` | Background  | Silent test runner providing only pass/fail status                       |
+| `bacon test --headless --summary`    | Background  | Silent test runner providing only pass/fail status                       |
 
 **Documentation:**
 
@@ -797,11 +796,8 @@ Choose the workflow that matches your current needs:
 
 **Testing Notes:**
 
-- We use [`cargo-nextest`](https://nexte.st/) for running tests as it's significantly faster than
-  `cargo test`
-- However, nextest does **not** run doctests (tests in documentation comments)
-- Use `bacon doctests` or `bacon test` to run documentation tests
-- Use `bacon test --doc` is equivalent to `bacon doctests`
+- Use `bacon test` to run all tests (includes unit, integration, and doctests)
+- Use `bacon doctests` or `bacon test --doc` to run only documentation tests
 
 ### Automated Development Monitoring
 
@@ -823,7 +819,7 @@ script:
   changes
 - **Event-driven execution**: Triggers immediately on file changes (no polling delay)
 - **Intelligent debouncing**: 5-second delay prevents rapid re-runs during saves
-- **Comprehensive checks**: Runs tests (nextest), doctests, and doc builds automatically
+- **Comprehensive checks**: Runs tests, doctests, and doc builds automatically
 - **Clean progress output**: Shows stage-by-stage progress without verbose cargo logs
 - **Automatic toolchain validation**: Validates and repairs Rust toolchain before checks
 - **ICE recovery**: Detects and recovers from Internal Compiler Errors automatically
@@ -838,8 +834,8 @@ Press Ctrl+C to stop
 
 🔄 Changes detected, running checks...
 
-▶️  Running nextest...
-✅ Nextest passed
+▶️  Running tests...
+✅ Tests passed
 
 ▶️  Running doctests...
 ✅ Doctests passed
@@ -898,7 +894,7 @@ bacon monitors with the `check.fish --watch` script for comprehensive coverage.
 │ Tmux Session: r3bl-dev (2x2 grid layout)                    │
 ├──────────────────────┬──────────────────────────────────────┤
 │ Top-left:            │ Top-right:                           │
-│ bacon nextest        │ bacon doc                            │
+│ bacon test           │ bacon doc                            │
 │ (Unit & Integration  │ (Documentation generation            │
 │  Tests)              │  with live feedback)                 │
 ├──────────────────────┼──────────────────────────────────────┤
@@ -918,14 +914,14 @@ bacon monitors with the `check.fish --watch` script for comprehensive coverage.
 - **Event-Driven Checks**: The bottom-right pane runs `./check.fish --watch` which triggers
   immediately on file changes (not periodic polling)
 - **Comprehensive Coverage**: The `check.fish --watch` monitor provides:
-  - All unit and integration tests (`cargo nextest run`)
+  - All unit and integration tests (`cargo test --all-targets`)
   - Documentation tests (`cargo test --doc`)
   - Documentation building (`cargo doc --no-deps`)
   - Automatic ICE (Internal Compiler Error) detection and recovery
   - Automatic toolchain validation and repair if needed
   - 5-second intelligent debouncing to prevent rapid re-runs
 - **Interactive Multiplexing**: Full tmux keybindings for pane switching and layout customization
-- **Redundant Coverage**: Tests run in two panes (bacon nextest + check.fish) - if one fails, the
+- **Redundant Coverage**: Tests run in two panes (bacon test + check.fish) - if one fails, the
   other shows details
 
 **Usage:**
@@ -1155,7 +1151,7 @@ fish run.fish toolchain-update
 - **ICE validation**: Runs comprehensive validation suite on each candidate:
   - `cargo clippy --all-targets`
   - `cargo build`
-  - `cargo nextest run`
+  - `cargo test --all-targets`
   - `cargo test --doc`
   - `cargo doc --no-deps`
 - **Toolchain vs code errors**: Distinguishes between:
@@ -1305,7 +1301,7 @@ fish run.fish toolchain-validate-complete
 - ✅ All quick mode checks
 - ✅ cargo clippy --all-targets (no ICE)
 - ✅ cargo build (no ICE)
-- ✅ cargo nextest run (no ICE)
+- ✅ cargo test --all-targets (no ICE)
 - ✅ cargo test --doc (no ICE)
 - ✅ cargo doc --no-deps (no ICE)
 
@@ -1431,7 +1427,7 @@ Setup**
 Commands**
 
 - **Workspace-wide commands** that operate on the entire project
-- **Cargo tool installation** (install-cargo-tools with cargo-binstall, uv, bacon, nextest, etc.)
+- **Cargo tool installation** (install-cargo-tools with cargo-binstall, uv, bacon, etc.)
 - **TUI-specific commands** for running examples and benchmarks
 - **cmdr-specific commands** for binary management
 - **Cross-platform file watching** using inotifywait (Linux) or fswatch (macOS)

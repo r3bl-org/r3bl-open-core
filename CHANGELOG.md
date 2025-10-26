@@ -256,7 +256,7 @@ performance analysis tooling. Issue: <https://github.com/r3bl-org/r3bl-open-core
     ```
   - Disable GitHub Actions for the project. With the addition of `nu run.nu build-server` there is
     no need to run this anymore, since the project, since it is possible to run the build server
-    locally and run `bacon nextest -W` and `bacon doc -W` continuously.
+    locally and run `cargo test --all-targets` and `bacon doc -W` continuously.
   - Remove `core` from the root level workspace `Cargo.toml` file.
   - Update `config.toml` in the root folder to use `28` threads for parallel compilation, instead of
     `8`. The `-Z` flag is an unstable compiler directive only applies to `nightly` Rust.

@@ -16,7 +16,7 @@ source script_lib.fish
 # - Philosophy: Latest nightly is usually most stable with newest bug fixes
 # - Start with today's nightly snapshot (optimistic approach)
 # - For each candidate: UPDATE rust-toolchain.toml, THEN run validation suite
-# - Validation tests production scenario: clippy, build, nextest, doctests, docs
+# - Validation tests production scenario: clippy, build, tests, doctests, docs
 # - Check for ICE (Internal Compiler Errors) - indicates toolchain bugs
 # - If ICE detected, try progressively older nightlies until finding stable one
 # - Distinguish between toolchain issues (ICE) vs code issues (compilation/test failures)
@@ -32,13 +32,13 @@ source script_lib.fish
 # - Remove ICE failure files (rustc-ice-*.txt) generated during validation
 # - Clean all caches: cargo cache, build artifacts (cargo clean)
 # - Run full verification build with new toolchain:
-#   - cargo nextest run --all-targets
+#   - cargo test --all-targets
 #   - cargo test --doc
 #   - cargo doc --no-deps
 # - Ensures new toolchain works perfectly with fresh build from scratch
 #
 # Cargo Tools Update:
-# - Updates all cargo development tools (nextest, bacon, flamegraph, etc.)
+# - Updates all cargo development tools (bacon, flamegraph, etc.)
 # - Uses cargo install-update to check and install latest versions
 # - Keeps development tools current with bug fixes and features
 # - Non-blocking: continues even if some tool updates fail
@@ -137,16 +137,6 @@ function clean_and_verify_build
     log_message "✅ ICE files cleaned"
     log_message ""
 
-    # Clean cargo cache
-    log_message "Cleaning cargo cache..."
-    if command -v cargo-cache >/dev/null 2>&1
-        if not log_command_output "Running cargo cache -r all..." cargo cache -r all
-            log_message "⚠️  cargo cache command failed (non-critical)"
-        end
-    else
-        log_message "⚠️  cargo-cache not installed, skipping cargo cache cleanup"
-    end
-
     # Clean build artifacts
     log_message ""
     if not log_command_output "Running cargo clean..." cargo clean
@@ -159,12 +149,12 @@ function clean_and_verify_build
     log_message "═══════════════════════════════════════════════════════"
     log_message ""
 
-    # Run tests with nextest
-    log_message "Running cargo nextest run --all-targets..."
-    if not log_command_output "Testing with nextest..." cargo nextest run --all-targets
+    # Run tests with cargo test
+    log_message "Running cargo test --all-targets..."
+    if not log_command_output "Running tests..." cargo test --all-targets
         log_message "⚠️  Some tests failed (this might be expected)"
     else
-        log_message "✅ All nextest tests passed"
+        log_message "✅ All tests passed"
     end
 
     # Run doctests
@@ -222,7 +212,7 @@ function validate_toolchain
         "clippy:cargo clippy --all-targets" \
         "build-prod-code:cargo build" \
         "build-test-code:cargo test --no-run" \
-        "nextest:cargo nextest run" \
+        "tests:cargo test --all-targets" \
         "doctest:cargo test --doc" \
         "doc:cargo doc --no-deps"
 
@@ -554,7 +544,7 @@ function main
     log_message "═══════════════════════════════════════════════════════"
     log_message ""
 
-    # Update all cargo tools (nextest, bacon, flamegraph, etc.)
+    # Update all cargo tools (bacon, flamegraph, etc.)
     log_message "Updating cargo development tools to latest versions..."
     if fish run.fish update-cargo-tools 2>&1 | tee -a $LOG_FILE
         log_message "✅ Cargo tools updated successfully"

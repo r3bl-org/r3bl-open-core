@@ -847,7 +847,7 @@ mod test_readline {
                 ReadlineEvent, StdMutex, broadcast, lock_output_device_as_mut,
                 readline_internal, readline_test_fixtures::get_input_vec, sleep};
     use crate::{InputDeviceExtMock, OutputDeviceExt, TTYResult,
-                return_if_not_interactive_terminal};
+                is_partially_uninteractive_terminal};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -857,7 +857,9 @@ mod test_readline {
 
         let prompt_str = "> ";
 
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         // We will get the `line_state` out of this to test.
         let (output_device, stdout_mock) = OutputDevice::new_mock();
@@ -901,7 +903,9 @@ mod test_readline {
     async fn test_readline() {
         let prompt_str = "> ";
 
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         // We will get the `line_state` out of this to test.
         let (output_device, stdout_mock) = OutputDevice::new_mock();
@@ -933,7 +937,9 @@ mod test_readline {
     async fn test_pause_resume() {
         let prompt_str = "> ";
 
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         // We will get the `line_state` out of this to test.
         let (output_device, _) = OutputDevice::new_mock();
@@ -977,7 +983,9 @@ mod test_readline {
     async fn test_pause_resume_with_output() {
         let prompt_str = "> ";
 
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         // We will get the `line_state` out of this to test.
         let (output_device, _) = OutputDevice::new_mock();

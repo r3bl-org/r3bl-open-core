@@ -89,7 +89,7 @@ end
 # - Uses bash for command execution
 #
 # Usage:
-#   install_if_missing "cargo-nextest" "cargo install cargo-nextest"
+#   install_if_missing "bacon" "cargo install bacon"
 #   install_if_missing "rg" "apt install ripgrep"
 function install_if_missing
     set tool $argv[1]
@@ -175,7 +175,7 @@ end
 #
 # Usage:
 #   install_cargo_tool "bacon"
-#   install_cargo_tool "cargo-nextest"
+#   install_cargo_tool "flamegraph"
 function install_cargo_tool --argument-names tool_name
     if not command -v $tool_name >/dev/null
         echo "Installing $tool_name..."

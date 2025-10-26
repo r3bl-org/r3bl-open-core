@@ -8,7 +8,7 @@
 # Workflow:
 # 1. Validates Rust toolchain installation with all required components
 # 2. Automatically installs/repairs toolchain if issues detected
-# 3. Runs tests using cargo-nextest (faster than cargo test)
+# 3. Runs tests using cargo test
 # 4. Runs documentation tests
 # 5. Builds documentation
 # 6. Detects and recovers from Internal Compiler Errors (ICE)
@@ -90,9 +90,9 @@ source script_lib.fish
 # it will be ignored. Increase this if you find checks running too frequently.
 set -g DEBOUNCE_SECONDS 5
 
-# Make sure that cargo has it's own folder to work on, so it does not wait for
-# lock on Claude Code, VSCode, or RustRoever (each of whom have their own
-# subfolder).
+# Use a separate target/check directory to avoid lock contention with IDEs
+# (VSCode, RustRover, Claude Code use their own target directories)
+# This allows check.fish to run concurrently without waiting for IDE locks.
 set -gx CARGO_TARGET_DIR target/check
 
 # Explicitly disable incremental compilation for check.fish (redundant safeguard).
@@ -165,7 +165,7 @@ function show_help
     echo "FEATURES:"
     set_color normal
     echo "  ✓ Automatic toolchain validation and repair"
-    echo "  ✓ Fast tests using cargo-nextest"
+    echo "  ✓ Fast tests using cargo test"
     echo "  ✓ Documentation tests (doctests)"
     echo "  ✓ Documentation building"
     echo "  ✓ Internal Compiler Error (ICE) detection and recovery"
@@ -175,8 +175,8 @@ function show_help
     set_color yellow
     echo "WATCH MODES:"
     set_color normal
-    echo "  --watch       Runs all checks: nextest, doctests, docs"
-    echo "  --watch-test  Runs tests only: nextest + doctests (faster, for test iteration)"
+    echo "  --watch       Runs all checks: tests, doctests, docs"
+    echo "  --watch-test  Runs tests only: cargo test + doctests (faster, for test iteration)"
     echo "  --watch-doc   Runs doc build only (for doc iteration)"
     echo ""
     echo "  Common options for all watch modes:"
@@ -198,7 +198,7 @@ function show_help
     set_color normal
     echo "  1. Validates Rust toolchain (nightly + components)"
     echo "  2. Auto-installs/repairs if needed"
-    echo "  3. Runs nextest (faster than cargo test)"
+    echo "  3. Runs cargo test (all unit and integration tests)"
     echo "  4. Runs doctests"
     echo "  5. Builds documentation"
     echo "  6. Detects and recovers from ICE"
@@ -366,8 +366,8 @@ function run_checks_for_type
             return $result
 
         case "test"
-            # Test checks: nextest + doctests only
-            run_check_with_recovery check_nextest "nextest"
+            # Test checks: cargo test + doctests only
+            run_check_with_recovery check_cargo_test "tests"
             if test $status -eq 2
                 return 2  # ICE detected
             end
@@ -419,12 +419,12 @@ end
 # These functions just run the command and return status code
 # They do NOT handle output formatting or ICE detection
 
-function check_nextest
-    cargo nextest run --all-targets
+function check_cargo_test
+    cargo test --all-targets -q
 end
 
 function check_doctests
-    cargo test --doc
+    cargo test --doc -q
 end
 
 function check_docs
@@ -436,6 +436,9 @@ end
 # ============================================================================
 # Generic wrapper that handles output, formatting, and ICE detection
 # Can wrap ANY check function and apply consistent error handling
+#
+# Strategy: Uses temp file to preserve ANSI codes and terminal formatting
+# while still allowing output to be parsed for ICE detection
 #
 # Parameters:
 #   $argv[1]: Function name to wrap (e.g., "check_nextest")
@@ -454,29 +457,42 @@ function run_check_with_recovery
     echo "▶️  Running $check_name..."
     set_color normal
 
-    # Run and capture output for ICE detection
-    set -l output ($check_func 2>&1)
+    # Create temp file for ICE detection (output is suppressed)
+    set -l temp_output (mktemp)
+
+    # Run command with output suppressed to temp file
+    # Redirecting both stdout and stderr to file hides all output
+    $check_func >$temp_output 2>&1
     set -l exit_code $status
 
     if test $exit_code -eq 0
         set_color green
         echo "✅ $check_name passed"
         set_color normal
+        rm -f $temp_output
         return 0
     end
 
-    # Check for ICE - the KEY centralized detection point
-    if detect_ice $exit_code $output
+    # Check for ICE - use exit code + temp file check (no string capture needed)
+    # This avoids variable corruption issues while still detecting ICE
+    if detect_ice_from_file $exit_code $temp_output
         set_color red
         echo "🧊 ICE detected"
         set_color normal
+        rm -f $temp_output
         return 2
     end
 
-    # Regular failure (not ICE)
+    # Regular failure (not ICE) - show the error output to user
     set_color red
     echo "❌ $check_name failed"
     set_color normal
+    echo ""
+    # Use grep to extract just the relevant error lines (much cleaner than cat)
+    # Look for actual error patterns (case-insensitive for FAILED, error:, panicked, etc.)
+    # Also strip carriage returns to avoid overlapping text from cargo's progress indicators
+    grep -iE "^error:|^(.*---\s+)?FAILED|panicked at|assertion|test result: FAILED" $temp_output | tr -d '\r'
+    rm -f $temp_output
     return 1
 end
 
@@ -491,12 +507,12 @@ end
 #   1 = At least one check failed (not ICE)
 #   2 = At least one check had ICE
 function run_all_checks_with_recovery
-    set -l result_nextest 0
+    set -l result_cargo_test 0
     set -l result_doctest 0
     set -l result_docs 0
 
-    run_check_with_recovery check_nextest "nextest"
-    set result_nextest $status
+    run_check_with_recovery check_cargo_test "tests"
+    set result_cargo_test $status
 
     run_check_with_recovery check_doctests "doctests"
     set result_doctest $status
@@ -505,11 +521,11 @@ function run_all_checks_with_recovery
     set result_docs $status
 
     # Aggregate: return 2 if ANY ICE, then 1 if ANY failure, else 0
-    if test $result_nextest -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
+    if test $result_cargo_test -eq 2 || test $result_doctest -eq 2 || test $result_docs -eq 2
         return 2
     end
 
-    if test $result_nextest -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0
+    if test $result_cargo_test -ne 0 || test $result_doctest -ne 0 || test $result_docs -ne 0
         return 1
     end
 
@@ -642,29 +658,66 @@ end
 # ICE Detection and Recovery Functions
 # ============================================================================
 
-# Helper function to check for ICE in output or exit code
-# Usage: detect_ice EXIT_CODE OUTPUT
-function detect_ice
+# Helper function to check for ICE from a file instead of a string variable
+# This avoids string variable corruption issues while still detecting ICE
+# Usage: detect_ice_from_file EXIT_CODE TEMP_FILE_PATH
+#
+# IMPORTANT: This function must avoid false positives from words containing "ice"
+# as a substring (like "device", "choice", "slice", "service", etc.)
+function detect_ice_from_file
     set -l exit_code $argv[1]
-    set -l output $argv[2]
+    set -l temp_file $argv[2]
 
-    # Check for exit code 101 (rustc ICE indicator)
-    if test $exit_code -eq 101
+    # Most reliable check: look for actual ICE dump files on disk
+    # These are only created by rustc when an actual ICE occurs
+    if test (count (find . -maxdepth 1 -name "rustc-ice-*.txt" 2>/dev/null)) -gt 0
         return 0
     end
 
-    # Check for ICE text in output
-    if string match -qi "*internal compiler error*" -- $output
-        or string match -qi "*ICE*" -- $output
-        return 0
+    # Secondary check: look for exit code 101 (rustc error indicator) with ICE patterns in file
+    if test $exit_code -eq 101
+        # Check for actual ICE patterns in file content
+        # Be very specific to avoid false positives from words like "device", "choice", "slice"
+        if grep -qi "internal compiler error" $temp_file 2>/dev/null
+            or grep -qi "thread 'rustc' panicked" $temp_file 2>/dev/null
+            or grep -qi "rustc ICE" $temp_file 2>/dev/null
+            or grep -qi "panicked at 'mir_" $temp_file 2>/dev/null
+            return 0
+        end
     end
     return 1
 end
 
-# Helper function to extract failed test count from nextest output
-function parse_nextest_failures
+# Deprecated: detect_ice - use detect_ice_from_file instead
+# Kept for backward compatibility
+function detect_ice
+    set -l exit_code $argv[1]
+    set -l output $argv[2]
+
+    # Most reliable check: look for actual ICE dump files on disk
+    # These are only created by rustc when an actual ICE occurs
+    if test (count (find . -maxdepth 1 -name "rustc-ice-*.txt" 2>/dev/null)) -gt 0
+        return 0
+    end
+
+    # Secondary check: look for exit code 101 (rustc error indicator) with ICE patterns in output
+    if test $exit_code -eq 101
+        # Check for actual ICE patterns in output
+        # Be very specific to avoid false positives from words like "device", "choice", "slice"
+        if string match -qi "*internal compiler error*" -- $output
+            or string match -qi "*thread 'rustc' panicked*" -- $output
+            or string match -qi "*rustc ICE*" -- $output
+            or string match -qi "*panicked at 'mir_*" -- $output
+            return 0
+        end
+    end
+    return 1
+end
+
+# Helper function to extract failed test count from cargo test output
+function parse_cargo_test_failures
     set -l output $argv[1]
-    # Extract the number before "failed" in nextest summary
+    # Extract the number before "failed" in test result summary
     set -l failed (echo "$output" | grep -oE '[0-9]+\s+failed' | grep -oE '[0-9]+' | tail -1)
     if test -z "$failed"
         echo "0"
@@ -727,9 +780,6 @@ function cleanup_after_ice
 
     # Remove all target folders (build artifacts and caches can become corrupted)
     cleanup_target_folder
-
-    # Clean cargo caches
-    cargo cache -r all
 
     echo "✨ Cleanup complete. Retrying checks..."
     echo ""

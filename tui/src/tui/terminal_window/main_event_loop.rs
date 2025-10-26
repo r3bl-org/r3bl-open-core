@@ -815,17 +815,7 @@ fn render_window_too_small_error(window_size: Size) -> RenderPipeline {
 
 #[cfg(test)]
 mod tests {
-    use crate::{App, ColorWheel, ColorWheelConfig, ColorWheelSpeed, CommonResult,
-                ComponentRegistryMap, CrosstermEventResult, EventPropagation,
-                GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus,
-                InlineVec, InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress,
-                OutputDevice, OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIRVec,
-                RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal,
-                TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder, assert_eq2,
-                ch, col, defaults::get_default_gradient_stops, height, inline_string,
-                is_fully_uninteractive_terminal, key_press, main_event_loop_impl,
-                new_style, ok, render_pipeline, render_tui_styled_texts_into,
-                send_signal, tui_color, tui_style_attrib, tui_styled_text, width};
+    use crate::{assert_eq2, ch, col, defaults::get_default_gradient_stops, height, inline_string, is_fully_uninteractive_terminal, is_partially_uninteractive_terminal, key_press, main_event_loop_impl, new_style, ok, render_pipeline, render_tui_styled_texts_into, send_signal, tui_color, tui_style_attrib, tui_styled_text, width, App, ColorWheel, ColorWheelConfig, ColorWheelSpeed, CommonResult, ComponentRegistryMap, CrosstermEventResult, EventPropagation, GlobalData, GradientGenerationPolicy, GradientLengthKind, HasFocus, InlineVec, InputDevice, InputDeviceExtMock, InputEvent, Key, KeyPress, OutputDevice, OutputDeviceExt, PixelChar, RenderOpCommon, RenderOpIRVec, RenderPipeline, SpecialKey, TTYResult, TerminalWindowMainThreadSignal, TextColorizationPolicy, TuiStyle, TuiStyleAttribs, ZOrder};
     use smallvec::smallvec;
     use std::{fmt::{Debug, Display, Formatter},
               time::Duration};
@@ -836,6 +826,11 @@ mod tests {
     #[allow(clippy::needless_return)]
     #[allow(clippy::too_many_lines)]
     async fn test_main_event_loop_impl() -> CommonResult<()> {
+        // Skip this test if not running in an interactive terminal (e.g., when output is redirected).
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return ok!();
+        }
+
         // Enable tracing to debug this test.
         // let _guard = TracingConfig {
         //     writer_config: tracing_logging::WriterConfig::Display(

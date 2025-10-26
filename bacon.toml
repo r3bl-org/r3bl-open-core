@@ -50,33 +50,6 @@ need_stdout = true
 command = ["cargo", "test", "--doc"]
 need_stdout = true
 
-# Nextest configuration for silent output
-# Docs: https://nexte.st/docs/running/
-#
-# This configuration creates a completely silent nextest experience when running through bacon,
-# with no compiler warnings, no test output, and no progress indicators - just bacon's own
-# interface for monitoring file changes and test results.
-#
-# To experience this: bacon nextest --headless --summary
-#
-# Flags explained:
-#   --hide-progress-bar: Removes the progress bar display
-#   --cargo-quiet (x2): Suppresses all cargo output including compiler warnings (twice for complete silence)
-#   --status-level none: Hides individual test status updates during execution
-#   --final-status-level none: Hides the final test summary at the end
-#   --failure-output never: Suppresses stdout/stderr output even for failing tests
-[jobs.nextest]
-command = [
-    "cargo", "nextest", "run",
-    # "--hide-progress-bar",
-    "--cargo-quiet", "--cargo-quiet",
-    # "--status-level", "none",
-    # "--final-status-level", "none",
-    # "--failure-output", "never"
-]
-need_stdout = true
-analyzer = "nextest"
-
 # Generate documentation
 #
 # This configuration provides a simple yes/no answer to "did docs get generated?"

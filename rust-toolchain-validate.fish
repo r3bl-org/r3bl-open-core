@@ -140,7 +140,7 @@ function validate_complete
         "clippy:cargo clippy --all-targets" \
         "build-prod-code:cargo build" \
         "build-test-code:cargo test --no-run" \
-        "nextest:cargo nextest run" \
+        "tests:cargo test --all-targets" \
         "doctest:cargo test --doc" \
         "doc:cargo doc --no-deps"
 
@@ -206,7 +206,7 @@ function print_help
     echo ""
     echo "  "(set_color green)"complete"(set_color normal)" (~5-10 minutes)"
     echo "    • Runs quick mode first, then ICE detection via:"
-    echo "    • clippy, build-prod, build-test, nextest, doctests, docs"
+    echo "    • clippy, build-prod, build-test, tests, doctests, docs"
     echo ""
     echo (set_color yellow)"EXIT CODES:"(set_color normal)
     echo "  0 = Success"

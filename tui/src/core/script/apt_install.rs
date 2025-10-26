@@ -81,11 +81,13 @@ pub async fn install_package(package_name: &str) -> miette::Result<()> {
 #[cfg(test)]
 mod tests_apt_install {
     use super::*;
-    use crate::{TTYResult, return_if_not_interactive_terminal};
+    use crate::{TTYResult, is_partially_uninteractive_terminal};
 
     #[tokio::test]
     async fn test_check_if_package_is_installed() {
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         let package_name = "bash";
         let is_installed = check_if_package_is_installed(package_name).await.unwrap();
@@ -94,7 +96,9 @@ mod tests_apt_install {
 
     #[tokio::test]
     async fn test_install_package() {
-        return_if_not_interactive_terminal!();
+        if let TTYResult::IsNotInteractive = is_partially_uninteractive_terminal() {
+            return;
+        }
 
         let package_name = "does_not_exist";
         assert!(install_package(package_name).await.is_err());

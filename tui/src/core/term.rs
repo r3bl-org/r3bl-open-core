@@ -116,29 +116,28 @@ pub fn is_fully_uninteractive_terminal() -> TTYResult {
     }
 }
 
-/// Return early if the terminal is not interactive.
+/// Returns [`TTYResult::IsNotInteractive`] if *any* of stdout or stderr are non-interactive.
 ///
-/// This is primarily meant to be used in tests that run in a CI/CD environments, where
-/// tests are run in a non-interactive terminal. It is meant to skip tests that require
-/// user interaction. Tests marked with this should run on a local machine during
-/// development.
+/// This is useful for tests that need to skip when output is redirected or piped, even if
+/// stdin is still interactive. For example, when running tests through a script that redirects
+/// output to a file: `command >file 2>&1`
 ///
-/// However, it is also useful in other situations where you want to skip code that
-/// requires user interaction.
-#[macro_export]
-macro_rules! return_if_not_interactive_terminal {
-    ($result:expr) => {
-        if let TTYResult::IsNotInteractive =
-            $crate::term::is_fully_uninteractive_terminal()
-        {
-            return $result;
-        }
-    };
-    () => {
-        if let TTYResult::IsNotInteractive =
-            $crate::term::is_fully_uninteractive_terminal()
-        {
-            return;
-        }
-    };
+/// In this case:
+/// - stdin: still a TTY (interactive)
+/// - stdout: redirected to file (non-interactive)
+/// - stderr: redirected to file (non-interactive)
+///
+/// This function would return `IsNotInteractive` because output streams are not fully
+/// interactive, even though stdin is.
+#[must_use]
+pub fn is_partially_uninteractive_terminal() -> TTYResult {
+    let stdout_is_tty: bool = std::io::stdout().is_terminal();
+    let stderr_is_tty: bool = std::io::stderr().is_terminal();
+
+    // If either stdout or stderr is not a TTY, consider it non-interactive
+    if !stdout_is_tty || !stderr_is_tty {
+        TTYResult::IsNotInteractive
+    } else {
+        TTYResult::IsInteractive
+    }
 }

@@ -1,6 +1,6 @@
 Fix errors and warnings in tests, doctests, build docs, clippy
 
-1. make sure all the tests pass (`cargo nextest run`)
+1. make sure all the tests pass (`cargo test --all-targets`)
 2. can you fix any failing doc tests (`cargo test --doc`)
 3. make sure all the docs build (`cargo doc --no-deps`)
 4. make sure (`cargo clippy --all-targets`) has no warnings

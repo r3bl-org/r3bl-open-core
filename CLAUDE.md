@@ -216,7 +216,7 @@ After completing tasks, run:
 - `cargo test --no-run` - Compile test code
 - `cargo clippy --all-targets` / `cargo clippy --fix --allow-dirty` - Discover lints
 - `cargo doc --no-deps` - Generate docs
-- `cargo nextest run` - Run tests (does not run doctests)
+- `cargo test --all-targets` - Run tests (does not run doctests)
 - `cargo test --doc` - Run doctests
 
 Performance analysis:

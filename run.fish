@@ -201,9 +201,9 @@ end
 #   fish run.fish build-server
 #
 # Then on the remote server, run:
-#   bacon nextest -W
-#   bacon doc -W
-#   bacon clippy -W
+#   cargo test --all-targets
+#   cargo doc --no-deps
+#   cargo clippy --all-targets
 function build-server
     # Where you source files live.
     set orig_path /home/nazmul/github/r3bl-open-core/
@@ -234,7 +234,7 @@ function build-server
 
         echo (set_color green --bold)" "(set_color yellow)"$inotify_command"(set_color normal)" "(set_color blue)"$inotify_args"(set_color normal)
 
-        echo (set_color cyan)"❪◕‿◕❫ "(set_color normal)(set_color green)"Please run bacon on build server: "(set_color normal)(set_color yellow --underline)"bacon nextest -W"(set_color normal)", "(set_color yellow --underline)"bacon doc -W"(set_color normal)", "(set_color yellow --underline)"bacon clippy -W"(set_color normal)
+        echo (set_color cyan)"❪◕‿◕❫ "(set_color normal)(set_color green)"Please run on build server: "(set_color normal)(set_color yellow --underline)"cargo test --all-targets"(set_color normal)", "(set_color yellow --underline)"cargo doc --no-deps"(set_color normal)", "(set_color yellow --underline)"cargo clippy --all-targets"(set_color normal)
 
         # Execute the inotifywait command with proper Ctrl+C handling
         if not $inotify_command $inotify_args >/dev/null 2>&1
@@ -270,7 +270,7 @@ end
 # This comprehensive installer sets up:
 # 1. cargo-binstall for fast binary installation
 # 2. uv package manager (required for Serena semantic code MCP server)
-# 3. Cargo tools for Rust development (bacon, nextest, flamegraph, etc.)
+# 3. Cargo tools for Rust development (bacon, flamegraph, etc.)
 # 4. Wild linker with .cargo/config.toml generation
 # 5. Language servers (rust-analyzer)
 #
@@ -296,7 +296,6 @@ end
 # - cargo-unmaintained: Check for unmaintained dependencies
 # - cargo-expand: Show macro expansions
 # - cargo-readme: Generate README from doc comments
-# - cargo-nextest: Next-generation test runner
 # - flamegraph: Performance profiling visualization
 # - inferno: Fast stack trace visualizer
 # - wild: Fast linker (wild-linker package)
@@ -324,7 +323,6 @@ function install-cargo-tools
         "cargo-unmaintained" \
         "cargo-expand" \
         "cargo-readme" \
-        "cargo-nextest" \
         "flamegraph" \
         "inferno"
 
@@ -481,7 +479,6 @@ end
 
 function build-full
     install-cargo-tools
-    cargo cache -r all
     cargo clean
     toolchain-update
     cargo build
@@ -630,7 +627,7 @@ end
 # - Safe to run regularly (idempotent)
 #
 # Tools updated include:
-# - cargo-nextest: Fast test runner
+# - bacon: Background rust code checker
 # - flamegraph & inferno: Performance profiling
 # - bacon: Background task runner
 # - cargo-deny: Security auditing
@@ -1009,13 +1006,13 @@ end
 # This function creates a persistent tmux session with four panes running in parallel:
 #
 # Layout: 2x2 grid
-#   ├─ Top-left:     bacon nextest --headless (run all tests)
+#   ├─ Top-left:     bacon test --headless (run all tests)
 #   ├─ Top-right:    bacon doc --headless (generate documentation)
 #   ├─ Bottom-left:  bacon doctests --headless (run documentation tests)
 #   └─ Bottom-right: watch -n 60 ./check.fish (periodic health check every 60s)
 #
 # The check.fish script monitors:
-# - cargo nextest run (all unit and integration tests)
+# - cargo test --all-targets (all unit and integration tests)
 # - cargo test --doc (documentation tests)
 # - cargo doc --no-deps (documentation generation)
 # - Automatic ICE (Internal Compiler Error) detection and recovery

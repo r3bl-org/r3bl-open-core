@@ -9,9 +9,8 @@
 
 pushd $HOME/github/r3bl-open-core/ >/dev/null
 
-# Clean up any rustc ICE (Internal Compiler Error) files and cargo cache if ICE files exist
+# Clean up any rustc ICE (Internal Compiler Error) files if ICE files exist
 if ls rustc-ice*.txt >/dev/null 2>&1; then
-    cargo cache -r all >/dev/null 2>&1
     cargo clean >/dev/null 2>&1
     sccache-clear >/dev/null 2>&1
     rm -f rustc-ice*.txt 2>/dev/null
