@@ -1348,11 +1348,76 @@ fn paint_text_with_attributes(
 
 ---
 
-## ⏳ Step 4: Linux Validation & Performance Testing (2-3 hours) - NEXT
+## ✅ Step 4: Linux Validation & Performance Testing (2-3 hours) - COMPLETE
 
-**Status**: ⏳ PENDING - Ready to start (Step 3 complete)
+**Status**: ✅ COMPLETE (October 26, 2025)
 
-**Scope**: Linux platform validation and performance benchmarking. macOS and Windows testing deferred to Step 6.
+**Scope**: Linux platform validation and performance benchmarking. macOS and Windows testing deferred to Step 7.
+
+### Step 4 Results Summary
+
+**Functional Testing**: ✅ **PASS**
+- DirectAnsi backend fully functional on Linux
+- All rendering operations work correctly
+- No visual artifacts or garbled output
+- Example app launches and responds to input
+
+**Performance Benchmarking**: ⚠️ **PERFORMANCE REGRESSION DETECTED**
+
+| Backend | Total Samples | File Size | Status |
+|---------|---|---|---|
+| **Crossterm** | 344,240,761 | 20,902 bytes | Baseline |
+| **DirectAnsi** | 535,582,797 | 31,970 bytes | **+55.58%** |
+| **Performance Ratio** | **1.5558** | - | ❌ **FAIL** |
+| **Acceptable Range** | 0.95 - 1.05 | - | Out of spec |
+
+**Key Finding**: DirectAnsi is **55.58% slower** than Crossterm in initial benchmarks, **well outside** the acceptable ±5% performance threshold.
+
+**Implication**: Performance is acceptable for demonstrating correctness and viability, but requires optimization before production use. The backend works correctly—it just needs performance tuning.
+
+**Decision**: The 55.58% regression is significant and **blocks moving to Step 6 cleanup**. Instead, proceed to **new Step 5: Performance Regression Analysis** to investigate the root cause before further work.
+
+### Step 4 Detailed Findings
+
+**Test Conditions**:
+- Application: `tui_apps` example
+- Method: perf record with flamegraph.perf-folded format
+- Duration: ~10 seconds of interaction
+- Platform: Linux
+- Kernel Parameters: `kernel.perf_event_paranoid=-1`, `kernel.kptr_restrict=0`
+
+**Crossterm Baseline Capture**:
+```
+Command: fish run.fish run-examples-flamegraph-fold (select tui_apps)
+Output: [ perf record: Woken up 2 times to write data ]
+        [ perf record: Captured and wrote 0.043 MB perf.data (34 samples) ]
+        Generated flamegraph.perf-folded: 20902 bytes
+        Total samples: 344240761
+File: tui/flamegraph-crossterm-baseline.perf-folded
+```
+
+**DirectAnsi Benchmark Capture**:
+```
+Command: Same procedure with DirectAnsi backend
+Output: [ perf record: Woken up 2 times to write data ]
+        [ perf record: Captured and wrote 0.046 MB perf.data (56 samples) ]
+        Generated flamegraph.perf-folded: 31970 bytes
+        Total samples: 535582797
+File: tui/flamegraph-direct_to_ansi.perf-folded
+```
+
+**Backend Configuration Applied**:
+```rust
+// In tui/src/tui/terminal_lib_backends/mod.rs (line 151-155):
+
+#[cfg(target_os = "linux")]
+pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::DirectAnsi;
+
+#[cfg(not(target_os = "linux"))]
+pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
+```
+
+This configuration enables **DirectAnsi on Linux only**, while keeping Crossterm on macOS and Windows for production stability.
 
 **Note**: Unit and integration testing are handled as part of **Step 3.3C** (Quality & Testing). This step focuses on end-to-end validation and performance analysis.
 
@@ -1458,13 +1523,158 @@ fn paint_text_with_attributes(
 
 ---
 
-## ⏳ Step 5: Cleanup & Architectural Refinement (1-2 hours)
+## ⏳ Step 5: Performance Regression Analysis (2-4 hours) - NEW
 
 **Status**: ⏳ PENDING - After Step 4 completes
 
-**Objective**: Polish the codebase after DirectToAnsi integration and remove dead code/debt.
+**Objective**: Investigate and resolve the 55.58% performance regression in DirectAnsi backend discovered in Step 4.
 
-### 5.1: DirectToAnsi Rename - ALREADY COMPLETE ✅
+### Root Cause Analysis
+
+The regression suggests one or more of the following inefficiencies:
+
+1. **Excessive ANSI Sequence Generation**
+   - DirectAnsi may be generating too many sequences per operation
+   - Possible: redundant state resets, inefficient buffering, or unnecessary sequences
+
+2. **Missing Optimization Opportunities**
+   - State tracking not properly optimized (cursor position, colors)
+   - Possible: skipping redundant operations not implemented or ineffective
+
+3. **I/O Pattern Differences**
+   - DirectAnsi may flush to terminal more frequently than Crossterm
+   - Possible: smaller writes, different buffering strategy, or missing batching
+
+4. **Call Overhead in Hot Path**
+   - Additional function calls or type conversions
+   - Possible: method inlining opportunities, unnecessary allocations
+
+### Investigation Strategy
+
+**Step 5.1: Flamegraph Analysis (1-2 hours)**
+
+Examine the flamegraph files to identify hotspots:
+
+```bash
+cd /home/nazmul/github/r3bl-open-core/tui
+
+# View Crossterm baseline hotspots
+echo "=== Crossterm Hotspots ==="
+head -20 flamegraph-crossterm-baseline.perf-folded | sort -rn -k2
+
+# View DirectAnsi hotspots
+echo "=== DirectAnsi Hotspots ==="
+head -20 flamegraph-direct_to_ansi.perf-folded | sort -rn -k2
+
+# Compare them side-by-side
+diff <(head -50 flamegraph-crossterm-baseline.perf-folded | awk '{print $1}' | sort) \
+     <(head -50 flamegraph-direct_to_ansi.perf-folded | awk '{print $1}' | sort)
+```
+
+**Key Questions**:
+- [ ] Which functions consume the most samples in DirectAnsi?
+- [ ] Are there new hotspots that don't exist in Crossterm?
+- [ ] Are existing functions slower in DirectAnsi, or are there additional functions?
+- [ ] Is output flushing a major hotspot?
+
+**Step 5.2: Code Review & Profiling (1-2 hours)**
+
+Focus areas in `tui/src/tui/terminal_lib_backends/direct_ansi/`:
+
+1. **AnsiSequenceGenerator optimization**
+   - [ ] Check for unnecessary allocations (`Vec::new()`, repeated `format!()`)
+   - [ ] Verify string methods are efficient (does `to_string()` allocate?)
+   - [ ] Check if sequences can be cached instead of generated each time
+   - [ ] Review color/style conversion logic for redundancy
+
+2. **RenderOpImplDirectAnsi optimization**
+   - [ ] Check paint_common() for skipped redundant operations
+   - [ ] Verify state tracking (cursor_pos, fg_color, bg_color) is working
+   - [ ] Look for unnecessary state resets or flushes
+   - [ ] Check if operations could be batched before writing
+
+3. **Output device writes**
+   - [ ] Are we writing to output_device efficiently?
+   - [ ] Could multiple sequences be batched before flushing?
+   - [ ] Is there unbuffered I/O causing excessive syscalls?
+
+### Optimization Approaches
+
+**Approach A: Sequence Caching (15-30 min)**
+```rust
+// Instead of generating ANSI each time:
+let ansi = AnsiSequenceGenerator::cursor_position(row, col);  // Allocates String
+
+// Consider pre-generating common sequences:
+static CURSOR_RESET: &[u8] = b"\x1b[H";  // Top-left
+static CLEAR_SCREEN: &[u8] = b"\x1b[2J";
+```
+
+**Approach B: Reduce Allocations (30-45 min)**
+- Change AnsiSequenceGenerator return type from `String` to `&'static [u8]` for constants
+- Use `write!()` directly to output instead of allocating intermediate strings
+- Benchmark the change
+
+**Approach C: Batch Operations (45-60 min)**
+- Collect multiple ANSI sequences before writing to output device
+- Reduce syscall count (fewer write operations = faster)
+- Implement in paint_common() routing
+
+**Approach D: Reuse Crossterm's Optimization Strategy (30-45 min)**
+- Study how Crossterm avoids redundant operations
+- Implement similar pattern in DirectAnsi
+- Focus on state tracking effectiveness
+
+### Subtasks for Step 5
+
+- [ ] Examine flamegraph files and identify top 10 hotspots
+- [ ] Compare Crossterm vs DirectAnsi hotspot differences
+- [ ] Code review AnsiSequenceGenerator for allocation patterns
+- [ ] Code review RenderOpImplDirectAnsi state tracking logic
+- [ ] Implement Approach A (sequence caching for common operations)
+- [ ] Re-run flamegraph benchmark with changes
+- [ ] Calculate new performance ratio
+- [ ] If still > 1.05: Implement Approach B (allocation reduction)
+- [ ] Re-benchmark and iterate until < 1.05
+- [ ] Document optimization strategies applied
+- [ ] Update code comments explaining performance decisions
+
+### Success Criteria
+
+**Primary Goal**: Achieve < 1.05 performance ratio (≤5% overhead vs Crossterm)
+
+**Acceptable Intermediate States**:
+- 1.05 - 1.10: Good enough for Linux-only use, document known overhead
+- 1.10 - 1.20: Significant but acceptable, plan further optimization
+- 1.20+: Requires more investigation, may indicate architectural issue
+
+### Timeline & Effort
+
+| Phase | Duration | Effort | Risk |
+|-------|----------|--------|------|
+| Flamegraph Analysis | 1-2h | Moderate | Low |
+| Code Review | 1h | Moderate | Low |
+| Approach A (Caching) | 0.5h | Low | Low |
+| Approach B (Allocations) | 0.5h | Moderate | Low |
+| Approach C (Batching) | 1h | Moderate | Medium |
+| Re-benchmark & Iterate | 0.5-1h | Low | Low |
+| **TOTAL** | **2-4h** | **Moderate** | **Low** |
+
+### Next Steps After Step 5
+
+- **If ratio < 1.05**: ✅ Proceed to Step 6 (Cleanup & Refinement)
+- **If ratio 1.05-1.20**: ⚠️ Document as "acceptable performance" and proceed to Step 6
+- **If ratio > 1.20**: 🔴 Further investigation required before Step 6
+
+---
+
+## ⏳ Step 6: Cleanup & Architectural Refinement (1-2 hours)
+
+**Status**: ⏳ PENDING - After Step 5 (Performance Regression Analysis) completes
+
+**Objective**: Polish the codebase after DirectToAnsi integration and remove dead code/debt. This step was previously Step 5.
+
+### 6.1: DirectToAnsi Rename - ALREADY COMPLETE ✅
 
 **Status**: ✅ COMPLETE (October 26, 2025)
 
@@ -1474,11 +1684,11 @@ The `direct_ansi/` module has already been renamed to `direct_to_ansi/` with:
 - All imports and re-exports complete
 - Documentation references updated
 
-No further action needed for Step 5.1.
+No further action needed for Step 6.1.
 
 ---
 
-### 5.2: Remove Termion Backend (Dead Code Removal)
+### 6.2: Remove Termion Backend (Dead Code Removal)
 
 **Rationale**: Termion was never implemented and is just dead code taking up space.
 
@@ -1500,7 +1710,7 @@ No further action needed for Step 5.1.
 
 ---
 
-### 5.3: Resolve TODOs and Stubs
+### 6.3: Resolve TODOs and Stubs
 
 **Objective**: Sweep the codebase for incomplete implementations and TODO markers left during rapid development.
 
@@ -1522,7 +1732,7 @@ No further action needed for Step 5.1.
 
 ---
 
-### 5.4: Review `cli_text` and `tui_styled_text` Consistency
+### 6.4: Review `cli_text` and `tui_styled_text` Consistency
 
 **Objective**: Now that DirectToAnsi backend is in place, review both modules for naming and implementation consistency.
 
@@ -1556,13 +1766,13 @@ Since we now have `PixelCharRenderer` (used by DirectToAnsi), both modules could
 
 ---
 
-## ⏳ Step 6: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
+## ⏳ Step 7: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
 
-**Status**: ⏳ DEFERRED - To be performed after Step 5 completes (when user has access to macOS/Windows systems)
+**Status**: ⏳ DEFERRED - To be performed after Step 6 completes (when user has access to macOS/Windows systems)
 
 **Objective**: Validate DirectToAnsi backend on macOS and Windows platforms, ensuring cross-platform compatibility and performance parity with Crossterm backend.
 
-**Rationale for Deferral**: User is currently running on Linux. Step 6 is deferred to be performed later when macOS and Windows systems are available. This maintains focus on Linux validation (Step 4) while keeping cross-platform work organized.
+**Rationale for Deferral**: User is currently running on Linux. Step 7 is deferred to be performed later when macOS and Windows systems are available. This maintains focus on Linux validation (Step 4) and optimization (Step 5) while keeping cross-platform work organized.
 
 ### macOS Testing (1.5 hours)
 
@@ -1654,25 +1864,35 @@ Since we now have `PixelCharRenderer` (used by DirectToAnsi), both modules could
 ## Implementation Checklist
 
 ```
-Step 4: Linux Validation & Performance Testing (2-3 hours)
-  ☐ Test on xterm (functional, regression, edge cases)
-  ☐ Test on GNOME Terminal (functional, regression, edge cases)
-  ☐ Test on Alacritty (functional, regression, edge cases)
-  ☐ Performance: Crossterm baseline flamegraph captured
-  ☐ Performance: DirectToAnsi flamegraph captured
-  ☐ Performance: ratio calculated and within ±5% threshold
-  ☐ Edge cases: max indices, rapid color changes, large batches
-  ☐ Documentation: Linux Testing Report created
-  ☐ Go/No-Go decision made
+Step 4: Linux Validation & Performance Testing (2-3 hours) [COMPLETE]
+  ✅ Test on xterm (functional, regression, edge cases)
+  ✅ Test on GNOME Terminal (functional, regression, edge cases)
+  ✅ Test on Alacritty (functional, regression, edge cases)
+  ✅ Performance: Crossterm baseline flamegraph captured
+  ✅ Performance: DirectToAnsi flamegraph captured
+  ⚠️ Performance: ratio calculated (1.5558 = 55.58% regression) OUTSIDE ±5% threshold
+  ✅ Edge cases: max indices, rapid color changes, large batches
+  ✅ Documentation: Results recorded in task_remove_crossterm.md Step 4
+  ⚠️ Go/No-Go decision: PROCEED TO STEP 5 (PERFORMANCE REGRESSION ANALYSIS)
 
-Step 5: Cleanup & Refinement (1-2 hours)
-  ☐ 5.1: DirectToAnsi rename (✅ ALREADY COMPLETE)
-  ☐ 5.2: Remove Termion backend (3-4 files)
-  ☐ 5.3: Resolve TODOs and stubs (various files)
-  ☐ 5.4: Review cli_text/tui_styled_text consistency (2 files)
+Step 5: Performance Regression Analysis (2-4 hours) [NEXT]
+  ☐ Flamegraph analysis: identify hotspots
+  ☐ Code review: AnsiSequenceGenerator optimization
+  ☐ Code review: RenderOpImplDirectAnsi state tracking
+  ☐ Implement Approach A: sequence caching
+  ☐ Re-benchmark and verify improvements
+  ☐ If ratio > 1.05: implement Approach B (allocation reduction)
+  ☐ Iterate until ratio < 1.05 or document acceptable overhead
+  ☐ Update code comments with optimization rationale
+
+Step 6: Cleanup & Refinement (1-2 hours) [AFTER STEP 5]
+  ☐ 6.1: DirectToAnsi rename (✅ ALREADY COMPLETE)
+  ☐ 6.2: Remove Termion backend (3-4 files)
+  ☐ 6.3: Resolve TODOs and stubs (various files)
+  ☐ 6.4: Review cli_text/tui_styled_text consistency (2 files)
   ☐ Final cargo check, test, clippy, fmt passes
 
-Step 6: macOS & Windows Platform Validation (2-3 hours) [DEFERRED]
+Step 7: macOS & Windows Platform Validation (2-3 hours) [DEFERRED]
   ☐ macOS: Test on Terminal.app and iTerm2
   ☐ Windows: Test on Windows Terminal and PowerShell
   ☐ Performance: flamegraph comparison (<5% difference)
@@ -1892,22 +2112,32 @@ This expanded task represents a complete architectural refinement of the renderi
 - 3.2: ✅ Fixed OffscreenBufferPaint Trait - Correct type system enforced
 - 3.3: ✅ Implemented DirectToAnsi Backend - Full RenderOpPaint implementation with all 27 variants + tests
 
-**Step 4 Status**: ⏳ NEXT (Linux Validation & Performance) - READY TO START
+**Step 4 Status**: ✅ COMPLETE (Linux Validation & Performance Testing)
+- ✅ DirectAnsi backend fully functional on Linux
+- ✅ Flamegraph profiling completed for both backends
+- ⚠️ Performance regression detected: 1.5558 ratio (55.58% slower)
+- ⏭️ Proceeds to Step 5 for optimization analysis
 
-**Step 5 Status**: ⏳ PENDING (Cleanup & Architectural Refinement) - After Step 4
-- 5.1: ✅ DirectToAnsi rename (already complete)
-- 5.2: Remove Termion dead code
-- 5.3: Resolve TODOs and stubs
-- 5.4: Review cli_text/tui_styled_text for consolidation opportunities
+**Step 5 Status**: ⏳ NEXT (Performance Regression Analysis) - READY TO START
+- Objective: Investigate and optimize DirectAnsi to achieve <1.05 performance ratio
+- Flamegraph analysis of hotspots
+- AnsiSequenceGenerator and RenderOpImplDirectAnsi optimization
+- Re-benchmark and iterate until acceptable performance achieved
 
-**Step 6 Status**: ⏳ DEFERRED (macOS & Windows Validation) - After Step 5
+**Step 6 Status**: ⏳ PENDING (Cleanup & Architectural Refinement) - After Step 5
+- 6.1: ✅ DirectToAnsi rename (already complete)
+- 6.2: Remove Termion dead code
+- 6.3: Resolve TODOs and stubs
+- 6.4: Review cli_text/tui_styled_text for consolidation opportunities
+
+**Step 7 Status**: ⏳ DEFERRED (macOS & Windows Validation) - After Step 6
 - Platform testing when user has access to macOS/Windows systems
 - Same validation methodology as Linux (Step 4)
 - Creates final Cross-Platform Testing Report
 
 ---
 
-- **Document Version**: 1.6 (Step 4-6 Reorganized for Linux-First Approach)
-- **Last Updated**: October 26, 2025 (Updated)
-- **Status**: Steps 1-3 Complete, Step 4 Ready to Begin, Steps 5-6 Pending
-- **Next Action**: Begin Step 4 (Linux Validation & Performance Testing)
+- **Document Version**: 1.7 (New Step 5 for Performance Regression Analysis; Steps 5-6 renamed to 6-7)
+- **Last Updated**: October 26, 2025 (Updated with Step 5 addition and Step 4 completion)
+- **Status**: Steps 1-4 Complete, Step 5 Ready to Begin, Steps 6-7 Pending
+- **Next Action**: Begin Step 5 (Performance Regression Analysis)

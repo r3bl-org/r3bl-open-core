@@ -107,7 +107,7 @@
 /// the backend that best fits their needs. Currently supported backends include:
 ///
 /// - **Crossterm**: Cross-platform terminal library (default and recommended)
-/// - **`DirectAnsi`**: Pure Rust ANSI sequence generation without external dependencies
+/// - **`DirectToAnsi`**: Pure Rust ANSI sequence generation without external dependencies
 /// - **Termion**: Unix-specific terminal library with minimal overhead
 ///
 /// # Example
@@ -118,7 +118,7 @@
 /// let backend = TerminalLibBackend::Crossterm;
 /// match backend {
 ///     TerminalLibBackend::Crossterm => println!("Using Crossterm backend"),
-///     TerminalLibBackend::DirectAnsi => println!("Using DirectAnsi backend"),
+///     TerminalLibBackend::DirectToAnsi => println!("Using DirectToAnsi backend"),
 ///     TerminalLibBackend::Termion => println!("Using Termion backend"),
 /// }
 /// ```
@@ -127,9 +127,9 @@ pub enum TerminalLibBackend {
     /// Crossterm backend - cross-platform terminal library supporting Windows, macOS, and
     /// Linux. This is the default and recommended backend for most applications.
     Crossterm,
-    /// `DirectAnsi` backend - Pure Rust ANSI sequence generation without external
+    /// `DirectToAnsi` backend - Pure Rust ANSI sequence generation without external
     /// dependencies. Generates ANSI escape sequences directly for terminal control.
-    DirectAnsi,
+    DirectToAnsi,
     /// Termion backend - Unix-specific terminal library with minimal overhead.
     /// Only available on Unix-like systems (Linux, macOS).
     Termion,
@@ -138,7 +138,20 @@ pub enum TerminalLibBackend {
 /// The default terminal library backend used by R3BL TUI.
 ///
 /// This constant defines which terminal backend is used throughout the TUI system.
-/// Currently set to [`TerminalLibBackend::Crossterm`] for maximum compatibility.
+/// Platform-specific backends are selected for optimal performance:
+/// - **Linux**: DirectToAnsi (pure Rust ANSI sequences)
+/// - **macOS/Windows**: Crossterm (cross-platform compatibility)
+///
+/// # Performance Note
+///
+/// DirectToAnsi is currently under performance regression analysis on Linux.
+/// A 55% performance regression was observed vs Crossterm in initial benchmarks.
+/// See docs/task_remove_crossterm.md Step 5 for detailed analysis.
+
+#[cfg(target_os = "linux")]
+pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::DirectToAnsi;
+
+#[cfg(not(target_os = "linux"))]
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 
 // Attach source files.

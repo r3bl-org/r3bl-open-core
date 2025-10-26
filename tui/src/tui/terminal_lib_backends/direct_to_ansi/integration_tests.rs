@@ -1,14 +1,14 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Integration tests for [`RenderOpPaintImplDirectAnsi`]
+//! Integration tests for [`RenderOpPaintImplDirectToAnsi`]
 //!
-//! Tests the full [`RenderOp`] execution pipeline with [`DirectAnsi`] backend,
+//! Tests the full [`RenderOp`] execution pipeline with [`DirectToAnsi`] backend,
 //! verifying that [`RenderOp`] sequences produce correct ANSI output.
 
 #[cfg(test)]
 mod render_op_execution_tests {
     // TODO: Implement integration tests for RenderOp execution
-    // These will test the full RenderOpPaintImplDirectAnsi::paint() method
+    // These will test the full RenderOpPaintImplDirectToAnsi::paint() method
     // with realistic sequences of RenderOps
 }
 

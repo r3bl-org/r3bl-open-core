@@ -31,7 +31,7 @@
 
 use super::{RenderOpCommon, RenderOpsExec};
 use crate::{InlineString, InlineVec, LockedOutputDevice, PaintRenderOpImplCrossterm,
-            RenderOpPaintImplDirectAnsi, RenderOpsLocalData, Size, TERMINAL_LIB_BACKEND,
+            RenderOpPaintImplDirectToAnsi, RenderOpsLocalData, Size, TERMINAL_LIB_BACKEND,
             TerminalLibBackend, TuiStyle, ok};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
@@ -151,9 +151,9 @@ impl RenderOpOutputVec {
                     );
                 }
             },
-            TerminalLibBackend::DirectAnsi => match render_op_output {
+            TerminalLibBackend::DirectToAnsi => match render_op_output {
                 RenderOpOutput::Common(common_op) => {
-                    RenderOpPaintImplDirectAnsi {}.paint_common(
+                    RenderOpPaintImplDirectToAnsi {}.paint_common(
                         skip_flush,
                         common_op,
                         window_size,
@@ -166,7 +166,7 @@ impl RenderOpOutputVec {
                     text,
                     style,
                 ) => {
-                    RenderOpPaintImplDirectAnsi::paint_text_with_attributes(
+                    RenderOpPaintImplDirectToAnsi::paint_text_with_attributes(
                         text,
                         *style,
                         window_size,

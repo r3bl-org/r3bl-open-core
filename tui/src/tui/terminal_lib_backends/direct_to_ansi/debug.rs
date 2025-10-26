@@ -15,9 +15,9 @@ use crate::{RenderOpCommon,
 use std::fmt::{Formatter, Result};
 
 #[derive(Debug)]
-pub struct DirectAnsiDebugFormatRenderOp;
+pub struct DirectToAnsiDebugFormatRenderOp;
 
-impl RenderOpDebugFormat for DirectAnsiDebugFormatRenderOp {
+impl RenderOpDebugFormat for DirectToAnsiDebugFormatRenderOp {
     fn fmt_debug(&self, this: &RenderOpCommon, f: &mut Formatter<'_>) -> Result {
         match this {
             Noop => f.write_str("Noop"),

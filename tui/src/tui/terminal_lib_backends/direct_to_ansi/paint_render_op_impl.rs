@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! # Pipeline Stage 5: Backend Executor (`DirectAnsi` Implementation)
+//! # Pipeline Stage 5: Backend Executor (`DirectToAnsi` Implementation)
 //!
 //! # You Are Here
 //!
@@ -12,7 +12,7 @@
 //!
 //! **Input**: [`RenderOpOutputVec`] (from backend converter)
 //! **Output**: ANSI escape sequences to terminal
-//! **Role**: Execute rendering operations via `DirectAnsi` backend
+//! **Role**: Execute rendering operations via `DirectToAnsi` backend
 //!
 //! > **For the complete rendering architecture**, see [`crate::render_op`] module
 //! > documentation.
@@ -27,10 +27,10 @@
 //! - Uses [`RenderOpsLocalData`] to avoid redundant commands
 //! - Generates ANSI sequences via [`AnsiSequenceGenerator`]
 //!
-//! This is the final stage before terminal output. Unlike Crossterm, `DirectAnsi`
+//! This is the final stage before terminal output. Unlike Crossterm, `DirectToAnsi`
 //! generates pure ANSI escape sequences without an external library.
 //!
-//! See [`RenderOpPaintImplDirectAnsi`] for implementation details.
+//! See [`RenderOpPaintImplDirectToAnsi`] for implementation details.
 //!
 //! [`RenderOpsOutput`]: crate::RenderOpOutput
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
@@ -62,9 +62,9 @@ use crate::{CliTextInline, GCStringOwned, InlineString, LockedOutputDevice,
 /// [`paint_common()`]: Self::paint_common
 /// [`paint_text_with_attributes()`]: Self::paint_text_with_attributes
 #[derive(Debug)]
-pub struct RenderOpPaintImplDirectAnsi;
+pub struct RenderOpPaintImplDirectToAnsi;
 
-impl RenderOpPaint for RenderOpPaintImplDirectAnsi {
+impl RenderOpPaint for RenderOpPaintImplDirectToAnsi {
     fn paint(
         &mut self,
         skip_flush: &mut bool,
@@ -89,7 +89,7 @@ impl RenderOpPaint for RenderOpPaintImplDirectAnsi {
                 text,
                 maybe_style,
             ) => {
-                RenderOpPaintImplDirectAnsi::paint_text_with_attributes(
+                RenderOpPaintImplDirectToAnsi::paint_text_with_attributes(
                     text,
                     *maybe_style,
                     window_size,
@@ -101,7 +101,7 @@ impl RenderOpPaint for RenderOpPaintImplDirectAnsi {
     }
 }
 
-impl RenderOpFlush for RenderOpPaintImplDirectAnsi {
+impl RenderOpFlush for RenderOpPaintImplDirectToAnsi {
     fn flush(&mut self, locked_output_device: LockedOutputDevice<'_>) {
         locked_output_device
             .flush()
@@ -119,7 +119,7 @@ impl RenderOpFlush for RenderOpPaintImplDirectAnsi {
     }
 }
 
-impl RenderOpPaintImplDirectAnsi {
+impl RenderOpPaintImplDirectToAnsi {
     /// Paint a single common render operation using direct ANSI sequence generation.
     ///
     /// This method handles all 27 [`RenderOpCommon`] variants, generating appropriate

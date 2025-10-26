@@ -119,7 +119,7 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// # Implementations
 ///
 /// - `PaintRenderOpImplCrossterm` - Crossterm backend
-/// - `RenderOpPaintImplDirectAnsi` - `DirectAnsi` backend
+/// - `RenderOpPaintImplDirectToAnsi` - `DirectAnsi` backend
 ///
 /// [`RenderOpOutput`]: crate::RenderOpOutput
 /// [`RenderOpsLocalData`]: crate::RenderOpsLocalData

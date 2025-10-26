@@ -47,8 +47,8 @@ fn perform_diff_paint(
                 is_mock,
             );
         }
-        TerminalLibBackend::DirectAnsi => {
-            // DirectAnsi uses the same converter as Crossterm
+        TerminalLibBackend::DirectToAnsi => {
+            // DirectToAnsi uses the same converter as Crossterm
             // (OffscreenBuffer → RenderOpOutput)
             // The difference is only in execution (via routing in render_op_output.rs)
             let mut converter = OffscreenBufferPaintImplCrossterm {};
@@ -78,8 +78,8 @@ fn perform_full_paint(
                 is_mock,
             );
         }
-        TerminalLibBackend::DirectAnsi => {
-            // DirectAnsi uses the same converter as Crossterm
+        TerminalLibBackend::DirectToAnsi => {
+            // DirectToAnsi uses the same converter as Crossterm
             // (OffscreenBuffer → RenderOpOutput)
             // The difference is only in execution (via routing in render_op_output.rs)
             let mut converter = OffscreenBufferPaintImplCrossterm {};
