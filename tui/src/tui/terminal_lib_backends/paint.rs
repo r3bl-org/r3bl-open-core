@@ -55,7 +55,6 @@ fn perform_diff_paint(
             let render_ops = converter.render_diff(diff_chunks);
             converter.paint_diff(render_ops, window_size, locked_output_device, is_mock);
         }
-        TerminalLibBackend::Termion => unimplemented!(),
     }
 }
 
@@ -92,7 +91,6 @@ fn perform_full_paint(
                 is_mock,
             );
         }
-        TerminalLibBackend::Termion => unimplemented!(),
     }
 }
 

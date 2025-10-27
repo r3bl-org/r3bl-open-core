@@ -15,8 +15,10 @@ pub fn clear_screen() -> String { CsiSequence::EraseDisplay(2).to_string() }
 #[must_use]
 pub fn clear_to_end_of_screen() -> String { CsiSequence::EraseDisplay(0).to_string() }
 
-// TODO: Add more display sequences:
-// - Scroll operations
-// - Line insertion/deletion
-// - Margin control
-// - Window operations
+// TODO: Post-Step 6 - Expand display sequence library
+// (Deferred: Advanced VT-100 features for future implementation)
+// Future additions:
+//   - Scroll operations (scrolling regions)
+//   - Line insertion/deletion (IL/DL commands)
+//   - Margin control (DECSTBM margins)
+//   - Window operations (Sixel, ReGIS graphics)

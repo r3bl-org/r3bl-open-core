@@ -175,7 +175,6 @@ impl RenderOpOutputVec {
                     );
                 }
             },
-            TerminalLibBackend::Termion => unimplemented!(),
         }
     }
 }

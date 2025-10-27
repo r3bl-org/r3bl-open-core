@@ -72,7 +72,7 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator;
+    use crate::{tui_color, terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator};
 
     #[test]
     fn test_reset_color() {
@@ -80,7 +80,165 @@ mod color_tests {
         assert_eq!(seq, "\x1b[0m");
     }
 
-    // TODO: Add color tests once TuiColor types are clarified
+    // ANSI Basic Colors (0-15) - Widely supported by all terminals
+    #[test]
+    fn test_fg_ansi_black() {
+        let color = tui_color!(black);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // Uses extended palette format with colons: SGR 38:5:N
+        assert_eq!(seq, "\x1b[38:5:0m");
+    }
+
+    #[test]
+    fn test_fg_ansi_red() {
+        let color = tui_color!(red);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // ANSI 1 in extended palette format
+        assert_eq!(seq, "\x1b[38:5:1m");
+    }
+
+    #[test]
+    fn test_fg_ansi_green() {
+        let color = tui_color!(green);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // ANSI 2 in extended palette format
+        assert_eq!(seq, "\x1b[38:5:2m");
+    }
+
+    #[test]
+    fn test_fg_ansi_blue() {
+        let color = tui_color!(blue);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // ANSI 4 in extended palette format
+        assert_eq!(seq, "\x1b[38:5:4m");
+    }
+
+    #[test]
+    fn test_bg_ansi_black() {
+        let color = tui_color!(black);
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        // Background extended palette format: SGR 48:5:N
+        assert_eq!(seq, "\x1b[48:5:0m");
+    }
+
+    #[test]
+    fn test_bg_ansi_red() {
+        let color = tui_color!(red);
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        // ANSI 1 background in extended palette format
+        assert_eq!(seq, "\x1b[48:5:1m");
+    }
+
+    #[test]
+    fn test_bg_ansi_green() {
+        let color = tui_color!(green);
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        // ANSI 2 background in extended palette format
+        assert_eq!(seq, "\x1b[48:5:2m");
+    }
+
+    // ANSI Extended Palette (16-255)
+    #[test]
+    fn test_fg_ansi_extended_palette_16() {
+        use crate::AnsiValue;
+        let color = crate::TuiColor::Ansi(AnsiValue::new(16));
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // Extended colors use colon-separated format for better compatibility
+        assert_eq!(seq, "\x1b[38:5:16m");
+    }
+
+    #[test]
+    fn test_fg_ansi_extended_palette_196() {
+        use crate::AnsiValue;
+        let color = crate::TuiColor::Ansi(AnsiValue::new(196));
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // Extended palette index 196 = pure red in 256-color palette
+        assert_eq!(seq, "\x1b[38:5:196m");
+    }
+
+    #[test]
+    fn test_bg_ansi_extended_palette_226() {
+        use crate::AnsiValue;
+        let color = crate::TuiColor::Ansi(AnsiValue::new(226));
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        // Extended palette index 226 = yellow in 256-color palette
+        assert_eq!(seq, "\x1b[48:5:226m");
+    }
+
+    // RGB Colors (24-bit true color)
+    #[test]
+    fn test_fg_rgb_pure_red() {
+        let color = tui_color!(255, 0, 0);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // RGB uses 24-bit truecolor with colons: SGR 38:2:R:G:B
+        assert_eq!(seq, "\x1b[38:2:255:0:0m");
+    }
+
+    #[test]
+    fn test_fg_rgb_pure_green() {
+        let color = tui_color!(0, 255, 0);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        assert_eq!(seq, "\x1b[38:2:0:255:0m");
+    }
+
+    #[test]
+    fn test_fg_rgb_pure_blue() {
+        let color = tui_color!(0, 0, 255);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        assert_eq!(seq, "\x1b[38:2:0:0:255m");
+    }
+
+    #[test]
+    fn test_fg_rgb_orange() {
+        let color = tui_color!(255, 165, 0);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        assert_eq!(seq, "\x1b[38:2:255:165:0m");
+    }
+
+    #[test]
+    fn test_bg_rgb_pure_red() {
+        let color = tui_color!(255, 0, 0);
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        // Background RGB uses colon-separated format: SGR 48:2:R:G:B
+        assert_eq!(seq, "\x1b[48:2:255:0:0m");
+    }
+
+    #[test]
+    fn test_bg_rgb_cyan() {
+        let color = tui_color!(0, 255, 255);
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        assert_eq!(seq, "\x1b[48:2:0:255:255m");
+    }
+
+    #[test]
+    fn test_bg_rgb_dark_gray() {
+        let color = tui_color!(64, 64, 64);
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        assert_eq!(seq, "\x1b[48:2:64:64:64m");
+    }
+
+    // Dark ANSI colors (8-15) - Extended basic colors
+    #[test]
+    fn test_fg_ansi_dark_red() {
+        let color = tui_color!(dark_red);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        // Dark colors use extended palette mode with colons
+        assert_eq!(seq, "\x1b[38:5:9m");
+    }
+
+    #[test]
+    fn test_fg_ansi_dark_green() {
+        let color = tui_color!(dark_green);
+        let seq = AnsiSequenceGenerator::fg_color(color);
+        assert_eq!(seq, "\x1b[38:5:10m");
+    }
+
+    #[test]
+    fn test_bg_ansi_dark_blue() {
+        let color = tui_color!(dark_blue);
+        let seq = AnsiSequenceGenerator::bg_color(color);
+        assert_eq!(seq, "\x1b[48:5:12m");
+    }
 }
 
 #[cfg(test)]

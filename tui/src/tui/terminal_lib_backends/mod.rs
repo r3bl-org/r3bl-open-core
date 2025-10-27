@@ -108,7 +108,6 @@
 ///
 /// - **Crossterm**: Cross-platform terminal library (default and recommended)
 /// - **`DirectToAnsi`**: Pure Rust ANSI sequence generation without external dependencies
-/// - **Termion**: Unix-specific terminal library with minimal overhead
 ///
 /// # Example
 ///
@@ -119,7 +118,6 @@
 /// match backend {
 ///     TerminalLibBackend::Crossterm => println!("Using Crossterm backend"),
 ///     TerminalLibBackend::DirectToAnsi => println!("Using DirectToAnsi backend"),
-///     TerminalLibBackend::Termion => println!("Using Termion backend"),
 /// }
 /// ```
 #[derive(Debug)]
@@ -130,9 +128,6 @@ pub enum TerminalLibBackend {
     /// `DirectToAnsi` backend - Pure Rust ANSI sequence generation without external
     /// dependencies. Generates ANSI escape sequences directly for terminal control.
     DirectToAnsi,
-    /// Termion backend - Unix-specific terminal library with minimal overhead.
-    /// Only available on Unix-like systems (Linux, macOS).
-    Termion,
 }
 
 /// The default terminal library backend used by R3BL TUI.
@@ -170,7 +165,6 @@ pub mod raw_mode;
 pub mod render_op;
 pub mod render_pipeline;
 pub mod render_tui_styled_texts;
-pub mod termion_backend;
 pub mod z_order;
 
 // Re-export.

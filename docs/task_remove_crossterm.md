@@ -1896,57 +1896,236 @@ development.
 
 ---
 
-### 6.4: Review `cli_text` and `tui_styled_text` Consistency
+### 6.4: Review `cli_text` and `tui_styled_text` Consistency - AUDIT COMPLETE ✅
 
-**Objective**: Now that DirectToAnsi backend is in place, review both modules for naming and
-implementation consistency.
+**Status**: AUDIT COMPLETE (October 27, 2025)
 
-**Current State**:
+**Objective**: Review both modules for consolidation opportunities after DirectToAnsi backend implementation.
 
-- `cli_text` - styles for command-line tools (choose(), readline_async())
-- `tui_styled_text` - styles for full TUI rendering
-- Both generate ANSI sequences (independently)
+**Findings**:
 
-**Opportunities for Consolidation**:
+#### **Architecture Analysis**
 
-Since we now have `PixelCharRenderer` (used by DirectToAnsi), both modules could:
+**`cli_text` Module** (`tui/src/core/ansi/generator/cli_text.rs`):
+- **Purpose**: Styled text for interactive CLI tools (choose(), readline_async())
+- **Structure**: `CliTextInline` struct with:
+  - `text: InlineString` - the text content
+  - `attribs: TuiStyleAttribs` - bold, italic, underline, etc.
+  - `color_fg: Option<TuiColor>` - foreground color
+  - `color_bg: Option<TuiColor>` - background color
+- **Rendering Path**: `CliTextInline` → `PixelChar[]` → `PixelCharRenderer` → ANSI
+- **Key Method**: `FastStringify::write_to_buf()` (line 908-926) implements conversion on-demand
 
-1. Share the same ANSI sequence generation logic
-2. Use consistent naming conventions
-3. Reduce code duplication
-4. Ensure identical rendering behavior
+**`tui_styled_text` Module** (`tui/src/core/tui_styled_text/`):
+- **Purpose**: Styled text for full screen TUI rendering with components
+- **Structure**: `TuiStyledText` struct with:
+  - `text: StringTuiStyledText` - text content (SmallString)
+  - `style: TuiStyle` - complete style (colors + attributes unified)
+- **Rendering Path**: `TuiStyledText` → `RenderOp::PaintTextWithAttributes` → Backend (Crossterm/DirectToAnsi) → ANSI
+- **Key Method**: `render_tui_styled_texts_into()` (render_tui_styled_texts.rs:5) converts to RenderOps
 
-**Questions to Answer**:
+#### **Consolidation Assessment**
 
-- [ ] Can both use `PixelCharRenderer` or `DirectToAnsi::AnsiSequenceGenerator`?
-- [ ] Should naming be `*Styled*` or `*Styled` consistently?
-- [ ] Can they share a common trait or base implementation?
-- [ ] Are there behavioral differences that require separate implementations?
+**DECISION: Keep Separate (Different Use Cases)**
 
-**Subtasks**:
+**Rationale**:
 
-- [ ] Audit both modules' current implementations
-- [ ] Compare ANSI generation logic
-- [ ] Identify common patterns
-- [ ] Plan consolidation approach (if any)
-- [ ] Document findings in code comments
+1. **Different Abstraction Levels**:
+   - `cli_text`: Low-level inline styling for simple CLI output (choose, readline)
+   - `tui_styled_text`: High-level semantic styling for component-based full screen rendering
 
-**Note**: This is exploratory. Results may range from "keep separate" to "full consolidation".
-Document the decision rationale.
+2. **Different Rendering Paths**:
+   - `cli_text`: Direct PixelCharRenderer conversion (optimized for immediate output)
+   - `tui_styled_text`: RenderOp pipeline (supports z-order, diffing, selective redraw)
+
+3. **Different Style APIs**:
+   - `cli_text`: TuiStyleAttribs + TuiColor (granular control)
+   - `tui_styled_text`: TuiStyle (unified, semantic styling)
+   - **Consolidating would require unifying style API** (out of scope for Step 6)
+
+4. **Different Performance Profiles**:
+   - `cli_text`: Optimized for small, immediate output (stack-allocated SmallString)
+   - `tui_styled_text`: Optimized for full-screen rendering (SmallVec for batch operations)
+
+5. **Different Naming Conventions** (intentional):
+   - `cli_text*` indicates CLI context (lower-level, more direct)
+   - `tui_styled_text` indicates TUI context (higher-level, component-oriented)
+   - Renaming would cause confusion about intended use
+
+#### **Code Duplication Analysis**
+
+- **ANSI generation**: Unified via backend (DirectToAnsi::AnsiSequenceGenerator)
+- **Style handling**: Different APIs (TuiStyleAttribs vs TuiStyle) prevent easy consolidation
+- **Minor duplication**: Constructor functions, helper methods - acceptable maintenance burden
+
+**Recommendation**: Keep modules separate. The semantic differences and different rendering paths justify separate implementations. Both ultimately converge at the backend layer (DirectToAnsi/Crossterm), so code duplication is minimal and intentional.
+
+**Documentation**: Added inline comments in both modules explaining their purpose and relationship.
 
 ---
 
-## ⏳ Step 7: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
+## ⏳ Step 7: Comprehensive RenderOp Integration Test Suite (4-6 hours)
 
-**Status**: ⏳ DEFERRED - To be performed after Step 6 completes (when user has access to
+**Status**: ⏳ PENDING - Ready to start after Step 6
+
+**Objective**: Build a robust, comprehensive test suite that validates the full RenderOp execution pipeline with DirectToAnsi backend. This provides confidence for future implementation changes and cross-platform validation (Step 8).
+
+**Rationale**: While manual testing has shown the DirectToAnsi backend works correctly in practice, a validation test suite is essential to:
+- Detect regressions if implementation changes in the future
+- Validate that code changes don't break existing functionality
+- Provide confidence for cross-platform implementations (Windows/macOS in Step 8)
+- Ensure state tracking (cursor, colors, optimizations) works correctly throughout the pipeline
+- Serve as executable documentation of expected behavior
+
+### 7.1: RenderOp Integration Tests - Core Execution Path (2-3 hours)
+
+**Objective**: Implement full integration tests for RenderOp execution with state validation
+
+**Location**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests.rs`
+
+**Current State**: Placeholder tests with clear implementation guidance documented
+
+**Test Coverage Required**:
+
+#### Part A: Color Operations (30-45 min)
+- [ ] `SetFgColor` RenderOp generates correct SGR foreground sequence
+- [ ] `SetBgColor` RenderOp generates correct SGR background sequence
+- [ ] Color state tracking in `RenderOpsLocalData::fg_color` and `bg_color`
+- [ ] `ResetColor` clears both fg and bg color state
+- [ ] Multiple color operations in sequence (red → blue → reset)
+- [ ] ANSI format validation (colon-separated: `38:5:N` for extended, `38:2:R:G:B` for RGB)
+
+#### Part B: Cursor Movement Operations (45-60 min)
+- [ ] `MoveCursorPositionAbs` updates cursor state correctly
+- [ ] Cursor position accessible via `Pos` with `row_index` and `col_index` fields
+- [ ] `MoveCursorPositionRelTo` (origin + relative offset) works correctly
+- [ ] Cursor state verification after movement
+- [ ] Multiple cursor moves in sequence
+
+#### Part C: Screen Operations (20-30 min)
+- [ ] `ClearScreen` generates CSI 2J
+- [ ] `ShowCursor` generates DECTCEM set `\x1b[?25h`
+- [ ] `HideCursor` generates DECTCEM reset `\x1b[?25l`
+- [ ] Mode state tracking (if applicable)
+
+#### Part D: State Optimization (30-45 min)
+- [ ] **Redundant cursor moves**: Moving to same position produces no output
+- [ ] **Redundant color changes**: Setting same color twice skips second output
+- [ ] **State persistence**: Colors persist across unrelated operations
+- [ ] **State clearing**: Reset clears all accumulated state
+- [ ] **Complex workflows**: Multiple operations (move → color → text → move) maintain correct state
+
+**Key Implementation Details**:
+- Use `RenderOpsLocalData::default()` to create test state
+- Create `Pos` using: `pos(row(N) + col(N))` syntax
+- RenderOp variants: `SetFgColor`, `SetBgColor`, `MoveCursorPositionAbs`, `ClearScreen`, `ShowCursor`, `HideCursor`, `ResetColor`
+- Verify ANSI output and state changes together
+- Test realistic sequences (not just isolated operations)
+
+**Deliverables**:
+- [ ] All tests compile without errors
+- [ ] Tests validate both ANSI output AND state changes
+- [ ] Test coverage for all major RenderOpCommon variants
+- [ ] Documentation of test structure for future maintainers
+- [ ] Clear error messages if any assertion fails
+
+### 7.2: VT-100 Display Sequence Expansion (1-2 hours)
+
+**Objective**: Expand `AnsiSequenceGenerator` with advanced VT-100 sequence support
+
+**Rationale**: Provides edge case coverage for future rendering features
+
+**Additions Required**:
+
+#### Scroll Operations
+- [ ] Implement `scroll_region_set()` - Set scrolling region (DECSTBM)
+- [ ] Implement `scroll_up(n)` - Scroll display up N lines (SU)
+- [ ] Implement `scroll_down(n)` - Scroll display down N lines (SD)
+- [ ] Tests: Verify CSI parameters are correct
+
+#### Line Operations
+- [ ] Implement `insert_lines(n)` - Insert N blank lines (IL)
+- [ ] Implement `delete_lines(n)` - Delete N lines (DL)
+- [ ] Tests: Verify line count parameter
+
+#### Cursor Margin Control
+- [ ] Implement `set_left_margin(col)` - Left margin (DECLM)
+- [ ] Implement `set_right_margin(col)` - Right margin
+- [ ] Tests: Boundary conditions, edge cases
+
+#### Window Operations
+- [ ] Research and document Sixel graphics support (future enhancement)
+- [ ] Research and document ReGIS graphics support (future enhancement)
+- [ ] Document as deferred features if not implementing now
+
+**Files to Update**:
+- `tui/src/tui/terminal_lib_backends/direct_to_ansi/ansi_sequence_generator.rs` - Add methods
+- `tui/src/core/ansi/parser/vt_100_ansi_conformance_tests/conformance_data/display_sequences.rs` - Add test sequences
+
+**Tests**:
+- [ ] Unit tests for each new method
+- [ ] ANSI sequence format validation
+- [ ] Parameter boundary testing
+
+### 7.3: Real-World VT-100 Test Scenarios (1-2 hours)
+
+**Objective**: Validate common, realistic terminal interaction patterns
+
+**Location**: `tui/src/core/ansi/parser/vt_100_ansi_conformance_tests/tests/vt_100_test_integration_real_world.rs`
+
+**Scenarios to Implement**:
+
+- [ ] Terminal window resize handling with reflow
+- [ ] Application mode switching (alternate screen buffer)
+- [ ] Tab completion menu display with color highlighting
+- [ ] Complex editor patterns (split windows, multiple buffers simulation)
+- [ ] Shell prompt variations (git status, error indicators)
+- [ ] Progress bars and status indicators
+- [ ] Interactive forms with field validation
+- [ ] Color palette demonstrations (all 256 colors)
+- [ ] UTF-8 and wide character handling patterns
+
+**Test Structure**:
+- Start with simple scenario
+- Build ANSI sequence using DirectToAnsi backend
+- Verify expected output
+- Add complexity gradually (nesting, multiple operations)
+
+**Expected Outcome**: Confidence that DirectToAnsi handles realistic usage patterns
+
+### 7.4: Final QA & Validation (30-45 min)
+
+**QA Checklist**:
+- [ ] `cargo check` passes with zero errors
+- [ ] `cargo test --lib` - all tests pass (should be 2200+)
+- [ ] `cargo clippy --all-targets` - zero warnings
+- [ ] `cargo fmt --all -- --check` - proper formatting
+- [ ] All new tests have clear documentation
+- [ ] Edge cases are covered (empty inputs, boundary conditions, max values)
+
+**Test Summary**:
+- [ ] Integration test count and coverage documented
+- [ ] All RenderOp variants covered
+- [ ] All color modes (basic, extended, RGB) tested
+- [ ] State optimization verified
+- [ ] Real-world scenarios passing
+
+**Sign-Off**: DirectToAnsi backend is robust, tested, and production-ready
+
+---
+
+## ⏳ Step 8: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
+
+**Status**: ⏳ DEFERRED - To be performed after Step 7 completes (when user has access to
 macOS/Windows systems)
 
 **Objective**: Validate DirectToAnsi backend on macOS and Windows platforms, ensuring cross-platform
 compatibility and performance parity with Crossterm backend.
 
-**Rationale for Deferral**: User is currently running on Linux. Step 7 is deferred to be performed
-later when macOS and Windows systems are available. This maintains focus on Linux validation
-(Step 4) and optimization (Step 5) while keeping cross-platform work organized.
+**Rationale for Deferral**: User is currently running on Linux. Step 8 is deferred to be performed
+later when macOS and Windows systems are available. Step 7 (comprehensive test suite) builds confidence
+before cross-platform validation. This maintains focus on test coverage and validation (Step 7) while
+keeping cross-platform work organized.
 
 ### macOS Testing (1.5 hours)
 
@@ -2056,24 +2235,33 @@ Step 4: Linux Validation & Performance Testing (2-3 hours) [COMPLETE]
   ✅ Documentation: Results recorded in task_remove_crossterm.md Step 4
   ⚠️ Go/No-Go decision: PROCEED TO STEP 5 (PERFORMANCE REGRESSION ANALYSIS)
 
-Step 5: Performance Regression Analysis (2-4 hours) [NEXT]
-  ☐ Flamegraph analysis: identify hotspots
-  ☐ Code review: AnsiSequenceGenerator optimization
-  ☐ Code review: RenderOpImplDirectAnsi state tracking
-  ☐ Implement Approach A: sequence caching
-  ☐ Re-benchmark and verify improvements
-  ☐ If ratio > 1.05: implement Approach B (allocation reduction)
-  ☐ Iterate until ratio < 1.05 or document acceptable overhead
-  ☐ Update code comments with optimization rationale
+Step 5: Performance Regression Analysis (2-4 hours) [COMPLETE]
+  ✅ Flamegraph analysis: identified hotspots
+  ✅ Code review: AnsiSequenceGenerator optimization (sequence caching)
+  ✅ Code review: RenderOpImplDirectAnsi state tracking
+  ✅ Implemented Approach A: sequence caching via DirectToAnsi
+  ✅ Re-benchmarked and verified improvements
+  ✅ Performance ratio optimized to acceptable threshold
+  ✅ Updated code comments with optimization rationale
 
-Step 6: Cleanup & Refinement (1-2 hours) [AFTER STEP 5]
-  ☐ 6.1: DirectToAnsi rename (✅ ALREADY COMPLETE)
-  ☐ 6.2: Remove Termion backend (3-4 files)
-  ☐ 6.3: Resolve TODOs and stubs (various files)
-  ☐ 6.4: Review cli_text/tui_styled_text consistency (2 files)
-  ☐ Final cargo check, test, clippy, fmt passes
+Step 6: Cleanup & Architectural Refinement (1-2 hours) [COMPLETE]
+  ✅ 6.1: DirectToAnsi rename (✅ ALREADY COMPLETE)
+  ✅ 6.2: Remove Termion backend (deleted directory, removed enum variant, fixed 3 matches)
+  ✅ 6.3: Resolve TODOs and document deferments (5 comments clarified)
+  ✅ 6.4: Audit cli_text/tui_styled_text consistency (kept separate, documented rationale)
+  ✅ Final cargo check, test, clippy, fmt passes (2192 tests passing)
 
-Step 7: macOS & Windows Platform Validation (2-3 hours) [DEFERRED]
+Step 7: Comprehensive RenderOp Integration Test Suite (4-6 hours) [READY TO START]
+  ☐ 7.1: RenderOp Integration Tests - Core Execution Path
+    ☐ Part A: Color Operations (30-45 min) - SetFgColor, SetBgColor, ResetColor
+    ☐ Part B: Cursor Movement (45-60 min) - MoveCursorPositionAbs, MoveCursorPositionRelTo
+    ☐ Part C: Screen Operations (20-30 min) - ClearScreen, ShowCursor, HideCursor
+    ☐ Part D: State Optimization (30-45 min) - Redundant operation detection
+  ☐ 7.2: VT-100 Display Sequence Expansion (1-2 hours) - Scroll, line ops, margins
+  ☐ 7.3: Real-World VT-100 Test Scenarios (1-2 hours) - Terminal interaction patterns
+  ☐ 7.4: Final QA & Validation (30-45 min) - All tests pass, documentation complete
+
+Step 8: macOS & Windows Platform Validation (2-3 hours) [DEFERRED]
   ☐ macOS: Test on Terminal.app and iTerm2
   ☐ Windows: Test on Windows Terminal and PowerShell
   ☐ Performance: flamegraph comparison (<5% difference)

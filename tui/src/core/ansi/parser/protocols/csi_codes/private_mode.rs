@@ -6,10 +6,11 @@
 //! such as cursor visibility, auto-wrap, and alternate screen buffer.
 
 use crate::{ParamsExt,
-            core::ansi::constants::{ALT_SCREEN_BUFFER, DECANM_VT52_MODE, DECAWM_AUTO_WRAP,
-                                    DECCKM_CURSOR_KEYS, DECCOLM_132_COLUMN, DECTCEM_SHOW_CURSOR,
-                                    DECOM_ORIGIN_MODE, DECSCLM_SMOOTH_SCROLL,
-                                    DECSCNM_REVERSE_VIDEO, SAVE_CURSOR_DEC}};
+            core::ansi::constants::{ALT_SCREEN_BUFFER, DECANM_VT52_MODE,
+                                    DECAWM_AUTO_WRAP, DECCKM_CURSOR_KEYS,
+                                    DECCOLM_132_COLUMN, DECOM_ORIGIN_MODE,
+                                    DECSCLM_SMOOTH_SCROLL, DECSCNM_REVERSE_VIDEO,
+                                    DECTCEM_SHOW_CURSOR, SAVE_CURSOR_DEC}};
 
 /// DEC Private Mode types for CSI ? h/l sequences
 #[derive(Debug, Clone, Copy, PartialEq)]

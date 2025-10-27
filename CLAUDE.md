@@ -3,6 +3,9 @@
 When doing work, when you have questions about important choices to be made, or ambiguities in the
 task, please ask the user for clarification immediately.
 
+Take your time to make changes. Slow and steady wins the race. It is better to be slow and steady
+and careful and considerate than to be fast and careless.
+
 ## Rust Code Guidelines
 
 ### MCP Tools to understand and change Rust code
@@ -19,22 +22,24 @@ has only one primary method, most documentation belongs at the trait level to av
 to hunt through method docs for the big picture.
 
 **Example Placement Guidelines:**
-- **Trait/Module level**: Place conceptual examples showing *why* and *when* to use the API, complete
-  workflows, visual diagrams, common mistakes, and antipatterns. These examples teach the concept.
-- **Method level**: Place minimal syntax examples showing *how* to call the specific method with exact
-  types and parameters. These serve as quick reference for IDE tooltips.
+
+- **Trait/Module level**: Place conceptual examples showing _why_ and _when_ to use the API,
+  complete workflows, visual diagrams, common mistakes, and antipatterns. These examples teach the
+  concept.
+- **Method level**: Place minimal syntax examples showing _how_ to call the specific method with
+  exact types and parameters. These serve as quick reference for IDE tooltips.
 - **Graduated complexity**: Examples should match the abstraction level - comprehensive scenarios at
   trait level, simple syntax at method level.
-- **Avoid duplication**: Don't repeat full examples between trait and method docs. Reference the trait
-  docs from methods when detailed examples already exist there.
+- **Avoid duplication**: Don't repeat full examples between trait and method docs. Reference the
+  trait docs from methods when detailed examples already exist there.
 
 Where it is possible use ASCII diagrams to illustrate concepts. Use code examples extensively to
 demonstrate usage patterns.
 
 ### Module Organization Pattern
 
-When organizing Rust modules, prefer **private modules with public re-exports** as the default pattern.
-This provides a clean API while maintaining flexibility to refactor internal structure.
+When organizing Rust modules, prefer **private modules with public re-exports** as the default
+pattern. This provides a clean API while maintaining flexibility to refactor internal structure.
 
 #### The Recommended Pattern
 
@@ -55,6 +60,7 @@ pub use helpers::*;
 #### Benefits
 
 1. **Clean, Flat API** - Users import directly without unnecessary nesting:
+
    ```rust
    // Good - flat, ergonomic
    use my_module::MyType;
@@ -66,12 +72,14 @@ pub use helpers::*;
    ```
 
 2. **Refactoring Freedom** - Internal reorganization doesn't break external code:
+
    ```rust
    // Can move items between files freely
    // External API stays: use my_module::Item;
    ```
 
 3. **Avoid Naming Conflicts** - Private module names don't pollute the namespace:
+
    ```rust
    // No conflicts with other `constants` modules in the crate
    mod constants;  // Private - name hidden
@@ -90,6 +98,7 @@ pub use helpers::*;
 - Working with small to medium-sized modules with clear responsibilities
 
 **Example from `csi_codes`:**
+
 ```rust
 // tui/src/core/pty_mux/vt_100_ansi_parser/protocols/csi_codes/mod.rs
 
@@ -117,12 +126,14 @@ use csi_codes::CSI_START;
 **❌ Keep modules public when:**
 
 1. **Module structure IS the API** - Different domains should be explicit:
+
    ```rust
    pub mod frontend;  // Frontend-specific APIs
    pub mod backend;   // Backend-specific APIs
    ```
 
 2. **Large feature domains** - When namespacing provides clarity:
+
    ```rust
    pub mod graphics;   // 100+ graphics-related items
    pub mod audio;      // 100+ audio-related items
@@ -138,12 +149,14 @@ use csi_codes::CSI_START;
 #### Special Cases
 
 **Test utilities** can be public but conditional:
+
 ```rust
 #[cfg(any(test, doc))]
 pub mod test_helpers;  // Public for testing/docs, not in release builds
 ```
 
 **Hybrid approach** (used by standard library):
+
 ```rust
 pub mod collections {
     // Internal structure hidden
@@ -158,7 +171,10 @@ pub mod collections {
 
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
 
-Use the type-safe bounds checking utilities from `tui/src/core/units/bounds_check/` which provide comprehensive protection against off-by-one errors. See [`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs) for detailed documentation, quick start guide, and examples.
+Use the type-safe bounds checking utilities from `tui/src/core/units/bounds_check/` which provide
+comprehensive protection against off-by-one errors. See
+[`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs) for detailed documentation, quick
+start guide, and examples.
 
 #### Core Principles
 
@@ -184,16 +200,17 @@ use r3bl_tui::{
 
 #### Quick Pattern Reference
 
-| Use Case | Trait | Key Method | When to Use |
-|----------|-------|------------|-------------|
-| **Array access** | `ArrayBoundsCheck` | `index.overflows(length)` | Validating `buffer[index]` access (`index < length`) |
-| **Cursor positioning** | `CursorBoundsCheck` | `length.check_cursor_position_bounds(pos)` | Text editing where cursor can be at end (`index <= length`) |
-| **Viewport visibility** | `ViewportBoundsCheck` | `index.check_viewport_bounds(start, size)` | Rendering optimization (is content on-screen?) |
-| **Range validation** | `RangeBoundsExt` | `range.check_range_is_valid_for_length(len)` | Iterator bounds, algorithm parameters |
-| **Range membership** | `RangeBoundsExt` | `range.check_index_is_within(index)` | VT-100 scroll regions, text selections |
-| **Range conversion** | `RangeConvertExt` | `inclusive_range.to_exclusive()` | Converting VT-100 ranges for Rust iteration |
+| Use Case                | Trait                 | Key Method                                   | When to Use                                                 |
+| ----------------------- | --------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| **Array access**        | `ArrayBoundsCheck`    | `index.overflows(length)`                    | Validating `buffer[index]` access (`index < length`)        |
+| **Cursor positioning**  | `CursorBoundsCheck`   | `length.check_cursor_position_bounds(pos)`   | Text editing where cursor can be at end (`index <= length`) |
+| **Viewport visibility** | `ViewportBoundsCheck` | `index.check_viewport_bounds(start, size)`   | Rendering optimization (is content on-screen?)              |
+| **Range validation**    | `RangeBoundsExt`      | `range.check_range_is_valid_for_length(len)` | Iterator bounds, algorithm parameters                       |
+| **Range membership**    | `RangeBoundsExt`      | `range.check_index_is_within(index)`         | VT-100 scroll regions, text selections                      |
+| **Range conversion**    | `RangeConvertExt`     | `inclusive_range.to_exclusive()`             | Converting VT-100 ranges for Rust iteration                 |
 
 **For comprehensive details:**
+
 - Quick start guide and examples: [`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs)
 - Decision tree for choosing the right trait
 - Trait hierarchy and type system architecture
@@ -223,10 +240,11 @@ Performance analysis:
 
 - `cargo bench` - Benchmarks (mark tests with `#[bench]`)
 - `cargo flamegraph` - Profiling (requires flamegraph crate)
-- For TUI apps: `./run.fish run-examples-flamegraph-fold --benchmark` - Automated flamegraph profiling
+- For TUI apps: `./run.fish run-examples-flamegraph-fold --benchmark` - Automated flamegraph
+  profiling
   - 8-second continuous workload with 999Hz sampling
   - Scripted input (pangrams, cursor movements) for consistent results
-  - Generates `tui/flamegraph-*.perf-folded` file for analysis
+  - Generates `tui/flamegraph-benchmark.perf-folded` file for analysis
   - Use `--benchmark` flag for reproducible performance comparisons
 
 ### Build Optimizations

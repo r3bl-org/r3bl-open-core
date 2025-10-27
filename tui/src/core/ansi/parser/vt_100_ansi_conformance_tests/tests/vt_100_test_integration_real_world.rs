@@ -825,13 +825,15 @@ fn test_text_manipulation_operations() {
     assert!(final_text.len() > 10); // Should have reasonable content
 }
 
-// TODO: Additional real-world scenarios to consider implementing:
-// - Terminal window resize handling with reflow
-// - Application mode switching (alternate screen buffer)
-// - Tab completion menu display with highlighting
-// - More complex editor patterns (split windows, multiple buffers)
-// - Shell prompt variations (git status, error indicators)
-// - Progress bars and status indicators
-// - Interactive forms with field validation
-// - Color palette demonstrations
-// - UTF-8 and wide character handling patterns
+// TODO: Post-Step 6 - Expand VT-100 real-world test coverage
+// (Deferred: Advanced terminal interaction patterns for future test suite)
+// Future scenarios to implement:
+//   - Terminal window resize handling with reflow
+//   - Application mode switching (alternate screen buffer)
+//   - Tab completion menu display with highlighting
+//   - More complex editor patterns (split windows, multiple buffers)
+//   - Shell prompt variations (git status, error indicators)
+//   - Progress bars and status indicators
+//   - Interactive forms with field validation
+//   - Color palette demonstrations
+//   - UTF-8 and wide character handling patterns

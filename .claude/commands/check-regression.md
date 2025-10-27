@@ -1,8 +1,9 @@
 # Regression Analysis with Flamegraphs
 
 1. Run `./run.fish run-examples-flamegraph-fold --benchmark` to collect flamegraph data for
-   benchmarks with an automated testing script that stress tests the rendering pipeline. The details
-   for this are in `script-lib.fish`. The generated flamegraph file can be found at
+   benchmarks with an automated testing script that stress tests the rendering pipeline. This
+   benchmark runs an 8-second continuous workload with 999Hz sampling. The details for this are in
+   `script-lib.fish`. The generated flamegraph file can be found at
    `tui/flamegraph-benchmark.perf-folded`
 
 2. The `tui/flamegraph-benchmark-baseline.perf-folded` file contains the baseline performance data
