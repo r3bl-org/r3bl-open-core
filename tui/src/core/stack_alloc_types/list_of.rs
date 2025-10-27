@@ -44,7 +44,7 @@ use std::ops::{AddAssign, Deref, DerefMut};
 pub mod sizing_list_of {
     use super::SmallVec;
     pub type ListStorage<T> = SmallVec<[T; DEFAULT_LIST_STORAGE_SIZE]>;
-    const DEFAULT_LIST_STORAGE_SIZE: usize = 8;
+    const DEFAULT_LIST_STORAGE_SIZE: usize = 16;
 }
 
 /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for

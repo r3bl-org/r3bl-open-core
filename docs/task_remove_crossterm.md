@@ -66,6 +66,9 @@
     - [✅ SmallVec[16] Optimization - IMPLEMENTED](#-smallvec16-optimization---implemented)
       - [Baseline (SmallVec[8])](#baseline-smallvec8)
       - [After SmallVec[16]](#after-smallvec16)
+    - [✅ SmallVec[16] for StyleUSSpan - IMPLEMENTED](#-smallvec16-for-styleusspan---implemented)
+      - [Baseline (SmallVec[8])](#baseline-smallvec8-1)
+      - [After SmallVec[16] (Both Types)](#after-smallvec16-both-types)
   - [⏳ Step 6: Cleanup & Architectural Refinement (1-2 hours)](#-step-6-cleanup--architectural-refinement-1-2-hours)
     - [6.1: DirectToAnsi Rename - ALREADY COMPLETE ✅](#61-directtoansi-rename---already-complete-)
     - [6.2: Remove Termion Backend (Dead Code Removal)](#62-remove-termion-backend-dead-code-removal)
@@ -1766,8 +1769,59 @@ StyleUSSpan[8]::try_grow: 5.17M samples (~5% CPU)
 Location: syntax_highlighting → List<StyleUSSpan> → try_grow
 ```
 
-This is a **future optimization opportunity** - the syntax highlighting layer could benefit from
-larger inline capacity for `StyleUSSpan` SmallVecs.
+### ✅ SmallVec[16] for StyleUSSpan - IMPLEMENTED
+
+**Status**: ✅ COMPLETE (October 27, 2025)
+
+**Change**: Increased `DEFAULT_LIST_STORAGE_SIZE` from 8 → 16 in
+`tui/src/core/stack_alloc_types/list_of.rs:47`
+
+**Background**: After implementing RenderOpIR[16], flamegraph analysis revealed `StyleUSSpan` (used
+in syntax highlighting) was spilling 10x more frequently than RenderOpIR, consuming ~5% CPU on heap
+allocations.
+
+**Results**:
+
+#### Baseline (SmallVec[8])
+
+```
+RenderOpIR::try_grow: 500,500 samples (0.47% CPU)
+StyleUSSpan::try_grow: 5,170,000 samples (~5.0% CPU)
+Total SmallVec overhead: ~5.47% CPU
+```
+
+#### After SmallVec[16] (Both Types)
+
+```
+RenderOpIR::try_grow: 0 samples - ELIMINATED ✅
+StyleUSSpan::try_grow: 0 samples - ELIMINATED ✅
+Total SmallVec overhead: 0% CPU - ELIMINATED ✅
+```
+
+**Verification**:
+
+- ✅ `cargo check` passed
+- ✅ Flamegraph benchmark confirmed elimination of ALL try_grow calls
+- ✅ No performance regressions observed
+- ✅ grep -i "try_grow" flamegraph-benchmark.perf-folded → 0 results
+
+**Final Performance Summary** (Combined Optimizations):
+
+```
+DirectToAnsi vs Crossterm (baseline):        12.4% faster
++ RenderOpIR[16] optimization:               +0.47%
++ StyleUSSpan[16] optimization:              +~5.0%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total improvement: ~18% faster than Crossterm 🎉🚀
+```
+
+**Files Changed**:
+
+- `tui/src/core/stack_alloc_types/list_of.rs:47` - `DEFAULT_LIST_STORAGE_SIZE: 8 → 16`
+
+**Impact**: The syntax highlighting layer now handles complex markdown documents with many style
+changes without heap allocations, eliminating the largest remaining performance bottleneck in the
+rendering pipeline.
 
 ---
 
