@@ -222,8 +222,12 @@ After completing tasks, run:
 Performance analysis:
 
 - `cargo bench` - Benchmarks (mark tests with `#[bench]`)
-- `cargo flamegraph` - Profiling
-- For TUI apps: ask user to run `run_example_with_flamegraph_profiling_perf_fold` in `lib_script.nu`
+- `cargo flamegraph` - Profiling (requires flamegraph crate)
+- For TUI apps: `./run.fish run-examples-flamegraph-fold --benchmark` - Automated flamegraph profiling
+  - 8-second continuous workload with 999Hz sampling
+  - Scripted input (pangrams, cursor movements) for consistent results
+  - Generates `tui/flamegraph-*.perf-folded` file for analysis
+  - Use `--benchmark` flag for reproducible performance comparisons
 
 ### Build Optimizations
 

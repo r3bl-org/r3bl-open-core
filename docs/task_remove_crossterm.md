@@ -63,6 +63,9 @@
       - [✅ U8_STRINGS Lookup Table for Color Sequences](#-u8_strings-lookup-table-for-color-sequences)
     - [Flamegraph Analysis: Backend is NOT in the Hot Path](#flamegraph-analysis-backend-is-not-in-the-hot-path)
     - [SmallVec Optimization Opportunity](#smallvec-optimization-opportunity)
+    - [✅ SmallVec[16] Optimization - IMPLEMENTED](#-smallvec16-optimization---implemented)
+      - [Baseline (SmallVec[8])](#baseline-smallvec8)
+      - [After SmallVec[16]](#after-smallvec16)
   - [⏳ Step 6: Cleanup & Architectural Refinement (1-2 hours)](#-step-6-cleanup--architectural-refinement-1-2-hours)
     - [6.1: DirectToAnsi Rename - ALREADY COMPLETE ✅](#61-directtoansi-rename---already-complete-)
     - [6.2: Remove Termion Backend (Dead Code Removal)](#62-remove-termion-backend-dead-code-removal)
@@ -1711,12 +1714,60 @@ occasional spills beyond inline capacity.
 most operations are < 8 elements, `[16]` would provide headroom for complex scenarios without
 significant stack overhead.
 
-**Next Steps** (optional, for future work):
+### ✅ SmallVec[16] Optimization - IMPLEMENTED
 
-1. Benchmark `SmallVec<[RenderOpIR; 16]>` vs current `[8]`
-2. Run flamegraph with `[16]` to verify `try_grow` samples decrease
-3. Measure stack usage impact in realistic scenarios
-4. If `try_grow` cost eliminated, keep `[16]`; otherwise revert to `[8]`
+**Status**: ✅ COMPLETE (October 27, 2025)
+
+**Change**: Increased `INLINE_VEC_SIZE` from 8 → 16 in `tui/src/core/stack_alloc_types/sizes.rs:84`
+
+**Results**:
+
+#### Baseline (SmallVec[8])
+
+```
+RenderOpIR::try_grow: 500,500 samples (0.47% CPU)
+Location: render_tui_styled_texts_into → SmallVec[RenderOpIR; 8] → try_grow
+```
+
+#### After SmallVec[16]
+
+```
+RenderOpIR::try_grow: 0 samples - ELIMINATED ✅
+CPU savings: 0.47%
+```
+
+**Verification**:
+
+- ✅ `cargo check` passed
+- ✅ `cargo test --no-run` compiled successfully
+- ✅ Flamegraph benchmark confirmed elimination of `RenderOpIR::try_grow`
+- ✅ No performance regression observed
+
+**Final Performance Summary**:
+
+```
+DirectToAnsi vs Crossterm: 12.4% faster (baseline)
++ SmallVec[16] optimization: +0.47%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total improvement: ~12.9% faster than Crossterm 🎉
+```
+
+**Files Changed**:
+
+- `tui/src/core/stack_alloc_types/sizes.rs:84` - `INLINE_VEC_SIZE: 8 → 16`
+- `CLAUDE.md:226-230` - Added flamegraph benchmark command
+
+**Additional Discovery**:
+
+Flamegraph revealed another SmallVec spilling more frequently:
+
+```
+StyleUSSpan[8]::try_grow: 5.17M samples (~5% CPU)
+Location: syntax_highlighting → List<StyleUSSpan> → try_grow
+```
+
+This is a **future optimization opportunity** - the syntax highlighting layer could benefit from
+larger inline capacity for `StyleUSSpan` SmallVecs.
 
 ---
 

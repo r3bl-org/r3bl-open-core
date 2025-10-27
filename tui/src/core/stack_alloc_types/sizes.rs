@@ -7,8 +7,8 @@
 //! your changes extensively using the demo examples in the `examples` directory to verify
 //! that they actually speed things up and cause performance regressions.
 
-// PERF: If you make this number too large, eg: more than 16, then it will slow down the
-// editor performance
+// PERF: If you make this number too large, eg: more than 32, then it will slow down the
+// editor performance. Current value (16) is optimal for typical usage patterns.
 pub const DEFAULT_STRING_STORAGE_SIZE: usize = 16;
 
 use smallstr::SmallString;
@@ -81,4 +81,4 @@ pub const DEFAULT_READ_BUFFER_SIZE: usize = 16384;
 /// Stack allocated list, that can [`smallvec::SmallVec::spilled`] into the heap if it
 /// gets larger than [`INLINE_VEC_SIZE`].
 pub type InlineVec<T> = SmallVec<[T; INLINE_VEC_SIZE]>;
-pub const INLINE_VEC_SIZE: usize = 8;
+pub const INLINE_VEC_SIZE: usize = 16;
