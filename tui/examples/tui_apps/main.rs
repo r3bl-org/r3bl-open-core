@@ -40,12 +40,15 @@ async fn main_impl() -> CommonResult<()> {
     let no_log_arg_passed = args.contains(&"--no-log".to_string());
 
     // If the terminal is not fully interactive, then return early.
-    let Some(mut rl_ctx) = ReadlineAsyncContext::try_new({
-        // Generate prompt.
-        let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
-        let prompt_seg_2 = " ";
-        Some(format!("{prompt_seg_1}{prompt_seg_2}"))
-    })
+    let Some(mut rl_ctx) = ReadlineAsyncContext::try_new(
+        {
+            // Generate prompt.
+            let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
+            let prompt_seg_2 = " ";
+            Some(format!("{prompt_seg_1}{prompt_seg_2}"))
+        },
+        None, // Use default channel capacity
+    )
     .await?
     else {
         return CommonError::new_error_result_with_only_msg(

@@ -264,7 +264,7 @@
 //!         let prompt_seg_3 = fg_magenta("╮").bg_dark_gray().to_string();
 //!         Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
 //!     };
-//!     let maybe_rl_ctx = ReadlineAsyncContext::try_new(prompt).await?;
+//!     let maybe_rl_ctx = ReadlineAsyncContext::try_new(prompt, None).await?;
 //!     let Some(mut rl_ctx) = maybe_rl_ctx else {
 //!         return Err(miette::miette!("Failed to create terminal").into());
 //!     };
@@ -361,14 +361,89 @@ pub const DEFAULT_PAUSE_BUFFER_SIZE: usize = 128;
 pub type SafePauseBuffer = Arc<StdMutex<PauseBuffer>>;
 
 // Constants.
+pub const HISTORY_SIZE_MAX: usize = 1_000;
+
 /// Channel buffer capacity for the readline async loop.
 ///
-/// This is set to 2,500 to provide a ~100 KB buffer. Since each [`LineStateControlSignal`]
-/// message is approximately 40 bytes, 2,500 messages ≈ 100 KB of RAM. This generous
-/// buffer prevents `try_send()` failures during burst traffic scenarios, such as filesystem
-/// traversal operations that generate thousands of messages in rapid succession.
+/// This enum forces callers to explicitly choose a channel capacity based on their use case,
+/// making the memory/performance trade-offs visible at the call site.
+///
+/// # Memory Analysis
+///
+/// Each [`LineStateControlSignal`] message occupies approximately **64 bytes**:
+/// - `InlineString`: ~32 bytes (16-byte inline storage + metadata)
+/// - Enum discriminant and largest variant: ~40 bytes
+/// - Tokio channel node overhead: ~24 bytes
+///
+/// # Capacity Reference Table
+///
+/// ```text
+/// ┌────────────┬─────────────────┬──────────────┬─────────────────────────────┐
+/// │  Variant   │  Capacity       │  Memory      │  Use Case                   │
+/// ├────────────┼─────────────────┼──────────────┼─────────────────────────────┤
+/// │  Minimal   │   10,000 msgs   │    0.61 MB   │  Simple CLIs, <10K outputs  │
+/// │  Moderate  │   20,000 msgs   │    1.22 MB   │  Medium burst traffic       │
+/// │  Large     │   50,000 msgs   │    3.05 MB   │  Large codebases (<50K)     │
+/// │  VeryLarge │  100,000 msgs   │    6.10 MB   │  Very large projects        │
+/// │  Extreme   │  200,000 msgs   │   12.20 MB   │  Huge monorepos             │
+/// │  Overkill  │  500,000 msgs   │   30.50 MB   │  Pathological cases         │
+/// └────────────┴─────────────────┴──────────────┴─────────────────────────────┘
+/// ```
+///
+/// # Real-World Burst Scenarios
+///
+/// Filesystem traversal (directory tree walking) generates one message per directory:
+/// - **r3bl-open-core**: ~13,666 directories → `Moderate` (20K)
+/// - **Linux kernel**: ~80,000 directories → `Extreme` (200K)
+/// - **Chromium**: ~150,000 directories → `Extreme` (200K)
+///
+/// # Why This Matters
+///
+/// The underlying [`SharedWriter`] uses **non-blocking `try_send()`** which fails
+/// immediately when the channel is full, even if the receiver is actively processing
+/// messages. If you choose too small a capacity for burst traffic scenarios, you'll get
+/// "Receiver has closed" errors even though the receiver is still running.
+///
+/// Choose conservatively: the memory cost is negligible compared to the cost of runtime
+/// failures and poor user experience.
 ///
 /// [`LineStateControlSignal`]: crate::LineStateControlSignal
-pub const CHANNEL_CAPACITY: usize = 2_500;
-pub const HISTORY_SIZE_MAX: usize = 1_000;
+/// [`SharedWriter`]: crate::SharedWriter
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChannelCapacity {
+    /// 10,000 messages (~0.61 MB) - For simple CLIs with light output.
+    Minimal,
+    /// 20,000 messages (~1.22 MB) - For moderate burst traffic.
+    Moderate,
+    /// 50,000 messages (~3.05 MB) - For large codebases.
+    Large,
+    /// 100,000 messages (~6.10 MB) - For very large projects (recommended default).
+    VeryLarge,
+    /// 200,000 messages (~12.20 MB) - For huge monorepos.
+    Extreme,
+    /// 500,000 messages (~30.50 MB) - For pathological edge cases.
+    Overkill,
+}
+
+impl ChannelCapacity {
+    /// Returns the actual channel capacity as a [`usize`].
+    #[must_use]
+    pub const fn capacity(self) -> usize {
+        match self {
+            Self::Minimal => 10_000,
+            Self::Moderate => 20_000,
+            Self::Large => 50_000,
+            Self::VeryLarge => 100_000,
+            Self::Extreme => 200_000,
+            Self::Overkill => 500_000,
+        }
+    }
+}
+
+impl Default for ChannelCapacity {
+    /// Defaults to [`VeryLarge`] (100K messages, ~6 MB) as a safe choice for most applications.
+    ///
+    /// [`VeryLarge`]: ChannelCapacity::VeryLarge
+    fn default() -> Self { Self::VeryLarge }
+}
 

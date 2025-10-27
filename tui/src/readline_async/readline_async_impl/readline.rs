@@ -1,5 +1,5 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{CHANNEL_CAPACITY, CommonResultWithError, History, InputDevice, LineState,
+use crate::{ChannelCapacity, CommonResultWithError, History, InputDevice, LineState,
             LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
             SafeHistory, SafeLineState, SafePauseBuffer, SendRawTerminal, SharedWriter,
             StdMutex, execute_commands_no_lock, join, lock_output_device_as_mut};
@@ -505,6 +505,7 @@ impl Readline {
         output_device: OutputDevice,
         /* move */ input_device: InputDevice,
         /* move */ shutdown_complete_sender: broadcast::Sender<()>,
+        channel_capacity: ChannelCapacity,
     ) -> CommonResultWithError<(Self, SharedWriter), ReadlineError> {
         // Immediately hide the cursor. Then wait for
         // `READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY` to display the cursor
@@ -522,7 +523,7 @@ impl Readline {
         // Line control channel - signals are send to this channel to control `LineState`.
         // A task is spawned to monitor this channel.
         let line_state_control_channel =
-            mpsc::channel::<LineStateControlSignal>(CHANNEL_CAPACITY);
+            mpsc::channel::<LineStateControlSignal>(channel_capacity.capacity());
         let (line_control_channel_sender, line_state_control_channel_receiver) =
             line_state_control_channel;
 
@@ -842,7 +843,7 @@ pub mod readline_test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use super::{Arc, ControlFlowExtended, Duration, History, InputDevice,
+    use super::{Arc, ChannelCapacity, ControlFlowExtended, Duration, History, InputDevice,
                 LineStateControlSignal, LineStateLiveness, OutputDevice, Readline,
                 ReadlineEvent, StdMutex, broadcast, lock_output_device_as_mut,
                 readline_internal, readline_test_fixtures::get_input_vec, sleep};
@@ -870,6 +871,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
             /* move */ shutdown_sender,
+            ChannelCapacity::Minimal, // Test uses minimal capacity
         )
         .unwrap();
 
@@ -916,6 +918,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
             shutdown_sender,
+            ChannelCapacity::Minimal, // Test uses minimal capacity
         )
         .unwrap();
 
@@ -950,6 +953,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
             shutdown_sender,
+            ChannelCapacity::Minimal, // Test uses minimal capacity
         )
         .unwrap();
 
@@ -996,6 +1000,7 @@ mod test_readline {
             output_device.clone(),
             /* move */ input_device,
             shutdown_sender,
+            ChannelCapacity::Minimal, // Test uses minimal capacity
         )
         .unwrap();
 

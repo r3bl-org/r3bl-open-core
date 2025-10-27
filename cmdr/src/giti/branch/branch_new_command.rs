@@ -1,7 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::giti::{BranchNewDetails, CommandRunDetails, git, local_branch_ops, ui_str};
-use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext, ReadlineEvent};
+use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext,
+               ReadlineEvent};
 
 /// The main function for `giti branch new` command.
 ///
@@ -86,7 +87,7 @@ mod user_interaction {
         let prompt_text =
             ui_str::branch_create_display::enter_branch_name_you_want_to_create();
 
-        let mut rl_ctx = ReadlineAsyncContext::try_new(Some(&prompt_text))
+        let mut rl_ctx = ReadlineAsyncContext::try_new(Some(&prompt_text), None)
             .await?
             .ok_or_else(|| miette::miette!("Failed to create terminal"))?;
 

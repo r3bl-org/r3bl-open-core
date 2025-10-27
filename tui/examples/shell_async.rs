@@ -295,7 +295,7 @@ pub mod terminal_async_constructor {
             format!("{prompt_seg_1}{prompt_seg_2}")
         };
 
-        let Ok(Some(rl_ctx)) = ReadlineAsyncContext::try_new(Some(prompt)).await else {
+        let Ok(Some(rl_ctx)) = ReadlineAsyncContext::try_new(Some(prompt), None).await else {
             miette::bail!("Failed to create ReadlineAsyncContext instance");
         };
 

@@ -5,9 +5,9 @@ use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
 
 use crate::{inline_string, is_fully_uninteractive_terminal, is_stdin_piped,
-            is_stdout_piped, ok, CommonResult, InputDevice, LineStateControlSignal,
-            OutputDevice, Readline, ReadlineEvent, SharedWriter, StdinIsPipedResult,
-            StdoutIsPipedResult, TTYResult,
+            is_stdout_piped, ok, ChannelCapacity, CommonResult, InputDevice,
+            LineStateControlSignal, OutputDevice, Readline, ReadlineEvent, SharedWriter,
+            StdinIsPipedResult, StdoutIsPipedResult, TTYResult,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY};
 
 /// This is the context for the readline async API. It contains the
@@ -38,14 +38,18 @@ use crate::{inline_string, is_fully_uninteractive_terminal, is_stdin_piped,
 /// // This example requires an interactive terminal for user input
 /// # async fn foo() -> miette::Result<()> {
 ///     # use r3bl_tui::readline_async::ReadlineAsyncContext;
+///     # use r3bl_tui::ChannelCapacity;
 ///     # use r3bl_tui::ok;
-///     let Some(mut rl_ctx) = ReadlineAsyncContext::try_new(Some("> ")).await?
+///     let Some(mut rl_ctx) = ReadlineAsyncContext::try_new(
+///         Some("> "),
+///         Some(ChannelCapacity::VeryLarge),
+///     ).await?
 ///     else {
 ///         return Err(miette::miette!("Failed to create terminal"));
 ///     };
 ///     let ReadlineAsyncContext { readline: ref mut rl, .. } = rl_ctx;
 ///     let user_input = rl.readline().await;
-///     rl_ctx.request_shutdown(Some("Shutting down...")).await;
+///     rl_ctx.request_shutdown(Some("Shutting down...")).await?;
 ///     rl_ctx.await_shutdown().await;
 ///     ok!()
 /// # }
@@ -107,6 +111,13 @@ impl ReadlineAsyncContext {
     /// into account when calculating the width of the terminal when displaying it in
     /// the "line editor".
     ///
+    /// # Parameters
+    ///
+    /// - `read_line_prompt`: Optional prompt string (defaults to `"> "`).
+    /// - `channel_capacity`: Optional channel capacity (defaults to [`ChannelCapacity::VeryLarge`]).
+    ///   Choose based on expected burst traffic - see [`ChannelCapacity`] documentation for
+    ///   detailed guidance.
+    ///
     /// # Returns
     /// 1. If the terminal is not fully interactive, then it will return [None], and won't
     ///    create the [Readline]. This is when the terminal is not considered fully
@@ -129,6 +140,7 @@ impl ReadlineAsyncContext {
     /// - The readline instance cannot be created
     pub async fn try_new(
         read_line_prompt: Option<impl AsRef<str>>,
+        channel_capacity: Option<ChannelCapacity>,
     ) -> miette::Result<Option<ReadlineAsyncContext>> {
         if let StdinIsPipedResult::StdinIsPiped = is_stdin_piped() {
             return Ok(None);
@@ -146,6 +158,9 @@ impl ReadlineAsyncContext {
         let prompt =
             read_line_prompt.map_or_else(|| "> ".to_owned(), |p| p.as_ref().to_string());
 
+        // Use the provided channel capacity or default to VeryLarge.
+        let capacity = channel_capacity.unwrap_or_default();
+
         // Create a channel to signal when shutdown is complete.
         let shutdown_complete_channel = broadcast::channel::<()>(1);
         let (shutdown_complete_sender, _) = shutdown_complete_channel;
@@ -155,6 +170,7 @@ impl ReadlineAsyncContext {
             output_device,
             input_device,
             shutdown_complete_sender.clone(),
+            capacity,
         )
         .into_diagnostic()?;
 

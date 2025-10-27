@@ -45,12 +45,15 @@ async fn without_readline_async() -> miette::Result<()> {
 
 async fn with_readline_async() -> miette::Result<()> {
     // If the terminal is not fully interactive, then return early.
-    let Some(mut rl_ctx) = ReadlineAsyncContext::try_new({
-        // Generate prompt.
-        let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
-        let prompt_seg_2 = " ";
-        Some(format!("{prompt_seg_1}{prompt_seg_2}"))
-    })
+    let Some(mut rl_ctx) = ReadlineAsyncContext::try_new(
+        {
+            // Generate prompt.
+            let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
+            let prompt_seg_2 = " ";
+            Some(format!("{prompt_seg_1}{prompt_seg_2}"))
+        },
+        None, // Use default channel capacity
+    )
     .await?
     else {
         return ok!();

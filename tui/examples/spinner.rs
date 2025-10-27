@@ -86,7 +86,7 @@ pub async fn main() -> CommonResult<()> {
 
 #[allow(unused_assignments)]
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
-    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ ")).await?;
+    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ "), None).await?;
     let rl_ctx = maybe_rl_ctx.expect("terminal is not fully interactive");
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
@@ -179,7 +179,7 @@ async fn example_with_concurrent_output_no_readline_async(
 /// Example showing how to update spinner messages dynamically.
 /// This demonstrates the new `update_message()` functionality.
 async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()> {
-    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ ")).await?;
+    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some("$ "), None).await?;
     let rl_ctx = maybe_rl_ctx.expect("terminal is not fully interactive");
 
     let shared_writer = rl_ctx.clone_shared_writer();

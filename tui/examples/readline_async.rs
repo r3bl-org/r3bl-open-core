@@ -2,7 +2,7 @@
 #![allow(unused_imports)]
 
 use miette::{IntoDiagnostic, miette};
-use r3bl_tui::{CHANNEL_CAPACITY, InlineVec, LineStateControlSignal, OutputDevice,
+use r3bl_tui::{ChannelCapacity, InlineVec, LineStateControlSignal, OutputDevice,
                SendRawTerminal, SharedWriter, SpinnerStyle, bold, fg_color, fg_red,
                fg_slate_gray, inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
@@ -123,7 +123,7 @@ async fn main() -> miette::Result<()> {
         format!("{prompt_seg_1}{prompt_seg_2}")
     };
 
-    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some(prompt)).await?;
+    let maybe_rl_ctx = ReadlineAsyncContext::try_new(Some(prompt), None).await?;
 
     // If the terminal is not fully interactive, then return early.
     let Some(mut rl_ctx) = maybe_rl_ctx else {
@@ -324,6 +324,7 @@ mod process_input_event {
                                     root_path,
                                     mut_shared_writer,
                                     true,
+                                    None, // No limit - show all directories
                                 )
                                 .await
                                 {
@@ -553,6 +554,15 @@ pub mod file_walker {
     ///
     /// Displays the folder tree structure.
     ///
+    /// # Parameters
+    ///
+    /// - `root_path`: The root directory to start traversal from
+    /// - `shared_writer`: Writer for output
+    /// - `delay_enable`: Whether to add artificial delay between outputs
+    /// - `max_items`: Optional limit on the number of directories to output. When `None`,
+    ///   outputs all directories. When `Some(n)`, stops after `n` items. Useful for
+    ///   testing to ensure deterministic behavior regardless of filesystem size.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -562,15 +572,25 @@ pub mod file_walker {
         root_path: String,
         shared_writer: &mut SharedWriter,
         delay_enable: bool,
+        max_items: Option<usize>,
     ) -> miette::Result<()> {
         let root = create_root(root_path)?;
 
         // Walk the root.
         let mut stack: InlineVec<Folder> = smallvec![root.clone()];
+        let mut items_written = 0;
 
         while let Some(mut current_node) = stack.pop() {
+            // Check if we've reached the limit (if specified)
+            if let Some(limit) = max_items
+                && items_written >= limit {
+                break;
+            }
+
             // Print the current node.
             print_node(shared_writer, &current_node)?;
+            items_written += 1;
+
             if delay_enable {
                 sleep(Duration::from_millis(10)).await;
             }
@@ -592,6 +612,11 @@ pub mod file_walker {
             // Add each sub-folder (contained in the current node) to the stack. And add
             // it to the current node's children.
             for sub_folder_name in vec_folder_name {
+                // Check limit again before adding to stack
+                if let Some(limit) = max_items
+                    && items_written >= limit {
+                    break;
+                }
                 stack.push(create_child_and_add_to(&mut current_node, sub_folder_name)?);
             }
         }
@@ -629,17 +654,28 @@ pub mod file_walker {
 /// cargo-nextest due to incompatibilities with this test. We switched to cargo test
 /// instead.
 ///
-/// # Buffer Size
+/// # Test Design
 ///
-/// This test uses the production channel capacity of [`CHANNEL_CAPACITY`] (~100 KB),
-/// which is sized generously to handle burst traffic scenarios like this filesystem
-/// traversal that can easily generate thousands of messages rapidly.
+/// This test intentionally limits output to **100 directories maximum** to ensure:
+/// - **Deterministic behavior**: Test results don't depend on filesystem size
+/// - **Fast execution**: Completes quickly regardless of machine
+/// - **Predictable capacity**: Uses [`ChannelCapacity::Minimal`] (10K messages) which is
+///   more than sufficient for 100 items
 ///
-/// [`CHANNEL_CAPACITY`]: crate::readline_async::CHANNEL_CAPACITY
+/// # Channel Capacity Choice
+///
+/// Uses [`ChannelCapacity::Minimal`] (10K messages, ~0.61 MB) since we artificially
+/// limit output to 100 items. This demonstrates proper capacity selection for known
+/// workload sizes.
+///
+/// [`ChannelCapacity::Minimal`]: crate::ChannelCapacity::Minimal
 #[tokio::test]
 async fn test_display_tree() -> miette::Result<()> {
+    const TEST_ITEM_LIMIT: usize = 100;
+
     let (path, _) = file_walker::get_current_working_directory()?;
-    let (line_sender, line_receiver) = tokio::sync::mpsc::channel(CHANNEL_CAPACITY);
+    let (line_sender, line_receiver) =
+        tokio::sync::mpsc::channel(ChannelCapacity::Minimal.capacity());
 
     let collector_task = tokio::spawn(async move {
         let mut output_lines: Vec<String> = vec![];
@@ -648,7 +684,6 @@ async fn test_display_tree() -> miette::Result<()> {
         while let Some(signal) = receiver.recv().await {
             if let LineStateControlSignal::Line(it) = signal {
                 let string = String::from_utf8_lossy(it.as_ref()).to_string();
-                print!("{string}");
                 output_lines.push(string);
             }
         }
@@ -657,7 +692,8 @@ async fn test_display_tree() -> miette::Result<()> {
 
     let mut shared_writer = SharedWriter::new(line_sender);
 
-    file_walker::display_tree(path, &mut shared_writer, false)
+    // Limit to TEST_ITEM_LIMIT items for deterministic testing
+    file_walker::display_tree(path, &mut shared_writer, false, Some(TEST_ITEM_LIMIT))
         .await
         .unwrap();
 
@@ -665,7 +701,10 @@ async fn test_display_tree() -> miette::Result<()> {
 
     drop(shared_writer);
     let output_lines = collector_task.await.unwrap();
-    assert_ne!(output_lines.len(), 0);
+
+    // Verify we got the expected number of items (or fewer if filesystem is smaller)
+    assert!(!output_lines.is_empty());
+    assert!(output_lines.len() <= TEST_ITEM_LIMIT);
 
     Ok(())
 }

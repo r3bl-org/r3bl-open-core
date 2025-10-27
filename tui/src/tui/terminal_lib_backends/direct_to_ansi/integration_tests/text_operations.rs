@@ -28,7 +28,7 @@ fn test_paint_text_plain_without_style() {
 
     // Plain text should produce output containing the text
     assert!(!output.is_empty(), "Output should not be empty");
-    assert!(output.contains(text), "Output should contain the text: {}", text);
+    assert!(output.contains(text), "Output should contain the text: {text}");
 
     // Cursor position should advance by the display width of the text
     assert!(
@@ -55,7 +55,7 @@ fn test_paint_text_with_foreground_color() {
     // Output should contain ANSI escape sequences for styling
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(output.contains("\x1b["), "Output should contain ANSI escape sequences");
-    assert!(output.contains(text), "Output should contain the text: {}", text);
+    assert!(output.contains(text), "Output should contain the text: {text}");
 
     // Cursor position should advance after painting
     assert!(
@@ -82,7 +82,7 @@ fn test_paint_text_with_background_color() {
     // Output should contain ANSI escape sequences for background styling
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(output.contains("\x1b["), "Output should contain ANSI escape sequences");
-    assert!(output.contains(text), "Output should contain the text: {}", text);
+    assert!(output.contains(text), "Output should contain the text: {text}");
 
     // Cursor position should advance after painting
     assert!(
@@ -110,7 +110,7 @@ fn test_paint_text_with_combined_style() {
     // Output should contain ANSI escape sequences for both fg and bg styling
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(output.contains("\x1b["), "Output should contain ANSI escape sequences");
-    assert!(output.contains(text), "Output should contain the text: {}", text);
+    assert!(output.contains(text), "Output should contain the text: {text}");
 
     // Cursor position should advance after painting
     assert!(
@@ -140,7 +140,7 @@ fn test_paint_text_with_bold_style() {
     // Output should contain ANSI escape sequences for bold attribute
     assert!(!output.is_empty(), "Output should not be empty");
     assert!(output.contains("\x1b["), "Output should contain ANSI escape sequences");
-    assert!(output.contains(text), "Output should contain the text: {}", text);
+    assert!(output.contains(text), "Output should contain the text: {text}");
 
     // Cursor position should advance after painting
     assert!(
@@ -160,7 +160,7 @@ fn test_paint_multiple_text_operations_sequence() {
     let text1 = "First";
     let output1 = execute_text_paint_and_capture(text1, None, &mut state, &output_device, &stdout_mock);
     assert!(!output1.is_empty(), "First output should not be empty");
-    assert!(output1.contains(text1), "First output should contain text: {}", text1);
+    assert!(output1.contains(text1), "First output should contain text: {text1}");
 
     let cursor_after_first = state.cursor_pos;
     assert!(
@@ -180,7 +180,7 @@ fn test_paint_multiple_text_operations_sequence() {
 
     // Second output should contain styled text
     assert!(!output2.is_empty(), "Second output should not be empty");
-    assert!(output2.contains(text2), "Second output should contain text: {}", text2);
+    assert!(output2.contains(text2), "Second output should contain text: {text2}");
     assert!(output2.contains("\x1b["), "Second output should have ANSI sequences");
 
     // Cursor should advance further
@@ -209,7 +209,7 @@ fn test_paint_text_empty_string() {
 
     // Output might be empty or contain only control sequences
     // The important thing is it doesn't panic
-    let _unused = output;
+    drop(output);
 }
 
 #[test]
@@ -224,7 +224,7 @@ fn test_paint_text_with_special_characters() {
 
     // Should handle special characters without panic
     assert!(!output.is_empty(), "Output should not be empty");
-    assert!(output.contains(text), "Output should contain special characters: {}", text);
+    assert!(output.contains(text), "Output should contain special characters: {text}");
 
     // Cursor should advance
     assert!(
@@ -246,7 +246,7 @@ fn test_paint_text_with_unicode_emoji() {
     // Should handle unicode/emoji without panic
     assert!(!output.is_empty(), "Output should not be empty");
     // Note: emoji might be represented differently in ANSI, but the output should contain something
-    assert!(output.len() > 0, "Output should have content");
+    assert!(!output.is_empty(), "Output should have content");
 
     // Cursor should advance (emoji typically take 2 columns)
     assert!(
