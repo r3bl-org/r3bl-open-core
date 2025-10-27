@@ -6,8 +6,8 @@
 use super::create_color_wheel_from_heading_data;
 use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             CommonResult, FragmentsInOneLine, GradientGenerationPolicy, HeadingData,
-            HyperlinkData, InlineString, Lines, MdDocument, MdElement,
-            MdLineFragment, PrettyPrintDebug, RenderList, StyleUSSpan, StyleUSSpanLine,
+            HyperlinkData, InlineString, Lines, MdDocument, MdElement, MdLineFragment,
+            PrettyPrintDebug, RenderList, StyleUSSpan, StyleUSSpanLine,
             StyleUSSpanLines, TextColorizationPolicy, TuiStyle, TuiStyledTexts,
             ZeroCopyGapBuffer, convert_syntect_to_styled_text,
             generate_ordered_list_item_bullet, generate_unordered_list_item_bullet,
@@ -327,10 +327,10 @@ impl StyleUSSpanLines {
 
 mod from_block_codeblock_helper {
     use super::{CODE_BLOCK_START_PARTIAL, CodeBlockLineContent, CodeBlockLines,
-                HighlightLines, RenderList, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines,
-                SyntaxSet, Theme, TuiStyle, convert_syntect_to_styled_text,
-                get_code_block_content_style, get_code_block_lang_style,
-                get_foreground_dim_style, try_get_syntax_ref};
+                HighlightLines, RenderList, StyleUSSpan, StyleUSSpanLine,
+                StyleUSSpanLines, SyntaxSet, Theme, TuiStyle,
+                convert_syntect_to_styled_text, get_code_block_content_style,
+                get_code_block_lang_style, get_foreground_dim_style, try_get_syntax_ref};
 
     #[allow(clippy::similar_names)]
     pub fn try_use_syntect(
@@ -1211,10 +1211,12 @@ mod tests_style_us_span_lines_from {
                         MdLineFragment::OrderedListBullet {
                             indent: 0,
                             number: 100,
-                            is_first_line: true
+                            is_first_line: true,
                         },
                         MdLineFragment::Plain("Foo"),
-                    ].into()].into(),
+                    ]
+                    .into()]
+                    .into(),
                     BulletKind::Ordered(100),
                     0,
                 ));
@@ -1224,10 +1226,12 @@ mod tests_style_us_span_lines_from {
                         MdLineFragment::OrderedListBullet {
                             indent: 0,
                             number: 200,
-                            is_first_line: true
+                            is_first_line: true,
                         },
                         MdLineFragment::Plain("Bar"),
-                    ].into()].into(),
+                    ]
+                    .into()]
+                    .into(),
                     BulletKind::Ordered(200),
                     0,
                 ));
@@ -1282,10 +1286,12 @@ mod tests_style_us_span_lines_from {
                     [[
                         MdLineFragment::UnorderedListBullet {
                             indent: 0,
-                            is_first_line: true
+                            is_first_line: true,
                         },
                         MdLineFragment::Plain("Foo"),
-                    ].into()].into(),
+                    ]
+                    .into()]
+                    .into(),
                     BulletKind::Unordered,
                     0,
                 ));
@@ -1294,10 +1300,12 @@ mod tests_style_us_span_lines_from {
                     [[
                         MdLineFragment::UnorderedListBullet {
                             indent: 0,
-                            is_first_line: true
+                            is_first_line: true,
                         },
                         MdLineFragment::Plain("Bar"),
-                    ].into()].into(),
+                    ]
+                    .into()]
+                    .into(),
                     BulletKind::Unordered,
                     0,
                 ));

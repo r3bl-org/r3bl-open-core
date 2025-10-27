@@ -139,15 +139,14 @@ pub enum TerminalLibBackend {
 ///
 /// This constant defines which terminal backend is used throughout the TUI system.
 /// Platform-specific backends are selected for optimal performance:
-/// - **Linux**: DirectToAnsi (pure Rust ANSI sequences)
+/// - **Linux**: `DirectToAnsi` (pure Rust ANSI sequences)
 /// - **macOS/Windows**: Crossterm (cross-platform compatibility)
 ///
 /// # Performance Note
 ///
-/// DirectToAnsi is currently under performance regression analysis on Linux.
+/// `DirectToAnsi` is currently under performance regression analysis on Linux.
 /// A 55% performance regression was observed vs Crossterm in initial benchmarks.
-/// See docs/task_remove_crossterm.md Step 5 for detailed analysis.
-
+/// See `docs/task_remove_crossterm.md` Step 5 for detailed analysis.
 #[cfg(target_os = "linux")]
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::DirectToAnsi;
 

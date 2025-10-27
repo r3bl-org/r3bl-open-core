@@ -15,8 +15,8 @@
 //!    the editor component (based on scroll state in the viewport). And finally that is
 //!    converted to a [`crate::TuiStyledTexts`].
 
-use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineString, RenderList,
-            PatternMatcherStateMachine, ScrOfs, TuiStyle, TuiStyledTexts,
+use crate::{CharacterMatchResult, ColIndex, ColWidth, GCStringOwned, InlineString,
+            PatternMatcherStateMachine, RenderList, ScrOfs, TuiStyle, TuiStyledTexts,
             get_foreground_dim_style, get_metadata_tags_marker_style,
             get_metadata_tags_values_style, get_metadata_title_marker_style,
             get_metadata_title_value_style,
@@ -52,14 +52,14 @@ impl StyleUSSpan {
 
 /// A line of text is made up of multiple [`StyleUSSpan`]s.
 ///
-/// Uses [RenderList] for performance-optimized hot-path rendering. The `SmallVec[16]`
-/// backing eliminates heap allocations in tight rendering loops, providing ~5% performance
-/// improvement as measured by flamegraph profiling.
+/// Uses [`RenderList`] for performance-optimized hot-path rendering. The `SmallVec[16]`
+/// backing eliminates heap allocations in tight rendering loops, providing ~5%
+/// performance improvement as measured by flamegraph profiling.
 pub type StyleUSSpanLine = RenderList<StyleUSSpan>;
 
 /// A document is made up of multiple [`StyleUSSpanLine`]s.
 ///
-/// Uses [RenderList] for nested rendering structures (document → lines → spans).
+/// Uses [`RenderList`] for nested rendering structures (document → lines → spans).
 pub type StyleUSSpanLines = RenderList<StyleUSSpanLine>;
 
 impl StyleUSSpanLine {
@@ -136,7 +136,7 @@ impl StyleUSSpanLine {
     }
 
     /// Clip the text (in one line) in this range: [ `start_col` .. `end_col` ]. Each line
-    /// is represented as a [RenderList] of ([`TuiStyle`], [`GCStringOwned`])'s.
+    /// is represented as a [`RenderList`] of ([`TuiStyle`], [`GCStringOwned`])'s.
     #[must_use]
     pub fn clip(
         &self,
@@ -256,8 +256,8 @@ mod convert {
 #[cfg(test)]
 mod tests_clip_styled_texts {
     use super::*;
-    use crate::{ChUnitPrimitiveType, ConvertToPlainText, RenderList, assert_eq2, ch, col,
-                render_list, row, scr_ofs, tui_color};
+    use crate::{ChUnitPrimitiveType, ConvertToPlainText, RenderList, assert_eq2, ch,
+                col, render_list, row, scr_ofs, tui_color};
 
     mod fixtures {
         use super::*;

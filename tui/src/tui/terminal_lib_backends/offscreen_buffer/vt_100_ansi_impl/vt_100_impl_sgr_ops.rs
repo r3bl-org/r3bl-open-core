@@ -25,7 +25,7 @@
 //!
 //! This module implements the business logic for SGR operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! code organization. See [parser module docs](crate::core::ansi::parser)
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
@@ -36,8 +36,8 @@
 //! [`apply_style_attribute`]: crate::OffscreenBuffer::apply_style_attribute
 //! [`set_foreground_color`]: crate::OffscreenBuffer::set_foreground_color
 //! [`set_background_color`]: crate::OffscreenBuffer::set_background_color
-//! [`sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_sgr_ops
-//! [`test_sgr_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_sgr_ops
+//! [`sgr_ops`]: crate::core::ansi::parser::operations::vt_100_shim_sgr_ops
+//! [`test_sgr_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_sgr_ops
 
 use crate::{AnsiValue, ColorTarget, OffscreenBuffer, RgbValue, SgrColorSequence,
             TuiColor, TuiStyle, TuiStyleAttribs};

@@ -1,12 +1,13 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, MdLineFragment, ParseList,
-            SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces, parse_list,
+use crate::{BulletKind, CheckboxParsePolicy, InlineVec, Lines, MdLineFragment,
+            ParseList, SmartListIRStr, SmartListLine, SmartListLineStr, get_spaces,
             md_parser::md_parser_constants::{CHECKED, LIST_PREFIX_BASE_WIDTH, NEW_LINE,
                                              NEWLINE_OR_NULL, NULL_CHAR,
                                              ORDERED_LIST_PARTIAL_PREFIX, SPACE,
                                              SPACE_CHAR, UNCHECKED,
                                              UNORDERED_LIST_PREFIX},
             parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line,
+            parse_list,
             parse_null_padded_line::is,
             tiny_inline_string};
 use nom::{IResult, Parser,
@@ -145,7 +146,9 @@ mod tests_parse_block_smart_list {
                         is_first_line: true
                     },
                     MdLineFragment::Plain("straight 😃 foo bar baz"),
-                ].into()].into(),
+                ]
+                .into()]
+                .into(),
                 BulletKind::Unordered,
                 0
             )
@@ -171,7 +174,8 @@ mod tests_parse_block_smart_list {
                     },
                     MdLineFragment::Checkbox(false),
                     MdLineFragment::Plain(" todo"),
-                ].into()
+                ]
+                .into()
             );
         }
 
@@ -192,7 +196,8 @@ mod tests_parse_block_smart_list {
                     },
                     MdLineFragment::Checkbox(true),
                     MdLineFragment::Plain(" done"),
-                ].into()
+                ]
+                .into()
             );
         }
 
@@ -213,7 +218,8 @@ mod tests_parse_block_smart_list {
                     },
                     MdLineFragment::Plain("[ ]"),
                     MdLineFragment::Plain("todo"),
-                ].into()
+                ]
+                .into()
             );
         }
 
@@ -234,7 +240,8 @@ mod tests_parse_block_smart_list {
                     },
                     MdLineFragment::Plain("[x]"),
                     MdLineFragment::Plain("done"),
-                ].into()
+                ]
+                .into()
             );
         }
     }
@@ -244,14 +251,23 @@ mod tests_parse_block_smart_list {
         let input = "- foo\n  bar baz\n";
         let expected = [
             [
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
+                MdLineFragment::UnorderedListBullet {
+                    indent: 0,
+                    is_first_line: true,
+                },
                 MdLineFragment::Plain("foo"),
-            ].into(),
+            ]
+            .into(),
             [
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
+                MdLineFragment::UnorderedListBullet {
+                    indent: 0,
+                    is_first_line: false,
+                },
                 MdLineFragment::Plain("bar baz"),
-            ].into(),
-        ].into();
+            ]
+            .into(),
+        ]
+        .into();
         let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;
@@ -264,14 +280,23 @@ mod tests_parse_block_smart_list {
         let input = "- foo\n  bar baz\n- foo1\n  bar1 baz1\n";
         let expected = [
             [
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: true },
+                MdLineFragment::UnorderedListBullet {
+                    indent: 0,
+                    is_first_line: true,
+                },
                 MdLineFragment::Plain("foo"),
-            ].into(),
+            ]
+            .into(),
             [
-                MdLineFragment::UnorderedListBullet { indent: 0, is_first_line: false },
+                MdLineFragment::UnorderedListBullet {
+                    indent: 0,
+                    is_first_line: false,
+                },
                 MdLineFragment::Plain("bar baz"),
-            ].into(),
-        ].into();
+            ]
+            .into(),
+        ]
+        .into();
         let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;
@@ -284,14 +309,25 @@ mod tests_parse_block_smart_list {
         let input = "1. foo\n   bar baz\n";
         let expected = [
             [
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
+                MdLineFragment::OrderedListBullet {
+                    indent: 0,
+                    number: 1,
+                    is_first_line: true,
+                },
                 MdLineFragment::Plain("foo"),
-            ].into(),
+            ]
+            .into(),
             [
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
+                MdLineFragment::OrderedListBullet {
+                    indent: 0,
+                    number: 1,
+                    is_first_line: false,
+                },
                 MdLineFragment::Plain("bar baz"),
-            ].into(),
-        ].into();
+            ]
+            .into(),
+        ]
+        .into();
         let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;
@@ -304,14 +340,25 @@ mod tests_parse_block_smart_list {
         let input = "1. foo\n   bar baz\n1. foo\n   bar baz\n";
         let expected = [
             [
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: true },
+                MdLineFragment::OrderedListBullet {
+                    indent: 0,
+                    number: 1,
+                    is_first_line: true,
+                },
                 MdLineFragment::Plain("foo"),
-            ].into(),
+            ]
+            .into(),
             [
-                MdLineFragment::OrderedListBullet { indent: 0 , number: 1, is_first_line: false },
+                MdLineFragment::OrderedListBullet {
+                    indent: 0,
+                    number: 1,
+                    is_first_line: false,
+                },
                 MdLineFragment::Plain("bar baz"),
-            ].into(),
-        ].into();
+            ]
+            .into(),
+        ]
+        .into();
         let result = parse_smart_list_block(input);
         let remainder = result.as_ref().unwrap().0;
         let (lines, _bullet_kind, _indent) = result.unwrap().1;

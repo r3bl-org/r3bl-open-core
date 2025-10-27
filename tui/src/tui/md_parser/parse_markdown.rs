@@ -300,7 +300,7 @@ mod tests_integration_block_smart_lists {
 mod tests_parse_markdown {
     use super::*;
     use crate::{BulletKind, CodeBlockLine, CodeBlockLineContent, HeadingData,
-                HeadingLevel, HyperlinkData, MdLineFragment, assert_eq2, parse_list};
+                HeadingLevel, HyperlinkData, MdLineFragment, assert_eq2};
 
     #[test]
     fn test_no_line() {
@@ -352,11 +352,14 @@ mod tests_parse_markdown {
         );
         assert_eq2!(
             blocks[2],
-            MdElement::Text([
-                MdLineFragment::Plain("##% LINE 2 FOO"),
-                MdLineFragment::Plain("_"),
-                MdLineFragment::Plain("BAR:"),
-            ].into())
+            MdElement::Text(
+                [
+                    MdLineFragment::Plain("##% LINE 2 FOO"),
+                    MdLineFragment::Plain("_"),
+                    MdLineFragment::Plain("BAR:"),
+                ]
+                .into()
+            )
         );
     }
 
@@ -371,10 +374,13 @@ mod tests_parse_markdown {
         assert_eq2!(blocks.len(), 1);
         assert_eq2!(
             blocks[0],
-            MdElement::Text([
-                MdLineFragment::Plain("_"),
-                MdLineFragment::Plain("this should not be italic"),
-            ].into())
+            MdElement::Text(
+                [
+                    MdLineFragment::Plain("_"),
+                    MdLineFragment::Plain("this should not be italic"),
+                ]
+                .into()
+            )
         );
     }
 
@@ -428,105 +434,125 @@ mod tests_parse_markdown {
                 text: "Foobar",
             }),
             MdElement::Text([].into()), /* Empty line */
-            MdElement::Text([MdLineFragment::Plain(
-                "Foobar is a Python library for dealing with word pluralization.",
-            )].into()),
+            MdElement::Text(
+                [MdLineFragment::Plain(
+                    "Foobar is a Python library for dealing with word pluralization.",
+                )]
+                .into(),
+            ),
             MdElement::Text([].into()), /* Empty line */
-            MdElement::CodeBlock([
-                CodeBlockLine {
-                    language: Some("bash"),
-                    content: CodeBlockLineContent::StartTag
-                },
-                CodeBlockLine {
-                    language: Some("bash"),
-                    content: CodeBlockLineContent::Text("pip install foobar")
-                },
-                CodeBlockLine {
-                    language: Some("bash"),
-                    content: CodeBlockLineContent::EndTag
-                },
-            ].into()),
-            MdElement::CodeBlock([
-                CodeBlockLine {
-                    language: Some("fish"),
-                    content: CodeBlockLineContent::StartTag
-                },
-                CodeBlockLine {
-                    language: Some("fish"),
-                    content: CodeBlockLineContent::EndTag
-                },
-            ].into()),
-            MdElement::CodeBlock([
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::StartTag
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::Text("")
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::EndTag
-                },
-            ].into()),
+            MdElement::CodeBlock(
+                [
+                    CodeBlockLine {
+                        language: Some("bash"),
+                        content: CodeBlockLineContent::StartTag,
+                    },
+                    CodeBlockLine {
+                        language: Some("bash"),
+                        content: CodeBlockLineContent::Text("pip install foobar"),
+                    },
+                    CodeBlockLine {
+                        language: Some("bash"),
+                        content: CodeBlockLineContent::EndTag,
+                    },
+                ]
+                .into(),
+            ),
+            MdElement::CodeBlock(
+                [
+                    CodeBlockLine {
+                        language: Some("fish"),
+                        content: CodeBlockLineContent::StartTag,
+                    },
+                    CodeBlockLine {
+                        language: Some("fish"),
+                        content: CodeBlockLineContent::EndTag,
+                    },
+                ]
+                .into(),
+            ),
+            MdElement::CodeBlock(
+                [
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::StartTag,
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::Text(""),
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::EndTag,
+                    },
+                ]
+                .into(),
+            ),
             MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 2 },
                 text: "Installation",
             }),
             MdElement::Text([].into()), /* Empty line */
-            MdElement::Text([
-                MdLineFragment::Plain("Use the package manager "),
-                MdLineFragment::Link(HyperlinkData::from((
-                    "pip",
-                    "https://pip.pypa.io/en/stable/",
-                ))),
-                MdLineFragment::Plain(" to install foobar."),
-            ].into()),
-            MdElement::CodeBlock([
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::StartTag
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::Text("import foobar")
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::Text("")
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::Text(
-                        "foobar.pluralize('word') # returns 'words'"
-                    )
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::Text(
-                        "foobar.pluralize('goose') # returns 'geese'"
-                    )
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::Text(
-                        "foobar.singularize('phenomena') # returns 'phenomenon'"
-                    )
-                },
-                CodeBlockLine {
-                    language: Some("python"),
-                    content: CodeBlockLineContent::EndTag
-                },
-            ].into()),
+            MdElement::Text(
+                [
+                    MdLineFragment::Plain("Use the package manager "),
+                    MdLineFragment::Link(HyperlinkData::from((
+                        "pip",
+                        "https://pip.pypa.io/en/stable/",
+                    ))),
+                    MdLineFragment::Plain(" to install foobar."),
+                ]
+                .into(),
+            ),
+            MdElement::CodeBlock(
+                [
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::StartTag,
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::Text("import foobar"),
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::Text(""),
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::Text(
+                            "foobar.pluralize('word') # returns 'words'",
+                        ),
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::Text(
+                            "foobar.pluralize('goose') # returns 'geese'",
+                        ),
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::Text(
+                            "foobar.singularize('phenomena') # returns 'phenomenon'",
+                        ),
+                    },
+                    CodeBlockLine {
+                        language: Some("python"),
+                        content: CodeBlockLineContent::EndTag,
+                    },
+                ]
+                .into(),
+            ),
             MdElement::SmartList((
                 [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
-                        is_first_line: true
+                        is_first_line: true,
                     },
                     MdLineFragment::Plain("ul1"),
-                ].into()].into(),
+                ]
+                .into()]
+                .into(),
                 BulletKind::Unordered,
                 0,
             )),
@@ -534,10 +560,12 @@ mod tests_parse_markdown {
                 [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
-                        is_first_line: true
+                        is_first_line: true,
                     },
                     MdLineFragment::Plain("ul2"),
-                ].into()].into(),
+                ]
+                .into()]
+                .into(),
                 BulletKind::Unordered,
                 0,
             )),
@@ -546,10 +574,12 @@ mod tests_parse_markdown {
                     MdLineFragment::OrderedListBullet {
                         indent: 0,
                         number: 1,
-                        is_first_line: true
+                        is_first_line: true,
                     },
                     MdLineFragment::Plain("ol1"),
-                ].into()].into(),
+                ]
+                .into()]
+                .into(),
                 BulletKind::Ordered(1),
                 0,
             )),
@@ -558,10 +588,12 @@ mod tests_parse_markdown {
                     MdLineFragment::OrderedListBullet {
                         indent: 0,
                         number: 2,
-                        is_first_line: true
+                        is_first_line: true,
                     },
                     MdLineFragment::Plain("ol2"),
-                ].into()].into(),
+                ]
+                .into()]
+                .into(),
                 BulletKind::Ordered(2),
                 0,
             )),
@@ -569,11 +601,13 @@ mod tests_parse_markdown {
                 [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
-                        is_first_line: true
+                        is_first_line: true,
                     },
                     MdLineFragment::Checkbox(false),
                     MdLineFragment::Plain(" todo"),
-                ].into()].into(),
+                ]
+                .into()]
+                .into(),
                 BulletKind::Unordered,
                 0,
             )),
@@ -581,11 +615,13 @@ mod tests_parse_markdown {
                 [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
-                        is_first_line: true
+                        is_first_line: true,
                     },
                     MdLineFragment::Checkbox(true),
                     MdLineFragment::Plain(" done"),
-                ].into()].into(),
+                ]
+                .into()]
+                .into(),
                 BulletKind::Unordered,
                 0,
             )),

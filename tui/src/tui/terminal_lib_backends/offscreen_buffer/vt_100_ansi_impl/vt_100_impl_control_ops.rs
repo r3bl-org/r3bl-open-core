@@ -16,7 +16,7 @@
 //!
 //! This module implements the business logic for control operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! code organization. See [parser module docs](crate::core::ansi::parser)
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
@@ -27,8 +27,8 @@
 //! [`handle_tab`]: crate::OffscreenBuffer::handle_tab
 //! [`handle_line_feed`]: crate::OffscreenBuffer::handle_line_feed
 //! [`handle_carriage_return`]: crate::OffscreenBuffer::handle_carriage_return
-//! [`control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_control_ops
-//! [`test_control_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_control_ops
+//! [`control_ops`]: crate::core::ansi::parser::operations::vt_100_shim_control_ops
+//! [`test_control_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_control_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

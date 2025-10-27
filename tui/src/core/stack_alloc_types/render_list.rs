@@ -6,12 +6,13 @@ use crate::InlineVecStr;
 use smallvec::SmallVec;
 use std::ops::{AddAssign, Deref, DerefMut};
 
-/// Storage type for RenderList - SmallVec with inline capacity of 16.
+/// Storage type for `RenderList` - `SmallVec` with inline capacity of 16.
 pub type RenderListStorage<T> = SmallVec<[T; RENDER_LIST_STORAGE_SIZE]>;
 const RENDER_LIST_STORAGE_SIZE: usize = 16;
 
 /// **Stack-allocated** performance-optimized list for hot-path rendering operations.
-/// Uses `[SmallVec][16]` internally to eliminate heap allocations in tight loops.
+/// Uses `SmallVec<[T; 16]>` (16-item stack-allocated inline capacity) internally to
+/// eliminate heap allocations in tight loops.
 ///
 /// **Why Stack Allocation for Rendering?**
 ///
@@ -23,8 +24,9 @@ const RENDER_LIST_STORAGE_SIZE: usize = 16;
 ///
 /// ## 1. Zero Heap Allocations (for typical sizes)
 ///
-/// `[SmallVec][16]` stores up to 16 items **directly inline on the stack**, avoiding
-/// heap allocations entirely for the common case:
+/// `SmallVec<[T; 16]>` (16-item stack-allocated inline capacity) stores up to 16 items
+/// **directly inline on the stack**, avoiding heap allocations entirely for the common
+/// case:
 ///
 /// - **Typical rendering**: Most render operations involve 8-16 styled text spans
 /// - **Stack storage**: ~648 bytes allocated inline ([`SmallVec`] header + 16 × ~40-byte
@@ -59,9 +61,10 @@ const RENDER_LIST_STORAGE_SIZE: usize = 16;
 ///
 /// ## Stack Usage
 ///
-/// - **Cost**: ~648 bytes per RenderList on the stack
+/// - **Cost**: ~648 bytes per `RenderList` on the stack
 /// - **Safe for**: Shallow call stacks (1-10 levels deep)
-/// - **Unsafe for**: Deep recursion (300+ frames) → See [`crate::ParseList`] for that use case
+/// - **Unsafe for**: Deep recursion (300+ frames) → See [`crate::ParseList`] for that use
+///   case
 ///
 /// ## When to Use
 ///
@@ -80,7 +83,8 @@ const RENDER_LIST_STORAGE_SIZE: usize = 16;
 /// # See Also
 ///
 /// - [`crate::ParseList`]: Heap-allocated for stack safety with deep recursion
-/// - [`crate::List`]: General-purpose with `[SmallVec][8]` for balanced trade-offs
+/// - [`crate::List`]: General-purpose with `SmallVec<[T; 8]>` (8-item stack-allocated
+///   inline capacity) for balanced trade-offs
 ///
 /// [`SmallVec`]: https://docs.rs/smallvec/latest/smallvec/
 #[derive(Clone, Default, PartialEq, Debug)]

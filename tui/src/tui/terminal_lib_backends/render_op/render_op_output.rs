@@ -31,8 +31,8 @@
 
 use super::{RenderOpCommon, RenderOpsExec};
 use crate::{InlineString, InlineVec, LockedOutputDevice, PaintRenderOpImplCrossterm,
-            RenderOpPaintImplDirectToAnsi, RenderOpsLocalData, Size, TERMINAL_LIB_BACKEND,
-            TerminalLibBackend, TuiStyle, ok};
+            RenderOpPaintImplDirectToAnsi, RenderOpsLocalData, Size,
+            TERMINAL_LIB_BACKEND, TerminalLibBackend, TuiStyle, ok};
 use std::{fmt::{Debug, Formatter, Result},
           ops::{AddAssign, Deref, DerefMut}};
 

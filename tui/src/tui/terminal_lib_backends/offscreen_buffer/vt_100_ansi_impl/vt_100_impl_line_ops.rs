@@ -57,9 +57,9 @@
 //! [`shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
 //! [`shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
 //! [`clear_line`]: crate::OffscreenBuffer::clear_line
-//! [`line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_line_ops
-//! [`test_line_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_line_ops
-//! [parser module docs]: crate::core::pty_mux::vt_100_ansi_parser
+//! [`line_ops`]: crate::core::ansi::parser::operations::vt_100_shim_line_ops
+//! [`test_line_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_line_ops
+//! [parser module docs]: crate::core::ansi::parser
 //! [Interval Notation]: crate::core::coordinates::bounds_check#interval-notation
 
 use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,

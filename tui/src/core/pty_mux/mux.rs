@@ -7,8 +7,8 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager};
 use crate::{Size,
-            ansi::terminal_output,
-            core::{get_size,
+            core::{ansi::terminal_output,
+                   get_size,
                    osc::OscController,
                    pty::pty_core::pty_sessions::show_notification,
                    terminal_io::{InputDevice, OutputDevice}},

@@ -1,80 +1,139 @@
-// Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-
-//! This module allows you to generate formatted ANSI 256 (8-bit) and truecolor (24-bit)
-//! color output to stdout. On macOS, the default Terminal.app does not support truecolor,
-//! so ANSI 256 colors are used instead.
+//! ANSI Terminal Abstraction Layer
 //!
-//! This crate performs its own detection of terminal color capability heuristically. And
-//! does not use other crates to perform this function.
+//! This module provides bidirectional ANSI sequence handling for terminal emulation:
 //!
-//! Here's a screenshot of running the `main` example on various operating systems:
+//! ## Key Subsystems
 //!
-//! | ![Linux screenshot](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/refs/heads/main/docs/image/screenshot_linux.png) |
-//! |:--:|
-//! | *Running on Linux Tilix* |
+//! - **Parser** ([`parser`]): Convert incoming PTY output (ANSI sequences) → terminal
+//!   state
+//! - **Generator** ([`generator`]): Convert app styling → outgoing ANSI sequences
+//! - **Color** ([`color`]): Color type definitions and conversions (RGB ↔ ANSI256)
+//! - **Terminal Output** ([`terminal_output`]): I/O operations for writing to terminal
 //!
-//! | ![Windows screenshot](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/refs/heads/main/docs/image/screenshot_windows.png) |
-//! |:--:|
-//! | *Running on Windows Terminal* |
+//! ## Architecture Overview
 //!
-//! | ![macOS screenshot Terminal app](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/refs/heads/main/docs/image/screenshot_macos_terminal_app.png) |
-//! |:--:|
-//! | *Running on macOS terminal app (note ANSI 256 runtime detection)* |
-//!
-//! | ![macOS screenshot iTerm app](https://raw.githubusercontent.com/r3bl-org/r3bl-open-core/refs/heads/main/docs/image/screenshot_macos_iterm_app.png) |
-//! |:--:|
-//! | *Running on macOS iTerm app (note Truecolor runtime detection)* |
-//!
-//! # How to use it
-//!
-//! The main struct that we have to consider is `CliTextInline`. It has two fields:
-//!
-//! - `text` - the text to print.
-//! - `style` - a list of styles to apply to the text.
-//!
-//! Here's an example.
-//!
-//! ```
-//! # use r3bl_tui::{
-//! #     fg_red, size, fg_color, tui_color, new_style, cli_text_inline,
-//! #     RgbValue, CliStyle, CliTextInline,
-//! # };
-//!
-//! // Use cli_text_inline() to create a styled text.
-//! let styled_text = cli_text_inline("Hello", new_style!(bold));
-//! println!("{styled_text}");
-//! styled_text.println();
+//! ```text
+//! PTY Input                                  App Output
+//!    ↓                                          ↓
+//! ┌─────────────┐                       ┌──────────────┐
+//! │   Parser    │◀─── Constants ───→   │  Generator   │
+//! └─────────────┘        (ANSI         └──────────────┘
+//! ↓                      specs)               ↑
+//! Terminal State          │           Styled Text
+//!                        ↓                    │
+//!                    ┌──────────┐            │
+//!                    │  Color   │────────────┘
+//!                    │Types &   │
+//!                    │Conversion│
+//!                    └──────────┘
 //! ```
 //!
-//! For more examples, please read the documentation for [`CliTextInline`]. Please don't
-//! create this struct directly, use [`crate::cli_text_inline()`],
-//! [`crate::cli_text_line!`], [`crate::cli_text_lines!`] or the constructor functions
-//! like [`fg_red()`], [`fg_green()`], [`fg_blue()`], etc.
+//! ## Usage Examples
 //!
-//! # References
+//! ### Styling Text for Output
+//! ```ignore
+//! use r3bl_tui::{SgrCode, CliTextInline};
 //!
-//! - [ANSI Escape Codes](https://notes.burke.libbey.me/ansi-escape-codes/)
-//! - [ASCII Table](https://www.asciitable.com/)
-//! - [Xterm 256color Chart](https://commons.wikimedia.org/wiki/File:Xterm_256color_chart.svg)
-//! - [256 Colors Cheat Sheet](https://www.ditig.com/256-colors-cheat-sheet)
-//! - [List of ANSI Color Escape Sequences](https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences)
-//! - [Color Metric](https://www.compuphase.com/cmetric.htm)
+//! let styled = CliTextInline::new("Hello", vec![SgrCode::Bold]);
+//! println!("{}", styled);
+//! ```
+//!
+//! ### Parsing ANSI Sequences
+//! ```ignore
+//! use r3bl_tui::core::ansi::parser;
+//!
+//! let sequence = parser::CsiSequence::cursor_position_report(10, 5);
+//! ```
+//!
+//! ### Color Conversions
+//! ```ignore
+//! use r3bl_tui::core::ansi::color::{RgbValue, AnsiValue};
+//!
+//! let rgb = RgbValue { r: 255, g: 128, b: 64 };
+//! let ansi = rgb.to_ansi();  // Convert to nearest ANSI color
+//! ```
+//!
+//! ## Module Organization
+//!
+//! - **`color/`** - Type-safe color representations and conversions
+//! - **`constants/`** - ANSI/VT100 escape sequence constants
+//! - **`generator/`** - ANSI sequence generation (`SgrCode`, `CliTextInline`)
+//! - **`parser/`** - ANSI sequence parsing (performer, protocols, operations)
+//! - **`terminal_output.rs`** - I/O operations
 
-// https://github.com/rust-lang/rust-clippy
-// https://rust-lang.github.io/rust-clippy/master/index.html
-#![warn(clippy::all)]
-#![warn(clippy::unwrap_in_result)]
-#![warn(rust_2018_idioms)]
-
-// Attach.
-pub mod ansi_escape_codes;
-pub mod cli_text;
 pub mod color;
-pub mod detect_color_support;
+pub mod constants;
+pub mod generator;
+pub mod parser;
 pub mod terminal_output;
 
-pub use ansi_escape_codes::*;
-pub use cli_text::*;
+// Color support detection module
+mod detect_color_support;
+
+// Re-export key types for ergonomics
 pub use color::*;
-pub use detect_color_support::*;
+pub use constants::*;
+// Color support detection and constants from detect_color_support module
+pub use detect_color_support::{ColorSupport, HyperlinkSupport, Stream,
+                               examine_env_vars_to_determine_color_support,
+                               examine_env_vars_to_determine_hyperlink_support,
+                               global_color_support, global_hyperlink_support};
+pub use generator::{// Constants
+                    CRLF_BYTES,
+                    // Main types
+                    CliTextInline,
+                    CliTextLine,
+                    CliTextLines,
+                    DsrRequestFromPtyEvent,
+                    DsrRequestType,
+                    DsrSequence,
+                    // Builder enums
+                    EscSequence,
+                    SGR_RESET_BYTES,
+                    SgrCode,
+                    // Style helpers
+                    bold,
+                    // Main CLI text function
+                    cli_text_inline,
+                    // Submodules
+                    cli_text_inline_impl,
+                    dim,
+                    dim_underline,
+                    fg_black,
+                    fg_blue,
+                    fg_bright_cyan,
+                    // Color functions - basic
+                    fg_color,
+                    fg_cyan,
+                    // Color functions - dark shades
+                    fg_dark_gray,
+                    fg_dark_lizard_green,
+                    fg_dark_pink,
+                    fg_dark_purple,
+                    fg_dark_teal,
+                    fg_frozen_blue,
+                    fg_green,
+                    fg_guards_red,
+                    fg_hot_pink,
+                    fg_lavender,
+                    fg_light_cyan,
+                    fg_light_purple,
+                    fg_light_yellow_green,
+                    fg_lizard_green,
+                    fg_magenta,
+                    // Color functions - light/bright shades
+                    fg_medium_gray,
+                    // Color functions - custom/themed
+                    fg_orange,
+                    fg_pink,
+                    fg_red,
+                    fg_silver_metallic,
+                    fg_sky_blue,
+                    fg_slate_gray,
+                    fg_soft_pink,
+                    fg_white,
+                    fg_yellow,
+                    italic,
+                    underline};
+pub use parser::{AnsiToOfsBufPerformer, CsiSequence};
 pub use terminal_output::*;

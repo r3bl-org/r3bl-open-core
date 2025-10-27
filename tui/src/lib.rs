@@ -454,7 +454,7 @@
 //! - **Automated benchmarking**: Reproducible flamegraph data for comparing performance
 //!   across code changes
 //!   - Command: `./run.fish run-examples-flamegraph-fold --benchmark`
-//!   - Uses scripted ex_editor input sequence that stress tests the rendering pipeline
+//!   - Uses scripted `ex_editor` input sequence that stress tests the rendering pipeline
 //!   - Ensures `.perf-folded` files are comparable across commits
 //!   - 8-second continuous workload with 999 Hz sampling for accurate hot path capture
 //! - **Real-time benchmarking**: Run benchmarks with live output
@@ -1661,7 +1661,7 @@
 //! - VT-100 conformance test suite
 //!
 //! See the detailed [`pty_mux` module documentation](crate::core::pty_mux) and
-//! [`vt_100_ansi_parser` module](crate::core::pty_mux::vt_100_ansi_parser).
+//! [`vt_100_ansi_parser` module](crate::core::ansi::parser).
 //!
 //! # Painting the caret
 //!
@@ -1840,9 +1840,9 @@
 //! [try_parse_and_highlight]: crate::tui::syntax_highlighting::md_parser_syn_hi::try_parse_and_highlight
 //!
 //! [PTYMux]: crate::core::pty_mux::PTYMux
-//! [CsiSequence]: crate::core::pty_mux::vt_100_ansi_parser::CsiSequence
-//! [EscSequence]: crate::core::pty_mux::vt_100_ansi_parser::EscSequence
-//! [SgrCode]: crate::core::ansi::SgrCode
+//! [CsiSequence]: crate::CsiSequence
+//! [EscSequence]: crate::EscSequence
+//! [SgrCode]: crate::SgrCode
 //!
 //! [RowIndex]: crate::RowIndex
 //! [ColIndex]: crate::ColIndex

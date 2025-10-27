@@ -108,7 +108,7 @@ mod inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2, parse_list};
+    use crate::{MdLineFragment, assert_eq2};
 
     #[test]
     fn test_parse_block_markdown_text_with_checkbox_policy_empty_string() {
@@ -134,7 +134,8 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Plain("*"),
                     MdLineFragment::Plain("but what if we italicize?"),
-                ].into()
+                ]
+                .into()
             ))
         );
     }
@@ -143,7 +144,7 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_inner {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2, parse_list};
+    use crate::{MdLineFragment, assert_eq2};
 
     #[test]
     fn test_parse_block_markdown_text_with_new_line() {
@@ -164,7 +165,8 @@ mod tests_parse_block_markdown_text_inner {
                 [
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Bold("but what if we bold?"),
-                ].into()
+                ]
+                .into()
             ))
         );
         assert_eq2!(
@@ -182,7 +184,8 @@ mod tests_parse_block_markdown_text_inner {
                     MdLineFragment::Bold(""),
                     MdLineFragment::Plain(" in my "),
                     MdLineFragment::InlineCode("code"),
-                ].into()
+                ]
+                .into()
             ))
         );
         assert_eq2!(
@@ -194,7 +197,8 @@ mod tests_parse_block_markdown_text_inner {
                 [
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Italic("but what if we italic?"),
-                ].into()
+                ]
+                .into()
             ))
         );
         assert_eq2!(
@@ -220,7 +224,8 @@ mod tests_parse_block_markdown_text_inner {
                     MdLineFragment::Plain("this "),
                     MdLineFragment::Plain("_"),
                     MdLineFragment::Plain("bar"),
-                ].into()
+                ]
+                .into()
             ))
         );
     }
@@ -229,7 +234,7 @@ mod tests_parse_block_markdown_text_inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text {
     use super::*;
-    use crate::{HyperlinkData, MdLineFragment, assert_eq2, parse_list};
+    use crate::{HyperlinkData, MdLineFragment, assert_eq2};
 
     #[test]
     fn test_parse_block_markdown_text_with_hyperlink_1() {
@@ -249,7 +254,8 @@ mod tests_parse_block_markdown_text {
                         url: "http://google.com",
                     },),
                     MdLineFragment::Plain(".",),
-                ].into(),
+                ]
+                .into(),
             ))
         );
     }
@@ -272,7 +278,8 @@ mod tests_parse_block_markdown_text {
                         url: "http://google.com",
                     },),
                     MdLineFragment::Plain(".",),
-                ].into(),
+                ]
+                .into(),
             ))
         );
     }
@@ -295,7 +302,8 @@ mod tests_parse_block_markdown_text {
                         url: "url",
                     },),
                     MdLineFragment::Plain(".",),
-                ].into(),
+                ]
+                .into(),
             ))
         );
     }
@@ -320,7 +328,8 @@ mod tests_parse_block_markdown_text {
                     },),
                     MdLineFragment::Plain(" ",),
                     MdLineFragment::Plain("*",),
-                ].into(),
+                ]
+                .into(),
             ))
         );
     }

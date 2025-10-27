@@ -81,10 +81,10 @@
 //!
 //! [`from_raw_non_zero_value()`]: TermRow::from_raw_non_zero_value
 //! [`from_zero_based()`]: TermRow::from_zero_based
-//! [`vt_100_ansi_parser`]: crate::core::pty_mux::vt_100_ansi_parser
+//! [`vt_100_ansi_parser`]: crate::core::ansi::parser
 //! [`offscreen_buffer`]: crate::tui::terminal_lib_backends::offscreen_buffer
 
-use crate::{ColIndex, NumericConversions, RowIndex, vt_100_ansi_parser::CsiSequence};
+use crate::{ColIndex, NumericConversions, RowIndex, core::ansi::parser::CsiSequence};
 use std::{num::NonZeroU16, ops::Add};
 
 /// Internal macro to implement all necessary traits and methods for terminal coordinate

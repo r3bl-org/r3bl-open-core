@@ -9,15 +9,15 @@
 //!
 //! This module implements the business logic for scroll operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! code organization. See [parser module docs](crate::core::ansi::parser)
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
 //! - **Shim**: [`scroll_ops`] - Parameter translation and delegation (no direct tests)
 //! - **Integration Tests**: [`test_scroll_ops`] - Full ANSI pipeline testing
 //!
-//! [`scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_scroll_ops
-//! [`test_scroll_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_scroll_ops
+//! [`scroll_ops`]: crate::core::ansi::parser::operations::vt_100_shim_scroll_ops
+//! [`test_scroll_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_scroll_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -269,7 +269,7 @@ impl OffscreenBuffer {
 mod tests_scroll_vert_ops {
     use super::*;
     use crate::{col, height, idx, row, term_row, width,
-                core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+                core::ansi::parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
                                         create_test_buffer_with_size}};
 

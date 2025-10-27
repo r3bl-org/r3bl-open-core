@@ -8,8 +8,8 @@
 
 use super::ProcessManager;
 use crate::{Size,
-            ansi::terminal_output,
-            core::{osc::OscController,
+            core::{ansi::terminal_output,
+                   osc::OscController,
                    pty::{PtyInputEvent, pty_core::pty_sessions::show_notification},
                    terminal_io::OutputDevice},
             tui::terminal_lib_backends::{FunctionKey, InputEvent, Key, KeyPress,

@@ -17,7 +17,7 @@
 //!
 //! This module implements the business logic for character operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::pty_mux::vt_100_ansi_parser)
+//! code organization. See [parser module docs](crate::core::ansi::parser)
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
@@ -28,8 +28,8 @@
 //! [`delete_chars_at_cursor`]: crate::OffscreenBuffer::delete_chars_at_cursor
 //! [`erase_chars_at_cursor`]: crate::OffscreenBuffer::erase_chars_at_cursor
 //! [`print_char`]: crate::OffscreenBuffer::print_char
-//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_char_ops
-//! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
+//! [`char_ops`]: crate::core::ansi::parser::operations::vt_100_shim_char_ops
+//! [`test_char_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

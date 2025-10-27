@@ -4,8 +4,9 @@
 //! w/out any formatting.
 
 use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement,
-            MdLineFragment, ParseList, PrettyPrintDebug, convert_to_string_slice, get_hashes,
-            get_horiz_lines, get_spaces, inline_string, join, join_fmt, join_with_index,
+            MdLineFragment, ParseList, PrettyPrintDebug, convert_to_string_slice,
+            get_hashes, get_horiz_lines, get_spaces, inline_string, join, join_fmt,
+            join_with_index,
             md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET,
                                              LEFT_IMAGE, LEFT_PARENTHESIS,
                                              LIST_SPACE_DISPLAY,

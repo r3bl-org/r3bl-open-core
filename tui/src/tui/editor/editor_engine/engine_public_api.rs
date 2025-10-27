@@ -721,8 +721,8 @@ mod no_syn_hi_path {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, ModifierKeysMask,
-                Pos, RenderList, clipboard_service::clipboard_test_fixtures::TestClipboard,
+    use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, ModifierKeysMask, Pos,
+                RenderList, clipboard_service::clipboard_test_fixtures::TestClipboard,
                 key_press, width};
 
     #[test]

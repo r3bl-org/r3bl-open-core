@@ -1,7 +1,8 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineVec, ParseList, parse_list,
+use crate::{InlineVec, ParseList,
             md_parser::md_parser_constants::{COLON, COMMA, SPACE},
+            parse_list,
             parse_null_padded_line::trim_optional_leading_newline_and_nulls,
             take_text_in_single_line};
 use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};

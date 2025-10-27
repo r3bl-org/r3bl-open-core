@@ -17,6 +17,7 @@ use crate::{execute_commands,
             TTYResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum EventLoopResult {
     Continue,
     ContinueAndRerender,

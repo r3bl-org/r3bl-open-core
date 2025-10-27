@@ -24,6 +24,7 @@ pub struct BranchCheckoutDetails {
 /// Information about command and subcommand that has run successfully. Eg: `giti branch
 /// delete` or `giti branch checkout` or `giti branch new`.
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum CommandRunDetails {
     BranchDelete(BranchDeleteDetails),
     BranchNew(BranchNewDetails),

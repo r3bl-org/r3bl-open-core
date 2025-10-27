@@ -4,7 +4,7 @@
 
 use std::ops::{AddAssign, Deref, DerefMut};
 
-/// Storage type for ParseList - standard Vec for heap allocation.
+/// Storage type for `ParseList` - standard Vec for heap allocation.
 pub type ParseListStorage<T> = Vec<T>;
 
 /// **Heap-allocated** list for parsing user input (markdown, config files, etc.).
@@ -14,10 +14,10 @@ pub type ParseListStorage<T> = Vec<T>;
 /// The [Vec] descriptor (24 bytes) lives on the stack, but all contents are stored
 /// on the heap. This is intentional for safety with deeply recursive parsers.
 ///
-/// # Why Heap Allocation Instead of Stack (SmallVec)?
+/// # Why Heap Allocation Instead of Stack (`SmallVec`)?
 ///
 /// This type deliberately uses heap allocation via [Vec] rather than stack optimization
-/// with [SmallVec], due to stack overflow issues with deeply recursive parsers.
+/// with [`SmallVec`], due to stack overflow issues with deeply recursive parsers.
 ///
 /// ## The Problem: Stack Overflow in Recursive Parsers
 ///
@@ -26,14 +26,15 @@ pub type ParseListStorage<T> = Vec<T>;
 ///
 /// - Complex markdown documents → 300+ recursive parser frames
 /// - Each frame allocates parser state on the stack
-/// - If list types use `[SmallVec][16]`, each adds 648 bytes per frame
+/// - If list types use `SmallVec<[T; 16]>` (16-item stack-allocated inline capacity),
+///   each adds 648 bytes per frame
 /// - **Total stack usage**: 648 bytes × 300 frames = **194,400 bytes (~189 KB)**
 /// - **Result**: Stack overflow! (Default stack is typically 8 MB, but recursive parsers
 ///   combined with large inline allocations quickly exhaust it)
 ///
 /// ## The Solution: Heap Allocation via Vec
 ///
-/// By using [Vec] instead of [SmallVec], we keep stack footprint minimal:
+/// By using [Vec] instead of [`SmallVec`], we keep stack footprint minimal:
 ///
 /// - [Vec] descriptor: **24 bytes** (ptr + len + capacity) on the stack
 /// - **Contents stored on heap**, not stack (this is the key difference!)
@@ -45,22 +46,24 @@ pub type ParseListStorage<T> = Vec<T>;
 /// - **Cost**: Heap allocations during parsing (acceptable for parsing phase)
 /// - **Benefit**: Can parse arbitrarily deep documents without stack overflow
 /// - **Why acceptable**: Parsing happens once; rendering (which uses [`RenderList`] with
-///   [SmallVec] optimization) happens repeatedly and benefits from inline storage
+///   [`SmallVec`] optimization) happens repeatedly and benefits from inline storage
 ///
 /// ## Historical Context
 ///
-/// Originally, this used [`List`] (backed by `[SmallVec][8]` = 328 bytes per frame).
-/// An optimization attempt increased it to `[SmallVec][16]` for 5% performance gain,
+/// Originally, this used [`List`] (backed by `SmallVec<[T; 8]>` (8-item stack-allocated
+/// inline capacity) = 328 bytes per frame). An optimization attempt increased it to
+/// `SmallVec<[T; 16]>` (16-item stack-allocated inline capacity) for 5% performance gain,
 /// which caused stack overflow in `test_parse_markdown_valid` with complex documents.
-/// The fix: separate domain-specific types where [ParseList] uses [Vec] for safety,
-/// while [`RenderList`] keeps `[SmallVec][16]` optimization for the hot rendering path.
+/// The fix: separate domain-specific types where [`ParseList`] uses [Vec] for safety,
+/// while [`RenderList`] keeps `SmallVec<[T; 16]>` (16-item stack-allocated inline
+/// capacity) optimization for the hot rendering path.
 ///
 /// ## See Also
 ///
-/// - [`RenderList`]: Performance-optimized with `[SmallVec][16]` for rendering
-///   (stack-allocated)
-/// - [`List`]: General-purpose with `[SmallVec][8]` for balanced performance/safety
-///   (stack-allocated)
+/// - [`RenderList`]: Performance-optimized with `SmallVec<[T; 16]>` (16-item
+///   stack-allocated inline capacity) for rendering
+/// - [`List`]: General-purpose with `SmallVec<[T; 8]>` (8-item stack-allocated inline
+///   capacity) for balanced performance/safety
 ///
 /// [SmallVec]: crate::smallvec
 /// [`crate::RenderList`]: crate::RenderList

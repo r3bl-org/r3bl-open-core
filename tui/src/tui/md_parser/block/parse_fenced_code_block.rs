@@ -170,7 +170,7 @@ fn convert_into_code_block_lines<'a>(
     });
 
     // Add text lines
-    for line in lines.iter() {
+    for line in lines {
         result.push(CodeBlockLine {
             language,
             content: CodeBlockLineContent::Text(line),
@@ -189,7 +189,7 @@ fn convert_into_code_block_lines<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, parse_list};
+    use crate::assert_eq2;
 
     #[test]
     fn test_parse_codeblock_split_by_eol() {
@@ -228,7 +228,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ].into();
+            ]
+            .into();
             let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }
@@ -250,7 +251,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ].into();
+            ]
+            .into();
             let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }
@@ -272,7 +274,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ].into();
+            ]
+            .into();
             let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }
@@ -298,7 +301,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ].into();
+            ]
+            .into();
             let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }

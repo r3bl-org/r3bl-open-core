@@ -11,10 +11,11 @@
 //!
 //! # Types in this Module
 //!
-//! ## [ParseList] - Stack-safe parsing
+//! ## [`ParseList`] - Stack-safe parsing
 //!
 //! Uses [Vec] for absolute stack safety with recursive parsers. Only 24 bytes on stack
-//! regardless of content size, preventing stack overflow in deeply nested parsing operations.
+//! regardless of content size, preventing stack overflow in deeply nested parsing
+//! operations.
 //!
 //! # See Also
 //!

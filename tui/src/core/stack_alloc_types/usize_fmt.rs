@@ -16,7 +16,8 @@
 //! # Types Supported
 //!
 //! - [usize]: Maximum 20 digits (for 64-bit platforms)
-//! - [u16]: Maximum 5 digits (u16::MAX = 65535) - **optimized for terminal coordinates**
+//! - [u16]: Maximum 5 digits (`u16::MAX` = 65535) - **optimized for terminal
+//!   coordinates**
 //!
 //! # Constants
 //!
@@ -27,7 +28,8 @@
 //!
 //! ## usize formatting
 //! - [`usize_to_u8_array`]: Converts [usize] to fixed-size [u8] array
-//! - [`convert_to_string_slice`]: Converts [u8] array to string slice (removes leading zeros)
+//! - [`convert_to_string_slice`]: Converts [u8] array to string slice (removes leading
+//!   zeros)
 //!
 //! ## u16 formatting (optimized for ANSI sequences)
 //! - [`u16_to_u8_array`]: Converts [u16] to fixed-size [u8] array (smaller, faster)
@@ -63,7 +65,7 @@ pub const USIZE_FMT_MAX_DIGITS: usize = 20;
 
 /// Maximum number of decimal digits needed to represent a [u16].
 ///
-/// This is 5 because [u16::MAX] is 65535 (5 digits).
+/// This is 5 because [`u16::MAX`] is 65535 (5 digits).
 /// - <https://doc.rust-lang.org/std/primitive.u16.html>
 ///
 /// # Use Case
@@ -122,7 +124,8 @@ pub fn convert_to_string_slice(arg: &[u8; USIZE_FMT_MAX_DIGITS]) -> &str {
     result_str.unwrap().trim_start_matches(char::from(0))
 }
 
-// ==================== u16 formatting (optimized for terminal coordinates) ====================
+// ==================== u16 formatting (optimized for terminal coordinates)
+// ====================
 
 /// Convert a [u16] to a fixed-size [u8] array without heap allocation.
 ///

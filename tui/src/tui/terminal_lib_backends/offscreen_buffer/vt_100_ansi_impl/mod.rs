@@ -27,7 +27,7 @@
 //!
 //! This naming pattern solves the IDE search problem by creating a predictable hierarchy
 //! that makes code navigation efficient and intuitive. See [parser module
-//! documentation](crate::core::pty_mux::vt_100_ansi_parser) for the complete
+//! documentation](crate::core::ansi::parser) for the complete
 //! architectural pattern explanation.
 //!
 //! # Module Organization
@@ -107,18 +107,18 @@
 //! documentation, or by using IDE search with the operation name (e.g., search for
 //! [`char_ops`] to find all related files).
 //!
-//! [`char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_char_ops
+//! [`char_ops`]: crate::core::ansi::parser::operations::vt_100_shim_char_ops
 //!
 //! # VT100 Compliance
 //!
 //! These implementations follow VT100 terminal specifications and are tested for
 //! compliance in the [`vt_100_ansi_conformance_tests`] module.
 //!
-//! [`operations`]: crate::core::pty_mux::vt_100_ansi_parser::operations
-//! [`vt_100_ansi_conformance_tests`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests
-//! [`operations::char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::operations::vt_100_shim_char_ops
-//! [`test_char_ops`]: crate::core::pty_mux::vt_100_ansi_parser::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
-//! [parser module docs]: crate::core::pty_mux::vt_100_ansi_parser
+//! [`operations`]: crate::core::ansi::parser::operations
+//! [`vt_100_ansi_conformance_tests`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests
+//! [`operations::char_ops`]: crate::core::ansi::parser::operations::vt_100_shim_char_ops
+//! [`test_char_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
+//! [parser module docs]: crate::core::ansi::parser
 //!
 //! // Implementation layer hyperlinks (this module)
 //! [`vt_100_impl_char_ops`]: `impl_char_ops`

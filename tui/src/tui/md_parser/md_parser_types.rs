@@ -5,7 +5,7 @@ use crate::{InlineVec, ParseList};
 /// This corresponds to a single Markdown document, which is produced after a successful
 /// parse operation [`crate::parse_markdown()`].
 ///
-/// Uses [ParseList] for absolute stack safety with recursive parsers handling unbounded
+/// Uses [`ParseList`] for absolute stack safety with recursive parsers handling unbounded
 /// user input. See [`crate::ParseList`] for details on the safety trade-offs.
 pub type MdDocument<'a> = ParseList<MdElement<'a>>;
 
@@ -15,15 +15,15 @@ pub type Blocks<'a> = MdDocument<'a>;
 /// This roughly corresponds to a single line of text. Each line is made up of one or more
 /// [`MdLineFragment`].
 ///
-/// Uses [ParseList] for stack safety in recursive markdown fragment parsing.
+/// Uses [`ParseList`] for stack safety in recursive markdown fragment parsing.
 pub type MdLineFragments<'a> = ParseList<MdLineFragment<'a>>;
 
 /// Alias for [`MdLineFragments`].
 pub type FragmentsInOneLine<'a> = MdLineFragments<'a>;
 
-/// Alias for [ParseList] of [`FragmentsInOneLine`].
+/// Alias for [`ParseList`] of [`FragmentsInOneLine`].
 ///
-/// Uses [ParseList] for nested lists in smart list parsing (list of lines, each line is
+/// Uses [`ParseList`] for nested lists in smart list parsing (list of lines, each line is
 /// a list of fragments).
 pub type Lines<'a> = ParseList<FragmentsInOneLine<'a>>;
 
@@ -119,9 +119,9 @@ pub struct CodeBlockLine<'a> {
     pub content: CodeBlockLineContent<'a>,
 }
 
-/// Alias for [ParseList] of [`CodeBlockLine`].
+/// Alias for [`ParseList`] of [`CodeBlockLine`].
 ///
-/// Uses [ParseList] for stack safety when parsing multi-line code blocks.
+/// Uses [`ParseList`] for stack safety when parsing multi-line code blocks.
 pub type CodeBlockLines<'a> = ParseList<CodeBlockLine<'a>>;
 
 #[derive(Debug, PartialEq, Clone)]

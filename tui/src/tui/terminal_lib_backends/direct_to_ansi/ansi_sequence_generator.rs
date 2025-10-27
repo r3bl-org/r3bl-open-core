@@ -2,19 +2,20 @@
 
 //! ANSI escape sequence generator for terminal operations. See [`AnsiSequenceGenerator`].
 
-use crate::{ColIndex, RowHeight, RowIndex, TuiColor, TuiStyle,
-            core::{coordinates::{TermCol, TermRow},
-                   pty_mux::vt_100_ansi_parser::{APPLICATION_MOUSE_TRACKING,
-                                                 BRACKETED_PASTE_MODE,
-                                                 CSI_PARAM_SEPARATOR, CSI_START,
-                                                 ColorTarget, CsiSequence,
-                                                 ED_ERASE_ALL, EL_ERASE_ALL,
-                                                 EL_ERASE_FROM_START, EL_ERASE_TO_END,
-                                                 PrivateModeType, SGR_BOLD, SGR_DIM,
-                                                 SGR_ITALIC, SGR_MOUSE_MODE,
-                                                 SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
-                                                 SGR_UNDERLINE, SgrColorSequence,
-                                                 URXVT_MOUSE_EXTENSION}}};
+use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiColor,
+            TuiStyle,
+            core::{ansi::{constants::{csi::{CSI_PARAM_SEPARATOR, CSI_START,
+                                            ED_ERASE_ALL, EL_ERASE_ALL,
+                                            EL_ERASE_FROM_START, EL_ERASE_TO_END,
+                                            SGR_BOLD, SGR_DIM, SGR_ITALIC,
+                                            SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
+                                            SGR_UNDERLINE},
+                                      generic::{APPLICATION_MOUSE_TRACKING,
+                                                BRACKETED_PASTE_MODE,
+                                                SGR_MOUSE_MODE,
+                                                URXVT_MOUSE_EXTENSION}},
+                          parser::{CsiSequence, PrivateModeType}},
+                   coordinates::{TermCol, TermRow}}};
 
 /// Generates ANSI escape sequence strings for terminal operations.
 ///
@@ -70,7 +71,7 @@ use crate::{ColIndex, RowHeight, RowIndex, TuiColor, TuiStyle,
 /// This struct has no state; it's a collection of static methods. State tracking (cursor
 /// position, current colors) is handled by external implementations.
 ///
-/// [`vt_100_ansi_parser`]: crate::core::pty_mux::vt_100_ansi_parser
+/// [`vt_100_ansi_parser`]: crate::core::ansi::parser
 /// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 /// [`CsiSequence`]: crate::CsiSequence
 /// [`SgrColorSequence`]: crate::SgrColorSequence
@@ -162,7 +163,7 @@ impl AnsiSequenceGenerator {
     /// Generate text attribute sequences (bold, italic, underline, etc.)
     /// Uses semantic SGR codes from the [`vt_100_ansi_parser`] infrastructure
     ///
-    /// [`vt_100_ansi_parser`]: mod@crate::core::pty_mux::vt_100_ansi_parser
+    /// [`vt_100_ansi_parser`]: mod@crate::core::ansi::parser
     #[must_use]
     pub fn text_attributes(style: &TuiStyle) -> String {
         // Build SGR sequence with all applicable attributes
