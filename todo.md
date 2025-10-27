@@ -30,6 +30,9 @@
 - [⌛] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
   `r3bl_open_core` codebase
 
+- [⌛] use [`task_unify_cli_and_styled_text`](docs/task_unify_cli_and_styled_text.md) to unify
+  `CliText` and `TuiStyledText` rendering paths
+
 - [⌛] use [`task_render_path_2_add_ofs_buf`](docs/task_render_path_2_add_ofs_buf.md) to add use
   `OffscreenBuffer` to radically simplify hybrid / partial TUI codepaths! This paves the way for
   having each Component paint into its own OffscreenBuffer, and then composing them together for

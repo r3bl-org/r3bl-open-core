@@ -1,0 +1,1 @@
+Remove all the md files in `.serena/memories/` directory to clear Serena's history.

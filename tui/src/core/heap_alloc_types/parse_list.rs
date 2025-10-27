@@ -14,7 +14,7 @@ pub type ParseListStorage<T> = Vec<T>;
 /// The [Vec] descriptor (24 bytes) lives on the stack, but all contents are stored
 /// on the heap. This is intentional for safety with deeply recursive parsers.
 ///
-/// # Why Heap Allocation Instead of Stack (`SmallVec`)?
+/// # Why Heap Allocation Instead of Stack ([`SmallVec`])?
 ///
 /// This type deliberately uses heap allocation via [Vec] rather than stack optimization
 /// with [`SmallVec`], due to stack overflow issues with deeply recursive parsers.
@@ -26,7 +26,7 @@ pub type ParseListStorage<T> = Vec<T>;
 ///
 /// - Complex markdown documents → 300+ recursive parser frames
 /// - Each frame allocates parser state on the stack
-/// - If list types use `SmallVec<[T; 16]>` (16-item stack-allocated inline capacity),
+/// - If list types use [`SmallVec`] with 16-item stack-allocated inline capacity,
 ///   each adds 648 bytes per frame
 /// - **Total stack usage**: 648 bytes × 300 frames = **194,400 bytes (~189 KB)**
 /// - **Result**: Stack overflow! (Default stack is typically 8 MB, but recursive parsers
@@ -50,24 +50,24 @@ pub type ParseListStorage<T> = Vec<T>;
 ///
 /// ## Historical Context
 ///
-/// Originally, this used [`List`] (backed by `SmallVec<[T; 8]>` (8-item stack-allocated
-/// inline capacity) = 328 bytes per frame). An optimization attempt increased it to
-/// `SmallVec<[T; 16]>` (16-item stack-allocated inline capacity) for 5% performance gain,
+/// Originally, this used [`List`] (backed by [`SmallVec`] with 8-item stack-allocated
+/// inline capacity = 328 bytes per frame). An optimization attempt increased it to
+/// [`SmallVec`] with 16-item stack-allocated inline capacity for 5% performance gain,
 /// which caused stack overflow in `test_parse_markdown_valid` with complex documents.
 /// The fix: separate domain-specific types where [`ParseList`] uses [Vec] for safety,
-/// while [`RenderList`] keeps `SmallVec<[T; 16]>` (16-item stack-allocated inline
-/// capacity) optimization for the hot rendering path.
+/// while [`RenderList`] keeps [`SmallVec`] with 16-item stack-allocated inline
+/// capacity optimization for the hot rendering path.
 ///
 /// ## See Also
 ///
-/// - [`RenderList`]: Performance-optimized with `SmallVec<[T; 16]>` (16-item
+/// - [`RenderList`]: Performance-optimized with [`SmallVec`] (16-item
 ///   stack-allocated inline capacity) for rendering
-/// - [`List`]: General-purpose with `SmallVec<[T; 8]>` (8-item stack-allocated inline
+/// - [`List`]: General-purpose with [`SmallVec`] (8-item stack-allocated inline
 ///   capacity) for balanced performance/safety
 ///
-/// [SmallVec]: crate::smallvec
-/// [`crate::RenderList`]: crate::RenderList
-/// [`crate::List`]: crate::List
+/// [`RenderList`]: crate::RenderList
+/// [`List`]: crate::List
+/// [`SmallVec`]: smallvec::SmallVec
 #[derive(Clone, Default, PartialEq, Debug)]
 pub struct ParseList<T> {
     pub inner: ParseListStorage<T>,

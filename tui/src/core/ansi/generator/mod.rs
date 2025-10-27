@@ -21,6 +21,7 @@
 //! ```
 
 // Private modules (hide internal structure)
+mod ansi_sequence_generator;
 mod cli_text;
 mod dsr_sequence;
 mod esc_sequence;
@@ -29,6 +30,7 @@ mod sgr_code;
 // Re-export cli_text_inline_impl from cli_text
 // Re-export byte constants from constants module
 pub use crate::core::ansi::constants::{CRLF_BYTES, SGR_RESET_BYTES};
+pub use ansi_sequence_generator::*;
 pub use cli_text::cli_text_inline_impl;
 // Public re-exports (flat API)
 pub use cli_text::*;

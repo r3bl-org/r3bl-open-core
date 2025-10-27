@@ -47,7 +47,7 @@ use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiCol
 /// We now use semantic enums (✅ CURRENT APPROACH):
 /// ```rust
 /// # use r3bl_tui::{row, col};
-/// # use r3bl_tui::terminal_lib_backends::direct_to_ansi::AnsiSequenceGenerator;
+/// # use r3bl_tui::core::ansi::generator::AnsiSequenceGenerator;
 /// let row_idx = row(5);
 /// let col_idx = col(10);
 /// let seq = AnsiSequenceGenerator::cursor_position(row_idx, col_idx);

@@ -43,7 +43,7 @@
 //! [`RenderOpCommon`]: crate::RenderOpCommon
 //! [`RenderOpIRVec`]: crate::RenderOpIRVec
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
-//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
+//! [`AnsiSequenceGenerator`]: crate::core::ansi::generator::AnsiSequenceGenerator
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`RenderToAnsi`]: crate::RenderToAnsi
@@ -52,14 +52,12 @@
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 
 // Attach.
-mod ansi_sequence_generator;
 mod debug;
 mod paint_render_op_impl;
 mod pixel_char_renderer;
 mod render_to_ansi;
 
 // Re-exports
-pub use ansi_sequence_generator::*;
 pub use debug::*;
 pub use paint_render_op_impl::*;
 pub use pixel_char_renderer::*;

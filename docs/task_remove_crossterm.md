@@ -74,7 +74,13 @@
     - [6.2: Remove Termion Backend (Dead Code Removal)](#62-remove-termion-backend-dead-code-removal)
     - [6.3: Resolve TODOs and Stubs](#63-resolve-todos-and-stubs)
     - [6.4: Review `cli_text` and `tui_styled_text` Consistency](#64-review-cli_text-and-tui_styled_text-consistency)
-  - [⏳ Step 7: macOS & Windows Platform Validation (2-3 hours) - DEFERRED](#-step-7-macos--windows-platform-validation-2-3-hours---deferred)
+  - [⏳ Step 7: Comprehensive RenderOp Integration Test Suite (4-6 hours)](#-step-7-comprehensive-renderop-integration-test-suite-4-6-hours)
+  - [⏳ Step 8: Implement InputDevice for DirectToAnsi Backend (8-12 hours)](#-step-8-implement-inputdevice-for-directtoansi-backend-8-12-hours)
+    - [8.1: Architecture Design (1-2 hours)](#81-architecture-design-1-2-hours)
+    - [8.2: Implement DirectToAnsi InputDevice (4-6 hours)](#82-implement-directtoansi-inputdevice-4-6-hours)
+    - [8.3: Testing & Validation (2-3 hours)](#83-testing--validation-2-3-hours)
+    - [8.4: Migration & Cleanup (1 hour)](#84-migration--cleanup-1-hour)
+  - [⏳ Step 9: macOS & Windows Platform Validation (2-3 hours) - DEFERRED](#-step-9-macos--windows-platform-validation-2-3-hours---deferred)
     - [macOS Testing (1.5 hours)](#macos-testing-15-hours)
     - [Windows Testing (1.5 hours)](#windows-testing-15-hours)
     - [Documentation & Sign-Off (30 min)](#documentation--sign-off-30-min)
@@ -1968,12 +1974,12 @@ development.
 
 **Status**: ⏳ PENDING - Ready to start after Step 6
 
-**Objective**: Build a robust, comprehensive test suite that validates the full RenderOp execution pipeline with DirectToAnsi backend. This provides confidence for future implementation changes and cross-platform validation (Step 8).
+**Objective**: Build a robust, comprehensive test suite that validates the full RenderOp execution pipeline with DirectToAnsi backend. This provides confidence for future implementation changes and InputDevice implementation (Step 8) and cross-platform validation (Step 9).
 
 **Rationale**: While manual testing has shown the DirectToAnsi backend works correctly in practice, a validation test suite is essential to:
 - Detect regressions if implementation changes in the future
 - Validate that code changes don't break existing functionality
-- Provide confidence for cross-platform implementations (Windows/macOS in Step 8)
+- Provide confidence for InputDevice implementation (Step 8) and cross-platform implementations (Windows/macOS in Step 9)
 - Ensure state tracking (cursor, colors, optimizations) works correctly throughout the pipeline
 - Serve as executable documentation of expected behavior
 
@@ -2114,7 +2120,181 @@ development.
 
 ---
 
-## ⏳ Step 8: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
+## ⏳ Step 8: Implement InputDevice for DirectToAnsi Backend (8-12 hours)
+
+**Status**: ⏳ PENDING - Final step to remove crossterm dependency
+
+**Objective**: Replace `crossterm::event::EventStream` with native mio-based stdin reading and ANSI sequence parsing to generate input events (keyboard and mouse).
+
+**Rationale**: This is the final piece needed to completely remove crossterm. Currently, while output uses DirectToAnsi, input still relies on `crossterm::event::read()`. This step achieves perfect architectural symmetry:
+
+```
+Output: Application → RenderOps → DirectToAnsi → ANSI bytes → stdout
+Input:  stdin → ANSI bytes → VT-100 Parser → Events → InputDevice → Application
+```
+
+Both sides now speak the same ANSI protocol, with no external terminal library dependencies.
+
+### 8.1: Architecture Design (1-2 hours)
+
+**Objective**: Plan the InputDevice refactoring to use mio + VT-100 parser instead of crossterm
+
+**Current State Analysis**:
+
+- `InputDevice` struct at `tui/src/core/terminal_io/input_device.rs:11`
+- Currently wraps `crossterm::event::EventStream` (line 19)
+- `InputDeviceExt` trait at `tui/src/tui/terminal_lib_backends/input_device_ext.rs:60` converts `crossterm::event::Event` to `InputEvent`
+- VT-100 parser already exists: `tui/src/core/ansi/parser/vt_100_ansi_parser.rs`
+
+**Design Tasks**:
+
+- [ ] Review existing VT-100 parser for input sequence support (mouse events, keyboard)
+- [ ] Design InputDevice API that remains backend-agnostic
+- [ ] Plan async event reading architecture using mio
+- [ ] Document ANSI sequence → InputEvent mapping:
+  - **Keyboard events**: CSI sequences for arrow keys, function keys, etc.
+  - **Mouse events**: SGR (Select Graphic Rendition) mouse protocol sequences
+  - **Special keys**: Page Up/Down, Home/End, Delete, etc.
+- [ ] Plan integration points: how DirectToAnsiInputDevice fits into the overall system
+- [ ] Identify edge cases: partial sequences, invalid input, timing issues
+
+**Deliverable**: Architecture document or inline code comments explaining the design
+
+### 8.2: Implement DirectToAnsi InputDevice (4-6 hours)
+
+**Objective**: Create DirectToAnsi-specific InputDevice using mio + VT-100 parser
+
+**Implementation Steps**:
+
+#### 8.2.1 Create DirectToAnsiInputDevice Module Structure (30-45 min)
+
+- [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input_device.rs`
+- [ ] Define `DirectToAnsiInputDevice` struct:
+  ```rust
+  pub struct DirectToAnsiInputDevice {
+      stdin_reader: /* mio-based async reader */,
+      parser: VT100Parser,
+      buffer: Vec<u8>,  // for partial sequences
+  }
+  ```
+- [ ] Implement constructor: `fn new() -> Self`
+- [ ] Implement async event reading: `async fn read_event(&mut self) -> Result<InputEvent>`
+
+#### 8.2.2 Implement ANSI Sequence Parsing for Input (1.5-2 hours)
+
+- [ ] Add input sequence support to or leverage existing VT-100 parser
+- [ ] Implement keyboard event parsing:
+  - [ ] Arrow keys: CSI `A`/`B`/`C`/`D` → `Key::Up/Down/Right/Left`
+  - [ ] Function keys: CSI `<n>~` → `Key::F1-F12`
+  - [ ] Home/End: CSI `H`/`F` → `Key::Home/End`
+  - [ ] Page Up/Down: CSI `5~`/`6~` → `Key::PageUp/PageDown`
+  - [ ] Delete/Backspace: `DEL`/`BS` → `Key::Delete/Backspace`
+  - [ ] Modifier combinations (Ctrl, Alt, Shift) from CSI parameters
+
+- [ ] Implement mouse event parsing (SGR protocol):
+  - [ ] Click events: `CSI < ... M/m` → `MouseEvent::Down/Up`
+  - [ ] Drag events: motion → `MouseEvent::Drag`
+  - [ ] Scroll events: button 64/65 → `MouseEvent::ScrollUp/ScrollDown`
+  - [ ] Button detection: parameter parsing for left/middle/right buttons
+
+#### 8.2.3 Handle Edge Cases (1-1.5 hours)
+
+- [ ] Partial sequence buffering (incomplete ANSI sequences)
+- [ ] Invalid/malformed sequences (skip gracefully)
+- [ ] Terminal timeout handling (read blocks appropriately)
+- [ ] stdin closure detection
+- [ ] UTF-8 text input between sequences
+
+**Files to Update**:
+
+- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input_device.rs`
+- Update: `tui/src/tui/terminal_lib_backends/input_device_ext.rs` - Add impl for DirectToAnsiInputDevice
+- Update: `tui/src/core/terminal_io/input_device.rs` - Replace crossterm dependency
+- Update: `tui/src/tui/terminal_lib_backends/mod.rs` - Export new module
+
+**Deliverable**: InputDevice implementation that reads and parses ANSI sequences to produce InputEvent
+
+### 8.3: Testing & Validation (2-3 hours)
+
+**Objective**: Ensure DirectToAnsi InputDevice works correctly for all input scenarios
+
+**Unit Tests** (1-1.5 hours):
+
+- [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input_device_tests.rs`
+- [ ] Test ANSI sequence → InputEvent conversion:
+  - [ ] Arrow keys generate correct directional events
+  - [ ] Function keys (F1-F12) parse correctly
+  - [ ] Modifier combinations (Ctrl+Arrow, Alt+Key, etc.)
+  - [ ] Mouse clicks (left, middle, right)
+  - [ ] Mouse drag detection
+  - [ ] Mouse scroll events
+  - [ ] Special keys (Home, End, Page Up/Down, Delete)
+
+- [ ] Test edge cases:
+  - [ ] Partial sequences (incomplete input)
+  - [ ] Rapid consecutive keys
+  - [ ] Mixed keyboard and mouse events
+  - [ ] Invalid/garbled sequences (should not panic)
+  - [ ] UTF-8 text between sequences
+  - [ ] Empty input handling
+
+**Integration Tests** (0.5-1 hour):
+
+- [ ] Create test in `tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests/input_handling.rs`
+- [ ] Test actual terminal interaction:
+  - [ ] Real keyboard input → InputEvent (manual or scripted)
+  - [ ] Real mouse input → InputEvent
+  - [ ] Verify against Crossterm behavior for compatibility
+  - [ ] Test in multiple terminal emulators (xterm, GNOME Terminal, Alacritty, Windows Terminal)
+
+**Test Utilities**:
+
+- [ ] Create helper to generate ANSI sequences for testing
+- [ ] Create mock stdin reader for unit tests
+- [ ] Create InputEvent comparison/assertion helpers
+
+**Deliverable**: Comprehensive test suite demonstrating InputDevice correctness
+
+### 8.4: Migration & Cleanup (1 hour)
+
+**Objective**: Integrate DirectToAnsi InputDevice and remove crossterm dependency
+
+**Migration Steps**:
+
+- [ ] Update `InputDevice` to use DirectToAnsiInputDevice by default
+- [ ] Remove `crossterm::event::EventStream` imports
+- [ ] Remove crossterm from `Cargo.toml` dependencies
+- [ ] Update `InputDeviceExt::next_input_event()` if needed for the new implementation
+- [ ] Verify no remaining crossterm usages in input-related code
+
+**Code Quality**:
+
+- [ ] `cargo check` - zero errors
+- [ ] `cargo test --lib` - all tests pass
+- [ ] `cargo clippy --all-targets` - zero warnings
+- [ ] `cargo fmt --all -- --check` - proper formatting
+- [ ] `cargo doc --no-deps` - generates without warnings
+
+**Documentation**:
+
+- [ ] Update `InputDevice` struct documentation to explain DirectToAnsi implementation
+- [ ] Document ANSI sequence handling in code comments
+- [ ] Update any user-facing docs that reference input handling
+- [ ] Add architecture notes about input/output symmetry
+
+**Verification**:
+
+- [ ] Full TUI application works with keyboard input
+- [ ] Full TUI application works with mouse input
+- [ ] choose() function works with DirectToAnsi InputDevice
+- [ ] readline_async() function works with DirectToAnsi InputDevice
+- [ ] All examples run without input-related issues
+
+**Sign-Off**: InputDevice fully migrated to DirectToAnsi, zero crossterm dependencies remaining
+
+---
+
+## ⏳ Step 9: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
 
 **Status**: ⏳ DEFERRED - To be performed after Step 7 completes (when user has access to
 macOS/Windows systems)
@@ -2122,10 +2302,11 @@ macOS/Windows systems)
 **Objective**: Validate DirectToAnsi backend on macOS and Windows platforms, ensuring cross-platform
 compatibility and performance parity with Crossterm backend.
 
-**Rationale for Deferral**: User is currently running on Linux. Step 8 is deferred to be performed
-later when macOS and Windows systems are available. Step 7 (comprehensive test suite) builds confidence
-before cross-platform validation. This maintains focus on test coverage and validation (Step 7) while
-keeping cross-platform work organized.
+**Rationale for Deferral**: User is currently running on Linux. Step 9 is deferred to be performed
+later when macOS and Windows systems are available. Step 8 (InputDevice implementation) completes the
+crossterm removal, and Step 7 (comprehensive test suite) builds confidence before cross-platform
+validation. This maintains focus on finalizing core architecture (Step 8) with test coverage (Step 7)
+before cross-platform work, keeping efforts organized.
 
 ### macOS Testing (1.5 hours)
 
@@ -2261,7 +2442,32 @@ Step 7: Comprehensive RenderOp Integration Test Suite (4-6 hours) [READY TO STAR
   ☐ 7.3: Real-World VT-100 Test Scenarios (1-2 hours) - Terminal interaction patterns
   ☐ 7.4: Final QA & Validation (30-45 min) - All tests pass, documentation complete
 
-Step 8: macOS & Windows Platform Validation (2-3 hours) [DEFERRED]
+Step 8: Implement InputDevice for DirectToAnsi Backend (8-12 hours) [PENDING]
+  ☐ 8.1: Architecture Design (1-2 hours)
+    ☐ Review VT-100 parser for input sequence support
+    ☐ Design InputDevice API (backend-agnostic)
+    ☐ Plan async event reading with mio
+    ☐ Document ANSI sequence → InputEvent mapping
+    ☐ Plan integration points
+    ☐ Identify edge cases
+  ☐ 8.2: Implement DirectToAnsi InputDevice (4-6 hours)
+    ☐ 8.2.1: Create module structure
+    ☐ 8.2.2: Implement ANSI sequence parsing (keyboard and mouse events)
+    ☐ 8.2.3: Handle edge cases (partial sequences, invalid input, etc.)
+  ☐ 8.3: Testing & Validation (2-3 hours)
+    ☐ Unit tests: ANSI sequence → InputEvent conversion
+    ☐ Unit tests: Edge cases and special keys
+    ☐ Integration tests: Actual terminal interaction
+    ☐ Compatibility verification with Crossterm behavior
+  ☐ 8.4: Migration & Cleanup (1 hour)
+    ☐ Update InputDevice to use DirectToAnsi implementation
+    ☐ Remove crossterm::event dependencies
+    ☐ Remove crossterm from Cargo.toml
+    ☐ Code quality: cargo check, test, clippy, fmt
+    ☐ Documentation update
+    ☐ Final verification
+
+Step 9: macOS & Windows Platform Validation (2-3 hours) [DEFERRED]
   ☐ macOS: Test on Terminal.app and iTerm2
   ☐ Windows: Test on Windows Terminal and PowerShell
   ☐ Performance: flamegraph comparison (<5% difference)
