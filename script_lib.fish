@@ -701,13 +701,14 @@ function run_benchmark_with_scripted_input
         return
     end
 
-    echo "Running perf record for exactly 30 seconds with scripted input..."
+    echo "Running perf record for ~8 seconds with continuous rendering workload..."
+    echo "Sampling: 999 Hz for accurate hot path capture"
     echo "Viewport size: 60 rows x 220 columns (exercises rendering pipeline)"
 
     # Use expect to send scripted keystrokes, wrapped in timeout for safety
-    timeout 35s sudo perf record -g --call-graph=fp,8 -F 99 -o perf.data -- \
+    timeout 10s sudo perf record -g --call-graph=fp,8 -F 999 -o perf.data -- \
         expect -c "
-            set timeout 30
+            set timeout 8
 
             # Set large terminal size to exercise rendering pipeline
             # (matches viewport from screenshot: ~220 cols x 60 rows)
@@ -715,112 +716,119 @@ function run_benchmark_with_scripted_input
             spawn $binary_path
 
             # Wait for app to initialize with large viewport
-            sleep 2
+            sleep 1
 
             # tui_apps shows a menu - select ex_editor (option 3)
             send \"3\"
-            sleep 0.5
+            sleep 0.2
             # Press Enter to select ex_editor
             send \"\r\"
-            sleep 2
+            sleep 0.5
 
-            # Now we're in ex_editor, start the benchmark sequence
+            # Now we're in ex_editor, start the benchmark sequence (25 operations)
             # Type \"Hello World\"
             send \"Hello World\"
-            sleep 0.5
 
             # Move cursor left 3 times
             send \"\x1b\[D\"
-            sleep 0.3
             send \"\x1b\[D\"
-            sleep 0.3
             send \"\x1b\[D\"
-            sleep 0.5
 
             # Type \"xyz\"
             send \"xyz\"
-            sleep 0.5
 
             # Press Enter
             send \"\r\"
-            sleep 0.5
 
             # Type \"Testing performance\"
             send \"Testing performance\"
-            sleep 0.5
 
             # Type Ctrl+L (show simple dialog)
             send \"\x0c\"
-            sleep 0.5
 
             # Type \"abc\"
             send \"abc\"
-            sleep 0.5
 
             # Press Esc (exit simple dialog)
             send \"\x1b\"
-            sleep 0.5
 
             # Type Ctrl+K (show complex dialog)
             send \"\x0b\"
-            sleep 0.5
 
             # Type \"def\"
             send \"def\"
-            sleep 0.5
 
             # Move cursor down 3 times
             send \"\x1b\[B\"
-            sleep 0.3
             send \"\x1b\[B\"
-            sleep 0.3
             send \"\x1b\[B\"
-            sleep 0.5
 
             # Press Esc again (exit complex dialog)
             send \"\x1b\"
-            sleep 0.5
 
             # Press cursor down 8 times
             send \"\x1b\[B\"
-            sleep 0.2
             send \"\x1b\[B\"
-            sleep 0.2
             send \"\x1b\[B\"
-            sleep 0.2
             send \"\x1b\[B\"
-            sleep 0.2
             send \"\x1b\[B\"
-            sleep 0.2
             send \"\x1b\[B\"
-            sleep 0.2
             send \"\x1b\[B\"
-            sleep 0.2
             send \"\x1b\[B\"
-            sleep 0.5
 
             # Press Home (move to beginning of line)
             send \"\x1b\[H\"
-            sleep 0.5
 
             # Press End (move to end of line)
             send \"\x1b\[F\"
-            sleep 0.5
 
             # Press PageDown 2 times
             send \"\x1b\[6~\"
-            sleep 0.5
             send \"\x1b\[6~\"
-            sleep 0.5
 
             # Press PageUp 2 times
             send \"\x1b\[5~\"
-            sleep 0.5
             send \"\x1b\[5~\"
-            sleep 1
 
-            # Idle for remaining time (renders screen with large viewport)
-            sleep 18
+            # Continuous typing to stress rendering (pangrams and lorem ipsum)
+            send \"The quick brown fox jumps over the lazy dog. \"
+            send \"Pack my box with five dozen liquor jugs. \"
+            send \"How vexingly quick daft zebras jump! \"
+            send \"Waltz, bad nymph, for quick jigs vex. \"
+            send \"Sphinx of black quartz, judge my vow. \"
+            send \"Lorem ipsum dolor sit amet, consectetur adipiscing elit. \"
+            send \"Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. \"
+            send \"Ut enim ad minim veniam, quis nostrud exercitation ullamco. \"
+            send \"Duis aute irure dolor in reprehenderit in voluptate velit. \"
+
+            # Rapid cursor movements (stress cursor positioning code)
+            send \"\x1b\[A\"
+            send \"\x1b\[A\"
+            send \"\x1b\[A\"
+            send \"\x1b\[A\"
+            send \"\x1b\[A\"
+            send \"\x1b\[B\"
+            send \"\x1b\[B\"
+            send \"\x1b\[B\"
+            send \"\x1b\[B\"
+            send \"\x1b\[B\"
+            send \"\x1b\[C\"
+            send \"\x1b\[C\"
+            send \"\x1b\[C\"
+            send \"\x1b\[C\"
+            send \"\x1b\[C\"
+            send \"\x1b\[D\"
+            send \"\x1b\[D\"
+            send \"\x1b\[D\"
+            send \"\x1b\[D\"
+            send \"\x1b\[D\"
+
+            # More typing
+            send \"Additional text to maximize rendering activity during profiling. \"
+            send \"Every keystroke triggers a complete render cycle with ANSI sequences. \"
+            send \"\r\"
+            send \"This benchmark measures DirectToAnsi backend performance. \"
+            send \"Stack-allocated number formatting should eliminate heap allocations. \"
 
             # Quit gracefully
             send \"q\"

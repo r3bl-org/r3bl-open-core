@@ -519,7 +519,7 @@ Watch commands:
 TUI-specific commands:
     run-examples [--release] [--no-log]  Run TUI examples
     run-examples-flamegraph-svg  Generate SVG flamegraph
-    run-examples-flamegraph-fold Generate perf-folded format
+    run-examples-flamegraph-fold [--benchmark]  Generate perf-folded format (use --benchmark for reproducible profiling)
     bench                Run benchmarks
 
 cmdr-specific commands:
@@ -542,6 +542,9 @@ Other commands:
 | `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, Wild linker, etc.) |
 | `fish run.fish watch-all-tests`             | Watch for file changes and run tests automatically                                              |
 | `fish run.fish run-examples`                | Run TUI examples interactively                                                                  |
+| `fish run.fish run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis                                                |
+| `fish run.fish run-examples-flamegraph-fold [--benchmark]` | Generate perf-folded format for analysis (use `--benchmark` for reproducible profiling) |
+| `fish run.fish bench`                       | Run benchmarks                                                                                  |
 | `fish run.fish run-binaries`                | Run cmdr binaries (edi, giti, rc) interactively                                                 |
 | `fish run.fish dev-dashboard`               | Start 4-pane tmux development dashboard (tests, docs, checks)                                   |
 | `fish run.fish check-full`                  | Run comprehensive checks (tests, doctests, docs, toolchain validation)                          |

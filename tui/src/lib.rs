@@ -451,6 +451,12 @@
 //!
 //! - **Flamegraph profiling**: Generate SVG and perf-folded formats for performance
 //!   analysis
+//! - **Automated benchmarking**: Reproducible flamegraph data for comparing performance
+//!   across code changes
+//!   - Command: `./run.fish run-examples-flamegraph-fold --benchmark`
+//!   - Uses scripted ex_editor input sequence that stress tests the rendering pipeline
+//!   - Ensures `.perf-folded` files are comparable across commits
+//!   - 8-second continuous workload with 999 Hz sampling for accurate hot path capture
 //! - **Real-time benchmarking**: Run benchmarks with live output
 //! - **Cross-platform file watching**: Uses `inotifywait` (Linux) or `fswatch` (macOS)
 //! - **Interactive example selection**: Choose examples with fuzzy search

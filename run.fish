@@ -166,7 +166,7 @@ function print-help
         echo (set_color cyan --bold)"TUI-specific commands:"(set_color normal)
         echo "    "(set_color green)"run-examples"(set_color normal)" "(set_color blue)"[--release] [--no-log]"(set_color normal)"  Run TUI examples"
         echo "    "(set_color green)"run-examples-flamegraph-svg"(set_color normal)"  Generate SVG flamegraph"
-        echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" "(set_color blue)"[--benchmark]"(set_color normal)"  Generate perf-folded format"
+        echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" "(set_color blue)"[--benchmark]"(set_color normal)"  Generate perf-folded (use --benchmark for reproducible profiling)"
         echo "    "(set_color green)"bench"(set_color normal)"                Run benchmarks"
         echo ""
         echo (set_color cyan --bold)"cmdr-specific commands:"(set_color normal)
@@ -785,6 +785,20 @@ end
 # - Can be converted to various formats later
 # - Benchmark mode for reproducible performance testing with scripted input
 #
+# Automated Benchmarking for Consistent Flamegraph Data:
+# The --benchmark flag enables automated benchmarking using the same ex_editor
+# input sequence that stress tests the rendering pipeline. This ensures that
+# .perf-folded files generated are comparable across code changes.
+#
+# Command: ./run.fish run-examples-flamegraph-fold --benchmark
+#
+# Benchmark methodology:
+# - 8-second continuous workload with 999 Hz sampling
+# - Scripted input: pangrams, lorem ipsum, rapid cursor movements
+# - ~85% active rendering time (vs 20% in interactive mode)
+# - Reproducible results for performance regression analysis
+# - Accurately captures rendering hot path, not initialization overhead
+#
 # Output format:
 # Each line contains: stack_trace sample_count
 # Example: main;foo;bar 42
@@ -801,7 +815,7 @@ end
 #
 # Usage:
 #   fish run.fish run-examples-flamegraph-fold              # Interactive mode (manual input)
-#   fish run.fish run-examples-flamegraph-fold --benchmark  # Benchmark mode (30s, scripted input)
+#   fish run.fish run-examples-flamegraph-fold --benchmark  # Benchmark mode (automated, reproducible)
 function run-examples-flamegraph-fold
     set original_dir $PWD
     cd tui
