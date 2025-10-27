@@ -17,7 +17,8 @@ use super::{super::dsr_codes::DsrRequestType,
                             RM_RESET_PRIVATE_MODE, SCP_SAVE_CURSOR, SD_SCROLL_DOWN,
                             SM_SET_PRIVATE_MODE, SU_SCROLL_UP, VPA_VERTICAL_POSITION},
             private_mode::PrivateModeType};
-use crate::{BufTextStorage, FastStringify, TermCol, TermRow,
+use crate::{stack_alloc_types::usize_fmt::{convert_u16_to_string_slice, u16_to_u8_array},
+            BufTextStorage, FastStringify, TermCol, TermRow,
             generate_impl_display_for_fast_stringify};
 use std::fmt::{Formatter, Result};
 
@@ -88,39 +89,49 @@ impl FastStringify for CsiSequence {
         acc.push_str(CSI_START);
         match self {
             CsiSequence::CursorUp(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUU_CURSOR_UP);
             }
             CsiSequence::CursorDown(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUD_CURSOR_DOWN);
             }
             CsiSequence::CursorForward(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUF_CURSOR_FORWARD);
             }
             CsiSequence::CursorBackward(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CUB_CURSOR_BACKWARD);
             }
             CsiSequence::CursorPosition { row, col } => {
-                acc.push_str(&row.as_u16().to_string());
+                let row_bytes = u16_to_u8_array(row.as_u16());
+                acc.push_str(convert_u16_to_string_slice(&row_bytes));
                 acc.push(CSI_PARAM_SEPARATOR);
-                acc.push_str(&col.as_u16().to_string());
+                let col_bytes = u16_to_u8_array(col.as_u16());
+                acc.push_str(convert_u16_to_string_slice(&col_bytes));
                 acc.push(CUP_CURSOR_POSITION);
             }
             CsiSequence::CursorPositionAlt { row, col } => {
-                acc.push_str(&row.as_u16().to_string());
+                let row_bytes = u16_to_u8_array(row.as_u16());
+                acc.push_str(convert_u16_to_string_slice(&row_bytes));
                 acc.push(CSI_PARAM_SEPARATOR);
-                acc.push_str(&col.as_u16().to_string());
+                let col_bytes = u16_to_u8_array(col.as_u16());
+                acc.push_str(convert_u16_to_string_slice(&col_bytes));
                 acc.push(HVP_CURSOR_POSITION);
             }
             CsiSequence::EraseDisplay(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(ED_ERASE_DISPLAY);
             }
             CsiSequence::EraseLine(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(EL_ERASE_LINE);
             }
             CsiSequence::SaveCursor => {
@@ -130,71 +141,87 @@ impl FastStringify for CsiSequence {
                 acc.push(RCP_RESTORE_CURSOR);
             }
             CsiSequence::CursorNextLine(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CNL_CURSOR_NEXT_LINE);
             }
             CsiSequence::CursorPrevLine(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CPL_CURSOR_PREV_LINE);
             }
             CsiSequence::CursorHorizontalAbsolute(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(CHA_CURSOR_COLUMN);
             }
             CsiSequence::ScrollUp(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(SU_SCROLL_UP);
             }
             CsiSequence::ScrollDown(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(SD_SCROLL_DOWN);
             }
             CsiSequence::SetScrollingMargins { top, bottom } => {
                 if let Some(top_row) = top {
-                    acc.push_str(&top_row.as_u16().to_string());
+                    let top_bytes = u16_to_u8_array(top_row.as_u16());
+                    acc.push_str(convert_u16_to_string_slice(&top_bytes));
                 }
                 acc.push(CSI_PARAM_SEPARATOR);
                 if let Some(bottom_row) = bottom {
-                    acc.push_str(&bottom_row.as_u16().to_string());
+                    let bottom_bytes = u16_to_u8_array(bottom_row.as_u16());
+                    acc.push_str(convert_u16_to_string_slice(&bottom_bytes));
                 }
                 acc.push(DECSTBM_SET_MARGINS);
             }
             CsiSequence::DeviceStatusReport(dsr_type) => {
-                acc.push_str(&dsr_type.as_u16().to_string());
+                let dsr_bytes = u16_to_u8_array(dsr_type.as_u16());
+                acc.push_str(convert_u16_to_string_slice(&dsr_bytes));
                 acc.push(DSR_DEVICE_STATUS);
             }
             CsiSequence::EnablePrivateMode(mode) => {
                 acc.push(CSI_PRIVATE_MODE_PREFIX);
-                acc.push_str(&mode.as_u16().to_string());
+                let mode_bytes = u16_to_u8_array(mode.as_u16());
+                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
                 acc.push(SM_SET_PRIVATE_MODE);
             }
             CsiSequence::DisablePrivateMode(mode) => {
                 acc.push(CSI_PRIVATE_MODE_PREFIX);
-                acc.push_str(&mode.as_u16().to_string());
+                let mode_bytes = u16_to_u8_array(mode.as_u16());
+                acc.push_str(convert_u16_to_string_slice(&mode_bytes));
                 acc.push(RM_RESET_PRIVATE_MODE);
             }
             CsiSequence::InsertLine(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(IL_INSERT_LINE);
             }
             CsiSequence::DeleteLine(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(DL_DELETE_LINE);
             }
             CsiSequence::DeleteChar(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(DCH_DELETE_CHAR);
             }
             CsiSequence::InsertChar(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(ICH_INSERT_CHAR);
             }
             CsiSequence::EraseChar(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(ECH_ERASE_CHAR);
             }
             CsiSequence::VerticalPositionAbsolute(n) => {
-                acc.push_str(&n.to_string());
+                let n_bytes = u16_to_u8_array(*n);
+                acc.push_str(convert_u16_to_string_slice(&n_bytes));
                 acc.push(VPA_VERTICAL_POSITION);
             }
         }
