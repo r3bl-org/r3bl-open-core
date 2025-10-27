@@ -6,8 +6,8 @@
 use super::create_color_wheel_from_heading_data;
 use crate::{CodeBlockLineContent, CodeBlockLines, CommonError, CommonErrorType,
             CommonResult, FragmentsInOneLine, GradientGenerationPolicy, HeadingData,
-            HyperlinkData, InlineString, Lines, List, MdDocument, MdElement,
-            MdLineFragment, PrettyPrintDebug, StyleUSSpan, StyleUSSpanLine,
+            HyperlinkData, InlineString, Lines, MdDocument, MdElement,
+            MdLineFragment, PrettyPrintDebug, RenderList, StyleUSSpan, StyleUSSpanLine,
             StyleUSSpanLines, TextColorizationPolicy, TuiStyle, TuiStyledTexts,
             ZeroCopyGapBuffer, convert_syntect_to_styled_text,
             generate_ordered_list_item_bullet, generate_unordered_list_item_bullet,
@@ -327,7 +327,7 @@ impl StyleUSSpanLines {
 
 mod from_block_codeblock_helper {
     use super::{CODE_BLOCK_START_PARTIAL, CodeBlockLineContent, CodeBlockLines,
-                HighlightLines, List, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines,
+                HighlightLines, RenderList, StyleUSSpan, StyleUSSpanLine, StyleUSSpanLines,
                 SyntaxSet, Theme, TuiStyle, convert_syntect_to_styled_text,
                 get_code_block_content_style, get_code_block_lang_style,
                 get_foreground_dim_style, try_get_syntax_ref};
@@ -364,7 +364,7 @@ mod from_block_codeblock_helper {
                         &str,
                     )> = highlighter.highlight_line(line_of_text, syntax_set).ok()?;
 
-                    let line_converted_to_tui: List<StyleUSSpan> =
+                    let line_converted_to_tui: RenderList<StyleUSSpan> =
                                 convert_syntect_to_styled_text::convert_highlighted_line_from_syntect_to_tui(
                                     &syntect_highlighted_line,
                                 );
@@ -661,7 +661,7 @@ impl StyleUSSpanLine {
             acc.extend(vec_spans);
         }
 
-        List { inner: acc }
+        RenderList { inner: acc }
     }
 
     /// This is a sample [`HeadingData`] that needs to be converted into a
@@ -732,7 +732,7 @@ mod tests_style_us_span_lines_from {
     use crate::{CodeBlockLine, ColorSupport, HeadingLevel, assert_eq2,
                 get_metadata_tags_marker_style, get_metadata_tags_values_style,
                 get_metadata_title_marker_style, get_metadata_title_value_style,
-                global_color_support, list, throws, tui_color};
+                global_color_support, throws, tui_color};
     use serial_test::serial;
 
     /// RAII guard for color support override cleanup
@@ -1063,7 +1063,7 @@ mod tests_style_us_span_lines_from {
     /// [StyleUSSpanLines::from_block](StyleUSSpanLines::from_block).
     mod from_block {
         use super::*;
-        use crate::BulletKind;
+        use crate::{BulletKind, parse_list};
 
         #[test]
         #[serial]
@@ -1072,7 +1072,7 @@ mod tests_style_us_span_lines_from {
             let _guard = set_color_override();
 
             throws!({
-                let tags = MdElement::Tags(list!["tag1", "tag2", "tag3"]);
+                let tags = MdElement::Tags(["tag1", "tag2", "tag3"].into());
                 let style = new_style!(
                     color_bg: {tui_color!(red)}
                 );
@@ -1148,7 +1148,7 @@ mod tests_style_us_span_lines_from {
         #[serial]
         fn test_block_codeblock() {
             let _guard = set_color_override();
-            let codeblock_block = MdElement::CodeBlock(list!(
+            let codeblock_block = MdElement::CodeBlock(parse_list!(
                 CodeBlockLine {
                     language: Some("ts"),
                     content: CodeBlockLineContent::StartTag
@@ -1207,27 +1207,27 @@ mod tests_style_us_span_lines_from {
 
                 // Construct ordered list elements directly.
                 let ol_block_1 = MdElement::SmartList((
-                    list![list![
+                    [[
                         MdLineFragment::OrderedListBullet {
                             indent: 0,
                             number: 100,
                             is_first_line: true
                         },
                         MdLineFragment::Plain("Foo"),
-                    ]],
+                    ].into()].into(),
                     BulletKind::Ordered(100),
                     0,
                 ));
 
                 let ol_block_2 = MdElement::SmartList((
-                    list![list![
+                    [[
                         MdLineFragment::OrderedListBullet {
                             indent: 0,
                             number: 200,
                             is_first_line: true
                         },
                         MdLineFragment::Plain("Bar"),
-                    ]],
+                    ].into()].into(),
                     BulletKind::Ordered(200),
                     0,
                 ));
@@ -1279,25 +1279,25 @@ mod tests_style_us_span_lines_from {
 
                 // Construct unordered list elements directly.
                 let ul_block_0 = MdElement::SmartList((
-                    list![list![
+                    [[
                         MdLineFragment::UnorderedListBullet {
                             indent: 0,
                             is_first_line: true
                         },
                         MdLineFragment::Plain("Foo"),
-                    ]],
+                    ].into()].into(),
                     BulletKind::Unordered,
                     0,
                 ));
 
                 let ul_block_1 = MdElement::SmartList((
-                    list![list![
+                    [[
                         MdLineFragment::UnorderedListBullet {
                             indent: 0,
                             is_first_line: true
                         },
                         MdLineFragment::Plain("Bar"),
-                    ]],
+                    ].into()].into(),
                     BulletKind::Unordered,
                     0,
                 ));
@@ -1338,7 +1338,7 @@ mod tests_style_us_span_lines_from {
         #[serial]
         fn test_block_text() {
             let _guard = set_color_override();
-            let text_block = MdElement::Text(list![MdLineFragment::Plain("Foobar")]);
+            let text_block = MdElement::Text([MdLineFragment::Plain("Foobar")].into());
             let style = new_style!(
                 color_bg: {tui_color!(red)}
             );

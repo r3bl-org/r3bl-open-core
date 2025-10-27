@@ -4,7 +4,7 @@
 //! w/out any formatting.
 
 use crate::{HeadingLevel, HyperlinkData, InlineString, List, MdDocument, MdElement,
-            MdLineFragment, PrettyPrintDebug, convert_to_string_slice, get_hashes,
+            MdLineFragment, ParseList, PrettyPrintDebug, convert_to_string_slice, get_hashes,
             get_horiz_lines, get_spaces, inline_string, join, join_fmt, join_with_index,
             md_parser::md_parser_constants::{BACK_TICK, CHECKED, LEFT_BRACKET,
                                              LEFT_IMAGE, LEFT_PARENTHESIS,
@@ -29,6 +29,17 @@ impl PrettyPrintDebug for MdDocument<'_> {
 }
 
 impl PrettyPrintDebug for List<MdLineFragment<'_>> {
+    fn pretty_print_debug(&self) -> InlineString {
+        join!(
+            from: self,
+            each: fragment,
+            delim: "",
+            format: "{a}", a = fragment.pretty_print_debug()
+        )
+    }
+}
+
+impl PrettyPrintDebug for ParseList<MdLineFragment<'_>> {
     fn pretty_print_debug(&self) -> InlineString {
         join!(
             from: self,

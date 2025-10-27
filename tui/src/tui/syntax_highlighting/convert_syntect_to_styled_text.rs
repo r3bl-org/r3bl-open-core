@@ -16,7 +16,7 @@
 //! 2. Then convert [`StyleUSSpanLine`] into a [`TuiStyledTexts`].
 
 use super::{StyleUSSpan, StyleUSSpanLine};
-use crate::{List, TuiColor, TuiStyle, TuiStyleAttribs, TuiStyledTexts, tui_color,
+use crate::{RenderList, TuiColor, TuiStyle, TuiStyleAttribs, TuiStyledTexts, tui_color,
             tui_style_attrib, tui_styled_text};
 use syntect::parsing::SyntaxSet;
 
@@ -130,7 +130,7 @@ pub fn convert_highlighted_line_from_syntect_to_tui(
     syntect_highlighted_line: &SyntectStyleStrSpanLine<'_>,
 ) -> StyleUSSpanLine {
     fn convert(vec_styled_str: &SyntectStyleStrSpanLine<'_>) -> StyleUSSpanLine {
-        let mut it: StyleUSSpanLine = List::default();
+        let mut it: StyleUSSpanLine = RenderList::default();
 
         for (style, text) in vec_styled_str {
             let my_style = convert_style_from_syntect_to_tui(*style);

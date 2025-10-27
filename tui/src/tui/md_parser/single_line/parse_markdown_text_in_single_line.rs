@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{List, MdLineFragments,
+use crate::{MdLineFragments, ParseList,
             md_parser::md_parser_constants::{NEW_LINE, NULL_CHAR},
             md_parser_types::CheckboxParsePolicy,
             parse_inline_fragments_until_eol_or_eoi,
@@ -30,7 +30,7 @@ pub fn parse_block_markdown_text_with_checkbox_policy_with_or_without_new_line(
         |it| parse_inline_fragments_until_eol_or_eoi(it, checkbox_policy)
     ).parse(input)?;
 
-    let it = List::from(output);
+    let it = ParseList::from(output);
 
     Ok((input, it))
 }
@@ -77,7 +77,7 @@ mod inner {
                 (tag(NEW_LINE), /* zero or more */ take_while(is(NULL_CHAR))),
             ).parse(input)?;
 
-        let it = List::from(output);
+        let it = ParseList::from(output);
 
         Ok((input, it))
     }
@@ -97,7 +97,7 @@ mod inner {
             |it| parse_inline_fragments_until_eol_or_eoi(it, CheckboxParsePolicy::IgnoreCheckbox)
         ).parse(input)?;
 
-        let it = List::from(output);
+        let it = ParseList::from(output);
 
         Ok((input, it))
     }
@@ -108,7 +108,7 @@ mod inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2, list};
+    use crate::{MdLineFragment, assert_eq2, parse_list};
 
     #[test]
     fn test_parse_block_markdown_text_with_checkbox_policy_empty_string() {
@@ -117,7 +117,7 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
                 "",
                 CheckboxParsePolicy::IgnoreCheckbox
             ),
-            Ok(("", list![]))
+            Ok(("", [].into()))
         );
     }
 
@@ -130,11 +130,11 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
             ),
             Ok((
                 "",
-                list![
+                [
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Plain("*"),
                     MdLineFragment::Plain("but what if we italicize?"),
-                ]
+                ].into()
             ))
         );
     }
@@ -143,17 +143,17 @@ mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {
 #[cfg(test)]
 mod tests_parse_block_markdown_text_inner {
     use super::*;
-    use crate::{MdLineFragment, assert_eq2, list};
+    use crate::{MdLineFragment, assert_eq2, parse_list};
 
     #[test]
     fn test_parse_block_markdown_text_with_new_line() {
         assert_eq2!(
             inner::parse_block_markdown_text_with_new_line("\n"),
-            Ok(("", list![]))
+            Ok(("", [].into()))
         );
         assert_eq2!(
             inner::parse_block_markdown_text_with_new_line("here is some plaintext\n"),
-            Ok(("", list![MdLineFragment::Plain("here is some plaintext")]))
+            Ok(("", [MdLineFragment::Plain("here is some plaintext")].into()))
         );
         assert_eq2!(
             inner::parse_block_markdown_text_with_new_line(
@@ -161,10 +161,10 @@ mod tests_parse_block_markdown_text_inner {
             ),
             Ok((
                 "",
-                list![
+                [
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Bold("but what if we bold?"),
-                ]
+                ].into()
             ))
         );
         assert_eq2!(
@@ -173,7 +173,7 @@ mod tests_parse_block_markdown_text_inner {
             ),
             Ok((
                 "",
-                list![
+                [
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Bold("but what if we bold?"),
                     MdLineFragment::Plain(" I guess it doesn't "),
@@ -182,7 +182,7 @@ mod tests_parse_block_markdown_text_inner {
                     MdLineFragment::Bold(""),
                     MdLineFragment::Plain(" in my "),
                     MdLineFragment::InlineCode("code"),
-                ]
+                ].into()
             ))
         );
         assert_eq2!(
@@ -191,10 +191,10 @@ mod tests_parse_block_markdown_text_inner {
             ),
             Ok((
                 "",
-                list![
+                [
                     MdLineFragment::Plain("here is some plaintext "),
                     MdLineFragment::Italic("but what if we italic?"),
-                ]
+                ].into()
             ))
         );
         assert_eq2!(
@@ -202,7 +202,7 @@ mod tests_parse_block_markdown_text_inner {
             Ok((
                 /* remainder */ "",
                 /* output */
-                list![MdLineFragment::Plain("this!"),]
+                [MdLineFragment::Plain("this!")].into()
             ))
         );
     }
@@ -216,11 +216,11 @@ mod tests_parse_block_markdown_text_inner {
             Ok((
                 /* remainder */ "",
                 /* output */
-                list![
+                [
                     MdLineFragment::Plain("this "),
                     MdLineFragment::Plain("_"),
                     MdLineFragment::Plain("bar"),
-                ]
+                ].into()
             ))
         );
     }
@@ -229,7 +229,7 @@ mod tests_parse_block_markdown_text_inner {
 #[cfg(test)]
 mod tests_parse_block_markdown_text {
     use super::*;
-    use crate::{HyperlinkData, MdLineFragment, assert_eq2, list};
+    use crate::{HyperlinkData, MdLineFragment, assert_eq2, parse_list};
 
     #[test]
     fn test_parse_block_markdown_text_with_hyperlink_1() {
@@ -240,7 +240,7 @@ mod tests_parse_block_markdown_text {
             it,
             Ok((
                 "",
-                list![
+                [
                     MdLineFragment::Plain("This is a ",),
                     MdLineFragment::Plain("_",),
                     MdLineFragment::Plain("hyperlink: ",),
@@ -249,7 +249,7 @@ mod tests_parse_block_markdown_text {
                         url: "http://google.com",
                     },),
                     MdLineFragment::Plain(".",),
-                ],
+                ].into(),
             ))
         );
     }
@@ -263,7 +263,7 @@ mod tests_parse_block_markdown_text {
             it,
             Ok((
                 "",
-                list![
+                [
                     MdLineFragment::Plain("This is a ",),
                     MdLineFragment::Plain("*",),
                     MdLineFragment::Plain("hyperlink: ",),
@@ -272,7 +272,7 @@ mod tests_parse_block_markdown_text {
                         url: "http://google.com",
                     },),
                     MdLineFragment::Plain(".",),
-                ],
+                ].into(),
             ))
         );
     }
@@ -286,7 +286,7 @@ mod tests_parse_block_markdown_text {
             it,
             Ok((
                 "this is a * monkey",
-                list![
+                [
                     MdLineFragment::Plain("this is a ",),
                     MdLineFragment::Plain("*",),
                     MdLineFragment::Plain(" ",),
@@ -295,7 +295,7 @@ mod tests_parse_block_markdown_text {
                         url: "url",
                     },),
                     MdLineFragment::Plain(".",),
-                ],
+                ].into(),
             ))
         );
     }
@@ -310,7 +310,7 @@ mod tests_parse_block_markdown_text {
             result,
             Ok((
                 "this is a * monkey",
-                list![
+                [
                     MdLineFragment::Plain("this is a ",),
                     MdLineFragment::Plain("_",),
                     MdLineFragment::Plain(" ",),
@@ -320,7 +320,7 @@ mod tests_parse_block_markdown_text {
                     },),
                     MdLineFragment::Plain(" ",),
                     MdLineFragment::Plain("*",),
-                ],
+                ].into(),
             ))
         );
     }

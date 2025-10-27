@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineVec, List, list,
+use crate::{InlineVec, ParseList, parse_list,
             md_parser::md_parser_constants::{COLON, COMMA, SPACE},
             parse_null_padded_line::trim_optional_leading_newline_and_nulls,
             take_text_in_single_line};
@@ -24,7 +24,7 @@ use nom::{IResult, Parser, bytes::complete::tag, sequence::preceded};
 pub fn parse_csv_opt_eol<'a>(
     tag_name: &'a str,
     input: &'a str,
-) -> IResult<&'a str, List<&'a str>> {
+) -> IResult<&'a str, ParseList<&'a str>> {
     let (remainder, tags_text) = preceded(
         /* start */ (tag(tag_name), tag(COLON), tag(SPACE)),
         /* output */ take_text_in_single_line(),
@@ -37,13 +37,15 @@ pub fn parse_csv_opt_eol<'a>(
 
     // Special case: Early return when just a `@tags: ` or `@tags: \n` is found.
     if tags_text.is_empty() {
-        Ok((remainder, list![]))
+        Ok((remainder, parse_list![]))
     }
     // Normal case.
     else {
         // At this point, `output` can have something like: `tag1, tag2, tag3`.
         let (_, vec_tags_text) = parse_comma_separated_list(tags_text)?;
-        Ok((remainder, List::from(vec_tags_text)))
+        // Convert SmallVec to Vec for ParseList::from()
+        let vec_tags: Vec<&str> = vec_tags_text.into_iter().collect();
+        Ok((remainder, ParseList::from(vec_tags)))
     }
 }
 
@@ -114,7 +116,7 @@ mod test_parse_tags_opt_eol {
         let input = "@tags: tag1, tag2, tag3";
         let (input, output) = super::parse_csv_opt_eol(TAGS, input).unwrap();
         assert_eq2!(input, "");
-        assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
+        assert_eq2!(output, ["tag1", "tag2", "tag3"].into());
     }
 
     #[test]
@@ -142,7 +144,7 @@ mod test_parse_tags_opt_eol {
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3").unwrap(),
-            ("", list!["tag1", "tag2", " tag3"]),
+            ("", ["tag1", "tag2", " tag3"].into()),
         );
     }
 
@@ -153,7 +155,7 @@ mod test_parse_tags_opt_eol {
             let input = "@tags: tag1, tag2, tag3\n";
             let (input, output) = parse_csv_opt_eol(TAGS, input).unwrap();
             assert_eq2!(input, "");
-            assert_eq2!(output, list!["tag1", "tag2", "tag3"]);
+            assert_eq2!(output, ["tag1", "tag2", "tag3"].into());
         }
 
         {
@@ -194,7 +196,7 @@ mod test_parse_tags_opt_eol {
         // It is ok to have more than 1 prefix space for 2nd fragment onwards.
         assert_eq2!(
             parse_csv_opt_eol(TAGS, "@tags: tag1, tag2,  tag3\n").unwrap(),
-            ("", list!["tag1", "tag2", " tag3"]),
+            ("", ["tag1", "tag2", " tag3"].into()),
         );
     }
 
@@ -203,6 +205,6 @@ mod test_parse_tags_opt_eol {
         let input = "@tags: \nfoo\nbar";
         let (input, output) = parse_csv_opt_eol(TAGS, input).unwrap();
         assert_eq2!(input, "foo\nbar");
-        assert_eq2!(output, list![]);
+        assert_eq2!(output, [].into());
     }
 }

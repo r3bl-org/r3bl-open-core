@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_ast_cache_operations() {
-        use crate::List;
+        use crate::RenderList;
 
         let mut engine = EditorEngine::default();
 
@@ -163,7 +163,7 @@ mod tests {
         assert!(engine.get_ast_cache().is_none());
 
         // Set cache - create empty StyleUSSpanLines for testing.
-        let test_ast: StyleUSSpanLines = List::new();
+        let test_ast: StyleUSSpanLines = RenderList::new();
         engine.set_ast_cache(test_ast.clone());
         assert!(!engine.ast_cache_is_empty());
         assert_eq2!(engine.get_ast_cache(), Some(&test_ast));

@@ -1,37 +1,43 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! This module provides a custom [List] struct that wraps around a [`SmallVec`] to
-//! provide additional functionality and traits implementations for ease of use within the
-//! `tui` crate. Specifically so that the  [From] trait can be implemented for [List] of
-//! `T`. Where `T` is any number of types in the tui crate.
+//! General-purpose **stack-allocated** list type with balanced performance.
 //!
-//! The [List] struct is designed to be a more flexible and efficient alternative to a
-//! standard [Vec], with the ability to implement custom traits and macros.
-//! 1. This gets around the orphan rule for implementing standard library traits.
-//! 2. Using a [`SmallVec`] allows for stack allocation rather than heap allocation. Its
-//!    internal backing store is essentially an array-vec. Starts out as a stack allocated
-//!    array which can spill over into the heap if needed.
+//! # [List] - Balanced Stack Allocation
+//!
+//! - Uses `SmallVec<[T; 8]>` as a compromise between performance and stack safety
+//! - ~328 bytes on stack
+//! - Good for most use cases outside specialized parsing/rendering
+//!
+//! # Why This Size?
+//!
+//! Originally sized at 8 elements to balance:
+//! - **Performance**: Avoids heap allocations for common small lists
+//! - **Stack safety**: Won't cause overflow in moderately deep recursion
+//!
+//! # See Also
+//!
+//! For specialized use cases, see:
+//! - [`crate::RenderList`] - Performance-optimized (`SmallVec[16]`) for hot rendering
+//!   paths
+//! - [`crate::ParseList`] - Heap-allocated (`Vec`) for stack safety with deep recursion
 //!
 //! # Features
 //!
-//! - Implements [`AddAssign`] trait for adding items, other lists, and vectors to the
-//!   list.
-//! - Implements [From] trait for converting from [`ListStorage`] and [Vec] to [List].
-//! - Implements [Deref] and [`DerefMut`] traits for easy access to the inner
-//!   [`SmallVec`].
-//! - Provides a [`crate::list`!] macro for convenient list creation.
+//! Implements:
+//! - [`AddAssign`] trait for adding items, other lists, and vectors
+//! - [From] trait for converting from [Vec]
+//! - [Deref] and [`DerefMut`] traits for easy access to inner storage
+//! - Companion macro: [`crate::list`!]
 //!
 //! # Examples
 //!
 //! ```
 //! use r3bl_tui::{list, List};
 //!
+//! // General purpose
 //! let mut list = List::new();
 //! list += 1;
 //! list += vec![2, 3, 4];
-//!
-//! let another_list = list![5, 6, 7];
-//! list += another_list;
 //! ```
 
 use crate::InlineVecStr;
@@ -39,12 +45,14 @@ use sizing_list_of::ListStorage;
 use smallvec::SmallVec;
 use std::ops::{AddAssign, Deref, DerefMut};
 
-/// This needs to be accessible by the rest of the crate, and anyone using the [List]
-/// struct.
+/// Storage type alias for [List].
 pub mod sizing_list_of {
     use super::SmallVec;
+
+    /// General storage: `SmallVec[8]` balanced default (~328 bytes on stack).
+    /// Reverted from 16→8 to avoid stack overflow in parser.
     pub type ListStorage<T> = SmallVec<[T; DEFAULT_LIST_STORAGE_SIZE]>;
-    const DEFAULT_LIST_STORAGE_SIZE: usize = 16;
+    const DEFAULT_LIST_STORAGE_SIZE: usize = 8;
 }
 
 /// Redundant struct to [Vec]. Added so that [From] trait can be implemented for for

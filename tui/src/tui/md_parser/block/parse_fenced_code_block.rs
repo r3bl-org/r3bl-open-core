@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{CodeBlockLine, CodeBlockLineContent, CodeBlockLines, List,
+use crate::{CodeBlockLine, CodeBlockLineContent, CodeBlockLines,
             md_parser::md_parser_constants::{CODE_BLOCK_END, CODE_BLOCK_START_PARTIAL,
                                              NEW_LINE, NEWLINE_OR_NULL, NULL_CHAR},
             parse_null_padded_line::{is, trim_optional_leading_newline_and_nulls}};
@@ -34,7 +34,7 @@ use nom::{IResult, Parser,
 ///
 /// Returns a nom parsing error if the input doesn't contain a valid fenced code block.
 #[rustfmt::skip]
-pub fn parse_fenced_code_block(input: &str) -> IResult<&str, List<CodeBlockLine<'_>>> {
+pub fn parse_fenced_code_block(input: &str) -> IResult<&str, CodeBlockLines<'_>> {
     let (remainder, (lang, code)) = (
         parse_code_block_lang_including_eol,
         parse_code_block_body_including_code_block_end,
@@ -47,7 +47,7 @@ pub fn parse_fenced_code_block(input: &str) -> IResult<&str, List<CodeBlockLine<
 
     let acc = split_by_new_line(code);
 
-    Ok((remainder, convert_into_code_block_lines(lang, &acc.into())))
+    Ok((remainder, convert_into_code_block_lines(lang, &acc)))
 }
 
 /// Take text until an optional EOL character is found, or end of input is reached.
@@ -159,9 +159,9 @@ pub fn split_by_new_line(input: &str) -> Vec<&str> {
 /// This function was previously in `md_parser_ng` but is now implemented locally.
 fn convert_into_code_block_lines<'a>(
     language: Option<&'a str>,
-    lines: &List<&'a str>,
+    lines: &[&'a str],
 ) -> CodeBlockLines<'a> {
-    let mut result = List::new();
+    let mut result = CodeBlockLines::new();
 
     // Add start tag
     result.push(CodeBlockLine {
@@ -189,7 +189,7 @@ fn convert_into_code_block_lines<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_eq2, list};
+    use crate::{assert_eq2, parse_list};
 
     #[test]
     fn test_parse_codeblock_split_by_eol() {
@@ -209,7 +209,7 @@ mod tests {
         assert_eq2!(remainder, "`");
         assert_eq2!(
             code_block_lines,
-            convert_into_code_block_lines(Some(lang), &code_lines.into())
+            convert_into_code_block_lines(Some(lang), &code_lines)
         );
     }
 
@@ -219,7 +219,7 @@ mod tests {
         {
             let language = Some("rs");
             let lines = vec![];
-            let expected = list![
+            let expected = [
                 CodeBlockLine {
                     language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
@@ -228,8 +228,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ];
-            let output = convert_into_code_block_lines(language, &lines.into());
+            ].into();
+            let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }
 
@@ -237,7 +237,7 @@ mod tests {
         {
             let language = Some("rs");
             let lines = vec![""];
-            let expected = list![
+            let expected = [
                 CodeBlockLine {
                     language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
@@ -250,8 +250,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ];
-            let output = convert_into_code_block_lines(language, &lines.into());
+            ].into();
+            let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }
 
@@ -259,7 +259,7 @@ mod tests {
         {
             let language = Some("rs");
             let lines = vec!["let x = 1;"];
-            let expected = list![
+            let expected = [
                 CodeBlockLine {
                     language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
@@ -272,8 +272,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ];
-            let output = convert_into_code_block_lines(language, &lines.into());
+            ].into();
+            let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }
 
@@ -281,7 +281,7 @@ mod tests {
         {
             let language = Some("rs");
             let lines = vec!["let x = 1;", "let y = 2;"];
-            let expected = list![
+            let expected = [
                 CodeBlockLine {
                     language: Some("rs"),
                     content: CodeBlockLineContent::StartTag,
@@ -298,8 +298,8 @@ mod tests {
                     language: Some("rs"),
                     content: CodeBlockLineContent::EndTag,
                 },
-            ];
-            let output = convert_into_code_block_lines(language, &lines.into());
+            ].into();
+            let output = convert_into_code_block_lines(language, &lines);
             assert_eq2!(output, expected);
         }
     }
@@ -316,7 +316,7 @@ mod tests {
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
-                convert_into_code_block_lines(Some(lang), &code_lines.into())
+                convert_into_code_block_lines(Some(lang), &code_lines)
             );
         }
 
@@ -329,7 +329,7 @@ mod tests {
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
-                convert_into_code_block_lines(Some(lang), &code_lines.into())
+                convert_into_code_block_lines(Some(lang), &code_lines)
             );
         }
 
@@ -342,7 +342,7 @@ mod tests {
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
-                convert_into_code_block_lines(Some(lang), &code_lines.into())
+                convert_into_code_block_lines(Some(lang), &code_lines)
             );
         }
 
@@ -374,7 +374,7 @@ mod tests {
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
-                convert_into_code_block_lines(Some(lang), &code_lines.into())
+                convert_into_code_block_lines(Some(lang), &code_lines)
             );
         }
     }
@@ -388,7 +388,7 @@ mod tests {
         assert_eq2!(remainder, "");
         assert_eq2!(
             code_block_lines,
-            convert_into_code_block_lines(lang, &code_lines.into())
+            convert_into_code_block_lines(lang, &code_lines)
         );
     }
 
@@ -403,7 +403,7 @@ mod tests {
             assert_eq2!(remainder, "");
             assert_eq2!(
                 code_block_lines,
-                convert_into_code_block_lines(Some(lang), &code_lines.into())
+                convert_into_code_block_lines(Some(lang), &code_lines)
             );
         }
 
@@ -416,7 +416,7 @@ mod tests {
             assert_eq2!(remainder, "\0\0\0\nNext line");
             assert_eq2!(
                 code_block_lines,
-                convert_into_code_block_lines(Some(lang), &code_lines.into())
+                convert_into_code_block_lines(Some(lang), &code_lines)
             );
         }
     }

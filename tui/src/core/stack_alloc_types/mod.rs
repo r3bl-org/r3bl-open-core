@@ -7,11 +7,13 @@ pub mod items;
 pub mod list_of;
 pub mod make_new;
 pub mod memory_allocator;
+pub mod render_list;
 pub mod sizes;
 pub mod usize_fmt;
 
 // Re-export.
 pub use items::*;
 pub use list_of::*;
+pub use render_list::*;
 pub use sizes::*;
 pub use usize_fmt::*;

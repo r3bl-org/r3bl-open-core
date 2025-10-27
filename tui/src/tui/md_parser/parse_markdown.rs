@@ -1,6 +1,6 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{List, MdDocument, MdElement, ZeroCopyGapBuffer,
+use crate::{MdDocument, MdElement, ParseList, ZeroCopyGapBuffer,
             md_parser::md_parser_constants::{AUTHORS, DATE, NULL_CHAR, TAGS, TITLE},
             parse_block_markdown_text_with_or_without_new_line, parse_csv_opt_eol,
             parse_fenced_code_block, parse_heading_in_single_line,
@@ -59,7 +59,7 @@ pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>
     // Handle any trailing null bytes at the end of the document.
     let (input, _discarded) = /* zero or more */ take_while(is(NULL_CHAR)).parse(input)?;
 
-    let it = List::from(output);
+    let it = ParseList::from(output);
     Ok((input, it))
 }
 
@@ -70,7 +70,7 @@ pub fn parse_markdown(input: &ZeroCopyGapBuffer) -> IResult<&str, MdDocument<'_>
 /// This parser expects input where lines end with `\n` followed by zero or more `\0`
 /// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying
 /// `parse_csv_opt_eol` handles null padding.
-fn parse_tags_list(input: &str) -> IResult<&str, List<&str>> {
+fn parse_tags_list(input: &str) -> IResult<&str, ParseList<&str>> {
     parse_csv_opt_eol(TAGS, input)
 }
 
@@ -81,7 +81,7 @@ fn parse_tags_list(input: &str) -> IResult<&str, List<&str>> {
 /// This parser expects input where lines end with `\n` followed by zero or more `\0`
 /// characters, as provided by `ZeroCopyGapBuffer::as_str()`. The underlying
 /// `parse_csv_opt_eol` handles null padding.
-fn parse_authors_list(input: &str) -> IResult<&str, List<&str>> {
+fn parse_authors_list(input: &str) -> IResult<&str, ParseList<&str>> {
     parse_csv_opt_eol(AUTHORS, input)
 }
 
@@ -300,7 +300,7 @@ mod tests_integration_block_smart_lists {
 mod tests_parse_markdown {
     use super::*;
     use crate::{BulletKind, CodeBlockLine, CodeBlockLineContent, HeadingData,
-                HeadingLevel, HyperlinkData, MdLineFragment, assert_eq2, list};
+                HeadingLevel, HyperlinkData, MdLineFragment, assert_eq2, parse_list};
 
     #[test]
     fn test_no_line() {
@@ -312,7 +312,7 @@ mod tests_parse_markdown {
         assert_eq2!(remainder, "");
         assert_eq2!(
             blocks[0],
-            MdElement::Text(list![MdLineFragment::Plain("Something")])
+            MdElement::Text([MdLineFragment::Plain("Something")].into())
         );
     }
 
@@ -326,7 +326,7 @@ mod tests_parse_markdown {
         assert_eq2!(remainder, "");
         assert_eq2!(
             blocks[0],
-            MdElement::Text(list![MdLineFragment::Plain("Something")])
+            MdElement::Text([MdLineFragment::Plain("Something")].into())
         );
     }
 
@@ -348,15 +348,15 @@ mod tests_parse_markdown {
         );
         assert_eq2!(
             blocks[1],
-            MdElement::Text(list![]), // Empty line.
+            MdElement::Text([].into()), // Empty line.
         );
         assert_eq2!(
             blocks[2],
-            MdElement::Text(list![
+            MdElement::Text([
                 MdLineFragment::Plain("##% LINE 2 FOO"),
                 MdLineFragment::Plain("_"),
                 MdLineFragment::Plain("BAR:"),
-            ])
+            ].into())
         );
     }
 
@@ -371,10 +371,10 @@ mod tests_parse_markdown {
         assert_eq2!(blocks.len(), 1);
         assert_eq2!(
             blocks[0],
-            MdElement::Text(list![
+            MdElement::Text([
                 MdLineFragment::Plain("_"),
                 MdLineFragment::Plain("this should not be italic"),
-            ])
+            ].into())
         );
     }
 
@@ -422,17 +422,17 @@ mod tests_parse_markdown {
 
         let vec_block = vec![
             MdElement::Title("Something"),
-            MdElement::Tags(list!["tag1", "tag2", "tag3"]),
+            MdElement::Tags(["tag1", "tag2", "tag3"].into()),
             MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 1 },
                 text: "Foobar",
             }),
-            MdElement::Text(list![]), /* Empty line */
-            MdElement::Text(list![MdLineFragment::Plain(
+            MdElement::Text([].into()), /* Empty line */
+            MdElement::Text([MdLineFragment::Plain(
                 "Foobar is a Python library for dealing with word pluralization.",
-            )]),
-            MdElement::Text(list![]), /* Empty line */
-            MdElement::CodeBlock(list![
+            )].into()),
+            MdElement::Text([].into()), /* Empty line */
+            MdElement::CodeBlock([
                 CodeBlockLine {
                     language: Some("bash"),
                     content: CodeBlockLineContent::StartTag
@@ -445,8 +445,8 @@ mod tests_parse_markdown {
                     language: Some("bash"),
                     content: CodeBlockLineContent::EndTag
                 },
-            ]),
-            MdElement::CodeBlock(list![
+            ].into()),
+            MdElement::CodeBlock([
                 CodeBlockLine {
                     language: Some("fish"),
                     content: CodeBlockLineContent::StartTag
@@ -455,8 +455,8 @@ mod tests_parse_markdown {
                     language: Some("fish"),
                     content: CodeBlockLineContent::EndTag
                 },
-            ]),
-            MdElement::CodeBlock(list![
+            ].into()),
+            MdElement::CodeBlock([
                 CodeBlockLine {
                     language: Some("python"),
                     content: CodeBlockLineContent::StartTag
@@ -469,21 +469,21 @@ mod tests_parse_markdown {
                     language: Some("python"),
                     content: CodeBlockLineContent::EndTag
                 },
-            ]),
+            ].into()),
             MdElement::Heading(HeadingData {
                 level: HeadingLevel { level: 2 },
                 text: "Installation",
             }),
-            MdElement::Text(list![]), /* Empty line */
-            MdElement::Text(list![
+            MdElement::Text([].into()), /* Empty line */
+            MdElement::Text([
                 MdLineFragment::Plain("Use the package manager "),
                 MdLineFragment::Link(HyperlinkData::from((
                     "pip",
                     "https://pip.pypa.io/en/stable/",
                 ))),
                 MdLineFragment::Plain(" to install foobar."),
-            ]),
-            MdElement::CodeBlock(list![
+            ].into()),
+            MdElement::CodeBlock([
                 CodeBlockLine {
                     language: Some("python"),
                     content: CodeBlockLineContent::StartTag
@@ -518,78 +518,78 @@ mod tests_parse_markdown {
                     language: Some("python"),
                     content: CodeBlockLineContent::EndTag
                 },
-            ]),
+            ].into()),
             MdElement::SmartList((
-                list![list![
+                [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
                         is_first_line: true
                     },
                     MdLineFragment::Plain("ul1"),
-                ],],
+                ].into()].into(),
                 BulletKind::Unordered,
                 0,
             )),
             MdElement::SmartList((
-                list![list![
+                [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
                         is_first_line: true
                     },
                     MdLineFragment::Plain("ul2"),
-                ],],
+                ].into()].into(),
                 BulletKind::Unordered,
                 0,
             )),
             MdElement::SmartList((
-                list![list![
+                [[
                     MdLineFragment::OrderedListBullet {
                         indent: 0,
                         number: 1,
                         is_first_line: true
                     },
                     MdLineFragment::Plain("ol1"),
-                ],],
+                ].into()].into(),
                 BulletKind::Ordered(1),
                 0,
             )),
             MdElement::SmartList((
-                list![list![
+                [[
                     MdLineFragment::OrderedListBullet {
                         indent: 0,
                         number: 2,
                         is_first_line: true
                     },
                     MdLineFragment::Plain("ol2"),
-                ],],
+                ].into()].into(),
                 BulletKind::Ordered(2),
                 0,
             )),
             MdElement::SmartList((
-                list![list![
+                [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
                         is_first_line: true
                     },
                     MdLineFragment::Checkbox(false),
                     MdLineFragment::Plain(" todo"),
-                ],],
+                ].into()].into(),
                 BulletKind::Unordered,
                 0,
             )),
             MdElement::SmartList((
-                list![list![
+                [[
                     MdLineFragment::UnorderedListBullet {
                         indent: 0,
                         is_first_line: true
                     },
                     MdLineFragment::Checkbox(true),
                     MdLineFragment::Plain(" done"),
-                ],],
+                ].into()].into(),
                 BulletKind::Unordered,
                 0,
             )),
-            MdElement::Text(list![MdLineFragment::Plain("end")]),
+            MdElement::Text([MdLineFragment::Plain("end")].into()),
         ];
 
         // Print a few of the last items.

@@ -1,23 +1,31 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineVec, List};
+use crate::{InlineVec, ParseList};
 
 /// This corresponds to a single Markdown document, which is produced after a successful
 /// parse operation [`crate::parse_markdown()`].
-pub type MdDocument<'a> = List<MdElement<'a>>;
+///
+/// Uses [ParseList] for absolute stack safety with recursive parsers handling unbounded
+/// user input. See [`crate::ParseList`] for details on the safety trade-offs.
+pub type MdDocument<'a> = ParseList<MdElement<'a>>;
 
 /// Alias for [`MdDocument`].
 pub type Blocks<'a> = MdDocument<'a>;
 
 /// This roughly corresponds to a single line of text. Each line is made up of one or more
 /// [`MdLineFragment`].
-pub type MdLineFragments<'a> = List<MdLineFragment<'a>>;
+///
+/// Uses [ParseList] for stack safety in recursive markdown fragment parsing.
+pub type MdLineFragments<'a> = ParseList<MdLineFragment<'a>>;
 
 /// Alias for [`MdLineFragments`].
 pub type FragmentsInOneLine<'a> = MdLineFragments<'a>;
 
-/// Alias for [List] of [`FragmentsInOneLine`].
-pub type Lines<'a> = List<FragmentsInOneLine<'a>>;
+/// Alias for [ParseList] of [`FragmentsInOneLine`].
+///
+/// Uses [ParseList] for nested lists in smart list parsing (list of lines, each line is
+/// a list of fragments).
+pub type Lines<'a> = ParseList<FragmentsInOneLine<'a>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeadingData<'a> {
@@ -44,11 +52,11 @@ pub enum MdElement<'a> {
     Heading(HeadingData<'a>),
     SmartList((Lines<'a>, BulletKind, usize)),
     Text(MdLineFragments<'a>),
-    CodeBlock(List<CodeBlockLine<'a>>),
+    CodeBlock(ParseList<CodeBlockLine<'a>>),
     Title(&'a str),
     Date(&'a str),
-    Tags(List<&'a str>),
-    Authors(List<&'a str>),
+    Tags(ParseList<&'a str>),
+    Authors(ParseList<&'a str>),
 }
 
 /// These are things that show up in a single line of Markdown text [`MdLineFragments`].
@@ -111,8 +119,10 @@ pub struct CodeBlockLine<'a> {
     pub content: CodeBlockLineContent<'a>,
 }
 
-/// Alias for [List] of [`CodeBlockLine`].
-pub type CodeBlockLines<'a> = List<CodeBlockLine<'a>>;
+/// Alias for [ParseList] of [`CodeBlockLine`].
+///
+/// Uses [ParseList] for stack safety when parsing multi-line code blocks.
+pub type CodeBlockLines<'a> = ParseList<CodeBlockLine<'a>>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum CodeBlockLineContent<'a> {

@@ -721,8 +721,8 @@ mod no_syn_hi_path {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, List, ModifierKeysMask,
-                Pos, clipboard_service::clipboard_test_fixtures::TestClipboard,
+    use crate::{CaretDirection, EditorEngineConfig, FlexBoxId, ModifierKeysMask,
+                Pos, RenderList, clipboard_service::clipboard_test_fixtures::TestClipboard,
                 key_press, width};
 
     #[test]
@@ -735,7 +735,7 @@ mod tests {
         buffer.content.lines.push_line("Hello World");
 
         // Populate the AST cache.
-        let test_ast: StyleUSSpanLines = List::new();
+        let test_ast: StyleUSSpanLines = RenderList::new();
         engine.set_ast_cache(test_ast);
         assert!(!engine.ast_cache_is_empty());
 
@@ -752,7 +752,7 @@ mod tests {
         assert!(engine.ast_cache_is_empty());
 
         // Set cache again and test redo.
-        let test_ast2: StyleUSSpanLines = List::new();
+        let test_ast2: StyleUSSpanLines = RenderList::new();
         engine.set_ast_cache(test_ast2);
         assert!(!engine.ast_cache_is_empty());
 
@@ -777,7 +777,7 @@ mod tests {
 
         // Test InsertChar event.
         {
-            let test_ast: StyleUSSpanLines = List::new();
+            let test_ast: StyleUSSpanLines = RenderList::new();
             engine.set_ast_cache(test_ast);
             assert!(!engine.ast_cache_is_empty());
 
@@ -792,7 +792,7 @@ mod tests {
 
         // Test Delete event.
         {
-            let test_ast: StyleUSSpanLines = List::new();
+            let test_ast: StyleUSSpanLines = RenderList::new();
             engine.set_ast_cache(test_ast);
             assert!(!engine.ast_cache_is_empty());
 
@@ -812,7 +812,7 @@ mod tests {
             buffer.content.lines.set_line(row(0), "test");
             buffer.content.caret_raw.col_index = col(4); // Position at end
 
-            let test_ast: StyleUSSpanLines = List::new();
+            let test_ast: StyleUSSpanLines = RenderList::new();
             engine.set_ast_cache(test_ast);
             assert!(!engine.ast_cache_is_empty());
 
@@ -837,7 +837,7 @@ mod tests {
         buffer.content.lines.push_line("World");
 
         // Set AST cache
-        let test_ast: StyleUSSpanLines = List::new();
+        let test_ast: StyleUSSpanLines = RenderList::new();
         engine.set_ast_cache(test_ast);
         assert!(!engine.ast_cache_is_empty());
 
