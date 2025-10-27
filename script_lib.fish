@@ -661,15 +661,195 @@ end
 #
 #   # Diff two profiles:
 #   inferno-diff-folded before.perf-folded after.perf-folded | flamegraph > diff.svg
-function run_example_with_flamegraph_profiling_perf_fold
-    set options $argv
 
-    set selection (printf '%s\n' $options | fzf --prompt 'Select an example to run: ')
-    set fzf_status $status
+# Runs benchmark with scripted input using expect for reproducible performance testing.
+#
+# This function executes a predefined sequence of keystrokes in a large terminal viewport
+# to stress-test the rendering pipeline and generate consistent profiling data.
+#
+# Features:
+# - Large viewport (220x60 = 13,200 cells) to exercise rendering
+# - 25 scripted operations (typing, navigation, scrolling)
+# - Fixed 30-second duration
+# - Zero user interaction required
+#
+# Scripted actions:
+# 1. Type text ("Hello World", "xyz", "Testing performance", etc.)
+# 2. Cursor navigation (arrows, Home, End)
+# 3. Screen operations (Ctrl+L redraw, PageUp/PageDown)
+# 4. Mode changes (Esc)
+# 5. Editing commands (Ctrl+K)
+# 6. Idle rendering (18 seconds of continuous screen updates)
+#
+# Arguments:
+#   $argv[1] - Binary path to execute under profiling
+#
+# Prerequisites:
+#   - expect installed (via bootstrap.sh)
+#   - sudo access for perf
+#
+# Output:
+#   - perf.data created by perf record
+function run_benchmark_with_scripted_input
+    set binary_path $argv[1]
 
-    if test $fzf_status -ne 0
-        # User pressed Ctrl+C, exit gracefully
+    # Check if expect is installed
+    if not command -v expect >/dev/null
+        echo "Error: expect is not installed (required for benchmark mode)."
+        echo "Please run from the repo root:"
+        echo "  ./bootstrap.sh    # Or manually: sudo apt install expect"
         return
+    end
+
+    echo "Running perf record for exactly 30 seconds with scripted input..."
+    echo "Viewport size: 60 rows x 220 columns (exercises rendering pipeline)"
+
+    # Use expect to send scripted keystrokes, wrapped in timeout for safety
+    timeout 35s sudo perf record -g --call-graph=fp,8 -F 99 -o perf.data -- \
+        expect -c "
+            set timeout 30
+
+            # Set large terminal size to exercise rendering pipeline
+            # (matches viewport from screenshot: ~220 cols x 60 rows)
+            set stty_init \"rows 60 cols 220\"
+            spawn $binary_path
+
+            # Wait for app to initialize with large viewport
+            sleep 2
+
+            # tui_apps shows a menu - select ex_editor (option 3)
+            send \"3\"
+            sleep 0.5
+            # Press Enter to select ex_editor
+            send \"\r\"
+            sleep 2
+
+            # Now we're in ex_editor, start the benchmark sequence
+            # Type \"Hello World\"
+            send \"Hello World\"
+            sleep 0.5
+
+            # Move cursor left 3 times
+            send \"\x1b\[D\"
+            sleep 0.3
+            send \"\x1b\[D\"
+            sleep 0.3
+            send \"\x1b\[D\"
+            sleep 0.5
+
+            # Type \"xyz\"
+            send \"xyz\"
+            sleep 0.5
+
+            # Press Enter
+            send \"\r\"
+            sleep 0.5
+
+            # Type \"Testing performance\"
+            send \"Testing performance\"
+            sleep 0.5
+
+            # Type Ctrl+L (show simple dialog)
+            send \"\x0c\"
+            sleep 0.5
+
+            # Type \"abc\"
+            send \"abc\"
+            sleep 0.5
+
+            # Press Esc (exit simple dialog)
+            send \"\x1b\"
+            sleep 0.5
+
+            # Type Ctrl+K (show complex dialog)
+            send \"\x0b\"
+            sleep 0.5
+
+            # Type \"def\"
+            send \"def\"
+            sleep 0.5
+
+            # Move cursor down 3 times
+            send \"\x1b\[B\"
+            sleep 0.3
+            send \"\x1b\[B\"
+            sleep 0.3
+            send \"\x1b\[B\"
+            sleep 0.5
+
+            # Press Esc again (exit complex dialog)
+            send \"\x1b\"
+            sleep 0.5
+
+            # Press cursor down 8 times
+            send \"\x1b\[B\"
+            sleep 0.2
+            send \"\x1b\[B\"
+            sleep 0.2
+            send \"\x1b\[B\"
+            sleep 0.2
+            send \"\x1b\[B\"
+            sleep 0.2
+            send \"\x1b\[B\"
+            sleep 0.2
+            send \"\x1b\[B\"
+            sleep 0.2
+            send \"\x1b\[B\"
+            sleep 0.2
+            send \"\x1b\[B\"
+            sleep 0.5
+
+            # Press Home (move to beginning of line)
+            send \"\x1b\[H\"
+            sleep 0.5
+
+            # Press End (move to end of line)
+            send \"\x1b\[F\"
+            sleep 0.5
+
+            # Press PageDown 2 times
+            send \"\x1b\[6~\"
+            sleep 0.5
+            send \"\x1b\[6~\"
+            sleep 0.5
+
+            # Press PageUp 2 times
+            send \"\x1b\[5~\"
+            sleep 0.5
+            send \"\x1b\[5~\"
+            sleep 1
+
+            # Idle for remaining time (renders screen with large viewport)
+            sleep 18
+
+            # Quit gracefully
+            send \"q\"
+            expect eof
+        "
+end
+
+function run_example_with_flamegraph_profiling_perf_fold
+    # Last argument is benchmark_mode (true/false)
+    set benchmark_mode $argv[-1]
+    # All other arguments are example options
+    set options $argv[1..-2]
+
+    # In benchmark mode, use tui_apps by default; otherwise use fzf selection
+    if test "$benchmark_mode" = "true"
+        set selection "tui_apps"
+        echo (set_color cyan --bold)"=== BENCHMARK MODE ===" (set_color normal)
+        echo "Using default example: $selection (ex_editor will be auto-selected)"
+        echo "Duration: 30 seconds (timeout controlled)"
+        echo "Output: flamegraph-benchmark.perf-folded"
+        echo ""
+    else
+        set selection (printf '%s\n' $options | fzf --prompt 'Select an example to run: ')
+        set fzf_status $status
+
+        if test $fzf_status -ne 0
+            # User pressed Ctrl+C, exit gracefully
+            return
+        end
     end
 
     if test -z "$selection"
@@ -710,8 +890,13 @@ function run_example_with_flamegraph_profiling_perf_fold
         end
 
         # Run perf record with same options as the SVG version
-        echo "Running perf record with enhanced symbol resolution..."
-        sudo perf record -g --call-graph=fp,8 -F 99 -o perf.data -- $binary_path
+        # In benchmark mode, use expect for scripted input and timeout for fixed duration
+        if test "$benchmark_mode" = "true"
+            run_benchmark_with_scripted_input $binary_path
+        else
+            echo "Running perf record with enhanced symbol resolution..."
+            sudo perf record -g --call-graph=fp,8 -F 99 -o perf.data -- $binary_path
+        end
 
         # Fix ownership of perf.data files so they can be accessed without sudo
         set current_user $USER
@@ -729,22 +914,29 @@ function run_example_with_flamegraph_profiling_perf_fold
         end
 
         # Convert perf data to collapsed stacks format using inferno (comes with cargo flamegraph)
+        # In benchmark mode, use a different output filename
+        if test "$benchmark_mode" = "true"
+            set output_file "flamegraph-benchmark.perf-folded"
+        else
+            set output_file "flamegraph.perf-folded"
+        end
+
         echo "Converting to collapsed stacks format..."
-        sudo perf script -f -i perf.data | inferno-collapse-perf > flamegraph.perf-folded
+        sudo perf script -f -i perf.data | inferno-collapse-perf > $output_file
 
         # Fix ownership of generated files
-        sudo chown "$current_user:$current_user" flamegraph.perf-folded
+        sudo chown "$current_user:$current_user" $output_file
 
         # Show file size comparison
-        set folded_size (wc -c < flamegraph.perf-folded)
-        echo "Generated flamegraph.perf-folded: $folded_size bytes"
+        set folded_size (wc -c < $output_file)
+        echo "Generated $output_file: $folded_size bytes"
 
         # Count total samples (with error handling for empty files)
         if test $folded_size -gt 0
-            set total_samples (awk '{sum += $NF} END {print sum}' flamegraph.perf-folded)
+            set total_samples (awk '{sum += $NF} END {print sum}' $output_file)
             echo "Total samples: $total_samples"
         else
-            echo "Warning: flamegraph.perf-folded is empty. Check if perf recording was successful."
+            echo "Warning: $output_file is empty. Check if perf recording was successful."
         end
 
         # Reset kernel parameters

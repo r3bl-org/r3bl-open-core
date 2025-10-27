@@ -98,7 +98,12 @@ function main
         case run-examples-flamegraph-svg
             run-examples-flamegraph-svg
         case run-examples-flamegraph-fold
-            run-examples-flamegraph-fold
+            # Check for --benchmark flag
+            if test (count $argv) -gt 1; and test "$argv[2]" = "--benchmark"
+                run-examples-flamegraph-fold --benchmark
+            else
+                run-examples-flamegraph-fold
+            end
         case bench
             bench
             # cmdr-specific commands
@@ -161,7 +166,7 @@ function print-help
         echo (set_color cyan --bold)"TUI-specific commands:"(set_color normal)
         echo "    "(set_color green)"run-examples"(set_color normal)" "(set_color blue)"[--release] [--no-log]"(set_color normal)"  Run TUI examples"
         echo "    "(set_color green)"run-examples-flamegraph-svg"(set_color normal)"  Generate SVG flamegraph"
-        echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" Generate perf-folded format"
+        echo "    "(set_color green)"run-examples-flamegraph-fold"(set_color normal)" "(set_color blue)"[--benchmark]"(set_color normal)"  Generate perf-folded format"
         echo "    "(set_color green)"bench"(set_color normal)"                Run benchmarks"
         echo ""
         echo (set_color cyan --bold)"cmdr-specific commands:"(set_color normal)
@@ -778,6 +783,7 @@ end
 # - Shows total sample counts
 # - Much smaller file size than SVG
 # - Can be converted to various formats later
+# - Benchmark mode for reproducible performance testing with scripted input
 #
 # Output format:
 # Each line contains: stack_trace sample_count
@@ -786,19 +792,31 @@ end
 # Prerequisites:
 # - perf installed
 # - inferno tools installed (via install-cargo-tools)
+# - expect installed (via bootstrap.sh) - required for --benchmark mode
 # - sudo access for kernel parameters
 #
 # Output:
-# - flamegraph.perf-folded: Collapsed stack trace file
+# - flamegraph.perf-folded: Collapsed stack trace file (interactive mode)
+# - flamegraph-benchmark.perf-folded: Collapsed stack trace file (benchmark mode)
 #
 # Usage:
-#   fish run.fish run-examples-flamegraph-fold
+#   fish run.fish run-examples-flamegraph-fold              # Interactive mode (manual input)
+#   fish run.fish run-examples-flamegraph-fold --benchmark  # Benchmark mode (30s, scripted input)
 function run-examples-flamegraph-fold
     set original_dir $PWD
     cd tui
 
     set example_binaries (get_example_binaries)
-    run_example_with_flamegraph_profiling_perf_fold $example_binaries
+
+    # Check for --benchmark flag in arguments
+    set benchmark_mode false
+    for arg in $argv
+        if test "$arg" = "--benchmark"
+            set benchmark_mode true
+        end
+    end
+
+    run_example_with_flamegraph_profiling_perf_fold $example_binaries $benchmark_mode
 
     cd $original_dir
 end

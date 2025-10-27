@@ -130,6 +130,23 @@ install_dev_utilities() {
         echo "  Arch: sudo pacman -S screen tmux"
         echo "  openSUSE: sudo zypper install screen tmux"
     fi
+
+    # Install expect for scripted terminal automation (used in benchmark mode)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        if [[ -z "$PKG_MGR" ]] && ! command -v brew &>/dev/null; then
+            echo "Warning: Homebrew not found. Skipping expect installation..."
+        else
+            install_if_missing "expect" "${PKG_MGR:-brew install} expect"
+        fi
+    elif [[ -n "$PKG_MGR" ]]; then
+        install_if_missing "expect" "$PKG_MGR expect"
+    else
+        echo "Warning: No supported package manager found. Install expect manually"
+        echo "  Ubuntu/Debian: sudo apt-get install expect"
+        echo "  RHEL/CentOS/Fedora: sudo dnf install expect"
+        echo "  Arch: sudo pacman -S expect"
+        echo "  openSUSE: sudo zypper install expect"
+    fi
 }
 
 # Install Node.js and npm
