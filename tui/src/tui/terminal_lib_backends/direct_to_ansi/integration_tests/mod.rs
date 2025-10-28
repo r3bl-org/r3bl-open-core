@@ -99,7 +99,7 @@ mod test_helpers {
     use crate::{LockedOutputDevice, OutputDevice, RenderOpOutput, RenderOpPaint,
                 RenderOpsLocalData, Size, StdoutMock, TuiColor, col, height,
                 lock_output_device_as_mut, pos, render_op::RenderOpCommon, row,
-                terminal_lib_backends::direct_to_ansi::paint_render_op_impl::RenderOpPaintImplDirectToAnsi,
+                terminal_lib_backends::direct_to_ansi::RenderOpPaintImplDirectToAnsi,
                 test_fixtures::output_device_fixtures::OutputDeviceExt, width};
 
     /// Creates initial test state with default values

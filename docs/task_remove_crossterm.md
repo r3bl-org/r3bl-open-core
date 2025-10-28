@@ -2183,39 +2183,42 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 ### 8.1: Architecture Design (1-2 hours)
 
-**Objective**: Plan the InputDevice refactoring with input/output parallel architecture
+**Status**: ✅ COMPLETE
 
-**Current State Analysis**:
+**Objective**: Design two-layer input architecture mirroring output path (protocol layer + backend layer)
 
-- `InputDevice` struct at `tui/src/core/terminal_io/input_device.rs:11`
-- Currently wraps `crossterm::event::EventStream` (line 19)
-- `InputDeviceExt` trait at `tui/src/tui/terminal_lib_backends/input_device_ext.rs:60` converts
-  `crossterm::event::Event` to `InputEvent`
-- DirectToAnsi output files (will be in `output/` subdirectory after Phase 8.0)
-- Parser utilities in `tui/src/core/ansi/parser/` can be reused for input parameter parsing
+**Approved Architecture** (see [`task_remove_crossterm_step_8_details.md`](task_remove_crossterm_step_8_details.md) for detailed specifications):
 
-**Design Tasks**:
+```
+Layer 1: Protocol Parsing (core/ansi/ - reusable, pure functions)
+  tui/src/core/ansi/vt_100_terminal_input_parser/
+  ├── mod.rs                   # Public API exports
+  ├── keyboard.rs              # parse_keyboard_sequence() - arrows, functions, modifiers
+  ├── mouse.rs                 # parse_mouse_sequence() - SGR, Normal/X10, RXVT protocols
+  ├── terminal_events.rs       # parse_focus_event(), parse_bracketed_paste()
+  ├── utf8.rs                  # UTF-8 text handling
+  └── tests.rs                 # Pure parsing unit tests
 
-- [ ] Review existing DirectToAnsi output architecture in `output/` subdirectory
-- [ ] Design InputDevice API that remains backend-agnostic (no DirectToAnsi-specific types leak)
-- [ ] Plan async event reading architecture:
-  - **Decision**: Use `tokio::io::stdin()` for async stdin (NOT mio)
-  - **Rationale**: tokio is already a project dependency with full features enabled; simpler than
-    adding mio
-  - **Benefit**: Integrates seamlessly with existing tokio-based event loop
-- [ ] Design ANSI sequence → InputEvent mapping:
-  - **Keyboard events**: CSI sequences for arrow keys (A/B/C/D), function keys (`<n>~`), etc.
-  - **Mouse events**: SGR (Select Graphic Rendition) mouse protocol sequences
-    (`CSI < Cb ; Cx ; Cy M/m`)
-  - **Special keys**: Page Up/Down (5~/6~), Home/End (H/F), Delete, Backspace, etc.
-  - **Modifier combinations**: Extract from CSI parameters (Ctrl=5, Alt=3, Shift=2, etc.)
-- [ ] Plan buffer management for partial sequences (incomplete ANSI sequences mid-stream)
-- [ ] Identify edge cases: malformed sequences, rapid input, utf-8 text between sequences, stdin
-      closure
-- [ ] Document how `input/input_sequences.rs` and `input/input_device_impl.rs` interact
+Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
+  tui/src/tui/terminal_lib_backends/direct_to_ansi/input/
+  ├── mod.rs                   # Public API exports
+  ├── input_device_impl.rs     # DirectToAnsiInputDevice: tokio I/O + buffering
+  └── tests.rs                 # Integration tests
+```
 
-**Deliverable**: Architecture document (inline code comments) explaining input/output symmetry and
-module responsibilities
+**Key Design Decisions**:
+- ✅ **Two-layer separation**: Protocol parsing (pure) separate from I/O (async)
+- ✅ **Platform strategy**: Linux uses DirectToAnsi, macOS/Windows use crossterm (deprecated)
+- ✅ **Async I/O**: Use `tokio::io::stdin()` (already available, better than mio)
+- ✅ **ANSI protocols supported**: Keyboard (CSI + SS3), Mouse (SGR + X10 + RXVT), Focus, Paste, UTF-8
+- ✅ **Naming**: `vt_100_pty_output_parser` (existing) + `vt_100_terminal_input_parser` (new)
+
+**Deliverable**: `ARCHITECTURE_STEP_8_INPUT.md` with:
+- Complete ANSI protocol reference (all sequences from crossterm analysis)
+- Module structure and responsibilities
+- Data flow diagrams
+- Edge case handling strategy
+- Parser function signatures
 
 ### 8.2: Implement DirectToAnsi InputDevice (4-6 hours)
 
@@ -2223,49 +2226,61 @@ module responsibilities
 
 **Implementation Steps**:
 
-#### 8.2.1 Create DirectToAnsi Input Module Structure (30-45 min)
+#### 8.2.1 Create Input Module Structure (30-45 min) - TWO LAYERS
 
-- [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/` directory
-- [ ] Create `input/mod.rs` with module exports:
+**Status**: ✅ COMPLETE
 
-  ```rust
-  mod input_device_impl;
-  mod input_sequences;
+**Layer 1: Protocol Parsing** (core/ansi/ - reusable, pure Rust parsing):
 
-  pub use input_device_impl::DirectToAnsiInputDevice;
-  pub use input_sequences::{
-      parse_keyboard_sequence,
-      parse_mouse_sequence,
-      parse_resize_event,
-      parse_focus_event,
-      parse_bracketed_paste,
-  };
-  ```
+- [x] Create `tui/src/core/ansi/vt_100_terminal_input_parser/` directory
+- [x] Create `vt_100_terminal_input_parser/mod.rs` with rustfmt skip and module re-exports
+- [x] Create module files (stubs, implementation in 8.2.2):
+  - [x] `keyboard.rs` - `parse_keyboard_sequence(bytes: &[u8]) -> Option<InputEvent>`
+  - [x] `mouse.rs` - `parse_mouse_sequence(bytes: &[u8]) -> Option<InputEvent>`
+  - [x] `terminal_events.rs` - `parse_terminal_event(bytes: &[u8]) -> Option<InputEvent>`
+  - [x] `utf8.rs` - `parse_utf8_text(bytes: &[u8]) -> Vec<InputEvent>`
+  - [x] `types.rs` - Backend-agnostic `InputEvent`, `KeyCode`, `MouseButton`, etc. types
+- [x] Unit tests colocated in each module file (no separate `tests.rs` file)
 
-- [ ] Create `input/input_device_impl.rs` with `DirectToAnsiInputDevice` struct:
-  ```rust
-  pub struct DirectToAnsiInputDevice {
-      stdin: tokio::io::Stdin,            // tokio async stdin reader
-      buffer: Vec<u8>,                    // for partial sequences
-      sequence_timeout: Duration,         // timeout for incomplete sequences (100-200ms)
-  }
-  ```
-- [ ] Implement constructor: `pub fn new() -> Result<Self>`
-- [ ] Implement async event reading: `pub async fn read_event(&mut self) -> Result<InputEvent>`
-- [ ] Create `input/tests.rs` for unit tests (filled in section 8.3)
+**Layer 2: Backend I/O** (terminal_lib_backends/ - async I/O + buffering):
 
-**Implementation Notes**:
+- [x] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/` directory
+- [x] Create `input/mod.rs` with module re-exports
+- [x] Create `input/input_device_impl.rs` with `DirectToAnsiInputDevice` struct (stub)
+  - [x] Struct with field placeholders for tokio stdin, buffer, timeout
+  - [x] `pub fn new() -> Self` constructor stub
+  - [x] `pub async fn read_event(&mut self) -> Option<InputEvent>` method stub
+  - [x] `dispatch_to_parser()` internal helper stub
+- [x] Create `input/tests.rs` (integration tests - will be filled in 8.3)
+- [x] Add `#[derive(Debug)]` to DirectToAnsiInputDevice (required by clippy)
 
-- Use `tokio::io::stdin()` for async stdin reading (tokio is already a project dependency)
-- Don't add mio as a separate dependency; tokio provides async I/O abstraction
-- Stdin is already available in tokio with `io::stdin().read()` for async reads
+**Module Integration**:
 
-#### 8.2.2 Implement ANSI Sequence Parsing for Input (1.5-2 hours)
+- [x] Update `core/ansi/mod.rs` to add `pub mod vt_100_terminal_input_parser`
+- [x] Update `direct_to_ansi/mod.rs` to enable `pub mod input` and re-export
 
-**File**: `input/input_sequences.rs`
+**Verification**:
 
-- [ ] Implement keyboard event parsing function
-      `parse_keyboard_sequence(bytes: &[u8]) -> Option<KeyPress>`
+- [x] `cargo check` passes with zero errors
+- [x] All warnings are expected dead-code for stubs (14 warnings, no errors)
+
+**Key Implementation Details**:
+
+- Unit tests are colocated with code (inline `#[cfg(test)]` modules in each file)
+- Integration tests are separate in `input/tests.rs` (since they test async I/O)
+- Types defined in protocol layer (`types.rs`) for backend-agnostic input events
+- Module structure mirrors output architecture for consistency
+
+#### 8.2.2 Implement Protocol Layer Parsers (1.5-2 hours)
+
+**Location**: `tui/src/core/ansi/vt_100_terminal_input_parser/` - These are pure functions with no I/O
+
+**See ARCHITECTURE_STEP_8_INPUT.md for detailed ANSI protocol specifications**
+
+##### Keyboard Parsing (`keyboard.rs`)
+
+- [ ] Implement `parse_keyboard_sequence(bytes: &[u8]) -> Option<(KeyPress, usize)>`
+      (returns parsed event + bytes consumed, or None if incomplete)
   - [ ] Arrow keys: CSI `A`/`B`/`C`/`D` → `SpecialKey::Up/Down/Right/Left`
   - [ ] Function keys: CSI `<n>~` → `FunctionKey::F1-F12` (map numbers 11-34)
     - CSI `11~` → F1, CSI `12~` → F2, ..., CSI `34~` → F12
@@ -2320,39 +2335,58 @@ module responsibilities
 - [ ] Helper functions for parsing CSI parameters (reuse from `parser/protocols/` if available)
 - [ ] Document SGR protocol byte format in comments
 
-#### 8.2.3 Handle Edge Cases (1-1.5 hours)
+#### 8.2.3 Implement Backend Device (1-1.5 hours)
 
-- [ ] Implement partial sequence buffering in `input_device_impl.rs`:
-  - [ ] Detect incomplete sequences (ESC without terminator)
-  - [ ] Buffer incomplete bytes and wait for more data
-  - [ ] Set reasonable timeout (100-200ms) for incomplete sequences
+**Location**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
+
+This layer manages async I/O and buffering, calling protocol parsers from 8.2.2:
+
+- [ ] Implement `DirectToAnsiInputDevice::new()` constructor
+  - [ ] Initialize tokio::io::stdin()
+  - [ ] Create 4096-byte buffer
+  - [ ] Set 150ms timeout for incomplete sequences
+
+- [ ] Implement async `read_event()` main loop
+  - [ ] Try to parse complete sequence from buffer using protocol parsers
+  - [ ] If no complete sequence, read more bytes with timeout
+  - [ ] On timeout, try to parse incomplete or skip malformed byte
+  - [ ] Return parsed InputEvent or None on EOF
+
+- [ ] Implement helper methods
+  - [ ] `try_parse_from_buffer()` - dispatches to protocol parsers
+  - [ ] `read_bytes()` - async tokio stdin read
+  - [ ] `handle_timeout()` - recover from incomplete sequences
+  - [ ] Buffer management (advance read pointer, handle wraparound)
+
+- [ ] Update `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs`:
+  - [ ] Add `pub mod input;`
+  - [ ] Add re-exports: `pub use input::DirectToAnsiInputDevice;`
+
+#### 8.2.4 Handle Edge Cases (1-1.5 hours)
+
+Both **protocol parsers** (8.2.2) and **backend device** (8.2.3) need edge case handling:
+
+**In Protocol Parsers** (`vt_100_terminal_input_parser/`):
 - [ ] Invalid/malformed sequence handling:
-  - [ ] Skip invalid bytes gracefully (don't panic)
-  - [ ] Log malformed sequences for debugging
-  - [ ] Continue processing after errors
+  - [ ] Return `None` for incomplete sequences
+  - [ ] Handle truncated sequences gracefully
+  - [ ] Validate sequence structure (don't panic)
+
+**In Backend Device** (`input_device_impl.rs`):
+- [ ] Partial sequence buffering:
+  - [ ] Detect incomplete sequences (ESC without terminator)
+  - [ ] Buffer and wait for more data
+  - [ ] Timeout recovery: skip byte and continue
+
+- [ ] UTF-8 text handling:
+  - [ ] Detect UTF-8 start bytes (0xC0-0xF7)
+  - [ ] Buffer until complete sequence (1-4 bytes)
+  - [ ] Validate continuation bytes match pattern 10xxxxxx
+  - [ ] Call `utf8::parse_utf8_text()` from protocol layer
+
 - [ ] Terminal interaction:
-  - [ ] Handle stdin closure gracefully (should produce InputEvent::Quit or similar)
-  - [ ] Detect EOF and propagate appropriately
-- [ ] UTF-8 text input:
-  - [ ] Detect and preserve raw UTF-8 text between ANSI sequences
-  - [ ] Handle incomplete UTF-8 sequences (buffer until complete)
-  - [ ] Emit as `InputEvent::Text(String)` if supported
-
-**Files to Create**:
-
-- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs`
-- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
-- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_sequences.rs`
-- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/tests.rs` (unit tests)
-
-**Files to Update**:
-
-- Update: `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs` - Add `pub mod input;` and
-  re-exports
-- Update: `tui/src/tui/terminal_lib_backends/input_device_ext.rs` - Implement trait for
-  DirectToAnsiInputDevice
-- Update: `tui/src/core/terminal_io/input_device.rs` - Replace
-  `PinnedInputStream<CrosstermEventResult>` with `DirectToAnsiInputDevice`
+  - [ ] Stdin EOF: return `Ok(None)` to signal graceful close
+  - [ ] I/O errors: propagate via `Result`
 
 **Deliverable**: Input module with complete InputDevice implementation that reads and parses all
 ANSI sequences (keyboard, mouse, resize, focus, paste) to produce InputEvent

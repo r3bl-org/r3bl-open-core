@@ -90,6 +90,9 @@ pub mod vt_100_ansi_parser;
 #[cfg(not(any(test, doc)))]
 mod vt_100_ansi_parser;
 
+// Input parsing module - public for protocol access
+pub mod vt_100_terminal_input_parser;
+
 // Re-export flat public API.
 pub use color::*;
 pub use constants::*;
