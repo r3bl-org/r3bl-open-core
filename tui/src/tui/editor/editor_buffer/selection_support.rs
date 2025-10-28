@@ -51,7 +51,7 @@ pub fn handle_selection_single_line_caret_movement(
         curr_col_index,
     );
 
-    // XMARK: For reference, algo for left, right selection
+    // XMARK: For reference, algo for left, right selection.
 
     // Handle the movement of the caret and apply the appropriate changes to the range.
     match (
@@ -471,7 +471,7 @@ mod multiline_select_helper {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    // XMARK: Impl multiline selection changes (up/down, and later page up/page down)
+    // XMARK: Impl multiline selection changes (up/down, and later page up/page down).
 
     /// Precondition: there has to be at least 2 rows.
     #[allow(clippy::too_many_lines)]

@@ -103,7 +103,7 @@ mod inner {
     }
 }
 
-// XMARK: Great tests to understand how a single line of Markdown text is parsed
+// XMARK: Great tests to understand how a single line of Markdown text is parsed.
 
 #[cfg(test)]
 mod tests_parse_block_markdown_text_opt_eol_checkbox_policy {

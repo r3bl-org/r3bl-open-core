@@ -211,7 +211,7 @@ end
 #   cargo clippy --all-targets
 function build-server
     # Where you source files live.
-    set orig_path /home/nazmul/github/r3bl-open-core/
+    set orig_path $HOME/github/r3bl-open-core/
     # Copy files to here.
     set dest_host "nazmul-laptop.local"
     set dest_path "$dest_host:$orig_path"

@@ -23,7 +23,7 @@ use crate::{CheckboxParsePolicy, DEBUG_MD_PARSER, MdLineFragment, fg_green, fg_r
             parse_fragment_starts_with_underscore_err_on_new_line};
 use nom::{IResult, Parser, branch::alt, combinator::map};
 
-// XMARK: Parser for a single line of markdown
+// XMARK: Parser for a single line of markdown.
 
 /// Parse a single chunk of Markdown text (found in a single line of text) into a
 /// [`MdLineFragment`]. If there is no [`crate::NEW_LINE`] character, then parse

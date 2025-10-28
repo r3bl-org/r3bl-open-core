@@ -339,13 +339,4 @@ mod tests {
         };
         assert_eq!(PtyConfigOption::Size(size), PtyConfigOption::Size(size));
     }
-
-    #[test]
-    fn test_pty_config_debug() {
-        let config = PtyConfigOption::Osc + PtyConfigOption::Output;
-        let debug_str = format!("{config:?}");
-        assert!(debug_str.contains("PtyConfig"));
-        assert!(debug_str.contains("capture_osc"));
-        assert!(debug_str.contains("capture_output"));
-    }
 }

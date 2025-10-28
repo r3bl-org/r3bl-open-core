@@ -1,14 +1,12 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use std::{sync::Arc, time::Duration};
-
-use tokio::{sync::broadcast, time::interval};
-
-use crate::{contains_ansi_escape_sequence, get_terminal_width,
+use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
+            SafeInlineString, SharedWriter, SpinnerStyle, StdMutex, StdoutIsPipedResult,
+            TTYResult, contains_ansi_escape_sequence, get_terminal_width,
             is_fully_uninteractive_terminal, is_stdout_piped, ok, spinner_print,
-            spinner_render, InlineString, LineStateControlSignal, OutputDevice,
-            SafeBool, SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
-            StdoutIsPipedResult, TTYResult};
+            spinner_render};
+use std::{sync::Arc, time::Duration};
+use tokio::{sync::broadcast, time::interval};
 
 /// `Spinner` works in conjunction with [`crate::ReadlineAsyncContext`] to provide a
 /// spinner in the terminal for long running tasks.
@@ -299,6 +297,7 @@ impl Spinner {
 
                     // Poll interval.
                     // This branch is cancel safe because tick is cancel safe.
+                    // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
                     _ = interval.tick() => {
                         // Early return if the spinner is shutdown.
                         if *self_safe_is_shutdown.lock().unwrap() {
@@ -376,12 +375,11 @@ impl Spinner {
 
 #[cfg(test)]
 mod tests {
-    use smallvec::SmallVec;
-
     use super::{Duration, LineStateControlSignal, SharedWriter, Spinner, SpinnerStyle,
                 TTYResult};
-    use crate::{is_partially_uninteractive_terminal, OutputDevice, OutputDeviceExt,
-                SpinnerColor, SpinnerTemplate};
+    use crate::{OutputDevice, OutputDeviceExt, SpinnerColor, SpinnerTemplate,
+                is_partially_uninteractive_terminal};
+    use smallvec::SmallVec;
 
     type ArrayVec = SmallVec<[LineStateControlSignal; FACTOR as usize]>;
     const FACTOR: u32 = 5;
@@ -435,8 +433,10 @@ mod tests {
                     Ok(signal) => {
                         acc.push(signal);
                     }
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty |
-                         tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                    Err(
+                        tokio::sync::mpsc::error::TryRecvError::Empty
+                        | tokio::sync::mpsc::error::TryRecvError::Disconnected,
+                    ) => {
                         break;
                     }
                 }
@@ -510,8 +510,10 @@ mod tests {
                     Ok(signal) => {
                         acc.push(signal);
                     }
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty |
-                         tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                    Err(
+                        tokio::sync::mpsc::error::TryRecvError::Empty
+                        | tokio::sync::mpsc::error::TryRecvError::Disconnected,
+                    ) => {
                         break;
                     }
                 }

@@ -115,7 +115,7 @@ impl TerminalWindow {
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
         let initial_size = get_size()?;
-        let input_device = InputDevice::new_event_stream();
+        let input_device = InputDevice::default();
         let output_device = OutputDevice::new_stdout();
 
         Ok(main_event_loop_impl(

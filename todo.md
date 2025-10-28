@@ -3,44 +3,51 @@
 
 # create tmux POC
 
-- [x] [`task_ring_buffer_enhance`](docs/done/task_ring_buffer_enhance.md)
-- [x] [`task_make_editor_vt_100_parser_more_typesafe`](docs/done/task_make_editor_vt_100_parser_more_typesafe.md)
-- [x] [`task_task_scroll_viewport_selection_refactor`](docs/done/task_scroll_viewport_selection_refactor.md)
+- [x] [`task_ring_buffer_enhance`](task/done/task_ring_buffer_enhance.md)
+- [x] [`task_make_editor_vt_100_parser_more_typesafe`](task/done/task_make_editor_vt_100_parser_more_typesafe.md)
+- [x] [`task_task_scroll_viewport_selection_refactor`](task/done/task_scroll_viewport_selection_refactor.md)
 - [x] 2025-10-07 review `bounds_check`, and make polished documentation & ergonomic API
-- [x] [`task_fix_params_ext`](docs/done/task_fix_params_ext.md)
+- [x] [`task_fix_params_ext`](task/done/task_fix_params_ext.md)
 - [⌛] review `pty_mux`, `offscreen_buffer` and `ansi conformance tests`
-- [⌛] [`task_pty_mux_example`](docs/task_pty_mux_example.md)
+- [⌛] [`task_pty_mux_example`](task/task_pty_mux_example.md)
 - [ ] extend `main_event_loop.rs` to support OSC output to terminal emulator (main window)
   - via `GlobalData::main_thread_channel_sender` -> add a variant to
     `TerminalWindowMainThreadSignal`
   - such that it can be handled by `run_main_event_loop()`'s `main_thread_channel_receiver.recv()`
   - using `OscController` to write to `OutputDevice`
 
-# optimize offscreen buffer
-
-- [ ] [`task_ofs_buf_1d_array.md`](docs/task_ofs_buf_1d_array.md)
-
 # remove crossterm
 
-- [x] use [`task_clean_render_ops_type_design`](docs/done/task_clean_render_ops_type_design.md) to
+- [x] use [`task_clean_render_ops_type_design`](task/done/task_clean_render_ops_type_design.md) to
       clean up `RenderOp` type ambiguity between "output" and "ir" contexts. The render pipeline is
       actually:
       `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
 
-- [⌛] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
+- [x] use [`task_refactor_input_device`](task/task_refactor_input_device.md) to refactor
+  `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
+
+- [⌛] use [`task_remove_crossterm`](task/task_remove_crossterm.md) to remove crossterm from the
   `r3bl_open_core` codebase
 
-- [⌛] use [`task_unify_cli_and_styled_text`](docs/task_unify_cli_and_styled_text.md) to unify
-  `CliText` and `TuiStyledText` rendering paths
+- [⌛] use [`task_readline_async_add_shortcuts.md`](task/task_readline_async_add_shortcuts.md) to
+  add `readline_async` support for all the shortcuts that we don't currently support but `readline`
+  does
 
-- [⌛] use [`task_render_path_2_add_ofs_buf`](docs/task_render_path_2_add_ofs_buf.md) to add use
-  `OffscreenBuffer` to radically simplify hybrid / partial TUI codepaths! This paves the way for
-  having each Component paint into its own OffscreenBuffer, and then composing them together for
-  automatic scrolling and z-index handling
+- [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to
+      unify `CliText` and `TuiStyledText` rendering paths
+
+- [ ] use [`task_render_path_2_add_ofs_buf`](task/pending/task_render_path_2_add_ofs_buf.md) to add
+      use `OffscreenBuffer` to radically simplify hybrid / partial TUI codepaths! This paves the way
+      for having each Component paint into its own OffscreenBuffer, and then composing them together
+      for automatic scrolling and z-index handling
+
+# optimize offscreen buffer
+
+- [ ] [`task_ofs_buf_1d_array.md`](task/pending/task_ofs_buf_1d_array.md)
 
 # unify rendering paths
 
-- [x] 2025-10-22 use [`task_unify_rendering`](docs/done/task_unify_rendering.md) to unify the
+- [x] 2025-10-22 use [`task_unify_rendering`](task/done/task_unify_rendering.md) to unify the
       rendering paths of `ASText`, `TuiStyledText`, and `readline_async` into a single, optimized
       rendering pipeline that works for both use cases while preparing for the future removal of
       crossterm dependency
@@ -48,7 +55,7 @@
 # submit talk for tokio conf 2026 proposal
 
 - [x] 2025-10-20 submit proposal for tokio conf 2026 talk on async TTY primitives in `r3bl_tui`
-  - [`task_tokio_conf_2026_proposal`](`docs/task_tokio_conf_2026_proposal`)
+  - [`task_tokio_conf_2026_proposal`](task/done/task_tokio_conf_2026_proposal.md)
   - [submitted](https://sessionize.com/app/speaker)
 
 # rearchitect how scrolling and rendering is done
@@ -77,15 +84,15 @@
 
 # add analytics to `ch` binary in r3bl-cmdr
 
-- [ ] task [`task_ch_analytics`](docs/task_ch_analytics.md) to add analytics to `ch`
+- [ ] task [`task_ch_analytics`](task/pending/task_ch_analytics.md) to add analytics to `ch`
 
 # build `chi` binary in r3bl-cmdr
 
-- [ ] PRD [`task_prd_chi`](docs/task_prd_chi.md) to build `chi`
+- [ ] PRD [`task_prd_chi`](task/pending/task_prd_chi.md) to build `chi`
 
 # build `build-infra-tools` binary to replace all the fish scripts
 
-- [ ] PRD [`task_build_tools_infra_plan`](docs/task_build_tools_infra_plan.md) to build
+- [ ] PRD [`task_build_tools_infra_plan`](task/pending/task_build_tools_infra_plan.md) to build
       `build-infra-tools`
 
 # refactor or rewrite the UI layout, sizing, and styling code
@@ -94,15 +101,15 @@
 
 # consider replacing syntect
 
-- [ ] use [`task_syntect_improve`](docs/task_syntect_improve.md) to add support for TypeScript,
-      TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom `.sublime-syntax` files
-      to syntect
+- [ ] use [`task_syntect_improve`](task/pending/task_syntect_improve.md) to add support for
+      TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom
+      `.sublime-syntax` files to syntect
 
 # rewrite textwrap
 
-- [ ] use [`task_textwrap_rewrite`](docs/task_textwrap_rewrite.md) to rewrite `textwrap` crate for
-      better unicode performance. this could be used in `edi` as well, for wrap & TOC create/update
-      on save.
+- [ ] use [`task_textwrap_rewrite`](task/pending/task_textwrap_rewrite.md) to rewrite `textwrap`
+      crate for better unicode performance. this could be used in `edi` as well, for wrap & TOC
+      create/update on save.
 
 # markdown parser enhancements
 

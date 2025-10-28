@@ -51,6 +51,12 @@
 //! | `📦`      | 4         | 2                     | No       |
 //! | `🙏🏽`      | 4         | 2                     | Yes      |
 //!
+//! > **Note**: For input parsing of UTF-8 byte sequences from terminal input, see
+//! > [`mod@crate::core::ansi::vt_100_terminal_input_parser::utf8`]. That module
+//! > handles byte-level decoding (converting raw bytes to characters), while this
+//! > module handles display width calculation (determining how many terminal columns
+//! > a character occupies for rendering).
+//!
 //! Here are examples of compound grapheme clusters.
 //!
 //! ```text
@@ -237,8 +243,10 @@
 pub mod gc_string;
 pub mod traits;
 pub mod unicode_segment;
+pub mod word_boundaries;
 
 // Re-export.
 pub use gc_string::*;
 pub use traits::*;
 pub use unicode_segment::*;
+pub use word_boundaries::*;

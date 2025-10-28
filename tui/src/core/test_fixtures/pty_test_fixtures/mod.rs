@@ -1,0 +1,14 @@
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+// Attach private modules.
+mod async_debounced_deadline;
+mod deadline;
+mod debounced_state;
+
+// Macro module - #[macro_export] makes it available at crate root.
+mod generate_pty_test;
+
+// Export flat public API.
+pub use async_debounced_deadline::*;
+pub use deadline::*;
+pub use debounced_state::*;

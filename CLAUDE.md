@@ -1,6 +1,7 @@
 # Claude Code Instructions for r3bl-open-core
 
-Ask for clarification immediately on important choices or ambiguities. Take your time with changes—slow, steady, and careful work beats fast and careless.
+Ask for clarification immediately on important choices or ambiguities. Take your time with
+changes—slow, steady, and careful work beats fast and careless.
 
 ## Rust Code Guidelines
 
@@ -12,7 +13,19 @@ Use these MCP tools to navigate and modify Rust code effectively:
 
 ### How to write documentation comments
 
-Use the "inverted pyramid" principle: high-level concepts at module/trait/struct level, implementation details at method level. Avoid making readers hunt through method docs for the big picture.
+Use the "inverted pyramid" principle: high-level concepts at module/trait/struct level,
+implementation details at method level. Avoid making readers hunt through method docs for the big
+picture.
+
+```
+╲────────────╱
+ ╲          ╱  High-level concepts - Module/trait/struct documentation
+  ╲────────╱
+   ╲      ╱  Mid-level details - Method group documentation
+    ╲────╱
+     ╲  ╱  Low-level specifics - Individual method documentation
+      ╲╱
+```
 
 **Example Placement Guidelines:**
 
@@ -28,6 +41,9 @@ Use the "inverted pyramid" principle: high-level concepts at module/trait/struct
 
 Where it is possible use ASCII diagrams to illustrate concepts. Use code examples extensively to
 demonstrate usage patterns.
+
+If you are including an example (rustdoc test with code) then make sure that it can either compile
+or run. Don't use ignore. If you can't make it compile or run, then don't include the example.
 
 ### Module Organization Pattern
 
@@ -53,8 +69,8 @@ pub use helpers::*;
 #### Controlling Rustfmt Behavior in Module Files
 
 When organizing imports and exports in `mod.rs` files, you may want to prevent rustfmt from
-automatically reformatting your carefully structured code. Use this directive at the top of the
-file (after copyright and module-level documentation):
+automatically reformatting your carefully structured code. Use this directive at the top of the file
+(after copyright and module-level documentation):
 
 ```rust
 // Skip rustfmt for rest of file.
@@ -63,12 +79,14 @@ file (after copyright and module-level documentation):
 ```
 
 **Why use this?**
+
 - Preserve manual alignment of public exports for readability
 - Control grouping of related items (e.g., keeping test fixtures together)
 - Prevent reformatting that obscures logical organization
 - Maintain consistent structure across similar modules
 
 **When to use:**
+
 - Large `mod.rs` files with many exports
 - When you have deliberately structured code alignment for documentation clarity
 - Files where the organization conveys semantic meaning
@@ -113,7 +131,6 @@ file (after copyright and module-level documentation):
 - Avoiding potential name collisions
 - Working with small to medium-sized modules with clear responsibilities
 
-
 #### When NOT to Use This Pattern
 
 **❌ Keep modules public when:**
@@ -139,9 +156,11 @@ file (after copyright and module-level documentation):
    pub mod async_api;  // Keep separate for clarity
    ```
 
-#### Special Cases
+#### Special Case - Conditionally public modules for documentation and testing
 
-**Conditionally public modules** (for documentation and testing):
+This is what to do when you want a module to be private in normal builds, but public when building
+documentation or tests. This allows rustdoc links to work while keeping it private in release
+builds.
 
 ```rust
 // mod.rs - Conditional visibility for documentation and testing
@@ -158,6 +177,7 @@ pub use vt_100_ansi_parser::*;
 ```
 
 Reference in rustdoc using `mod@` links:
+
 ```rust
 /// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
 ```
@@ -202,7 +222,8 @@ use r3bl_tui::{
 | **Range membership**    | `RangeBoundsExt`      | `range.check_index_is_within(index)`         | VT-100 scroll regions, text selections                      |
 | **Range conversion**    | `RangeConvertExt`     | `inclusive_range.to_exclusive()`             | Converting VT-100 ranges for Rust iteration                 |
 
-See [`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs) for detailed documentation, decision trees, and examples.
+See [`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs) for detailed documentation,
+decision trees, and examples.
 
 # Testing interactive terminal applications
 
@@ -227,7 +248,8 @@ Performance analysis:
 
 - `cargo bench` - Benchmarks (mark tests with `#[bench]`)
 - `cargo flamegraph` - Profiling (requires flamegraph crate)
-- `./run.fish run-examples-flamegraph-fold --benchmark` - TUI app profiling (8s workload, 999Hz sampling, generates `tui/flamegraph-benchmark.perf-folded`)
+- `./run.fish run-examples-flamegraph-fold --benchmark` - TUI app profiling (8s workload, 999Hz
+  sampling, generates `tui/flamegraph-benchmark.perf-folded`)
 
 ### Build Optimizations
 
@@ -243,6 +265,14 @@ Wild linker is automatically activated when both `clang` and `wild-linker` are i
 ### Git Workflow
 
 - Never commit unless explicitly asked
+- When you do make commits, do not add an attribution to yourself in the commit message. Do not add
+  the following trailing lines in a commit message:
+
+  ```
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
 
 ## Task Tracking System
 
@@ -269,3 +299,9 @@ Two-file system: active work in `todo.md`, completed work in `done.md`.
 - Group under descriptive headers
 - Include GitHub issue links
 - Add technical notes for complex tasks
+
+### The "./tasks/" folder
+
+The custom slash comand "/task" is available to manage all the details of a long running task. The
+"todo.md" and "done.md" files are simply "pointers" to what tasks are active and which ones are
+done. For the details and to create, update, or load a task, use the "/task" command.

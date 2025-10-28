@@ -90,7 +90,7 @@ macro_rules! try_create_temp_dir_and_cd {
     }};
 }
 
-// XMARK: Clever Rust, use of Drop to perform transaction close / end.
+// XMARK: Clever Rust, use of Drop to perform transaction close / end (RAII pattern).
 
 /// Automatically delete the temporary directory when the [`TempDir`] struct is dropped.
 impl Drop for TempDir {

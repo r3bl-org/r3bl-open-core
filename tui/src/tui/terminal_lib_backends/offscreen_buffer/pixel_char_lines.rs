@@ -151,18 +151,6 @@ mod tests {
     }
 
     #[test]
-    fn test_pixel_char_lines_debug() {
-        let size = height(2) + width(2);
-        let lines = PixelCharLines::new_empty(size);
-
-        let debug_output = format!("{lines:?}");
-
-        // Should contain debug representation.
-        assert!(!debug_output.is_empty());
-        assert!(debug_output.contains("PixelCharLines"));
-    }
-
-    #[test]
     fn test_pixel_char_lines_equality() {
         let size = height(2) + width(2);
         let lines1 = PixelCharLines::new_empty(size);

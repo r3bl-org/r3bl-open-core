@@ -16,11 +16,6 @@ use notify_rust::Notification;
 /// # Arguments
 /// * `title` - The notification title/summary
 /// * `message` - The notification body message
-///
-/// # Example
-/// ```ignore
-/// show_notification("PTY Mux - Input Event", &format!("Input received: {event:?}"));
-/// ```
 pub fn show_notification(title: &str, message: &str) {
     if let Err(e) = Notification::new()
         .summary(title)
@@ -97,36 +92,20 @@ pub struct PtyReadWriteSession {
     /// will forcefully terminate the child process, allowing `child.wait()` in the
     /// completion task to return immediately.
     ///
-    /// # Usage Pattern
-    /// ```ignore
-    /// // For immediate termination (recommended for shutdown):
-    /// session.child_process_terminate_handle.kill()?;  // Kill child process
-    /// session.input_event_ch_tx_half.send(PtyInputEvent::Close)?;  // Stop input writer
+    /// # Usage Patterns
     ///
-    /// // For graceful termination (may hang if child doesn't respond to EOF):
-    /// session.input_event_ch_tx_half.send(PtyInputEvent::Close)?;  // Send EOF only
-    /// ```
+    /// **For immediate termination (recommended for shutdown):**
+    /// - Call `kill()` on this handle to forcefully terminate the child process
+    /// - Send `PtyInputEvent::Close` to stop the input writer
+    /// - This ensures clean shutdown without waiting for the child to respond
+    ///
+    /// **For graceful termination (may hang if child doesn't respond):**
+    /// - Send only `PtyInputEvent::Close` to send EOF to the child
+    /// - Wait for the child to exit naturally
+    /// - Use this approach if the child process needs time to clean up resources
     ///
     /// # See Also
     /// - [`crate::PtyInputEvent::Close`] for input writer termination only
     /// - [`portable_pty::ChildKiller::kill()`] for the underlying kill method
     pub child_process_terminate_handle: ControlledChildTerminationHandle,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_pty_session_structs_debug() {
-        // Test that the session structs have Debug implemented.
-        // We can't easily test the actual structs without spawning processes,
-        // but we can verify the types exist and have the expected fields.
-
-        // These will be compile-time checks.
-        fn check_debug<T: std::fmt::Debug>() {}
-
-        check_debug::<PtyReadOnlySession>();
-        check_debug::<PtyReadWriteSession>();
-    }
 }

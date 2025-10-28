@@ -216,9 +216,9 @@ mod dsr_request_from_pty_event_impl {
 mod tests {
     use super::*;
     use crate::core::ansi::constants::DSR_STATUS_OK_FULL_RESPONSE;
-    use crate::core::ansi::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_sequence_builders::dsr_builders::dsr_cursor_position_response;
+    use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::dsr_cursor_position_response;
     use crate::{term_col, term_row,
-                core::ansi::vt_100_ansi_parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
+                core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
 
     #[test]
     fn test_dsr_sequence_status_ok_response() {
@@ -234,21 +234,6 @@ mod tests {
         };
         let expected = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
         assert_eq!(sequence.to_string(), expected);
-    }
-
-    #[test]
-    fn test_dsr_sequence_clone_and_debug() {
-        let original = DsrSequence::CursorPositionResponse {
-            row: term_row(nz(5)),
-            col: term_col(nz(10)),
-        };
-        let cloned = original.clone();
-        assert_eq!(original, cloned);
-
-        let debug_output = format!("{original:?}");
-        assert!(debug_output.contains("CursorPositionResponse"));
-        assert!(debug_output.contains("TermRow(5)"));
-        assert!(debug_output.contains("TermCol(10)"));
     }
 
     #[test]

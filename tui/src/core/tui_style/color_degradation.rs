@@ -52,20 +52,14 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// ## Usage Pattern
 ///
 /// The typical flow is:
-///
-/// ```ignore
-/// use r3bl_tui::{TuiColor, ColorSupport, degrade_color};
-///
-/// let original_color = TuiColor::Rgb((255, 0, 0).into()); // Bright red
-/// let color_support = global_color_support::detect();
-/// let degraded = degrade_color(original_color, color_support);
-///
-/// // degraded is now in a form safe for the terminal:
-/// // - If Truecolor: RGB(255, 0, 0) - unchanged
-/// // - If Ansi256: Ansi(9) - red from palette
-/// // - If Grayscale: Ansi(196) or similar grayscale value
-/// // - If NoColor: Ansi(0) - black/default
-/// ```
+/// 1. Get original color (e.g., `TuiColor::Rgb((255, 0, 0).into())` for bright red)
+/// 2. Detect terminal color support capabilities
+/// 3. Call `degrade_color(original_color, color_support)` to get a terminal-safe color
+/// 4. The result is now in a form safe for the terminal:
+///    - If Truecolor: RGB unchanged
+///    - If Ansi256: Converted to nearest ANSI palette color
+///    - If Grayscale: Converted to grayscale equivalent
+///    - If `NoColor`: Converted to default (black/reset)
 ///
 /// ## Integration Points
 ///
@@ -93,19 +87,11 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use r3bl_tui::{TuiColor, ColorSupport, degrade_color};
-///
-/// // RGB color on Ansi256 terminal
-/// let color = TuiColor::Rgb((255, 0, 0).into());
-/// let degraded = degrade_color(color, ColorSupport::Ansi256);
-/// // Returns: TuiColor::Ansi(9) - bright red from palette
-///
-/// // RGB color on Grayscale terminal
-/// let color = TuiColor::Rgb((255, 0, 0).into());
-/// let degraded = degrade_color(color, ColorSupport::Grayscale);
-/// // Returns: TuiColor::Ansi(some_gray) - grayscale approximation
-/// ```
+/// For RGB color `(255, 0, 0)` (bright red):
+/// - On **Ansi256** terminal: Returns `TuiColor::Ansi(9)` - bright red from ANSI palette
+/// - On **Grayscale** terminal: Returns grayscale approximation
+/// - On **Truecolor** terminal: Returns `TuiColor::Rgb((255, 0, 0))` - unchanged
+/// - On **`NoColor`** terminal: Returns `TuiColor::Ansi(0)` - default/black
 #[must_use]
 pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
     match color {

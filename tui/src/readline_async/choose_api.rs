@@ -29,7 +29,7 @@ pub struct DefaultIoDevices {
 impl Default for DefaultIoDevices {
     fn default() -> Self {
         let output_device = OutputDevice::new_stdout();
-        let input_device = InputDevice::new_event_stream();
+        let input_device = InputDevice::default();
         DefaultIoDevices {
             output_device,
             input_device,
@@ -487,7 +487,7 @@ pub enum HowToChoose {
 #[cfg(test)]
 mod test_choose_async {
     use super::*;
-    use crate::{CrosstermEventResult, InlineVec, InputDeviceExtMock, OutputDeviceExt};
+    use crate::{CrosstermEventResult, InlineVec, OutputDeviceExt};
     use smallvec::smallvec;
     use std::{io::Write, time::Duration};
 

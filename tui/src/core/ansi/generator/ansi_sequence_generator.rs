@@ -4,24 +4,20 @@
 
 use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiColor,
             TuiStyle,
-            core::{ansi::{constants::{csi::{CSI_PARAM_SEPARATOR, CSI_START,
-                                            ED_ERASE_ALL, EL_ERASE_ALL,
-                                            EL_ERASE_FROM_START, EL_ERASE_TO_END,
-                                            SGR_BOLD, SGR_DIM, SGR_ITALIC,
-                                            SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
-                                            SGR_UNDERLINE},
-                                      generic::{APPLICATION_MOUSE_TRACKING,
-                                                BRACKETED_PASTE_MODE,
-                                                SGR_MOUSE_MODE,
-                                                URXVT_MOUSE_EXTENSION}},
-                          vt_100_ansi_parser::{CsiSequence, PrivateModeType}},
+            core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING, BRACKETED_PASTE_MODE,
+                                      CSI_PARAM_SEPARATOR, CSI_START, ED_ERASE_ALL,
+                                      EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END,
+                                      SGR_BOLD, SGR_DIM, SGR_ITALIC, SGR_RESET_STR,
+                                      SGR_SET_GRAPHICS, SGR_STRIKETHROUGH, SGR_UNDERLINE,
+                                      SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION},
+                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType}},
                    coordinates::{TermCol, TermRow}}};
 
 /// Generates ANSI escape sequence strings for terminal operations.
 ///
 /// This module generates raw ANSI escape sequence bytes for terminal operations using
 /// semantic types and traits for type-safe sequence generation. Works in conjunction with
-/// [`vt_100_ansi_parser`] for bidirectional ANSI handling.
+/// [`vt_100_pty_output_parser`] for bidirectional ANSI handling.
 ///
 /// # Design Philosophy
 ///
@@ -33,7 +29,7 @@ use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiCol
 /// - **Infallible generation**: Exhaustive pattern matching ensures valid output
 /// - **1-based indexing**: Automatically converts 0-based indices to 1-based ANSI
 ///
-/// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 ///
 /// # Reference Implementation Pattern
 ///
@@ -72,7 +68,7 @@ use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiCol
 /// This struct has no state; it's a collection of static methods. State tracking (cursor
 /// position, current colors) is handled by external implementations.
 ///
-/// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 /// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 /// [`CsiSequence`]: crate::CsiSequence
 /// [`SgrColorSequence`]: crate::SgrColorSequence
@@ -162,9 +158,9 @@ impl AnsiSequenceGenerator {
     }
 
     /// Generate text attribute sequences (bold, italic, underline, etc.)
-    /// Uses semantic SGR codes from the [`vt_100_ansi_parser`] infrastructure
+    /// Uses semantic SGR codes from the [`vt_100_pty_output_parser`] infrastructure
     ///
-    /// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+    /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
     #[must_use]
     pub fn text_attributes(style: &TuiStyle) -> String {
         // Build SGR sequence with all applicable attributes
@@ -207,7 +203,7 @@ impl AnsiSequenceGenerator {
     /// Reset all colors and attributes to default
     /// CSI 0m (SGR Reset)
     #[must_use]
-    pub fn reset_color() -> String { format!("{CSI_START}0m") }
+    pub fn reset_color() -> String { SGR_RESET_STR.to_string() }
 
     // ==================== Cursor Visibility ====================
 

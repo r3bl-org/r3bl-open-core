@@ -300,30 +300,153 @@ edi --version
 
 ## Project Task Organization
 
-This project uses three root-level Markdown files to organize day-to-day development work:
+This project uses a two-tier task management system for organizing day-to-day development work:
+lightweight pointers with simple tasks in root-level files, and detailed task files with
+implementation plans in the `./task/` directory.
 
 ### Task Management Files
 
-- **[`todo.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/todo.md)** - Active tasks and
-  immediate priorities that need attention
+- **[`todo.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/todo.md)** - Active tasks,
+  immediate priorities, and pointers to detailed task files. Latest changes at top. Uses status
+  markers: `[ ]` (pending), `[⌛]` (in progress), `[x]` (completed)
 - **[`done.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/done.md)** - Completed tasks
-  and achievements, providing a historical record of progress
-- **[`claude.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/claude.md)** - AI assistant
-  interaction logs and collaborative planning sessions
+  and achievements, providing a historical record of progress. Links to archived task files in
+  `./task/done/`
+- **[`./task/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/task)** - Directory containing
+  detailed task management files:
+  - **Active tasks**: `task_*.md` files in root of `./task/` - Complex tasks currently in progress
+  - **`pending/`**: Tasks queued for later work
+  - **`done/`**: Completed task files moved from root after all steps are marked `[COMPLETE]`
+  - **`archive/`**: Abandoned tasks retained for historical reference
+  - **`CLAUDE.md`**: Rules and format specifications for creating and maintaining task files
+
+### Task File Format
+
+Detailed task files follow a structured format defined in
+[`./task/CLAUDE.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/task/CLAUDE.md):
+
+**Structure:**
+
+```markdown
+# Task Overview
+
+High-level description, architecture, context, and the "why"
+
+# Implementation Plan
+
+## Step 0: Do Something [STATUS]
+
+Detailed instructions for this step
+
+### Step 0.0: Do Subtask [STATUS]
+
+Details about subtask
+
+### Step 0.1: Do Another Subtask [STATUS]
+
+Details about another subtask
+
+## Step 1: Do Something Else [STATUS]
+
+More detailed steps...
+```
+
+**Hierarchical organization:**
+
+- Steps are numbered (Step 0, Step 1, Step 2, etc.)
+- Substeps use decimal notation (Step 0.0, Step 0.1, etc.)
+- Table of contents automatically generated and maintained using `doctoc`
+- Formatting standardized with `prettier`
+
+**Status markers:**
+
+- `[COMPLETE]` - Step finished and verified
+- `[WORK_IN_PROGRESS]` - Currently working on this step
+- `[BLOCKED]` - Cannot proceed (waiting for dependency)
+- `[DEFERRED]` - Postponed to later
+
+### Task Workflow Commands
+
+The `/task` slash command (defined in
+[`.claude/commands/task.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/commands/task.md))
+manages the task lifecycle:
+
+**Create a new task:**
+
+```sh
+/task create my_feature_name
+```
+
+- Creates `./task/task_my_feature_name.md` from your detailed plan
+- Use after you have a comprehensive plan in your todo list
+- Initializes structure with steps and status markers
+
+**Update an existing task:**
+
+```sh
+/task update my_feature_name
+```
+
+- Updates progress markers in `./task/task_my_feature_name.md`
+- Moves completed task files to `./task/done/` when all steps are `[COMPLETE]`
+- Updates `todo.md` and `done.md` cross-references as needed
+
+**Resume working on a task:**
+
+```sh
+/task load my_feature_name
+```
+
+- Loads `./task/task_my_feature_name.md` for continued work
+- Resumes from the last step marked `[WORK_IN_PROGRESS]`
+- If none found, asks which incomplete step to start with
 
 ### Workflow Connection
 
-The task organization workflow connects with the documentation in `docs/` as follows:
+The task organization workflow connects strategic planning with tactical execution:
 
-- **Strategic to Tactical**: Items from `docs/` planning files (strategic goals, feature designs)
-  are broken down into actionable tasks and copied into `todo.md`
-- **Planning to Execution**: Complex features get documented in `docs/` first, then their
-  implementation steps flow into the daily task management system
-- **Documentation of Decisions**: AI-assisted development sessions and decision-making processes are
-  logged in `claude.md` for future reference
+- **Strategic Planning** (`docs/` folder): Feature roadmaps, architectural decisions, design
+  documents
+- **Planning to Active Work**: Complex features are documented in `docs/` first, then planned into
+  `todo.md`
+- **Tactical Execution**:
+  1. Simple tasks stay in `todo.md` as checklist items
+  2. Complex tasks get detailed planning → `/task create` → `./task/task_*.md`
+  3. Work progresses through hierarchical steps with `/task update` marking progress
+  4. Completion → Task moved to `./task/done/` via `/task update`
+  5. `done.md` maintains archive links for historical reference
+- **Continuous Sync**: `todo.md` is synchronized with the GitHub project dashboard for visibility
+  across team members
 
-This dual-level approach ensures both strategic planning (in `docs/`) and tactical execution (in
-root-level `.md` files) are well-organized and connected.
+This three-level approach (docs → todo.md → ./task/) ensures strategic planning, tactical planning,
+and detailed execution are well-organized and connected.
+
+### Development Tools Integration
+
+R3BL provides IDE extensions and plugins to enhance your development workflow, regardless of your
+editor choice:
+
+**For VSCode Users**
+
+R3BL provides custom VSCode extensions including Task Spaces (organize editor tabs by context),
+theme, and enhanced syntax highlighting. See the [R3BL VSCode Extensions](#r3bl-vscode-extensions)
+section below for installation and detailed feature descriptions.
+
+**For IntelliJ IDEA Users**
+
+R3BL provides theme and productivity plugins for IntelliJ IDEA and other JetBrains IDEs. See the
+[R3BL IntelliJ Plugins](#r3bl-intellij-plugins) section below for installation from the JetBrains
+Marketplace and detailed feature descriptions.
+
+**Workflow Integration:**
+
+Both IDE environments complement the `./task/` file management system in this project:
+
+- **VSCode**: The R3BL Task Spaces extension helps you organize editor tabs by context (e.g., one
+  space for features, one for docs, one for debugging) while the `./task/` files track your
+  implementation progress
+- **RustRover**: Use the built-in Task Management plugin alongside `./task/` files for seamless
+  workflow integration
 
 ## Documentation and Planning
 
@@ -428,14 +551,75 @@ fish run.fish install-cargo-tools
 
 ## IDE Setup and Extensions
 
+Choose the development environment that works best for you. R3BL provides extensions and plugins for
+both VSCode and IntelliJ IDEA.
+
+### R3BL IntelliJ Plugins
+
+For developers using IntelliJ IDEA, RustRover, or other JetBrains IDEs, install the R3BL plugins
+directly from the JetBrains Marketplace:
+
+**Available Plugins:**
+
+- **[R3BL Theme](https://plugins.jetbrains.com/plugin/28943-r3bl-theme/)** - Vibrant dark theme with
+  carefully chosen colors for visual clarity and reduced eye strain. Optimized for Rust, Markdown,
+  and 30+ languages.
+- **[R3BL Copy Selection Path](https://plugins.jetbrains.com/plugin/28944-r3bl-copy-selection-path-and-range/)** -
+  Copy file paths with selected line ranges in Claude Code compatible format. Press `Alt+O` to copy
+  the current file path with line numbers.
+
+**Installation from JetBrains Marketplace:**
+
+1. Open IntelliJ IDEA / RustRover
+2. Go to `Settings` → `Plugins` → `Marketplace`
+3. Search for "R3BL Theme" and "R3BL Copy Selection Path"
+4. Click `Install` on each plugin
+5. Restart the IDE
+
+**Or install from disk (for latest development builds):**
+
+```sh
+# Clone the plugins repository
+git clone https://github.com/r3bl-org/r3bl-intellij-plugins.git
+cd r3bl-intellij-plugins
+
+# Build the plugins
+./gradlew buildPlugin
+
+# In IntelliJ: Settings → Plugins → ⚙️ → Install Plugin from Disk
+# Select the .zip files from:
+# - plugins/r3bl-theme/build/distributions/r3bl-theme-*.zip
+# - plugins/r3bl-copy-selection-path/build/distributions/r3bl-copy-selection-path-*.zip
+```
+
+**Benefits for r3bl-open-core development:**
+
+- **Vibrant Color Scheme**: Enhanced syntax highlighting makes Rust code more readable
+- **Claude Code Integration**: Quickly copy file paths with line ranges using `Alt+O` to share code
+  references with Claude Code
+- **Reduced Eye Strain**: Carefully balanced colors optimized for long coding sessions
+- **Multi-Language Support**: Works great with Rust, Markdown, TOML, and all file types in this
+  project
+
+**Post-installation:**
+
+1. Restart IntelliJ IDEA / RustRover
+2. Go to `Settings` → `Appearance & Behavior` → `Appearance` → `Theme` → Select "R3BL"
+3. Use `Alt+O` to copy file paths with line ranges (great for Claude Code interactions!)
+
+**Task Workflow Integration:**
+
+IntelliJ IDEA and RustRover include a built-in Task Management plugin that works seamlessly alongside the `./task/` file management system in this project. Use it to organize your work contexts while the `./task/` files track your implementation progress.
+
 ### R3BL VSCode Extensions
 
-For an optimal development experience with r3bl-open-core, we provide a custom VSCode extension pack
-specifically designed for Rust development. This extension pack is not available on the VSCode
+For an optimal development experience with r3bl-open-core in VSCode, we provide a custom extension
+pack specifically designed for Rust development. This extension pack is not available on the VSCode
 marketplace and must be installed manually.
 
 **What's included:**
 
+- **Task Spaces** - Organize and switch between collections of editor tabs for different work contexts (e.g., one space for editing features, one for writing documentation, one for debugging). Complements the `./task/` file management system by helping you organize your editor sessions.
 - **R3BL Theme** - A carefully crafted dark theme optimized for Rust and Markdown development
 - **Auto Insert Copyright** - Automatically inserts copyright headers in new files
 - **Semantic Configuration** - Enhanced Rust syntax highlighting with additional semantic tokens
@@ -471,8 +655,8 @@ cd r3bl-vscode-extensions
 2. Select the R3BL Theme: `Ctrl+Shift+P` → "Preferences: Color Theme" → "R3BL Theme"
 3. Configure copyright settings if needed
 
-The extensions work seamlessly with the existing development tools mentioned in this guide,
-including rust-analyzer and bacon.
+Both the IntelliJ plugins and VSCode extensions work seamlessly with the existing development tools
+mentioned in this guide, including rust-analyzer, bacon, and the comprehensive development workflow.
 
 ## Build the workspace and run tests
 
@@ -534,25 +718,25 @@ Other commands:
 
 ### Key Commands
 
-| Command                                     | Description                                                                                     |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `fish run.fish all`                         | Run all major checks (build, test, clippy, docs, audit, format)                                 |
-| `fish run.fish build`                       | Build the entire workspace                                                                      |
-| `fish run.fish test`                        | Run all tests across the workspace                                                              |
-| `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, Wild linker, etc.) |
-| `fish run.fish watch-all-tests`             | Watch for file changes and run tests automatically                                              |
-| `fish run.fish run-examples`                | Run TUI examples interactively                                                                  |
-| `fish run.fish run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis                                                |
+| Command                                                    | Description                                                                             |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `fish run.fish all`                                        | Run all major checks (build, test, clippy, docs, audit, format)                         |
+| `fish run.fish build`                                      | Build the entire workspace                                                              |
+| `fish run.fish test`                                       | Run all tests across the workspace                                                      |
+| `fish run.fish install-cargo-tools`                        | Install Rust development tools (cargo-binstall, uv, bacon, Wild linker, etc.)           |
+| `fish run.fish watch-all-tests`                            | Watch for file changes and run tests automatically                                      |
+| `fish run.fish run-examples`                               | Run TUI examples interactively                                                          |
+| `fish run.fish run-examples-flamegraph-svg`                | Generate SVG flamegraph for performance analysis                                        |
 | `fish run.fish run-examples-flamegraph-fold [--benchmark]` | Generate perf-folded format for analysis (use `--benchmark` for reproducible profiling) |
-| `fish run.fish bench`                       | Run benchmarks                                                                                  |
-| `fish run.fish run-binaries`                | Run cmdr binaries (edi, giti, rc) interactively                                                 |
-| `fish run.fish dev-dashboard`               | Start 4-pane tmux development dashboard (tests, docs, checks)                                   |
-| `fish run.fish check-full`                  | Run comprehensive checks (tests, doctests, docs, toolchain validation)                          |
-| `fish run.fish toolchain-validate`          | Quick toolchain validation (components only, ~1-2 seconds)                                      |
-| `fish run.fish toolchain-validate-complete` | Complete toolchain validation (full build+test, ~5-10 minutes)                                  |
-| `fish run.fish toolchain-update`            | Update Rust to month-old nightly toolchain with cleanup                                         |
-| `fish run.fish toolchain-sync`              | Sync Rust environment to match rust-toolchain.toml                                              |
-| `fish run.fish toolchain-remove`            | Remove ALL toolchains (⚠️ destructive testing utility)                                          |
+| `fish run.fish bench`                                      | Run benchmarks                                                                          |
+| `fish run.fish run-binaries`                               | Run cmdr binaries (edi, giti, rc) interactively                                         |
+| `fish run.fish dev-dashboard`                              | Start 4-pane tmux development dashboard (tests, docs, checks)                           |
+| `fish run.fish check-full`                                 | Run comprehensive checks (tests, doctests, docs, toolchain validation)                  |
+| `fish run.fish toolchain-validate`                         | Quick toolchain validation (components only, ~1-2 seconds)                              |
+| `fish run.fish toolchain-validate-complete`                | Complete toolchain validation (full build+test, ~5-10 minutes)                          |
+| `fish run.fish toolchain-update`                           | Update Rust to month-old nightly toolchain with cleanup                                 |
+| `fish run.fish toolchain-sync`                             | Sync Rust environment to match rust-toolchain.toml                                      |
+| `fish run.fish toolchain-remove`                           | Remove ALL toolchains (⚠️ destructive testing utility)                                  |
 
 ### Cargo Target Directory Isolation for IDE/Tool Performance
 
@@ -709,8 +893,8 @@ CARGO_TARGET_DIR=/tmp/test cargo build
 
 #### Incremental Compilation Management
 
-Incremental compilation is disabled globally (`incremental = false` in `.cargo/config.toml`) to avoid
-issues with the rustc dependency graph on nightly builds:
+Incremental compilation is disabled globally (`incremental = false` in `.cargo/config.toml`) to
+avoid issues with the rustc dependency graph on nightly builds:
 
 ```toml
 # .cargo/config.toml
@@ -767,12 +951,12 @@ and testing. Bacon provides real-time feedback on code changes with two distinct
 
 **Testing:**
 
-| Command                              | Workflow    | Description                                                              |
-| ------------------------------------ | ----------- | ------------------------------------------------------------------------ |
-| `bacon test`                         | Interactive | Run all tests with cargo test (includes unit, integration, and doctests) |
-| `bacon test -- <pattern>`            | Interactive | Run specific test matching pattern                                       |
-| `bacon doctests`                     | Interactive | Run only documentation tests (`cargo test --doc`)                        |
-| `bacon test --headless --summary`    | Background  | Silent test runner providing only pass/fail status                       |
+| Command                           | Workflow    | Description                                                              |
+| --------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| `bacon test`                      | Interactive | Run all tests with cargo test (includes unit, integration, and doctests) |
+| `bacon test -- <pattern>`         | Interactive | Run specific test matching pattern                                       |
+| `bacon doctests`                  | Interactive | Run only documentation tests (`cargo test --doc`)                        |
+| `bacon test --headless --summary` | Background  | Silent test runner providing only pass/fail status                       |
 
 **Documentation:**
 
@@ -924,8 +1108,8 @@ bacon monitors with the `check.fish --watch` script for comprehensive coverage.
   - Automatic toolchain validation and repair if needed
   - 5-second intelligent debouncing to prevent rapid re-runs
 - **Interactive Multiplexing**: Full tmux keybindings for pane switching and layout customization
-- **Redundant Coverage**: Tests run in two panes (bacon test + check.fish) - if one fails, the
-  other shows details
+- **Redundant Coverage**: Tests run in two panes (bacon test + check.fish) - if one fails, the other
+  shows details
 
 **Usage:**
 

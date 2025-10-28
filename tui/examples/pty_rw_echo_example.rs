@@ -3,15 +3,14 @@
 //! Super minimal PTY test - just echo raw bytes to verify data flow
 
 use portable_pty::PtySize;
-use r3bl_tui::{clear_screen_and_home_cursor,
+use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, RawMode,
+               clear_screen_and_home_cursor,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
                             PtyInputEvent, PtyReadWriteOutputEvent},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, set_mimalloc_in_main,
-               tui::terminal_lib_backends::{InputEvent, Key, KeyPress, KeyState,
-                                            ModifierKeysMask, RawMode}};
+               lock_output_device_as_mut, set_mimalloc_in_main};
 use std::io::Write;
 
 #[tokio::main]
@@ -28,7 +27,7 @@ async fn main() -> miette::Result<()> {
 
     let terminal_size = get_size()?;
     let output_device = OutputDevice::new_stdout();
-    let mut input_device = InputDevice::new_event_stream();
+    let mut input_device = InputDevice::default();
 
     // Start raw mode.
     RawMode::start(
@@ -71,9 +70,7 @@ async fn main() -> miette::Result<()> {
             }
 
             // Handle user input.
-            Ok(event) = input_device.next() => {
-                let Ok(input_event) = InputEvent::try_from(event) else { continue };
-
+            Some(input_event) = input_device.next_input_event() => {
                 if let InputEvent::Keyboard(key) = input_event {
                     // Check for Ctrl+Q.
                     if let KeyPress::WithModifiers {

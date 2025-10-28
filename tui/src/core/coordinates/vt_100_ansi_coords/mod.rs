@@ -10,7 +10,7 @@
 //!
 //! Use these types **only** when:
 //! - Parsing ANSI escape sequences (e.g., `ESC[5;10H`)
-//! - Working with `vt_100_ansi_parser` module
+//! - Working with `vt_100_pty_output_parser` module
 //!
 //! For all other terminal operations (including crossterm), use [`buffer_coords`] types
 //! which are 0-based.
@@ -19,6 +19,7 @@
 //!
 //! - [`TermRow`]: 1-based row coordinate for ANSI sequences
 //! - [`TermCol`]: 1-based column coordinate for ANSI sequences
+//! - [`TermPos`]: 1-based position combining column and row (used in mouse events)
 //!
 //! # Coordinate Conversion
 //!
@@ -28,8 +29,12 @@
 //!
 //! [`buffer_coords`]: crate::coordinates::buffer_coords
 
-// Attach source file.
-pub mod term_units;
+// Submodule declarations (private).
+mod term_col;
+mod term_pos;
+mod term_row;
 
-// Re-export.
-pub use term_units::*;
+// Re-export for flat public API.
+pub use term_col::*;
+pub use term_pos::*;
+pub use term_row::*;

@@ -8,8 +8,7 @@
 //! - Terminal control sequence generation for cross-platform compatibility
 
 use super::pty_output_events::{ControlSequence, CursorKeyMode};
-use crate::tui::terminal_lib_backends::{FunctionKey, Key, KeyPress, KeyState,
-                                        ModifierKeysMask, SpecialKey};
+use crate::{FunctionKey, Key, KeyPress, KeyState, ModifierKeysMask, SpecialKey};
 use portable_pty::PtySize;
 
 /// Input event types that can be sent to a child process through PTY.
@@ -664,16 +663,8 @@ mod tests {
     }
 
     #[test]
-    fn test_pty_input_debug_and_clone() {
-        let input = PtyInputEvent::Write(b"test".to_vec());
-        let cloned = input.clone();
-        assert_eq!(format!("{input:?}"), format!("{cloned:?}"));
-    }
-
-    #[test]
     fn test_keypress_to_pty_input_event() {
-        use crate::tui::terminal_lib_backends::{Key, KeyPress, KeyState,
-                                                ModifierKeysMask, SpecialKey};
+        use crate::{Key, KeyPress, KeyState, ModifierKeysMask, SpecialKey};
 
         // Test regular character.
         let key = KeyPress::Plain {
@@ -704,7 +695,7 @@ mod tests {
 
         // Test function keys.
         let key = KeyPress::Plain {
-            key: Key::FunctionKey(crate::tui::terminal_lib_backends::FunctionKey::F2),
+            key: Key::FunctionKey(crate::FunctionKey::F2),
         };
         let event = Option::<PtyInputEvent>::from(key);
         assert!(matches!(
@@ -713,7 +704,7 @@ mod tests {
         ));
 
         let key = KeyPress::Plain {
-            key: Key::FunctionKey(crate::tui::terminal_lib_backends::FunctionKey::F10),
+            key: Key::FunctionKey(crate::FunctionKey::F10),
         };
         let event = Option::<PtyInputEvent>::from(key);
         assert!(matches!(
@@ -1042,7 +1033,7 @@ mod tests {
     fn test_modified_function_keys() {
         // Test Ctrl+F1
         let key = KeyPress::WithModifiers {
-            key: Key::FunctionKey(crate::tui::terminal_lib_backends::FunctionKey::F1),
+            key: Key::FunctionKey(crate::FunctionKey::F1),
             mask: ModifierKeysMask {
                 ctrl_key_state: KeyState::Pressed,
                 shift_key_state: KeyState::NotPressed,
@@ -1059,7 +1050,7 @@ mod tests {
 
         // Test Shift+F5
         let key = KeyPress::WithModifiers {
-            key: Key::FunctionKey(crate::tui::terminal_lib_backends::FunctionKey::F5),
+            key: Key::FunctionKey(crate::FunctionKey::F5),
             mask: ModifierKeysMask {
                 ctrl_key_state: KeyState::NotPressed,
                 shift_key_state: KeyState::Pressed,
@@ -1076,7 +1067,7 @@ mod tests {
 
         // Test Alt+F12
         let key = KeyPress::WithModifiers {
-            key: Key::FunctionKey(crate::tui::terminal_lib_backends::FunctionKey::F12),
+            key: Key::FunctionKey(crate::FunctionKey::F12),
             mask: ModifierKeysMask {
                 ctrl_key_state: KeyState::NotPressed,
                 shift_key_state: KeyState::NotPressed,

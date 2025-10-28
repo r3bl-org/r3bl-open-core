@@ -3,8 +3,8 @@
 //! Scroll margin operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements scroll margin operations that correspond to ANSI
-//! sequences handled by the `vt_100_ansi_parser::operations::margin_ops` module. These
-//! include:
+//! sequences handled by the `vt_100_pty_output_parser::operations::margin_ops` module.
+//! These include:
 //!
 //! - **DECSTBM** (Set Top and Bottom Margins) - [`set_scroll_margins`]
 //! - **Reset margins** - [`reset_scroll_margins`]
@@ -77,7 +77,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_margin_ops {
     use super::*;
-    use crate::{core::{ansi::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+    use crate::{core::{ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                        coordinates::term_row},
                 height, width};
 

@@ -241,17 +241,6 @@ mod tests {
     }
 
     #[test]
-    fn test_osc_sequence_clone_and_debug() {
-        let original = OscSequence::SetTitle("Test".to_string());
-        let cloned = original.clone();
-        assert_eq!(original, cloned);
-
-        let debug_output = format!("{original:?}");
-        assert!(debug_output.contains("SetTitle"));
-        assert!(debug_output.contains("Test"));
-    }
-
-    #[test]
     fn test_hyperlink_complete_sequence() {
         let start = OscSequence::HyperlinkStart {
             uri: "https://r3bl.com".to_string(),

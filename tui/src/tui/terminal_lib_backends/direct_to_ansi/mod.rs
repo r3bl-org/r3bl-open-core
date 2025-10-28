@@ -51,20 +51,20 @@
 //! [`RenderOpIR`]: crate::RenderOpIR
 //! [`RenderOpOutput`]: crate::RenderOpOutput
 
-// Attach.
+// Skip rustfmt for rest of file to preserve manual alignment.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
+// Private inner modules (hide implementation structure).
 mod debug;
-mod paint_render_op_impl;
-mod pixel_char_renderer;
-mod render_to_ansi;
+mod output;
+mod input;
 
-// Re-exports
+// Public re-exports (flat API surface).
 pub use debug::*;
-pub use paint_render_op_impl::*;
-pub use pixel_char_renderer::*;
-pub use render_to_ansi::*;
+pub use output::*;
+pub use input::*;
 
-// Tests
+// Tests.
 #[cfg(test)]
 mod integration_tests;
-#[cfg(test)]
-mod tests;

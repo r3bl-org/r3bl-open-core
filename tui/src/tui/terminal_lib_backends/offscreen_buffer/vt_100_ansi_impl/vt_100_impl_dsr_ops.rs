@@ -3,7 +3,7 @@
 //! Device Status Report (DSR) operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements DSR operations that correspond to ANSI DSR
-//! sequences handled by the `vt_100_ansi_parser::operations::dsr_ops` module. These
+//! sequences handled by the `vt_100_pty_output_parser::operations::dsr_ops` module. These
 //! include:
 //!
 //! - **DSR 5** (Device Status Report) - [`handle_status_report_request`]

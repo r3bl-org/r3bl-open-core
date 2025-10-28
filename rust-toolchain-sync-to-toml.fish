@@ -30,8 +30,8 @@ source script_lib.fish
 # Global Variables
 # ============================================================================
 
-set -g LOG_FILE /home/nazmul/Downloads/rust-toolchain-sync-to-toml.log
-set -g PROJECT_DIR /home/nazmul/github/r3bl-open-core
+set -g LOG_FILE $HOME/Downloads/rust-toolchain-sync-to-toml.log
+set -g PROJECT_DIR $HOME/github/r3bl-open-core
 set -g TOOLCHAIN_FILE $PROJECT_DIR/rust-toolchain.toml
 set -g target_toolchain ""
 

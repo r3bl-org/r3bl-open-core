@@ -153,7 +153,7 @@ impl ReadlineAsyncContext {
         }
 
         let output_device = OutputDevice::new_stdout();
-        let input_device = InputDevice::new_event_stream();
+        let input_device = InputDevice::default();
 
         let prompt =
             read_line_prompt.map_or_else(|| "> ".to_owned(), |p| p.as_ref().to_string());

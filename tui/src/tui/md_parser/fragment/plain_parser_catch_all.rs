@@ -30,7 +30,7 @@ use nom::{IResult, Parser,
           multi::many1,
           sequence::preceded};
 
-// XMARK: Lowest priority parser for "plain text" Markdown fragment
+// XMARK: Lowest priority parser for "plain text" Markdown fragment.
 
 /// This is the lowest priority parser called by
 /// [`crate::parse_inline_fragments_until_eol_or_eoi()`], which itself is called:

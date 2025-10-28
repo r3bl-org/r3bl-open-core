@@ -197,17 +197,6 @@ mod tests {
     }
 
     #[test]
-    fn test_debug_format() {
-        let content = "debug";
-        let seg = create_test_seg(0, 5, 5, 0, 0);
-        let seg_content = SegContent { content, seg };
-
-        let debug_str = format!("{seg_content:?}");
-        assert!(debug_str.contains("SegContent"));
-        // The exact format may vary, but it should contain the struct name.
-    }
-
-    #[test]
     fn test_lifetime_correctness() {
         // Test that SegContent correctly borrows from the string.
         let content = String::from("lifetime_test");

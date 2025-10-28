@@ -96,7 +96,7 @@ impl OffscreenBuffer {
 mod tests_bounds_check_ops {
     use super::*;
     use crate::{height, term_row, width,
-                core::ansi::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
+                core::ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
 
     fn create_test_buffer() -> OffscreenBuffer {
         let size = width(10) + height(6);

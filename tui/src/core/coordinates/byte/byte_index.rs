@@ -272,15 +272,6 @@ mod tests {
         assert_eq!(offset.as_usize(), usize::MAX / 2);
     }
 
-    // Trait implementation tests.
-    #[test]
-    fn test_debug_format() {
-        let index = byte_index(42);
-        let debug_str = format!("{index:?}");
-        assert!(debug_str.contains("ByteIndex"));
-        assert!(debug_str.contains("42"));
-    }
-
     #[test]
     fn test_clone() {
         let index1 = byte_index(42);

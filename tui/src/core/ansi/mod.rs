@@ -1,3 +1,7 @@
+/*
+ * // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+ */
+
 //! ANSI Terminal Abstraction Layer
 //!
 //! This module provides bidirectional ANSI sequence handling for terminal emulation:
@@ -14,45 +18,90 @@
 //! ## Architecture Overview
 //!
 //! ```text
-//! PTY Input                                  App Output
-//!    ↓                                          ↓
-//! ┌─────────────┐                       ┌──────────────┐
-//! │   Parser    │◀─── Constants ───→   │  Generator   │
-//! └─────────────┘        (ANSI         └──────────────┘
-//! ↓                      specs)               ↑
-//! Terminal State          │           Styled Text
-//!                        ↓                    │
-//!                    ┌──────────┐            │
-//!                    │  Color   │────────────┘
-//!                    │Types &   │
-//!                    │Conversion│
-//!                    └──────────┘
+//!   PTY Input                             App Output
+//!      ↓                                     ↓
+//! ┌─────────────┐                     ┌──────────────┐
+//! │   Parser    │ ◀─── Constants ───▶ │  Generator   │
+//! └─────────────┘    (ANSI specs)     └──────────────┘
+//!    ↓                     │                 ↑
+//! Terminal State           │            Styled Text
+//!                  ┌───────▼────────┐        │
+//!                  │ Color types &  │────────┘
+//!                  │ Conversion     │
+//!                  └────────────────┘
 //! ```
 //!
-//! ## Usage Examples
+//! ## Terminal Input Modes: Raw vs Cooked
 //!
-//! ### Styling Text for Output
-//! ```ignore
-//! use r3bl_tui::{SgrCode, CliTextInline};
+//! To understand why this module exists, you need to know how terminals handle input.
 //!
-//! let styled = CliTextInline::new("Hello", vec![SgrCode::Bold]);
-//! println!("{}", styled);
+//! ### Cooked Mode (Default)
+//!
+//! This is the **default terminal mode** when you open a shell:
+//!
+//! ```text
+//! You type:        "hello^H^H"  (^H = backspace key)
+//!                      ↓
+//! OS processes:    character buffering, line editing, special key handling
+//!                      ↓
+//! Program gets:    "hel" (only after Enter, with backspace processed)
 //! ```
 //!
-//! ### Parsing ANSI Sequences
-//! ```ignore
-//! use r3bl_tui::CsiSequence;
+//! The OS handles input processing: backspace deletes, Ctrl+C terminates the program,
+//! Enter sends the line. The program only receives complete lines.
 //!
-//! let sequence = CsiSequence::cursor_position_report(10, 5);
+//! ### Raw Mode (Interactive TUI)
+//!
+//! Interactive applications (vim, less, this TUI) need **character-by-character input**:
+//!
+//! ```text
+//! You press:       [individual keystroke]
+//!                      ↓
+//! OS processing:   [NONE - raw bytes sent immediately]
+//!                      ↓
+//! Program gets:    raw keystroke immediately
+//!                  (including escape sequences for arrow keys, Ctrl+C, etc.)
 //! ```
 //!
-//! ### Color Conversions
-//! ```ignore
-//! use r3bl_tui::{RgbValue, AnsiValue};
+//! **Why raw mode?** The program needs to:
+//! - Capture every keystroke immediately (no line buffering)
+//! - Distinguish between Ctrl+C (user interrupt) vs. Ctrl+C keypress the user wants
+//! - Detect special keys (arrows, function keys) sent as **escape sequences**
+//! - Control the cursor, colors, and screen layout
 //!
-//! let rgb = RgbValue { r: 255, g: 128, b: 64 };
-//! let ansi = rgb.to_ansi();  // Convert to nearest ANSI color
+//! ### Escape Sequences in Raw Mode
+//!
+//! When a user presses a special key in raw mode, the terminal sends an **escape sequence**.
+//! For example:
+//!
+//! ```text
+//! User presses:    Up arrow
+//! Terminal sends:  ESC [ A    (3 bytes: 0x1B 0x5B 0x41)
+//! Displayed as:    ^[[A       (when using cat -v to visualize)
 //! ```
+//!
+//! Use `cat -v` to see raw escape sequences:
+//!
+//! ```text
+//! $ cat -v          # cat with visualization of control characters
+//! # [user types: "hello" then Up arrow then Left arrow]
+//! hello^[[A^[[D
+//! # ^[ is the Escape character (ESC, 0x1B)
+//! # [A is "cursor up"
+//! # [D is "cursor left"
+//! ```
+//!
+//! **Common escape sequences:**
+//! - `^[[A` = Up arrow
+//! - `^[[B` = Down arrow
+//! - `^[[C` = Right arrow
+//! - `^[[D` = Left arrow
+//! - `^[[3~` = Delete key
+//! - `^[OP` = F1 key
+//!
+//! This module's parser ([`vt_100_pty_output_parser`])
+//! converts these escape sequence bytes into structured events the application can handle.
+//!
 //!
 //! ## Key Types and Public API
 //!
@@ -70,6 +119,10 @@
 //!
 //! **Terminal I/O:**
 //! - Color detection and support queries
+//!
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+
+// XMARK: Snippet to stop rustfmt from reformatting entire file.
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
@@ -85,10 +138,23 @@ mod terminal_output;
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
 #[cfg(any(test, doc))]
-pub mod vt_100_ansi_parser;
+pub mod terminal_raw_mode;
 // This module is private in non-test, non-doc builds.
 #[cfg(not(any(test, doc)))]
-mod vt_100_ansi_parser;
+mod terminal_raw_mode;
+
+// XMARK: Example for how to conditionally expose private modules for testing and documentation.
+
+// Module is public only when building documentation or tests.
+// This allows rustdoc links to work while keeping it private in release builds.
+#[cfg(any(test, doc))]
+pub mod vt_100_pty_output_parser;
+// This module is private in non-test, non-doc builds.
+#[cfg(not(any(test, doc)))]
+mod vt_100_pty_output_parser;
+
+// Input parsing module - public for protocol access
+pub mod vt_100_terminal_input_parser;
 
 // Re-export flat public API.
 pub use color::*;
@@ -96,8 +162,9 @@ pub use constants::*;
 pub use detect_color_support::*;
 pub use generator::*;
 pub use terminal_output::*;
+pub use vt_100_pty_output_parser::*;
+pub use terminal_raw_mode::*;
 
 // Re-export test fixtures for testing purposes only.
 #[cfg(test)]
-pub use vt_100_ansi_parser::vt_100_ansi_conformance_tests;
-pub use vt_100_ansi_parser::*;
+pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;

@@ -9,7 +9,7 @@ use crate::{MdDocument, MdElement, ParseList, ZeroCopyGapBuffer,
 use nom::{IResult, Parser, branch::alt, bytes::complete::take_while, combinator::map,
           multi::many0};
 
-// XMARK: Main Markdown parser entry point
+// XMARK: Main Markdown parser entry point.
 
 /// Type-safe parser entry point that enforces `ZeroCopyGapBuffer` usage at compile time.
 /// This ensures that only properly formatted null-padded content from `ZeroCopyGapBuffer`

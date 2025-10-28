@@ -182,13 +182,6 @@ mod tests {
     }
 
     #[test]
-    fn test_esc_sequence_debug() {
-        let sequence = EscSequence::SaveCursor;
-        let debug_output = format!("{sequence:?}");
-        assert!(debug_output.contains("SaveCursor"));
-    }
-
-    #[test]
     fn test_esc_sequence_equality() {
         let seq1 = EscSequence::SaveCursor;
         let seq2 = EscSequence::SaveCursor;

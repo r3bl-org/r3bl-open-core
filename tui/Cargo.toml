@@ -36,6 +36,9 @@ chrono = "0.4.41"
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 futures-util = "0.3.31"
 
+# Terminal raw mode support with safe Rust APIs.
+rustix = { version = "0.38", features = ["termios", "std"] }
+
 # strum.
 strum = "0.27.1"
 strum_macros = "0.27.1"

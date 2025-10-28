@@ -1,0 +1,889 @@
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
+//! Automated Parser Validation Tests
+//!
+//! These tests use **real ANSI sequences** captured from interactive terminal observation
+//! to validate parser correctness. All sequences were confirmed with actual terminal
+//! emulators using `cat -v` or similar tools.
+//!
+//! ## Test Organization
+//!
+//! Tests are organized by event type and complexity:
+//! - **Mouse Events**: Clicks, drags, scrolling with various modifiers
+//! - **Keyboard Events**: Arrow keys, function keys with modifier combinations
+//! - **Terminal Events**: Resize, focus, paste markers
+//! - **Edge Cases**: Incomplete sequences, invalid data, boundary conditions
+//!
+//! ## Key VT-100 Behaviors Validated
+//!
+//! 1. **Coordinate System**: VT-100 uses 1-based coordinates (top-left = 1,1)
+//! 2. **Modifier Encoding**: CSI parameter = 1 + bitfield (Shift=1, Alt=2, Ctrl=4)
+//! 3. **Ctrl Modifier**: Parameter 5 = Ctrl (not 4), confirmed with `ESC[1;5A`
+//! 4. **Scroll Events**: Button 66+ indicates scroll with possible modifiers
+//!
+//! ## Test Design Philosophy
+//!
+//! These tests use **literal byte sequences** rather than generated sequences. This
+//! design is intentional and critical for correctness:
+//!
+//! ### Why Literals?
+//!
+//! 1. **Ground Truth**: Literals represent empirical VT-100 behavior observed from real
+//!    terminals, providing an independent reference that parsers must match.
+//!
+//! 2. **Avoid Circular Logic**: Using a generator to create test sequences would be
+//!    circular - if the generator has a bug, tests would pass despite incorrect behavior.
+//!
+//! 3. **Spec Compliance**: Literal sequences serve as the authoritative reference from
+//!    the VT-100 specification and terminal observation.
+//!
+//! ### Test Strategy
+//!
+//! | Test Type                    | Purpose                                 | Approach                                            |
+//! |------------------------------|-----------------------------------------|-----------------------------------------------------|
+//! | **Parser tests** (this file) | Verify ANSI → Event parsing             | Use literal sequences from terminal observation     |
+//! | **Generator tests**          | Verify Event → ANSI generation          | Use literal sequences from VT-100 spec              |
+//! | **Round-trip tests**         | Verify parser ↔ generator compatibility | Event → bytes → Event                               |
+//!
+//! The combination of all three test types ensures both parser and generator are correct
+//! and compatible with each other.
+//!
+//! ## ⚠️ WARNING: DO NOT Refactor These Tests to Use Generators!
+//!
+//! If you're considering replacing hardcoded sequences in this file with generator
+//! function calls, **STOP**! This would break the validation chain:
+//!
+//! ```text
+//! ❌ BROKEN: Circular validation (no ground truth)
+//!    Generator → Bytes → Parser → Generator validates itself ✗
+//!
+//! ✅ CORRECT: Independent validation against reality
+//!    Terminal observation → Bytes → Parser validates against reality ✓
+//!    Generator → Bytes validates against reality ✓
+//! ```
+//!
+//! **These hardcoded sequences ARE the ground truth.** The generators in
+//! [`test_fixtures::input_sequence_generator`] are validated by producing sequences
+//! that match these literals.
+//!
+//! If you want to test generator correctness, see the round-trip tests in
+//! [`unit_tests::generator_round_trip_tests`] instead.
+//!
+//! [`test_fixtures::input_sequence_generator`]: mod@crate::core::ansi::vt_100_terminal_input_parser::test_fixtures
+//! [`unit_tests::generator_round_trip_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::unit_tests::generator_round_trip_tests
+//!
+//! ### Sample Test Run Output
+//! ╔═══════════════════════════════════════════════════════╗
+//! ║   VT-100 Terminal Input Observation Test              ║
+//! ║   Phase 1: Establish Ground Truth                     ║
+//! ╚═══════════════════════════════════════════════════════╝
+//!
+//! 🖥️  Terminal: Alacritty
+//!
+//! 🔧 Diagnostic Info:
+//!    Sending ANSI codes to enable mouse tracking...
+//! 📤 Sent: SGR mouse (1006) = [1b, 5b, 3f, 31, 30, 30, 36, 68]
+//! 📤 Sent: X11 mouse (1000) = [1b, 5b, 3f, 31, 30, 30, 30, 68]
+//! 📤 Sent: Bracketed paste (2004) = [1b, 5b, 3f, 32, 30, 30, 34, 68]
+//! ✅ All ANSI codes sent (check stderr for details)
+//!
+//! ╭─────────────────────────────────────────╮
+//! │ TEST 1: Mouse - Top-Left Corner         │
+//! ╰─────────────────────────────────────────╯
+//! 👆 Click the TOP-LEFT corner of this terminal window
+//! (Where row 1, column 1 would be)
+//! Waiting for input...
+//!
+//! 📦 Raw bytes (hex): [1b, 5b, 3c, 30, 3b, 31, 3b, 31, 4d]
+//! 🔤 Escaped string: "\u{1b}[<0;1;1M"
+//!
+//! ╭─────────────────────────────────────────╮
+//! │ TEST 2: Mouse - Middle of Screen        │
+//! ╰─────────────────────────────────────────╯
+//! 👆 Click roughly the MIDDLE of the terminal
+//! (Around row 12, column 40 on typical terminal)
+//! Waiting for input...
+//!
+//! 📦 Raw bytes (hex): [1b, 5b, 3c, 30, 3b, 36, 31, 3b, 32, 30, 4d]
+//! 🔤 Escaped string: "\u{1b}[<0;61;20M"
+//!
+//! ╭─────────────────────────────────────────╮
+//! │ TEST 3: Keyboard - Arrow Up              │
+//! ╰─────────────────────────────────────────╯
+//! ⬆️  Press the UP ARROW key
+//! Waiting for input...
+//!
+//! 📦 Raw bytes (hex): [1b, 5b, 41]
+//! 🔤 Escaped string: "\u{1b}[A"
+//! ⌨️  Parsed: Up Arrow
+//!
+//! ╭─────────────────────────────────────────╮
+//! │ TEST 4: Keyboard - Ctrl+Up               │
+//! ╰─────────────────────────────────────────╯
+//! ⌨️  Press CTRL+UP ARROW together
+//! Waiting for input...
+//!
+//! 📦 Raw bytes (hex): [1b, 5b, 31, 3b, 35, 41]
+//! 🔤 Escaped string: "\u{1b}[1;5A"
+//! ⌨️  Parsed: Ctrl+Up
+//!
+//! ╭─────────────────────────────────────────╮
+//! │ TEST 5: Mouse - Scroll Wheel Up          │
+//! ╰─────────────────────────────────────────╯
+//! 🖱️  Scroll mouse wheel UP
+//! Waiting for input...
+//!
+//! 📦 Raw bytes (hex): [1b, 5b, 3c, 36, 35, 3b, 35, 39, 3b, 32, 30, 4d]
+//! 🔤 Escaped string: "\u{1b}[<65;59;20M"
+//! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
+
+use crate::core::ansi::vt_100_terminal_input_parser::{KeyState, VT100InputEvent,
+                                                      VT100KeyCode, VT100MouseAction,
+                                                      VT100MouseButton,
+                                                      VT100ScrollDirection,
+                                                      parse_alt_letter,
+                                                      parse_control_character,
+                                                      parse_keyboard_sequence,
+                                                      parse_mouse_sequence};
+
+// ================================================================================================
+// Mouse Event Tests (Real Sequences from Terminal Observation)
+// ================================================================================================
+
+mod mouse_events {
+    use super::*;
+
+    #[test]
+    fn test_left_click_at_top_left() {
+        // CONFIRMED: cat -v showed ESC[<0;1;1M for left click at top-left
+        let seq = b"\x1b[<0;1;1M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse observed sequence");
+
+        match event {
+            VT100InputEvent::Mouse {
+                button,
+                pos,
+                action,
+                modifiers,
+            } => {
+                assert_eq!(button, VT100MouseButton::Left);
+                assert_eq!(pos.col.as_u16(), 1, "Top-left column is 1 (1-based)");
+                assert_eq!(pos.row.as_u16(), 1, "Top-left row is 1 (1-based)");
+                assert_eq!(action, VT100MouseAction::Press);
+                assert!(
+                    modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed,
+                    "No modifiers held"
+                );
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_left_click_release() {
+        // CONFIRMED: lowercase 'm' indicates release in SGR protocol
+        let seq = b"\x1b[<0;1;1m";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse release");
+
+        match event {
+            VT100InputEvent::Mouse { action, .. } => {
+                assert_eq!(action, VT100MouseAction::Release);
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_scroll_up_with_modifiers() {
+        // CONFIRMED: Button 66 = scroll up at col 37, row 14 (from terminal observation)
+        let seq = b"\x1b[<66;37;14M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
+
+        match event {
+            VT100InputEvent::Mouse { action, pos, .. } => {
+                assert_eq!(action, VT100MouseAction::Scroll(VT100ScrollDirection::Up));
+                assert_eq!(pos.col.as_u16(), 37);
+                assert_eq!(pos.row.as_u16(), 14);
+            }
+            _ => panic!("Expected Mouse scroll event"),
+        }
+    }
+
+    #[test]
+    fn test_middle_button_click() {
+        // Middle button = button code 1
+        let seq = b"\x1b[<1;10;5M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse middle button");
+
+        match event {
+            VT100InputEvent::Mouse { button, .. } => {
+                assert_eq!(button, VT100MouseButton::Middle);
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_right_button_click() {
+        // Right button = button code 2
+        let seq = b"\x1b[<2;10;5M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse right button");
+
+        match event {
+            VT100InputEvent::Mouse { button, .. } => {
+                assert_eq!(button, VT100MouseButton::Right);
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_mouse_drag() {
+        // Drag = button 0 + drag flag (bit 5 = 32)
+        let seq = b"\x1b[<32;15;8M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse drag");
+
+        match event {
+            VT100InputEvent::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButton::Left);
+                assert_eq!(action, VT100MouseAction::Drag);
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_left_click() {
+        // Ctrl modifier = bit 4 (value 16)
+        let seq = b"\x1b[<16;5;5M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse Ctrl+click");
+
+        match event {
+            VT100InputEvent::Mouse {
+                button, modifiers, ..
+            } => {
+                assert_eq!(button, VT100MouseButton::Left);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed, "Ctrl should be set");
+                assert_eq!(modifiers.shift, KeyState::NotPressed, "Shift should not be set");
+                assert_eq!(modifiers.alt, KeyState::NotPressed, "Alt should not be set");
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_shift_alt_left_click() {
+        // Shift (4) + Alt (8) = 12
+        let seq = b"\x1b[<12;10;10M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse Shift+Alt+click");
+
+        match event {
+            VT100InputEvent::Mouse { modifiers, .. } => {
+                assert_eq!(modifiers.shift, KeyState::Pressed, "Shift should be set");
+                assert_eq!(modifiers.alt, KeyState::Pressed, "Alt should be set");
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed, "Ctrl should not be set");
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_coordinates_are_1_based() {
+        // Verify observed behavior: VT-100 coordinates are 1-based
+        let seq = b"\x1b[<0;1;1M";
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
+
+        match event {
+            VT100InputEvent::Mouse { pos, .. } => {
+                assert_eq!(
+                    pos.col.as_u16(),
+                    1,
+                    "Column 1 is top-left (1-based coordinate system)"
+                );
+                assert_eq!(
+                    pos.row.as_u16(),
+                    1,
+                    "Row 1 is top-left (1-based coordinate system)"
+                );
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+}
+
+// ================================================================================================
+// Keyboard Event Tests (Real Sequences from Terminal Observation)
+// ================================================================================================
+
+mod keyboard_events {
+    use super::*;
+
+    #[test]
+    fn test_ctrl_up() {
+        // CONFIRMED: cat -v showed ESC[1;5A for Ctrl+Up (parameter 5 = Ctrl)
+        let seq = b"\x1b[1;5A";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse observed Ctrl+Up");
+
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed, "Ctrl modifier should be set");
+                assert_eq!(modifiers.shift, KeyState::NotPressed, "Shift should not be set");
+                assert_eq!(modifiers.alt, KeyState::NotPressed, "Alt should not be set");
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_plain_arrow_up() {
+        let seq = b"\x1b[A";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse plain Up");
+
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_shift_up() {
+        // Shift modifier: parameter 2 (1 + 1 where Shift bit = 1)
+        let seq = b"\x1b[1;2A";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Shift+Up");
+
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
+                assert_eq!(modifiers.shift, KeyState::Pressed, "Shift should be set");
+                assert!(modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_alt_up() {
+        // Alt modifier: parameter 3 (1 + 2 where Alt bit = 2)
+        let seq = b"\x1b[1;3A";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Alt+Up");
+
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
+                assert_eq!(modifiers.alt, KeyState::Pressed, "Alt should be set");
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_alt_up() {
+        // Ctrl (4) + Alt (2) = 6, plus 1 = parameter 7
+        let seq = b"\x1b[1;7A";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+Up");
+
+        match event {
+            VT100InputEvent::Keyboard { modifiers, .. } => {
+                assert_eq!(modifiers.ctrl, KeyState::Pressed, "Ctrl should be set");
+                assert_eq!(modifiers.alt, KeyState::Pressed, "Alt should be set");
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_shift_alt_ctrl_up() {
+        // Shift (1) + Alt (2) + Ctrl (4) = 7, plus 1 = parameter 8
+        let seq = b"\x1b[1;8A";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Shift+Alt+Ctrl+Up");
+
+        match event {
+            VT100InputEvent::Keyboard { modifiers, .. } => {
+                assert_eq!(modifiers.shift, KeyState::Pressed, "Shift should be set");
+                assert_eq!(modifiers.alt, KeyState::Pressed, "Alt should be set");
+                assert_eq!(modifiers.ctrl, KeyState::Pressed, "Ctrl should be set");
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_f1_key() {
+        let seq = b"\x1b[11~";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse F1");
+
+        match event {
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Function(1));
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_shift_f5() {
+        // F5 = 15, Shift modifier = parameter 2
+        let seq = b"\x1b[15;2~";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Shift+F5");
+
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Function(5));
+                assert_eq!(modifiers.shift, KeyState::Pressed);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_alt_f10() {
+        // F10 = 21, Ctrl+Alt = parameter 7
+        let seq = b"\x1b[21;7~";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+F10");
+
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Function(10));
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_home_key() {
+        let seq = b"\x1b[H";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Home");
+
+        match event {
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Home);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_end_key() {
+        let seq = b"\x1b[F";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse End");
+
+        match event {
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::End);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_delete_key() {
+        let seq = b"\x1b[3~";
+        let (event, _bytes_consumed) =
+            parse_keyboard_sequence(seq).expect("Should parse Delete");
+
+        match event {
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Delete);
+            }
+            _ => panic!("Expected Keyboard event"),
+        }
+    }
+}
+
+// ================================================================================================
+// Edge Cases and Error Handling
+// ================================================================================================
+
+mod edge_cases {
+    use super::*;
+
+    #[test]
+    fn test_incomplete_mouse_sequence() {
+        let seq = b"\x1b[<0;1";
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Incomplete sequence should not parse");
+    }
+
+    #[test]
+    fn test_incomplete_keyboard_sequence() {
+        let seq = b"\x1b[1;";
+        let event = parse_keyboard_sequence(seq);
+        assert!(event.is_none(), "Incomplete sequence should not parse");
+    }
+
+    #[test]
+    fn test_invalid_mouse_action_char() {
+        // Invalid action character 'X' (must be 'M' or 'm')
+        let seq = b"\x1b[<0;1;1X";
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Invalid action char should not parse");
+    }
+
+    #[test]
+    #[should_panic(expected = "must be non-zero (1-based)")]
+    fn test_mouse_coordinate_zero() {
+        // Zero coordinates are invalid (VT-100 is 1-based) - should panic
+        let seq = b"\x1b[<0;0;0M";
+        let _unused = parse_mouse_sequence(seq);
+    }
+
+    #[test]
+    fn test_very_large_coordinates() {
+        // Test coordinates near u16::MAX
+        let seq = b"\x1b[<0;65535;65535M";
+        let (event, _bytes_consumed) =
+            parse_mouse_sequence(seq).expect("Should parse large coords");
+
+        match event {
+            VT100InputEvent::Mouse { pos, .. } => {
+                assert_eq!(pos.col.as_u16(), 65535);
+                assert_eq!(pos.row.as_u16(), 65535);
+            }
+            _ => panic!("Expected Mouse event"),
+        }
+    }
+
+    #[test]
+    fn test_malformed_sgr_missing_semicolons() {
+        let seq = b"\x1b[<0M";
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Malformed SGR should not parse");
+    }
+
+    #[test]
+    fn test_non_numeric_coordinates() {
+        let seq = b"\x1b[<0;abc;def M";
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Non-numeric coords should not parse");
+    }
+}
+
+// ================================================================================================
+// Modifier Encoding Verification (Terminal Observations)
+// ================================================================================================
+
+mod modifier_encoding {
+    use super::*;
+
+    /// Verify the modifier encoding formula: parameter = 1 + bitfield
+    /// where bitfield = Shift(1) | Alt(2) | Ctrl(4)
+    #[test]
+    fn test_modifier_parameter_encoding() {
+        use KeyState::*;
+        let test_cases = vec![
+            (2, Pressed, NotPressed, NotPressed), // Shift only
+            (3, NotPressed, Pressed, NotPressed), // Alt only
+            (4, Pressed, Pressed, NotPressed),  // Shift + Alt
+            (5, NotPressed, NotPressed, Pressed), // Ctrl only (CONFIRMED by Phase 1)
+            (6, Pressed, NotPressed, Pressed),  // Shift + Ctrl
+            (7, NotPressed, Pressed, Pressed),  // Alt + Ctrl
+            (8, Pressed, Pressed, Pressed),   // All three
+        ];
+
+        for (param, expect_shift, expect_alt, expect_ctrl) in test_cases {
+            let seq = format!("\x1b[1;{param}A");
+            let (event, _bytes_consumed) = parse_keyboard_sequence(seq.as_bytes())
+                .unwrap_or_else(|| panic!("Should parse parameter {param}"));
+
+            match event {
+                VT100InputEvent::Keyboard { modifiers, .. } => {
+                    assert_eq!(
+                        modifiers.shift, expect_shift,
+                        "Parameter {param} shift mismatch"
+                    );
+                    assert_eq!(
+                        modifiers.alt, expect_alt,
+                        "Parameter {param} alt mismatch"
+                    );
+                    assert_eq!(
+                        modifiers.ctrl, expect_ctrl,
+                        "Parameter {param} ctrl mismatch"
+                    );
+                }
+                _ => panic!("Expected Keyboard event"),
+            }
+        }
+    }
+}
+
+// ==================== Control Character Tests (Ctrl+Letter) ====================
+
+#[cfg(test)]
+mod control_character_tests {
+    use super::*;
+
+    #[test]
+    fn test_ctrl_a() {
+        // Ctrl+A sends 0x01 (SOH - Start of Heading)
+        let seq = b"\x01";
+        let (event, bytes_consumed) =
+            parse_control_character(seq).expect("Should parse Ctrl+A");
+
+        assert_eq!(bytes_consumed, 1);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('a'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_d() {
+        // Ctrl+D sends 0x04 (EOT - End of Transmission)
+        let seq = b"\x04";
+        let (event, bytes_consumed) =
+            parse_control_character(seq).expect("Should parse Ctrl+D");
+
+        assert_eq!(bytes_consumed, 1);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('d'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_w() {
+        // Ctrl+W sends 0x17 (ETB - End of Transmission Block)
+        let seq = b"\x17";
+        let (event, bytes_consumed) =
+            parse_control_character(seq).expect("Should parse Ctrl+W");
+
+        assert_eq!(bytes_consumed, 1);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('w'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_u() {
+        // Ctrl+U sends 0x15 (NAK - Negative Acknowledge)
+        let seq = b"\x15";
+        let (event, bytes_consumed) =
+            parse_control_character(seq).expect("Should parse Ctrl+U");
+
+        assert_eq!(bytes_consumed, 1);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('u'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_k() {
+        // Ctrl+K sends 0x0B (VT - Vertical Tab)
+        let seq = b"\x0B";
+        let (event, bytes_consumed) =
+            parse_control_character(seq).expect("Should parse Ctrl+K");
+
+        assert_eq!(bytes_consumed, 1);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('k'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_space() {
+        // Ctrl+Space generates NUL (0x00) and is parsed as Ctrl+Space
+        let nul = b"\x00";
+        let (event, bytes) = parse_control_character(nul).expect("Ctrl+Space should parse");
+        assert_eq!(bytes, 1);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char(' '));
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_ctrl_special_cases_parsed_as_dedicated_keys() {
+        // Tab (0x09) is parsed as Tab, not Ctrl+I
+        let tab = b"\x09";
+        let (event, bytes) = parse_control_character(tab).expect("Tab should parse");
+        assert_eq!(bytes, 1);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Tab);
+                assert!(modifiers.ctrl == KeyState::NotPressed && modifiers.shift == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+
+        // Enter (0x0A and 0x0D) is parsed as Enter
+        let lf = b"\x0A";
+        let (event, _) = parse_control_character(lf).expect("LF should parse as Enter");
+        assert!(matches!(event, VT100InputEvent::Keyboard { code: VT100KeyCode::Enter, .. }));
+
+        let cr = b"\x0D";
+        let (event, _) = parse_control_character(cr).expect("CR should parse as Enter");
+        assert!(matches!(event, VT100InputEvent::Keyboard { code: VT100KeyCode::Enter, .. }));
+
+        // ESC (0x1B) should NOT be parsed by parse_control_character
+        // (handled in try_parse() routing)
+        let esc = b"\x1B";
+        assert!(parse_control_character(esc).is_none());
+    }
+}
+
+// ==================== Alt+Letter Tests ====================
+
+#[cfg(test)]
+mod alt_letter_tests {
+    use super::*;
+
+    #[test]
+    fn test_alt_b() {
+        // Alt+B sends ESC (0x1B) + 'b' (0x62)
+        let seq = b"\x1bb";
+        let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+B");
+
+        assert_eq!(bytes_consumed, 2);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('b'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_alt_f() {
+        // Alt+F sends ESC (0x1B) + 'f' (0x66)
+        let seq = b"\x1bf";
+        let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+F");
+
+        assert_eq!(bytes_consumed, 2);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('f'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_alt_d() {
+        // Alt+D sends ESC (0x1B) + 'd' (0x64)
+        let seq = b"\x1bd";
+        let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+D");
+
+        assert_eq!(bytes_consumed, 2);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('d'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_alt_backspace() {
+        // Note: Alt+Backspace is NOT tested here because terminals typically send it
+        // as a CSI sequence (not ESC+DEL), and DEL (0x7F) is outside the printable
+        // ASCII range (0x20-0x7E) that parse_alt_letter() handles.
+    }
+
+    #[test]
+    fn test_alt_uppercase_letter() {
+        // Alt+Shift+B sends ESC (0x1B) + 'B' (0x42)
+        // Note: The Shift modifier is encoded in the uppercase letter itself,
+        // not in the modifiers struct (terminals don't send separate Shift info)
+        let seq = b"\x1bB";
+        let (event, bytes_consumed) =
+            parse_alt_letter(seq).expect("Should parse Alt+Shift+B");
+
+        assert_eq!(bytes_consumed, 2);
+        match event {
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Char('B'));
+                assert_eq!(modifiers.shift, KeyState::NotPressed); // Shift not explicitly encoded
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+            }
+            _ => panic!("Expected keyboard event"),
+        }
+    }
+
+    #[test]
+    fn test_alt_letter_incomplete() {
+        // Just ESC without letter should return None (incomplete sequence)
+        let seq = b"\x1b";
+        assert!(parse_alt_letter(seq).is_none());
+    }
+
+    #[test]
+    fn test_alt_letter_not_printable() {
+        // ESC + control character (not printable) should return None
+        let seq = b"\x1b\x01"; // ESC + Ctrl+A
+        assert!(parse_alt_letter(seq).is_none());
+
+        // ESC + high byte (not ASCII) should return None
+        let seq = b"\x1b\x80";
+        assert!(parse_alt_letter(seq).is_none());
+    }
+}

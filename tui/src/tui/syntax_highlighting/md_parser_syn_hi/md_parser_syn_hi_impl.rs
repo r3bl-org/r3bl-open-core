@@ -67,7 +67,7 @@ pub fn try_parse_and_highlight(
     maybe_current_box_computed_style: Option<TuiStyle>,
     maybe_syntect_tuple: Option<(&SyntaxSet, &Theme)>,
 ) -> CommonResult<StyleUSSpanLines> {
-    // XMARK: Parse markdown from editor and render it
+    // XMARK: Parse markdown from editor and render it.
 
     // Parse using the zero-copy approach - no conversions needed!
     let result_md_ast = parse_markdown(gap_buffer);

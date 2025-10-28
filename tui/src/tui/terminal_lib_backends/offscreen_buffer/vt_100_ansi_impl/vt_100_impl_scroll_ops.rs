@@ -264,7 +264,7 @@ impl OffscreenBuffer {
 mod tests_scroll_vert_ops {
     use super::*;
     use crate::{col, height, idx, row, term_row, width,
-                core::ansi::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+                core::ansi::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                 test_fixtures_ofs_buf::{assert_plain_char_at,
                                         create_test_buffer_with_size}};
 
