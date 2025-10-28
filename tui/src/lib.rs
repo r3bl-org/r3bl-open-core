@@ -1661,7 +1661,9 @@
 //! - VT-100 conformance test suite
 //!
 //! See the detailed [`pty_mux` module documentation](crate::core::pty_mux) and
-//! [`vt_100_ansi_parser` module](crate::core::ansi::parser).
+//! [`vt_100_ansi_parser`] documentation.
+//!
+//! [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
 //!
 //! # Painting the caret
 //!

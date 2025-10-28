@@ -1,6 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Integration tests for screen operations ([`ClearScreen`], [`ShowCursor`], [`HideCursor`], etc.)
+//! Integration tests for screen operations ([`ClearScreen`], [`ShowCursor`],
+//! [`HideCursor`], etc.)
 //!
 //! These tests validate:
 //! 1. [`ClearScreen`] generates correct CSI 2J sequence
@@ -20,8 +21,7 @@
 //! [`ClearToStartOfLine`]: crate::render_op::RenderOpCommon::ClearToStartOfLine
 
 use super::test_helpers::*;
-use crate::{col, row, pos, AnsiSequenceGenerator};
-use crate::render_op::RenderOpCommon;
+use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row};
 
 #[test]
 fn test_clear_screen() {
@@ -141,7 +141,8 @@ fn test_screen_operations_preserve_cursor_state() {
     // Do a screen operation
     let (output_device2, stdout_mock2) = create_mock_output();
     let clear_op = RenderOpCommon::ClearScreen;
-    let _unused = execute_and_capture(clear_op, &mut state, &output_device2, &stdout_mock2);
+    let _unused =
+        execute_and_capture(clear_op, &mut state, &output_device2, &stdout_mock2);
 
     // Cursor position should be unchanged
     assert_eq!(state.cursor_pos, saved_pos);
@@ -153,12 +154,10 @@ fn test_hide_and_show_cursor_sequence() {
     let (output_device, stdout_mock) = create_mock_output();
     let mut state = create_test_state();
 
-    let ops = vec![
-        RenderOpCommon::HideCursor,
-        RenderOpCommon::ShowCursor,
-    ];
+    let ops = vec![RenderOpCommon::HideCursor, RenderOpCommon::ShowCursor];
 
-    let output = execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
+    let output =
+        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain both sequences
     assert!(output.contains(&AnsiSequenceGenerator::hide_cursor()));
@@ -176,7 +175,8 @@ fn test_enter_and_exit_alternate_screen_sequence() {
         RenderOpCommon::ExitAlternateScreen,
     ];
 
-    let output = execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
+    let output =
+        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain both sequences
     assert!(output.contains(&AnsiSequenceGenerator::enter_alternate_screen()));
@@ -194,7 +194,8 @@ fn test_save_and_restore_cursor_position() {
         RenderOpCommon::RestoreCursorPosition,
     ];
 
-    let output = execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
+    let output =
+        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain both sequences (CSI format: ESC [ s and ESC [ u)
     assert!(output.contains(&AnsiSequenceGenerator::save_cursor_position()));

@@ -73,8 +73,7 @@
 //! ## Integration Testing Relationship
 //!
 //! While this module contains unit tests, the **complete pipeline testing** is handled by
-//! the integration tests in [`vt_100_ansi_conformance_tests`]. This creates two
-//! complementary test layers:
+//! integration tests for VT100 conformance. This creates two complementary test layers:
 //!
 //! ```text
 //! Integration Tests (conformance_tests) ─── Tests complete pipeline:
@@ -87,31 +86,26 @@
 //! ## Navigation Between Testing Layers
 //!
 //! When working on any implementation file, you can navigate to its related layers:
-//! - **Shim Layer**: [`operations`] - The delegation layer that calls these
-//!   implementations
-//! - **Integration Tests**: [`vt_100_ansi_conformance_tests`] - Tests the complete ANSI
-//!   pipeline
+//! - **Shim Layer** - The delegation layer that calls these implementations
+//! - **Integration Tests** - Tests the complete ANSI pipeline
 //! - **Testing Philosophy**: See the three-layer architecture documentation above for
 //!   strategy
 //!
 //! For example, when working on character operations:
-//! 1. **Implementation**: [`vt_100_impl_char_ops`] (this module) - Unit tests for buffer
-//!    logic
-//! 2. **Shim**: [`operations::char_ops`] - Parameter translation (no direct tests)
-//! 3. **Integration**: [`test_char_ops`] - Full ANSI sequence testing
+//! 1. **Implementation** - Unit tests for buffer logic
+//! 2. **Shim** - Parameter translation (no direct tests)
+//! 3. **Integration** - Full ANSI sequence testing
 //!
 //! ## Complete Navigation Map
 //!
 //! All operation types follow the same three-layer pattern. From any implementation file,
-//! you can navigate to its corresponding shim and test layers using the links in this
-//! documentation, or by using IDE search with the operation name (e.g., search for
-//! [`char_ops`] to find all related files).
+//! you can navigate to its corresponding shim and test layers, or by using IDE search
+//! with the operation name to find all related files.
 //!
 //!
 //! # VT100 Compliance
 //!
-//! These implementations follow VT100 terminal specifications and are tested for
-//! compliance in the [`vt_100_ansi_conformance_tests`] module.
+//! These implementations follow VT100 terminal specifications.
 //!
 //!
 //! // Implementation layer hyperlinks (this module)

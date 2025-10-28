@@ -36,9 +36,9 @@
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
-use crate::{CliTextInline, GCStringOwned, InlineString, LockedOutputDevice,
-            PixelCharRenderer, Pos, RenderOpCommon, RenderOpFlush, RenderOpOutput,
-            RenderOpPaint, RenderOpsLocalData, Size, TuiStyle, AnsiSequenceGenerator,
+use crate::{AnsiSequenceGenerator, CliTextInline, GCStringOwned, InlineString,
+            LockedOutputDevice, PixelCharRenderer, Pos, RenderOpCommon, RenderOpFlush,
+            RenderOpOutput, RenderOpPaint, RenderOpsLocalData, Size, TuiStyle,
             cli_text_inline_impl::CliTextConvertOptions, col, disable_raw_mode_now,
             enable_raw_mode_now, flush_now, sanitize_and_save_abs_pos};
 

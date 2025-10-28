@@ -73,7 +73,7 @@
 //! ```
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`ANSI Parser`]: crate::core::ansi::parser::AnsiToOfsBufPerformer
+//! [`ANSI Parser`]: crate::AnsiToOfsBufPerformer
 //! [`PTY Session`]: crate::PtyReadWriteSession
 
 // Attach.

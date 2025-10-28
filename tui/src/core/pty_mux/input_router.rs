@@ -86,9 +86,7 @@ impl InputRouter {
                                 );
 
                                 // Clear the screen before switching.
-                                clear_screen_and_home_cursor(
-                                    output_device,
-                                );
+                                clear_screen_and_home_cursor(output_device);
 
                                 process_manager.switch_to(process_index);
                                 Self::update_terminal_title(process_manager, osc)?;

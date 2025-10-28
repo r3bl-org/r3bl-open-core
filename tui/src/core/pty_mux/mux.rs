@@ -69,7 +69,10 @@ impl PTYMuxBuilder {
         }
 
         if self.processes.len() > output_renderer::MAX_PROCESSES {
-            miette::bail!("Maximum of {} processes allowed", output_renderer::MAX_PROCESSES);
+            miette::bail!(
+                "Maximum of {} processes allowed",
+                output_renderer::MAX_PROCESSES
+            );
         }
 
         let terminal_size = get_size()?;

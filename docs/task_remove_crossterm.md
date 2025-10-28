@@ -166,7 +166,7 @@ input.
 **Input symmetry:**
 
 ```
-     stdin → mio async read → VT-100 Parser → Events → InputDevice → Application
+     stdin → tokio async read → VT-100 Parser → Events → InputDevice → Application
 ```
 
 #### Ultimate Architecture Vision
@@ -1906,13 +1906,15 @@ development.
 
 **Status**: AUDIT COMPLETE (October 27, 2025)
 
-**Objective**: Review both modules for consolidation opportunities after DirectToAnsi backend implementation.
+**Objective**: Review both modules for consolidation opportunities after DirectToAnsi backend
+implementation.
 
 **Findings**:
 
 #### **Architecture Analysis**
 
 **`cli_text` Module** (`tui/src/core/ansi/generator/cli_text.rs`):
+
 - **Purpose**: Styled text for interactive CLI tools (choose(), readline_async())
 - **Structure**: `CliTextInline` struct with:
   - `text: InlineString` - the text content
@@ -1923,12 +1925,15 @@ development.
 - **Key Method**: `FastStringify::write_to_buf()` (line 908-926) implements conversion on-demand
 
 **`tui_styled_text` Module** (`tui/src/core/tui_styled_text/`):
+
 - **Purpose**: Styled text for full screen TUI rendering with components
 - **Structure**: `TuiStyledText` struct with:
   - `text: StringTuiStyledText` - text content (SmallString)
   - `style: TuiStyle` - complete style (colors + attributes unified)
-- **Rendering Path**: `TuiStyledText` → `RenderOp::PaintTextWithAttributes` → Backend (Crossterm/DirectToAnsi) → ANSI
-- **Key Method**: `render_tui_styled_texts_into()` (render_tui_styled_texts.rs:5) converts to RenderOps
+- **Rendering Path**: `TuiStyledText` → `RenderOp::PaintTextWithAttributes` → Backend
+  (Crossterm/DirectToAnsi) → ANSI
+- **Key Method**: `render_tui_styled_texts_into()` (render_tui_styled_texts.rs:5) converts to
+  RenderOps
 
 #### **Consolidation Assessment**
 
@@ -1964,7 +1969,9 @@ development.
 - **Style handling**: Different APIs (TuiStyleAttribs vs TuiStyle) prevent easy consolidation
 - **Minor duplication**: Constructor functions, helper methods - acceptable maintenance burden
 
-**Recommendation**: Keep modules separate. The semantic differences and different rendering paths justify separate implementations. Both ultimately converge at the backend layer (DirectToAnsi/Crossterm), so code duplication is minimal and intentional.
+**Recommendation**: Keep modules separate. The semantic differences and different rendering paths
+justify separate implementations. Both ultimately converge at the backend layer
+(DirectToAnsi/Crossterm), so code duplication is minimal and intentional.
 
 **Documentation**: Added inline comments in both modules explaining their purpose and relationship.
 
@@ -1974,12 +1981,17 @@ development.
 
 **Status**: ✅ COMPLETED - October 27, 2025
 
-**Objective**: Build a robust, comprehensive test suite that validates the full RenderOp execution pipeline with DirectToAnsi backend. This provides confidence for future implementation changes and InputDevice implementation (Step 8) and cross-platform validation (Step 9).
+**Objective**: Build a robust, comprehensive test suite that validates the full RenderOp execution
+pipeline with DirectToAnsi backend. This provides confidence for future implementation changes and
+InputDevice implementation (Step 8) and cross-platform validation (Step 9).
 
-**Rationale**: While manual testing has shown the DirectToAnsi backend works correctly in practice, a validation test suite is essential to:
+**Rationale**: While manual testing has shown the DirectToAnsi backend works correctly in practice,
+a validation test suite is essential to:
+
 - Detect regressions if implementation changes in the future
 - Validate that code changes don't break existing functionality
-- Provide confidence for InputDevice implementation (Step 8) and cross-platform implementations (Windows/macOS in Step 9)
+- Provide confidence for InputDevice implementation (Step 8) and cross-platform implementations
+  (Windows/macOS in Step 9)
 - Ensure state tracking (cursor, colors, optimizations) works correctly throughout the pipeline
 - Serve as executable documentation of expected behavior
 
@@ -1989,11 +2001,13 @@ development.
 
 **Location**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests/`
 
-**Current State**: Partially complete - Text operations (Part E) fully implemented with 10 passing tests. Parts A-D tests already exist and are passing.
+**Current State**: Partially complete - Text operations (Part E) fully implemented with 10 passing
+tests. Parts A-D tests already exist and are passing.
 
 **Test Coverage Required**:
 
 #### Part A: Color Operations (30-45 min) ✅ **COMPLETED**
+
 - [x] `SetFgColor` RenderOp generates correct SGR foreground sequence
 - [x] `SetBgColor` RenderOp generates correct SGR background sequence
 - [x] Color state tracking in `RenderOpsLocalData::fg_color` and `bg_color`
@@ -2002,6 +2016,7 @@ development.
 - [x] ANSI format validation (colon-separated: `38:5:N` for extended, `38:2:R:G:B` for RGB)
 
 #### Part B: Cursor Movement Operations (45-60 min) ✅ **COMPLETED**
+
 - [x] `MoveCursorPositionAbs` updates cursor state correctly
 - [x] Cursor position accessible via `Pos` with `row_index` and `col_index` fields
 - [x] `MoveCursorPositionRelTo` (origin + relative offset) works correctly
@@ -2009,12 +2024,14 @@ development.
 - [x] Multiple cursor moves in sequence
 
 #### Part C: Screen Operations (20-30 min) ✅ **COMPLETED**
+
 - [x] `ClearScreen` generates CSI 2J
 - [x] `ShowCursor` generates DECTCEM set `\x1b[?25h`
 - [x] `HideCursor` generates DECTCEM reset `\x1b[?25l`
 - [x] Mode state tracking (if applicable)
 
 #### Part D: State Optimization (30-45 min) ✅ **COMPLETED**
+
 - [x] **Redundant cursor moves**: Moving to same position produces no output
 - [x] **Redundant color changes**: Setting same color twice skips second output
 - [x] **State persistence**: Colors persist across unrelated operations
@@ -2022,6 +2039,7 @@ development.
 - [x] **Complex workflows**: Multiple operations (move → color → text → move) maintain correct state
 
 #### Part E: Text Painting Operations (30-45 min) ✅ **COMPLETED**
+
 - [x] Plain text rendering without style attributes
 - [x] Text with foreground color generates correct SGR sequences
 - [x] Text with background color generates correct SGR sequences
@@ -2035,9 +2053,11 @@ development.
 
 **Status**: ✅ All 10 text operation tests implemented and passing (October 27, 2025)
 
-**Location**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests/text_operations.rs`
+**Location**:
+`tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests/text_operations.rs`
 
 **Test Coverage**:
+
 - `test_paint_text_plain_without_style` - Plain text without styling
 - `test_paint_text_with_foreground_color` - Foreground color application
 - `test_paint_text_with_background_color` - Background color application
@@ -2050,6 +2070,7 @@ development.
 - `test_paint_text_style_persistence` - Style state management
 
 **Implementation Notes**:
+
 - Tests validate `RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes` execution
 - Each test verifies ANSI escape sequence generation via `PixelCharRenderer`
 - Cursor position tracking validated (display width advancement)
@@ -2057,13 +2078,16 @@ development.
 - All assertions include descriptive error messages
 
 **Key Implementation Details**:
+
 - Use `RenderOpsLocalData::default()` to create test state
 - Create `Pos` using: `pos(row(N) + col(N))` syntax
-- RenderOp variants: `SetFgColor`, `SetBgColor`, `MoveCursorPositionAbs`, `ClearScreen`, `ShowCursor`, `HideCursor`, `ResetColor`
+- RenderOp variants: `SetFgColor`, `SetBgColor`, `MoveCursorPositionAbs`, `ClearScreen`,
+  `ShowCursor`, `HideCursor`, `ResetColor`
 - Verify ANSI output and state changes together
 - Test realistic sequences (not just isolated operations)
 
 **Deliverables**: ✅ **COMPLETED**
+
 - [x] All tests compile without errors
 - [x] Tests validate both ANSI output AND state changes
 - [x] Test coverage for all major RenderOpCommon variants
@@ -2073,6 +2097,7 @@ development.
 ### 7.2: Final QA & Validation (30-45 min) ✅ **COMPLETED**
 
 **QA Checklist**: ✅ **ALL PASSED**
+
 - [x] `cargo check` passes with zero errors
 - [x] `cargo test --lib` - all tests pass (should be 2200+)
 - [x] `cargo clippy --all-targets` - zero warnings
@@ -2081,6 +2106,7 @@ development.
 - [x] Edge cases are covered (empty inputs, boundary conditions, max values)
 
 **Test Summary**: ✅ **COMPLETE**
+
 - [x] Integration test count and coverage documented
 - [x] All RenderOp variants covered
 - [x] All color modes (basic, extended, RGB) tested
@@ -2095,22 +2121,28 @@ development.
 
 **Status**: ⏳ PENDING - Final step to remove crossterm dependency
 
-**Objective**: Replace `crossterm::event::EventStream` with native tokio-based stdin reading and ANSI sequence parsing to generate input events (keyboard, mouse, resize, focus, and paste).
+**Objective**: Replace `crossterm::event::EventStream` with native tokio-based stdin reading and
+ANSI sequence parsing to generate input events (keyboard, mouse, resize, focus, and paste).
 
-**Rationale**: This is the final piece needed to completely remove crossterm. Currently, while output uses DirectToAnsi, input still relies on `crossterm::event::read()`. This step achieves perfect architectural symmetry:
+**Rationale**: This is the final piece needed to completely remove crossterm. Currently, while
+output uses DirectToAnsi, input still relies on `crossterm::event::read()`. This step achieves
+perfect architectural symmetry:
 
 ```
 Output: Application → RenderOps → DirectToAnsi output/ → ANSI bytes → stdout
 Input:  stdin → ANSI bytes → DirectToAnsi input/ → InputEvent → Application
 ```
 
-Both input and output are now in the same backend module with parallel directory structures, speaking the same ANSI protocol with no external terminal library dependencies.
+Both input and output are now in the same backend module with parallel directory structures,
+speaking the same ANSI protocol with no external terminal library dependencies.
 
 ### 8.0: Reorganize Existing Output Files (30 min)
 
-**Objective**: Create clean `input/` and `output/` subdirectories within DirectToAnsi backend for parallel architecture
+**Objective**: Create clean `input/` and `output/` subdirectories within DirectToAnsi backend for
+parallel architecture
 
-**Rationale**: The DirectToAnsi backend currently has output files at the root level. Reorganizing into `input/` and `output/` subdirectories creates symmetry and makes the backend structure clearer.
+**Rationale**: The DirectToAnsi backend currently has output files at the root level. Reorganizing
+into `input/` and `output/` subdirectories creates symmetry and makes the backend structure clearer.
 
 **Reorganization Tasks**:
 
@@ -2128,6 +2160,7 @@ Both input and output are now in the same backend module with parallel directory
 **Deliverable**: DirectToAnsi backend cleanly organized with `input/` and `output/` subdirectories
 
 **Directory Structure After Reorganization**:
+
 ```
 tui/src/tui/terminal_lib_backends/direct_to_ansi/
 ├── mod.rs                          ← Backend coordinator
@@ -2156,7 +2189,8 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 - `InputDevice` struct at `tui/src/core/terminal_io/input_device.rs:11`
 - Currently wraps `crossterm::event::EventStream` (line 19)
-- `InputDeviceExt` trait at `tui/src/tui/terminal_lib_backends/input_device_ext.rs:60` converts `crossterm::event::Event` to `InputEvent`
+- `InputDeviceExt` trait at `tui/src/tui/terminal_lib_backends/input_device_ext.rs:60` converts
+  `crossterm::event::Event` to `InputEvent`
 - DirectToAnsi output files (will be in `output/` subdirectory after Phase 8.0)
 - Parser utilities in `tui/src/core/ansi/parser/` can be reused for input parameter parsing
 
@@ -2166,22 +2200,26 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 - [ ] Design InputDevice API that remains backend-agnostic (no DirectToAnsi-specific types leak)
 - [ ] Plan async event reading architecture:
   - **Decision**: Use `tokio::io::stdin()` for async stdin (NOT mio)
-  - **Rationale**: tokio is already a project dependency with full features enabled; simpler than adding mio
+  - **Rationale**: tokio is already a project dependency with full features enabled; simpler than
+    adding mio
   - **Benefit**: Integrates seamlessly with existing tokio-based event loop
 - [ ] Design ANSI sequence → InputEvent mapping:
   - **Keyboard events**: CSI sequences for arrow keys (A/B/C/D), function keys (`<n>~`), etc.
-  - **Mouse events**: SGR (Select Graphic Rendition) mouse protocol sequences (`CSI < Cb ; Cx ; Cy M/m`)
+  - **Mouse events**: SGR (Select Graphic Rendition) mouse protocol sequences
+    (`CSI < Cb ; Cx ; Cy M/m`)
   - **Special keys**: Page Up/Down (5~/6~), Home/End (H/F), Delete, Backspace, etc.
   - **Modifier combinations**: Extract from CSI parameters (Ctrl=5, Alt=3, Shift=2, etc.)
 - [ ] Plan buffer management for partial sequences (incomplete ANSI sequences mid-stream)
-- [ ] Identify edge cases: malformed sequences, rapid input, utf-8 text between sequences, stdin closure
+- [ ] Identify edge cases: malformed sequences, rapid input, utf-8 text between sequences, stdin
+      closure
 - [ ] Document how `input/input_sequences.rs` and `input/input_device_impl.rs` interact
 
-**Deliverable**: Architecture document (inline code comments) explaining input/output symmetry and module responsibilities
+**Deliverable**: Architecture document (inline code comments) explaining input/output symmetry and
+module responsibilities
 
 ### 8.2: Implement DirectToAnsi InputDevice (4-6 hours)
 
-**Objective**: Create DirectToAnsi-specific InputDevice using mio + ANSI sequence parsing
+**Objective**: Create DirectToAnsi-specific InputDevice using tokio + ANSI sequence parsing
 
 **Implementation Steps**:
 
@@ -2189,6 +2227,7 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 - [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/` directory
 - [ ] Create `input/mod.rs` with module exports:
+
   ```rust
   mod input_device_impl;
   mod input_sequences;
@@ -2202,6 +2241,7 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
       parse_bracketed_paste,
   };
   ```
+
 - [ ] Create `input/input_device_impl.rs` with `DirectToAnsiInputDevice` struct:
   ```rust
   pub struct DirectToAnsiInputDevice {
@@ -2215,6 +2255,7 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 - [ ] Create `input/tests.rs` for unit tests (filled in section 8.3)
 
 **Implementation Notes**:
+
 - Use `tokio::io::stdin()` for async stdin reading (tokio is already a project dependency)
 - Don't add mio as a separate dependency; tokio provides async I/O abstraction
 - Stdin is already available in tokio with `io::stdin().read()` for async reads
@@ -2223,7 +2264,8 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 **File**: `input/input_sequences.rs`
 
-- [ ] Implement keyboard event parsing function `parse_keyboard_sequence(bytes: &[u8]) -> Option<KeyPress>`
+- [ ] Implement keyboard event parsing function
+      `parse_keyboard_sequence(bytes: &[u8]) -> Option<KeyPress>`
   - [ ] Arrow keys: CSI `A`/`B`/`C`/`D` → `SpecialKey::Up/Down/Right/Left`
   - [ ] Function keys: CSI `<n>~` → `FunctionKey::F1-F12` (map numbers 11-34)
     - CSI `11~` → F1, CSI `12~` → F2, ..., CSI `34~` → F12
@@ -2246,8 +2288,10 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
       - 7 = Ctrl+Alt+Shift
     - **Examples**: CSI `1;5A` (1=base, 5=Ctrl) → Ctrl+Up, CSI `1;2A` → Shift+Up
 
-- [ ] Implement mouse event parsing function `parse_mouse_sequence(bytes: &[u8]) -> Option<MouseInput>`
-  - [ ] Click events: `CSI < Cb ; Cx ; Cy M` (press) / `m` (release) → `MouseInputKind::MouseDown/MouseUp`
+- [ ] Implement mouse event parsing function
+      `parse_mouse_sequence(bytes: &[u8]) -> Option<MouseInput>`
+  - [ ] Click events: `CSI < Cb ; Cx ; Cy M` (press) / `m` (release) →
+        `MouseInputKind::MouseDown/MouseUp`
   - [ ] Button detection: Extract button number from Cb parameter (0=left, 1=middle, 2=right)
   - [ ] Drag events: Button held (Cb & 32) → `MouseInputKind::MouseDrag`
   - [ ] Motion events: Button not held → `MouseInputKind::MouseMove`
@@ -2257,7 +2301,8 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
     - [ ] Button 6 → `MouseInputKind::ScrollLeft` (horizontal)
     - [ ] Button 7 → `MouseInputKind::ScrollRight` (horizontal)
   - [ ] Position parsing: Extract Cx (column) and Cy (row) and convert to `Pos`
-  - [ ] Modifier handling: Check if modifiers are present in SGR sequence and extract to `ModifierKeysMask`
+  - [ ] Modifier handling: Check if modifiers are present in SGR sequence and extract to
+        `ModifierKeysMask`
 
 - [ ] **Implement resize event parsing** `parse_resize_event(bytes: &[u8]) -> Option<Size>`
   - [ ] Format: CSI `8 ; rows ; cols t` → extract rows and columns → `Size`
@@ -2302,11 +2347,15 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 **Files to Update**:
 
-- Update: `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs` - Add `pub mod input;` and re-exports
-- Update: `tui/src/tui/terminal_lib_backends/input_device_ext.rs` - Implement trait for DirectToAnsiInputDevice
-- Update: `tui/src/core/terminal_io/input_device.rs` - Replace `PinnedInputStream<CrosstermEventResult>` with `DirectToAnsiInputDevice`
+- Update: `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs` - Add `pub mod input;` and
+  re-exports
+- Update: `tui/src/tui/terminal_lib_backends/input_device_ext.rs` - Implement trait for
+  DirectToAnsiInputDevice
+- Update: `tui/src/core/terminal_io/input_device.rs` - Replace
+  `PinnedInputStream<CrosstermEventResult>` with `DirectToAnsiInputDevice`
 
-**Deliverable**: Input module with complete InputDevice implementation that reads and parses all ANSI sequences (keyboard, mouse, resize, focus, paste) to produce InputEvent
+**Deliverable**: Input module with complete InputDevice implementation that reads and parses all
+ANSI sequences (keyboard, mouse, resize, focus, paste) to produce InputEvent
 
 ### 8.3: Testing & Validation (2-3 hours)
 
@@ -2319,6 +2368,7 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 Test ANSI sequence → InputEvent conversion:
 
 **Keyboard Events**:
+
 - [ ] Arrow keys generate correct directional events
   - [ ] CSI `A` → SpecialKey::Up
   - [ ] CSI `B` → SpecialKey::Down
@@ -2347,6 +2397,7 @@ Test ANSI sequence → InputEvent conversion:
   - [ ] 0x08 → SpecialKey::Backspace
 
 **Mouse Events**:
+
 - [ ] Mouse clicks (left, middle, right)
   - [ ] `CSI <0;10;5M` → MouseInputKind::MouseDown(Button::Left) at Pos(col=10, row=5)
   - [ ] `CSI <1;10;5M` → MouseInputKind::MouseDown(Button::Middle, ...)
@@ -2364,6 +2415,7 @@ Test ANSI sequence → InputEvent conversion:
   - [ ] Button 7 → MouseInputKind::ScrollRight
 
 **Terminal Events**:
+
 - [ ] Resize events
   - [ ] CSI `8;rows;cols t` → InputEvent::Resize(Size) with correct dimensions
 - [ ] Focus events
@@ -2373,6 +2425,7 @@ Test ANSI sequence → InputEvent conversion:
   - [ ] ESC `[200~text ESC [201~` → InputEvent::BracketedPaste(String)
 
 Test edge cases:
+
 - [ ] Partial sequences (incomplete input buffered until complete)
   - [ ] `ESC[` without terminator → buffer and wait
   - [ ] `ESC[1;` without final byte → buffer and wait
@@ -2390,7 +2443,8 @@ Test edge cases:
 **File**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests/input_handling.rs`
 
 - [ ] Test actual terminal interaction:
-  - [ ] Real keyboard input → InputEvent (scripted with tmux/screen or manual)
+  - [ ] Real keyboard input → InputEvent (scripted with `tmux`/`screen` or `expect` like in
+        @script_lib.fish with flamegraph profiling with benchmark code).
   - [ ] Real mouse input → InputEvent
   - [ ] Test in multiple terminal emulators (xterm, GNOME Terminal, Alacritty, Windows Terminal)
 - [ ] Verify behavior matches Crossterm implementation:
@@ -2415,6 +2469,7 @@ Test edge cases:
 **Migration Steps**:
 
 - [ ] **Replace InputDevice struct** in `tui/src/core/terminal_io/input_device.rs`:
+
   ```rust
   // Old code:
   pub struct InputDevice {
@@ -2427,7 +2482,8 @@ Test edge cases:
   }
   ```
 
-- [ ] **Update InputDeviceExt implementation** in `tui/src/tui/terminal_lib_backends/input_device_ext.rs`:
+- [ ] **Update InputDeviceExt implementation** in
+      `tui/src/tui/terminal_lib_backends/input_device_ext.rs`:
   - Implement `InputDeviceExt` trait for `InputDevice` (already exists)
   - Call `DirectToAnsiInputDevice::read_event()` instead of `crossterm::event` methods
 
@@ -2440,6 +2496,13 @@ Test edge cases:
 - [ ] **Verify no remaining crossterm usages in input code**:
   - Run: `grep -r "crossterm::event" tui/src/` (should return 0 results for input code)
   - Verify output code can still use crossterm if needed (PaintRenderOpImplCrossterm)
+
+**Linux, Windows, macOS **:
+
+- [ ] For Linux we will use tokio and the DirectToAnsiInputDevice as designed.
+- [ ] For macOS and Windows, we will still keep using crossterm for input handling, just as we use
+      crossterm for output as well (for now until Step 9 is done). After Step 9 is complete, then we
+      can remove crossterm input handling on those platforms as well.
 
 **Remove CrossTerm Dependency** (if no other uses remain):
 
@@ -2466,15 +2529,17 @@ Test edge cases:
 **Documentation**:
 
 - [ ] Update `InputDevice` struct docs (top-level abstraction, no backend details leaked)
-- [ ] Update `DirectToAnsiInputDevice` docs to explain mio architecture
+- [ ] Update `DirectToAnsiInputDevice` docs to explain tokio architecture
 - [ ] Document ANSI sequence handling in `input_sequences.rs` with protocol references
 - [ ] Add architecture notes in `direct_to_ansi/mod.rs` explaining input/output symmetry
+
   ```
   Output: RenderOp → render_op_impl → ansi generator → stdout
-  Input:  stdin → mio poll → ansi input parser → InputEvent
+  Input:  stdin → tokio async I/O → ansi input parser → InputEvent
 
   Both paths use ANSI/VT-100 protocol, neither depends on external libraries.
   ```
+
 - [ ] Update user-facing docs if any reference input handling
 
 **Verification** (Functional Testing):
@@ -2486,7 +2551,8 @@ Test edge cases:
 - [ ] All examples run without input-related issues
 - [ ] Terminal works in various terminal emulators (xterm, alacritty, GNOME Terminal, tmux, screen)
 
-**Sign-Off**: InputDevice fully migrated to DirectToAnsi with parallel input/output architecture, zero crossterm dependencies remaining
+**Sign-Off**: InputDevice fully migrated to DirectToAnsi with parallel input/output architecture,
+zero crossterm dependencies remaining
 
 ---
 
@@ -2499,10 +2565,10 @@ macOS/Windows systems)
 compatibility and performance parity with Crossterm backend.
 
 **Rationale for Deferral**: User is currently running on Linux. Step 9 is deferred to be performed
-later when macOS and Windows systems are available. Step 8 (InputDevice implementation) completes the
-crossterm removal, and Step 7 (comprehensive test suite) builds confidence before cross-platform
-validation. This maintains focus on finalizing core architecture (Step 8) with test coverage (Step 7)
-before cross-platform work, keeping efforts organized.
+later when macOS and Windows systems are available. Step 8 (InputDevice implementation) completes
+the crossterm removal, and Step 7 (comprehensive test suite) builds confidence before cross-platform
+validation. This maintains focus on finalizing core architecture (Step 8) with test coverage
+(Step 7) before cross-platform work, keeping efforts organized.
 
 ### macOS Testing (1.5 hours)
 
@@ -2642,7 +2708,7 @@ Step 8: Implement InputDevice for DirectToAnsi Backend (8-12 hours) [PENDING]
   ☐ 8.1: Architecture Design (1-2 hours)
     ☐ Review VT-100 parser for input sequence support
     ☐ Design InputDevice API (backend-agnostic)
-    ☐ Plan async event reading with mio
+    ☐ Plan async event reading with tokio
     ☐ Document ANSI sequence → InputEvent mapping
     ☐ Plan integration points
     ☐ Identify edge cases

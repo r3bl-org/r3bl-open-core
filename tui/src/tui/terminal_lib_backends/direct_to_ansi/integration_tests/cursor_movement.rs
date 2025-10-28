@@ -6,7 +6,8 @@
 //! 1. [`MoveCursorPositionAbs`] generates correct CUP (Cursor Position) ANSI sequences
 //! 2. [`MoveCursorPositionRelTo`] correctly adds origin + relative offset
 //! 3. Cursor state tracking in [`RenderOpsLocalData`] after movement
-//! 4. [`MoveCursorToColumn`], [`MoveCursorToNextLine`], [`MoveCursorToPreviousLine`] operations
+//! 4. [`MoveCursorToColumn`], [`MoveCursorToNextLine`], [`MoveCursorToPreviousLine`]
+//!    operations
 //! 5. Multiple cursor moves in sequence preserve correct final position
 //! 6. Cursor position state matches ANSI output
 //!
@@ -18,8 +19,8 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 use super::test_helpers::*;
-use crate::{tui_color, col, row, pos, height, ColIndex, RowIndex, AnsiSequenceGenerator};
-use crate::render_op::RenderOpCommon;
+use crate::{AnsiSequenceGenerator, ColIndex, RowIndex, col, height, pos,
+            render_op::RenderOpCommon, row, tui_color};
 
 #[test]
 fn test_move_cursor_absolute_origin() {
@@ -31,7 +32,10 @@ fn test_move_cursor_absolute_origin() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI H with 1-based indexing: row 0 (0-based) = 1 (1-based), col 0 = 1
-    assert_eq!(output, AnsiSequenceGenerator::cursor_position(row(0), col(0)));
+    assert_eq!(
+        output,
+        AnsiSequenceGenerator::cursor_position(row(0), col(0))
+    );
     assert_eq!(state.cursor_pos, pos(row(0) + col(0)));
 }
 
@@ -45,7 +49,10 @@ fn test_move_cursor_absolute_5_10() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // CSI H with 1-based: row 5 (0-based) = 6 (1-based), col 10 = 11
-    assert_eq!(output, AnsiSequenceGenerator::cursor_position(row(5), col(10)));
+    assert_eq!(
+        output,
+        AnsiSequenceGenerator::cursor_position(row(5), col(10))
+    );
     assert_eq!(state.cursor_pos, pos(row(5) + col(10)));
 }
 
@@ -59,7 +66,10 @@ fn test_move_cursor_absolute_20_40() {
     let output = execute_and_capture(op, &mut state, &output_device, &stdout_mock);
 
     // row 20 = 21, col 40 = 41 in 1-based
-    assert_eq!(output, AnsiSequenceGenerator::cursor_position(row(20), col(40)));
+    assert_eq!(
+        output,
+        AnsiSequenceGenerator::cursor_position(row(20), col(40))
+    );
     assert_eq!(state.cursor_pos, pos(row(20) + col(40)));
 }
 
@@ -76,7 +86,10 @@ fn test_move_cursor_relative_to() {
 
     // Final position: row(5+2) + col(3+7) = row(7) + col(10)
     // ANSI: row 7 = 8, col 10 = 11
-    assert_eq!(output, AnsiSequenceGenerator::cursor_position(row(7), col(10)));
+    assert_eq!(
+        output,
+        AnsiSequenceGenerator::cursor_position(row(7), col(10))
+    );
     assert_eq!(state.cursor_pos, pos(row(7) + col(10)));
 }
 
@@ -97,7 +110,10 @@ fn test_move_cursor_to_column() {
     let output = execute_and_capture(op, &mut state, &output_device2, &stdout_mock2);
 
     // CSI 21G (1-based column index)
-    assert_eq!(output, AnsiSequenceGenerator::cursor_to_column(ColIndex::new(20)));
+    assert_eq!(
+        output,
+        AnsiSequenceGenerator::cursor_to_column(ColIndex::new(20))
+    );
     // Row should remain unchanged
     assert_eq!(state.cursor_pos.row_index, initial_row);
     // Column should be updated
@@ -141,7 +157,10 @@ fn test_move_cursor_to_previous_line() {
     let output = execute_and_capture(op, &mut state, &output_device2, &stdout_mock2);
 
     // CSI 3F (move up 3 lines and to column 0)
-    assert_eq!(output, AnsiSequenceGenerator::cursor_previous_line(height(3)));
+    assert_eq!(
+        output,
+        AnsiSequenceGenerator::cursor_previous_line(height(3))
+    );
     assert_eq!(state.cursor_pos.row_index, RowIndex::new(7));
     assert_eq!(state.cursor_pos.col_index, ColIndex::new(0));
 }
@@ -158,7 +177,8 @@ fn test_multiple_cursor_moves_sequence() {
         RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0))),
     ];
 
-    let output = execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
+    let output =
+        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain all three ANSI sequences
     assert!(output.contains(&AnsiSequenceGenerator::cursor_position(row(5), col(5))));
@@ -183,7 +203,8 @@ fn test_cursor_state_persists_across_operations() {
     // Do a color operation (shouldn't affect cursor position)
     let (output_device2, stdout_mock2) = create_mock_output();
     let color_op = RenderOpCommon::SetFgColor(tui_color!(red));
-    let _unused = execute_and_capture(color_op, &mut state, &output_device2, &stdout_mock2);
+    let _unused =
+        execute_and_capture(color_op, &mut state, &output_device2, &stdout_mock2);
 
     // Cursor position should be unchanged
     assert_eq!(state.cursor_pos, saved_pos);
@@ -205,6 +226,9 @@ fn test_cursor_overwrite_same_position() {
     let output = execute_and_capture(op2, &mut state, &output_device2, &stdout_mock2);
 
     // Both should generate same ANSI sequence
-    assert_eq!(output, AnsiSequenceGenerator::cursor_position(row(8), col(15)));
+    assert_eq!(
+        output,
+        AnsiSequenceGenerator::cursor_position(row(8), col(15))
+    );
     assert_eq!(state.cursor_pos, pos_val);
 }

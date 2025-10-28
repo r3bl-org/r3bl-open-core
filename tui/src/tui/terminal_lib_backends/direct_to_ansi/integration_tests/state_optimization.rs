@@ -15,8 +15,7 @@
 //! ANSI escape sequences sent to the terminal.
 
 use super::test_helpers::*;
-use crate::{col, row, pos, tui_color, AnsiSequenceGenerator};
-use crate::render_op::RenderOpCommon;
+use crate::{AnsiSequenceGenerator, col, pos, render_op::RenderOpCommon, row, tui_color};
 
 #[test]
 fn test_duplicate_cursor_position_updates_state() {
@@ -32,7 +31,10 @@ fn test_duplicate_cursor_position_updates_state() {
 
     // State should be updated to target position
     assert_eq!(state.cursor_pos, target_pos);
-    assert_eq!(output1, AnsiSequenceGenerator::cursor_position(row(5), col(10)));
+    assert_eq!(
+        output1,
+        AnsiSequenceGenerator::cursor_position(row(5), col(10))
+    );
 
     // Clear buffer for second operation
     let (output_device2, stdout_mock2) = create_mock_output();
@@ -118,7 +120,8 @@ fn test_mixed_operations_with_state_tracking() {
         RenderOpCommon::SetFgColor(tui_color!(blue)),
     ];
 
-    let output = execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
+    let output =
+        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Verify output contains the main sequences
     assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(red))));
@@ -128,7 +131,10 @@ fn test_mixed_operations_with_state_tracking() {
     // Verify color optimization works (duplicate red doesn't appear twice)
     let expected_red = AnsiSequenceGenerator::fg_color(tui_color!(red));
     let red_count = output.matches(&expected_red).count();
-    assert_eq!(red_count, 1, "Red color should only appear once (optimization)");
+    assert_eq!(
+        red_count, 1,
+        "Red color should only appear once (optimization)"
+    );
 
     // Final state should be correct regardless of optimization
     assert_eq!(state.fg_color, Some(tui_color!(blue)));
@@ -217,7 +223,8 @@ fn test_reset_color_clears_optimization_state() {
 
     // Reset color
     let reset = RenderOpCommon::ResetColor;
-    let output_reset = execute_and_capture(reset, &mut state, &output_device2, &stdout_mock2);
+    let output_reset =
+        execute_and_capture(reset, &mut state, &output_device2, &stdout_mock2);
 
     assert_eq!(output_reset, AnsiSequenceGenerator::reset_color());
     assert!(state.fg_color.is_none());
@@ -228,10 +235,14 @@ fn test_reset_color_clears_optimization_state() {
 
     // Set red again - should generate output (cache was cleared by reset)
     let op2 = RenderOpCommon::SetFgColor(tui_color!(red));
-    let output_red2 = execute_and_capture(op2, &mut state, &output_device3, &stdout_mock3);
+    let output_red2 =
+        execute_and_capture(op2, &mut state, &output_device3, &stdout_mock3);
 
     // Should generate output because reset cleared the cache
-    assert_eq!(output_red2, AnsiSequenceGenerator::fg_color(tui_color!(red)));
+    assert_eq!(
+        output_red2,
+        AnsiSequenceGenerator::fg_color(tui_color!(red))
+    );
 }
 
 #[test]
@@ -245,19 +256,18 @@ fn test_complex_optimization_workflow() {
         RenderOpCommon::SetFgColor(tui_color!(red)),
         RenderOpCommon::SetBgColor(tui_color!(blue)),
         RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0))),
-
         // Redundant operations (will be skipped)
         RenderOpCommon::SetFgColor(tui_color!(red)),
         RenderOpCommon::SetBgColor(tui_color!(blue)),
         RenderOpCommon::MoveCursorPositionAbs(pos(row(0) + col(0))),
-
         // New operations
         RenderOpCommon::SetFgColor(tui_color!(green)),
         RenderOpCommon::MoveCursorPositionAbs(pos(row(1) + col(5))),
         RenderOpCommon::ClearCurrentLine,
     ];
 
-    let output = execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
+    let output =
+        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Verify final state
     assert_eq!(state.fg_color, Some(tui_color!(green)));

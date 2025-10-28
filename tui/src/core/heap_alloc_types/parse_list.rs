@@ -26,8 +26,8 @@ pub type ParseListStorage<T> = Vec<T>;
 ///
 /// - Complex markdown documents → 300+ recursive parser frames
 /// - Each frame allocates parser state on the stack
-/// - If list types use [`SmallVec`] with 16-item stack-allocated inline capacity,
-///   each adds 648 bytes per frame
+/// - If list types use [`SmallVec`] with 16-item stack-allocated inline capacity, each
+///   adds 648 bytes per frame
 /// - **Total stack usage**: 648 bytes × 300 frames = **194,400 bytes (~189 KB)**
 /// - **Result**: Stack overflow! (Default stack is typically 8 MB, but recursive parsers
 ///   combined with large inline allocations quickly exhaust it)
@@ -60,10 +60,10 @@ pub type ParseListStorage<T> = Vec<T>;
 ///
 /// ## See Also
 ///
-/// - [`RenderList`]: Performance-optimized with [`SmallVec`] (16-item
-///   stack-allocated inline capacity) for rendering
-/// - [`List`]: General-purpose with [`SmallVec`] (8-item stack-allocated inline
-///   capacity) for balanced performance/safety
+/// - [`RenderList`]: Performance-optimized with [`SmallVec`] (16-item stack-allocated
+///   inline capacity) for rendering
+/// - [`List`]: General-purpose with [`SmallVec`] (8-item stack-allocated inline capacity)
+///   for balanced performance/safety
 ///
 /// [`RenderList`]: crate::RenderList
 /// [`List`]: crate::List

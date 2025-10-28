@@ -1,10 +1,6 @@
 # Claude Code Instructions for r3bl-open-core
 
-When doing work, when you have questions about important choices to be made, or ambiguities in the
-task, please ask the user for clarification immediately.
-
-Take your time to make changes. Slow and steady wins the race. It is better to be slow and steady
-and careful and considerate than to be fast and careless.
+Ask for clarification immediately on important choices or ambiguities. Take your time with changes—slow, steady, and careful work beats fast and careless.
 
 ## Rust Code Guidelines
 
@@ -16,10 +12,7 @@ Use these MCP tools to navigate and modify Rust code effectively:
 
 ### How to write documentation comments
 
-Documentation architecture should follow the "inverted pyramid" principle: high-level concepts at
-the module, trait, struct, enum level, and implementation details at the method level. When a trait
-has only one primary method, most documentation belongs at the trait level to avoid readers having
-to hunt through method docs for the big picture.
+Use the "inverted pyramid" principle: high-level concepts at module/trait/struct level, implementation details at method level. Avoid making readers hunt through method docs for the big picture.
 
 **Example Placement Guidelines:**
 
@@ -56,6 +49,29 @@ pub use constants::*;
 pub use types::*;
 pub use helpers::*;
 ```
+
+#### Controlling Rustfmt Behavior in Module Files
+
+When organizing imports and exports in `mod.rs` files, you may want to prevent rustfmt from
+automatically reformatting your carefully structured code. Use this directive at the top of the
+file (after copyright and module-level documentation):
+
+```rust
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+```
+
+**Why use this?**
+- Preserve manual alignment of public exports for readability
+- Control grouping of related items (e.g., keeping test fixtures together)
+- Prevent reformatting that obscures logical organization
+- Maintain consistent structure across similar modules
+
+**When to use:**
+- Large `mod.rs` files with many exports
+- When you have deliberately structured code alignment for documentation clarity
+- Files where the organization conveys semantic meaning
 
 #### Benefits
 
@@ -97,29 +113,6 @@ pub use helpers::*;
 - Avoiding potential name collisions
 - Working with small to medium-sized modules with clear responsibilities
 
-**Example from `csi_codes`:**
-
-```rust
-// tui/src/core/pty_mux/vt_100_ansi_parser/protocols/csi_codes/mod.rs
-
-// Private modules - can refactor without breaking changes
-mod constants;
-mod margin;
-mod params;
-mod private_mode;
-mod sequence;
-
-// Public re-exports - stable API
-pub use constants::*;
-pub use margin::*;
-pub use params::*;
-pub use private_mode::*;
-pub use sequence::*;
-
-// Usage: clean imports
-use csi_codes::CsiSequence;
-use csi_codes::CSI_START;
-```
 
 #### When NOT to Use This Pattern
 
@@ -148,25 +141,25 @@ use csi_codes::CSI_START;
 
 #### Special Cases
 
-**Test utilities** can be public but conditional:
+**Conditionally public modules** (for documentation and testing):
 
 ```rust
+// mod.rs - Conditional visibility for documentation and testing
+
+// Module is public only when building documentation or tests.
+// This allows rustdoc links to work while keeping it private in release builds.
 #[cfg(any(test, doc))]
-pub mod test_helpers;  // Public for testing/docs, not in release builds
+pub mod vt_100_ansi_parser;
+#[cfg(not(any(test, doc)))]
+mod vt_100_ansi_parser;
+
+// Re-export items for the flat public API
+pub use vt_100_ansi_parser::*;
 ```
 
-**Hybrid approach** (used by standard library):
-
+Reference in rustdoc using `mod@` links:
 ```rust
-pub mod collections {
-    // Internal structure hidden
-    mod vec;
-    mod hashmap;
-
-    // Items re-exported
-    pub use vec::Vec;
-    pub use hashmap::HashMap;
-}
+/// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
 ```
 
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
@@ -209,13 +202,7 @@ use r3bl_tui::{
 | **Range membership**    | `RangeBoundsExt`      | `range.check_index_is_within(index)`         | VT-100 scroll regions, text selections                      |
 | **Range conversion**    | `RangeConvertExt`     | `inclusive_range.to_exclusive()`             | Converting VT-100 ranges for Rust iteration                 |
 
-**For comprehensive details:**
-
-- Quick start guide and examples: [`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs)
-- Decision tree for choosing the right trait
-- Trait hierarchy and type system architecture
-- Common mistakes to avoid
-- All method documentation
+See [`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs) for detailed documentation, decision trees, and examples.
 
 # Testing interactive terminal applications
 
@@ -240,12 +227,7 @@ Performance analysis:
 
 - `cargo bench` - Benchmarks (mark tests with `#[bench]`)
 - `cargo flamegraph` - Profiling (requires flamegraph crate)
-- For TUI apps: `./run.fish run-examples-flamegraph-fold --benchmark` - Automated flamegraph
-  profiling
-  - 8-second continuous workload with 999Hz sampling
-  - Scripted input (pangrams, cursor movements) for consistent results
-  - Generates `tui/flamegraph-benchmark.perf-folded` file for analysis
-  - Use `--benchmark` flag for reproducible performance comparisons
+- `./run.fish run-examples-flamegraph-fold --benchmark` - TUI app profiling (8s workload, 999Hz sampling, generates `tui/flamegraph-benchmark.perf-folded`)
 
 ### Build Optimizations
 

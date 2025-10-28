@@ -3,7 +3,7 @@
 //! Line manipulation operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements line-level operations that correspond to ANSI line
-//! sequences handled by the [`line_ops`] module. These include:
+//! sequences. These include:
 //!
 //! - **IL** (Insert Lines) - [`shift_lines_down`]
 //! - **DL** (Delete Lines) - [`shift_lines_up`]

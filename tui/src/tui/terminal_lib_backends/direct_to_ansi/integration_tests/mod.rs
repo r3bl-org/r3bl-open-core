@@ -26,15 +26,18 @@
 //! # Key Types Under Test
 //!
 //! **[`RenderOpOutput`] Variants:**
-//! - [`RenderOpOutput::Common`]: Wraps [`RenderOpCommon`] for cursor/color/screen operations
+//! - [`RenderOpOutput::Common`]: Wraps [`RenderOpCommon`] for cursor/color/screen
+//!   operations
 //! - [`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`]: Paints styled text
 //!
 //! **Supporting Types:**
-//! - [`RenderOpsLocalData`]: Tracks cursor position, `fg_color`, `bg_color` for optimization
+//! - [`RenderOpsLocalData`]: Tracks cursor position, `fg_color`, `bg_color` for
+//!   optimization
 //! - [`Pos`]: Position with `row_index` and `col_index` fields (0-based indices)
 //! - [`RenderOpCommon`]: Enum variants for common operations (`SetFgColor`, `SetBgColor`,
 //!   `MoveCursorPositionAbs`, `ClearScreen`, `ShowCursor`, `HideCursor`, etc.)
-//! - [`TuiStyle`]: Styling information for text (foreground color, background color, attributes)
+//! - [`TuiStyle`]: Styling information for text (foreground color, background color,
+//!   attributes)
 //! - [`StdoutMock`]: Captures ANSI output for verification
 //! - [`OutputDeviceExt::new_mock()`]: Creates (`OutputDevice`, `StdoutMock`) pair
 //!
@@ -43,9 +46,12 @@
 //! Tests are organized by operation type and variant:
 //!
 //! **[`RenderOpOutput::Common`] Tests:**
-//! - `color_operations`: Tests for [`SetFgColor`], [`SetBgColor`], [`ResetColor`] operations
-//! - `cursor_movement`: Tests for [`MoveCursorPositionAbs`], [`MoveCursorPositionRelTo`] operations
-//! - `screen_operations`: Tests for [`ClearScreen`], [`ShowCursor`], [`HideCursor`] operations
+//! - `color_operations`: Tests for [`SetFgColor`], [`SetBgColor`], [`ResetColor`]
+//!   operations
+//! - `cursor_movement`: Tests for [`MoveCursorPositionAbs`], [`MoveCursorPositionRelTo`]
+//!   operations
+//! - `screen_operations`: Tests for [`ClearScreen`], [`ShowCursor`], [`HideCursor`]
+//!   operations
 //! - `state_optimization`: Tests for redundant operation skipping and state persistence
 //!
 //! **[`RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes`] Tests:**
@@ -121,7 +127,8 @@ mod test_helpers {
         RenderOpCommon::SetBgColor(color)
     }
 
-    /// Executes a [`RenderOpCommon`] via the paint pipeline and returns the captured ANSI output
+    /// Executes a [`RenderOpCommon`] via the paint pipeline and returns the captured ANSI
+    /// output
     pub fn execute_and_capture(
         op: RenderOpCommon,
         state: &mut RenderOpsLocalData,
@@ -178,7 +185,8 @@ mod test_helpers {
         stdout_mock.get_copy_of_buffer_as_string()
     }
 
-    /// Executes a [`CompositorNoClipTruncPaintTextWithAttributes`] [`RenderOpOutput`] and returns captured ANSI output
+    /// Executes a [`CompositorNoClipTruncPaintTextWithAttributes`] [`RenderOpOutput`] and
+    /// returns captured ANSI output
     ///
     /// [`CompositorNoClipTruncPaintTextWithAttributes`]: crate::RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes
     pub fn execute_text_paint_and_capture(

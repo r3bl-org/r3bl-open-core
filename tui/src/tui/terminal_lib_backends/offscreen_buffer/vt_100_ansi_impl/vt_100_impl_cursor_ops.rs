@@ -12,7 +12,6 @@
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
-//!
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

@@ -4,10 +4,10 @@
 //!
 //! ## Key Subsystems
 //!
-//! - **Parser**: Convert incoming PTY output (ANSI sequences) → terminal state
-//!   (via [`AnsiToOfsBufPerformer`])
-//! - **Generator**: Convert app styling → outgoing ANSI sequences
-//!   (via [`SgrCode`], [`CliTextInline`])
+//! - **Parser**: Convert incoming PTY output (ANSI sequences) → terminal state (via
+//!   [`AnsiToOfsBufPerformer`])
+//! - **Generator**: Convert app styling → outgoing ANSI sequences (via [`SgrCode`],
+//!   [`CliTextInline`])
 //! - **Color**: Color type definitions and conversions (RGB ↔ ANSI256)
 //! - **Terminal Output**: I/O operations for writing to terminal
 //!
@@ -57,7 +57,7 @@
 //! ## Key Types and Public API
 //!
 //! **Color System:**
-//! - [`TuiColor`] - Terminal color with RGB and ANSI256 support
+//! - `TuiColor` - Terminal color with RGB and ANSI256 support
 //! - [`RgbValue`], [`AnsiValue`] - Color value types
 //!
 //! **Text Styling:**
@@ -71,21 +71,33 @@
 //! **Terminal I/O:**
 //! - Color detection and support queries
 
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
+// Private modules.
 mod color;
 mod constants;
 mod detect_color_support;
 mod generator;
-mod parser;
 mod terminal_output;
 
-// Re-export key types for ergonomics
+// Module is public only when building documentation or tests.
+// This allows rustdoc links to work while keeping it private in release builds.
+#[cfg(any(test, doc))]
+pub mod vt_100_ansi_parser;
+// This module is private in non-test, non-doc builds.
+#[cfg(not(any(test, doc)))]
+mod vt_100_ansi_parser;
+
+// Re-export flat public API.
 pub use color::*;
 pub use constants::*;
 pub use detect_color_support::*;
 pub use generator::*;
-pub use parser::*;
 pub use terminal_output::*;
 
-// Re-export test fixtures for testing purposes only
+// Re-export test fixtures for testing purposes only.
 #[cfg(test)]
-pub use parser::vt_100_ansi_conformance_tests;
+pub use vt_100_ansi_parser::vt_100_ansi_conformance_tests;
+pub use vt_100_ansi_parser::*;

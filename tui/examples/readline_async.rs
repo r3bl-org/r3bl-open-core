@@ -583,7 +583,8 @@ pub mod file_walker {
         while let Some(mut current_node) = stack.pop() {
             // Check if we've reached the limit (if specified)
             if let Some(limit) = max_items
-                && items_written >= limit {
+                && items_written >= limit
+            {
                 break;
             }
 
@@ -614,7 +615,8 @@ pub mod file_walker {
             for sub_folder_name in vec_folder_name {
                 // Check limit again before adding to stack
                 if let Some(limit) = max_items
-                    && items_written >= limit {
+                    && items_written >= limit
+                {
                     break;
                 }
                 stack.push(create_child_and_add_to(&mut current_node, sub_folder_name)?);

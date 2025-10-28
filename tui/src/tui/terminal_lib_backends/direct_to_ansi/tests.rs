@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod cursor_positioning_tests {
-    use crate::{col, height, row, AnsiSequenceGenerator};
+    use crate::{AnsiSequenceGenerator, col, height, row};
 
     #[test]
     fn test_cursor_position_absolute() {
@@ -71,7 +71,7 @@ mod screen_clearing_tests {
 
 #[cfg(test)]
 mod color_tests {
-    use crate::{tui_color, AnsiSequenceGenerator};
+    use crate::{AnsiSequenceGenerator, tui_color};
 
     #[test]
     fn test_reset_color() {

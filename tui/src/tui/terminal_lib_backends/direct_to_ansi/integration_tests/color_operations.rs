@@ -1,9 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Integration tests for color operations ([`SetFgColor`], [`SetBgColor`], [`ResetColor`])
+//! Integration tests for color operations ([`SetFgColor`], [`SetBgColor`],
+//! [`ResetColor`])
 //!
 //! These tests validate:
-//! 1. [`SetFgColor`] [`RenderOpCommon`] generates correct SGR foreground ANSI sequences via the full paint pipeline
+//! 1. [`SetFgColor`] [`RenderOpCommon`] generates correct SGR foreground ANSI sequences
+//!    via the full paint pipeline
 //! 2. [`SetBgColor`] [`RenderOpCommon`] generates correct SGR background ANSI sequences
 //! 3. Color state tracking in [`RenderOpsLocalData`] (`fg_color`, `bg_color` fields)
 //! 4. [`ResetColor`] clears both foreground and background color state
@@ -17,8 +19,7 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 use super::test_helpers::*;
-use crate::{tui_color, AnsiSequenceGenerator};
-use crate::render_op::RenderOpCommon;
+use crate::{AnsiSequenceGenerator, render_op::RenderOpCommon, tui_color};
 
 #[test]
 fn test_set_fg_color_basic_red() {
@@ -164,7 +165,8 @@ fn test_reset_color_clears_both_colors() {
 
     // Now reset
     let reset_op = RenderOpCommon::ResetColor;
-    let output = execute_and_capture(reset_op, &mut state, &output_device2, &stdout_mock2);
+    let output =
+        execute_and_capture(reset_op, &mut state, &output_device2, &stdout_mock2);
 
     // Should generate SGR 0 (reset all attributes)
     assert_eq!(output, AnsiSequenceGenerator::reset_color());
@@ -185,7 +187,8 @@ fn test_multiple_color_changes_sequence() {
         set_fg_color_op(tui_color!(green)),
     ];
 
-    let output = execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
+    let output =
+        execute_sequence_and_capture(ops, &mut state, &output_device, &stdout_mock);
 
     // Should contain all three ANSI sequences
     assert!(output.contains(&AnsiSequenceGenerator::fg_color(tui_color!(red))));
@@ -252,7 +255,8 @@ fn test_color_sequence_after_reset() {
     let mut state = create_test_state();
 
     let first_color = set_fg_color_op(tui_color!(red));
-    let _unused = execute_and_capture(first_color, &mut state, &output_device, &stdout_mock);
+    let _unused =
+        execute_and_capture(first_color, &mut state, &output_device, &stdout_mock);
     assert_eq!(state.fg_color, Some(tui_color!(red)));
 
     // Reset
@@ -264,7 +268,8 @@ fn test_color_sequence_after_reset() {
     // Set new color
     let (output_device3, stdout_mock3) = create_mock_output();
     let second_color = set_fg_color_op(tui_color!(blue));
-    let output = execute_and_capture(second_color, &mut state, &output_device3, &stdout_mock3);
+    let output =
+        execute_and_capture(second_color, &mut state, &output_device3, &stdout_mock3);
 
     // Should produce correct ANSI sequence
     assert_eq!(output, AnsiSequenceGenerator::fg_color(tui_color!(blue)));
