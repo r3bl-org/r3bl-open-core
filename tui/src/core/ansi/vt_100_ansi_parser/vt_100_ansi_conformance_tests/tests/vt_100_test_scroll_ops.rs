@@ -14,7 +14,7 @@
 
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{EscSequence, TuiStyle, col,
-            core::ansi::{constants::esc::{IND_INDEX_DOWN, RI_REVERSE_INDEX_UP},
+            core::ansi::{constants::{IND_INDEX_DOWN, RI_REVERSE_INDEX_UP},
                          vt_100_ansi_parser::{CsiSequence, PrivateModeType,
                                               ansi_parser_public_api::AnsiToOfsBufPerformer}},
             offscreen_buffer::test_fixtures_ofs_buf::*,

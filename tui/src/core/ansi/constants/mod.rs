@@ -8,11 +8,11 @@
 //! ## Organization
 //!
 //! Constants are grouped by protocol domain:
-//! - **[`generic`]**: Terminal modes, DEC modes, mouse tracking, alternate screen
-//! - **[`csi`]**: CSI sequences, cursor movement, SGR parameters, color codes
-//! - **[`esc`]**: ESC sequences, character set selection, C0 control characters
-//! - **[`dsr`]**: Device Status Report response constants
-//! - **[`sgr`]**: SGR byte constants for performance-critical paths
+//! - **generic**: Terminal modes, DEC modes, mouse tracking, alternate screen
+//! - **csi**: CSI sequences, cursor movement, SGR parameters, color codes
+//! - **esc**: ESC sequences, character set selection, C0 control characters
+//! - **dsr**: Device Status Report response constants
+//! - **sgr**: SGR byte constants for performance-critical paths
 //!
 //! ## Usage
 //!
@@ -25,16 +25,22 @@
 //! let escape = ESC_START;
 //! ```
 
-// Public submodules for organized access
-pub mod csi;
-pub mod dsr;
-pub mod esc;
-pub mod generic;
-pub mod sgr;
+// Skip rustfmt for rest of file to preserve manual alignment.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
+// Private modules (hide internal structure)
+mod csi;
+mod dsr;
+mod esc;
+mod generic;
+mod input_sequences;
+mod sgr;
 
 // Public re-exports (flat API) for convenience
 pub use csi::*;
 pub use dsr::*;
 pub use esc::*;
 pub use generic::*;
+pub use input_sequences::*;
 pub use sgr::*;

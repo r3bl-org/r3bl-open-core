@@ -6,7 +6,7 @@ use super::super::test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_
 use crate::{
     DsrRequestFromPtyEvent, DsrRequestType, col,
             core::ansi::{
-                constants::dsr::DSR_STATUS_OK_FULL_RESPONSE,
+                constants::DSR_STATUS_OK_FULL_RESPONSE,
                 vt_100_ansi_parser::{CsiSequence,
                                      vt_100_ansi_conformance_tests::test_sequence_builders::dsr_builders::dsr_cursor_position_response},
             },

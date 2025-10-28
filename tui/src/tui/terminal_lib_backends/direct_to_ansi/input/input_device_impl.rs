@@ -7,7 +7,7 @@
 //! for partial ANSI sequences, and delegates to the protocol layer parsers for
 //! sequence interpretation.
 
-use crate::core::ansi::vt_100_terminal_input_parser::types::InputEvent;
+use crate::core::ansi::vt_100_terminal_input_parser::InputEvent;
 
 /// Async input device for DirectToAnsi backend.
 ///

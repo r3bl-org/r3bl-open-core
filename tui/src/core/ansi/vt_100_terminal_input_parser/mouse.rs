@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 //! Mouse input event parsing from ANSI/CSI sequences.
 //!
-//! This module handles conversion of mouse-related ANSI escape sequences into mouse events,
-//! including support for:
+//! This module handles conversion of mouse-related ANSI escape sequences into mouse
+//! events, including support for:
 //!
 //! - **SGR (Selective Graphic Rendition) Protocol**: Modern standard format
 //!   - Format: `CSI < Cb ; Cx ; Cy M/m`
@@ -18,7 +19,7 @@
 //! - **Motion Events**: Movement without buttons
 //! - **Modifier Keys**: Shift, Ctrl, Alt detection
 
-use super::types::{InputEvent, MouseButton, Pos, ScrollDirection, KeyModifiers};
+use super::types::{InputEvent, KeyModifiers, MouseButton, Pos, ScrollDirection};
 
 /// Parse a mouse sequence and return an InputEvent if recognized.
 ///

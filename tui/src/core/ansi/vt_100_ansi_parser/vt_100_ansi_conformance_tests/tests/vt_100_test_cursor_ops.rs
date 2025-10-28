@@ -8,7 +8,7 @@ use crate::{
             offscreen_buffer::test_fixtures_ofs_buf::*,
             row, term_col, term_row};
 use crate::core::ansi::{
-    constants::csi::{CSI_PARAM_SEPARATOR, CSI_START},
+    constants::{CSI_PARAM_SEPARATOR, CSI_START},
     vt_100_ansi_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                          CsiSequence,
                          vt_100_ansi_conformance_tests::test_sequence_builders::csi_builders::{csi_seq_cursor_pos,

@@ -2273,67 +2273,96 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 
 #### 8.2.2 Implement Protocol Layer Parsers (1.5-2 hours)
 
+**Status**: ✅ KEYBOARD PARSING COMPLETE - Mouse/Resize/Focus/Paste pending
+
 **Location**: `tui/src/core/ansi/vt_100_terminal_input_parser/` - These are pure functions with no I/O
 
 **See ARCHITECTURE_STEP_8_INPUT.md for detailed ANSI protocol specifications**
 
-##### Keyboard Parsing (`keyboard.rs`)
+##### Keyboard Parsing (`keyboard.rs`) ✅ COMPLETE
 
-- [ ] Implement `parse_keyboard_sequence(bytes: &[u8]) -> Option<(KeyPress, usize)>`
-      (returns parsed event + bytes consumed, or None if incomplete)
-  - [ ] Arrow keys: CSI `A`/`B`/`C`/`D` → `SpecialKey::Up/Down/Right/Left`
-  - [ ] Function keys: CSI `<n>~` → `FunctionKey::F1-F12` (map numbers 11-34)
-    - CSI `11~` → F1, CSI `12~` → F2, ..., CSI `34~` → F12
-  - [ ] Home/End: CSI `H`/`F` → `SpecialKey::Home/End`
-  - [ ] Page Up/Down: CSI `5~`/`6~` → `SpecialKey::PageUp/PageDown`
-  - [ ] Insert: CSI `2~` → `SpecialKey::Insert`
-  - [ ] Delete/Backspace: CSI `3~` → `SpecialKey::Delete`, 0x08 → `SpecialKey::Backspace`
-  - [ ] Tab: 0x09 → `SpecialKey::Tab`, CSI `Z` → `SpecialKey::BackTab`
-  - [ ] Enter: 0x0D or 0x0A → `SpecialKey::Enter`
-  - [ ] Esc: Lone 0x1B (not followed by `[`) → `SpecialKey::Esc`
-  - [ ] Modifier combinations: Parse CSI parameter for modifier byte
-    - **Formula**: Final byte number = `1 + modifier_mask` where modifier_mask is:
-      - 0 = no modifiers
-      - 1 = Shift
-      - 2 = Alt
-      - 3 = Alt+Shift
-      - 4 = Ctrl
-      - 5 = Ctrl+Shift
-      - 6 = Ctrl+Alt
-      - 7 = Ctrl+Alt+Shift
-    - **Examples**: CSI `1;5A` (1=base, 5=Ctrl) → Ctrl+Up, CSI `1;2A` → Shift+Up
+**Completion Summary**:
+- ✅ Implemented `parse_keyboard_sequence(bytes: &[u8]) -> Option<InputEvent>` with 23 comprehensive unit tests
+- ✅ Created three-tier constant/generator/helper solution:
+  1. **Constants** (`tui/src/core/ansi/constants/input_sequences.rs`): ANSI codes (function keys, modifiers, control bytes)
+  2. **Generator** (`tui/src/core/ansi/generator/input_event_generator.rs`): `InputEvent → Vec<u8>` conversion with 23 tests including round-trip validation
+  3. **Test Helpers** (in keyboard.rs test module): Builders using generators for self-documenting tests
+
+**Implementation Details**:
+- ✅ Arrow keys: CSI `A`/`B`/`C`/`D` → `KeyCode::Up/Down/Right/Left`
+- ✅ Function keys: CSI `<n>~` → `KeyCode::Function(1-12)` with correct ANSI codes (11-15, 17-21, 23-24 - not sequential)
+- ✅ Home/End: CSI `H`/`F` → `KeyCode::Home/End`
+- ✅ Page Up/Down: CSI `5~`/`6~` → `KeyCode::PageUp/PageDown`
+- ✅ Insert: CSI `2~` → `KeyCode::Insert`
+- ✅ Delete: CSI `3~` → `KeyCode::Delete`
+- ✅ Modifier combinations: CSI `1;m final_byte` where `m` is bitwise modifier mask:
+  - 0 = no modifiers, 1 = Shift, 2 = Alt, 3 = Alt+Shift
+  - 4 = Ctrl, 5 = Ctrl+Shift, 6 = Ctrl+Alt, 7 = Ctrl+Alt+Shift
+
+**Test Coverage**:
+- 4 arrow key tests (basic keys)
+- 4 arrow key with modifiers tests (Shift+Up, Alt+Right, Ctrl+Down, Ctrl+Alt+Shift+Left)
+- 6 special key tests (Home, End, Insert, Delete, PageUp, PageDown)
+- 3 function key tests (F1, F6, F12)
+- 2 function key with modifiers tests (Shift+F5, Ctrl+Alt+F10)
+- 4 invalid/incomplete sequence tests
+
+**Test Quality**:
+- ✅ All 2315 library tests pass
+- ✅ All 23 keyboard parsing tests pass
+- ✅ All 23 input event generator tests pass (including round-trip validation)
+- ✅ Conformance tests updated to use flat public API (removed private submodule access)
+- ✅ Constants module follows CLAUDE.md guidelines (private modules with public re-exports)
+
+**Key Files Created/Modified**:
+- Created: `tui/src/core/ansi/constants/input_sequences.rs` (50 constants, 10 tests)
+- Created: `tui/src/core/ansi/generator/input_event_generator.rs` (public generator, 23 tests)
+- Modified: `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs` (added test helpers, refactored tests)
+- Updated: `tui/src/core/ansi/constants/mod.rs` (added input_sequences export)
+- Updated: `tui/src/core/ansi/generator/mod.rs` (added input_event_generator export)
+- Fixed: `tui/src/core/ansi/vt_100_ansi_parser/vt_100_ansi_conformance_tests/tests/*.rs` (3 test files updated to use flat API)
+
+##### Mouse Parsing (`mouse.rs`)
 
 - [ ] Implement mouse event parsing function
-      `parse_mouse_sequence(bytes: &[u8]) -> Option<MouseInput>`
+      `parse_mouse_sequence(bytes: &[u8]) -> Option<InputEvent>`
   - [ ] Click events: `CSI < Cb ; Cx ; Cy M` (press) / `m` (release) →
-        `MouseInputKind::MouseDown/MouseUp`
+        `MouseAction::Press/Release`
   - [ ] Button detection: Extract button number from Cb parameter (0=left, 1=middle, 2=right)
-  - [ ] Drag events: Button held (Cb & 32) → `MouseInputKind::MouseDrag`
-  - [ ] Motion events: Button not held → `MouseInputKind::MouseMove`
+  - [ ] Drag events: Button held (Cb & 32) → `MouseAction::Drag`
+  - [ ] Motion events: Button not held → `MouseAction::Motion`
   - [ ] Scroll events:
-    - [ ] Button 64 → `MouseInputKind::ScrollUp`
-    - [ ] Button 65 → `MouseInputKind::ScrollDown`
-    - [ ] Button 6 → `MouseInputKind::ScrollLeft` (horizontal)
-    - [ ] Button 7 → `MouseInputKind::ScrollRight` (horizontal)
+    - [ ] Button 64 → `MouseAction::Scroll(ScrollDirection::Up)`
+    - [ ] Button 65 → `MouseAction::Scroll(ScrollDirection::Down)`
   - [ ] Position parsing: Extract Cx (column) and Cy (row) and convert to `Pos`
-  - [ ] Modifier handling: Check if modifiers are present in SGR sequence and extract to
-        `ModifierKeysMask`
+  - [ ] Modifier handling: Check if modifiers are present in SGR sequence
 
-- [ ] **Implement resize event parsing** `parse_resize_event(bytes: &[u8]) -> Option<Size>`
-  - [ ] Format: CSI `8 ; rows ; cols t` → extract rows and columns → `Size`
+##### Resize Event Parsing (`terminal_events.rs`)
+
+- [ ] **Implement resize event parsing** `parse_resize_event(bytes: &[u8]) -> Option<InputEvent>`
+  - [ ] Format: CSI `8 ; rows ; cols t` → extract rows and columns → `InputEvent::Resize`
   - [ ] Detect window resize sequences sent by terminal
 
-- [ ] **Implement focus event parsing** `parse_focus_event(bytes: &[u8]) -> Option<FocusEvent>`
-  - [ ] CSI `I` → `FocusEvent::Gained`
-  - [ ] CSI `O` → `FocusEvent::Lost`
+##### Focus Event Parsing (`terminal_events.rs`)
 
-- [ ] **Implement bracketed paste parsing** `parse_bracketed_paste(bytes: &[u8]) -> Option<String>`
+- [ ] **Implement focus event parsing** `parse_focus_event(bytes: &[u8]) -> Option<InputEvent>`
+  - [ ] CSI `I` → `InputEvent::Focus(FocusState::Gained)`
+  - [ ] CSI `O` → `InputEvent::Focus(FocusState::Lost)`
+
+##### Bracketed Paste Parsing (`terminal_events.rs`)
+
+- [ ] **Implement bracketed paste parsing** `parse_bracketed_paste(bytes: &[u8]) -> Option<InputEvent>`
   - [ ] Format: ESC `[200~` text ESC `[201~`
   - [ ] Accumulate pasted text between delimiters
-  - [ ] Return accumulated text as String when terminator found
+  - [ ] Return `InputEvent::Paste(PasteMode::Start/End)` for markers
 
-- [ ] Helper functions for parsing CSI parameters (reuse from `parser/protocols/` if available)
-- [ ] Document SGR protocol byte format in comments
+##### UTF-8 Text Parsing (`utf8.rs`)
+
+- [ ] Helper functions for UTF-8 parsing
+- [ ] Implement `parse_utf8_text(bytes: &[u8]) -> Vec<InputEvent>`
+  - [ ] Handle single-byte ASCII characters
+  - [ ] Handle multi-byte UTF-8 sequences
+  - [ ] Buffer incomplete sequences for later completion
 
 #### 8.2.3 Implement Backend Device (1-1.5 hours)
 

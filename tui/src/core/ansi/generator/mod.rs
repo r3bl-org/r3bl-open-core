@@ -29,6 +29,7 @@ mod ansi_sequence_generator;
 mod cli_text;
 mod dsr_sequence;
 mod esc_sequence;
+mod input_event_generator;
 mod sgr_code;
 
 // Public re-exports (flat API)
@@ -37,4 +38,5 @@ pub use cli_text::cli_text_inline_impl;
 pub use cli_text::*;
 pub use dsr_sequence::*;
 pub use esc_sequence::*;
+pub use input_event_generator::*;
 pub use sgr_code::*;

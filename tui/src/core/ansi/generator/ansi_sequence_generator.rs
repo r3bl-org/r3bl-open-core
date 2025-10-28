@@ -4,16 +4,12 @@
 
 use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiColor,
             TuiStyle,
-            core::{ansi::{constants::{csi::{CSI_PARAM_SEPARATOR, CSI_START,
-                                            ED_ERASE_ALL, EL_ERASE_ALL,
-                                            EL_ERASE_FROM_START, EL_ERASE_TO_END,
-                                            SGR_BOLD, SGR_DIM, SGR_ITALIC,
-                                            SGR_SET_GRAPHICS, SGR_STRIKETHROUGH,
-                                            SGR_UNDERLINE},
-                                      generic::{APPLICATION_MOUSE_TRACKING,
-                                                BRACKETED_PASTE_MODE,
-                                                SGR_MOUSE_MODE,
-                                                URXVT_MOUSE_EXTENSION}},
+            core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING, BRACKETED_PASTE_MODE,
+                                      CSI_PARAM_SEPARATOR, CSI_START, ED_ERASE_ALL,
+                                      EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END,
+                                      SGR_BOLD, SGR_DIM, SGR_ITALIC, SGR_SET_GRAPHICS,
+                                      SGR_STRIKETHROUGH, SGR_UNDERLINE, SGR_MOUSE_MODE,
+                                      URXVT_MOUSE_EXTENSION},
                           vt_100_ansi_parser::{CsiSequence, PrivateModeType}},
                    coordinates::{TermCol, TermRow}}};
 

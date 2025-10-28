@@ -1,4 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 //! Terminal event parsing from ANSI sequences.
 //!
 //! This module handles terminal-level events like window resize, focus changes,

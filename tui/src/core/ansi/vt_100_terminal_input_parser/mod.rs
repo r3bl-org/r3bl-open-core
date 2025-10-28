@@ -1,4 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 //! VT-100 Terminal Input Parsing Layer
 //!
 //! This module provides pure, reusable ANSI sequence parsing for terminal user input.
@@ -114,10 +115,11 @@ mod keyboard;
 mod mouse;
 mod terminal_events;
 mod utf8;
-pub mod types;
+mod types;
 
 // Re-export flat public API.
-pub use keyboard::parse_keyboard_sequence;
-pub use mouse::parse_mouse_sequence;
-pub use terminal_events::parse_terminal_event;
-pub use utf8::parse_utf8_text;
+pub use keyboard::*;
+pub use mouse::*;
+pub use terminal_events::*;
+pub use utf8::*;
+pub use types::*;
