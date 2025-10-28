@@ -3,69 +3,50 @@
 //! Input event generator - converts high-level input events to ANSI sequences.
 //!
 //! This module provides the inverse operation to the input parsers in
-//! [`vt_100_terminal_input_parser`](crate::core::ansi::vt_100_terminal_input_parser).
+//! [`vt_100_terminal_input_parser`].
 //!
 //! ## Purpose
 //!
-//! The primary use cases are:
-//! 1. **Round-trip testing**: Parse ANSI → InputEvent → Generate ANSI → Parse again
-//! 2. **Test helpers**: Build keyboard sequences without hardcoding magic bytes
-//! 3. **Symmetric architecture**: Input and output paths have corresponding generators
+//! **This module is for testing only.** It is not used in production code.
 //!
-//! ## Example
+//! The generator enables:
+//! 1. **Round-trip validation**: Parse ANSI → InputEvent → Generate ANSI → Verify match
+//! 2. **Test helpers**: Build test sequences without hardcoding raw bytes
+//! 3. **Parser verification**: Confirm parsers handle all modifier combinations correctly
 //!
-//! ```ignore
-//! use r3bl_tui::{InputEvent, KeyCode, KeyModifiers, generate_keyboard_sequence};
-//!
-//! // Generate ANSI for Up arrow with no modifiers
-//! let event = InputEvent::Keyboard {
-//!     code: KeyCode::Up,
-//!     modifiers: KeyModifiers::default(),
-//! };
-//! let bytes = generate_keyboard_sequence(&event)?;
-//! assert_eq!(bytes, b"\x1b[A");
-//! ```
+//! [`vt_100_terminal_input_parser`](crate::core::ansi::vt_100_terminal_input_parser)
 
-use crate::core::ansi::{
-    constants::{
-        ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-        ARROW_DOWN_FINAL, ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
-        FUNCTION_F1_CODE, FUNCTION_F10_CODE, FUNCTION_F11_CODE, FUNCTION_F12_CODE,
-        FUNCTION_F2_CODE, FUNCTION_F3_CODE, FUNCTION_F4_CODE, FUNCTION_F5_CODE,
-        FUNCTION_F6_CODE, FUNCTION_F7_CODE, FUNCTION_F8_CODE, FUNCTION_F9_CODE,
-        MODIFIER_ALT, MODIFIER_CTRL, MODIFIER_SHIFT, SPECIAL_DELETE_CODE,
-        SPECIAL_END_FINAL, SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
-        SPECIAL_PAGE_UP_CODE,
-    },
-    vt_100_terminal_input_parser::{InputEvent, KeyCode, KeyModifiers},
-};
+use crate::core::ansi::{constants::{ANSI_CSI_BRACKET, ANSI_ESC,
+                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
+                                    ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
+                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
+                                    FUNCTION_F1_CODE, FUNCTION_F2_CODE,
+                                    FUNCTION_F3_CODE, FUNCTION_F4_CODE,
+                                    FUNCTION_F5_CODE, FUNCTION_F6_CODE,
+                                    FUNCTION_F7_CODE, FUNCTION_F8_CODE,
+                                    FUNCTION_F9_CODE, FUNCTION_F10_CODE,
+                                    FUNCTION_F11_CODE, FUNCTION_F12_CODE, MODIFIER_ALT,
+                                    MODIFIER_CTRL, MODIFIER_SHIFT, SPECIAL_DELETE_CODE,
+                                    SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
+                                    SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
+                                    SPECIAL_PAGE_UP_CODE},
+                        vt_100_terminal_input_parser::{InputEvent, KeyCode,
+                                                       KeyModifiers}};
 
 /// Generate ANSI bytes for a keyboard input event.
 ///
-/// Converts a keyboard input event back into the ANSI CSI sequence format.
+/// Converts a keyboard input event back into the ANSI CSI sequence format that terminals
+/// send when keys are pressed.
 ///
 /// ## Returns
 ///
 /// - `Some(Vec<u8>)` for recognized key combinations
 /// - `None` for unrecognized or unsupported key codes
 ///
-/// ## Examples
+/// ## Usage
 ///
-/// ```ignore
-/// // Arrow key with no modifiers
-/// let event = InputEvent::Keyboard {
-///     code: KeyCode::Up,
-///     modifiers: KeyModifiers::default(),
-/// };
-/// assert_eq!(generate_keyboard_sequence(&event)?, b"\x1b[A");
-///
-/// // Arrow key with modifier
-/// let event = InputEvent::Keyboard {
-///     code: KeyCode::Right,
-///     modifiers: KeyModifiers { shift: true, ctrl: false, alt: false },
-/// };
-/// assert_eq!(generate_keyboard_sequence(&event)?, b"\x1b[1;1C");
-/// ```
+/// This function is used internally by tests to generate sequences for round-trip
+/// validation. See the test suite for examples of all supported key combinations.
 pub fn generate_keyboard_sequence(event: &InputEvent) -> Option<Vec<u8>> {
     match event {
         InputEvent::Keyboard { code, modifiers } => {
@@ -169,7 +150,11 @@ fn generate_key_sequence(code: KeyCode, modifiers: KeyModifiers) -> Option<Vec<u
         // Tab, Enter, Escape, Backspace are typically raw control characters,
         // not CSI sequences. Not implemented in generator as they're handled
         // differently in the input parsing layer.
-        KeyCode::Tab | KeyCode::BackTab | KeyCode::Enter | KeyCode::Escape | KeyCode::Backspace => None,
+        KeyCode::Tab
+        | KeyCode::BackTab
+        | KeyCode::Enter
+        | KeyCode::Escape
+        | KeyCode::Backspace => None,
 
         // Char events are also handled differently (UTF-8 text)
         KeyCode::Char(_) => None,
@@ -195,23 +180,27 @@ fn generate_special_key_sequence(
     Some(bytes.clone())
 }
 
-/// Encode modifier flags into a single byte following ANSI convention.
+/// Encode modifier flags into a single byte following VT-100 ANSI convention.
 ///
-/// Modifier encoding (bitwise flags):
+/// **VT-100 Modifier Encoding**: `parameter = 1 + bitfield`
+///
+/// Where bitfield is:
 /// - bit 0 (value 1): Shift
 /// - bit 1 (value 2): Alt
 /// - bit 2 (value 4): Ctrl
 ///
-/// ## Examples
+/// ## Parameter Values
 ///
-/// - `0` → no modifiers
-/// - `1` → Shift
-/// - `2` → Alt
-/// - `3` → Alt+Shift
-/// - `4` → Ctrl
-/// - `5` → Ctrl+Shift
-/// - `6` → Ctrl+Alt
-/// - `7` → Ctrl+Alt+Shift
+/// - `1` → no modifiers (1 + 0)
+/// - `2` → Shift (1 + 1)
+/// - `3` → Alt (1 + 2)
+/// - `4` → Alt+Shift (1 + 3)
+/// - `5` → Ctrl (1 + 4)
+/// - `6` → Ctrl+Shift (1 + 5)
+/// - `7` → Ctrl+Alt (1 + 6)
+/// - `8` → Ctrl+Alt+Shift (1 + 7)
+///
+/// **Confirmed by terminal observation**: `ESC[1;5A` = Ctrl+Up (parameter 5 = 1+4)
 fn encode_modifiers(modifiers: KeyModifiers) -> u8 {
     let mut mask: u8 = 0;
     if modifiers.shift {
@@ -223,8 +212,9 @@ fn encode_modifiers(modifiers: KeyModifiers) -> u8 {
     if modifiers.ctrl {
         mask |= MODIFIER_CTRL;
     }
-    // ASCII digit for the mask (0-7 as '0'-'7')
-    b'0' + mask
+    // VT-100 formula: parameter = 1 + bitfield
+    // Convert to ASCII digit ('1'-'8' for modifiers 0-7)
+    b'1' + mask
 }
 
 #[cfg(test)]
@@ -286,7 +276,8 @@ mod tests {
             },
         };
         let bytes = generate_keyboard_sequence(&event).unwrap();
-        assert_eq!(bytes, b"\x1b[1;1A");
+        // Shift modifier: parameter = 1 + 1 = 2
+        assert_eq!(bytes, b"\x1b[1;2A");
     }
 
     #[test]
@@ -300,7 +291,8 @@ mod tests {
             },
         };
         let bytes = generate_keyboard_sequence(&event).unwrap();
-        assert_eq!(bytes, b"\x1b[1;2C");
+        // Alt modifier: parameter = 1 + 2 = 3
+        assert_eq!(bytes, b"\x1b[1;3C");
     }
 
     #[test]
@@ -314,7 +306,8 @@ mod tests {
             },
         };
         let bytes = generate_keyboard_sequence(&event).unwrap();
-        assert_eq!(bytes, b"\x1b[1;4B");
+        // Ctrl modifier: parameter = 1 + 4 = 5
+        assert_eq!(bytes, b"\x1b[1;5B");
     }
 
     #[test]
@@ -328,7 +321,8 @@ mod tests {
             },
         };
         let bytes = generate_keyboard_sequence(&event).unwrap();
-        assert_eq!(bytes, b"\x1b[1;7D");
+        // Shift+Alt+Ctrl modifiers: parameter = 1 + 7 = 8
+        assert_eq!(bytes, b"\x1b[1;8D");
     }
 
     // ==================== Special Keys ====================
@@ -438,7 +432,8 @@ mod tests {
             },
         };
         let bytes = generate_keyboard_sequence(&event).unwrap();
-        assert_eq!(bytes, b"\x1b[15;1~");
+        // Shift modifier: parameter = 1 + 1 = 2
+        assert_eq!(bytes, b"\x1b[15;2~");
     }
 
     #[test]
@@ -452,7 +447,8 @@ mod tests {
             },
         };
         let bytes = generate_keyboard_sequence(&event).unwrap();
-        assert_eq!(bytes, b"\x1b[21;6~");
+        // Ctrl+Alt modifiers: parameter = 1 + 6 = 7
+        assert_eq!(bytes, b"\x1b[21;7~");
     }
 
     // ==================== Unsupported Keys ====================

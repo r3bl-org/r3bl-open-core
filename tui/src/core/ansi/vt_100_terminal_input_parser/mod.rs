@@ -105,6 +105,36 @@
 //!     }
 //! }
 //! ```
+//!
+//! # Establishing Ground Truth with Integration Tests
+//!
+//! The `observe_real_terminal_input_events.rs` integration test is a critical tool for
+//! validating parser accuracy against real terminal emulators.
+//!
+//! Run it with:
+//! ```bash
+//! cargo test observe_terminal -- --ignored --nocapture
+//! ```
+//!
+//! This test captures raw bytes from actual terminal interactions and helps establish
+//! ground truth for:
+//! - **Coordinate systems**: Confirms 1-based (col, row) with (1, 1) at top-left
+//! - **SGR mouse protocol**: Button codes, scroll wheel interpretation, press/release
+//! - **OS platform quirks**: Natural scrolling inversion on GNOME/Ubuntu/macOS
+//! - **Terminal-specific behaviors**: Different emulators may have subtle variations
+//!
+//! Key findings incorporated into this parser:
+//! - VT-100 mouse coordinates are **1-based** (not 0-based)
+//! - Scroll wheel codes are **inverted on systems with natural scrolling enabled**:
+//!   - Check with: `gsettings get org.gnome.desktop.peripherals.mouse natural-scroll`
+//! - SGR protocol uses codes: 64=Wheel Down, 65=Wheel Up (XTerm standard)
+//!
+//! # One based mouse input events
+//!
+//! **Confirmed by `observe_real_terminal_input_events.rs` test**: VT-100 mouse
+//! coordinates are 1-based, where (1, 1) is the top-left corner. Uses [`TermRow`] and
+//! [`TermCol`] for type safety and explicit conversion to/from 0-based buffer
+//! coordinates.
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
@@ -123,3 +153,8 @@ pub use mouse::*;
 pub use terminal_events::*;
 pub use utf8::*;
 pub use types::*;
+use crate::{TermCol, TermRow};
+
+// Integration tests for terminal input parsing.
+#[cfg(test)]
+mod integration_tests;

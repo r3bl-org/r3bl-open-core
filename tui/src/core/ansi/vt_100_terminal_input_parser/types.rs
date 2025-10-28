@@ -5,11 +5,41 @@
 //! These types are protocol-agnostic and represent the high-level events
 //! that result from parsing ANSI sequences and UTF-8 text.
 
-/// Represents a position (column, row) on the terminal.
+use crate::{TermCol, TermRow};
+use std::num::NonZeroU16;
+
+/// Represents a position (column, row) on the terminal using [1-based coordinates].
+///
+/// [1-based coordinates]: mod@super#one-based-mouse-input-events
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pos {
-    pub col: u16,
-    pub row: u16,
+    pub col: TermCol,
+    pub row: TermRow,
+}
+
+impl Pos {
+    /// Construct a terminal position from raw 1-based coordinate values.
+    ///
+    /// This is the primary constructor for ANSI sequence parsing where coordinates
+    /// are received as raw `u16` values that are known to be 1-based and non-zero.
+    ///
+    /// This is similar to [`parse_cursor_position`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if either coordinate is zero (invalid VT-100 coordinate).
+    ///
+    /// [`parse_cursor_position`]: crate::core::ansi::vt_100_ansi_parser::parse_cursor_position
+    #[must_use]
+    pub fn from_one_based(col: u16, row: u16) -> Self {
+        let col_nz = NonZeroU16::new(col).expect("Column must be non-zero (1-based)");
+        let row_nz = NonZeroU16::new(row).expect("Row must be non-zero (1-based)");
+
+        Self {
+            col: TermCol::from_raw_non_zero_value(col_nz),
+            row: TermRow::from_raw_non_zero_value(row_nz),
+        }
+    }
 }
 
 /// Keyboard modifiers for input events.
@@ -31,9 +61,7 @@ impl KeyModifiers {
 }
 
 impl Default for KeyModifiers {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 /// Mouse buttons.
@@ -131,10 +159,7 @@ pub enum InputEvent {
         modifiers: KeyModifiers,
     },
     /// Terminal resize event with new dimensions.
-    Resize {
-        rows: u16,
-        cols: u16,
-    },
+    Resize { rows: u16, cols: u16 },
     /// Terminal focus event (gained or lost).
     Focus(FocusState),
     /// Paste mode notification (start or end).

@@ -29,6 +29,77 @@
 //!                    └──────────┘
 //! ```
 //!
+//! ## Terminal Input Modes: Raw vs Cooked
+//!
+//! To understand why this module exists, you need to know how terminals handle input.
+//!
+//! ### Cooked Mode (Default)
+//!
+//! This is the **default terminal mode** when you open a shell:
+//!
+//! ```text
+//! You type:        "hello^H^H"  (^H = backspace key)
+//!                      ↓
+//! OS processes:    character buffering, line editing, special key handling
+//!                      ↓
+//! Program gets:    "hel" (only after Enter, with backspace processed)
+//! ```
+//!
+//! The OS handles input processing: backspace deletes, Ctrl+C terminates the program,
+//! Enter sends the line. The program only receives complete lines.
+//!
+//! ### Raw Mode (Interactive TUI)
+//!
+//! Interactive applications (vim, less, this TUI) need **character-by-character input**:
+//!
+//! ```text
+//! You press:       [individual keystroke]
+//!                      ↓
+//! OS processing:   [NONE - raw bytes sent immediately]
+//!                      ↓
+//! Program gets:    raw keystroke immediately
+//!                  (including escape sequences for arrow keys, Ctrl+C, etc.)
+//! ```
+//!
+//! **Why raw mode?** The program needs to:
+//! - Capture every keystroke immediately (no line buffering)
+//! - Distinguish between Ctrl+C (user interrupt) vs. Ctrl+C keypress the user wants
+//! - Detect special keys (arrows, function keys) sent as **escape sequences**
+//! - Control the cursor, colors, and screen layout
+//!
+//! ### Escape Sequences in Raw Mode
+//!
+//! When a user presses a special key in raw mode, the terminal sends an **escape sequence**.
+//! For example:
+//!
+//! ```text
+//! User presses:    Up arrow
+//! Terminal sends:  ESC [ A    (3 bytes: 0x1B 0x5B 0x41)
+//! Displayed as:    ^[[A       (when using cat -v to visualize)
+//! ```
+//!
+//! Use `cat -v` to see raw escape sequences:
+//!
+//! ```text
+//! $ cat -v          # cat with visualization of control characters
+//! # [user types: "hello" then Up arrow then Left arrow]
+//! hello^[[A^[[D
+//! # ^[ is the Escape character (ESC, 0x1B)
+//! # [A is "cursor up"
+//! # [D is "cursor left"
+//! ```
+//!
+//! **Common escape sequences:**
+//! - `^[[A` = Up arrow
+//! - `^[[B` = Down arrow
+//! - `^[[C` = Right arrow
+//! - `^[[D` = Left arrow
+//! - `^[[3~` = Delete key
+//! - `^[OP` = F1 key
+//!
+//! This module's parser ([`vt_100_ansi_parser`](mod@crate::core::ansi::vt_100_ansi_parser))
+//! converts these escape sequence bytes into structured events the application can handle.
+//!
 //! ## Usage Examples
 //!
 //! ### Styling Text for Output

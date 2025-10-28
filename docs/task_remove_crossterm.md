@@ -2185,9 +2185,12 @@ tui/src/tui/terminal_lib_backends/direct_to_ansi/
 
 **Status**: ✅ COMPLETE
 
-**Objective**: Design two-layer input architecture mirroring output path (protocol layer + backend layer)
+**Objective**: Design two-layer input architecture mirroring output path (protocol layer + backend
+layer)
 
-**Approved Architecture** (see [`task_remove_crossterm_step_8_details.md`](task_remove_crossterm_step_8_details.md) for detailed specifications):
+**Approved Architecture** (see
+[`task_remove_crossterm_step_8_details.md`](task_remove_crossterm_step_8_details.md) for detailed
+specifications):
 
 ```
 Layer 1: Protocol Parsing (core/ansi/ - reusable, pure functions)
@@ -2207,13 +2210,16 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 ```
 
 **Key Design Decisions**:
+
 - ✅ **Two-layer separation**: Protocol parsing (pure) separate from I/O (async)
 - ✅ **Platform strategy**: Linux uses DirectToAnsi, macOS/Windows use crossterm (deprecated)
 - ✅ **Async I/O**: Use `tokio::io::stdin()` (already available, better than mio)
-- ✅ **ANSI protocols supported**: Keyboard (CSI + SS3), Mouse (SGR + X10 + RXVT), Focus, Paste, UTF-8
+- ✅ **ANSI protocols supported**: Keyboard (CSI + SS3), Mouse (SGR + X10 + RXVT), Focus, Paste,
+  UTF-8
 - ✅ **Naming**: `vt_100_pty_output_parser` (existing) + `vt_100_terminal_input_parser` (new)
 
 **Deliverable**: `ARCHITECTURE_STEP_8_INPUT.md` with:
+
 - Complete ANSI protocol reference (all sequences from crossterm analysis)
 - Module structure and responsibilities
 - Data flow diagrams
@@ -2273,33 +2279,45 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 
 #### 8.2.2 Implement Protocol Layer Parsers (1.5-2 hours)
 
-**Status**: ✅ KEYBOARD PARSING COMPLETE - Mouse/Resize/Focus/Paste pending
+**Status**: ✅ KEYBOARD & MOUSE PARSING COMPLETE - Resize/Focus/Paste/UTF-8 pending
 
-**Location**: `tui/src/core/ansi/vt_100_terminal_input_parser/` - These are pure functions with no I/O
+**Location**: `tui/src/core/ansi/vt_100_terminal_input_parser/` - These are pure functions with no
+I/O
 
 **See ARCHITECTURE_STEP_8_INPUT.md for detailed ANSI protocol specifications**
 
 ##### Keyboard Parsing (`keyboard.rs`) ✅ COMPLETE
 
 **Completion Summary**:
-- ✅ Implemented `parse_keyboard_sequence(bytes: &[u8]) -> Option<InputEvent>` with 23 comprehensive unit tests
+
+- ✅ Implemented `parse_keyboard_sequence(bytes: &[u8]) -> Option<InputEvent>` with 23 comprehensive
+  unit tests
 - ✅ Created three-tier constant/generator/helper solution:
-  1. **Constants** (`tui/src/core/ansi/constants/input_sequences.rs`): ANSI codes (function keys, modifiers, control bytes)
-  2. **Generator** (`tui/src/core/ansi/generator/input_event_generator.rs`): `InputEvent → Vec<u8>` conversion with 23 tests including round-trip validation
-  3. **Test Helpers** (in keyboard.rs test module): Builders using generators for self-documenting tests
+  1. **Constants** (`tui/src/core/ansi/constants/input_sequences.rs`): ANSI codes (function keys,
+     modifiers, control bytes)
+  2. **Generator** (`tui/src/core/ansi/generator/input_event_generator.rs`): `InputEvent → Vec<u8>`
+     conversion with 23 tests including round-trip validation
+  3. **Test Helpers** (in keyboard.rs test module): Builders using generators for self-documenting
+     tests
 
 **Implementation Details**:
+
 - ✅ Arrow keys: CSI `A`/`B`/`C`/`D` → `KeyCode::Up/Down/Right/Left`
-- ✅ Function keys: CSI `<n>~` → `KeyCode::Function(1-12)` with correct ANSI codes (11-15, 17-21, 23-24 - not sequential)
+- ✅ Function keys: CSI `<n>~` → `KeyCode::Function(1-12)` with correct ANSI codes (11-15, 17-21,
+  23-24 - not sequential)
 - ✅ Home/End: CSI `H`/`F` → `KeyCode::Home/End`
 - ✅ Page Up/Down: CSI `5~`/`6~` → `KeyCode::PageUp/PageDown`
 - ✅ Insert: CSI `2~` → `KeyCode::Insert`
 - ✅ Delete: CSI `3~` → `KeyCode::Delete`
-- ✅ Modifier combinations: CSI `1;m final_byte` where `m` is bitwise modifier mask:
-  - 0 = no modifiers, 1 = Shift, 2 = Alt, 3 = Alt+Shift
-  - 4 = Ctrl, 5 = Ctrl+Shift, 6 = Ctrl+Alt, 7 = Ctrl+Alt+Shift
+- ✅ Modifier combinations: CSI `1;m final_byte` where `m = 1 + bitfield`:
+  - Parameter 1 = no modifiers (1+0)
+  - Parameter 2 = Shift (1+1), Parameter 3 = Alt (1+2), Parameter 4 = Alt+Shift (1+3)
+  - Parameter 5 = Ctrl (1+4), Parameter 6 = Ctrl+Shift (1+5)
+  - Parameter 7 = Ctrl+Alt (1+6), Parameter 8 = Ctrl+Alt+Shift (1+7)
+  - **Confirmed**: `ESC[1;5A` = Ctrl+Up (parameter 5 = 1+4, not raw bitfield 4)
 
 **Test Coverage**:
+
 - 4 arrow key tests (basic keys)
 - 4 arrow key with modifiers tests (Shift+Up, Alt+Right, Ctrl+Down, Ctrl+Alt+Shift+Left)
 - 6 special key tests (Home, End, Insert, Delete, PageUp, PageDown)
@@ -2308,34 +2326,90 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 - 4 invalid/incomplete sequence tests
 
 **Test Quality**:
-- ✅ All 2315 library tests pass
+
+- ✅ All 2347 library tests pass (updated after mouse parser completion)
 - ✅ All 23 keyboard parsing tests pass
-- ✅ All 23 input event generator tests pass (including round-trip validation)
+- ✅ All 23 input event generator tests pass (including round-trip validation with corrected
+  encoding)
 - ✅ Conformance tests updated to use flat public API (removed private submodule access)
 - ✅ Constants module follows CLAUDE.md guidelines (private modules with public re-exports)
 
 **Key Files Created/Modified**:
+
 - Created: `tui/src/core/ansi/constants/input_sequences.rs` (50 constants, 10 tests)
 - Created: `tui/src/core/ansi/generator/input_event_generator.rs` (public generator, 23 tests)
-- Modified: `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs` (added test helpers, refactored tests)
+- Modified: `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs` (added test helpers,
+  refactored tests)
 - Updated: `tui/src/core/ansi/constants/mod.rs` (added input_sequences export)
 - Updated: `tui/src/core/ansi/generator/mod.rs` (added input_event_generator export)
-- Fixed: `tui/src/core/ansi/vt_100_ansi_parser/vt_100_ansi_conformance_tests/tests/*.rs` (3 test files updated to use flat API)
+- Fixed: `tui/src/core/ansi/vt_100_ansi_parser/vt_100_ansi_conformance_tests/tests/*.rs` (3 test
+  files updated to use flat API)
 
-##### Mouse Parsing (`mouse.rs`)
+##### Mouse Parsing (`mouse.rs`) ✅ COMPLETE
 
-- [ ] Implement mouse event parsing function
-      `parse_mouse_sequence(bytes: &[u8]) -> Option<InputEvent>`
-  - [ ] Click events: `CSI < Cb ; Cx ; Cy M` (press) / `m` (release) →
-        `MouseAction::Press/Release`
-  - [ ] Button detection: Extract button number from Cb parameter (0=left, 1=middle, 2=right)
-  - [ ] Drag events: Button held (Cb & 32) → `MouseAction::Drag`
-  - [ ] Motion events: Button not held → `MouseAction::Motion`
-  - [ ] Scroll events:
-    - [ ] Button 64 → `MouseAction::Scroll(ScrollDirection::Up)`
-    - [ ] Button 65 → `MouseAction::Scroll(ScrollDirection::Down)`
-  - [ ] Position parsing: Extract Cx (column) and Cy (row) and convert to `Pos`
-  - [ ] Modifier handling: Check if modifiers are present in SGR sequence
+**Completion Summary**:
+
+- ✅ Implemented `parse_mouse_sequence(bytes: &[u8]) -> Option<InputEvent>` with comprehensive SGR
+  protocol support
+- ✅ Type-safe coordinate system using `Pos` with 1-based `TermCol`/`TermRow` (confirmed via
+  terminal observation)
+- ✅ Created 29 automated integration tests using real sequences from terminal observation
+- ✅ Fixed modifier encoding bug in `input_event_generator.rs` (off-by-1 error: parameter = 1 +
+  bitfield)
+- ✅ All round-trip tests pass (generator ↔ parser compatibility validated)
+
+**Implementation Details**:
+
+- ✅ SGR Protocol: `CSI < Cb ; Cx ; Cy M/m` → `InputEvent::Mouse`
+  - `M` (uppercase) = press, `m` (lowercase) = release
+  - Cb = button byte with modifiers and flags
+  - Cx, Cy = 1-based terminal coordinates (VT-100 convention)
+- ✅ Button detection: Bits 0-1 of Cb (0=left, 1=middle, 2=right)
+- ✅ Drag detection: Bit 5 (value 32) in Cb → `MouseAction::Drag`
+- ✅ Scroll detection: Buttons 64-67 → `MouseAction::Scroll(Up/Down)`
+  - Button 64-67: Scroll up (including with modifiers)
+  - Button 68-71: Scroll down
+- ✅ Modifier extraction: Bits 2-4 (Shift=4, Alt=8, Ctrl=16)
+- ✅ Position handling: `Pos::from_one_based(cx, cy)` with `NonZeroU16` validation
+
+**Test Coverage** (37 parser tests + 29 integration tests = 66 total):
+
+- **Parser unit tests** (6 tests in `mouse.rs`):
+  - SGR left click press/release
+  - Scroll events with modifiers
+  - Drag events
+  - Modifier extraction (Ctrl+click)
+  - 1-based coordinate verification
+- **Integration tests** (29 tests in `input_parser_validation_test.rs`):
+  - Mouse events: left/middle/right clicks, drag, scroll, all modifier combinations
+  - Keyboard events: arrows, function keys, all 8 modifier combinations
+  - Edge cases: incomplete sequences, invalid data, boundary conditions (coordinate zero, u16::MAX)
+  - Modifier encoding validation: all 7 combinations (Shift through Shift+Alt+Ctrl)
+
+**Key Findings from Terminal Observation**:
+
+- ✅ VT-100 coordinates are 1-based (top-left = 1,1) - confirmed empirically
+- ✅ Modifier encoding: parameter = 1 + bitfield (e.g., Ctrl = parameter 5, not 4)
+- ✅ Scroll button 66 = scroll up with Shift modifier set
+
+**Test Quality**:
+
+- ✅ All 2347 library tests pass
+- ✅ All 66 VT-100 input parser tests pass (37 unit + 29 integration)
+- ✅ All 23 generator tests pass with corrected modifier encoding
+- ✅ Round-trip validation: Event → ANSI → Event matches for all combinations
+
+**Key Files Created/Modified**:
+
+- Modified: `tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs` (SGR parser implementation)
+- Modified: `tui/src/core/ansi/vt_100_terminal_input_parser/types.rs` (updated `Pos` to use
+  `TermCol`/`TermRow`)
+- Created:
+  `tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/input_parser_validation_test.rs`
+  (29 tests)
+- Fixed: `tui/src/core/ansi/generator/input_event_generator.rs` (corrected `encode_modifiers`:
+  `b'1' + mask`)
+- Updated: Documentation with test design philosophy (why literals, not generators, in tests)
 
 ##### Resize Event Parsing (`terminal_events.rs`)
 
@@ -2351,7 +2425,8 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 
 ##### Bracketed Paste Parsing (`terminal_events.rs`)
 
-- [ ] **Implement bracketed paste parsing** `parse_bracketed_paste(bytes: &[u8]) -> Option<InputEvent>`
+- [ ] **Implement bracketed paste parsing**
+      `parse_bracketed_paste(bytes: &[u8]) -> Option<InputEvent>`
   - [ ] Format: ESC `[200~` text ESC `[201~`
   - [ ] Accumulate pasted text between delimiters
   - [ ] Return `InputEvent::Paste(PasteMode::Start/End)` for markers
@@ -2396,12 +2471,14 @@ This layer manages async I/O and buffering, calling protocol parsers from 8.2.2:
 Both **protocol parsers** (8.2.2) and **backend device** (8.2.3) need edge case handling:
 
 **In Protocol Parsers** (`vt_100_terminal_input_parser/`):
+
 - [ ] Invalid/malformed sequence handling:
   - [ ] Return `None` for incomplete sequences
   - [ ] Handle truncated sequences gracefully
   - [ ] Validate sequence structure (don't panic)
 
 **In Backend Device** (`input_device_impl.rs`):
+
 - [ ] Partial sequence buffering:
   - [ ] Detect incomplete sequences (ESC without terminator)
   - [ ] Buffer and wait for more data
@@ -2523,6 +2600,13 @@ Test edge cases:
 - [ ] Mock stdin reader for unit tests (inject test bytes)
 - [ ] InputEvent comparison/assertion helpers
 
+**Final crossterm input "event_stream" feature code comparison**:
+
+- [ ] Look at existing crossterm input handling code for reference. Compare it to our code and
+      verify that all scenarios are covered. Since we know that crossterm's input event handling
+      works correctly, and we have access to the source, we can use it as a benchmark to ensure our
+      implementation is functionally equivalent.
+
 **Deliverable**: Comprehensive test suite (unit + integration) demonstrating InputDevice correctness
 
 ### 8.4: Migration & Cleanup (1 hour)
@@ -2569,18 +2653,23 @@ Test edge cases:
 
 **Keep CrossTerm for Platform-Specific Support** (Until Step 9):
 
-At this stage, crossterm is intentionally retained for macOS and Windows platforms while DirectToAnsi is used for Linux input. This deferred removal strategy allows for safe, incremental validation:
+At this stage, crossterm is intentionally retained for macOS and Windows platforms while
+DirectToAnsi is used for Linux input. This deferred removal strategy allows for safe, incremental
+validation:
 
 - [ ] Verify crossterm dependency remains in `Cargo.toml` with `event-stream` feature
   - Needed for: macOS/Windows input handling (until Step 9 validation)
 - [ ] Keep `futures-util` dependency (required for crossterm event stream on macOS/Windows)
 - [ ] **Platform-specific implementation**: Use conditional compilation:
   - `#[cfg(target_os = "linux")]` - Use DirectToAnsi input for Linux
-  - `#[cfg(any(target_os = "macos", target_os = "windows"))]` - Use Crossterm input for macOS/Windows (deprecated, to be removed after Step 9)
+  - `#[cfg(any(target_os = "macos", target_os = "windows"))]` - Use Crossterm input for
+    macOS/Windows (deprecated, to be removed after Step 9)
 - [ ] Add deprecation markers to crossterm InputDevice code:
   - `#[deprecated(since = "0.7.7", note = "Will be removed in Step 9 after DirectToAnsi validation on macOS/Windows")]`
-- [ ] Document in comments: "Crossterm input will be removed after Step 9 validates DirectToAnsi on all platforms"
-- [ ] **Step 9** (not Step 8) will validate DirectToAnsi on macOS/Windows, then remove crossterm entirely
+- [ ] Document in comments: "Crossterm input will be removed after Step 9 validates DirectToAnsi on
+      all platforms"
+- [ ] **Step 9** (not Step 8) will validate DirectToAnsi on macOS/Windows, then remove crossterm
+      entirely
 
 **Code Quality**:
 
@@ -2615,8 +2704,8 @@ At this stage, crossterm is intentionally retained for macOS and Windows platfor
 - [ ] All examples run without input-related issues
 - [ ] Terminal works in various terminal emulators (xterm, alacritty, GNOME Terminal, tmux, screen)
 
-**Sign-Off**: InputDevice for Linux implemented with DirectToAnsi, macOS/Windows still use
-crossterm (deprecated, to be removed after Step 9 validation)
+**Sign-Off**: InputDevice for Linux implemented with DirectToAnsi, macOS/Windows still use crossterm
+(deprecated, to be removed after Step 9 validation)
 
 ---
 
@@ -2626,6 +2715,7 @@ crossterm (deprecated, to be removed after Step 9 validation)
 macOS/Windows systems)
 
 **Objective**:
+
 1. Validate DirectToAnsi backend on macOS and Windows platforms (replacing deprecated crossterm)
 2. Remove crossterm dependency entirely once DirectToAnsi is verified on all platforms
 
@@ -2636,6 +2726,7 @@ DirectToAnsi works identically on macOS/Windows, then remove the deprecated cros
 entirely. This incremental validation strategy ensures safety before removing the legacy backend.
 
 **Key Difference from Step 8**:
+
 - **Step 8**: Implements DirectToAnsi input for Linux only; crossterm retained for macOS/Windows
 - **Step 9**: Validates DirectToAnsi on macOS/Windows, then removes deprecated crossterm entirely
 
