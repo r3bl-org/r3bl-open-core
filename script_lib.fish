@@ -913,6 +913,11 @@ function run_example_with_flamegraph_profiling_perf_fold
             sudo chown "$current_user:$current_user" perf.data.old
         end
 
+        # Fix ownership of log.txt if it was created (happens when running with sudo)
+        if test -f log.txt
+            sudo chown "$current_user:$current_user" log.txt
+        end
+
         # Check if inferno-collapse-perf is available
         if not command -v inferno-collapse-perf >/dev/null
             echo "Error: inferno-collapse-perf is not installed."

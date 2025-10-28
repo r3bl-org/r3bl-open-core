@@ -2504,19 +2504,20 @@ Test edge cases:
       crossterm for output as well (for now until Step 9 is done). After Step 9 is complete, then we
       can remove crossterm input handling on those platforms as well.
 
-**Remove CrossTerm Dependency** (if no other uses remain):
+**Keep CrossTerm for Platform-Specific Support** (Until Step 9):
 
-- [ ] Check if any remaining code uses crossterm (likely render/output code)
-  - If output still uses crossterm: Keep dependency, just remove event-stream feature
-  - If nothing uses crossterm: Remove entire dependency
-- [ ] **Option A - Update to minimal crossterm** (if output still uses it):
-  - Edit `Cargo.toml`: Change `crossterm = { version = "0.29.0", features = ["event-stream"] }`
-  - To: `crossterm = { version = "0.29.0" }` (remove "event-stream" feature)
-- [ ] **Option B - Remove crossterm entirely** (if nothing uses it):
-  - Remove `crossterm` line from `Cargo.toml` dependencies
-  - Remove `futures-util` dependency if only used for crossterm event stream
-- [ ] Run `cargo tree | grep crossterm` to verify
-- [ ] Update lock file: `cargo update`
+At this stage, crossterm is intentionally retained for macOS and Windows platforms while DirectToAnsi is used for Linux input. This deferred removal strategy allows for safe, incremental validation:
+
+- [ ] Verify crossterm dependency remains in `Cargo.toml` with `event-stream` feature
+  - Needed for: macOS/Windows input handling (until Step 9 validation)
+- [ ] Keep `futures-util` dependency (required for crossterm event stream on macOS/Windows)
+- [ ] **Platform-specific implementation**: Use conditional compilation:
+  - `#[cfg(target_os = "linux")]` - Use DirectToAnsi input for Linux
+  - `#[cfg(any(target_os = "macos", target_os = "windows"))]` - Use Crossterm input for macOS/Windows (deprecated, to be removed after Step 9)
+- [ ] Add deprecation markers to crossterm InputDevice code:
+  - `#[deprecated(since = "0.7.7", note = "Will be removed in Step 9 after DirectToAnsi validation on macOS/Windows")]`
+- [ ] Document in comments: "Crossterm input will be removed after Step 9 validates DirectToAnsi on all platforms"
+- [ ] **Step 9** (not Step 8) will validate DirectToAnsi on macOS/Windows, then remove crossterm entirely
 
 **Code Quality**:
 
@@ -2551,24 +2552,29 @@ Test edge cases:
 - [ ] All examples run without input-related issues
 - [ ] Terminal works in various terminal emulators (xterm, alacritty, GNOME Terminal, tmux, screen)
 
-**Sign-Off**: InputDevice fully migrated to DirectToAnsi with parallel input/output architecture,
-zero crossterm dependencies remaining
+**Sign-Off**: InputDevice for Linux implemented with DirectToAnsi, macOS/Windows still use
+crossterm (deprecated, to be removed after Step 9 validation)
 
 ---
 
-## ⏳ Step 9: macOS & Windows Platform Validation (2-3 hours) - DEFERRED
+## ⏳ Step 9: macOS & Windows Platform Validation & Crossterm Removal (2-3 hours) - DEFERRED
 
-**Status**: ⏳ DEFERRED - To be performed after Step 7 completes (when user has access to
+**Status**: ⏳ DEFERRED - To be performed after Step 8 completes (when user has access to
 macOS/Windows systems)
 
-**Objective**: Validate DirectToAnsi backend on macOS and Windows platforms, ensuring cross-platform
-compatibility and performance parity with Crossterm backend.
+**Objective**:
+1. Validate DirectToAnsi backend on macOS and Windows platforms (replacing deprecated crossterm)
+2. Remove crossterm dependency entirely once DirectToAnsi is verified on all platforms
 
 **Rationale for Deferral**: User is currently running on Linux. Step 9 is deferred to be performed
-later when macOS and Windows systems are available. Step 8 (InputDevice implementation) completes
-the crossterm removal, and Step 7 (comprehensive test suite) builds confidence before cross-platform
-validation. This maintains focus on finalizing core architecture (Step 8) with test coverage
-(Step 7) before cross-platform work, keeping efforts organized.
+later when macOS and Windows systems are available. Step 8 (InputDevice implementation) establishes
+DirectToAnsi for Linux input with crossterm retained for macOS/Windows. Step 9 will validate
+DirectToAnsi works identically on macOS/Windows, then remove the deprecated crossterm dependency
+entirely. This incremental validation strategy ensures safety before removing the legacy backend.
+
+**Key Difference from Step 8**:
+- **Step 8**: Implements DirectToAnsi input for Linux only; crossterm retained for macOS/Windows
+- **Step 9**: Validates DirectToAnsi on macOS/Windows, then removes deprecated crossterm entirely
 
 ### macOS Testing (1.5 hours)
 
