@@ -13,12 +13,16 @@
 //! ## Usage
 //!
 //! ```ignore
-//! use crate::core::ansi::generator::{SgrCode, EscSequence, DsrSequence, CliTextInline};
+//! use crate::{SgrCode, EscSequence, DsrSequence, CliTextInline};
 //!
 //! let styled = CliTextInline::new("Hello", vec![SgrCode::Bold]);
 //! let esc = EscSequence::SaveCursor;
 //! println!("{}", styled);
 //! ```
+
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
 
 // Private modules (hide internal structure)
 mod ansi_sequence_generator;
@@ -27,12 +31,9 @@ mod dsr_sequence;
 mod esc_sequence;
 mod sgr_code;
 
-// Re-export cli_text_inline_impl from cli_text
-// Re-export byte constants from constants module
-pub use crate::core::ansi::constants::{CRLF_BYTES, SGR_RESET_BYTES};
+// Public re-exports (flat API)
 pub use ansi_sequence_generator::*;
 pub use cli_text::cli_text_inline_impl;
-// Public re-exports (flat API)
 pub use cli_text::*;
 pub use dsr_sequence::*;
 pub use esc_sequence::*;

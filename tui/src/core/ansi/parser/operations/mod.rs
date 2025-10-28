@@ -5,9 +5,6 @@
 //! This module organizes all the different types of ANSI operations into
 //! logical groups for better maintainability and discoverability.
 //!
-//! For the complete architecture overview, including the shim → impl → test design
-//! pattern and testing philosophy, see the [module-level documentation](super).
-//!
 //! # Design Architecture
 //!
 //! The operation modules in this directory follow a consistent **thin shim pattern**:
@@ -41,8 +38,8 @@
 //! 4. **Comprehensive Coverage**: Testing is handled by two complementary layers:
 //!    - **Unit Tests**: The underlying [`OffscreenBuffer`] methods have comprehensive
 //!      unit tests
-//!    - **Integration Tests**: The VT100 conformance tests in
-//!      [`vt_100_ansi_conformance_tests`] verify the complete ANSI processing pipeline
+//!    - **Integration Tests**: The VT100 conformance tests verify the complete ANSI
+//!      processing pipeline
 //!
 //! ## Testing Philosophy
 //!
@@ -75,9 +72,7 @@
 //! When working with any operation module, you can navigate to its related testing
 //! layers:
 //! - **Implementation with Unit Tests**: [`vt_100_ansi_impl`] module
-//! - **Integration Tests**: [`vt_100_ansi_conformance_tests`] module
-//! - **Complete Testing Philosophy**: See the [main module documentation](super) for the
-//!   full three-layer testing strategy
+//! - **Integration Tests**: See the conformance test modules
 //!
 //! # Naming Convention
 //!
@@ -106,11 +101,7 @@
 //! | [`vt_100_shim_sgr_ops`]       | [`vt_100_impl_sgr_ops`]      | [`vt_100_test_sgr_ops`]        |
 //! | [`vt_100_shim_terminal_ops`]  | [`vt_100_impl_terminal_ops`] | [`vt_100_test_terminal_ops`]   |
 //!
-//! See the [main module documentation](super) for the complete explanation of this
-//! architectural pattern and its benefits for IDE navigation.
-//!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
 //! [`vt_100_shim_char_ops`]: vt_100_shim_char_ops
 //! [`vt_100_impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops

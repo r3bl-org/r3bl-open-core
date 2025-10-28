@@ -26,4 +26,5 @@ pub mod vt_100_ansi_conformance_tests;
 
 // Re-export public API
 pub use ansi_parser_public_api::*;
+pub use operations::*;
 pub use protocols::*;

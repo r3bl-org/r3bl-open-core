@@ -17,7 +17,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use r3bl_tui::core::ansi::constants::*;
+//! use r3bl_tui::{CSI_START, SGR_RESET_BYTES, ESC_START};
 //!
 //! // All constants available with flat imports
 //! let csi_start = CSI_START;

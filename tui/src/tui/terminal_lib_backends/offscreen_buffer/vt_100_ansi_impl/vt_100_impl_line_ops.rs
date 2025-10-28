@@ -14,12 +14,10 @@
 //!
 //! This module implements the business logic for line operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs] for the complete three-layer
+//! code organization. See the three-layer architecture documentation above for
 //! architecture.
 //!
 //! **Related Files:**
-//! - **Shim**: [`line_ops`] - Parameter translation and delegation (no direct tests)
-//! - **Integration Tests**: [`test_line_ops`] - Full ANSI pipeline testing
 //!
 //! # VT-100 Scroll Region Boundaries
 //!
@@ -57,9 +55,6 @@
 //! [`shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
 //! [`shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
 //! [`clear_line`]: crate::OffscreenBuffer::clear_line
-//! [`line_ops`]: crate::core::ansi::parser::operations::vt_100_shim_line_ops
-//! [`test_line_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_line_ops
-//! [parser module docs]: crate::core::ansi::parser
 //! [Interval Notation]: crate::core::coordinates::bounds_check#interval-notation
 
 use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,

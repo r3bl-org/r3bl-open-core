@@ -14,17 +14,13 @@
 //!
 //! This module implements the business logic for OSC operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::ansi::parser)
+//! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
-//! - **Shim**: [`osc_ops`] - Parameter translation and delegation (no direct tests)
-//! - **Integration Tests**: [`test_osc_ops`] - Full ANSI pipeline testing
 //!
 //! [`handle_title_and_icon`]: crate::OffscreenBuffer::handle_title_and_icon
 //! [`handle_hyperlink`]: crate::OffscreenBuffer::handle_hyperlink
-//! [`osc_ops`]: crate::core::ansi::parser::operations::vt_100_shim_osc_ops
-//! [`test_osc_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_osc_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

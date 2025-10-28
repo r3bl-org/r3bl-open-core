@@ -18,7 +18,7 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 use super::test_helpers::*;
-use crate::{tui_color, col, row, pos, height, ColIndex, RowIndex, core::ansi::generator::AnsiSequenceGenerator};
+use crate::{tui_color, col, row, pos, height, ColIndex, RowIndex, AnsiSequenceGenerator};
 use crate::render_op::RenderOpCommon;
 
 #[test]

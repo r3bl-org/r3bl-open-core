@@ -30,7 +30,7 @@
 //!    together
 //! 3. **Complements Unit Tests**: While [`vt_100_ansi_impl`] files have unit tests, these
 //!    test the integrated system
-//! 4. **Replaces Shim Tests**: Since [`operations`] shims are pure delegation, these
+//! 4. **Replaces Shim Tests**: Since the operation shims are pure delegation, these
 //!    tests provide their coverage
 //!
 //! ## Testing Strategy Relationship
@@ -61,15 +61,15 @@
 //!
 //! When working with any test file, you can navigate to its related implementation
 //! layers:
-//! - **Shim Layer**: [`operations`] - The delegation layer being tested indirectly
+//! - **Shim Layer**: The delegation layer being tested indirectly
 //! - **Implementation Layer**: [`vt_100_ansi_impl`] - The business logic being tested
-//! - **Testing Philosophy**: See [parser module docs] for the complete three-layer
+//! - **Testing Philosophy**: For the complete three-layer
 //!   strategy
 //!
 //! For example, when working on character operations:
 //! 1. **Integration Tests**: Character operation tests (test-only) - Full ANSI sequence
 //!    testing
-//! 2. **Shim**: [`operations::char_ops`] - Parameter translation (tested indirectly here)
+//! 2. **Shim**: The delegation layer (tested indirectly here)
 //! 3. **Implementation**: [`impl_char_ops`] - Buffer logic (has separate unit tests)
 //!
 //! ## Test Organization
@@ -313,12 +313,12 @@
 //! }, "status line reverse video");
 //! ```
 //!
-//! [`operations`]: super::operations
+//! 
 //! [`vt_100_ansi_impl`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl
-//! [`operations::char_ops`]: super::operations::vt_100_shim_char_ops
+//! 
 //! [`impl_char_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_char_ops
 //! [`test_char_ops`]: tests::vt_100_test_char_ops
-//! [parser module docs]: super
+//! 
 //! [`OffscreenBuffer::apply_ansi_bytes`]: crate::tui::terminal_lib_backends::offscreen_buffer::OffscreenBuffer::apply_ansi_bytes
 
 #[cfg(any(test, doc))]

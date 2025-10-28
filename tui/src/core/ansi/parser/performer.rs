@@ -174,17 +174,16 @@
 //!   methods
 //! - [`OffscreenBuffer`] methods have comprehensive unit tests (following codebase
 //!   convention)
-//! - VT100 conformance tests in [`vt_100_ansi_conformance_tests`] verify end-to-end
+//! - VT100 conformance tests in the conformance tests verify end-to-end
 //!   behavior
 //!
 //! This approach avoids redundant testing while ensuring both unit-level correctness
 //! (in [`OffscreenBuffer`]) and system-level behavior (in conformance tests).
 //!
-//! See the [module-level documentation](super) for more details on the
+//! For architecture details for more details on the
 //! architecture and testing strategy.
 //!
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
-//! [`vt_100_ansi_conformance_tests`]: mod@super::vt_100_ansi_conformance_tests
 //! [`ParamsExt`]: crate::ParamsExt
 //! [`Perform`]: vte::Perform
 //! [`print()`]: AnsiToOfsBufPerformer::print

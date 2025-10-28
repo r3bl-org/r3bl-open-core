@@ -10,8 +10,9 @@
 //! Uses the `colorgrad` crate for smooth interpolation between color stops.
 //! Previously located in `color_wheel_core/truecolor_gradient.rs`.
 
-use crate::{color_wheel_config::sizing::{StringHexColor, VecSteps},
-            tui_color};
+use super::super::color_wheel_config::sizing::{StringHexColor, VecSteps};
+use crate::tui_color;
+
 use colorgrad::Gradient;
 use rand::{Rng, rngs::ThreadRng};
 

@@ -3,13 +3,12 @@
 //! Super minimal PTY test - just echo raw bytes to verify data flow
 
 use portable_pty::PtySize;
-use r3bl_tui::{core::{ansi::terminal_output,
-                      get_size,
+use r3bl_tui::{core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
                             PtyInputEvent, PtyReadWriteOutputEvent},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, set_mimalloc_in_main,
+               clear_screen_and_home_cursor, lock_output_device_as_mut, set_mimalloc_in_main,
                tui::terminal_lib_backends::{InputEvent, Key, KeyPress, KeyState,
                                             ModifierKeysMask, RawMode}};
 use std::io::Write;
@@ -38,7 +37,7 @@ async fn main() -> miette::Result<()> {
     );
 
     // Clear screen.
-    terminal_output::clear_screen_and_home_cursor(&output_device);
+    clear_screen_and_home_cursor(&output_device);
 
     // Spawn cat process (simple echo).
     let pty_size = PtySize {

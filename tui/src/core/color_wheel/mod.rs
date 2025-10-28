@@ -12,18 +12,20 @@
 //! - `lolcat` - Lolcat-style colorization API
 //! - `impl` - Main `ColorWheel` implementation
 
-// Attach sources.
-pub mod color_wheel_config;
-pub mod color_wheel_helpers;
-pub mod color_wheel_policies;
-pub mod color_wheel_types;
-pub mod gradients;
-pub mod lolcat;
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
 
-// Private implementation details.
+// Attach sources.
+mod color_wheel_config;
+mod color_wheel_helpers;
+mod color_wheel_policies;
+mod color_wheel_types;
+mod gradients;
+mod lolcat;
 mod color_wheel_impl;
 
-// Re-export everything for backward compatibility.
+// Re-export flat public API.
 pub use color_wheel_config::*;
 pub use color_wheel_helpers::*;
 pub use color_wheel_impl::*;

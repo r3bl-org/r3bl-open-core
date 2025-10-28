@@ -331,8 +331,8 @@ pub mod spinner_impl;
 pub mod readline_async_impl;
 pub mod choose_impl;
 
-pub use choose_api::*;
 // Re-export the public API.
+pub use choose_api::*;
 pub use choose_impl::*;
 pub use readline_async_api::*;
 pub use readline_async_impl::*;

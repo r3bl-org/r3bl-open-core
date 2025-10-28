@@ -90,7 +90,7 @@
 //! The optimization successfully eliminated the hash operation bottleneck, making
 //! `ColorWheel` operations negligible in the overall performance profile.
 use super::{Ansi256GradientIndex, ColorWheelConfig, ColorWheelDirection,
-            ColorWheelSpeed, GradientKind, GradientLengthKind, Lolcat, LolcatBuilder,
+            ColorWheelSpeed, Colorize, GradientKind, GradientLengthKind, Lolcat, LolcatBuilder,
             Seed,
             color_wheel_config::{defaults::{Defaults, get_default_gradient_stops},
                                  sizing::VecSteps},
@@ -186,7 +186,7 @@ mod color_wheel_cache {
 
         /// Hash a `LolcatBuilder`, handling the f64 fields.
         fn hash_lolcat_builder<H: Hasher>(
-            builder: &crate::lolcat::LolcatBuilder,
+            builder: &LolcatBuilder,
             hasher: &mut H,
         ) {
             builder.color_change_speed.hash(hasher);
@@ -198,14 +198,14 @@ mod color_wheel_cache {
 
         /// Hash the Colorize enum discriminant.
         fn hash_colorize_strategy<H: Hasher>(
-            strategy: crate::lolcat::Colorize,
+            strategy: Colorize,
             hasher: &mut H,
         ) {
             match strategy {
-                crate::lolcat::Colorize::BothBackgroundAndForeground => {
+                Colorize::BothBackgroundAndForeground => {
                     0u8.hash(hasher);
                 }
-                crate::lolcat::Colorize::OnlyForeground => {
+                Colorize::OnlyForeground => {
                     1u8.hash(hasher);
                 }
             }
@@ -331,8 +331,7 @@ mod color_wheel_cache {
 
         #[test]
         fn test_lolcat_config_hash_handles_f64() {
-            use crate::{Seed, SeedDelta,
-                        lolcat::{Colorize, LolcatBuilder}};
+            use crate::{Seed, SeedDelta, Colorize, LolcatBuilder};
 
             // Test that different f64 values produce different hashes.
             let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
@@ -360,8 +359,7 @@ mod color_wheel_cache {
 
         #[test]
         fn test_hash_handles_negative_zero() {
-            use crate::{Seed, SeedDelta,
-                        lolcat::{Colorize, LolcatBuilder}};
+            use crate::{Seed, SeedDelta, Colorize, LolcatBuilder};
 
             // Test that -0.0 and 0.0 produce different hashes (as documented)
             let config1 = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
@@ -1744,8 +1742,7 @@ mod bench {
     /// Benchmark: Hash computation for Lolcat config (with f64)
     #[bench]
     fn bench_hash_lolcat_config(b: &mut Bencher) {
-        use crate::{Seed, SeedDelta,
-                    lolcat::{Colorize, LolcatBuilder}};
+        use crate::{Seed, SeedDelta, Colorize, LolcatBuilder};
 
         let config = crate::ColorWheelConfig::Lolcat(LolcatBuilder {
             color_change_speed: crate::ColorChangeSpeed::Slow,

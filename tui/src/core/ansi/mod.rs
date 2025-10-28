@@ -4,11 +4,12 @@
 //!
 //! ## Key Subsystems
 //!
-//! - **Parser** ([`parser`]): Convert incoming PTY output (ANSI sequences) → terminal
-//!   state
-//! - **Generator** ([`generator`]): Convert app styling → outgoing ANSI sequences
-//! - **Color** ([`color`]): Color type definitions and conversions (RGB ↔ ANSI256)
-//! - **Terminal Output** ([`terminal_output`]): I/O operations for writing to terminal
+//! - **Parser**: Convert incoming PTY output (ANSI sequences) → terminal state
+//!   (via [`AnsiToOfsBufPerformer`])
+//! - **Generator**: Convert app styling → outgoing ANSI sequences
+//!   (via [`SgrCode`], [`CliTextInline`])
+//! - **Color**: Color type definitions and conversions (RGB ↔ ANSI256)
+//! - **Terminal Output**: I/O operations for writing to terminal
 //!
 //! ## Architecture Overview
 //!
@@ -40,100 +41,51 @@
 //!
 //! ### Parsing ANSI Sequences
 //! ```ignore
-//! use r3bl_tui::core::ansi::parser;
+//! use r3bl_tui::CsiSequence;
 //!
-//! let sequence = parser::CsiSequence::cursor_position_report(10, 5);
+//! let sequence = CsiSequence::cursor_position_report(10, 5);
 //! ```
 //!
 //! ### Color Conversions
 //! ```ignore
-//! use r3bl_tui::core::ansi::color::{RgbValue, AnsiValue};
+//! use r3bl_tui::{RgbValue, AnsiValue};
 //!
 //! let rgb = RgbValue { r: 255, g: 128, b: 64 };
 //! let ansi = rgb.to_ansi();  // Convert to nearest ANSI color
 //! ```
 //!
-//! ## Module Organization
+//! ## Key Types and Public API
 //!
-//! - **`color/`** - Type-safe color representations and conversions
-//! - **`constants/`** - ANSI/VT100 escape sequence constants
-//! - **`generator/`** - ANSI sequence generation (`SgrCode`, `CliTextInline`)
-//! - **`parser/`** - ANSI sequence parsing (performer, protocols, operations)
-//! - **`terminal_output.rs`** - I/O operations
+//! **Color System:**
+//! - [`TuiColor`] - Terminal color with RGB and ANSI256 support
+//! - [`RgbValue`], [`AnsiValue`] - Color value types
+//!
+//! **Text Styling:**
+//! - [`SgrCode`] - SGR (Select Graphic Rendition) styling codes
+//! - [`CliTextInline`] - Styled inline text for output
+//!
+//! **ANSI Parsing:**
+//! - [`AnsiToOfsBufPerformer`] - Main ANSI parser implementation
+//! - [`CsiSequence`] - CSI escape sequence types
+//!
+//! **Terminal I/O:**
+//! - Color detection and support queries
 
-pub mod color;
-pub mod constants;
-pub mod generator;
-pub mod parser;
-pub mod terminal_output;
-
-// Color support detection module
+mod color;
+mod constants;
 mod detect_color_support;
+mod generator;
+mod parser;
+mod terminal_output;
 
 // Re-export key types for ergonomics
 pub use color::*;
 pub use constants::*;
-// Color support detection and constants from detect_color_support module
-pub use detect_color_support::{ColorSupport, HyperlinkSupport, Stream,
-                               examine_env_vars_to_determine_color_support,
-                               examine_env_vars_to_determine_hyperlink_support,
-                               global_color_support, global_hyperlink_support};
-pub use generator::{// Constants
-                    CRLF_BYTES,
-                    // Main types
-                    CliTextInline,
-                    CliTextLine,
-                    CliTextLines,
-                    DsrRequestFromPtyEvent,
-                    DsrRequestType,
-                    DsrSequence,
-                    // Builder enums
-                    EscSequence,
-                    SGR_RESET_BYTES,
-                    SgrCode,
-                    // Style helpers
-                    bold,
-                    // Main CLI text function
-                    cli_text_inline,
-                    // Submodules
-                    cli_text_inline_impl,
-                    dim,
-                    dim_underline,
-                    fg_black,
-                    fg_blue,
-                    fg_bright_cyan,
-                    // Color functions - basic
-                    fg_color,
-                    fg_cyan,
-                    // Color functions - dark shades
-                    fg_dark_gray,
-                    fg_dark_lizard_green,
-                    fg_dark_pink,
-                    fg_dark_purple,
-                    fg_dark_teal,
-                    fg_frozen_blue,
-                    fg_green,
-                    fg_guards_red,
-                    fg_hot_pink,
-                    fg_lavender,
-                    fg_light_cyan,
-                    fg_light_purple,
-                    fg_light_yellow_green,
-                    fg_lizard_green,
-                    fg_magenta,
-                    // Color functions - light/bright shades
-                    fg_medium_gray,
-                    // Color functions - custom/themed
-                    fg_orange,
-                    fg_pink,
-                    fg_red,
-                    fg_silver_metallic,
-                    fg_sky_blue,
-                    fg_slate_gray,
-                    fg_soft_pink,
-                    fg_white,
-                    fg_yellow,
-                    italic,
-                    underline};
-pub use parser::{AnsiToOfsBufPerformer, CsiSequence};
+pub use detect_color_support::*;
+pub use generator::*;
+pub use parser::*;
 pub use terminal_output::*;
+
+// Re-export test fixtures for testing purposes only
+#[cfg(test)]
+pub use parser::vt_100_ansi_conformance_tests;

@@ -77,20 +77,13 @@
 //! [`PTY Session`]: crate::PtyReadWriteSession
 
 // Attach.
-pub mod input_router;
-pub mod mux;
-pub mod output_renderer;
-pub mod process_manager;
+mod input_router;
+mod mux;
+mod output_renderer;
+mod process_manager;
 
-// Import parser from its new location in ansi
-use crate::core::ansi::parser;
-// Re-export ansi components for backward compatibility and convenience
-// Note: vt_100_ansi_parser no longer exists; it's now ansi::parser
-// EscSequence is now in ansi::generator (re-exported via ansi module)
-pub use crate::core::ansi::{AnsiToOfsBufPerformer, CsiSequence, EscSequence};
 // Re-export.
 pub use input_router::*;
 pub use mux::*;
 pub use output_renderer::*;
-pub use parser::{operations::*, protocols::*};
 pub use process_manager::*;

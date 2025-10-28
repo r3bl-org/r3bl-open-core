@@ -14,17 +14,13 @@
 //!
 //! This module implements the business logic for margin operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::ansi::parser)
+//! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
-//! - **Shim**: [`margin_ops`] - Parameter translation and delegation (no direct tests)
-//! - **Integration Tests**: [`test_margin_ops`] - Full ANSI pipeline testing
 //!
-//! [`margin_ops`]: crate::core::ansi::parser::operations::vt_100_shim_margin_ops
 //! [`set_scroll_margins`]: crate::OffscreenBuffer::set_scroll_margins
 //! [`reset_scroll_margins`]: crate::OffscreenBuffer::reset_scroll_margins
-//! [`test_margin_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_margin_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;
@@ -81,7 +77,7 @@ impl OffscreenBuffer {
 #[cfg(test)]
 mod tests_margin_ops {
     use super::*;
-    use crate::{core::{ansi::parser::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
+    use crate::{core::{ansi::vt_100_ansi_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz,
                        coordinates::term_row},
                 height, width};
 

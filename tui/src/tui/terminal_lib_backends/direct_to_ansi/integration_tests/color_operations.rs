@@ -17,7 +17,7 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 use super::test_helpers::*;
-use crate::{tui_color, core::ansi::generator::AnsiSequenceGenerator};
+use crate::{tui_color, AnsiSequenceGenerator};
 use crate::render_op::RenderOpCommon;
 
 #[test]

@@ -7,9 +7,8 @@
 //! terminal resize events.
 
 use super::ProcessManager;
-use crate::{Size,
-            core::{ansi::terminal_output,
-                   osc::OscController,
+use crate::{Size, clear_screen_and_home_cursor,
+            core::{osc::OscController,
                    pty::{PtyInputEvent, pty_core::pty_sessions::show_notification},
                    terminal_io::OutputDevice},
             tui::terminal_lib_backends::{FunctionKey, InputEvent, Key, KeyPress,
@@ -87,7 +86,7 @@ impl InputRouter {
                                 );
 
                                 // Clear the screen before switching.
-                                terminal_output::clear_screen_and_home_cursor(
+                                clear_screen_and_home_cursor(
                                     output_device,
                                 );
 

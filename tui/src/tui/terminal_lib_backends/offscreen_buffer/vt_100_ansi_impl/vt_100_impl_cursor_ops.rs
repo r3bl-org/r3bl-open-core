@@ -8,15 +8,11 @@
 //!
 //! This module implements the business logic for cursor operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::ansi::parser)
+//! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
-//! - **Shim**: [`cursor_ops`] - Parameter translation and delegation (no direct tests)
-//! - **Integration Tests**: [`test_cursor_ops`] - Full ANSI pipeline testing
 //!
-//! [`cursor_ops`]: crate::core::ansi::parser::operations::vt_100_shim_cursor_ops
-//! [`test_cursor_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_cursor_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

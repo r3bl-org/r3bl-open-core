@@ -14,16 +14,12 @@
 //!
 //! This module implements the business logic for mode operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::ansi::parser)
+//! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
-//! - **Shim**: [`mode_ops`] - Parameter translation and delegation (no direct tests)
-//! - **Integration Tests**: [`test_mode_ops`] - Full ANSI pipeline testing
 //!
 //! [`set_auto_wrap_mode`]: crate::OffscreenBuffer::set_auto_wrap_mode
-//! [`mode_ops`]: crate::core::ansi::parser::operations::vt_100_shim_mode_ops
-//! [`test_mode_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_mode_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

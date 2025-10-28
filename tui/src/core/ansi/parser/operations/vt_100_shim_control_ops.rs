@@ -3,7 +3,7 @@
 //! Control character operations.
 //!
 //! This module acts as a thin shim layer that delegates to the actual implementation.
-//! See the [module-level documentation] for details on the "shim → impl →
+//! Refer to the module-level documentation in the operations module for details on the "shim → impl →
 //! test" architecture and naming conventions.
 //!
 //! **Related Files:**
@@ -17,10 +17,10 @@
 //! This is a deliberate architectural decision: these functions are pure delegation
 //! layers with no business logic. Testing is comprehensively handled by:
 //! - **Unit tests** in the implementation layer (with `#[test]` functions)
-//! - **Integration tests** in [`vt_100_ansi_conformance_tests`] validating the full
+//! - **Integration tests** in the conformance tests validating the full
 //!   pipeline
 //!
-//! See the [operations module documentation] for the complete testing philosophy
+//! For the complete testing philosophy,
 //! and rationale behind this approach.
 //!
 //! # Architecture Overview
@@ -78,9 +78,7 @@
 //!
 //! [`impl_control_ops`]: crate::tui::terminal_lib_backends::offscreen_buffer::vt_100_ansi_impl::vt_100_impl_control_ops
 //! [`test_control_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_control_ops
-//! [module-level documentation]: super::super
-//! [operations module documentation]: super
-//! [`vt_100_ansi_conformance_tests`]: super::super::vt_100_ansi_conformance_tests
+//! [module-level documentation]: self
 
 use super::super::ansi_parser_public_api::AnsiToOfsBufPerformer;
 

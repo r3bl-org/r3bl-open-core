@@ -38,10 +38,9 @@
 
 use crate::{CliTextInline, GCStringOwned, InlineString, LockedOutputDevice,
             PixelCharRenderer, Pos, RenderOpCommon, RenderOpFlush, RenderOpOutput,
-            RenderOpPaint, RenderOpsLocalData, Size, TuiStyle,
+            RenderOpPaint, RenderOpsLocalData, Size, TuiStyle, AnsiSequenceGenerator,
             cli_text_inline_impl::CliTextConvertOptions, col, disable_raw_mode_now,
-            enable_raw_mode_now, flush_now, sanitize_and_save_abs_pos,
-            core::ansi::generator::AnsiSequenceGenerator};
+            enable_raw_mode_now, flush_now, sanitize_and_save_abs_pos};
 
 /// Implements [`RenderOpPaint`] trait using direct ANSI sequence generation.
 ///

@@ -14,17 +14,13 @@
 //!
 //! This module implements the business logic for DSR operations delegated from
 //! the parser shim. The `impl_` prefix follows our naming convention for searchable
-//! code organization. See [parser module docs](crate::core::ansi::parser)
+//! code organization. See the architecture documentation above
 //! for the complete three-layer architecture.
 //!
 //! **Related Files:**
-//! - **Shim**: [`dsr_ops`] - Parameter translation and delegation (no direct tests)
-//! - **Integration Tests**: [`test_dsr_ops`] - Full ANSI pipeline testing
 //!
 //! [`handle_status_report_request`]: crate::OffscreenBuffer::handle_status_report_request
 //! [`handle_cursor_position_request`]: crate::OffscreenBuffer::handle_cursor_position_request
-//! [`dsr_ops`]: crate::core::ansi::parser::operations::vt_100_shim_dsr_ops
-//! [`test_dsr_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_dsr_ops
 
 #[allow(clippy::wildcard_imports)]
 use super::super::*;

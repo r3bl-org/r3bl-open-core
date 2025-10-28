@@ -43,7 +43,7 @@
 //! [`RenderOpCommon`]: crate::RenderOpCommon
 //! [`RenderOpIRVec`]: crate::RenderOpIRVec
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
-//! [`AnsiSequenceGenerator`]: crate::core::ansi::generator::AnsiSequenceGenerator
+//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
 //! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`RenderToAnsi`]: crate::RenderToAnsi

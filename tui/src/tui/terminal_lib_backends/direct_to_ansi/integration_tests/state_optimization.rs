@@ -15,7 +15,7 @@
 //! ANSI escape sequences sent to the terminal.
 
 use super::test_helpers::*;
-use crate::{col, row, pos, tui_color, core::ansi::generator::AnsiSequenceGenerator};
+use crate::{col, row, pos, tui_color, AnsiSequenceGenerator};
 use crate::render_op::RenderOpCommon;
 
 #[test]

@@ -2095,95 +2095,218 @@ development.
 
 **Status**: ⏳ PENDING - Final step to remove crossterm dependency
 
-**Objective**: Replace `crossterm::event::EventStream` with native mio-based stdin reading and ANSI sequence parsing to generate input events (keyboard and mouse).
+**Objective**: Replace `crossterm::event::EventStream` with native tokio-based stdin reading and ANSI sequence parsing to generate input events (keyboard, mouse, resize, focus, and paste).
 
 **Rationale**: This is the final piece needed to completely remove crossterm. Currently, while output uses DirectToAnsi, input still relies on `crossterm::event::read()`. This step achieves perfect architectural symmetry:
 
 ```
-Output: Application → RenderOps → DirectToAnsi → ANSI bytes → stdout
-Input:  stdin → ANSI bytes → VT-100 Parser → Events → InputDevice → Application
+Output: Application → RenderOps → DirectToAnsi output/ → ANSI bytes → stdout
+Input:  stdin → ANSI bytes → DirectToAnsi input/ → InputEvent → Application
 ```
 
-Both sides now speak the same ANSI protocol, with no external terminal library dependencies.
+Both input and output are now in the same backend module with parallel directory structures, speaking the same ANSI protocol with no external terminal library dependencies.
+
+### 8.0: Reorganize Existing Output Files (30 min)
+
+**Objective**: Create clean `input/` and `output/` subdirectories within DirectToAnsi backend for parallel architecture
+
+**Rationale**: The DirectToAnsi backend currently has output files at the root level. Reorganizing into `input/` and `output/` subdirectories creates symmetry and makes the backend structure clearer.
+
+**Reorganization Tasks**:
+
+- [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/output/` directory
+- [ ] Move existing output files to new location:
+  - [ ] `render_to_ansi.rs` → `output/render_to_ansi.rs`
+  - [ ] `paint_render_op_impl.rs` → `output/paint_render_op_impl.rs`
+  - [ ] `pixel_char_renderer.rs` → `output/pixel_char_renderer.rs`
+  - [ ] `tests.rs` → `output/tests.rs` (if output-specific)
+- [ ] Create `output/mod.rs` with re-exports of moved files
+- [ ] Update `direct_to_ansi/mod.rs` to import from `output/` module
+- [ ] Update imports throughout codebase (cargo check should catch all)
+- [ ] Verify `cargo check` passes with zero errors
+
+**Deliverable**: DirectToAnsi backend cleanly organized with `input/` and `output/` subdirectories
+
+**Directory Structure After Reorganization**:
+```
+tui/src/tui/terminal_lib_backends/direct_to_ansi/
+├── mod.rs                          ← Backend coordinator
+├── debug.rs                        ← Debug utilities (unchanged)
+├── input/                          ← NEW: To be created in 8.1-8.3
+├── output/                         ← NEW: Moved existing files
+│   ├── mod.rs                      ← Re-exports
+│   ├── render_to_ansi.rs           ← Moved
+│   ├── paint_render_op_impl.rs     ← Moved
+│   ├── pixel_char_renderer.rs      ← Moved
+│   └── tests.rs                    ← Moved
+└── integration_tests/              ← Updated to reference output/ subdirectory
+    ├── input_handling.rs           ← NEW: To be created in 8.3
+    ├── color_operations.rs         ← Updated import paths
+    ├── cursor_movement.rs          ← Updated import paths
+    ├── screen_operations.rs        ← Updated import paths
+    ├── state_optimization.rs       ← Updated import paths
+    └── text_operations.rs          ← Updated import paths
+```
 
 ### 8.1: Architecture Design (1-2 hours)
 
-**Objective**: Plan the InputDevice refactoring to use mio + VT-100 parser instead of crossterm
+**Objective**: Plan the InputDevice refactoring with input/output parallel architecture
 
 **Current State Analysis**:
 
 - `InputDevice` struct at `tui/src/core/terminal_io/input_device.rs:11`
 - Currently wraps `crossterm::event::EventStream` (line 19)
 - `InputDeviceExt` trait at `tui/src/tui/terminal_lib_backends/input_device_ext.rs:60` converts `crossterm::event::Event` to `InputEvent`
-- VT-100 parser already exists: `tui/src/core/ansi/parser/vt_100_ansi_parser.rs`
+- DirectToAnsi output files (will be in `output/` subdirectory after Phase 8.0)
+- Parser utilities in `tui/src/core/ansi/parser/` can be reused for input parameter parsing
 
 **Design Tasks**:
 
-- [ ] Review existing VT-100 parser for input sequence support (mouse events, keyboard)
-- [ ] Design InputDevice API that remains backend-agnostic
-- [ ] Plan async event reading architecture using mio
-- [ ] Document ANSI sequence → InputEvent mapping:
-  - **Keyboard events**: CSI sequences for arrow keys, function keys, etc.
-  - **Mouse events**: SGR (Select Graphic Rendition) mouse protocol sequences
-  - **Special keys**: Page Up/Down, Home/End, Delete, etc.
-- [ ] Plan integration points: how DirectToAnsiInputDevice fits into the overall system
-- [ ] Identify edge cases: partial sequences, invalid input, timing issues
+- [ ] Review existing DirectToAnsi output architecture in `output/` subdirectory
+- [ ] Design InputDevice API that remains backend-agnostic (no DirectToAnsi-specific types leak)
+- [ ] Plan async event reading architecture:
+  - **Decision**: Use `tokio::io::stdin()` for async stdin (NOT mio)
+  - **Rationale**: tokio is already a project dependency with full features enabled; simpler than adding mio
+  - **Benefit**: Integrates seamlessly with existing tokio-based event loop
+- [ ] Design ANSI sequence → InputEvent mapping:
+  - **Keyboard events**: CSI sequences for arrow keys (A/B/C/D), function keys (`<n>~`), etc.
+  - **Mouse events**: SGR (Select Graphic Rendition) mouse protocol sequences (`CSI < Cb ; Cx ; Cy M/m`)
+  - **Special keys**: Page Up/Down (5~/6~), Home/End (H/F), Delete, Backspace, etc.
+  - **Modifier combinations**: Extract from CSI parameters (Ctrl=5, Alt=3, Shift=2, etc.)
+- [ ] Plan buffer management for partial sequences (incomplete ANSI sequences mid-stream)
+- [ ] Identify edge cases: malformed sequences, rapid input, utf-8 text between sequences, stdin closure
+- [ ] Document how `input/input_sequences.rs` and `input/input_device_impl.rs` interact
 
-**Deliverable**: Architecture document or inline code comments explaining the design
+**Deliverable**: Architecture document (inline code comments) explaining input/output symmetry and module responsibilities
 
 ### 8.2: Implement DirectToAnsi InputDevice (4-6 hours)
 
-**Objective**: Create DirectToAnsi-specific InputDevice using mio + VT-100 parser
+**Objective**: Create DirectToAnsi-specific InputDevice using mio + ANSI sequence parsing
 
 **Implementation Steps**:
 
-#### 8.2.1 Create DirectToAnsiInputDevice Module Structure (30-45 min)
+#### 8.2.1 Create DirectToAnsi Input Module Structure (30-45 min)
 
-- [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input_device.rs`
-- [ ] Define `DirectToAnsiInputDevice` struct:
+- [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/` directory
+- [ ] Create `input/mod.rs` with module exports:
+  ```rust
+  mod input_device_impl;
+  mod input_sequences;
+
+  pub use input_device_impl::DirectToAnsiInputDevice;
+  pub use input_sequences::{
+      parse_keyboard_sequence,
+      parse_mouse_sequence,
+      parse_resize_event,
+      parse_focus_event,
+      parse_bracketed_paste,
+  };
+  ```
+- [ ] Create `input/input_device_impl.rs` with `DirectToAnsiInputDevice` struct:
   ```rust
   pub struct DirectToAnsiInputDevice {
-      stdin_reader: /* mio-based async reader */,
-      parser: VT100Parser,
-      buffer: Vec<u8>,  // for partial sequences
+      stdin: tokio::io::Stdin,            // tokio async stdin reader
+      buffer: Vec<u8>,                    // for partial sequences
+      sequence_timeout: Duration,         // timeout for incomplete sequences (100-200ms)
   }
   ```
-- [ ] Implement constructor: `fn new() -> Self`
-- [ ] Implement async event reading: `async fn read_event(&mut self) -> Result<InputEvent>`
+- [ ] Implement constructor: `pub fn new() -> Result<Self>`
+- [ ] Implement async event reading: `pub async fn read_event(&mut self) -> Result<InputEvent>`
+- [ ] Create `input/tests.rs` for unit tests (filled in section 8.3)
+
+**Implementation Notes**:
+- Use `tokio::io::stdin()` for async stdin reading (tokio is already a project dependency)
+- Don't add mio as a separate dependency; tokio provides async I/O abstraction
+- Stdin is already available in tokio with `io::stdin().read()` for async reads
 
 #### 8.2.2 Implement ANSI Sequence Parsing for Input (1.5-2 hours)
 
-- [ ] Add input sequence support to or leverage existing VT-100 parser
-- [ ] Implement keyboard event parsing:
-  - [ ] Arrow keys: CSI `A`/`B`/`C`/`D` → `Key::Up/Down/Right/Left`
-  - [ ] Function keys: CSI `<n>~` → `Key::F1-F12`
-  - [ ] Home/End: CSI `H`/`F` → `Key::Home/End`
-  - [ ] Page Up/Down: CSI `5~`/`6~` → `Key::PageUp/PageDown`
-  - [ ] Delete/Backspace: `DEL`/`BS` → `Key::Delete/Backspace`
-  - [ ] Modifier combinations (Ctrl, Alt, Shift) from CSI parameters
+**File**: `input/input_sequences.rs`
 
-- [ ] Implement mouse event parsing (SGR protocol):
-  - [ ] Click events: `CSI < ... M/m` → `MouseEvent::Down/Up`
-  - [ ] Drag events: motion → `MouseEvent::Drag`
-  - [ ] Scroll events: button 64/65 → `MouseEvent::ScrollUp/ScrollDown`
-  - [ ] Button detection: parameter parsing for left/middle/right buttons
+- [ ] Implement keyboard event parsing function `parse_keyboard_sequence(bytes: &[u8]) -> Option<KeyPress>`
+  - [ ] Arrow keys: CSI `A`/`B`/`C`/`D` → `SpecialKey::Up/Down/Right/Left`
+  - [ ] Function keys: CSI `<n>~` → `FunctionKey::F1-F12` (map numbers 11-34)
+    - CSI `11~` → F1, CSI `12~` → F2, ..., CSI `34~` → F12
+  - [ ] Home/End: CSI `H`/`F` → `SpecialKey::Home/End`
+  - [ ] Page Up/Down: CSI `5~`/`6~` → `SpecialKey::PageUp/PageDown`
+  - [ ] Insert: CSI `2~` → `SpecialKey::Insert`
+  - [ ] Delete/Backspace: CSI `3~` → `SpecialKey::Delete`, 0x08 → `SpecialKey::Backspace`
+  - [ ] Tab: 0x09 → `SpecialKey::Tab`, CSI `Z` → `SpecialKey::BackTab`
+  - [ ] Enter: 0x0D or 0x0A → `SpecialKey::Enter`
+  - [ ] Esc: Lone 0x1B (not followed by `[`) → `SpecialKey::Esc`
+  - [ ] Modifier combinations: Parse CSI parameter for modifier byte
+    - **Formula**: Final byte number = `1 + modifier_mask` where modifier_mask is:
+      - 0 = no modifiers
+      - 1 = Shift
+      - 2 = Alt
+      - 3 = Alt+Shift
+      - 4 = Ctrl
+      - 5 = Ctrl+Shift
+      - 6 = Ctrl+Alt
+      - 7 = Ctrl+Alt+Shift
+    - **Examples**: CSI `1;5A` (1=base, 5=Ctrl) → Ctrl+Up, CSI `1;2A` → Shift+Up
+
+- [ ] Implement mouse event parsing function `parse_mouse_sequence(bytes: &[u8]) -> Option<MouseInput>`
+  - [ ] Click events: `CSI < Cb ; Cx ; Cy M` (press) / `m` (release) → `MouseInputKind::MouseDown/MouseUp`
+  - [ ] Button detection: Extract button number from Cb parameter (0=left, 1=middle, 2=right)
+  - [ ] Drag events: Button held (Cb & 32) → `MouseInputKind::MouseDrag`
+  - [ ] Motion events: Button not held → `MouseInputKind::MouseMove`
+  - [ ] Scroll events:
+    - [ ] Button 64 → `MouseInputKind::ScrollUp`
+    - [ ] Button 65 → `MouseInputKind::ScrollDown`
+    - [ ] Button 6 → `MouseInputKind::ScrollLeft` (horizontal)
+    - [ ] Button 7 → `MouseInputKind::ScrollRight` (horizontal)
+  - [ ] Position parsing: Extract Cx (column) and Cy (row) and convert to `Pos`
+  - [ ] Modifier handling: Check if modifiers are present in SGR sequence and extract to `ModifierKeysMask`
+
+- [ ] **Implement resize event parsing** `parse_resize_event(bytes: &[u8]) -> Option<Size>`
+  - [ ] Format: CSI `8 ; rows ; cols t` → extract rows and columns → `Size`
+  - [ ] Detect window resize sequences sent by terminal
+
+- [ ] **Implement focus event parsing** `parse_focus_event(bytes: &[u8]) -> Option<FocusEvent>`
+  - [ ] CSI `I` → `FocusEvent::Gained`
+  - [ ] CSI `O` → `FocusEvent::Lost`
+
+- [ ] **Implement bracketed paste parsing** `parse_bracketed_paste(bytes: &[u8]) -> Option<String>`
+  - [ ] Format: ESC `[200~` text ESC `[201~`
+  - [ ] Accumulate pasted text between delimiters
+  - [ ] Return accumulated text as String when terminator found
+
+- [ ] Helper functions for parsing CSI parameters (reuse from `parser/protocols/` if available)
+- [ ] Document SGR protocol byte format in comments
 
 #### 8.2.3 Handle Edge Cases (1-1.5 hours)
 
-- [ ] Partial sequence buffering (incomplete ANSI sequences)
-- [ ] Invalid/malformed sequences (skip gracefully)
-- [ ] Terminal timeout handling (read blocks appropriately)
-- [ ] stdin closure detection
-- [ ] UTF-8 text input between sequences
+- [ ] Implement partial sequence buffering in `input_device_impl.rs`:
+  - [ ] Detect incomplete sequences (ESC without terminator)
+  - [ ] Buffer incomplete bytes and wait for more data
+  - [ ] Set reasonable timeout (100-200ms) for incomplete sequences
+- [ ] Invalid/malformed sequence handling:
+  - [ ] Skip invalid bytes gracefully (don't panic)
+  - [ ] Log malformed sequences for debugging
+  - [ ] Continue processing after errors
+- [ ] Terminal interaction:
+  - [ ] Handle stdin closure gracefully (should produce InputEvent::Quit or similar)
+  - [ ] Detect EOF and propagate appropriately
+- [ ] UTF-8 text input:
+  - [ ] Detect and preserve raw UTF-8 text between ANSI sequences
+  - [ ] Handle incomplete UTF-8 sequences (buffer until complete)
+  - [ ] Emit as `InputEvent::Text(String)` if supported
+
+**Files to Create**:
+
+- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs`
+- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
+- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_sequences.rs`
+- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/tests.rs` (unit tests)
 
 **Files to Update**:
 
-- Create: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input_device.rs`
-- Update: `tui/src/tui/terminal_lib_backends/input_device_ext.rs` - Add impl for DirectToAnsiInputDevice
-- Update: `tui/src/core/terminal_io/input_device.rs` - Replace crossterm dependency
-- Update: `tui/src/tui/terminal_lib_backends/mod.rs` - Export new module
+- Update: `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs` - Add `pub mod input;` and re-exports
+- Update: `tui/src/tui/terminal_lib_backends/input_device_ext.rs` - Implement trait for DirectToAnsiInputDevice
+- Update: `tui/src/core/terminal_io/input_device.rs` - Replace `PinnedInputStream<CrosstermEventResult>` with `DirectToAnsiInputDevice`
 
-**Deliverable**: InputDevice implementation that reads and parses ANSI sequences to produce InputEvent
+**Deliverable**: Input module with complete InputDevice implementation that reads and parses all ANSI sequences (keyboard, mouse, resize, focus, paste) to produce InputEvent
 
 ### 8.3: Testing & Validation (2-3 hours)
 
@@ -2191,40 +2314,99 @@ Both sides now speak the same ANSI protocol, with no external terminal library d
 
 **Unit Tests** (1-1.5 hours):
 
-- [ ] Create `tui/src/tui/terminal_lib_backends/direct_to_ansi/input_device_tests.rs`
-- [ ] Test ANSI sequence → InputEvent conversion:
-  - [ ] Arrow keys generate correct directional events
-  - [ ] Function keys (F1-F12) parse correctly
-  - [ ] Modifier combinations (Ctrl+Arrow, Alt+Key, etc.)
-  - [ ] Mouse clicks (left, middle, right)
-  - [ ] Mouse drag detection
-  - [ ] Mouse scroll events
-  - [ ] Special keys (Home, End, Page Up/Down, Delete)
+**File**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/tests.rs`
 
-- [ ] Test edge cases:
-  - [ ] Partial sequences (incomplete input)
-  - [ ] Rapid consecutive keys
-  - [ ] Mixed keyboard and mouse events
-  - [ ] Invalid/garbled sequences (should not panic)
-  - [ ] UTF-8 text between sequences
-  - [ ] Empty input handling
+Test ANSI sequence → InputEvent conversion:
+
+**Keyboard Events**:
+- [ ] Arrow keys generate correct directional events
+  - [ ] CSI `A` → SpecialKey::Up
+  - [ ] CSI `B` → SpecialKey::Down
+  - [ ] CSI `C` → SpecialKey::Right
+  - [ ] CSI `D` → SpecialKey::Left
+- [ ] Function keys (F1-F12) parse correctly
+  - [ ] CSI `11~` → FunctionKey::F1
+  - [ ] CSI `12~` → FunctionKey::F2
+  - [ ] ... CSI `34~` → FunctionKey::F12
+- [ ] Modifier combinations (Ctrl+Arrow, Alt+Key, Shift+Key)
+  - [ ] CSI `1;5A` → Ctrl+Up
+  - [ ] CSI `1;3A` → Alt+Up
+  - [ ] CSI `1;2A` → Shift+Up
+  - [ ] Combinations: Ctrl+Alt, Alt+Shift, Ctrl+Shift, all three
+- [ ] Special keys (Home, End, Page Up/Down, Delete, Insert, Tab, BackTab, Esc, Enter)
+  - [ ] CSI `H` → SpecialKey::Home
+  - [ ] CSI `F` → SpecialKey::End
+  - [ ] CSI `5~` → SpecialKey::PageUp
+  - [ ] CSI `6~` → SpecialKey::PageDown
+  - [ ] CSI `2~` → SpecialKey::Insert
+  - [ ] CSI `3~` → SpecialKey::Delete
+  - [ ] 0x09 → SpecialKey::Tab
+  - [ ] CSI `Z` → SpecialKey::BackTab
+  - [ ] 0x1B (lone) → SpecialKey::Esc
+  - [ ] 0x0D/0x0A → SpecialKey::Enter
+  - [ ] 0x08 → SpecialKey::Backspace
+
+**Mouse Events**:
+- [ ] Mouse clicks (left, middle, right)
+  - [ ] `CSI <0;10;5M` → MouseInputKind::MouseDown(Button::Left) at Pos(col=10, row=5)
+  - [ ] `CSI <1;10;5M` → MouseInputKind::MouseDown(Button::Middle, ...)
+  - [ ] `CSI <2;10;5M` → MouseInputKind::MouseDown(Button::Right, ...)
+- [ ] Mouse release events
+  - [ ] `CSI <0;10;5m` → MouseInputKind::MouseUp
+- [ ] Mouse drag detection
+  - [ ] Button held (Cb & 32) with motion → MouseInputKind::MouseDrag
+- [ ] Mouse motion without buttons
+  - [ ] Movement without button pressed → MouseInputKind::MouseMove
+- [ ] Mouse scroll events
+  - [ ] Button 64 → MouseInputKind::ScrollUp
+  - [ ] Button 65 → MouseInputKind::ScrollDown
+  - [ ] Button 6 → MouseInputKind::ScrollLeft
+  - [ ] Button 7 → MouseInputKind::ScrollRight
+
+**Terminal Events**:
+- [ ] Resize events
+  - [ ] CSI `8;rows;cols t` → InputEvent::Resize(Size) with correct dimensions
+- [ ] Focus events
+  - [ ] CSI `I` → InputEvent::Focus(FocusEvent::Gained)
+  - [ ] CSI `O` → InputEvent::Focus(FocusEvent::Lost)
+- [ ] Bracketed paste
+  - [ ] ESC `[200~text ESC [201~` → InputEvent::BracketedPaste(String)
+
+Test edge cases:
+- [ ] Partial sequences (incomplete input buffered until complete)
+  - [ ] `ESC[` without terminator → buffer and wait
+  - [ ] `ESC[1;` without final byte → buffer and wait
+- [ ] Rapid consecutive keys (multiple sequences in quick succession)
+- [ ] Mixed keyboard and mouse events in stream
+- [ ] Invalid/garbled sequences (should not panic)
+  - [ ] Random bytes that don't form valid sequences
+  - [ ] Truncated sequences
+  - [ ] Unknown CSI codes
+- [ ] UTF-8 text between sequences (if supported)
+- [ ] Empty input handling (no events for a period)
 
 **Integration Tests** (0.5-1 hour):
 
-- [ ] Create test in `tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests/input_handling.rs`
+**File**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/integration_tests/input_handling.rs`
+
 - [ ] Test actual terminal interaction:
-  - [ ] Real keyboard input → InputEvent (manual or scripted)
+  - [ ] Real keyboard input → InputEvent (scripted with tmux/screen or manual)
   - [ ] Real mouse input → InputEvent
-  - [ ] Verify against Crossterm behavior for compatibility
   - [ ] Test in multiple terminal emulators (xterm, GNOME Terminal, Alacritty, Windows Terminal)
+- [ ] Verify behavior matches Crossterm implementation:
+  - [ ] Same keys produce same InputEvent types
+  - [ ] Same mouse sequences produce same events
+  - [ ] Modifier combinations identical
+- [ ] Performance test: Rapid input doesn't drop events
+- [ ] Stress test: Large input volume handled correctly
 
-**Test Utilities**:
+**Test Utilities** (create if needed):
 
-- [ ] Create helper to generate ANSI sequences for testing
-- [ ] Create mock stdin reader for unit tests
-- [ ] Create InputEvent comparison/assertion helpers
+- [ ] Helper to generate ANSI sequences for testing (keyboard/mouse)
+- [ ] Mock stdin reader for unit tests (inject test bytes)
+- [ ] InputEvent comparison/assertion helpers
 
-**Deliverable**: Comprehensive test suite demonstrating InputDevice correctness
+**Deliverable**: Comprehensive test suite (unit + integration) demonstrating InputDevice correctness
 
 ### 8.4: Migration & Cleanup (1 hour)
 
@@ -2232,11 +2414,46 @@ Both sides now speak the same ANSI protocol, with no external terminal library d
 
 **Migration Steps**:
 
-- [ ] Update `InputDevice` to use DirectToAnsiInputDevice by default
-- [ ] Remove `crossterm::event::EventStream` imports
-- [ ] Remove crossterm from `Cargo.toml` dependencies
-- [ ] Update `InputDeviceExt::next_input_event()` if needed for the new implementation
-- [ ] Verify no remaining crossterm usages in input-related code
+- [ ] **Replace InputDevice struct** in `tui/src/core/terminal_io/input_device.rs`:
+  ```rust
+  // Old code:
+  pub struct InputDevice {
+      pub resource: PinnedInputStream<CrosstermEventResult>,
+  }
+
+  // New code:
+  pub struct InputDevice {
+      backend: DirectToAnsiInputDevice,
+  }
+  ```
+
+- [ ] **Update InputDeviceExt implementation** in `tui/src/tui/terminal_lib_backends/input_device_ext.rs`:
+  - Implement `InputDeviceExt` trait for `InputDevice` (already exists)
+  - Call `DirectToAnsiInputDevice::read_event()` instead of `crossterm::event` methods
+
+- [ ] **Remove all crossterm::event imports**:
+  - Remove `use crossterm::event::EventStream` from input-related files
+  - Remove `use crossterm::event::Event` from conversion code
+  - Remove `PinnedInputStream` usage (no longer needed)
+  - Remove `CrosstermEventResult` type (no longer needed)
+
+- [ ] **Verify no remaining crossterm usages in input code**:
+  - Run: `grep -r "crossterm::event" tui/src/` (should return 0 results for input code)
+  - Verify output code can still use crossterm if needed (PaintRenderOpImplCrossterm)
+
+**Remove CrossTerm Dependency** (if no other uses remain):
+
+- [ ] Check if any remaining code uses crossterm (likely render/output code)
+  - If output still uses crossterm: Keep dependency, just remove event-stream feature
+  - If nothing uses crossterm: Remove entire dependency
+- [ ] **Option A - Update to minimal crossterm** (if output still uses it):
+  - Edit `Cargo.toml`: Change `crossterm = { version = "0.29.0", features = ["event-stream"] }`
+  - To: `crossterm = { version = "0.29.0" }` (remove "event-stream" feature)
+- [ ] **Option B - Remove crossterm entirely** (if nothing uses it):
+  - Remove `crossterm` line from `Cargo.toml` dependencies
+  - Remove `futures-util` dependency if only used for crossterm event stream
+- [ ] Run `cargo tree | grep crossterm` to verify
+- [ ] Update lock file: `cargo update`
 
 **Code Quality**:
 
@@ -2248,20 +2465,28 @@ Both sides now speak the same ANSI protocol, with no external terminal library d
 
 **Documentation**:
 
-- [ ] Update `InputDevice` struct documentation to explain DirectToAnsi implementation
-- [ ] Document ANSI sequence handling in code comments
-- [ ] Update any user-facing docs that reference input handling
-- [ ] Add architecture notes about input/output symmetry
+- [ ] Update `InputDevice` struct docs (top-level abstraction, no backend details leaked)
+- [ ] Update `DirectToAnsiInputDevice` docs to explain mio architecture
+- [ ] Document ANSI sequence handling in `input_sequences.rs` with protocol references
+- [ ] Add architecture notes in `direct_to_ansi/mod.rs` explaining input/output symmetry
+  ```
+  Output: RenderOp → render_op_impl → ansi generator → stdout
+  Input:  stdin → mio poll → ansi input parser → InputEvent
 
-**Verification**:
+  Both paths use ANSI/VT-100 protocol, neither depends on external libraries.
+  ```
+- [ ] Update user-facing docs if any reference input handling
 
-- [ ] Full TUI application works with keyboard input
-- [ ] Full TUI application works with mouse input
-- [ ] choose() function works with DirectToAnsi InputDevice
-- [ ] readline_async() function works with DirectToAnsi InputDevice
+**Verification** (Functional Testing):
+
+- [ ] Full TUI application works with keyboard input (test with example app)
+- [ ] Full TUI application works with mouse input (test with example app)
+- [ ] `choose()` function works with DirectToAnsi InputDevice
+- [ ] `readline_async()` function works with DirectToAnsi InputDevice
 - [ ] All examples run without input-related issues
+- [ ] Terminal works in various terminal emulators (xterm, alacritty, GNOME Terminal, tmux, screen)
 
-**Sign-Off**: InputDevice fully migrated to DirectToAnsi, zero crossterm dependencies remaining
+**Sign-Off**: InputDevice fully migrated to DirectToAnsi with parallel input/output architecture, zero crossterm dependencies remaining
 
 ---
 

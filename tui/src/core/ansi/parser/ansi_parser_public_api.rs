@@ -27,7 +27,7 @@
 //! OSC events (window titles, etc.) and DSR responses (terminal status queries).
 //!
 //! For implementation details, architecture patterns, and testing strategy, see the
-//! [module-level documentation](super) which covers the shim → impl → test design
+//! the architecture and testing strategy which covers the shim → impl → test design
 //! pattern.
 //!
 //! [`apply_ansi_bytes`]: crate::OffscreenBuffer::apply_ansi_bytes

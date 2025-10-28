@@ -20,7 +20,7 @@
 //! [`ClearToStartOfLine`]: crate::render_op::RenderOpCommon::ClearToStartOfLine
 
 use super::test_helpers::*;
-use crate::{col, row, pos, core::ansi::generator::AnsiSequenceGenerator};
+use crate::{col, row, pos, AnsiSequenceGenerator};
 use crate::render_op::RenderOpCommon;
 
 #[test]

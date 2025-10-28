@@ -27,7 +27,7 @@
 //!
 //! This naming pattern solves the IDE search problem by creating a predictable hierarchy
 //! that makes code navigation efficient and intuitive. See [parser module
-//! documentation](crate::core::ansi::parser) for the complete
+//! documentation for the complete
 //! architectural pattern explanation.
 //!
 //! # Module Organization
@@ -91,7 +91,7 @@
 //!   implementations
 //! - **Integration Tests**: [`vt_100_ansi_conformance_tests`] - Tests the complete ANSI
 //!   pipeline
-//! - **Testing Philosophy**: See [parser module docs] for the complete three-layer
+//! - **Testing Philosophy**: See the three-layer architecture documentation above for
 //!   strategy
 //!
 //! For example, when working on character operations:
@@ -107,18 +107,12 @@
 //! documentation, or by using IDE search with the operation name (e.g., search for
 //! [`char_ops`] to find all related files).
 //!
-//! [`char_ops`]: crate::core::ansi::parser::operations::vt_100_shim_char_ops
 //!
 //! # VT100 Compliance
 //!
 //! These implementations follow VT100 terminal specifications and are tested for
 //! compliance in the [`vt_100_ansi_conformance_tests`] module.
 //!
-//! [`operations`]: crate::core::ansi::parser::operations
-//! [`vt_100_ansi_conformance_tests`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests
-//! [`operations::char_ops`]: crate::core::ansi::parser::operations::vt_100_shim_char_ops
-//! [`test_char_ops`]: crate::core::ansi::parser::vt_100_ansi_conformance_tests::tests::vt_100_test_char_ops
-//! [parser module docs]: crate::core::ansi::parser
 //!
 //! // Implementation layer hyperlinks (this module)
 //! [`vt_100_impl_char_ops`]: `impl_char_ops`

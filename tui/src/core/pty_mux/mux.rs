@@ -5,15 +5,13 @@
 //! This module provides the main `PTYMux` struct that coordinates all components
 //! and manages the event loop for the terminal multiplexer.
 
-use super::{InputRouter, OutputRenderer, Process, ProcessManager};
-use crate::{Size,
-            core::{ansi::terminal_output,
-                   get_size,
+use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer};
+use crate::{Size, clear_screen_and_home_cursor,
+            core::{get_size,
                    osc::OscController,
                    pty::pty_core::pty_sessions::show_notification,
                    terminal_io::{InputDevice, OutputDevice}},
             lock_output_device_as_mut,
-            output_renderer::MAX_PROCESSES,
             tui::terminal_lib_backends::{InputEvent, RawMode}};
 
 /// Main PTY multiplexer that orchestrates all components.
@@ -70,8 +68,8 @@ impl PTYMuxBuilder {
             miette::bail!("At least one process must be configured");
         }
 
-        if self.processes.len() > MAX_PROCESSES {
-            miette::bail!("Maximum of {} processes allowed", MAX_PROCESSES);
+        if self.processes.len() > output_renderer::MAX_PROCESSES {
+            miette::bail!("Maximum of {} processes allowed", output_renderer::MAX_PROCESSES);
         }
 
         let terminal_size = get_size()?;
@@ -125,7 +123,7 @@ impl PTYMux {
         self.process_manager.start_all_processes()?;
 
         // Clear screen before showing first process.
-        terminal_output::clear_screen_and_home_cursor(&self.output_device);
+        clear_screen_and_home_cursor(&self.output_device);
 
         // Trigger initial process switch to show first process.
         self.process_manager.switch_to(0);
@@ -271,7 +269,7 @@ impl PTYMux {
 
         // Clear screen
         tracing::debug!("Step 4: Clearing screen and homing cursor");
-        terminal_output::clear_screen_and_home_cursor(&self.output_device);
+        clear_screen_and_home_cursor(&self.output_device);
         tracing::debug!("Step 4 completed in {:?}", start_time.elapsed());
 
         // Force flush after escape sequences.
