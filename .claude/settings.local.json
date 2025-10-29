@@ -80,7 +80,8 @@
       "Read(//home/nazmul/.config/Code/User/**)",
       "Read(//home/nazmul/.config/Code/logs/20250925T142242/window1/**)",
       "Read(//home/nazmul/.claude/**)",
-      "WebFetch(domain:internals.rust-lang.org)"
+      "WebFetch(domain:internals.rust-lang.org)",
+      "Read(//home/nazmul/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/crossterm-0.29.0/**)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

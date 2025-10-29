@@ -2226,13 +2226,69 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 - Edge case handling strategy
 - Parser function signatures
 
-### 8.2: Implement DirectToAnsi InputDevice (4-6 hours)
+### 8.2: Implement DirectToAnsi InputDevice (5-7 hours)
 
-**Objective**: Create DirectToAnsi-specific InputDevice using tokio + ANSI sequence parsing
+**Objective**: Create DirectToAnsi-specific InputDevice using tokio + ANSI sequence parsing with crossterm compatibility as benchmark
 
-**Implementation Steps**:
+**Status**: ⏳ IN PROGRESS - Module structure complete, implementing remaining parsers and backend device
 
-#### 8.2.1 Create Input Module Structure (30-45 min) - TWO LAYERS
+**Architecture Improvement**: No timeout needed! Using smart async lookahead instead of artificial delays (see insight box below)
+
+**Implementation Plan**: 8 phases based on comprehensive crossterm source analysis
+
+**Key Decisions Made**:
+- ✅ **Type Consolidation**: Backend imports from protocol layer (no parent-level abstraction)
+- ✅ **SS3 Support**: Required for vim/application mode compatibility
+- ✅ **Mouse Protocols**: Implement SGR + X10 + RXVT (crossterm parity)
+- ✅ **Resize Parsing**: Implement CSI 8;rows;cols t (handles query responses, not SIGWINCH)
+- ✅ **Crossterm Benchmark**: crossterm 0.29.0 source code analyzed for compatibility verification
+- ✅ **Buffer Strategy**: Simple `Vec<u8>` instead of RingBuffer (parsers expect `&[u8]` slices)
+- ✅ **No Timeout**: Smart async lookahead instead of 150ms delays (zero latency ESC key)
+
+---
+
+### 🔍 Architecture Insight: Why No Timeout?
+
+**The ESC Key Problem**:
+When a user presses ESC, the terminal sends `0x1B`. But ANSI sequences also start with `0x1B[...`. How do we distinguish?
+
+**❌ Naive Approach (with timeout)**:
+- Wait 150ms to see if more bytes arrive
+- If yes → parse as ANSI sequence
+- If no → emit ESC key
+- **Problem**: Adds 150ms latency to every ESC key press!
+
+**✅ Smart Approach (no timeout)**:
+- Use tokio async I/O: `stdin.read().await` returns when data is ready
+- If buffer has `[0x1B]` only → emit ESC immediately (no delay!)
+- If buffer has `[0x1B, b'[', ...]` → parse CSI sequence
+- **Advantage**: Zero latency, deterministic parsing
+
+**Implementation Pattern**:
+```rust
+loop {
+    // 1. Try to parse from existing buffer
+    if let Some((event, bytes_consumed)) = self.try_parse() {
+        self.consume(bytes_consumed);
+        return Some(event);
+    }
+
+    // 2. Buffer exhausted, read more from stdin (yields until ready)
+    match self.stdin.read(&mut self.buffer).await {
+        Ok(0) => return None,  // EOF
+        Ok(n) => { /* buffer now has n more bytes */ }
+        Err(_) => return None,
+    }
+
+    // 3. Loop back to try_parse() with new data
+}
+```
+
+**Key Insight**: Tokio's async I/O is more efficient than manual timeouts. The event loop yields control until data arrives, then processes what's available. No artificial delays needed! ✨
+
+---
+
+#### 8.2.1 Create Input Module Structure (30-45 min) - ✅ COMPLETE
 
 **Status**: ✅ COMPLETE
 
@@ -2240,13 +2296,13 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 
 - [x] Create `tui/src/core/ansi/vt_100_terminal_input_parser/` directory
 - [x] Create `vt_100_terminal_input_parser/mod.rs` with rustfmt skip and module re-exports
-- [x] Create module files (stubs, implementation in 8.2.2):
-  - [x] `keyboard.rs` - `parse_keyboard_sequence(bytes: &[u8]) -> Option<InputEvent>`
-  - [x] `mouse.rs` - `parse_mouse_sequence(bytes: &[u8]) -> Option<InputEvent>`
-  - [x] `terminal_events.rs` - `parse_terminal_event(bytes: &[u8]) -> Option<InputEvent>`
-  - [x] `utf8.rs` - `parse_utf8_text(bytes: &[u8]) -> Vec<InputEvent>`
-  - [x] `types.rs` - Backend-agnostic `InputEvent`, `KeyCode`, `MouseButton`, etc. types
-- [x] Unit tests colocated in each module file (no separate `tests.rs` file)
+- [x] Create module files (stubs, implementation ongoing):
+  - [x] `keyboard.rs` - `parse_keyboard_sequence()` - **✅ CSI COMPLETE, SS3 PENDING**
+  - [x] `mouse.rs` - `parse_mouse_sequence()` - **✅ SGR COMPLETE, X10/RXVT PENDING**
+  - [x] `terminal_events.rs` - `parse_terminal_event()` - **⏳ PENDING**
+  - [x] `utf8.rs` - `parse_utf8_text()` - **⏳ PENDING**
+  - [x] `types.rs` - `InputEvent`, `KeyCode`, `MouseButton`, etc. types
+- [x] Unit tests colocated in each module file (66 tests passing)
 
 **Layer 2: Backend I/O** (terminal_lib_backends/ - async I/O + buffering):
 
@@ -2257,8 +2313,8 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
   - [x] `pub fn new() -> Self` constructor stub
   - [x] `pub async fn read_event(&mut self) -> Option<InputEvent>` method stub
   - [x] `dispatch_to_parser()` internal helper stub
-- [x] Create `input/tests.rs` (integration tests - will be filled in 8.3)
-- [x] Add `#[derive(Debug)]` to DirectToAnsiInputDevice (required by clippy)
+- [x] Create `input/tests.rs` (integration tests - to be implemented)
+- [x] Add `#[derive(Debug)]` to DirectToAnsiInputDevice
 
 **Module Integration**:
 
@@ -2268,13 +2324,12 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 **Verification**:
 
 - [x] `cargo check` passes with zero errors
-- [x] All warnings are expected dead-code for stubs (14 warnings, no errors)
+- [x] All warnings are expected dead-code for stubs
 
 **Key Implementation Details**:
 
-- Unit tests are colocated with code (inline `#[cfg(test)]` modules in each file)
-- Integration tests are separate in `input/tests.rs` (since they test async I/O)
-- Types defined in protocol layer (`types.rs`) for backend-agnostic input events
+- Types defined in protocol layer (`vt_100_terminal_input_parser/types.rs`)
+- Backend imports from protocol layer (no duplicate types)
 - Module structure mirrors output architecture for consistency
 
 #### 8.2.2 Implement Protocol Layer Parsers (1.5-2 hours)
@@ -2411,91 +2466,337 @@ I/O
   `b'1' + mask`)
 - Updated: Documentation with test design philosophy (why literals, not generators, in tests)
 
-##### Resize Event Parsing (`terminal_events.rs`)
+---
 
-- [ ] **Implement resize event parsing** `parse_resize_event(bytes: &[u8]) -> Option<InputEvent>`
-  - [ ] Format: CSI `8 ; rows ; cols t` → extract rows and columns → `InputEvent::Resize`
-  - [ ] Detect window resize sequences sent by terminal
+#### Phase 1: Type Consolidation (15-20 min) - ⏳ IN PROGRESS
 
-##### Focus Event Parsing (`terminal_events.rs`)
+**Objective**: Eliminate duplicate types between protocol and backend layers
 
-- [ ] **Implement focus event parsing** `parse_focus_event(bytes: &[u8]) -> Option<InputEvent>`
-  - [ ] CSI `I` → `InputEvent::Focus(FocusState::Gained)`
-  - [ ] CSI `O` → `InputEvent::Focus(FocusState::Lost)`
+**Approach** (refined based on user feedback):
+- ❌ No parent-level `input_event_types.rs` (unnecessary abstraction)
+- ✅ Keep types in `vt_100_terminal_input_parser/types.rs` (protocol layer owns them)
+- ✅ Backend imports from protocol layer
+- ✅ Delete duplicate `direct_to_ansi/input/types.rs`
 
-##### Bracketed Paste Parsing (`terminal_events.rs`)
+**Tasks**:
+- [ ] Delete `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/types.rs`
+- [ ] Update `direct_to_ansi/input/mod.rs` to remove types module
+- [ ] Update `input_device_impl.rs` imports to use protocol layer types:
+  ```rust
+  use crate::core::ansi::vt_100_terminal_input_parser::{InputEvent, KeyCode, /* other types */};
+  ```
+- [ ] Run `cargo check` - verify no broken imports
 
-- [ ] **Implement bracketed paste parsing**
-      `parse_bracketed_paste(bytes: &[u8]) -> Option<InputEvent>`
-  - [ ] Format: ESC `[200~` text ESC `[201~`
-  - [ ] Accumulate pasted text between delimiters
-  - [ ] Return `InputEvent::Paste(PasteMode::Start/End)` for markers
+---
 
-##### UTF-8 Text Parsing (`utf8.rs`)
+#### Phase 2: SS3 Keyboard Support (45-60 min)
 
-- [ ] Helper functions for UTF-8 parsing
-- [ ] Implement `parse_utf8_text(bytes: &[u8]) -> Vec<InputEvent>`
-  - [ ] Handle single-byte ASCII characters
-  - [ ] Handle multi-byte UTF-8 sequences
-  - [ ] Buffer incomplete sequences for later completion
+**Objective**: Add SS3 (ESC O) sequence support for vim/application mode compatibility
 
-#### 8.2.3 Implement Backend Device (1-1.5 hours)
+**Background**: Many terminals in "application mode" send SS3 instead of CSI for arrows and F1-F4. Missing this breaks vim/less/etc.
+
+**Tasks**:
+- [ ] Add SS3 constants to `core/ansi/constants/input_sequences.rs`:
+  - `SS3_PREFIX = b'O'`
+  - SS3 arrow sequences (O A/B/C/D)
+  - SS3 function key sequences F1-F4 (O P/Q/R/S)
+- [ ] Implement `parse_ss3_sequence()` in keyboard.rs:
+  - Handle arrows: ESC O A/B/C/D → Up/Down/Right/Left
+  - Handle F1-F4: ESC O P/Q/R/S → Function(1-4)
+- [ ] Update main keyboard parser to try SS3 before CSI
+- [ ] Add ~10 unit tests for SS3 sequences
+- [ ] Update generator to support SS3 output for round-trip tests
+
+---
+
+#### Phase 3: X10/RXVT Mouse Protocols (60-90 min)
+
+**Objective**: Implement legacy mouse protocols for crossterm parity
+
+**Background**: Crossterm supports 3 mouse protocols (SGR ✅, X10, RXVT). We need all three for compatibility.
+
+**Tasks**:
+
+**3.1 Verify/Fix Scroll Button Codes**:
+- [ ] Check crossterm scroll mapping: buttons 4-7 (not 64-67)
+- [ ] Update scroll detection in mouse.rs if needed
+- [ ] Add tests for all scroll directions
+
+**3.2 Implement X10 Normal Mouse Protocol**:
+- [ ] Add `parse_x10_mouse(bytes: &[u8])` to mouse.rs
+- [ ] Format: ESC [ M Cb Cx Cy (6 bytes fixed)
+- [ ] Button decoding: `(cb - 32) & 3` → 0=left, 1=middle, 2=right, 3=release
+- [ ] Coordinates: `(cx - 32, cy - 32)` then convert to 1-based
+- [ ] Add ~10 tests
+
+**3.3 Implement RXVT Mouse Protocol**:
+- [ ] Add `parse_rxvt_mouse(bytes: &[u8])` to mouse.rs
+- [ ] Format: ESC [ Cb ; Cx ; Cy M (semicolon-separated)
+- [ ] Same button encoding as X10
+- [ ] Coordinates are 1-based
+- [ ] Add ~10 tests
+
+**3.4 Update Mouse Parser Dispatcher**:
+- [ ] Try protocols in order: SGR → RXVT → X10
+- [ ] Protocol detection based on sequence structure
+- [ ] Add integration tests with mixed protocols
+
+---
+
+#### Phase 4: Terminal Events Parser (60-75 min)
+
+**Objective**: Implement focus, bracketed paste, and resize event parsing
+
+**Location**: `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
+
+**Tasks**:
+
+**4.1 Focus Events**:
+- [ ] Implement `parse_focus_event(bytes: &[u8]) -> Option<InputEvent>`
+- [ ] CSI I (0x49) → Focus(Gained)
+- [ ] CSI O (0x4F) → Focus(Lost)
+- [ ] Add 3 tests
+
+**4.2 Bracketed Paste**:
+- [ ] Implement `parse_bracketed_paste(buffer: &[u8]) -> Option<InputEvent>`
+- [ ] ESC[200~ → Paste(Start)
+- [ ] ESC[201~ → Paste(End)
+- [ ] **CRITICAL**: Content between markers NOT parsed for ANSI
+- [ ] Add 3 tests
+
+**4.3 Resize Events**:
+- [ ] Implement `parse_resize_event(bytes: &[u8]) -> Option<InputEvent>`
+- [ ] Format: CSI 8 ; rows ; cols t
+- [ ] Parse parameters, return Resize{rows, cols}
+- [ ] Document: SIGWINCH is preferred, this handles query responses
+- [ ] Add 3 tests
+
+**4.4 Main Dispatcher**:
+- [ ] Implement `parse_terminal_event(buffer: &[u8]) -> Option<InputEvent>`
+- [ ] Route to focus/paste/resize based on sequence structure
+
+---
+
+#### Phase 5: UTF-8 Text Parser (45-60 min)
+
+**Objective**: Parse UTF-8 text input with proper validation
+
+**Location**: `tui/src/core/ansi/vt_100_terminal_input_parser/utf8.rs`
+
+**Tasks**:
+
+**5.1 UTF-8 Helper Functions**:
+- [ ] `get_utf8_length(first_byte: u8) -> Option<usize>`:
+  - 0x00-0x7F → 1 byte
+  - 0xC0-0xDF → 2 bytes
+  - 0xE0-0xEF → 3 bytes
+  - 0xF0-0xF7 → 4 bytes
+- [ ] `is_utf8_complete(buffer: &[u8]) -> Option<usize>`:
+  - Check if buffer has complete UTF-8 sequence
+  - Validate continuation bytes (10xxxxxx pattern)
+- [ ] `decode_utf8(buffer: &[u8]) -> Option<char>`:
+  - Decode validated UTF-8 bytes to char
+
+**5.2 Main UTF-8 Parser**:
+- [ ] Implement `parse_utf8_text(buffer: &[u8]) -> Vec<InputEvent>`:
+  - Parse all complete UTF-8 sequences in buffer
+  - Return InputEvent::Key for each character
+  - Handle uppercase A-Z → add SHIFT modifier
+  - Handle incomplete sequences → return empty vec
+
+**5.3 UTF-8 Tests** (~20 tests):
+- [ ] ASCII characters (5 tests)
+- [ ] Uppercase letters with SHIFT modifier (3 tests)
+- [ ] 2-byte UTF-8 (Greek, Cyrillic) (3 tests)
+- [ ] 3-byte UTF-8 (CJK, emoji) (3 tests)
+- [ ] 4-byte UTF-8 (rare emoji) (2 tests)
+- [ ] Incomplete sequences (3 tests)
+- [ ] Invalid UTF-8 (2 tests)
+
+---
+
+#### Phase 6: Backend Device Implementation (2-3 hours)
+
+**Objective**: Implement async I/O and buffering layer that calls protocol parsers
 
 **Location**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
 
-This layer manages async I/O and buffering, calling protocol parsers from 8.2.2:
+**Why Vec<u8> instead of RingBuffer?**
+- Parsers expect `&[u8]` slices (keyboard, mouse parsers already use this)
+- No need for random access or wraparound complexity
+- Simple buffer management: append, parse, consume
+- Codebase has `RingBufferHeap`/`RingBufferStack` but they're designed for discrete elements with gaps, not byte streams
 
-- [ ] Implement `DirectToAnsiInputDevice::new()` constructor
-  - [ ] Initialize tokio::io::stdin()
-  - [ ] Create 4096-byte buffer
-  - [ ] Set 150ms timeout for incomplete sequences
+---
 
-- [ ] Implement async `read_event()` main loop
-  - [ ] Try to parse complete sequence from buffer using protocol parsers
-  - [ ] If no complete sequence, read more bytes with timeout
-  - [ ] On timeout, try to parse incomplete or skip malformed byte
-  - [ ] Return parsed InputEvent or None on EOF
+**Tasks**:
 
-- [ ] Implement helper methods
-  - [ ] `try_parse_from_buffer()` - dispatches to protocol parsers
-  - [ ] `read_bytes()` - async tokio stdin read
-  - [ ] `handle_timeout()` - recover from incomplete sequences
-  - [ ] Buffer management (advance read pointer, handle wraparound)
+**6.1 DirectToAnsiInputDevice Structure**:
+```rust
+struct DirectToAnsiInputDevice {
+    stdin: tokio::io::Stdin,
+    buffer: Vec<u8>,      // Raw byte buffer (4KB pre-allocated)
+    consumed: usize,      // Bytes already parsed and consumed
+    // NO timeout field - not needed with async I/O!
+}
+```
 
-- [ ] Update `tui/src/tui/terminal_lib_backends/direct_to_ansi/mod.rs`:
-  - [ ] Add `pub mod input;`
-  - [ ] Add re-exports: `pub use input::DirectToAnsiInputDevice;`
+**6.2 Constructor**:
+- [ ] Implement `new() -> Self`:
+  - Initialize tokio::io::stdin()
+  - Create Vec with 4096-byte capacity (pre-allocated)
+  - Set consumed = 0
+  - NO timeout initialization needed
 
-#### 8.2.4 Handle Edge Cases (1-1.5 hours)
+**6.3 Main Event Loop (No Timeout Pattern)**:
+- [ ] Implement `async read_event(&mut self) -> Option<InputEvent>`:
+  ```rust
+  loop {
+      // 1. Try parse from existing buffer
+      if let Some((event, bytes_consumed)) = self.try_parse() {
+          self.consume(bytes_consumed);
+          return Some(event);
+      }
 
-Both **protocol parsers** (8.2.2) and **backend device** (8.2.3) need edge case handling:
+      // 2. Buffer exhausted, read more from stdin (yields until ready)
+      match self.stdin.read(&mut self.buffer).await {
+          Ok(0) => return None,  // EOF
+          Ok(n) => { /* buffer now has n more bytes */ }
+          Err(_) => return None,
+      }
 
-**In Protocol Parsers** (`vt_100_terminal_input_parser/`):
+      // 3. Loop back to try_parse() with new data
+  }
+  ```
+  - **Key insight**: No timeout! Tokio async read yields until data ready
+  - ESC key emitted immediately if no follow-up bytes
+  - Incomplete sequences kept in buffer until more data arrives
 
-- [ ] Invalid/malformed sequence handling:
-  - [ ] Return `None` for incomplete sequences
-  - [ ] Handle truncated sequences gracefully
-  - [ ] Validate sequence structure (don't panic)
+**6.4 Parser Dispatcher (Smart Lookahead)**:
+- [ ] Implement `try_parse(&self) -> Option<(InputEvent, usize)>`:
+  ```rust
+  let buf = &self.buffer[self.consumed..];
 
-**In Backend Device** (`input_device_impl.rs`):
+  match buf.first() {
+      Some(&0x1B) if buf.len() == 1 => {
+          // Just ESC, emit immediately (no timeout!)
+          Some((InputEvent::Esc, 1))
+      }
+      Some(&0x1B) if buf.get(1) == Some(&b'[') => {
+          // CSI sequence - delegate to keyboard parser
+          parse_keyboard_sequence(buf)
+      }
+      Some(&0x1B) if buf.get(1) == Some(&b'O') => {
+          // SS3 sequence - delegate to keyboard parser
+          parse_keyboard_sequence(buf)
+      }
+      Some(&0x1B) => {
+          // ESC + unknown byte = emit ESC
+          Some((InputEvent::Esc, 1))
+      }
+      Some(_) => {
+          // Try mouse, terminal events, then UTF-8
+          parse_mouse_sequence(buf)
+              .or_else(|| parse_terminal_event(buf))
+              .or_else(|| parse_utf8_text(buf))
+      }
+      None => None,  // Empty buffer
+  }
+  ```
+  - Fast path: check first byte for routing
+  - Return `(InputEvent, bytes_consumed)` or `None` if incomplete
 
-- [ ] Partial sequence buffering:
-  - [ ] Detect incomplete sequences (ESC without terminator)
-  - [ ] Buffer and wait for more data
-  - [ ] Timeout recovery: skip byte and continue
+**6.5 Buffer Management**:
+- [ ] `async read_bytes(&mut self) -> io::Result<usize>`:
+  - Use tokio `AsyncReadExt::read()` to append to buffer
+  - Grow buffer if needed (Vec handles this automatically)
+- [ ] `consume(&mut self, count: usize)`:
+  - Increment `self.consumed` by count
+  - If consumed > threshold (e.g., 2KB), compact buffer:
+    ```rust
+    if self.consumed > 2048 {
+        self.buffer.drain(..self.consumed);
+        self.consumed = 0;
+    }
+    ```
+- [ ] No wraparound logic needed (Vec manages memory)
 
-- [ ] UTF-8 text handling:
-  - [ ] Detect UTF-8 start bytes (0xC0-0xF7)
-  - [ ] Buffer until complete sequence (1-4 bytes)
-  - [ ] Validate continuation bytes match pattern 10xxxxxx
-  - [ ] Call `utf8::parse_utf8_text()` from protocol layer
+**6.6 Edge Cases**:
+- [ ] EOF handling: `stdin.read()` returns 0 → return None (clean shutdown)
+- [ ] Invalid sequences: Skip first byte, retry parse with remaining buffer
+- [ ] Incomplete sequences: Keep in buffer until more data arrives (no timeout)
+- [ ] Empty buffer after EOF: Return None (no hanging)
+- [ ] Buffer growth: Vec auto-grows, but compact periodically to avoid unbounded growth
 
-- [ ] Terminal interaction:
-  - [ ] Stdin EOF: return `Ok(None)` to signal graceful close
-  - [ ] I/O errors: propagate via `Result`
+---
 
-**Deliverable**: Input module with complete InputDevice implementation that reads and parses all
-ANSI sequences (keyboard, mouse, resize, focus, paste) to produce InputEvent
+**Phase 6 Time Estimate**:
+- 6.1 Structure: 10 min
+- 6.2 Constructor: 15 min
+- 6.3 Main Event Loop: 45-60 min
+- 6.4 Parser Dispatcher: 30-45 min
+- 6.5 Buffer Management: 20-30 min
+- 6.6 Edge Cases: 15-20 min
+**Total: 2-3 hours** (down from 3-4 hours with timeout complexity)
+
+---
+
+#### Phase 7: Testing (90-120 min)
+
+**Objective**: Comprehensive test suite for backend device
+
+**7.1 Backend Unit Tests** (30+ tests in `input/tests.rs`):
+- [ ] Constructor initialization (1 test)
+- [ ] Parser dispatch for all event types (15 tests)
+- [ ] Buffer management and wraparound (5 tests)
+- [ ] Timeout handling (3 tests)
+- [ ] Incomplete sequences (5 tests)
+- [ ] EOF (2 tests)
+
+**7.2 Integration Tests**:
+- [ ] Real terminal interaction (tmux/screen)
+- [ ] Mixed event streams
+- [ ] Rapid input stress test
+- [ ] Multiple terminal emulators
+
+**7.3 Crossterm Parity Verification** (NEW REQUIREMENT):
+- [ ] Compare against crossterm source code
+- [ ] Verify all scenarios covered
+- [ ] Document any intentional differences
+
+---
+
+#### Phase 8: Documentation and Cleanup (30-45 min)
+
+**Objective**: Polish documentation and verify code quality
+
+**8.1 Module Documentation**:
+- [ ] Comprehensive docs for all parsers
+- [ ] SS3 vs CSI explanation
+- [ ] Protocol differences (X10/RXVT/SGR)
+- [ ] Backend architecture notes
+
+**8.2 Code Quality**:
+- [ ] `cargo fmt --all`
+- [ ] `cargo clippy --all-targets --fix`
+- [ ] Fix warnings
+- [ ] Verify tests pass
+
+**8.3 Update Task Documents**:
+- [ ] Mark completed sections
+- [ ] Add crossterm parity notes
+- [ ] Document deviations
+
+**Success Criteria**:
+- ✅ All parsers implemented (keyboard+SS3, mouse+X10/RXVT, events, UTF-8)
+- ✅ Backend device with tokio async I/O (NO timeout needed!)
+- ✅ Simple Vec<u8> buffer with consume/compact pattern
+- ✅ Type consolidation via import (no duplicates)
+- ✅ Crossterm source compatibility verified
+- ✅ ESC key has zero latency (no artificial delays)
+- ✅ Zero errors, zero warnings
+- ✅ 100+ new tests, all passing
+- ✅ Documentation complete with architecture insights
 
 ### 8.3: Testing & Validation (2-3 hours)
 
