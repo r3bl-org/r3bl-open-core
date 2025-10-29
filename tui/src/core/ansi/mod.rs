@@ -1,3 +1,7 @@
+/*
+ * // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+ */
+
 //! ANSI Terminal Abstraction Layer
 //!
 //! This module provides bidirectional ANSI sequence handling for terminal emulation:
@@ -14,19 +18,17 @@
 //! ## Architecture Overview
 //!
 //! ```text
-//! PTY Input                                  App Output
-//!    ↓                                          ↓
-//! ┌─────────────┐                       ┌──────────────┐
-//! │   Parser    │◀─── Constants ───→   │  Generator   │
-//! └─────────────┘        (ANSI         └──────────────┘
-//! ↓                      specs)               ↑
-//! Terminal State          │           Styled Text
-//!                        ↓                    │
-//!                    ┌──────────┐            │
-//!                    │  Color   │────────────┘
-//!                    │Types &   │
-//!                    │Conversion│
-//!                    └──────────┘
+//!   PTY Input                             App Output
+//!      ↓                                     ↓
+//! ┌─────────────┐                     ┌──────────────┐
+//! │   Parser    │ ◀─── Constants ───▶ │  Generator   │
+//! └─────────────┘    (ANSI specs)     └──────────────┘
+//!    ↓                     │                 ↑
+//! Terminal State           │            Styled Text
+//!                  ┌───────▼────────┐        │
+//!                  │ Color types &  │────────┘
+//!                  │ Conversion     │
+//!                  └────────────────┘
 //! ```
 //!
 //! ## Terminal Input Modes: Raw vs Cooked
@@ -97,7 +99,7 @@
 //! - `^[[3~` = Delete key
 //! - `^[OP` = F1 key
 //!
-//! This module's parser ([`vt_100_ansi_parser`](mod@crate::core::ansi::vt_100_ansi_parser))
+//! This module's parser ([`vt_100_pty_output_parser`])
 //! converts these escape sequence bytes into structured events the application can handle.
 //!
 //! ## Usage Examples
@@ -141,6 +143,8 @@
 //!
 //! **Terminal I/O:**
 //! - Color detection and support queries
+//!
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
@@ -156,10 +160,10 @@ mod terminal_output;
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
 #[cfg(any(test, doc))]
-pub mod vt_100_ansi_parser;
+pub mod vt_100_pty_output_parser;
 // This module is private in non-test, non-doc builds.
 #[cfg(not(any(test, doc)))]
-mod vt_100_ansi_parser;
+mod vt_100_pty_output_parser;
 
 // Input parsing module - public for protocol access
 pub mod vt_100_terminal_input_parser;
@@ -173,5 +177,5 @@ pub use terminal_output::*;
 
 // Re-export test fixtures for testing purposes only.
 #[cfg(test)]
-pub use vt_100_ansi_parser::vt_100_ansi_conformance_tests;
-pub use vt_100_ansi_parser::*;
+pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;
+pub use vt_100_pty_output_parser::*;

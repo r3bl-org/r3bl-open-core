@@ -388,7 +388,7 @@
 //!
 //! ```bash
 //! # Run all VT100 ANSI conformance tests
-//! cargo test vt_100_ansi_conformance_tests
+//! cargo test vt_100_pty_output_conformance_tests
 //!
 //! # Run specific conformance test categories
 //! cargo test test_real_world_scenarios     # vim, emacs, tmux patterns
@@ -1661,9 +1661,9 @@
 //! - VT-100 conformance test suite
 //!
 //! See the detailed [`pty_mux` module documentation](crate::core::pty_mux) and
-//! [`vt_100_ansi_parser`] documentation.
+//! [`vt_100_pty_output_parser`] documentation.
 //!
-//! [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //!
 //! # Painting the caret
 //!

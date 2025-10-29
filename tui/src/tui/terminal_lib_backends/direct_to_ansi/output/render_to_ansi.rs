@@ -73,8 +73,8 @@ pub trait RenderToAnsi {
     ///
     /// The smart style diffing in [`PixelCharRenderer`] ensures minimal ANSI output.
     ///
-    /// [`PixelCharRenderer`]: crate::tui::terminal_lib_backends::direct_to_ansi::pixel_char_renderer::PixelCharRenderer
-    /// [`render_line()`]: crate::tui::terminal_lib_backends::direct_to_ansi::pixel_char_renderer::PixelCharRenderer::render_line
+    /// [`PixelCharRenderer`]: crate::PixelCharRenderer
+    /// [`render_line()`]: crate::PixelCharRenderer::render_line
     fn render_to_ansi(&self) -> Vec<u8>;
 }
 

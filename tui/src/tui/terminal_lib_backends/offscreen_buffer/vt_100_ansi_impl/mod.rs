@@ -3,14 +3,14 @@
 //! VT100/ANSI terminal operation implementations for `OffscreenBuffer`.
 //!
 //! This module contains the actual implementations of VT100 and ANSI escape sequence
-//! operations that are delegated from the `vt_100_ansi_parser::operations` module. The
-//! structure mirrors `vt_100_ansi_parser/operations/` to provide a clear 1:1 mapping
+//! operations that are delegated from the `vt_100_pty_output_parser::operations` module. The
+//! structure mirrors `vt_100_pty_output_parser/operations/` to provide a clear 1:1 mapping
 //! between the parser shim layer and the implementation layer.
 //!
 //! # Architecture
 //!
 //! ```text
-//! vt_100_ansi_parser/operations/vt_100_shim_char_ops <- (shim - minimal logic)
+//! vt_100_pty_output_parser/operations/vt_100_shim_char_ops <- (shim - minimal logic)
 //!           ↓ delegates to
 //! vt_100_ansi_impl/vt_100_impl_char_ops                  <- (implementation - full logic)
 //! ```
@@ -32,7 +32,7 @@
 //!
 //! # Module Organization
 //!
-//! Each file corresponds directly to a file in `vt_100_ansi_parser/operations/`:
+//! Each file corresponds directly to a file in `vt_100_pty_output_parser/operations/`:
 //!
 //! - [`vt_100_impl_char_ops`] - Character operations (`print_char`, ICH, DCH, ECH)
 //! - [`vt_100_impl_control_ops`] - Control character handling (BS, TAB, LF, CR)
@@ -142,4 +142,4 @@ pub mod vt_100_impl_sgr_ops;
 pub mod vt_100_impl_terminal_ops;
 
 // Note: Individual modules are typically accessed directly by their respective
-// vt_100_ansi_parser operation files. No re-exports needed here.
+// vt_100_pty_output_parser operation files. No re-exports needed here.

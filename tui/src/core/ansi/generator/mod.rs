@@ -1,3 +1,5 @@
+// Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 //! ANSI sequence generation engine
 //!
 //! This module provides builders for converting styled text and terminal operations

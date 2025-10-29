@@ -3,7 +3,7 @@
 //! Character operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements character-level operations that correspond to ANSI escape
-//! sequences handled by the `vt_100_ansi_parser/operations/vt_100_shim_char_ops` shim.
+//! sequences handled by the `vt_100_pty_output_parser/operations/vt_100_shim_char_ops` shim.
 //! These include:
 //!
 //! - **ICH** (Insert Character) - [`insert_chars_at_cursor`]

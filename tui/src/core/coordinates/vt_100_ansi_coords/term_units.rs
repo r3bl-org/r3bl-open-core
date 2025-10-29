@@ -4,7 +4,7 @@
 //!
 //! This module provides the [`TermRow`] and [`TermCol`] types for terminal coordinates.
 //! See type documentation for detailed usage and examples.
-//! The [`vt_100_ansi_parser`] is the primary consumer of these types, along with
+//! The [`vt_100_pty_output_parser`] is the primary consumer of these types, along with
 //! the [`offscreen_buffer`] module which uses them for VT 100 related operations.
 //!
 //! # Core Concept: Two Coordinate Systems
@@ -81,7 +81,7 @@
 //!
 //! [`from_raw_non_zero_value()`]: TermRow::from_raw_non_zero_value
 //! [`from_zero_based()`]: TermRow::from_zero_based
-//! [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+//! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 //! [`offscreen_buffer`]: crate::tui::terminal_lib_backends::offscreen_buffer
 
 use crate::{ColIndex, CsiSequence, NumericConversions, RowIndex};

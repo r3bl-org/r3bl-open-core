@@ -10,7 +10,7 @@
 //!
 //! Use these types **only** when:
 //! - Parsing ANSI escape sequences (e.g., `ESC[5;10H`)
-//! - Working with `vt_100_ansi_parser` module
+//! - Working with `vt_100_pty_output_parser` module
 //!
 //! For all other terminal operations (including crossterm), use [`buffer_coords`] types
 //! which are 0-based.

@@ -10,14 +10,14 @@ use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiCol
                                       SGR_BOLD, SGR_DIM, SGR_ITALIC, SGR_SET_GRAPHICS,
                                       SGR_STRIKETHROUGH, SGR_UNDERLINE, SGR_MOUSE_MODE,
                                       URXVT_MOUSE_EXTENSION},
-                          vt_100_ansi_parser::{CsiSequence, PrivateModeType}},
+                          vt_100_pty_output_parser::{CsiSequence, PrivateModeType}},
                    coordinates::{TermCol, TermRow}}};
 
 /// Generates ANSI escape sequence strings for terminal operations.
 ///
 /// This module generates raw ANSI escape sequence bytes for terminal operations using
 /// semantic types and traits for type-safe sequence generation. Works in conjunction with
-/// [`vt_100_ansi_parser`] for bidirectional ANSI handling.
+/// [`vt_100_pty_output_parser`] for bidirectional ANSI handling.
 ///
 /// # Design Philosophy
 ///
@@ -29,7 +29,7 @@ use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiCol
 /// - **Infallible generation**: Exhaustive pattern matching ensures valid output
 /// - **1-based indexing**: Automatically converts 0-based indices to 1-based ANSI
 ///
-/// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 ///
 /// # Reference Implementation Pattern
 ///
@@ -68,7 +68,7 @@ use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiCol
 /// This struct has no state; it's a collection of static methods. State tracking (cursor
 /// position, current colors) is handled by external implementations.
 ///
-/// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+/// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 /// [`FastStringify`]: crate::core::common::fast_stringify::FastStringify
 /// [`CsiSequence`]: crate::CsiSequence
 /// [`SgrColorSequence`]: crate::SgrColorSequence
@@ -158,9 +158,9 @@ impl AnsiSequenceGenerator {
     }
 
     /// Generate text attribute sequences (bold, italic, underline, etc.)
-    /// Uses semantic SGR codes from the [`vt_100_ansi_parser`] infrastructure
+    /// Uses semantic SGR codes from the [`vt_100_pty_output_parser`] infrastructure
     ///
-    /// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+    /// [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
     #[must_use]
     pub fn text_attributes(style: &TuiStyle) -> String {
         // Build SGR sequence with all applicable attributes

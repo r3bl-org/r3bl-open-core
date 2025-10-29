@@ -29,7 +29,7 @@ impl Pos {
     ///
     /// Panics if either coordinate is zero (invalid VT-100 coordinate).
     ///
-    /// [`parse_cursor_position`]: crate::core::ansi::vt_100_ansi_parser::parse_cursor_position
+    /// [`parse_cursor_position`]: crate::core::ansi::vt_100_pty_output_parser::parse_cursor_position
     #[must_use]
     pub fn from_one_based(col: u16, row: u16) -> Self {
         let col_nz = NonZeroU16::new(col).expect("Column must be non-zero (1-based)");

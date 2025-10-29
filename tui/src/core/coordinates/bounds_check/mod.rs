@@ -696,7 +696,7 @@
 //!
 //! **VT-100 Protocol Types** (not part of bounds checking):
 //! - [`TermRow`], [`TermCol`] - 1-based terminal coordinates for ANSI escape sequences
-//!   - Located in `vt_100_ansi_parser::term_units` module
+//!   - Located in `vt_100_pty_output_parser::term_units` module
 //!   - Used exclusively for CSI sequence parsing (`ESC[row;colH`)
 //!   - Convert to/from [`RowIndex`]/[`ColIndex`] for buffer operations
 //!   - **Not paired**: Both are 1-based positions, neither represents a size/length

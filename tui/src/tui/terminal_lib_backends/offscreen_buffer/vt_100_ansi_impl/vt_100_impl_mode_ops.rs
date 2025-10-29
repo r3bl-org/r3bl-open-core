@@ -3,7 +3,7 @@
 //! Mode setting operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements mode operations that correspond to ANSI mode
-//! sequences handled by the `vt_100_ansi_parser::operations::mode_ops` module. These
+//! sequences handled by the `vt_100_pty_output_parser::operations::mode_ops` module. These
 //! include:
 //!
 //! - **SM h** (Set Mode) - [`set_auto_wrap_mode`] (enabled=true)

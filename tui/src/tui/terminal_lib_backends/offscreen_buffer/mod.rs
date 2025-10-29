@@ -100,7 +100,7 @@
 //! mapping:
 //!
 //! ```text
-//! vt_100_ansi_parser/operations/             offscreen_buffer/vt_100_ansi_impl/
+//! vt_100_pty_output_parser/operations/             offscreen_buffer/vt_100_ansi_impl/
 //! ├── vt_100_shim_char_ops         →         ├── vt_100_impl_char_ops    (print_char, ICH, DCH, ECH)
 //! ├── vt_100_shim_control_ops      →         ├── vt_100_impl_control_ops (BS, TAB, LF, CR)
 //! ├── vt_100_shim_cursor_ops       →         ├── vt_100_impl_cursor_ops  (movement, positioning)

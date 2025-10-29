@@ -3,7 +3,7 @@
 //! SGR (Select Graphic Rendition) operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements SGR operations that correspond to ANSI SGR
-//! sequences handled by the `vt_100_ansi_parser::operations::sgr_ops` module. These
+//! sequences handled by the `vt_100_pty_output_parser::operations::sgr_ops` module. These
 //! include:
 //!
 //! - **SGR 0** (Reset) - [`reset_all_style_attributes`]
