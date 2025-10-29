@@ -397,7 +397,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_extended_256_colors() {
-        use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_builders::extended_color_builders::*;
+        use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
@@ -462,7 +462,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_extended_rgb_colors() {
-        use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_builders::extended_color_builders::*;
+        use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);
@@ -521,7 +521,7 @@ pub mod sgr_styling {
 
     #[test]
     fn test_sgr_extended_colors_mixed() {
-        use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_builders::extended_color_builders::*;
+        use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 
         let mut ofs_buf = create_test_offscreen_buffer_10r_by_10c();
         let mut performer = AnsiToOfsBufPerformer::new(&mut ofs_buf);

@@ -9,7 +9,7 @@ use crate::{
             term_col, term_row, tui_style_attrib};
 use crate::core::ansi::vt_100_pty_output_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                                             CsiSequence,
-                                            vt_100_pty_output_conformance_tests::test_sequence_builders::csi_builders::csi_seq_cursor_pos};
+                                            vt_100_pty_output_conformance_tests::test_sequence_generators::csi_builders::csi_seq_cursor_pos};
 
 /// Create a test `OffscreenBuffer` with 24x80 dimensions (more realistic terminal size).
 fn create_offscreen_buffer_24r_by_80c() -> OffscreenBuffer {

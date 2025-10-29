@@ -13,13 +13,25 @@
 
 use super::types::InputEvent;
 
-/// Parse UTF-8 text and return InputEvents for typed characters.
+/// Parse UTF-8 text and return a single InputEvent for the first complete character.
+///
+/// Returns `Some((event, bytes_consumed))` if a complete UTF-8 character is parsed,
+/// or `None` if the sequence is incomplete or invalid.
 ///
 /// Converts raw UTF-8 bytes into character input events. Handles multi-byte
-/// UTF-8 sequences and buffers incomplete sequences for later completion.
-pub fn parse_utf8_text(_buffer: &[u8]) -> Vec<InputEvent> {
+/// UTF-8 sequences (1-4 bytes). If the buffer starts with incomplete UTF-8,
+/// returns `None` to indicate more bytes are needed.
+///
+/// The caller (DirectToAnsiInputDevice) can call this repeatedly to parse
+/// multiple characters from the buffer.
+pub fn parse_utf8_text(_buffer: &[u8]) -> Option<(InputEvent, usize)> {
     // TODO: Implement UTF-8 text parsing
-    Vec::new()
+    // When implementing:
+    // 1. Check first byte to determine UTF-8 sequence length (1-4 bytes)
+    // 2. Verify buffer has enough bytes
+    // 3. Validate UTF-8 encoding
+    // 4. Return (InputEvent::Keyboard { code: KeyCode::Char(ch), modifiers }, bytes_consumed)
+    None
 }
 
 /// Check if a UTF-8 byte sequence is complete.

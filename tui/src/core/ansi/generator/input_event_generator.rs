@@ -493,9 +493,10 @@ mod tests {
         };
 
         let bytes = generate_keyboard_sequence(&original_event).unwrap();
-        let parsed_event = parse_keyboard_sequence(&bytes);
+        let (parsed_event, bytes_consumed) = parse_keyboard_sequence(&bytes).expect("Should parse");
 
-        assert_eq!(parsed_event, Some(original_event));
+        assert_eq!(parsed_event, original_event);
+        assert_eq!(bytes_consumed, bytes.len());
     }
 
     #[test]
@@ -512,9 +513,10 @@ mod tests {
         };
 
         let bytes = generate_keyboard_sequence(&original_event).unwrap();
-        let parsed_event = parse_keyboard_sequence(&bytes);
+        let (parsed_event, bytes_consumed) = parse_keyboard_sequence(&bytes).expect("Should parse");
 
-        assert_eq!(parsed_event, Some(original_event));
+        assert_eq!(parsed_event, original_event);
+        assert_eq!(bytes_consumed, bytes.len());
     }
 
     #[test]
@@ -531,8 +533,9 @@ mod tests {
         };
 
         let bytes = generate_keyboard_sequence(&original_event).unwrap();
-        let parsed_event = parse_keyboard_sequence(&bytes);
+        let (parsed_event, bytes_consumed) = parse_keyboard_sequence(&bytes).expect("Should parse");
 
-        assert_eq!(parsed_event, Some(original_event));
+        assert_eq!(parsed_event, original_event);
+        assert_eq!(bytes_consumed, bytes.len());
     }
 }

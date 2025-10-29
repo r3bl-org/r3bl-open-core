@@ -15,7 +15,7 @@
 //! # Example Usage
 //!
 //! ```rust,ignore
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_builders::dsr_builders::*;
+//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::*;
 //!
 //! let cursor_response = dsr_cursor_position_response(
 //!     term_row(nz(10)),

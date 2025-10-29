@@ -14,12 +14,15 @@
 
 use super::types::{InputEvent, KeyCode, KeyModifiers};
 
-/// Parse a CSI keyboard sequence and return an InputEvent if recognized.
+/// Parse a CSI keyboard sequence and return an InputEvent with bytes consumed.
+///
+/// Returns `Some((event, bytes_consumed))` if a complete sequence was parsed,
+/// or `None` if the sequence is incomplete or invalid.
 ///
 /// Handles sequences like:
-/// - `CSI A` → Up arrow
-/// - `CSI 5~` → Page Up
-/// - `CSI 1;3C` → Alt+Right
+/// - `CSI A` → (Up arrow, 3 bytes)
+/// - `CSI 5~` → (Page Up, 4 bytes)
+/// - `CSI 1;3C` → (Alt+Right, 6 bytes)
 ///
 /// ## Sequence Format
 ///
@@ -27,10 +30,10 @@ use super::types::{InputEvent, KeyCode, KeyModifiers};
 /// parameters separated by semicolons, and a final command byte.
 ///
 /// Examples:
-/// - `ESC [ A` - Arrow up (no parameters)
-/// - `ESC [ 5 ~` - Page up (parameter: 5, final: ~)
-/// - `ESC [ 1 ; 3 C` - Alt+Right (base: 1, modifier: 3, final: C)
-pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<InputEvent> {
+/// - `ESC [ A` - Arrow up (no parameters, 3 bytes)
+/// - `ESC [ 5 ~` - Page up (parameter: 5, final: ~, 4 bytes)
+/// - `ESC [ 1 ; 3 C` - Alt+Right (base: 1, modifier: 3, final: C, 6 bytes)
+pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
         return None;
@@ -43,7 +46,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<InputEvent> {
 
     // Handle simple control keys first (single character after ESC[)
     if buffer.len() == 3 {
-        return parse_csi_single_char(buffer[2]);
+        return parse_csi_single_char(buffer[2]).map(|event| (event, 3));
     }
 
     // Parse parameters and final byte for multi-character sequences
@@ -69,14 +72,17 @@ fn parse_csi_single_char(final_byte: u8) -> Option<InputEvent> {
 }
 
 /// Parse CSI sequences with numeric parameters (e.g., `CSI 5 ~ `, `CSI 1 ; 3 C`)
-fn parse_csi_parameters(buffer: &[u8]) -> Option<InputEvent> {
+/// Returns (InputEvent, bytes_consumed) on success.
+fn parse_csi_parameters(buffer: &[u8]) -> Option<(InputEvent, usize)> {
     // Extract the parameters and final byte
     // Format: ESC [ [param;param;...] final_byte
     let mut params = Vec::new();
     let mut current_num = String::new();
     let mut final_byte = 0u8;
+    let mut bytes_scanned = 0;
 
-    for &byte in &buffer[2..] {
+    for (idx, &byte) in buffer[2..].iter().enumerate() {
+        bytes_scanned = idx + 1; // Track position relative to buffer[2..]
         match byte {
             b'0'..=b'9' => {
                 current_num.push(byte as char);
@@ -102,8 +108,11 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<InputEvent> {
         return None; // No final byte found
     }
 
+    // Total bytes consumed: ESC [ (2 bytes) + scanned bytes (includes final)
+    let total_consumed = 2 + bytes_scanned;
+
     // Parse based on parameters and final byte
-    match (params.len(), final_byte) {
+    let event = match (params.len(), final_byte) {
         // Arrow keys with modifiers: CSI 1 ; m A/B/C/D
         (2, b'A') if params[0] == 1 => {
             let modifiers = decode_modifiers(params[1] as u8);
@@ -141,7 +150,9 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<InputEvent> {
         }
         // Other CSI sequences
         _ => None,
-    }
+    }?;
+
+    Some((event, total_consumed))
 }
 
 /// Parse function keys (CSI n~) and special keys (Insert, Delete, Home, End, PageUp,
@@ -248,53 +259,57 @@ mod tests {
     fn test_arrow_up() {
         // Use generator to build the sequence (self-documenting)
         let input = arrow_key_sequence(KeyCode::Up, KeyModifiers::default());
-        let event = parse_keyboard_sequence(&input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert_eq!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::Up,
                 modifiers: KeyModifiers::default()
-            })
+            }
         );
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_arrow_down() {
         let input = b"\x1b[B"; // ESC [ B
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::Down,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_arrow_right() {
         let input = b"\x1b[C"; // ESC [ C
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::Right,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_arrow_left() {
         let input = b"\x1b[D"; // ESC [ D
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::Left,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     // ==================== Arrow Keys with Modifiers ====================
@@ -311,7 +326,7 @@ mod tests {
                 ctrl: false,
             },
         );
-        let event = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         assert_eq!(
             event,
             InputEvent::Keyboard {
@@ -323,12 +338,13 @@ mod tests {
                 }
             }
         );
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_alt_right() {
         let input = b"\x1b[1;3C"; // ESC [ 1 ; 3 C → 3-1=2 = Alt(2)
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Right,
@@ -340,13 +356,14 @@ mod tests {
             }
             _ => panic!("Expected Alt+Right"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_ctrl_up_from_phase1() {
         // FROM PHASE 1 FINDINGS: ESC[1;5A = Ctrl+Up (verified with cat -v)
         let input = b"\x1b[1;5A";
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Up,
@@ -358,12 +375,13 @@ mod tests {
             }
             _ => panic!("Expected Ctrl+Up"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_ctrl_down() {
         let input = b"\x1b[1;5B"; // ESC [ 1 ; 5 B (base 1, ctrl modifier = 5)
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Down,
@@ -375,12 +393,13 @@ mod tests {
             }
             _ => panic!("Expected Ctrl+Down"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_alt_ctrl_left() {
         let input = b"\x1b[1;7D"; // ESC [ 1 ; 7 D → 7-1=6 = Alt(2)+Ctrl(4)
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Left,
@@ -392,12 +411,13 @@ mod tests {
             }
             _ => panic!("Expected Alt+Ctrl+Left"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_shift_alt_ctrl_left() {
         let input = b"\x1b[1;8D"; // ESC [ 1 ; 8 D → 8-1=7 = Shift(1)+Alt(2)+Ctrl(4)
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Left,
@@ -409,6 +429,7 @@ mod tests {
             }
             _ => panic!("Expected Shift+Alt+Ctrl+Left"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     // ==================== Special Keys ====================
@@ -416,79 +437,85 @@ mod tests {
     #[test]
     fn test_home_key() {
         let input = b"\x1b[H"; // ESC [ H
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::Home,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_end_key() {
         let input = b"\x1b[F"; // ESC [ F
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::End,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_insert_key() {
         let input = b"\x1b[2~"; // ESC [ 2 ~
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::Insert,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_delete_key() {
         let input = b"\x1b[3~"; // ESC [ 3 ~
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::Delete,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_page_up() {
         let input = b"\x1b[5~"; // ESC [ 5 ~
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::PageUp,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_page_down() {
         let input = b"\x1b[6~"; // ESC [ 6 ~
-        let event = parse_keyboard_sequence(input);
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
         assert!(matches!(
             event,
-            Some(InputEvent::Keyboard {
+            InputEvent::Keyboard {
                 code: KeyCode::PageDown,
                 modifiers: _
-            })
+            }
         ));
+        assert_eq!(bytes_consumed, input.len());
     }
 
     // ==================== Function Keys ====================
@@ -496,7 +523,7 @@ mod tests {
     #[test]
     fn test_f1_key() {
         let input = b"\x1b[11~"; // ESC [ 11 ~
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Function(n),
@@ -506,12 +533,13 @@ mod tests {
             }
             _ => panic!("Expected F1"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_f6_key() {
         let input = b"\x1b[17~"; // ESC [ 17 ~
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Function(n),
@@ -521,13 +549,14 @@ mod tests {
             }
             _ => panic!("Expected F6"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_f12_key() {
         // Build F12 sequence (ANSI code 24) using generator
         let input = function_key_sequence(12, KeyModifiers::default());
-        let event = parse_keyboard_sequence(&input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         assert_eq!(
             event,
             InputEvent::Keyboard {
@@ -535,6 +564,7 @@ mod tests {
                 modifiers: KeyModifiers::default()
             }
         );
+        assert_eq!(bytes_consumed, input.len());
     }
 
     // ==================== Function Keys with Modifiers ====================
@@ -542,7 +572,7 @@ mod tests {
     #[test]
     fn test_shift_f5() {
         let input = b"\x1b[15;2~"; // ESC [ 15 ; 2 ~ (F5 with shift) → 2-1=1=Shift
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Function(n),
@@ -555,12 +585,13 @@ mod tests {
             }
             _ => panic!("Expected Shift+F5"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     #[test]
     fn test_ctrl_alt_f10() {
         let input = b"\x1b[21;7~"; // ESC [ 21 ; 7 ~ (F10 with ctrl+alt) → 7-1=6=Alt(2)+Ctrl(4)
-        let event = parse_keyboard_sequence(input).unwrap();
+        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
         match event {
             InputEvent::Keyboard {
                 code: KeyCode::Function(n),
@@ -573,6 +604,7 @@ mod tests {
             }
             _ => panic!("Expected Ctrl+Alt+F10"),
         }
+        assert_eq!(bytes_consumed, input.len());
     }
 
     // ==================== Invalid/Incomplete Sequences ====================

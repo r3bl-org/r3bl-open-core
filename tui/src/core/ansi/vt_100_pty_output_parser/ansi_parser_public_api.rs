@@ -250,7 +250,7 @@ mod tests {
                 offscreen_buffer::test_fixtures_ofs_buf::*,
                 core::ansi::vt_100_pty_output_parser::{CsiSequence,
                                                  vt_100_pty_output_conformance_tests::{test_fixtures_vt_100_ansi_conformance::{create_test_offscreen_buffer_10r_by_10c, nz},
-                                                                      test_sequence_builders::csi_builders::csi_seq_cursor_pos}}};
+                                                                      test_sequence_generators::csi_builders::csi_seq_cursor_pos}}};
 
     #[test]
     #[allow(clippy::items_after_statements)]

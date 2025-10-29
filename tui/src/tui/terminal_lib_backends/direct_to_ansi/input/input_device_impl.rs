@@ -7,13 +7,27 @@
 //! for partial ANSI sequences, and delegates to the protocol layer parsers for
 //! sequence interpretation.
 
-use crate::core::ansi::vt_100_terminal_input_parser::InputEvent;
+use crate::core::ansi::vt_100_terminal_input_parser::{
+    parse_keyboard_sequence,
+    // Temporarily commented out until parsers are updated:
+    // parse_mouse_sequence,
+    // parse_terminal_event,
+    // parse_utf8_text,
+    InputEvent, KeyCode, KeyModifiers,
+};
+use tokio::io::{AsyncReadExt, Stdin};
+
+/// Buffer compaction threshold: compact when consumed bytes exceed this value.
+const BUFFER_COMPACT_THRESHOLD: usize = 2048;
+
+/// Initial buffer capacity: 4KB for efficient ANSI sequence buffering.
+const INITIAL_BUFFER_CAPACITY: usize = 4096;
 
 /// Async input device for DirectToAnsi backend.
 ///
 /// Manages asynchronous reading from terminal stdin using tokio, with:
-/// - Ring buffer for handling partial/incomplete ANSI sequences
-/// - 150ms timeout for incomplete sequences
+/// - Simple `Vec<u8>` buffer for handling partial/incomplete ANSI sequences
+/// - Smart lookahead for zero-latency ESC key detection (no timeout!)
 /// - Dispatch to protocol parsers (keyboard, mouse, terminal events, UTF-8)
 ///
 /// ## Architecture
@@ -22,7 +36,7 @@ use crate::core::ansi::vt_100_terminal_input_parser::InputEvent;
 /// ```text
 /// stdin (tokio::io::stdin)
 ///   ↓
-/// [Ring Buffer: 4KB with 150ms timeout]
+/// [Vec<u8> Buffer: 4KB, zero-timeout parsing]
 ///   ↓
 /// [Protocol Layer Parsers]
 /// ├─ keyboard::parse_keyboard_sequence()
@@ -32,10 +46,27 @@ use crate::core::ansi::vt_100_terminal_input_parser::InputEvent;
 ///   ↓
 /// InputEvent (to application)
 /// ```
+///
+/// ## Why No Timeout?
+///
+/// Traditional implementations wait 150ms to distinguish ESC from ESC sequences.
+/// We use tokio's async I/O instead:
+/// - `stdin.read().await` yields until data is ready
+/// - ESC alone → emitted immediately (0ms latency)
+/// - ESC sequence → parsed when complete
+/// - No artificial delays needed!
+#[derive(Debug)]
 pub struct DirectToAnsiInputDevice {
-    // TODO: Add fields for tokio stdin handle
-    // TODO: Add ring buffer for sequence buffering
-    // TODO: Add timeout state
+    /// Tokio async stdin handle for non-blocking reading.
+    stdin: Stdin,
+
+    /// Raw byte buffer for ANSI sequences and text.
+    /// Pre-allocated with 4KB capacity, grows as needed.
+    buffer: Vec<u8>,
+
+    /// Number of bytes already parsed and consumed from buffer.
+    /// When this exceeds `BUFFER_COMPACT_THRESHOLD`, buffer is compacted.
+    consumed: usize,
 }
 
 impl DirectToAnsiInputDevice {
@@ -43,17 +74,26 @@ impl DirectToAnsiInputDevice {
     ///
     /// Initializes:
     /// - tokio::io::stdin() handle for non-blocking reading
-    /// - 4KB ring buffer for partial sequence buffering
-    /// - 150ms timeout for incomplete sequences
+    /// - 4KB `Vec<u8>` buffer (pre-allocated)
+    /// - consumed counter at 0
+    ///
+    /// No timeout initialization needed - we use smart async lookahead instead!
     pub fn new() -> Self {
-        // TODO: Implement constructor
-        Self {}
+        Self {
+            stdin: tokio::io::stdin(),
+            buffer: Vec::with_capacity(INITIAL_BUFFER_CAPACITY),
+            consumed: 0,
+        }
     }
 
     /// Read the next input event asynchronously.
     ///
-    /// Blocks until an event is available or the timeout expires.
-    /// Returns None if stdin is closed or EOF is reached.
+    /// Uses a smart async loop with zero-timeout parsing:
+    /// 1. Try to parse from existing buffer
+    /// 2. If incomplete, read more from stdin (yields until data ready)
+    /// 3. Loop back to parsing
+    ///
+    /// Returns None if stdin is closed (EOF).
     ///
     /// ## Event Types
     ///
@@ -63,24 +103,130 @@ impl DirectToAnsiInputDevice {
     /// - **Resize**: Terminal window size change (rows, cols)
     /// - **Focus**: Terminal gained/lost focus
     /// - **Paste**: Bracketed paste mode start/end markers
+    ///
+    /// ## Zero-Latency ESC Key
+    ///
+    /// Unlike naive implementations with 150ms timeout, this immediately emits
+    /// ESC when buffer contains only `[0x1B]`, with no artificial delay.
     pub async fn read_event(&mut self) -> Option<InputEvent> {
-        // TODO: Implement async event reading
-        // 1. Try to read more bytes from stdin (non-blocking)
-        // 2. Add to ring buffer
-        // 3. Try to parse complete event from buffer
-        // 4. If incomplete, wait for timeout (150ms)
-        // 5. Return parsed event or None if EOF
-        None
+        loop {
+            // 1. Try to parse from existing buffer
+            if let Some((event, bytes_consumed)) = self.try_parse() {
+                self.consume(bytes_consumed);
+                return Some(event);
+            }
+
+            // 2. Buffer exhausted or incomplete sequence, read more from stdin
+            // This yields until data is ready - no busy-waiting!
+            let mut temp_buf = vec![0u8; 256]; // Read up to 256 bytes at a time
+            match self.stdin.read(&mut temp_buf).await {
+                Ok(0) => {
+                    // EOF - stdin closed
+                    return None;
+                }
+                Ok(n) => {
+                    // Append new bytes to buffer
+                    self.buffer.extend_from_slice(&temp_buf[..n]);
+                }
+                Err(_) => {
+                    // Read error - treat as EOF
+                    return None;
+                }
+            }
+
+            // 3. Loop back to try_parse() with new data
+        }
     }
 
-    /// Internal: Dispatch buffer to appropriate protocol parser.
-    fn dispatch_to_parser(&self, _buffer: &[u8]) -> Option<(InputEvent, usize)> {
-        // TODO: Implement dispatch logic
-        // Checks first byte to determine sequence type:
-        // - ESC (0x1b): Try keyboard/mouse/terminal event parsers in order
-        // - Regular text: Try UTF-8 parser
-        // Returns (event, bytes_consumed)
-        None
+    /// Try to parse a complete event from the buffer.
+    ///
+    /// Returns `Some((event, bytes_consumed))` if successful, `None` if incomplete.
+    ///
+    /// ## Smart Lookahead Logic
+    ///
+    /// - `[0x1B]` alone → ESC key (emitted immediately)
+    /// - `[0x1B, b'[', ...]` → CSI sequence (keyboard/mouse)
+    /// - `[0x1B, b'O', ...]` → SS3 sequence (application mode keys)
+    /// - `[0x1B, other]` → ESC key (unknown escape)
+    /// - Other bytes → UTF-8 text
+    fn try_parse(&self) -> Option<(InputEvent, usize)> {
+        let buf = &self.buffer[self.consumed..];
+
+        // Fast path: empty buffer
+        if buf.is_empty() {
+            return None;
+        }
+
+        // Check first byte for routing
+        match buf.first() {
+            Some(&0x1B) => {
+                // ESC sequence or ESC key
+                if buf.len() == 1 {
+                    // Just ESC, emit immediately (no timeout!)
+                    return Some((
+                        InputEvent::Keyboard {
+                            code: KeyCode::Escape,
+                            modifiers: KeyModifiers::default(),
+                        },
+                        1,
+                    ));
+                }
+
+                // Check second byte
+                match buf.get(1) {
+                    Some(&b'[') => {
+                        // CSI sequence - try keyboard first, then mouse
+                        parse_keyboard_sequence(buf)
+                        // TODO: Add mouse and terminal event parsing once updated
+                        // .or_else(|| parse_mouse_sequence(buf))
+                        // .or_else(|| parse_terminal_event(buf))
+                    }
+                    Some(&b'O') => {
+                        // SS3 sequence - try keyboard
+                        parse_keyboard_sequence(buf)
+                    }
+                    Some(_) => {
+                        // ESC + unknown byte, emit ESC
+                        Some((
+                            InputEvent::Keyboard {
+                                code: KeyCode::Escape,
+                                modifiers: KeyModifiers::default(),
+                            },
+                            1,
+                        ))
+                    }
+                    None => {
+                        // Shouldn't reach here (buf.len() > 1 but get(1) is None?)
+                        None
+                    }
+                }
+            }
+            Some(_) => {
+                // Not ESC - try terminal events, mouse (X10/RXVT), or UTF-8 text
+                // TODO: Implement non-ESC parsing once parsers are updated
+                // parse_terminal_event(buf)
+                //     .or_else(|| parse_mouse_sequence(buf))
+                //     .or_else(|| parse_utf8_text(buf))
+                None  // Temporary: return None until parsers are ready
+            }
+            None => {
+                // Empty buffer (shouldn't reach here due to early return)
+                None
+            }
+        }
+    }
+
+    /// Consume N bytes from the buffer.
+    ///
+    /// Increments the consumed counter and compacts the buffer if threshold exceeded.
+    fn consume(&mut self, count: usize) {
+        self.consumed += count;
+
+        // Compact buffer if consumed bytes exceed threshold
+        if self.consumed > BUFFER_COMPACT_THRESHOLD {
+            self.buffer.drain(..self.consumed);
+            self.consumed = 0;
+        }
     }
 }
 

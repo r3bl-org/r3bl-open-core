@@ -22,7 +22,7 @@
 //! # Example Usage
 //!
 //! ```rust,ignore
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_builders::extended_color_builders::*;
+//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
 //! // 256-color sequences
 //! let fg = fg_ansi256(196);                  // → "\x1b[38:5:196m"

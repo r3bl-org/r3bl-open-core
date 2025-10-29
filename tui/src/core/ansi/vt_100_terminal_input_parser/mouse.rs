@@ -24,13 +24,16 @@
 use super::types::{InputEvent, KeyModifiers, MouseAction, MouseButton, Pos,
                    ScrollDirection};
 
-/// Parse a mouse sequence and return an InputEvent if recognized.
+/// Parse a mouse sequence and return an InputEvent with bytes consumed if recognized.
+///
+/// Returns `Some((event, bytes_consumed))` if a complete sequence is parsed,
+/// or `None` if the sequence is incomplete or invalid.
 ///
 /// Supports multiple mouse protocols:
 /// - SGR (modern): `CSI < Cb ; Cx ; Cy M/m`
 /// - X10/Normal (legacy): `CSI M Cb Cx Cy`
 /// - RXVT (legacy): `CSI [ Cb ; Cx ; Cy M`
-pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<InputEvent> {
+pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(InputEvent, usize)> {
     // Check for SGR mouse protocol (most reliable)
     if buffer.len() >= 6 && buffer.starts_with(b"\x1b[<") {
         return parse_sgr_mouse(buffer);
@@ -42,27 +45,43 @@ pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<InputEvent> {
 
 /// Parse SGR mouse protocol: `CSI < Cb ; Cx ; Cy M/m`
 ///
+/// Returns `Some((event, bytes_consumed))` for complete sequences, `None` for incomplete.
+///
 /// Format breakdown:
 /// - `ESC[<` prefix (3 bytes)
 /// - `Cb` = button byte (with modifiers encoded)
 /// - `Cx` = column (1-based)
 /// - `Cy` = row (1-based)
 /// - `M` = press, `m` = release
-fn parse_sgr_mouse(sequence: &[u8]) -> Option<InputEvent> {
+fn parse_sgr_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
     // Minimum: ESC[<0;1;1M (9 bytes)
     if sequence.len() < 9 {
         return None;
     }
 
-    // Extract the action character (last byte)
-    let action_char = *sequence.last()? as char;
-    if action_char != 'M' && action_char != 'm' {
-        return None;
+    // Find the terminator (M or m)
+    // We need to scan from position 3 onwards to find the terminator
+    let mut bytes_consumed = 0;
+    let mut found_terminator = false;
+
+    for (idx, &byte) in sequence.iter().enumerate().skip(3) {
+        if byte == b'M' || byte == b'm' {
+            bytes_consumed = idx + 1;
+            found_terminator = true;
+            break;
+        }
     }
+
+    if !found_terminator {
+        return None; // Incomplete sequence
+    }
+
+    // Extract the action character (terminator)
+    let action_char = sequence[bytes_consumed - 1] as char;
 
     // Parse the content between ESC[< and M/m
     // Skip prefix (3 bytes) and suffix (1 byte)
-    let content = std::str::from_utf8(&sequence[3..sequence.len() - 1]).ok()?;
+    let content = std::str::from_utf8(&sequence[3..bytes_consumed - 1]).ok()?;
 
     // Split by semicolons: Cb;Cx;Cy
     let parts: Vec<&str> = content.split(';').collect();
@@ -79,12 +98,15 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<InputEvent> {
 
     // Check for scroll events first (buttons 64-67)
     if let Some(scroll_dir) = detect_scroll_event(cb) {
-        return Some(InputEvent::Mouse {
-            button: MouseButton::Unknown,
-            pos: Pos::from_one_based(cx, cy),
-            action: MouseAction::Scroll(scroll_dir),
-            modifiers,
-        });
+        return Some((
+            InputEvent::Mouse {
+                button: MouseButton::Unknown,
+                pos: Pos::from_one_based(cx, cy),
+                action: MouseAction::Scroll(scroll_dir),
+                modifiers,
+            },
+            bytes_consumed,
+        ));
     }
 
     // Detect button type
@@ -99,12 +121,15 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<InputEvent> {
         MouseAction::Release
     };
 
-    Some(InputEvent::Mouse {
-        button,
-        pos: Pos::from_one_based(cx, cy),
-        action,
-        modifiers,
-    })
+    Some((
+        InputEvent::Mouse {
+            button,
+            pos: Pos::from_one_based(cx, cy),
+            action,
+            modifiers,
+        },
+        bytes_consumed,
+    ))
 }
 
 /// Detect mouse button from SGR button byte.
@@ -184,8 +209,9 @@ mod tests {
     fn test_sgr_left_click_press() {
         // From Phase 1: ESC[<0;1;1M (left click at top-left)
         let seq = b"\x1b[<0;1;1M";
-        let event = parse_mouse_sequence(seq).expect("Should parse");
+        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
+        assert_eq!(bytes_consumed, seq.len());
         match event {
             InputEvent::Mouse {
                 button,
@@ -207,8 +233,9 @@ mod tests {
     fn test_sgr_left_click_release() {
         // From Phase 1: ESC[<0;1;1m (lowercase 'm' = release)
         let seq = b"\x1b[<0;1;1m";
-        let event = parse_mouse_sequence(seq).expect("Should parse");
+        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
+        assert_eq!(bytes_consumed, seq.len());
         match event {
             InputEvent::Mouse { action, .. } => {
                 assert_eq!(action, MouseAction::Release);
@@ -222,8 +249,9 @@ mod tests {
         // From Phase 1: ESC[<66;37;14M (scroll up at col 37, row 14)
         // Button 66 = scroll up with modifiers (Shift bit set)
         let seq = b"\x1b[<66;37;14M";
-        let event = parse_mouse_sequence(seq).expect("Should parse");
+        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
+        assert_eq!(bytes_consumed, seq.len());
         match event {
             InputEvent::Mouse { action, pos, .. } => {
                 assert_eq!(action, MouseAction::Scroll(ScrollDirection::Up));
@@ -238,8 +266,9 @@ mod tests {
     fn test_sgr_drag() {
         // Drag has bit 5 set (32): button 0 + drag = 32
         let seq = b"\x1b[<32;10;5M";
-        let event = parse_mouse_sequence(seq).expect("Should parse");
+        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
+        assert_eq!(bytes_consumed, seq.len());
         match event {
             InputEvent::Mouse { button, action, .. } => {
                 assert_eq!(button, MouseButton::Left);
@@ -253,8 +282,9 @@ mod tests {
     fn test_modifier_extraction() {
         // Ctrl+Left click: button 0 + Ctrl (16) = 16
         let seq = b"\x1b[<16;1;1M";
-        let event = parse_mouse_sequence(seq).expect("Should parse");
+        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
+        assert_eq!(bytes_consumed, seq.len());
         match event {
             InputEvent::Mouse { modifiers, .. } => {
                 assert!(modifiers.ctrl);
@@ -269,8 +299,9 @@ mod tests {
     fn test_coordinates_are_1_based() {
         // Verify 1-based coordinates from Phase 1 findings
         let seq = b"\x1b[<0;1;1M";
-        let event = parse_mouse_sequence(seq).expect("Should parse");
+        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
+        assert_eq!(bytes_consumed, seq.len());
         match event {
             InputEvent::Mouse { pos, .. } => {
                 assert_eq!(pos.col.as_u16(), 1, "Column should be 1-based");

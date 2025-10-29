@@ -130,7 +130,7 @@ mod mouse_events {
     fn test_left_click_at_top_left() {
         // CONFIRMED: cat -v showed ESC[<0;1;1M for left click at top-left
         let seq = b"\x1b[<0;1;1M";
-        let event = parse_mouse_sequence(seq).expect("Should parse observed sequence");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse observed sequence");
 
         match event {
             InputEvent::Mouse {
@@ -156,7 +156,7 @@ mod mouse_events {
     fn test_left_click_release() {
         // CONFIRMED: lowercase 'm' indicates release in SGR protocol
         let seq = b"\x1b[<0;1;1m";
-        let event = parse_mouse_sequence(seq).expect("Should parse release");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse release");
 
         match event {
             InputEvent::Mouse { action, .. } => {
@@ -170,7 +170,7 @@ mod mouse_events {
     fn test_scroll_up_with_modifiers() {
         // CONFIRMED: Button 66 = scroll up at col 37, row 14 (from terminal observation)
         let seq = b"\x1b[<66;37;14M";
-        let event =
+        let (event, _bytes_consumed) =
             parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
 
         match event {
@@ -187,7 +187,7 @@ mod mouse_events {
     fn test_middle_button_click() {
         // Middle button = button code 1
         let seq = b"\x1b[<1;10;5M";
-        let event = parse_mouse_sequence(seq).expect("Should parse middle button");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse middle button");
 
         match event {
             InputEvent::Mouse { button, .. } => {
@@ -201,7 +201,7 @@ mod mouse_events {
     fn test_right_button_click() {
         // Right button = button code 2
         let seq = b"\x1b[<2;10;5M";
-        let event = parse_mouse_sequence(seq).expect("Should parse right button");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse right button");
 
         match event {
             InputEvent::Mouse { button, .. } => {
@@ -215,7 +215,7 @@ mod mouse_events {
     fn test_mouse_drag() {
         // Drag = button 0 + drag flag (bit 5 = 32)
         let seq = b"\x1b[<32;15;8M";
-        let event = parse_mouse_sequence(seq).expect("Should parse drag");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse drag");
 
         match event {
             InputEvent::Mouse { button, action, .. } => {
@@ -230,7 +230,7 @@ mod mouse_events {
     fn test_ctrl_left_click() {
         // Ctrl modifier = bit 4 (value 16)
         let seq = b"\x1b[<16;5;5M";
-        let event = parse_mouse_sequence(seq).expect("Should parse Ctrl+click");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse Ctrl+click");
 
         match event {
             InputEvent::Mouse {
@@ -249,7 +249,7 @@ mod mouse_events {
     fn test_shift_alt_left_click() {
         // Shift (4) + Alt (8) = 12
         let seq = b"\x1b[<12;10;10M";
-        let event = parse_mouse_sequence(seq).expect("Should parse Shift+Alt+click");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse Shift+Alt+click");
 
         match event {
             InputEvent::Mouse { modifiers, .. } => {
@@ -265,7 +265,7 @@ mod mouse_events {
     fn test_coordinates_are_1_based() {
         // Verify observed behavior: VT-100 coordinates are 1-based
         let seq = b"\x1b[<0;1;1M";
-        let event = parse_mouse_sequence(seq).expect("Should parse");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
         match event {
             InputEvent::Mouse { pos, .. } => {
@@ -296,7 +296,7 @@ mod keyboard_events {
     fn test_ctrl_up() {
         // CONFIRMED: cat -v showed ESC[1;5A for Ctrl+Up (parameter 5 = Ctrl)
         let seq = b"\x1b[1;5A";
-        let event = parse_keyboard_sequence(seq).expect("Should parse observed Ctrl+Up");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse observed Ctrl+Up");
 
         match event {
             InputEvent::Keyboard { code, modifiers } => {
@@ -312,7 +312,7 @@ mod keyboard_events {
     #[test]
     fn test_plain_arrow_up() {
         let seq = b"\x1b[A";
-        let event = parse_keyboard_sequence(seq).expect("Should parse plain Up");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse plain Up");
 
         match event {
             InputEvent::Keyboard { code, modifiers } => {
@@ -327,7 +327,7 @@ mod keyboard_events {
     fn test_shift_up() {
         // Shift modifier: parameter 2 (1 + 1 where Shift bit = 1)
         let seq = b"\x1b[1;2A";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Shift+Up");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Shift+Up");
 
         match event {
             InputEvent::Keyboard { code, modifiers } => {
@@ -343,7 +343,7 @@ mod keyboard_events {
     fn test_alt_up() {
         // Alt modifier: parameter 3 (1 + 2 where Alt bit = 2)
         let seq = b"\x1b[1;3A";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Alt+Up");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Alt+Up");
 
         match event {
             InputEvent::Keyboard { code, modifiers } => {
@@ -359,7 +359,7 @@ mod keyboard_events {
     fn test_ctrl_alt_up() {
         // Ctrl (4) + Alt (2) = 6, plus 1 = parameter 7
         let seq = b"\x1b[1;7A";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+Up");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+Up");
 
         match event {
             InputEvent::Keyboard { modifiers, .. } => {
@@ -375,7 +375,7 @@ mod keyboard_events {
     fn test_shift_alt_ctrl_up() {
         // Shift (1) + Alt (2) + Ctrl (4) = 7, plus 1 = parameter 8
         let seq = b"\x1b[1;8A";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Shift+Alt+Ctrl+Up");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Shift+Alt+Ctrl+Up");
 
         match event {
             InputEvent::Keyboard { modifiers, .. } => {
@@ -390,7 +390,7 @@ mod keyboard_events {
     #[test]
     fn test_f1_key() {
         let seq = b"\x1b[11~";
-        let event = parse_keyboard_sequence(seq).expect("Should parse F1");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse F1");
 
         match event {
             InputEvent::Keyboard { code, .. } => {
@@ -404,7 +404,7 @@ mod keyboard_events {
     fn test_shift_f5() {
         // F5 = 15, Shift modifier = parameter 2
         let seq = b"\x1b[15;2~";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Shift+F5");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Shift+F5");
 
         match event {
             InputEvent::Keyboard { code, modifiers } => {
@@ -419,7 +419,7 @@ mod keyboard_events {
     fn test_ctrl_alt_f10() {
         // F10 = 21, Ctrl+Alt = parameter 7
         let seq = b"\x1b[21;7~";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+F10");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+F10");
 
         match event {
             InputEvent::Keyboard { code, modifiers } => {
@@ -433,7 +433,7 @@ mod keyboard_events {
     #[test]
     fn test_home_key() {
         let seq = b"\x1b[H";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Home");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Home");
 
         match event {
             InputEvent::Keyboard { code, .. } => {
@@ -446,7 +446,7 @@ mod keyboard_events {
     #[test]
     fn test_end_key() {
         let seq = b"\x1b[F";
-        let event = parse_keyboard_sequence(seq).expect("Should parse End");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse End");
 
         match event {
             InputEvent::Keyboard { code, .. } => {
@@ -459,7 +459,7 @@ mod keyboard_events {
     #[test]
     fn test_delete_key() {
         let seq = b"\x1b[3~";
-        let event = parse_keyboard_sequence(seq).expect("Should parse Delete");
+        let (event, _bytes_consumed) = parse_keyboard_sequence(seq).expect("Should parse Delete");
 
         match event {
             InputEvent::Keyboard { code, .. } => {
@@ -480,8 +480,8 @@ mod edge_cases {
     #[test]
     fn test_incomplete_mouse_sequence() {
         let seq = b"\x1b[<0;1";
-        let event = parse_mouse_sequence(seq);
-        assert!(event.is_none(), "Incomplete sequence should not parse");
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Incomplete sequence should not parse");
     }
 
     #[test]
@@ -495,8 +495,8 @@ mod edge_cases {
     fn test_invalid_mouse_action_char() {
         // Invalid action character 'X' (must be 'M' or 'm')
         let seq = b"\x1b[<0;1;1X";
-        let event = parse_mouse_sequence(seq);
-        assert!(event.is_none(), "Invalid action char should not parse");
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Invalid action char should not parse");
     }
 
     #[test]
@@ -516,7 +516,7 @@ mod edge_cases {
     fn test_very_large_coordinates() {
         // Test coordinates near u16::MAX
         let seq = b"\x1b[<0;65535;65535M";
-        let event = parse_mouse_sequence(seq).expect("Should parse large coords");
+        let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse large coords");
 
         match event {
             InputEvent::Mouse { pos, .. } => {
@@ -530,15 +530,15 @@ mod edge_cases {
     #[test]
     fn test_malformed_sgr_missing_semicolons() {
         let seq = b"\x1b[<0M";
-        let event = parse_mouse_sequence(seq);
-        assert!(event.is_none(), "Malformed SGR should not parse");
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Malformed SGR should not parse");
     }
 
     #[test]
     fn test_non_numeric_coordinates() {
         let seq = b"\x1b[<0;abc;def M";
-        let event = parse_mouse_sequence(seq);
-        assert!(event.is_none(), "Non-numeric coords should not parse");
+        let result = parse_mouse_sequence(seq);
+        assert!(result.is_none(), "Non-numeric coords should not parse");
     }
 }
 
@@ -565,7 +565,7 @@ mod modifier_encoding {
 
         for (param, expect_shift, expect_alt, expect_ctrl) in test_cases {
             let seq = format!("\x1b[1;{}A", param);
-            let event = parse_keyboard_sequence(seq.as_bytes())
+            let (event, _bytes_consumed) = parse_keyboard_sequence(seq.as_bytes())
                 .unwrap_or_else(|| panic!("Should parse parameter {}", param));
 
             match event {

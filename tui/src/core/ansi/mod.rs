@@ -146,6 +146,8 @@
 //!
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 
+// XMARK: Snippet to stop rustfmt from reformatting entire file
+
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
@@ -156,6 +158,8 @@ mod constants;
 mod detect_color_support;
 mod generator;
 mod terminal_output;
+
+// XMARK: Example for how to conditionally expose private modules for testing and documentation
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.
@@ -174,8 +178,8 @@ pub use constants::*;
 pub use detect_color_support::*;
 pub use generator::*;
 pub use terminal_output::*;
+pub use vt_100_pty_output_parser::*;
 
 // Re-export test fixtures for testing purposes only.
 #[cfg(test)]
 pub use vt_100_pty_output_parser::vt_100_pty_output_conformance_tests;
-pub use vt_100_pty_output_parser::*;

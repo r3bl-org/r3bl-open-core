@@ -23,15 +23,23 @@
 //! ## Module Responsibilities
 //!
 //! - **Async I/O**: Non-blocking reading from tokio::io::stdin()
-//! - **Buffering**: Ring buffer for handling partial/incomplete ANSI sequences
-//! - **Timeout Management**: 150ms timeout for sequence completion
+//! - **Buffering**: Simple `Vec<u8>` buffer for handling partial/incomplete ANSI sequences
+//! - **Smart Lookahead**: Zero-latency ESC key detection (no timeout needed!)
 //! - **Parser Dispatch**: Route buffer content to appropriate protocol parsers
 //! - **Event Generation**: Convert parsed results to InputEvent
+//!
+//! ## Key Architectural Decision: No Timeout Needed
+//!
+//! Unlike naive implementations that wait 150ms to distinguish ESC from ESC sequences,
+//! we use tokio's async I/O to yield until data is ready. This means:
+//! - ESC key pressed alone → emitted immediately (0ms latency)
+//! - ESC sequence arriving → parsed as complete sequence
+//! - No artificial delays or timeouts required!
 
 mod input_device_impl;
 
 // Re-exports - flatten the public API
-pub use input_device_impl::DirectToAnsiInputDevice;
+pub use input_device_impl::*;
 
 // Tests
 #[cfg(test)]

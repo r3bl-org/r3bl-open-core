@@ -11,7 +11,7 @@ use crate::core::ansi::{
     constants::{CSI_PARAM_SEPARATOR, CSI_START},
     vt_100_pty_output_parser::{ansi_parser_public_api::AnsiToOfsBufPerformer,
                          CsiSequence,
-                         vt_100_pty_output_conformance_tests::test_sequence_builders::csi_builders::{csi_seq_cursor_pos,
+                         vt_100_pty_output_conformance_tests::test_sequence_generators::csi_builders::{csi_seq_cursor_pos,
                                                                         csi_seq_cursor_pos_alt}},
 };
 use std::num::NonZeroU16;

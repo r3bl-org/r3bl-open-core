@@ -20,7 +20,7 @@
 //! # Example Usage
 //!
 //! ```rust,ignore
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_builders::csi_builders::*;
+//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::csi_builders::*;
 //!
 //! let cursor_pos = csi_seq_cursor_pos(
 //!     CsiSequence::CursorPosition {

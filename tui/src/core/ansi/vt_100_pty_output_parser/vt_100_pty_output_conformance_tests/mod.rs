@@ -171,7 +171,7 @@
 //!
 //! ```rust,ignore
 //! use crate::protocols::csi_codes::SgrColorSequence;
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_builders::extended_color_builders::*;
+//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //!
 //! // ❌ Raw escape strings (error-prone, unclear)
 //! let bad_fg = "\x1b[38:5:196m";  // What color index? Typo-prone!
@@ -207,12 +207,12 @@
 //!
 //! ```rust,ignore
 //! // Extended colors
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_builders::extended_color_builders::*;
+//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::extended_color_builders::*;
 //! let fg = fg_ansi256(196);      // → "\x1b[38:5:196m"
 //! let bg = bg_rgb(255, 128, 0);  // → "\x1b[48:2:255:128:0m"
 //!
 //! // DSR sequences
-//! use crate::vt_100_pty_output_conformance_tests::test_sequence_builders::dsr_builders::*;
+//! use crate::vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::*;
 //! let cursor_pos = dsr_cursor_position_response(term_row(nz(10)), term_col(nz(25)));
 //!
 //! // CSI sequences (via Display)
@@ -327,7 +327,7 @@ pub mod conformance_data;
 pub mod test_fixtures_vt_100_ansi_conformance; // Re-export existing test fixtures
 
 #[cfg(any(test, doc))]
-pub mod test_sequence_builders; // Test-only convenience builders for ANSI sequences
+pub mod test_sequence_generators; // Test-only convenience generators for ANSI sequences
 
 // Re-export test modules for both test and doc builds
 #[cfg(any(test, doc))]

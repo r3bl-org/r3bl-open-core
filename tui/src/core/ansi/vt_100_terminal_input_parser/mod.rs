@@ -21,16 +21,14 @@
 //! ```text
 //! Raw Terminal Input (stdin)
 //!    │
-//!    ↓
-//! ┌──────────────────────────────────────────┐
+//! ┌──▼───────────────────────────────────────┐
 //! │  DirectToAnsiInputDevice (async I/O)     │  ← tui/src/tui/terminal_lib_backends/
 //! │  • Read from tokio::io::stdin()          │     direct_to_ansi/input/
 //! │  • Manage buffers (4KB, 150ms timeout)   │
 //! │  • Dispatch to protocol parsers          │
 //! └──────────────────────────────────────────┘
-//!    │
-//!    ↓ (delegate parsing)
-//! ┌──────────────────────────────────────────┐
+//!    │ (delegate parsing)
+//! ┌──▼───────────────────────────────────────┐
 //! │  vt_100_terminal_input_parser (pure)     │  ← tui/src/core/ansi/
 //! │  • parse_keyboard_sequence()             │     vt_100_terminal_input_parser/
 //! │  • parse_mouse_sequence()                │
@@ -38,7 +36,7 @@
 //! │  • parse_utf8_text()                     │
 //! └──────────────────────────────────────────┘
 //!    │
-//!    ↓
+//!    ▼
 //! InputEvent (keyboard, mouse, resize, focus, paste)
 //! ```
 //!
@@ -46,12 +44,12 @@
 //!
 //! The input parser is intentionally designed to parallel the output architecture:
 //!
-//! | Aspect | Output | Input |
-//! |--------|--------|-------|
-//! | Protocol layer | `core/ansi/generator/` | `core/ansi/vt_100_terminal_input_parser/` |
-//! | Backend layer | `terminal_lib_backends/direct_to_ansi/output/` | `terminal_lib_backends/direct_to_ansi/input/` |
-//! | Styling/Rendering | `SgrCode`, `ansi_sequence_generator` | `parse_keyboard_sequence`, etc. |
-//! | I/O handling | `paint_render_op_impl`, `pixel_char_renderer` | `DirectToAnsiInputDevice` |
+//! | Aspect            | Output                                         | Input                                         |
+//! |-------------------|----------------------------------------------- |-----------------------------------------------|
+//! | Protocol layer    | `core/ansi/generator/`                         | `core/ansi/vt_100_terminal_input_parser/`     |
+//! | Backend layer     | `terminal_lib_backends/direct_to_ansi/output/` | `terminal_lib_backends/direct_to_ansi/input/` |
+//! | Styling/Rendering | `SgrCode`, `ansi_sequence_generator`           | `parse_keyboard_sequence`, etc.               |
+//! | I/O handling      | `paint_render_op_impl`, `pixel_char_renderer`  | `DirectToAnsiInputDevice`                     |
 //!
 //! ## Module Responsibilities
 //!
@@ -135,25 +133,48 @@
 //! coordinates are 1-based, where (1, 1) is the top-left corner. Uses [`TermRow`] and
 //! [`TermCol`] for type safety and explicit conversion to/from 0-based buffer
 //! coordinates.
+//!
+//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::term_units::TermRow
+//! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::term_units::TermCol
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-// Private modules.
+// Conditionally public modules for documentation and testing.
+// In test/doc builds: fully public (for rustdoc and test access)
+// In release builds: private (encapsulated implementation details)
+#[cfg(any(test, doc))]
+pub mod keyboard;
+#[cfg(not(any(test, doc)))]
 mod keyboard;
+
+#[cfg(any(test, doc))]
+pub mod mouse;
+#[cfg(not(any(test, doc)))]
 mod mouse;
+
+#[cfg(any(test, doc))]
+pub mod terminal_events;
+#[cfg(not(any(test, doc)))]
 mod terminal_events;
+
+#[cfg(any(test, doc))]
+pub mod utf8;
+#[cfg(not(any(test, doc)))]
 mod utf8;
+
+#[cfg(any(test, doc))]
+pub mod types;
+#[cfg(not(any(test, doc)))]
 mod types;
 
-// Re-export flat public API.
+// Re-export types for flat public API.
 pub use keyboard::*;
 pub use mouse::*;
 pub use terminal_events::*;
 pub use utf8::*;
 pub use types::*;
-use crate::{TermCol, TermRow};
 
 // Integration tests for terminal input parsing.
 #[cfg(test)]

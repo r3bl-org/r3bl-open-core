@@ -8,7 +8,7 @@ use crate::{
             core::ansi::{
                 constants::DSR_STATUS_OK_FULL_RESPONSE,
                 vt_100_pty_output_parser::{CsiSequence,
-                                     vt_100_pty_output_conformance_tests::test_sequence_builders::dsr_builders::dsr_cursor_position_response},
+                                     vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::dsr_cursor_position_response},
             },
             row, term_col, term_row};
 

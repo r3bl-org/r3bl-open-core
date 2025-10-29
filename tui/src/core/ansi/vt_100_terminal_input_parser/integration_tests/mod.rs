@@ -26,6 +26,18 @@
 //! - Mouse events (clicks, drags, scrolling, modifiers)
 //! - Keyboard events (arrows, function keys, modifier combinations)
 //! - Edge cases (incomplete sequences, invalid data, boundary conditions)
+//!
+//! ### PTY-Based DirectToAnsiInputDevice Testing
+//!
+//! The `pty_based_input_device_test` module tests the complete DirectToAnsiInputDevice
+//! in a real PTY context using a bootstrap/slave pattern. This validates:
+//! - Async I/O loop behavior
+//! - Zero-latency ESC key detection
+//! - Buffer management and compaction
+//! - End-to-end parsing from raw bytes to InputEvent
+//!
+//! Run with: `cargo test test_pty -- --ignored --nocapture`
 
 pub mod input_parser_validation_test;
 pub mod observe_real_terminal_input_events;
+pub mod pty_based_input_device_test;

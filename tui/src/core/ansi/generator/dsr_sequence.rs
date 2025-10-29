@@ -216,7 +216,7 @@ mod dsr_request_from_pty_event_impl {
 mod tests {
     use super::*;
     use crate::core::ansi::constants::DSR_STATUS_OK_FULL_RESPONSE;
-    use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_builders::dsr_builders::dsr_cursor_position_response;
+    use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_sequence_generators::dsr_builders::dsr_cursor_position_response;
     use crate::{term_col, term_row,
                 core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz};
 
