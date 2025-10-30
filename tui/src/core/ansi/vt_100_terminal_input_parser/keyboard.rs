@@ -5,12 +5,13 @@
 //! This module handles conversion of raw ANSI escape sequences into keyboard events,
 //! including support for:
 //!
-//! - Arrow keys (CSI A/B/C/D)
-//! - Function keys F1-F12 (CSI n~)
+//! - Arrow keys (CSI A/B/C/D, SS3 A/B/C/D for application mode)
+//! - Function keys F1-F12 (CSI n~, SS3 P/Q/R/S for F1-F4)
 //! - Special keys (Home, End, Insert, Delete, Page Up/Down)
 //! - Modifier combinations (Shift, Ctrl, Alt)
 //! - Tab, Enter, Escape, Backspace
 //! - Kitty keyboard protocol (extended support)
+//! - SS3 sequences (ESC O) for vim/less/emacs application mode
 
 use super::types::{InputEvent, KeyCode, KeyModifiers};
 
@@ -51,6 +52,91 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(InputEvent, usize)> {
 
     // Parse parameters and final byte for multi-character sequences
     parse_csi_parameters(buffer)
+}
+
+/// Parse an SS3 keyboard sequence and return an InputEvent with bytes consumed.
+///
+/// SS3 sequences are used in terminal application mode (vim, less, emacs, etc.)
+/// to send arrow keys and function keys. They have a simpler format than CSI.
+///
+/// Returns `Some((event, bytes_consumed))` if a complete sequence was parsed,
+/// or `None` if the sequence is incomplete or invalid.
+///
+/// Handles sequences like:
+/// - `SS3 A` → (Up arrow, 3 bytes)
+/// - `SS3 P` → (F1, 3 bytes)
+///
+/// ## Sequence Format
+///
+/// SS3 sequences start with ESC O (0x1B 0x4F), followed by a single character command.
+/// Total length is always 3 bytes.
+///
+/// Examples:
+/// - `ESC O A` - Arrow up (3 bytes)
+/// - `ESC O P` - F1 (3 bytes)
+///
+/// **Note**: SS3 sequences do NOT support modifiers like Shift/Ctrl/Alt.
+/// Those combinations are still sent as CSI sequences with modifiers.
+pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+    // SS3 sequences must be exactly 3 bytes: ESC O + command_char
+    if buffer.len() < 3 {
+        return None;
+    }
+
+    // Check for ESC O sequence start
+    if buffer[0] != 0x1B || buffer[1] != 0x4F {
+        return None;
+    }
+
+    // Parse the command character
+    let event = match buffer[2] {
+        // Arrow keys
+        b'A' => InputEvent::Keyboard {
+            code: KeyCode::Up,
+            modifiers: KeyModifiers::default(),
+        },
+        b'B' => InputEvent::Keyboard {
+            code: KeyCode::Down,
+            modifiers: KeyModifiers::default(),
+        },
+        b'C' => InputEvent::Keyboard {
+            code: KeyCode::Right,
+            modifiers: KeyModifiers::default(),
+        },
+        b'D' => InputEvent::Keyboard {
+            code: KeyCode::Left,
+            modifiers: KeyModifiers::default(),
+        },
+        // Home and End keys
+        b'H' => InputEvent::Keyboard {
+            code: KeyCode::Home,
+            modifiers: KeyModifiers::default(),
+        },
+        b'F' => InputEvent::Keyboard {
+            code: KeyCode::End,
+            modifiers: KeyModifiers::default(),
+        },
+        // Function keys F1-F4
+        b'P' => InputEvent::Keyboard {
+            code: KeyCode::Function(1),
+            modifiers: KeyModifiers::default(),
+        },
+        b'Q' => InputEvent::Keyboard {
+            code: KeyCode::Function(2),
+            modifiers: KeyModifiers::default(),
+        },
+        b'R' => InputEvent::Keyboard {
+            code: KeyCode::Function(3),
+            modifiers: KeyModifiers::default(),
+        },
+        b'S' => InputEvent::Keyboard {
+            code: KeyCode::Function(4),
+            modifiers: KeyModifiers::default(),
+        },
+        _ => return None,
+    };
+
+    Some((event, 3))
 }
 
 /// Parse single-character CSI sequences like `CSI A` (up arrow)
@@ -251,6 +337,178 @@ mod tests {
         let event = InputEvent::Keyboard { code, modifiers };
         generate_keyboard_sequence(&event)
             .expect("Failed to generate special key sequence")
+    }
+
+    // ==================== SS3 Sequences ====================
+    // SS3 sequences (ESC O) are used in vim, less, emacs and other terminal apps
+    // when they're in application mode. Simple 3-byte format: ESC O + command_char
+
+    #[test]
+    fn test_ss3_arrow_up() {
+        let input = b"\x1bOA"; // ESC O A
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 up");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Up,
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_arrow_down() {
+        let input = b"\x1bOB"; // ESC O B
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 down");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Down,
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_arrow_right() {
+        let input = b"\x1bOC"; // ESC O C
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 right");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Right,
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_arrow_left() {
+        let input = b"\x1bOD"; // ESC O D
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 left");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Left,
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_home() {
+        let input = b"\x1bOH"; // ESC O H
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 home");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Home,
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_end() {
+        let input = b"\x1bOF"; // ESC O F
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 end");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::End,
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_f1() {
+        let input = b"\x1bOP"; // ESC O P
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F1");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Function(1),
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_f2() {
+        let input = b"\x1bOQ"; // ESC O Q
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F2");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Function(2),
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_f3() {
+        let input = b"\x1bOR"; // ESC O R
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F3");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Function(3),
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_f4() {
+        let input = b"\x1bOS"; // ESC O S
+        let (event, bytes_consumed) = parse_ss3_sequence(input).expect("Should parse SS3 F4");
+        assert_eq!(
+            event,
+            InputEvent::Keyboard {
+                code: KeyCode::Function(4),
+                modifiers: KeyModifiers::default()
+            }
+        );
+        assert_eq!(bytes_consumed, 3);
+    }
+
+    #[test]
+    fn test_ss3_incomplete_sequence() {
+        let input = b"\x1bO"; // Only ESC O, missing command char
+        assert!(
+            parse_ss3_sequence(input).is_none(),
+            "Incomplete SS3 sequence should return None"
+        );
+    }
+
+    #[test]
+    fn test_ss3_invalid_command_char() {
+        let input = b"\x1bOX"; // ESC O X (X is not a valid command)
+        assert!(
+            parse_ss3_sequence(input).is_none(),
+            "Invalid SS3 command should return None"
+        );
+    }
+
+    #[test]
+    fn test_ss3_rejects_csi_sequence() {
+        // Make sure SS3 parser correctly rejects CSI sequences
+        let input = b"\x1b[A"; // CSI sequence, not SS3
+        assert!(
+            parse_ss3_sequence(input).is_none(),
+            "SS3 parser should reject CSI sequences"
+        );
     }
 
     // ==================== Arrow Keys ====================

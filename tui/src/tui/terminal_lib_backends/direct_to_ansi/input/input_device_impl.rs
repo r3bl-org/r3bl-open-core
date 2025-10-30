@@ -8,12 +8,8 @@
 //! sequence interpretation.
 
 use crate::core::ansi::vt_100_terminal_input_parser::{
-    parse_keyboard_sequence,
-    // Temporarily commented out until parsers are updated:
-    // parse_mouse_sequence,
-    // parse_terminal_event,
-    // parse_utf8_text,
-    InputEvent, KeyCode, KeyModifiers,
+    parse_keyboard_sequence, parse_ss3_sequence, parse_mouse_sequence, parse_terminal_event,
+    parse_utf8_text, InputEvent, KeyCode, KeyModifiers,
 };
 use tokio::io::{AsyncReadExt, Stdin};
 
@@ -175,15 +171,14 @@ impl DirectToAnsiInputDevice {
                 // Check second byte
                 match buf.get(1) {
                     Some(&b'[') => {
-                        // CSI sequence - try keyboard first, then mouse
+                        // CSI sequence - try keyboard first, then mouse, then terminal events
                         parse_keyboard_sequence(buf)
-                        // TODO: Add mouse and terminal event parsing once updated
-                        // .or_else(|| parse_mouse_sequence(buf))
-                        // .or_else(|| parse_terminal_event(buf))
+                            .or_else(|| parse_mouse_sequence(buf))
+                            .or_else(|| parse_terminal_event(buf))
                     }
                     Some(&b'O') => {
-                        // SS3 sequence - try keyboard
-                        parse_keyboard_sequence(buf)
+                        // SS3 sequence - application mode keys (F1-F4, Home, End, arrows)
+                        parse_ss3_sequence(buf)
                     }
                     Some(_) => {
                         // ESC + unknown byte, emit ESC
@@ -203,11 +198,9 @@ impl DirectToAnsiInputDevice {
             }
             Some(_) => {
                 // Not ESC - try terminal events, mouse (X10/RXVT), or UTF-8 text
-                // TODO: Implement non-ESC parsing once parsers are updated
-                // parse_terminal_event(buf)
-                //     .or_else(|| parse_mouse_sequence(buf))
-                //     .or_else(|| parse_utf8_text(buf))
-                None  // Temporary: return None until parsers are ready
+                parse_terminal_event(buf)
+                    .or_else(|| parse_mouse_sequence(buf))
+                    .or_else(|| parse_utf8_text(buf))
             }
             None => {
                 // Empty buffer (shouldn't reach here due to early return)

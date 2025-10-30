@@ -54,13 +54,15 @@
 //! ## Module Responsibilities
 //!
 //! ### keyboard.rs
-//! - Parse CSI sequences for arrow keys, function keys, special keys
+//! - Parse CSI sequences (ESC [) for arrow keys, function keys, special keys
+//! - Parse SS3 sequences (ESC O) for application mode keys (F1-F4, Home, End, arrows)
 //! - Handle modifier combinations (Shift, Ctrl, Alt)
 //! - Support Kitty keyboard protocol for extended functionality
 //!
 //! ### mouse.rs
 //! - Parse SGR mouse protocol (modern standard): `CSI < Cb ; Cx ; Cy M/m`
-//! - Parse X10/Normal protocol (legacy)
+//! - Parse X10/Normal protocol (legacy): `CSI M Cb Cx Cy`
+//! - Parse RXVT protocol (legacy): `CSI Cb ; Cx ; Cy M`
 //! - Detect buttons, clicks, drags, motion, scrolling
 //! - Extract modifier keys from mouse sequences
 //!
