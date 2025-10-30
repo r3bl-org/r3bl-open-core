@@ -1,71 +1,5 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration test for [`DirectToAnsiInputDevice`].
-//!
-//! ## Test Architecture (2 Actors)
-//!
-//! This test validates [`DirectToAnsiInputDevice`] in a real PTY environment using a
-//! coordinator-worker pattern with two processes:
-//!
-//! ```text
-//! ┌───────────────────────────────────────────────────────────────┐
-//! │ Actor 1: PTY Master (test coordinator)                        │
-//! │ Synchronous code                                              │
-//! │                                                               │
-//! │  1. Create PTY pair (master/slave file descriptors)           │
-//! │  2. Spawn test binary with PTY_SLAVE=1 env var                │
-//! │  3. Write ANSI sequences to PTY master (the pipe)             │
-//! │  4. Read parsed events from Actor 2's stdout via PTY          │
-//! │  5. Verify parsed events match expected values                │
-//! └────────────────────────┬──────────────────────────────────────┘
-//!                          │ spawns with slave PTY as stdin/stdout
-//! ┌────────────────────────▼──────────────────────────────────────┐
-//! │ Actor 2: PTY Slave (worker process, PTY_SLAVE=1)              │
-//! │ Tokio runtime and async code                                  │
-//! │                                                               │
-//! │  1. Test function detects PTY_SLAVE env var                   │
-//! │  2. CRITICAL: Enable raw mode on terminal (PTY slave)         │
-//! │  3. Create DirectToAnsiInputDevice (reads from stdin)         │
-//! │  4. Loop: read_event() → parse ANSI → write to stdout         │
-//! │  5. Exit after processing test sequences                      │
-//! └───────────────────────────────────────────────────────────────┘
-//! ```
-//!
-//! ## Critical: Raw Mode Requirement
-//!
-//! **Raw Mode Clarification**: In PTY architecture, the SLAVE side is what the child
-//! process sees as its terminal. When the child reads from stdin, it's reading from
-//! the slave PTY. Therefore, we MUST set the SLAVE to raw mode so that:
-//!
-//! 1. **No Line Buffering**: Input isn't line-buffered - characters are available
-//!    immediately without waiting for Enter key
-//! 2. **No Special Character Processing**: Special characters (like ESC sequences)
-//!    aren't interpreted by the terminal layer - they pass through as raw bytes
-//! 3. **Async Compatibility**: The async reader can get bytes as they arrive, not
-//!    waiting for newlines, enabling proper ANSI escape sequence parsing
-//!
-//! **Master vs Slave**: The master doesn't need raw mode - it's just a bidirectional
-//! pipe for communication. The slave is the actual "terminal" that needs proper
-//! settings for the child process to read ANSI sequences correctly.
-//!
-//! Without raw mode, the PTY stays in "cooked" mode where:
-//! - Input waits for line termination (Enter key)
-//! - Control sequences may be interpreted instead of passed through
-//! - DirectToAnsiInputDevice times out waiting for input that's stuck in buffers
-//!
-//! ## Why This Test Pattern?
-//!
-//! - **Real PTY Environment**: Tests [`DirectToAnsiInputDevice`] with actual PTY, not mocks
-//! - **Process Isolation**: Each test run gets fresh PTY resources via process spawning
-//! - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
-//! - **Async Validation**: Properly tests tokio async I/O with real terminal input
-//!
-//! ## Running the Tests
-//!
-//! ```bash
-//! cargo test test_pty_input_device -- --nocapture
-//! ```
-
 use crate::{core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::{InputEvent, KeyCode,
                                                         KeyModifiers}},
@@ -74,9 +8,78 @@ use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
 
+// XMARK: Process isolated test functions using env vars & PTY.
+
+/// PTY-based integration test for [`DirectToAnsiInputDevice`].
+///
 /// Test coordinator that routes to master or slave based on env var.
-/// When PTY_SLAVE is set, runs slave logic and exits.
+/// When `PTY_SLAVE` is set, runs slave logic and exits.
 /// Otherwise runs the master test.
+///
+/// ## Test Architecture (2 Actors)
+///
+/// This test validates [`DirectToAnsiInputDevice`] in a real PTY environment using a
+/// coordinator-worker pattern with two processes:
+///
+/// ```text
+/// ┌───────────────────────────────────────────────────────────────┐
+/// │ Actor 1: PTY Master (test coordinator)                        │
+/// │ Synchronous code                                              │
+/// │                                                               │
+/// │  1. Create PTY pair (master/slave file descriptors)           │
+/// │  2. Spawn test binary with PTY_SLAVE=1 env var                │
+/// │  3. Write ANSI sequences to PTY master (the pipe)             │
+/// │  4. Read parsed events from Actor 2's stdout via PTY          │
+/// │  5. Verify parsed events match expected values                │
+/// └────────────────────────┬──────────────────────────────────────┘
+///                          │ spawns with slave PTY as stdin/stdout
+/// ┌────────────────────────▼──────────────────────────────────────┐
+/// │ Actor 2: PTY Slave (worker process, PTY_SLAVE=1)              │
+/// │ Tokio runtime and async code                                  │
+/// │                                                               │
+/// │  1. Test function detects PTY_SLAVE env var                   │
+/// │  2. CRITICAL: Enable raw mode on terminal (PTY slave)         │
+/// │  3. Create DirectToAnsiInputDevice (reads from stdin)         │
+/// │  4. Loop: read_event() → parse ANSI → write to stdout         │
+/// │  5. Exit after processing test sequences                      │
+/// └───────────────────────────────────────────────────────────────┘
+/// ```
+///
+/// ## Critical: Raw Mode Requirement
+///
+/// **Raw Mode Clarification**: In PTY architecture, the SLAVE side is what the child
+/// process sees as its terminal. When the child reads from stdin, it's reading from
+/// the slave PTY. Therefore, we MUST set the SLAVE to raw mode so that:
+///
+/// 1. **No Line Buffering**: Input isn't line-buffered - characters are available
+///    immediately without waiting for Enter key
+/// 2. **No Special Character Processing**: Special characters (like ESC sequences) aren't
+///    interpreted by the terminal layer - they pass through as raw bytes
+/// 3. **Async Compatibility**: The async reader can get bytes as they arrive, not waiting
+///    for newlines, enabling proper ANSI escape sequence parsing
+///
+/// **Master vs Slave**: The master doesn't need raw mode - it's just a bidirectional
+/// pipe for communication. The slave is the actual "terminal" that needs proper
+/// settings for the child process to read ANSI sequences correctly.
+///
+/// Without raw mode, the PTY stays in "cooked" mode where:
+/// - Input waits for line termination (Enter key)
+/// - Control sequences may be interpreted instead of passed through
+/// - DirectToAnsiInputDevice times out waiting for input that's stuck in buffers
+///
+/// ## Why This Test Pattern?
+///
+/// - **Real PTY Environment**: Tests [`DirectToAnsiInputDevice`] with actual PTY, not
+///   mocks
+/// - **Process Isolation**: Each test run gets fresh PTY resources via process spawning
+/// - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
+/// - **Async Validation**: Properly tests tokio async I/O with real terminal input
+///
+/// ## Running the Test
+///
+/// ```bash
+/// cargo test test_pty_input_device -- --nocapture
+/// ```
 #[test]
 fn test_pty_input_device() {
     // Immediate debug output to confirm test is running
@@ -87,18 +90,20 @@ fn test_pty_input_device() {
     println!("TEST_RUNNING");
     std::io::stdout().flush().expect("Failed to flush stdout");
 
+    // Skip in CI if running as master
+    if pty_slave.is_err() && is_ci::cached() {
+        println!("⏭️  Skipped in CI (requires interactive terminal)");
+        return;
+    }
+
     // Check if we're running as the slave process
     if pty_slave.is_ok() {
         eprintln!("🔍 TEST: PTY_SLAVE detected, running slave mode");
         println!("SLAVE_STARTING");
         std::io::stdout().flush().expect("Failed to flush stdout");
 
-        // Run the slave logic
+        // Run the slave logic (never returns - exits process)
         run_pty_slave();
-
-        eprintln!("🔍 TEST: Slave completed, exiting");
-        // Exit successfully to prevent test harness from running other tests
-        std::process::exit(0);
     }
 
     // Otherwise, run as master
@@ -119,7 +124,9 @@ fn test_pty_input_device() {
 /// 2. **Create Device**: Initialize DirectToAnsiInputDevice to read from stdin
 /// 3. **Process Events**: Read and parse ANSI sequences into InputEvents
 /// 4. **Output Results**: Write parsed events to stdout for master to verify
-fn run_pty_slave() {
+///
+/// This function MUST exit before returning so other tests don't run.
+fn run_pty_slave() -> ! {
     // Print to stdout immediately to confirm slave is running
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
@@ -181,7 +188,10 @@ fn run_pty_slave() {
 
                     // Exit after processing a few events for testing
                     if event_count >= 3 {
-                        eprintln!("🔍 PTY Slave: Processed {} events, exiting", event_count);
+                        eprintln!(
+                            "🔍 PTY Slave: Processed {} events, exiting",
+                            event_count
+                        );
                         break;
                     }
                 }
@@ -210,6 +220,10 @@ fn run_pty_slave() {
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
         eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {}", e);
     }
+
+    eprintln!("🔍 Slave: Completed, exiting");
+    // CRITICAL: Exit immediately to prevent test harness from running other tests
+    std::process::exit(0);
 }
 
 /// ### Actor 1: PTY Master (test entry, env var NOT set) - Synchronous code
@@ -250,9 +264,10 @@ fn run_pty_master() {
     cmd.env("RUST_BACKTRACE", "1");
     // Run the same test in the spawned process
     cmd.args(&[
-        "--test-threads", "1",
+        "--test-threads",
+        "1",
         "--nocapture",           // Essential for seeing output!
-        "test_pty_input_device",  // Same test name
+        "test_pty_input_device", // Same test name
     ]);
 
     eprintln!("🚀 PTY Master: Spawning slave process...");
@@ -324,9 +339,10 @@ fn run_pty_master() {
                     break;
                 }
                 // Skip test harness output
-                if trimmed.contains("running 1 test") ||
-                   trimmed.contains("test result:") ||
-                   trimmed.is_empty() {
+                if trimmed.contains("running 1 test")
+                    || trimmed.contains("test result:")
+                    || trimmed.is_empty()
+                {
                     continue;
                 }
             }
@@ -341,7 +357,9 @@ fn run_pty_master() {
         panic!("Slave test never started running (no TEST_RUNNING output)");
     }
     if !slave_started {
-        panic!("Slave process did not enter slave mode within 5 seconds (no SLAVE_STARTING)");
+        panic!(
+            "Slave process did not enter slave mode within 5 seconds (no SLAVE_STARTING)"
+        );
     }
 
     eprintln!("📝 PTY Master: Sending {} sequences...", sequences.len());

@@ -146,7 +146,7 @@
 //!
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
 
-// XMARK: Snippet to stop rustfmt from reformatting entire file
+// XMARK: Snippet to stop rustfmt from reformatting entire file.
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356
@@ -160,7 +160,7 @@ mod generator;
 mod terminal_output;
 mod terminal_raw_mode;
 
-// XMARK: Example for how to conditionally expose private modules for testing and documentation
+// XMARK: Example for how to conditionally expose private modules for testing and documentation.
 
 // Module is public only when building documentation or tests.
 // This allows rustdoc links to work while keeping it private in release builds.

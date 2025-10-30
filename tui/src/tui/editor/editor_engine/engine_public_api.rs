@@ -241,7 +241,8 @@ pub fn render_content(render_args: RenderArgs<'_>, render_ops: &mut RenderOpIRVe
     }
 }
 
-// XMARK: Render selection
+// XMARK: Render selection.
+
 pub fn render_selection(render_args: RenderArgs<'_>, mut render_ops: &mut RenderOpIRVec) {
     let RenderArgs {
         buffer: editor_buffer,

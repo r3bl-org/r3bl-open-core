@@ -1664,7 +1664,7 @@ mod tests {
         Ok(output)
     }
 
-    // XMARK: Input handler task tests
+    // XMARK: Input handler task tests.
 
     #[tokio::test]
     async fn test_create_input_handler_task_write() {

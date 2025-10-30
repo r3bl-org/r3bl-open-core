@@ -123,8 +123,8 @@ mod editor_buffer_mut_no_drop_impl_block {
     }
 }
 
-// XMARK: Clever Rust, use of Drop to perform transaction close / end. And also of
-// "newtype" idiom / pattern.
+// XMARK: Clever Rust, use of Drop to perform transaction close / end (RAII pattern). And
+// also of "newtype" idiom / pattern.
 
 /// See the [Drop] implementation of `EditorBufferMut` which runs
 /// [`crate::validate_buffer_mut::perform_validation_checks_after_mutation`].
