@@ -73,14 +73,49 @@
     - [6.1: DirectToAnsi Rename - ALREADY COMPLETE ✅](#61-directtoansi-rename---already-complete-)
     - [6.2: Remove Termion Backend (Dead Code Removal)](#62-remove-termion-backend-dead-code-removal)
     - [6.3: Resolve TODOs and Stubs](#63-resolve-todos-and-stubs)
-    - [6.4: Review `cli_text` and `tui_styled_text` Consistency](#64-review-cli_text-and-tui_styled_text-consistency)
-  - [⏳ Step 7: Comprehensive RenderOp Integration Test Suite (4-6 hours)](#-step-7-comprehensive-renderop-integration-test-suite-4-6-hours)
+    - [6.4: Review `cli_text` and `tui_styled_text` Consistency - AUDIT COMPLETE ✅](#64-review-cli_text-and-tui_styled_text-consistency---audit-complete-)
+      - [**Architecture Analysis**](#architecture-analysis)
+      - [**Consolidation Assessment**](#consolidation-assessment)
+      - [**Code Duplication Analysis**](#code-duplication-analysis)
+  - [✅ Step 7: Comprehensive RenderOp Integration Test Suite (4-6 hours)](#-step-7-comprehensive-renderop-integration-test-suite-4-6-hours)
+    - [7.1: RenderOp Integration Tests - Core Execution Path (2-3 hours)](#71-renderop-integration-tests---core-execution-path-2-3-hours)
+      - [Part A: Color Operations (30-45 min) ✅ **COMPLETED**](#part-a-color-operations-30-45-min--completed)
+      - [Part B: Cursor Movement Operations (45-60 min) ✅ **COMPLETED**](#part-b-cursor-movement-operations-45-60-min--completed)
+      - [Part C: Screen Operations (20-30 min) ✅ **COMPLETED**](#part-c-screen-operations-20-30-min--completed)
+      - [Part D: State Optimization (30-45 min) ✅ **COMPLETED**](#part-d-state-optimization-30-45-min--completed)
+      - [Part E: Text Painting Operations (30-45 min) ✅ **COMPLETED**](#part-e-text-painting-operations-30-45-min--completed)
+    - [7.2: Final QA & Validation (30-45 min) ✅ **COMPLETED**](#72-final-qa--validation-30-45-min--completed)
   - [⏳ Step 8: Implement InputDevice for DirectToAnsi Backend (8-12 hours)](#-step-8-implement-inputdevice-for-directtoansi-backend-8-12-hours)
+    - [8.0: Reorganize Existing Output Files (30 min)](#80-reorganize-existing-output-files-30-min)
     - [8.1: Architecture Design (1-2 hours)](#81-architecture-design-1-2-hours)
-    - [8.2: Implement DirectToAnsi InputDevice (4-6 hours)](#82-implement-directtoansi-inputdevice-4-6-hours)
+    - [8.2: Implement DirectToAnsi InputDevice (9-14 hours - See 8.2.1 Crossterm Feature Parity Analysis)](#82-implement-directtoansi-inputdevice-9-14-hours---see-821-crossterm-feature-parity-analysis)
+  - [🔍 8.2.1: Crossterm Feature Parity Analysis (CRITICAL - READ FIRST)](#-821-crossterm-feature-parity-analysis-critical---read-first)
+    - [Mouse Protocol Support Comparison](#mouse-protocol-support-comparison)
+    - [Keyboard Sequence Support Comparison](#keyboard-sequence-support-comparison)
+    - [Critical Missing Features (Must-Have for Production)](#critical-missing-features-must-have-for-production)
+    - [Revised Scope & Time Estimates](#revised-scope--time-estimates)
+    - [Testing Strategy for Feature Parity](#testing-strategy-for-feature-parity)
+      - [Unit Tests (for each parser)](#unit-tests-for-each-parser)
+      - [Integration Tests (real terminal)](#integration-tests-real-terminal)
+      - [Terminal Compatibility Matrix](#terminal-compatibility-matrix)
+    - [Not Included (Can Defer)](#not-included-can-defer)
+    - [Recommendation](#recommendation)
+    - [🔍 Architecture Insight: Why No Timeout?](#-architecture-insight-why-no-timeout)
+      - [8.2.1 Create Input Module Structure (30-45 min) - ✅ COMPLETE](#821-create-input-module-structure-30-45-min----complete)
+      - [8.2.2 Implement Protocol Layer Parsers (1.5-2 hours)](#822-implement-protocol-layer-parsers-15-2-hours)
+        - [Keyboard Parsing (`keyboard.rs`) ✅ COMPLETE](#keyboard-parsing-keyboardrs--complete)
+        - [Mouse Parsing (`mouse.rs`) ✅ COMPLETE](#mouse-parsing-mousers--complete)
+      - [Phase 1: Type Consolidation (15-20 min) - ✅ COMPLETE](#phase-1-type-consolidation-15-20-min----complete)
+      - [Phase 2: SS3 Keyboard Support (45-60 min)](#phase-2-ss3-keyboard-support-45-60-min)
+      - [Phase 3: X10/RXVT Mouse Protocols (60-90 min)](#phase-3-x10rxvt-mouse-protocols-60-90-min)
+      - [Phase 4: Terminal Events Parser (60-75 min)](#phase-4-terminal-events-parser-60-75-min)
+      - [Phase 5: UTF-8 Text Parser (45-60 min)](#phase-5-utf-8-text-parser-45-60-min)
+      - [Phase 6: Backend Device Implementation (2-3 hours) - ✅ CORE COMPLETE](#phase-6-backend-device-implementation-2-3-hours----core-complete)
+      - [Phase 7: Testing (90-120 min)](#phase-7-testing-90-120-min)
+      - [Phase 8: Documentation and Cleanup (30-45 min)](#phase-8-documentation-and-cleanup-30-45-min)
     - [8.3: Testing & Validation (2-3 hours)](#83-testing--validation-2-3-hours)
     - [8.4: Migration & Cleanup (1 hour)](#84-migration--cleanup-1-hour)
-  - [⏳ Step 9: macOS & Windows Platform Validation (2-3 hours) - DEFERRED](#-step-9-macos--windows-platform-validation-2-3-hours---deferred)
+  - [⏳ Step 9: macOS & Windows Platform Validation & Crossterm Removal (2-3 hours) - DEFERRED](#-step-9-macos--windows-platform-validation--crossterm-removal-2-3-hours---deferred)
     - [macOS Testing (1.5 hours)](#macos-testing-15-hours)
     - [Windows Testing (1.5 hours)](#windows-testing-15-hours)
     - [Documentation & Sign-Off (30 min)](#documentation--sign-off-30-min)
@@ -2226,7 +2261,7 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 - Edge case handling strategy
 - Parser function signatures
 
-### 8.2: Implement DirectToAnsi InputDevice (5-7 hours)
+### 8.2: Implement DirectToAnsi InputDevice (9-14 hours - See 8.2.1 Crossterm Feature Parity Analysis)
 
 **Objective**: Create DirectToAnsi-specific InputDevice using tokio + ANSI sequence parsing with
 crossterm compatibility as benchmark
@@ -2259,6 +2294,141 @@ delays (see insight box below)
 - ✅ **Crossterm Benchmark**: crossterm 0.29.0 source code analyzed for compatibility verification
 - ✅ **Buffer Strategy**: Simple `Vec<u8>` instead of RingBuffer (parsers expect `&[u8]` slices)
 - ✅ **No Timeout**: Smart async lookahead instead of 150ms delays (zero latency ESC key)
+
+---
+
+## 🔍 8.2.1: Crossterm Feature Parity Analysis (CRITICAL - READ FIRST)
+
+**Objective**: This analysis documents what crossterm 0.29.0 actually implements, ensuring
+DirectToAnsi achieves full feature parity as our baseline replacement.
+
+**Key Finding**: The original plan underestimated scope. Crossterm implements several protocols that
+are **critical for production use**, not optional. This analysis drives the revised 9-14 hour
+estimate.
+
+### Mouse Protocol Support Comparison
+
+**Crossterm Capabilities** (from crossterm 0.29.0 source, `parse.rs` lines 663-761):
+
+| Protocol       | Format                   | Status      | Use Case                                |
+| -------------- | ------------------------ | ----------- | --------------------------------------- |
+| **SGR**        | `CSI < Cb ; Cx ; Cy M/m` | ✅ COMPLETE | Modern standard (kitty, alacritty, etc) |
+| **Normal/X10** | `CSI M Cb Cx Cy`         | ✅ COMPLETE | Legacy xterm, screen, tmux              |
+| **RXVT**       | `CSI Cb ; Cx ; Cy M`     | ✅ COMPLETE | rxvt/urxvt terminals                    |
+
+**DirectToAnsi Current Implementation** (`tui/src/core/ansi/vt_100_terminal_input_parser/mouse.rs`):
+
+| Protocol   | Status         | Notes                                             |
+| ---------- | -------------- | ------------------------------------------------- |
+| SGR        | ✅ Implemented | Lines 38-39, 56-133, button/drag/scroll detection |
+| Normal/X10 | ❌ Missing     | Line 42: TODO comment                             |
+| RXVT       | ❌ Missing     | Line 42: TODO comment                             |
+
+**Impact of Missing Protocols**:
+
+- ❌ Without X10: Mouse doesn't work in `xterm`, `screen`, `tmux` with legacy settings
+- ❌ Without RXVT: Mouse doesn't work in `rxvt`, `urxvt`, and derivatives
+- ✅ SGR alone sufficient for modern terminals (Kitty, Alacritty, GNOME Terminal)
+
+### Keyboard Sequence Support Comparison
+
+**Crossterm Capabilities** (from parse.rs lines 45-617):
+
+| Sequence Type | Format      | Status      | Use Case                                           |
+| ------------- | ----------- | ----------- | -------------------------------------------------- |
+| **CSI**       | `ESC [ ...` | ✅ COMPLETE | Arrow keys, function keys, modifiers (normal mode) |
+| **SS3**       | `ESC O ...` | ✅ COMPLETE | Arrow keys, F1-F4 in application mode              |
+| **Kitty**     | `CSI ... u` | ✅ COMPLETE | Advanced: press/release/repeat, media keys         |
+
+**DirectToAnsi Current Implementation** (`keyboard.rs` and `types.rs`):
+
+| Sequence Type | Status         | Notes                                                        |
+| ------------- | -------------- | ------------------------------------------------------------ |
+| CSI           | ✅ Implemented | Lines 48-219, full arrow/function/modifier support, 25 tests |
+| SS3           | ❌ Missing     | **CRITICAL - No implementation found**                       |
+| Kitty         | ❌ Missing     | Advanced protocol, lower priority                            |
+
+**Impact of Missing SS3**:
+
+- 🚨 **CRITICAL**: Terminals in application mode send `ESC O A` (not `ESC [ A`) for arrow keys
+- 🚨 **Breaks vim/less/emacs**: These applications enable application mode, breaking navigation
+- ⚠️ **Many terminals affected**: vim, less, emacs, screen, tmux in app mode
+
+### Critical Missing Features (Must-Have for Production)
+
+| Feature                 | Effort | Priority    | Why Critical                       |
+| ----------------------- | ------ | ----------- | ---------------------------------- |
+| **SS3 Keyboard**        | 2-3h   | 🚨 CRITICAL | Arrow keys in vim/less/emacs       |
+| **X10 Mouse Protocol**  | 2-3h   | ⚠️ HIGH     | xterm, screen, tmux legacy mode    |
+| **RXVT Mouse Protocol** | 1-2h   | ⚠️ HIGH     | rxvt/urxvt terminal emulators      |
+| **UTF-8 Text Parser**   | 1-2h   | 🔴 CRITICAL | Basic text input (typing letters)  |
+| **Terminal Events**     | 1-2h   | MEDIUM      | Window resize, focus, paste events |
+| **Bracketed Paste**     | 1h     | MEDIUM      | Security: prevent ANSI injection   |
+
+### Revised Scope & Time Estimates
+
+**Original Estimate**: 5-7 hours (considered X10/RXVT/SS3 as "nice-to-have")
+
+**Revised Estimate**: 9-14 hours (all features critical for crossterm parity)
+
+| Phase     | Component       | Time      | Priority | Reason                             |
+| --------- | --------------- | --------- | -------- | ---------------------------------- |
+| 1         | SS3 keyboard    | 2-3h      | CRITICAL | Breaks vim navigation without this |
+| 2         | X10 mouse       | 2-3h      | HIGH     | Needed for older/legacy terminals  |
+| 3         | RXVT mouse      | 1-2h      | HIGH     | Needed for rxvt derivatives        |
+| 4         | UTF-8 text      | 1-2h      | CRITICAL | Basic text input functionality     |
+| 5         | Terminal events | 1-2h      | MEDIUM   | Resize/focus/paste support         |
+| 6         | Integration     | 1h        | -        | Connect all parsers                |
+| **Total** | **Full Parity** | **9-14h** | -        | Production-ready                   |
+
+### Testing Strategy for Feature Parity
+
+#### Unit Tests (for each parser)
+
+- Valid sequences → correct InputEvent
+- Incomplete sequences → return None
+- Invalid sequences → return None
+- Edge cases (coordinates, modifiers)
+
+#### Integration Tests (real terminal)
+
+- SS3 sequences: Test arrow keys in vim
+- X10 protocol: Test mouse in xterm legacy mode
+- RXVT protocol: Test mouse in urxvt
+- Resize events: Resize terminal window
+- UTF-8 input: Type various Unicode characters
+
+#### Terminal Compatibility Matrix
+
+| Terminal         | Keyboard | Mouse Protocol | Status        |
+| ---------------- | -------- | -------------- | ------------- |
+| xterm (normal)   | CSI      | SGR            | ✅ Works      |
+| xterm (app mode) | **SS3**  | **X10**        | ❌ Needs impl |
+| vim              | **SS3**  | SGR            | ❌ Needs SS3  |
+| less             | **SS3**  | SGR            | ❌ Needs SS3  |
+| urxvt            | CSI/SS3  | **RXVT**       | ❌ Needs RXVT |
+| kitty            | CSI      | SGR            | ✅ Works      |
+| alacritty        | CSI      | SGR            | ✅ Works      |
+| screen           | **SS3**  | **X10**        | ❌ Needs both |
+| tmux             | **SS3**  | SGR/**X10**    | ⚠️ Partial    |
+
+### Not Included (Can Defer)
+
+| Feature                | Effort | Why Defer                      |
+| ---------------------- | ------ | ------------------------------ |
+| Kitty keyboard (CSI u) | 4-6h   | Only modern terminals, complex |
+| Mouse motion events    | 1h     | Less common use case           |
+
+### Recommendation
+
+**Implement Phases 1-4 immediately** (6-10 hours) to achieve production parity:
+
+- SS3 keyboard sequences (required for vim)
+- X10 and RXVT mouse protocols (required for legacy/specialized terminals)
+- UTF-8 text parser (required for text input)
+
+**Defer Phase 5** (terminal events) to next sprint if time-constrained, but implement for full
+feature parity.
 
 ---
 

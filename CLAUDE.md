@@ -32,6 +32,9 @@ picture.
 Where it is possible use ASCII diagrams to illustrate concepts. Use code examples extensively to
 demonstrate usage patterns.
 
+If you are including an example (rustdoc test with code) then make sure that it can either compile
+or run. Don't use ignore. If you can't make it compile or run, then don't include the example.
+
 ### Module Organization Pattern
 
 When organizing Rust modules, prefer **private modules with public re-exports** as the default

@@ -237,6 +237,7 @@
     "rustdocs",
     "rustflags",
     "rustfmt",
+    "rustix",
     "rustls",
     "rustrover",
     "RUSTSEC",
