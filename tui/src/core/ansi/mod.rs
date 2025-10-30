@@ -158,6 +158,7 @@ mod constants;
 mod detect_color_support;
 mod generator;
 mod terminal_output;
+mod terminal_raw_mode;
 
 // XMARK: Example for how to conditionally expose private modules for testing and documentation
 
@@ -179,6 +180,7 @@ pub use detect_color_support::*;
 pub use generator::*;
 pub use terminal_output::*;
 pub use vt_100_pty_output_parser::*;
+pub use terminal_raw_mode::*;
 
 // Re-export test fixtures for testing purposes only.
 #[cfg(test)]

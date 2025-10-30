@@ -2228,13 +2228,17 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 
 ### 8.2: Implement DirectToAnsi InputDevice (5-7 hours)
 
-**Objective**: Create DirectToAnsi-specific InputDevice using tokio + ANSI sequence parsing with crossterm compatibility as benchmark
+**Objective**: Create DirectToAnsi-specific InputDevice using tokio + ANSI sequence parsing with
+crossterm compatibility as benchmark
 
-**Status**: ✅ CORE COMPLETE - Backend device fully functional with keyboard input. Remaining parsers (mouse, terminal_events, utf8) need signature updates for full integration.
+**Status**: ✅ CORE COMPLETE - Backend device fully functional with keyboard input. Remaining
+parsers (mouse, terminal_events, utf8) need signature updates for full integration.
 
-**Architecture Improvement**: No timeout needed! Using smart async lookahead instead of artificial delays (see insight box below)
+**Architecture Improvement**: No timeout needed! Using smart async lookahead instead of artificial
+delays (see insight box below)
 
 **Completion Summary**:
+
 - ✅ DirectToAnsiInputDevice fully implemented with async I/O loop
 - ✅ Zero-latency ESC key detection (no 150ms timeout!)
 - ✅ Smart buffer management with Vec<u8> and compaction
@@ -2247,6 +2251,7 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 **Implementation Plan**: 8 phases based on comprehensive crossterm source analysis
 
 **Key Decisions Made**:
+
 - ✅ **Type Consolidation**: Backend imports from protocol layer (no parent-level abstraction)
 - ✅ **SS3 Support**: Required for vim/application mode compatibility
 - ✅ **Mouse Protocols**: Implement SGR + X10 + RXVT (crossterm parity)
@@ -2259,22 +2264,25 @@ Layer 2: Backend I/O (terminal_lib_backends/ - backend-specific)
 
 ### 🔍 Architecture Insight: Why No Timeout?
 
-**The ESC Key Problem**:
-When a user presses ESC, the terminal sends `0x1B`. But ANSI sequences also start with `0x1B[...`. How do we distinguish?
+**The ESC Key Problem**: When a user presses ESC, the terminal sends `0x1B`. But ANSI sequences also
+start with `0x1B[...`. How do we distinguish?
 
 **❌ Naive Approach (with timeout)**:
+
 - Wait 150ms to see if more bytes arrive
 - If yes → parse as ANSI sequence
 - If no → emit ESC key
 - **Problem**: Adds 150ms latency to every ESC key press!
 
 **✅ Smart Approach (no timeout)**:
+
 - Use tokio async I/O: `stdin.read().await` returns when data is ready
 - If buffer has `[0x1B]` only → emit ESC immediately (no delay!)
 - If buffer has `[0x1B, b'[', ...]` → parse CSI sequence
 - **Advantage**: Zero latency, deterministic parsing
 
 **Implementation Pattern**:
+
 ```rust
 loop {
     // 1. Try to parse from existing buffer
@@ -2294,7 +2302,8 @@ loop {
 }
 ```
 
-**Key Insight**: Tokio's async I/O is more efficient than manual timeouts. The event loop yields control until data arrives, then processes what's available. No artificial delays needed! ✨
+**Key Insight**: Tokio's async I/O is more efficient than manual timeouts. The event loop yields
+control until data arrives, then processes what's available. No artificial delays needed! ✨
 
 ---
 
@@ -2483,12 +2492,14 @@ I/O
 **Objective**: Eliminate duplicate types between protocol and backend layers
 
 **Approach** (refined based on user feedback):
+
 - ❌ No parent-level `input_event_types.rs` (unnecessary abstraction)
 - ✅ Keep types in `vt_100_terminal_input_parser/types.rs` (protocol layer owns them)
 - ✅ Backend imports from protocol layer
 - ✅ Delete duplicate `direct_to_ansi/input/types.rs`
 
 **Tasks**:
+
 - [x] Delete `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/types.rs`
 - [x] Update `direct_to_ansi/input/mod.rs` to remove types module
 - [x] Update `input_device_impl.rs` imports to use protocol layer types:
@@ -2498,6 +2509,7 @@ I/O
 - [x] Run `cargo check` - verify no broken imports
 
 **Completion Notes**:
+
 - Duplicate `types.rs` file removed from backend layer
 - Backend now properly imports all types from protocol layer
 - Type consolidation complete with zero compilation errors
@@ -2508,9 +2520,11 @@ I/O
 
 **Objective**: Add SS3 (ESC O) sequence support for vim/application mode compatibility
 
-**Background**: Many terminals in "application mode" send SS3 instead of CSI for arrows and F1-F4. Missing this breaks vim/less/etc.
+**Background**: Many terminals in "application mode" send SS3 instead of CSI for arrows and F1-F4.
+Missing this breaks vim/less/etc.
 
 **Tasks**:
+
 - [ ] Add SS3 constants to `core/ansi/constants/input_sequences.rs`:
   - `SS3_PREFIX = b'O'`
   - SS3 arrow sequences (O A/B/C/D)
@@ -2528,16 +2542,19 @@ I/O
 
 **Objective**: Implement legacy mouse protocols for crossterm parity
 
-**Background**: Crossterm supports 3 mouse protocols (SGR ✅, X10, RXVT). We need all three for compatibility.
+**Background**: Crossterm supports 3 mouse protocols (SGR ✅, X10, RXVT). We need all three for
+compatibility.
 
 **Tasks**:
 
 **3.1 Verify/Fix Scroll Button Codes**:
+
 - [ ] Check crossterm scroll mapping: buttons 4-7 (not 64-67)
 - [ ] Update scroll detection in mouse.rs if needed
 - [ ] Add tests for all scroll directions
 
 **3.2 Implement X10 Normal Mouse Protocol**:
+
 - [ ] Add `parse_x10_mouse(bytes: &[u8])` to mouse.rs
 - [ ] Format: ESC [ M Cb Cx Cy (6 bytes fixed)
 - [ ] Button decoding: `(cb - 32) & 3` → 0=left, 1=middle, 2=right, 3=release
@@ -2545,6 +2562,7 @@ I/O
 - [ ] Add ~10 tests
 
 **3.3 Implement RXVT Mouse Protocol**:
+
 - [ ] Add `parse_rxvt_mouse(bytes: &[u8])` to mouse.rs
 - [ ] Format: ESC [ Cb ; Cx ; Cy M (semicolon-separated)
 - [ ] Same button encoding as X10
@@ -2552,6 +2570,7 @@ I/O
 - [ ] Add ~10 tests
 
 **3.4 Update Mouse Parser Dispatcher**:
+
 - [ ] Try protocols in order: SGR → RXVT → X10
 - [ ] Protocol detection based on sequence structure
 - [ ] Add integration tests with mixed protocols
@@ -2567,12 +2586,14 @@ I/O
 **Tasks**:
 
 **4.1 Focus Events**:
+
 - [ ] Implement `parse_focus_event(bytes: &[u8]) -> Option<InputEvent>`
 - [ ] CSI I (0x49) → Focus(Gained)
 - [ ] CSI O (0x4F) → Focus(Lost)
 - [ ] Add 3 tests
 
 **4.2 Bracketed Paste**:
+
 - [ ] Implement `parse_bracketed_paste(buffer: &[u8]) -> Option<InputEvent>`
 - [ ] ESC[200~ → Paste(Start)
 - [ ] ESC[201~ → Paste(End)
@@ -2580,6 +2601,7 @@ I/O
 - [ ] Add 3 tests
 
 **4.3 Resize Events**:
+
 - [ ] Implement `parse_resize_event(bytes: &[u8]) -> Option<InputEvent>`
 - [ ] Format: CSI 8 ; rows ; cols t
 - [ ] Parse parameters, return Resize{rows, cols}
@@ -2587,6 +2609,7 @@ I/O
 - [ ] Add 3 tests
 
 **4.4 Main Dispatcher**:
+
 - [ ] Implement `parse_terminal_event(buffer: &[u8]) -> Option<InputEvent>`
 - [ ] Route to focus/paste/resize based on sequence structure
 
@@ -2601,6 +2624,7 @@ I/O
 **Tasks**:
 
 **5.1 UTF-8 Helper Functions**:
+
 - [ ] `get_utf8_length(first_byte: u8) -> Option<usize>`:
   - 0x00-0x7F → 1 byte
   - 0xC0-0xDF → 2 bytes
@@ -2613,6 +2637,7 @@ I/O
   - Decode validated UTF-8 bytes to char
 
 **5.2 Main UTF-8 Parser**:
+
 - [ ] Implement `parse_utf8_text(buffer: &[u8]) -> Vec<InputEvent>`:
   - Parse all complete UTF-8 sequences in buffer
   - Return InputEvent::Key for each character
@@ -2620,6 +2645,7 @@ I/O
   - Handle incomplete sequences → return empty vec
 
 **5.3 UTF-8 Tests** (~20 tests):
+
 - [ ] ASCII characters (5 tests)
 - [ ] Uppercase letters with SHIFT modifier (3 tests)
 - [ ] 2-byte UTF-8 (Greek, Cyrillic) (3 tests)
@@ -2636,19 +2662,23 @@ I/O
 
 **Location**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/input_device_impl.rs`
 
-**Status**: ✅ Core implementation complete with keyboard parser integrated. Remaining parsers (mouse, terminal_events, utf8) need signature updates.
+**Status**: ✅ Core implementation complete with keyboard parser integrated. Remaining parsers
+(mouse, terminal_events, utf8) need signature updates.
 
 **Why Vec<u8> instead of RingBuffer?**
+
 - Parsers expect `&[u8]` slices (keyboard, mouse parsers already use this)
 - No need for random access or wraparound complexity
 - Simple buffer management: append, parse, consume
-- Codebase has `RingBufferHeap`/`RingBufferStack` but they're designed for discrete elements with gaps, not byte streams
+- Codebase has `RingBufferHeap`/`RingBufferStack` but they're designed for discrete elements with
+  gaps, not byte streams
 
 ---
 
 **Tasks**:
 
 **6.1 DirectToAnsiInputDevice Structure**: ✅ COMPLETE
+
 ```rust
 pub struct DirectToAnsiInputDevice {
     stdin: Stdin,         // tokio::io::Stdin for async reading
@@ -2659,6 +2689,7 @@ pub struct DirectToAnsiInputDevice {
 ```
 
 **6.2 Constructor**: ✅ COMPLETE
+
 - [x] Implement `new() -> Self`:
   - Initialize tokio::io::stdin()
   - Create Vec with 4096-byte capacity (pre-allocated)
@@ -2667,7 +2698,9 @@ pub struct DirectToAnsiInputDevice {
 - [x] Implement `Default` trait
 
 **6.3 Main Event Loop (No Timeout Pattern)**: ✅ COMPLETE
+
 - [x] Implement `async read_event(&mut self) -> Option<InputEvent>`:
+
   ```rust
   loop {
       // 1. Try parse from existing buffer
@@ -2687,12 +2720,15 @@ pub struct DirectToAnsiInputDevice {
       // 3. Loop back to try_parse() with new data
   }
   ```
+
   - **Key insight**: No timeout! Tokio async read yields until data ready
   - ESC key emitted immediately if no follow-up bytes
   - Incomplete sequences kept in buffer until more data arrives
 
 **6.4 Parser Dispatcher (Smart Lookahead)**: ✅ COMPLETE
+
 - [x] Implement `try_parse(&self) -> Option<(InputEvent, usize)>`:
+
   ```rust
   let buf = &self.buffer[self.consumed..];
 
@@ -2744,11 +2780,13 @@ pub struct DirectToAnsiInputDevice {
       None => None,  // Empty buffer
   }
   ```
+
   - Fast path: check first byte for routing
   - Return `(InputEvent, bytes_consumed)` or `None` if incomplete
   - **Zero-latency ESC key detection**: Single 0x1B byte emitted immediately
 
 **6.5 Buffer Management**: ✅ COMPLETE
+
 - [x] `consume(&mut self, count: usize)`:
   - Increment `self.consumed` by count
   - If consumed > threshold (2KB), compact buffer:
@@ -2762,12 +2800,14 @@ pub struct DirectToAnsiInputDevice {
 - [x] Constants defined: `BUFFER_COMPACT_THRESHOLD = 2048`, `INITIAL_BUFFER_CAPACITY = 4096`
 
 **6.6 Edge Cases**: ✅ COMPLETE
+
 - [x] EOF handling: `stdin.read()` returns 0 → return None (clean shutdown)
 - [x] Incomplete sequences: Keep in buffer until more data arrives (no timeout)
 - [x] Empty buffer after EOF: Return None (no hanging)
 - [x] Buffer growth: Vec auto-grows, compact periodically to avoid unbounded growth
 
 **6.7 Parser Signature Updates**: ✅ ALL PARSERS COMPLETE
+
 - [x] **keyboard.rs**: Updated to `Option<(InputEvent, usize)>` signature
   - Returns tuple with event and bytes consumed
   - All 23 unit tests updated and passing
@@ -2788,7 +2828,9 @@ pub struct DirectToAnsiInputDevice {
   - Implementation guidance added in comments
 
 **6.8 Encapsulation Improvements**: ✅ COMPLETE
+
 - [x] Applied conditional visibility pattern from CLAUDE.md:
+
   ```rust
   // Conditionally public modules for documentation and testing
   #[cfg(any(test, doc))]
@@ -2799,12 +2841,14 @@ pub struct DirectToAnsiInputDevice {
   // Public re-exports for flat API
   pub use keyboard::*;
   ```
+
 - [x] Applied to all parser modules (keyboard, mouse, terminal_events, utf8, types)
 - [x] Modules are private in release builds, public for docs and tests
 
 ---
 
 **Phase 6 Completion Summary**:
+
 - ✅ 6.1 Structure: 10 min - **COMPLETE**
 - ✅ 6.2 Constructor: 15 min - **COMPLETE**
 - ✅ 6.3 Main Event Loop: 60 min - **COMPLETE**
@@ -2814,10 +2858,11 @@ pub struct DirectToAnsiInputDevice {
 - ✅ 6.7 Parser Updates: 120 min - **ALL PARSERS COMPLETE** (keyboard, mouse, terminal_events, utf8)
 - ✅ 6.8 Encapsulation: 20 min - **COMPLETE**
 - ✅ 6.9 PTY Test Structure: 45 min - **COMPLETE**
-- ✅ 6.10 Naming Consistency: 15 min - **COMPLETE**
-**Actual Time: ~5.75 hours** (includes parser signature updates, test fixing, PTY infrastructure, refactoring, and architectural refinements)
+- ✅ 6.10 Naming Consistency: 15 min - **COMPLETE** **Actual Time: ~5.75 hours** (includes parser
+  signature updates, test fixing, PTY infrastructure, refactoring, and architectural refinements)
 
 **Test Status**: ✅ All 97 tests passing
+
 - **66 VT-100 parser tests** (includes keyboard, mouse, terminal_events, utf8, integration tests)
   - 23 keyboard parser unit tests (all with bytes_consumed assertions)
   - 6 mouse parser unit tests (all with bytes_consumed assertions)
@@ -2828,11 +2873,13 @@ pub struct DirectToAnsiInputDevice {
 - **8 DirectToAnsiInputDevice async tests** (buffer management, event parsing, EOF handling)
 
 **Documentation Status**: ✅ All docs building successfully
+
 - Comprehensive module-level documentation
 - Architecture diagrams and insights
 - Zero rustdoc warnings
 
 **6.9 PTY-Based Integration Test Structure**: ✅ COMPLETE
+
 - [x] Created `pty_based_input_device_test.rs` with bootstrap/slave pattern
 - [x] Confirmed `portable-pty = "0.9.0"` dependency at `tui/Cargo.toml:156`
 - [x] Implemented full test infrastructure:
@@ -2845,28 +2892,42 @@ pub struct DirectToAnsiInputDevice {
   - Ensures same generator used in round-trip tests and PTY tests
   - Improves maintainability and type safety
 - 📋 **Note**: Tests require binary entry point to handle `--pty-slave` flag (beyond current scope)
-- 📋 **Alternative**: Use parser validation tests in `input_parser_validation_test.rs` (13 tests, all passing)
+- 📋 **Alternative**: Use parser validation tests in `input_parser_validation_test.rs` (13 tests,
+  all passing)
 
 **6.10 Naming Consistency Refactoring**: ✅ COMPLETE
+
 - [x] Renamed `test_sequence_builders/` → `test_sequence_generators/`
 - [x] Updated 16 references across vt_100_pty_output_parser module
 - [x] Aligned with `input_event_generator.rs` naming convention
 - [x] All 248 tests passing (66 input parser + 182 output parser)
 
+**6.11 Create raw mode implementation using rustix**:
+
+- [x] Implement `core/ansi/terminal_raw_mode.rs` with `enable_raw_mode()` and `disable_raw_mode()`
+      using `rustix`
+- [ ] Use our raw mode enable / disable instead of crossterm where appropriate. We should not have
+      crossterm raw mode calls in codepaths where we are using DirectToAnsiInputDevice or
+      DirectToAnsi. We still must support crossterm for macos and Windows (for now). So use `#cfg`
+      to select which raw mode implementation to use based on OS.
+
 **Next Steps - Decision Point**:
+
 1. ✅ **COMPLETE**: All parser signatures updated to `Option<(InputEvent, usize)>`
 2. ✅ **COMPLETE**: Validate keyboard-only implementation - **All 97 tests passing!**
    - 66 VT-100 parser tests pass
    - 23 round-trip tests pass
    - 8 DirectToAnsiInputDevice async tests pass
 3. **Choose Path Forward**:
-   - **Option A**: Wire up complete parser chain in `try_parse()` method (mouse/terminal_events/utf8)
+   - **Option A**: Wire up complete parser chain in `try_parse()` method
+     (mouse/terminal_events/utf8)
      - Pros: Complete implementation, all parsers integrated
      - Cons: Additional work before testing
    - **Option B**: Proceed to Phase 7 with keyboard-only implementation
      - Pros: Can validate architecture with existing tests
      - Cons: Mouse/terminal events parsers not yet wired up
-   - **Recommendation**: **Option B** - Validate keyboard-only architecture first, then wire up remaining parsers
+   - **Recommendation**: **Option B** - Validate keyboard-only architecture first, then wire up
+     remaining parsers
 
 ---
 
@@ -2874,7 +2935,15 @@ pub struct DirectToAnsiInputDevice {
 
 **Objective**: Comprehensive test suite for backend device
 
-**7.1 Backend Unit Tests** (30+ tests in `input/tests.rs`):
+**7.1 Verify that keyboard input works** (tests in
+`tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/`):
+
+- [ ] Make sure all the tests in this module pass
+- [ ] Make sure this works with real terminal input `pty_based_input_device_test.rs`
+- [ ] Implement raw mode using rustix (`core/ansi/terminal_raw_mode.rs`)
+
+**7.2 Backend Unit Tests** (30+ tests in `input/tests.rs`):
+
 - [ ] Constructor initialization (1 test)
 - [ ] Parser dispatch for all event types (15 tests)
 - [ ] Buffer management and wraparound (5 tests)
@@ -2882,13 +2951,15 @@ pub struct DirectToAnsiInputDevice {
 - [ ] Incomplete sequences (5 tests)
 - [ ] EOF (2 tests)
 
-**7.2 Integration Tests**:
+**7.3 Integration Tests**:
+
 - [ ] Real terminal interaction (tmux/screen)
 - [ ] Mixed event streams
 - [ ] Rapid input stress test
 - [ ] Multiple terminal emulators
 
-**7.3 Crossterm Parity Verification** (NEW REQUIREMENT):
+**7.4 Crossterm Parity Verification** (NEW REQUIREMENT):
+
 - [ ] Compare against crossterm source code
 - [ ] Verify all scenarios covered
 - [ ] Document any intentional differences
@@ -2900,23 +2971,27 @@ pub struct DirectToAnsiInputDevice {
 **Objective**: Polish documentation and verify code quality
 
 **8.1 Module Documentation**:
+
 - [ ] Comprehensive docs for all parsers
 - [ ] SS3 vs CSI explanation
 - [ ] Protocol differences (X10/RXVT/SGR)
 - [ ] Backend architecture notes
 
 **8.2 Code Quality**:
+
 - [ ] `cargo fmt --all`
 - [ ] `cargo clippy --all-targets --fix`
 - [ ] Fix warnings
 - [ ] Verify tests pass
 
 **8.3 Update Task Documents**:
+
 - [ ] Mark completed sections
 - [ ] Add crossterm parity notes
 - [ ] Document deviations
 
 **Success Criteria**:
+
 - ✅ All parsers implemented (keyboard+SS3, mouse+X10/RXVT, events, UTF-8)
 - ✅ Backend device with tokio async I/O (NO timeout needed!)
 - ✅ Simple Vec<u8> buffer with consume/compact pattern

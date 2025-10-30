@@ -25,6 +25,7 @@
       <excludeFolder url="file://$MODULE_DIR$/cmdr/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/tui/target" />
+      <excludeFolder url="file://$MODULE_DIR$/analytics_schema/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

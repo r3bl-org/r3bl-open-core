@@ -128,7 +128,8 @@ fn run_pty_slave() {
     // Without this, DirectToAnsiInputDevice cannot read ANSI escape sequences properly
     // because they would be buffered or interpreted by the terminal layer
     eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
-    if let Err(e) = crossterm::terminal::enable_raw_mode() {
+    // Use our own raw mode implementation instead of crossterm
+    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
         eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {}", e);
         // This would likely cause the test to fail - escape sequences won't be readable
     } else {
@@ -206,7 +207,7 @@ fn run_pty_slave() {
     });
 
     // Clean up: disable raw mode before exiting
-    if let Err(e) = crossterm::terminal::disable_raw_mode() {
+    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
         eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {}", e);
     }
 }
@@ -299,7 +300,7 @@ fn run_pty_master() {
     // Wait for slave to confirm it's running
     let mut slave_started = false;
     let mut test_running_seen = false;
-    let start_timeout = std::time::Instant::now();
+    let start_timeout = Instant::now();
 
     while !slave_started && start_timeout.elapsed() < Duration::from_secs(5) {
         let mut line = String::new();
