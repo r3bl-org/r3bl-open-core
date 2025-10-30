@@ -38,6 +38,9 @@
 //!
 //! Run with: `cargo test test_pty -- --ignored --nocapture`
 
+#[cfg(test)]
 pub mod input_parser_validation_test;
+#[cfg(test)]
 pub mod observe_real_terminal_input_events;
+#[cfg(test)]
 pub mod pty_based_input_device_test;
