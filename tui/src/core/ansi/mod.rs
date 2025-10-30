@@ -158,6 +158,13 @@ mod constants;
 mod detect_color_support;
 mod generator;
 mod terminal_output;
+
+// Module is public only when building documentation or tests.
+// This allows rustdoc links to work while keeping it private in release builds.
+#[cfg(any(test, doc))]
+pub mod terminal_raw_mode;
+// This module is private in non-test, non-doc builds.
+#[cfg(not(any(test, doc)))]
 mod terminal_raw_mode;
 
 // XMARK: Example for how to conditionally expose private modules for testing and documentation.

@@ -177,5 +177,5 @@ pub use utf8::*;
 pub use types::*;
 
 // Integration tests for terminal input parsing.
-#[cfg(test)]
-mod integration_tests;
+#[cfg(any(test, doc))]
+pub mod integration_tests;

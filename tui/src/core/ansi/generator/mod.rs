@@ -42,7 +42,7 @@ pub use esc_sequence::*;
 pub use sgr_code::*;
 
 // Tests.
-#[cfg(test)]
+#[cfg(any(test, doc))]
 mod input_event_generator;
-#[cfg(test)]
+#[cfg(any(test, doc))]
 pub use input_event_generator::*;

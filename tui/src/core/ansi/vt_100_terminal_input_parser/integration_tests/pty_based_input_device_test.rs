@@ -3,8 +3,8 @@
 use crate::{core::ansi::{generator::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::{InputEvent, KeyCode,
                                                         KeyModifiers}},
+            run_test_in_isolated_process_with_pty,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
-use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
 
@@ -82,157 +82,23 @@ use std::{io::{BufRead, BufReader, Write},
 /// ```
 #[test]
 fn test_pty_input_device() {
-    // Immediate debug output to confirm test is running
-    let pty_slave = std::env::var("PTY_SLAVE");
-    eprintln!("🔍 TEST ENTRY: PTY_SLAVE env = {:?}", pty_slave);
-
-    // Also print to stdout to ensure it gets through PTY
-    println!("TEST_RUNNING");
-    std::io::stdout().flush().expect("Failed to flush stdout");
-
-    // Skip in CI if running as master
-    if pty_slave.is_err() && is_ci::cached() {
-        println!("⏭️  Skipped in CI (requires interactive terminal)");
-        return;
-    }
-
-    // Check if we're running as the slave process
-    if pty_slave.is_ok() {
-        eprintln!("🔍 TEST: PTY_SLAVE detected, running slave mode");
-        println!("SLAVE_STARTING");
-        std::io::stdout().flush().expect("Failed to flush stdout");
-
-        // Run the slave logic (never returns - exits process)
-        run_pty_slave();
-    }
-
-    // Otherwise, run as master
-    eprintln!("🚀 TEST: No PTY_SLAVE var, running as master");
-    run_pty_master();
-}
-
-/// ### Actor 2: PTY Slave (worker process)
-///
-/// Runs in the spawned child process when `PTY_SLAVE` env var is set.
-/// This process's stdin/stdout are connected to the PTY slave file descriptor.
-///
-/// **Critical Steps**:
-/// 1. **Enable Raw Mode**: MUST set the PTY slave terminal to raw mode to:
-///    - Disable line buffering (get bytes immediately)
-///    - Prevent ANSI escape sequence interpretation
-///    - Allow async byte-by-byte reading
-/// 2. **Create Device**: Initialize DirectToAnsiInputDevice to read from stdin
-/// 3. **Process Events**: Read and parse ANSI sequences into InputEvents
-/// 4. **Output Results**: Write parsed events to stdout for master to verify
-///
-/// This function MUST exit before returning so other tests don't run.
-fn run_pty_slave() -> ! {
-    // Print to stdout immediately to confirm slave is running
-    println!("SLAVE_STARTING");
-    std::io::stdout().flush().expect("Failed to flush");
-
-    // CRITICAL: Set the terminal (PTY slave) to raw mode
-    // Without this, DirectToAnsiInputDevice cannot read ANSI escape sequences properly
-    // because they would be buffered or interpreted by the terminal layer
-    eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
-    // Use our own raw mode implementation instead of crossterm
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {}", e);
-        // This would likely cause the test to fail - escape sequences won't be readable
-    } else {
-        eprintln!("✓ PTY Slave: Terminal in raw mode");
-    }
-
-    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-
-    runtime.block_on(async {
-        eprintln!("🔍 PTY Slave: Starting...");
-        let mut device = DirectToAnsiInputDevice::new();
-        eprintln!("🔍 PTY Slave: Device created, reading events...");
-
-        // Add timeout to prevent hanging forever
-        use tokio::time::timeout;
-        let mut event_count = 0;
-
-        loop {
-            // Try to read an event with a timeout
-            match timeout(Duration::from_millis(100), device.read_event()).await {
-                Ok(Some(event)) => {
-                    event_count += 1;
-                    eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
-
-                    // Output event in parseable format
-                    let output = match event {
-                        InputEvent::Keyboard { code, modifiers } => {
-                            format!(
-                                "Keyboard: {:?} (shift={} ctrl={} alt={})",
-                                code, modifiers.shift, modifiers.ctrl, modifiers.alt
-                            )
-                        }
-                        InputEvent::Mouse { button, action, .. } => {
-                            format!("Mouse: button={:?} action={:?}", button, action)
-                        }
-                        InputEvent::Resize { rows, cols } => {
-                            format!("Resize: {}x{}", rows, cols)
-                        }
-                        InputEvent::Focus(state) => {
-                            format!("Focus: {:?}", state)
-                        }
-                        InputEvent::Paste(mode) => {
-                            format!("Paste: {:?}", mode)
-                        }
-                    };
-
-                    println!("{}", output);
-                    std::io::stdout().flush().expect("Failed to flush stdout");
-
-                    // Exit after processing a few events for testing
-                    if event_count >= 3 {
-                        eprintln!(
-                            "🔍 PTY Slave: Processed {} events, exiting",
-                            event_count
-                        );
-                        break;
-                    }
-                }
-                Ok(None) => {
-                    eprintln!("🔍 PTY Slave: EOF reached");
-                    break;
-                }
-                Err(_) => {
-                    // Timeout - check if we should exit
-                    static mut TIMEOUT_COUNT: usize = 0;
-                    unsafe {
-                        TIMEOUT_COUNT += 1;
-                        if TIMEOUT_COUNT > 20 {
-                            eprintln!("🔍 PTY Slave: Too many timeouts, exiting");
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        eprintln!("🔍 PTY Slave: Completed, exiting");
-    });
-
-    // Clean up: disable raw mode before exiting
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {}", e);
-    }
-
-    eprintln!("🔍 Slave: Completed, exiting");
-    // CRITICAL: Exit immediately to prevent test harness from running other tests
-    std::process::exit(0);
+    run_test_in_isolated_process_with_pty!(
+        env_var: "PTY_SLAVE",
+        test_name: "test_pty_input_device",
+        slave: run_pty_slave,
+        master: run_pty_master
+    );
 }
 
 /// ### Actor 1: PTY Master (test entry, env var NOT set) - Synchronous code
-/// - Creates PTY pair
-/// - Spawns Actor 2 with env var ISOLATED_PTY_SINGLE_TEST=slave
+/// - Receives PTY pair and child process from macro
 /// - Writes ANSI sequences to PTY master
 /// - Reads parsed output from slave's stdout
 /// - Verifies correctness
-fn run_pty_master() {
+fn run_pty_master(
+    pty_pair: portable_pty::PtyPair,
+    mut child: Box<dyn portable_pty::Child + Send + Sync>,
+) {
     /// Helper to generate ANSI bytes from InputEvent.
     fn generate_test_sequence(desc: &str, event: InputEvent) -> (&str, Vec<u8>) {
         let bytes = generate_keyboard_sequence(&event)
@@ -242,41 +108,7 @@ fn run_pty_master() {
 
     eprintln!("🚀 PTY Master: Starting...");
 
-    // 1. Create PTY pair
-    let pty_system = NativePtySystem::default();
-    let pty_pair = pty_system
-        .openpty(PtySize {
-            rows: 24,
-            cols: 80,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .expect("Failed to create PTY pair");
-
-    // 2. Spawn test binary with PTY_SLAVE=1
-    // The spawned process will run the same test, but the env var will
-    // make it take the slave path
-    let test_binary = std::env::current_exe().unwrap();
-    eprintln!("🔍 Test binary: {:?}", test_binary);
-
-    let mut cmd = CommandBuilder::new(test_binary);
-    cmd.env("PTY_SLAVE", "1");
-    cmd.env("RUST_BACKTRACE", "1");
-    // Run the same test in the spawned process
-    cmd.args(&[
-        "--test-threads",
-        "1",
-        "--nocapture",           // Essential for seeing output!
-        "test_pty_input_device", // Same test name
-    ]);
-
-    eprintln!("🚀 PTY Master: Spawning slave process...");
-    let mut child = pty_pair
-        .slave
-        .spawn_command(cmd)
-        .expect("Failed to spawn slave process");
-
-    // 3. Get master writer/reader
+    // Get master writer/reader
     let mut writer = pty_pair.master.take_writer().expect("Failed to get writer");
     let reader = pty_pair
         .master
@@ -424,4 +256,119 @@ fn run_pty_master() {
     }
 
     eprintln!("✅ PTY Master: Test passed!");
+}
+
+/// ### Actor 2: PTY Slave (worker process)
+///
+/// Runs in the spawned child process when `PTY_SLAVE` env var is set.
+/// This process's stdin/stdout are connected to the PTY slave file descriptor.
+///
+/// **Critical Steps**:
+/// 1. **Enable Raw Mode**: MUST set the PTY slave terminal to raw mode to:
+///    - Disable line buffering (get bytes immediately)
+///    - Prevent ANSI escape sequence interpretation
+///    - Allow async byte-by-byte reading
+/// 2. **Create Device**: Initialize DirectToAnsiInputDevice to read from stdin
+/// 3. **Process Events**: Read and parse ANSI sequences into InputEvents
+/// 4. **Output Results**: Write parsed events to stdout for master to verify
+///
+/// This function MUST exit before returning so other tests don't run.
+fn run_pty_slave() -> ! {
+    // Print to stdout immediately to confirm slave is running
+    println!("SLAVE_STARTING");
+    std::io::stdout().flush().expect("Failed to flush");
+
+    // CRITICAL: Set the terminal (PTY slave) to raw mode
+    // Without this, DirectToAnsiInputDevice cannot read ANSI escape sequences properly
+    // because they would be buffered or interpreted by the terminal layer
+    eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
+    // Use our own raw mode implementation instead of crossterm
+    if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
+        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {}", e);
+        // This would likely cause the test to fail - escape sequences won't be readable
+    } else {
+        eprintln!("✓ PTY Slave: Terminal in raw mode");
+    }
+
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+
+    runtime.block_on(async {
+        eprintln!("🔍 PTY Slave: Starting...");
+        let mut device = DirectToAnsiInputDevice::new();
+        eprintln!("🔍 PTY Slave: Device created, reading events...");
+
+        // Add timeout to prevent hanging forever
+        use tokio::time::timeout;
+        let mut event_count = 0;
+
+        loop {
+            // Try to read an event with a timeout
+            match timeout(Duration::from_millis(100), device.read_event()).await {
+                Ok(Some(event)) => {
+                    event_count += 1;
+                    eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
+
+                    // Output event in parseable format
+                    let output = match event {
+                        InputEvent::Keyboard { code, modifiers } => {
+                            format!(
+                                "Keyboard: {:?} (shift={} ctrl={} alt={})",
+                                code, modifiers.shift, modifiers.ctrl, modifiers.alt
+                            )
+                        }
+                        InputEvent::Mouse { button, action, .. } => {
+                            format!("Mouse: button={:?} action={:?}", button, action)
+                        }
+                        InputEvent::Resize { rows, cols } => {
+                            format!("Resize: {}x{}", rows, cols)
+                        }
+                        InputEvent::Focus(state) => {
+                            format!("Focus: {:?}", state)
+                        }
+                        InputEvent::Paste(mode) => {
+                            format!("Paste: {:?}", mode)
+                        }
+                    };
+
+                    println!("{}", output);
+                    std::io::stdout().flush().expect("Failed to flush stdout");
+
+                    // Exit after processing a few events for testing
+                    if event_count >= 3 {
+                        eprintln!(
+                            "🔍 PTY Slave: Processed {} events, exiting",
+                            event_count
+                        );
+                        break;
+                    }
+                }
+                Ok(None) => {
+                    eprintln!("🔍 PTY Slave: EOF reached");
+                    break;
+                }
+                Err(_) => {
+                    // Timeout - check if we should exit
+                    static mut TIMEOUT_COUNT: usize = 0;
+                    unsafe {
+                        TIMEOUT_COUNT += 1;
+                        if TIMEOUT_COUNT > 20 {
+                            eprintln!("🔍 PTY Slave: Too many timeouts, exiting");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        eprintln!("🔍 PTY Slave: Completed, exiting");
+    });
+
+    // Clean up: disable raw mode before exiting
+    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
+        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {}", e);
+    }
+
+    eprintln!("🔍 Slave: Completed, exiting");
+    // CRITICAL: Exit immediately to prevent test harness from running other tests
+    std::process::exit(0);
 }
