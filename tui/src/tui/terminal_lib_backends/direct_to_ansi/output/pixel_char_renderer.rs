@@ -5,7 +5,7 @@
 //! minimize redundant codes.
 
 use crate::{FastStringify, PixelChar, SgrCode, TuiColor, TuiStyle, degrade_color,
-            global_color_support};
+            global_color_support, SGR_RESET_BYTES};
 
 /// # Unified ANSI Generator for [`PixelChar`] Rendering
 ///
@@ -187,14 +187,14 @@ impl PixelCharRenderer {
 
         // Transitioning to default style from an active style
         if to_is_default && self.has_active_style {
-            self.buffer.extend_from_slice(b"\x1b[0m"); // Reset
+            self.buffer.extend_from_slice(SGR_RESET_BYTES); // Reset
             self.has_active_style = false;
             return;
         }
 
         // Transitioning between two styled states
         if !from_is_default && Self::needs_full_reset(from, to) {
-            self.buffer.extend_from_slice(b"\x1b[0m"); // Reset first
+            self.buffer.extend_from_slice(SGR_RESET_BYTES); // Reset first
             self.has_active_style = false;
         }
 

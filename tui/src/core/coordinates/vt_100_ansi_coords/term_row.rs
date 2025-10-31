@@ -149,12 +149,9 @@ pub const fn term_row(value: NonZeroU16) -> TermRow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::ansi::vt_100_pty_output_parser::vt_100_pty_output_conformance_tests::test_fixtures_vt_100_ansi_conformance::nz;
     use crate::{ColIndex, term_col};
     use std::hash::{DefaultHasher, Hash, Hasher};
-
-    fn nz(value: u16) -> NonZeroU16 {
-        NonZeroU16::new(value).expect("NonZeroU16 creation failed")
-    }
 
     #[test]
     fn test_term_row_new() {

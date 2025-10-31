@@ -7,10 +7,14 @@
 //! for partial ANSI sequences, and delegates to the protocol layer parsers for
 //! sequence interpretation.
 
-use crate::core::ansi::vt_100_terminal_input_parser::{
-    parse_keyboard_sequence, parse_ss3_sequence, parse_mouse_sequence, parse_terminal_event,
-    parse_utf8_text, InputEvent, KeyCode, KeyModifiers,
-};
+use crate::core::ansi::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O,
+                        vt_100_terminal_input_parser::{InputEvent, KeyCode,
+                                                       KeyModifiers,
+                                                       parse_keyboard_sequence,
+                                                       parse_mouse_sequence,
+                                                       parse_ss3_sequence,
+                                                       parse_terminal_event,
+                                                       parse_utf8_text}};
 use tokio::io::{AsyncReadExt, Stdin};
 
 /// Buffer compaction threshold: compact when consumed bytes exceed this value.
@@ -104,7 +108,56 @@ impl DirectToAnsiInputDevice {
     ///
     /// Unlike naive implementations with 150ms timeout, this immediately emits
     /// ESC when buffer contains only `[0x1B]`, with no artificial delay.
+    ///
+    /// ## How Escape Sequences Arrive in Practice
+    ///
+    /// When you press a special key (e.g., Up Arrow), the terminal emulator sends
+    /// an escape sequence like `ESC [ A` (3 bytes: `[0x1B, 0x5B, 0x41]`).
+    ///
+    /// **Key Assumption**: Modern terminal emulators send escape sequences **atomically**
+    /// in a single `write()` syscall, and the kernel buffers all bytes together.
+    ///
+    /// ### Typical Flow (99.9% of cases)
+    ///
+    /// ```text
+    /// User presses Up Arrow
+    ///   ↓
+    /// Terminal: write(stdout, "\x1B[A", 3)  ← One syscall, 3 bytes
+    ///   ↓
+    /// Kernel buffer: [0x1B, 0x5B, 0x41]    ← All bytes arrive together
+    ///   ↓
+    /// stdin.read().await → [0x1B, 0x5B, 0x41]  ← We get all 3 bytes in one read
+    ///   ↓
+    /// try_parse() sees complete sequence → Up Arrow event ✓
+    /// ```
+    ///
+    /// ### Edge Case: Slow Byte Arrival (rare)
+    ///
+    /// Over high-latency SSH or slow serial connections, bytes might arrive separately:
+    ///
+    /// ```text
+    /// First read:  [0x1B]           → Emits ESC immediately
+    /// Second read: [0x5B, 0x41]     → User gets ESC instead of Up Arrow
+    /// ```
+    ///
+    /// **Trade-off**: We optimize for the common case (local terminals with atomic
+    /// sequences) to achieve 0ms ESC latency, accepting rare edge cases over forcing
+    /// 150ms timeout on all users (Crossterm's approach).
+    ///
+    /// ### Why This Assumption Holds
+    ///
+    /// - **Local terminals** (gnome-terminal, xterm, Alacritty, iTerm2): Always send
+    ///   escape sequences atomically in one write
+    /// - **Terminal protocol design**: Sequences are designed to be atomic units
+    /// - **Kernel buffering**: Even with slight delays, kernel buffers complete sequences
+    ///   before read() sees them
+    /// - **Network delay case**: Over SSH with 200ms latency, UX is already degraded;
+    ///   getting ESC instead of Up Arrow is annoying but not catastrophic
     pub async fn read_event(&mut self) -> Option<InputEvent> {
+        // Allocate temp buffer ONCE before loop (performance optimization).
+        // read() overwrites from index 0 each time, so no clearing between iterations.
+        let mut temp_buf = vec![0u8; 256];
+
         loop {
             // 1. Try to parse from existing buffer
             if let Some((event, bytes_consumed)) = self.try_parse() {
@@ -112,9 +165,9 @@ impl DirectToAnsiInputDevice {
                 return Some(event);
             }
 
-            // 2. Buffer exhausted or incomplete sequence, read more from stdin
+            // 2. Buffer exhausted or incomplete sequence, read more from stdin.
             // This yields until data is ready - no busy-waiting!
-            let mut temp_buf = vec![0u8; 256]; // Read up to 256 bytes at a time
+            // Reuse temp_buf - read() overwrites from index 0, we only use [..n]
             match self.stdin.read(&mut temp_buf).await {
                 Ok(0) => {
                     // EOF - stdin closed
@@ -136,8 +189,6 @@ impl DirectToAnsiInputDevice {
 
     /// Try to parse a complete event from the buffer.
     ///
-    /// Returns `Some((event, bytes_consumed))` if successful, `None` if incomplete.
-    ///
     /// ## Smart Lookahead Logic
     ///
     /// - `[0x1B]` alone → ESC key (emitted immediately)
@@ -145,20 +196,48 @@ impl DirectToAnsiInputDevice {
     /// - `[0x1B, b'O', ...]` → SS3 sequence (application mode keys)
     /// - `[0x1B, other]` → ESC key (unknown escape)
     /// - Other bytes → UTF-8 text
+    ///
+    /// Here's the algorithm visually:
+    ///
+    /// ```text
+    /// try_parse() uses smart 1-2 byte lookahead:
+    /// ┌─────────────────────────────────────────┐
+    /// │  First byte check                       │
+    /// ├─────────────────────────────────────────┤
+    /// │ 0x1B (ESC)?                             │
+    /// │  ├─ buf.len() == 1?                     │
+    /// │  │  └─ YES → Emit ESC immediately ▲     │
+    /// │  │     (zero-latency ESC key!)          │
+    /// │  └─ buf.len() > 1?                      │
+    /// │     ├─ Second byte = b'['?              │
+    /// │     │  └─ CSI → keyboard/mouse/terminal │
+    /// │     ├─ Second byte = b'O'?              │
+    /// │     │  └─ SS3 → app mode keys (F1-F4)   │
+    /// │     └─ Second byte = other?             │
+    /// │        └─ Emit ESC, leave rest in buf   │
+    /// ├─────────────────────────────────────────┤
+    /// │ Not ESC?                                │
+    /// │  └─ Try: terminal → mouse → UTF-8       │
+    /// └─────────────────────────────────────────┘
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// `Some((event, bytes_consumed))` if successful, `None` if incomplete.
     fn try_parse(&self) -> Option<(InputEvent, usize)> {
         let buf = &self.buffer[self.consumed..];
 
-        // Fast path: empty buffer
+        // Fast path: empty buffer.
         if buf.is_empty() {
             return None;
         }
 
-        // Check first byte for routing
+        // Check first byte for routing.
         match buf.first() {
-            Some(&0x1B) => {
-                // ESC sequence or ESC key
+            Some(&ANSI_ESC) => {
+                // ESC sequence or ESC key.
                 if buf.len() == 1 {
-                    // Just ESC, emit immediately (no timeout!)
+                    // Just ESC, emit immediately (no timeout!).
                     return Some((
                         InputEvent::Keyboard {
                             code: KeyCode::Escape,
@@ -168,20 +247,22 @@ impl DirectToAnsiInputDevice {
                     ));
                 }
 
-                // Check second byte
+                // Check second byte.
                 match buf.get(1) {
-                    Some(&b'[') => {
-                        // CSI sequence - try keyboard first, then mouse, then terminal events
+                    Some(&ANSI_CSI_BRACKET) => {
+                        // CSI sequence - try keyboard first, then mouse, then terminal
+                        // events.
                         parse_keyboard_sequence(buf)
                             .or_else(|| parse_mouse_sequence(buf))
                             .or_else(|| parse_terminal_event(buf))
                     }
-                    Some(&b'O') => {
-                        // SS3 sequence - application mode keys (F1-F4, Home, End, arrows)
+                    Some(&ANSI_SS3_O) => {
+                        // SS3 sequence - application mode keys (F1-F4, Home, End,
+                        // arrows).
                         parse_ss3_sequence(buf)
                     }
                     Some(_) => {
-                        // ESC + unknown byte, emit ESC
+                        // ESC + unknown byte, emit ESC.
                         Some((
                             InputEvent::Keyboard {
                                 code: KeyCode::Escape,
@@ -191,19 +272,19 @@ impl DirectToAnsiInputDevice {
                         ))
                     }
                     None => {
-                        // Shouldn't reach here (buf.len() > 1 but get(1) is None?)
+                        // Shouldn't reach here (buf.len() > 1 but get(1) is None?).
                         None
                     }
                 }
             }
             Some(_) => {
-                // Not ESC - try terminal events, mouse (X10/RXVT), or UTF-8 text
+                // Not ESC - try terminal events, mouse (X10/RXVT), or UTF-8 text.
                 parse_terminal_event(buf)
                     .or_else(|| parse_mouse_sequence(buf))
                     .or_else(|| parse_utf8_text(buf))
             }
             None => {
-                // Empty buffer (shouldn't reach here due to early return)
+                // Empty buffer (shouldn't reach here due to early return).
                 None
             }
         }
@@ -224,9 +305,7 @@ impl DirectToAnsiInputDevice {
 }
 
 impl Default for DirectToAnsiInputDevice {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 #[cfg(test)]

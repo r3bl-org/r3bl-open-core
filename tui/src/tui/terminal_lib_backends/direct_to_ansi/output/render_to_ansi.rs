@@ -108,7 +108,7 @@ impl RenderToAnsi for OffscreenBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PixelChar, TuiStyle, height, width};
+    use crate::{PixelChar, TuiStyle, height, width, SGR_RESET_BYTES};
 
     #[test]
     fn test_render_to_ansi_empty_buffer() {
@@ -116,14 +116,14 @@ mod tests {
         let ansi = buffer.render_to_ansi();
 
         // Empty buffer (all spacers) should still produce output (spaces + line separator
-        // + spaces) The pattern is: spaces, \r\n, spaces, \x1b[0m
+        // + spaces) The pattern is: spaces, \r\n, spaces, SGR reset
         assert!(!ansi.is_empty());
         // Should contain spaces (from Spacer pixels)
         assert!(ansi.contains(&b' '));
         // Should contain line separator
         assert!(ansi.windows(2).any(|w| w == b"\r\n"));
         // Should end with reset
-        assert!(ansi.ends_with(b"\x1b[0m"));
+        assert!(ansi.ends_with(SGR_RESET_BYTES));
     }
 
     #[test]
@@ -149,7 +149,7 @@ mod tests {
         assert!(ansi.contains(&b'H'));
         assert!(ansi.contains(&b'i'));
         // Should end with reset
-        assert!(ansi.ends_with(b"\x1b[0m"));
+        assert!(ansi.ends_with(SGR_RESET_BYTES));
     }
 
     #[test]
@@ -185,7 +185,7 @@ mod tests {
         // Should have line separator between lines
         assert!(ansi.windows(2).any(|w| w == b"\r\n"));
         // Should end with reset
-        assert!(ansi.ends_with(b"\x1b[0m"));
+        assert!(ansi.ends_with(SGR_RESET_BYTES));
     }
 
     #[test]

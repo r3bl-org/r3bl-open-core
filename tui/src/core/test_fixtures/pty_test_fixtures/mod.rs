@@ -89,11 +89,11 @@
 /// # Examples of code using this macro
 ///
 /// For complete PTY test implementations, see:
-/// - [`test_raw_mode_pty`] - Tests raw mode itself
-/// - [`pty_based_input_device_test`] - Tests input parsing
+/// - [`unix_integration_tests`] - Tests raw mode itself
+/// - [`integration_tests`] - Tests input parsing
 ///
-/// [`test_raw_mode_pty`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
-/// [`pty_based_input_device_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+/// [`unix_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::unix_integration_tests
+/// [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 #[macro_export]
 macro_rules! generate_pty_test {
     (

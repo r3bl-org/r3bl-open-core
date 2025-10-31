@@ -14,7 +14,7 @@
 //! 2. **Test helpers**: Build test sequences without hardcoding raw bytes
 //! 3. **Parser verification**: Confirm parsers handle all modifier combinations correctly
 //!
-//! [`vt_100_terminal_input_parser`](crate::core::ansi::vt_100_terminal_input_parser)
+//! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
 use crate::core::ansi::{constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
