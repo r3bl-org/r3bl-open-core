@@ -1,48 +1,31 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Integration tests for VT-100 terminal input parsing.
+//! System-level PTY tests - end-to-end validation in real pseudo-terminals.
 //!
-//! ## Test Organization
-//!
-//! ### Interactive Terminal Observation
-//!
-//! The `observe_real_interactive_terminal_input_events.rs` file provides an interactive
-//! test (the user has to type on a keyboard, and click and move a mouse in a real
-//! terminal) that captures raw bytes. It is a great way to get and parse the actual
-//! sequences in real terminals for making the parser work better for various terminal
-//! applications on various OSes.
-//!
-//! This helps establish **ground truth** for:
-//! - Coordinate system conventions (1-based for VT-100)
-//! - Actual ANSI sequences sent by terminal emulators
-//! - Terminal-specific behaviors and quirks
-//!
-//! Run with: `cargo test observe_terminal -- --ignored --nocapture`
-//!
-//! ### Automated Parser Validation
-//!
-//! The `input_parser_validation_test` module contains automated tests using real ANSI
-//! sequences captured from terminal observation. These tests validate parser correctness
-//! against confirmed terminal output for:
-//! - Mouse events (clicks, drags, scrolling, modifiers)
-//! - Keyboard events (arrows, function keys, modifier combinations)
-//! - Edge cases (incomplete sequences, invalid data, boundary conditions)
-//!
-//! ### PTY-Based DirectToAnsiInputDevice Testing
-//!
-//! The `pty_based_input_device_test` module tests the complete DirectToAnsiInputDevice
-//! in a real PTY context using a bootstrap/slave pattern. This validates:
-//! - Async I/O loop behavior
+//! These tests validate the complete input handling stack in a real PTY environment:
+//! - DirectToAnsiInputDevice async I/O and buffer management
 //! - Zero-latency ESC key detection
-//! - Buffer management and compaction
-//! - End-to-end parsing from raw bytes to InputEvent
+//! - Full parsing from raw bytes to InputEvent
 //!
-//! Run with: `cargo test test_pty -- --ignored --nocapture`
+//! All tests use **generated sequences** to verify the system can handle its own output.
+//!
+//! Run with: `cargo test test_pty -- --nocapture`
+//!
+//! # Testing Philosophy
+//!
+//! **PTY tests use generated sequences** because:
+//! - **Real-world testing**: In production, our generator creates sequences and our
+//!   parser consumes them - we test this integration
+//! - **System compatibility**: If both generator and parser have matching bugs, this
+//!   is still OK - the system works end-to-end
+//! - **Scalability**: Easy to test many input combinations without hardcoding hundreds
+//!   of test cases
+//!
+//! **Protocol conformance** is tested separately in [`validation_tests`], which use
+//! hardcoded sequences to validate against the VT-100 spec.
+//!
+//! See the [parent module](super#testing-strategy) for the overall testing strategy.
 
-#[cfg(any(test, doc))]
-pub mod input_parser_validation_test;
-#[cfg(any(test, doc))]
-pub mod observe_real_interactive_terminal_input_events;
 #[cfg(any(test, doc))]
 pub mod pty_input_device_test;
 #[cfg(any(test, doc))]

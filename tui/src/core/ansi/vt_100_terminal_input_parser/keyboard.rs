@@ -315,14 +315,14 @@ mod tests {
 
     /// Build an arrow key sequence using the generator.
     fn arrow_key_sequence(code: KeyCode, modifiers: KeyModifiers) -> Vec<u8> {
-        use crate::core::ansi::generator::generate_keyboard_sequence;
+        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
         let event = InputEvent::Keyboard { code, modifiers };
         generate_keyboard_sequence(&event).expect("Failed to generate arrow key sequence")
     }
 
     /// Build a function key sequence using the generator.
     fn function_key_sequence(n: u8, modifiers: KeyModifiers) -> Vec<u8> {
-        use crate::core::ansi::generator::generate_keyboard_sequence;
+        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
         let event = InputEvent::Keyboard {
             code: KeyCode::Function(n),
             modifiers,
@@ -333,7 +333,7 @@ mod tests {
 
     /// Build a special key sequence using the generator.
     fn special_key_sequence(code: KeyCode, modifiers: KeyModifiers) -> Vec<u8> {
-        use crate::core::ansi::generator::generate_keyboard_sequence;
+        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
         let event = InputEvent::Keyboard { code, modifiers };
         generate_keyboard_sequence(&event)
             .expect("Failed to generate special key sequence")

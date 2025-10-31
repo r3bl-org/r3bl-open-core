@@ -17,6 +17,16 @@ Use the "inverted pyramid" principle: high-level concepts at module/trait/struct
 implementation details at method level. Avoid making readers hunt through method docs for the big
 picture.
 
+```
+╲────────────╱
+ ╲          ╱  High-level concepts - Module/trait/struct documentation
+  ╲────────╱
+   ╲      ╱  Mid-level details - Method group documentation
+    ╲────╱
+     ╲  ╱  Low-level specifics - Individual method documentation
+      ╲╱
+```
+
 **Example Placement Guidelines:**
 
 - **Trait/Module level**: Place conceptual examples showing _why_ and _when_ to use the API,

@@ -113,6 +113,26 @@
 //! [`TermCol`] for type safety and explicit conversion to/from 0-based buffer
 //! coordinates.
 //!
+//! # Testing strategy
+//!
+//! ```text
+//!       ╱╲
+//!      ╱  ╲  Integration (generated) - System testing
+//!     ╱────╲
+//!    ╱      ╲  Unit (generated) - Component testing
+//!   ╱────────╲
+//!  ╱          ╲  Validation (hardcoded) - Acceptance testing
+//! ╱────────────╲
+//! ```
+//!
+//! | Level       | Purpose                        | Sequences | Why                                     |
+//! |-------------|--------------------------------|-----------|-----------------------------------------|
+//! | Validation  | Spec compliance & Ground truth | Hardcoded | Independent reference (VT-100 protocol) |
+//! | Unit        | Component contracts            | Generated | Round-trip (generator ↔ parser)         |
+//! | Integration | System behavior                | Generated | Real-world usage pattern                |
+//!
+//! The `test_fixtures` module is shared between the unit, and integration tests only.
+//!
 //! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::term_units::TermRow
 //! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::term_units::TermCol
 
@@ -155,6 +175,12 @@ pub use terminal_events::*;
 pub use utf8::*;
 pub use types::*;
 
-// Integration tests for terminal input parsing.
+// Three-tier test architecture.
+#[cfg(any(test, doc))]
+pub mod validation_tests;
+#[cfg(any(test, doc))]
+pub mod test_fixtures;
+#[cfg(any(test, doc))]
+pub mod unit_tests;
 #[cfg(any(test, doc))]
 pub mod integration_tests;

@@ -30,9 +30,3 @@ pub use cli_text::*;
 pub use dsr_sequence::*;
 pub use esc_sequence::*;
 pub use sgr_code::*;
-
-// Tests.
-#[cfg(any(test, doc))]
-mod test_input_sequence_generator;
-#[cfg(any(test, doc))]
-pub use test_input_sequence_generator::*;

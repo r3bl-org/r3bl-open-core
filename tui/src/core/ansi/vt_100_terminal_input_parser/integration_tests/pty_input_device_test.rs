@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{core::ansi::{generator::generate_keyboard_sequence,
+use crate::{core::ansi::{vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence,
                          vt_100_terminal_input_parser::{InputEvent, KeyCode,
                                                         KeyModifiers}},
             generate_pty_test,

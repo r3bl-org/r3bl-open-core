@@ -110,7 +110,7 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(InputEvent, usize)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::ansi::generator::generate_keyboard_sequence;
+    use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
 
     #[test]
     fn test_resize_event() {
