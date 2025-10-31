@@ -202,6 +202,7 @@
     "overcaptures",
     "pacman",
     "paintable",
+    "parseable",
     "peekable",
     "pgrep",
     "pids",

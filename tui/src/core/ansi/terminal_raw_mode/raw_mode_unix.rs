@@ -20,13 +20,15 @@ static ORIGINAL_TERMIOS: LazyLock<Mutex<Option<Termios>>> =
 /// 2. Disable canonical mode, echo, and signal generation
 /// 3. Set VMIN=1, VTIME=0 for immediate byte-by-byte reading
 ///
-/// See [`mod@crate::core::ansi::terminal_raw_mode`] for conceptual overview and usage.
+/// See [module documentation] for conceptual overview and usage.
 ///
 /// # Errors
 ///
 /// Returns miette diagnostic errors if:
 /// - Terminal attributes cannot be retrieved or set
 /// - Mutex lock is poisoned
+///
+/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
     let stdin = io::stdin();
     let mut termios = termios::tcgetattr(&stdin)
@@ -80,9 +82,11 @@ pub fn enable_raw_mode() -> miette::Result<()> {
     Ok(())
 }
 
-/// Disable raw mode and restore original terminal settings (Unix/Linux/macOS implementation).
+/// Disable raw mode and restore original terminal settings (Unix/Linux/macOS
+/// implementation).
 ///
-/// Restores the terminal settings saved by `enable_raw_mode()`. No-op if raw mode was never enabled.
+/// Restores the terminal settings saved by `enable_raw_mode()`. No-op if raw mode was
+/// never enabled.
 ///
 /// # Errors
 ///

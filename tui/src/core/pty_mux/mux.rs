@@ -159,6 +159,7 @@ impl PTYMux {
         'main_loop: loop {
             tokio::select! {
                 // Poll ALL processes and update their virtual terminal buffers.
+                // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
                 _ = output_poll_interval.tick() => {
                     // **Core of per-process virtual terminal architecture**:
                     // Poll ALL processes continuously (every 10ms), not just the active one.

@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-/// Macro for PTY test coordinator with automatic PTY setup.
+/// Macro that generates PTY-based integration tests with automatic test name injection.
 ///
 /// This macro handles the boilerplate for PTY-based integration tests:
 ///
@@ -68,40 +68,9 @@
 /// - Raw mode management is YOUR responsibility in slave function
 /// - Verification logic is YOUR responsibility in master function
 ///
-/// # Syntax
-///
-/// ```ignore
-/// run_test_in_isolated_process_with_pty!(
-///     env_var: "MY_TEST_SLAVE",
-///     test_name: "test_my_feature",  // Name of the #[test] function
-///     slave: run_my_slave,
-///     master: run_my_master
-/// );
-///
-/// fn run_my_slave() -> ! {
-///     println!("SLAVE_STARTING");
-///     // ... test operations ...
-///     std::process::exit(0);
-/// }
-///
-/// fn run_my_master(
-///     pty_pair: portable_pty::PtyPair,
-///     mut child: Box<dyn portable_pty::Child + Send + Sync>
-/// ) {
-///     // Macro has already created PTY and spawned slave
-///     // You just handle verification logic
-///     let reader = pty_pair.master.try_clone_reader().unwrap();
-///     let mut writer = pty_pair.master.take_writer().unwrap();  // If needed
-///
-///     // Your verification logic...
-///     child.wait().unwrap();
-/// }
-/// ```
-///
 /// # Parameters
 ///
-/// - `env_var`: The environment variable name used to identify the slave process
-/// - `test_name`: The name of the test function (used to spawn correct test)
+/// - `test_fn`: The test function name (used as identifier, not string)
 /// - `slave`: A function or expression that runs in the slave process (must not return)
 /// - `master`: A function that accepts `(pty_pair, child)` parameters
 ///
@@ -116,6 +85,36 @@
 /// - Get a writer: `pty_pair.master.take_writer()`
 /// - Wait for child: `child.wait()`
 ///
+/// # Example
+///
+/// ```ignore
+/// generate_pty_test! {
+///     /// My test documentation.
+///     test_fn: test_my_feature,
+///     slave: my_slave_fn,
+///     master: my_master_fn
+/// }
+///
+/// fn my_slave_fn() -> ! {
+///     println!("SLAVE_STARTING");
+///     // ... test operations ...
+///     std::process::exit(0);
+/// }
+///
+/// fn my_master_fn(
+///     pty_pair: portable_pty::PtyPair,
+///     mut child: Box<dyn portable_pty::Child + Send + Sync>
+/// ) {
+///     // Macro has already created PTY and spawned slave
+///     // You just handle verification logic
+///     let reader = pty_pair.master.try_clone_reader().unwrap();
+///     let mut writer = pty_pair.master.take_writer().unwrap();  // If needed
+///
+///     // Your verification logic...
+///     child.wait().unwrap();
+/// }
+/// ```
+///
 /// # Examples of code using this macro
 ///
 /// For complete PTY test implementations, see:
@@ -125,72 +124,78 @@
 /// [`test_raw_mode_pty`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
 /// [`pty_based_input_device_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 #[macro_export]
-macro_rules! run_test_in_isolated_process_with_pty {
+macro_rules! generate_pty_test {
     (
-        env_var: $env_var:expr,
-        test_name: $test_name:expr,
-        slave: $slave_fn:expr,
-        master: $master_fn:expr
-    ) => {{
-        use std::io::Write;
+        $(#[$meta:meta])*
+        test_fn: $test_name:ident,
+        master: $master_fn:expr,
+        slave: $slave_fn:expr
+    ) => {
+        $(#[$meta])*
+        #[test]
+        fn $test_name() {
+            use std::io::Write;
 
-        // Immediate debug output to confirm test is running
-        let pty_slave = std::env::var($env_var);
-        eprintln!("🔍 TEST ENTRY: {} env = {:?}", $env_var, pty_slave);
+            const PTY_SLAVE_ENV_VAR: &str = "R3BL_PTY_TEST_SLAVE";
 
-        // Also print to stdout to ensure it gets through PTY
-        println!("TEST_RUNNING");
-        std::io::stdout().flush().expect("Failed to flush stdout");
+            // Immediate debug output to confirm test is running
+            let pty_slave_env_var = std::env::var(PTY_SLAVE_ENV_VAR);
+            eprintln!("🔍 TEST ENTRY: {} env = {:?}", PTY_SLAVE_ENV_VAR, pty_slave_env_var);
 
-        // Skip in CI if running as master
-        if pty_slave.is_err() && is_ci::cached() {
-            println!("⏭️  Skipped in CI (requires interactive terminal)");
-            return;
-        }
-
-        // Check if we're running as the slave process
-        if pty_slave.is_ok() {
-            eprintln!("🔍 TEST: {} detected, running slave mode", $env_var);
-            println!("SLAVE_STARTING");
+            // Also print to stdout to ensure it gets through PTY
+            println!("TEST_RUNNING");
             std::io::stdout().flush().expect("Failed to flush stdout");
 
-            // Run the slave logic (never returns - exits process)
-            $slave_fn();
+            // Skip in CI if running as master
+            if pty_slave_env_var.is_err() && is_ci::cached() {
+                println!("⏭️  Skipped in CI (requires interactive terminal)");
+                return;
+            }
+
+            // Check if we're running as the slave process
+            if pty_slave_env_var.is_ok() {
+                eprintln!("🔍 TEST: {} detected, running slave mode", PTY_SLAVE_ENV_VAR);
+                println!("SLAVE_STARTING");
+                std::io::stdout().flush().expect("Failed to flush stdout");
+
+                // Run the slave logic (never returns - exits process)
+                $slave_fn();
+            }
+
+            // Otherwise, run as master - create PTY and spawn slave
+            eprintln!("🚀 TEST: No {} var, running as master", PTY_SLAVE_ENV_VAR);
+
+            // Create PTY pair
+            use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
+
+            let pty_system = NativePtySystem::default();
+            let pty_pair = pty_system
+                .openpty(PtySize {
+                    rows: 24,
+                    cols: 80,
+                    pixel_width: 0,
+                    pixel_height: 0,
+                })
+                .expect("Failed to create PTY pair");
+
+            eprintln!("🔍 Master: PTY pair created");
+
+            // Spawn slave process
+            let test_binary =
+                std::env::current_exe().expect("Failed to get current executable");
+            let mut cmd = CommandBuilder::new(&test_binary);
+            cmd.env(PTY_SLAVE_ENV_VAR, "1");
+            cmd.env("RUST_BACKTRACE", "1");
+            cmd.args(&["--test-threads", "1", "--nocapture", stringify!($test_name)]);
+
+            eprintln!("🚀 Master: Spawning slave process...");
+            let child = pty_pair
+                .slave
+                .spawn_command(cmd)
+                .expect("Failed to spawn slave process");
+
+            // Call user's master function with PTY resources
+            $master_fn(pty_pair, child);
         }
-
-        // Otherwise, run as master - create PTY and spawn slave
-        eprintln!("🚀 TEST: No {} var, running as master", $env_var);
-
-        // Create PTY pair
-        use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
-
-        let pty_system = NativePtySystem::default();
-        let pty_pair = pty_system
-            .openpty(PtySize {
-                rows: 24,
-                cols: 80,
-                pixel_width: 0,
-                pixel_height: 0,
-            })
-            .expect("Failed to create PTY pair");
-
-        eprintln!("🔍 Master: PTY pair created");
-
-        // Spawn slave process
-        let test_binary =
-            std::env::current_exe().expect("Failed to get current executable");
-        let mut cmd = CommandBuilder::new(&test_binary);
-        cmd.env($env_var, "1");
-        cmd.env("RUST_BACKTRACE", "1");
-        cmd.args(&["--test-threads", "1", "--nocapture", $test_name]);
-
-        eprintln!("🚀 Master: Spawning slave process...");
-        let child = pty_pair
-            .slave
-            .spawn_command(cmd)
-            .expect("Failed to spawn slave process");
-
-        // Call user's master function with PTY resources
-        $master_fn(pty_pair, child);
-    }};
+    };
 }

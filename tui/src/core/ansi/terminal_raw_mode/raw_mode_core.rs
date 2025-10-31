@@ -15,7 +15,7 @@ use super::raw_mode_windows;
 
 /// Enable raw mode on the terminal.
 ///
-/// See [`mod@crate::core::ansi::terminal_raw_mode`] module documentation for:
+/// See [module documentation] module documentation for:
 /// - Why raw mode is needed and how it differs from cooked mode
 /// - Platform-specific implementation details
 /// - Complete usage examples
@@ -26,6 +26,8 @@ use super::raw_mode_windows;
 /// - Terminal attributes cannot be retrieved or set
 /// - Platform is not supported (Windows currently)
 /// - Lock is poisoned (internal state corruption)
+///
+/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn enable_raw_mode() -> miette::Result<()> {
     #[cfg(unix)]
     {
@@ -48,7 +50,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// Safe to call even if raw mode was never enabled (it will be a no-op).
 /// Prefer using [`RawModeGuard`] for automatic cleanup.
 ///
-/// See [`mod@crate::core::ansi::terminal_raw_mode`] for complete documentation and examples.
+/// See [module documentation] for complete documentation and examples.
 ///
 /// # Errors
 ///
@@ -56,6 +58,8 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// - Terminal attributes cannot be set
 /// - Platform is not supported (Windows currently)
 /// - Lock is poisoned (internal state corruption)
+///
+/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 pub fn disable_raw_mode() -> miette::Result<()> {
     #[cfg(unix)]
     {
@@ -76,7 +80,10 @@ pub fn disable_raw_mode() -> miette::Result<()> {
 /// RAII guard that automatically disables raw mode when dropped.
 ///
 /// Recommended way to use raw mode as it ensures terminal restoration even on panic.
-/// See [`mod@crate::core::ansi::terminal_raw_mode`] for usage examples and complete documentation.
+/// See [module documentation] for usage examples and complete
+/// documentation.
+///
+/// [module documentation]: mod@crate::core::ansi::terminal_raw_mode
 #[derive(Debug)]
 pub struct RawModeGuard;
 

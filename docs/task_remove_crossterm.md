@@ -3113,23 +3113,209 @@ pub struct DirectToAnsiInputDevice {
    - Mouse: SGR protocol (6 tests)
    - Mouse: X10/Normal protocol (12 tests) - **NEW**
    - Mouse: RXVT protocol (13 tests) - **NEW**
-   - Terminal Events: focus, resize, bracketed paste (ready for use)
+   - Terminal Events: ⚠️ **NOT YET IMPLEMENTED** (stubs only - see Phase 7.0)
    - UTF-8: 1-4 byte sequences (13 tests) - **NEW**
 3. ✅ **EXECUTED Option A**: Wired up complete parser chain in `try_parse()` method
    - All parsers integrated with smart routing
-   - Full crossterm feature parity achieved
+   - ⚠️ **Partial parity** - Terminal events (resize, focus, paste) still need implementation
    - **Result**: All 2396 tests passing!
-4. **Ready for Phase 7**: Testing & Validation can now begin with complete implementation
+4. 🔴 **Code Audit (2025-10-30)**: Critical blockers identified before Phase 7
+   - Terminal events not implemented (CRITICAL for parity)
+   - Generator bug affects modifier key testing
+   - Missing DirectToAnsiInputDevice test coverage
+   - **See Phase 7.0 for required fixes**
 
 ---
 
-#### Phase 7: Testing & Validation - NEXT PHASE ⏭️
+## Phase 7: Testing & Validation (10-15 hours total)
 
-**Objective**: Comprehensive validation of DirectToAnsi InputDevice with all parsers integrated
+### 🔴 Phase 7.0: Pre-Testing Fixes - CRITICAL BLOCKERS ⚠️ **IMMEDIATE NEXT TASK**
 
-**Status**: ✅ Ready to proceed - All parsers implemented and integrated, 2396 tests passing
+**Objective**: Fix critical gaps discovered by code audit before Phase 7.1 integration testing
 
-**7.1 Parser Test Verification** (ALL PASSING ✅):
+**Status**: 🔴 **MUST COMPLETE BEFORE PROCEEDING TO PHASE 7.1**
+
+**Why This Phase Exists**: Code audit (2025-10-30) identified 3 critical blockers that prevent:
+1. Achieving full crossterm feature parity
+2. Proper round-trip validation testing
+3. Confident Phase 7.1 integration testing
+
+---
+
+#### 7.0.1: Terminal Event Parsing Implementation (2 hours) - BLOCKS CROSSTERM PARITY 🔴
+
+**Current State**: All functions in `terminal_events.rs` are stubs returning `None`
+
+**Required for Crossterm Parity**:
+- ✅ Resize events: `CSI 8 ; rows ; cols t` (e.g., `ESC[8;24;80t`)
+- ✅ Focus events: `CSI I` (Focus gained), `CSI O` (Focus lost)
+- ✅ Bracketed paste: `ESC[200~` (paste start), `ESC[201~` (paste end)
+
+**Critical Implementation Details**:
+
+```rust
+// File: tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs
+
+pub fn parse_terminal_event(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+    // Must try parsers in this order:
+    // 1. Focus events (single byte after CSI)
+    // 2. Resize events (CSI 8 ; ... t format)
+    // 3. Bracketed paste (ESC [ 200/201 ~ format)
+
+    // Return first match or None if incomplete
+}
+
+fn parse_resize_event(sequence: &[u8]) -> Option<(InputEvent, usize)> {
+    // Parse: ESC [ 8 ; rows ; cols t
+    // Example: ESC[8;24;80t → InputEvent::Resize { rows: 24, cols: 80 }
+    // Handle: incomplete sequences, large values (999x999)
+}
+
+fn parse_focus_event(byte: u8) -> Option<(InputEvent, usize)> {
+    // I (0x49) → Focus::Gained
+    // O (0x4F) → Focus::Lost
+}
+
+fn parse_bracketed_paste(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+    // ESC[200~ → Paste::Start
+    // ESC[201~ → Paste::End
+    // CRITICAL: Content between markers is NOT parsed for ANSI
+}
+```
+
+**Testing Requirements**:
+- [ ] `test_resize_valid()` - Valid resize sequence
+- [ ] `test_resize_large()` - Large dimensions (999x999)
+- [ ] `test_resize_incomplete()` - Missing bytes
+- [ ] `test_focus_gained()` - CSI I
+- [ ] `test_focus_lost()` - CSI O
+- [ ] `test_paste_start()` - ESC[200~
+- [ ] `test_paste_end()` - ESC[201~
+
+**Success Criteria**:
+- [ ] All 7 terminal event tests passing
+- [ ] `parse_terminal_event()` dispatcher correctly routes to each parser
+- [ ] Incomplete sequences return `None` (not panic)
+- [ ] All parser tests passing
+
+**Estimated Time**: 2 hours
+
+---
+
+#### 7.0.2: Fix Generator Bug - Arrow Key Modifiers (2 hours) - BLOCKS ROUND-TRIP VALIDATION 🔴
+
+**Current State**: Test `test_shift_up()` in `keyboard.rs:576` is ignored with comment:
+```rust
+#[test]
+#[ignore] // TODO: Generator produces wrong sequence - needs fixing
+fn test_shift_up() { ... }
+```
+
+**Problem**: `input_event_generator.rs:204-217` has `encode_modifiers()` bug
+
+**Investigation Required**:
+1. Run: `cargo test test_shift_up --lib -- --exact --ignored --nocapture`
+2. Compare: Expected vs Actual ANSI sequences
+3. Verify against VT-100 spec for modifier encoding
+
+**Fix Approach** (likely):
+```rust
+fn encode_modifiers(modifiers: KeyModifiers) -> u8 {
+    // VT-100 Formula: parameter = 1 + bitfield
+    // Where bitfield is: Shift=1, Alt=2, Ctrl=4
+    // So: Shift → 2, Ctrl → 5, Ctrl+Shift → 6, etc.
+
+    let mut mask: u8 = 0;
+    if modifiers.shift { mask |= 1; }
+    if modifiers.alt { mask |= 2; }
+    if modifiers.ctrl { mask |= 4; }
+    b'1' + mask  // Returns '2' for Shift, '5' for Ctrl, etc.
+}
+```
+
+**Testing Requirements**:
+- [ ] Re-enable `test_shift_up()` and verify it passes
+- [ ] Add test for Ctrl+Up (parameter 5)
+- [ ] Add test for Alt+Right (parameter 3)
+- [ ] Add test for Ctrl+Alt+Shift+Down (parameter 8)
+- [ ] Verify round-trip: generate → parse → verify
+
+**Success Criteria**:
+- [ ] `test_shift_up()` no longer ignored and passing
+- [ ] All 4 modifier combination tests passing
+- [ ] Round-trip validation succeeds for all modifiers
+
+**Estimated Time**: 2 hours
+
+---
+
+#### 7.0.3: DirectToAnsiInputDevice Test Coverage (1 hour) - QUALITY ASSURANCE 🟡
+
+**Current State**: All tests in `direct_to_ansi/input/tests.rs` are empty stubs:
+```rust
+#[test]
+fn test_device_creation() {
+    // TODO: Test DirectToAnsiInputDevice construction
+}
+```
+
+**Missing Tests** (minimum viable):
+1. Constructor initialization - verify new() works
+2. Async event reading - verify read_event() handles simple input
+3. Buffer compaction - verify 2KB threshold triggers cleanup
+4. EOF handling - verify None returned on stdin close
+5. Incomplete sequence buffering - verify partial sequences held until complete
+
+**Implementation Examples**:
+
+```rust
+#[test]
+fn test_device_creation() {
+    let device = DirectToAnsiInputDevice::new();
+    assert_eq!(device.buffer.capacity(), 4096);
+}
+
+#[tokio::test]
+async fn test_simple_event() {
+    // Inject test bytes, verify correct event parsed
+}
+```
+
+**Testing Requirements**:
+- [ ] Device construction test (5 min)
+- [ ] Simple async event reading test (30 min)
+- [ ] Buffer compaction threshold test (30 min)
+
+**Success Criteria**:
+- [ ] All 3 basic tests passing
+- [ ] No tokio/async issues
+- [ ] Device properly initializes and dispatches to parsers
+
+**Estimated Time**: 1 hour
+
+---
+
+### Phase 7.0 Summary
+
+**Total Effort**: 4-5 hours (for all 3 blockers)
+
+**Completion Gate**:
+- [ ] Terminal events fully implemented and tested
+- [ ] Generator bug fixed, modifier key tests passing
+- [ ] DirectToAnsiInputDevice has basic test coverage
+- [ ] All 2400+ tests passing
+- [ ] No CRITICAL clippy warnings
+- **THEN PROCEED TO PHASE 7.1**
+
+---
+
+### 🟢 Phase 7.1: PTY Integration Tests (4-6 hours) - Starts after Phase 7.0 complete
+
+**Objective**: Comprehensive validation of DirectToAnsi InputDevice with real PTY environment
+
+**Status**: Awaiting Phase 7.0 completion
+
+**7.1.1 Parser Test Verification** (ALL PASSING ✅):
 
 - [x] All keyboard parser tests in `vt_100_terminal_input_parser/` pass (23 CSI + 13 SS3 tests)
 - [x] All mouse parser tests pass (6 SGR + 12 X10 + 13 RXVT tests)

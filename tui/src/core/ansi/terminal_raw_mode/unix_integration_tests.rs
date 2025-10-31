@@ -6,32 +6,28 @@
 //! restores terminal state using actual PTY pairs.
 
 use super::*;
-use crate::run_test_in_isolated_process_with_pty;
+use crate::generate_pty_test;
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
 
-/// PTY-based integration test for raw mode functionality.
-///
-/// This test uses a master/slave PTY pair to verify that:
-/// 1. Raw mode can be enabled on a real PTY
-/// 2. Raw mode can be disabled and terminal settings restored
-/// 3. The RAII guard pattern works correctly
-///
-/// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_pty -- --nocapture`
-#[test]
-fn test_raw_mode_pty() {
-    run_test_in_isolated_process_with_pty!(
-        env_var: "TEST_RAW_MODE_PTY_SLAVE",
-        test_name: "test_raw_mode_pty",
-        slave: run_raw_mode_pty_slave,
-        master: run_raw_mode_pty_master
-    );
+generate_pty_test! {
+    /// PTY-based integration test for raw mode functionality.
+    ///
+    /// This test uses a master/slave PTY pair to verify that:
+    /// 1. Raw mode can be enabled on a real PTY
+    /// 2. Raw mode can be disabled and terminal settings restored
+    /// 3. The RAII guard pattern works correctly
+    ///
+    /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_pty -- --nocapture`
+    test_fn: test_raw_mode_pty,
+    master: pty_master_entry_point,
+    slave: pty_slave_entry_point
 }
 
 /// Master process: verifies results.
 /// Receives PTY pair and child process from the macro.
-fn run_raw_mode_pty_master(
+fn pty_master_entry_point(
     pty_pair: portable_pty::PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
@@ -99,7 +95,7 @@ fn run_raw_mode_pty_master(
 
 /// Slave process: enables raw mode and reports results.
 /// This function MUST exit before returning so other tests don't run.
-fn run_raw_mode_pty_slave() -> ! {
+fn pty_slave_entry_point() -> ! {
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
