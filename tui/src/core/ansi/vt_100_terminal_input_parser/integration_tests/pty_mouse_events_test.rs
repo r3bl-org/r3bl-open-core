@@ -16,8 +16,9 @@
 //! See `integration_tests/mod.rs` for full testing philosophy documentation.
 
 use crate::{
+    TermPos,
     core::ansi::vt_100_terminal_input_parser::{
-        InputEvent, MouseButton, MouseAction, KeyModifiers, Pos,
+        InputEvent, MouseButton, MouseAction, KeyModifiers,
     },
     generate_pty_test,
     tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice,
@@ -103,37 +104,37 @@ fn pty_master_entry_point(
     let mouse_events: Vec<(&str, InputEvent)> = vec![
         ("Left Click", InputEvent::Mouse {
             button: MouseButton::Left,
-            pos: Pos::from_one_based(10, 5),
+            pos: TermPos::from_one_based(10, 5),
             action: MouseAction::Press,
             modifiers: KeyModifiers::default(),
         }),
         ("Left Release", InputEvent::Mouse {
             button: MouseButton::Left,
-            pos: Pos::from_one_based(10, 5),
+            pos: TermPos::from_one_based(10, 5),
             action: MouseAction::Release,
             modifiers: KeyModifiers::default(),
         }),
         ("Right Click", InputEvent::Mouse {
             button: MouseButton::Right,
-            pos: Pos::from_one_based(20, 10),
+            pos: TermPos::from_one_based(20, 10),
             action: MouseAction::Press,
             modifiers: KeyModifiers::default(),
         }),
         ("Middle Click", InputEvent::Mouse {
             button: MouseButton::Middle,
-            pos: Pos::from_one_based(30, 15),
+            pos: TermPos::from_one_based(30, 15),
             action: MouseAction::Press,
             modifiers: KeyModifiers::default(),
         }),
         ("Scroll Up", InputEvent::Mouse {
             button: MouseButton::Left,
-            pos: Pos::from_one_based(25, 12),
+            pos: TermPos::from_one_based(25, 12),
             action: MouseAction::Scroll(crate::core::ansi::vt_100_terminal_input_parser::ScrollDirection::Up),
             modifiers: KeyModifiers::default(),
         }),
         ("Scroll Down", InputEvent::Mouse {
             button: MouseButton::Left,
-            pos: Pos::from_one_based(25, 12),
+            pos: TermPos::from_one_based(25, 12),
             action: MouseAction::Scroll(crate::core::ansi::vt_100_terminal_input_parser::ScrollDirection::Down),
             modifiers: KeyModifiers::default(),
         }),

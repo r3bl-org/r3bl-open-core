@@ -307,7 +307,6 @@ fn decode_modifiers(modifier_mask: u8) -> KeyModifiers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::ansi::constants::*;
 
     // ==================== Test Helpers ====================
     // These helpers use the input event generator to build test sequences,

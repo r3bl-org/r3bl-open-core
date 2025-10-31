@@ -28,7 +28,7 @@ mod device_tests {
         // Note: Full async testing requires mocking tokio::io::stdin,
         // which is done in integration tests using PTY infrastructure.
         // This test verifies the device structure supports async operations.
-        let mut device = DirectToAnsiInputDevice::new();
+        let device = DirectToAnsiInputDevice::new();
 
         // The device is initialized properly for async reading
         // Actual event reading is tested in PTY integration tests

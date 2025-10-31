@@ -32,7 +32,6 @@ use tokio::io::AsyncReadExt;
 /// Describes a single test case in the observation sequence.
 #[derive(Clone)]
 struct TestCase {
-    name: &'static str,
     prompt_title: &'static str,
     prompt_action: &'static str,
     prompt_detail: &'static str,
@@ -46,7 +45,7 @@ struct TestCase {
 #[ignore] // Manual test: cargo test observe_terminal -- --ignored --nocapture
 async fn observe_terminal() -> IoResult<()> {
     // Skip in CI
-    if is_ci::is_ci() {
+    if is_ci::cached() {
         println!("⏭️  Skipped in CI (requires interactive terminal)");
         return Ok(());
     }
@@ -79,9 +78,15 @@ async fn observe_terminal() -> IoResult<()> {
 
     // Enable terminal capture mode with diagnostic output
     write_raw_message(&mut stdout, "🔧 Diagnostic Info:")?;
-    write_raw_message(&mut stdout, "   Sending ANSI codes to enable mouse tracking...")?;
+    write_raw_message(
+        &mut stdout,
+        "   Sending ANSI codes to enable mouse tracking...",
+    )?;
     enable_terminal_capture_mode()?;
-    write_raw_message(&mut stdout, "   ✅ All ANSI codes sent (check stderr for details)")?;
+    write_raw_message(
+        &mut stdout,
+        "   ✅ All ANSI codes sent (check stderr for details)",
+    )?;
     write_raw_message(&mut stdout, "")?;
 
     // Run capture phase with real-time output
@@ -136,10 +141,10 @@ async fn drain_stdin_buffer<R: tokio::io::AsyncRead + Unpin>(
     let mut buffer = vec![0u8; 256];
     loop {
         match tokio::time::timeout(drain_timeout, stdin.read(&mut buffer)).await {
-            Ok(Ok(0)) => break,              // EOF
-            Ok(Ok(_)) => continue,           // Got data, keep draining
-            Ok(Err(_)) => break,             // Read error
-            Err(_) => break,                 // Timeout = buffer empty
+            Ok(Ok(0)) => break,    // EOF
+            Ok(Ok(_)) => continue, // Got data, keep draining
+            Ok(Err(_)) => break,   // Read error
+            Err(_) => break,       // Timeout = buffer empty
         }
     }
 }
@@ -235,31 +240,26 @@ async fn run_capture_phase_with_output(stdout: &mut std::io::Stdout) -> IoResult
 fn get_test_cases() -> Vec<TestCase> {
     vec![
         TestCase {
-            name: "test_1_sgr_coordinates",
             prompt_title: "TEST 1: Mouse - Top-Left Corner        ",
             prompt_action: "👆 Click the TOP-LEFT corner of this terminal window",
             prompt_detail: "(Where row 1, column 1 would be)",
         },
         TestCase {
-            name: "test_2_sgr_coordinates",
             prompt_title: "TEST 2: Mouse - Middle of Screen       ",
             prompt_action: "👆 Click roughly the MIDDLE of the terminal",
             prompt_detail: "(Around row 12, column 40 on typical terminal)",
         },
         TestCase {
-            name: "test_3_keyboard_code",
             prompt_title: "TEST 3: Keyboard - Arrow Up             ",
             prompt_action: "⬆️  Press the UP ARROW key",
             prompt_detail: "",
         },
         TestCase {
-            name: "test_4_keyboard_code",
             prompt_title: "TEST 4: Keyboard - Ctrl+Up              ",
             prompt_action: "⌨️  Press CTRL+UP ARROW together",
             prompt_detail: "",
         },
         TestCase {
-            name: "test_5_scroll",
             prompt_title: "TEST 5: Mouse - Scroll Wheel Up         ",
             prompt_action: "🖱️  Scroll mouse wheel UP",
             prompt_detail: "",
@@ -339,7 +339,8 @@ fn detect_terminal_name() -> String {
     "Unknown Terminal".to_string()
 }
 
-/// Describes a parsed SGR mouse event (button/action, coordinates, and human-readable description).
+/// Describes a parsed SGR mouse event (button/action, coordinates, and human-readable
+/// description).
 #[derive(Debug)]
 struct SgrMouseEvent {
     button_code: u16,
@@ -397,8 +398,8 @@ fn describe_sgr_button_event(button_code: u16, action_char: char) -> String {
         // - 64 = Wheel Down (scroll down)
         // - 65 = Wheel Up (scroll up)
         // Note: If you have "Natural Scrolling" enabled in your OS (Ubuntu, macOS, etc),
-        // the codes will be inverted (user scrolls up → code 65, user scrolls down → code 64).
-        // The raw protocol values below follow the XTerm standard.
+        // the codes will be inverted (user scrolls up → code 65, user scrolls down → code
+        // 64). The raw protocol values below follow the XTerm standard.
         // Check GNOME natural scrolling setting with:
         //   gsettings get org.gnome.desktop.peripherals.mouse natural-scroll
         64 => "Wheel Down",

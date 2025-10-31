@@ -5,42 +5,7 @@
 //! These types are protocol-agnostic and represent the high-level events
 //! that result from parsing ANSI sequences and UTF-8 text.
 
-use crate::{TermCol, TermRow};
-use std::num::NonZeroU16;
-
-/// Represents a position (column, row) on the terminal using [1-based coordinates].
-///
-/// [1-based coordinates]: mod@super#one-based-mouse-input-events
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Pos {
-    pub col: TermCol,
-    pub row: TermRow,
-}
-
-impl Pos {
-    /// Construct a terminal position from raw 1-based coordinate values.
-    ///
-    /// This is the primary constructor for ANSI sequence parsing where coordinates
-    /// are received as raw `u16` values that are known to be 1-based and non-zero.
-    ///
-    /// This is similar to [`parse_cursor_position`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if either coordinate is zero (invalid VT-100 coordinate).
-    ///
-    /// [`parse_cursor_position`]: crate::core::ansi::vt_100_pty_output_parser::parse_cursor_position
-    #[must_use]
-    pub fn from_one_based(col: u16, row: u16) -> Self {
-        let col_nz = NonZeroU16::new(col).expect("Column must be non-zero (1-based)");
-        let row_nz = NonZeroU16::new(row).expect("Row must be non-zero (1-based)");
-
-        Self {
-            col: TermCol::from_raw_non_zero_value(col_nz),
-            row: TermRow::from_raw_non_zero_value(row_nz),
-        }
-    }
-}
+use crate::TermPos;
 
 /// Keyboard modifiers for input events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -154,7 +119,7 @@ pub enum InputEvent {
     /// Mouse event with button, position, and action.
     Mouse {
         button: MouseButton,
-        pos: Pos,
+        pos: TermPos,
         action: MouseAction,
         modifiers: KeyModifiers,
     },

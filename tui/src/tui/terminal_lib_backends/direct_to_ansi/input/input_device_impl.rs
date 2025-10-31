@@ -231,8 +231,6 @@ impl Default for DirectToAnsiInputDevice {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_device_creation() {
         // TODO: Test DirectToAnsiInputDevice construction

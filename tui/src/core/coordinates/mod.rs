@@ -205,7 +205,24 @@
 //! [`index.overflows(length)`]: buffer_coords::Index::overflows
 //! [`TermRow::from_zero_based(RowIndex)`]: vt_100_ansi_coords::TermRow::from_zero_based
 
-// Attach submodules
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
+// ╔════════════════════════════════════════════════════════════════════════════╗
+// ║                   COORDINATE SYSTEM MODULE ORGANIZATION                   ║
+// ║                    (Private modules with public re-exports)               ║
+// ║                                                                            ║
+// ║ This module follows the pattern from CLAUDE.md:                          ║
+// ║ - Submodules are kept private (hide internal structure)                  ║
+// ║ - Public re-exports provide a flat, stable API surface                   ║
+// ║ - Users should import from the flat re-exports, not qualified paths      ║
+// ╚════════════════════════════════════════════════════════════════════════════╝
+
+// Submodule declarations (internal implementation detail).
+// Note: These are public to support existing codebase that uses qualified paths.
+// New code should avoid importing from qualified paths and instead use the
+// public re-exports below.
 pub mod bounds_check;
 pub mod buffer_coords;
 pub mod byte;
@@ -213,7 +230,22 @@ pub mod percent_spec;
 pub mod primitives;
 pub mod vt_100_ansi_coords;
 
-// Re-export commonly used types at the module root
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC RE-EXPORTS (Flat API Surface - Recommended Way to Import)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// All public types and traits from submodules are re-exported at this level
+// to provide a clean, flat API. Users should import from here.
+//
+// ✅ GOOD:
+//    use r3bl_tui::{RowIndex, ColIndex, ViewportBoundsCheck, TermRow, TermCol};
+//
+// ❌ AVOID:
+//    use r3bl_tui::core::coordinates::buffer_coords::{RowIndex, ColIndex};
+//    use r3bl_tui::core::coordinates::bounds_check::ViewportBoundsCheck;
+//
+// ═══════════════════════════════════════════════════════════════════════════
+
 pub use bounds_check::*;
 pub use buffer_coords::*;
 pub use byte::*;

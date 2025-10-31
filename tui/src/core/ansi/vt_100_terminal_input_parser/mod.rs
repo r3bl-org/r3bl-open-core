@@ -133,8 +133,8 @@
 //!
 //! The `test_fixtures` module is shared between the unit, and integration tests only.
 //!
-//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::term_units::TermRow
-//! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::term_units::TermCol
+//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
+//! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356

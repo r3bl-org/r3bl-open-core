@@ -21,7 +21,8 @@
 //!
 //! [1-based coordinates]: mod@super#one-based-mouse-input-events
 
-use super::types::{InputEvent, KeyModifiers, MouseAction, MouseButton, Pos,
+use crate::TermPos;
+use super::types::{InputEvent, KeyModifiers, MouseAction, MouseButton,
                    ScrollDirection};
 
 pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(InputEvent, usize)> {
@@ -106,7 +107,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
         return Some((
             InputEvent::Mouse {
                 button: MouseButton::Unknown,
-                pos: Pos::from_one_based(cx, cy),
+                pos: TermPos::from_one_based(cx, cy),
                 action: MouseAction::Scroll(scroll_dir),
                 modifiers,
             },
@@ -129,7 +130,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
     Some((
         InputEvent::Mouse {
             button,
-            pos: Pos::from_one_based(cx, cy),
+            pos: TermPos::from_one_based(cx, cy),
             action,
             modifiers,
         },
@@ -206,7 +207,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
         return Some((
             InputEvent::Mouse {
                 button: MouseButton::Unknown,
-                pos: Pos::from_one_based(col, row),
+                pos: TermPos::from_one_based(col, row),
                 action: MouseAction::Motion,
                 modifiers,
             },
@@ -220,7 +221,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Left,
-                    pos: Pos::from_one_based(col, row),
+                    pos: TermPos::from_one_based(col, row),
                     action: MouseAction::Press,
                     modifiers,
                 },
@@ -232,7 +233,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Middle,
-                    pos: Pos::from_one_based(col, row),
+                    pos: TermPos::from_one_based(col, row),
                     action: MouseAction::Press,
                     modifiers,
                 },
@@ -244,7 +245,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Right,
-                    pos: Pos::from_one_based(col, row),
+                    pos: TermPos::from_one_based(col, row),
                     action: MouseAction::Press,
                     modifiers,
                 },
@@ -256,7 +257,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Unknown,
-                    pos: Pos::from_one_based(col, row),
+                    pos: TermPos::from_one_based(col, row),
                     action: MouseAction::Release,
                     modifiers,
                 },
@@ -348,7 +349,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
         return Some((
             InputEvent::Mouse {
                 button: MouseButton::Unknown,
-                pos: Pos::from_one_based(cx, cy),
+                pos: TermPos::from_one_based(cx, cy),
                 action: MouseAction::Motion,
                 modifiers,
             },
@@ -362,7 +363,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Left,
-                    pos: Pos::from_one_based(cx, cy),
+                    pos: TermPos::from_one_based(cx, cy),
                     action: MouseAction::Press,
                     modifiers,
                 },
@@ -374,7 +375,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Middle,
-                    pos: Pos::from_one_based(cx, cy),
+                    pos: TermPos::from_one_based(cx, cy),
                     action: MouseAction::Press,
                     modifiers,
                 },
@@ -386,7 +387,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Right,
-                    pos: Pos::from_one_based(cx, cy),
+                    pos: TermPos::from_one_based(cx, cy),
                     action: MouseAction::Press,
                     modifiers,
                 },
@@ -398,7 +399,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(InputEvent, usize)> {
             Some((
                 InputEvent::Mouse {
                     button: MouseButton::Unknown,
-                    pos: Pos::from_one_based(cx, cy),
+                    pos: TermPos::from_one_based(cx, cy),
                     action: MouseAction::Release,
                     modifiers,
                 },
