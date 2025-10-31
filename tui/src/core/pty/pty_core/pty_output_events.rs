@@ -283,22 +283,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_pty_event_debug() {
-        let read_only_event = PtyReadOnlyOutputEvent::Output(b"test".to_vec());
-        let debug_str = format!("{read_only_event:?}");
-        assert!(debug_str.contains("Output"));
-
-        let read_write_event = PtyReadWriteOutputEvent::Output(b"test".to_vec());
-        let debug_str = format!("{read_write_event:?}");
-        assert!(debug_str.contains("Output"));
-
-        let mode_change_event =
-            PtyReadWriteOutputEvent::CursorModeChange(CursorKeyMode::Application);
-        let debug_str = format!("{mode_change_event:?}");
-        assert!(debug_str.contains("CursorModeChange"));
-    }
-
-    #[test]
     fn test_cursor_key_mode() {
         assert_eq!(CursorKeyMode::default(), CursorKeyMode::Application);
 

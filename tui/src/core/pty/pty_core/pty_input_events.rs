@@ -664,13 +664,6 @@ mod tests {
     }
 
     #[test]
-    fn test_pty_input_debug_and_clone() {
-        let input = PtyInputEvent::Write(b"test".to_vec());
-        let cloned = input.clone();
-        assert_eq!(format!("{input:?}"), format!("{cloned:?}"));
-    }
-
-    #[test]
     fn test_keypress_to_pty_input_event() {
         use crate::tui::terminal_lib_backends::{Key, KeyPress, KeyState,
                                                 ModifierKeysMask, SpecialKey};

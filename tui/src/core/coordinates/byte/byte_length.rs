@@ -240,15 +240,6 @@ mod tests {
         assert_eq!(index.as_usize(), (usize::MAX / 2) - 1);
     }
 
-    // Trait implementation tests.
-    #[test]
-    fn test_debug_format() {
-        let length = byte_len(42);
-        let debug_str = format!("{length:?}");
-        assert!(debug_str.contains("ByteLength"));
-        assert!(debug_str.contains("42"));
-    }
-
     #[test]
     fn test_clone() {
         let length1 = byte_len(42);

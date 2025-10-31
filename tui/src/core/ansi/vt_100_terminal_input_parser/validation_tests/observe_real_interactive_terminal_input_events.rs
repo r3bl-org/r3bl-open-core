@@ -214,8 +214,8 @@ async fn run_capture_phase_with_output(stdout: &mut std::io::Stdout) -> IoResult
                     write_raw_message(
                         stdout,
                         &format!(
-                            "🎯 Parsed: {} at col={}, row={}",
-                            event.description, event.col, event.row
+                            "🎯 Parsed: {} (code={}) at col={}, row={}",
+                            event.description, event.button_code, event.col, event.row
                         ),
                     )?;
                 }

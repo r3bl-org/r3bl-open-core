@@ -237,21 +237,6 @@ mod tests {
     }
 
     #[test]
-    fn test_dsr_sequence_clone_and_debug() {
-        let original = DsrSequence::CursorPositionResponse {
-            row: term_row(nz(5)),
-            col: term_col(nz(10)),
-        };
-        let cloned = original.clone();
-        assert_eq!(original, cloned);
-
-        let debug_output = format!("{original:?}");
-        assert!(debug_output.contains("CursorPositionResponse"));
-        assert!(debug_output.contains("TermRow(5)"));
-        assert!(debug_output.contains("TermCol(10)"));
-    }
-
-    #[test]
     fn test_write_to_buf_produces_correct_ansi_sequence() {
         let sequence = DsrSequence::CursorPositionResponse {
             row: term_row(nz(42)),

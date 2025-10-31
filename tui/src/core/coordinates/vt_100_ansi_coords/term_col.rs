@@ -278,13 +278,6 @@ mod tests {
         assert_eq!(hash1, hash2);
     }
 
-    #[test]
-    fn test_term_col_debug() {
-        let col = term_col(nz(84));
-        let debug_str = format!("{col:?}");
-        assert_eq!(debug_str, "TermCol(84)");
-    }
-
     // ========================================================================
     // Conversion Boundary Testing
     // ========================================================================

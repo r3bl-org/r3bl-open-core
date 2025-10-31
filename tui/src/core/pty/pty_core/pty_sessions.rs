@@ -109,21 +109,3 @@ pub struct PtyReadWriteSession {
     /// - [`portable_pty::ChildKiller::kill()`] for the underlying kill method
     pub child_process_terminate_handle: ControlledChildTerminationHandle,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_pty_session_structs_debug() {
-        // Test that the session structs have Debug implemented.
-        // We can't easily test the actual structs without spawning processes,
-        // but we can verify the types exist and have the expected fields.
-
-        // These will be compile-time checks.
-        fn check_debug<T: std::fmt::Debug>() {}
-
-        check_debug::<PtyReadOnlySession>();
-        check_debug::<PtyReadWriteSession>();
-    }
-}

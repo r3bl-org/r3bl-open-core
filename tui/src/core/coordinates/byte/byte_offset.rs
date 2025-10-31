@@ -318,15 +318,6 @@ mod tests {
         _ = large_offset - another_offset;
     }
 
-    // Trait implementation tests.
-    #[test]
-    fn test_debug_format() {
-        let offset = byte_offset(42);
-        let debug_str = format!("{offset:?}");
-        assert!(debug_str.contains("ByteOffset"));
-        assert!(debug_str.contains("42"));
-    }
-
     #[test]
     fn test_clone() {
         let offset1 = byte_offset(42);

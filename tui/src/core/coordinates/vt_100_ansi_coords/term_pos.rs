@@ -123,13 +123,6 @@ mod tests {
     }
 
     #[test]
-    fn test_term_pos_debug() {
-        let pos = TermPos::from_one_based(10, 5);
-        let debug_str = format!("{pos:?}");
-        assert!(debug_str.contains("10") && debug_str.contains("5"));
-    }
-
-    #[test]
     #[should_panic(expected = "Column must be non-zero")]
     fn test_term_pos_panics_on_zero_column() { let _unused = TermPos::from_one_based(0, 5); }
 

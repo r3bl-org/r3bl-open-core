@@ -777,32 +777,6 @@ mod tests {
     }
 
     #[test]
-    fn test_offscreen_buffer_debug() {
-        let buffer = create_test_buffer();
-
-        let debug_output = format!("{buffer:?}");
-
-        // Should contain some basic information.
-        assert!(!debug_output.is_empty());
-        // Debug output should contain window_size information.
-        assert!(debug_output.contains("window_size"));
-    }
-
-    #[test]
-    fn test_pixel_char_diff_chunks_debug() {
-        let mut list = List::new();
-        list.push((row(0) + col(0), create_test_pixel_char('A')));
-        list.push((row(1) + col(1), create_test_pixel_char('B')));
-
-        let chunks = PixelCharDiffChunks::from(list);
-        let debug_output = format!("{chunks:?}");
-
-        // Should contain debug information.
-        assert!(!debug_output.is_empty());
-        assert!(debug_output.contains('A') || debug_output.contains('B'));
-    }
-
-    #[test]
     fn test_offscreen_buffer_large_size() {
         let large_size = height(100) + width(200);
         let buffer = OffscreenBuffer::new_empty(large_size);

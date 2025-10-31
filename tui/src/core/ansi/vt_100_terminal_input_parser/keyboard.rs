@@ -330,14 +330,6 @@ mod tests {
             .expect("Failed to generate function key sequence")
     }
 
-    /// Build a special key sequence using the generator.
-    fn special_key_sequence(code: KeyCode, modifiers: KeyModifiers) -> Vec<u8> {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
-        let event = InputEvent::Keyboard { code, modifiers };
-        generate_keyboard_sequence(&event)
-            .expect("Failed to generate special key sequence")
-    }
-
     // ==================== SS3 Sequences ====================
     // SS3 sequences (ESC O) are used in vim, less, emacs and other terminal apps
     // when they're in application mode. Simple 3-byte format: ESC O + command_char

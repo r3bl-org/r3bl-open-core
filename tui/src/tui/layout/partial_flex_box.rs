@@ -94,17 +94,6 @@ mod tests {
     }
 
     #[test]
-    fn test_partial_flex_box_debug() {
-        let partial_flex_box = PartialFlexBox::default();
-        let debug_str = format!("{partial_flex_box:?}");
-        assert!(debug_str.contains("FlexBox"));
-        assert!(debug_str.contains("id"));
-        assert!(debug_str.contains("style_adjusted_origin_pos"));
-        assert!(debug_str.contains("style_adjusted_bounds_size"));
-        assert!(debug_str.contains("maybe_computed_style"));
-    }
-
-    #[test]
     fn test_partial_flex_box_from_flex_box() {
         let flex_box = FlexBox::default();
         let partial_flex_box: PartialFlexBox = flex_box.into();

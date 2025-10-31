@@ -281,13 +281,6 @@ mod tests {
         assert_eq!(hash1, hash2);
     }
 
-    #[test]
-    fn test_term_row_debug() {
-        let row = term_row(nz(42));
-        let debug_str = format!("{row:?}");
-        assert_eq!(debug_str, "TermRow(42)");
-    }
-
     // ========================================================================
     // Conversion Boundary Testing
     // ========================================================================

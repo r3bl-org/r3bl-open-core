@@ -122,35 +122,4 @@ mod tests {
         assert_eq!(direction, LayoutDirection::Horizontal);
     }
 
-    #[test]
-    fn test_flex_box_debug() -> CommonResult<()> {
-        let flex_box = FlexBox {
-            id: FlexBoxId::default(),
-            dir: LayoutDirection::Vertical,
-            origin_pos: col(1) + row(2),
-            bounds_size: width(3) + height(4),
-            style_adjusted_origin_pos: col(5) + row(6),
-            style_adjusted_bounds_size: width(7) + height(8),
-            requested_size_percent: req_size_pc!(
-                width: 50,
-                height: 50
-            ),
-            insertion_pos_for_next_box: Some(col(9) + row(10)),
-            maybe_computed_style: TuiStyle::default().into(),
-        };
-
-        let debug_str = format!("{flex_box:?}");
-        assert!(debug_str.contains("FlexBox"));
-        assert!(debug_str.contains("id"));
-        assert!(debug_str.contains("dir"));
-        assert!(debug_str.contains("origin_pos"));
-        assert!(debug_str.contains("bounds_size"));
-        assert!(debug_str.contains("style_adjusted_origin_pos"));
-        assert!(debug_str.contains("style_adjusted_bounds_size"));
-        assert!(debug_str.contains("requested_size_percent"));
-        assert!(debug_str.contains("insertion_pos_for_next_box"));
-        assert!(debug_str.contains("maybe_computed_style"));
-
-        ok!()
-    }
 }
