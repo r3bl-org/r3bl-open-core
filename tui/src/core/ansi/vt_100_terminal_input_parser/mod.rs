@@ -85,7 +85,7 @@
 //!
 //! # Establishing Ground Truth with Integration Tests
 //!
-//! The `observe_real_terminal_input_events.rs` integration test is a critical tool for
+//! The `observer_real_interactive_terminal_input_events` integration test is a critical tool for
 //! validating parser accuracy against real terminal emulators.
 //!
 //! Run it with:
@@ -108,7 +108,7 @@
 //!
 //! # One based mouse input events
 //!
-//! **Confirmed by `observe_real_terminal_input_events.rs` test**: VT-100 mouse
+//! **Confirmed by `observer_real_interactive_terminal_input_events` test**: VT-100 mouse
 //! coordinates are 1-based, where (1, 1) is the top-left corner. Uses [`TermRow`] and
 //! [`TermCol`] for type safety and explicit conversion to/from 0-based buffer
 //! coordinates.

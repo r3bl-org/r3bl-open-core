@@ -12,7 +12,7 @@
 //! - **Bracketed Paste Start**: `ESC [ 200 ~`
 //! - **Bracketed Paste End**: `ESC [ 201 ~`
 
-use super::types::{InputEvent, PasteMode};
+use super::types::{InputEvent, FocusState, PasteMode};
 
 /// Parse a terminal event sequence and return an InputEvent with bytes consumed if recognized.
 ///
@@ -24,55 +24,167 @@ use super::types::{InputEvent, PasteMode};
 /// - `CSI I` → Terminal gained focus
 /// - `CSI O` → Terminal lost focus
 /// - `ESC[200~` → Bracketed paste start
-pub fn parse_terminal_event(_buffer: &[u8]) -> Option<(InputEvent, usize)> {
-    // TODO: Implement terminal event parsing
-    // When implementing, return (event, bytes_consumed) tuple
-    None
+pub fn parse_terminal_event(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+    // Check minimum length: ESC [ + final byte
+    if buffer.len() < 3 {
+        return None;
+    }
+
+    // Check for ESC [ sequence start
+    if buffer[0] != 0x1B || buffer[1] != 0x5B {
+        return None;
+    }
+
+    // Handle simple focus events (single character after ESC[)
+    if buffer.len() == 3 {
+        match buffer[2] {
+            b'I' => return Some((InputEvent::Focus(FocusState::Gained), 3)),
+            b'O' => return Some((InputEvent::Focus(FocusState::Lost), 3)),
+            _ => {}
+        }
+    }
+
+    // Parse parameters and final byte for multi-character sequences
+    parse_csi_terminal_parameters(buffer)
 }
 
-/// Parse window resize event: `CSI 8 ; rows ; cols t`
-///
-/// Returns `Some((event, bytes_consumed))` for complete sequences.
-fn parse_resize_event(_sequence: &[u8]) -> Option<(InputEvent, usize)> {
-    // TODO: Implement resize event parsing
-    // Example return: Some((InputEvent::Resize { rows, cols }, sequence_length))
-    None
-}
+/// Parse CSI sequences with parameters for terminal events.
+fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+    // Extract parameters and final byte
+    // Format: ESC [ [param;param;...] final_byte
+    let mut params = Vec::new();
+    let mut current_num = String::new();
+    let mut final_byte = 0u8;
+    let mut bytes_scanned = 0;
 
-/// Parse focus event: `CSI I` (gained) or `CSI O` (lost)
-///
-/// Returns `Some((event, bytes_consumed))` for complete sequences.
-fn parse_focus_event(_byte: u8) -> Option<(InputEvent, usize)> {
-    // TODO: Implement focus event parsing
-    // Example return: Some((InputEvent::Focus(FocusEvent::Gained), 3)) for ESC[I
-    None
-}
+    for (idx, &byte) in buffer[2..].iter().enumerate() {
+        bytes_scanned = idx + 1; // Track position relative to buffer[2..]
+        match byte {
+            b'0'..=b'9' => {
+                current_num.push(byte as char);
+            }
+            b';' => {
+                if !current_num.is_empty() {
+                    params.push(current_num.parse::<u16>().unwrap_or(0));
+                    current_num.clear();
+                }
+            }
+            b'~' | b't' => {
+                if !current_num.is_empty() {
+                    params.push(current_num.parse::<u16>().unwrap_or(0));
+                }
+                final_byte = byte;
+                break;
+            }
+            _ => return None, // Invalid byte in sequence
+        }
+    }
 
-/// Parse bracketed paste start/end: `ESC [ 200 ~` / `ESC [ 201 ~`
-///
-/// Returns `Some((paste_mode, bytes_consumed))` for complete sequences.
-fn parse_bracketed_paste(_buffer: &[u8]) -> Option<(PasteMode, usize)> {
-    // TODO: Implement bracketed paste parsing
-    // Example return: Some((PasteMode::Start, 6)) for ESC[200~
-    None
+    if final_byte == 0 {
+        return None; // No final byte found
+    }
+
+    // Total bytes consumed: ESC [ (2 bytes) + scanned bytes (includes final)
+    let total_consumed = 2 + bytes_scanned;
+
+    // Parse based on parameters and final byte
+    match (params.len(), final_byte) {
+        // Window resize: CSI 8 ; rows ; cols t
+        (3, b't') if params[0] == 8 => {
+            let rows = params[1];
+            let cols = params[2];
+            Some((InputEvent::Resize { rows, cols }, total_consumed))
+        }
+        // Bracketed paste: CSI 200 ~ or CSI 201 ~
+        (1, b'~') => {
+            match params[0] {
+                200 => Some((InputEvent::Paste(PasteMode::Start), total_consumed)),
+                201 => Some((InputEvent::Paste(PasteMode::End), total_consumed)),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::ansi::generator::generate_keyboard_sequence;
 
     #[test]
     fn test_resize_event() {
-        // TODO: Test window resize parsing
+        // Round-trip test: Generate sequence from InputEvent, then parse it back
+        let original_event = InputEvent::Resize { rows: 24, cols: 80 };
+        let seq = generate_keyboard_sequence(&original_event)
+            .expect("Failed to generate resize sequence");
+
+        let (parsed_event, bytes_consumed) = parse_terminal_event(&seq)
+            .expect("Should parse resize");
+
+        assert_eq!(bytes_consumed, seq.len());
+        assert_eq!(parsed_event, original_event);
     }
 
     #[test]
     fn test_focus_events() {
-        // TODO: Test focus event parsing
+        // Round-trip test: Focus gained
+        let original_gained = InputEvent::Focus(FocusState::Gained);
+        let seq_gained = generate_keyboard_sequence(&original_gained)
+            .expect("Failed to generate focus gained sequence");
+
+        let (parsed, bytes_consumed) = parse_terminal_event(&seq_gained)
+            .expect("Should parse focus gained");
+
+        assert_eq!(bytes_consumed, seq_gained.len());
+        assert_eq!(parsed, original_gained);
+
+        // Round-trip test: Focus lost
+        let original_lost = InputEvent::Focus(FocusState::Lost);
+        let seq_lost = generate_keyboard_sequence(&original_lost)
+            .expect("Failed to generate focus lost sequence");
+
+        let (parsed, bytes_consumed) = parse_terminal_event(&seq_lost)
+            .expect("Should parse focus lost");
+
+        assert_eq!(bytes_consumed, seq_lost.len());
+        assert_eq!(parsed, original_lost);
     }
 
     #[test]
     fn test_bracketed_paste() {
-        // TODO: Test bracketed paste parsing
+        // Round-trip test: Paste start
+        let original_start = InputEvent::Paste(PasteMode::Start);
+        let seq_start = generate_keyboard_sequence(&original_start)
+            .expect("Failed to generate paste start sequence");
+
+        let (parsed, bytes_consumed) = parse_terminal_event(&seq_start)
+            .expect("Should parse paste start");
+
+        assert_eq!(bytes_consumed, seq_start.len());
+        assert_eq!(parsed, original_start);
+
+        // Round-trip test: Paste end
+        let original_end = InputEvent::Paste(PasteMode::End);
+        let seq_end = generate_keyboard_sequence(&original_end)
+            .expect("Failed to generate paste end sequence");
+
+        let (parsed, bytes_consumed) = parse_terminal_event(&seq_end)
+            .expect("Should parse paste end");
+
+        assert_eq!(bytes_consumed, seq_end.len());
+        assert_eq!(parsed, original_end);
+    }
+
+    #[test]
+    fn test_invalid_sequences() {
+        // Test: incomplete sequence (too short)
+        assert_eq!(parse_terminal_event(b"\x1b"), None);
+
+        // Test: sequence without CSI start
+        assert_eq!(parse_terminal_event(b"abc"), None);
+
+        // Test: empty buffer
+        assert_eq!(parse_terminal_event(b""), None);
     }
 }

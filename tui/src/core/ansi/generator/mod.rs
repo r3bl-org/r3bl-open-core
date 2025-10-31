@@ -33,6 +33,6 @@ pub use sgr_code::*;
 
 // Tests.
 #[cfg(any(test, doc))]
-mod input_event_generator;
+mod test_input_sequence_generator;
 #[cfg(any(test, doc))]
-pub use input_event_generator::*;
+pub use test_input_sequence_generator::*;

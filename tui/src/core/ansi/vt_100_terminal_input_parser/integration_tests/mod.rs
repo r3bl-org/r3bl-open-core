@@ -6,12 +6,13 @@
 //!
 //! ### Interactive Terminal Observation
 //!
-//! The `observe_real_terminal_input_events.rs` file provides an interactive test that
-//! captures raw bytes from real terminal interactions. It is a great way to get and parse
-//! the actual sequences in real terminals for making the parser work better for various
-//! terminal applications on various OSes.
+//! The `observe_real_interactive_terminal_input_events.rs` file provides an interactive
+//! test (the user has to type on a keyboard, and click and move a mouse in a real
+//! terminal) that captures raw bytes. It is a great way to get and parse the actual
+//! sequences in real terminals for making the parser work better for various terminal
+//! applications on various OSes.
 //!
-//! This helps establish ground truth for:
+//! This helps establish **ground truth** for:
 //! - Coordinate system conventions (1-based for VT-100)
 //! - Actual ANSI sequences sent by terminal emulators
 //! - Terminal-specific behaviors and quirks
@@ -41,6 +42,14 @@
 #[cfg(any(test, doc))]
 pub mod input_parser_validation_test;
 #[cfg(any(test, doc))]
-pub mod observe_real_terminal_input_events;
+pub mod observe_real_interactive_terminal_input_events;
 #[cfg(any(test, doc))]
-pub mod pty_based_input_device_test;
+pub mod pty_input_device_test;
+#[cfg(any(test, doc))]
+pub mod pty_keyboard_modifiers_test;
+#[cfg(any(test, doc))]
+pub mod pty_terminal_events_test;
+#[cfg(any(test, doc))]
+pub mod pty_utf8_text_test;
+#[cfg(any(test, doc))]
+pub mod pty_mouse_events_test;

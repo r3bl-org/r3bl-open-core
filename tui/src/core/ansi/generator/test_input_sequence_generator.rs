@@ -31,28 +31,46 @@ use crate::core::ansi::{constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
                                     SPECIAL_PAGE_UP_CODE},
                         vt_100_terminal_input_parser::{InputEvent, KeyCode,
-                                                       KeyModifiers}};
+                                                       KeyModifiers, FocusState, PasteMode}};
 
-/// Generate ANSI bytes for a keyboard input event.
+/// Generate ANSI bytes for an input event.
 ///
-/// Converts a keyboard input event back into the ANSI CSI sequence format that terminals
-/// send when keys are pressed.
+/// Converts any input event back into the ANSI CSI sequence format that terminals
+/// send. This enables round-trip validation: InputEvent → bytes → parse → InputEvent.
+///
+/// ## Supported Events
+///
+/// - **Keyboard**: All key codes with modifiers (arrows, function keys, special keys)
+/// - **Resize**: Window resize notifications (CSI 8 ; rows ; cols t)
+/// - **Focus**: Focus gained/lost events (CSI I / CSI O)
+/// - **Paste**: Bracketed paste mode (CSI 200~ / CSI 201~)
+/// - **Mouse**: Not supported (requires position coordinates)
 ///
 /// ## Returns
 ///
-/// - `Some(Vec<u8>)` for recognized key combinations
-/// - `None` for unrecognized or unsupported key codes
+/// - `Some(Vec<u8>)` for recognized events
+/// - `None` for unsupported or invalid combinations
 ///
 /// ## Usage
 ///
 /// This function is used internally by tests to generate sequences for round-trip
-/// validation. See the test suite for examples of all supported key combinations.
+/// validation. See the test suite for examples of all supported event types.
 pub fn generate_keyboard_sequence(event: &InputEvent) -> Option<Vec<u8>> {
     match event {
         InputEvent::Keyboard { code, modifiers } => {
             generate_key_sequence(*code, *modifiers)
         }
-        _ => None,
+        InputEvent::Resize { rows, cols } => {
+            Some(generate_resize_sequence(*rows, *cols))
+        }
+        InputEvent::Focus(state) => {
+            Some(generate_focus_sequence(*state))
+        }
+        InputEvent::Paste(mode) => {
+            Some(generate_paste_sequence(*mode))
+        }
+        // Mouse events require position coordinates and are not generator-compatible
+        InputEvent::Mouse { .. } => None,
     }
 }
 
@@ -213,10 +231,140 @@ fn encode_modifiers(modifiers: KeyModifiers) -> u8 {
         mask |= MODIFIER_CTRL;
     }
     // VT-100 formula: parameter = 1 + bitfield
-    // Convert to ASCII digit ('1'-'8' for modifiers 0-7)
+    // Produce ASCII digit character for the parameter (1-8 as '1'-'8')
     b'1' + mask
 }
 
+/// Generate a window resize sequence: `CSI 8 ; rows ; cols t`
+///
+/// This is the ANSI sequence sent by terminals when they are resized.
+fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
+    let mut bytes = vec![ANSI_ESC, ANSI_CSI_BRACKET];
+    bytes.push(b'8');
+    bytes.push(ANSI_PARAM_SEPARATOR);
+    bytes.extend_from_slice(rows.to_string().as_bytes());
+    bytes.push(ANSI_PARAM_SEPARATOR);
+    bytes.extend_from_slice(cols.to_string().as_bytes());
+    bytes.push(b't');
+    bytes
+}
+
+/// Generate a focus event sequence.
+///
+/// - Focus gained: `CSI I`
+/// - Focus lost: `CSI O`
+fn generate_focus_sequence(state: FocusState) -> Vec<u8> {
+    match state {
+        FocusState::Gained => vec![ANSI_ESC, ANSI_CSI_BRACKET, b'I'],
+        FocusState::Lost => vec![ANSI_ESC, ANSI_CSI_BRACKET, b'O'],
+    }
+}
+
+/// Generate a bracketed paste mode sequence.
+///
+/// - Paste start: `CSI 200 ~`
+/// - Paste end: `CSI 201 ~`
+fn generate_paste_sequence(mode: PasteMode) -> Vec<u8> {
+    let mut bytes = vec![ANSI_ESC, ANSI_CSI_BRACKET];
+    match mode {
+        PasteMode::Start => {
+            bytes.extend_from_slice(b"200");
+        }
+        PasteMode::End => {
+            bytes.extend_from_slice(b"201");
+        }
+    }
+    bytes.push(b'~');
+    bytes
+}
+
+
+    // ==================== Terminal Events ====================
+
+    #[test]
+    fn test_generate_resize_event() {
+        let event = InputEvent::Resize { rows: 24, cols: 80 };
+        let bytes = generate_keyboard_sequence(&event).unwrap();
+        assert_eq!(bytes, b"\x1b[8;24;80t");
+    }
+
+    #[test]
+    fn test_generate_focus_gained() {
+        let event = InputEvent::Focus(FocusState::Gained);
+        let bytes = generate_keyboard_sequence(&event).unwrap();
+        assert_eq!(bytes, b"\x1b[I");
+    }
+
+    #[test]
+    fn test_generate_focus_lost() {
+        let event = InputEvent::Focus(FocusState::Lost);
+        let bytes = generate_keyboard_sequence(&event).unwrap();
+        assert_eq!(bytes, b"\x1b[O");
+    }
+
+    #[test]
+    fn test_generate_paste_start() {
+        let event = InputEvent::Paste(PasteMode::Start);
+        let bytes = generate_keyboard_sequence(&event).unwrap();
+        assert_eq!(bytes, b"\x1b[200~");
+    }
+
+    #[test]
+    fn test_generate_paste_end() {
+        let event = InputEvent::Paste(PasteMode::End);
+        let bytes = generate_keyboard_sequence(&event).unwrap();
+        assert_eq!(bytes, b"\x1b[201~");
+    }
+
+    #[test]
+    fn test_roundtrip_resize_event() {
+        use crate::core::ansi::vt_100_terminal_input_parser::parse_terminal_event;
+
+        let original_event = InputEvent::Resize { rows: 30, cols: 120 };
+        let bytes = generate_keyboard_sequence(&original_event).unwrap();
+        let (parsed_event, bytes_consumed) = parse_terminal_event(&bytes).expect("Should parse");
+
+        assert_eq!(parsed_event, original_event);
+        assert_eq!(bytes_consumed, bytes.len());
+    }
+
+    #[test]
+    fn test_roundtrip_focus_events() {
+        use crate::core::ansi::vt_100_terminal_input_parser::parse_terminal_event;
+
+        let original_gained = InputEvent::Focus(FocusState::Gained);
+        let bytes_gained = generate_keyboard_sequence(&original_gained).unwrap();
+        let (parsed_gained, bytes_consumed) = parse_terminal_event(&bytes_gained).expect("Should parse");
+
+        assert_eq!(parsed_gained, original_gained);
+        assert_eq!(bytes_consumed, bytes_gained.len());
+
+        let original_lost = InputEvent::Focus(FocusState::Lost);
+        let bytes_lost = generate_keyboard_sequence(&original_lost).unwrap();
+        let (parsed_lost, bytes_consumed) = parse_terminal_event(&bytes_lost).expect("Should parse");
+
+        assert_eq!(parsed_lost, original_lost);
+        assert_eq!(bytes_consumed, bytes_lost.len());
+    }
+
+    #[test]
+    fn test_roundtrip_paste_events() {
+        use crate::core::ansi::vt_100_terminal_input_parser::parse_terminal_event;
+
+        let original_start = InputEvent::Paste(PasteMode::Start);
+        let bytes_start = generate_keyboard_sequence(&original_start).unwrap();
+        let (parsed_start, bytes_consumed) = parse_terminal_event(&bytes_start).expect("Should parse");
+
+        assert_eq!(parsed_start, original_start);
+        assert_eq!(bytes_consumed, bytes_start.len());
+
+        let original_end = InputEvent::Paste(PasteMode::End);
+        let bytes_end = generate_keyboard_sequence(&original_end).unwrap();
+        let (parsed_end, bytes_consumed) = parse_terminal_event(&bytes_end).expect("Should parse");
+
+        assert_eq!(parsed_end, original_end);
+        assert_eq!(bytes_consumed, bytes_end.len());
+    }
 #[cfg(test)]
 mod tests {
     use super::*;

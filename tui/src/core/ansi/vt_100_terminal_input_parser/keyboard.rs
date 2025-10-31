@@ -573,7 +573,6 @@ mod tests {
     // ==================== Arrow Keys with Modifiers ====================
 
     #[test]
-    #[ignore] // TODO: Generator produces wrong sequence - needs fixing
     fn test_shift_up() {
         // Build sequence with Shift modifier using generator
         let input = arrow_key_sequence(
