@@ -30,6 +30,9 @@
 - [⌛] use [`task_remove_crossterm`](docs/task_remove_crossterm.md) to remove crossterm from the
   `r3bl_open_core` codebase
 
+- [⌛] use [`task_refactor_input_device`](docs/task_refactor_input_device.md) to refactor
+  `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
+
 - [⌛] use [`task_unify_cli_and_styled_text`](docs/task_unify_cli_and_styled_text.md) to unify
   `CliText` and `TuiStyledText` rendering paths
 

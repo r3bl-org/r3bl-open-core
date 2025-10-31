@@ -3,9 +3,9 @@
 //! DirectToAnsi Input Device Implementation
 //!
 //! This module implements the async input device for the DirectToAnsi backend.
-//! It handles non-blocking reading from stdin using tokio, manages a ring buffer
-//! for partial ANSI sequences, and delegates to the protocol layer parsers for
-//! sequence interpretation.
+//! It handles non-blocking reading from stdin using tokio, manages a ring buffer (kind
+//! of, except that it is growable) for partial ANSI sequences, and delegates to the
+//! protocol layer parsers for sequence interpretation.
 
 use crate::core::ansi::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O,
                         vt_100_terminal_input_parser::{InputEvent, KeyCode,
@@ -17,7 +17,8 @@ use crate::core::ansi::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O,
                                                        parse_utf8_text}};
 use tokio::io::{AsyncReadExt, Stdin};
 
-/// Buffer compaction threshold: compact when consumed bytes exceed this value.
+/// Buffer compaction threshold: compact when consumed bytes exceed this value. This is
+/// kind of like a ring buffer (except that it is not fixed size).
 const BUFFER_COMPACT_THRESHOLD: usize = 2048;
 
 /// Initial buffer capacity: 4KB for efficient ANSI sequence buffering.
@@ -273,7 +274,7 @@ impl DirectToAnsiInputDevice {
                     }
                     None => {
                         // Shouldn't reach here (buf.len() > 1 but get(1) is None?).
-                        None
+                        unreachable!()
                     }
                 }
             }
@@ -285,7 +286,7 @@ impl DirectToAnsiInputDevice {
             }
             None => {
                 // Empty buffer (shouldn't reach here due to early return).
-                None
+                unreachable!()
             }
         }
     }
@@ -293,6 +294,7 @@ impl DirectToAnsiInputDevice {
     /// Consume N bytes from the buffer.
     ///
     /// Increments the consumed counter and compacts the buffer if threshold exceeded.
+    /// This is kind of like a ring buffer (except that it is not fixed size).
     fn consume(&mut self, count: usize) {
         self.consumed += count;
 
