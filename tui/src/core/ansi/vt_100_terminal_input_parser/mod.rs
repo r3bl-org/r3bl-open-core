@@ -77,34 +77,11 @@
 //! - Handle multi-byte UTF-8 sequences
 //! - Buffer incomplete sequences for later completion
 //!
-//! ## Usage (By Backend I/O Layer)
+//! ## Integration
 //!
-//! ```ignore
-//! // In DirectToAnsiInputDevice::read_event():
-//! use crate::core::ansi::vt_100_terminal_input_parser::{
-//!     keyboard, mouse, terminal_events, utf8
-//! };
-//!
-//! match self.buffer[0] {
-//!     b'\x1b' => {
-//!         // Try keyboard/mouse/terminal event parsers in order
-//!         if let Some(event) = keyboard::parse_keyboard_sequence(&self.buffer) {
-//!             return Some(event);
-//!         }
-//!         if let Some(event) = mouse::parse_mouse_sequence(&self.buffer) {
-//!             return Some(event);
-//!         }
-//!         if let Some(event) = terminal_events::parse_terminal_event(&self.buffer) {
-//!             return Some(event);
-//!         }
-//!     }
-//!     _ => {
-//!         // Regular UTF-8 text
-//!         let events = utf8::parse_utf8_text(&self.buffer);
-//!         return events.into_iter().next();
-//!     }
-//! }
-//! ```
+//! The backend I/O layer (`DirectToAnsiInputDevice`) uses these parser functions by
+//! reading from stdin, checking if the buffer starts with escape sequences (ESC, 0x1b),
+//! and dispatching to the appropriate parser: keyboard, mouse, terminal events, or UTF-8 text.
 //!
 //! # Establishing Ground Truth with Integration Tests
 //!

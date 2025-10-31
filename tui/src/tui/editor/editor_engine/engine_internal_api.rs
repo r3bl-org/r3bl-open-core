@@ -81,16 +81,10 @@ pub fn insert_str_at_caret(args: EditorArgsMut<'_>, chunk: &str) {
 ///    operation with a single validation.
 ///
 /// # Example
-/// ```ignore
-/// // Slow approach - validates after each operation:
-/// for line in lines {
-///     insert_str_at_caret(args, line);      // Validates
-///     insert_new_line_at_caret(args);       // Validates again
-/// }
 ///
-/// // Fast approach - validates once at the end:
-/// insert_str_batch_at_caret(args, lines);   // Validates once
-/// ```
+/// Instead of calling `insert_str_at_caret()` and `insert_new_line_at_caret()` in a loop
+/// (which validates after each call), use this function to insert all lines in a single
+/// batch operation with a single validation pass at the end.
 ///
 /// # Arguments
 /// * `args` - Mutable references to the editor engine and buffer

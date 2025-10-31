@@ -73,27 +73,6 @@ use crate::{FastStringify, PixelChar, SgrCode, TuiColor, TuiStyle, degrade_color
 /// while maintaining correctness. It tracks the current style and only emits new codes
 /// when styles change.
 ///
-/// # Example
-///
-/// ```ignore
-/// use r3bl_tui::{PixelChar, TuiStyle, new_style};
-///
-/// let mut renderer = PixelCharRenderer::new();
-/// let pixels = vec![
-///     PixelChar::PlainText {
-///         display_char: 'H',
-///         style: new_style!(bold),
-///     },
-///     PixelChar::PlainText {
-///         display_char: 'i',
-///         style: TuiStyle::default(),
-///     },
-/// ];
-///
-/// let ansi_bytes = renderer.render_line(&pixels);
-/// // Output: "\x1b[1mH\x1b[0mi" (bold H, reset, normal i)
-/// ```
-///
 /// [`OutputDevice`]: crate::OutputDevice
 #[derive(Debug, Clone)]
 pub struct PixelCharRenderer {

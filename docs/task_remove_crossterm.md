@@ -3127,82 +3127,28 @@ pub struct DirectToAnsiInputDevice {
 
 ---
 
-## Phase 7: Testing & Validation (10-15 hours total)
+#### Phase 7: Testing & Validation (10-15 hours total)
 
-### 🔴 Phase 7.0: Pre-Testing Fixes - CRITICAL BLOCKERS ⚠️ **IMMEDIATE NEXT TASK**
+##### 🔴 Phase 7.0: Pre-Testing Fixes + PTY Integration Tests - CRITICAL BLOCKERS ⚠️ **IMMEDIATE NEXT TASK**
 
-**Objective**: Fix critical gaps discovered by code audit before Phase 7.1 integration testing
+**Objective**: Fix critical gaps discovered by code audit PLUS comprehensive PTY validation
 
 **Status**: 🔴 **MUST COMPLETE BEFORE PROCEEDING TO PHASE 7.1**
 
-**Why This Phase Exists**: Code audit (2025-10-30) identified 3 critical blockers that prevent:
-1. Achieving full crossterm feature parity
-2. Proper round-trip validation testing
-3. Confident Phase 7.1 integration testing
+**Why This Phase Exists**:
+1. Code audit (2025-10-30) identified 3 critical blockers preventing full crossterm parity
+2. PTY-based integration tests provide gold standard validation in real terminal environment
+3. Validates entire stack: buffer management, async I/O, incomplete sequences, real terminal behavior
+
+**Total Estimated Time**: 6-8 hours (4-5 hours fixes + 2-3 hours PTY tests)
+
+**Implementation Order**: 7.0.2 (generator fix) → 7.0.1 (terminal events) → 7.0.3 (unit tests) → 7.0.4 (PTY integration tests)
 
 ---
 
-#### 7.0.1: Terminal Event Parsing Implementation (2 hours) - BLOCKS CROSSTERM PARITY 🔴
+###### 7.0.2: Fix Generator Bug - Arrow Key Modifiers (30-45 min) - DO THIS FIRST 🔴
 
-**Current State**: All functions in `terminal_events.rs` are stubs returning `None`
-
-**Required for Crossterm Parity**:
-- ✅ Resize events: `CSI 8 ; rows ; cols t` (e.g., `ESC[8;24;80t`)
-- ✅ Focus events: `CSI I` (Focus gained), `CSI O` (Focus lost)
-- ✅ Bracketed paste: `ESC[200~` (paste start), `ESC[201~` (paste end)
-
-**Critical Implementation Details**:
-
-```rust
-// File: tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs
-
-pub fn parse_terminal_event(buffer: &[u8]) -> Option<(InputEvent, usize)> {
-    // Must try parsers in this order:
-    // 1. Focus events (single byte after CSI)
-    // 2. Resize events (CSI 8 ; ... t format)
-    // 3. Bracketed paste (ESC [ 200/201 ~ format)
-
-    // Return first match or None if incomplete
-}
-
-fn parse_resize_event(sequence: &[u8]) -> Option<(InputEvent, usize)> {
-    // Parse: ESC [ 8 ; rows ; cols t
-    // Example: ESC[8;24;80t → InputEvent::Resize { rows: 24, cols: 80 }
-    // Handle: incomplete sequences, large values (999x999)
-}
-
-fn parse_focus_event(byte: u8) -> Option<(InputEvent, usize)> {
-    // I (0x49) → Focus::Gained
-    // O (0x4F) → Focus::Lost
-}
-
-fn parse_bracketed_paste(buffer: &[u8]) -> Option<(InputEvent, usize)> {
-    // ESC[200~ → Paste::Start
-    // ESC[201~ → Paste::End
-    // CRITICAL: Content between markers is NOT parsed for ANSI
-}
-```
-
-**Testing Requirements**:
-- [ ] `test_resize_valid()` - Valid resize sequence
-- [ ] `test_resize_large()` - Large dimensions (999x999)
-- [ ] `test_resize_incomplete()` - Missing bytes
-- [ ] `test_focus_gained()` - CSI I
-- [ ] `test_focus_lost()` - CSI O
-- [ ] `test_paste_start()` - ESC[200~
-- [ ] `test_paste_end()` - ESC[201~
-
-**Success Criteria**:
-- [ ] All 7 terminal event tests passing
-- [ ] `parse_terminal_event()` dispatcher correctly routes to each parser
-- [ ] Incomplete sequences return `None` (not panic)
-- [ ] All parser tests passing
-
-**Estimated Time**: 2 hours
-
----
-
-#### 7.0.2: Fix Generator Bug - Arrow Key Modifiers (2 hours) - BLOCKS ROUND-TRIP VALIDATION 🔴
+**Why First**: One-line fix enables reliable test sequence generation for other blockers
 
 **Current State**: Test `test_shift_up()` in `keyboard.rs:576` is ignored with comment:
 ```rust
@@ -3211,105 +3157,543 @@ fn parse_bracketed_paste(buffer: &[u8]) -> Option<(InputEvent, usize)> {
 fn test_shift_up() { ... }
 ```
 
-**Problem**: `input_event_generator.rs:204-217` has `encode_modifiers()` bug
+**Problem**: `input_event_generator.rs:217` has `encode_modifiers()` bug
 
-**Investigation Required**:
-1. Run: `cargo test test_shift_up --lib -- --exact --ignored --nocapture`
-2. Compare: Expected vs Actual ANSI sequences
-3. Verify against VT-100 spec for modifier encoding
-
-**Fix Approach** (likely):
+**Root Cause Analysis**:
 ```rust
+// CURRENT (WRONG - line 217):
 fn encode_modifiers(modifiers: KeyModifiers) -> u8 {
-    // VT-100 Formula: parameter = 1 + bitfield
-    // Where bitfield is: Shift=1, Alt=2, Ctrl=4
-    // So: Shift → 2, Ctrl → 5, Ctrl+Shift → 6, etc.
-
     let mut mask: u8 = 0;
     if modifiers.shift { mask |= 1; }
     if modifiers.alt { mask |= 2; }
     if modifiers.ctrl { mask |= 4; }
-    b'1' + mask  // Returns '2' for Shift, '5' for Ctrl, etc.
+    b'1' + mask  // ← BUG: Returns ASCII character (b'2' = 50), not numeric value (2)
+}
+
+// FIXED:
+fn encode_modifiers(modifiers: KeyModifiers) -> u8 {
+    let mut mask: u8 = 0;
+    if modifiers.shift { mask |= 1; }
+    if modifiers.alt { mask |= 2; }
+    if modifiers.ctrl { mask |= 4; }
+    1 + mask  // ← FIX: Returns numeric value (Shift=2, Ctrl=5, etc.)
 }
 ```
 
-**Testing Requirements**:
-- [ ] Re-enable `test_shift_up()` and verify it passes
-- [ ] Add test for Ctrl+Up (parameter 5)
-- [ ] Add test for Alt+Right (parameter 3)
-- [ ] Add test for Ctrl+Alt+Shift+Down (parameter 8)
-- [ ] Verify round-trip: generate → parse → verify
+**Implementation Steps**:
+
+1. **Fix encode_modifiers() Function (5 min)**
+   - File: `tui/src/core/ansi/generator/input_event_generator.rs:217`
+   - Change: `b'1' + mask` → `1 + mask`
+
+2. **Re-enable test_shift_up() (10 min)**
+   - File: `tui/src/core/ansi/vt_100_terminal_input_parser/keyboard.rs:576`
+   - Remove `#[ignore]` annotation
+   - Run: `cargo test test_shift_up --lib -- --exact --nocapture`
+   - Verify: Test passes
+
+3. **Add Comprehensive Modifier Tests (15-20 min)**
+   - Add `test_ctrl_up()` - Ctrl modifier (parameter 5)
+   - Add `test_alt_right()` - Alt modifier (parameter 3)
+   - Add `test_ctrl_shift_down()` - Combined modifiers (parameter 6)
+   - Add `test_ctrl_alt_shift_left()` - All modifiers (parameter 8)
+
+4. **Validation (5-10 min)**
+   ```bash
+   cargo test --lib input_event_generator
+   cargo test --lib keyboard
+   ```
 
 **Success Criteria**:
-- [ ] `test_shift_up()` no longer ignored and passing
-- [ ] All 4 modifier combination tests passing
-- [ ] Round-trip validation succeeds for all modifiers
+- [ ] Generator produces correct modifier sequences
+- [ ] All modifier tests passing (Shift, Ctrl, Alt, combinations)
+- [ ] Round-trip validation works (generate → parse → verify)
+
+**Estimated Time**: 30-45 minutes
+
+---
+
+###### 7.0.1: Terminal Event Parsing Implementation (2 hours) - BLOCKS CROSSTERM PARITY 🔴
+
+**Current State**: All functions in `terminal_events.rs` are stubs returning `None`
+
+**File**: `tui/src/core/ansi/vt_100_terminal_input_parser/terminal_events.rs`
+
+**Required for Crossterm Parity**:
+- Resize events: `CSI 8 ; rows ; cols t` (e.g., `ESC[8;24;80t`)
+- Focus events: `CSI I` (Focus gained), `CSI O` (Focus lost)
+- Bracketed paste: `ESC[200~` (paste start), `ESC[201~` (paste end)
+
+**Implementation Steps**:
+
+**Step 1: Implement parse_resize_event() (30 min)**
+
+Parse: `ESC [ 8 ; rows ; cols t`
+
+Implementation approach:
+- Validate minimum length (6 bytes: `ESC[8;1;1t`)
+- Use existing numeric parameter parsing utilities from keyboard/mouse parsers
+- Create `InputEvent::Resize { rows: u16, cols: u16 }`
+- Handle incomplete sequences (return `None`, never panic)
+
+Tests to add:
+- `test_resize_valid()` - `ESC[8;24;80t` → Resize(24, 80)
+- `test_resize_large()` - `ESC[8;999;999t` → Resize(999, 999)
+- `test_resize_incomplete()` - `ESC[8;24` → None (wait for more bytes)
+- `test_resize_malformed()` - Invalid format → None
+
+**Step 2: Implement parse_focus_event() (20 min)**
+
+Parse: `ESC [ I` (gained) or `ESC [ O` (lost)
+
+Implementation approach:
+- Expect exactly 3 bytes
+- Match: `I` (0x49) → Focus::Gained, `O` (0x4F) → Focus::Lost
+- Return `(InputEvent::Focus(state), 3)`
+
+Tests to add:
+- `test_focus_gained()` - `ESC[I` → Focus(Gained)
+- `test_focus_lost()` - `ESC[O` → Focus(Lost)
+- `test_focus_incomplete()` - `ESC[` → None
+
+**Step 3: Implement parse_bracketed_paste() (30 min)**
+
+Parse: `ESC [ 200 ~` (start) or `ESC [ 201 ~` (end)
+
+Implementation approach:
+- Expect 6 bytes for complete sequence
+- Parse numeric code (200 or 201)
+- **Critical**: Wrap in `InputEvent::Paste(PasteMode)` not bare `PasteMode`
+- Return `(event, 6)`
+
+Tests to add:
+- `test_paste_start()` - `ESC[200~` → Paste(Start)
+- `test_paste_end()` - `ESC[201~` → Paste(End)
+- `test_paste_incomplete()` - `ESC[20` → None
+
+**Step 4: Implement parse_terminal_event() Dispatcher (20 min)**
+
+Main parsing logic - try parsers in order:
+1. Focus events (simplest: single byte after CSI)
+2. Bracketed paste (200~/201~)
+3. Resize events (8;...t format)
+
+Return first match or None.
+
+Tests to add:
+- `test_dispatcher_focus()` - Verify routing to focus parser
+- `test_dispatcher_paste()` - Verify routing to paste parser
+- `test_dispatcher_resize()` - Verify routing to resize parser
+- `test_dispatcher_unknown()` - Unknown sequence → None
+
+**Step 5: Integration Validation (20 min)**
+```bash
+cargo test terminal_events
+cargo test --lib vt_100_terminal_input_parser
+```
+
+**Success Criteria**:
+- [ ] All 11+ terminal event unit tests passing
+- [ ] parse_terminal_event() dispatcher correctly routes
+- [ ] Incomplete sequences return None (not panic)
+- [ ] No regressions in other parsers
 
 **Estimated Time**: 2 hours
 
 ---
 
-#### 7.0.3: DirectToAnsiInputDevice Test Coverage (1 hour) - QUALITY ASSURANCE 🟡
+###### 7.0.3: DirectToAnsiInputDevice Test Coverage (1-1.5 hours) - QUALITY ASSURANCE 🟡
 
-**Current State**: All tests in `direct_to_ansi/input/tests.rs` are empty stubs:
-```rust
-#[test]
-fn test_device_creation() {
-    // TODO: Test DirectToAnsiInputDevice construction
-}
-```
+**Current State**: All tests in `direct_to_ansi/input/tests.rs` are empty stubs
 
-**Missing Tests** (minimum viable):
-1. Constructor initialization - verify new() works
-2. Async event reading - verify read_event() handles simple input
-3. Buffer compaction - verify 2KB threshold triggers cleanup
-4. EOF handling - verify None returned on stdin close
-5. Incomplete sequence buffering - verify partial sequences held until complete
+**File**: `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/tests.rs`
 
-**Implementation Examples**:
+**Challenge**: Direct stdin testing is hard; focus on testable logic (try_parse, buffer management)
+
+**Implementation Steps**:
+
+**Step 1: Test Device Construction (10 min)**
 
 ```rust
 #[test]
 fn test_device_creation() {
     let device = DirectToAnsiInputDevice::new();
     assert_eq!(device.buffer.capacity(), 4096);
-}
-
-#[tokio::test]
-async fn test_simple_event() {
-    // Inject test bytes, verify correct event parsed
+    assert_eq!(device.consumed, 0);
 }
 ```
 
-**Testing Requirements**:
-- [ ] Device construction test (5 min)
-- [ ] Simple async event reading test (30 min)
-- [ ] Buffer compaction threshold test (30 min)
+**Step 2: Test try_parse() Logic with Mock Buffers (30-40 min)**
+
+Create helper to test parsing without async I/O:
+
+```rust
+fn parse_bytes_helper(bytes: &[u8]) -> Option<InputEvent> {
+    let mut device = DirectToAnsiInputDevice::new();
+    device.buffer.extend_from_slice(bytes);
+    device.try_parse()
+}
+```
+
+Tests to add:
+- `test_parse_esc_key()` - Single ESC byte → Esc event (zero latency)
+- `test_parse_arrow_key()` - `ESC[A` → Up arrow
+- `test_parse_mouse_click()` - SGR mouse sequence
+- `test_parse_terminal_event()` - Resize/focus/paste
+- `test_parse_utf8_text()` - Unicode characters
+- `test_parse_incomplete_sequence()` - Partial ANSI → None (buffered)
+- `test_parse_multiple_events()` - Buffer contains 2+ events
+
+**Step 3: Test Buffer Management (20-30 min)**
+
+Tests to add:
+- `test_consume_increments_counter()` - Consumed counter increases correctly
+- `test_compaction_threshold()` - Triggers at 2048 bytes consumed
+- `test_compaction_preserves_data()` - Unconsumed data retained after compaction
+
+**Step 4: Consolidate Test Files (10 min)**
+
+**Decision**: Keep both test modules but clarify purpose:
+- `tests.rs` - Unit tests for parsing logic (no async I/O)
+- `input_device_impl.rs` inline tests - Add comment "see tests.rs for comprehensive unit tests"
+
+**Step 5: Validation (10 min)**
+```bash
+cargo test --lib direct_to_ansi::input
+cargo clippy --all-targets
+```
 
 **Success Criteria**:
-- [ ] All 3 basic tests passing
-- [ ] No tokio/async issues
-- [ ] Device properly initializes and dispatches to parsers
+- [ ] Core parsing logic tested (10+ unit tests)
+- [ ] Buffer management tested
+- [ ] No async I/O complications in unit tests
+- [ ] Async I/O deferred to Phase 7.0.4 PTY tests
 
-**Estimated Time**: 1 hour
+**Estimated Time**: 1-1.5 hours
 
 ---
 
-### Phase 7.0 Summary
+###### 7.0.4: PTY Integration Test Suite (2-3 hours) - COMPREHENSIVE E2E VALIDATION 🆕
 
-**Total Effort**: 4-5 hours (for all 3 blockers)
+**Objective**: Create comprehensive PTY-based integration tests validating ALL parsers in real terminal environment
 
-**Completion Gate**:
-- [ ] Terminal events fully implemented and tested
-- [ ] Generator bug fixed, modifier key tests passing
-- [ ] DirectToAnsiInputDevice has basic test coverage
+**Location**: `tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/`
+
+**Pattern**: Use existing `generate_pty_test!` macro infrastructure (proven in `pty_based_input_device_test.rs`)
+
+**Why PTY Tests Are Critical**:
+- Tests DirectToAnsiInputDevice in actual PTY slave process with raw mode enabled
+- Catches issues unit tests miss: buffer management, async I/O timing, incomplete sequence handling
+- Validates real terminal behavior (exactly how production works)
+- Each test focused and runs in parallel (< 5 seconds each)
+
+---
+
+**Test 1: Keyboard Modifiers (validates 7.0.2 fix) - 30 min**
+
+**New File**: `pty_keyboard_modifiers_test.rs`
+
+**Sequences to test**:
+- Shift+Up (`ESC[1;2A`)
+- Ctrl+Up (`ESC[1;5A`)
+- Alt+Right (`ESC[1;3C`)
+- Ctrl+Shift+Down (`ESC[1;6B`)
+- Ctrl+Alt+Left (`ESC[1;7D`)
+- Ctrl+Alt+Shift+Right (`ESC[1;8C`)
+
+**Implementation**:
+```rust
+generate_pty_test! {
+    /// PTY test for keyboard modifier combinations
+    test_fn: test_pty_keyboard_modifiers,
+    master: keyboard_modifiers_master,
+    slave: keyboard_modifiers_slave
+}
+
+fn keyboard_modifiers_master(pty_pair, child) {
+    // Generate all modifier combinations using FIXED generator (post-7.0.2)
+    let sequences = vec![
+        ("Shift+Up", KeyCode::Up, KeyModifiers { shift: true, ..default }),
+        ("Ctrl+Up", KeyCode::Up, KeyModifiers { ctrl: true, ..default }),
+        // ... 4 more combinations
+    ];
+
+    // Send each sequence to PTY, verify parsed event matches
+    for (desc, sequence) in sequences {
+        write_to_pty(sequence);
+        let event = read_from_pty();
+        assert_event_matches(desc, event);
+    }
+}
+```
+
+**Why this test**:
+- Validates 7.0.2 generator fix works end-to-end in real PTY
+- Tests all 6 critical modifier combinations with real terminal I/O
+- Proves round-trip: generate → send to PTY → parse → verify
+
+**Estimated time**: 30 minutes
+
+---
+
+**Test 2: Terminal Events (validates 7.0.1) - 45 min**
+
+**New File**: `pty_terminal_events_test.rs`
+
+**Sequences to test**:
+- Resize: `ESC[8;24;80t` (24 rows, 80 cols)
+- Resize: `ESC[8;40;120t` (40 rows, 120 cols)
+- Focus gained: `ESC[I`
+- Focus lost: `ESC[O`
+- Paste start: `ESC[200~`
+- Paste end: `ESC[201~`
+
+**Implementation**:
+```rust
+generate_pty_test! {
+    /// PTY test for terminal events (resize, focus, paste)
+    test_fn: test_pty_terminal_events,
+    master: terminal_events_master,
+    slave: terminal_events_slave
+}
+
+fn terminal_events_master(pty_pair, child) {
+    // Manually construct terminal event sequences (no generator needed)
+    let sequences = vec![
+        ("Resize 24x80", b"\x1b[8;24;80t"),
+        ("Focus gained", b"\x1b[I"),
+        ("Focus lost", b"\x1b[O"),
+        ("Paste start", b"\x1b[200~"),
+        ("Paste end", b"\x1b[201~"),
+    ];
+
+    // Send and verify each event parses correctly
+}
+```
+
+**Why this test**:
+- Validates all 3 terminal event parsers from 7.0.1 in real PTY
+- Tests in actual PTY slave with raw mode (production conditions)
+- Ensures events route correctly through DirectToAnsiInputDevice
+
+**Estimated time**: 45 minutes
+
+---
+
+**Test 3: Mouse Events (existing parser, needs PTY validation) - 45 min**
+
+**New File**: `pty_mouse_events_test.rs`
+
+**Sequences to test**:
+- Left click: `ESC[<0;10;5M` (SGR protocol)
+- Middle click: `ESC[<1;10;5M`
+- Right click: `ESC[<2;10;5M`
+- Mouse release: `ESC[<0;10;5m` (lowercase 'm')
+- Scroll up: `ESC[<64;10;5M`
+- Scroll down: `ESC[<65;10;5M`
+- X10 protocol: `ESC[M#%&` (legacy format)
+- RXVT protocol: `ESC[32;10;5M`
+
+**Implementation**:
+```rust
+generate_pty_test! {
+    /// PTY test for all mouse protocols (SGR, X10, RXVT)
+    test_fn: test_pty_mouse_events,
+    master: mouse_events_master,
+    slave: mouse_events_slave
+}
+
+fn mouse_events_master(pty_pair, child) {
+    // Test all 3 mouse protocols in real PTY
+    let sequences = vec![
+        ("SGR Left Click", b"\x1b[<0;10;5M"),
+        ("SGR Release", b"\x1b[<0;10;5m"),
+        ("SGR Scroll Up", b"\x1b[<64;10;5M"),
+        ("X10 Click", b"\x1b[M# %&"),  // Encoded format
+        ("RXVT Click", b"\x1b[32;10;5M"),
+    ];
+
+    // Verify correct button/action/position parsing
+}
+```
+
+**Why this test**:
+- Validates all 3 mouse protocols work in PTY environment
+- Tests complex coordinate encoding with real terminal I/O
+- Ensures button states and actions parse correctly with async reading
+
+**Estimated time**: 45 minutes
+
+---
+
+**Test 4: UTF-8 Text + Mixed Sequences (30 min)**
+
+**New File**: `pty_utf8_mixed_test.rs`
+
+**Sequences to test**:
+- ASCII text: `hello`
+- UTF-8 text: `日本語` (Japanese - multi-byte chars)
+- Emoji: `🚀🎉` (4-byte UTF-8 sequences)
+- Mixed: `hello ESC[A world` (text + arrow + text)
+- Mixed: `日本語 ESC[<0;10;5M 🚀` (UTF-8 + mouse + emoji)
+
+**Implementation**:
+```rust
+generate_pty_test! {
+    /// PTY test for UTF-8 text and mixed sequences
+    test_fn: test_pty_utf8_mixed,
+    master: utf8_mixed_master,
+    slave: utf8_mixed_slave
+}
+
+fn utf8_mixed_master(pty_pair, child) {
+    // Test UTF-8 parsing and mixed input streams
+    let sequences = vec![
+        ("ASCII", b"hello"),
+        ("UTF-8 Japanese", "日本語".as_bytes()),
+        ("Emoji", "🚀".as_bytes()),
+        ("Mixed", b"text\x1b[Amore"),
+    ];
+
+    // Verify text events parse correctly without corruption
+}
+```
+
+**Why this test**:
+- Validates UTF-8 parser handles multi-byte sequences correctly
+- Tests mixed text/ANSI in same buffer (real-world scenario)
+- Ensures no corruption at sequence boundaries
+- Validates async byte-by-byte reading with UTF-8
+
+**Estimated time**: 30 minutes
+
+---
+
+**Test 5: Stress Test - Rapid Input (30 min) - OPTIONAL**
+
+**New File**: `pty_stress_test.rs`
+
+**Objective**: Send 100+ sequences rapidly to test:
+- Buffer management under load
+- No dropped events
+- Correct event ordering
+- No parsing corruption
+
+**Implementation**:
+```rust
+fn stress_test_master(pty_pair, child) {
+    // Send 100 mixed sequences as fast as possible
+    for i in 0..100 {
+        match i % 4 {
+            0 => send_keyboard_sequence(),
+            1 => send_mouse_sequence(),
+            2 => send_terminal_event(),
+            3 => send_utf8_text(),
+        }
+    }
+
+    // Verify all 100 events received correctly in order
+}
+```
+
+**Why this test**:
+- Validates buffer management under load
+- Tests async I/O performance and event ordering
+- Ensures no race conditions in parsing pipeline
+
+**Estimated time**: 30 minutes (OPTIONAL - can defer to Phase 7.1)
+
+---
+
+**Integration Test Infrastructure Updates (30 min)**
+
+**File**: `tui/src/core/ansi/vt_100_terminal_input_parser/integration_tests/mod.rs`
+
+Updates needed:
+```rust
+// Add new test modules
+#[cfg(test)]
+mod pty_keyboard_modifiers_test;
+#[cfg(test)]
+mod pty_terminal_events_test;
+#[cfg(test)]
+mod pty_mouse_events_test;
+#[cfg(test)]
+mod pty_utf8_mixed_test;
+// Optional:
+// #[cfg(test)]
+// mod pty_stress_test;
+```
+
+**Helper utilities** (add to shared module if needed):
+- `verify_keyboard_event()` - Parse and compare keyboard events
+- `verify_mouse_event()` - Parse and compare mouse events
+- `verify_terminal_event()` - Parse and compare terminal events
+- Timeout constants (standardize wait times across tests)
+
+---
+
+###### Phase 7.0.4 Summary
+
+**Total PTY Integration Tests**: 4 required + 1 optional
+
+| Test | Focus | Sequences | Time | Priority |
+|------|-------|-----------|------|----------|
+| `pty_keyboard_modifiers_test.rs` | Modifiers (7.0.2) | 6 | 30m | 🔴 CRITICAL |
+| `pty_terminal_events_test.rs` | Terminal events (7.0.1) | 5 | 45m | 🔴 CRITICAL |
+| `pty_mouse_events_test.rs` | Mouse protocols | 8 | 45m | 🟡 HIGH |
+| `pty_utf8_mixed_test.rs` | UTF-8 + mixed | 5 | 30m | 🟡 HIGH |
+| `pty_stress_test.rs` | Load testing | 100+ | 30m | 🟢 OPTIONAL |
+
+**Estimated time**: 2-3 hours (150-180 min for 4 tests, 210 min with stress test)
+
+**Success Criteria**:
+- [ ] All PTY tests pass on Linux
+- [ ] Each test runs in < 5 seconds (fast feedback)
+- [ ] Tests can run in parallel (isolated PTY pairs)
+- [ ] Clear failure messages identify exact sequence/event that failed
+- [ ] Real terminal validation for all parsers
+
+---
+
+##### Phase 7.0 Final Summary
+
+**Total Estimated Time**: 6-8 hours
+
+**Implementation Strategy**:
+
+**Day 1 (4-5 hours)**: Core fixes
+1. Fix generator bug (7.0.2) - 30-45 min ← **DO THIS FIRST**
+2. Implement terminal events (7.0.1) - 2 hours
+3. DirectToAnsiInputDevice unit tests (7.0.3) - 1-1.5 hours
+
+**Day 2 (2-3 hours)**: PTY integration validation
+4. PTY keyboard modifiers test (7.0.4.1) - 30 min
+5. PTY terminal events test (7.0.4.2) - 45 min
+6. PTY mouse events test (7.0.4.3) - 45 min
+7. PTY UTF-8 mixed test (7.0.4.4) - 30 min
+8. Final validation - 15-30 min
+
+**Completion Gate - ALL must be true**:
+- [ ] Terminal events fully implemented (11+ unit tests passing)
+- [ ] Generator bug fixed (modifier tests passing, round-trip validated)
+- [ ] DirectToAnsiInputDevice has test coverage (10+ unit tests passing)
+- [ ] **PTY integration tests validate all parsers** (4 tests passing, real terminal)
 - [ ] All 2400+ tests passing
 - [ ] No CRITICAL clippy warnings
-- **THEN PROCEED TO PHASE 7.1**
+- [ ] **GATE**: All criteria met → **PROCEED TO PHASE 7.1**
+
+**Key Benefits of This Approach**:
+1. ✅ Real Terminal Validation: PTY tests catch issues unit tests miss
+2. ✅ Fast Feedback: Each PTY test runs in < 5 seconds
+3. ✅ Parallel Execution: Tests use isolated PTY pairs (no conflicts)
+4. ✅ Comprehensive Coverage: Every parser validated end-to-end
+5. ✅ Regression Protection: Future changes caught by integration tests
+6. ✅ Clear Failures: Tests identify exact sequence/event that broke
 
 ---
 
-### 🟢 Phase 7.1: PTY Integration Tests (4-6 hours) - Starts after Phase 7.0 complete
+##### 🟢 Phase 7.1: PTY Integration Tests (4-6 hours) - Starts after Phase 7.0 complete
 
 **Objective**: Comprehensive validation of DirectToAnsi InputDevice with real PTY environment
 

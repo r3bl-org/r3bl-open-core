@@ -27,12 +27,8 @@ use crate::{ColIndex, InlineString, Pos, RowHeight, TuiColor, TuiStyle};
 ///
 /// # Usage
 ///
-/// ```ignore
-/// use r3bl_tui::{RenderOpIR, RenderOpCommonExt, Pos};
-///
-/// // Instead of: RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))
-/// let op = RenderOpIR::move_cursor(pos);
-/// ```
+/// Instead of `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))`,
+/// use the ergonomic helper method: `RenderOpIR::move_cursor(pos)`.
 pub trait RenderOpCommonExt: Sized {
     /// Convert a common operation into this specific type (IR or Output).
     fn from_common(common: RenderOpCommon) -> Self;

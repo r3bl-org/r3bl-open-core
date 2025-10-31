@@ -85,35 +85,6 @@
 /// - Get a writer: `pty_pair.master.take_writer()`
 /// - Wait for child: `child.wait()`
 ///
-/// # Example
-///
-/// ```ignore
-/// generate_pty_test! {
-///     /// My test documentation.
-///     test_fn: test_my_feature,
-///     slave: my_slave_fn,
-///     master: my_master_fn
-/// }
-///
-/// fn my_slave_fn() -> ! {
-///     println!("SLAVE_STARTING");
-///     // ... test operations ...
-///     std::process::exit(0);
-/// }
-///
-/// fn my_master_fn(
-///     pty_pair: portable_pty::PtyPair,
-///     mut child: Box<dyn portable_pty::Child + Send + Sync>
-/// ) {
-///     // Macro has already created PTY and spawned slave
-///     // You just handle verification logic
-///     let reader = pty_pair.master.try_clone_reader().unwrap();
-///     let mut writer = pty_pair.master.take_writer().unwrap();  // If needed
-///
-///     // Your verification logic...
-///     child.wait().unwrap();
-/// }
-/// ```
 ///
 /// # Examples of code using this macro
 ///

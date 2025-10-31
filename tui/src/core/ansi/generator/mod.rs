@@ -11,16 +11,6 @@
 //! - [`EscSequence`] - ESC (Escape) sequence builder for cursor and terminal control
 //! - [`DsrSequence`] - DSR (Device Status Report) response builder
 //! - [`CliTextInline`] - Styled text for CLI output
-//!
-//! ## Usage
-//!
-//! ```ignore
-//! use crate::{SgrCode, EscSequence, DsrSequence, CliTextInline};
-//!
-//! let styled = CliTextInline::new("Hello", vec![SgrCode::Bold]);
-//! let esc = EscSequence::SaveCursor;
-//! println!("{}", styled);
-//! ```
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356

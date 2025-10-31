@@ -102,30 +102,6 @@
 //! This module's parser ([`vt_100_pty_output_parser`])
 //! converts these escape sequence bytes into structured events the application can handle.
 //!
-//! ## Usage Examples
-//!
-//! ### Styling Text for Output
-//! ```ignore
-//! use r3bl_tui::{SgrCode, CliTextInline};
-//!
-//! let styled = CliTextInline::new("Hello", vec![SgrCode::Bold]);
-//! println!("{}", styled);
-//! ```
-//!
-//! ### Parsing ANSI Sequences
-//! ```ignore
-//! use r3bl_tui::CsiSequence;
-//!
-//! let sequence = CsiSequence::cursor_position_report(10, 5);
-//! ```
-//!
-//! ### Color Conversions
-//! ```ignore
-//! use r3bl_tui::{RgbValue, AnsiValue};
-//!
-//! let rgb = RgbValue { r: 255, g: 128, b: 64 };
-//! let ansi = rgb.to_ansi();  // Convert to nearest ANSI color
-//! ```
 //!
 //! ## Key Types and Public API
 //!
