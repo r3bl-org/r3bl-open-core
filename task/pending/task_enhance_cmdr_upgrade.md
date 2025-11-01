@@ -2,29 +2,20 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Task: Enhance cmdr Upgrade with PTY spawn_read_only and OSC Progress](#task-enhance-cmdr-upgrade-with-pty-spawn_read_only-and-osc-progress)
-  - [Summary](#summary)
+  - [Overview](#overview)
   - [Current Analysis](#current-analysis)
     - [Current Implementation](#current-implementation)
     - [Key Components](#key-components)
-  - [Implementation Plan](#implementation-plan)
-    - [Phase 1: Make Spinner interval_message Updatable](#phase-1-make-spinner-interval_message-updatable)
-      - [1.1 Modify Spinner struct](#11-modify-spinner-struct)
-      - [1.2 Add type alias for clarity](#12-add-type-alias-for-clarity)
-      - [1.3 Add update method to Spinner](#13-add-update-method-to-spinner)
-      - [1.4 Update Spinner initialization](#14-update-spinner-initialization)
-    - [Phase 2: Integrate PTY in upgrade_check.rs](#phase-2-integrate-pty-in-upgrade_checkrs)
-      - [2.1 Update imports](#21-update-imports)
-      - [2.2 Implement dual-command execution](#22-implement-dual-command-execution)
-      - [2.3 Implement rustup update (use spinner, but not progress reporting)](#23-implement-rustup-update-use-spinner-but-not-progress-reporting)
-      - [2.4 Implement cargo install with progress](#24-implement-cargo-install-with-progress)
-      - [2.5 Handle OSC progress events](#25-handle-osc-progress-events)
-    - [Phase 3: Update UI Messages](#phase-3-update-ui-messages)
+- [Implementation plan](#implementation-plan)
+  - [Step 1: Make Spinner interval_message Updatable [COMPLETE] Make Spinner interval_message Updatable](#step-1-make-spinner-interval_message-updatable-complete-make-spinner-interval_message-updatable)
+  - [Step 2: Integrate PTY in upgrade_check.rs [COMPLETE] Integrate PTY in upgrade_check.rs](#step-2-integrate-pty-in-upgrade_checkrs-complete-integrate-pty-in-upgrade_checkrs)
+  - [Step 3: Update UI Messages [COMPLETE] Update UI Messages](#step-3-update-ui-messages-complete-update-ui-messages)
   - [Benefits of This Approach](#benefits-of-this-approach)
   - [Testing Plan](#testing-plan)
   - [Rollback Plan](#rollback-plan)
   - [Success Criteria](#success-criteria)
   - [Implementation Progress (Phase 2 & 3)](#implementation-progress-phase-2--3)
-  - [Implementation Complete ✅](#implementation-complete-)
+  - [Implementation Complete [COMPLETE]](#implementation-complete-complete)
     - [Key Features Implemented:](#key-features-implemented)
   - [Implementation Details and Challenges](#implementation-details-and-challenges)
     - [Error Type Conversions](#error-type-conversions)
@@ -36,7 +27,7 @@
 
 # Task: Enhance cmdr Upgrade with PTY spawn_read_only and OSC Progress
 
-## Summary
+## Overview
 
 Integrate the PTY `spawn_read_only` API into the `install_upgrade_command_with_spinner_and_ctrl_c()`
 function to handle OSC progress codes and run commands with better control. The key insight is to
@@ -65,9 +56,9 @@ percentages.
    - `PtyOutputEvent` enum includes `Osc(OscEvent)` for progress
    - `OscEvent::ProgressUpdate(u8)` provides 0-100% progress values
 
-## Implementation Plan
+# Implementation plan
 
-### Phase 1: Make Spinner interval_message Updatable
+## Step 1: Make Spinner interval_message Updatable [COMPLETE] Make Spinner interval_message Updatable
 
 #### 1.1 Modify Spinner struct
 
@@ -116,7 +107,7 @@ impl Spinner {
 - Clone the Arc for the spawned task
 - In the render loop, lock and read the current message value
 
-### Phase 2: Integrate PTY in upgrade_check.rs
+## Step 2: Integrate PTY in upgrade_check.rs [COMPLETE] Integrate PTY in upgrade_check.rs
 
 #### 2.1 Update imports
 
@@ -312,7 +303,7 @@ fn handle_osc_event(event: OscEvent, crate_name: &str, spinner: Option<&Spinner>
 }
 ```
 
-### Phase 3: Update UI Messages
+## Step 3: Update UI Messages [COMPLETE] Update UI Messages
 
 Add new messages in `ui_str.rs`:
 
@@ -398,7 +389,7 @@ If issues arise:
 - [x] Phase 3: Add new UI messages in ui_str.rs
 - [x] Test the implementation (cargo check and cargo clippy passed)
 
-## Implementation Complete ✅
+## Implementation Complete [COMPLETE]
 
 Phase 2 and Phase 3 have been successfully implemented. The upgrade process now:
 

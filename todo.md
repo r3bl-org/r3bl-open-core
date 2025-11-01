@@ -23,19 +23,19 @@
       actually:
       `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
 
-- [⌛] use [`task_remove_crossterm`](task/task_remove_crossterm.md) to remove crossterm from the
-  `r3bl_open_core` codebase
-
 - [⌛] use [`task_refactor_input_device`](task/task_refactor_input_device.md) to refactor
   `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
 
-- [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to unify
-      `CliText` and `TuiStyledText` rendering paths
+- [⌛] use [`task_remove_crossterm`](task/task_remove_crossterm.md) to remove crossterm from the
+  `r3bl_open_core` codebase
 
-- [ ] use [`task_render_path_2_add_ofs_buf`](task/pending/task_render_path_2_add_ofs_buf.md) to add use
-      `OffscreenBuffer` to radically simplify hybrid / partial TUI codepaths! This paves the way for
-      having each Component paint into its own OffscreenBuffer, and then composing them together for
-      automatic scrolling and z-index handling
+- [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to
+      unify `CliText` and `TuiStyledText` rendering paths
+
+- [ ] use [`task_render_path_2_add_ofs_buf`](task/pending/task_render_path_2_add_ofs_buf.md) to add
+      use `OffscreenBuffer` to radically simplify hybrid / partial TUI codepaths! This paves the way
+      for having each Component paint into its own OffscreenBuffer, and then composing them together
+      for automatic scrolling and z-index handling
 
 # optimize offscreen buffer
 
@@ -97,15 +97,15 @@
 
 # consider replacing syntect
 
-- [ ] use [`task_syntect_improve`](task/pending/task_syntect_improve.md) to add support for TypeScript,
-      TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom `.sublime-syntax` files
-      to syntect
+- [ ] use [`task_syntect_improve`](task/pending/task_syntect_improve.md) to add support for
+      TypeScript, TOML, SCSS, Kotlin, Swift, and Dockerfile languages by adding custom
+      `.sublime-syntax` files to syntect
 
 # rewrite textwrap
 
-- [ ] use [`task_textwrap_rewrite`](task/pending/task_textwrap_rewrite.md) to rewrite `textwrap` crate for
-      better unicode performance. this could be used in `edi` as well, for wrap & TOC create/update
-      on save.
+- [ ] use [`task_textwrap_rewrite`](task/pending/task_textwrap_rewrite.md) to rewrite `textwrap`
+      crate for better unicode performance. this could be used in `edi` as well, for wrap & TOC
+      create/update on save.
 
 # markdown parser enhancements
 

@@ -1,95 +1,170 @@
 # Build Tools Infrastructure Plan
 
-**Date:** October 18, 2025
-**Status:** Planning Phase
-**Decision:** Rust Implementation with TUI
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
----
+- [Overview](#overview)
+  - [Task Description](#task-description)
+  - [Current State](#current-state)
+    - [Technical Issues](#technical-issues)
+  - [Goals](#goals)
+- [Implementation plan](#implementation-plan)
+  - [Decision Analysis & Rationale](#decision-analysis--rationale)
+    - [Options Considered](#options-considered)
+      - [Option 1: Python Rewrite](#option-1-python-rewrite)
+      - [Option 2: Rust Rewrite [COMPLETE] **SELECTED**](#option-2-rust-rewrite--selected)
+  - [Game-Changing Factors](#game-changing-factors)
+    - [1. Team is Rust Experts](#1-team-is-rust-experts)
+    - [2. TUI Dogfooding = Product Development](#2-tui-dogfooding--product-development)
+    - [3. Open Source Product Potential](#3-open-source-product-potential)
+    - [4. Infrastructure Already Prepared](#4-infrastructure-already-prepared)
+  - [Architecture](#architecture)
+    - [Project Structure](#project-structure)
+    - [Dependency Stack](#dependency-stack)
+  - [Solving the Chicken-Egg Problem](#solving-the-chicken-egg-problem)
+    - [Option A: Bootstrap Script [COMPLETE] **RECOMMENDED**](#option-a-bootstrap-script--recommended)
+    - [Option B: Checked-In Pre-Built Binaries](#option-b-checked-in-pre-built-binaries)
+    - [Option C: `cargo-xtask` Pattern](#option-c-cargo-xtask-pattern)
+  - [Step 0: Proof of Concept [PENDING]](#step-0-proof-of-concept-pending)
+  - [Step 1: Feature Parity [PENDING]](#step-1-feature-parity-pending)
+  - [Step 2: TUI Excellence [PENDING]](#step-2-tui-excellence-pending)
+  - [Step 3: Open Source Product [PENDING]](#step-3-open-source-product-pending)
+  - [Command Migration Map](#command-migration-map)
+    - [From `run.fish` → `r3bl-build`](#from-runfish-%E2%86%92-r3bl-build)
+  - [Example TUI Implementations](#example-tui-implementations)
+    - [1. Interactive Example Picker](#1-interactive-example-picker)
+    - [2. Multi-Pane Dashboard](#2-multi-pane-dashboard)
+    - [3. Log Viewer with Filtering](#3-log-viewer-with-filtering)
+  - [Future `cargo-xtask-tui` API](#future-cargo-xtask-tui-api)
+  - [Testing Strategy](#testing-strategy)
+    - [Unit Tests](#unit-tests)
+    - [Integration Tests](#integration-tests)
+    - [TUI Testing](#tui-testing)
+  - [Migration Timeline](#migration-timeline)
+    - [Week 1: POC](#week-1-poc)
+    - [Week 2: Feature Parity](#week-2-feature-parity)
+    - [Week 3: TUI Excellence](#week-3-tui-excellence)
+    - [Weeks 4-5: Product Extraction](#weeks-4-5-product-extraction)
+    - [Week 6: Launch](#week-6-launch)
+  - [Success Metrics](#success-metrics)
+    - [Technical](#technical)
+    - [User Experience](#user-experience)
+    - [Product](#product)
+  - [Risks and Mitigations](#risks-and-mitigations)
+    - [Risk 1: TUI complexity slows development](#risk-1-tui-complexity-slows-development)
+    - [Risk 2: pty_mux not mature enough](#risk-2-pty_mux-not-mature-enough)
+    - [Risk 3: Team resistance to new tool](#risk-3-team-resistance-to-new-tool)
+    - [Risk 4: Bootstrap script too complex](#risk-4-bootstrap-script-too-complex)
+    - [Risk 5: Product extraction takes too long](#risk-5-product-extraction-takes-too-long)
+  - [Open Questions](#open-questions)
+  - [Next Steps](#next-steps)
+  - [References](#references)
+  - [Conclusion](#conclusion)
 
-## Executive Summary
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-This document outlines the plan to rewrite the complex Fish shell scripts (`run.fish`, `script_lib.fish`, `rust-toolchain-*.fish`) into a Rust-based build tool called `r3bl-build`. This decision is driven by:
+# Overview
 
-1. **Expertise Alignment:** Team is Rust experts, not Python experts
-2. **Dogfooding Opportunity:** Stress-test and showcase the `r3bl_tui` crate
-3. **Product Potential:** Extract generic components into open-source `cargo-xtask-tui` product
-4. **Better Tooling:** Superior IDE support and testability compared to Fish
+## Task Description
 
----
+Rewrite the complex Fish shell scripts (`run.fish`, `script_lib.fish`, `rust-toolchain-*.fish`) into
+a Rust-based build tool called `r3bl-build`. This decision is driven by team expertise alignment,
+the opportunity to stress-test and showcase `r3bl_tui`, and the potential to extract generic
+components into an open-source product.
 
-## Current Pain Points
+## Current State
 
-### Script Complexity
+The project currently uses complex Fish shell scripts that are difficult to maintain and test:
+
 - **`script_lib.fish`**: ~960 lines with complex toolchain management, Docker operations, profiling
 - **`run.fish`**: ~950 lines with 30+ commands covering builds, tests, docs, examples, deployment
 - **`rust-toolchain-*.fish`**: Multiple specialized scripts for toolchain synchronization
 
 ### Technical Issues
-- ❌ Poor IDE support for Fish shell
-- ❌ Limited testing frameworks
-- ❌ Verbose error handling
-- ❌ Difficult to maintain and extend
-- ❌ No type safety
 
----
+- [BLOCKED] Poor IDE support for Fish shell
+- [BLOCKED] Limited testing frameworks
+- [BLOCKED] Verbose error handling
+- [BLOCKED] Difficult to maintain and extend
+- [BLOCKED] No type safety
 
-## Decision Analysis
+## Goals
+
+1. Rewrite build scripts in Rust for better maintainability and testability
+2. Create feature parity with existing Fish scripts
+3. Build delightful TUI experiences for developer tools
+4. Establish proof-of-concept for `cargo-xtask-tui` open-source product
+5. Stress-test and showcase the `r3bl_tui` crate capabilities
+6. Reduce build script complexity and improve IDE support
+
+# Implementation plan
+
+## Decision Analysis & Rationale
 
 ### Options Considered
 
 #### Option 1: Python Rewrite
+
 **Pros:**
-- ✅ Excellent IDE support (PyCharm, VS Code with mypy, ruff)
-- ✅ Rich testing with pytest
-- ✅ Rapid iteration (no compilation)
-- ✅ Type hints with mypy
-- ✅ Rich CLI libraries (typer, click, rich)
+
+- [COMPLETE] Excellent IDE support (PyCharm, VS Code with mypy, ruff)
+- [COMPLETE] Rich testing with pytest
+- [COMPLETE] Rapid iteration (no compilation)
+- [COMPLETE] Type hints with mypy
+- [COMPLETE] Rich CLI libraries (typer, click, rich)
 
 **Cons:**
-- ❌ Runtime dependency (Python 3.11+)
-- ❌ Team lacks Python expertise
-- ❌ Not dogfooding (Python for Rust project feels inconsistent)
-- ❌ Cannot leverage TUI crate
-- ❌ No product potential
 
-**Effort:** 🟡 MEDIUM (1-1.5 weeks)
+- [BLOCKED] Runtime dependency (Python 3.11+)
+- [BLOCKED] Team lacks Python expertise
+- [BLOCKED] Not dogfooding (Python for Rust project feels inconsistent)
+- [BLOCKED] Cannot leverage TUI crate
+- [BLOCKED] No product potential
+
+**Effort:** [PENDING] MEDIUM (1-1.5 weeks)
 
 ---
 
-#### Option 2: Rust Rewrite ✅ **SELECTED**
+#### Option 2: Rust Rewrite [COMPLETE] **SELECTED**
+
 **Pros:**
-- ✅ **Team Expertise:** Rust experts can write idiomatic, high-quality code
-- ✅ **TUI Dogfooding:** Stress-test `r3bl_tui` crate with real-world complexity
-- ✅ **Product Potential:** Can extract `cargo-xtask-tui` as open-source product
-- ✅ **Existing Infrastructure:** `script/` module and `pty_mux` already prepared
-- ✅ **Type Safety:** Compile-time error catching
-- ✅ **Excellent Testing:** Full unit/integration test support
-- ✅ **Great IDE Support:** rust-analyzer provides amazing tooling
-- ✅ **Binary Distribution:** Single binary, no runtime dependencies
-- ✅ **Workspace Integration:** Can directly use types/code from other crates
+
+- [COMPLETE] **Team Expertise:** Rust experts can write idiomatic, high-quality code
+- [COMPLETE] **TUI Dogfooding:** Stress-test `r3bl_tui` crate with real-world complexity
+- [COMPLETE] **Product Potential:** Can extract `cargo-xtask-tui` as open-source product
+- [COMPLETE] **Existing Infrastructure:** `script/` module and `pty_mux` already prepared
+- [COMPLETE] **Type Safety:** Compile-time error catching
+- [COMPLETE] **Excellent Testing:** Full unit/integration test support
+- [COMPLETE] **Great IDE Support:** rust-analyzer provides amazing tooling
+- [COMPLETE] **Binary Distribution:** Single binary, no runtime dependencies
+- [COMPLETE] **Workspace Integration:** Can directly use types/code from other crates
 
 **Cons:**
-- ❌ Chicken-egg complexity (solvable via bootstrap script)
-- ❌ Compilation time for changes
-- ❌ Higher initial effort
 
-**Effort:** 🔴 HIGH (2-3 weeks initially, but with long-term ROI)
+- [BLOCKED] Chicken-egg complexity (solvable via bootstrap script)
+- [BLOCKED] Compilation time for changes
+- [BLOCKED] Higher initial effort
+
+**Effort:** [BLOCKED] HIGH (2-3 weeks initially, but with long-term ROI)
 
 ---
 
 ## Game-Changing Factors
 
 ### 1. Team is Rust Experts
+
 - No need to learn Python while rewriting complex tooling
 - Can leverage expertise for better error handling, type design, async patterns
 - Write idiomatic code from day 1
 
 ### 2. TUI Dogfooding = Product Development
+
 This transforms the project from "script replacement" to "product development":
-- ✅ **Stress-test** the TUI crate with real-world complexity
-- ✅ **Create a showcase** for potential users
-- ✅ **Discover pain points** in the API before users do
-- ✅ **Build a reference implementation** demonstrating best practices
+
+- [COMPLETE] **Stress-test** the TUI crate with real-world complexity
+- [COMPLETE] **Create a showcase** for potential users
+- [COMPLETE] **Discover pain points** in the API before users do
+- [COMPLETE] **Build a reference implementation** demonstrating best practices
 
 **Example TUI Use Cases:**
 
@@ -119,6 +194,7 @@ $ r3bl-build run-examples
 ### 3. Open Source Product Potential
 
 **Competitive Analysis:**
+
 - [`cargo-xtask`](https://github.com/matklad/cargo-xtask) - Simple, no TUI
 - [`cargo-make`](https://github.com/sagiegurari/cargo-make) - TOML-based, no TUI
 - [`just`](https://github.com/casey/just) - Make-like, no TUI
@@ -130,10 +206,12 @@ Can extract generic parts into `cargo-xtask-tui` crate - **first to market** wit
 ### 4. Infrastructure Already Prepared
 
 Existing modules built in preparation:
-- ✅ **`script/` module:** Subprocess management, shell execution
-- ✅ **`pty_mux`:** Multiplexed PTY handling for parallel tasks
+
+- [COMPLETE] **`script/` module:** Subprocess management, shell execution
+- [COMPLETE] **`pty_mux`:** Multiplexed PTY handling for parallel tasks
 
 **Example Usage:**
+
 ```rust
 use r3bl_tui::pty_mux::PtySession;
 use r3bl_tui::script::CommandBuilder;
@@ -245,15 +323,17 @@ tempfile = "3"              # Temporary directories
 
 ## Solving the Chicken-Egg Problem
 
-### Option A: Bootstrap Script ✅ **RECOMMENDED**
+### Option A: Bootstrap Script [COMPLETE] **RECOMMENDED**
 
 Keep a minimal `bootstrap.fish` that ONLY:
+
 1. Checks if `r3bl-build` binary exists
 2. If not: `cargo build --release --package build-infra-tools`
 3. Copies binary to `./bin/r3bl-build`
 4. All future operations use `./bin/r3bl-build`
 
 **Implementation:**
+
 ```fish
 #!/usr/bin/env fish
 # bootstrap.fish - ONLY builds the build tool
@@ -269,6 +349,7 @@ end
 ```
 
 **Usage:**
+
 ```bash
 # First time (or after changes to build-infra-tools)
 ./bootstrap.fish install-cargo-tools
@@ -290,15 +371,18 @@ bin/
 ```
 
 **Usage:**
+
 ```bash
 ./bin/r3bl-build-$(uname -m)-$(uname -s | tr '[:upper:]' '[:lower:]') all
 ```
 
 **Pros:**
+
 - No bootstrap needed
 - Instant execution
 
 **Cons:**
+
 - Must maintain binaries for multiple platforms
 - Large binary sizes in git (consider Git LFS)
 - Unusual pattern (though `rustc` itself uses this)
@@ -315,32 +399,36 @@ xtask/          # Not in workspace, separate Cargo.toml
 ```
 
 **Usage:**
+
 ```bash
 cargo xtask install-cargo-tools
 cargo xtask dev-dashboard
 ```
 
 **Pros:**
+
 - Idiomatic Rust pattern
 - Used by rust-analyzer, tokio, etc.
 - No bootstrap script needed
 
 **Cons:**
+
 - Separate from workspace
 - Harder to share code with main crates
 
 **Precedents:**
+
 - [rust-analyzer](https://github.com/rust-lang/rust-analyzer/tree/master/xtask)
 - [tokio](https://github.com/tokio-rs/tokio/tree/master/xtask)
 
 ---
 
-## Implementation Phases
+## Step 0: Proof of Concept [PENDING]
 
-### Phase 1: Proof of Concept (1 week)
 **Goal:** Validate approach and TUI integration
 
 **Tasks:**
+
 - [ ] Set up `build-infra-tools` crate structure
 - [ ] Implement basic CLI with `clap`
 - [ ] Port 3-5 critical commands:
@@ -354,16 +442,19 @@ cargo xtask dev-dashboard
 - [ ] Write basic integration tests
 
 **Success Criteria:**
+
 - Fish → Rust parity for core commands
 - One delightful TUI experience working
 - Can build and run via bootstrap script
 
 ---
 
-### Phase 2: Feature Parity (1 week)
+## Step 1: Feature Parity [PENDING]
+
 **Goal:** Complete migration from Fish scripts
 
 **Tasks:**
+
 - [ ] Port remaining 25+ commands from `run.fish`
 - [ ] Port utility functions from `script_lib.fish`
 - [ ] Implement toolchain management commands
@@ -375,16 +466,19 @@ cargo xtask dev-dashboard
 - [ ] Documentation for all commands
 
 **Success Criteria:**
+
 - Complete feature parity with Fish scripts
 - All tests passing
 - Can deprecate Fish scripts
 
 ---
 
-### Phase 3: TUI Excellence (1 week)
+## Step 2: TUI Excellence [PENDING]
+
 **Goal:** Create delightful user experiences
 
 **Tasks:**
+
 - [ ] **Dev Dashboard** using `pty_mux`:
   - [ ] 4-pane layout (nextest, clippy, docs, health check)
   - [ ] Real-time output streaming
@@ -409,16 +503,19 @@ cargo xtask dev-dashboard
   - [ ] Favorites/bookmarks
 
 **Success Criteria:**
+
 - TUI features are more delightful than CLI equivalents
 - No regressions in functionality
 - Positive user feedback (internal team testing)
 
 ---
 
-### Phase 4: Open Source Product (2-4 weeks)
+## Step 3: Open Source Product [PENDING]
+
 **Goal:** Extract and publish reusable components
 
 **Tasks:**
+
 - [ ] Identify generic vs project-specific code
 - [ ] Extract to `cargo-xtask-tui` crate:
   - [ ] Core abstractions for task definitions
@@ -441,6 +538,7 @@ cargo xtask dev-dashboard
   - [ ] HN launch post
 
 **Success Criteria:**
+
 - Published to crates.io
 - Positive community reception
 - At least 2-3 external projects using it
@@ -451,34 +549,34 @@ cargo xtask dev-dashboard
 
 ### From `run.fish` → `r3bl-build`
 
-| Fish Command | Rust Command | Priority | Complexity |
-|--------------|--------------|----------|------------|
-| `all` | `r3bl-build all` | P0 | Medium |
-| `build` | `r3bl-build build` | P0 | Low |
-| `test_workspace` | `r3bl-build test` | P0 | Low |
-| `clippy` | `r3bl-build clippy` | P0 | Medium |
-| `docs` | `r3bl-build docs` | P0 | Low |
-| `install-cargo-tools` | `r3bl-build install-tools` | P0 | High |
-| `toolchain-update` | `r3bl-build toolchain update` | P0 | High |
-| `toolchain-sync` | `r3bl-build toolchain sync` | P0 | High |
-| `toolchain-validate` | `r3bl-build toolchain validate` | P0 | Medium |
-| `run-examples` | `r3bl-build examples run` (TUI) | P1 | High |
-| `run-binaries` | `r3bl-build binaries run` (TUI) | P1 | Medium |
-| `dev-dashboard` | `r3bl-build dashboard` (TUI) | P1 | High |
-| `log` | `r3bl-build log` (TUI) | P1 | Medium |
-| `watch-all-tests` | `r3bl-build watch tests` | P2 | Medium |
-| `watch-clippy` | `r3bl-build watch clippy` | P2 | Medium |
-| `watch-check` | `r3bl-build watch check` | P2 | Medium |
-| `bench` | `r3bl-build bench` | P2 | Low |
-| `run-examples-flamegraph-svg` | `r3bl-build flamegraph svg` | P2 | High |
-| `run-examples-flamegraph-fold` | `r3bl-build flamegraph fold` | P2 | High |
-| `docker-build` | `r3bl-build docker build` | P2 | Medium |
-| `build-server` | `r3bl-build sync` | P3 | Medium |
-| `upgrade-deps` | `r3bl-build upgrade-deps` | P3 | Low |
-| `audit-deps` | `r3bl-build audit` | P3 | Low |
-| `unmaintained-deps` | `r3bl-build unmaintained` | P3 | Low |
-| `rustfmt` | `r3bl-build fmt` | P3 | Low |
-| `serve-docs` | `r3bl-build docs serve` | P3 | Low |
+| Fish Command                   | Rust Command                    | Priority | Complexity |
+| ------------------------------ | ------------------------------- | -------- | ---------- |
+| `all`                          | `r3bl-build all`                | P0       | Medium     |
+| `build`                        | `r3bl-build build`              | P0       | Low        |
+| `test_workspace`               | `r3bl-build test`               | P0       | Low        |
+| `clippy`                       | `r3bl-build clippy`             | P0       | Medium     |
+| `docs`                         | `r3bl-build docs`               | P0       | Low        |
+| `install-cargo-tools`          | `r3bl-build install-tools`      | P0       | High       |
+| `toolchain-update`             | `r3bl-build toolchain update`   | P0       | High       |
+| `toolchain-sync`               | `r3bl-build toolchain sync`     | P0       | High       |
+| `toolchain-validate`           | `r3bl-build toolchain validate` | P0       | Medium     |
+| `run-examples`                 | `r3bl-build examples run` (TUI) | P1       | High       |
+| `run-binaries`                 | `r3bl-build binaries run` (TUI) | P1       | Medium     |
+| `dev-dashboard`                | `r3bl-build dashboard` (TUI)    | P1       | High       |
+| `log`                          | `r3bl-build log` (TUI)          | P1       | Medium     |
+| `watch-all-tests`              | `r3bl-build watch tests`        | P2       | Medium     |
+| `watch-clippy`                 | `r3bl-build watch clippy`       | P2       | Medium     |
+| `watch-check`                  | `r3bl-build watch check`        | P2       | Medium     |
+| `bench`                        | `r3bl-build bench`              | P2       | Low        |
+| `run-examples-flamegraph-svg`  | `r3bl-build flamegraph svg`     | P2       | High       |
+| `run-examples-flamegraph-fold` | `r3bl-build flamegraph fold`    | P2       | High       |
+| `docker-build`                 | `r3bl-build docker build`       | P2       | Medium     |
+| `build-server`                 | `r3bl-build sync`               | P3       | Medium     |
+| `upgrade-deps`                 | `r3bl-build upgrade-deps`       | P3       | Low        |
+| `audit-deps`                   | `r3bl-build audit`              | P3       | Low        |
+| `unmaintained-deps`            | `r3bl-build unmaintained`       | P3       | Low        |
+| `rustfmt`                      | `r3bl-build fmt`                | P3       | Low        |
+| `serve-docs`                   | `r3bl-build docs serve`         | P3       | Low        |
 
 ---
 
@@ -652,20 +750,22 @@ async fn main() -> Result<()> {
 ```
 
 **Features to provide:**
-- ✅ Example picker component
-- ✅ Log viewer component
-- ✅ Multi-pane dashboard with `pty_mux`
-- ✅ Progress indicators and spinners
-- ✅ Fuzzy search utilities
-- ✅ File watching utilities
-- ✅ Process management utilities
-- ✅ Common command patterns (cargo, rustup, etc.)
+
+- [COMPLETE] Example picker component
+- [COMPLETE] Log viewer component
+- [COMPLETE] Multi-pane dashboard with `pty_mux`
+- [COMPLETE] Progress indicators and spinners
+- [COMPLETE] Fuzzy search utilities
+- [COMPLETE] File watching utilities
+- [COMPLETE] Process management utilities
+- [COMPLETE] Common command patterns (cargo, rustup, etc.)
 
 ---
 
 ## Testing Strategy
 
 ### Unit Tests
+
 ```rust
 #[cfg(test)]
 mod tests {
@@ -688,6 +788,7 @@ mod tests {
 ```
 
 ### Integration Tests
+
 ```rust
 use assert_cmd::Command;
 use predicates::prelude::*;
@@ -713,6 +814,7 @@ fn test_toolchain_validate() {
 ```
 
 ### TUI Testing
+
 ```rust
 // Mock terminal for TUI testing
 #[test]
@@ -735,30 +837,35 @@ fn test_example_picker_navigation() {
 ## Migration Timeline
 
 ### Week 1: POC
+
 - Days 1-2: Project setup, bootstrap script
 - Days 3-4: Port core commands (build, test, clippy)
 - Day 5: Build example picker TUI
 - Weekend: Testing and refinement
 
 ### Week 2: Feature Parity
+
 - Days 1-2: Port toolchain management
 - Days 3-4: Port remaining commands
 - Day 5: Comprehensive testing
 - Weekend: Documentation
 
 ### Week 3: TUI Excellence
+
 - Days 1-2: Multi-pane dashboard
 - Days 3-4: Log viewer and command palette
 - Day 5: Polish and bug fixes
 - Weekend: User testing (internal team)
 
 ### Weeks 4-5: Product Extraction
+
 - Days 1-3: Identify and extract generic code
 - Days 4-7: Create cargo-xtask-tui crate
 - Days 8-10: Documentation and examples
 - Weekend: Prep for launch
 
 ### Week 6: Launch
+
 - Days 1-2: Final testing
 - Day 3: Publish to crates.io
 - Days 4-5: Marketing (blog posts, Reddit, HN)
@@ -768,6 +875,7 @@ fn test_example_picker_navigation() {
 ## Success Metrics
 
 ### Technical
+
 - [ ] 100% feature parity with Fish scripts
 - [ ] All tests passing (unit + integration)
 - [ ] No performance regressions
@@ -775,12 +883,14 @@ fn test_example_picker_navigation() {
 - [ ] Compilation time < 2 minutes
 
 ### User Experience
+
 - [ ] Positive feedback from team members
 - [ ] TUI features used regularly
 - [ ] Faster than Fish equivalents (subjective)
 - [ ] No major bugs reported in first month
 
 ### Product
+
 - [ ] `cargo-xtask-tui` published to crates.io
 - [ ] 50+ GitHub stars in first month
 - [ ] 2+ external projects using it
@@ -791,18 +901,23 @@ fn test_example_picker_navigation() {
 ## Risks and Mitigations
 
 ### Risk 1: TUI complexity slows development
+
 **Mitigation:** Phased approach - get CLI working first, add TUI incrementally
 
 ### Risk 2: pty_mux not mature enough
+
 **Mitigation:** This is actually a benefit - we'll discover issues and fix them
 
 ### Risk 3: Team resistance to new tool
+
 **Mitigation:** Keep Fish scripts during transition, allow parallel usage
 
 ### Risk 4: Bootstrap script too complex
+
 **Mitigation:** Keep it minimal - just build and copy binary
 
 ### Risk 5: Product extraction takes too long
+
 **Mitigation:** Phase 4 is optional - we get value even if we don't extract
 
 ---
@@ -842,9 +957,10 @@ fn test_example_picker_navigation() {
 ## Conclusion
 
 This is an opportunity to:
+
 1. **Solve a real problem:** Complex Fish scripts are unmaintainable
 2. **Dogfood our technology:** Stress-test and showcase `r3bl_tui`
 3. **Create value:** Build something genuinely useful for the Rust community
 4. **Demonstrate expertise:** Show what's possible with Rust TUI
 
-**Let's build this.** 🚀
+**Let's build this.** [COMPLETE]

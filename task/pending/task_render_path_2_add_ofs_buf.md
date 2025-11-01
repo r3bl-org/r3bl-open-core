@@ -1,8 +1,79 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Task: Add Viewport-Only OffscreenBuffer Mode for Path 2 Architectural Unification](#task-add-viewport-only-offscreenbuffer-mode-for-path-2-architectural-unification)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Executive Summary](#executive-summary)
+    - [The Problem](#the-problem)
+    - [The Solution](#the-solution)
+    - [Key Benefits](#key-benefits)
+    - [Timeline & Complexity](#timeline--complexity)
+  - [Current State Analysis](#current-state-analysis)
+    - [Path 1: Full-Terminal OffscreenBuffer (Existing)](#path-1-full-terminal-offscreenbuffer-existing)
+    - [Path 2: Direct Interactive (Current)](#path-2-direct-interactive-current)
+    - [Why Unification Matters](#why-unification-matters)
+  - [Technical Design](#technical-design)
+    - [3.1 OffscreenBuffer Extension](#31-offscreenbuffer-extension)
+    - [3.2 Crossterm Command Adapter](#32-crossterm-command-adapter)
+    - [3.3 Architecture Diagrams](#33-architecture-diagrams)
+- [Implementation plan](#implementation-plan)
+  - [Step 1: Extend OffscreenBuffer [PENDING] Extend OffscreenBuffer (3-4 days)](#step-1-extend-offscreenbuffer-pending-extend-offscreenbuffer-3-4-days)
+  - [Step 2: Create Crossterm Command Adapter [PENDING] Create Crossterm Command Adapter (3-4 days)](#step-2-create-crossterm-command-adapter-pending-create-crossterm-command-adapter-3-4-days)
+  - [Step 3: Refactor SelectComponent [PENDING] Refactor SelectComponent (3-4 days)](#step-3-refactor-selectcomponent-pending-refactor-selectcomponent-3-4-days)
+  - [Step 4: Apply to Other Path 2 Components [PENDING] Apply to Other Path 2 Components (2-3 days)](#step-4-apply-to-other-path-2-components-pending-apply-to-other-path-2-components-2-3-days)
+  - [Step 5: Documentation [PENDING] Documentation (1-2 days)](#step-5-documentation-pending-documentation-1-2-days)
+  - [Detailed Code Examples](#detailed-code-examples)
+    - [Example 1: Creating a Viewport Buffer](#example-1-creating-a-viewport-buffer)
+    - [Example 2: Rendering Text to Viewport Buffer](#example-2-rendering-text-to-viewport-buffer)
+    - [Example 3: Using the Helper Macro](#example-3-using-the-helper-macro)
+    - [Example 4: Complete Component Refactor](#example-4-complete-component-refactor)
+  - [Testing Strategy](#testing-strategy)
+    - [Unit Tests](#unit-tests)
+    - [Integration Tests](#integration-tests)
+    - [Regression Tests](#regression-tests)
+    - [Component Tests](#component-tests)
+  - [Migration Guide](#migration-guide)
+    - [For Developers Converting Path 2 Components](#for-developers-converting-path-2-components)
+    - [Gotchas & Edge Cases](#gotchas--edge-cases)
+  - [Future Possibilities](#future-possibilities)
+    - [1. Automatic Scrolling](#1-automatic-scrolling)
+    - [2. Terminal Resize Handling](#2-terminal-resize-handling)
+    - [3. Optional Diffing for Viewport Mode](#3-optional-diffing-for-viewport-mode)
+    - [4. Viewport Composition](#4-viewport-composition)
+    - [5. Integration with Path 1](#5-integration-with-path-1)
+  - [Open Questions & Decisions](#open-questions--decisions)
+    - [1. Mutable Viewport Origin?](#1-mutable-viewport-origin)
+    - [2. Viewport Larger Than Terminal?](#2-viewport-larger-than-terminal)
+    - [3. Naming Convention](#3-naming-convention)
+    - [4. Should Viewport Resize Be Supported?](#4-should-viewport-resize-be-supported)
+    - [5. Performance: Full Paint vs Optional Diffing?](#5-performance-full-paint-vs-optional-diffing)
+  - [References](#references)
+    - [Code Files (Current Implementation)](#code-files-current-implementation)
+    - [Related Memory Files](#related-memory-files)
+    - [Documentation](#documentation)
+    - [External References](#external-references)
+  - [Appendix: Related Code Snippets](#appendix-related-code-snippets)
+    - [Current OffscreenBuffer Constructor (for reference)](#current-offscreenbuffer-constructor-for-reference)
+    - [Current Manual State Management (for reference)](#current-manual-state-management-for-reference)
+  - [Version History](#version-history)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Task: Add Viewport-Only OffscreenBuffer Mode for Path 2 Architectural Unification
 
-**Status:** Specification & Implementation Plan
-**Estimated Effort:** 3-4 weeks (1-2 weeks core implementation + testing + integration)
-**Priority:** Medium-High (technical debt + foundation for future features)
+## Overview
+
+This task unifies two separate architectural paths in the TUI rendering system by extending
+`OffscreenBuffer` to support a viewport-only mode. Currently, Path 1 uses a full-terminal
+`OffscreenBuffer` to accumulate render operations, then paints to the terminal, while Path 2
+performs direct immediate-mode rendering to the terminal. By introducing a viewport-sized
+`OffscreenBuffer` option, Path 2 components can use the same abstraction, eliminating code
+duplication and enabling consistent rendering behavior across both paths.
+
+**Status:** Specification & Implementation Plan **Estimated Effort:** 3-4 weeks (1-2 weeks core
+implementation + testing + integration) **Priority:** Medium-High (technical debt + foundation for
+future features)
 
 ## Table of Contents
 
@@ -25,10 +96,14 @@
 
 The R3BL TUI engine has two rendering paths:
 
-- **Path 1 (Composed)**: Full-screen TUI applications using `RenderOpsIR` → `OffscreenBuffer` → diff-based rendering
-- **Path 2 (Direct Interactive)**: Simple CLI tools using direct `crossterm` commands and manual state management
+- **Path 1 (Composed)**: Full-screen TUI applications using `RenderOpsIR` → `OffscreenBuffer` →
+  diff-based rendering
+- **Path 2 (Direct Interactive)**: Simple CLI tools using direct `crossterm` commands and manual
+  state management
 
-Path 2 components like `choose()` and `readline_async()` require extensive manual management that should be automated:
+Path 2 components like `choose()` and `readline_async()` require extensive manual management that
+should be automated:
+
 - Manual space allocation (`allocate_viewport_height_space()`)
 - Manual cursor position tracking (`move_cursor_back_to_start()`)
 - Manual height/width calculations with clamping logic
@@ -39,7 +114,8 @@ This complexity increases maintenance burden and limits features (scrolling, res
 
 ### The Solution
 
-Extend `OffscreenBuffer` to support **viewport-only mode** alongside the existing full-terminal mode. This enables:
+Extend `OffscreenBuffer` to support **viewport-only mode** alongside the existing full-terminal
+mode. This enables:
 
 - **Unified architecture**: Both Path 1 and Path 2 use the same buffer abstraction
 - **Automatic state management**: Viewport buffer handles cursor, bounds, clipping automatically
@@ -49,14 +125,14 @@ Extend `OffscreenBuffer` to support **viewport-only mode** alongside the existin
 
 ### Key Benefits
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| State management | Manual | Automatic |
-| Code complexity | High | Low |
-| Cursor tracking | Manual | Automatic |
-| Bounds checking | Manual | Automatic |
-| Feature foundation | Limited | Strong |
-| Type safety | Medium | High |
+| Aspect             | Before  | After     |
+| ------------------ | ------- | --------- |
+| State management   | Manual  | Automatic |
+| Code complexity    | High    | Low       |
+| Cursor tracking    | Manual  | Automatic |
+| Bounds checking    | Manual  | Automatic |
+| Feature foundation | Limited | Strong    |
+| Type safety        | Medium  | High      |
 
 ### Timeline & Complexity
 
@@ -76,6 +152,7 @@ Extend `OffscreenBuffer` to support **viewport-only mode** alongside the existin
 ### Path 1: Full-Terminal OffscreenBuffer (Existing)
 
 **Architecture:**
+
 ```
 Component
     ↓
@@ -93,6 +170,7 @@ Terminal
 ```
 
 **OffscreenBuffer characteristics:**
+
 - Size: Full terminal width × height
 - Contains: 2D grid of `PixelChar` (styled characters)
 - Features:
@@ -107,6 +185,7 @@ Terminal
 ### Path 2: Direct Interactive (Current)
 
 **Architecture:**
+
 ```
 Component (SelectComponent, Readline, etc.)
     ↓
@@ -126,6 +205,7 @@ Terminal
 **Pain points in `choose()` implementation:**
 
 1. **Manual space allocation** (`function_component.rs:allocate_viewport_height_space`):
+
 ```rust
 // Must manually allocate lines before rendering
 for _ in 0..*viewport_height {
@@ -140,6 +220,7 @@ queue_commands! {
 ```
 
 2. **Manual height calculation** (`select_component.rs`):
+
 ```rust
 // Must manually calculate header height
 fn calculate_header_viewport_height(&self, state: &mut State) -> ChUnit {
@@ -160,6 +241,7 @@ fn calculate_items_viewport_height(&self, state: &mut State) -> ChUnit {
 ```
 
 3. **Clamping logic in `choose_api.rs`** (lines 165-190):
+
 ```rust
 let max_display_height = ch({
     match maybe_max_height {
@@ -182,6 +264,7 @@ let max_display_height = ch({
 ```
 
 4. **Manual cursor management** (`select_component.rs:render`):
+
 ```rust
 self.allocate_viewport_height_space(state)?;
 // ... render content ...
@@ -192,7 +275,8 @@ render_helper::move_cursor_back_to_start(
 )?;
 ```
 
-**Key issue:** Developers must manually implement state management that OffscreenBuffer provides for free.
+**Key issue:** Developers must manually implement state management that OffscreenBuffer provides for
+free.
 
 ### Why Unification Matters
 
@@ -290,7 +374,7 @@ pub struct OffscreenBuffer {
 
 #### New Constructors
 
-```rust
+````rust
 impl OffscreenBuffer {
     /// Create a full-terminal buffer (existing Path 1 behavior).
     pub fn new_full_terminal(size: Size, terminal_mode: TerminalModeState) -> Self {
@@ -352,7 +436,7 @@ impl OffscreenBuffer {
         };
     }
 }
-```
+````
 
 #### Viewport Paint Method
 
@@ -414,7 +498,7 @@ Create a new module to translate crossterm commands to viewport buffer operation
 
 **File:** `tui/src/readline_async/viewport_buffer_adapter.rs`
 
-```rust
+````rust
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{OffscreenBuffer, OutputDevice};
@@ -586,7 +670,7 @@ macro_rules! viewport_buffer_cmd {
         $crate::readline_async::viewport_buffer_adapter::adapter::$cmd($($arg),*)
     }};
 }
-```
+````
 
 ### 3.3 Architecture Diagrams
 
@@ -658,9 +742,9 @@ macro_rules! viewport_buffer_cmd {
 
 ---
 
-## Implementation Phases
+# Implementation plan
 
-### Phase 1: Extend OffscreenBuffer (3-4 days)
+## Step 1: Extend OffscreenBuffer [PENDING] Extend OffscreenBuffer (3-4 days)
 
 **Objective:** Add viewport mode support to OffscreenBuffer without breaking Path 1.
 
@@ -707,7 +791,7 @@ macro_rules! viewport_buffer_cmd {
 - [ ] All Path 1 tests still pass (no regression)
 - [ ] New unit tests provide >80% coverage of new code
 
-### Phase 2: Create Crossterm Command Adapter (3-4 days)
+## Step 2: Create Crossterm Command Adapter [PENDING] Create Crossterm Command Adapter (3-4 days)
 
 **Objective:** Bridge imperative crossterm commands to viewport buffer operations.
 
@@ -746,7 +830,7 @@ macro_rules! viewport_buffer_cmd {
 - [ ] Integration tests cover all operations
 - [ ] Error messages are clear and helpful
 
-### Phase 3: Refactor SelectComponent (3-4 days)
+## Step 3: Refactor SelectComponent [PENDING] Refactor SelectComponent (3-4 days)
 
 **Objective:** Remove manual state management from `choose()` by using viewport buffer.
 
@@ -787,6 +871,7 @@ macro_rules! viewport_buffer_cmd {
 #### Code Example: Before & After
 
 **Before (current):**
+
 ```rust
 fn render(&mut self, state: &mut State) -> CommonResult<()> {
     let render_context = render_helper::RenderContext::new(self, state);
@@ -815,6 +900,7 @@ fn render(&mut self, state: &mut State) -> CommonResult<()> {
 ```
 
 **After (with viewport buffer):**
+
 ```rust
 fn render(&mut self, state: &mut State) -> CommonResult<()> {
     // Calculate viewport size based on content
@@ -880,7 +966,7 @@ fn render_to_buffer(
 - [ ] No performance regression
 - [ ] Memory usage acceptable
 
-### Phase 4: Apply to Other Path 2 Components (2-3 days)
+## Step 4: Apply to Other Path 2 Components [PENDING] Apply to Other Path 2 Components (2-3 days)
 
 **Objective:** Extend viewport buffer pattern to other interactive components.
 
@@ -916,7 +1002,7 @@ fn render_to_buffer(
 - [ ] Component tests pass for all
 - [ ] Consistent patterns across codebase
 
-### Phase 5: Documentation (1-2 days)
+## Step 5: Documentation [PENDING] Documentation (1-2 days)
 
 **Objective:** Update documentation to reflect architectural unification.
 
@@ -1032,6 +1118,7 @@ fn render_with_macro(buffer: &mut OffscreenBuffer) -> miette::Result<()> {
 ### Example 4: Complete Component Refactor
 
 **Before (Manual State Management):**
+
 ```rust
 pub struct SelectComponent {
     pub output_device: OutputDevice,
@@ -1083,6 +1170,7 @@ impl SelectComponent {
 ```
 
 **After (Using Viewport Buffer):**
+
 ```rust
 pub struct SelectComponent {
     pub output_device: OutputDevice,
@@ -1143,6 +1231,7 @@ impl SelectComponent {
 ```
 
 **Comparison:**
+
 - **Before:** ~150 lines with manual state management
 - **After:** ~80 lines, clear intent, no manual bookkeeping
 
@@ -1376,6 +1465,7 @@ viewport_buffer_cmd!(move_to_next_line, buffer, 1)?;
 #### Step 3: Remove State Management Code
 
 Delete these methods:
+
 - `allocate_viewport_height_space()`
 - `move_cursor_back_to_start()`
 - `calculate_*_height()` functions
@@ -1384,6 +1474,7 @@ Delete these methods:
 #### Common Patterns
 
 **Pattern: Rendering multiple lines**
+
 ```rust
 for item in items {
     viewport_buffer_cmd!(
@@ -1397,6 +1488,7 @@ for item in items {
 ```
 
 **Pattern: Clearing and redrawing**
+
 ```rust
 viewport_buffer_cmd!(clear_all, buffer)?;
 buffer.cursor_pos = Pos::ORIGIN;
@@ -1404,6 +1496,7 @@ buffer.cursor_pos = Pos::ORIGIN;
 ```
 
 **Pattern: Styled text**
+
 ```rust
 let style = TuiStyle::new()
     .fg(fg_blue())
@@ -1578,10 +1671,12 @@ overlay_buffer.paint_viewport_to_terminal(&mut output)?;
 **Question:** Should the viewport origin be mutable after buffer creation?
 
 **Option A:** Immutable
+
 - Pro: Simpler mental model, clear intent
 - Con: Can't reposition viewport after creation
 
 **Option B:** Mutable
+
 - Pro: Flexible for dynamic positioning
 - Con: More complex, potential for bugs
 
@@ -1600,14 +1695,17 @@ pub fn set_origin(&mut self, origin: Pos) { ... }
 **Question:** What happens if viewport size > terminal size?
 
 **Option A:** Error on creation
+
 - Pro: Fail fast, clear
 - Con: Some use cases might need to handle dynamically
 
 **Option B:** Allow silently, clamp on paint
+
 - Pro: Flexible
 - Con: Silent errors are bad
 
 **Option C:** Allow, but require explicit confirmation
+
 - Pro: Flexible + intentional
 - Con: More API complexity
 
@@ -1656,8 +1754,8 @@ pub fn resize_viewport(&mut self, new_size: Size) -> miette::Result<()> {
 
 **Question:** Should viewport mode support optional diffing like full-terminal mode?
 
-**Phase 1 Recommendation:** No - keep simple. Full paint every time.
-**Phase 2+:** Consider if performance testing shows need.
+**Phase 1 Recommendation:** No - keep simple. Full paint every time. **Phase 2+:** Consider if
+performance testing shows need.
 
 ---
 
@@ -1665,7 +1763,8 @@ pub fn resize_viewport(&mut self, new_size: Size) -> miette::Result<()> {
 
 ### Code Files (Current Implementation)
 
-- **OffscreenBuffer definition:** `tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_core.rs`
+- **OffscreenBuffer definition:**
+  `tui/src/tui/terminal_lib_backends/offscreen_buffer/ofs_buf_core.rs`
 - **SelectComponent (to refactor):** `tui/src/readline_async/choose_impl/select_component.rs`
 - **Function component trait:** `tui/src/readline_async/choose_impl/function_component.rs`
 - **Choose API:** `tui/src/readline_async/choose_api.rs`
@@ -1675,8 +1774,10 @@ pub fn resize_viewport(&mut self, new_size: Size) -> miette::Result<()> {
 ### Related Memory Files
 
 From previous architectural analysis:
+
 - `claude_memories/rendering_path_architecture.md` - Overview of Path 1 vs Path 2
-- `claude_memories/cli_text_inline_pixel_char_conversion.md` - How CliTextInline converts to PixelChar
+- `claude_memories/cli_text_inline_pixel_char_conversion.md` - How CliTextInline converts to
+  PixelChar
 - `claude_memories/pixel_char_renderer_ansi_generation.md` - PixelCharRenderer ANSI byte generation
 
 ### Documentation
@@ -1741,12 +1842,11 @@ fn allocate_viewport_height_space(&mut self, state: &mut S) -> miette::Result<()
 
 ## Version History
 
-| Date | Version | Author | Changes |
-|------|---------|--------|---------|
-| 2025-01-25 | 1.0 | Nazmul (via Claude Code) | Initial specification and implementation plan |
+| Date       | Version | Author                   | Changes                                       |
+| ---------- | ------- | ------------------------ | --------------------------------------------- |
+| 2025-01-25 | 1.0     | Nazmul (via Claude Code) | Initial specification and implementation plan |
 
 ---
 
-**Document Status:** Ready for developer handoff
-**Last Updated:** 2025-01-25
-**Next Review:** After Phase 1 implementation
+**Document Status:** Ready for developer handoff **Last Updated:** 2025-01-25 **Next Review:** After
+Phase 1 implementation

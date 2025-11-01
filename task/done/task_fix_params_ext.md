@@ -1,4 +1,36 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Task: Fix ParamsExt and Add RGB/256-Color Support](#task-fix-paramsext-and-add-rgb256-color-support)
+  - [Overview](#overview)
+  - [Problem Statement](#problem-statement)
+  - [Background: How VT100 Parameters Work](#background-how-vt100-parameters-work)
+  - [Implementation Plan](#implementation-plan)
+    - [Phase 1: Enhance ParamsExt Trait [COMPLETE]](#phase-1-enhance-paramsext-trait-complete)
+    - [Phase 2: Add Color Constants](#phase-2-add-color-constants)
+    - [Phase 3: Create Color Sequence Types](#phase-3-create-color-sequence-types)
+    - [Phase 4: Update SGR Handler](#phase-4-update-sgr-handler)
+    - [Phase 5: Add Color Conversion Support](#phase-5-add-color-conversion-support)
+    - [Phase 6: Update Offscreen Buffer Implementation](#phase-6-update-offscreen-buffer-implementation)
+    - [Phase 7: Update All Call Sites](#phase-7-update-all-call-sites)
+    - [Phase 8: Add Tests](#phase-8-add-tests)
+  - [Testing Checklist](#testing-checklist)
+  - [Implementation Notes](#implementation-notes)
+  - [Progress Tracking](#progress-tracking)
+  - [References](#references)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Task: Fix ParamsExt and Add RGB/256-Color Support
+
+## Overview
+
+The VT100 ANSI parser has a critical gap in color support due to limitations in the `ParamsExt`
+trait. The trait can only extract the first sub-parameter from each position, making it impossible
+to handle complex sequences like `ESC[38:5:196m` (256-color) or `ESC[38:2:255:128:0m` (RGB). This
+task enhances the trait with a new `extract_nth_all()` method that returns all sub-parameters,
+enables proper parsing of extended color sequences, and updates all VT100 handler components to
+support 256-color and RGB colors.
 
 ## Problem Statement
 
@@ -27,7 +59,7 @@ colon-separated sub-parameters.
 
 ## Implementation Plan
 
-### Phase 1: Enhance ParamsExt Trait ✅
+### Phase 1: Enhance ParamsExt Trait [COMPLETE]
 
 **File**: `tui/src/core/pty_mux/vt_100_ansi_parser/protocols/csi_codes/params.rs`
 

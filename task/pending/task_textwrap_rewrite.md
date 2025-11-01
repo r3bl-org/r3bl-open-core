@@ -2,17 +2,17 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Task: Rewrite textwrap in TUI Codebase](#task-rewrite-textwrap-in-tui-codebase)
-  - [Detailed task tracking](#detailed-task-tracking)
-    - [Phase 1: Setup and Basic Implementation](#phase-1-setup-and-basic-implementation)
-    - [Phase 2: Core Components](#phase-2-core-components)
-      - [Word Finding Implementation](#word-finding-implementation)
-      - [Text Wrapping Engine](#text-wrapping-engine)
-      - [Display Width Calculation](#display-width-calculation)
-    - [Phase 3: Options and Configuration](#phase-3-options-and-configuration)
-    - [Phase 4: Integration and Testing](#phase-4-integration-and-testing)
-    - [Phase 5: Migration and Cleanup](#phase-5-migration-and-cleanup)
-    - [Phase 6: Performance Verification](#phase-6-performance-verification)
-    - [Phase 7: Future Enhancements (Optional)](#phase-7-future-enhancements-optional)
+- [Implementation plan](#implementation-plan)
+  - [Step 1: Setup and Basic Implementation [PENDING] Setup and Basic Implementation](#step-1-setup-and-basic-implementation-pending-setup-and-basic-implementation)
+  - [Step 2: Core Components [PENDING] Core Components](#step-2-core-components-pending-core-components)
+    - [Word Finding Implementation](#word-finding-implementation)
+    - [Text Wrapping Engine](#text-wrapping-engine)
+    - [Display Width Calculation](#display-width-calculation)
+  - [Step 3: Options and Configuration [PENDING] Options and Configuration](#step-3-options-and-configuration-pending-options-and-configuration)
+  - [Step 4: Integration and Testing [PENDING] Integration and Testing](#step-4-integration-and-testing-pending-integration-and-testing)
+  - [Step 5: Migration and Cleanup [PENDING] Migration and Cleanup](#step-5-migration-and-cleanup-pending-migration-and-cleanup)
+  - [Step 6: Performance Verification [PENDING] Performance Verification](#step-6-performance-verification-pending-performance-verification)
+  - [Step 7: Future Enhancements [DEFERRED] Future Enhancements (Optional)](#step-7-future-enhancements-deferred-future-enhancements-optional)
   - [Overview](#overview)
   - [Current Performance Issue](#current-performance-issue)
   - [Current textwrap Usage Analysis](#current-textwrap-usage-analysis)
@@ -42,9 +42,9 @@
 
 # Task: Rewrite textwrap in TUI Codebase
 
-## Detailed task tracking
+# Implementation plan
 
-### Phase 1: Setup and Basic Implementation
+## Step 1: Setup and Basic Implementation [PENDING] Setup and Basic Implementation
 
 - [ ] Create module structure at `tui/src/core/textwrap/`
   - [ ] Create `mod.rs` with module exports
@@ -53,7 +53,7 @@
   - [ ] Create `options.rs` for configuration
   - [ ] Create `utils.rs` for utilities (ANSI handling, width calc)
 
-### Phase 2: Core Components
+## Step 2: Core Components [PENDING] Core Components
 
 #### Word Finding Implementation
 
@@ -102,7 +102,7 @@
   - [ ] Minimize string allocations by using slices
   - [ ] Cache width calculations for repeated characters
 
-### Phase 3: Options and Configuration
+## Step 3: Options and Configuration [PENDING] Options and Configuration
 
 - [ ] Implement Options struct in `options.rs`
   - [ ] Add width field
@@ -111,7 +111,7 @@
   - [ ] Add word_separator enum (AsciiSpace, UnicodeBreakProperties)
   - [ ] Add builder pattern for Options
 
-### Phase 4: Integration and Testing
+## Step 4: Integration and Testing [PENDING] Integration and Testing
 
 - [ ] Create comprehensive test suite
   - [ ] Unit tests for each component
@@ -141,7 +141,7 @@
   - [ ] Ensure API compatibility with current usage
   - [ ] Test with existing log formatting
 
-### Phase 5: Migration and Cleanup
+## Step 5: Migration and Cleanup [PENDING] Migration and Cleanup
 
 - [ ] Remove textwrap dependency
   - [ ] Update `Cargo.toml` to remove textwrap
@@ -153,7 +153,7 @@
   - [ ] Create usage examples
   - [ ] Document performance improvements
 
-### Phase 6: Performance Verification
+## Step 6: Performance Verification [PENDING] Performance Verification
 
 - [ ] Run benchmarks after implementation
   - [ ] Compare against baseline benchmarks
@@ -176,7 +176,7 @@
   - [ ] Re-run benchmarks and profiling
   - [ ] Update documentation with final results
 
-### Phase 7: Future Enhancements (Optional)
+## Step 7: Future Enhancements [DEFERRED] Future Enhancements (Optional)
 
 - [ ] Add caching layer
   - [ ] Cache frequently wrapped text

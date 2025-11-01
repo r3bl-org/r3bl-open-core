@@ -2,6 +2,7 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [ZeroCopyGapBuffer Performance Analysis (2025-08-03)](#zerocopygapbuffer-performance-analysis-2025-08-03)
+  - [Overview](#overview)
   - [Executive Summary](#executive-summary)
   - [Performance Goals Achieved](#performance-goals-achieved)
   - [Key Performance Improvements](#key-performance-improvements)
@@ -28,73 +29,54 @@
     - [Prioritized Next Optimization Targets](#prioritized-next-optimization-targets)
     - [Recently Completed Optimizations](#recently-completed-optimizations)
     - [RenderOp SmallVec Optimization Details](#renderop-smallvec-optimization-details)
-      - [Current Implementation](#current-implementation)
-      - [Typical Usage Pattern](#typical-usage-pattern)
-      - [Why This Is A Good Next Target](#why-this-is-a-good-next-target)
-      - [Implementation Plan](#implementation-plan)
-      - [Benchmark Results (✅ COMPLETED - 2025-07-18)](#benchmark-results--completed---2025-07-18)
-      - [Recommendation: KEEP SmallVec<[RenderOp; 8]>](#recommendation-keep-smallvecrenderop-8)
     - [Format Change Note](#format-change-note)
     - [Profiling Configuration](#profiling-configuration)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis)
     - [Key Findings from Current Analysis](#key-findings-from-current-analysis)
-  - [AnsiStyledText Display Optimization (✅ Completed - 2025-07-17, 2025-07-18)](#ansistyledtext-display-optimization--completed---2025-07-17-2025-07-18)
+  - [AnsiStyledText Display Optimization ([COMPLETE] Completed - 2025-07-17, 2025-07-18)](#ansistyledtext-display-optimization-complete-completed---2025-07-17-2025-07-18)
     - [Problem Identified](#problem-identified)
     - [Root Cause Analysis](#root-cause-analysis)
     - [Solution Implemented](#solution-implemented)
-      - [Phase 1: WriteToBuf Trait (2025-07-17)](#phase-1-writetobuf-trait-2025-07-17)
-      - [Phase 2: Color Support Detection Optimization (2025-07-18)](#phase-2-color-support-detection-optimization-2025-07-18)
     - [Performance Results](#performance-results)
-      - [Phase 1 Results (WriteToBuf optimization)](#phase-1-results-writetobuf-optimization)
-      - [Phase 2 Results (Color support detection fix)](#phase-2-results-color-support-detection-fix)
     - [Key Achievements](#key-achievements)
   - [Previous Flamegraph Analysis (2025-07-17 - Post Grapheme Optimization)](#previous-flamegraph-analysis-2025-07-17---post-grapheme-optimization)
     - [Immediate Action Items (Historical - From Post Grapheme Optimization)](#immediate-action-items-historical---from-post-grapheme-optimization)
     - [Profiling Configuration](#profiling-configuration-1)
     - [Performance Bottleneck Analysis (Post Grapheme Optimization)](#performance-bottleneck-analysis-post-grapheme-optimization)
     - [Key Findings from Post Grapheme Analysis](#key-findings-from-post-grapheme-analysis)
-  - [Grapheme Segmentation and Dialog Border Optimization (✅ Completed - 2025-07-17)](#grapheme-segmentation-and-dialog-border-optimization--completed---2025-07-17)
+  - [Grapheme Segmentation and Dialog Border Optimization ([COMPLETE] Completed - 2025-07-17)](#grapheme-segmentation-and-dialog-border-optimization-complete-completed---2025-07-17)
     - [Problem Identified](#problem-identified-1)
     - [Root Cause Analysis](#root-cause-analysis-1)
     - [Solutions Implemented](#solutions-implemented)
     - [Performance Results](#performance-results-1)
-      - [GCString ASCII Optimization Benchmarks](#gcstring-ascii-optimization-benchmarks)
-      - [ColorWheel Caching Benchmarks](#colorwheel-caching-benchmarks)
-      - [Final Flamegraph Results (2025-07-17)](#final-flamegraph-results-2025-07-17)
     - [Key Achievements](#key-achievements-1)
-  - [LRU Cache Infrastructure and Dialog Border Optimization (✅ Completed - 2025-07-21)](#lru-cache-infrastructure-and-dialog-border-optimization--completed---2025-07-21)
+  - [LRU Cache Infrastructure and Dialog Border Optimization ([COMPLETE] Completed - 2025-07-21)](#lru-cache-infrastructure-and-dialog-border-optimization-complete-completed---2025-07-21)
     - [Problem Identified](#problem-identified-2)
     - [Root Cause Analysis](#root-cause-analysis-2)
     - [Solutions Implemented](#solutions-implemented-1)
-      - [1. Generic LRU Cache Infrastructure](#1-generic-lru-cache-infrastructure)
-      - [2. Dialog Border Caching](#2-dialog-border-caching)
-      - [3. Log Heading Cache](#3-log-heading-cache)
-      - [4. ColorWheel Migration](#4-colorwheel-migration)
     - [Buffer Pooling Experiment (Removed)](#buffer-pooling-experiment-removed)
     - [Performance Results](#performance-results-2)
     - [Key Achievements](#key-achievements-2)
-  - [ColorWheel FxHashMap Optimization (✅ Completed - 2025-07-21)](#colorwheel-fxhashmap-optimization--completed---2025-07-21)
+  - [ColorWheel FxHashMap Optimization ([COMPLETE] Completed - 2025-07-21)](#colorwheel-fxhashmap-optimization-complete-completed---2025-07-21)
     - [Problem Identified](#problem-identified-3)
     - [Root Cause Analysis](#root-cause-analysis-3)
     - [Solution Implemented](#solution-implemented-1)
     - [Performance Results](#performance-results-3)
     - [Key Achievements](#key-achievements-3)
-  - [Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)](#syntax-highlighting-resource-caching--completed---2025-07-16)
+  - [Syntax Highlighting Resource Caching ([COMPLETE] Completed - 2025-07-16)](#syntax-highlighting-resource-caching-complete-completed---2025-07-16)
     - [Problem Identified](#problem-identified-4)
     - [Root Cause Analysis](#root-cause-analysis-4)
     - [Solution Implemented](#solution-implemented-2)
     - [Performance Impact Verified](#performance-impact-verified)
     - [Benchmark Results](#benchmark-results)
-      - [Individual Resource Loading](#individual-resource-loading)
-      - [Multiple Editor Creation (10 editors)](#multiple-editor-creation-10-editors)
     - [Key Achievement](#key-achievement)
-  - [GCString Creation Optimization (✅ Completed - 2025-07-16)](#gcstring-creation-optimization--completed---2025-07-16)
+  - [GCString Creation Optimization ([COMPLETE] Completed - 2025-07-16)](#gcstring-creation-optimization-complete-completed---2025-07-16)
     - [Problem Identified](#problem-identified-5)
     - [Root Cause Analysis](#root-cause-analysis-5)
     - [Solution Implemented](#solution-implemented-3)
     - [Performance Results](#performance-results-4)
     - [Key Achievement](#key-achievement-1)
-  - [String Truncation Padding Fix (✅ Completed - 2025-07-16)](#string-truncation-padding-fix--completed---2025-07-16)
+  - [String Truncation Padding Fix ([COMPLETE] Completed - 2025-07-16)](#string-truncation-padding-fix-complete-completed---2025-07-16)
     - [Problem Identified](#problem-identified-6)
     - [Root Cause Analysis](#root-cause-analysis-6)
     - [Solution Implemented](#solution-implemented-4)
@@ -105,10 +87,10 @@
     - [Profiling Configuration](#profiling-configuration-2)
     - [Current Performance Bottleneck Analysis](#current-performance-bottleneck-analysis-1)
     - [Key Changes from Previous Analysis](#key-changes-from-previous-analysis)
-    - [String Truncation Optimization (✅ Completed)](#string-truncation-optimization--completed)
+    - [String Truncation Optimization ([COMPLETE] Completed)](#string-truncation-optimization-complete-completed)
     - [Next Priority Optimization Targets](#next-priority-optimization-targets)
     - [Historical Next Priority Optimization Targets (2025-07-14)](#historical-next-priority-optimization-targets-2025-07-14)
-  - [NG Parser Performance Optimization (✅ Completed - 2025-07-14)](#ng-parser-performance-optimization--completed---2025-07-14)
+  - [NG Parser Performance Optimization ([COMPLETE] Completed - 2025-07-14)](#ng-parser-performance-optimization-complete-completed---2025-07-14)
     - [Problem Identified](#problem-identified-7)
     - [Root Causes Discovered](#root-causes-discovered)
     - [Solutions Implemented](#solutions-implemented-2)
@@ -116,31 +98,31 @@
     - [Hybrid Parser Implementation](#hybrid-parser-implementation)
     - [Key Achievements](#key-achievements-4)
     - [Technical Insights](#technical-insights)
-  - [MD Parser Optimization (✅ Completed - 2025-07-14)](#md-parser-optimization--completed---2025-07-14)
+  - [MD Parser Optimization ([COMPLETE] Completed - 2025-07-14)](#md-parser-optimization-complete-completed---2025-07-14)
     - [Problem Identified](#problem-identified-8)
     - [Solution Implemented](#solution-implemented-5)
     - [Performance Impact](#performance-impact)
-  - [Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)](#text-wrapping-optimization--root-cause-fixed---2025-07-14)
+  - [Text Wrapping Optimization ([COMPLETE] Root Cause Fixed - 2025-07-14)](#text-wrapping-optimization-complete-root-cause-fixed---2025-07-14)
     - [Problem Identified](#problem-identified-9)
     - [Root Cause Analysis](#root-cause-analysis-7)
     - [Solution Implemented](#solution-implemented-6)
     - [Performance Impact](#performance-impact-1)
     - [Key Insight](#key-insight-1)
-  - [Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)](#display-trait-optimization-for-telemetry--completed---2025-07-13)
+  - [Display Trait Optimization for Telemetry ([COMPLETE] Completed - 2025-07-13)](#display-trait-optimization-for-telemetry-complete-completed---2025-07-13)
     - [Problem Identified](#problem-identified-10)
     - [Solution Implemented](#solution-implemented-7)
     - [Performance Impact Verified (2025-07-14)](#performance-impact-verified-2025-07-14)
     - [Key Achievement](#key-achievement-2)
-  - [Memory Size Calculation Caching (✅ Completed - 2025-07-13)](#memory-size-calculation-caching--completed---2025-07-13)
+  - [Memory Size Calculation Caching ([COMPLETE] Completed - 2025-07-13)](#memory-size-calculation-caching-complete-completed---2025-07-13)
     - [Problem Identified](#problem-identified-11)
     - [Solution Implemented](#solution-implemented-8)
     - [Technical Details](#technical-details)
     - [Performance Impact](#performance-impact-2)
     - [Integration with Display Trait](#integration-with-display-trait)
-  - [CRITICAL FIX: Color Support Detection Optimization (✅ Completed)](#critical-fix-color-support-detection-optimization--completed)
-  - [Color Support Detection Caching (✅ Completed)](#color-support-detection-caching--completed)
-  - [PixelChar Memory Optimization (✅ Completed)](#pixelchar-memory-optimization--completed)
-  - [NG Parser Status (✅ Optimized and Hybrid Approach Implemented)](#ng-parser-status--optimized-and-hybrid-approach-implemented)
+  - [CRITICAL FIX: Color Support Detection Optimization ([COMPLETE] Completed)](#critical-fix-color-support-detection-optimization-complete-completed)
+  - [Color Support Detection Caching ([COMPLETE] Completed)](#color-support-detection-caching-complete-completed)
+  - [PixelChar Memory Optimization ([COMPLETE] Completed)](#pixelchar-memory-optimization-complete-completed)
+  - [NG Parser Status ([COMPLETE] Optimized and Hybrid Approach Implemented)](#ng-parser-status-complete-optimized-and-hybrid-approach-implemented)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -158,6 +140,14 @@
 > ---
 
 # ZeroCopyGapBuffer Performance Analysis (2025-08-03)
+
+## Overview
+
+This document tracks TUI performance optimization efforts with detailed flamegraph analysis and
+benchmarking results. It documents the evolution from early performance concerns to the current
+highly optimized state achieved through ZeroCopyGapBuffer implementation, ParserCache optimization,
+and component-level refinements. The latest analysis shows 2-3x faster application performance with
+comprehensive measurements across different document sizes and operation types.
 
 ## Executive Summary
 
@@ -226,14 +216,14 @@ has been completely removed, with no performance regressions detected.
 
 ## Performance Goals Achieved
 
-1. **✅ Zero-Copy Parser Access**: The markdown parser now directly accesses buffer content as
-   `&str` without creating intermediate `String` objects
-2. **✅ No String Materialization**: The costly `&[GCString] → String` conversion on every render
-   has been eliminated
-3. **✅ Maintained Application Performance**: All previously optimized areas remain fast with no
-   regressions
-4. **✅ Improved Memory Efficiency**: Consolidated memory allocations with predictable growth
-   patterns
+1. **[COMPLETE] Zero-Copy Parser Access**: The markdown parser now directly accesses buffer content
+   as `&str` without creating intermediate `String` objects
+2. **[COMPLETE] No String Materialization**: The costly `&[GCString] → String` conversion on every
+   render has been eliminated
+3. **[COMPLETE] Maintained Application Performance**: All previously optimized areas remain fast
+   with no regressions
+4. **[COMPLETE] Improved Memory Efficiency**: Consolidated memory allocations with predictable
+   growth patterns
 
 ## Key Performance Improvements
 
@@ -465,36 +455,36 @@ optimizations:
 
 ### Recently Completed Optimizations
 
-1. **LRU Cache Infrastructure and Dialog Border Caching** (✅ COMPLETED - 2025-07-21):
+1. **LRU Cache Infrastructure and Dialog Border Caching** ([COMPLETE] COMPLETED - 2025-07-21):
    - Extracted generic LRU cache module to `/tui/src/core/common/lru_cache.rs`
    - Implemented dialog border caching with ThreadSafeLruCache
    - **Result**: 27% reduction in dialog border overhead (53M → 39M samples)
    - Added heading cache for log colorization
    - Buffer pooling tested but removed (no measurable benefit)
 
-2. **ColorWheel LRU Cache Migration** (✅ COMPLETED - 2025-07-21):
+2. **ColorWheel LRU Cache Migration** ([COMPLETE] COMPLETED - 2025-07-21):
    - Refactored ColorWheel to use generic ThreadSafeLruCache
    - Maintains same performance with cleaner architecture
    - Consistent caching approach across codebase
 
-3. **ColorWheel FxHashMap Optimization** (✅ COMPLETED - 2025-07-21):
+3. **ColorWheel FxHashMap Optimization** ([COMPLETE] COMPLETED - 2025-07-21):
    - Replaced standard HashMap with FxHashMap for cache operations
    - **Result**: 87% reduction in ColorWheel CPU usage
    - From 38M samples in hash operations to only 5M samples total
    - Maintained DefaultHasher for config hashing (better distribution)
    - ColorWheel operations now negligible in performance profile
 
-4. **PixelChar SmallVec Optimization** (✅ COMPLETED - 2025-07-18):
+4. **PixelChar SmallVec Optimization** ([COMPLETE] COMPLETED - 2025-07-18):
    - Replaced `SmallVec<[PixelChar; 8]>` with `Vec<PixelChar>`
    - **Result**: COMPLETE ELIMINATION of 45M+ sample hotspot
    - Benchmarks showed Vec is 2-4x faster for typical terminal lines
    - Random access patterns now 3-5x faster
 
-5. **RenderOp SmallVec Optimization** (✅ COMPLETED - Benchmarks show SmallVec is optimal):
+5. **RenderOp SmallVec Optimization** ([COMPLETE] COMPLETED - Benchmarks show SmallVec is optimal):
    - Benchmark results show SmallVec is 2.27x faster for typical usage
    - Iteration is 2.57x faster - critical for render execution
    - Current SmallVec<[RenderOp; 8]> is optimal for our usage patterns
-6. **ANSI Escape Code Formatting** (✅ PARTIALLY COMPLETED):
+6. **ANSI Escape Code Formatting** ([COMPLETE] PARTIALLY COMPLETED):
    - WriteToBuf optimization successful
    - Remaining overhead is from u8 number formatting
    - Consider lookup table for all u8 values (0-255)
@@ -535,7 +525,7 @@ render_ops.push(RenderOp::ResetColor);
 3. Measure: Creation, push performance, memory usage, iteration
 4. If Vec proves better, update type alias in `sizes.rs`
 
-#### Benchmark Results (✅ COMPLETED - 2025-07-18)
+#### Benchmark Results ([COMPLETE] COMPLETED - 2025-07-18)
 
 ```
 Typical usage (8 operations - within SmallVec capacity):
@@ -652,7 +642,7 @@ Cache Implementation):
    - Crossterm ANSI generation overhead
    - Acceptable level after optimizations
 
-9. ~~**ColorWheel Hash Operations**~~ (✅ ELIMINATED)
+9. ~~**ColorWheel Hash Operations**~~ ([COMPLETE] ELIMINATED)
    - Previously: 38M samples in hash operations
    - Now negligible after FxHashMap optimization
    - No longer appears as significant in flamegraph
@@ -689,7 +679,7 @@ Cache Implementation):
    - Memory operations significant but spread across codebase
    - System-level operations acceptable
 
-## AnsiStyledText Display Optimization (✅ Completed - 2025-07-17, 2025-07-18)
+## AnsiStyledText Display Optimization ([COMPLETE] Completed - 2025-07-17, 2025-07-18)
 
 ### Problem Identified
 
@@ -862,7 +852,7 @@ Based on the flamegraph analysis from `tui/flamegraph.perf-folded` after graphem
    - Debug formatting reduced but still present
    - String truncation completely eliminated as bottleneck
 
-## Grapheme Segmentation and Dialog Border Optimization (✅ Completed - 2025-07-17)
+## Grapheme Segmentation and Dialog Border Optimization ([COMPLETE] Completed - 2025-07-17)
 
 ### Problem Identified
 
@@ -959,7 +949,7 @@ Flamegraph analysis showed two major performance bottlenecks:
 - **Comprehensive testing**: Added benchmarks and tests for hash implementation
 - **All tests pass**: Maintains correctness while achieving dramatic performance gains
 
-## LRU Cache Infrastructure and Dialog Border Optimization (✅ Completed - 2025-07-21)
+## LRU Cache Infrastructure and Dialog Border Optimization ([COMPLETE] Completed - 2025-07-21)
 
 ### Problem Identified
 
@@ -1063,7 +1053,7 @@ Flamegraph analysis after implementation shows:
 - **Data-driven decisions** - removed buffer pooling after profiling showed no benefit
 - **Thread-safe design** - works correctly with async/await and Tokio
 
-## ColorWheel FxHashMap Optimization (✅ Completed - 2025-07-21)
+## ColorWheel FxHashMap Optimization ([COMPLETE] Completed - 2025-07-21)
 
 ### Problem Identified
 
@@ -1114,7 +1104,7 @@ Flamegraph analysis after implementation shows dramatic improvement:
 - **Simple implementation** - drop-in replacement with FxHashMap
 - **Benchmarks added** - comprehensive performance tests for future tracking
 
-## Syntax Highlighting Resource Caching (✅ Completed - 2025-07-16)
+## Syntax Highlighting Resource Caching ([COMPLETE] Completed - 2025-07-16)
 
 ### Problem Identified
 
@@ -1198,7 +1188,7 @@ In practical terms:
 - Cleaner API by removing unused `Clone` derives
 - All tests pass and code compiles without warnings
 
-## GCString Creation Optimization (✅ Completed - 2025-07-16)
+## GCString Creation Optimization ([COMPLETE] Completed - 2025-07-16)
 
 ### Problem Identified
 
@@ -1247,7 +1237,7 @@ Benchmark results show significant improvements across all scenarios:
 - Successfully addressed the 8.61% performance bottleneck identified in flamegraph
 - Added comprehensive benchmarks for future performance tracking
 
-## String Truncation Padding Fix (✅ Completed - 2025-07-16)
+## String Truncation Padding Fix ([COMPLETE] Completed - 2025-07-16)
 
 ### Problem Identified
 
@@ -1362,7 +1352,7 @@ Based on the latest flamegraph analysis after all recent optimizations:
 3. **Performance Distribution**: With previous bottlenecks eliminated, performance impact is now
    more evenly distributed across multiple components.
 
-### String Truncation Optimization (✅ Completed)
+### String Truncation Optimization ([COMPLETE] Completed)
 
 **Implementation**: Optimized `truncate_from_right` and `truncate_from_left` functions in
 `/tui/src/core/misc/string_helper.rs`.
@@ -1397,7 +1387,7 @@ Based on the latest flamegraph analysis after all recent optimizations:
 
 Based on the latest flamegraph analysis (2025-07-16), the optimization priorities should be:
 
-1. ~~**String Truncation Padding Fix**~~ - ✅ COMPLETED
+1. ~~**String Truncation Padding Fix**~~ - [COMPLETE] COMPLETED
    - Fixed unnecessary padding in custom event formatter
    - Changed `pad=true` to `pad=false` for body lines
    - Eliminated all string truncation bottlenecks
@@ -1407,7 +1397,7 @@ Based on the latest flamegraph analysis (2025-07-16), the optimization prioritie
    - May be related to process/thread lifecycle
    - Consider buffer pooling or reuse strategies
 
-3. ~~**Syntax Highlighting Deserialization** (1.82% per instance)~~ - ✅ COMPLETED
+3. ~~**Syntax Highlighting Deserialization** (1.82% per instance)~~ - [COMPLETE] COMPLETED
    - Implemented global caching using `thread_local!` + `OnceCell`
    - Syntax definitions now loaded once per application
    - Eliminated repeated deserialization overhead
@@ -1417,7 +1407,7 @@ Based on the latest flamegraph analysis (2025-07-16), the optimization prioritie
    - Consider caching grapheme boundaries for repeated strings
    - Optimize Unicode segmentation in hot paths
 
-5. ~~**GCString Creation in Rendering** (3.63% remaining)~~ - ✅ PARTIALLY COMPLETED
+5. ~~**GCString Creation in Rendering** (3.63% remaining)~~ - [COMPLETE] PARTIALLY COMPLETED
    - Already optimized `clip_text_to_bounds` by 34-65%
    - Remaining overhead is acceptable for rendering pipeline
    - Further optimization may have diminishing returns
@@ -1455,7 +1445,7 @@ priorities were:
    - Text wrapping (1.72%) - already optimized
    - Main event loop overhead is expected and necessary
 
-## NG Parser Performance Optimization (✅ Completed - 2025-07-14)
+## NG Parser Performance Optimization ([COMPLETE] Completed - 2025-07-14)
 
 ### Problem Identified
 
@@ -1542,7 +1532,7 @@ The optimization journey revealed several important insights:
 - Lazy initialization can significantly reduce overhead for simple operations
 - Shared mutable state (via `Rc<RefCell>`) can cause subtle bugs in parser combinators
 
-## MD Parser Optimization (✅ Completed - 2025-07-14)
+## MD Parser Optimization ([COMPLETE] Completed - 2025-07-14)
 
 ### Problem Identified
 
@@ -1565,7 +1555,7 @@ expensive string conversion operations.
   - `try_parse_and_highlight` - no longer visible in flamegraph
 - **Result**: Complete elimination of the single largest performance bottleneck
 
-## Text Wrapping Optimization (✅ Root Cause Fixed - 2025-07-14)
+## Text Wrapping Optimization ([COMPLETE] Root Cause Fixed - 2025-07-14)
 
 ### Problem Identified
 
@@ -1605,7 +1595,7 @@ The ASCII text wrapping optimization initially implemented was solving a symptom
 cause. By fixing the Debug formatting issue with `record_str()`, the standard textwrap performance
 became acceptable, eliminating the need for complex optimization code.
 
-## Display Trait Optimization for Telemetry (✅ Completed - 2025-07-13)
+## Display Trait Optimization for Telemetry ([COMPLETE] Completed - 2025-07-13)
 
 ### Problem Identified
 
@@ -1635,11 +1625,11 @@ Implemented efficient Display trait for all State structs and buffers:
 
 Latest flamegraph analysis shows:
 
-- **MD Parser operations eliminated**: From 22.45% to 0% (100% elimination) ✅
+- **MD Parser operations eliminated**: From 22.45% to 0% (100% elimination) [COMPLETE]
 - **Debug formatting reduced**: From 17.39% to 9.86% (43% reduction) - KeyPress Debug formatting
   remains
-- **Text wrapping dramatically reduced**: From 16.12% to 1.72% (89% reduction) ✅
-- **String truncation eliminated**: Previously 11.67%, now not visible in flamegraph ✅
+- **Text wrapping dramatically reduced**: From 16.12% to 1.72% (89% reduction) [COMPLETE]
+- **String truncation eliminated**: Previously 11.67%, now not visible in flamegraph [COMPLETE]
 - **Primary bottlenecks now**:
   - Main event loop: 44.71% (normal for event-driven TUI)
   - Terminal rendering pipeline: 18.53% (render_diff operations)
@@ -1653,7 +1643,7 @@ Reduced Debug formatting overhead from 17.39% to 9.86% (43% reduction). The rema
 is from KeyPress formatting, not telemetry logging. The main event loop can now log state
 information efficiently after every render with minimal performance impact.
 
-## Memory Size Calculation Caching (✅ Completed - 2025-07-13)
+## Memory Size Calculation Caching ([COMPLETE] Completed - 2025-07-13)
 
 ### Problem Identified
 
@@ -1704,7 +1694,7 @@ The memory size caching seamlessly integrates with the Display trait optimizatio
 - OffscreenBuffer provides `get_mem_size_cached()` for telemetry logging
 - No "?" values appear in telemetry due to immediate cache recalculation
 
-## CRITICAL FIX: Color Support Detection Optimization (✅ Completed)
+## CRITICAL FIX: Color Support Detection Optimization ([COMPLETE] Completed)
 
 **Issue Identified**: Flamegraph analysis revealed that ~24% of execution time was spent in color
 support detection (`examine_env_vars_to_determine_color_support`), making thousands of environment
@@ -1723,7 +1713,7 @@ variable detection on every call instead of caching the result.
 **Expected Performance Impact**: ~24% reduction in execution time for editor operations, as color
 support detection will only run once instead of thousands of times.
 
-## Color Support Detection Caching (✅ Completed)
+## Color Support Detection Caching ([COMPLETE] Completed)
 
 **Implementation**: Added memoization to `global_color_support::detect()` function in
 `/tui/src/core/ansi/detect_color_support.rs`.
@@ -1743,7 +1733,7 @@ support detection will only run once instead of thousands of times.
 
 **Testing**: Added comprehensive test coverage for caching behavior to ensure correctness.
 
-## PixelChar Memory Optimization (✅ Completed)
+## PixelChar Memory Optimization ([COMPLETE] Completed)
 
 **Implementation**: Changed `PixelChar::PlainText` to store a single `char` instead of
 `TinyInlineString` in commit df9057f9.
@@ -1768,7 +1758,7 @@ support detection will only run once instead of thousands of times.
 - Multi-character grapheme clusters are reduced to single characters
 - This is acceptable for terminal rendering where each cell displays one visible character
 
-## NG Parser Status (✅ Optimized and Hybrid Approach Implemented)
+## NG Parser Status ([COMPLETE] Optimized and Hybrid Approach Implemented)
 
 The NG parser has been dramatically optimized and is now used in a hybrid approach:
 

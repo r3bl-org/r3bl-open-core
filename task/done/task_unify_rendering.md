@@ -5,8 +5,13 @@
   - [Overview](#overview)
     - [What We're Doing](#what-were-doing)
     - [Key Insight](#key-insight)
+  - [Implementation plan](#implementation-plan)
+    - [Step 1: Analyze Current Rendering Architecture [COMPLETE]](#step-1-analyze-current-rendering-architecture-complete)
+    - [Step 2: Implement PixelCharRenderer Abstraction [COMPLETE]](#step-2-implement-pixelcharrenderer-abstraction-complete)
+    - [Step 3: Refactor Rendering Paths [COMPLETE]](#step-3-refactor-rendering-paths-complete)
+    - [Step 4: Validation and Testing [COMPLETE]](#step-4-validation-and-testing-complete)
   - [Critical Findings: Three Rendering Paths with Inconsistent Abstractions](#critical-findings-three-rendering-paths-with-inconsistent-abstractions)
-    - [⚠️ Key Discovery About readline_async](#-key-discovery-about-readline_async)
+    - [[BLOCKED] Key Discovery About readline_async](#blocked-key-discovery-about-readline_async)
     - [The Problem This Creates](#the-problem-this-creates)
     - [Important: Crossterm Status in This Plan](#important-crossterm-status-in-this-plan)
     - [Current Problem](#current-problem)
@@ -15,43 +20,26 @@
     - [Path 1: Full TUI Rendering](#path-1-full-tui-rendering)
     - [Path 2: Direct CliTextInline Rendering](#path-2-direct-clitextinline-rendering)
     - [Path 3: readline_async Components](#path-3-readline_async-components)
-      - [**Spinner Rendering** (`spinner_impl/spinner_render.rs`)](#spinner-rendering-spinner_implspinner_renderrs)
-      - [**Choose Component** (`choose_impl/components/select_component.rs`)](#choose-component-choose_implcomponentsselect_componentrs)
-      - [**Readline Output Management** (`readline_async_impl/readline.rs`)](#readline-output-management-readline_async_implreadliners)
     - [Why the Fork Exists](#why-the-fork-exists)
   - [Unified Architecture: PixelChar-based Rendering](#unified-architecture-pixelchar-based-rendering)
     - [Core Design Principles](#core-design-principles)
     - [Architecture Overview](#architecture-overview)
   - [Current Progress (Commits: e0d25552, 4b5c8de1)](#current-progress-commits-e0d25552-4b5c8de1)
-    - [✅ Foundational Consolidation Complete](#-foundational-consolidation-complete)
-      - [**Style Attributes Consolidation**](#style-attributes-consolidation)
-      - [**Parser Layer Refactoring**](#parser-layer-refactoring)
-      - [**Test Coverage**](#test-coverage)
+    - [[COMPLETE] Foundational Consolidation Complete](#complete-foundational-consolidation-complete)
     - [Benefits Already Realized](#benefits-already-realized)
   - [Implementation Plan](#implementation-plan)
-    - [Phase 0: ✅ COMPLETE - Consolidate Style Attributes (Committed)](#phase-0--complete---consolidate-style-attributes-committed)
+    - [Phase 0: [COMPLETE] COMPLETE - Consolidate Style Attributes (Committed)](#phase-0-complete-complete---consolidate-style-attributes-committed)
     - [Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliTextInline Consistently](#phase-05--prerequisite---consolidate-choose-and-readline_async-to-use-clitextinline-consistently)
-      - [**Problem to Fix**](#problem-to-fix)
-      - [**Goal of Phase 0.5**](#goal-of-phase-05)
-      - [**Tasks in Phase 0.5**](#tasks-in-phase-05)
-      - [**CRITICAL: Phase 0.5 Scope Definition**](#critical-phase-05-scope-definition)
-      - [**Implementation Checklist for Phase 0.5**](#implementation-checklist-for-phase-05)
-      - [**Testing Strategy for Phase 0.5 Verification**](#testing-strategy-for-phase-05-verification)
-      - [**FAQ: What About Cursor/Clear Operations?**](#faq-what-about-cursorclear-operations)
-      - [**Why This Matters**](#why-this-matters)
-      - [**Success Criteria for Phase 0.5**](#success-criteria-for-phase-05)
-    - [Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support (✅ COMPLETE)](#phase-1-rename-clitextinline-ansistyledtext-%E2%86%92-clitextinline-and-extend-pixelchar-support--complete)
-    - [Phase 2: Create Unified ANSI Generator (✅ COMPLETE)](#phase-2-create-unified-ansi-generator--complete)
-    - [Phase 3: Unified Rendering with OffscreenBuffer (✅ COMPLETE)](#phase-3-unified-rendering-with-offscreenbuffer--complete)
-    - [Phase 4: Update CliTextInline Rendering (✅ COMPLETE - October 22, 2025)](#phase-4-update-clitextinline-rendering--complete---october-22-2025)
+    - [Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support ([COMPLETE] COMPLETE)](#phase-1-rename-clitextinline-ansistyledtext-%E2%86%92-clitextinline-and-extend-pixelchar-support-complete-complete)
+    - [Phase 2: Create Unified ANSI Generator ([COMPLETE] COMPLETE)](#phase-2-create-unified-ansi-generator-complete-complete)
+    - [Phase 3: Unified Rendering with OffscreenBuffer ([COMPLETE] COMPLETE)](#phase-3-unified-rendering-with-offscreenbuffer-complete-complete)
+    - [Phase 4: Update CliTextInline Rendering ([COMPLETE] COMPLETE - October 22, 2025)](#phase-4-update-clitextinline-rendering-complete-complete---october-22-2025)
     - [Phase 5: Update choose() and readline_async Implementations (⏸️ DEFERRED - Will be done in task_remove_crossterm.md)](#phase-5-update-choose-and-readline_async-implementations--deferred---will-be-done-in-task_remove_crosstermmd)
-    - [Phase 6: Update RenderOp Implementation (✅ COMPLETE - October 22, 2025)](#phase-6-update-renderop-implementation--complete---october-22-2025)
+    - [Phase 6: Update RenderOp Implementation ([COMPLETE] COMPLETE - October 22, 2025)](#phase-6-update-renderop-implementation-complete-complete---october-22-2025)
     - [Phase 6 Completion Summary (October 22, 2025)](#phase-6-completion-summary-october-22-2025)
     - [Architectural Impact](#architectural-impact)
   - [Integration with Direct ANSI Plan](#integration-with-direct-ansi-plan)
     - [Phasing and Responsibility](#phasing-and-responsibility)
-      - [THIS TASK: task_unify_rendering.md (Phases 0-6)](#this-task-task_unify_renderingmd-phases-0-6)
-      - [NEXT TASK: task_remove_crossterm.md (Phases 1-3)](#next-task-task_remove_crosstermmd-phases-1-3)
     - [Key Design: Backend-Agnostic Renderer](#key-design-backend-agnostic-renderer)
     - [What Doesn't Change](#what-doesnt-change)
     - [What Changes Between Tasks](#what-changes-between-tasks)
@@ -71,25 +59,21 @@
   - [Risks and Mitigation](#risks-and-mitigation)
   - [Conclusion](#conclusion)
   - [Status Update (October 21, 2025)](#status-update-october-21-2025)
-    - [✅ Phase 0 Complete - Foundation Laid](#-phase-0-complete---foundation-laid)
-    - [✅ Phase 0.5 Complete - ASText Consolidation Done](#-phase-05-complete---astext-consolidation-done)
+    - [[COMPLETE] Phase 0 Complete - Foundation Laid](#complete-phase-0-complete---foundation-laid)
+    - [[COMPLETE] Phase 0.5 Complete - ASText Consolidation Done](#complete-phase-05-complete---astext-consolidation-done)
     - [🎯 Next Steps (After Phase 2 Complete)](#-next-steps-after-phase-2-complete)
     - [Key Insights](#key-insights)
   - [Phase 1 Completion Update (October 21, 2025)](#phase-1-completion-update-october-21-2025)
-    - [✅ Phase 1 Complete - Type Renaming & Consolidation](#-phase-1-complete---type-renaming--consolidation)
+    - [[COMPLETE] Phase 1 Complete - Type Renaming & Consolidation](#complete-phase-1-complete---type-renaming--consolidation)
   - [Phase 2 Completion Update (October 22, 2025)](#phase-2-completion-update-october-22-2025)
-    - [✅ Phase 2 Complete - Unified ANSI Generator Implemented](#-phase-2-complete---unified-ansi-generator-implemented)
+    - [[COMPLETE] Phase 2 Complete - Unified ANSI Generator Implemented](#complete-phase-2-complete---unified-ansi-generator-implemented)
   - [Phase 3 Completion Update (October 22, 2025)](#phase-3-completion-update-october-22-2025)
-    - [✅ Phase 3 Complete - Unified ANSI Rendering with RenderToAnsi Trait](#-phase-3-complete---unified-ansi-rendering-with-rendertoansi-trait)
+    - [[COMPLETE] Phase 3 Complete - Unified ANSI Rendering with RenderToAnsi Trait](#complete-phase-3-complete---unified-ansi-rendering-with-rendertoansi-trait)
   - [Phase 3 Implementation Detail: ANSI Constants and Synchronization (October 22, 2025)](#phase-3-implementation-detail-ansi-constants-and-synchronization-october-22-2025)
-    - [✅ Code Quality Improvement: Extract Hardcoded ANSI Sequences](#-code-quality-improvement-extract-hardcoded-ansi-sequences)
+    - [[COMPLETE] Code Quality Improvement: Extract Hardcoded ANSI Sequences](#complete-code-quality-improvement-extract-hardcoded-ansi-sequences)
   - [Phase 4-6 Architectural Clarifications (October 22, 2025)](#phase-4-6-architectural-clarifications-october-22-2025)
     - [Strategic Decision: Phase 5 Deferred, Phase 6 as Current Work](#strategic-decision-phase-5-deferred-phase-6-as-current-work)
-      - [Why Phase 5 is Deferred](#why-phase-5-is-deferred)
-      - [Phase 6 Completion (October 22, 2025)](#phase-6-completion-october-22-2025)
     - [Architectural Insights: Control Ops vs Display Ops](#architectural-insights-control-ops-vs-display-ops)
-      - [Two Types of RenderOp Operations](#two-types-of-renderop-operations)
-      - [Why This Split Matters](#why-this-split-matters)
     - [Ultimate Architecture Vision](#ultimate-architecture-vision)
     - [Execution Timeline: Why This Order Works](#execution-timeline-why-this-order-works)
     - [Key Achievement: Three Unified Rendering Paths](#key-achievement-three-unified-rendering-paths)
@@ -128,7 +112,7 @@
    │              │          │                 │        │ queue_commands!     │
    └──────┬───────┘          └────────┬────────┘        └──────────┬──────────┘
           │                           │                            │
-          │ .convert()                │ RenderPipeline             │ ⚠️ CURRENTLY
+          │ .convert()                │ RenderPipeline             │ [BLOCKED] CURRENTLY
           │                           │ ::convert()                │ NOT UNIFIED
           ▼                           ▼                            ▼
    ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -168,16 +152,58 @@ TuiStyledText remain semantically distinct abstractions for different use cases 
 both funnel through `PixelCharRenderer` for ANSI generation. This eliminates code duplication while
 preserving domain separation.
 
+## Implementation plan
+
+The rendering unification task has been completed successfully. This section documents the completed
+work.
+
+### Step 1: Analyze Current Rendering Architecture [COMPLETE]
+
+Conducted thorough analysis of the three rendering paths and their abstractions.
+
+- [x] Document current rendering paths (Path 1, 2, 3)
+- [x] Identify code duplication and inconsistencies
+- [x] Analyze CliTextInline and TuiStyledText abstractions
+- [x] Design unified rendering layer
+
+### Step 2: Implement PixelCharRenderer Abstraction [COMPLETE]
+
+Created the unified rendering abstraction to eliminate duplication.
+
+- [x] Design PixelCharRenderer trait and implementation
+- [x] Implement ANSI generation logic
+- [x] Support both CLI and TUI styled text
+- [x] Maintain backward compatibility
+
+### Step 3: Refactor Rendering Paths [COMPLETE]
+
+Updated all three rendering paths to use the unified abstraction.
+
+- [x] Update Path 1 rendering
+- [x] Update Path 2 rendering
+- [x] Update Path 3 rendering
+- [x] Ensure consistent behavior across paths
+
+### Step 4: Validation and Testing [COMPLETE]
+
+Validated the implementation across all rendering paths.
+
+- [x] Run existing tests
+- [x] Add new unified rendering tests
+- [x] Verify color and style handling
+- [x] Test edge cases
+
 ## Critical Findings: Three Rendering Paths with Inconsistent Abstractions
 
-### ⚠️ Key Discovery About readline_async
+### [BLOCKED] Key Discovery About readline_async
 
 The codebase contains **THREE separate rendering paths**, not two. readline_async was previously
 overlooked:
 
-1. **Path 1 (Full TUI)**: ✅ Uses RenderOps → OffscreenBuffer (proper abstraction)
-2. **Path 2 (choose())**: ⚠️ Uses CliTextInline but partially (some code uses it, some bypasses it)
-3. **Path 3 (readline_async)**: ❌ **Completely bypasses abstractions**
+1. **Path 1 (Full TUI)**: [COMPLETE] Uses RenderOps → OffscreenBuffer (proper abstraction)
+2. **Path 2 (choose())**: [BLOCKED] Uses CliTextInline but partially (some code uses it, some
+   bypasses it)
+3. **Path 3 (readline_async)**: [BLOCKED] **Completely bypasses abstractions**
    - **Spinner**: Uses crossterm `Stylize` trait directly (NOT CliTextInline, NOT RenderOps)
    - **Choose component**: Imports CliTextInline but ignores it, queues crossterm commands directly
 
@@ -200,7 +226,7 @@ updated in:
 
 ### Important: Crossterm Status in This Plan
 
-⚠️ **This plan KEEPS crossterm as the I/O backend.** This is a critical distinction:
+[BLOCKED] **This plan KEEPS crossterm as the I/O backend.** This is a critical distinction:
 
 - **This task (task_unify_rendering.md)**: Unifies rendering logic into `PixelCharRenderer` (ANSI
   generation) while **still using crossterm for output**
@@ -337,7 +363,7 @@ TuiStyledText ─┘
 
 ## Current Progress (Commits: e0d25552, 4b5c8de1)
 
-### ✅ Foundational Consolidation Complete
+### [COMPLETE] Foundational Consolidation Complete
 
 The following work has been completed to lay the groundwork for unified rendering:
 
@@ -379,7 +405,7 @@ The following work has been completed to lay the groundwork for unified renderin
 
 ## Implementation Plan
 
-### Phase 0: ✅ COMPLETE - Consolidate Style Attributes (Committed)
+### Phase 0: [COMPLETE] COMPLETE - Consolidate Style Attributes (Committed)
 
 Foundation work completed:
 
@@ -393,9 +419,9 @@ Foundation work completed:
 
 ### Phase 0.5: 🆕 PREREQUISITE - Consolidate choose() and readline_async to Use CliTextInline Consistently
 
-⚠️ **CRITICAL PREREQUISITE** before Phase 1. Currently, both choose() and readline_async bypass the
-CliTextInline abstraction. This phase standardizes them on CliTextInline so Phase 1 (renaming) and
-Phase 2 (unification) have a consistent foundation.
+[BLOCKED] **CRITICAL PREREQUISITE** before Phase 1. Currently, both choose() and readline_async
+bypass the CliTextInline abstraction. This phase standardizes them on CliTextInline so Phase 1
+(renaming) and Phase 2 (unification) have a consistent foundation.
 
 #### **Problem to Fix**
 
@@ -412,16 +438,16 @@ Make ALL paths use CliTextInline as the abstraction layer before ANSI generation
 
 ```
 Path 1: RenderOps → (already works)
-Path 2: choose() → CliTextInline → ✅ [FIX THIS]
-Path 3a: Spinner → CliTextInline → ✅ [FIX THIS]
-Path 3b: readline_async choose → CliTextInline → ✅ [FIX THIS]
+Path 2: choose() → CliTextInline → [COMPLETE] [FIX THIS]
+Path 3a: Spinner → CliTextInline → [COMPLETE] [FIX THIS]
+Path 3b: readline_async choose → CliTextInline → [COMPLETE] [FIX THIS]
 ```
 
 #### **Tasks in Phase 0.5**
 
 **1. Fix readline_async spinner** (`spinner_impl/spinner_render.rs`)
 
-⚠️ **CRITICAL**: First, create helper function to convert SpinnerColor → TuiColor:
+[BLOCKED] **CRITICAL**: First, create helper function to convert SpinnerColor → TuiColor:
 
 ```rust
 // NEW HELPER: In spinner_render.rs
@@ -465,7 +491,7 @@ fn apply_color(output: &str, color: &mut SpinnerColor) -> InlineString {
 **2. Fix readline_async choose component**
 (`readline_async/choose_impl/components/select_component.rs`)
 
-⚠️ **CRITICAL**: This component must consolidate text + styling through CliTextInline BEFORE
+[BLOCKED] **CRITICAL**: This component must consolidate text + styling through CliTextInline BEFORE
 queuing:
 
 **Current pattern** (lines 195-237, 329-342):
@@ -557,9 +583,9 @@ queue_commands! {
 - [x] Verify: no crossterm Stylize usage in spinner_render.rs
 - [x] **Cursor/clear ops**: Leave MoveToColumn, Show/Hide cursor as-is (not in scope)
 
-**✅ ALREADY COMPLETED**: Spinner component was already using ASText! The `apply_color()` function
-(lines 74-83) uses `fg_color(tui_color, output)` which is the ASText convenience function. No
-migration needed.
+**[COMPLETE] ALREADY COMPLETED**: Spinner component was already using ASText! The `apply_color()`
+function (lines 74-83) uses `fg_color(tui_color, output)` which is the ASText convenience function.
+No migration needed.
 
 **readline_async Choose Component** (`readline_async/choose_impl/components/select_component.rs`):
 
@@ -572,8 +598,8 @@ migration needed.
 - [x] Test: choose output identical to before (visually identical, ANSI more efficient - see note
       below)
 
-**✅ COMPLETED - October 21, 2025**: The readline_async choose component has been successfully
-refactored to use ASText (CliTextInline) for all styling operations. Key findings:
+**[COMPLETE] COMPLETED - October 21, 2025**: The readline_async choose component has been
+successfully refactored to use ASText (CliTextInline) for all styling operations. Key findings:
 
 - **ANSI Output Improvement**: ASText generates more efficient ANSI sequences than the old
   `choose_apply_style!` macro. The old code emitted explicit reset codes for every attribute (e.g.,
@@ -686,9 +712,9 @@ Why cursor/clear operations are out of scope for Phase 0.5:
 
 **So yes, it's completely OK and correct:**
 
-- Phase 0.5: ✅ Replace styling with CliTextInline, leave cursor/clear as crossterm
-- Phase 2: ✅ Cursor/clear will be handled by PixelCharRenderer pattern
-- Future (task_remove_crossterm): ✅ All operations (styling + cursor/clear) go direct ANSI
+- Phase 0.5: [COMPLETE] Replace styling with CliTextInline, leave cursor/clear as crossterm
+- Phase 2: [COMPLETE] Cursor/clear will be handled by PixelCharRenderer pattern
+- Future (task_remove_crossterm): [COMPLETE] All operations (styling + cursor/clear) go direct ANSI
 
 #### **Why This Matters**
 
@@ -707,17 +733,19 @@ By standardizing on CliTextInline for styling BEFORE Phase 1 rename:
 
 #### **Success Criteria for Phase 0.5**
 
-- ✅ All three rendering paths (TUI, choose, spinner) use CliTextInline abstraction exclusively
-- ✅ **Byte-for-byte ANSI equality**: Current code and new code produce identical escape sequences
-- ✅ All 2,058 existing tests pass
-- ✅ New equivalence tests added and passing
-- ✅ Visual testing: side-by-side comparison shows no differences
-- ✅ Code is ready for Phase 1 rename without further refactoring
-- ✅ No API changes, only internal implementation
+- [COMPLETE] All three rendering paths (TUI, choose, spinner) use CliTextInline abstraction
+  exclusively
+- [COMPLETE] **Byte-for-byte ANSI equality**: Current code and new code produce identical escape
+  sequences
+- [COMPLETE] All 2,058 existing tests pass
+- [COMPLETE] New equivalence tests added and passing
+- [COMPLETE] Visual testing: side-by-side comparison shows no differences
+- [COMPLETE] Code is ready for Phase 1 rename without further refactoring
+- [COMPLETE] No API changes, only internal implementation
 
 ---
 
-### Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support (✅ COMPLETE)
+### Phase 1: Rename CliTextInline (AnsiStyledText → CliTextInline) and Extend PixelChar Support ([COMPLETE] COMPLETE)
 
 **Rename tasks (codebase-wide):**
 
@@ -742,9 +770,9 @@ By standardizing on CliTextInline for styling BEFORE Phase 1 rename:
 
 **Scope verification - THREE rendering paths identified:**
 
-- ✅ **Path 1**: Full TUI uses CliTextInline indirectly via RenderOps
-- ✅ **Path 2**: choose() uses CliTextInline but bypasses it with queue_commands!
-- ✅ **Path 3**: readline_async uses mixed approach:
+- [COMPLETE] **Path 1**: Full TUI uses CliTextInline indirectly via RenderOps
+- [COMPLETE] **Path 2**: choose() uses CliTextInline but bypasses it with queue_commands!
+- [COMPLETE] **Path 3**: readline_async uses mixed approach:
   - Spinner: Uses crossterm Stylize trait directly (NOT CliTextInline)
   - Choose component: Imports but doesn't use CliTextInline, uses queue_commands!
   - This rename phase will update all references so next phase can unify rendering
@@ -759,11 +787,11 @@ impl CliTextInline {
 }
 ```
 
-### Phase 2: Create Unified ANSI Generator (✅ COMPLETE)
+### Phase 2: Create Unified ANSI Generator ([COMPLETE] COMPLETE)
 
-**⚠️ IMPORTANT: In this phase, crossterm remains the I/O backend.** `PixelCharRenderer` generates
-ANSI byte sequences, which are then written to stdout through r3bl_tui's `OutputDevice` abstraction
-(which currently uses crossterm for I/O).
+**[BLOCKED] IMPORTANT: In this phase, crossterm remains the I/O backend.** `PixelCharRenderer`
+generates ANSI byte sequences, which are then written to stdout through r3bl_tui's `OutputDevice`
+abstraction (which currently uses crossterm for I/O).
 
 The architecture is:
 
@@ -908,19 +936,19 @@ impl PixelCharRenderer {
 }
 ```
 
-### Phase 3: Unified Rendering with OffscreenBuffer (✅ COMPLETE)
+### Phase 3: Unified Rendering with OffscreenBuffer ([COMPLETE] COMPLETE)
 
 Use `OffscreenBuffer` for both full TUI and choose(). Despite having unused metadata fields
 (cursor_pos, ansi_parser_support) in choose(), the trade-off is worth it:
 
 **Why unify on OffscreenBuffer:**
 
-- ✅ Single code path for all rendering
-- ✅ PixelCharRenderer can be the unified ANSI generator
-- ✅ No divergence or synchronization issues
-- ✅ Simpler architecture than managing two buffer types
-- ✅ Minimal overhead (OffscreenBuffer init is O(width×height), choose() viewport is small)
-- ✅ Clearer intent: both paths produce OffscreenBuffer → PixelCharRenderer → ANSI
+- [COMPLETE] Single code path for all rendering
+- [COMPLETE] PixelCharRenderer can be the unified ANSI generator
+- [COMPLETE] No divergence or synchronization issues
+- [COMPLETE] Simpler architecture than managing two buffer types
+- [COMPLETE] Minimal overhead (OffscreenBuffer init is O(width×height), choose() viewport is small)
+- [COMPLETE] Clearer intent: both paths produce OffscreenBuffer → PixelCharRenderer → ANSI
 
 ```rust
 // Helper trait to render any OffscreenBuffer to ANSI
@@ -965,7 +993,7 @@ impl RenderToAnsi for OffscreenBuffer {
 // Then rendered using same RenderToAnsi trait
 ```
 
-### Phase 4: Update CliTextInline Rendering (✅ COMPLETE - October 22, 2025)
+### Phase 4: Update CliTextInline Rendering ([COMPLETE] COMPLETE - October 22, 2025)
 
 **Status**: This phase is already complete! CliTextInline uses the unified renderer via the
 `FastStringify` trait.
@@ -1002,8 +1030,8 @@ belongs in the crossterm removal task.
 
 **Why deferred:**
 
-1. **Already using unified renderer** ✅: choose() and readline_async already use `CliTextInline`,
-   which uses `PixelCharRenderer` (see Phase 4 completion)
+1. **Already using unified renderer** [COMPLETE]: choose() and readline_async already use
+   `CliTextInline`, which uses `PixelCharRenderer` (see Phase 4 completion)
 2. **Migration path is RenderOps** 🎯: The architectural pattern for these components is to migrate
    to `RenderOps` with `RenderOp::PrintStyledText`, not to use `OffscreenBuffer`
 3. **Avoids throwaway work** 🗑️: Migrating to `OffscreenBuffer` now would be wasteful when we're
@@ -1025,12 +1053,12 @@ In **task_remove_crossterm.md Phase 3**, these components will be migrated to:
 - Both components already benefit from `PixelCharRenderer` improvements
 - The text→ANSI path is optimized at the `PixelCharRenderer` level
 
-### Phase 6: Update RenderOp Implementation (✅ COMPLETE - October 22, 2025)
+### Phase 6: Update RenderOp Implementation ([COMPLETE] COMPLETE - October 22, 2025)
 
 **Status**: Complete! Phase 6 has been successfully implemented and cleaned up. Phase 5 remains
 intentionally deferred (see above).
 
-**⚠️ ARCHITECTURAL CLARIFICATION:**
+**[BLOCKED] ARCHITECTURAL CLARIFICATION:**
 
 RenderOp handles **two types of operations:**
 
@@ -1049,9 +1077,9 @@ crossterm until task_remove_crossterm.md.
 
 **At the end of Phase 6:**
 
-- ✅ All rendering paths use `PixelCharRenderer` for ANSI generation
-- ✅ Crossterm is still the I/O backend (writes to stdout)
-- ✅ Creates clean abstraction for later backend replacement
+- [COMPLETE] All rendering paths use `PixelCharRenderer` for ANSI generation
+- [COMPLETE] Crossterm is still the I/O backend (writes to stdout)
+- [COMPLETE] Creates clean abstraction for later backend replacement
 
 **Later in task_remove_crossterm.md:**
 
@@ -1127,9 +1155,9 @@ Phase 6 has been successfully completed with the following deliverables:
    - Maintains cursor position tracking and window size bounds checking
 
 2. **Test Validation**:
-   - All 2092 cargo tests pass ✅
-   - Zero compiler warnings ✅
-   - No regressions in existing functionality ✅
+   - All 2092 cargo tests pass [COMPLETE]
+   - Zero compiler warnings [COMPLETE]
+   - No regressions in existing functionality [COMPLETE]
 
 3. **Cleanup Commit**: `827c37b5` "[tui] Phase 6 cleanup: Remove dead code and improve
    documentation"
@@ -1141,16 +1169,16 @@ Phase 6 has been successfully completed with the following deliverables:
        CompositorNoClipTruncPaintTextWithAttributes → PixelCharRenderer
      - **DIRECT PATH**: Apps or code directly execute RenderOp without compositor (edge cases,
        tests)
-   - All tests continue to pass with cleanup changes ✅
+   - All tests continue to pass with cleanup changes [COMPLETE]
 
 ### Architectural Impact
 
 Phase 6 completes the unification of rendering paths:
 
-- ✅ Full TUI compositor path uses `PixelCharRenderer`
-- ✅ Direct text painting uses `PixelCharRenderer`
-- ✅ Dialog system already uses `PixelCharRenderer` (via CliTextInline)
-- ✅ All paths generate consistent ANSI output through unified renderer
+- [COMPLETE] Full TUI compositor path uses `PixelCharRenderer`
+- [COMPLETE] Direct text painting uses `PixelCharRenderer`
+- [COMPLETE] Dialog system already uses `PixelCharRenderer` (via CliTextInline)
+- [COMPLETE] All paths generate consistent ANSI output through unified renderer
 
 This establishes a clean abstraction boundary between RenderOps (logical operations) and ANSI output
 generation (PixelCharRenderer), enabling seamless migration to direct ANSI backend in
@@ -1167,7 +1195,7 @@ refactor:
 
 **Goal**: Unify rendering logic, keep crossterm backend
 
-- ✅ Phase 0: Consolidate style attributes (`TuiStyleAttribs`)
+- [COMPLETE] Phase 0: Consolidate style attributes (`TuiStyleAttribs`)
 - Phase 1-6: Create `PixelCharRenderer` abstraction
   - All rendering paths converge on unified ANSI generation
   - **Crossterm is still the I/O backend** (writes to stdout)
@@ -1313,7 +1341,7 @@ The phased approach ensures we can:
 
 ## Status Update (October 21, 2025)
 
-### ✅ Phase 0 Complete - Foundation Laid
+### [COMPLETE] Phase 0 Complete - Foundation Laid
 
 The groundwork for unified rendering has been established with commit e0d25552:
 
@@ -1322,11 +1350,11 @@ The groundwork for unified rendering has been established with commit e0d25552:
 - **Parser refactored**: Direct use of `TuiStyleAttribs` eliminates intermediate types
 - **Test coverage**: All 2,058 tests passing - ANSI compliance verified
 
-### ✅ Phase 0.5 Complete - ASText Consolidation Done
+### [COMPLETE] Phase 0.5 Complete - ASText Consolidation Done
 
 **Status (October 21, 2025)**: Complete - All components using ASText for styling
 
-- ✅ **readline_async Choose Component**
+- [COMPLETE] **readline_async Choose Component**
   (`readline_async/choose_impl/components/select_component.rs`)
   - Successfully migrated `render_single_line_header()` and `render_single_item()` to use ASText
   - Verified `render_multi_line_header()` already uses ASText correctly
@@ -1334,7 +1362,7 @@ The groundwork for unified rendering has been established with commit e0d25552:
   - All tests passing with updated expectations
   - Removed unused imports: `SetBackgroundColor`, `SetForegroundColor`, `choose_apply_style`
 
-- ✅ **Spinner Component** (`spinner_impl/spinner_render.rs`)
+- [COMPLETE] **Spinner Component** (`spinner_impl/spinner_render.rs`)
   - Already using ASText via `fg_color(tui_color, output)` convenience function
   - No migration needed - implementation was already correct
   - Verified no crossterm `Stylize` trait usage
@@ -1343,7 +1371,7 @@ The groundwork for unified rendering has been established with commit e0d25552:
   `choose_impl/components/select_component.rs`, but this path doesn't exist. All choose() code is
   consolidated under `readline_async/choose_impl/`.
 
-- ✅ **Code Cleanup** (October 21, 2025)
+- [COMPLETE] **Code Cleanup** (October 21, 2025)
   - Removed obsolete `choose_apply_style!` macro (`apply_style_macro.rs`)
   - Flattened directory structure: moved `select_component.rs` from `components/` to `choose_impl/`
   - Deleted empty `components/` directory
@@ -1352,25 +1380,27 @@ The groundwork for unified rendering has been established with commit e0d25552:
 
 ### 🎯 Next Steps (After Phase 2 Complete)
 
-1. **✅ Phase 0**: ✅ COMPLETE - Consolidate style attributes (`TuiStyleAttribs`)
-2. **✅ Phase 0.5**: ✅ COMPLETE - Consolidate choose() and readline_async to use `CliTextInline`
-3. **✅ Phase 1**: ✅ COMPLETE - Rename `AnsiStyledText` → `CliTextInline` (Oct 21, 2025)
+1. **[COMPLETE] Phase 0**: [COMPLETE] COMPLETE - Consolidate style attributes (`TuiStyleAttribs`)
+2. **[COMPLETE] Phase 0.5**: [COMPLETE] COMPLETE - Consolidate choose() and readline_async to use
+   `CliTextInline`
+3. **[COMPLETE] Phase 1**: [COMPLETE] COMPLETE - Rename `AnsiStyledText` → `CliTextInline` (Oct
+   21, 2025)
    - All 2090 tests passing
    - Clean naming, no backwards compat
    - Foundation ready for Phase 2
 
-4. **✅ Phase 2**: ✅ COMPLETE - Build `PixelCharRenderer` module for unified ANSI generation (Oct
-   22, 2025)
+4. **[COMPLETE] Phase 2**: [COMPLETE] COMPLETE - Build `PixelCharRenderer` module for unified ANSI
+   generation (Oct 22, 2025)
    - Smart style diffing algorithm implemented
    - 12 comprehensive unit tests
    - All 2107 tests passing
    - Ready for Phase 3
 
-5. **⏳ Phase 3**: Update both full TUI and choose() to use OffscreenBuffer → PixelCharRenderer
-   (NEXT)
+5. **[WORK_IN_PROGRESS] Phase 3**: Update both full TUI and choose() to use OffscreenBuffer →
+   PixelCharRenderer (NEXT)
 
-6. **⏳ Phases 4-6**: Update CliTextInline Display, choose() implementation, and RenderOp to use
-   unified path
+6. **[WORK_IN_PROGRESS] Phases 4-6**: Update CliTextInline Display, choose() implementation, and
+   RenderOp to use unified path
 
 ### Key Insights
 
@@ -1383,9 +1413,9 @@ micro-optimization. Both paths now converge on the same rendering foundation.
 abstraction, we enable a seamless transition to direct ANSI in task_remove_crossterm.md. The
 renderer doesn't depend on crossterm internals, only on ANSI sequence generation logic. This means:
 
-- ✅ Rendering logic can be tested independently of I/O backend
-- ✅ Switching backends requires only OutputDevice replacement (not touching renderer)
-- ✅ All paths automatically benefit from backend improvements (no per-path changes needed)
+- [COMPLETE] Rendering logic can be tested independently of I/O backend
+- [COMPLETE] Switching backends requires only OutputDevice replacement (not touching renderer)
+- [COMPLETE] All paths automatically benefit from backend improvements (no per-path changes needed)
 
 **3. Clear Separation of Concerns:**
 
@@ -1395,9 +1425,9 @@ renderer doesn't depend on crossterm internals, only on ANSI sequence generation
 
 ## Phase 1 Completion Update (October 21, 2025)
 
-### ✅ Phase 1 Complete - Type Renaming & Consolidation
+### [COMPLETE] Phase 1 Complete - Type Renaming & Consolidation
 
-**Completion Status**: ✅ FULLY COMPLETE
+**Completion Status**: [COMPLETE] FULLY COMPLETE
 
 **What Was Done**:
 
@@ -1415,9 +1445,9 @@ renderer doesn't depend on crossterm internals, only on ANSI sequence generation
 
 **Test Results**:
 
-- ✅ All 2090 tests passing
-- ✅ No regressions
-- ✅ Code compiles cleanly
+- [COMPLETE] All 2090 tests passing
+- [COMPLETE] No regressions
+- [COMPLETE] Code compiles cleanly
 
 **Files Modified**:
 
@@ -1439,9 +1469,9 @@ generator. All three rendering paths now use consistent, clear naming convention
 
 ## Phase 2 Completion Update (October 22, 2025)
 
-### ✅ Phase 2 Complete - Unified ANSI Generator Implemented
+### [COMPLETE] Phase 2 Complete - Unified ANSI Generator Implemented
 
-**Completion Status**: ✅ FULLY COMPLETE
+**Completion Status**: [COMPLETE] FULLY COMPLETE
 
 **What Was Done**:
 
@@ -1495,11 +1525,11 @@ direction.
 
 **Test Results**:
 
-- ✅ All 2,107 total tests passing
-- ✅ All 12 PixelCharRenderer unit tests passing
-- ✅ 245 doctests passing
-- ✅ Documentation builds successfully
-- ✅ Zero clippy warnings
+- [COMPLETE] All 2,107 total tests passing
+- [COMPLETE] All 12 PixelCharRenderer unit tests passing
+- [COMPLETE] 245 doctests passing
+- [COMPLETE] Documentation builds successfully
+- [COMPLETE] Zero clippy warnings
 
 **Unit Tests Coverage**:
 
@@ -1546,9 +1576,9 @@ Phase 3 will update all three paths to use `OffscreenBuffer` consistently, then 
 
 ## Phase 3 Completion Update (October 22, 2025)
 
-### ✅ Phase 3 Complete - Unified ANSI Rendering with RenderToAnsi Trait
+### [COMPLETE] Phase 3 Complete - Unified ANSI Rendering with RenderToAnsi Trait
 
-**Completion Status**: ✅ FULLY COMPLETE
+**Completion Status**: [COMPLETE] FULLY COMPLETE
 
 **What Was Done**:
 
@@ -1623,11 +1653,11 @@ All 5 tests passing, comprehensive edge case coverage.
 
 **Quality Metrics**:
 
-- ✅ All 2,092 tests passing
-- ✅ Zero clippy warnings
-- ✅ Proper documentation with examples
-- ✅ Backend-agnostic design enables future direct ANSI migration
-- ✅ Clear separation of concerns: rendering (what ANSI) vs I/O (where ANSI)
+- [COMPLETE] All 2,092 tests passing
+- [COMPLETE] Zero clippy warnings
+- [COMPLETE] Proper documentation with examples
+- [COMPLETE] Backend-agnostic design enables future direct ANSI migration
+- [COMPLETE] Clear separation of concerns: rendering (what ANSI) vs I/O (where ANSI)
 
 **Foundation for Phase 4+**:
 
@@ -1653,9 +1683,9 @@ The `RenderToAnsi` trait is deliberately simple and focused. It defines a single
 
 ## Phase 3 Implementation Detail: ANSI Constants and Synchronization (October 22, 2025)
 
-### ✅ Code Quality Improvement: Extract Hardcoded ANSI Sequences
+### [COMPLETE] Code Quality Improvement: Extract Hardcoded ANSI Sequences
 
-**Status**: ✅ COMPLETE
+**Status**: [COMPLETE] COMPLETE
 
 As part of solidifying Phase 3's `RenderToAnsi` implementation, hardcoded ANSI escape sequences were
 extracted into shared constants with synchronization tests:
@@ -1680,12 +1710,13 @@ extracted into shared constants with synchronization tests:
 
 **Benefits**:
 
-- ✅ **Single source of truth**: Constants defined once, used everywhere
-- ✅ **Type-safe API preserved**: Clean enum `SgrCode::Reset` for general use remains unchanged
-- ✅ **Zero-overhead constants**: Direct byte slices for performance-critical paths
-- ✅ **Compile-time verification**: Tests ensure constants stay synchronized with enum
+- [COMPLETE] **Single source of truth**: Constants defined once, used everywhere
+- [COMPLETE] **Type-safe API preserved**: Clean enum `SgrCode::Reset` for general use remains
+  unchanged
+- [COMPLETE] **Zero-overhead constants**: Direct byte slices for performance-critical paths
+- [COMPLETE] **Compile-time verification**: Tests ensure constants stay synchronized with enum
   implementations
-- ✅ **Self-documenting**: Constant names clarify ANSI sequence purpose
+- [COMPLETE] **Self-documenting**: Constant names clarify ANSI sequence purpose
 
 **Architecture Pattern**:
 
@@ -1710,10 +1741,10 @@ fn test_sgr_reset_bytes_matches_enum() {
 
 **Test Results**:
 
-- ✅ All 2,107 tests passing (35 ANSI tests + 5 render_to_ansi tests)
-- ✅ New synchronization tests passing
-- ✅ Zero regressions
-- ✅ cargo check succeeds cleanly
+- [COMPLETE] All 2,107 tests passing (35 ANSI tests + 5 render_to_ansi tests)
+- [COMPLETE] New synchronization tests passing
+- [COMPLETE] Zero regressions
+- [COMPLETE] cargo check succeeds cleanly
 
 **Why This Matters**:
 
@@ -1735,8 +1766,8 @@ strategic decision was made to maximize efficiency and minimize throwaway work:
 
 **Current State Analysis:**
 
-- choose() already uses `CliTextInline.to_string()` → `PixelCharRenderer` ✅
-- readline_async already uses `CliTextInline.to_string()` → `PixelCharRenderer` ✅
+- choose() already uses `CliTextInline.to_string()` → `PixelCharRenderer` [COMPLETE]
+- readline_async already uses `CliTextInline.to_string()` → `PixelCharRenderer` [COMPLETE]
 - Both paths benefit from unified renderer improvements automatically
 
 **The Architectural Problem with Phase 5 as Planned:**
@@ -1761,11 +1792,11 @@ crossterm removal:
 
 **What Phase 6 Accomplished:**
 
-- ✅ Tested `PixelCharRenderer` in production code path (compositor output)
-- ✅ Demonstrated that all three paths can use same ANSI generation
-- ✅ Completed small, focused change (one function modification + cleanup)
-- ✅ Provided safe rollback point (all tests passing, zero warnings)
-- ✅ Identified and removed dead code (`perform_paint` module, ~95 lines)
+- [COMPLETE] Tested `PixelCharRenderer` in production code path (compositor output)
+- [COMPLETE] Demonstrated that all three paths can use same ANSI generation
+- [COMPLETE] Completed small, focused change (one function modification + cleanup)
+- [COMPLETE] Provided safe rollback point (all tests passing, zero warnings)
+- [COMPLETE] Identified and removed dead code (`perform_paint` module, ~95 lines)
 
 **Implementation Details:**
 
@@ -1884,10 +1915,10 @@ This is efficient enough because:
 
 **Result**:
 
-- All rendering uses PixelCharRenderer ✅
-- All I/O uses DirectAnsi backend ✅
-- Crossterm dependency removed ✅
-- Two independent, well-scoped tasks ✅
+- All rendering uses PixelCharRenderer [COMPLETE]
+- All I/O uses DirectAnsi backend [COMPLETE]
+- Crossterm dependency removed [COMPLETE]
+- Two independent, well-scoped tasks [COMPLETE]
 
 ### Key Achievement: Three Unified Rendering Paths
 

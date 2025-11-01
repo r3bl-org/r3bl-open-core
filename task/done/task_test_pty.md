@@ -3,10 +3,15 @@
 
 - [Testing PTY-based OSC Sequence Capture](#testing-pty-based-osc-sequence-capture)
   - [Overview](#overview)
+  - [Implementation plan](#implementation-plan)
+    - [Step 1: Unit Test OscBuffer Parser [PENDING]](#step-1-unit-test-oscbuffer-parser-pending)
+    - [Step 2: Create Test Helper Binary [PENDING]](#step-2-create-test-helper-binary-pending)
+    - [Step 3: Integration Tests with Helper Binary [PENDING]](#step-3-integration-tests-with-helper-binary-pending)
+    - [Step 4: Real Cargo Build Testing [PENDING]](#step-4-real-cargo-build-testing-pending)
+    - [Step 5: CI Integration [PENDING]](#step-5-ci-integration-pending)
   - [Testing Approaches](#testing-approaches)
     - [1. Unit Test the Parser Components](#1-unit-test-the-parser-components)
     - [2. Integration Tests with Smaller Scope](#2-integration-tests-with-smaller-scope)
-      - [Required Refactoring](#required-refactoring)
   - [Test Cases to Consider](#test-cases-to-consider)
     - [Common Cases](#common-cases)
     - [Edge Cases](#edge-cases)
@@ -30,9 +35,58 @@
 
 ## Overview
 
-Testing PTY-based code that captures OSC sequences is challenging because it requires spawning
-processes with pseudo-terminals. This document outlines strategies for testing the OSC sequence
-capture functionality in `real.rs`.
+Testing PTY-based code that captures OSC sequences requires spawning processes with
+pseudo-terminals. This document outlines comprehensive testing strategies for validating the OSC
+sequence capture functionality, from low-level parser unit tests to high-level integration tests
+with real PTY sessions. The goal is to ensure robust handling of progress indicators, error states,
+and edge cases across different platforms and terminal scenarios.
+
+## Implementation plan
+
+This testing plan follows a structured approach from simplest (unit tests) to most complex
+(integration tests).
+
+### Step 1: Unit Test OscBuffer Parser [PENDING]
+
+Test the `OscBuffer` and OSC parsing logic in isolation with known inputs.
+
+- [x] Test basic OSC sequence parsing
+- [x] Test multiple sequences
+- [x] Test invalid sequences handling
+- [x] Test edge cases (split sequences, malformed terminators)
+
+### Step 2: Create Test Helper Binary [PENDING]
+
+Build a test utility that emits predictable OSC sequences for controlled testing.
+
+- [x] Implement test_osc_emitter binary
+- [x] Support different progress states (25%, 50%, error, indeterminate)
+- [x] Handle timing delays for split sequence testing
+
+### Step 3: Integration Tests with Helper Binary [PENDING]
+
+Test with actual PTY spawning using the test helper binary.
+
+- [x] Basic progress update sequences
+- [x] Multiple sequence handling
+- [x] Platform-specific sequence formatting (Linux/macOS vs Windows)
+- [x] Timeout handling for long-running tests
+
+### Step 4: Real Cargo Build Testing [PENDING]
+
+Test with actual cargo builds to validate real-world OSC emission.
+
+- [x] Verify cargo emits OSC codes correctly
+- [x] Test progress tracking during actual compilation
+- [x] Handle system variations in OSC support
+
+### Step 5: CI Integration [PENDING]
+
+Add PTY test support to continuous integration pipeline.
+
+- [x] Feature gate PTY tests for platforms that support them
+- [x] Configure test environment for CI runners
+- [x] Handle PTY unavailability gracefully
 
 ## Testing Approaches
 

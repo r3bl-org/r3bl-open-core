@@ -534,25 +534,25 @@ Other commands:
 
 ### Key Commands
 
-| Command                                     | Description                                                                                     |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `fish run.fish all`                         | Run all major checks (build, test, clippy, docs, audit, format)                                 |
-| `fish run.fish build`                       | Build the entire workspace                                                                      |
-| `fish run.fish test`                        | Run all tests across the workspace                                                              |
-| `fish run.fish install-cargo-tools`         | Install Rust development tools (cargo-binstall, uv, bacon, Wild linker, etc.) |
-| `fish run.fish watch-all-tests`             | Watch for file changes and run tests automatically                                              |
-| `fish run.fish run-examples`                | Run TUI examples interactively                                                                  |
-| `fish run.fish run-examples-flamegraph-svg` | Generate SVG flamegraph for performance analysis                                                |
+| Command                                                    | Description                                                                             |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `fish run.fish all`                                        | Run all major checks (build, test, clippy, docs, audit, format)                         |
+| `fish run.fish build`                                      | Build the entire workspace                                                              |
+| `fish run.fish test`                                       | Run all tests across the workspace                                                      |
+| `fish run.fish install-cargo-tools`                        | Install Rust development tools (cargo-binstall, uv, bacon, Wild linker, etc.)           |
+| `fish run.fish watch-all-tests`                            | Watch for file changes and run tests automatically                                      |
+| `fish run.fish run-examples`                               | Run TUI examples interactively                                                          |
+| `fish run.fish run-examples-flamegraph-svg`                | Generate SVG flamegraph for performance analysis                                        |
 | `fish run.fish run-examples-flamegraph-fold [--benchmark]` | Generate perf-folded format for analysis (use `--benchmark` for reproducible profiling) |
-| `fish run.fish bench`                       | Run benchmarks                                                                                  |
-| `fish run.fish run-binaries`                | Run cmdr binaries (edi, giti, rc) interactively                                                 |
-| `fish run.fish dev-dashboard`               | Start 4-pane tmux development dashboard (tests, docs, checks)                                   |
-| `fish run.fish check-full`                  | Run comprehensive checks (tests, doctests, docs, toolchain validation)                          |
-| `fish run.fish toolchain-validate`          | Quick toolchain validation (components only, ~1-2 seconds)                                      |
-| `fish run.fish toolchain-validate-complete` | Complete toolchain validation (full build+test, ~5-10 minutes)                                  |
-| `fish run.fish toolchain-update`            | Update Rust to month-old nightly toolchain with cleanup                                         |
-| `fish run.fish toolchain-sync`              | Sync Rust environment to match rust-toolchain.toml                                              |
-| `fish run.fish toolchain-remove`            | Remove ALL toolchains (⚠️ destructive testing utility)                                          |
+| `fish run.fish bench`                                      | Run benchmarks                                                                          |
+| `fish run.fish run-binaries`                               | Run cmdr binaries (edi, giti, rc) interactively                                         |
+| `fish run.fish dev-dashboard`                              | Start 4-pane tmux development dashboard (tests, docs, checks)                           |
+| `fish run.fish check-full`                                 | Run comprehensive checks (tests, doctests, docs, toolchain validation)                  |
+| `fish run.fish toolchain-validate`                         | Quick toolchain validation (components only, ~1-2 seconds)                              |
+| `fish run.fish toolchain-validate-complete`                | Complete toolchain validation (full build+test, ~5-10 minutes)                          |
+| `fish run.fish toolchain-update`                           | Update Rust to month-old nightly toolchain with cleanup                                 |
+| `fish run.fish toolchain-sync`                             | Sync Rust environment to match rust-toolchain.toml                                      |
+| `fish run.fish toolchain-remove`                           | Remove ALL toolchains (⚠️ destructive testing utility)                                  |
 
 ### Cargo Target Directory Isolation for IDE/Tool Performance
 
@@ -709,8 +709,8 @@ CARGO_TARGET_DIR=/tmp/test cargo build
 
 #### Incremental Compilation Management
 
-Incremental compilation is disabled globally (`incremental = false` in `.cargo/config.toml`) to avoid
-issues with the rustc dependency graph on nightly builds:
+Incremental compilation is disabled globally (`incremental = false` in `.cargo/config.toml`) to
+avoid issues with the rustc dependency graph on nightly builds:
 
 ```toml
 # .cargo/config.toml
@@ -767,12 +767,12 @@ and testing. Bacon provides real-time feedback on code changes with two distinct
 
 **Testing:**
 
-| Command                              | Workflow    | Description                                                              |
-| ------------------------------------ | ----------- | ------------------------------------------------------------------------ |
-| `bacon test`                         | Interactive | Run all tests with cargo test (includes unit, integration, and doctests) |
-| `bacon test -- <pattern>`            | Interactive | Run specific test matching pattern                                       |
-| `bacon doctests`                     | Interactive | Run only documentation tests (`cargo test --doc`)                        |
-| `bacon test --headless --summary`    | Background  | Silent test runner providing only pass/fail status                       |
+| Command                           | Workflow    | Description                                                              |
+| --------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| `bacon test`                      | Interactive | Run all tests with cargo test (includes unit, integration, and doctests) |
+| `bacon test -- <pattern>`         | Interactive | Run specific test matching pattern                                       |
+| `bacon doctests`                  | Interactive | Run only documentation tests (`cargo test --doc`)                        |
+| `bacon test --headless --summary` | Background  | Silent test runner providing only pass/fail status                       |
 
 **Documentation:**
 
@@ -924,8 +924,8 @@ bacon monitors with the `check.fish --watch` script for comprehensive coverage.
   - Automatic toolchain validation and repair if needed
   - 5-second intelligent debouncing to prevent rapid re-runs
 - **Interactive Multiplexing**: Full tmux keybindings for pane switching and layout customization
-- **Redundant Coverage**: Tests run in two panes (bacon test + check.fish) - if one fails, the
-  other shows details
+- **Redundant Coverage**: Tests run in two panes (bacon test + check.fish) - if one fails, the other
+  shows details
 
 **Usage:**
 

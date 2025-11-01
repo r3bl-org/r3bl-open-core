@@ -3,125 +3,112 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Status](#status)
-- [Executive Summary](#executive-summary)
-- [Product Overview](#product-overview)
-  - [Vision](#vision)
-  - [Core Concept](#core-concept)
-  - [Key Benefits](#key-benefits)
-- [Architecture Overview](#architecture-overview)
-  - [System Architecture](#system-architecture)
-  - [Terminal Multiplexer Architecture](#terminal-multiplexer-architecture)
-  - [State Flow Diagram](#state-flow-diagram)
-- [Detailed Specifications](#detailed-specifications)
-  - [Command Line Interface](#command-line-interface)
-  - [Configuration (Future)](#configuration-future)
-  - [Key Bindings](#key-bindings)
-    - [In Terminal Multiplexer Mode](#in-terminal-multiplexer-mode)
-    - [In Chi Input Helper Mode](#in-chi-input-helper-mode)
-    - [In Chi History Browser Mode](#in-chi-history-browser-mode)
-  - [Data Flow & Integration](#data-flow--integration)
-    - [Clipboard Integration](#clipboard-integration)
-    - [History File Format](#history-file-format)
-- [Implementation Structure](#implementation-structure)
-  - [Module Organization](#module-organization)
-  - [Core Data Structures](#core-data-structures)
-    - [Terminal Multiplexer](#terminal-multiplexer)
-    - [History Data (from cmdr/src/ch/types.rs)](#history-data-from-cmdrsrcchtypesrs)
-  - [Event Loop Implementation](#event-loop-implementation)
-    - [Main Event Loop](#main-event-loop)
-    - [Input Routing Logic](#input-routing-logic)
-  - [PTY Lifecycle Management](#pty-lifecycle-management)
-    - [Spawning Helper PTYs](#spawning-helper-ptys)
-    - [Returning to Claude](#returning-to-claude)
-  - [Output Buffering Strategy](#output-buffering-strategy)
-    - [Claude Output Management](#claude-output-management)
-- [TUI Application Specifications](#tui-application-specifications)
-  - [Chi Input Helper (`chi --input`)](#chi-input-helper-chi---input)
-    - [Purpose](#purpose)
-    - [Features](#features)
-    - [UI Layout](#ui-layout)
-    - [Implementation](#implementation)
-  - [Chi History Browser (`chi --history`)](#chi-history-browser-chi---history)
-    - [Purpose](#purpose-1)
-    - [Features](#features-1)
-    - [UI Layout](#ui-layout-1)
-    - [Implementation](#implementation-1)
-- [Technical Requirements](#technical-requirements)
-  - [Dependencies](#dependencies)
-  - [File System Requirements](#file-system-requirements)
-  - [Performance Requirements](#performance-requirements)
-  - [Compatibility Requirements](#compatibility-requirements)
-- [User Experience Design](#user-experience-design)
-  - [Accessibility Features](#accessibility-features)
-  - [Visual Feedback](#visual-feedback)
-  - [Transition Animations](#transition-animations)
-  - [Error Handling](#error-handling)
-- [Testing Strategy](#testing-strategy)
-  - [Unit Tests](#unit-tests)
-  - [Integration Tests](#integration-tests)
-  - [Manual Testing Scenarios](#manual-testing-scenarios)
-- [Analytics Integration](#analytics-integration)
-  - [Analytics Events to Track](#analytics-events-to-track)
-  - [Implementation Points](#implementation-points)
-  - [Privacy Considerations](#privacy-considerations)
-  - [Success Metrics](#success-metrics)
-  - [Integration with Existing Infrastructure](#integration-with-existing-infrastructure)
-- [Security Considerations](#security-considerations)
-- [Future Enhancements](#future-enhancements)
-  - [Phase 2 Features](#phase-2-features)
-  - [Phase 3 Features](#phase-3-features)
-- [Implementation Timeline (Revised - 3-5 days)](#implementation-timeline-revised---3-5-days)
-  - [Day 1-2: Core Infrastructure](#day-1-2-core-infrastructure)
-  - [Day 3: Multiplexer Logic](#day-3-multiplexer-logic)
-  - [Day 4-5: Helper Apps & Testing](#day-4-5-helper-apps--testing)
-- [Conclusion](#conclusion)
+- [Overview](#overview)
+  - [Task Description](#task-description)
+  - [Current State](#current-state)
+  - [Goals](#goals)
+    - [Key Benefits](#key-benefits)
+  - [Architecture Overview](#architecture-overview)
+    - [System Architecture](#system-architecture)
+    - [Terminal Multiplexer Architecture](#terminal-multiplexer-architecture)
+    - [State Flow Diagram](#state-flow-diagram)
+  - [Detailed Specifications](#detailed-specifications)
+    - [Command Line Interface](#command-line-interface)
+    - [Configuration (Future)](#configuration-future)
+    - [Key Bindings](#key-bindings)
+      - [In Terminal Multiplexer Mode](#in-terminal-multiplexer-mode)
+      - [In Chi Input Helper Mode](#in-chi-input-helper-mode)
+      - [In Chi History Browser Mode](#in-chi-history-browser-mode)
+    - [Data Flow & Integration](#data-flow--integration)
+      - [Clipboard Integration](#clipboard-integration)
+      - [History File Format](#history-file-format)
+  - [Implementation Structure](#implementation-structure)
+    - [Module Organization](#module-organization)
+    - [Core Data Structures](#core-data-structures)
+      - [Terminal Multiplexer](#terminal-multiplexer)
+      - [History Data (from cmdr/src/ch/types.rs)](#history-data-from-cmdrsrcchtypesrs)
+    - [Event Loop Implementation](#event-loop-implementation)
+      - [Main Event Loop](#main-event-loop)
+      - [Input Routing Logic](#input-routing-logic)
+    - [PTY Lifecycle Management](#pty-lifecycle-management)
+      - [Spawning Helper PTYs](#spawning-helper-ptys)
+      - [Returning to Claude](#returning-to-claude)
+    - [Output Buffering Strategy](#output-buffering-strategy)
+      - [Claude Output Management](#claude-output-management)
+  - [TUI Application Specifications](#tui-application-specifications)
+    - [Chi Input Helper (`chi --input`)](#chi-input-helper-chi---input)
+      - [Purpose](#purpose)
+      - [Features](#features)
+      - [UI Layout](#ui-layout)
+      - [Implementation](#implementation)
+    - [Chi History Browser (`chi --history`)](#chi-history-browser-chi---history)
+      - [Purpose](#purpose-1)
+      - [Features](#features-1)
+      - [UI Layout](#ui-layout-1)
+      - [Implementation](#implementation-1)
+  - [Technical Requirements](#technical-requirements)
+    - [Dependencies](#dependencies)
+    - [File System Requirements](#file-system-requirements)
+    - [Performance Requirements](#performance-requirements)
+    - [Compatibility Requirements](#compatibility-requirements)
+  - [User Experience Design](#user-experience-design)
+    - [Accessibility Features](#accessibility-features)
+    - [Visual Feedback](#visual-feedback)
+    - [Transition Animations](#transition-animations)
+    - [Error Handling](#error-handling)
+  - [Testing Strategy](#testing-strategy)
+    - [Unit Tests](#unit-tests)
+    - [Integration Tests](#integration-tests)
+    - [Manual Testing Scenarios](#manual-testing-scenarios)
+  - [Analytics Integration](#analytics-integration)
+    - [Analytics Events to Track](#analytics-events-to-track)
+    - [Implementation Points](#implementation-points)
+    - [Privacy Considerations](#privacy-considerations)
+    - [Success Metrics](#success-metrics)
+    - [Integration with Existing Infrastructure](#integration-with-existing-infrastructure)
+  - [Security Considerations](#security-considerations)
+  - [Future Enhancements](#future-enhancements)
+    - [Phase 2 Features](#phase-2-features)
+    - [Phase 3 Features](#phase-3-features)
+- [Implementation plan](#implementation-plan)
+  - [Step 1: Core Infrastructure [PENDING]](#step-1-core-infrastructure-pending)
+  - [Step 2: Multiplexer Logic [PENDING]](#step-2-multiplexer-logic-pending)
+  - [Step 3: Helper Apps & Testing [PENDING]](#step-3-helper-apps--testing-pending)
+  - [Conclusion](#conclusion)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Status
+# Overview
 
-- **Created**: 2025-01-16
-- **Status**: Design Complete - Ready for Implementation
-- **Priority**: High
-- **Estimated Effort**: 3-5 days (includes analytics integration)
-- **Complexity**: Low (mostly integration work within same crate)
-- **Dependencies**: All within same cmdr crate or existing tui dependency
-- **Code Reuse**: ~85% leveraging existing components:
-  - Direct access to ch module (same crate - no imports/refactoring needed)
-  - Direct access to analytics_client module (same crate)
-  - Direct access to config_folder module (same crate)
-  - TUI editor component from tui crate dependency
-  - PTY management from tui crate dependency
-  - Clipboard service from tui crate dependency
-- **Implementation Simplification**: Being in the same crate eliminates:
-  - No cross-crate coordination needed
-  - No shared module extraction required
-  - Direct access to all ch functionality
-  - Direct analytics integration (same patterns as ch/edi/giti)
-  - Simpler build and testing
-- **Analytics**: Full usage tracking included (adds ~2-3 hours to implementation)
-
-## Executive Summary
+## Task Description
 
 Chi ("claude history interactive") is a unified terminal application that provides seamless
 integration between Claude Code and TUI-based helper tools. It operates in three distinct modes
 based on command-line arguments, creating a powerful workflow for enhanced Claude Code interaction.
 
-## Product Overview
+This PRD documents the complete design for a terminal multiplexer that enhances Claude Code usage by
+providing quick access to input helpers and command history, all while maintaining Claude as the
+primary interface.
 
-### Vision
+## Current State
 
-Create a terminal multiplexer that enhances Claude Code usage by providing quick access to input
-helpers and command history, all while maintaining Claude as the primary interface.
+- **Status**: Design Complete - Ready for Implementation
+- **Created**: 2025-01-16
+- **Priority**: High
+- **Estimated Effort**: 3-5 days (includes analytics integration)
+- **Complexity**: Low (mostly integration work within same crate)
 
-### Core Concept
+The application needs to be built to manage switching between Claude and helper apps (Chi Input
+Helper and Chi History Browser), with about 85% code reuse from existing components.
 
-Chi is a single binary (`chi`) that serves multiple roles:
+## Goals
 
-- **Terminal Multiplexer Mode** (no args): Manages switching between Claude and helper apps
-- **Input Helper Mode** (`--input`): TUI app for enhanced text input
-- **History Browser Mode** (`--history`): TUI app for browsing Claude command history
+1. Create a terminal multiplexer that enhances Claude Code usage
+2. Implement three distinct application modes (multiplexer, input helper, history browser)
+3. Enable seamless workflow between Claude and helper tools
+4. Maintain Claude running in background during tool usage
+5. Integrate analytics to track feature usage
+6. Achieve feature parity with all planned interactions within 3-5 days
 
 ### Key Benefits
 
@@ -1010,9 +997,15 @@ This ensures consistent analytics across all R3BL tools and minimal new code.
 - Integration with external tools
 - Advanced text processing
 
-## Implementation Timeline (Revised - 3-5 days)
+# Implementation plan
 
-### Day 1-2: Core Infrastructure
+## Step 1: Core Infrastructure [PENDING]
+
+**Timeline**: Days 1-2
+
+Core infrastructure and module setup for the Chi application.
+
+**Tasks:**
 
 - [ ] Create `cmdr/src/bin/chi.rs` binary entry point
 - [ ] Set up `cmdr/src/chi/` module structure
@@ -1020,14 +1013,26 @@ This ensures consistent analytics across all R3BL tools and minimal new code.
 - [ ] Terminal multiplexer core with PTY manager
 - [ ] Input router and event handling
 
-### Day 3: Multiplexer Logic
+## Step 2: Multiplexer Logic [PENDING]
+
+**Timeline**: Day 3
+
+Implement the core terminal multiplexer functionality.
+
+**Tasks:**
 
 - [ ] Claude PTY spawning and management
 - [ ] Output buffering system for background Claude
 - [ ] Mode switching between Claude and helpers
 - [ ] Clipboard integration using tui's SystemClipboard
 
-### Day 4-5: Helper Apps & Testing
+## Step 3: Helper Apps & Testing [PENDING]
+
+**Timeline**: Days 4-5
+
+Implement the helper applications and comprehensive testing.
+
+**Tasks:**
 
 - [ ] Chi Input mode (wrap tui editor component)
 - [ ] Chi History mode (directly use ch module functions)

@@ -631,8 +631,9 @@
 
 # refactor editor & vt100 parser to use type-safe indices and lengths
 
-- [x] **COMPLETED 2025-09-27** - Refactor Editor Buffer, Editor Engine, and VT100 Parser modules for type safety
-  [`task_make_editor_vt_100_parser_more_typesafe`](task/done/task_make_editor_vt_100_parser_more_typesafe.md)
+- [x] **COMPLETED 2025-09-27** - Refactor Editor Buffer, Editor Engine, and VT100 Parser modules for
+      type safety
+      [`task_make_editor_vt_100_parser_more_typesafe`](task/done/task_make_editor_vt_100_parser_more_typesafe.md)
 - [x] **Major discovery**: Most of the codebase was already type-safe! Only needed to:
   - [x] Fix 6 test assertions in `validate_buffer_mut.rs` to use `!overflows()` pattern
   - [x] Document legitimate `as_usize()` usage in debug output and doctests
@@ -640,11 +641,12 @@
 - [x] **Modules completed**:
   - [x] Editor Buffer Core (3/3 files) - buffer_struct.rs, caret_locate.rs, history.rs
   - [x] Editor Buffer Support (7/7 files) - all already type-safe
-  - [x] Editor Engine (10/10 files) - content_mut.rs, validate_buffer_mut.rs, engine_public_api.rs + 7 already type-safe
+  - [x] Editor Engine (10/10 files) - content_mut.rs, validate_buffer_mut.rs, engine_public_api.rs +
+        7 already type-safe
   - [x] Editor Component (3/3 files) - all already type-safe
   - [x] VT100 Parser (15+ files) - term_units.rs, protocols/csi_codes.rs + all already type-safe
 - [x] **Total**: 38/38 files complete - 100% type-safe with zero behavioral regressions
-- [x] **Timeline**: Completed in 1 day (vs 1-2 weeks estimated) due to excellent existing architecture
+- [x] **Timeline**: Completed in 1 day (vs 1-2 weeks estimated) due to excellent existing
+      architecture
 - [x] **All 1900+ tests pass** - behavior preserved exactly
 - [x] **Performance**: Zero-cost abstractions maintain optimal performance
-

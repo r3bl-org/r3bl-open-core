@@ -16,44 +16,44 @@
     - [Consistency](#consistency)
     - [Extensibility](#extensibility)
   - [Trade-offs](#trade-offs)
-  - [Implementation Plan](#implementation-plan)
-    - [Phase 1: Extend TuiStyledText with Builder API (3-4 hours)](#phase-1-extend-tuistyledtext-with-builder-api-3-4-hours)
-      - [1.1 Add Builder Methods to TuiStyledText](#11-add-builder-methods-to-tuistyledtext)
-      - [1.2 Create Constructor Functions Module](#12-create-constructor-functions-module)
-      - [1.3 Add `styled_text()` Function (CLI-Compatible)](#13-add-styled_text-function-cli-compatible)
-      - [1.4 Add to_pixel_chars() Method](#14-add-to_pixel_chars-method)
-      - [1.5 Update Module Exports](#15-update-module-exports)
-    - [Phase 2: Add Compatibility Layer (1 hour)](#phase-2-add-compatibility-layer-1-hour)
-      - [2.1 Create Type Alias](#21-create-type-alias)
-      - [2.2 Create Compatibility Function](#22-create-compatibility-function)
-      - [2.3 Re-export Constructor Functions](#23-re-export-constructor-functions)
-    - [Phase 3: Migrate Call Sites (5-7 hours)](#phase-3-migrate-call-sites-5-7-hours)
-      - [3.1 Type Signature Updates](#31-type-signature-updates)
-      - [3.2 Function Call Updates](#32-function-call-updates)
-      - [3.3 Incremental Validation](#33-incremental-validation)
-    - [Phase 4: Remove Old Code (2 hours)](#phase-4-remove-old-code-2-hours)
-      - [4.1 Verify No Remaining Uses](#41-verify-no-remaining-uses)
-      - [4.2 Remove Implementation Code](#42-remove-implementation-code)
-      - [4.3 Update Module Exports](#43-update-module-exports)
-      - [4.4 Update Imports in Paint Implementations](#44-update-imports-in-paint-implementations)
-    - [Phase 5: Testing & Validation (2-3 hours)](#phase-5-testing--validation-2-3-hours)
-      - [5.1 Unit Tests](#51-unit-tests)
-      - [5.2 Integration Tests](#52-integration-tests)
-      - [5.3 Documentation Tests](#53-documentation-tests)
-      - [5.4 Code Quality](#54-code-quality)
-      - [5.5 Performance Validation](#55-performance-validation)
-    - [Phase 6: SmallString Optimization (1-2 hours)](#phase-6-smallstring-optimization-1-2-hours)
-      - [Option A: Use SmallVec-Based String](#option-a-use-smallvec-based-string)
-      - [Option B: Use InlineString (if better fit)](#option-b-use-inlinestring-if-better-fit)
-      - [Phase 6 Implementation:](#phase-6-implementation)
-    - [Phase 7: Zero-Cost Abstractions (2-3 hours)](#phase-7-zero-cost-abstractions-2-3-hours)
-      - [Option A: Simple (No Changes)](#option-a-simple-no-changes)
-      - [Option B: Feature-Gated Compilation](#option-b-feature-gated-compilation)
-      - [Option C: Newtype Wrapper](#option-c-newtype-wrapper)
-      - [Recommendation for Phase 7:](#recommendation-for-phase-7)
-    - [Phase 8: Macro Unification & Builder DSL (1 hour)](#phase-8-macro-unification--builder-dsl-1-hour)
-      - [Option 1: Extend styled_text() Function](#option-1-extend-styled_text-function)
-      - [Option 2: Create styled!() Macro for Builder Chains](#option-2-create-styled-macro-for-builder-chains)
+- [Implementation plan](#implementation-plan)
+  - [Step 1: Extend TuiStyledText with Builder API [PENDING] (3-4 hours)](#step-1-extend-tuistyledtext-with-builder-api-pending-3-4-hours)
+    - [1.1 Add Builder Methods to TuiStyledText](#11-add-builder-methods-to-tuistyledtext)
+    - [1.2 Create Constructor Functions Module](#12-create-constructor-functions-module)
+    - [1.3 Add `styled_text()` Function (CLI-Compatible)](#13-add-styled_text-function-cli-compatible)
+    - [1.4 Add to_pixel_chars() Method](#14-add-to_pixel_chars-method)
+    - [1.5 Update Module Exports](#15-update-module-exports)
+  - [Step 2: Add Compatibility Layer [PENDING] (1 hour)](#step-2-add-compatibility-layer-pending-1-hour)
+    - [2.1 Create Type Alias](#21-create-type-alias)
+    - [2.2 Create Compatibility Function](#22-create-compatibility-function)
+    - [2.3 Re-export Constructor Functions](#23-re-export-constructor-functions)
+  - [Step 3: Migrate Call Sites [PENDING] (5-7 hours)](#step-3-migrate-call-sites-pending-5-7-hours)
+    - [3.1 Type Signature Updates](#31-type-signature-updates)
+    - [3.2 Function Call Updates](#32-function-call-updates)
+    - [3.3 Incremental Validation](#33-incremental-validation)
+  - [Step 4: Remove Old Code [PENDING] (2 hours)](#step-4-remove-old-code-pending-2-hours)
+    - [4.1 Verify No Remaining Uses](#41-verify-no-remaining-uses)
+    - [4.2 Remove Implementation Code](#42-remove-implementation-code)
+    - [4.3 Update Module Exports](#43-update-module-exports)
+    - [4.4 Update Imports in Paint Implementations](#44-update-imports-in-paint-implementations)
+  - [Step 5: Testing & Validation [PENDING] (2-3 hours)](#step-5-testing--validation-pending-2-3-hours)
+    - [5.1 Unit Tests](#51-unit-tests)
+    - [5.2 Integration Tests](#52-integration-tests)
+    - [5.3 Documentation Tests](#53-documentation-tests)
+    - [5.4 Code Quality](#54-code-quality)
+    - [5.5 Performance Validation](#55-performance-validation)
+  - [Step 6: SmallString Optimization [PENDING] (1-2 hours)](#step-6-smallstring-optimization-pending-1-2-hours)
+    - [Option A: Use SmallVec-Based String](#option-a-use-smallvec-based-string)
+    - [Option B: Use InlineString (if better fit)](#option-b-use-inlinestring-if-better-fit)
+    - [Phase 6 Implementation:](#phase-6-implementation)
+  - [Step 7: Zero-Cost Abstractions [DEFERRED] (2-3 hours)](#step-7-zero-cost-abstractions-deferred-2-3-hours)
+    - [Option A: Simple (No Changes)](#option-a-simple-no-changes)
+    - [Option B: Feature-Gated Compilation](#option-b-feature-gated-compilation)
+    - [Option C: Newtype Wrapper](#option-c-newtype-wrapper)
+    - [Recommendation for Phase 7:](#recommendation-for-phase-7)
+  - [Step 8: Macro Unification [DEFERRED] & Builder DSL (1 hour)](#step-8-macro-unification-deferred--builder-dsl-1-hour)
+    - [Option 1: Extend styled_text() Function](#option-1-extend-styled_text-function)
+    - [Option 2: Create styled!() Macro for Builder Chains](#option-2-create-styled-macro-for-builder-chains)
   - [Testing & Validation](#testing--validation)
     - [Pre-Migration Checklist](#pre-migration-checklist)
     - [Per-File Validation During Phase 3](#per-file-validation-during-phase-3)
@@ -373,9 +373,9 @@ CliTextInline                         TuiStyledText
 | **String Type Change**     | May need InlineString → String (or optimize with SmallString)              | Phase 6 optimizes this                                          |
 | **Feature Learning Curve** | CLI developers now have more features (good, but unfamiliar)               | Good documentation + examples                                   |
 
-## Implementation Plan
+# Implementation plan
 
-### Phase 1: Extend TuiStyledText with Builder API (3-4 hours)
+## Step 1: Extend TuiStyledText with Builder API [PENDING] (3-4 hours)
 
 **Goal**: Add the ergonomic builder API from `CliTextInline` to `TuiStyledText`.
 
@@ -638,7 +638,7 @@ cargo test tui_styled_text
 cargo test --doc tui_styled_text
 ```
 
-### Phase 2: Add Compatibility Layer (1 hour)
+## Step 2: Add Compatibility Layer [PENDING] (1 hour)
 
 **Goal**: Make `CliTextInline` a transparent alias to `TuiStyledText` to support gradual migration.
 
@@ -705,7 +705,7 @@ cargo check
 cargo build  # Should build with deprecation warnings
 ```
 
-### Phase 3: Migrate Call Sites (5-7 hours)
+## Step 3: Migrate Call Sites [PENDING] (5-7 hours)
 
 **Goal**: Update all ~100-150 call sites to use `TuiStyledText` directly.
 
@@ -793,13 +793,13 @@ cargo test --lib
 
 **Validation Checklist**:
 
-- ✅ `cargo check` succeeds
-- ✅ `cargo test --lib --package r3bl_tui` passes
-- ✅ `cargo test --lib --package cmdr` passes (if applicable)
-- ✅ Examples compile and run
-- ✅ No new deprecation warnings (only from old code)
+- [COMPLETE] `cargo check` succeeds
+- [COMPLETE] `cargo test --lib --package r3bl_tui` passes
+- [COMPLETE] `cargo test --lib --package cmdr` passes (if applicable)
+- [COMPLETE] Examples compile and run
+- [COMPLETE] No new deprecation warnings (only from old code)
 
-### Phase 4: Remove Old Code (2 hours)
+## Step 4: Remove Old Code [PENDING] (2 hours)
 
 **Goal**: Delete the original `CliTextInline` implementation and clean up.
 
@@ -898,7 +898,7 @@ cargo check
 cargo test --lib
 ```
 
-### Phase 5: Testing & Validation (2-3 hours)
+## Step 5: Testing & Validation [PENDING] (2-3 hours)
 
 **Goal**: Comprehensive testing before moving to optimizations.
 
@@ -960,7 +960,7 @@ cargo bench --package r3bl_tui 2>/dev/null || echo "No benchmarks yet"
   echo "Flamegraph tools not available, skip this step"
 ```
 
-### Phase 6: SmallString Optimization (1-2 hours)
+## Step 6: SmallString Optimization [PENDING] (1-2 hours)
 
 **Goal**: Optimize the text field storage for better memory efficiency.
 
@@ -1039,11 +1039,11 @@ InlineString might be better. If mostly <10 chars, SmallString is fine.
 
 **Success Criteria**:
 
-- ✅ No performance regression
-- ✅ Better or equal memory usage for typical workloads
-- ✅ All tests pass
+- [COMPLETE] No performance regression
+- [COMPLETE] Better or equal memory usage for typical workloads
+- [COMPLETE] All tests pass
 
-### Phase 7: Zero-Cost Abstractions (2-3 hours)
+## Step 7: Zero-Cost Abstractions [DEFERRED] (2-3 hours)
 
 **Goal**: Use conditional compilation to exclude unused fields from TuiStyle when not needed
 (advanced optimization).
@@ -1165,7 +1165,7 @@ impl From<TuiStyle> for CliStyle {
 3. Update conditional compilation in any code that depends on these fields
 4. Test with both feature combinations
 
-### Phase 8: Macro Unification & Builder DSL (1 hour)
+## Step 8: Macro Unification [DEFERRED] & Builder DSL (1 hour)
 
 **Goal**: Provide a unified, ergonomic way to create styled text across all contexts.
 
@@ -1421,26 +1421,26 @@ If unrecoverable issues arise:
 
 ### Must Have (Exit Criteria for Phase 5)
 
-- ✅ All tests pass: `cargo test --all`
-- ✅ All examples compile and run
-- ✅ No remaining references to old `CliTextInline` implementation
-- ✅ Deprecation warnings only for compatibility stubs
-- ✅ Documentation updated
-- ✅ Code review approved
+- [COMPLETE] All tests pass: `cargo test --all`
+- [COMPLETE] All examples compile and run
+- [COMPLETE] No remaining references to old `CliTextInline` implementation
+- [COMPLETE] Deprecation warnings only for compatibility stubs
+- [COMPLETE] Documentation updated
+- [COMPLETE] Code review approved
 
 ### Should Have (Exit Criteria for Phase 8)
 
-- ✅ Memory usage same or better
-- ✅ No performance regression (flamegraph comparison)
-- ✅ Unified ergonomic API (builder methods + constructor functions)
-- ✅ Comprehensive examples
+- [COMPLETE] Memory usage same or better
+- [COMPLETE] No performance regression (flamegraph comparison)
+- [COMPLETE] Unified ergonomic API (builder methods + constructor functions)
+- [COMPLETE] Comprehensive examples
 
 ### Nice to Have (Post-Consolidation)
 
-- ✅ Feature-gated zero-cost abstractions (Phase 7)
-- ✅ Macro DSL for enhanced ergonomics (Phase 8)
-- ✅ Migration guide for users
-- ✅ Blog post / internal documentation
+- [COMPLETE] Feature-gated zero-cost abstractions (Phase 7)
+- [COMPLETE] Macro DSL for enhanced ergonomics (Phase 8)
+- [COMPLETE] Migration guide for users
+- [COMPLETE] Blog post / internal documentation
 
 ## Future Work
 

@@ -1,8 +1,75 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+**Table of Contents** _generated with [DocToc](https://github.com/thlorenz/doctoc)_
+
+- [Task: Clean RenderOps Type Design](#task-clean-renderops-type-design)
+  - [Overview](#overview)
+  - [Problem Statement](#problem-statement)
+    - [Current Flow](#current-flow)
+  - [Solution: Nested Enum Pattern](#solution-nested-enum-pattern)
+    - [Architecture](#architecture)
+  - [Design Decisions](#design-decisions)
+    - [[COMPLETE] Confirmed Approach](#-confirmed-approach)
+    - [Naming Rationale](#naming-rationale)
+  - [Implementation Plan](#implementation-plan)
+    - [Phase 1: Define New Enum Types](#phase-1-define-new-enum-types)
+      - [1.1 Extract Common Operations into RenderOpCommon](#11-extract-common-operations-into-renderopcommon)
+      - [1.2 Create RenderOpIR for App/Component Context](#12-create-renderopir-for-appcomponent-context)
+      - [1.3 Create RenderOpOutput for Terminal/Backend Context](#13-create-renderopoutput-for-terminalbackend-context)
+      - [1.4 Add Trait for Helper Methods (No Duplication)](#14-add-trait-for-helper-methods-no-duplication)
+    - [Phase 2: Create Collection Types](#phase-2-create-collection-types)
+      - [2.1 Create RenderOpsIR Collection](#21-create-renderopsir-collection)
+      - [2.2 Create RenderOpsOutput Collection](#22-create-renderopsoutput-collection)
+    - [Phase 3: Update RenderPipeline](#phase-3-update-renderpipeline)
+    - [Phase 4: Update Compositor](#phase-4-update-compositor)
+      - [4.1 Update compose_render_ops_into_ofs_buf Signature](#41-update-compose_render_ops_into_ofs_buf-signature)
+      - [4.2 Update process_render_op to Accept RenderOpIR](#42-update-process_render_op-to-accept-renderopir)
+      - [4.3 Create Common Operation Handler](#43-create-common-operation-handler)
+    - [Phase 5: Update Backend Converters](#phase-5-update-backend-converters)
+      - [5.1 Update OffscreenBufferPaint Trait](#51-update-offscreenbufferpaint-trait)
+      - [5.2 Update render() Implementation](#52-update-render-implementation)
+      - [5.3 Update render_helper Module](#53-update-render_helper-module)
+    - [Phase 6: Update Backend Executors](#phase-6-update-backend-executors)
+      - [6.1 Update PaintRenderOp Trait](#61-update-paintrenderop-trait)
+      - [6.2 Update paint() Implementation](#62-update-paint-implementation)
+      - [6.3 Create Common Output Handler](#63-create-common-output-handler)
+    - [Phase 7: Update paint.rs Orchestration](#phase-7-update-paintrs-orchestration)
+    - [Phase 8: Update Component API & App Code](#phase-8-update-component-api--app-code)
+      - [8.1 Component Trait (No Changes Needed)](#81-component-trait-no-changes-needed)
+      - [8.2 Update Component Implementations](#82-update-component-implementations)
+      - [8.3 Update render_tui_styled_texts Function](#83-update-render_tui_styled_texts-function)
+    - [Phase 9: Remove Old Code](#phase-9-remove-old-code)
+      - [9.1 Remove render_ops! Macro](#91-remove-render_ops-macro)
+      - [9.2 Remove Old RenderOp Enum](#92-remove-old-renderop-enum)
+      - [9.3 Remove Old RenderOps Collection](#93-remove-old-renderops-collection)
+    - [Phase 10: Update Tests](#phase-10-update-tests)
+  - [Migration Guide](#migration-guide)
+    - [For Component Authors](#for-component-authors)
+    - [For Backend Implementers](#for-backend-implementers)
+  - [Benefits](#benefits)
+    - [Type Safety](#type-safety)
+    - [Maintainability](#maintainability)
+    - [Ergonomics](#ergonomics)
+    - [Architecture](#architecture-1)
+  - [Expected Impact](#expected-impact)
+    - [Files to Modify (~17 files)](#files-to-modify-17-files)
+    - [Estimated Effort](#estimated-effort)
+  - [Testing Checklist](#testing-checklist)
+  - [Documentation Updates](#documentation-updates)
+  - [Success Criteria](#success-criteria)
+  - [Rollback Plan](#rollback-plan)
+  - [Future Enhancements](#future-enhancements)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Task: Clean RenderOps Type Design
 
 ## Overview
 
-Refactor the single `RenderOp` enum into a nested enum architecture that provides type safety by distinguishing between:
+Refactor the single `RenderOp` enum into a nested enum architecture that provides type safety by
+distinguishing between:
+
 - **RenderOpCommon**: 27 operations used in both contexts (shared)
 - **RenderOpIR**: App/Component-level operations (Intermediate Representation)
 - **RenderOpOutput**: Terminal/Backend-level operations (Output to terminal)
@@ -63,7 +130,7 @@ App → Component → RenderOp (#1) → OffscreenBuffer → RenderOp (#2) → Te
 
 ## Design Decisions
 
-### ✅ Confirmed Approach
+### [COMPLETE] Confirmed Approach
 
 1. **Three enums**: `RenderOpCommon`, `RenderOpIR`, `RenderOpOutput`
 2. **Trait for helpers**: `RenderOpCommonExt` with 27 helper methods (no duplication)
@@ -903,6 +970,7 @@ pub trait Component {
 #### 8.2 Update Component Implementations
 
 **Before:**
+
 ```rust
 let ops = render_ops!(@new
     RenderOp::MoveCursorPositionAbs(pos),
@@ -912,6 +980,7 @@ let ops = render_ops!(@new
 ```
 
 **After:**
+
 ```rust
 let ops = RenderOpsIR::from(vec![
     RenderOpIR::move_cursor(pos),
@@ -921,6 +990,7 @@ let ops = RenderOpsIR::from(vec![
 ```
 
 Or incrementally:
+
 ```rust
 let mut ops = RenderOpsIR::new();
 ops.push(RenderOpIR::move_cursor(pos));
@@ -965,6 +1035,7 @@ Delete the old `RenderOps` struct that wrapped `InlineVec<RenderOp>`.
 ### Phase 10: Update Tests
 
 **Files**:
+
 - `tui/src/tui/terminal_lib_backends/test_render_pipeline.rs`
 - `tui/src/tui/terminal_lib_backends/render_op_bench.rs`
 - `tui/src/tui/terminal_lib_backends/crossterm_backend/offscreen_buffer_paint_impl.rs` (test module)
@@ -1006,6 +1077,7 @@ fn test_type_safety_ir_vs_output() {
 ### For Component Authors
 
 **Old code:**
+
 ```rust
 render_ops!(@new
     RenderOp::MoveCursorPositionAbs(pos),
@@ -1015,6 +1087,7 @@ render_ops!(@new
 ```
 
 **New code:**
+
 ```rust
 RenderOpsIR::from(vec![
     RenderOpIR::move_cursor(pos),
@@ -1026,6 +1099,7 @@ RenderOpsIR::from(vec![
 ### For Backend Implementers
 
 **Old code:**
+
 ```rust
 let mut ops = render_ops!();
 ops.push(RenderOp::MoveCursor(pos));
@@ -1033,6 +1107,7 @@ ops.push(RenderOp::CompositorNoClipTruncPaintTextWithAttributes(text, style));
 ```
 
 **New code:**
+
 ```rust
 let mut ops = RenderOpsOutput::new();
 ops.push(RenderOpOutput::move_cursor(pos));
@@ -1042,30 +1117,35 @@ ops.push(RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(text, styl
 ## Benefits
 
 ### Type Safety
-- ✅ Compiler prevents using compositor operations in app code
-- ✅ Compiler prevents using app operations in backend code
-- ✅ Clear separation of concerns enforced at compile time
+
+- [COMPLETE] Compiler prevents using compositor operations in app code
+- [COMPLETE] Compiler prevents using app operations in backend code
+- [COMPLETE] Clear separation of concerns enforced at compile time
 
 ### Maintainability
-- ✅ Self-documenting: Function signatures show operation context
-- ✅ No code duplication: Common operations defined once
-- ✅ Single source of truth for each operation type
+
+- [COMPLETE] Self-documenting: Function signatures show operation context
+- [COMPLETE] No code duplication: Common operations defined once
+- [COMPLETE] Single source of truth for each operation type
 
 ### Ergonomics
-- ✅ Clean call sites with helper methods
-- ✅ Standard Rust patterns (`vec![]`, `new()`, `push()`)
-- ✅ Better IDE support (no macro expansion, better autocomplete)
+
+- [COMPLETE] Clean call sites with helper methods
+- [COMPLETE] Standard Rust patterns (`vec![]`, `new()`, `push()`)
+- [COMPLETE] Better IDE support (no macro expansion, better autocomplete)
 
 ### Architecture
-- ✅ Clear pipeline stages with distinct types
-- ✅ Explicit conversions between IR and Output
-- ✅ Future-proof for additional operation types
+
+- [COMPLETE] Clear pipeline stages with distinct types
+- [COMPLETE] Explicit conversions between IR and Output
+- [COMPLETE] Future-proof for additional operation types
 
 ## Expected Impact
 
 ### Files to Modify (~17 files)
 
 **Core infrastructure:**
+
 - `render_op.rs` - Define new enums + trait (~700 lines)
 - `render_pipeline.rs` - Update pipeline types (~20 lines)
 - `compositor_render_ops_to_ofs_buf.rs` - Accept RenderOpIR (~150 lines)
@@ -1074,6 +1154,7 @@ ops.push(RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(text, styl
 - `paint.rs` - Update orchestration (~40 lines)
 
 **Components:**
+
 - `dialog_engine_api.rs` - Update dialog rendering (~40 lines)
 - `editor_engine/engine_public_api.rs` - Update editor rendering (~30 lines)
 - `main_event_loop.rs` - Update event loop rendering (~20 lines)
@@ -1081,11 +1162,13 @@ ops.push(RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(text, styl
 - Example components (~30 lines each)
 
 **Tests & supporting code:**
+
 - `test_render_pipeline.rs` - Update tests (~50 lines)
 - `render_op_bench.rs` - Update benchmarks (~30 lines)
 - `crossterm_backend/debug.rs` - Update debug formatting (~20 lines)
 
 ### Estimated Effort
+
 - **Phase 1-2** (New types + collections): 3-4 hours
 - **Phase 3-4** (Pipeline + compositor): 3-4 hours
 - **Phase 5-7** (Backend converter + executor + orchestration): 4-5 hours
@@ -1115,13 +1198,13 @@ ops.push(RenderOpOutput::CompositorNoClipTruncPaintTextWithAttributes(text, styl
 
 ## Success Criteria
 
-1. ✅ All tests pass
-2. ✅ No compiler errors or warnings
-3. ✅ All examples run correctly
-4. ✅ Type safety enforced (wrong-context ops don't compile)
-5. ✅ Performance unchanged (benchmark comparison)
-6. ✅ Documentation updated
-7. ✅ Code follows project style guidelines
+1. [COMPLETE] All tests pass
+2. [COMPLETE] No compiler errors or warnings
+3. [COMPLETE] All examples run correctly
+4. [COMPLETE] Type safety enforced (wrong-context ops don't compile)
+5. [COMPLETE] Performance unchanged (benchmark comparison)
+6. [COMPLETE] Documentation updated
+7. [COMPLETE] Code follows project style guidelines
 
 ## Rollback Plan
 

@@ -3,52 +3,72 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Status](#status)
-- [Background](#background)
-- [Problem Statement](#problem-statement)
-- [Proposed Solution](#proposed-solution)
-  - [New Analytics Events](#new-analytics-events)
-    - [Core Interaction Events](#core-interaction-events)
-    - [Feature-Specific Events](#feature-specific-events)
-- [Implementation Plan](#implementation-plan)
-  - [Step 1: Update Analytics Action Enum](#step-1-update-analytics-action-enum)
-  - [Step 2: Modify Main Command Handler](#step-2-modify-main-command-handler)
-  - [Step 3: Update Selection Handler](#step-3-update-selection-handler)
-  - [Step 4: Consider Metadata Enhancement (Optional)](#step-4-consider-metadata-enhancement-optional)
-  - [Step 5: Testing Plan](#step-5-testing-plan)
-- [Implementation Checklist](#implementation-checklist)
-- [Success Metrics](#success-metrics)
-- [Notes for Implementer](#notes-for-implementer)
-- [Related Files](#related-files)
-- [Questions to Resolve](#questions-to-resolve)
+- [Overview](#overview)
+  - [Task Description](#task-description)
+  - [Current State](#current-state)
+  - [Goals](#goals)
+    - [Success Metrics](#success-metrics)
+- [Implementation plan](#implementation-plan)
+  - [Step 0: Design Analytics Events [COMPLETE]](#step-0-design-analytics-events-complete)
+    - [New Analytics Events](#new-analytics-events)
+      - [Core Interaction Events](#core-interaction-events)
+      - [Feature-Specific Events](#feature-specific-events)
+  - [Step 1: Update Analytics Action Enum [PENDING]](#step-1-update-analytics-action-enum-pending)
+  - [Step 2: Modify Main Command Handler [PENDING]](#step-2-modify-main-command-handler-pending)
+  - [Step 3: Update Selection Handler [PENDING]](#step-3-update-selection-handler-pending)
+  - [Step 4: Consider Metadata Enhancement (Optional) [DEFERRED]](#step-4-consider-metadata-enhancement-optional-deferred)
+  - [Step 5: Testing Plan [PENDING]](#step-5-testing-plan-pending)
+  - [Implementation Checklist](#implementation-checklist)
+- [Testing & Validation](#testing--validation)
+  - [Manual Testing Plan](#manual-testing-plan)
+  - [Notes for Implementer](#notes-for-implementer)
+  - [Related Files](#related-files)
+  - [Questions to Resolve](#questions-to-resolve)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Status
+# Overview
 
-- **Created**: 2025-08-16
-- **Status**: Not Started
-- **Priority**: Medium
-- **Estimated Effort**: 2-3 hours
+## Task Description
 
-## Background
+Enhance analytics tracking for the `ch` binary to capture user interactions with the prompt
+selection feature. Currently, ch only tracks app start and failure events. This task adds
+comprehensive event tracking for prompt selections, cancellations, and image prompt usage to provide
+insight into feature adoption and usage patterns.
+
+## Current State
 
 The `ch` binary currently has minimal analytics compared to `edi` and `giti`:
 
-- **Current state**: Only tracks `ChAppStart` and `ChFailedToRun`
-- **Gap**: No tracking of actual user interactions with the prompt selection feature
-- **Goal**: Understand feature usage patterns to inform product decisions
+- Only tracks `ChAppStart` and `ChFailedToRun` events
+- No tracking of actual user interactions with the prompt selection feature
+- Gap prevents understanding of feature usage patterns and adoption rates
 
-## Problem Statement
+This limits visibility into how users interact with the prompt selector and whether image prompt
+features are being utilized.
 
-We need better visibility into how users interact with the `ch` prompt selector to:
+## Goals
 
-1. Measure feature adoption (% of users who select vs browse)
-2. Understand success rates (selections vs cancellations)
-3. Track image prompt usage to justify feature complexity
-4. Identify UX improvement opportunities from usage patterns
+1. Track prompt selection events with contextual metadata
+2. Track prompt selection cancellations (ESC or Ctrl+C)
+3. Monitor image prompt usage to justify feature complexity
+4. Track scenarios where no prompts are available
+5. Enable data-driven decisions about feature improvements
+6. Measure feature adoption rates (% of users who select vs browse)
 
-## Proposed Solution
+### Success Metrics
+
+After implementation, we should be able to answer:
+
+1. What % of ch launches result in prompt selection?
+2. What's the cancellation rate?
+3. How often are image prompts used?
+4. What's the typical prompt list size?
+5. Do users tend to select recent prompts (low index) or scroll deeper?
+
+# Implementation plan
+
+## Step 0: Design Analytics Events [COMPLETE]
 
 ### New Analytics Events
 
@@ -81,9 +101,7 @@ We need better visibility into how users interact with the `ch` prompt selector 
      - `prompt_index`: Position in list
      - `total_prompts`: Total number of prompts
 
-## Implementation Plan
-
-### Step 1: Update Analytics Action Enum
+## Step 1: Update Analytics Action Enum [PENDING]
 
 **File**: `cmdr/src/analytics_client/analytics_action.rs`
 
@@ -102,7 +120,7 @@ pub enum AnalyticsAction {
 
 Update the Display implementation to include string representations for new events.
 
-### Step 2: Modify Main Command Handler
+## Step 2: Modify Main Command Handler [PENDING]
 
 **File**: `cmdr/src/ch/choose_prompt.rs` **Function**: `handle_ch_command()`
 
@@ -132,7 +150,7 @@ None => {
 }
 ```
 
-### Step 3: Update Selection Handler
+## Step 3: Update Selection Handler [PENDING]
 
 **File**: `cmdr/src/ch/choose_prompt.rs` **Function**: `handle_selected_prompt()`
 
@@ -163,7 +181,7 @@ fn handle_selected_prompt(...) -> ChResult {
 }
 ```
 
-### Step 4: Consider Metadata Enhancement (Optional)
+## Step 4: Consider Metadata Enhancement (Optional) [DEFERRED]
 
 If we need richer metadata, consider extending the analytics client to support structured metadata:
 
@@ -178,7 +196,9 @@ pub fn start_task_to_generate_event_with_metadata(
 )
 ```
 
-### Step 5: Testing Plan
+This step is deferred for future enhancement if the current metadata approach proves insufficient.
+
+## Step 5: Testing Plan [PENDING]
 
 1. **Unit Tests**: Mock analytics calls in tests
 2. **Integration Tests**: Verify events fire in correct scenarios
@@ -202,15 +222,16 @@ pub fn start_task_to_generate_event_with_metadata(
 - [ ] Test all analytics events locally
 - [ ] Update documentation if needed
 
-## Success Metrics
+# Testing & Validation
 
-After implementation, we should be able to answer:
+## Manual Testing Plan
 
-1. What % of ch launches result in prompt selection?
-2. What's the cancellation rate?
-3. How often are image prompts used?
-4. What's the typical prompt list size?
-5. Do users tend to select recent prompts (low index) or scroll deeper?
+- [ ] Launch ch with prompts → verify ChAppStart
+- [ ] Select a regular prompt → verify ChPromptSelected
+- [ ] Select an image prompt → verify ChImagePromptSelected
+- [ ] Press ESC to cancel → verify ChSelectionCancelled
+- [ ] Run ch in empty project → verify ChNoPromptsFound
+- [ ] Force an error → verify ChFailedToRun
 
 ## Notes for Implementer
 

@@ -1,4 +1,56 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Task: Optimize OffscreenBuffer with 1D Array Implementation](#task-optimize-offscreenbuffer-with-1d-array-implementation)
+  - [Overview](#overview)
+  - [Executive Summary](#executive-summary)
+  - [Background and Motivation](#background-and-motivation)
+    - [Current Implementation Problems](#current-implementation-problems)
+    - [Benefits of 1D Array](#benefits-of-1d-array)
+    - [SIMD and Performance Background](#simd-and-performance-background)
+  - [Current Architecture Analysis](#current-architecture-analysis)
+    - [Key Files and Structures](#key-files-and-structures)
+    - [Current Type Hierarchy](#current-type-hierarchy)
+    - [Access Patterns in Current Code](#access-patterns-in-current-code)
+  - [Proposed Solution](#proposed-solution)
+    - [Core Data Structure](#core-data-structure)
+    - [Benefits of Generic Design](#benefits-of-generic-design)
+    - [Flexible, Type-Safe API Design](#flexible-type-safe-api-design)
+    - [Index Trait Implementation](#index-trait-implementation)
+- [Implementation plan](#implementation-plan)
+  - [Step 1: Core Infrastructure [PENDING] Core Infrastructure (Priority: High)](#step-1-core-infrastructure-pending-core-infrastructure-priority-high)
+  - [Step 2: Standard Trait Implementations [PENDING] Standard Trait Implementations (Priority: High)](#step-2-standard-trait-implementations-pending-standard-trait-implementations-priority-high)
+  - [Step 3: Advanced Operations [PENDING] Advanced Operations (Priority: Medium)](#step-3-advanced-operations-pending-advanced-operations-priority-medium)
+  - [Step 4: Migration Operations [PENDING] Migration Operations (Priority: High)](#step-4-migration-operations-pending-migration-operations-priority-high)
+  - [Step 5: Testing [PENDING] Testing (Priority: Critical)](#step-5-testing-pending-testing-priority-critical)
+  - [Step 6: Documentation [PENDING] Documentation (Priority: Medium)](#step-6-documentation-pending-documentation-priority-medium)
+  - [Migration Strategy](#migration-strategy)
+    - [Step 1: Parallel Development](#step-1-parallel-development)
+    - [Step 2: Integration](#step-2-integration)
+    - [Step 3: Cleanup](#step-3-cleanup)
+  - [Success Criteria](#success-criteria)
+  - [Risk Mitigation](#risk-mitigation)
+    - [Potential Issues and Solutions](#potential-issues-and-solutions)
+  - [Implementation Notes](#implementation-notes)
+    - [Index Calculation Formula](#index-calculation-formula)
+    - [Memory Layout](#memory-layout)
+    - [Key Performance Improvements](#key-performance-improvements)
+    - [Type Safety Benefits](#type-safety-benefits)
+    - [Flexible API Benefits](#flexible-api-benefits)
+  - [Estimated Timeline](#estimated-timeline)
+  - [References](#references)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Task: Optimize OffscreenBuffer with 1D Array Implementation
+
+## Overview
+
+This task focuses on optimizing the `OffscreenBuffer` data structure by migrating from a nested 2D
+vector (`Vec<Vec<PixelChar>>`) to a flat 1D array (`Box<[PixelChar]>`). This architectural change
+enables compiler-driven SIMD vectorization, improves cache locality, and provides better performance
+for memory operations. The implementation uses a generic `FlatGridBuffer` abstraction that maintains
+type safety through custom index traits while providing flexible, ergonomic access patterns.
 
 ## Executive Summary
 
@@ -282,7 +334,7 @@ let pixel = buffer[(row(5), col(10))]; // Tuple syntax
 let pixel = buffer[my_pos];            // Direct Pos
 ```
 
-## Implementation Tasks
+# Implementation plan
 
 **Important**: Throughout the implementation, use the type-safe bounds checking utilities from
 `tui/src/core/units/bounds_check.rs`:
@@ -292,7 +344,7 @@ let pixel = buffer[my_pos];            // Direct Pos
 - Use `LengthMarker::clamp_to()` for clamping operations
 - Leverage `convert_to_index()` and `convert_to_length()` for type conversions
 
-### Phase 1: Core Infrastructure (Priority: High)
+## Step 1: Core Infrastructure [PENDING] Core Infrastructure (Priority: High)
 
 #### Task 1.1: Create FlatGridBuffer Module
 
@@ -417,7 +469,7 @@ where
 }
 ```
 
-### Phase 2: Standard Trait Implementations (Priority: High)
+## Step 2: Standard Trait Implementations [PENDING] Standard Trait Implementations (Priority: High)
 
 #### Task 2.1: Implement Index Traits
 
@@ -459,7 +511,7 @@ where
 }
 ```
 
-### Phase 3: Advanced Operations (Priority: Medium)
+## Step 3: Advanced Operations [PENDING] Advanced Operations (Priority: Medium)
 
 #### Task 3.1: Region Operations
 
@@ -560,7 +612,7 @@ where
 }
 ```
 
-### Phase 4: Migration Operations (Priority: High)
+## Step 4: Migration Operations [PENDING] Migration Operations (Priority: High)
 
 #### Task 4.1: Line-Level Operations Migration
 
@@ -686,7 +738,7 @@ pub fn diff(&self, other: &Self) -> Option<PixelCharDiffChunks> {
 }
 ```
 
-### Phase 5: Testing (Priority: Critical)
+## Step 5: Testing [PENDING] Testing (Priority: Critical)
 
 #### Task 5.1: Unit Tests
 
@@ -747,7 +799,7 @@ fn test_generic_with_simple_type() {
 - [ ] Test diff generation and application
 - [ ] Ensure all existing OffscreenBuffer tests pass
 
-### Phase 6: Documentation (Priority: Medium)
+## Step 6: Documentation [PENDING] Documentation (Priority: Medium)
 
 #### Task 6.1: API Documentation
 

@@ -3,6 +3,10 @@
 
 - [Dual Channel PTY Interactive Design](#dual-channel-pty-interactive-design)
   - [Overview](#overview)
+  - [Implementation plan](#implementation-plan)
+    - [Step 1: Core API Implementation [COMPLETE]](#step-1-core-api-implementation-complete)
+    - [Step 2: Integration with Existing Components [COMPLETE]](#step-2-integration-with-existing-components-complete)
+    - [Step 3: Testing and Validation [COMPLETE]](#step-3-testing-and-validation-complete)
   - [Core API Design](#core-api-design)
     - [Main Function](#main-function)
     - [PtySession Structure](#ptysession-structure)
@@ -44,6 +48,38 @@ pseudo-terminal. This function will be implemented in
 assumptions about the child process. The child process itself determines terminal modes
 (cooked/raw), interprets terminal environment variables, and handles all terminal-specific behavior.
 We simply provide the transport layer for bidirectional communication.
+
+## Implementation plan
+
+The dual channel PTY design has been successfully implemented and deployed. This section documents
+the completed work.
+
+### Step 1: Core API Implementation [COMPLETE]
+
+Implemented the bidirectional PTY communication function with proper channel management.
+
+- [x] Design and implement `spawn_pty_capture_output_and_provide_input` function
+- [x] Create `PtySession` structure with sender/receiver channels
+- [x] Implement `PtyInput` and `PtyEvent` enum types
+- [x] Handle process lifecycle and resource cleanup
+
+### Step 2: Integration with Existing Components [COMPLETE]
+
+Integrated the dual channel implementation with the existing PTY infrastructure.
+
+- [x] Refactor shared components into common_impl.rs
+- [x] Update existing read-only function to use shared implementation
+- [x] Ensure compatibility with PtyConfig and CommandBuilder
+- [x] Add proper error handling and status conversion
+
+### Step 3: Testing and Validation [COMPLETE]
+
+Validated the implementation with comprehensive test cases.
+
+- [x] Tested Python REPL interaction
+- [x] Tested interactive shell command execution
+- [x] Tested SSH session handling
+- [x] Validated error handling and edge cases
 
 ## Core API Design
 
@@ -455,12 +491,12 @@ module:
 
 | Feature            | `spawn_pty_capture_output_no_input` | `spawn_pty_capture_output_and_provide_input` |
 | ------------------ | ----------------------------------- | -------------------------------------------- |
-| Read from child    | ✅                                  | ✅                                           |
-| Write to child     | ❌                                  | ✅                                           |
-| OSC capture        | ✅                                  | ✅                                           |
-| Raw output capture | ✅                                  | ✅                                           |
-| Control sequences  | ❌                                  | ✅                                           |
-| PTY resize         | ❌                                  | ✅                                           |
+| Read from child    | [COMPLETE]                          | [COMPLETE]                                   |
+| Write to child     | [BLOCKED]                           | [COMPLETE]                                   |
+| OSC capture        | [COMPLETE]                          | [COMPLETE]                                   |
+| Raw output capture | [COMPLETE]                          | [COMPLETE]                                   |
+| Control sequences  | [BLOCKED]                           | [COMPLETE]                                   |
+| PTY resize         | [BLOCKED]                           | [COMPLETE]                                   |
 | Use cases          | Monitoring, logging                 | REPL, SSH, shells                            |
 
 ## Future Enhancements
