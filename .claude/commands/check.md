@@ -1,5 +1,4 @@
-Fix errors and warnings in tests, doctests, build docs
+# Make sure tests pass and docs build
 
-1. Run `cargo test --all-targets`
-2. Run `cargo test --doc`
-3. Run `cargo doc --no-deps`
+1. Use the test-runner subagent to make sure tests pass
+2. Use the code-formatter subagent to make sure that docs build

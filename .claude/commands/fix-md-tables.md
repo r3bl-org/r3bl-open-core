@@ -1,4 +1,3 @@
-In the file currently open in the IDE:
+# Make sure rustdoc builds and comments are formatted correctly
 
-1. Make sure that any markdown tables in this file is properly formatted with columns
-   aligned using the right amount of whitespaces.
+Have the code-formatter subagent review my recent changes
