@@ -81,7 +81,10 @@
       "Read(//home/nazmul/.config/Code/logs/20250925T142242/window1/**)",
       "Read(//home/nazmul/.claude/**)",
       "WebFetch(domain:internals.rust-lang.org)",
-      "Read(//home/nazmul/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/crossterm-0.29.0/**)"
+      "Read(//home/nazmul/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/crossterm-0.29.0/**)",
+      "mcp__serena__initial_instructions",
+      "WebFetch(domain:www.masteringemacs.org)",
+      "WebFetch(domain:www.gnu.org)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

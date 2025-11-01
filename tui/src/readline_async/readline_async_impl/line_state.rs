@@ -1,10 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, LINE_FEED_BYTE,
-            MemoizedLenMap, ReadlineError, ReadlineEvent, SafeHistory, StringLength,
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, FunctionKey, IndexOps, InputEvent,
+            Key, KeyPress, KeyState, LINE_FEED_BYTE, MemoizedLenMap, ReadlineError,
+            ReadlineEvent, SafeHistory, SpecialKey, StringLength,
             core::coordinates::idx, ok};
 use crossterm::{QueueableCommand, cursor,
-                event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
+                event::{KeyCode, KeyModifiers},
                 terminal::{Clear,
                            ClearType::{All, FromCursorDown}}};
 use std::io::{self, Write};
@@ -19,6 +20,112 @@ pub enum LineStateLiveness {
 impl LineStateLiveness {
     #[must_use]
     pub fn is_paused(&self) -> bool { matches!(self, LineStateLiveness::Paused) }
+}
+
+/// Extract KeyCode and modifiers from a KeyPress, converting to crossterm types.
+/// Returns (KeyCode, KeyModifiers, is_control_only).
+///
+/// is_control_only indicates whether ONLY Ctrl is pressed (no Shift or Alt).
+fn extract_keycode_and_modifiers(keypress: KeyPress) -> (KeyCode, KeyModifiers, bool) {
+    match keypress {
+        KeyPress::Plain { key } => {
+            let code = match key {
+                Key::Character(c) => KeyCode::Char(c),
+                Key::SpecialKey(special) => match special {
+                    SpecialKey::Backspace => KeyCode::Backspace,
+                    SpecialKey::Enter => KeyCode::Enter,
+                    SpecialKey::Esc => KeyCode::Esc,
+                    SpecialKey::Tab => KeyCode::Tab,
+                    SpecialKey::BackTab => KeyCode::BackTab,
+                    SpecialKey::Up => KeyCode::Up,
+                    SpecialKey::Down => KeyCode::Down,
+                    SpecialKey::Left => KeyCode::Left,
+                    SpecialKey::Right => KeyCode::Right,
+                    SpecialKey::Home => KeyCode::Home,
+                    SpecialKey::End => KeyCode::End,
+                    SpecialKey::PageUp => KeyCode::PageUp,
+                    SpecialKey::PageDown => KeyCode::PageDown,
+                    SpecialKey::Delete => KeyCode::Delete,
+                    SpecialKey::Insert => KeyCode::Insert,
+                },
+                Key::FunctionKey(fn_key) => {
+                    let n = match fn_key {
+                        FunctionKey::F1 => 1,
+                        FunctionKey::F2 => 2,
+                        FunctionKey::F3 => 3,
+                        FunctionKey::F4 => 4,
+                        FunctionKey::F5 => 5,
+                        FunctionKey::F6 => 6,
+                        FunctionKey::F7 => 7,
+                        FunctionKey::F8 => 8,
+                        FunctionKey::F9 => 9,
+                        FunctionKey::F10 => 10,
+                        FunctionKey::F11 => 11,
+                        FunctionKey::F12 => 12,
+                    };
+                    KeyCode::F(n)
+                }
+                _ => KeyCode::Null,
+            };
+            (code, KeyModifiers::NONE, false)
+        }
+        KeyPress::WithModifiers { key, mask } => {
+            let code = match key {
+                Key::Character(c) => KeyCode::Char(c),
+                Key::SpecialKey(special) => match special {
+                    SpecialKey::Backspace => KeyCode::Backspace,
+                    SpecialKey::Enter => KeyCode::Enter,
+                    SpecialKey::Esc => KeyCode::Esc,
+                    SpecialKey::Tab => KeyCode::Tab,
+                    SpecialKey::BackTab => KeyCode::BackTab,
+                    SpecialKey::Up => KeyCode::Up,
+                    SpecialKey::Down => KeyCode::Down,
+                    SpecialKey::Left => KeyCode::Left,
+                    SpecialKey::Right => KeyCode::Right,
+                    SpecialKey::Home => KeyCode::Home,
+                    SpecialKey::End => KeyCode::End,
+                    SpecialKey::PageUp => KeyCode::PageUp,
+                    SpecialKey::PageDown => KeyCode::PageDown,
+                    SpecialKey::Delete => KeyCode::Delete,
+                    SpecialKey::Insert => KeyCode::Insert,
+                },
+                Key::FunctionKey(fn_key) => {
+                    let n = match fn_key {
+                        FunctionKey::F1 => 1,
+                        FunctionKey::F2 => 2,
+                        FunctionKey::F3 => 3,
+                        FunctionKey::F4 => 4,
+                        FunctionKey::F5 => 5,
+                        FunctionKey::F6 => 6,
+                        FunctionKey::F7 => 7,
+                        FunctionKey::F8 => 8,
+                        FunctionKey::F9 => 9,
+                        FunctionKey::F10 => 10,
+                        FunctionKey::F11 => 11,
+                        FunctionKey::F12 => 12,
+                    };
+                    KeyCode::F(n)
+                }
+                _ => KeyCode::Null,
+            };
+
+            let mut modifiers = KeyModifiers::NONE;
+            let mut is_ctrl_only = false;
+            if mask.shift_key_state == KeyState::Pressed {
+                modifiers |= KeyModifiers::SHIFT;
+            }
+            if mask.ctrl_key_state == KeyState::Pressed {
+                modifiers |= KeyModifiers::CONTROL;
+                is_ctrl_only = mask.shift_key_state == KeyState::NotPressed
+                    && mask.alt_key_state == KeyState::NotPressed;
+            }
+            if mask.alt_key_state == KeyState::Pressed {
+                modifiers |= KeyModifiers::ALT;
+            }
+
+            (code, modifiers, is_ctrl_only)
+        }
+    }
 }
 
 /// This struct actually handles the line editing, and rendering. This works hand in hand
@@ -431,7 +538,7 @@ impl LineState {
     /// processed.
     pub fn apply_event_and_render(
         &mut self,
-        event: &Event,
+        event: &InputEvent,
         term: &mut dyn Write,
         safe_history: &SafeHistory,
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
@@ -439,21 +546,20 @@ impl LineState {
                                             handle_resize};
 
         match event {
-            // Control Keys
-            Event::Key(KeyEvent {
-                code,
-                modifiers: KeyModifiers::CONTROL,
-                kind: KeyEventKind::Press,
-                ..
-            }) => handle_control_key(self, *code, term, safe_history),
-            // Other Modifiers (None, Shift, Control+Alt)
-            Event::Key(KeyEvent {
-                code,
-                modifiers: _,
-                kind: KeyEventKind::Press,
-                ..
-            }) => handle_regular_key(self, *code, term, safe_history),
-            Event::Resize(x, y) => handle_resize(self, *x, *y, term),
+            InputEvent::Keyboard(keypress) => {
+                let (code, _modifiers, is_ctrl_only) =
+                    extract_keycode_and_modifiers(*keypress);
+                if is_ctrl_only {
+                    handle_control_key(self, code, term, safe_history)
+                } else {
+                    handle_regular_key(self, code, term, safe_history)
+                }
+            }
+            InputEvent::Resize(size) => {
+                let width = size.col_width.0.value;
+                let height = size.row_height.0.value;
+                handle_resize(self, width, height, term)
+            }
             _ => Ok(None),
         }
     }
@@ -907,7 +1013,9 @@ mod tests {
         let (history, _) = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
-        let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+        let event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::Character('a'),
+        });
 
         let it = line.apply_event_and_render(
             &event,
@@ -932,7 +1040,9 @@ mod tests {
         let (history, _) = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
-        let event = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+        let event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Right),
+        });
 
         let it = line.apply_event_and_render(
             &event,
@@ -957,7 +1067,9 @@ mod tests {
         let (history, _) = History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
-        let event = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        let event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::SpecialKey(SpecialKey::Up),
+        });
 
         let it = line.apply_event_and_render(
             &event,

@@ -22,7 +22,7 @@ async fn main() -> miette::Result<()> {
 
 async fn without_readline_async() -> miette::Result<()> {
     let mut output_device = OutputDevice::new_stdout();
-    let mut input_device = InputDevice::new_event_stream();
+    let mut input_device = InputDevice::default();
 
     let chosen = choose(
         Header::SingleLine("Choose one:".into()),

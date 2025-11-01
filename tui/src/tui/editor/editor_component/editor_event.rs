@@ -1,11 +1,11 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{DEBUG_TUI_COPY_PASTE, DeleteSelectionWith, EditorArgsMut, EditorBuffer,
-            EditorEngine, InputEvent, Key, KeyState, ModifierKeysMask, SelectMode, Size,
+            EditorEngine, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, SelectMode, Size,
             SpecialKey, clipboard_support::ClipboardService,
             editor_engine::engine_internal_api, fg_green, inline_string,
             md_parser::md_parser_constants::NEW_LINE_CHAR,
-            terminal_lib_backends::KeyPress, validate_scroll_on_resize};
+            validate_scroll_on_resize};
 use std::fmt::Debug;
 
 /// Events that can be applied to the [`EditorEngine`] to modify an [`EditorBuffer`].

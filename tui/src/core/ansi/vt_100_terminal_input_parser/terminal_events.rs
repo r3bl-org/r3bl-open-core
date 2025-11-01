@@ -12,7 +12,7 @@
 //! - **Bracketed Paste Start**: `ESC [ 200 ~`
 //! - **Bracketed Paste End**: `ESC [ 201 ~`
 
-use super::types::{InputEvent, FocusState, PasteMode};
+use super::types::{VT100InputEvent, VT100FocusState, VT100PasteMode};
 
 /// Parse a terminal event sequence and return an InputEvent with bytes consumed if recognized.
 ///
@@ -24,7 +24,7 @@ use super::types::{InputEvent, FocusState, PasteMode};
 /// - `CSI I` → Terminal gained focus
 /// - `CSI O` → Terminal lost focus
 /// - `ESC[200~` → Bracketed paste start
-pub fn parse_terminal_event(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
         return None;
@@ -38,8 +38,8 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(InputEvent, usize)> {
     // Handle simple focus events (single character after ESC[)
     if buffer.len() == 3 {
         match buffer[2] {
-            b'I' => return Some((InputEvent::Focus(FocusState::Gained), 3)),
-            b'O' => return Some((InputEvent::Focus(FocusState::Lost), 3)),
+            b'I' => return Some((VT100InputEvent::Focus(VT100FocusState::Gained), 3)),
+            b'O' => return Some((VT100InputEvent::Focus(VT100FocusState::Lost), 3)),
             _ => {}
         }
     }
@@ -49,7 +49,7 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(InputEvent, usize)> {
 }
 
 /// Parse CSI sequences with parameters for terminal events.
-fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Extract parameters and final byte
     // Format: ESC [ [param;param;...] final_byte
     let mut params = Vec::new();
@@ -93,13 +93,13 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(InputEvent, usize)> {
         (3, b't') if params[0] == 8 => {
             let rows = params[1];
             let cols = params[2];
-            Some((InputEvent::Resize { rows, cols }, total_consumed))
+            Some((VT100InputEvent::Resize { rows, cols }, total_consumed))
         }
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
         (1, b'~') => {
             match params[0] {
-                200 => Some((InputEvent::Paste(PasteMode::Start), total_consumed)),
-                201 => Some((InputEvent::Paste(PasteMode::End), total_consumed)),
+                200 => Some((VT100InputEvent::Paste(VT100PasteMode::Start), total_consumed)),
+                201 => Some((VT100InputEvent::Paste(VT100PasteMode::End), total_consumed)),
                 _ => None,
             }
         }
@@ -114,8 +114,8 @@ mod tests {
 
     #[test]
     fn test_resize_event() {
-        // Round-trip test: Generate sequence from InputEvent, then parse it back
-        let original_event = InputEvent::Resize { rows: 24, cols: 80 };
+        // Round-trip test: Generate sequence from VT100InputEvent, then parse it back
+        let original_event = VT100InputEvent::Resize { rows: 24, cols: 80 };
         let seq = generate_keyboard_sequence(&original_event)
             .expect("Failed to generate resize sequence");
 
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn test_focus_events() {
         // Round-trip test: Focus gained
-        let original_gained = InputEvent::Focus(FocusState::Gained);
+        let original_gained = VT100InputEvent::Focus(VT100FocusState::Gained);
         let seq_gained = generate_keyboard_sequence(&original_gained)
             .expect("Failed to generate focus gained sequence");
 
@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(parsed, original_gained);
 
         // Round-trip test: Focus lost
-        let original_lost = InputEvent::Focus(FocusState::Lost);
+        let original_lost = VT100InputEvent::Focus(VT100FocusState::Lost);
         let seq_lost = generate_keyboard_sequence(&original_lost)
             .expect("Failed to generate focus lost sequence");
 
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn test_bracketed_paste() {
         // Round-trip test: Paste start
-        let original_start = InputEvent::Paste(PasteMode::Start);
+        let original_start = VT100InputEvent::Paste(VT100PasteMode::Start);
         let seq_start = generate_keyboard_sequence(&original_start)
             .expect("Failed to generate paste start sequence");
 
@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(parsed, original_start);
 
         // Round-trip test: Paste end
-        let original_end = InputEvent::Paste(PasteMode::End);
+        let original_end = VT100InputEvent::Paste(VT100PasteMode::End);
         let seq_end = generate_keyboard_sequence(&original_end)
             .expect("Failed to generate paste end sequence");
 

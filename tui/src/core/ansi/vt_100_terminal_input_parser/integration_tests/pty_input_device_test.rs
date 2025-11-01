@@ -1,9 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{core::ansi::{vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence,
-                         vt_100_terminal_input_parser::{InputEvent, KeyCode,
-                                                        KeyModifiers}},
-            generate_pty_test,
+use crate::{core::ansi::vt_100_terminal_input_parser::{
+                test_fixtures::generate_keyboard_sequence,
+                types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers}
+            },
+            generate_pty_test, InputEvent,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -96,7 +97,7 @@ fn pty_master_entry_point(
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
     /// Helper to generate ANSI bytes from InputEvent.
-    fn generate_test_sequence(desc: &str, event: InputEvent) -> (&str, Vec<u8>) {
+    fn generate_test_sequence(desc: &str, event: VT100InputEvent) -> (&str, Vec<u8>) {
         let bytes = generate_keyboard_sequence(&event)
             .unwrap_or_else(|| panic!("Failed to generate sequence for: {}", desc));
         (desc, bytes)
@@ -153,26 +154,26 @@ fn pty_master_entry_point(
     }
 
     // Send sequences and verify.
-    let no_mods = KeyModifiers::default();
+    let no_mods = VT100KeyModifiers::default();
     let sequences: Vec<(&str, Vec<u8>)> = vec![
         generate_test_sequence(
             "Up Arrow",
-            InputEvent::Keyboard {
-                code: KeyCode::Up,
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Up,
                 modifiers: no_mods,
             },
         ),
         generate_test_sequence(
             "Down Arrow",
-            InputEvent::Keyboard {
-                code: KeyCode::Down,
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Down,
                 modifiers: no_mods,
             },
         ),
         generate_test_sequence(
             "F1",
-            InputEvent::Keyboard {
-                code: KeyCode::Function(1),
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Function(1),
                 modifiers: no_mods,
             },
         ),
@@ -303,23 +304,20 @@ fn pty_slave_entry_point() -> ! {
 
                             // Output event in parseable format.
                             let output = match event {
-                                InputEvent::Keyboard { code, modifiers } => {
-                                    format!(
-                                        "Keyboard: {:?} (shift={} ctrl={} alt={})",
-                                        code, modifiers.shift, modifiers.ctrl, modifiers.alt
-                                    )
+                                InputEvent::Keyboard(ref key_press) => {
+                                    format!("Keyboard: {:?}", key_press)
                                 }
-                                InputEvent::Mouse { button, action, .. } => {
-                                    format!("Mouse: button={:?} action={:?}", button, action)
+                                InputEvent::Mouse(ref mouse_input) => {
+                                    format!("Mouse: {:?}", mouse_input)
                                 }
-                                InputEvent::Resize { rows, cols } => {
-                                    format!("Resize: {}x{}", rows, cols)
+                                InputEvent::Resize(ref size) => {
+                                    format!("Resize: {:?}", size)
                                 }
-                                InputEvent::Focus(state) => {
+                                InputEvent::Focus(ref state) => {
                                     format!("Focus: {:?}", state)
                                 }
-                                InputEvent::Paste(mode) => {
-                                    format!("Paste: {:?}", mode)
+                                InputEvent::BracketedPaste(ref text) => {
+                                    format!("Paste: {} chars", text.len())
                                 }
                             };
 

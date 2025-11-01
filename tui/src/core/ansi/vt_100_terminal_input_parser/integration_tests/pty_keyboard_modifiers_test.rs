@@ -1,9 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{core::ansi::{vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence,
-                         vt_100_terminal_input_parser::{InputEvent, KeyCode,
-                                                        KeyModifiers}},
-            generate_pty_test,
+use crate::{core::ansi::vt_100_terminal_input_parser::{
+                test_fixtures::generate_keyboard_sequence,
+                types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers}
+            },
+            generate_pty_test, InputEvent,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -83,9 +84,9 @@ fn pty_master_entry_point(
     let modifier_combos = vec![
         (
             "Shift+Up",
-            InputEvent::Keyboard {
-                code: KeyCode::Up,
-                modifiers: KeyModifiers {
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Up,
+                modifiers: VT100KeyModifiers {
                     shift: true,
                     alt: false,
                     ctrl: false,
@@ -94,9 +95,9 @@ fn pty_master_entry_point(
         ),
         (
             "Ctrl+Up",
-            InputEvent::Keyboard {
-                code: KeyCode::Up,
-                modifiers: KeyModifiers {
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Up,
+                modifiers: VT100KeyModifiers {
                     shift: false,
                     alt: false,
                     ctrl: true,
@@ -105,9 +106,9 @@ fn pty_master_entry_point(
         ),
         (
             "Alt+Down",
-            InputEvent::Keyboard {
-                code: KeyCode::Down,
-                modifiers: KeyModifiers {
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Down,
+                modifiers: VT100KeyModifiers {
                     shift: false,
                     alt: true,
                     ctrl: false,
@@ -116,9 +117,9 @@ fn pty_master_entry_point(
         ),
         (
             "Shift+Alt+Left",
-            InputEvent::Keyboard {
-                code: KeyCode::Left,
-                modifiers: KeyModifiers {
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Left,
+                modifiers: VT100KeyModifiers {
                     shift: true,
                     alt: true,
                     ctrl: false,
@@ -127,9 +128,9 @@ fn pty_master_entry_point(
         ),
         (
             "Ctrl+Shift+Right",
-            InputEvent::Keyboard {
-                code: KeyCode::Right,
-                modifiers: KeyModifiers {
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Right,
+                modifiers: VT100KeyModifiers {
                     shift: true,
                     alt: false,
                     ctrl: true,
@@ -138,9 +139,9 @@ fn pty_master_entry_point(
         ),
         (
             "Ctrl+Alt+Shift+F1",
-            InputEvent::Keyboard {
-                code: KeyCode::Function(1),
-                modifiers: KeyModifiers {
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Function(1),
+                modifiers: VT100KeyModifiers {
                     shift: true,
                     alt: true,
                     ctrl: true,
@@ -243,11 +244,8 @@ fn pty_slave_entry_point() -> ! {
                             eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
 
                             let output = match event {
-                                InputEvent::Keyboard { code, modifiers } => {
-                                    format!(
-                                        "Keyboard: {:?} (shift={} ctrl={} alt={})",
-                                        code, modifiers.shift, modifiers.ctrl, modifiers.alt
-                                    )
+                                InputEvent::Keyboard(ref key_press) => {
+                                    format!("Keyboard: {:?}", key_press)
                                 }
                                 _ => {
                                     format!("Unexpected event: {:?}", event)

@@ -1,6 +1,5 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use super::{KeyPress, MouseInput};
-use crate::{Size, height, width};
+use crate::{KeyPress, MouseInput, Size, height, width};
 use crossterm::event::{Event as CTEvent,
                        Event::{self},
                        KeyEvent, MouseEvent};
@@ -129,7 +128,8 @@ pub enum FocusEvent {
 }
 
 mod helpers {
-    use super::{InputEvent, KeyPress};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     impl InputEvent {
         #[must_use]

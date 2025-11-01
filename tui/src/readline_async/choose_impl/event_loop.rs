@@ -11,7 +11,6 @@ use crate::{execute_commands,
             CommonResult,
             FunctionComponent,
             InputDevice,
-            InputDeviceExt,
             InputEvent,
             ItemsOwned,
             TTYResult};

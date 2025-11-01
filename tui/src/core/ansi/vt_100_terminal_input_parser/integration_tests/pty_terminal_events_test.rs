@@ -1,9 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{core::ansi::{vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence,
-                         vt_100_terminal_input_parser::{FocusState, InputEvent,
-                                                        PasteMode}},
-            generate_pty_test,
+use crate::{core::ansi::vt_100_terminal_input_parser::{
+                test_fixtures::generate_keyboard_sequence,
+                types::{VT100FocusState, VT100InputEvent}
+            },
+            generate_pty_test, InputEvent,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -16,7 +17,9 @@ generate_pty_test! {
     /// Validates that the DirectToAnsiInputDevice correctly parses terminal events:
     /// - Window resize notifications (CSI 8;rows;cols t)
     /// - Focus gained/lost events (CSI I/O)
-    /// - Bracketed paste mode start/end (CSI 200~/201~)
+    ///
+    /// Note: Bracketed paste events are tested in pty_bracketed_paste_test.rs
+    /// because they require special state machine handling (Start + text + End).
     ///
     /// Uses the coordinator-worker pattern with two processes.
     test_fn: test_pty_terminal_events,
@@ -77,12 +80,12 @@ fn pty_master_entry_point(
     }
 
     // Generate and send terminal events
+    // Note: Paste events are tested separately in pty_bracketed_paste_test.rs
+    // because they require special handling (Start + text + End = single event)
     let events = vec![
-        ("Window Resize", InputEvent::Resize { rows: 24, cols: 80 }),
-        ("Focus Gained", InputEvent::Focus(FocusState::Gained)),
-        ("Focus Lost", InputEvent::Focus(FocusState::Lost)),
-        ("Paste Start", InputEvent::Paste(PasteMode::Start)),
-        ("Paste End", InputEvent::Paste(PasteMode::End)),
+        ("Window Resize", VT100InputEvent::Resize { rows: 24, cols: 80 }),
+        ("Focus Gained", VT100InputEvent::Focus(VT100FocusState::Gained)),
+        ("Focus Lost", VT100InputEvent::Focus(VT100FocusState::Lost)),
     ];
 
     eprintln!("📝 PTY Master: Sending {} terminal events...", events.len());
@@ -179,14 +182,14 @@ fn pty_slave_entry_point() -> ! {
                             eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
 
                             let output = match event {
-                                InputEvent::Resize { rows, cols } => {
-                                    format!("Resize: {}x{}", rows, cols)
+                                InputEvent::Resize(ref size) => {
+                                    format!("Resize: {:?}", size)
                                 }
-                                InputEvent::Focus(state) => {
+                                InputEvent::Focus(ref state) => {
                                     format!("Focus: {:?}", state)
                                 }
-                                InputEvent::Paste(mode) => {
-                                    format!("Paste: {:?}", mode)
+                                InputEvent::BracketedPaste(ref text) => {
+                                    format!("Paste: {} chars", text.len())
                                 }
                                 _ => {
                                     format!("Unexpected event: {:?}", event)
@@ -196,7 +199,8 @@ fn pty_slave_entry_point() -> ! {
                             println!("{}", output);
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
-                            if event_count >= 5 {
+                            // Exit after processing the expected number of test events (3)
+                            if event_count >= 3 {
                                 eprintln!("🔍 PTY Slave: Processed {} events, exiting", event_count);
                                 break;
                             }

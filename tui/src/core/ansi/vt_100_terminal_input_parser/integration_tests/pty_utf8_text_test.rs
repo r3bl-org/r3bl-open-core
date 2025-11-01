@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{core::ansi::vt_100_terminal_input_parser::InputEvent, generate_pty_test,
+use crate::{InputEvent, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
@@ -177,8 +177,8 @@ fn pty_slave_entry_point() -> ! {
                             eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
 
                             let output = match event {
-                                InputEvent::Keyboard { code, .. } => {
-                                    format!("Text: {:?}", code)
+                                InputEvent::Keyboard(key_press) => {
+                                    format!("Text: {:?}", key_press)
                                 }
                                 _ => {
                                     format!("Unexpected event: {:?}", event)

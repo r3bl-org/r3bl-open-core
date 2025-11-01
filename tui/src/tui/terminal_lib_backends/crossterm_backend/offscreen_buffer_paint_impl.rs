@@ -347,8 +347,8 @@ mod tests {
     use super::*;
     use crate::{ColWidth, RenderOpsLocalData, assert_eq2,
                 compositor_render_ops_to_ofs_buf::print_text_with_attributes, height,
-                new_style, offscreen_buffer_paint_impl::render_helper::style_eq,
-                tui_color, width};
+                new_style, tui_color, width};
+    use super::render_helper::style_eq;
 
     /// Helper function to make an `OffscreenBuffer`.
     fn make_offscreen_buffer_plain_text() -> OffscreenBuffer {

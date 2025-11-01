@@ -1,8 +1,9 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
-use crate::{ChannelCapacity, CommonResultWithError, History, InputDevice, LineState,
-            LineStateControlSignal, LineStateLiveness, OutputDevice, PauseBuffer,
-            SafeHistory, SafeLineState, SafePauseBuffer, SendRawTerminal, SharedWriter,
-            StdMutex, execute_commands_no_lock, join, lock_output_device_as_mut};
+use crate::{ChannelCapacity, CommonResultWithError, History, InputDevice, InputEvent,
+            LineState, LineStateControlSignal, LineStateLiveness, ModifierKeysMask,
+            OutputDevice, PauseBuffer, SafeHistory, SafeLineState, SafePauseBuffer,
+            SendRawTerminal, SharedWriter, StdMutex, execute_commands_no_lock, join,
+            key_press, lock_output_device_as_mut};
 use crossterm::{ExecutableCommand, QueueableCommand, cursor,
                 terminal::{self, Clear, disable_raw_mode}};
 use miette::Report as ErrorReport;
@@ -21,18 +22,6 @@ use tokio::{select, spawn,
 /// into raw mode.
 pub const READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY: Duration =
     Duration::from_millis(66);
-
-const CTRL_C: crossterm::event::Event =
-    crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
-        crossterm::event::KeyCode::Char('c'),
-        crossterm::event::KeyModifiers::CONTROL,
-    ));
-
-const CTRL_D: crossterm::event::Event =
-    crossterm::event::Event::Key(crossterm::event::KeyEvent::new(
-        crossterm::event::KeyCode::Char('d'),
-        crossterm::event::KeyModifiers::CONTROL,
-    ));
 
 /// # Mental model and overview
 ///
@@ -710,21 +699,23 @@ impl Readline {
                 // - All the state comes from other variables (self.*).
                 // - So if this future is dropped, then the item in the
                 //   pinned_input_stream isn't used, and the state isn't modified.
-                result_crossterm_event = self.input_device.next() => {
-                    match readline_internal::apply_event_to_line_state_and_render(
-                        result_crossterm_event,
-                        &self.safe_line_state,
-                        lock_output_device_as_mut!(self.output_device),
-                        &self.safe_history,
-                        &self.safe_spinner_is_active,
-                    ) {
-                        ControlFlowExtended::ReturnOk(ok_value) => {
-                            return Ok(ok_value);
-                        },
-                        ControlFlowExtended::ReturnError(err_value) => {
-                            return Err(err_value);
-                        },
-                        ControlFlowExtended::Continue => {}
+                maybe_input_event = self.input_device.next_input_event() => {
+                    if let Some(input_event) = maybe_input_event {
+                        match readline_internal::apply_event_to_line_state_and_render(
+                            input_event,
+                            &self.safe_line_state,
+                            lock_output_device_as_mut!(self.output_device),
+                            &self.safe_history,
+                            &self.safe_spinner_is_active,
+                        ) {
+                            ControlFlowExtended::ReturnOk(ok_value) => {
+                                return Ok(ok_value);
+                            },
+                            ControlFlowExtended::ReturnError(err_value) => {
+                                return Err(err_value);
+                            },
+                            ControlFlowExtended::Continue => {}
+                        }
                     }
                 },
 
@@ -749,8 +740,8 @@ impl Readline {
 }
 
 pub mod readline_internal {
-    use super::{Arc, CTRL_C, CTRL_D, ControlFlowExtended, ReadlineError, ReadlineEvent,
-                SafeHistory, SafeLineState, StdMutex, Write, broadcast};
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
 
     /// # Panics
     ///
@@ -758,54 +749,201 @@ pub mod readline_internal {
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
     pub fn apply_event_to_line_state_and_render(
-        result_crossterm_event: miette::Result<crossterm::event::Event>,
+        input_event: InputEvent,
         self_line_state: &SafeLineState,
         term: &mut dyn Write,
         self_safe_history: &SafeHistory,
         self_safe_is_spinner_active: &Arc<StdMutex<Option<broadcast::Sender<()>>>>,
     ) -> ControlFlowExtended<ReadlineEvent, ReadlineError> {
-        match result_crossterm_event {
-            Ok(crossterm_event) => {
-                let mut line_state = self_line_state.lock().unwrap();
+        // Check if this is Ctrl+C or Ctrl+D
+        let is_ctrl_c_or_d = input_event.matches_any_of_these_keypresses(&[
+            key_press!(@char ModifierKeysMask::new().with_ctrl(), 'c'),
+            key_press!(@char ModifierKeysMask::new().with_ctrl(), 'd'),
+        ]);
 
-                // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
-                // active). And early return!
-                let is_spinner_active =
-                    self_safe_is_spinner_active.lock().unwrap().take();
-                if (crossterm_event == CTRL_C || crossterm_event == CTRL_D)
-                    && let Some(spinner_shutdown_sender) = is_spinner_active
-                {
-                    // Send signal to SharedWriter spinner shutdown channel.
-                    // We don't care about the result of this operation.
-                    spinner_shutdown_sender.send(()).ok();
-                    return ControlFlowExtended::Continue;
-                }
+        let mut line_state = self_line_state.lock().unwrap();
 
-                // Regular readline event handling.
-                let result_maybe_readline_event = line_state.apply_event_and_render(
-                    &crossterm_event,
-                    term,
-                    self_safe_history,
-                );
+        // Intercept Ctrl+C or Ctrl+D here and send a signal to spinner (if it is
+        // active). And early return!
+        let is_spinner_active = self_safe_is_spinner_active.lock().unwrap().take();
+        if is_ctrl_c_or_d && let Some(spinner_shutdown_sender) = is_spinner_active {
+            // Send signal to SharedWriter spinner shutdown channel.
+            // We don't care about the result of this operation.
+            spinner_shutdown_sender.send(()).ok();
+            return ControlFlowExtended::Continue;
+        }
 
-                match result_maybe_readline_event {
-                    Ok(maybe_readline_event) => {
-                        if let Some(readline_event) = maybe_readline_event {
-                            return ControlFlowExtended::ReturnOk(readline_event);
-                        }
-                    }
-                    Err(e) => return ControlFlowExtended::ReturnError(e),
+        // Regular readline event handling - use the canonical InputEvent directly
+        let result_maybe_readline_event =
+            line_state.apply_event_and_render(&input_event, term, self_safe_history);
+
+        match result_maybe_readline_event {
+            Ok(maybe_readline_event) => {
+                if let Some(readline_event) = maybe_readline_event {
+                    return ControlFlowExtended::ReturnOk(readline_event);
                 }
             }
-
-            Err(report) => {
-                return ControlFlowExtended::ReturnError(ReadlineError::IO(
-                    std::io::Error::other(format!("{report}")),
-                ));
-            }
+            Err(e) => return ControlFlowExtended::ReturnError(e),
         }
 
         ControlFlowExtended::Continue
+    }
+
+    /// Convert crossterm::event::Event to canonical InputEvent
+    pub fn convert_crossterm_event_to_input_event(
+        event: crossterm::event::Event,
+    ) -> Option<InputEvent> {
+        use crate::{Button, FunctionKey, Key, KeyPress, KeyState, MouseInputKind,
+                    SpecialKey};
+        use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent,
+                               MouseEventKind};
+
+        match event {
+            Event::Key(KeyEvent {
+                code, modifiers, ..
+            }) => {
+                let key = match code {
+                    KeyCode::Char(c) => Key::Character(c),
+                    KeyCode::F(n) => {
+                        let fn_key = match n {
+                            1 => FunctionKey::F1,
+                            2 => FunctionKey::F2,
+                            3 => FunctionKey::F3,
+                            4 => FunctionKey::F4,
+                            5 => FunctionKey::F5,
+                            6 => FunctionKey::F6,
+                            7 => FunctionKey::F7,
+                            8 => FunctionKey::F8,
+                            9 => FunctionKey::F9,
+                            10 => FunctionKey::F10,
+                            11 => FunctionKey::F11,
+                            12 => FunctionKey::F12,
+                            _ => return None,
+                        };
+                        Key::FunctionKey(fn_key)
+                    }
+                    KeyCode::Up => Key::SpecialKey(SpecialKey::Up),
+                    KeyCode::Down => Key::SpecialKey(SpecialKey::Down),
+                    KeyCode::Left => Key::SpecialKey(SpecialKey::Left),
+                    KeyCode::Right => Key::SpecialKey(SpecialKey::Right),
+                    KeyCode::Home => Key::SpecialKey(SpecialKey::Home),
+                    KeyCode::End => Key::SpecialKey(SpecialKey::End),
+                    KeyCode::PageUp => Key::SpecialKey(SpecialKey::PageUp),
+                    KeyCode::PageDown => Key::SpecialKey(SpecialKey::PageDown),
+                    KeyCode::Tab => Key::SpecialKey(SpecialKey::Tab),
+                    KeyCode::BackTab => Key::SpecialKey(SpecialKey::BackTab),
+                    KeyCode::Delete => Key::SpecialKey(SpecialKey::Delete),
+                    KeyCode::Insert => Key::SpecialKey(SpecialKey::Insert),
+                    KeyCode::Enter => Key::SpecialKey(SpecialKey::Enter),
+                    KeyCode::Backspace => Key::SpecialKey(SpecialKey::Backspace),
+                    KeyCode::Esc => Key::SpecialKey(SpecialKey::Esc),
+                    _ => return None,
+                };
+
+                let mask = crate::ModifierKeysMask {
+                    shift_key_state: if modifiers.contains(KeyModifiers::SHIFT) {
+                        KeyState::Pressed
+                    } else {
+                        KeyState::NotPressed
+                    },
+                    ctrl_key_state: if modifiers.contains(KeyModifiers::CONTROL) {
+                        KeyState::Pressed
+                    } else {
+                        KeyState::NotPressed
+                    },
+                    alt_key_state: if modifiers.contains(KeyModifiers::ALT) {
+                        KeyState::Pressed
+                    } else {
+                        KeyState::NotPressed
+                    },
+                };
+
+                let keypress = if mask.shift_key_state == KeyState::NotPressed
+                    && mask.ctrl_key_state == KeyState::NotPressed
+                    && mask.alt_key_state == KeyState::NotPressed
+                {
+                    KeyPress::Plain { key }
+                } else {
+                    KeyPress::WithModifiers { key, mask }
+                };
+
+                Some(InputEvent::Keyboard(keypress))
+            }
+            Event::Mouse(MouseEvent {
+                kind,
+                column,
+                row,
+                modifiers,
+            }) => {
+                let mouse_input = crate::MouseInput {
+                    pos: crate::Pos {
+                        col_index: crate::ColIndex::from(column as i32),
+                        row_index: crate::RowIndex::from(row as i32),
+                    },
+                    kind: match kind {
+                        MouseEventKind::Down(button) => {
+                            let btn = match button {
+                                crossterm::event::MouseButton::Left => Button::Left,
+                                crossterm::event::MouseButton::Right => Button::Right,
+                                crossterm::event::MouseButton::Middle => Button::Middle,
+                            };
+                            MouseInputKind::MouseDown(btn)
+                        }
+                        MouseEventKind::Up(button) => {
+                            let btn = match button {
+                                crossterm::event::MouseButton::Left => Button::Left,
+                                crossterm::event::MouseButton::Right => Button::Right,
+                                crossterm::event::MouseButton::Middle => Button::Middle,
+                            };
+                            MouseInputKind::MouseUp(btn)
+                        }
+                        MouseEventKind::Drag(button) => {
+                            let btn = match button {
+                                crossterm::event::MouseButton::Left => Button::Left,
+                                crossterm::event::MouseButton::Right => Button::Right,
+                                crossterm::event::MouseButton::Middle => Button::Middle,
+                            };
+                            MouseInputKind::MouseDrag(btn)
+                        }
+                        MouseEventKind::Moved => MouseInputKind::MouseMove,
+                        MouseEventKind::ScrollUp => MouseInputKind::ScrollUp,
+                        MouseEventKind::ScrollDown => MouseInputKind::ScrollDown,
+                        MouseEventKind::ScrollLeft => MouseInputKind::ScrollLeft,
+                        MouseEventKind::ScrollRight => MouseInputKind::ScrollRight,
+                    },
+                    maybe_modifier_keys: if modifiers.contains(KeyModifiers::SHIFT)
+                        || modifiers.contains(KeyModifiers::CONTROL)
+                        || modifiers.contains(KeyModifiers::ALT)
+                    {
+                        Some(crate::ModifierKeysMask {
+                            shift_key_state: if modifiers.contains(KeyModifiers::SHIFT) {
+                                KeyState::Pressed
+                            } else {
+                                KeyState::NotPressed
+                            },
+                            ctrl_key_state: if modifiers.contains(KeyModifiers::CONTROL) {
+                                KeyState::Pressed
+                            } else {
+                                KeyState::NotPressed
+                            },
+                            alt_key_state: if modifiers.contains(KeyModifiers::ALT) {
+                                KeyState::Pressed
+                            } else {
+                                KeyState::NotPressed
+                            },
+                        })
+                    } else {
+                        None
+                    },
+                };
+                Some(InputEvent::Mouse(mouse_input))
+            }
+            Event::Resize(width, height) => Some(InputEvent::Resize(crate::Size {
+                col_width: crate::ColWidth::from(width),
+                row_height: crate::RowHeight::from(height),
+            })),
+            _ => None,
+        }
     }
 }
 
@@ -843,12 +981,11 @@ pub mod readline_test_fixtures {
 
 #[cfg(test)]
 mod test_readline {
-    use super::{Arc, ChannelCapacity, ControlFlowExtended, Duration, History, InputDevice,
-                LineStateControlSignal, LineStateLiveness, OutputDevice, Readline,
-                ReadlineEvent, StdMutex, broadcast, lock_output_device_as_mut,
+    use super::{Arc, ChannelCapacity, ControlFlowExtended, Duration, History,
+                InputDevice, LineStateControlSignal, LineStateLiveness, OutputDevice,
+                Readline, ReadlineEvent, StdMutex, broadcast, lock_output_device_as_mut,
                 readline_internal, readline_test_fixtures::get_input_vec, sleep};
-    use crate::{InputDeviceExtMock, OutputDeviceExt, TTYResult,
-                is_partially_uninteractive_terminal};
+    use crate::{OutputDeviceExt, TTYResult, is_partially_uninteractive_terminal};
 
     #[tokio::test]
     #[allow(clippy::needless_return)]
@@ -884,8 +1021,13 @@ mod test_readline {
         let Some(Ok(event)) = iter.next() else {
             panic!();
         };
+        let Some(input_event) =
+            readline_internal::convert_crossterm_event_to_input_event(event.clone())
+        else {
+            panic!("Failed to convert event");
+        };
         let control_flow = readline_internal::apply_event_to_line_state_and_render(
-            Ok(event.clone()),
+            input_event,
             &readline.safe_line_state,
             lock_output_device_as_mut!(output_device),
             &safe_history,

@@ -108,7 +108,7 @@ impl RenderToAnsi for OffscreenBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PixelChar, TuiStyle, height, width, SGR_RESET_BYTES};
+    use crate::{PixelChar, TuiStyle, height, width};
 
     #[test]
     fn test_render_to_ansi_empty_buffer() {

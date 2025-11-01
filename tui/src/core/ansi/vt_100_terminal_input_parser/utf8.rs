@@ -11,7 +11,7 @@
 //! - Incomplete UTF-8 sequences (buffering)
 //! - Invalid UTF-8 sequences (graceful error handling)
 
-use super::types::{InputEvent, KeyCode, KeyModifiers};
+use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 
 /// Parse UTF-8 text and return a single InputEvent for the first complete character.
 ///
@@ -24,7 +24,7 @@ use super::types::{InputEvent, KeyCode, KeyModifiers};
 ///
 /// The caller (DirectToAnsiInputDevice) can call this repeatedly to parse
 /// multiple characters from the buffer.
-pub fn parse_utf8_text(buffer: &[u8]) -> Option<(InputEvent, usize)> {
+pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check if we have a complete UTF-8 sequence
     let bytes_consumed = is_utf8_complete(buffer)?;
 
@@ -33,9 +33,9 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<(InputEvent, usize)> {
 
     // Return keyboard event with the decoded character
     Some((
-        InputEvent::Keyboard {
-            code: KeyCode::Char(ch),
-            modifiers: KeyModifiers::default(),
+        VT100InputEvent::Keyboard {
+            code: VT100KeyCode::Char(ch),
+            modifiers: VT100KeyModifiers::default(),
         },
         bytes_consumed,
     ))
@@ -164,8 +164,8 @@ mod tests {
 
         assert_eq!(consumed, 1);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('a'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('a'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -180,8 +180,8 @@ mod tests {
         let (event, consumed) = parse_utf8_text(buffer).expect("Should parse first char");
         assert_eq!(consumed, 1);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('h'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('h'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -190,8 +190,8 @@ mod tests {
         let (event, consumed) = parse_utf8_text(&buffer[1..]).expect("Should parse second char");
         assert_eq!(consumed, 1);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('e'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('e'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -205,8 +205,8 @@ mod tests {
 
         assert_eq!(consumed, 2);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('©'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('©'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -220,8 +220,8 @@ mod tests {
 
         assert_eq!(consumed, 3);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('€'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('€'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -235,8 +235,8 @@ mod tests {
 
         assert_eq!(consumed, 4);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('😀'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('😀'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -308,8 +308,8 @@ mod tests {
         let (event, consumed) = parse_utf8_text(buffer).expect("Should parse ASCII");
         assert_eq!(consumed, 1);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('a'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('a'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -318,8 +318,8 @@ mod tests {
         let (event, consumed) = parse_utf8_text(&buffer[1..]).expect("Should parse 2-byte");
         assert_eq!(consumed, 2);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('©'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('©'));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -328,8 +328,8 @@ mod tests {
         let (event, consumed) = parse_utf8_text(&buffer[3..]).expect("Should parse ASCII");
         assert_eq!(consumed, 1);
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Char('b'));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Char('b'));
             }
             _ => panic!("Expected Keyboard event"),
         }

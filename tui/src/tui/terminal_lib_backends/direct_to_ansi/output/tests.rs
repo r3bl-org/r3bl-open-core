@@ -85,7 +85,6 @@ mod screen_clearing_tests {
 #[cfg(test)]
 mod color_tests {
     use crate::{AnsiSequenceGenerator, SgrColorSequence, tui_color};
-    use std::num::NonZeroU16;
 
     #[test]
     fn test_reset_color() {

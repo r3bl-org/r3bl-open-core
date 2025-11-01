@@ -13,8 +13,8 @@ use r3bl_tui::{clear_screen_and_home_cursor,
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
                lock_output_device_as_mut, set_mimalloc_in_main,
-               tui::terminal_lib_backends::{InputEvent, Key, KeyPress, KeyState,
-                                            ModifierKeysMask, RawMode}};
+               InputEvent, Key, KeyPress, KeyState,
+               ModifierKeysMask, RawMode};
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
@@ -33,7 +33,7 @@ async fn main() -> miette::Result<()> {
     // Get terminal size.
     let terminal_size = get_size()?;
     let mut output_device = OutputDevice::new_stdout();
-    let mut input_device = InputDevice::new_event_stream();
+    let mut input_device = InputDevice::default();
 
     // Start raw mode.
     RawMode::start(
@@ -123,9 +123,7 @@ async fn run_event_loop(
             }
 
             // Handle user input.
-            Ok(event) = input_device.next() => {
-                let Ok(input_event) = InputEvent::try_from(event) else { continue };
-
+            Some(input_event) = input_device.next_input_event() => {
                 match input_event {
                     InputEvent::Keyboard(key) => {
                         // Check for Ctrl+Q to quit.

@@ -46,11 +46,13 @@
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
 
 // Attach.
-pub mod debug;
-pub mod offscreen_buffer_paint_impl;
-pub mod paint_render_op_impl;
+mod debug;
+mod input_device_impl;
+mod offscreen_buffer_paint_impl;
+mod paint_render_op_impl;
 
 // Re-export.
 pub use debug::*;
+pub use input_device_impl::*;
 pub use offscreen_buffer_paint_impl::*;
 pub use paint_render_op_impl::*;

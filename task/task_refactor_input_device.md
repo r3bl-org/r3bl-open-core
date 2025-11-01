@@ -73,12 +73,12 @@ This refactoring reorganizes the architecture to match the output layer:
 
 ## Goals
 
-1. [COMPLETE] Perfect architectural symmetry with OutputDevice
-2. [COMPLETE] Zero new dependencies (enum dispatch, no `async-trait` or `Pin<Box<Future>>`)
-3. [COMPLETE] Automatic backend selection via `TERMINAL_LIB_BACKEND`
-4. [COMPLETE] Backward compatible test API (`new_mock` still works)
-5. [COMPLETE] Clean separation: trait in core/, impls in backends/
-6. [COMPLETE] Easy to add new backends in future
+1. Perfect architectural symmetry with OutputDevice
+2. Zero new dependencies (enum dispatch, no `async-trait` or `Pin<Box<Future>>`)
+3. Automatic backend selection via `TERMINAL_LIB_BACKEND`
+4. Backward compatible test API (`new_mock` still works)
+5. Clean separation: trait in core/, impls in backends/
+6. Easy to add new backends in future
 
 ## Architecture Before vs After
 
@@ -119,7 +119,7 @@ core/test_fixtures/input_device_fixtures/
 This step reorganizes files to match the OutputDevice pattern, moving files to their proper
 locations and preparing the codebase for the new enum-based dispatch system.
 
-### Step 1.1: Move `input_device_ext.rs` [PENDING]
+### Step 1.1: Move `input_device_ext.rs` [COMPLETE]
 
 Move the trait definition from the backend layer to the core protocol layer.
 
@@ -136,7 +136,7 @@ Move the trait definition from the backend layer to the core protocol layer.
 - Keep trait simple with `async fn` (enum dispatch = no object safety needed)
 - Remove `#[allow(async_fn_in_trait)]` if present
 
-### Step 1.2: Move and rename Crossterm implementation [PENDING]
+### Step 1.2: Move and rename Crossterm implementation [COMPLETE]
 
 Move the Crossterm input device implementation to the Crossterm backend folder and rename the struct
 for clarity.
@@ -162,7 +162,7 @@ for clarity.
 
 Create the generic enum wrapper and mock device to support the new architecture.
 
-### Step 2.1: Create `MockInputDevice` [PENDING]
+### Step 2.1: Create `MockInputDevice` [COMPLETE]
 
 Implement a mock input device for testing purposes.
 
@@ -260,7 +260,7 @@ pub mod mock_input_device;
 pub use mock_input_device::*;
 ```
 
-### Step 2.2: Create Generic `InputDevice` Enum [PENDING]
+### Step 2.2: Create Generic `InputDevice` Enum [COMPLETE]
 
 Replace the existing `input_device.rs` with a generic enum wrapper.
 
@@ -415,7 +415,7 @@ impl Default for InputDevice {
 
 Update the implementations of each backend to work with the new architecture.
 
-### Step 3.1: Update `CrosstermInputDevice` Implementation [PENDING]
+### Step 3.1: Update `CrosstermInputDevice` Implementation [COMPLETE]
 
 Rename the struct and move the `InputDeviceExt` implementation to the new location.
 
@@ -505,7 +505,7 @@ impl InputDeviceExt for CrosstermInputDevice {
 }
 ```
 
-### Step 3.2: Update `DirectToAnsiInputDevice` [PENDING]
+### Step 3.2: Update `DirectToAnsiInputDevice` [COMPLETE]
 
 Add `InputDeviceExt` trait implementation and create a constant for the read buffer size.
 
@@ -535,7 +535,7 @@ Add `InputDeviceExt` trait implementation and create a constant for the read buf
    }
    ```
 
-### Step 3.3: Update `InputDeviceExtMock` Trait [PENDING]
+### Step 3.3: Update `InputDeviceExtMock` Trait [COMPLETE]
 
 Update the mock trait implementation to delegate to enum constructors.
 
@@ -576,11 +576,11 @@ impl InputDeviceExtMock for InputDevice {
 }
 ```
 
-## Step 4: Update Module Exports [PENDING]
+## Step 4: Update Module Exports [COMPLETE]
 
 Update module declarations to reflect the new file locations and exports.
 
-### Step 4.1: Update `tui/src/core/terminal_io/mod.rs` [PENDING]
+### Step 4.1: Update `tui/src/core/terminal_io/mod.rs` [COMPLETE]
 
 Add/update the following:
 
@@ -592,17 +592,17 @@ pub use input_device::*;
 pub use input_device_ext::*;
 ```
 
-### Step 4.2: Update `tui/src/tui/terminal_lib_backends/crossterm_backend/mod.rs` [PENDING]
+### Step 4.2: Update `tui/src/tui/terminal_lib_backends/crossterm_backend/mod.rs` [COMPLETE]
 
 Add:
 
 ```rust
-pub mod input_device_impl;
+mod input_device_impl;
 
 pub use input_device_impl::*;
 ```
 
-### Step 4.3: Update `tui/src/tui/terminal_lib_backends/mod.rs` [PENDING]
+### Step 4.3: Update `tui/src/tui/terminal_lib_backends/mod.rs` [COMPLETE]
 
 Remove:
 
@@ -612,7 +612,7 @@ pub mod input_device_ext;  // Moved to core/terminal_io/
 
 The trait is now exported from `core/terminal_io/`.
 
-### Step 4.4: Update `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs` [PENDING]
+### Step 4.4: Update `tui/src/tui/terminal_lib_backends/direct_to_ansi/input/mod.rs` [COMPLETE]
 
 Re-export `DirectToAnsiInputDevice` if not already done:
 
@@ -723,21 +723,21 @@ If issues arise:
 
 # Benefits Summary
 
-[COMPLETE] **Architectural Symmetry:** Perfect mirror of OutputDevice pattern
+**Architectural Symmetry:** Perfect mirror of OutputDevice pattern
 
-[COMPLETE] **Zero Dependencies:** No `async-trait`, no `Pin<Box<Future>>` complexity
+**Zero Dependencies:** No `async-trait`, no `Pin<Box<Future>>` complexity
 
-[COMPLETE] **Auto Backend Selection:** Uses `TERMINAL_LIB_BACKEND` automatically
+**Auto Backend Selection:** Uses `TERMINAL_LIB_BACKEND` automatically
 
-[COMPLETE] **Backward Compatible:** Existing test API (`new_mock`) works unchanged
+**Backward Compatible:** Existing test API (`new_mock`) works unchanged
 
-[COMPLETE] **Clean Separation:** Trait in core/, implementations in backends/
+**Clean Separation:** Trait in core/, implementations in backends/
 
-[COMPLETE] **Extensible:** Easy to add new backends (just add enum variant)
+**Extensible:** Easy to add new backends (just add enum variant)
 
-[COMPLETE] **Type Safe:** Enum dispatch provides exhaustive matching
+**Type Safe:** Enum dispatch provides exhaustive matching
 
-[COMPLETE] **Simple:** Straightforward `async fn` in trait, no boxing needed
+**Simple:** Straightforward `async fn` in trait, no boxing needed
 
 # Risks and Mitigations
 

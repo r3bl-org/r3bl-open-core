@@ -1,6 +1,6 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::terminal_lib_backends::{InputEvent, Key, KeyPress, SpecialKey};
+use crate::{InputEvent, Key, KeyPress, SpecialKey};
 
 /// Provide a conversion from [`crate::InputEvent`] to [`DialogEvent`].
 ///

@@ -7,14 +7,19 @@
 //! of, except that it is growable) for partial ANSI sequences, and delegates to the
 //! protocol layer parsers for sequence interpretation.
 
-use crate::core::ansi::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O,
-                        vt_100_terminal_input_parser::{InputEvent, KeyCode,
-                                                       KeyModifiers,
-                                                       parse_keyboard_sequence,
-                                                       parse_mouse_sequence,
-                                                       parse_ss3_sequence,
-                                                       parse_terminal_event,
-                                                       parse_utf8_text}};
+use crate::{Button, ColWidth, FocusEvent, InputDeviceExt, InputEvent, Key, KeyPress,
+            KeyState, ModifierKeysMask, MouseInput, MouseInputKind, Pos, RowHeight,
+            SpecialKey,
+            core::ansi::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O,
+                         vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
+                                                        VT100KeyModifiers, VT100MouseAction,
+                                                        VT100MouseButton, VT100PasteMode,
+                                                        VT100ScrollDirection, VT100FocusState,
+                                                        parse_keyboard_sequence,
+                                                        parse_mouse_sequence,
+                                                        parse_ss3_sequence,
+                                                        parse_terminal_event,
+                                                        parse_utf8_text}}};
 use tokio::io::{AsyncReadExt, Stdin};
 
 /// Buffer compaction threshold: compact when consumed bytes exceed this value. This is
@@ -56,6 +61,184 @@ const INITIAL_BUFFER_CAPACITY: usize = 4096;
 /// - ESC alone → emitted immediately (0ms latency)
 /// - ESC sequence → parsed when complete
 /// - No artificial delays needed!
+///
+/// Temporary read buffer size for stdin reads.
+const TEMP_READ_BUFFER_SIZE: usize = 256;
+
+/// Convert protocol-level KeyCode and KeyModifiers to canonical KeyPress.
+fn convert_key_code_to_keypress(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> KeyPress {
+    let key = match code {
+        VT100KeyCode::Char(ch) => Key::Character(ch),
+        VT100KeyCode::Function(n) => {
+            use crate::FunctionKey;
+            match n {
+                1 => Key::FunctionKey(FunctionKey::F1),
+                2 => Key::FunctionKey(FunctionKey::F2),
+                3 => Key::FunctionKey(FunctionKey::F3),
+                4 => Key::FunctionKey(FunctionKey::F4),
+                5 => Key::FunctionKey(FunctionKey::F5),
+                6 => Key::FunctionKey(FunctionKey::F6),
+                7 => Key::FunctionKey(FunctionKey::F7),
+                8 => Key::FunctionKey(FunctionKey::F8),
+                9 => Key::FunctionKey(FunctionKey::F9),
+                10 => Key::FunctionKey(FunctionKey::F10),
+                11 => Key::FunctionKey(FunctionKey::F11),
+                12 => Key::FunctionKey(FunctionKey::F12),
+                _ => Key::Character('?'), // Fallback
+            }
+        }
+        VT100KeyCode::Up => Key::SpecialKey(SpecialKey::Up),
+        VT100KeyCode::Down => Key::SpecialKey(SpecialKey::Down),
+        VT100KeyCode::Left => Key::SpecialKey(SpecialKey::Left),
+        VT100KeyCode::Right => Key::SpecialKey(SpecialKey::Right),
+        VT100KeyCode::Home => Key::SpecialKey(SpecialKey::Home),
+        VT100KeyCode::End => Key::SpecialKey(SpecialKey::End),
+        VT100KeyCode::PageUp => Key::SpecialKey(SpecialKey::PageUp),
+        VT100KeyCode::PageDown => Key::SpecialKey(SpecialKey::PageDown),
+        VT100KeyCode::Tab => Key::SpecialKey(SpecialKey::Tab),
+        VT100KeyCode::BackTab => Key::SpecialKey(SpecialKey::BackTab),
+        VT100KeyCode::Delete => Key::SpecialKey(SpecialKey::Delete),
+        VT100KeyCode::Insert => Key::SpecialKey(SpecialKey::Insert),
+        VT100KeyCode::Enter => Key::SpecialKey(SpecialKey::Enter),
+        VT100KeyCode::Backspace => Key::SpecialKey(SpecialKey::Backspace),
+        VT100KeyCode::Escape => Key::SpecialKey(SpecialKey::Esc),
+    };
+
+    // Convert modifiers
+    let mask = ModifierKeysMask {
+        shift_key_state: if modifiers.shift {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        ctrl_key_state: if modifiers.ctrl {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        alt_key_state: if modifiers.alt {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+    };
+
+    if mask.shift_key_state == KeyState::NotPressed
+        && mask.ctrl_key_state == KeyState::NotPressed
+        && mask.alt_key_state == KeyState::NotPressed
+    {
+        KeyPress::Plain { key }
+    } else {
+        KeyPress::WithModifiers { key, mask }
+    }
+}
+
+/// Convert protocol-level InputEvent to canonical InputEvent.
+fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputEvent> {
+    match vt100_event {
+        VT100InputEvent::Keyboard { code, modifiers } => {
+            let keypress = convert_key_code_to_keypress(code, modifiers);
+            Some(InputEvent::Keyboard(keypress))
+        }
+        VT100InputEvent::Mouse {
+            button,
+            pos,
+            action,
+            modifiers,
+        } => {
+            let button_kind = match button {
+                VT100MouseButton::Left => Button::Left,
+                VT100MouseButton::Right => Button::Right,
+                VT100MouseButton::Middle => Button::Middle,
+                VT100MouseButton::Unknown => return None,
+            };
+
+            let kind = match action {
+                VT100MouseAction::Press => MouseInputKind::MouseDown(button_kind),
+                VT100MouseAction::Release => MouseInputKind::MouseUp(button_kind),
+                VT100MouseAction::Drag => MouseInputKind::MouseDrag(button_kind),
+                VT100MouseAction::Motion => MouseInputKind::MouseMove,
+                VT100MouseAction::Scroll(direction) => match direction {
+                    VT100ScrollDirection::Up => MouseInputKind::ScrollUp,
+                    VT100ScrollDirection::Down => MouseInputKind::ScrollDown,
+                    VT100ScrollDirection::Left => MouseInputKind::ScrollLeft,
+                    VT100ScrollDirection::Right => MouseInputKind::ScrollRight,
+                },
+            };
+
+            let maybe_modifier_keys =
+                if modifiers.shift || modifiers.ctrl || modifiers.alt {
+                    Some(ModifierKeysMask {
+                        shift_key_state: if modifiers.shift {
+                            KeyState::Pressed
+                        } else {
+                            KeyState::NotPressed
+                        },
+                        ctrl_key_state: if modifiers.ctrl {
+                            KeyState::Pressed
+                        } else {
+                            KeyState::NotPressed
+                        },
+                        alt_key_state: if modifiers.alt {
+                            KeyState::Pressed
+                        } else {
+                            KeyState::NotPressed
+                        },
+                    })
+                } else {
+                    None
+                };
+
+            // Convert TermPos to Pos (convert from 1-based to 0-based)
+            // TermCol and TermRow have built-in conversion to 0-based indices
+            let canonical_pos = Pos {
+                col_index: pos.col.to_zero_based(),
+                row_index: pos.row.to_zero_based(),
+            };
+
+            let mouse_input = MouseInput {
+                pos: canonical_pos,
+                kind,
+                maybe_modifier_keys,
+            };
+            Some(InputEvent::Mouse(mouse_input))
+        }
+        VT100InputEvent::Resize { rows, cols } => Some(InputEvent::Resize(crate::Size {
+            col_width: ColWidth::from(cols),
+            row_height: RowHeight::from(rows),
+        })),
+        VT100InputEvent::Focus(focus_state) => {
+            let event = match focus_state {
+                VT100FocusState::Gained => FocusEvent::Gained,
+                VT100FocusState::Lost => FocusEvent::Lost,
+            };
+            Some(InputEvent::Focus(event))
+        }
+        VT100InputEvent::Paste(_paste_mode) => {
+            unreachable!(
+                "Paste events are handled by state machine in read_event() \
+                 and should never reach convert_input_event()"
+            )
+        }
+    }
+}
+
+/// State machine for collecting bracketed paste text.
+///
+/// When the terminal sends a bracketed paste sequence, it arrives as:
+/// - `Paste(Start)` marker
+/// - Multiple `Keyboard` events (the actual pasted text)
+/// - `Paste(End)` marker
+///
+/// This state tracks whether we're currently collecting text between markers.
+#[derive(Debug)]
+enum PasteCollectionState {
+    /// Not currently in a paste operation.
+    NotPasting,
+    /// Currently collecting text for a paste operation.
+    Collecting(String),
+}
+
 #[derive(Debug)]
 pub struct DirectToAnsiInputDevice {
     /// Tokio async stdin handle for non-blocking reading.
@@ -68,6 +251,10 @@ pub struct DirectToAnsiInputDevice {
     /// Number of bytes already parsed and consumed from buffer.
     /// When this exceeds `BUFFER_COMPACT_THRESHOLD`, buffer is compacted.
     consumed: usize,
+
+    /// State machine for collecting bracketed paste text.
+    /// Tracks whether we're between Paste(Start) and Paste(End) markers.
+    paste_state: PasteCollectionState,
 }
 
 impl DirectToAnsiInputDevice {
@@ -84,6 +271,7 @@ impl DirectToAnsiInputDevice {
             stdin: tokio::io::stdin(),
             buffer: Vec::with_capacity(INITIAL_BUFFER_CAPACITY),
             consumed: 0,
+            paste_state: PasteCollectionState::NotPasting,
         }
     }
 
@@ -157,13 +345,51 @@ impl DirectToAnsiInputDevice {
     pub async fn read_event(&mut self) -> Option<InputEvent> {
         // Allocate temp buffer ONCE before loop (performance optimization).
         // read() overwrites from index 0 each time, so no clearing between iterations.
-        let mut temp_buf = vec![0u8; 256];
+        let mut temp_buf = vec![0u8; TEMP_READ_BUFFER_SIZE];
 
         loop {
             // 1. Try to parse from existing buffer
-            if let Some((event, bytes_consumed)) = self.try_parse() {
+            if let Some((vt100_event, bytes_consumed)) = self.try_parse() {
                 self.consume(bytes_consumed);
-                return Some(event);
+
+                // 2. Apply paste collection state machine
+                match (&mut self.paste_state, &vt100_event) {
+                    // Start marker: enter collecting state, don't emit event
+                    (state @ PasteCollectionState::NotPasting, VT100InputEvent::Paste(VT100PasteMode::Start)) => {
+                        *state = PasteCollectionState::Collecting(String::new());
+                        continue; // Loop to get next event
+                    }
+
+                    // While collecting: accumulate keyboard characters
+                    (PasteCollectionState::Collecting(buffer), VT100InputEvent::Keyboard { code: VT100KeyCode::Char(ch), .. }) => {
+                        buffer.push(*ch);
+                        continue; // Loop to get next event
+                    }
+
+                    // End marker: emit complete paste and exit collecting state
+                    (state @ PasteCollectionState::Collecting(_), VT100InputEvent::Paste(VT100PasteMode::End)) => {
+                        if let PasteCollectionState::Collecting(text) = std::mem::replace(state, PasteCollectionState::NotPasting) {
+                            return Some(InputEvent::BracketedPaste(text));
+                        }
+                        unreachable!()
+                    }
+
+                    // Orphaned end marker (End without Start): emit empty paste
+                    (PasteCollectionState::NotPasting, VT100InputEvent::Paste(VT100PasteMode::End)) => {
+                        return Some(InputEvent::BracketedPaste(String::new()));
+                    }
+
+                    // Normal event processing when not pasting
+                    (PasteCollectionState::NotPasting, _) => {
+                        return convert_input_event(vt100_event);
+                    }
+
+                    // Other events while collecting paste should be ignored (or queued)
+                    // For now, ignore them (they'll be lost)
+                    (PasteCollectionState::Collecting(_), _) => {
+                        continue; // Ignore and get next event
+                    }
+                }
             }
 
             // 2. Buffer exhausted or incomplete sequence, read more from stdin.
@@ -225,7 +451,8 @@ impl DirectToAnsiInputDevice {
     /// # Returns
     ///
     /// `Some((event, bytes_consumed))` if successful, `None` if incomplete.
-    fn try_parse(&self) -> Option<(InputEvent, usize)> {
+    /// Returns the protocol-level VT100InputEvent before conversion to canonical InputEvent.
+    fn try_parse(&self) -> Option<(VT100InputEvent, usize)> {
         let buf = &self.buffer[self.consumed..];
 
         // Fast path: empty buffer.
@@ -239,13 +466,11 @@ impl DirectToAnsiInputDevice {
                 // ESC sequence or ESC key.
                 if buf.len() == 1 {
                     // Just ESC, emit immediately (no timeout!).
-                    return Some((
-                        InputEvent::Keyboard {
-                            code: KeyCode::Escape,
-                            modifiers: KeyModifiers::default(),
-                        },
-                        1,
-                    ));
+                    let esc_event = VT100InputEvent::Keyboard {
+                        code: VT100KeyCode::Escape,
+                        modifiers: VT100KeyModifiers::default(),
+                    };
+                    return Some((esc_event, 1));
                 }
 
                 // Check second byte.
@@ -264,13 +489,11 @@ impl DirectToAnsiInputDevice {
                     }
                     Some(_) => {
                         // ESC + unknown byte, emit ESC.
-                        Some((
-                            InputEvent::Keyboard {
-                                code: KeyCode::Escape,
-                                modifiers: KeyModifiers::default(),
-                            },
-                            1,
-                        ))
+                        let esc_event = VT100InputEvent::Keyboard {
+                            code: VT100KeyCode::Escape,
+                            modifiers: VT100KeyModifiers::default(),
+                        };
+                        Some((esc_event, 1))
                     }
                     None => {
                         // Shouldn't reach here (buf.len() > 1 but get(1) is None?).
@@ -310,6 +533,10 @@ impl Default for DirectToAnsiInputDevice {
     fn default() -> Self { Self::new() }
 }
 
+impl InputDeviceExt for DirectToAnsiInputDevice {
+    async fn next_input_event(&mut self) -> Option<InputEvent> { self.read_event().await }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,10 +566,14 @@ mod tests {
         // Test 1: Parse UTF-8 text (simplest case)
         // Single character "A" should parse as keyboard input
         device.buffer.extend_from_slice(b"A");
-        if let Some((event, bytes_consumed)) = parse_utf8_text(&device.buffer) {
+        if let Some((vt100_event, bytes_consumed)) = parse_utf8_text(&device.buffer) {
             assert_eq!(bytes_consumed, 1);
-            // Verify we got a keyboard event for the character
-            assert!(matches!(event, InputEvent::Keyboard { .. }));
+            // Convert and verify we got a keyboard event for the character
+            if let Some(canonical_event) = convert_input_event(vt100_event) {
+                assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
+            } else {
+                panic!("Failed to convert UTF-8 text event");
+            }
         } else {
             panic!("Failed to parse UTF-8 text 'A'");
         }
@@ -350,18 +581,25 @@ mod tests {
         // Test 2: Clear buffer and test ESC key (single byte)
         device.buffer.clear();
         device.buffer.push(0x1B); // ESC byte
-        // Note: try_parse() is private, so we verify parsing logic through the buffer setup
-        // A buffer with only [0x1B] should parse as ESC key (based on try_parse logic)
+        // Note: try_parse() is private, so we verify parsing logic through the buffer
+        // setup A buffer with only [0x1B] should parse as ESC key (based on
+        // try_parse logic)
         assert_eq!(device.buffer.len(), 1);
         assert_eq!(device.buffer[0], 0x1B);
 
         // Test 3: Set up CSI sequence for keyboard (Up Arrow: ESC [ A)
         device.buffer.clear();
         device.buffer.extend_from_slice(&[0x1B, 0x5B, 0x41]); // ESC [ A
-        if let Some((event, bytes_consumed)) = parse_keyboard_sequence(&device.buffer) {
+        if let Some((vt100_event, bytes_consumed)) =
+            parse_keyboard_sequence(&device.buffer)
+        {
             assert_eq!(bytes_consumed, 3);
-            // Verify we got a keyboard event
-            assert!(matches!(event, InputEvent::Keyboard { .. }));
+            // Convert and verify we got a keyboard event
+            if let Some(canonical_event) = convert_input_event(vt100_event) {
+                assert!(matches!(canonical_event, InputEvent::Keyboard(_)));
+            } else {
+                panic!("Failed to convert keyboard event");
+            }
         }
 
         // Test 4: Verify buffer consumption tracking
@@ -395,7 +633,8 @@ mod tests {
         assert_eq!(device.buffer.len(), 100); // Buffer still holds all bytes
 
         // Test 3: Verify consumed bytes are skipped in try_parse
-        // The try_parse function uses &buffer[consumed..], so consumed bytes are logically skipped
+        // The try_parse function uses &buffer[consumed..], so consumed bytes are
+        // logically skipped
         let unread_portion = &device.buffer[device.consumed..];
         assert_eq!(unread_portion.len(), 50);
 
@@ -423,5 +662,149 @@ mod tests {
         // Even after compaction, we should maintain reasonable capacity
         let capacity_after_compact = device.buffer.capacity();
         assert!(capacity_after_compact >= INITIAL_BUFFER_CAPACITY);
+    }
+
+    #[test]
+    fn test_paste_state_machine_basic() {
+        // Test: Basic paste collection - Start marker, text, End marker
+        let mut device = DirectToAnsiInputDevice::new();
+
+        // Verify initial state is NotPasting
+        assert!(matches!(device.paste_state, PasteCollectionState::NotPasting));
+
+        // Simulate receiving Paste(Start) event
+        let start_event = VT100InputEvent::Paste(VT100PasteMode::Start);
+        // Apply state machine logic (simulating what read_event does)
+        match (&mut device.paste_state, &start_event) {
+            (state @ PasteCollectionState::NotPasting, VT100InputEvent::Paste(VT100PasteMode::Start)) => {
+                *state = PasteCollectionState::Collecting(String::new());
+            }
+            _ => panic!("State machine should handle Paste(Start)"),
+        }
+
+        // Verify we're now collecting
+        assert!(matches!(device.paste_state, PasteCollectionState::Collecting(_)));
+
+        // Simulate receiving keyboard events (the pasted text)
+        for ch in &['H', 'e', 'l', 'l', 'o'] {
+            let keyboard_event = VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Char(*ch),
+                modifiers: VT100KeyModifiers::default(),
+            };
+            match (&mut device.paste_state, &keyboard_event) {
+                (PasteCollectionState::Collecting(buffer), VT100InputEvent::Keyboard { code: VT100KeyCode::Char(ch), .. }) => {
+                    buffer.push(*ch);
+                }
+                _ => panic!("State machine should accumulate text while collecting"),
+            }
+        }
+
+        // Simulate receiving Paste(End) event
+        let end_event = VT100InputEvent::Paste(VT100PasteMode::End);
+        let collected_text = match (&mut device.paste_state, &end_event) {
+            (state @ PasteCollectionState::Collecting(_), VT100InputEvent::Paste(VT100PasteMode::End)) => {
+                if let PasteCollectionState::Collecting(text) = std::mem::replace(state, PasteCollectionState::NotPasting) {
+                    text
+                } else {
+                    panic!("Should have collected text")
+                }
+            }
+            _ => panic!("State machine should handle Paste(End)"),
+        };
+
+        // Verify we collected the correct text
+        assert_eq!(collected_text, "Hello");
+
+        // Verify we're back to NotPasting state
+        assert!(matches!(device.paste_state, PasteCollectionState::NotPasting));
+    }
+
+    #[test]
+    fn test_paste_state_machine_multiline() {
+        // Test: Paste with newlines
+        let mut device = DirectToAnsiInputDevice::new();
+
+        // Start collection
+        match &mut device.paste_state {
+            state @ PasteCollectionState::NotPasting => {
+                *state = PasteCollectionState::Collecting(String::new());
+            }
+            PasteCollectionState::Collecting(_) => panic!(),
+        }
+
+        // Accumulate "Line1\nLine2"
+        for ch in "Line1\nLine2".chars() {
+            match &mut device.paste_state {
+                PasteCollectionState::Collecting(buffer) => {
+                    buffer.push(ch);
+                }
+                _ => panic!(),
+            }
+        }
+
+        // End collection
+        let text = match &mut device.paste_state {
+            state @ PasteCollectionState::Collecting(_) => {
+                if let PasteCollectionState::Collecting(t) = std::mem::replace(state, PasteCollectionState::NotPasting) {
+                    t
+                } else {
+                    panic!()
+                }
+            }
+            _ => panic!(),
+        };
+
+        assert_eq!(text, "Line1\nLine2");
+    }
+
+    #[test]
+    fn test_paste_state_machine_orphaned_end() {
+        // Test: Orphaned End marker (without Start) should be handled gracefully
+        let mut device = DirectToAnsiInputDevice::new();
+
+        // Should be NotPasting initially
+        assert!(matches!(device.paste_state, PasteCollectionState::NotPasting));
+
+        // Receive End marker without Start - should emit empty paste
+        let end_event = VT100InputEvent::Paste(VT100PasteMode::End);
+        let result = match (&mut device.paste_state, &end_event) {
+            (PasteCollectionState::NotPasting, VT100InputEvent::Paste(VT100PasteMode::End)) => {
+                Some(InputEvent::BracketedPaste(String::new()))
+            }
+            _ => None,
+        };
+
+        assert!(matches!(result, Some(InputEvent::BracketedPaste(s)) if s.is_empty()));
+
+        // Should still be NotPasting
+        assert!(matches!(device.paste_state, PasteCollectionState::NotPasting));
+    }
+
+    #[test]
+    fn test_paste_state_machine_empty_paste() {
+        // Test: Empty paste (Start immediately followed by End)
+        let mut device = DirectToAnsiInputDevice::new();
+
+        // Start
+        match &mut device.paste_state {
+            state @ PasteCollectionState::NotPasting => {
+                *state = PasteCollectionState::Collecting(String::new());
+            }
+            _ => panic!(),
+        }
+
+        // End (without any characters in between)
+        let text = match &mut device.paste_state {
+            state @ PasteCollectionState::Collecting(_) => {
+                if let PasteCollectionState::Collecting(t) = std::mem::replace(state, PasteCollectionState::NotPasting) {
+                    t
+                } else {
+                    panic!()
+                }
+            }
+            _ => panic!(),
+        };
+
+        assert_eq!(text, "");
     }
 }

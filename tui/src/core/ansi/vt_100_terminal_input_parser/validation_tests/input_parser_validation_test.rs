@@ -113,8 +113,8 @@
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
 
-use crate::core::ansi::vt_100_terminal_input_parser::{InputEvent, KeyCode, MouseAction,
-                                                      MouseButton, ScrollDirection,
+use crate::core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode, VT100MouseAction,
+                                                      VT100MouseButton, VT100ScrollDirection,
                                                       parse_keyboard_sequence,
                                                       parse_mouse_sequence};
 
@@ -133,16 +133,16 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse observed sequence");
 
         match event {
-            InputEvent::Mouse {
+            VT100InputEvent::Mouse {
                 button,
                 pos,
                 action,
                 modifiers,
             } => {
-                assert_eq!(button, MouseButton::Left);
+                assert_eq!(button, VT100MouseButton::Left);
                 assert_eq!(pos.col.as_u16(), 1, "Top-left column is 1 (1-based)");
                 assert_eq!(pos.row.as_u16(), 1, "Top-left row is 1 (1-based)");
-                assert_eq!(action, MouseAction::Press);
+                assert_eq!(action, VT100MouseAction::Press);
                 assert!(
                     !modifiers.shift && !modifiers.ctrl && !modifiers.alt,
                     "No modifiers held"
@@ -160,8 +160,8 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse release");
 
         match event {
-            InputEvent::Mouse { action, .. } => {
-                assert_eq!(action, MouseAction::Release);
+            VT100InputEvent::Mouse { action, .. } => {
+                assert_eq!(action, VT100MouseAction::Release);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -175,8 +175,8 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse observed scroll sequence");
 
         match event {
-            InputEvent::Mouse { action, pos, .. } => {
-                assert_eq!(action, MouseAction::Scroll(ScrollDirection::Up));
+            VT100InputEvent::Mouse { action, pos, .. } => {
+                assert_eq!(action, VT100MouseAction::Scroll(VT100ScrollDirection::Up));
                 assert_eq!(pos.col.as_u16(), 37);
                 assert_eq!(pos.row.as_u16(), 14);
             }
@@ -192,8 +192,8 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse middle button");
 
         match event {
-            InputEvent::Mouse { button, .. } => {
-                assert_eq!(button, MouseButton::Middle);
+            VT100InputEvent::Mouse { button, .. } => {
+                assert_eq!(button, VT100MouseButton::Middle);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -207,8 +207,8 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse right button");
 
         match event {
-            InputEvent::Mouse { button, .. } => {
-                assert_eq!(button, MouseButton::Right);
+            VT100InputEvent::Mouse { button, .. } => {
+                assert_eq!(button, VT100MouseButton::Right);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -222,9 +222,9 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse drag");
 
         match event {
-            InputEvent::Mouse { button, action, .. } => {
-                assert_eq!(button, MouseButton::Left);
-                assert_eq!(action, MouseAction::Drag);
+            VT100InputEvent::Mouse { button, action, .. } => {
+                assert_eq!(button, VT100MouseButton::Left);
+                assert_eq!(action, VT100MouseAction::Drag);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -238,10 +238,10 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse Ctrl+click");
 
         match event {
-            InputEvent::Mouse {
+            VT100InputEvent::Mouse {
                 button, modifiers, ..
             } => {
-                assert_eq!(button, MouseButton::Left);
+                assert_eq!(button, VT100MouseButton::Left);
                 assert!(modifiers.ctrl, "Ctrl should be set");
                 assert!(!modifiers.shift, "Shift should not be set");
                 assert!(!modifiers.alt, "Alt should not be set");
@@ -258,7 +258,7 @@ mod mouse_events {
             parse_mouse_sequence(seq).expect("Should parse Shift+Alt+click");
 
         match event {
-            InputEvent::Mouse { modifiers, .. } => {
+            VT100InputEvent::Mouse { modifiers, .. } => {
                 assert!(modifiers.shift, "Shift should be set");
                 assert!(modifiers.alt, "Alt should be set");
                 assert!(!modifiers.ctrl, "Ctrl should not be set");
@@ -274,7 +274,7 @@ mod mouse_events {
         let (event, _bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
 
         match event {
-            InputEvent::Mouse { pos, .. } => {
+            VT100InputEvent::Mouse { pos, .. } => {
                 assert_eq!(
                     pos.col.as_u16(),
                     1,
@@ -306,8 +306,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse observed Ctrl+Up");
 
         match event {
-            InputEvent::Keyboard { code, modifiers } => {
-                assert_eq!(code, KeyCode::Up);
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
                 assert!(modifiers.ctrl, "Ctrl modifier should be set");
                 assert!(!modifiers.shift, "Shift should not be set");
                 assert!(!modifiers.alt, "Alt should not be set");
@@ -323,8 +323,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse plain Up");
 
         match event {
-            InputEvent::Keyboard { code, modifiers } => {
-                assert_eq!(code, KeyCode::Up);
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
                 assert!(!modifiers.shift && !modifiers.ctrl && !modifiers.alt);
             }
             _ => panic!("Expected Keyboard event"),
@@ -339,8 +339,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Shift+Up");
 
         match event {
-            InputEvent::Keyboard { code, modifiers } => {
-                assert_eq!(code, KeyCode::Up);
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
                 assert!(modifiers.shift, "Shift should be set");
                 assert!(!modifiers.ctrl && !modifiers.alt);
             }
@@ -356,8 +356,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Alt+Up");
 
         match event {
-            InputEvent::Keyboard { code, modifiers } => {
-                assert_eq!(code, KeyCode::Up);
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Up);
                 assert!(modifiers.alt, "Alt should be set");
                 assert!(!modifiers.shift && !modifiers.ctrl);
             }
@@ -373,7 +373,7 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+Up");
 
         match event {
-            InputEvent::Keyboard { modifiers, .. } => {
+            VT100InputEvent::Keyboard { modifiers, .. } => {
                 assert!(modifiers.ctrl, "Ctrl should be set");
                 assert!(modifiers.alt, "Alt should be set");
                 assert!(!modifiers.shift);
@@ -390,7 +390,7 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Shift+Alt+Ctrl+Up");
 
         match event {
-            InputEvent::Keyboard { modifiers, .. } => {
+            VT100InputEvent::Keyboard { modifiers, .. } => {
                 assert!(modifiers.shift, "Shift should be set");
                 assert!(modifiers.alt, "Alt should be set");
                 assert!(modifiers.ctrl, "Ctrl should be set");
@@ -406,8 +406,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse F1");
 
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Function(1));
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Function(1));
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -421,8 +421,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Shift+F5");
 
         match event {
-            InputEvent::Keyboard { code, modifiers } => {
-                assert_eq!(code, KeyCode::Function(5));
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Function(5));
                 assert!(modifiers.shift);
             }
             _ => panic!("Expected Keyboard event"),
@@ -437,8 +437,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Ctrl+Alt+F10");
 
         match event {
-            InputEvent::Keyboard { code, modifiers } => {
-                assert_eq!(code, KeyCode::Function(10));
+            VT100InputEvent::Keyboard { code, modifiers } => {
+                assert_eq!(code, VT100KeyCode::Function(10));
                 assert!(modifiers.ctrl && modifiers.alt);
             }
             _ => panic!("Expected Keyboard event"),
@@ -452,8 +452,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Home");
 
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Home);
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Home);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -466,8 +466,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse End");
 
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::End);
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::End);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -480,8 +480,8 @@ mod keyboard_events {
             parse_keyboard_sequence(seq).expect("Should parse Delete");
 
         match event {
-            InputEvent::Keyboard { code, .. } => {
-                assert_eq!(code, KeyCode::Delete);
+            VT100InputEvent::Keyboard { code, .. } => {
+                assert_eq!(code, VT100KeyCode::Delete);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -538,7 +538,7 @@ mod edge_cases {
             parse_mouse_sequence(seq).expect("Should parse large coords");
 
         match event {
-            InputEvent::Mouse { pos, .. } => {
+            VT100InputEvent::Mouse { pos, .. } => {
                 assert_eq!(pos.col.as_u16(), 65535);
                 assert_eq!(pos.row.as_u16(), 65535);
             }
@@ -588,7 +588,7 @@ mod modifier_encoding {
                 .unwrap_or_else(|| panic!("Should parse parameter {}", param));
 
             match event {
-                InputEvent::Keyboard { modifiers, .. } => {
+                VT100InputEvent::Keyboard { modifiers, .. } => {
                     assert_eq!(
                         modifiers.shift, expect_shift,
                         "Parameter {} shift mismatch",

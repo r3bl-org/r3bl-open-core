@@ -42,7 +42,7 @@ struct TestCase {
 // ============================================================================
 
 #[tokio::test]
-#[ignore] // Manual test: cargo test observe_terminal -- --ignored --nocapture
+#[ignore = "Manual test: cargo test observe_terminal -- --ignored --nocapture"]
 async fn observe_terminal() -> IoResult<()> {
     // Skip in CI
     if is_ci::cached() {

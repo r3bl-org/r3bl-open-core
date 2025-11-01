@@ -1,21 +1,24 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Input event types for VT-100 terminal input parsing.
+//! Internal protocol types for VT-100 terminal input parsing.
 //!
-//! These types are protocol-agnostic and represent the high-level events
-//! that result from parsing ANSI sequences and UTF-8 text.
+//! These types are used internally by the parser to represent protocol-level
+//! events. The parser converts these to canonical [`InputEvent`] from [`terminal_io`].
+//!
+//! [`InputEvent`]: crate::terminal_io::InputEvent
+//! [`terminal_io`]: mod@crate::terminal_io
 
 use crate::TermPos;
 
 /// Keyboard modifiers for input events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct KeyModifiers {
+pub struct VT100KeyModifiers {
     pub shift: bool,
     pub ctrl: bool,
     pub alt: bool,
 }
 
-impl KeyModifiers {
+impl VT100KeyModifiers {
     pub fn new() -> Self {
         Self {
             shift: false,
@@ -25,13 +28,13 @@ impl KeyModifiers {
     }
 }
 
-impl Default for KeyModifiers {
+impl Default for VT100KeyModifiers {
     fn default() -> Self { Self::new() }
 }
 
 /// Mouse buttons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MouseButton {
+pub enum VT100MouseButton {
     Left,
     Middle,
     Right,
@@ -40,7 +43,7 @@ pub enum MouseButton {
 
 /// Scroll direction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ScrollDirection {
+pub enum VT100ScrollDirection {
     Up,
     Down,
     Left,
@@ -49,21 +52,21 @@ pub enum ScrollDirection {
 
 /// Paste mode state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PasteMode {
+pub enum VT100PasteMode {
     Start,
     End,
 }
 
-/// Focus event state.
+/// Internal protocol focus state (maps to canonical FocusEvent).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FocusState {
+pub enum VT100FocusState {
     Gained,
     Lost,
 }
 
 /// Keyboard key codes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum KeyCode {
+pub enum VT100KeyCode {
     /// Regular printable character.
     Char(char),
     /// Function keys F1-F12.
@@ -92,7 +95,7 @@ pub enum KeyCode {
 
 /// Mouse event actions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MouseAction {
+pub enum VT100MouseAction {
     /// Mouse button pressed down.
     Press,
     /// Mouse button released.
@@ -102,31 +105,31 @@ pub enum MouseAction {
     /// Mouse moved without buttons.
     Motion,
     /// Scroll wheel rotated.
-    Scroll(ScrollDirection),
+    Scroll(VT100ScrollDirection),
 }
 
-/// High-level input events from terminal input.
+/// Internal protocol event from VT-100 parsing.
 ///
-/// These are the result of parsing ANSI sequences and UTF-8 text.
-/// They are backend-agnostic and can be used by any terminal application.
+/// This is an intermediate representation used during parsing.
+/// It gets converted to the canonical InputEvent from terminal_io.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InputEvent {
+pub enum VT100InputEvent {
     /// Keyboard event with character, modifiers, and key code.
     Keyboard {
-        code: KeyCode,
-        modifiers: KeyModifiers,
+        code: VT100KeyCode,
+        modifiers: VT100KeyModifiers,
     },
     /// Mouse event with button, position, and action.
     Mouse {
-        button: MouseButton,
+        button: VT100MouseButton,
         pos: TermPos,
-        action: MouseAction,
-        modifiers: KeyModifiers,
+        action: VT100MouseAction,
+        modifiers: VT100KeyModifiers,
     },
     /// Terminal resize event with new dimensions.
     Resize { rows: u16, cols: u16 },
     /// Terminal focus event (gained or lost).
-    Focus(FocusState),
+    Focus(VT100FocusState),
     /// Paste mode notification (start or end).
-    Paste(PasteMode),
+    Paste(VT100PasteMode),
 }

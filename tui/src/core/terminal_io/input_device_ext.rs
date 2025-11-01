@@ -53,47 +53,19 @@
 //!     - <https://github.com/crossterm-rs/crossterm/wiki/Upgrade-from-0.13-to-0.14#111-new-event-api>
 //!     - <https://github.com/crossterm-rs/crossterm/blob/master/examples/event-stream-tokio.rs>
 
-use super::InputEvent;
-use crate::{DEBUG_TUI_SHOW_TERMINAL_BACKEND, InputDevice};
-use futures_util::FutureExt;
+use crate::InputEvent;
 
+/// Trait for reading input events asynchronously.
+///
+/// Provides a unified interface for different input device backends to deliver
+/// terminal input events.
+///
+/// # Implementing backends
+///
+/// Each backend implementation should:
+/// - Filter out unsupported event types (Key Release/Repeat, Paste events)
+/// - Convert crossterm events to [`InputEvent`]
+/// - Return `None` on error or stream closure
 pub trait InputDeviceExt {
-    #[allow(async_fn_in_trait)]
-    async fn next_input_event(&mut self) -> Option<InputEvent>;
-}
-
-impl InputDeviceExt for InputDevice {
-    async fn next_input_event(&mut self) -> Option<InputEvent> {
-        loop {
-            let maybe_result_event = self.next().fuse().await;
-            match maybe_result_event {
-                Ok(event) => {
-                    let input_event = InputEvent::try_from(event);
-                    if let Ok(input_event) = input_event {
-                        return Some(input_event);
-                    }
-                    // Conversion errors are expected in the following cases:
-                    // 1. Key Release/Repeat events (filtered in InputEvent::try_from).
-                    // 2. Paste events (not supported).
-                    //
-                    // These are normal occurrences, not bugs. We simply continue
-                    // reading the next event. The TryFrom implementations handle
-                    // all expected cases by returning Err(()), so we don't need
-                    // to panic or log errors here.
-                    //
-                    // Continue reading the next event in the loop.
-                }
-                Err(e) => {
-                    DEBUG_TUI_SHOW_TERMINAL_BACKEND.then(|| {
-                        // % is Display, ? is Debug.
-                        tracing::error!(
-                            message = "Error reading input event.",
-                            error = ?e,
-                        );
-                    });
-                    return None;
-                }
-            }
-        }
-    }
+  async fn next_input_event(&mut self) -> Option<InputEvent>;
 }

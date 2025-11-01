@@ -6,7 +6,7 @@
 use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatus,
             DEBUG_TUI_COPY_PASTE, DEBUG_TUI_MOD, DEBUG_TUI_SYN_HI, DEFAULT_CURSOR_CHAR,
             EditMode, EditorBuffer, EditorEngine, EditorEvent, FlexBox, GapBufferLine,
-            HasFocus, InputEvent, Key, PrettyPrintDebug, RenderArgs, RenderOpCommon,
+            HasFocus, InputEvent, Key, KeyPress, PrettyPrintDebug, RenderArgs, RenderOpCommon,
             RenderOpIR, RenderOpIRVec, RenderPipeline, RowHeight, RowIndex,
             ScrollOffsetColLocationInRange, SegStringOwned, SelectionRange, Size,
             SpecialKey, StyleUSSpanLines, SyntaxHighlightMode, ZOrder, caret_scr_adj,
@@ -15,7 +15,6 @@ use crate::{ColWidth, CommonResult, CursorBoundsCheck, CursorPositionBoundsStatu
             height, inline_string, new_style,
             render_cache::{RenderCache, UseRenderCache},
             render_pipeline, render_tui_styled_texts_into, row,
-            terminal_lib_backends::KeyPress,
             throws, throws_with_return, try_get_syntax_ref, try_parse_and_highlight,
             tui_color, usize};
 use syntect::easy::HighlightLines;

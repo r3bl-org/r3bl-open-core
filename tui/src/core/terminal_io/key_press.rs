@@ -44,13 +44,13 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MediaKeyCo
 macro_rules! key_press {
     // @char
     (@char $arg_char : expr) => {
-        $crate::terminal_lib_backends::KeyPress::Plain {
+        $crate::KeyPress::Plain {
             key: $crate::Key::Character($arg_char),
         }
     };
 
     (@char $arg_modifiers : expr, $arg_char : expr) => {
-        $crate::terminal_lib_backends::KeyPress::WithModifiers {
+        $crate::KeyPress::WithModifiers {
             mask: $arg_modifiers,
             key: $crate::Key::Character($arg_char),
         }
@@ -58,13 +58,13 @@ macro_rules! key_press {
 
     // @special
     (@special $arg_special : expr) => {
-        $crate::terminal_lib_backends::KeyPress::Plain {
+        $crate::KeyPress::Plain {
             key: $crate::Key::SpecialKey($arg_special),
         }
     };
 
     (@special $arg_modifiers : expr, $arg_special : expr) => {
-        $crate::terminal_lib_backends::KeyPress::WithModifiers {
+        $crate::KeyPress::WithModifiers {
             mask: $arg_modifiers,
             key: $crate::Key::SpecialKey($arg_special),
         }
@@ -72,13 +72,13 @@ macro_rules! key_press {
 
     // @fn
     (@fn $arg_function : expr) => {
-        $crate::terminal_lib_backends::KeyPress::Plain {
+        $crate::KeyPress::Plain {
             key: $crate::Key::FunctionKey($arg_function),
         }
     };
 
     (@fn $arg_modifiers : expr, $arg_function : expr) => {
-        $crate::terminal_lib_backends::KeyPress::WithModifiers {
+        $crate::KeyPress::WithModifiers {
             mask: $arg_modifiers,
             key: $crate::Key::FunctionKey($arg_function),
         }

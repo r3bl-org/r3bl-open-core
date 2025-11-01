@@ -34,6 +34,8 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 #[cfg(any(test, doc))]
+pub mod pty_bracketed_paste_test;
+#[cfg(any(test, doc))]
 pub mod pty_input_device_test;
 #[cfg(any(test, doc))]
 pub mod pty_keyboard_modifiers_test;

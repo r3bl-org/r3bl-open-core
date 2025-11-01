@@ -152,12 +152,6 @@ pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crosste
 pub mod compositor_render_ops_to_ofs_buf;
 pub mod crossterm_backend;
 pub mod direct_to_ansi;
-pub mod enhanced_keys;
-pub mod input_device_ext;
-pub mod input_event;
-pub mod key_press;
-pub mod modifier_keys_mask;
-pub mod mouse_input;
 pub mod offscreen_buffer;
 pub mod offscreen_buffer_pool;
 pub mod paint;
@@ -171,12 +165,6 @@ pub mod z_order;
 pub use compositor_render_ops_to_ofs_buf::*;
 pub use crossterm_backend::*;
 pub use direct_to_ansi::*;
-pub use enhanced_keys::*;
-pub use input_device_ext::*;
-pub use input_event::*;
-pub use key_press::*;
-pub use modifier_keys_mask::*;
-pub use mouse_input::*;
 pub use offscreen_buffer::*;
 pub use offscreen_buffer_pool::*;
 pub use paint::*;
@@ -187,12 +175,6 @@ pub use render_tui_styled_texts::*;
 pub use z_order::*;
 
 // Tests.
-#[cfg(test)]
-mod test_input_event;
-#[cfg(test)]
-mod test_keypress;
-#[cfg(test)]
-mod test_mouse_input;
 #[cfg(test)]
 mod test_render_pipeline;
 

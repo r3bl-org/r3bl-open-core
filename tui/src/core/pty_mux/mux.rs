@@ -6,13 +6,12 @@
 //! and manages the event loop for the terminal multiplexer.
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer};
-use crate::{Size, clear_screen_and_home_cursor,
+use crate::{InputEvent, RawMode, Size, clear_screen_and_home_cursor,
+            lock_output_device_as_mut,
             core::{get_size,
                    osc::OscController,
                    pty::pty_core::pty_sessions::show_notification,
-                   terminal_io::{InputDevice, OutputDevice}},
-            lock_output_device_as_mut,
-            tui::terminal_lib_backends::{InputEvent, RawMode}};
+                   terminal_io::{InputDevice, OutputDevice}}};
 
 /// Main PTY multiplexer that orchestrates all components.
 pub struct PTYMux {
@@ -77,7 +76,7 @@ impl PTYMuxBuilder {
 
         let terminal_size = get_size()?;
         let output_device = OutputDevice::new_stdout();
-        let input_device = InputDevice::new_event_stream();
+        let input_device = InputDevice::default();
 
         Ok(PTYMux {
             process_manager: ProcessManager::new(self.processes, terminal_size),
@@ -184,13 +183,8 @@ impl PTYMux {
                 }
 
                 // Handle user input using existing InputDevice.
-                Ok(event) = self.input_device.next() => {
-                    // Convert crossterm event to InputEvent - handle conversion error gracefully.
-                    tracing::debug!("Received input event: {:?}", event);
-                    let Ok(input_event) = InputEvent::try_from(event.clone()) else {
-                        tracing::warn!("Failed to convert input event: {:?}", event);
-                        continue
-                    };
+                Some(input_event) = self.input_device.next_input_event() => {
+                    tracing::debug!("Received input event: {:?}", input_event);
 
                     // Show desktop notification for input event (filter out mouse events)
                     if !matches!(input_event, InputEvent::Mouse(_)) {
