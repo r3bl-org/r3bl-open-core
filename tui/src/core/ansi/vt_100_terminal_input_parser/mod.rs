@@ -66,7 +66,7 @@
 //! - Detect buttons, clicks, drags, motion, scrolling
 //! - Extract modifier keys from mouse sequences
 //!
-//! ### terminal_events.rs
+//! ### `terminal_events.rs`
 //! - Parse window resize events: `CSI 8 ; rows ; cols t`
 //! - Parse focus gained/lost: `CSI I` / `CSI O`
 //! - Parse bracketed paste markers: `ESC [ 200 ~` / `ESC [ 201 ~`
@@ -104,7 +104,7 @@
 //! - VT-100 mouse coordinates are **1-based** (not 0-based)
 //! - Scroll wheel codes are **inverted on systems with natural scrolling enabled**:
 //!   - Check with: `gsettings get org.gnome.desktop.peripherals.mouse natural-scroll`
-//! - SGR protocol uses codes: 64=Wheel Down, 65=Wheel Up (XTerm standard)
+//! - SGR protocol uses codes: 64=Wheel Down, 65=Wheel Up (`XTerm` standard)
 //!
 //! # One based mouse input events
 //!

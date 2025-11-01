@@ -39,6 +39,7 @@
     "Cloneable",
     "cmark",
     "codegen",
+    "codepoint",
     "codepoints",
     "col_index",
     "colorgrad",

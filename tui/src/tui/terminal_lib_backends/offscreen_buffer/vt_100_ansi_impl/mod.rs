@@ -3,9 +3,9 @@
 //! VT100/ANSI terminal operation implementations for `OffscreenBuffer`.
 //!
 //! This module contains the actual implementations of VT100 and ANSI escape sequence
-//! operations that are delegated from the `vt_100_pty_output_parser::operations` module. The
-//! structure mirrors `vt_100_pty_output_parser/operations/` to provide a clear 1:1 mapping
-//! between the parser shim layer and the implementation layer.
+//! operations that are delegated from the `vt_100_pty_output_parser::operations` module.
+//! The structure mirrors `vt_100_pty_output_parser/operations/` to provide a clear 1:1
+//! mapping between the parser shim layer and the implementation layer.
 //!
 //! # Architecture
 //!

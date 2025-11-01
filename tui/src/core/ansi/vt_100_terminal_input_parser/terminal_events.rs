@@ -12,9 +12,10 @@
 //! - **Bracketed Paste Start**: `ESC [ 200 ~`
 //! - **Bracketed Paste End**: `ESC [ 201 ~`
 
-use super::types::{VT100InputEvent, VT100FocusState, VT100PasteMode};
+use super::types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
 
-/// Parse a terminal event sequence and return an InputEvent with bytes consumed if recognized.
+/// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if
+/// recognized.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence is parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -24,6 +25,7 @@ use super::types::{VT100InputEvent, VT100FocusState, VT100PasteMode};
 /// - `CSI I` → Terminal gained focus
 /// - `CSI O` → Terminal lost focus
 /// - `ESC[200~` → Bracketed paste start
+#[must_use]
 pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
@@ -96,17 +98,25 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usiz
             Some((VT100InputEvent::Resize { rows, cols }, total_consumed))
         }
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
-        (1, b'~') => {
-            match params[0] {
-                200 => Some((VT100InputEvent::Paste(VT100PasteMode::Start), total_consumed)),
-                201 => Some((VT100InputEvent::Paste(VT100PasteMode::End), total_consumed)),
-                _ => None,
-            }
-        }
+        (1, b'~') => match params[0] {
+            200 => Some((
+                VT100InputEvent::Paste(VT100PasteMode::Start),
+                total_consumed,
+            )),
+            201 => Some((VT100InputEvent::Paste(VT100PasteMode::End), total_consumed)),
+            _ => None,
+        },
         _ => None,
     }
 }
 
+/// Unit tests for terminal event parsing (focus, resize, bracketed paste).
+///
+/// These tests use generator functions instead of hardcoded magic strings to ensure
+/// consistency between sequence generation and parsing. For testing strategy details,
+/// see the [testing strategy] documentation.
+///
+/// [testing strategy]: mod@super#testing-strategy
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -119,8 +129,8 @@ mod tests {
         let seq = generate_keyboard_sequence(&original_event)
             .expect("Failed to generate resize sequence");
 
-        let (parsed_event, bytes_consumed) = parse_terminal_event(&seq)
-            .expect("Should parse resize");
+        let (parsed_event, bytes_consumed) =
+            parse_terminal_event(&seq).expect("Should parse resize");
 
         assert_eq!(bytes_consumed, seq.len());
         assert_eq!(parsed_event, original_event);
@@ -133,8 +143,8 @@ mod tests {
         let seq_gained = generate_keyboard_sequence(&original_gained)
             .expect("Failed to generate focus gained sequence");
 
-        let (parsed, bytes_consumed) = parse_terminal_event(&seq_gained)
-            .expect("Should parse focus gained");
+        let (parsed, bytes_consumed) =
+            parse_terminal_event(&seq_gained).expect("Should parse focus gained");
 
         assert_eq!(bytes_consumed, seq_gained.len());
         assert_eq!(parsed, original_gained);
@@ -144,8 +154,8 @@ mod tests {
         let seq_lost = generate_keyboard_sequence(&original_lost)
             .expect("Failed to generate focus lost sequence");
 
-        let (parsed, bytes_consumed) = parse_terminal_event(&seq_lost)
-            .expect("Should parse focus lost");
+        let (parsed, bytes_consumed) =
+            parse_terminal_event(&seq_lost).expect("Should parse focus lost");
 
         assert_eq!(bytes_consumed, seq_lost.len());
         assert_eq!(parsed, original_lost);
@@ -158,8 +168,8 @@ mod tests {
         let seq_start = generate_keyboard_sequence(&original_start)
             .expect("Failed to generate paste start sequence");
 
-        let (parsed, bytes_consumed) = parse_terminal_event(&seq_start)
-            .expect("Should parse paste start");
+        let (parsed, bytes_consumed) =
+            parse_terminal_event(&seq_start).expect("Should parse paste start");
 
         assert_eq!(bytes_consumed, seq_start.len());
         assert_eq!(parsed, original_start);
@@ -169,8 +179,8 @@ mod tests {
         let seq_end = generate_keyboard_sequence(&original_end)
             .expect("Failed to generate paste end sequence");
 
-        let (parsed, bytes_consumed) = parse_terminal_event(&seq_end)
-            .expect("Should parse paste end");
+        let (parsed, bytes_consumed) =
+            parse_terminal_event(&seq_end).expect("Should parse paste end");
 
         assert_eq!(bytes_consumed, seq_end.len());
         assert_eq!(parsed, original_end);

@@ -1,8 +1,8 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Output rendering module for DirectToAnsi backend.
+//! Output rendering module for `DirectToAnsi` backend.
 //!
-//! This module contains the output-specific functionality for the DirectToAnsi backend,
+//! This module contains the output-specific functionality for the `DirectToAnsi` backend,
 //! including ANSI sequence generation, render operation painting, and text rendering.
 //!
 //! ## Architecture

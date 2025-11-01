@@ -3,8 +3,8 @@
 //! Scroll margin operations for VT100/ANSI terminal emulation.
 //!
 //! This module implements scroll margin operations that correspond to ANSI
-//! sequences handled by the `vt_100_pty_output_parser::operations::margin_ops` module. These
-//! include:
+//! sequences handled by the `vt_100_pty_output_parser::operations::margin_ops` module.
+//! These include:
 //!
 //! - **DECSTBM** (Set Top and Bottom Margins) - [`set_scroll_margins`]
 //! - **Reset margins** - [`reset_scroll_margins`]

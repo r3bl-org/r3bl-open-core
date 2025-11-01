@@ -76,6 +76,10 @@
 //! - [TUI Development Workflow](#tui-development-workflow)
 //!   - [TUI-Specific Commands](#tui-specific-commands)
 //!   - [Testing and Development](#testing-and-development)
+//!     - [VT100 ANSI Conformance Testing](#vt100-ansi-conformance-testing)
+//!     - [Markdown Parser Conformance Testing](#markdown-parser-conformance-testing)
+//!     - [Next-Level PTY-Based Integration
+//!       Testing](#next-level-pty-based-integration-testing)
 //!   - [Performance Analysis Features](#performance-analysis-features)
 //! - [Examples to get you started](#examples-to-get-you-started)
 //!   - [Video of the demo in action](#video-of-the-demo-in-action)
@@ -443,6 +447,83 @@
 //!
 //! The conformance tests ensure the parser correctly handles both standard markdown
 //! syntax and R3BL extensions while maintaining performance and reliability.
+//!
+//! ### Next-Level PTY-Based Integration Testing
+//!
+//! The TUI library features **production-grade integration testing** using
+//! pseudo-terminals (PTYs) that simulate real interactive terminal applications. Unlike
+//! traditional unit tests, these tests spawn the test binary itself in a PTY slave
+//! process and send raw byte sequences through the PTY master—exactly like a real
+//! terminal emulator would.
+//!
+//! **This is how we achieve "next level" testing:**
+//!
+//! ```text
+//! Traditional Unit Tests          PTY Integration Tests (Ours)
+//! ────────────────────           ──────────────────────────────
+//! Mock objects                   Real PTY pair (master/slave)
+//! Synthetic input                Raw byte sequences (like real apps)
+//! Isolated functions             Full interactive child process
+//! No terminal state              Raw mode enabled (fully interactive)
+//! Limited realism                Production-equivalent environment
+//! ```
+//!
+//! **Why PTY Testing is a Superpower:**
+//!
+//! 1. **Realistic terminal interactions**: Tests interact with a real PTY device, not
+//!    mocks
+//! 2. **Raw mode testing**: Slave process runs in raw mode with actual termios settings
+//! 3. **Byte-level precision**: Send exact ANSI sequences as applications receive them
+//! 4. **Full integration**: Tests the complete pipeline from input parsing to output
+//!    rendering
+//! 5. **Real-world behavior**: Catches issues that unit tests miss (race conditions,
+//!    buffering, signal handling)
+//!
+//! **Implementation powered by [`generate_pty_test!`] macro:**
+//!
+//! The [`generate_pty_test!`] macro handles PTY infrastructure automatically:
+//! - Creates PTY pair with standard terminal dimensions (24x80)
+//! - Spawns test binary as slave process with environment isolation
+//! - Routes execution to master (verification) or slave (interactive) code paths
+//! - Provides dependency injection pattern for flexible verification strategies
+//!
+//! **Example test structure:**
+//!
+//! ```rust,ignore
+//! generate_pty_test! {
+//!     test_fn: interactive_input_parsing,
+//!     slave: || {
+//!         // Runs in PTY slave - fully interactive terminal
+//!         enable_raw_mode();
+//!         let input_device = InputDevice::new();
+//!         process_terminal_events(&input_device);
+//!         std::process::exit(0);
+//!     },
+//!     master: |pty_pair, child| {
+//!         // Runs in PTY master - sends input, verifies output
+//!         let mut writer = pty_pair.master.take_writer();
+//!         writer.write_all(b"\x1b[A").unwrap();  // Send Up Arrow
+//!
+//!         let output = read_pty_output(&pty_pair);
+//!         assert!(output.contains("UpArrow event received"));
+//!         child.wait().unwrap();
+//!     }
+//! }
+//! ```
+//!
+//! **Real-world applications:**
+//! - **Terminal input parsing**: [`integration_tests`] validates VT-100 input sequences
+//! - **Raw mode behavior**: [`unix_integration_tests`] tests termios configuration
+//! - **Interactive applications**: Tests readline, editor, and TUI component interactions
+//!
+//! For complete PTY test implementation details and examples, see:
+//! - Macro documentation: [`generate_pty_test!`]
+//! - Input parser tests: [`integration_tests`]
+//! - Raw mode tests: [`unix_integration_tests`]
+//!
+//! [`generate_pty_test!`]: crate::generate_pty_test
+//! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+//! [`unix_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::unix_integration_tests
 //!
 //! For complete development setup and all available commands, see the
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).

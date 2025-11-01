@@ -10,6 +10,7 @@
 /// # Errors
 ///
 /// Panics with unimplemented message as Windows support is still being developed.
+#[allow(dead_code)]
 pub fn enable_raw_mode() -> miette::Result<()> {
     unimplemented!("Windows raw mode not yet implemented")
 }
@@ -19,6 +20,7 @@ pub fn enable_raw_mode() -> miette::Result<()> {
 /// # Errors
 ///
 /// Panics with unimplemented message as Windows support is still being developed.
+#[allow(dead_code)]
 pub fn disable_raw_mode() -> miette::Result<()> {
     unimplemented!("Windows raw mode not yet implemented")
 }

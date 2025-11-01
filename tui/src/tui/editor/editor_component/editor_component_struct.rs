@@ -135,7 +135,7 @@ pub mod editor_component_impl_component_trait {
                 );
 
             // XMARK: Editor component processes input event here.
-            
+
             // Try to apply the `input_event` to `editor_engine` to decide whether to
             // fire action.
             let result = engine_public_api::apply_event(

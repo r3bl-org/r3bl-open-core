@@ -7,9 +7,9 @@ use crate::{ColIndex, ColorTarget, RowHeight, RowIndex, SgrColorSequence, TuiCol
             core::{ansi::{constants::{APPLICATION_MOUSE_TRACKING, BRACKETED_PASTE_MODE,
                                       CSI_PARAM_SEPARATOR, CSI_START, ED_ERASE_ALL,
                                       EL_ERASE_ALL, EL_ERASE_FROM_START, EL_ERASE_TO_END,
-                                      SGR_BOLD, SGR_DIM, SGR_ITALIC, SGR_SET_GRAPHICS,
-                                      SGR_STRIKETHROUGH, SGR_UNDERLINE, SGR_MOUSE_MODE,
-                                      URXVT_MOUSE_EXTENSION},
+                                      SGR_BOLD, SGR_DIM, SGR_ITALIC, SGR_RESET_STR,
+                                      SGR_SET_GRAPHICS, SGR_STRIKETHROUGH, SGR_UNDERLINE,
+                                      SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION},
                           vt_100_pty_output_parser::{CsiSequence, PrivateModeType}},
                    coordinates::{TermCol, TermRow}}};
 
@@ -203,7 +203,7 @@ impl AnsiSequenceGenerator {
     /// Reset all colors and attributes to default
     /// CSI 0m (SGR Reset)
     #[must_use]
-    pub fn reset_color() -> String { format!("{CSI_START}0m") }
+    pub fn reset_color() -> String { SGR_RESET_STR.to_string() }
 
     // ==================== Cursor Visibility ====================
 

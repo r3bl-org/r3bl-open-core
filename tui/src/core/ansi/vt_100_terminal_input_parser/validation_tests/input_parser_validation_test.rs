@@ -39,11 +39,11 @@
 //!
 //! ### Test Strategy
 //!
-//! | Test Type | Purpose | Approach |
-//! |-----------|---------|----------|
-//! | **Parser tests** (this file) | Verify ANSI → Event parsing | Use literal sequences from terminal observation |
-//! | **Generator tests** | Verify Event → ANSI generation | Use literal sequences from VT-100 spec |
-//! | **Round-trip tests** | Verify parser ↔ generator compatibility | Event → bytes → Event |
+//! | Test Type                    | Purpose                                 | Approach                                            |
+//! |------------------------------|-----------------------------------------|-----------------------------------------------------|
+//! | **Parser tests** (this file) | Verify ANSI → Event parsing             | Use literal sequences from terminal observation     |
+//! | **Generator tests**          | Verify Event → ANSI generation          | Use literal sequences from VT-100 spec              |
+//! | **Round-trip tests**         | Verify parser ↔ generator compatibility | Event → bytes → Event                               |
 //!
 //! The combination of all three test types ensures both parser and generator are correct
 //! and compatible with each other.
@@ -518,16 +518,11 @@ mod edge_cases {
     }
 
     #[test]
+    #[should_panic(expected = "must be non-zero (1-based)")]
     fn test_mouse_coordinate_zero() {
-        // Zero coordinates are invalid (VT-100 is 1-based)
+        // Zero coordinates are invalid (VT-100 is 1-based) - should panic
         let seq = b"\x1b[<0;0;0M";
-        let result = std::panic::catch_unwind(|| {
-            parse_mouse_sequence(seq);
-        });
-        assert!(
-            result.is_err(),
-            "Zero coordinates should panic (invalid 1-based coord)"
-        );
+        let _unused = parse_mouse_sequence(seq);
     }
 
     #[test]
@@ -583,26 +578,23 @@ mod modifier_encoding {
         ];
 
         for (param, expect_shift, expect_alt, expect_ctrl) in test_cases {
-            let seq = format!("\x1b[1;{}A", param);
+            let seq = format!("\x1b[1;{param}A");
             let (event, _bytes_consumed) = parse_keyboard_sequence(seq.as_bytes())
-                .unwrap_or_else(|| panic!("Should parse parameter {}", param));
+                .unwrap_or_else(|| panic!("Should parse parameter {param}"));
 
             match event {
                 VT100InputEvent::Keyboard { modifiers, .. } => {
                     assert_eq!(
                         modifiers.shift, expect_shift,
-                        "Parameter {} shift mismatch",
-                        param
+                        "Parameter {param} shift mismatch"
                     );
                     assert_eq!(
                         modifiers.alt, expect_alt,
-                        "Parameter {} alt mismatch",
-                        param
+                        "Parameter {param} alt mismatch"
                     );
                     assert_eq!(
                         modifiers.ctrl, expect_ctrl,
-                        "Parameter {} ctrl mismatch",
-                        param
+                        "Parameter {param} ctrl mismatch"
                     );
                 }
                 _ => panic!("Expected Keyboard event"),

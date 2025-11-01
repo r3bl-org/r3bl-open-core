@@ -1,16 +1,16 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 // Private modules (hide internal structure).
+mod enhanced_keys;
 mod input_device;
 mod input_device_ext;
-mod output_device;
-mod shared_writer;
-mod terminal_io_type_aliases;
-mod enhanced_keys;
 mod input_event;
 mod key_press;
 mod modifier_keys_mask;
 mod mouse_input;
+mod output_device;
+mod shared_writer;
+mod terminal_io_type_aliases;
 
 // Re-exports for flat public API.
 pub use enhanced_keys::*;

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! DirectToAnsi Input Device Implementation
+//! `DirectToAnsi` Input Device Implementation
 //!
-//! This module implements the async input device for the DirectToAnsi backend.
+//! This module implements the async input device for the `DirectToAnsi` backend.
 //! It handles non-blocking reading from stdin using tokio, manages a ring buffer (kind
 //! of, except that it is growable) for partial ANSI sequences, and delegates to the
 //! protocol layer parsers for sequence interpretation.
@@ -29,7 +29,7 @@ const BUFFER_COMPACT_THRESHOLD: usize = 2048;
 /// Initial buffer capacity: 4KB for efficient ANSI sequence buffering.
 const INITIAL_BUFFER_CAPACITY: usize = 4096;
 
-/// Async input device for DirectToAnsi backend.
+/// Async input device for `DirectToAnsi` backend.
 ///
 /// Manages asynchronous reading from terminal stdin using tokio, with:
 /// - Simple `Vec<u8>` buffer for handling partial/incomplete ANSI sequences
@@ -65,7 +65,7 @@ const INITIAL_BUFFER_CAPACITY: usize = 4096;
 /// Temporary read buffer size for stdin reads.
 const TEMP_READ_BUFFER_SIZE: usize = 256;
 
-/// Convert protocol-level KeyCode and KeyModifiers to canonical KeyPress.
+/// Convert protocol-level `KeyCode` and `KeyModifiers` to canonical `KeyPress`.
 fn convert_key_code_to_keypress(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> KeyPress {
     let key = match code {
         VT100KeyCode::Char(ch) => Key::Character(ch),
@@ -133,7 +133,7 @@ fn convert_key_code_to_keypress(code: VT100KeyCode, modifiers: VT100KeyModifiers
     }
 }
 
-/// Convert protocol-level InputEvent to canonical InputEvent.
+/// Convert protocol-level `InputEvent` to canonical `InputEvent`.
 fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputEvent> {
     match vt100_event {
         VT100InputEvent::Keyboard { code, modifiers } => {
@@ -258,14 +258,15 @@ pub struct DirectToAnsiInputDevice {
 }
 
 impl DirectToAnsiInputDevice {
-    /// Create a new DirectToAnsiInputDevice.
+    /// Create a new `DirectToAnsiInputDevice`.
     ///
     /// Initializes:
-    /// - tokio::io::stdin() handle for non-blocking reading
+    /// - `tokio::io::stdin()` handle for non-blocking reading
     /// - 4KB `Vec<u8>` buffer (pre-allocated)
     /// - consumed counter at 0
     ///
     /// No timeout initialization needed - we use smart async lookahead instead!
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             stdin: tokio::io::stdin(),
@@ -286,7 +287,7 @@ impl DirectToAnsiInputDevice {
     ///
     /// ## Event Types
     ///
-    /// Returns InputEvent variants for:
+    /// Returns `InputEvent` variants for:
     /// - **Keyboard**: Character input, arrow keys, function keys, modifiers
     /// - **Mouse**: Clicks, drags, motion, scrolling with position and modifiers
     /// - **Resize**: Terminal window size change (rows, cols)
@@ -339,7 +340,7 @@ impl DirectToAnsiInputDevice {
     ///   escape sequences atomically in one write
     /// - **Terminal protocol design**: Sequences are designed to be atomic units
     /// - **Kernel buffering**: Even with slight delays, kernel buffers complete sequences
-    ///   before read() sees them
+    ///   before `read()` sees them
     /// - **Network delay case**: Over SSH with 200ms latency, UX is already degraded;
     ///   getting ESC instead of Up Arrow is annoying but not catastrophic
     pub async fn read_event(&mut self) -> Option<InputEvent> {
@@ -396,17 +397,13 @@ impl DirectToAnsiInputDevice {
             // This yields until data is ready - no busy-waiting!
             // Reuse temp_buf - read() overwrites from index 0, we only use [..n]
             match self.stdin.read(&mut temp_buf).await {
-                Ok(0) => {
-                    // EOF - stdin closed
+                Ok(0) | Err(_) => {
+                    // EOF - stdin closed or read error - treat as EOF
                     return None;
                 }
                 Ok(n) => {
                     // Append new bytes to buffer
                     self.buffer.extend_from_slice(&temp_buf[..n]);
-                }
-                Err(_) => {
-                    // Read error - treat as EOF
-                    return None;
                 }
             }
 
@@ -451,7 +448,7 @@ impl DirectToAnsiInputDevice {
     /// # Returns
     ///
     /// `Some((event, bytes_consumed))` if successful, `None` if incomplete.
-    /// Returns the protocol-level VT100InputEvent before conversion to canonical InputEvent.
+    /// Returns the protocol-level `VT100InputEvent` before conversion to canonical `InputEvent`.
     fn try_parse(&self) -> Option<(VT100InputEvent, usize)> {
         let buf = &self.buffer[self.consumed..];
 
@@ -738,7 +735,7 @@ mod tests {
                 PasteCollectionState::Collecting(buffer) => {
                     buffer.push(ch);
                 }
-                _ => panic!(),
+                PasteCollectionState::NotPasting => panic!(),
             }
         }
 

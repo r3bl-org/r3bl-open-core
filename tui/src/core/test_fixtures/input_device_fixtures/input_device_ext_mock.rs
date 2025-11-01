@@ -3,7 +3,7 @@
 use crate::{CrosstermEventResult, InlineVec, InputDevice};
 use std::time::Duration;
 
-/// Extension trait for creating mock InputDevice instances for testing.
+/// Extension trait for creating mock `InputDevice` instances for testing.
 ///
 /// This trait provides a backward-compatible API for existing tests.
 /// Internally, it delegates to the `InputDevice` enum's mock constructors.

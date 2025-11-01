@@ -31,6 +31,7 @@ use tokio::io::AsyncReadExt;
 
 /// Describes a single test case in the observation sequence.
 #[derive(Clone)]
+#[allow(clippy::struct_field_names)]
 struct TestCase {
     prompt_title: &'static str,
     prompt_action: &'static str,
@@ -74,7 +75,7 @@ async fn observe_terminal() -> IoResult<()> {
         &mut stdout,
         "╚═══════════════════════════════════════════════════════╝",
     )?;
-    write_raw_message(&mut stdout, &format!("\n🖥️  Terminal: {}\n", terminal_name))?;
+    write_raw_message(&mut stdout, &format!("\n🖥️  Terminal: {terminal_name}\n"))?;
 
     // Enable terminal capture mode with diagnostic output
     write_raw_message(&mut stdout, "🔧 Diagnostic Info:")?;
@@ -122,7 +123,7 @@ async fn observe_terminal() -> IoResult<()> {
 /// Write a message in raw mode with proper cursor positioning.
 /// Uses \n\r (line feed + carriage return) for correct positioning.
 fn write_raw_message(stdout: &mut std::io::Stdout, message: &str) -> IoResult<()> {
-    write!(stdout, "{}\n\r", message)?;
+    write!(stdout, "{message}\n\r")?;
     stdout.flush()?;
     Ok(())
 }
@@ -141,10 +142,8 @@ async fn drain_stdin_buffer<R: tokio::io::AsyncRead + Unpin>(
     let mut buffer = vec![0u8; 256];
     loop {
         match tokio::time::timeout(drain_timeout, stdin.read(&mut buffer)).await {
-            Ok(Ok(0)) => break,    // EOF
-            Ok(Ok(_)) => continue, // Got data, keep draining
-            Ok(Err(_)) => break,   // Read error
-            Err(_) => break,       // Timeout = buffer empty
+            Ok(Ok(0)) | Ok(Err(_)) | Err(_) => break, // EOF, read error, or timeout
+            Ok(Ok(_)) => {}                           // Got data, keep draining
         }
     }
 }
@@ -186,7 +185,7 @@ async fn run_capture_phase_with_output(stdout: &mut std::io::Stdout) -> IoResult
                     Err(_) => (Vec::new(), false),
                 }
             }
-            _ = tokio::time::sleep(delay_for_user) => {
+            () = tokio::time::sleep(delay_for_user) => {
                 (Vec::new(), true)
             }
         };
@@ -195,10 +194,7 @@ async fn run_capture_phase_with_output(stdout: &mut std::io::Stdout) -> IoResult
         if timed_out {
             write_raw_message(stdout, "⏱️  TIMEOUT: No input received\n")?;
         } else if !raw_bytes.is_empty() {
-            write_raw_message(
-                stdout,
-                &format!("📦 Raw bytes (hex): {:02x?}", raw_bytes),
-            )?;
+            write_raw_message(stdout, &format!("📦 Raw bytes (hex): {raw_bytes:02x?}"))?;
             write_raw_message(
                 stdout,
                 &format!(
@@ -220,7 +216,7 @@ async fn run_capture_phase_with_output(stdout: &mut std::io::Stdout) -> IoResult
                     )?;
                 }
             } else if let Some(desc) = extract_keyboard_code(&raw_bytes) {
-                write_raw_message(stdout, &format!("⌨️  Parsed: {}", desc))?;
+                write_raw_message(stdout, &format!("⌨️  Parsed: {desc}"))?;
             }
         } else {
             write_raw_message(stdout, "❌ ERROR: No input captured\n")?;
@@ -287,7 +283,7 @@ fn enable_terminal_capture_mode() -> IoResult<()> {
 
     for (name, seq) in &sequences {
         stdout.write_all(*seq)?;
-        eprintln!("📤 Sent: {} = {:02x?}", name, seq);
+        eprintln!("📤 Sent: {name} = {seq:02x?}");
     }
 
     stdout.flush()?;
@@ -332,7 +328,7 @@ fn detect_terminal_name() -> String {
             "alacritty" => "Alacritty".to_string(),
             "kitty" => "Kitty".to_string(),
             "linux" => "Linux Console".to_string(),
-            other => format!("{} (from $TERM)", other),
+            other => format!("{other} (from $TERM)"),
         };
     }
 
@@ -414,7 +410,7 @@ fn describe_sgr_button_event(button_code: u16, action_char: char) -> String {
                 2 => "Right",
                 _ => "Unknown",
             };
-            return format!("{} (dragging)", base);
+            return format!("{base} (dragging)");
         }
         _ => "Unknown Button",
     };
@@ -427,10 +423,10 @@ fn describe_sgr_button_event(button_code: u16, action_char: char) -> String {
     };
 
     // Scroll events only have 'M', not separate press/release
-    if button_code >= 64 && button_code <= 67 {
+    if (64..=67).contains(&button_code) {
         button_name.to_string()
     } else {
-        format!("{} ({})", button_name, action_desc)
+        format!("{button_name} ({action_desc})")
     }
 }
 
@@ -465,10 +461,10 @@ fn extract_keyboard_code(raw: &[u8]) -> Option<String> {
             // Show hex representation for unknown sequences
             let hex: String = other
                 .bytes()
-                .map(|b| format!("{:02x}", b))
+                .map(|b| format!("{b:02x}"))
                 .collect::<Vec<_>>()
                 .join(" ");
-            Some(format!("Unknown (hex: {})", hex))
+            Some(format!("Unknown (hex: {hex})"))
         }
     }
 }

@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Input handling module for DirectToAnsi backend.
+//! Input handling module for `DirectToAnsi` backend.
 //!
 //! This module contains the async input device implementation that reads from
 //! terminal stdin and parses ANSI sequences into input events.
@@ -22,11 +22,11 @@
 //!
 //! ## Module Responsibilities
 //!
-//! - **Async I/O**: Non-blocking reading from tokio::io::stdin()
+//! - **Async I/O**: Non-blocking reading from `tokio::io::stdin()`
 //! - **Buffering**: Simple `Vec<u8>` buffer for handling partial/incomplete ANSI sequences
 //! - **Smart Lookahead**: Zero-latency ESC key detection (no timeout needed!)
 //! - **Parser Dispatch**: Route buffer content to appropriate protocol parsers
-//! - **Event Generation**: Convert parsed results to InputEvent
+//! - **Event Generation**: Convert parsed results to `InputEvent`
 //!
 //! ## Key Architectural Decision: No Timeout Needed
 //!

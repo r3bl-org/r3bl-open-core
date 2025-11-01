@@ -33,7 +33,7 @@
 //! - Home: `CSI H`
 //! - End: `CSI F`
 //!
-//! ## Modifiers (CSI 1; m final_byte)
+//! ## Modifiers (CSI 1; m `final_byte`)
 //! Modifier encoding:
 //! - 0 = no modifiers
 //! - 1 = Shift
@@ -53,7 +53,7 @@ pub const ANSI_ESC: u8 = 0x1B;
 pub const ANSI_CSI_BRACKET: u8 = 0x5B;
 
 /// SS3 'O' byte: Second byte of SS3 sequences (0x4F)
-/// SS3 sequences format: ESC O command_char (used in application mode)
+/// SS3 sequences format: ESC O `command_char` (used in application mode)
 pub const ANSI_SS3_O: u8 = b'O';
 
 /// Parameter separator byte: `;` (59 in decimal, 0x3B in hex)
@@ -203,6 +203,30 @@ pub const CONTROL_ESC: u8 = 0x1B;
 
 /// ASCII Backspace character (0x08)
 pub const CONTROL_BACKSPACE: u8 = 0x08;
+
+// ==================== Mouse Protocol Markers ====================
+
+/// SGR mouse protocol marker: `<` (60 in decimal, 0x3C in hex)
+/// Used in SGR extended mouse tracking sequences: ESC [ < Cb ; Cx ; Cy M/m
+pub const MOUSE_SGR_MARKER: u8 = b'<';
+
+/// X10/Normal mouse protocol marker: `M` (77 in decimal, 0x4D in hex)
+/// Used in X10 mouse tracking sequences: ESC [ M Cb Cx Cy
+pub const MOUSE_X10_MARKER: u8 = b'M';
+
+// ==================== Mouse Protocol Sequence Prefixes ====================
+
+/// SGR mouse protocol sequence prefix: ESC [ <
+/// Used to identify SGR extended mouse tracking sequences
+pub const MOUSE_SGR_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_SGR_MARKER];
+
+/// X10/Normal mouse protocol sequence prefix: ESC [ M
+/// Used to identify X10 mouse tracking sequences
+pub const MOUSE_X10_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARKER];
+
+/// Basic CSI sequence prefix: ESC [
+/// Used for general CSI sequence detection
+pub const CSI_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET];
 
 #[cfg(test)]
 mod tests {

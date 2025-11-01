@@ -4,10 +4,10 @@ use crate::{core::ansi::vt_100_terminal_input_parser::{
                 test_fixtures::generate_keyboard_sequence,
                 types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers}
             },
-            generate_pty_test, InputEvent,
+            Deadline, generate_pty_test, InputEvent,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
-          time::{Duration, Instant}};
+          time::Duration};
 
 // XMARK: Process isolated test functions using env vars & PTY.
 
@@ -67,7 +67,7 @@ generate_pty_test! {
     /// Without raw mode, the PTY stays in "cooked" mode where:
     /// - Input waits for line termination (Enter key)
     /// - Control sequences may be interpreted instead of passed through
-    /// - DirectToAnsiInputDevice times out waiting for input that's stuck in buffers
+    /// - [`DirectToAnsiInputDevice`] times out waiting for input that's stuck in buffers
     ///
     /// ## Why This Test Pattern?
     ///
@@ -82,6 +82,8 @@ generate_pty_test! {
     /// ```bash
     /// cargo test test_pty_input_device -- --nocapture
     /// ```
+    ///
+    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_input_device,
     master: pty_master_entry_point,
     slave: pty_slave_entry_point
@@ -96,10 +98,10 @@ fn pty_master_entry_point(
     pty_pair: portable_pty::PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,
 ) {
-    /// Helper to generate ANSI bytes from InputEvent.
+    /// Helper to generate ANSI bytes from `InputEvent`.
     fn generate_test_sequence(desc: &str, event: VT100InputEvent) -> (&str, Vec<u8>) {
         let bytes = generate_keyboard_sequence(&event)
-            .unwrap_or_else(|| panic!("Failed to generate sequence for: {}", desc));
+            .unwrap_or_else(|| panic!("Failed to generate sequence for: {desc}"));
         (desc, bytes)
     }
 
@@ -118,20 +120,18 @@ fn pty_master_entry_point(
 
     // Wait for slave to confirm it's running.
     let mut test_running_seen = false;
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Deadline::default();
 
     // Non-blocking read loop: poll for slave startup with timeout.
     loop {
-        if Instant::now() >= deadline {
-            panic!("Timeout: slave did not start within 5 seconds");
-        }
+        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
             Ok(0) => panic!("EOF reached before slave started"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {}", trimmed);
+                eprintln!("  ← Slave output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
@@ -145,13 +145,11 @@ fn pty_master_entry_point(
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
             }
-            Err(e) => panic!("Read error while waiting for slave: {}", e),
+            Err(e) => panic!("Read error while waiting for slave: {e}"),
         }
     }
 
-    if !test_running_seen {
-        panic!("Slave test never started running (no TEST_RUNNING output)");
-    }
+    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
 
     // Send sequences and verify.
     let no_mods = VT100KeyModifiers::default();
@@ -184,7 +182,7 @@ fn pty_master_entry_point(
     // For each test sequence: write ANSI bytes to PTY, read back parsed event, verify
     // correctness.
     for (desc, sequence) in &sequences {
-        eprintln!("  → Sending: {} ({:?})", desc, sequence);
+        eprintln!("  → Sending: {desc} ({sequence:?})");
 
         writer
             .write_all(sequence)
@@ -199,7 +197,7 @@ fn pty_master_entry_point(
             let mut line = String::new();
             match buf_reader_non_blocking.read_line(&mut line) {
                 Ok(0) => {
-                    panic!("EOF reached before receiving event for {}", desc);
+                    panic!("EOF reached before receiving event for {desc}");
                 }
                 Ok(_) => {
                     let trimmed = line.trim();
@@ -215,15 +213,15 @@ fn pty_master_entry_point(
                     }
 
                     // Skip test harness noise
-                    eprintln!("  ⚠️  Skipping non-event output: {}", trimmed);
+                    eprintln!("  ⚠️  Skipping non-event output: {trimmed}");
                 }
                 Err(e) => {
-                    panic!("Read error for {}: {}", desc, e);
+                    panic!("Read error for {desc}: {e}");
                 }
             }
         };
 
-        eprintln!("  ✓ {}: {}", desc, event_line);
+        eprintln!("  ✓ {desc}: {event_line}");
     }
 
     eprintln!("🧹 PTY Master: Cleaning up...");
@@ -234,10 +232,10 @@ fn pty_master_entry_point(
     // Wait for slave to exit.
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {:?}", status);
+            eprintln!("✅ PTY Master: Slave exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {}", e);
+            panic!("Failed to wait for slave: {e}");
         }
     }
 
@@ -254,8 +252,8 @@ fn pty_master_entry_point(
 ///    - Disable line buffering (get bytes immediately)
 ///    - Prevent ANSI escape sequence interpretation
 ///    - Allow async byte-by-byte reading
-/// 2. **Create Device**: Initialize DirectToAnsiInputDevice to read from stdin
-/// 3. **Process Events**: Read and parse ANSI sequences into InputEvents
+/// 2. **Create Device**: Initialize `DirectToAnsiInputDevice` to read from stdin
+/// 3. **Process Events**: Read and parse ANSI sequences into `InputEvents`
 /// 4. **Output Results**: Write parsed events to stdout for master to verify
 ///
 /// This function MUST exit before returning so other tests don't run.
@@ -270,7 +268,7 @@ fn pty_slave_entry_point() -> ! {
     eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
     // Enter raw mode.
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {}", e);
+        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
         // This would likely cause the test to fail - escape sequences won't be readable
     } else {
         eprintln!("✓ PTY Slave: Terminal in raw mode");
@@ -300,33 +298,33 @@ fn pty_slave_entry_point() -> ! {
                         Some(event) => {
                             event_count += 1;
                             inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout; // Reset deadline.
-                            eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
+                            eprintln!("🔍 PTY Slave: Event #{event_count}: {event:?}");
 
                             // Output event in parseable format.
                             let output = match event {
                                 InputEvent::Keyboard(ref key_press) => {
-                                    format!("Keyboard: {:?}", key_press)
+                                    format!("Keyboard: {key_press:?}")
                                 }
                                 InputEvent::Mouse(ref mouse_input) => {
-                                    format!("Mouse: {:?}", mouse_input)
+                                    format!("Mouse: {mouse_input:?}")
                                 }
                                 InputEvent::Resize(ref size) => {
-                                    format!("Resize: {:?}", size)
+                                    format!("Resize: {size:?}")
                                 }
                                 InputEvent::Focus(ref state) => {
-                                    format!("Focus: {:?}", state)
+                                    format!("Focus: {state:?}")
                                 }
                                 InputEvent::BracketedPaste(ref text) => {
                                     format!("Paste: {} chars", text.len())
                                 }
                             };
 
-                            println!("{}", output);
+                            println!("{output}");
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
                             // Exit after processing a few events for testing.
                             if event_count >= 3 {
-                                eprintln!("🔍 PTY Slave: Processed {} events, exiting", event_count);
+                                eprintln!("🔍 PTY Slave: Processed {event_count} events, exiting");
                                 break;
                             }
                         }
@@ -338,7 +336,7 @@ fn pty_slave_entry_point() -> ! {
                 }
                 // Inactivity timeout: exit if deadline is reached (2 seconds of no events).
                 // https://developerlife.com/2024/07/10/rust-async-cancellation-safety-tokio/#example-1-right-and-wrong-way-to-sleep-and-interval
-                _ = tokio::time::sleep_until(inactivity_deadline) => {
+                () = tokio::time::sleep_until(inactivity_deadline) => {
                     eprintln!("🔍 PTY Slave: Inactivity timeout (2 seconds with no events), exiting");
                     break;
                 }
@@ -350,7 +348,7 @@ fn pty_slave_entry_point() -> ! {
 
     // Clean up: disable raw mode before exiting.
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {}", e);
+        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
     }
 
     eprintln!("🔍 Slave: Completed, exiting");
