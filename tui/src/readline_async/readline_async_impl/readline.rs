@@ -789,7 +789,8 @@ pub mod readline_internal {
         ControlFlowExtended::Continue
     }
 
-    /// Convert crossterm::event::Event to canonical InputEvent
+    /// Convert `crossterm::event::Event` to canonical `InputEvent`
+    #[must_use] 
     pub fn convert_crossterm_event_to_input_event(
         event: crossterm::event::Event,
     ) -> Option<InputEvent> {
@@ -877,8 +878,8 @@ pub mod readline_internal {
             }) => {
                 let mouse_input = crate::MouseInput {
                     pos: crate::Pos {
-                        col_index: crate::ColIndex::from(column as i32),
-                        row_index: crate::RowIndex::from(row as i32),
+                        col_index: crate::ColIndex::from(i32::from(column)),
+                        row_index: crate::RowIndex::from(i32::from(row)),
                     },
                     kind: match kind {
                         MouseEventKind::Down(button) => {

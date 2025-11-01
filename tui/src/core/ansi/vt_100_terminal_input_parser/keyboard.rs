@@ -15,7 +15,7 @@
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 
-/// Parse a CSI keyboard sequence and return an InputEvent with bytes consumed.
+/// Parse a CSI keyboard sequence and return an `InputEvent` with bytes consumed.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence was parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -34,6 +34,7 @@ use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 /// - `ESC [ A` - Arrow up (no parameters, 3 bytes)
 /// - `ESC [ 5 ~` - Page up (parameter: 5, final: ~, 4 bytes)
 /// - `ESC [ 1 ; 3 C` - Alt+Right (base: 1, modifier: 3, final: C, 6 bytes)
+#[must_use] 
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
@@ -54,7 +55,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
     parse_csi_parameters(buffer)
 }
 
-/// Parse an SS3 keyboard sequence and return an InputEvent with bytes consumed.
+/// Parse an SS3 keyboard sequence and return an `InputEvent` with bytes consumed.
 ///
 /// SS3 sequences are used in terminal application mode (vim, less, emacs, etc.)
 /// to send arrow keys and function keys. They have a simpler format than CSI.
@@ -77,6 +78,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 ///
 /// **Note**: SS3 sequences do NOT support modifiers like Shift/Ctrl/Alt.
 /// Those combinations are still sent as CSI sequences with modifiers.
+#[must_use] 
 pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // SS3 sequences must be exactly 3 bytes: ESC O + command_char
     if buffer.len() < 3 {
@@ -158,7 +160,7 @@ fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEvent> {
 }
 
 /// Parse CSI sequences with numeric parameters (e.g., `CSI 5 ~ `, `CSI 1 ; 3 C`)
-/// Returns (InputEvent, bytes_consumed) on success.
+/// Returns (`InputEvent`, `bytes_consumed`) on success.
 fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Extract the parameters and final byte
     // Format: ESC [ [param;param;...] final_byte
@@ -241,8 +243,8 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     Some((event, total_consumed))
 }
 
-/// Parse function keys (CSI n~) and special keys (Insert, Delete, Home, End, PageUp,
-/// PageDown)
+/// Parse function keys (CSI n~) and special keys (Insert, Delete, Home, End, `PageUp`,
+/// `PageDown`)
 ///
 /// Function key codes in ANSI (with gaps):
 /// - F1: 11, F2: 12, F3: 13, F4: 14, F5: 15
@@ -280,7 +282,7 @@ fn parse_function_or_special_key(
     })
 }
 
-/// Decode modifier mask to KeyModifiers
+/// Decode modifier mask to `KeyModifiers`
 ///
 /// Modifier encoding (from CSI 1;m format - CONFIRMED BY PHASE 1!):
 /// Parameter value = 1 + bitfield, where bitfield = Shift(1) | Alt(2) | Ctrl(4)

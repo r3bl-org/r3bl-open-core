@@ -25,6 +25,7 @@ use crate::TermPos;
 use super::types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction, VT100MouseButton,
                    VT100ScrollDirection};
 
+#[must_use] 
 pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check for SGR mouse protocol (most reliable)
     if buffer.len() >= 6 && buffer.starts_with(b"\x1b[<") {
@@ -180,8 +181,8 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Convert raw bytes to 1-based coordinates
     // X10 encoding: byte value - 32 = position (with offset for positions > 95)
     // Positions are 1-based in the terminal
-    let col = (cx as u16).saturating_sub(32);
-    let row = (cy as u16).saturating_sub(32);
+    let col = u16::from(cx).saturating_sub(32);
+    let row = u16::from(cy).saturating_sub(32);
 
     // Handle invalid coordinates
     if col == 0 || row == 0 {

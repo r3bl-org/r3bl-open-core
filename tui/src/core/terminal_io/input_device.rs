@@ -14,7 +14,7 @@ use std::time::Duration;
 ///
 /// Uses an enum to dispatch to the appropriate backend implementation at runtime:
 /// - **Crossterm**: Cross-platform terminal input (default on non-Linux)
-/// - **DirectToAnsi**: Pure Rust async input with tokio (default on Linux)
+/// - **`DirectToAnsi`**: Pure Rust async input with tokio (default on Linux)
 /// - **Mock**: Synthetic event generator for testing
 ///
 /// Backend selection is automatic based on [`TERMINAL_LIB_BACKEND`], or can be
@@ -54,7 +54,7 @@ use std::time::Duration;
 pub enum InputDevice {
     /// Crossterm backend - cross-platform terminal input
     Crossterm(CrosstermInputDevice),
-    /// DirectToAnsi backend - pure Rust async I/O
+    /// `DirectToAnsi` backend - pure Rust async I/O
     DirectToAnsi(DirectToAnsiInputDevice),
     /// Mock backend - synthetic events for testing
     Mock(MockInputDevice),
@@ -63,7 +63,7 @@ pub enum InputDevice {
 impl InputDevice {
     /// Create a new [`InputDevice`] using the platform-default backend.
     ///
-    /// - Linux: DirectToAnsi (pure Rust async I/O)
+    /// - Linux: `DirectToAnsi` (pure Rust async I/O)
     /// - Others: Crossterm (cross-platform compatibility)
     ///
     /// Backend is selected via [`TERMINAL_LIB_BACKEND`] constant.
@@ -75,19 +75,19 @@ impl InputDevice {
         }
     }
 
-    /// Create a new InputDevice using the Crossterm backend explicitly.
+    /// Create a new `InputDevice` using the Crossterm backend explicitly.
     #[must_use]
     pub fn new_crossterm() -> Self {
         Self::Crossterm(CrosstermInputDevice::new_event_stream())
     }
 
-    /// Create a new InputDevice using the DirectToAnsi backend explicitly.
+    /// Create a new `InputDevice` using the `DirectToAnsi` backend explicitly.
     #[must_use]
     pub fn new_direct_to_ansi() -> Self {
         Self::DirectToAnsi(DirectToAnsiInputDevice::new())
     }
 
-    /// Create a new mock InputDevice for testing.
+    /// Create a new mock `InputDevice` for testing.
     ///
     /// Events are yielded from the provided vector in order.
     #[must_use]
@@ -95,7 +95,7 @@ impl InputDevice {
         Self::Mock(MockInputDevice::new(generator_vec))
     }
 
-    /// Create a new mock InputDevice with a delay between events.
+    /// Create a new mock `InputDevice` with a delay between events.
     ///
     /// Useful for testing timing-sensitive behavior.
     #[must_use]

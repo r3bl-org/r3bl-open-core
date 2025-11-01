@@ -39,6 +39,7 @@ impl std::fmt::Debug for MockInputDevice {
 
 impl MockInputDevice {
     /// Create a new mock input device that yields events from the given vector.
+    #[must_use] 
     pub fn new(generator_vec: InlineVec<CrosstermEventResult>) -> Self {
         Self {
             resource: gen_input_stream(generator_vec),
@@ -49,6 +50,7 @@ impl MockInputDevice {
     ///
     /// Useful for testing timing-sensitive behavior or simulating realistic
     /// user input speed.
+    #[must_use] 
     pub fn new_with_delay(
         generator_vec: InlineVec<CrosstermEventResult>,
         delay: Duration,

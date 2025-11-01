@@ -13,7 +13,7 @@
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 
-/// Parse UTF-8 text and return a single InputEvent for the first complete character.
+/// Parse UTF-8 text and return a single `InputEvent` for the first complete character.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete UTF-8 character is parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -22,8 +22,9 @@ use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 /// UTF-8 sequences (1-4 bytes). If the buffer starts with incomplete UTF-8,
 /// returns `None` to indicate more bytes are needed.
 ///
-/// The caller (DirectToAnsiInputDevice) can call this repeatedly to parse
+/// The caller (`DirectToAnsiInputDevice`) can call this repeatedly to parse
 /// multiple characters from the buffer.
+#[must_use] 
 pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check if we have a complete UTF-8 sequence
     let bytes_consumed = is_utf8_complete(buffer)?;
@@ -89,15 +90,15 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 
     let codepoint = match first_byte {
         // 1-byte sequence: 0xxxxxxx
-        0x00..=0x7F => first_byte as u32,
+        0x00..=0x7F => u32::from(first_byte),
 
         // 2-byte sequence: 110xxxxx 10xxxxxx
         0xC0..=0xDF => {
             if buffer.len() < 2 {
                 return None;
             }
-            let b1 = (first_byte & 0x1F) as u32;
-            let b2 = (buffer[1] & 0x3F) as u32;
+            let b1 = u32::from(first_byte & 0x1F);
+            let b2 = u32::from(buffer[1] & 0x3F);
             (b1 << 6) | b2
         }
 
@@ -106,9 +107,9 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
             if buffer.len() < 3 {
                 return None;
             }
-            let b1 = (first_byte & 0x0F) as u32;
-            let b2 = (buffer[1] & 0x3F) as u32;
-            let b3 = (buffer[2] & 0x3F) as u32;
+            let b1 = u32::from(first_byte & 0x0F);
+            let b2 = u32::from(buffer[1] & 0x3F);
+            let b3 = u32::from(buffer[2] & 0x3F);
             (b1 << 12) | (b2 << 6) | b3
         }
 
@@ -117,10 +118,10 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
             if buffer.len() < 4 {
                 return None;
             }
-            let b1 = (first_byte & 0x07) as u32;
-            let b2 = (buffer[1] & 0x3F) as u32;
-            let b3 = (buffer[2] & 0x3F) as u32;
-            let b4 = (buffer[3] & 0x3F) as u32;
+            let b1 = u32::from(first_byte & 0x07);
+            let b2 = u32::from(buffer[1] & 0x3F);
+            let b3 = u32::from(buffer[2] & 0x3F);
+            let b4 = u32::from(buffer[3] & 0x3F);
             (b1 << 18) | (b2 << 12) | (b3 << 6) | b4
         }
 

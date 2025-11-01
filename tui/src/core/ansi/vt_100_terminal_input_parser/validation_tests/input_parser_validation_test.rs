@@ -518,16 +518,11 @@ mod edge_cases {
     }
 
     #[test]
+    #[should_panic(expected = "must be non-zero (1-based)")]
     fn test_mouse_coordinate_zero() {
-        // Zero coordinates are invalid (VT-100 is 1-based)
+        // Zero coordinates are invalid (VT-100 is 1-based) - should panic
         let seq = b"\x1b[<0;0;0M";
-        let result = std::panic::catch_unwind(|| {
-            parse_mouse_sequence(seq);
-        });
-        assert!(
-            result.is_err(),
-            "Zero coordinates should panic (invalid 1-based coord)"
-        );
+        let _unused = parse_mouse_sequence(seq);
     }
 
     #[test]

@@ -237,8 +237,10 @@
 pub mod gc_string;
 pub mod traits;
 pub mod unicode_segment;
+pub mod word_boundaries;
 
 // Re-export.
 pub use gc_string::*;
 pub use traits::*;
 pub use unicode_segment::*;
+pub use word_boundaries::*;

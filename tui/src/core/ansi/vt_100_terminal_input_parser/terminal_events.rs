@@ -14,7 +14,7 @@
 
 use super::types::{VT100InputEvent, VT100FocusState, VT100PasteMode};
 
-/// Parse a terminal event sequence and return an InputEvent with bytes consumed if recognized.
+/// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if recognized.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence is parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -24,6 +24,7 @@ use super::types::{VT100InputEvent, VT100FocusState, VT100PasteMode};
 /// - `CSI I` → Terminal gained focus
 /// - `CSI O` → Terminal lost focus
 /// - `ESC[200~` → Bracketed paste start
+#[must_use] 
 pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {

@@ -59,7 +59,7 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 ///    - If Truecolor: RGB unchanged
 ///    - If Ansi256: Converted to nearest ANSI palette color
 ///    - If Grayscale: Converted to grayscale equivalent
-///    - If NoColor: Converted to default (black/reset)
+///    - If `NoColor`: Converted to default (black/reset)
 ///
 /// ## Integration Points
 ///
@@ -91,7 +91,7 @@ use crate::{AnsiValue, ColorSupport, RgbValue, TransformColor, TuiColor};
 /// - On **Ansi256** terminal: Returns `TuiColor::Ansi(9)` - bright red from ANSI palette
 /// - On **Grayscale** terminal: Returns grayscale approximation
 /// - On **Truecolor** terminal: Returns `TuiColor::Rgb((255, 0, 0))` - unchanged
-/// - On **NoColor** terminal: Returns `TuiColor::Ansi(0)` - default/black
+/// - On **`NoColor`** terminal: Returns `TuiColor::Ansi(0)` - default/black
 #[must_use]
 pub fn degrade_color(color: TuiColor, color_support: ColorSupport) -> TuiColor {
     match color {

@@ -33,7 +33,7 @@
 //! - Home: `CSI H`
 //! - End: `CSI F`
 //!
-//! ## Modifiers (CSI 1; m final_byte)
+//! ## Modifiers (CSI 1; m `final_byte`)
 //! Modifier encoding:
 //! - 0 = no modifiers
 //! - 1 = Shift
@@ -53,7 +53,7 @@ pub const ANSI_ESC: u8 = 0x1B;
 pub const ANSI_CSI_BRACKET: u8 = 0x5B;
 
 /// SS3 'O' byte: Second byte of SS3 sequences (0x4F)
-/// SS3 sequences format: ESC O command_char (used in application mode)
+/// SS3 sequences format: ESC O `command_char` (used in application mode)
 pub const ANSI_SS3_O: u8 = b'O';
 
 /// Parameter separator byte: `;` (59 in decimal, 0x3B in hex)

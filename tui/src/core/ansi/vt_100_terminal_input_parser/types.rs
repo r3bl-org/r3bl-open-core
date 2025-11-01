@@ -19,6 +19,7 @@ pub struct VT100KeyModifiers {
 }
 
 impl VT100KeyModifiers {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             shift: false,
@@ -57,7 +58,7 @@ pub enum VT100PasteMode {
     End,
 }
 
-/// Internal protocol focus state (maps to canonical FocusEvent).
+/// Internal protocol focus state (maps to canonical `FocusEvent`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VT100FocusState {
     Gained,
@@ -111,7 +112,7 @@ pub enum VT100MouseAction {
 /// Internal protocol event from VT-100 parsing.
 ///
 /// This is an intermediate representation used during parsing.
-/// It gets converted to the canonical InputEvent from terminal_io.
+/// It gets converted to the canonical `InputEvent` from `terminal_io`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VT100InputEvent {
     /// Keyboard event with character, modifiers, and key code.
