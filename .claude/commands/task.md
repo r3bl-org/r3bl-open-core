@@ -21,6 +21,10 @@ else if $1 is "update" then:
 - If you have completed some tasks in your todo list that is related to @task/$2
   then find the appropriate step in the md file and update its progress with whatever
   status code is appropriate. Then save the file.
+- If all the steps in the single task file are completed, then it
+  is time to move this md file into the ./task/done/ folder and update
+  @todo.md and @done.md if necessary (if they contain links to this
+  single md file).
 
 else if $1 is "load" then:
 - Make sure that you are in plan mode and your context is clear. If not then ask the

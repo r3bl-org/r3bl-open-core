@@ -265,6 +265,14 @@ Wild linker is automatically activated when both `clang` and `wild-linker` are i
 ### Git Workflow
 
 - Never commit unless explicitly asked
+- When you do make commits, do not add an attribution to yourself in the commit message. Do not add
+  the following trailing lines in a commit message:
+
+  ```
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
 
 ## Task Tracking System
 
@@ -291,3 +299,9 @@ Two-file system: active work in `todo.md`, completed work in `done.md`.
 - Group under descriptive headers
 - Include GitHub issue links
 - Add technical notes for complex tasks
+
+### The "./tasks/" folder
+
+The custom slash comand "/task" is available to manage all the details of a long running task. The
+"todo.md" and "done.md" files are simply "pointers" to what tasks are active and which ones are
+done. For the details and to create, update, or load a task, use the "/task" command.

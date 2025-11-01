@@ -555,11 +555,11 @@
 
 - [x] fix all the lints after the extraction & archival of the `md_parser_ng`
 - [x] create parser conformance snapshot test, and make sure they pass
-      [docs/parser_conformance.md](docs/done/task_parser_conformance.md)
+      [docs/parser_conformance.md](task/done/task_parser_conformance.md)
 - [x] review the flamegraph.svg and cargo bench results to ensure no regressions
-      [docs/task_tui_perf_optimize.md](docs/task_tui_perf_optimize.md)
+      [task/pending/task_tui_perf_optimize.md](task/pending/task_tui_perf_optimize.md)
 - [x] complete the performance work started in
-      [task_tui_perf_optimize](docs/task_tui_perf_optimize.md)
+      [task_tui_perf_optimize](task/pending/task_tui_perf_optimize.md)
 - [x] fix windows bug: https://github.com/r3bl-org/r3bl-open-core/issues/433
 - [x] refactor `md_parser` with consistent naming and module organization
 - [x] add missing tests to `editor` module
@@ -579,7 +579,7 @@
 
 # editor content storage enhancements: https://github.com/r3bl-org/r3bl-open-core/issues/387
 
-- [x] use [`task_zero_copy_gap_buffer`](docs/done/task_zero_copy_gap_buffer.md) to implement a gap
+- [x] use [`task_zero_copy_gap_buffer`](task/done/task_zero_copy_gap_buffer.md) to implement a gap
       buffer for the editor content storage. This will improve performance and memory usage when
       editing large files.
   - The summary highlights:
@@ -595,7 +595,7 @@
 
 # clean up run.nu, update CHANGELOG.md, README.md and make release
 
-- [x] plan in [`docs/done/task_refactor_nu.md`](docs/done/task_refactor_nu.md) to consolidate and
+- [x] plan in [`task/done/task_refactor_nu.md`](task/done/task_refactor_nu.md) to consolidate and
       rewrite the `run.nu` file to make it more readable and maintainable
 - [x] update `CHANGELOG.md` with the latest changes
 - [x] update `README.md` with the latest changes
@@ -615,24 +615,24 @@
   - [x] single channel
     - [x] code
     - [x] example
-    - [x] tests in [`task_test_pty`](docs/done/task_test_pty.md)
+    - [x] tests in [`task_test_pty`](task/done/task_test_pty.md)
     - [x] code review
   - [x] dual channel
-    - [x] code [`task_dual_channel_pty`](docs/done/task_dual_channel_pty.md)
+    - [x] code [`task_dual_channel_pty`](task/done/task_dual_channel_pty.md)
     - [x] example
     - [x] tests
     - [x] code review
 - [x] implement the upgrade code in
-  - [x] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](docs/task_enhance_cmdr_upgrade.md)
+  - [x] `r3bl-cmdr` [`task_enhance_cmdr_upgrade`](task/pending/task_enhance_cmdr_upgrade.md)
   - [x] create release and close issue: https://github.com/r3bl-org/r3bl-open-core/issues/437
 - [x] new feature to recall claude history in r3bl-cmdr
-      [`task_prd_ch_bin`](`docs/done/task_prd_ch_bin.md`):
+      [`task_prd_ch_bin`](task/done/task_prd_ch_bin.md):
       https://github.com/anthropics/claude-code/issues/5005#issuecomment-3188388260
 
 # refactor editor & vt100 parser to use type-safe indices and lengths
 
 - [x] **COMPLETED 2025-09-27** - Refactor Editor Buffer, Editor Engine, and VT100 Parser modules for type safety
-  [`task_make_editor_vt_100_parser_more_typesafe`](docs/done/task_make_editor_vt_100_parser_more_typesafe.md)
+  [`task_make_editor_vt_100_parser_more_typesafe`](task/done/task_make_editor_vt_100_parser_more_typesafe.md)
 - [x] **Major discovery**: Most of the codebase was already type-safe! Only needed to:
   - [x] Fix 6 test assertions in `validate_buffer_mut.rs` to use `!overflows()` pattern
   - [x] Document legitimate `as_usize()` usage in debug output and doctests

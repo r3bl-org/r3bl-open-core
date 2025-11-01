@@ -3,7 +3,7 @@
 Tasks are detailed instructions to guide claude code to implement things.
 One long running task is contained in a single .md file.
 
-# Structure of this task md file
+## Structure of a "single task" md file
 
 ```md
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -90,3 +90,14 @@ This makes it very easy to understand what is being worked on now,
 what work is completed, and how much is left to do. This makes
 handing off work from one agent to another or one developer to another
 seamless.
+
+## Folder structure
+
+There are other folders in the ./task/ folder:
+- "archive/" - This is where tasks which we have decided not work on but want to retain
+  for historical reasons are moved to. If we don't care about retaining history for a 
+  task we don't intend to work on then we can just delete it.
+- "pending/" - This is where tasks which we are NOT currently working on, but do intend
+  to work on in the future are stored. This ensures that the files in ./task/ folder are
+  those which we (agents, subagents, and other developers) are are currently working on.
+- "done/" - This is where task which have been completed are moved to.
