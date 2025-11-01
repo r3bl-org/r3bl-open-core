@@ -20,7 +20,8 @@ use crate::InputEvent;
 /// This trait intentionally omits `+ Send` from the future return type because:
 /// - All implementations hold `&mut self` across `.await` points with non-`Send` streams
 /// - The trait is only used within single-task contexts (not sent between threads)
-/// - Backend implementations (Crossterm, DirectToAnsi) cannot satisfy `Send` constraints
+/// - Backend implementations (Crossterm, `DirectToAnsi`) cannot satisfy `Send`
+///   constraints
 ///
 /// **IMPORTANT**: The futures returned by this trait are **NOT `Send`** and cannot be
 /// used across thread boundaries. This limitation comes from the underlying stream types

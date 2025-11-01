@@ -61,8 +61,7 @@ fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
     }
 
     // Verify all continuation bytes are correctly formatted
-    for i in 1..required_len {
-        let byte = buffer[i];
+    for byte in buffer.iter().skip(1).take(required_len - 1) {
         // Continuation bytes must be 10xxxxxx (0x80-0xBF)
         if (byte & 0xC0) != 0x80 {
             return None; // Invalid continuation byte
@@ -147,9 +146,8 @@ fn get_utf8_length(first_byte: u8) -> Option<usize> {
         // Start byte for 4-byte sequence (11110xxx)
         0xF0..=0xF7 => Some(4),
         // Continuation byte (10xxxxxx) - invalid as start byte
-        0x80..=0xBF => None,
         // Reserved/invalid bytes (11111xxx)
-        0xF8..=0xFF => None,
+        0x80..=0xBF | 0xF8..=0xFF => None,
     }
 }
 

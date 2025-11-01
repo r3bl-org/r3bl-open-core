@@ -1,21 +1,23 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InputEvent, generate_pty_test,
+use crate::{InputEvent, Deadline, generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
-          time::{Duration, Instant}};
+          time::Duration};
 
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
     /// PTY-based integration test for UTF-8 text input parsing.
     ///
-    /// Validates that the DirectToAnsiInputDevice correctly handles UTF-8 text input:
+    /// Validates that the [`DirectToAnsiInputDevice`] correctly handles UTF-8 text input:
     /// - ASCII characters
     /// - UTF-8 multi-byte sequences (accented characters, emojis, etc.)
     /// - Mixed text and ANSI escape sequences
     ///
     /// Uses the coordinator-worker pattern with two processes.
+    ///
+    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_utf8_text,
     master: pty_master_entry_point,
     slave: pty_slave_entry_point
@@ -39,19 +41,17 @@ fn pty_master_entry_point(
 
     // Wait for slave to confirm it's running
     let mut test_running_seen = false;
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Deadline::default();
 
     loop {
-        if Instant::now() >= deadline {
-            panic!("Timeout: slave did not start within 5 seconds");
-        }
+        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
             Ok(0) => panic!("EOF reached before slave started"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {}", trimmed);
+                eprintln!("  ← Slave output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
@@ -65,13 +65,11 @@ fn pty_master_entry_point(
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
             }
-            Err(e) => panic!("Read error while waiting for slave: {}", e),
+            Err(e) => panic!("Read error while waiting for slave: {e}"),
         }
     }
 
-    if !test_running_seen {
-        panic!("Slave test never started running (no TEST_RUNNING output)");
-    }
+    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
 
     // Send text inputs
     let texts = vec![
@@ -84,7 +82,7 @@ fn pty_master_entry_point(
     eprintln!("📝 PTY Master: Sending {} text inputs...", texts.len());
 
     for (desc, text) in &texts {
-        eprintln!("  → Sending: {} ({})", desc, text);
+        eprintln!("  → Sending: {desc} ({text})");
 
         writer
             .write_all(text.as_bytes())
@@ -99,32 +97,32 @@ fn pty_master_entry_point(
             let mut line = String::new();
             match buf_reader_non_blocking.read_line(&mut line) {
                 Ok(0) => {
-                    panic!("EOF reached before receiving text for {}", desc);
+                    panic!("EOF reached before receiving text for {desc}");
                 }
                 Ok(_) => {
                     let trimmed = line.trim();
 
                     // Check if it's a text event line
                     if trimmed.starts_with("Text:") {
-                        eprintln!("  ✓ {}: {}", desc, trimmed);
+                        eprintln!("  ✓ {desc}: {trimmed}");
                         output_received = true;
                         break;
                     }
 
                     // Skip test harness noise
-                    eprintln!("  ⚠️  Skipping non-text output: {}", trimmed);
+                    eprintln!("  ⚠️  Skipping non-text output: {trimmed}");
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     std::thread::sleep(Duration::from_millis(10));
                 }
                 Err(e) => {
-                    panic!("Read error for {}: {}", desc, e);
+                    panic!("Read error for {desc}: {e}");
                 }
             }
         }
 
         if !output_received {
-            eprintln!("⚠️  Warning: No output received for {}", desc);
+            eprintln!("⚠️  Warning: No output received for {desc}");
         }
     }
 
@@ -134,10 +132,10 @@ fn pty_master_entry_point(
 
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {:?}", status);
+            eprintln!("✅ PTY Master: Slave exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {}", e);
+            panic!("Failed to wait for slave: {e}");
         }
     }
 
@@ -151,7 +149,7 @@ fn pty_slave_entry_point() -> ! {
 
     eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {}", e);
+        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
     } else {
         eprintln!("✓ PTY Slave: Terminal in raw mode");
     }
@@ -174,22 +172,22 @@ fn pty_slave_entry_point() -> ! {
                         Some(event) => {
                             event_count += 1;
                             inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
-                            eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
+                            eprintln!("🔍 PTY Slave: Event #{event_count}: {event:?}");
 
                             let output = match event {
                                 InputEvent::Keyboard(key_press) => {
-                                    format!("Text: {:?}", key_press)
+                                    format!("Text: {key_press:?}")
                                 }
                                 _ => {
-                                    format!("Unexpected event: {:?}", event)
+                                    format!("Unexpected event: {event:?}")
                                 }
                             };
 
-                            println!("{}", output);
+                            println!("{output}");
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
                             if event_count >= 4 {
-                                eprintln!("🔍 PTY Slave: Processed {} events, exiting", event_count);
+                                eprintln!("🔍 PTY Slave: Processed {event_count} events, exiting");
                                 break;
                             }
                         }
@@ -199,7 +197,7 @@ fn pty_slave_entry_point() -> ! {
                         }
                     }
                 }
-                _ = tokio::time::sleep_until(inactivity_deadline) => {
+                () = tokio::time::sleep_until(inactivity_deadline) => {
                     eprintln!("🔍 PTY Slave: Inactivity timeout (2 seconds with no events), exiting");
                     break;
                 }
@@ -210,7 +208,7 @@ fn pty_slave_entry_point() -> ! {
     });
 
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {}", e);
+        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
     }
 
     eprintln!("🔍 Slave: Completed, exiting");

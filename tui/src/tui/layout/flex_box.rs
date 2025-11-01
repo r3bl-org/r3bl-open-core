@@ -120,5 +120,4 @@ mod tests {
         let direction = LayoutDirection::default();
         assert_eq!(direction, LayoutDirection::Horizontal);
     }
-
 }

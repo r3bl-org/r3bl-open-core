@@ -97,12 +97,12 @@ pub struct PtyReadWriteSession {
     /// **For immediate termination (recommended for shutdown):**
     /// - Call `kill()` on this handle to forcefully terminate the child process
     /// - Send `PtyInputEvent::Close` to stop the input writer
-    /// This ensures clean shutdown without waiting for the child to respond
+    /// - This ensures clean shutdown without waiting for the child to respond
     ///
     /// **For graceful termination (may hang if child doesn't respond):**
     /// - Send only `PtyInputEvent::Close` to send EOF to the child
     /// - Wait for the child to exit naturally
-    /// Use this approach if the child process needs time to clean up resources
+    /// - Use this approach if the child process needs time to clean up resources
     ///
     /// # See Also
     /// - [`crate::PtyInputEvent::Close`] for input writer termination only

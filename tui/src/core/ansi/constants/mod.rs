@@ -29,7 +29,7 @@
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-// Private modules (hide internal structure)
+// Private modules (hide internal structure).
 mod csi;
 mod dsr;
 mod esc;
@@ -37,7 +37,7 @@ mod generic;
 mod input_sequences;
 mod sgr;
 
-// Public re-exports (flat API) for convenience
+// Public re-exports (flat API) for convenience.
 pub use csi::*;
 pub use dsr::*;
 pub use esc::*;

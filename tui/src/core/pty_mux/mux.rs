@@ -7,11 +7,11 @@
 
 use super::{InputRouter, OutputRenderer, Process, ProcessManager, output_renderer};
 use crate::{InputEvent, RawMode, Size, clear_screen_and_home_cursor,
-            lock_output_device_as_mut,
             core::{get_size,
                    osc::OscController,
                    pty::pty_core::pty_sessions::show_notification,
-                   terminal_io::{InputDevice, OutputDevice}}};
+                   terminal_io::{InputDevice, OutputDevice}},
+            lock_output_device_as_mut};
 
 /// Main PTY multiplexer that orchestrates all components.
 pub struct PTYMux {

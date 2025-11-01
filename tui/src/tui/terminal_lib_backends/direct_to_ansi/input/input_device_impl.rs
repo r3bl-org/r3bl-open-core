@@ -397,17 +397,13 @@ impl DirectToAnsiInputDevice {
             // This yields until data is ready - no busy-waiting!
             // Reuse temp_buf - read() overwrites from index 0, we only use [..n]
             match self.stdin.read(&mut temp_buf).await {
-                Ok(0) => {
-                    // EOF - stdin closed
+                Ok(0) | Err(_) => {
+                    // EOF - stdin closed or read error - treat as EOF
                     return None;
                 }
                 Ok(n) => {
                     // Append new bytes to buffer
                     self.buffer.extend_from_slice(&temp_buf[..n]);
-                }
-                Err(_) => {
-                    // Read error - treat as EOF
-                    return None;
                 }
             }
 
@@ -739,7 +735,7 @@ mod tests {
                 PasteCollectionState::Collecting(buffer) => {
                     buffer.push(ch);
                 }
-                _ => panic!(),
+                PasteCollectionState::NotPasting => panic!(),
             }
         }
 

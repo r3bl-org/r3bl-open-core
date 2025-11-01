@@ -19,7 +19,7 @@ use unicode_segmentation::UnicodeSegmentation;
 /// assert_eq!(is_word_boundary("5"), false);  // Digit
 /// assert_eq!(is_word_boundary("世"), false); // Unicode char
 /// ```
-#[must_use] 
+#[must_use]
 pub fn is_word_boundary(grapheme: &str) -> bool {
     grapheme
         .chars()
@@ -29,7 +29,7 @@ pub fn is_word_boundary(grapheme: &str) -> bool {
 /// Returns true if the grapheme cluster is a word character (not a boundary).
 ///
 /// This is the inverse of `is_word_boundary()`.
-#[must_use] 
+#[must_use]
 pub fn is_word_char(grapheme: &str) -> bool { !is_word_boundary(grapheme) }
 
 /// Finds the start position of the previous word from the cursor position.
@@ -61,7 +61,7 @@ pub fn is_word_char(grapheme: &str) -> bool { !is_word_boundary(grapheme) }
 /// assert_eq!(find_prev_word_start("hello", 5), 0);         // Start of text
 /// assert_eq!(find_prev_word_start("", 0), 0);              // Empty string
 /// ```
-#[must_use] 
+#[must_use]
 pub fn find_prev_word_start(text: &str, cursor_grapheme_idx: usize) -> usize {
     let graphemes: Vec<(usize, &str)> = text.grapheme_indices(true).collect();
     let count = graphemes.len();
@@ -131,7 +131,7 @@ pub fn find_prev_word_start(text: &str, cursor_grapheme_idx: usize) -> usize {
 /// assert_eq!(find_next_word_end("hello", 0), 5);         // End of text
 /// assert_eq!(find_next_word_end("", 0), 0);              // Empty string
 /// ```
-#[must_use] 
+#[must_use]
 pub fn find_next_word_end(text: &str, cursor_grapheme_idx: usize) -> usize {
     let graphemes: Vec<(usize, &str)> = text.grapheme_indices(true).collect();
     let count = graphemes.len();

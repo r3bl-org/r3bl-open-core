@@ -10,10 +10,13 @@
 //! 2. **Scalability**: Easy to test many input combinations without hardcoding
 //! 3. **Consistency**: Uses the same generator as all other PTY tests
 //!
-//! Protocol conformance is validated separately in `validation_tests/` using hardcoded
+//! Protocol conformance is validated separately in [`validation_tests`] using hardcoded
 //! sequences to ensure compliance with the VT-100 spec.
 //!
-//! See `integration_tests/mod.rs` for full testing philosophy documentation.
+//! See the [parent module documentation] for full testing philosophy.
+//!
+//! [`validation_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::validation_tests
+//! [parent module documentation]: mod@super#testing-philosophy
 
 use crate::{
     TermPos,
@@ -21,18 +24,18 @@ use crate::{
         types::{VT100InputEvent, VT100MouseButton, VT100MouseAction, VT100KeyModifiers},
         test_fixtures::generate_keyboard_sequence,
     },
-    generate_pty_test, InputEvent,
+    Deadline, generate_pty_test, InputEvent,
     tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice,
 };
 use std::{io::{BufRead, BufReader, Write},
-          time::{Duration, Instant}};
+          time::Duration};
 
 // XMARK: Process isolated test functions using env vars & PTY.
 
 generate_pty_test! {
     /// PTY-based integration test for mouse event parsing.
     ///
-    /// Validates that the DirectToAnsiInputDevice correctly parses mouse sequences:
+    /// Validates that the [`DirectToAnsiInputDevice`] correctly parses mouse sequences:
     /// - Mouse button press/release
     /// - Mouse motion
     /// - Scroll wheel events
@@ -43,6 +46,8 @@ generate_pty_test! {
     /// sequences, which are tested in detail in the protocol parsers.
     ///
     /// Uses the coordinator-worker pattern with two processes.
+    ///
+    /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_mouse_events,
     master: pty_master_entry_point,
     slave: pty_slave_entry_point
@@ -66,19 +71,17 @@ fn pty_master_entry_point(
 
     // Wait for slave to confirm it's running
     let mut test_running_seen = false;
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Deadline::default();
 
     loop {
-        if Instant::now() >= deadline {
-            panic!("Timeout: slave did not start within 5 seconds");
-        }
+        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
             Ok(0) => panic!("EOF reached before slave started"),
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {}", trimmed);
+                eprintln!("  ← Slave output: {trimmed}");
 
                 if trimmed.contains("TEST_RUNNING") {
                     test_running_seen = true;
@@ -92,13 +95,11 @@ fn pty_master_entry_point(
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
             }
-            Err(e) => panic!("Read error while waiting for slave: {}", e),
+            Err(e) => panic!("Read error while waiting for slave: {e}"),
         }
     }
 
-    if !test_running_seen {
-        panic!("Slave test never started running (no TEST_RUNNING output)");
-    }
+    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
 
     // Generated mouse events using the input sequence generator
     let mouse_events: Vec<(&str, VT100InputEvent)> = vec![
@@ -147,8 +148,8 @@ fn pty_master_entry_point(
 
     for (desc, event) in &mouse_events {
         let sequence = generate_keyboard_sequence(event)
-            .unwrap_or_else(|| panic!("Failed to generate sequence for: {}", desc));
-        eprintln!("  → Sending: {} ({:?})", desc, sequence);
+            .unwrap_or_else(|| panic!("Failed to generate sequence for: {desc}"));
+        eprintln!("  → Sending: {desc} ({sequence:?})");
 
         writer
             .write_all(&sequence)
@@ -171,7 +172,7 @@ fn pty_master_entry_point(
 
                     // Check if it's a mouse event line or any output
                     if trimmed.starts_with("Mouse:") || !trimmed.is_empty() {
-                        eprintln!("  ✓ {}: {}", desc, trimmed);
+                        eprintln!("  ✓ {desc}: {trimmed}");
                         found_response = true;
                         break;
                     }
@@ -186,7 +187,7 @@ fn pty_master_entry_point(
         }
 
         if !found_response {
-            eprintln!("  ⚠️  No response for {}", desc);
+            eprintln!("  ⚠️  No response for {desc}");
         }
     }
 
@@ -196,10 +197,10 @@ fn pty_master_entry_point(
 
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {:?}", status);
+            eprintln!("✅ PTY Master: Slave exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {}", e);
+            panic!("Failed to wait for slave: {e}");
         }
     }
 
@@ -213,7 +214,7 @@ fn pty_slave_entry_point() -> ! {
 
     eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {}", e);
+        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
     } else {
         eprintln!("✓ PTY Slave: Terminal in raw mode");
     }
@@ -236,22 +237,22 @@ fn pty_slave_entry_point() -> ! {
                         Some(event) => {
                             event_count += 1;
                             inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
-                            eprintln!("🔍 PTY Slave: Event #{}: {:?}", event_count, event);
+                            eprintln!("🔍 PTY Slave: Event #{event_count}: {event:?}");
 
                             let output = match event {
                                 InputEvent::Mouse(ref mouse_input) => {
-                                    format!("Mouse: {:?}", mouse_input)
+                                    format!("Mouse: {mouse_input:?}")
                                 }
                                 _ => {
-                                    format!("Event: {:?}", event)
+                                    format!("Event: {event:?}")
                                 }
                             };
 
-                            println!("{}", output);
+                            println!("{output}");
                             std::io::stdout().flush().expect("Failed to flush stdout");
 
                             if event_count >= 6 {
-                                eprintln!("🔍 PTY Slave: Processed {} events, exiting", event_count);
+                                eprintln!("🔍 PTY Slave: Processed {event_count} events, exiting");
                                 break;
                             }
                         }
@@ -261,7 +262,7 @@ fn pty_slave_entry_point() -> ! {
                         }
                     }
                 }
-                _ = tokio::time::sleep_until(inactivity_deadline) => {
+                () = tokio::time::sleep_until(inactivity_deadline) => {
                     eprintln!("🔍 PTY Slave: Inactivity timeout (2 seconds with no events), exiting");
                     break;
                 }
@@ -272,7 +273,7 @@ fn pty_slave_entry_point() -> ! {
     });
 
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {}", e);
+        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
     }
 
     eprintln!("🔍 Slave: Completed, exiting");

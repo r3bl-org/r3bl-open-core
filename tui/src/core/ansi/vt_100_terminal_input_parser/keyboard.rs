@@ -14,6 +14,7 @@
 //! - SS3 sequences (ESC O) for vim/less/emacs application mode
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
+use crate::core::ansi::constants::{ANSI_ESC, ANSI_CSI_BRACKET, ANSI_SS3_O};
 
 /// Parse a CSI keyboard sequence and return an `InputEvent` with bytes consumed.
 ///
@@ -42,7 +43,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
     }
 
     // Check for ESC [ sequence start
-    if buffer[0] != 0x1B || buffer[1] != 0x5B {
+    if buffer[0] != ANSI_ESC || buffer[1] != ANSI_CSI_BRACKET {
         return None;
     }
 
@@ -86,7 +87,7 @@ pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     }
 
     // Check for ESC O sequence start
-    if buffer[0] != 0x1B || buffer[1] != 0x4F {
+    if buffer[0] != ANSI_ESC || buffer[1] != ANSI_SS3_O {
         return None;
     }
 
@@ -203,6 +204,7 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     let event = match (params.len(), final_byte) {
         // Arrow keys with modifiers: CSI 1 ; m A/B/C/D
         (2, b'A') if params[0] == 1 => {
+            #[allow(clippy::cast_possible_truncation)]
             let modifiers = decode_modifiers(params[1] as u8);
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Up,
@@ -210,6 +212,7 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
             })
         }
         (2, b'B') if params[0] == 1 => {
+            #[allow(clippy::cast_possible_truncation)]
             let modifiers = decode_modifiers(params[1] as u8);
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Down,
@@ -217,6 +220,7 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
             })
         }
         (2, b'C') if params[0] == 1 => {
+            #[allow(clippy::cast_possible_truncation)]
             let modifiers = decode_modifiers(params[1] as u8);
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Right,
@@ -224,6 +228,7 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
             })
         }
         (2, b'D') if params[0] == 1 => {
+            #[allow(clippy::cast_possible_truncation)]
             let modifiers = decode_modifiers(params[1] as u8);
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Left,
@@ -233,6 +238,7 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
         // Function keys and special keys: CSI n ~ or CSI n ; m ~
         (1, b'~') => parse_function_or_special_key(params[0], VT100KeyModifiers::default()),
         (2, b'~') => {
+            #[allow(clippy::cast_possible_truncation)]
             let modifiers = decode_modifiers(params[1] as u8);
             parse_function_or_special_key(params[0], modifiers)
         }
@@ -330,6 +336,13 @@ mod tests {
         };
         generate_keyboard_sequence(&event)
             .expect("Failed to generate function key sequence")
+    }
+
+    /// Build a special key sequence (Home, End, Insert, Delete, PageUp, PageDown) using the generator.
+    fn special_key_sequence(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> Vec<u8> {
+        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
+        let event = VT100InputEvent::Keyboard { code, modifiers };
+        generate_keyboard_sequence(&event).expect("Failed to generate special key sequence")
     }
 
     // ==================== SS3 Sequences ====================
@@ -523,8 +536,8 @@ mod tests {
 
     #[test]
     fn test_arrow_down() {
-        let input = b"\x1b[B"; // ESC [ B
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = arrow_key_sequence(VT100KeyCode::Down, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -537,8 +550,8 @@ mod tests {
 
     #[test]
     fn test_arrow_right() {
-        let input = b"\x1b[C"; // ESC [ C
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = arrow_key_sequence(VT100KeyCode::Right, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -551,8 +564,8 @@ mod tests {
 
     #[test]
     fn test_arrow_left() {
-        let input = b"\x1b[D"; // ESC [ D
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = arrow_key_sequence(VT100KeyCode::Left, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -593,8 +606,15 @@ mod tests {
 
     #[test]
     fn test_alt_right() {
-        let input = b"\x1b[1;3C"; // ESC [ 1 ; 3 C → 3-1=2 = Alt(2)
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = arrow_key_sequence(
+            VT100KeyCode::Right,
+            VT100KeyModifiers {
+                shift: false,
+                alt: true,
+                ctrl: false,
+            },
+        );
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Right,
@@ -612,8 +632,15 @@ mod tests {
     #[test]
     fn test_ctrl_up_from_phase1() {
         // FROM PHASE 1 FINDINGS: ESC[1;5A = Ctrl+Up (verified with cat -v)
-        let input = b"\x1b[1;5A";
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = arrow_key_sequence(
+            VT100KeyCode::Up,
+            VT100KeyModifiers {
+                shift: false,
+                alt: false,
+                ctrl: true,
+            },
+        );
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Up,
@@ -686,8 +713,8 @@ mod tests {
 
     #[test]
     fn test_home_key() {
-        let input = b"\x1b[H"; // ESC [ H
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::Home, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -700,8 +727,8 @@ mod tests {
 
     #[test]
     fn test_end_key() {
-        let input = b"\x1b[F"; // ESC [ F
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::End, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -714,8 +741,8 @@ mod tests {
 
     #[test]
     fn test_insert_key() {
-        let input = b"\x1b[2~"; // ESC [ 2 ~
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::Insert, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -728,8 +755,8 @@ mod tests {
 
     #[test]
     fn test_delete_key() {
-        let input = b"\x1b[3~"; // ESC [ 3 ~
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::Delete, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -742,8 +769,8 @@ mod tests {
 
     #[test]
     fn test_page_up() {
-        let input = b"\x1b[5~"; // ESC [ 5 ~
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::PageUp, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -756,8 +783,8 @@ mod tests {
 
     #[test]
     fn test_page_down() {
-        let input = b"\x1b[6~"; // ESC [ 6 ~
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).expect("Should parse");
+        let input = special_key_sequence(VT100KeyCode::PageDown, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).expect("Should parse");
         assert!(matches!(
             event,
             VT100InputEvent::Keyboard {
@@ -772,8 +799,8 @@ mod tests {
 
     #[test]
     fn test_f1_key() {
-        let input = b"\x1b[11~"; // ESC [ 11 ~
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = function_key_sequence(1, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Function(n),
@@ -788,8 +815,8 @@ mod tests {
 
     #[test]
     fn test_f6_key() {
-        let input = b"\x1b[17~"; // ESC [ 17 ~
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = function_key_sequence(6, VT100KeyModifiers::default());
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Function(n),

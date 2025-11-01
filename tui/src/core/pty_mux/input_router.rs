@@ -7,7 +7,7 @@
 //! terminal resize events.
 
 use super::ProcessManager;
-use crate::{Size, FunctionKey, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
+use crate::{FunctionKey, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, Size,
             clear_screen_and_home_cursor,
             core::{osc::OscController,
                    pty::{PtyInputEvent, pty_core::pty_sessions::show_notification},

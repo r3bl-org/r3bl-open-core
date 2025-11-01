@@ -10,7 +10,7 @@
 //! **This module is for testing only.** It is not used in production code.
 //!
 //! The generator enables:
-//! 1. **Round-trip validation**: Parse ANSI → InputEvent → Generate ANSI → Verify match
+//! 1. **Round-trip validation**: Parse ANSI → `InputEvent` → Generate ANSI → Verify match
 //! 2. **Test helpers**: Build test sequences without hardcoding raw bytes
 //! 3. **Parser verification**: Confirm parsers handle all modifier combinations correctly
 //!
@@ -19,24 +19,24 @@
 use crate::core::ansi::{constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
                                     ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
-                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
+                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL, CSI_PREFIX,
                                     FUNCTION_F1_CODE, FUNCTION_F2_CODE,
                                     FUNCTION_F3_CODE, FUNCTION_F4_CODE,
                                     FUNCTION_F5_CODE, FUNCTION_F6_CODE,
                                     FUNCTION_F7_CODE, FUNCTION_F8_CODE,
                                     FUNCTION_F9_CODE, FUNCTION_F10_CODE,
                                     FUNCTION_F11_CODE, FUNCTION_F12_CODE, MODIFIER_ALT,
-                                    MODIFIER_CTRL, MODIFIER_SHIFT, SPECIAL_DELETE_CODE,
-                                    SPECIAL_END_FINAL, SPECIAL_HOME_FINAL,
-                                    SPECIAL_INSERT_CODE, SPECIAL_PAGE_DOWN_CODE,
-                                    SPECIAL_PAGE_UP_CODE},
+                                    MODIFIER_CTRL, MODIFIER_SHIFT, MOUSE_SGR_PREFIX,
+                                    SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
+                                    SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
+                                    SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
                         vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
                                                        VT100KeyModifiers, VT100FocusState, VT100PasteMode, VT100MouseButton, VT100MouseAction}};
 
 /// Generate ANSI bytes for an input event.
 ///
 /// Converts any input event back into the ANSI CSI sequence format that terminals
-/// send. This enables round-trip validation: InputEvent → bytes → parse → InputEvent.
+/// send. This enables round-trip validation: `InputEvent` → bytes → parse → `InputEvent`.
 ///
 /// ## Supported Events
 ///
@@ -55,6 +55,7 @@ use crate::core::ansi::{constants::{ANSI_CSI_BRACKET, ANSI_ESC,
 ///
 /// This function is used internally by tests to generate sequences for round-trip
 /// validation. See the test suite for examples of all supported event types.
+#[must_use] 
 pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
     match event {
         VT100InputEvent::Keyboard { code, modifiers } => {
@@ -86,6 +87,7 @@ pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
 /// - `row`: Row coordinate (1-based)
 /// - `action`: Press, Release, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
+#[must_use] 
 pub fn generate_mouse_sequence_bytes(
     button: VT100MouseButton,
     col: u16,
@@ -94,10 +96,9 @@ pub fn generate_mouse_sequence_bytes(
     modifiers: VT100KeyModifiers,
 ) -> Vec<u8> {
     let button_code = match button {
-        VT100MouseButton::Left => 0,
         VT100MouseButton::Middle => 1,
         VT100MouseButton::Right => 2,
-        VT100MouseButton::Unknown => 0, // Default to left for unknown buttons
+        VT100MouseButton::Left | VT100MouseButton::Unknown => 0, // Left or unknown default to 0
     };
 
     // Apply modifiers and action flags to button code
@@ -105,14 +106,15 @@ pub fn generate_mouse_sequence_bytes(
 
     // Handle action/drag flag
     let action_char = match action {
-        VT100MouseAction::Press => 'M',
         VT100MouseAction::Release => 'm',
         VT100MouseAction::Drag => {
             code |= 32; // Drag flag (bit 5)
             'M'
         }
-        VT100MouseAction::Motion => 'M', // Motion events use M like press
-        VT100MouseAction::Scroll(_) => 'M', // Scroll uses button codes 64-67
+        VT100MouseAction::Press | VT100MouseAction::Motion | VT100MouseAction::Scroll(_) => {
+            // Motion and scroll events use M like press
+            'M'
+        }
     };
 
     // Apply modifiers: shift=1, alt=2, ctrl=4
@@ -129,7 +131,7 @@ pub fn generate_mouse_sequence_bytes(
     code |= modifier_bits;
 
     // Build sequence: ESC[<button;col;rowM/m
-    let mut bytes = vec![ANSI_ESC, ANSI_CSI_BRACKET, b'<'];
+    let mut bytes = MOUSE_SGR_PREFIX.to_vec();
     bytes.extend_from_slice(code.to_string().as_bytes());
     bytes.push(b';');
     bytes.extend_from_slice(col.to_string().as_bytes());
@@ -142,7 +144,7 @@ pub fn generate_mouse_sequence_bytes(
 /// Generate ANSI bytes for a specific key code and modifiers.
 fn generate_key_sequence(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> Option<Vec<u8>> {
     // Build the base sequence
-    let mut bytes = vec![ANSI_ESC, ANSI_CSI_BRACKET];
+    let mut bytes = CSI_PREFIX.to_vec();
 
     let has_modifiers = modifiers.shift || modifiers.ctrl || modifiers.alt;
 
@@ -197,16 +199,16 @@ fn generate_key_sequence(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> Op
 
         // ==================== Special Keys (CSI n~) ====================
         VT100KeyCode::Insert => {
-            generate_special_key_sequence(&mut bytes, SPECIAL_INSERT_CODE, modifiers)
+            Some(generate_special_key_sequence(&mut bytes, SPECIAL_INSERT_CODE, modifiers))
         }
         VT100KeyCode::Delete => {
-            generate_special_key_sequence(&mut bytes, SPECIAL_DELETE_CODE, modifiers)
+            Some(generate_special_key_sequence(&mut bytes, SPECIAL_DELETE_CODE, modifiers))
         }
         VT100KeyCode::PageUp => {
-            generate_special_key_sequence(&mut bytes, SPECIAL_PAGE_UP_CODE, modifiers)
+            Some(generate_special_key_sequence(&mut bytes, SPECIAL_PAGE_UP_CODE, modifiers))
         }
         VT100KeyCode::PageDown => {
-            generate_special_key_sequence(&mut bytes, SPECIAL_PAGE_DOWN_CODE, modifiers)
+            Some(generate_special_key_sequence(&mut bytes, SPECIAL_PAGE_DOWN_CODE, modifiers))
         }
 
         // ==================== Function Keys (CSI n~) ====================
@@ -226,21 +228,19 @@ fn generate_key_sequence(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> Op
                 12 => FUNCTION_F12_CODE,
                 _ => return None, // Invalid function key number
             };
-            generate_special_key_sequence(&mut bytes, code, modifiers)
+            Some(generate_special_key_sequence(&mut bytes, code, modifiers))
         }
 
         // ==================== Other Keys ====================
-        // Tab, Enter, Escape, Backspace are typically raw control characters,
-        // not CSI sequences. Not implemented in generator as they're handled
+        // Tab, Enter, Escape, Backspace, and Char events are typically raw control characters
+        // or UTF-8 text, not CSI sequences. Not implemented in generator as they're handled
         // differently in the input parsing layer.
         VT100KeyCode::Tab
         | VT100KeyCode::BackTab
         | VT100KeyCode::Enter
         | VT100KeyCode::Escape
-        | VT100KeyCode::Backspace => None,
-
-        // Char events are also handled differently (UTF-8 text)
-        VT100KeyCode::Char(_) => None,
+        | VT100KeyCode::Backspace
+        | VT100KeyCode::Char(_) => None,
     }
 }
 
@@ -249,7 +249,7 @@ fn generate_special_key_sequence(
     bytes: &mut Vec<u8>,
     code: u16,
     modifiers: VT100KeyModifiers,
-) -> Option<Vec<u8>> {
+) -> Vec<u8> {
     // Format: CSI code~ or CSI code; modifier~
     let code_str = code.to_string();
     bytes.extend_from_slice(code_str.as_bytes());
@@ -260,7 +260,7 @@ fn generate_special_key_sequence(
     }
 
     bytes.push(ANSI_FUNCTION_KEY_TERMINATOR);
-    Some(bytes.clone())
+    bytes.clone()
 }
 
 /// Encode modifier flags into a single byte following VT-100 ANSI convention.
@@ -303,8 +303,9 @@ fn encode_modifiers(modifiers: VT100KeyModifiers) -> u8 {
 /// Generate a window resize sequence: `CSI 8 ; rows ; cols t`
 ///
 /// This is the ANSI sequence sent by terminals when they are resized.
+#[must_use]
 pub fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
-    let mut bytes = vec![ANSI_ESC, ANSI_CSI_BRACKET];
+    let mut bytes = CSI_PREFIX.to_vec();
     bytes.push(b'8');
     bytes.push(ANSI_PARAM_SEPARATOR);
     bytes.extend_from_slice(rows.to_string().as_bytes());
@@ -318,19 +319,23 @@ pub fn generate_resize_sequence(rows: u16, cols: u16) -> Vec<u8> {
 ///
 /// - Focus gained: `CSI I`
 /// - Focus lost: `CSI O`
+#[must_use]
 pub fn generate_focus_sequence(state: VT100FocusState) -> Vec<u8> {
+    let mut bytes = CSI_PREFIX.to_vec();
     match state {
-        VT100FocusState::Gained => vec![ANSI_ESC, ANSI_CSI_BRACKET, b'I'],
-        VT100FocusState::Lost => vec![ANSI_ESC, ANSI_CSI_BRACKET, b'O'],
+        VT100FocusState::Gained => bytes.push(b'I'),
+        VT100FocusState::Lost => bytes.push(b'O'),
     }
+    bytes
 }
 
 /// Generate a bracketed paste mode sequence.
 ///
 /// - Paste start: `CSI 200 ~`
 /// - Paste end: `CSI 201 ~`
+#[must_use]
 pub fn generate_paste_sequence(mode: VT100PasteMode) -> Vec<u8> {
-    let mut bytes = vec![ANSI_ESC, ANSI_CSI_BRACKET];
+    let mut bytes = CSI_PREFIX.to_vec();
     match mode {
         VT100PasteMode::Start => {
             bytes.extend_from_slice(b"200");

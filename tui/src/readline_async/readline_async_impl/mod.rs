@@ -9,3 +9,7 @@ pub mod readline_history;
 pub use line_state::*;
 pub use readline::*;
 pub use readline_history::*;
+
+// Integration tests (conditional visibility).
+#[cfg(any(test, doc))]
+pub mod integration_tests;

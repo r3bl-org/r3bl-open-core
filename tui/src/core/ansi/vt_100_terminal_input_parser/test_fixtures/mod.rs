@@ -8,7 +8,7 @@
 //! # Purpose
 //!
 //! The input event generator enables:
-//! 1. **Round-trip validation**: Parse ANSI → InputEvent → Generate ANSI → Verify
+//! 1. **Round-trip validation**: Parse ANSI → `InputEvent` → Generate ANSI → Verify
 //! 2. **System integration testing**: Generate sequences for real PTY testing
 //! 3. **Test helpers**: Build test sequences without hardcoding raw bytes
 //!

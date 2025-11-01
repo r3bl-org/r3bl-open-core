@@ -55,7 +55,7 @@ fn pty_master_entry_point(
             }
             Ok(_) => {
                 let trimmed = line.trim();
-                eprintln!("  ← Slave output: {}", trimmed);
+                eprintln!("  ← Slave output: {trimmed}");
 
                 if trimmed.contains("SLAVE_STARTING") {
                     slave_started = true;
@@ -63,17 +63,15 @@ fn pty_master_entry_point(
                 }
                 if trimmed.contains("SUCCESS:") {
                     test_passed = true;
-                    eprintln!("  ✓ Test passed: {}", trimmed);
+                    eprintln!("  ✓ Test passed: {trimmed}");
                     break;
                 }
-                if trimmed.contains("FAILED:") {
-                    panic!("Test failed: {}", trimmed);
-                }
+                assert!(!trimmed.contains("FAILED:"), "Test failed: {trimmed}");
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
             }
-            Err(e) => panic!("Read error: {}", e),
+            Err(e) => panic!("Read error: {e}"),
         }
     }
 
@@ -83,10 +81,10 @@ fn pty_master_entry_point(
     // 4. Wait for slave to exit
     match child.wait() {
         Ok(status) => {
-            eprintln!("✅ PTY Master: Slave exited: {:?}", status);
+            eprintln!("✅ PTY Master: Slave exited: {status:?}");
         }
         Err(e) => {
-            panic!("Failed to wait for slave: {}", e);
+            panic!("Failed to wait for slave: {e}");
         }
     }
 
@@ -106,7 +104,7 @@ fn pty_slave_entry_point() -> ! {
     let before_termios = match termios::tcgetattr(&stdin) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("⚠️  Slave: Failed to get termios before: {}", e);
+            eprintln!("⚠️  Slave: Failed to get termios before: {e}");
             println!("FAILED: Could not read termios");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
@@ -117,7 +115,7 @@ fn pty_slave_entry_point() -> ! {
     let _guard = match RawModeGuard::new() {
         Ok(g) => g,
         Err(e) => {
-            eprintln!("⚠️  Slave: Failed to enable raw mode: {}", e);
+            eprintln!("⚠️  Slave: Failed to enable raw mode: {e}");
             println!("FAILED: Could not enable raw mode");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);
@@ -130,7 +128,7 @@ fn pty_slave_entry_point() -> ! {
     let after_termios = match termios::tcgetattr(&stdin) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("⚠️  Slave: Failed to get termios after: {}", e);
+            eprintln!("⚠️  Slave: Failed to get termios after: {e}");
             println!("FAILED: Could not read termios after");
             std::io::stdout().flush().expect("Failed to flush");
             std::process::exit(1);

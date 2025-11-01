@@ -7,7 +7,8 @@
 //!
 //! - **Whitespace boundaries**: spaces, tabs, newlines
 //! - **Punctuation boundaries**: common punctuation characters
-//! - **Unicode safety**: Works correctly with emoji, combining characters, and multi-byte sequences
+//! - **Unicode safety**: Works correctly with emoji, combining characters, and multi-byte
+//!   sequences
 //!
 //! ## Usage
 //!

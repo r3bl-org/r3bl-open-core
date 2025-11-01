@@ -386,7 +386,7 @@ impl LineState {
         self.prompt.clear();
         self.prompt.push_str(prompt);
 
-        // recalculates column
+        // Recalculates column.
         self.move_cursor(0)?;
         self.render_and_flush(term)?;
 
@@ -1831,5 +1831,258 @@ mod tests {
 
         // Down should navigate forward in history
         assert!(matches!(result, Ok(None)));
+    }
+
+    // Edge case tests
+
+    #[tokio::test]
+    async fn test_unicode_emoji_word_operations() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // Setup: "hello 世界 🌍 test"
+        //         012345678901234567890
+        //               ^cursor at end (20)
+        line.line = "hello 世界 🌍 test".to_string();
+        line.line_cursor_grapheme = 20;
+
+        // Test Ctrl+W (delete word backward) with Unicode/emoji
+        let ctrl_w_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('w'),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::NotPressed,
+            },
+        });
+
+        let result = line.apply_event_and_render(
+            &ctrl_w_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        // Should delete "test", leaving "hello 世界 🌍 "
+        assert_eq!(line.line, "hello 世界 🌍 ");
+
+        // Test Alt+Backspace with emoji
+        let alt_backspace_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::SpecialKey(SpecialKey::Backspace),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::NotPressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::Pressed,
+            },
+        });
+
+        let result = line.apply_event_and_render(
+            &alt_backspace_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        // Should delete "🌍 ", leaving "hello 世界 "
+        assert_eq!(line.line, "hello 世界 ");
+    }
+
+    #[tokio::test]
+    async fn test_ctrl_left_unicode() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // Setup: "hello 世界 test"
+        line.line = "hello 世界 test".to_string();
+        line.line_cursor_grapheme = 16; // At end
+
+        let ctrl_left_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::SpecialKey(SpecialKey::Left),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::NotPressed,
+            },
+        });
+
+        // First Ctrl+Left: should move to start of "test"
+        let result = line.apply_event_and_render(
+            &ctrl_left_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        assert_eq!(line.line_cursor_grapheme, 9); // Start of "test"
+
+        // Second Ctrl+Left: should move to start of "世界"
+        let result = line.apply_event_and_render(
+            &ctrl_left_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        assert_eq!(line.line_cursor_grapheme, 6); // Start of "世界"
+
+        // Third Ctrl+Left: should move to start of "hello"
+        let result = line.apply_event_and_render(
+            &ctrl_left_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        assert_eq!(line.line_cursor_grapheme, 0); // Start of line
+    }
+
+    #[tokio::test]
+    async fn test_pause_resume_state() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        line.line = "test".to_string();
+        line.line_cursor_grapheme = 4;
+
+        // Pause the line state
+        line.set_paused(
+            LineStateLiveness::Paused,
+            &mut *safe_output_terminal.lock().unwrap(),
+        )
+        .unwrap();
+
+        // Try to send input while paused - should be ignored
+        let char_event = InputEvent::Keyboard(KeyPress::Plain {
+            key: Key::Character('x'),
+        });
+
+        let result = line.apply_event_and_render(
+            &char_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        // Line should be unchanged because it's paused
+        assert_eq!(line.line, "test");
+        assert_eq!(line.line_cursor_grapheme, 4);
+
+        // Resume the line state
+        line.set_paused(
+            LineStateLiveness::NotPaused,
+            &mut *safe_output_terminal.lock().unwrap(),
+        )
+        .unwrap();
+
+        // Now input should work
+        let result = line.apply_event_and_render(
+            &char_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        // Line should now have the character appended
+        assert_eq!(line.line, "testx");
+        assert_eq!(line.line_cursor_grapheme, 5);
+    }
+
+    #[tokio::test]
+    async fn test_ctrl_w_empty_line() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // Empty line
+        line.line = String::new();
+        line.line_cursor_grapheme = 0;
+
+        let ctrl_w_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('w'),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::NotPressed,
+            },
+        });
+
+        let result = line.apply_event_and_render(
+            &ctrl_w_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        // Should not crash, should return Ok(None)
+        assert!(matches!(result, Ok(None)));
+        assert_eq!(line.line, String::new());
+        assert_eq!(line.line_cursor_grapheme, 0);
+    }
+
+    #[tokio::test]
+    async fn test_word_boundaries_with_only_punctuation() {
+        let mut line = LineState::new(String::new(), (100, 100));
+        let stdout_mock = StdoutMock::default();
+        let safe_output_terminal = Arc::new(StdMutex::new(stdout_mock.clone()));
+        let (history, _) = History::new();
+        let safe_history = Arc::new(StdMutex::new(history));
+
+        // Line with only punctuation: "...---..."
+        line.line = "...---...".to_string();
+        line.line_cursor_grapheme = 9; // At end
+
+        // Test Ctrl+W on punctuation-only line
+        let ctrl_w_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::Character('w'),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::NotPressed,
+            },
+        });
+
+        let result = line.apply_event_and_render(
+            &ctrl_w_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        // Should delete to beginning since all are boundaries
+        assert_eq!(line.line, String::new());
+        assert_eq!(line.line_cursor_grapheme, 0);
+
+        // Test Ctrl+Left on mixed punctuation
+        line.line = "hello...world".to_string();
+        line.line_cursor_grapheme = 13;
+
+        let ctrl_left_event = InputEvent::Keyboard(KeyPress::WithModifiers {
+            key: Key::SpecialKey(SpecialKey::Left),
+            mask: ModifierKeysMask {
+                ctrl_key_state: KeyState::Pressed,
+                shift_key_state: KeyState::NotPressed,
+                alt_key_state: KeyState::NotPressed,
+            },
+        });
+
+        let result = line.apply_event_and_render(
+            &ctrl_left_event,
+            &mut *safe_output_terminal.lock().unwrap(),
+            &safe_history,
+        );
+
+        assert!(matches!(result, Ok(None)));
+        // Should move to start of "world" at position 8
+        assert_eq!(line.line_cursor_grapheme, 8);
     }
 }

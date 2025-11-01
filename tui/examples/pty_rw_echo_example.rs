@@ -3,15 +3,14 @@
 //! Super minimal PTY test - just echo raw bytes to verify data flow
 
 use portable_pty::PtySize;
-use r3bl_tui::{clear_screen_and_home_cursor,
+use r3bl_tui::{InputEvent, Key, KeyPress, KeyState, ModifierKeysMask, RawMode,
+               clear_screen_and_home_cursor,
                core::{get_size,
                       pty::{ControlSequence, CursorKeyMode, PtyCommandBuilder,
                             PtyInputEvent, PtyReadWriteOutputEvent},
                       terminal_io::{InputDevice, OutputDevice},
                       try_initialize_logging_global},
-               lock_output_device_as_mut, set_mimalloc_in_main,
-               InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, RawMode};
+               lock_output_device_as_mut, set_mimalloc_in_main};
 use std::io::Write;
 
 #[tokio::main]
