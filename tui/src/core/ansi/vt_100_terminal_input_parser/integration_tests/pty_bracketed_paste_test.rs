@@ -18,6 +18,8 @@ generate_pty_test! {
     /// bracketed paste markers (ESC[200~ ... ESC[201~) and emits a single
     /// [`InputEvent::BracketedPaste`] with the complete text.
     ///
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_bracketed_paste -- --nocapture`
+    ///
     /// ## Test Cases
     ///
     /// - Simple ASCII paste: "Hello"

@@ -18,6 +18,8 @@ generate_pty_test! {
     /// When `PTY_SLAVE` is set, runs slave logic and exits.
     /// Otherwise runs the master test.
     ///
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_input_device -- --nocapture`
+    ///
     /// ## Test Architecture (2 Actors)
     ///
     /// This test validates [`DirectToAnsiInputDevice`] in a real PTY environment using a
@@ -76,12 +78,6 @@ generate_pty_test! {
     /// - **Process Isolation**: Each test run gets fresh PTY resources via process spawning
     /// - **Coordinator-Worker Pattern**: Same test function handles both roles via env var
     /// - **Async Validation**: Properly tests tokio async I/O with real terminal input
-    ///
-    /// ## Running the Test
-    ///
-    /// ```bash
-    /// cargo test test_pty_input_device -- --nocapture
-    /// ```
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_input_device,

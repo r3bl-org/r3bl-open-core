@@ -15,7 +15,7 @@ generate_pty_test! {
     /// - UTF-8 multi-byte sequences (accented characters, emojis, etc.)
     /// - Mixed text and ANSI escape sequences
     ///
-    /// Uses the coordinator-worker pattern with two processes.
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_utf8_text -- --nocapture`
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_utf8_text,

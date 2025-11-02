@@ -45,7 +45,7 @@ generate_pty_test! {
     /// Actual mouse event parsing is complex and requires SGR mouse mode
     /// sequences, which are tested in detail in the protocol parsers.
     ///
-    /// Uses the coordinator-worker pattern with two processes.
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_mouse_events -- --nocapture`
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_mouse_events,

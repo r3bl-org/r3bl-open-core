@@ -21,7 +21,7 @@ generate_pty_test! {
     /// Note: Bracketed paste events are tested in [`pty_bracketed_paste_test`]
     /// because they require special state machine handling (Start + text + End).
     ///
-    /// Uses the coordinator-worker pattern with two processes.
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_terminal_events -- --nocapture`
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     /// [`pty_bracketed_paste_test`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_bracketed_paste_test

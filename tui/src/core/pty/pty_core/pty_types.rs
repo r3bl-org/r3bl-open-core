@@ -14,6 +14,9 @@ use tokio::{sync::mpsc::{UnboundedReceiver, UnboundedSender},
 /// is not this buffer size but the `Vec<u8>` allocations in `PtyOutputEvent::Output`.
 pub const READ_BUFFER_SIZE: usize = 4096;
 
+/// Type alias for a PTY pair (master and slave).
+pub type Pair = portable_pty::PtyPair;
+
 /// Type alias for the controlled half of a PTY (slave).
 ///
 /// This represents the process-side of the PTY that the child process

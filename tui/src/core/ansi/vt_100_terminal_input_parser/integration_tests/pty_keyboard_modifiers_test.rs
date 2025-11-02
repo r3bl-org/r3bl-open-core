@@ -22,7 +22,7 @@ generate_pty_test! {
     ///
     /// Tests with arrow keys and function keys to validate round-trip generation+parsing.
     ///
-    /// Uses the coordinator-worker pattern with two processes.
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_keyboard_modifiers -- --nocapture`
     ///
     /// [`DirectToAnsiInputDevice`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice
     test_fn: test_pty_keyboard_modifiers,

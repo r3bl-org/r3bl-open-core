@@ -1,7 +1,12 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{generate_pty_test, Deadline, readline_async::readline_async_impl::LineState, core::test_fixtures::StdoutMock};
-use std::{io::{BufRead, BufReader, Write}, time::Duration, sync::{Arc, Mutex as StdMutex}};
+use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, Pair,
+            core::test_fixtures::StdoutMock,
+            generate_pty_test,
+            readline_async::readline_async_impl::LineState};
+use std::{io::{BufRead, BufReader, Write},
+          sync::{Arc, Mutex as StdMutex},
+          time::Duration};
 
 generate_pty_test! {
     /// PTY-based integration test for Ctrl+W word deletion.
@@ -9,12 +14,29 @@ generate_pty_test! {
     /// Validates that Ctrl+W correctly deletes the word before the cursor,
     /// respecting word boundaries (whitespace and punctuation).
     ///
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_ctrl_w_deletion -- --nocapture`
+    ///
     /// Tests:
     /// 1. Delete word with space boundary: "hello world" → "hello "
     /// 2. Delete word with punctuation boundary: "hello-world" → "hello-"
     /// 3. Multiple deletions: "one two three" → "one two " → "one "
     ///
-    /// Uses the coordinator-worker pattern with two processes ([`LineState`]).
+    /// ## Test Protocol (Request-Response Pattern)
+    ///
+    /// This test uses a **request-response protocol** between master and slave:
+    ///
+    /// 1. **Master sends input** (e.g., "hello world" or Ctrl+W sequences)
+    /// 2. **Master flushes** and waits ~200ms for slave to process
+    /// 3. **Master blocks** reading slave stdout until it sees "Line: ..."
+    /// 4. **Master makes assertion** on the line state
+    /// 5. **Repeat** for next input sequence
+    ///
+    /// **Critical requirement**: Slave must output line state **only once** after
+    /// processing all available input, not after every character. Otherwise, master
+    /// will read intermediate states (e.g., "Line: h, Cursor: 1" instead of
+    /// "Line: hello world, Cursor: 11").
+    ///
+    /// The ([`LineState`]) is checked in the tests to make assertions against.
     ///
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
     test_fn: test_pty_ctrl_w_deletion,
@@ -23,10 +45,7 @@ generate_pty_test! {
 }
 
 /// PTY Master: Send Ctrl+W sequences and verify word deletion
-fn pty_master_entry_point(
-    pty_pair: portable_pty::PtyPair,
-    mut child: Box<dyn portable_pty::Child + Send + Sync>,
-) {
+fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Master: Starting Ctrl+W test...");
 
     let mut writer = pty_pair.master.take_writer().expect("Failed to get writer");
@@ -43,7 +62,10 @@ fn pty_master_entry_point(
     let deadline = Deadline::default();
 
     loop {
-        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
+        assert!(
+            deadline.has_time_remaining(),
+            "Timeout: slave did not start within 5 seconds"
+        );
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
@@ -68,7 +90,10 @@ fn pty_master_entry_point(
         }
     }
 
-    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
+    assert!(
+        test_running_seen,
+        "Slave test never started running (no TEST_RUNNING output)"
+    );
 
     // Helper function to read line state, skipping debug output
     let mut read_line_state = || -> String {
@@ -95,7 +120,9 @@ fn pty_master_entry_point(
     eprintln!("📝 PTY Master: Test 1 - Delete word with space boundary...");
 
     // Send "hello world"
-    writer.write_all(b"hello world").expect("Failed to write text");
+    writer
+        .write_all(b"hello world")
+        .expect("Failed to write text");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(200));
 
@@ -123,7 +150,9 @@ fn pty_master_entry_point(
     let result = read_line_state();
     eprintln!("  ← After clear: {result}");
 
-    writer.write_all(b"hello-world").expect("Failed to write text");
+    writer
+        .write_all(b"hello-world")
+        .expect("Failed to write text");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(200));
 
@@ -162,17 +191,17 @@ fn pty_slave_entry_point() -> ! {
     println!("SLAVE_STARTING");
     std::io::stdout().flush().expect("Failed to flush");
 
-    eprintln!("🔍 PTY Slave: Setting terminal to raw mode...");
+    println!("🔍 PTY Slave: Setting terminal to raw mode...");
     if let Err(e) = crate::core::ansi::terminal_raw_mode::enable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
+        println!("⚠️  PTY Slave: Failed to enable raw mode: {e}");
     } else {
-        eprintln!("✓ PTY Slave: Terminal in raw mode");
+        println!("✓ PTY Slave: Terminal in raw mode");
     }
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     runtime.block_on(async {
-        eprintln!("🔍 PTY Slave: Starting...");
+        println!("🔍 PTY Slave: Starting...");
 
         let mut line_state = LineState::new(String::new(), (100, 100));
         let stdout_mock = StdoutMock::default();
@@ -180,20 +209,33 @@ fn pty_slave_entry_point() -> ! {
         let (history, _) = crate::readline_async::readline_async_impl::History::new();
         let safe_history = Arc::new(StdMutex::new(history));
 
-        eprintln!("🔍 PTY Slave: LineState created, reading input...");
+        println!("🔍 PTY Slave: LineState created, reading input...");
 
         let mut input_device = DirectToAnsiInputDevice::new();
 
-        let inactivity_timeout = Duration::from_secs(2);
-        let mut inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
+        // ==================== Timing Configuration ====================
+        //
+        // Inactivity watchdog: Exit if no events arrive for 2 seconds
+        // Pattern: "Exit if this operation takes too long"
+        let mut inactivity_watchdog = AsyncDebouncedDeadline::new(Duration::from_secs(2));
+        inactivity_watchdog.reset(); // Start the watchdog
 
+        // Debounced state: Buffer line state and print after 10ms of no events
+        // Pattern: "Do X after Y ms of no activity"
+        // This batches rapid input (e.g., "one two three" arrives as 13 chars
+        // within ~1-2ms, all processed before first print at ~12ms)
+        let mut buffered_state = DebouncedState::new(Duration::from_millis(10));
+
+        // ==================== Event Loop ====================
         loop {
             tokio::select! {
+                // -------- Branch 1: Read next input event --------
                 event_result = input_device.read_event() => {
                     match event_result {
                         Some(event) => {
-                            inactivity_deadline = tokio::time::Instant::now() + inactivity_timeout;
-                            eprintln!("🔍 PTY Slave: Event: {event:?}");
+                            // Reset inactivity watchdog on each event
+                            inactivity_watchdog.reset();
+                            println!("🔍 PTY Slave: Event: {event:?}");
 
                             let result = line_state.apply_event_and_render(
                                 &event,
@@ -203,9 +245,9 @@ fn pty_slave_entry_point() -> ! {
 
                             match result {
                                 Ok(Some(readline_event)) => {
-                                    eprintln!("🔍 PTY Slave: ReadlineEvent: {readline_event:?}");
+                                    println!("🔍 PTY Slave: ReadlineEvent: {readline_event:?}");
 
-                                    // Check if it's EOF
+                                    // Check if it's EOF - print immediately and exit
                                     if matches!(readline_event, crate::ReadlineEvent::Eof) {
                                         println!("EOF");
                                         std::io::stdout().flush().expect("Failed to flush");
@@ -213,39 +255,51 @@ fn pty_slave_entry_point() -> ! {
                                     }
                                 }
                                 Ok(None) => {
-                                    // Normal event, output line state
-                                    let output = format!("Line: {}, Cursor: {}",
+                                    // Buffer the current line state and reset debounce timer.
+                                    // If another event arrives before 10ms, we update the buffered
+                                    // state and reset the timer again (batching rapid input).
+                                    buffered_state.set(format!(
+                                        "Line: {}, Cursor: {}",
                                         line_state.line,
                                         line_state.line_cursor_grapheme
-                                    );
-                                    println!("{output}");
-                                    std::io::stdout().flush().expect("Failed to flush");
+                                    ));
                                 }
                                 Err(e) => {
-                                    eprintln!("🔍 PTY Slave: Error: {e:?}");
+                                    println!("🔍 PTY Slave: Error: {e:?}");
                                 }
                             }
                         }
                         None => {
-                            eprintln!("🔍 PTY Slave: EOF reached");
+                            println!("🔍 PTY Slave: EOF reached");
                             break;
                         }
                     }
                 }
-                () = tokio::time::sleep_until(inactivity_deadline) => {
-                    eprintln!("🔍 PTY Slave: Inactivity timeout, exiting");
+                // -------- Branch 2: Print buffered state after debounce delay --------
+                // If we should poll the debounced state, then sleep until the debounce timer expires, and when it fires, execute this code.
+                () = buffered_state.sleep_until(), if buffered_state.should_poll() => {
+                    // No new events arrived within 10ms, print the buffered line state
+                    if let Some(state) = buffered_state.take() {
+                        println!("{state}");
+                        std::io::stdout().flush().expect("Failed to flush");
+                    }
+                }
+
+                // -------- Branch 3: Exit on inactivity timeout --------
+                () = inactivity_watchdog.sleep_until() => {
+                    println!("🔍 PTY Slave: Inactivity timeout hit, exiting");
                     break;
                 }
             }
         }
 
-        eprintln!("🔍 PTY Slave: Completed, exiting");
+        println!("🔍 PTY Slave: Completed, exiting");
     });
 
     if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        eprintln!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
+        println!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
     }
 
-    eprintln!("🔍 Slave: Completed, exiting");
+    println!("🔍 Slave: Completed, exiting");
     std::process::exit(0);
 }

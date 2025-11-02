@@ -2,26 +2,92 @@
 
 use std::time::{Duration, Instant};
 
-/// Simple timeout utility for PTY tests.
+/// Timeout enforcement for PTY tests.
 ///
-/// Provides a clean API for timeout handling in PTY-based integration tests.
+/// Enforces maximum duration for operations with a clean polling API. Use this when
+/// you need to ensure an operation completes within a time limit, such as waiting
+/// for a PTY slave process to start or for test output to appear.
+///
+/// # Use Case
+///
+/// **Good for:** "Exit if this operation takes too long"
+/// - Timeout enforcement for test operations
+/// - Watchdog timers for subprocess startup
+/// - Maximum duration guards for I/O operations
+/// - Preventing tests from hanging indefinitely
+///
+/// **Not good for:** "Do X after Y ms of no activity"
+/// - Use [`AsyncDebouncedDeadline`] for debouncing events instead
+///
+/// # Comparison with AsyncDebouncedDeadline
+///
+/// | Pattern | `Deadline` | `AsyncDebouncedDeadline` |
+/// |---------|-----------|-------------------------|
+/// | **Purpose** | Timeout enforcement | Event debouncing |
+/// | **Resets?** | No (fixed duration) | Yes (on each event) |
+/// | **Runtime** | Sync (`std::time`) | Async (`tokio::time`) |
+/// | **Use with** | Polling loops | `tokio::select!` |
+/// | **Example** | "Slave must start in 5s" | "Print after 10ms of silence" |
 ///
 /// # Examples
+///
+/// ## Basic Timeout Enforcement
 ///
 /// ```rust
 /// use std::time::Duration;
 /// use r3bl_tui::Deadline;
 ///
-/// let deadline = Deadline::default();
+/// let deadline = Deadline::default(); // 5 second timeout
 ///
 /// loop {
 ///     if deadline.is_expired() {
-///         panic!("Timeout: operation did not complete");
+///         panic!("Timeout: operation did not complete within 5 seconds");
 ///     }
+///
 ///     // ... do work ...
 /// #   break; // For doctest
 /// }
 /// ```
+///
+/// ## Custom Timeout Duration
+///
+/// ```rust
+/// use std::time::Duration;
+/// use r3bl_tui::Deadline;
+///
+/// // Wait up to 10 seconds for subprocess to start
+/// let deadline = Deadline::new(Duration::from_secs(10));
+///
+/// loop {
+///     if deadline.is_expired() {
+///         panic!("Subprocess did not start in time");
+///     }
+///
+///     // Check if subprocess is ready...
+/// #   break;
+/// }
+/// ```
+///
+/// ## Readable Assertions
+///
+/// ```rust
+/// use std::time::Duration;
+/// use r3bl_tui::Deadline;
+///
+/// let deadline = Deadline::new(Duration::from_secs(5));
+///
+/// loop {
+///     assert!(
+///         deadline.has_time_remaining(),
+///         "Timeout: slave did not start within 5 seconds"
+///     );
+///
+///     // ... check for completion ...
+/// #   break;
+/// }
+/// ```
+///
+/// [`AsyncDebouncedDeadline`]: crate::AsyncDebouncedDeadline
 #[derive(Debug, Clone, Copy)]
 pub struct Deadline {
     expires_at: Instant,

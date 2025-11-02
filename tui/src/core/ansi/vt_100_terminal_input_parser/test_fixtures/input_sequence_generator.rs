@@ -16,8 +16,7 @@
 //!
 //! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
-use crate::core::ansi::{constants::{ANSI_CSI_BRACKET, ANSI_ESC,
-                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
+use crate::core::ansi::{constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
                                     ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
                                     ARROW_RIGHT_FINAL, ARROW_UP_FINAL, CSI_PREFIX,
                                     FUNCTION_F1_CODE, FUNCTION_F2_CODE,

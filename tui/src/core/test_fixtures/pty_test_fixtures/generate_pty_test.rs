@@ -68,6 +68,33 @@
 /// - Raw mode management is YOUR responsibility in slave function
 /// - Verification logic is YOUR responsibility in master function
 ///
+/// ## PTY Stream Behavior
+///
+/// **Important:** In a PTY, stdout and stderr are **merged into a single stream** from the
+/// master's perspective. This means:
+///
+/// - Slave's `println!()` and `eprintln!()` both go to the same merged stream
+/// - Master reads both streams together via `pty_pair.master.try_clone_reader()`
+/// - There is NO semantic difference between stdout and stderr in PTY tests
+/// - Use **content-based filtering** to distinguish messages, not stream type
+///
+/// **Example:**
+/// ```rust,ignore
+/// // Slave code (both go to the same stream!)
+/// println!("Line: hello, Cursor: 5");      // Protocol message
+/// println!("🔍 PTY Slave: Event: ...");    // Debug message (use println!, not eprintln!)
+///
+/// // Master code (filters by content, not stream)
+/// if line.starts_with("Line:") {
+///     // Protocol message - parse it
+/// } else {
+///     // Debug message - skip it
+/// }
+/// ```
+///
+/// This is why all output in PTY slaves should use `println!()` - using `eprintln!()`
+/// creates a false impression that stderr is handled differently.
+///
 /// # Parameters
 ///
 /// - `test_fn`: The test function name (used as identifier, not string)

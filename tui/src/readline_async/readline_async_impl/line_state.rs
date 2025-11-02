@@ -1,11 +1,11 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, InputEvent,
-            Key, KeyPress, KeyState, LINE_FEED_BYTE, MemoizedLenMap, ReadlineError,
-            ReadlineEvent, SafeHistory, SpecialKey, StringLength,
-            core::coordinates::idx, find_next_word_end, find_prev_word_start, ok};
 #[cfg(test)]
 use crate::ModifierKeysMask;
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, InputEvent, Key, KeyPress,
+            KeyState, LINE_FEED_BYTE, MemoizedLenMap, ReadlineError, ReadlineEvent,
+            SafeHistory, SpecialKey, StringLength, core::coordinates::idx,
+            find_next_word_end, find_prev_word_start, ok};
 use crossterm::{QueueableCommand, cursor,
                 terminal::{Clear,
                            ClearType::{All, FromCursorDown}}};
@@ -421,16 +421,102 @@ impl LineState {
         ok!()
     }
 
+    /// Processes an input event, updates line state, and renders changes to the terminal.
+    ///
+    /// This is the **core event processing method** for the readline event loop. It:
+    /// 1. Receives an input event (keyboard, resize, mouse, etc.)
+    /// 2. Updates the internal line state (text, cursor position, history)
+    /// 3. Renders the updated state to the terminal
+    /// 4. Returns any significant events that the caller needs to handle
+    ///
+    /// # Return Value
+    ///
+    /// Returns `Ok(Some(ReadlineEvent))` when a **significant event** occurs that the caller
+    /// should handle:
+    /// - [`ReadlineEvent::Line`] - User pressed Enter, line is complete
+    /// - [`ReadlineEvent::Eof`] - User pressed Ctrl+D on empty line
+    /// - [`ReadlineEvent::Resized`] - Terminal was resized
+    ///
+    /// Returns `Ok(None)` for **normal editing operations** that don't require caller action:
+    /// - Character insertion/deletion
+    /// - Cursor movement (arrow keys, Home, End, Ctrl+Left/Right, Alt+B/F)
+    /// - Word deletion (Ctrl+W, Alt+D, Alt+Backspace)
+    /// - Line editing (Ctrl+A, Ctrl+E, Ctrl+K, Ctrl+U)
+    /// - History navigation (Up/Down arrows)
+    ///
+    /// # Examples
+    ///
+    /// ## Basic Usage (Simulated Events)
+    ///
+    /// ```rust
+    /// use r3bl_tui::{InputEvent, KeyPress, SpecialKey, LineState, StdoutMock, ReadlineEvent};
+    /// use std::sync::{Arc, Mutex};
+    ///
+    /// // Setup
+    /// let mut line_state = LineState::new(String::new(), (80, 24));
+    /// let mut stdout = StdoutMock::default();
+    /// let (history, _) = r3bl_tui::readline_async::readline_async_impl::History::new();
+    /// let safe_history = Arc::new(Mutex::new(history));
+    ///
+    /// // Simulate typing "hello"
+    /// for ch in "hello".chars() {
+    ///     let event = InputEvent::Keyboard(KeyPress::Plain {
+    ///         key: r3bl_tui::Key::Character(ch)
+    ///     });
+    ///
+    ///     let result = line_state.apply_event_and_render(
+    ///         &event,
+    ///         &mut stdout,
+    ///         &safe_history
+    ///     ).unwrap();
+    ///
+    ///     // Normal character input returns None
+    ///     assert!(result.is_none());
+    /// }
+    ///
+    /// assert_eq!(line_state.line, "hello");
+    /// assert_eq!(line_state.line_cursor_grapheme, 5);
+    ///
+    /// // Simulate pressing Enter
+    /// let enter_event = InputEvent::Keyboard(KeyPress::Plain {
+    ///     key: r3bl_tui::Key::SpecialKey(SpecialKey::Enter)
+    /// });
+    ///
+    /// let result = line_state.apply_event_and_render(
+    ///     &enter_event,
+    ///     &mut stdout,
+    ///     &safe_history
+    /// ).unwrap();
+    ///
+    /// // Enter returns Some(ReadlineEvent::Line)
+    /// match result {
+    ///     Some(ReadlineEvent::Line(text)) => {
+    ///         assert_eq!(text, "hello");
+    ///     }
+    ///     _ => panic!("Expected ReadlineEvent::Line"),
+    /// }
+    /// ```
+    ///
+    /// ## Real-World Usage
+    ///
+    /// For complete async event loop implementations, see:
+    /// - [`pty_ctrl_navigation_test`] - Shows full PTY test pattern with debouncing
+    /// - [`pty_ctrl_d_test`] - Shows handling of Ctrl+D dual behavior
+    ///
+    /// [`pty_ctrl_navigation_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_navigation_test
+    /// [`pty_ctrl_d_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_test
+    ///
     /// # Panics
     ///
     /// This will panic if the lock is poisoned, which can happen if a thread
     /// panics while holding the lock. To avoid panics, ensure that the code that
     /// locks the mutex does not panic while holding the lock.
-    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
+    ///
     /// # Errors
     ///
     /// Returns an error if writing to the terminal fails or if the event cannot be
     /// processed.
+    #[allow(clippy::unwrap_in_result)] /* This is for lock.unwrap() */
     pub fn apply_event_and_render(
         &mut self,
         event: &InputEvent,
@@ -464,7 +550,7 @@ impl LineState {
                         handle_regular_key(self, key, term, safe_history)
                     }
                 }
-            }
+            },
             InputEvent::Resize(size) => {
                 let width = size.col_width.0.value;
                 let height = size.row_height.0.value;
@@ -515,7 +601,9 @@ mod apply_event_and_render_helper {
             Key::Character('b') => handle_alt_b(line_state, term),
             Key::Character('f') => handle_alt_f(line_state, term),
             Key::Character('d') => handle_alt_d(line_state, term),
-            Key::SpecialKey(SpecialKey::Backspace) => handle_alt_backspace(line_state, term),
+            Key::SpecialKey(SpecialKey::Backspace) => {
+                handle_alt_backspace(line_state, term)
+            }
             _ => Ok(None),
         }
     }
@@ -539,7 +627,9 @@ mod apply_event_and_render_helper {
             Key::SpecialKey(SpecialKey::Home) => handle_home(line_state, term),
             Key::SpecialKey(SpecialKey::End) => handle_end(line_state, term),
             Key::SpecialKey(SpecialKey::Up) => handle_up(line_state, term, safe_history),
-            Key::SpecialKey(SpecialKey::Down) => handle_down(line_state, term, safe_history),
+            Key::SpecialKey(SpecialKey::Down) => {
+                handle_down(line_state, term, safe_history)
+            }
             Key::Character(c) => handle_char(line_state, term, *c),
             _ => Ok(None),
         }
