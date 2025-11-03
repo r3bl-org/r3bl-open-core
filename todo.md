@@ -23,7 +23,7 @@
       actually:
       `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
 
-- [⌛] use [`task_refactor_input_device`](task/task_refactor_input_device.md) to refactor
+- [x] use [`task_refactor_input_device`](task/task_refactor_input_device.md) to refactor
   `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
 
 - [⌛] use [`task_remove_crossterm`](task/task_remove_crossterm.md) to remove crossterm from the

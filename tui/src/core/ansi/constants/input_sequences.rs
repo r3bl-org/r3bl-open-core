@@ -53,7 +53,7 @@ pub const ANSI_ESC: u8 = 0x1B;
 pub const ANSI_CSI_BRACKET: u8 = 0x5B;
 
 /// SS3 'O' byte: Second byte of SS3 sequences (0x4F)
-/// SS3 sequences format: ESC O `command_char` (used in application mode)
+/// SS3 sequences format: ESC O `command_char` (used in application mode).
 pub const ANSI_SS3_O: u8 = b'O';
 
 /// Parameter separator byte: `;` (59 in decimal, 0x3B in hex)
@@ -283,6 +283,22 @@ pub const MODIFIER_CTRL_ALT_SHIFT: u8 = MODIFIER_CTRL | MODIFIER_ALT | MODIFIER_
 /// Arrow key modifier base value (always 1 for arrow keys with modifiers)
 pub const ARROW_KEY_MODIFIER_BASE: u16 = 1;
 
+/// Arrow key modifier parameter base character: `'1'` (ASCII 49)
+///
+/// Used in VT-100 keyboard sequences with modifiers: `CSI 1; modifier [A/B/C/D/...]`
+/// The parameter is computed as: `'1'` + `modifier_mask`, producing `'1'`-`'8'`
+///
+/// ## VT-100 Modifier Encoding
+/// - '1' = no modifiers (1 + 0)
+/// - '2' = Shift (1 + 1)
+/// - '3' = Alt (1 + 2)
+/// - '4' = Alt+Shift (1 + 3)
+/// - '5' = Ctrl (1 + 4)
+/// - '6' = Ctrl+Shift (1 + 5)
+/// - '7' = Ctrl+Alt (1 + 6)
+/// - '8' = Ctrl+Alt+Shift (1 + 7)
+pub const MODIFIER_PARAMETER_BASE_CHAR: u8 = b'1';
+
 // ==================== Control Characters ====================
 //
 // Control characters (0x00-0x1F) are generated when Ctrl is held while typing.
@@ -364,59 +380,100 @@ pub const PRINTABLE_ASCII_MAX: u8 = 0x7E;
 /// When combined with ESC (0x1B), it represents Alt+Backspace: ESC DEL (0x1B 0x7F).
 pub const ASCII_DEL: u8 = 0x7F;
 
+// ==================== ASCII Character Constants ====================
+//
+// These constants define the ASCII byte values for digits and letters used in
+// ANSI escape sequence parsing and generation.
+//
+// ## Why These Constants Are Necessary
+//
+// ANSI escape sequences are text-based protocols that use ASCII characters to
+// represent numeric values. For example:
+// - The digit '1' is represented as byte 0x31 (ASCII 49), NOT byte value 1
+// - Parameters like "15" are two ASCII bytes: [0x31, 0x35] ('1', '5')
+//
+// These constants prevent off-by-one errors when converting between:
+// - Numeric values (0-9) and their ASCII representations (0x30-0x39)
+// - Character ranges used in parsing (b'A'-b'Z', b'a'-b'z')
+//
+// ## Rust Pattern Matching Limitation
+//
+// We cannot use these constants in match arms due to RFC 1445. In match patterns,
+// constants are treated as variable bindings, not value comparisons. Instead, use:
+// - `if/else` chains with direct comparisons
+// - `matches!` macro for range checking.
+// See keyboard.rs and terminal_events.rs for examples.
+
+/// ASCII digit '0' (48 in decimal, 0x30 in hex)
+///
+/// Used to convert numeric values to ASCII digits: `ASCII_DIGIT_0 + value`
+/// Example: To represent number 5 in ASCII: `ASCII_DIGIT_0 + 5 = 0x35 = '5'`
+pub const ASCII_DIGIT_0: u8 = b'0';
+
+/// ASCII digit '1' (49 in decimal, 0x31 in hex)
+pub const ASCII_DIGIT_1: u8 = b'1';
+
+/// ASCII digit '2' (50 in decimal, 0x32 in hex)
+pub const ASCII_DIGIT_2: u8 = b'2';
+
+/// ASCII digit '3' (51 in decimal, 0x33 in hex)
+pub const ASCII_DIGIT_3: u8 = b'3';
+
+/// ASCII digit '4' (52 in decimal, 0x34 in hex)
+pub const ASCII_DIGIT_4: u8 = b'4';
+
+/// ASCII digit '5' (53 in decimal, 0x35 in hex)
+pub const ASCII_DIGIT_5: u8 = b'5';
+
+/// ASCII digit '6' (54 in decimal, 0x36 in hex)
+pub const ASCII_DIGIT_6: u8 = b'6';
+
+/// ASCII digit '7' (55 in decimal, 0x37 in hex)
+pub const ASCII_DIGIT_7: u8 = b'7';
+
+/// ASCII digit '8' (56 in decimal, 0x38 in hex)
+pub const ASCII_DIGIT_8: u8 = b'8';
+
+/// ASCII digit '9' (57 in decimal, 0x39 in hex)
+///
+/// Upper bound for digit range checking: `b'0'..=b'9'` becomes
+/// `ASCII_DIGIT_0..=ASCII_DIGIT_9`
+pub const ASCII_DIGIT_9: u8 = b'9';
+
+/// ASCII uppercase letter 'A' (65 in decimal, 0x41 in hex)
+///
+/// Lower bound for uppercase letter range: `b'A'..=b'Z'` becomes
+/// `ASCII_UPPER_A..=ASCII_UPPER_Z`
+pub const ASCII_UPPER_A: u8 = b'A';
+
+/// ASCII uppercase letter 'Z' (90 in decimal, 0x5A in hex)
+///
+/// Upper bound for uppercase letter range
+pub const ASCII_UPPER_Z: u8 = b'Z';
+
+/// ASCII lowercase letter 'a' (97 in decimal, 0x61 in hex)
+///
+/// Lower bound for lowercase letter range: `b'a'..=b'z'` becomes
+/// `ASCII_LOWER_A..=ASCII_LOWER_Z`
+pub const ASCII_LOWER_A: u8 = b'a';
+
+/// ASCII lowercase letter 'z' (122 in decimal, 0x7A in hex)
+///
+/// Upper bound for lowercase letter range
+pub const ASCII_LOWER_Z: u8 = b'z';
+
 // ==================== Mouse Protocol Markers ====================
 
-/// SGR mouse protocol marker: `<` (60 in decimal, 0x3C in hex)
-/// Used in SGR extended mouse tracking sequences: ESC [ < Cb ; Cx ; Cy M/m
-pub const MOUSE_SGR_MARKER: u8 = b'<';
+// Mouse constants are now in the dedicated `mouse` module.
+// Re-export them for backward compatibility with existing imports.
+pub use crate::core::ansi::constants::mouse::*;
 
-/// X10/Normal mouse protocol marker: `M` (77 in decimal, 0x4D in hex)
-/// Used in X10 mouse tracking sequences: ESC [ M Cb Cx Cy
-pub const MOUSE_X10_MARKER: u8 = b'M';
-
-/// SGR mouse press event terminator: `M` (uppercase)
-/// Used in SGR sequences to indicate button press: ESC [ < Cb ; Cx ; Cy M
-pub const MOUSE_SGR_PRESS: u8 = b'M';
-
-/// SGR mouse release event terminator: `m` (lowercase)
-/// Used in SGR sequences to indicate button release: ESC [ < Cb ; Cx ; Cy m
-pub const MOUSE_SGR_RELEASE: u8 = b'm';
-
-// ==================== Mouse Protocol Sequence Prefixes ====================
-
-/// SGR mouse protocol sequence prefix: ESC [ <
-/// Used to identify SGR extended mouse tracking sequences
-pub const MOUSE_SGR_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_SGR_MARKER];
-
-/// X10/Normal mouse protocol sequence prefix: ESC [ M
-/// Used to identify X10 mouse tracking sequences
-pub const MOUSE_X10_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARKER];
+// ==================== CSI Prefix ====================
 
 /// Basic CSI sequence prefix: ESC [
-/// Used for general CSI sequence detection
+///
+/// Used for general CSI sequence detection and as base for mouse/focus sequences.
 pub const CSI_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET];
-
-// ==================== Mouse Button and Event Bitmasks ====================
-
-/// Mouse button bits mask (bits 0-1): extracts base button code (0-3)
-/// Used to determine which button: 0=left, 1=middle, 2=right, 3=release
-pub const MOUSE_BUTTON_BITS_MASK: u16 = 0x3;
-
-/// Mouse button code mask (bits 0-5): extracts button code without scroll bit
-/// Used before checking for scroll events (which use bit 6)
-pub const MOUSE_BUTTON_CODE_MASK: u16 = 0x3F;
-
-/// Mouse base button mask (bits 0-6): includes scroll bit
-/// Used to extract button code with scroll information
-pub const MOUSE_BASE_BUTTON_MASK: u16 = 0x7F;
-
-/// Mouse motion flag (bit 5, value 32)
-/// When set, indicates mouse movement without button press
-pub const MOUSE_MOTION_FLAG: u16 = 32;
-
-/// Mouse scroll threshold (bit 6, value 64)
-/// Button codes >= 64 indicate scroll events (up/down)
-pub const MOUSE_SCROLL_THRESHOLD: u16 = 64;
 
 // ==================== Terminal Focus Events ====================
 
@@ -427,6 +484,57 @@ pub const FOCUS_GAINED_FINAL: u8 = b'I';
 /// CSI O: Terminal focus lost event final byte
 /// Format: ESC [ O
 pub const FOCUS_LOST_FINAL: u8 = b'O';
+
+// ==================== Resize Event Constants ====================
+
+/// CSI 8: Window resize event parameter for parsing (numeric).
+///
+/// The numeric parameter value (8) used when PARSING resize sequences.
+/// When we receive `CSI 8 ; rows ; cols t` and parse it, `params[0]` will equal this value.
+/// Format: `CSI 8 ; rows ; cols t`
+pub const RESIZE_EVENT_PARSE_PARAM: u16 = 8;
+
+/// CSI 8: Window resize event code for generation (ASCII character).
+///
+/// The ASCII character '8' (0x38) used when GENERATING resize sequences.
+/// When we create `CSI 8 ; rows ; cols t`, we push this byte value.
+/// Format: `CSI 8 ; rows ; cols t`
+pub const RESIZE_EVENT_GENERATE_CODE: u8 = b'8';
+
+/// CSI t: Resize event terminator.
+///
+/// Final byte in the window resize sequence.
+pub const RESIZE_TERMINATOR: u8 = b't';
+
+// ==================== Bracketed Paste Mode Constants ====================
+
+/// Bracketed paste start parameter for parsing: numeric value 200.
+///
+/// The numeric parameter value used when PARSING paste start sequences.
+/// When we receive `CSI 200 ~` and parse it, `params[0]` will equal this value.
+/// Full sequence: `CSI 200 ~`
+pub const PASTE_START_PARSE_PARAM: u16 = 200;
+
+/// Bracketed paste end parameter for parsing: numeric value 201.
+///
+/// The numeric parameter value used when PARSING paste end sequences.
+/// When we receive `CSI 201 ~` and parse it, params\[0\] will equal this value.
+/// Full sequence: `CSI 201 ~`
+pub const PASTE_END_PARSE_PARAM: u16 = 201;
+
+/// Bracketed paste start code for generation: `200` (string).
+///
+/// String representation used when GENERATING paste start sequences.
+/// When we create `CSI 200 ~`, we use this string.
+/// Full sequence: `CSI 200 ~`
+pub const PASTE_START_GENERATE_CODE: &str = "200";
+
+/// Bracketed paste end code for generation: `201` (string).
+///
+/// String representation used when GENERATING paste end sequences.
+/// When we create `CSI 201 ~`, we use this string.
+/// Full sequence: `CSI 201 ~`
+pub const PASTE_END_GENERATE_CODE: &str = "201";
 
 #[cfg(test)]
 mod tests {

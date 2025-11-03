@@ -259,8 +259,7 @@ mod tests {
         // Should take approximately 10ms (allow some tolerance)
         assert!(
             elapsed >= Duration::from_millis(8) && elapsed <= Duration::from_millis(20),
-            "Expected ~10ms, got {:?}",
-            elapsed
+            "Expected ~10ms, got {elapsed:?}"
         );
     }
 
@@ -280,8 +279,7 @@ mod tests {
         // Should take ~20ms from second reset (not 10ms from first)
         assert!(
             elapsed >= Duration::from_millis(15),
-            "Expected >= 15ms, got {:?}",
-            elapsed
+            "Expected >= 15ms, got {elapsed:?}"
         );
     }
 }

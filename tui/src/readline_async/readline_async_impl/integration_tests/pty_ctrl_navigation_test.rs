@@ -81,6 +81,7 @@ generate_pty_test! {
 }
 
 /// PTY Master: Send Ctrl+Left/Right sequences and verify navigation
+#[allow(clippy::too_many_lines)]
 fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Master: Starting Ctrl+Left/Right test...");
 

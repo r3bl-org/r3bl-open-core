@@ -13,6 +13,7 @@
 //! - **[`esc`]**: ESC sequences, character set selection, C0 control characters
 //! - **[`dsr`]**: Device Status Report response constants
 //! - **[`input_sequences`]**: Keyboard input, control characters, mouse protocol markers
+//! - **[`mouse`]**: Mouse protocol constants (SGR, X10, RXVT button codes and flags)
 //! - **[`raw_mode`]**: Raw mode terminal configuration (VMIN, VTIME)
 //! - **[`sgr`]**: SGR byte constants for performance-critical paths
 //! - **[`utf8`]**: UTF-8 encoding constants for byte-level text parsing
@@ -55,6 +56,10 @@ pub mod input_sequences;
 #[cfg(not(any(test, doc)))]
 mod input_sequences;
 #[cfg(any(test, doc))]
+pub mod mouse;
+#[cfg(not(any(test, doc)))]
+mod mouse;
+#[cfg(any(test, doc))]
 pub mod raw_mode;
 #[cfg(not(any(test, doc)))]
 mod raw_mode;
@@ -73,6 +78,8 @@ pub use dsr::*;
 pub use esc::*;
 pub use generic::*;
 pub use input_sequences::*;
+#[allow(unused_imports)]
+pub use mouse::*;
 pub use raw_mode::*;
 pub use sgr::*;
 pub use utf8::*;

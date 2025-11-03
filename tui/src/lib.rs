@@ -1956,14 +1956,26 @@
 // bytes) are intentional and necessary for I/O operations.
 #![cfg_attr(test, allow(clippy::large_stack_arrays))]
 
-// Attach.
+// Attach modules (re-exported below to provide clean public API).
 pub mod core;
 pub mod network_io;
 pub mod readline_async;
 pub mod tui;
 
-// Re-export.
+// Re-export stable public API using glob imports for ergonomic, flat API surface.
+//
+// Note on ambiguous_glob_reexports: Some names (like 'raw_mode', 'integration_tests')
+// appear in multiple modules. This is intentional and acceptable because:
+// 1. Users typically import specific items: `use r3bl_tui::InputEvent;`
+// 2. Users can disambiguate with full paths: `use r3bl_tui::core::ansi::raw_mode;`
+// 3. Explicit imports would require listing 100+ items (violates DRY principle)
+// 4. Rust resolves ambiguity by precedence (later imports take precedence)
+// See CLAUDE.md module organization pattern for rationale.
+#[allow(ambiguous_glob_reexports)]
 pub use core::*;
+#[allow(ambiguous_glob_reexports)]
 pub use network_io::*;
+#[allow(ambiguous_glob_reexports)]
 pub use readline_async::*;
+#[allow(ambiguous_glob_reexports)]
 pub use tui::*;

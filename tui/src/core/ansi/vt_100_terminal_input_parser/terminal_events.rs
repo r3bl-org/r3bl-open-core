@@ -13,20 +13,22 @@
 //! - **Bracketed Paste End**: `ESC [ 201 ~`
 
 use super::types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
-use crate::core::ansi::constants::{ANSI_ESC, ANSI_CSI_BRACKET,
-                                   FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL};
+use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR,
+                                   ANSI_PARAM_SEPARATOR, ASCII_DIGIT_0, ASCII_DIGIT_9,
+                                   FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL, PASTE_END_PARSE_PARAM,
+                                   PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM, RESIZE_TERMINATOR};
 
-/// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if
-/// recognized.
+/// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if recognized.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence is parsed,
 /// or `None` if the sequence is incomplete or invalid.
 ///
-/// Handles sequences like:
-/// - `CSI 8;24;80t` → Window resize to 24 rows × 80 columns
-/// - `CSI I` → Terminal gained focus
-/// - `CSI O` → Terminal lost focus
-/// - `ESC[200~` → Bracketed paste start
+/// # Handled Sequences
+///
+/// - `CSI 8;24;80t` - Window resize to 24 rows × 80 columns
+/// - `CSI I` - Terminal gained focus
+/// - `CSI O` - Terminal lost focus
+/// - `ESC[200~` - Bracketed paste start
 #[must_use]
 pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
@@ -63,24 +65,29 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usiz
 
     for (idx, &byte) in buffer[2..].iter().enumerate() {
         bytes_scanned = idx + 1; // Track position relative to buffer[2..]
-        match byte {
-            b'0'..=b'9' => {
-                current_num.push(byte as char);
+
+        // IMPORTANT: We use if/else chains instead of match arms because Rust treats
+        // constants in match patterns as variable bindings, not value comparisons.
+        // See keyboard.rs for detailed explanation of this pattern.
+
+        if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
+            // Digit: accumulate in current_num
+            current_num.push(byte as char);
+        } else if byte == ANSI_PARAM_SEPARATOR {
+            // Semicolon: parameter separator
+            if !current_num.is_empty() {
+                params.push(current_num.parse::<u16>().unwrap_or(0));
+                current_num.clear();
             }
-            b';' => {
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                    current_num.clear();
-                }
+        } else if byte == ANSI_FUNCTION_KEY_TERMINATOR || byte == RESIZE_TERMINATOR {
+            // Terminal character: '~' for paste events, 't' for resize events
+            if !current_num.is_empty() {
+                params.push(current_num.parse::<u16>().unwrap_or(0));
             }
-            b'~' | b't' => {
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                }
-                final_byte = byte;
-                break;
-            }
-            _ => return None, // Invalid byte in sequence
+            final_byte = byte;
+            break;
+        } else {
+            return None; // Invalid byte in sequence
         }
     }
 
@@ -92,33 +99,33 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usiz
     let total_consumed = 2 + bytes_scanned;
 
     // Parse based on parameters and final byte
-    match (params.len(), final_byte) {
+    // Using if/else for consistency - avoiding all match statements when using constants
+    if params.len() == 3 && final_byte == RESIZE_TERMINATOR && params[0] == RESIZE_EVENT_PARSE_PARAM {
         // Window resize: CSI 8 ; rows ; cols t
-        (3, b't') if params[0] == 8 => {
-            let rows = params[1];
-            let cols = params[2];
-            Some((VT100InputEvent::Resize { rows, cols }, total_consumed))
-        }
+        let rows = params[1];
+        let cols = params[2];
+        Some((VT100InputEvent::Resize { rows, cols }, total_consumed))
+    } else if params.len() == 1 && final_byte == ANSI_FUNCTION_KEY_TERMINATOR {
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
-        (1, b'~') => match params[0] {
-            200 => Some((
+        if params[0] == PASTE_START_PARSE_PARAM {
+            Some((
                 VT100InputEvent::Paste(VT100PasteMode::Start),
                 total_consumed,
-            )),
-            201 => Some((VT100InputEvent::Paste(VT100PasteMode::End), total_consumed)),
-            _ => None,
-        },
-        _ => None,
+            ))
+        } else if params[0] == PASTE_END_PARSE_PARAM {
+            Some((VT100InputEvent::Paste(VT100PasteMode::End), total_consumed))
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
 
 /// Unit tests for terminal event parsing (focus, resize, bracketed paste).
 ///
 /// These tests use generator functions instead of hardcoded magic strings to ensure
-/// consistency between sequence generation and parsing. For testing strategy details,
-/// see the [testing strategy] documentation.
-///
-/// [testing strategy]: mod@super#testing-strategy
+/// consistency between sequence generation and parsing.
 #[cfg(test)]
 mod tests {
     use super::*;

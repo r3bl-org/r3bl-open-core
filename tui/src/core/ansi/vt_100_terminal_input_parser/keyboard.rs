@@ -256,12 +256,18 @@
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 use crate::{ASCII_DEL,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
-                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_SS3_O,
-                                    ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
-                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL, BACKTAB_FINAL,
+                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
+                                    ANSI_SS3_O, ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
+                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL, ASCII_DIGIT_0,
+                                    ASCII_DIGIT_9, ASCII_LOWER_A, ASCII_LOWER_Z,
+                                    ASCII_UPPER_A, ASCII_UPPER_Z, BACKTAB_FINAL,
                                     CONTROL_BACKSPACE, CONTROL_ENTER, CONTROL_ESC,
                                     CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
                                     CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK,
+                                    FUNCTION_F1_CODE, FUNCTION_F2_CODE, FUNCTION_F3_CODE,
+                                    FUNCTION_F4_CODE, FUNCTION_F5_CODE, FUNCTION_F6_CODE,
+                                    FUNCTION_F7_CODE, FUNCTION_F8_CODE, FUNCTION_F9_CODE,
+                                    FUNCTION_F10_CODE, FUNCTION_F11_CODE, FUNCTION_F12_CODE,
                                     PRINTABLE_ASCII_MAX, PRINTABLE_ASCII_MIN,
                                     SPECIAL_DELETE_CODE, SPECIAL_END_ALT1_CODE,
                                     SPECIAL_END_ALT2_CODE, SPECIAL_END_FINAL,
@@ -418,14 +424,12 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 ///
 /// ## Examples
 ///
-/// ```text
-/// Sequence         | Bytes        | Result
-/// -----------------|--------------|---------------------------
-/// Alt+B            | [0x1B, 0x62] | Alt+b (single event)
-/// Alt+F            | [0x1B, 0x66] | Alt+f (single event)
-/// Alt+D            | [0x1B, 0x64] | Alt+d (single event)
-/// Alt+Backspace    | [0x1B, 0x7F] | Alt+Backspace (single event)
-/// ```
+/// Sequence      | Bytes          | Result                       |
+/// --------------|----------------|------------------------------|
+/// Alt+B         | `[0x1B, 0x62]` | Alt+b (single event)         |
+/// Alt+F         | `[0x1B, 0x66]` | Alt+f (single event)         |
+/// Alt+D         | `[0x1B, 0x64]` | Alt+d (single event)         |
+/// Alt+Backspace | `[0x1B, 0x7F]` | Alt+Backspace (single event) |
 ///
 /// ## Design: Why Alt+key is ESC + key
 ///
@@ -493,7 +497,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     ))
 }
 
-/// Parse a CSI keyboard sequence and return an `InputEvent` with bytes consumed.
+/// Parse a CSI keyboard sequence and return an [`InputEvent`] with bytes consumed.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence was parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -512,6 +516,8 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// - `ESC [ A` - Arrow up (no parameters, 3 bytes)
 /// - `ESC [ 5 ~` - Page up (parameter: 5, final: ~, 4 bytes)
 /// - `ESC [ 1 ; 3 C` - Alt+Right (base: 1, modifier: 3, final: C, 6 bytes)
+///
+/// [`InputEvent`]: crate::core::terminal_io::InputEvent
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
@@ -533,7 +539,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
     parse_csi_parameters(buffer)
 }
 
-/// Parse an SS3 keyboard sequence and return an `InputEvent` with bytes consumed.
+/// Parse an SS3 keyboard sequence and return an [`InputEvent`] with bytes consumed.
 ///
 /// SS3 sequences are used in terminal application mode (vim, less, emacs, etc.)
 /// to send arrow keys, function keys, and numpad keys. They have a simpler format than
@@ -558,6 +564,8 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 ///
 /// **Note**: SS3 sequences do NOT support modifiers like Shift/Ctrl/Alt.
 /// Those combinations are still sent as CSI sequences with modifiers.
+///
+/// [`InputEvent`]: crate::core::terminal_io::InputEvent
 #[must_use]
 pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // SS3 sequences must be exactly 3 bytes: ESC O + command_char
@@ -571,126 +579,56 @@ pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     }
 
     // Parse the command character
-    let event = match buffer[2] {
+    let code = parse_ss3_command(buffer[2])?;
+
+    Some((
+        VT100InputEvent::Keyboard {
+            code,
+            modifiers: VT100KeyModifiers::default(),
+        },
+        3,
+    ))
+}
+
+/// Parse SS3 command character and return the corresponding [`VT100KeyCode`].
+fn parse_ss3_command(byte: u8) -> Option<VT100KeyCode> {
+    match byte {
         // Arrow keys
-        ARROW_UP_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Up,
-            modifiers: VT100KeyModifiers::default(),
-        },
-        ARROW_DOWN_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Down,
-            modifiers: VT100KeyModifiers::default(),
-        },
-        ARROW_RIGHT_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Right,
-            modifiers: VT100KeyModifiers::default(),
-        },
-        ARROW_LEFT_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Left,
-            modifiers: VT100KeyModifiers::default(),
-        },
+        ARROW_UP_FINAL => Some(VT100KeyCode::Up),
+        ARROW_DOWN_FINAL => Some(VT100KeyCode::Down),
+        ARROW_RIGHT_FINAL => Some(VT100KeyCode::Right),
+        ARROW_LEFT_FINAL => Some(VT100KeyCode::Left),
         // Home and End keys
-        SPECIAL_HOME_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Home,
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SPECIAL_END_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::End,
-            modifiers: VT100KeyModifiers::default(),
-        },
+        SPECIAL_HOME_FINAL => Some(VT100KeyCode::Home),
+        SPECIAL_END_FINAL => Some(VT100KeyCode::End),
         // Function keys F1-F4 (SS3 mode)
-        SS3_F1_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Function(1),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_F2_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Function(2),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_F3_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Function(3),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_F4_FINAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Function(4),
-            modifiers: VT100KeyModifiers::default(),
-        },
+        SS3_F1_FINAL => Some(VT100KeyCode::Function(1)),
+        SS3_F2_FINAL => Some(VT100KeyCode::Function(2)),
+        SS3_F3_FINAL => Some(VT100KeyCode::Function(3)),
+        SS3_F4_FINAL => Some(VT100KeyCode::Function(4)),
         // Numpad keys in application mode
         // Note: These send SS3 sequences instead of literal digits to allow
         // applications to distinguish numpad from regular number keys
-        SS3_NUMPAD_0 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('0'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_1 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('1'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_2 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('2'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_3 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('3'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_4 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('4'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_5 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('5'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_6 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('6'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_7 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('7'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_8 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('8'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_9 => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('9'),
-            modifiers: VT100KeyModifiers::default(),
-        },
+        SS3_NUMPAD_0 => Some(VT100KeyCode::Char('0')),
+        SS3_NUMPAD_1 => Some(VT100KeyCode::Char('1')),
+        SS3_NUMPAD_2 => Some(VT100KeyCode::Char('2')),
+        SS3_NUMPAD_3 => Some(VT100KeyCode::Char('3')),
+        SS3_NUMPAD_4 => Some(VT100KeyCode::Char('4')),
+        SS3_NUMPAD_5 => Some(VT100KeyCode::Char('5')),
+        SS3_NUMPAD_6 => Some(VT100KeyCode::Char('6')),
+        SS3_NUMPAD_7 => Some(VT100KeyCode::Char('7')),
+        SS3_NUMPAD_8 => Some(VT100KeyCode::Char('8')),
+        SS3_NUMPAD_9 => Some(VT100KeyCode::Char('9')),
         // Numpad operators and special keys
-        SS3_NUMPAD_ENTER => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Enter,
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_PLUS => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('+'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_MINUS => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('-'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_MULTIPLY => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('*'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_DIVIDE => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('/'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_DECIMAL => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char('.'),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        SS3_NUMPAD_COMMA => VT100InputEvent::Keyboard {
-            code: VT100KeyCode::Char(','),
-            modifiers: VT100KeyModifiers::default(),
-        },
-        _ => return None,
-    };
-
-    Some((event, 3))
+        SS3_NUMPAD_ENTER => Some(VT100KeyCode::Enter),
+        SS3_NUMPAD_PLUS => Some(VT100KeyCode::Char('+')),
+        SS3_NUMPAD_MINUS => Some(VT100KeyCode::Char('-')),
+        SS3_NUMPAD_MULTIPLY => Some(VT100KeyCode::Char('*')),
+        SS3_NUMPAD_DIVIDE => Some(VT100KeyCode::Char('/')),
+        SS3_NUMPAD_DECIMAL => Some(VT100KeyCode::Char('.')),
+        SS3_NUMPAD_COMMA => Some(VT100KeyCode::Char(',')),
+        _ => None,
+    }
 }
 
 /// Parse single-character CSI sequences like `CSI A` (up arrow)
@@ -724,24 +662,37 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 
     for (idx, &byte) in buffer[2..].iter().enumerate() {
         bytes_scanned = idx + 1; // Track position relative to buffer[2..]
-        match byte {
-            b'0'..=b'9' => {
-                current_num.push(byte as char);
+
+        // IMPORTANT: We use if/else chains instead of match arms because Rust treats
+        // constants in match patterns as variable bindings, not value comparisons.
+        // This is a Rust language limitation documented in RFC 1445.
+        //
+        // Using named constants in match arms like:
+        //   ASCII_DIGIT_0..=ASCII_DIGIT_9 => { ... }
+        // would create new bindings named ASCII_DIGIT_0 and ASCII_DIGIT_9 instead of
+        // matching against the constant values. The if/else chain correctly compares
+        // against the constant values.
+
+        if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
+            // Digit: accumulate in current_num
+            current_num.push(byte as char);
+        } else if byte == ANSI_PARAM_SEPARATOR {
+            // Semicolon: parameter separator
+            if !current_num.is_empty() {
+                params.push(current_num.parse::<u16>().unwrap_or(0));
+                current_num.clear();
             }
-            b';' => {
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                    current_num.clear();
-                }
+        } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
+                || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
+                || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte) {
+            // Terminal character: end of sequence
+            if !current_num.is_empty() {
+                params.push(current_num.parse::<u16>().unwrap_or(0));
             }
-            b'~' | b'A'..=b'Z' | b'a'..=b'z' => {
-                if !current_num.is_empty() {
-                    params.push(current_num.parse::<u16>().unwrap_or(0));
-                }
-                final_byte = byte;
-                break;
-            }
-            _ => return None, // Invalid byte in sequence
+            final_byte = byte;
+            break;
+        } else {
+            return None; // Invalid byte in sequence
         }
     }
 
@@ -821,27 +772,27 @@ fn parse_function_or_special_key(
 ) -> Option<VT100InputEvent> {
     let key_code = match code {
         // Function keys: map ANSI codes to F1-F12
-        11 => VT100KeyCode::Function(1),
-        12 => VT100KeyCode::Function(2),
-        13 => VT100KeyCode::Function(3),
-        14 => VT100KeyCode::Function(4),
-        15 => VT100KeyCode::Function(5),
-        17 => VT100KeyCode::Function(6),
-        18 => VT100KeyCode::Function(7),
-        19 => VT100KeyCode::Function(8),
-        20 => VT100KeyCode::Function(9),
-        21 => VT100KeyCode::Function(10),
-        23 => VT100KeyCode::Function(11),
-        24 => VT100KeyCode::Function(12),
+        FUNCTION_F1_CODE => VT100KeyCode::Function(1),
+        FUNCTION_F2_CODE => VT100KeyCode::Function(2),
+        FUNCTION_F3_CODE => VT100KeyCode::Function(3),
+        FUNCTION_F4_CODE => VT100KeyCode::Function(4),
+        FUNCTION_F5_CODE => VT100KeyCode::Function(5),
+        FUNCTION_F6_CODE => VT100KeyCode::Function(6),
+        FUNCTION_F7_CODE => VT100KeyCode::Function(7),
+        FUNCTION_F8_CODE => VT100KeyCode::Function(8),
+        FUNCTION_F9_CODE => VT100KeyCode::Function(9),
+        FUNCTION_F10_CODE => VT100KeyCode::Function(10),
+        FUNCTION_F11_CODE => VT100KeyCode::Function(11),
+        FUNCTION_F12_CODE => VT100KeyCode::Function(12),
         // Special keys
-        SPECIAL_HOME_ALT1_CODE => VT100KeyCode::Home, // Alternative Home (ESC[1~)
+        // Home: Multiple alternative codes for different terminal implementations
+        SPECIAL_HOME_ALT1_CODE | SPECIAL_HOME_ALT2_CODE => VT100KeyCode::Home,
         SPECIAL_INSERT_CODE => VT100KeyCode::Insert,
         SPECIAL_DELETE_CODE => VT100KeyCode::Delete,
-        SPECIAL_END_ALT1_CODE => VT100KeyCode::End, // Alternative End (ESC[4~)
+        // End: Multiple alternative codes for different terminal implementations
+        SPECIAL_END_ALT1_CODE | SPECIAL_END_ALT2_CODE => VT100KeyCode::End,
         SPECIAL_PAGE_UP_CODE => VT100KeyCode::PageUp,
         SPECIAL_PAGE_DOWN_CODE => VT100KeyCode::PageDown,
-        SPECIAL_HOME_ALT2_CODE => VT100KeyCode::Home, // Alternative Home (ESC[7~, rxvt)
-        SPECIAL_END_ALT2_CODE => VT100KeyCode::End,   // Alternative End (ESC[8~, rxvt)
         _ => return None,
     };
 
@@ -908,7 +859,7 @@ mod tests {
             .expect("Failed to generate function key sequence")
     }
 
-    /// Build a special key sequence (Home, End, Insert, Delete, PageUp, PageDown) using
+    /// Build a special key sequence (Home, End, Insert, Delete, `PageUp`, `PageDown`) using
     /// the generator.
     fn special_key_sequence(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;

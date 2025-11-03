@@ -44,6 +44,7 @@ generate_pty_test! {
 }
 
 /// PTY Master: Send Alt+D/Backspace sequences and verify word deletion
+#[allow(clippy::too_many_lines)]
 fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     eprintln!("🚀 PTY Master: Starting Alt+D/Backspace test...");
 

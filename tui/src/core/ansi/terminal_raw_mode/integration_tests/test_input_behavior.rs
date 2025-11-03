@@ -44,8 +44,7 @@ fn pty_master_entry_point(
     eprintln!("📝 PTY Master: Waiting for slave to be ready...");
 
     // Wait for slave to signal ready
-    let mut slave_ready = false;
-    loop {
+    let slave_ready = loop {
         let mut line = String::new();
         match buf_reader.read_line(&mut line) {
             Ok(0) => panic!("EOF before slave ready"),
@@ -53,9 +52,8 @@ fn pty_master_entry_point(
                 let trimmed = line.trim();
                 eprintln!("  ← Slave output: {trimmed}");
                 if trimmed.contains("SLAVE_READY") {
-                    slave_ready = true;
                     eprintln!("  ✓ Slave is ready");
-                    break;
+                    break true;
                 }
                 assert!(!trimmed.contains("FAILED:"), "Test failed: {trimmed}");
             }
@@ -64,7 +62,7 @@ fn pty_master_entry_point(
             }
             Err(e) => panic!("Read error: {e}"),
         }
-    }
+    };
 
     assert!(slave_ready, "Slave did not become ready");
 

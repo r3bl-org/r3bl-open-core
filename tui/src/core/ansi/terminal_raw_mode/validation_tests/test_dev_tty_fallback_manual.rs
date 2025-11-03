@@ -5,6 +5,7 @@
 //! This test verifies that raw mode works correctly when stdin is not a tty,
 //! which happens in real-world scenarios like piped input.
 
+use rustix::termios::LocalModes;
 use std::io::Write;
 
 /// Manual test for `/dev/tty` fallback with redirected stdin.
@@ -44,6 +45,7 @@ use std::io::Write;
 ///
 /// Where the app needs terminal control even though stdin is redirected.
 #[test]
+#[allow(clippy::too_many_lines)]
 #[ignore = "Manual test: echo 'test' | cargo test test_dev_tty_fallback_manual -- --ignored --nocapture"]
 fn test_dev_tty_fallback_manual() {
     println!("╔═══════════════════════════════════════════════════════╗");
@@ -56,7 +58,7 @@ fn test_dev_tty_fallback_manual() {
     let stdin_is_tty = rustix::termios::isatty(&stdin);
 
     println!("📋 Test Environment:");
-    println!("   stdin.isatty() = {}", stdin_is_tty);
+    println!("   stdin.isatty() = {stdin_is_tty}");
 
     if stdin_is_tty {
         println!();
@@ -119,8 +121,6 @@ fn test_dev_tty_fallback_manual() {
                     println!("   ✓ Successfully read /dev/tty termios");
 
                     // Verify key raw mode flags
-                    use rustix::termios::LocalModes;
-
                     if termios.local_modes.contains(LocalModes::ICANON) {
                         println!("   ✗ ICANON is ON (should be OFF in raw mode)");
                         panic!("Raw mode not properly enabled - ICANON still set");

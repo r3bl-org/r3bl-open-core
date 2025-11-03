@@ -133,6 +133,7 @@ macro_rules! generate_pty_test {
         #[test]
         fn $test_name() {
             use std::io::Write;
+            use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 
             const PTY_SLAVE_ENV_VAR: &str = "R3BL_PTY_TEST_SLAVE";
 
@@ -164,8 +165,6 @@ macro_rules! generate_pty_test {
             eprintln!("🚀 TEST: No {} var, running as master", PTY_SLAVE_ENV_VAR);
 
             // Create PTY pair
-            use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
-
             let pty_system = NativePtySystem::default();
             let pty_pair = pty_system
                 .openpty(PtySize {

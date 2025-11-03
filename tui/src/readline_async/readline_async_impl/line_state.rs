@@ -501,10 +501,12 @@ impl LineState {
     ///
     /// For complete async event loop implementations, see:
     /// - [`pty_ctrl_navigation_test`] - Shows full PTY test pattern with debouncing
-    /// - [`pty_ctrl_d_test`] - Shows handling of Ctrl+D dual behavior
+    /// - [`pty_ctrl_d_eof_test`] - Shows handling of Ctrl+D as EOF
+    /// - [`pty_ctrl_d_delete_test`] - Shows handling of Ctrl+D as delete
     ///
     /// [`pty_ctrl_navigation_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_navigation_test
-    /// [`pty_ctrl_d_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_test
+    /// [`pty_ctrl_d_eof_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_eof_test
+    /// [`pty_ctrl_d_delete_test`]: crate::readline_async::readline_async_impl::integration_tests::pty_ctrl_d_delete_test
     ///
     /// # Panics
     ///

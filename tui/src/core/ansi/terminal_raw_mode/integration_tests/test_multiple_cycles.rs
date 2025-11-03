@@ -4,8 +4,8 @@
 //!
 //! Verifies that raw mode can be enabled and disabled multiple times without
 //! issues. Tests edge cases like:
-//! - Calling enable() when already enabled
-//! - Calling disable() when already disabled
+//! - Calling `enable()` when already enabled
+//! - Calling `disable()` when already disabled
 //! - Original settings are preserved across cycles
 
 use crate::generate_pty_test;
@@ -21,9 +21,9 @@ generate_pty_test! {
     /// 2. Second enable/disable cycle
     /// 3. Third enable/disable cycle
     /// 4. Settings restore correctly after each cycle
-    /// 5. Multiple enable() calls don't fail
+    /// 5. Multiple `enable()` calls don't fail
     ///
-    /// This catches edge cases with the ORIGINAL_TERMIOS static and ensures
+    /// This catches edge cases with the `ORIGINAL_TERMIOS` static and ensures
     /// the implementation is robust for repeated use.
     ///
     /// Run with: `cargo test -p r3bl_tui --lib test_raw_mode_cycles -- --nocapture`

@@ -90,6 +90,6 @@
     "defaultMode": "acceptEdits"
   },
   "enableAllProjectMcpServers": true,
-  "outputStyle": "default",
+  "outputStyle": "Explanatory",
   "spinnerTipsEnabled": true
 }

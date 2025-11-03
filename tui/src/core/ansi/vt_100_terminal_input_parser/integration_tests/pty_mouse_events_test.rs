@@ -54,6 +54,7 @@ generate_pty_test! {
 }
 
 /// PTY Master: Send mouse event sequences and verify parsing
+#[allow(clippy::too_many_lines)]
 fn pty_master_entry_point(
     pty_pair: portable_pty::PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,

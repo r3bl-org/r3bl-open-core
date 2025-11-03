@@ -211,10 +211,16 @@ mod tests {
         assert_eq!(0xBF & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
 
         // Invalid continuation bytes
-        assert_ne!(0x00 & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
+        #[allow(clippy::erasing_op)]
+        {
+            assert_ne!(0x00 & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
+        }
         assert_ne!(0x7F & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
         assert_ne!(0xC0 & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
-        assert_ne!(0xFF & UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
+        #[allow(clippy::identity_op)]
+        {
+            assert_ne!(UTF8_CONTINUATION_MASK, UTF8_CONTINUATION_PATTERN);
+        }
     }
 
     #[test]

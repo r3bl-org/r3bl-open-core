@@ -7,7 +7,7 @@
 //! - Ctrl+Space (generates Ctrl+Space event, not Ctrl+@)
 //! - Alternative Home/End sequences (ESC[1~, ESC[4~, ESC[7~, ESC[8~)
 //! - Numpad application mode (all 17 numpad keys)
-//! - Shift+Tab (BackTab)
+//! - Shift+Tab (`BackTab`)
 //!
 //! These tests validate that the complete input stack handles these new features
 //! correctly in a real PTY environment.
@@ -33,7 +33,7 @@ generate_pty_test! {
     ///
     /// Validates that the [`DirectToAnsiInputDevice`] correctly parses:
     /// - Tab key (basic forward navigation)
-    /// - Shift+Tab (BackTab for backward navigation)
+    /// - Shift+Tab (`BackTab` for backward navigation)
     /// - Ctrl+Space (special input trigger)
     /// - Alternative Home/End sequences
     /// - Numpad keys in application mode
@@ -47,6 +47,7 @@ generate_pty_test! {
 }
 
 /// PTY Master: Send new keyboard sequences and verify parsing
+#[allow(clippy::too_many_lines)]
 fn pty_master_entry_point(
     pty_pair: portable_pty::PtyPair,
     mut child: Box<dyn portable_pty::Child + Send + Sync>,

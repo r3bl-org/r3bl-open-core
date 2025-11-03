@@ -714,11 +714,11 @@ If issues arise:
 - [x] All module exports updated
 - [x] `TEMP_READ_BUFFER_SIZE` const added
 - [x] `cargo check` passes
-- [ ] `cargo clippy --all-targets` passes
-- [ ] `cargo test --all-targets` passes (all tests green)
-- [ ] `cargo test --doc` passes
-- [ ] Manual testing on Linux (DirectToAnsi) successful
-- [ ] Manual testing on non-Linux (Crossterm) successful
+- [x] `cargo clippy --all-targets` passes
+- [x] `cargo test --all-targets` passes (all tests green)
+- [x] `cargo test --doc` passes
+- [x] Manual testing on Linux (DirectToAnsi) successful
+- [x] Manual testing on non-Linux (Crossterm) successful
 - [x] No import errors in any file
 - [x] Documentation updated and accurate
 

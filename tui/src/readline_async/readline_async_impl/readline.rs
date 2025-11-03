@@ -789,76 +789,104 @@ pub mod readline_internal {
         ControlFlowExtended::Continue
     }
 
+    /// Convert crossterm `KeyCode` to canonical `Key`
+    #[must_use]
+    fn convert_key_code_to_key(code: crossterm::event::KeyCode) -> Option<crate::Key> {
+        use crate::{FunctionKey, Key, SpecialKey};
+        use crossterm::event::KeyCode;
+
+        match code {
+            KeyCode::Char(c) => Some(Key::Character(c)),
+            KeyCode::F(n) => {
+                let fn_key = match n {
+                    1 => FunctionKey::F1,
+                    2 => FunctionKey::F2,
+                    3 => FunctionKey::F3,
+                    4 => FunctionKey::F4,
+                    5 => FunctionKey::F5,
+                    6 => FunctionKey::F6,
+                    7 => FunctionKey::F7,
+                    8 => FunctionKey::F8,
+                    9 => FunctionKey::F9,
+                    10 => FunctionKey::F10,
+                    11 => FunctionKey::F11,
+                    12 => FunctionKey::F12,
+                    _ => return None,
+                };
+                Some(Key::FunctionKey(fn_key))
+            }
+            KeyCode::Up => Some(Key::SpecialKey(SpecialKey::Up)),
+            KeyCode::Down => Some(Key::SpecialKey(SpecialKey::Down)),
+            KeyCode::Left => Some(Key::SpecialKey(SpecialKey::Left)),
+            KeyCode::Right => Some(Key::SpecialKey(SpecialKey::Right)),
+            KeyCode::Home => Some(Key::SpecialKey(SpecialKey::Home)),
+            KeyCode::End => Some(Key::SpecialKey(SpecialKey::End)),
+            KeyCode::PageUp => Some(Key::SpecialKey(SpecialKey::PageUp)),
+            KeyCode::PageDown => Some(Key::SpecialKey(SpecialKey::PageDown)),
+            KeyCode::Tab => Some(Key::SpecialKey(SpecialKey::Tab)),
+            KeyCode::BackTab => Some(Key::SpecialKey(SpecialKey::BackTab)),
+            KeyCode::Delete => Some(Key::SpecialKey(SpecialKey::Delete)),
+            KeyCode::Insert => Some(Key::SpecialKey(SpecialKey::Insert)),
+            KeyCode::Enter => Some(Key::SpecialKey(SpecialKey::Enter)),
+            KeyCode::Backspace => Some(Key::SpecialKey(SpecialKey::Backspace)),
+            KeyCode::Esc => Some(Key::SpecialKey(SpecialKey::Esc)),
+            _ => None,
+        }
+    }
+
+    /// Convert crossterm modifiers to canonical modifier mask
+    #[must_use]
+    fn convert_modifier_keys(modifiers: crossterm::event::KeyModifiers) -> crate::ModifierKeysMask {
+        use crossterm::event::KeyModifiers;
+        use crate::KeyState;
+
+        crate::ModifierKeysMask {
+            shift_key_state: if modifiers.contains(KeyModifiers::SHIFT) {
+                KeyState::Pressed
+            } else {
+                KeyState::NotPressed
+            },
+            ctrl_key_state: if modifiers.contains(KeyModifiers::CONTROL) {
+                KeyState::Pressed
+            } else {
+                KeyState::NotPressed
+            },
+            alt_key_state: if modifiers.contains(KeyModifiers::ALT) {
+                KeyState::Pressed
+            } else {
+                KeyState::NotPressed
+            },
+        }
+    }
+
+    /// Convert crossterm mouse button to canonical button
+    #[must_use]
+    fn convert_mouse_button(button: crossterm::event::MouseButton) -> crate::Button {
+        use crossterm::event::MouseButton;
+        use crate::Button;
+
+        match button {
+            MouseButton::Left => Button::Left,
+            MouseButton::Right => Button::Right,
+            MouseButton::Middle => Button::Middle,
+        }
+    }
+
     /// Convert `crossterm::event::Event` to canonical `InputEvent`
     #[must_use] 
     pub fn convert_crossterm_event_to_input_event(
         event: crossterm::event::Event,
     ) -> Option<InputEvent> {
-        use crate::{Button, FunctionKey, Key, KeyPress, KeyState, MouseInputKind,
-                    SpecialKey};
-        use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent,
-                               MouseEventKind};
+        use crate::{KeyPress, KeyState, MouseInputKind};
+        use crossterm::event::{Event, KeyEvent, MouseEvent, MouseEventKind};
 
         match event {
             Event::Key(KeyEvent {
                 code, modifiers, ..
             }) => {
-                let key = match code {
-                    KeyCode::Char(c) => Key::Character(c),
-                    KeyCode::F(n) => {
-                        let fn_key = match n {
-                            1 => FunctionKey::F1,
-                            2 => FunctionKey::F2,
-                            3 => FunctionKey::F3,
-                            4 => FunctionKey::F4,
-                            5 => FunctionKey::F5,
-                            6 => FunctionKey::F6,
-                            7 => FunctionKey::F7,
-                            8 => FunctionKey::F8,
-                            9 => FunctionKey::F9,
-                            10 => FunctionKey::F10,
-                            11 => FunctionKey::F11,
-                            12 => FunctionKey::F12,
-                            _ => return None,
-                        };
-                        Key::FunctionKey(fn_key)
-                    }
-                    KeyCode::Up => Key::SpecialKey(SpecialKey::Up),
-                    KeyCode::Down => Key::SpecialKey(SpecialKey::Down),
-                    KeyCode::Left => Key::SpecialKey(SpecialKey::Left),
-                    KeyCode::Right => Key::SpecialKey(SpecialKey::Right),
-                    KeyCode::Home => Key::SpecialKey(SpecialKey::Home),
-                    KeyCode::End => Key::SpecialKey(SpecialKey::End),
-                    KeyCode::PageUp => Key::SpecialKey(SpecialKey::PageUp),
-                    KeyCode::PageDown => Key::SpecialKey(SpecialKey::PageDown),
-                    KeyCode::Tab => Key::SpecialKey(SpecialKey::Tab),
-                    KeyCode::BackTab => Key::SpecialKey(SpecialKey::BackTab),
-                    KeyCode::Delete => Key::SpecialKey(SpecialKey::Delete),
-                    KeyCode::Insert => Key::SpecialKey(SpecialKey::Insert),
-                    KeyCode::Enter => Key::SpecialKey(SpecialKey::Enter),
-                    KeyCode::Backspace => Key::SpecialKey(SpecialKey::Backspace),
-                    KeyCode::Esc => Key::SpecialKey(SpecialKey::Esc),
-                    _ => return None,
-                };
+                let key = convert_key_code_to_key(code)?;
 
-                let mask = crate::ModifierKeysMask {
-                    shift_key_state: if modifiers.contains(KeyModifiers::SHIFT) {
-                        KeyState::Pressed
-                    } else {
-                        KeyState::NotPressed
-                    },
-                    ctrl_key_state: if modifiers.contains(KeyModifiers::CONTROL) {
-                        KeyState::Pressed
-                    } else {
-                        KeyState::NotPressed
-                    },
-                    alt_key_state: if modifiers.contains(KeyModifiers::ALT) {
-                        KeyState::Pressed
-                    } else {
-                        KeyState::NotPressed
-                    },
-                };
-
+                let mask = convert_modifier_keys(modifiers);
                 let keypress = if mask.shift_key_state == KeyState::NotPressed
                     && mask.ctrl_key_state == KeyState::NotPressed
                     && mask.alt_key_state == KeyState::NotPressed
@@ -876,35 +904,21 @@ pub mod readline_internal {
                 row,
                 modifiers,
             }) => {
+                let modifiers_mask = convert_modifier_keys(modifiers);
                 let mouse_input = crate::MouseInput {
                     pos: crate::Pos {
                         col_index: crate::ColIndex::from(i32::from(column)),
                         row_index: crate::RowIndex::from(i32::from(row)),
                     },
                     kind: match kind {
-                        MouseEventKind::Down(button) => {
-                            let btn = match button {
-                                crossterm::event::MouseButton::Left => Button::Left,
-                                crossterm::event::MouseButton::Right => Button::Right,
-                                crossterm::event::MouseButton::Middle => Button::Middle,
-                            };
-                            MouseInputKind::MouseDown(btn)
+                        MouseEventKind::Down(btn) => {
+                            MouseInputKind::MouseDown(convert_mouse_button(btn))
                         }
-                        MouseEventKind::Up(button) => {
-                            let btn = match button {
-                                crossterm::event::MouseButton::Left => Button::Left,
-                                crossterm::event::MouseButton::Right => Button::Right,
-                                crossterm::event::MouseButton::Middle => Button::Middle,
-                            };
-                            MouseInputKind::MouseUp(btn)
+                        MouseEventKind::Up(btn) => {
+                            MouseInputKind::MouseUp(convert_mouse_button(btn))
                         }
-                        MouseEventKind::Drag(button) => {
-                            let btn = match button {
-                                crossterm::event::MouseButton::Left => Button::Left,
-                                crossterm::event::MouseButton::Right => Button::Right,
-                                crossterm::event::MouseButton::Middle => Button::Middle,
-                            };
-                            MouseInputKind::MouseDrag(btn)
+                        MouseEventKind::Drag(btn) => {
+                            MouseInputKind::MouseDrag(convert_mouse_button(btn))
                         }
                         MouseEventKind::Moved => MouseInputKind::MouseMove,
                         MouseEventKind::ScrollUp => MouseInputKind::ScrollUp,
@@ -912,29 +926,13 @@ pub mod readline_internal {
                         MouseEventKind::ScrollLeft => MouseInputKind::ScrollLeft,
                         MouseEventKind::ScrollRight => MouseInputKind::ScrollRight,
                     },
-                    maybe_modifier_keys: if modifiers.contains(KeyModifiers::SHIFT)
-                        || modifiers.contains(KeyModifiers::CONTROL)
-                        || modifiers.contains(KeyModifiers::ALT)
+                    maybe_modifier_keys: if modifiers_mask.shift_key_state == KeyState::NotPressed
+                        && modifiers_mask.ctrl_key_state == KeyState::NotPressed
+                        && modifiers_mask.alt_key_state == KeyState::NotPressed
                     {
-                        Some(crate::ModifierKeysMask {
-                            shift_key_state: if modifiers.contains(KeyModifiers::SHIFT) {
-                                KeyState::Pressed
-                            } else {
-                                KeyState::NotPressed
-                            },
-                            ctrl_key_state: if modifiers.contains(KeyModifiers::CONTROL) {
-                                KeyState::Pressed
-                            } else {
-                                KeyState::NotPressed
-                            },
-                            alt_key_state: if modifiers.contains(KeyModifiers::ALT) {
-                                KeyState::Pressed
-                            } else {
-                                KeyState::NotPressed
-                            },
-                        })
-                    } else {
                         None
+                    } else {
+                        Some(modifiers_mask)
                     },
                 };
                 Some(InputEvent::Mouse(mouse_input))

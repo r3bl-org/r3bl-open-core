@@ -49,7 +49,8 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
 
     // Wait for slave to confirm it's running and ready
     let mut test_running_seen = false;
-    let mut slave_ready_seen = false;
+    // Note: slave_ready_seen will be assigned in the loop before being read
+    let slave_ready_seen;
     let deadline = Deadline::default();
 
     loop {
