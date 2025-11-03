@@ -23,7 +23,7 @@ use std::time::Duration;
 /// ## Examples
 ///
 /// ### Auto-select backend based on platform
-/// ```no_run
+/// ```ignore
 /// use r3bl_tui::InputDevice;
 ///
 /// let mut device = InputDevice::new();

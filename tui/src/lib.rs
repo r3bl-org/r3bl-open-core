@@ -513,17 +513,13 @@
 //!
 //! **Real-world applications:**
 //! - **Terminal input parsing**: [`integration_tests`] validates VT-100 input sequences
-//! - **Raw mode behavior**: [`unix_integration_tests`] tests termios configuration
+//! - **Raw mode behavior**: [`raw_mode_integration_tests`] tests termios configuration
 //! - **Interactive applications**: Tests readline, editor, and TUI component interactions
 //!
 //! For complete PTY test implementation details and examples, see:
 //! - Macro documentation: [`generate_pty_test!`]
 //! - Input parser tests: [`integration_tests`]
-//! - Raw mode tests: [`unix_integration_tests`]
-//!
-//! [`generate_pty_test!`]: crate::generate_pty_test
-//! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
-//! [`unix_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::unix_integration_tests
+//! - Raw mode tests: [`raw_mode_integration_tests`]
 //!
 //! For complete development setup and all available commands, see the
 //! [repository README](https://github.com/r3bl-org/r3bl-open-core/blob/main/README.md).
@@ -1945,6 +1941,10 @@
 //!
 //! [HasDialogBuffers]: crate::HasDialogBuffers
 //! [DialogEngineConfigOptions]: crate::DialogEngineConfigOptions
+//!
+//! [`generate_pty_test!`]: crate::generate_pty_test
+//! [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
+//! [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
 
 // Enable benchmarking for nightly Rust.
 #![cfg_attr(test, feature(test))]

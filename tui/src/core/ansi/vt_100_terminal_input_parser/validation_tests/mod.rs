@@ -27,6 +27,30 @@
 //! - **Error detection**: Catches bugs in both parser AND generator implementations
 //!
 //! See the [parent module](super#testing-strategy) for the overall testing strategy.
+//!
+//! ## ⚠️ WARNING: DO NOT Refactor These Tests to Use Generators!
+//!
+//! If you're considering replacing hardcoded sequences in this module with generator
+//! function calls, **STOP**! This would break the validation chain:
+//!
+//! ```text
+//! ❌ BROKEN: Circular validation (no ground truth)
+//!    Generator → Bytes → Parser → Generator validates itself ✗
+//!
+//! ✅ CORRECT: Independent validation against reality
+//!    Terminal observation → Bytes → Parser validates against reality ✓
+//!    Generator → Bytes validates against reality ✓
+//! ```
+//!
+//! **These hardcoded sequences ARE the ground truth.** The generators in
+//! [`test_fixtures::input_sequence_generator`] are validated by producing sequences
+//! that match these literals.
+//!
+//! If you want to test generator correctness, see the round-trip tests in
+//! [`unit_tests::generator_round_trip_tests`] instead.
+//!
+//! [`test_fixtures::input_sequence_generator`]: super::test_fixtures
+//! [`unit_tests::generator_round_trip_tests`]: super::unit_tests::generator_round_trip_tests
 
 #[cfg(any(test, doc))]
 pub mod observe_real_interactive_terminal_input_events;

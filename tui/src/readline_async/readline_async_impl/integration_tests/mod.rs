@@ -33,7 +33,11 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 #[cfg(any(test, doc))]
-pub mod pty_ctrl_d_test;
+pub mod pty_ctrl_d_eof_test;
+#[cfg(any(test, doc))]
+pub mod pty_ctrl_d_delete_test;
+#[cfg(any(test, doc))]
+pub mod pty_ctrl_u_test;
 #[cfg(any(test, doc))]
 pub mod pty_ctrl_w_test;
 #[cfg(any(test, doc))]

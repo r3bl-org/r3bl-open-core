@@ -164,3 +164,4 @@ pub const SGR_MOUSE_MODE: u16 = 1006;
 /// content differently from keyboard input. This prevents misinterpretation of
 /// special characters in pasted content.
 pub const BRACKETED_PASTE_MODE: u16 = 2004;
+

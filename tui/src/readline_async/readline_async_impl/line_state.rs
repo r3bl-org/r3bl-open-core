@@ -5,7 +5,7 @@ use crate::ModifierKeysMask;
 use crate::{ArrayBoundsCheck, ArrayOverflowResult, IndexOps, InputEvent, Key, KeyPress,
             KeyState, LINE_FEED_BYTE, MemoizedLenMap, ReadlineError, ReadlineEvent,
             SafeHistory, SpecialKey, StringLength, core::coordinates::idx,
-            find_next_word_end, find_prev_word_start, ok};
+            find_next_word_end, find_next_word_start, find_prev_word_start, ok};
 use crossterm::{QueueableCommand, cursor,
                 terminal::{Clear,
                            ClearType::{All, FromCursorDown}}};
@@ -700,9 +700,18 @@ mod apply_event_and_render_helper {
     ) -> Result<Option<ReadlineEvent>, ReadlineError> {
         early_return_if_paused!(line_state @None);
 
-        if let Some((pos, str)) = line_state.current_grapheme() {
-            let pos = pos + str.len();
-            line_state.line.drain(0..pos);
+        // Delete from start of line (position 0) to cursor position
+        // If cursor is at position 0, this deletes nothing (0..0)
+        // If cursor is in middle or end, deletes from start to cursor
+        let cursor_pos = line_state.line_cursor_grapheme;
+        if cursor_pos > 0 {
+            // Convert grapheme cursor position to byte offset
+            let graphemes: Vec<_> = line_state.line.grapheme_indices(true).collect();
+            let cursor_byte_pos = graphemes
+                .get(cursor_pos)
+                .map_or(line_state.line.len(), |(i, _)| *i);
+
+            line_state.line.drain(0..cursor_byte_pos);
             line_state.move_cursor(-100_000)?;
             line_state.clear_and_render_and_flush(term)?;
         }
@@ -812,10 +821,10 @@ mod apply_event_and_render_helper {
         let line_len = line_state.line.graphemes(true).count();
 
         if cursor_pos < line_len {
-            // Find end of next word using word_boundaries module
-            let word_end = find_next_word_end(&line_state.line, cursor_pos);
+            // Find start of next word using word_boundaries module
+            let word_start = find_next_word_start(&line_state.line, cursor_pos);
             #[allow(clippy::cast_possible_wrap)]
-            let movement = word_end as isize - cursor_pos as isize;
+            let movement = word_start as isize - cursor_pos as isize;
             line_state.move_cursor(movement)?;
         }
 
@@ -862,10 +871,10 @@ mod apply_event_and_render_helper {
         let line_len = line_state.line.graphemes(true).count();
 
         if cursor_pos < line_len {
-            // Find end of next word
-            let word_end = find_next_word_end(&line_state.line, cursor_pos);
+            // Find start of next word
+            let word_start = find_next_word_start(&line_state.line, cursor_pos);
             #[allow(clippy::cast_possible_wrap)]
-            let movement = word_end as isize - cursor_pos as isize;
+            let movement = word_start as isize - cursor_pos as isize;
             line_state.move_cursor(movement)?;
         }
 
@@ -1360,25 +1369,25 @@ mod tests {
             },
         });
 
-        // First Ctrl+Right should move to end of "hello"
+        // First Ctrl+Right should move to start of "world" (after hyphen)
         line.apply_event_and_render(
             &event,
             &mut *safe_output_terminal.lock().unwrap(),
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line_cursor_grapheme, 5);
+        assert_eq!(line.line_cursor_grapheme, 6);
 
-        // Second Ctrl+Right should move to end of "world"
+        // Second Ctrl+Right should move to start of "foo"
         line.apply_event_and_render(
             &event,
             &mut *safe_output_terminal.lock().unwrap(),
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line_cursor_grapheme, 11);
+        assert_eq!(line.line_cursor_grapheme, 12);
 
-        // Third Ctrl+Right should move to end of "foo"
+        // Third Ctrl+Right should move to end (no next word)
         line.apply_event_and_render(
             &event,
             &mut *safe_output_terminal.lock().unwrap(),
@@ -1456,25 +1465,25 @@ mod tests {
             },
         });
 
-        // First Alt+F should move to end of "one"
+        // First Alt+F should move to start of "two"
         line.apply_event_and_render(
             &event,
             &mut *safe_output_terminal.lock().unwrap(),
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line_cursor_grapheme, 3);
+        assert_eq!(line.line_cursor_grapheme, 4);
 
-        // Second Alt+F should move to end of "two"
+        // Second Alt+F should move to start of "three"
         line.apply_event_and_render(
             &event,
             &mut *safe_output_terminal.lock().unwrap(),
             &safe_history,
         )
         .unwrap();
-        assert_eq!(line.line_cursor_grapheme, 7);
+        assert_eq!(line.line_cursor_grapheme, 8);
 
-        // Third Alt+F should move to end of "three"
+        // Third Alt+F should move to end (no next word)
         line.apply_event_and_render(
             &event,
             &mut *safe_output_terminal.lock().unwrap(),

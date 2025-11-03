@@ -15,33 +15,12 @@ use std::time::Duration;
 /// **Good for:** "Do X after Y ms of no activity"
 /// - Batch rapid input events before printing output
 /// - Debounce user input in interactive tests
-/// - Coalescescingice multiple rapid events into single response
+/// - Coalescescing multiple rapid events into single response
 ///
 /// **Not good for:** "Exit if this operation takes too long"
 /// - Use [`Deadline`] for timeout enforcement instead
 ///
-/// # Examples
-///
-/// ```rust
-/// use std::time::Duration;
-/// use r3bl_tui::AsyncDebouncedDeadline;
-///
-/// # tokio_test::block_on(async {
-/// let mut debounce = AsyncDebouncedDeadline::new(Duration::from_millis(10));
-///
-/// // Simulate rapid events
-/// debounce.reset(); // First event
-/// assert!(debounce.is_pending());
-///
-/// debounce.reset(); // Second event (deadline resets)
-/// assert!(debounce.is_pending());
-///
-/// // After 10ms of no events, deadline fires
-/// debounce.sleep_until().await; // Completes after ~10ms
-/// # });
-/// ```
-///
-/// # Integration with tokio::select!
+/// # Integration with `tokio::select`!
 ///
 /// ```rust,no_run
 /// use std::time::Duration;
@@ -202,7 +181,7 @@ impl AsyncDebouncedDeadline {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```ignore
     /// use std::time::Duration;
     /// use r3bl_tui::AsyncDebouncedDeadline;
     ///

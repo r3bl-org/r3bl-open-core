@@ -9,55 +9,47 @@ use std::{io::{BufRead, BufReader, Write},
           time::Duration};
 
 generate_pty_test! {
-    /// PTY-based integration test for Alt+D and Alt+Backspace word killing.
+    /// PTY-based integration test for Ctrl+D EOF behavior on empty line.
     ///
-    /// Validates that Alt+D (kill word forward) and Alt+Backspace (kill word backward)
-    /// correctly delete words at word boundaries.
+    /// Validates that Ctrl+D on an empty line returns EOF ([`ReadlineEvent::Eof`]).
     ///
-    /// Run with: `cargo test -p r3bl_tui --lib test_pty_alt_kill -- --nocapture`
-    ///
-    /// Tests:
-    /// 1. Alt+D: Delete word forward from cursor
-    /// 2. Alt+Backspace: Delete word backward from cursor
-    /// 3. Word deletion with punctuation boundaries
+    /// Run with: `cargo test -p r3bl_tui --lib test_pty_ctrl_d_eof -- --nocapture`
     ///
     /// ## Test Protocol (Request-Response Pattern)
     ///
     /// This test uses a **request-response protocol** between master and slave:
     ///
-    /// 1. **Master sends input** (e.g., "hello-world" or Alt+D sequences)
+    /// 1. **Master sends input** (Ctrl+D on empty line)
     /// 2. **Master flushes** and waits ~200ms for slave to process
-    /// 3. **Master blocks** reading slave stdout until it sees "Line: ..."
-    /// 4. **Master makes assertion** on the line state
-    /// 5. **Repeat** for next input sequence
+    /// 3. **Master blocks** reading slave stdout until it sees "EOF"
+    /// 4. **Master makes assertion** on the EOF signal
     ///
-    /// **Critical requirement**: Slave must output line state **only once** after
-    /// processing all available input, not after every character. Otherwise, master
-    /// will read intermediate states.
+    /// The ([`LineState`]) is checked in the test to make assertions against.
     ///
-    /// The ([`LineState`]) is checked in the tests to make assertions against.
-    ///
+    /// [`ReadlineEvent::Eof`]: crate::ReadlineEvent::Eof
     /// [`LineState`]: crate::readline_async::readline_async_impl::LineState
-    test_fn: test_pty_alt_kill,
+    test_fn: test_pty_ctrl_d_eof,
     master: pty_master_entry_point,
     slave: pty_slave_entry_point
 }
 
-/// PTY Master: Send Alt+D/Backspace sequences and verify word deletion
+/// PTY Master: Send Ctrl+D on empty line and verify EOF
 fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
-    eprintln!("🚀 PTY Master: Starting Alt+D/Backspace test...");
+    eprintln!("🚀 PTY Master: Starting Ctrl+D EOF test...");
 
     let mut writer = pty_pair.master.take_writer().expect("Failed to get writer");
     let reader_non_blocking = pty_pair
         .master
         .try_clone_reader()
-        .expect("Failed to get reader");
+        .expect("Failed to clone reader");
+
     let mut buf_reader_non_blocking = BufReader::new(reader_non_blocking);
 
     eprintln!("📝 PTY Master: Waiting for slave to start...");
 
-    // Wait for slave to confirm it's running
+    // Wait for slave to confirm it's running and ready
     let mut test_running_seen = false;
+    let mut slave_ready_seen = false;
     let deadline = Deadline::default();
 
     loop {
@@ -79,6 +71,10 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
                 }
                 if trimmed.contains("SLAVE_STARTING") {
                     eprintln!("  ✓ Slave confirmed running!");
+                }
+                if trimmed.contains("SLAVE_READY") {
+                    slave_ready_seen = true;
+                    eprintln!("  ✓ Slave is ready (raw mode enabled, input device created)");
                     break;
                 }
             }
@@ -92,6 +88,10 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
     assert!(
         test_running_seen,
         "Slave test never started running (no TEST_RUNNING output)"
+    );
+    assert!(
+        slave_ready_seen,
+        "Slave never signaled ready (no SLAVE_READY output)"
     );
 
     // Helper function to read line state, skipping debug output
@@ -115,94 +115,19 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
         }
     };
 
-    // Test 1: Alt+D to delete word forward
-    eprintln!("📝 PTY Master: Test 1 - Alt+D to delete word forward...");
-
-    // Send "hello world test"
-    writer
-        .write_all(b"hello world test")
-        .expect("Failed to write text");
+    // Test: Ctrl+D on empty line → EOF
+    eprintln!("📝 PTY Master: Sending Ctrl+D on empty line...");
+    writer.write_all(&[0x04]).expect("Failed to write Ctrl+D");
     writer.flush().expect("Failed to flush");
     std::thread::sleep(Duration::from_millis(200));
 
     let result = read_line_state();
-    eprintln!("  ← Initial line: {result}");
-    assert_eq!(result, "Line: hello world test, Cursor: 16");
+    eprintln!("  ← Slave response: {result}");
+    assert!(result.contains("EOF"), "Expected EOF, got: {result}");
 
-    // Move to start with Ctrl+A
-    writer.write_all(&[0x01]).expect("Failed to write Ctrl+A");
-    writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
+    eprintln!("✅ PTY Master: Ctrl+D EOF test passed!");
 
-    let result = read_line_state();
-    eprintln!("  ← After Ctrl+A: {result}");
-    assert_eq!(result, "Line: hello world test, Cursor: 0");
-
-    // Alt+D to delete "hello"
-    // Alt+D is ESC d
-    writer.write_all(b"\x1bd").expect("Failed to write Alt+D");
-    writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
-
-    let result = read_line_state();
-    eprintln!("  ← After Alt+D: {result}");
-    assert_eq!(result, "Line:  world test, Cursor: 0");
-
-    // Test 2: Alt+Backspace to delete word backward
-    eprintln!("📝 PTY Master: Test 2 - Alt+Backspace to delete word backward...");
-
-    // Move cursor to end with Ctrl+E, then clear with Ctrl+U
-    writer.write_all(&[0x05]).expect("Failed to write Ctrl+E");
-    writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
-
-    let result = read_line_state();
-    eprintln!("  ← After Ctrl+E: {result}");
-
-    writer.write_all(&[0x15]).expect("Failed to write Ctrl+U");
-    writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
-
-    let result = read_line_state();
-    eprintln!("  ← After clear: {result}");
-
-    writer
-        .write_all(b"one two three")
-        .expect("Failed to write text");
-    writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(200));
-
-    let result = read_line_state();
-    eprintln!("  ← New line: {result}");
-    assert_eq!(result, "Line: one two three, Cursor: 13");
-
-    // Alt+Backspace to delete "three"
-    // Alt+Backspace is ESC DEL (0x7f)
-    writer
-        .write_all(b"\x1b\x7f")
-        .expect("Failed to write Alt+Backspace");
-    writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
-
-    let result = read_line_state();
-    eprintln!("  ← After Alt+Backspace: {result}");
-    assert_eq!(result, "Line: one two , Cursor: 8");
-
-    // Test 3: Another Alt+Backspace to delete "two"
-    eprintln!("📝 PTY Master: Test 3 - Another Alt+Backspace...");
-    writer
-        .write_all(b"\x1b\x7f")
-        .expect("Failed to write Alt+Backspace");
-    writer.flush().expect("Failed to flush");
-    std::thread::sleep(Duration::from_millis(100));
-
-    let result = read_line_state();
-    eprintln!("  ← After Alt+Backspace: {result}");
-    assert_eq!(result, "Line: one , Cursor: 4");
-
-    eprintln!("🧹 PTY Master: Cleaning up...");
-    drop(writer);
-
+    // Wait for child to exit
     match child.wait() {
         Ok(status) => {
             eprintln!("✅ PTY Master: Slave exited: {status:?}");
@@ -211,11 +136,9 @@ fn pty_master_entry_point(pty_pair: Pair, mut child: ControlledChild) {
             panic!("Failed to wait for slave: {e}");
         }
     }
-
-    eprintln!("✅ PTY Master: Test passed!");
 }
 
-/// PTY Slave: Process readline input and report line state
+/// PTY Slave: Process readline input and report EOF
 fn pty_slave_entry_point() -> ! {
     use crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice;
 
@@ -228,6 +151,7 @@ fn pty_slave_entry_point() -> ! {
     } else {
         println!("✓ PTY Slave: Terminal in raw mode");
     }
+    std::io::stdout().flush().expect("Failed to flush");
 
     let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
@@ -241,6 +165,8 @@ fn pty_slave_entry_point() -> ! {
         let safe_history = Arc::new(StdMutex::new(history));
 
         println!("🔍 PTY Slave: LineState created, reading input...");
+        println!("SLAVE_READY");  // Signal to master that we're ready to receive input
+        std::io::stdout().flush().expect("Failed to flush");
 
         let mut input_device = DirectToAnsiInputDevice::new();
 
@@ -253,7 +179,7 @@ fn pty_slave_entry_point() -> ! {
 
         // Debounced state: Buffer line state and print after 10ms of no events
         // Pattern: "Do X after Y ms of no activity"
-        // This batches rapid input (e.g., "one two three" arrives as 13 chars
+        // This batches rapid input (e.g., "hello" arrives as 5 chars
         // within ~1-2ms, all processed before first print at ~12ms)
         let mut buffered_state = DebouncedState::new(Duration::from_millis(10));
 
@@ -277,6 +203,13 @@ fn pty_slave_entry_point() -> ! {
                             match result {
                                 Ok(Some(readline_event)) => {
                                     println!("🔍 PTY Slave: ReadlineEvent: {readline_event:?}");
+
+                                    // Check if it's EOF - print immediately and exit
+                                    if matches!(readline_event, crate::ReadlineEvent::Eof) {
+                                        println!("EOF");
+                                        std::io::stdout().flush().expect("Failed to flush");
+                                        break;
+                                    }
                                 }
                                 Ok(None) => {
                                     // Buffer the current line state and reset debounce timer.
@@ -299,7 +232,8 @@ fn pty_slave_entry_point() -> ! {
                         }
                     }
                 }
-                // -------- Branch 2: Print buffered state after debounce delay --------
+
+                // -------- Branch 2: Debounce timer expired, print buffered state --------
                 // If we should poll the debounced state, then sleep until the debounce timer expires, and when it fires, execute this code.
                 () = buffered_state.sleep_until(), if buffered_state.should_poll() => {
                     // No new events arrived within 10ms, print the buffered line state
@@ -309,20 +243,17 @@ fn pty_slave_entry_point() -> ! {
                     }
                 }
 
-                // -------- Branch 3: Exit on inactivity timeout --------
+                // -------- Branch 3: Inactivity timeout - exit test --------
                 () = inactivity_watchdog.sleep_until() => {
-                    println!("🔍 PTY Slave: Inactivity timeout hit, exiting");
+                    println!("🔍 PTY Slave: Inactivity timeout - exiting");
                     break;
                 }
             }
         }
 
         println!("🔍 PTY Slave: Completed, exiting");
+        std::io::stdout().flush().expect("Failed to flush");
     });
-
-    if let Err(e) = crate::core::ansi::terminal_raw_mode::disable_raw_mode() {
-        println!("⚠️  PTY Slave: Failed to disable raw mode: {e}");
-    }
 
     println!("🔍 Slave: Completed, exiting");
     std::process::exit(0);

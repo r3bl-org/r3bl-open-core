@@ -57,6 +57,7 @@
 //! - Parse CSI sequences (ESC [) for arrow keys, function keys, special keys
 //! - Parse SS3 sequences (ESC O) for application mode keys (F1-F4, Home, End, arrows)
 //! - Handle modifier combinations (Shift, Ctrl, Alt)
+//! - Handle control characters and ambiguous key mappings (see [`mod@keyboard`] for details)
 //! - Support Kitty keyboard protocol for extended functionality
 //!
 //! ### mouse.rs

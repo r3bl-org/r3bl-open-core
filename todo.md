@@ -29,6 +29,10 @@
 - [⌛] use [`task_remove_crossterm`](task/task_remove_crossterm.md) to remove crossterm from the
   `r3bl_open_core` codebase
 
+- [⌛] use [`task_readline_async_add_shortcuts.md`](task/task_readline_async_add_shortcuts.md) to
+  add `readline_async` support for all the shortcuts that we don't currently support but `readline`
+  does
+
 - [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to
       unify `CliText` and `TuiStyledText` rendering paths
 

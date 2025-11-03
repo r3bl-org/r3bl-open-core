@@ -13,6 +13,8 @@
 //! - **Bracketed Paste End**: `ESC [ 201 ~`
 
 use super::types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
+use crate::core::ansi::constants::{ANSI_ESC, ANSI_CSI_BRACKET,
+                                   FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL};
 
 /// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if
 /// recognized.
@@ -33,15 +35,15 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     }
 
     // Check for ESC [ sequence start
-    if buffer[0] != 0x1B || buffer[1] != 0x5B {
+    if buffer[0] != ANSI_ESC || buffer[1] != ANSI_CSI_BRACKET {
         return None;
     }
 
     // Handle simple focus events (single character after ESC[)
     if buffer.len() == 3 {
         match buffer[2] {
-            b'I' => return Some((VT100InputEvent::Focus(VT100FocusState::Gained), 3)),
-            b'O' => return Some((VT100InputEvent::Focus(VT100FocusState::Lost), 3)),
+            FOCUS_GAINED_FINAL => return Some((VT100InputEvent::Focus(VT100FocusState::Gained), 3)),
+            FOCUS_LOST_FINAL => return Some((VT100InputEvent::Focus(VT100FocusState::Lost), 3)),
             _ => {}
         }
     }
@@ -189,7 +191,7 @@ mod tests {
     #[test]
     fn test_invalid_sequences() {
         // Test: incomplete sequence (too short)
-        assert_eq!(parse_terminal_event(b"\x1b"), None);
+        assert_eq!(parse_terminal_event(&[ANSI_ESC]), None);
 
         // Test: sequence without CSI start
         assert_eq!(parse_terminal_event(b"abc"), None);

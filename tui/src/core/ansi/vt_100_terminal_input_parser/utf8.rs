@@ -50,6 +50,13 @@
 //! text rendering utilities.
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
+use crate::{
+    UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK, UTF8_2BYTE_MAX,
+    UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX, UTF8_3BYTE_MIN,
+    UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
+    UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
+    UTF8_CONTINUATION_PATTERN,
+};
 
 /// Parse UTF-8 text and return a single `InputEvent` for the first complete character.
 ///
@@ -63,7 +70,7 @@ use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 /// The caller (`DirectToAnsiInputDevice`) can call this repeatedly to parse
 /// multiple characters from the buffer.
 ///
-/// # Important: bytes_consumed ≠ display width
+/// # Important: `bytes_consumed` ≠ display width
 ///
 /// The returned `bytes_consumed` indicates how many bytes to advance in the input
 /// buffer. This is **NOT** the display width (terminal columns) of the character.
@@ -112,7 +119,7 @@ fn is_utf8_complete(buffer: &[u8]) -> Option<usize> {
     // Verify all continuation bytes are correctly formatted
     for byte in buffer.iter().skip(1).take(required_len - 1) {
         // Continuation bytes must be 10xxxxxx (0x80-0xBF)
-        if (byte & 0xC0) != 0x80 {
+        if (byte & UTF8_CONTINUATION_MASK) != UTF8_CONTINUATION_PATTERN {
             return None; // Invalid continuation byte
         }
     }
@@ -138,38 +145,38 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 
     let codepoint = match first_byte {
         // 1-byte sequence: 0xxxxxxx
-        0x00..=0x7F => u32::from(first_byte),
+        UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => u32::from(first_byte),
 
         // 2-byte sequence: 110xxxxx 10xxxxxx
-        0xC0..=0xDF => {
+        UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => {
             if buffer.len() < 2 {
                 return None;
             }
-            let b1 = u32::from(first_byte & 0x1F);
-            let b2 = u32::from(buffer[1] & 0x3F);
+            let b1 = u32::from(first_byte & UTF8_2BYTE_FIRST_MASK);
+            let b2 = u32::from(buffer[1] & UTF8_CONTINUATION_DATA_MASK);
             (b1 << 6) | b2
         }
 
         // 3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx
-        0xE0..=0xEF => {
+        UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => {
             if buffer.len() < 3 {
                 return None;
             }
-            let b1 = u32::from(first_byte & 0x0F);
-            let b2 = u32::from(buffer[1] & 0x3F);
-            let b3 = u32::from(buffer[2] & 0x3F);
+            let b1 = u32::from(first_byte & UTF8_3BYTE_FIRST_MASK);
+            let b2 = u32::from(buffer[1] & UTF8_CONTINUATION_DATA_MASK);
+            let b3 = u32::from(buffer[2] & UTF8_CONTINUATION_DATA_MASK);
             (b1 << 12) | (b2 << 6) | b3
         }
 
         // 4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-        0xF0..=0xF7 => {
+        UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => {
             if buffer.len() < 4 {
                 return None;
             }
-            let b1 = u32::from(first_byte & 0x07);
-            let b2 = u32::from(buffer[1] & 0x3F);
-            let b3 = u32::from(buffer[2] & 0x3F);
-            let b4 = u32::from(buffer[3] & 0x3F);
+            let b1 = u32::from(first_byte & UTF8_4BYTE_FIRST_MASK);
+            let b2 = u32::from(buffer[1] & UTF8_CONTINUATION_DATA_MASK);
+            let b3 = u32::from(buffer[2] & UTF8_CONTINUATION_DATA_MASK);
+            let b4 = u32::from(buffer[3] & UTF8_CONTINUATION_DATA_MASK);
             (b1 << 18) | (b2 << 12) | (b3 << 6) | b4
         }
 
@@ -207,16 +214,16 @@ fn decode_utf8(buffer: &[u8]) -> Option<char> {
 fn get_utf8_length(first_byte: u8) -> Option<usize> {
     match first_byte {
         // ASCII: single byte (0xxxxxxx)
-        0x00..=0x7F => Some(1),
+        UTF8_1BYTE_MIN..=UTF8_1BYTE_MAX => Some(1),
         // Start byte for 2-byte sequence (110xxxxx)
-        0xC0..=0xDF => Some(2),
+        UTF8_2BYTE_MIN..=UTF8_2BYTE_MAX => Some(2),
         // Start byte for 3-byte sequence (1110xxxx)
-        0xE0..=0xEF => Some(3),
+        UTF8_3BYTE_MIN..=UTF8_3BYTE_MAX => Some(3),
         // Start byte for 4-byte sequence (11110xxx)
-        0xF0..=0xF7 => Some(4),
+        UTF8_4BYTE_MIN..=UTF8_4BYTE_MAX => Some(4),
         // Continuation byte (10xxxxxx) - invalid as start byte
         // Reserved/invalid bytes (11111xxx)
-        0x80..=0xBF | 0xF8..=0xFF => None,
+        _ => None,
     }
 }
 

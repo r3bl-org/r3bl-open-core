@@ -70,8 +70,8 @@
 ///
 /// ## PTY Stream Behavior
 ///
-/// **Important:** In a PTY, stdout and stderr are **merged into a single stream** from the
-/// master's perspective. This means:
+/// **Important:** In a PTY, stdout and stderr are **merged into a single stream** from
+/// the master's perspective. This means:
 ///
 /// - Slave's `println!()` and `eprintln!()` both go to the same merged stream
 /// - Master reads both streams together via `pty_pair.master.try_clone_reader()`
@@ -116,10 +116,10 @@
 /// # Examples of code using this macro
 ///
 /// For complete PTY test implementations, see:
-/// - [`unix_integration_tests`] - Tests raw mode itself
+/// - [`raw_mode_integration_tests`] - Tests raw mode itself
 /// - [`integration_tests`] - Tests input parsing
 ///
-/// [`unix_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::unix_integration_tests
+/// [`raw_mode_integration_tests`]: mod@crate::core::ansi::terminal_raw_mode::integration_tests
 /// [`integration_tests`]: mod@crate::core::ansi::vt_100_terminal_input_parser::integration_tests
 #[macro_export]
 macro_rules! generate_pty_test {

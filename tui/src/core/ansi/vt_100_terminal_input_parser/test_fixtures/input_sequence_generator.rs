@@ -18,8 +18,8 @@
 
 use crate::core::ansi::{constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
                                     ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
-                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL, CSI_PREFIX,
-                                    FUNCTION_F1_CODE, FUNCTION_F2_CODE,
+                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL, CONTROL_NUL,
+                                    CSI_PREFIX, FUNCTION_F1_CODE, FUNCTION_F2_CODE,
                                     FUNCTION_F3_CODE, FUNCTION_F4_CODE,
                                     FUNCTION_F5_CODE, FUNCTION_F6_CODE,
                                     FUNCTION_F7_CODE, FUNCTION_F8_CODE,
@@ -75,6 +75,153 @@ pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
     }
 }
 
+/// Generate ANSI bytes for a mouse event in X10/Normal format.
+///
+/// Generates sequences like: `ESC [ M Cb Cx Cy` (6 bytes)
+///
+/// ## X10 Format Details
+///
+/// - `Cb` = button byte: button code (0-2) + modifier flags + motion flag
+/// - `Cx` = column byte: actual_column + 32 (ASCII offset encoding)
+/// - `Cy` = row byte: actual_row + 32 (ASCII offset encoding)
+///
+/// Button encoding:
+/// - Bits 0-1: Button (0=left, 1=middle, 2=right, 3=release)
+/// - Bit 2: Shift modifier (4)
+/// - Bit 3: Alt modifier (8)
+/// - Bit 4: Ctrl modifier (16)
+/// - Bit 5: Motion flag (32)
+///
+/// ## Parameters
+///
+/// - `button`: Mouse button
+/// - `col`: Column coordinate (1-based)
+/// - `row`: Row coordinate (1-based)
+/// - `action`: Press, Release, Motion, or Drag
+/// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
+#[must_use]
+pub fn generate_x10_mouse_sequence(
+    button: VT100MouseButton,
+    col: u16,
+    row: u16,
+    action: VT100MouseAction,
+    modifiers: VT100KeyModifiers,
+) -> Vec<u8> {
+    use crate::core::ansi::constants::MOUSE_X10_PREFIX;
+
+    // Base button code
+    let button_code = match button {
+        VT100MouseButton::Left => 0,
+        VT100MouseButton::Middle => 1,
+        VT100MouseButton::Right => 2,
+        VT100MouseButton::Unknown => 0,
+    };
+
+    let mut cb = button_code;
+
+    // Handle action
+    match action {
+        VT100MouseAction::Release => cb = 3, // Release always sends button=3
+        VT100MouseAction::Motion => cb |= 32, // Motion flag (bit 5)
+        VT100MouseAction::Drag => cb |= 32,   // Drag is motion with button
+        VT100MouseAction::Press => {},        // Press uses base button code
+        VT100MouseAction::Scroll(_) => {},    // Not typically used in X10
+    }
+
+    // Apply modifiers
+    if modifiers.shift {
+        cb |= 4; // Bit 2
+    }
+    if modifiers.alt {
+        cb |= 8; // Bit 3
+    }
+    if modifiers.ctrl {
+        cb |= 16; // Bit 4
+    }
+
+    // X10 coordinate encoding: add 32 to make printable ASCII
+    #[allow(clippy::cast_possible_truncation)]
+    let cx = (col + 32) as u8;
+    #[allow(clippy::cast_possible_truncation)]
+    let cy = (row + 32) as u8;
+
+    // Build sequence: ESC [ M Cb Cx Cy
+    let mut bytes = MOUSE_X10_PREFIX.to_vec();
+    bytes.push(cb);
+    bytes.push(cx);
+    bytes.push(cy);
+    bytes.push(CONTROL_NUL); // Null terminator (some implementations include this)
+    bytes
+}
+
+/// Generate ANSI bytes for a mouse event in RXVT format.
+///
+/// Generates sequences like: `ESC [ Cb ; Cx ; Cy M` (variable length)
+///
+/// ## RXVT Format Details
+///
+/// Uses decimal numbers separated by semicolons (human-readable format):
+/// - `Cb` = button code (decimal): button (0-2) + modifier bits
+/// - `Cx` = column coordinate (decimal, 1-based)
+/// - `Cy` = row coordinate (decimal, 1-based)
+/// - Final: `M` for press
+///
+/// ## Parameters
+///
+/// - `button`: Mouse button
+/// - `col`: Column coordinate (1-based)
+/// - `row`: Row coordinate (1-based)
+/// - `action`: Press or Release (RXVT primarily uses Press)
+/// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
+#[must_use]
+pub fn generate_rxvt_mouse_sequence(
+    button: VT100MouseButton,
+    col: u16,
+    row: u16,
+    action: VT100MouseAction,
+    modifiers: VT100KeyModifiers,
+) -> Vec<u8> {
+    // Base button code
+    let button_code = match button {
+        VT100MouseButton::Left => 0,
+        VT100MouseButton::Middle => 1,
+        VT100MouseButton::Right => 2,
+        VT100MouseButton::Unknown => 0,
+    };
+
+    let mut cb = button_code;
+
+    // Handle action
+    match action {
+        VT100MouseAction::Release => cb = 3,
+        VT100MouseAction::Motion => cb |= 32,
+        VT100MouseAction::Drag => cb |= 32,
+        VT100MouseAction::Press => {},
+        VT100MouseAction::Scroll(_) => {},
+    }
+
+    // Apply modifiers (same encoding as X10)
+    if modifiers.shift {
+        cb |= 4;
+    }
+    if modifiers.alt {
+        cb |= 8;
+    }
+    if modifiers.ctrl {
+        cb |= 16;
+    }
+
+    // Build sequence: ESC [ Cb ; Cx ; Cy M
+    let mut bytes = CSI_PREFIX.to_vec();
+    bytes.extend_from_slice(cb.to_string().as_bytes());
+    bytes.push(b';');
+    bytes.extend_from_slice(col.to_string().as_bytes());
+    bytes.push(b';');
+    bytes.extend_from_slice(row.to_string().as_bytes());
+    bytes.push(b'M');
+    bytes
+}
+
 /// Generate ANSI bytes for a mouse event in SGR format.
 ///
 /// Generates sequences like: `ESC[<button;col;rowM` or `ESC[<button;col;rowm`
@@ -86,7 +233,7 @@ pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
 /// - `row`: Row coordinate (1-based)
 /// - `action`: Press, Release, or Drag
 /// - `modifiers`: Key modifiers (Shift, Ctrl, Alt)
-#[must_use] 
+#[must_use]
 pub fn generate_mouse_sequence_bytes(
     button: VT100MouseButton,
     col: u16,
@@ -94,10 +241,22 @@ pub fn generate_mouse_sequence_bytes(
     action: VT100MouseAction,
     modifiers: VT100KeyModifiers,
 ) -> Vec<u8> {
-    let button_code = match button {
-        VT100MouseButton::Middle => 1,
-        VT100MouseButton::Right => 2,
-        VT100MouseButton::Left | VT100MouseButton::Unknown => 0, // Left or unknown default to 0
+    // Handle scroll events: buttons 64-67 (up), 68-71 (down)
+    let button_code = match action {
+        VT100MouseAction::Scroll(scroll_dir) => {
+            use crate::core::ansi::vt_100_terminal_input_parser::VT100ScrollDirection;
+            match scroll_dir {
+                VT100ScrollDirection::Up => 64,
+                VT100ScrollDirection::Down => 68,
+                VT100ScrollDirection::Left => 66,  // Horizontal scroll
+                VT100ScrollDirection::Right => 67, // Horizontal scroll
+            }
+        }
+        _ => match button {
+            VT100MouseButton::Middle => 1,
+            VT100MouseButton::Right => 2,
+            VT100MouseButton::Left | VT100MouseButton::Unknown => 0,
+        }
     };
 
     // Apply modifiers and action flags to button code
@@ -116,18 +275,17 @@ pub fn generate_mouse_sequence_bytes(
         }
     };
 
-    // Apply modifiers: shift=1, alt=2, ctrl=4
-    let mut modifier_bits: u8 = 0;
+    // Apply modifiers: shift=4, alt=8, ctrl=16 (bits 2, 3, 4)
+    // These match the encoding used by the parser in extract_modifiers()
     if modifiers.shift {
-        modifier_bits |= 1;
+        code |= 4;
     }
     if modifiers.alt {
-        modifier_bits |= 2;
+        code |= 8;
     }
     if modifiers.ctrl {
-        modifier_bits |= 4;
+        code |= 16;
     }
-    code |= modifier_bits;
 
     // Build sequence: ESC[<button;col;rowM/m
     let mut bytes = MOUSE_SGR_PREFIX.to_vec();

@@ -1,18 +1,18 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! PTY-based integration tests for raw mode functionality.
+//! Test 1: Basic enable/disable functionality.
 //!
-//! These tests verify that raw mode can be enabled, disabled, and properly
-//! restores terminal state using actual PTY pairs.
+//! Verifies that raw mode can be enabled, disabled, and properly restores
+//! terminal state using actual PTY pairs. This is the foundational test
+//! that ensures the basic lifecycle works.
 
-use super::*;
-use crate::generate_pty_test;
+use crate::{RawModeGuard, generate_pty_test};
 use rustix::termios;
 use std::{io::{BufRead, BufReader, Write},
           time::{Duration, Instant}};
 
 generate_pty_test! {
-    /// PTY-based integration test for raw mode functionality.
+    /// PTY-based integration test for raw mode basic enable/disable.
     ///
     /// This test uses a master/slave PTY pair to verify that:
     /// 1. Raw mode can be enabled on a real PTY
@@ -78,7 +78,7 @@ fn pty_master_entry_point(
     assert!(slave_started, "Slave did not start properly");
     assert!(test_passed, "Test did not report success");
 
-    // 4. Wait for slave to exit
+    // Wait for slave to exit
     match child.wait() {
         Ok(status) => {
             eprintln!("✅ PTY Master: Slave exited: {status:?}");

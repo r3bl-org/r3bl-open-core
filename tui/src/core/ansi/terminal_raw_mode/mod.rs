@@ -57,6 +57,10 @@ mod raw_mode_windows;
 // Re-export the public API (flat, ergonomic surface).
 pub use raw_mode_core::*;
 
-// Conditional re-export for Unix integration tests.
+// Conditional re-export for automated integration tests.
 #[cfg(any(test, doc))]
-pub mod unix_integration_tests;
+pub mod integration_tests;
+
+// Conditional re-export for manual validation tests.
+#[cfg(any(test, doc))]
+pub mod validation_tests;

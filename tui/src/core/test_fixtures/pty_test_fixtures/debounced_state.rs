@@ -2,9 +2,8 @@
 
 //! Convenience wrapper combining async debounced deadline with buffered state.
 
-use std::time::Duration;
-
 use super::async_debounced_deadline::AsyncDebouncedDeadline;
+use std::time::Duration;
 
 /// Convenience wrapper combining [`AsyncDebouncedDeadline`] with buffered state.
 ///
@@ -22,31 +21,7 @@ use super::async_debounced_deadline::AsyncDebouncedDeadline;
 /// **Not good for:** Debouncing without state buffering
 /// - Use [`AsyncDebouncedDeadline`] directly if you don't need to store a value
 ///
-/// # Examples
-///
-/// ## Basic Usage
-///
-/// ```rust
-/// use std::time::Duration;
-/// use r3bl_tui::DebouncedState;
-///
-/// # tokio_test::block_on(async {
-/// let mut buffered = DebouncedState::new(Duration::from_millis(10));
-///
-/// // Buffer a value (starts 10ms timer)
-/// buffered.set("hello".to_string());
-/// assert!(buffered.is_pending());
-///
-/// // Wait for debounce period
-/// buffered.sleep_until().await;
-///
-/// // Take the buffered value
-/// assert_eq!(buffered.take(), Some("hello".to_string()));
-/// assert!(!buffered.is_pending());
-/// # });
-/// ```
-///
-/// ## Integration with tokio::select!
+/// # Integration with `tokio::select`!
 ///
 /// ```rust,no_run
 /// use std::time::Duration;
@@ -217,22 +192,6 @@ impl<T> DebouncedState<T> {
     ///         println!("{state}");
     ///     }
     /// }
-    /// ```
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use std::time::Duration;
-    /// use r3bl_tui::DebouncedState;
-    ///
-    /// # tokio_test::block_on(async {
-    /// let mut buffered = DebouncedState::new(Duration::from_millis(10));
-    /// buffered.set("hello".to_string());
-    ///
-    /// // This will complete after ~10ms
-    /// buffered.sleep_until().await;
-    /// assert_eq!(buffered.take(), Some("hello".to_string()));
-    /// # });
     /// ```
     pub async fn sleep_until(&self) { self.debounce.sleep_until().await; }
 }

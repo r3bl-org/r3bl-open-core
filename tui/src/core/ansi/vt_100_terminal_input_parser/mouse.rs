@@ -23,8 +23,13 @@
 
 use super::types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction,
                    VT100MouseButton, VT100ScrollDirection};
+use crate::core::ansi::constants::{MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE,
+                                   MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
+                                   MOUSE_BASE_BUTTON_MASK, MOUSE_MOTION_FLAG,
+                                   MOUSE_SCROLL_THRESHOLD};
 use crate::{TermPos,
-            core::ansi::constants::{CSI_PREFIX, MOUSE_SGR_PREFIX, MOUSE_X10_PREFIX}};
+            core::ansi::constants::{CSI_PREFIX, MOUSE_SGR_PREFIX,
+                                    MOUSE_X10_PREFIX, MOUSE_X10_MARKER}};
 
 #[must_use]
 pub fn parse_mouse_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
@@ -76,7 +81,7 @@ fn parse_sgr_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
     let mut found_terminator = false;
 
     for (idx, &byte) in sequence.iter().enumerate().skip(3) {
-        if byte == b'M' || byte == b'm' {
+        if byte == MOUSE_SGR_PRESS || byte == MOUSE_SGR_RELEASE {
             bytes_consumed = idx + 1;
             found_terminator = true;
             break;
@@ -178,7 +183,7 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
     }
 
     // Extract button, column, and row bytes
-    let cb = sequence[3];
+    let cb = u16::from(sequence[3]);  // Widen to u16 for consistent constant usage
     let cx = sequence[4];
     let cy = if sequence.len() > 5 {
         sequence[5]
@@ -205,10 +210,10 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
     };
 
     // Check motion flag (bit 5, value 32)
-    let is_motion = (cb & 32) != 0;
+    let is_motion = (cb & MOUSE_MOTION_FLAG) != 0;
 
     // Get button code (bits 0-1)
-    let button_bits = cb & 0x3;
+    let button_bits = cb & MOUSE_BUTTON_BITS_MASK;
 
     // Determine action and button
     if is_motion {
@@ -314,7 +319,7 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
     let mut found_terminator = false;
 
     for (idx, &byte) in sequence.iter().enumerate().skip(2) {
-        if byte == b'M' {
+        if byte == MOUSE_X10_MARKER {
             bytes_consumed = idx + 1;
             found_terminator = true;
             break;
@@ -347,10 +352,10 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
     };
 
     // Check motion flag (bit 5, value 32)
-    let is_motion = (cb & 32) != 0;
+    let is_motion = (cb & MOUSE_MOTION_FLAG) != 0;
 
     // Get button code (bits 0-1)
-    let button_bits = cb & 0x3;
+    let button_bits = cb & MOUSE_BUTTON_BITS_MASK;
 
     // Determine action and button
     if is_motion {
@@ -428,15 +433,15 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// - 3 = release (for legacy modes, SGR uses 'M'/'m' instead)
 fn detect_mouse_button(cb: u16) -> Option<VT100MouseButton> {
     // Mask out modifier and drag bits (keep only bits 0-5)
-    let button_code = cb & 0x3F;
+    let button_code = cb & MOUSE_BUTTON_CODE_MASK;
 
     // Scroll events are handled separately
-    if button_code >= 64 {
+    if button_code >= MOUSE_SCROLL_THRESHOLD {
         return None;
     }
 
     // Get base button (bits 0-1)
-    match button_code & 0x3 {
+    match button_code & MOUSE_BUTTON_BITS_MASK {
         0 => Some(VT100MouseButton::Left),
         1 => Some(VT100MouseButton::Middle),
         2 => Some(VT100MouseButton::Right),
@@ -459,9 +464,9 @@ fn is_drag_event(cb: u16) -> bool { (cb & 32) != 0 }
 fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirection> {
     // Check raw button code first (before masking modifiers)
     // Buttons 64+ indicate scroll events
-    if cb >= 64 {
+    if cb >= MOUSE_SCROLL_THRESHOLD {
         // Mask to get base button (without modifiers but keeping scroll bit)
-        let base_button = cb & 0x7F; // Keep bit 6 (value 64)
+        let base_button = cb & MOUSE_BASE_BUTTON_MASK; // Keep bit 6 (value 64)
 
         match base_button {
             68..=71 => Some(VT100ScrollDirection::Down), // All scroll down variants
@@ -496,6 +501,57 @@ fn extract_modifiers(cb: u16) -> VT100KeyModifiers {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::ansi::constants::{ANSI_ESC, ANSI_CSI_BRACKET, CONTROL_NUL};
+
+    // ==================== Test Helpers ====================
+
+    /// Build an X10 mouse sequence using the generator.
+    ///
+    /// X10 format: `ESC [ M Cb Cx Cy` (6 bytes with null terminator)
+    fn x10_mouse_sequence(
+        button: VT100MouseButton,
+        col: u16,
+        row: u16,
+        action: VT100MouseAction,
+        modifiers: VT100KeyModifiers,
+    ) -> Vec<u8> {
+        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_x10_mouse_sequence;
+        generate_x10_mouse_sequence(button, col, row, action, modifiers)
+    }
+
+    /// Build an RXVT mouse sequence using the generator.
+    ///
+    /// RXVT format: `ESC [ Cb ; Cx ; Cy M` (decimal with semicolons)
+    fn rxvt_mouse_sequence(
+        button: VT100MouseButton,
+        col: u16,
+        row: u16,
+        action: VT100MouseAction,
+        modifiers: VT100KeyModifiers,
+    ) -> Vec<u8> {
+        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_rxvt_mouse_sequence;
+        generate_rxvt_mouse_sequence(button, col, row, action, modifiers)
+    }
+
+    /// Build an SGR mouse sequence using the generator.
+    ///
+    /// SGR format: `ESC [ < Cb ; Cx ; Cy M/m` (modern standard)
+    fn sgr_mouse_sequence(
+        button: VT100MouseButton,
+        col: u16,
+        row: u16,
+        action: VT100MouseAction,
+        modifiers: VT100KeyModifiers,
+    ) -> Vec<u8> {
+        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
+        let event = VT100InputEvent::Mouse {
+            button,
+            pos: TermPos::from_one_based(col, row),
+            action,
+            modifiers
+        };
+        generate_keyboard_sequence(&event).expect("Failed to generate SGR mouse sequence")
+    }
 
     // X10/Normal Mouse Protocol Tests
     // Format: ESC [ M Cb Cx Cy (5-6 bytes)
@@ -503,11 +559,15 @@ mod tests {
 
     #[test]
     fn test_x10_left_click() {
-        // X10: ESC [ M 0 33 33 (left click at col 1, row 1)
-        // Button: 0 (left), Col: 33-32=1, Row: 33-32=1
-        let seq = b"\x1b[M\x00!!\x00";
+        // X10: Left click at col 1, row 1
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -529,11 +589,15 @@ mod tests {
 
     #[test]
     fn test_x10_middle_click() {
-        // X10: ESC [ M 1 50 40 (middle click at col 18, row 8)
-        // Button: 1 (middle), Col: 50-32=18, Row: 40-32=8
-        let seq = b"\x1b[M\x012(\x00";
+        // X10: Middle click at col 18, row 8
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Middle,
+            18, 8,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -547,11 +611,15 @@ mod tests {
 
     #[test]
     fn test_x10_right_click() {
-        // X10: ESC [ M 2 45 35 (right click at col 13, row 3)
-        // Button: 2 (right), Col: 45-32=13, Row: 35-32=3
-        let seq = b"\x1b[M\x02-#\x00";
+        // X10: Right click at col 13, row 3
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Right,
+            13, 3,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -565,11 +633,15 @@ mod tests {
 
     #[test]
     fn test_x10_release() {
-        // X10: ESC [ M 3 33 33 (release at col 1, row 1)
-        // Button: 3 (release), Col: 33-32=1, Row: 33-32=1
-        let seq = b"\x1b[M\x03!!\x00";
+        // X10: Release at col 1, row 1
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Release,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -582,11 +654,15 @@ mod tests {
 
     #[test]
     fn test_x10_motion() {
-        // X10: ESC [ M 35 50 50 (motion flag set, bit 5 = 32, so 3+32=35)
-        // Button: 3+32=35 (motion), Col: 50-32=18, Row: 50-32=18
-        let seq = b"\x1b[M\x232\\x00";
+        // X10: Motion at col 18, row 18
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Unknown,
+            18, 18,
+            VT100MouseAction::Motion,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -600,11 +676,15 @@ mod tests {
 
     #[test]
     fn test_x10_with_shift() {
-        // X10: ESC [ M 4 33 33 (left click with shift: button 0 + shift 4 = 4)
-        // Button: 0 with shift, Col: 33-32=1, Row: 33-32=1
-        let seq = b"\x1b[M\x04!!\x00";
+        // X10: Left click with shift at col 1, row 1
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers { shift: true, ctrl: false, alt: false },
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -619,11 +699,15 @@ mod tests {
 
     #[test]
     fn test_x10_with_ctrl() {
-        // X10: ESC [ M 16 33 33 (left click with ctrl: button 0 + ctrl 16 = 16)
-        // Button: 0 with ctrl, Col: 33-32=1, Row: 33-32=1
-        let seq = b"\x1b[M\x10!!\x00";
+        // X10: Left click with ctrl at col 1, row 1
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers { shift: false, ctrl: true, alt: false },
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -638,11 +722,15 @@ mod tests {
 
     #[test]
     fn test_x10_with_alt() {
-        // X10: ESC [ M 8 33 33 (left click with alt: button 0 + alt 8 = 8)
-        // Button: 0 with alt, Col: 33-32=1, Row: 33-32=1
-        let seq = b"\x1b[M\x08!!\x00";
+        // X10: Left click with alt at col 1, row 1
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers { shift: false, ctrl: false, alt: true },
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -658,10 +746,14 @@ mod tests {
     #[test]
     fn test_x10_coordinates_1_based() {
         // Verify 1-based coordinates in X10 format
-        // ESC [ M 0 (33 for col 1) (33 for row 1)
-        let seq = b"\x1b[M\x00!!\x00";
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse X10");
+            parse_mouse_sequence(&seq).expect("Should parse X10");
 
         assert_eq!(bytes_consumed, 6);
         match event {
@@ -676,10 +768,13 @@ mod tests {
     #[test]
     fn test_x10_large_coordinates() {
         // Test with larger coordinates: col 100, row 50
-        // Col: 100 + 32 = 132 = byte value
-        // Row: 50 + 32 = 82 = byte value
-        let seq = b"\x1b[M\x00\x84R\x00";
-        let (event, _) = parse_mouse_sequence(seq).expect("Should parse X10");
+        let seq = x10_mouse_sequence(
+            VT100MouseButton::Left,
+            100, 50,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
+        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse X10");
 
         match event {
             VT100InputEvent::Mouse { pos, .. } => {
@@ -693,7 +788,8 @@ mod tests {
     #[test]
     fn test_x10_incomplete_sequence() {
         // Incomplete: ESC [ M Cb Cx (missing Cy) - only 5 bytes
-        let seq = b"\x1b[M\x00!";
+        // Note: using raw bytes for intentionally invalid sequence
+        let seq = &[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARKER, CONTROL_NUL, b'!'];
         let result = parse_mouse_sequence(seq);
         assert!(result.is_none(), "Should not parse incomplete X10 sequence");
     }
@@ -701,7 +797,7 @@ mod tests {
     #[test]
     fn test_x10_too_short() {
         // Too short: ESC [ M (missing everything else)
-        let seq = b"\x1b[M";
+        let seq = &[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARKER];
         let result = parse_mouse_sequence(seq);
         assert!(result.is_none(), "Should not parse too-short X10 sequence");
     }
@@ -711,10 +807,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_left_click() {
-        // RXVT: ESC [ 0 ; 1 ; 1 M (left click at col 1, row 1)
-        let seq = b"\x1b[0;1;1M";
+        // RXVT: Left click at col 1, row 1
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -736,10 +837,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_middle_click() {
-        // RXVT: ESC [ 1 ; 18 ; 8 M (middle click at col 18, row 8)
-        let seq = b"\x1b[1;18;8M";
+        // RXVT: Middle click at col 18, row 8
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Middle,
+            18, 8,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -753,10 +859,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_right_click() {
-        // RXVT: ESC [ 2 ; 13 ; 3 M (right click at col 13, row 3)
-        let seq = b"\x1b[2;13;3M";
+        // RXVT: Right click at col 13, row 3
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Right,
+            13, 3,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -770,10 +881,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_release() {
-        // RXVT: ESC [ 3 ; 1 ; 1 M (release at col 1, row 1)
-        let seq = b"\x1b[3;1;1M";
+        // RXVT: Release at col 1, row 1
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Release,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -786,10 +902,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_motion() {
-        // RXVT: ESC [ 35 ; 18 ; 18 M (motion flag set, button 3 + motion 32 = 35)
-        let seq = b"\x1b[35;18;18M";
+        // RXVT: Motion at col 18, row 18
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Unknown,
+            18, 18,
+            VT100MouseAction::Motion,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -803,10 +924,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_with_shift() {
-        // RXVT: ESC [ 4 ; 1 ; 1 M (left click with shift: button 0 + shift 4 = 4)
-        let seq = b"\x1b[4;1;1M";
+        // RXVT: Left click with shift at col 1, row 1
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers { shift: true, ctrl: false, alt: false },
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -821,10 +947,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_with_ctrl() {
-        // RXVT: ESC [ 16 ; 1 ; 1 M (left click with ctrl: button 0 + ctrl 16 = 16)
-        let seq = b"\x1b[16;1;1M";
+        // RXVT: Left click with ctrl at col 1, row 1
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers { shift: false, ctrl: true, alt: false },
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -839,10 +970,15 @@ mod tests {
 
     #[test]
     fn test_rxvt_with_alt() {
-        // RXVT: ESC [ 8 ; 1 ; 1 M (left click with alt: button 0 + alt 8 = 8)
-        let seq = b"\x1b[8;1;1M";
+        // RXVT: Left click with alt at col 1, row 1
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers { shift: false, ctrl: false, alt: true },
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -858,9 +994,14 @@ mod tests {
     #[test]
     fn test_rxvt_coordinates_1_based() {
         // Verify 1-based coordinates in RXVT format
-        let seq = b"\x1b[0;1;1M";
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
         let (event, bytes_consumed) =
-            parse_mouse_sequence(seq).expect("Should parse RXVT");
+            parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -875,8 +1016,13 @@ mod tests {
     #[test]
     fn test_rxvt_large_coordinates() {
         // Test with larger coordinates: col 100, row 50
-        let seq = b"\x1b[0;100;50M";
-        let (event, _) = parse_mouse_sequence(seq).expect("Should parse RXVT");
+        let seq = rxvt_mouse_sequence(
+            VT100MouseButton::Left,
+            100, 50,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
+        let (event, _) = parse_mouse_sequence(&seq).expect("Should parse RXVT");
 
         match event {
             VT100InputEvent::Mouse { pos, .. } => {
@@ -887,10 +1033,16 @@ mod tests {
         }
     }
 
+    /// Test incomplete RXVT sequence parsing (negative test).
+    ///
+    /// Uses raw bytes instead of a generator because this tests the parser's
+    /// rejection of invalid input. Generators should only produce valid sequences;
+    /// this ensures our type system cannot express invalid mouse protocols.
+    ///
+    /// Sequence: `ESC [ 0 ; 1` (missing `;`, `Cy`, and `M`)
     #[test]
     fn test_rxvt_incomplete_sequence() {
-        // Incomplete: ESC [ 0 ; 1 (missing ; and Cy and M)
-        let seq = b"\x1b[0;1";
+        let seq = &[ANSI_ESC, ANSI_CSI_BRACKET, b'0', b';', b'1'];
         let result = parse_mouse_sequence(seq);
         assert!(
             result.is_none(),
@@ -898,30 +1050,41 @@ mod tests {
         );
     }
 
+    /// Test RXVT sequence without terminator (negative test).
+    ///
+    /// Uses raw bytes instead of a generator because this tests the parser's
+    /// rejection of invalid input. Generators should only produce valid sequences;
+    /// this ensures our type system cannot express invalid mouse protocols.
+    ///
+    /// Sequence: `ESC [ 0 ; 1 ; 1` (missing `M` terminator)
     #[test]
     fn test_rxvt_missing_terminator() {
-        // Missing terminator: ESC [ 0 ; 1 ; 1 (no M)
-        let seq = b"\x1b[0;1;1";
+        let seq = &[ANSI_ESC, ANSI_CSI_BRACKET, b'0', b';', b'1', b';', b'1'];
         let result = parse_mouse_sequence(seq);
         assert!(result.is_none(), "Should not parse RXVT without terminator");
     }
 
+    /// Test RXVT sequence that is too short (negative test).
+    ///
+    /// Uses raw bytes instead of a generator because this tests the parser's
+    /// rejection of invalid input. Generators should only produce valid sequences;
+    /// this ensures our type system cannot express invalid mouse protocols.
+    ///
+    /// Sequence: `ESC [` (missing all parameters and terminator)
     #[test]
     fn test_rxvt_too_short() {
-        // Too short: ESC [ (missing everything else)
-        let seq = b"\x1b[";
+        let seq = &[ANSI_ESC, ANSI_CSI_BRACKET];
         let result = parse_mouse_sequence(seq);
         assert!(result.is_none(), "Should not parse too-short RXVT sequence");
     }
 
     #[test]
     fn test_sgr_left_click_press() {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_mouse_sequence_bytes;
-        // From Phase 1: ESC[<0;1;1M (left click at top-left)
-        let seq = generate_mouse_sequence_bytes(
+        // SGR: Left click press at col 1, row 1
+        // Generated sequence: ESC[<0;1;1M
+        let seq = sgr_mouse_sequence(
             VT100MouseButton::Left,
-            1,
-            1,
+            1, 1,
             VT100MouseAction::Press,
             VT100KeyModifiers::default(),
         );
@@ -947,12 +1110,11 @@ mod tests {
 
     #[test]
     fn test_sgr_left_click_release() {
-        use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_mouse_sequence_bytes;
-        // From Phase 1: ESC[<0;1;1m (lowercase 'm' = release)
-        let seq = generate_mouse_sequence_bytes(
+        // SGR: Left click release at col 1, row 1
+        // Generated sequence: ESC[<0;1;1m (lowercase 'm' = release)
+        let seq = sgr_mouse_sequence(
             VT100MouseButton::Left,
-            1,
-            1,
+            1, 1,
             VT100MouseAction::Release,
             VT100KeyModifiers::default(),
         );
@@ -969,10 +1131,15 @@ mod tests {
 
     #[test]
     fn test_sgr_scroll_up() {
-        // From Phase 1: ESC[<66;37;14M (scroll up at col 37, row 14)
-        // Button 66 = scroll up with modifiers (Shift bit set)
-        let seq = b"\x1b[<66;37;14M";
-        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
+        // SGR: Scroll up at col 37, row 14
+        // Generated sequence: ESC[<64;37;14M (button 64 = scroll up)
+        let seq = sgr_mouse_sequence(
+            VT100MouseButton::Left,  // Base button for scroll
+            37, 14,
+            VT100MouseAction::Scroll(VT100ScrollDirection::Up),
+            VT100KeyModifiers::default(),
+        );
+        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -987,9 +1154,15 @@ mod tests {
 
     #[test]
     fn test_sgr_drag() {
-        // Drag has bit 5 set (32): button 0 + drag = 32
-        let seq = b"\x1b[<32;10;5M";
-        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
+        // SGR: Left button drag at col 10, row 5
+        // Generated sequence: ESC[<32;10;5M (button 32 = drag with bit 5 set)
+        let seq = sgr_mouse_sequence(
+            VT100MouseButton::Left,
+            10, 5,
+            VT100MouseAction::Drag,
+            VT100KeyModifiers::default(),
+        );
+        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -1003,9 +1176,15 @@ mod tests {
 
     #[test]
     fn test_modifier_extraction() {
-        // Ctrl+Left click: button 0 + Ctrl (16) = 16
-        let seq = b"\x1b[<16;1;1M";
-        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
+        // SGR: Ctrl+Left click at col 1, row 1
+        // Generated sequence: ESC[<16;1;1M (button 16 = Ctrl modifier)
+        let seq = sgr_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers { ctrl: true, shift: false, alt: false },
+        );
+        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {
@@ -1020,9 +1199,15 @@ mod tests {
 
     #[test]
     fn test_coordinates_are_1_based() {
-        // Verify 1-based coordinates from Phase 1 findings
-        let seq = b"\x1b[<0;1;1M";
-        let (event, bytes_consumed) = parse_mouse_sequence(seq).expect("Should parse");
+        // SGR: Verify 1-based coordinates at col 1, row 1
+        // Generated sequence: ESC[<0;1;1M
+        let seq = sgr_mouse_sequence(
+            VT100MouseButton::Left,
+            1, 1,
+            VT100MouseAction::Press,
+            VT100KeyModifiers::default(),
+        );
+        let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
 
         assert_eq!(bytes_consumed, seq.len());
         match event {

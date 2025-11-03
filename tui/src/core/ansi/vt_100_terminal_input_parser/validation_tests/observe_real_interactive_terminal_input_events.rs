@@ -142,8 +142,9 @@ async fn drain_stdin_buffer<R: tokio::io::AsyncRead + Unpin>(
     let mut buffer = vec![0u8; 256];
     loop {
         match tokio::time::timeout(drain_timeout, stdin.read(&mut buffer)).await {
-            Ok(Ok(0)) | Ok(Err(_)) | Err(_) => break, // EOF, read error, or timeout
-            Ok(Ok(_)) => {}                           // Got data, keep draining
+            Ok(Ok(0)) | Err(_) => break,            // EOF or timeout
+            Ok(Err(_)) => break,                    // read error
+            Ok(Ok(_)) => {}                         // Got data, keep draining
         }
     }
 }

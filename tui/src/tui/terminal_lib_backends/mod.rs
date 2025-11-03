@@ -58,9 +58,8 @@
 //! - [`render_pipeline`] - Collects & organizes `RenderOps` by Z-order
 //! - [`compositor_render_ops_to_ofs_buf`] - Renders `RenderOpsIR` to `OffscreenBuffer`
 //! - [`offscreen_buffer`] - Virtual terminal buffer (2D grid of styled `PixelChars`)
-//! - [`crossterm_backend::offscreen_buffer_paint_impl`] - Converts buffer → optimized
-//!   operations
-//! - [`crossterm_backend::paint_render_op_impl`] - Executes operations via Crossterm
+//! - [`offscreen_buffer_paint_impl`] - Converts buffer → optimized operations
+//! - [`paint_render_op_impl`] - Executes operations via Crossterm
 //!
 //! ### Supporting Modules
 //! - [`offscreen_buffer_pool`] - Buffer pooling for efficiency
@@ -100,6 +99,9 @@
 //!   - repo (C code): <https://github.com/antirez/kilo>
 //! - Sodium:
 //!   - repo: <https://github.com/redox-os/sodium>
+//!
+//! [`offscreen_buffer_paint_impl`]: mod@crossterm_backend::offscreen_buffer_paint_impl
+//! [`paint_render_op_impl`]: mod@crossterm_backend::paint_render_op_impl
 
 /// Terminal library backend selection for the TUI system.
 ///
@@ -122,29 +124,49 @@
 /// ```
 #[derive(Debug)]
 pub enum TerminalLibBackend {
-    /// Crossterm backend - cross-platform terminal library supporting Windows, macOS, and
-    /// Linux. This is the default and recommended backend for most applications.
+    /// Cross-platform terminal library (default).
     Crossterm,
-    /// `DirectToAnsi` backend - Pure Rust ANSI sequence generation without external
-    /// dependencies. Generates ANSI escape sequences directly for terminal control.
+    /// Pure Rust ANSI sequence generation.
     DirectToAnsi,
 }
 
-/// The default terminal library backend used by R3BL TUI.
+/// The default terminal library backend for this platform.
 ///
-/// This constant defines which terminal backend is used throughout the TUI system.
-/// Platform-specific backends are selected for optimal performance:
-/// - **Linux**: `DirectToAnsi` (pure Rust ANSI sequences)
+/// On **Linux**, [`DirectToAnsi`] is selected for pure Rust ANSI sequence generation
+/// without external dependencies.
+///
+/// # Platform Selection
+///
+/// R3BL TUI uses platform-specific backends:
+/// - **Linux**: [`DirectToAnsi`] (pure Rust async I/O)
 /// - **macOS/Windows**: Crossterm (cross-platform compatibility)
 ///
-/// # Performance Note
+/// # Performance
 ///
-/// `DirectToAnsi` is currently under performance regression analysis on Linux.
-/// A 55% performance regression was observed vs Crossterm in initial benchmarks.
-/// See `docs/task_remove_crossterm.md` Step 5 for detailed analysis.
+/// [`DirectToAnsi`] achieves ~18% better performance than Crossterm on Linux through:
+/// - Stack-allocated number formatting (eliminates heap allocations)
+/// - `SmallVec[16]` for render operations (+0.47%)
+/// - `StyleUSSpan[16]` for styled text spans (+~5.0%)
+///
+/// Benchmarked using 8-second continuous workload with 999Hz sampling and scripted
+/// input (see `script_lib.fish::run_example_with_flamegraph_profiling_perf_fold`).
+///
+/// [`DirectToAnsi`]: variant@TerminalLibBackend::DirectToAnsi
 #[cfg(target_os = "linux")]
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::DirectToAnsi;
 
+/// The default terminal library backend for this platform.
+///
+/// On **macOS/Windows**, Crossterm is selected for its mature cross-platform
+/// support and compatibility across different terminal emulators.
+///
+/// # Platform Selection
+///
+/// R3BL TUI uses platform-specific backends:
+/// - **Linux**: [`DirectToAnsi`] (pure Rust async I/O)
+/// - **macOS/Windows**: Crossterm (cross-platform compatibility)
+///
+/// [`DirectToAnsi`]: variant@TerminalLibBackend::DirectToAnsi
 #[cfg(not(target_os = "linux"))]
 pub const TERMINAL_LIB_BACKEND: TerminalLibBackend = TerminalLibBackend::Crossterm;
 

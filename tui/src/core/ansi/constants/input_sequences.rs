@@ -76,6 +76,11 @@ pub const ARROW_RIGHT_FINAL: u8 = b'C';
 /// CSI D: Left arrow key final byte
 pub const ARROW_LEFT_FINAL: u8 = b'D';
 
+// ==================== Tab Keys ====================
+
+/// CSI Z: `BackTab` (Shift+Tab) final byte
+pub const BACKTAB_FINAL: u8 = b'Z';
+
 // ==================== Special Keys (CSI H/F) ====================
 
 /// CSI H: Home key final byte
@@ -97,6 +102,18 @@ pub const SPECIAL_PAGE_UP_CODE: u16 = 5;
 
 /// CSI 6~: Page Down key code
 pub const SPECIAL_PAGE_DOWN_CODE: u16 = 6;
+
+/// CSI 1~: Home key code (alternative)
+pub const SPECIAL_HOME_ALT1_CODE: u16 = 1;
+
+/// CSI 4~: End key code (alternative)
+pub const SPECIAL_END_ALT1_CODE: u16 = 4;
+
+/// CSI 7~: Home key code (alternative, rxvt)
+pub const SPECIAL_HOME_ALT2_CODE: u16 = 7;
+
+/// CSI 8~: End key code (alternative, rxvt)
+pub const SPECIAL_END_ALT2_CODE: u16 = 8;
 
 // ==================== Function Keys (CSI n~) ====================
 //
@@ -142,6 +159,82 @@ pub const FUNCTION_F11_CODE: u16 = 23;
 
 /// CSI 24~: Function key F12
 pub const FUNCTION_F12_CODE: u16 = 24;
+
+// ==================== SS3 Function Keys (SS3 P/Q/R/S) ====================
+//
+// SS3 sequences (ESC O) are used in application mode for F1-F4.
+// Format: ESC O `command_char`
+
+/// SS3 P: Function key F1 (application mode)
+pub const SS3_F1_FINAL: u8 = b'P';
+
+/// SS3 Q: Function key F2 (application mode)
+pub const SS3_F2_FINAL: u8 = b'Q';
+
+/// SS3 R: Function key F3 (application mode)
+pub const SS3_F3_FINAL: u8 = b'R';
+
+/// SS3 S: Function key F4 (application mode)
+pub const SS3_F4_FINAL: u8 = b'S';
+
+// ==================== SS3 Numpad Keys (Application Mode) ====================
+//
+// When numpad is in application mode (DECPAM), numpad keys send SS3 sequences
+// instead of their literal digits. Format: ESC O `command_char`
+//
+// This allows applications to distinguish numpad from regular number keys.
+// For example, vim can use numpad for navigation while regular numbers set counts.
+
+/// SS3 M: Numpad Enter (application mode)
+pub const SS3_NUMPAD_ENTER: u8 = b'M';
+
+/// SS3 j: Numpad * (multiply)
+pub const SS3_NUMPAD_MULTIPLY: u8 = b'j';
+
+/// SS3 k: Numpad + (plus)
+pub const SS3_NUMPAD_PLUS: u8 = b'k';
+
+/// SS3 l: Numpad , (comma/separator) - Note: not all terminals support this
+pub const SS3_NUMPAD_COMMA: u8 = b'l';
+
+/// SS3 m: Numpad - (minus)
+pub const SS3_NUMPAD_MINUS: u8 = b'm';
+
+/// SS3 n: Numpad . (decimal point)
+pub const SS3_NUMPAD_DECIMAL: u8 = b'n';
+
+/// SS3 o: Numpad / (divide)
+pub const SS3_NUMPAD_DIVIDE: u8 = b'o';
+
+/// SS3 p: Numpad 0
+pub const SS3_NUMPAD_0: u8 = b'p';
+
+/// SS3 q: Numpad 1
+pub const SS3_NUMPAD_1: u8 = b'q';
+
+/// SS3 r: Numpad 2
+pub const SS3_NUMPAD_2: u8 = b'r';
+
+/// SS3 s: Numpad 3
+pub const SS3_NUMPAD_3: u8 = b's';
+
+/// SS3 t: Numpad 4
+pub const SS3_NUMPAD_4: u8 = b't';
+
+/// SS3 u: Numpad 5
+pub const SS3_NUMPAD_5: u8 = b'u';
+
+/// SS3 v: Numpad 6
+pub const SS3_NUMPAD_6: u8 = b'v';
+
+/// SS3 w: Numpad 7
+pub const SS3_NUMPAD_7: u8 = b'w';
+
+/// SS3 x: Numpad 8
+pub const SS3_NUMPAD_8: u8 = b'x';
+
+/// SS3 y: Numpad 9
+pub const SS3_NUMPAD_9: u8 = b'y';
 
 // ==================== Modifier Masks ====================
 //
@@ -191,18 +284,85 @@ pub const MODIFIER_CTRL_ALT_SHIFT: u8 = MODIFIER_CTRL | MODIFIER_ALT | MODIFIER_
 pub const ARROW_KEY_MODIFIER_BASE: u16 = 1;
 
 // ==================== Control Characters ====================
+//
+// Control characters (0x00-0x1F) are generated when Ctrl is held while typing.
+// For example: Ctrl+A → 0x01, Ctrl+D → 0x04, Ctrl+W → 0x17
+//
+// The transformation is: letter & 0x1F = control_byte
+// Reverse: control_byte | 0x60 = lowercase letter
+
+/// Control character range maximum (0x1F).
+///
+/// Control characters occupy bytes 0x00-0x1F in ASCII.
+/// This constant marks the upper bound of this range.
+pub const CTRL_CHAR_RANGE_MAX: u8 = 0x1F;
+
+/// ASCII NUL character (0x00)
+/// Can be generated via Ctrl+Space or Ctrl+@.
+pub const CONTROL_NUL: u8 = 0x00;
 
 /// ASCII Tab character (0x09)
+/// Can be generated via Ctrl+I or Tab key.
 pub const CONTROL_TAB: u8 = b'\t';
 
-/// ASCII Enter character (0x0D)
+/// ASCII Line Feed (0x0A)
+/// Can be generated via Ctrl+J or Enter key (Unix).
+pub const CONTROL_LF: u8 = b'\n';
+
+/// ASCII Enter/Carriage Return character (0x0D)
+/// Can be generated via Ctrl+M or Enter key (Windows/Mac).
 pub const CONTROL_ENTER: u8 = b'\r';
 
 /// ASCII Escape character (0x1B)
+/// Can be generated via Ctrl+[ or Esc key.
 pub const CONTROL_ESC: u8 = 0x1B;
 
 /// ASCII Backspace character (0x08)
+/// Can be generated via Ctrl+H or Backspace key.
 pub const CONTROL_BACKSPACE: u8 = 0x08;
+
+/// Ctrl+C character (0x03) - End of Text (ETX)
+/// Can be generated via Ctrl+C.
+/// In cooked mode, typically triggers SIGINT. In raw mode, passed as byte 0x03.
+pub const CONTROL_C: u8 = 0x03;
+
+/// Ctrl+D character (0x04) - End of Transmission (EOT)
+/// Can be generated via Ctrl+D.
+/// In cooked mode, typically signals EOF. In raw mode, passed as byte 0x04.
+pub const CONTROL_D: u8 = 0x04;
+
+/// Mask to convert control character to lowercase letter (0x60).
+///
+/// To reverse the Ctrl transformation (letter & 0x1F → byte),
+/// we can compute: byte | 0x60 = lowercase letter.
+///
+/// Example: 0x01 | 0x60 = 0x61 = 'a'
+pub const CTRL_TO_LOWERCASE_MASK: u8 = 0x60;
+
+/// Mask to convert control character to uppercase letter (0x40).
+///
+/// Alternative reverse transformation: byte | 0x40 = uppercase letter.
+///
+/// Example: 0x01 | 0x40 = 0x41 = 'A'
+pub const CTRL_TO_UPPERCASE_MASK: u8 = 0x40;
+
+/// Printable ASCII minimum (space, 0x20).
+///
+/// First printable ASCII character. Used to validate Alt+letter sequences,
+/// which must be ESC + printable character (0x20-0x7E).
+pub const PRINTABLE_ASCII_MIN: u8 = 0x20;
+
+/// Printable ASCII maximum (tilde, 0x7E).
+///
+/// Last printable ASCII character. Used to validate Alt+letter sequences,
+/// which must be ESC + printable character (0x20-0x7E).
+pub const PRINTABLE_ASCII_MAX: u8 = 0x7E;
+
+/// ASCII DEL character (0x7F).
+///
+/// This is the ASCII delete character, typically sent by the Backspace key.
+/// When combined with ESC (0x1B), it represents Alt+Backspace: ESC DEL (0x1B 0x7F).
+pub const ASCII_DEL: u8 = 0x7F;
 
 // ==================== Mouse Protocol Markers ====================
 
@@ -213,6 +373,14 @@ pub const MOUSE_SGR_MARKER: u8 = b'<';
 /// X10/Normal mouse protocol marker: `M` (77 in decimal, 0x4D in hex)
 /// Used in X10 mouse tracking sequences: ESC [ M Cb Cx Cy
 pub const MOUSE_X10_MARKER: u8 = b'M';
+
+/// SGR mouse press event terminator: `M` (uppercase)
+/// Used in SGR sequences to indicate button press: ESC [ < Cb ; Cx ; Cy M
+pub const MOUSE_SGR_PRESS: u8 = b'M';
+
+/// SGR mouse release event terminator: `m` (lowercase)
+/// Used in SGR sequences to indicate button release: ESC [ < Cb ; Cx ; Cy m
+pub const MOUSE_SGR_RELEASE: u8 = b'm';
 
 // ==================== Mouse Protocol Sequence Prefixes ====================
 
@@ -227,6 +395,38 @@ pub const MOUSE_X10_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET, MOUSE_X10_MARK
 /// Basic CSI sequence prefix: ESC [
 /// Used for general CSI sequence detection
 pub const CSI_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET];
+
+// ==================== Mouse Button and Event Bitmasks ====================
+
+/// Mouse button bits mask (bits 0-1): extracts base button code (0-3)
+/// Used to determine which button: 0=left, 1=middle, 2=right, 3=release
+pub const MOUSE_BUTTON_BITS_MASK: u16 = 0x3;
+
+/// Mouse button code mask (bits 0-5): extracts button code without scroll bit
+/// Used before checking for scroll events (which use bit 6)
+pub const MOUSE_BUTTON_CODE_MASK: u16 = 0x3F;
+
+/// Mouse base button mask (bits 0-6): includes scroll bit
+/// Used to extract button code with scroll information
+pub const MOUSE_BASE_BUTTON_MASK: u16 = 0x7F;
+
+/// Mouse motion flag (bit 5, value 32)
+/// When set, indicates mouse movement without button press
+pub const MOUSE_MOTION_FLAG: u16 = 32;
+
+/// Mouse scroll threshold (bit 6, value 64)
+/// Button codes >= 64 indicate scroll events (up/down)
+pub const MOUSE_SCROLL_THRESHOLD: u16 = 64;
+
+// ==================== Terminal Focus Events ====================
+
+/// CSI I: Terminal focus gained event final byte
+/// Format: ESC [ I
+pub const FOCUS_GAINED_FINAL: u8 = b'I';
+
+/// CSI O: Terminal focus lost event final byte
+/// Format: ESC [ O
+pub const FOCUS_LOST_FINAL: u8 = b'O';
 
 #[cfg(test)]
 mod tests {

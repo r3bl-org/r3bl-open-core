@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 /// **Not good for:** "Do X after Y ms of no activity"
 /// - Use [`AsyncDebouncedDeadline`] for debouncing events instead
 ///
-/// # Comparison with AsyncDebouncedDeadline
+/// # Comparison with `AsyncDebouncedDeadline`
 ///
 /// | Pattern | `Deadline` | `AsyncDebouncedDeadline` |
 /// |---------|-----------|-------------------------|

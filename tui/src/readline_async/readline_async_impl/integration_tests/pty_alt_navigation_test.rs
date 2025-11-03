@@ -237,7 +237,8 @@ fn pty_slave_entry_point() -> ! {
 
                             match result {
                                 Ok(Some(readline_event)) => {
-                                    println!("🔍 PTY Slave: ReadlineEvent: {readline_event:?}");
+                                    println!("🔍 PTY Slave: ReadlineEvent:\
+                                     {readline_event:?}");
                                 }
                                 Ok(None) => {
                                     // Buffer the current line state and reset debounce timer.

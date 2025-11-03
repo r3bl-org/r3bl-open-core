@@ -2,13 +2,13 @@
 
 // Attach private modules.
 mod async_debounced_deadline;
-mod debounced_state;
 mod deadline;
+mod debounced_state;
 
 // Macro module - #[macro_export] makes it available at crate root.
 mod generate_pty_test;
 
 // Export flat public API.
 pub use async_debounced_deadline::*;
-pub use debounced_state::*;
 pub use deadline::*;
+pub use debounced_state::*;

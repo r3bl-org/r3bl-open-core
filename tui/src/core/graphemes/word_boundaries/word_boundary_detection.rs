@@ -164,6 +164,72 @@ pub fn find_next_word_end(text: &str, cursor_grapheme_idx: usize) -> usize {
     idx
 }
 
+/// Finds the start position of the next word from the cursor position.
+///
+/// This function moves forward from the cursor, skipping any word characters
+/// (to finish the current word), then skipping boundary characters, until it
+/// finds the start of the next word.
+///
+/// ## Algorithm
+///
+/// 1. Start from cursor position
+/// 2. Skip any word characters at/after cursor (finish current word)
+/// 3. Skip boundary characters (whitespace/punctuation) moving forward
+/// 4. Return the position at the start of the next word
+///
+/// ## Edge Cases
+///
+/// - If cursor is at end of text, returns text length
+/// - If text is empty, returns 0
+/// - If only boundary characters after cursor, returns text length
+///
+/// ## Examples
+///
+/// ```
+/// use r3bl_tui::core::graphemes::word_boundaries::find_next_word_start;
+///
+/// // "one two three"
+/// //  012 456 89ABC (C=12)
+/// assert_eq!(find_next_word_start("one two three", 0), 4);   // "one" → "two"
+/// assert_eq!(find_next_word_start("one two three", 4), 8);   // "two" → "three"
+/// assert_eq!(find_next_word_start("one-two", 0), 4);         // "one" → "two" (skip hyphen)
+/// assert_eq!(find_next_word_start("one  two", 0), 5);        // Skip multiple spaces
+/// assert_eq!(find_next_word_start("one", 0), 3);             // End of text
+/// assert_eq!(find_next_word_start("", 0), 0);                // Empty string
+/// ```
+#[must_use]
+pub fn find_next_word_start(text: &str, cursor_grapheme_idx: usize) -> usize {
+    let graphemes: Vec<(usize, &str)> = text.grapheme_indices(true).collect();
+    let count = graphemes.len();
+
+    if count == 0 {
+        return 0;
+    }
+
+    if cursor_grapheme_idx >= count {
+        return count;
+    }
+
+    let mut idx = cursor_grapheme_idx;
+
+    // Skip any word characters at/after cursor (finish current word)
+    while idx < count && is_word_char(graphemes[idx].1) {
+        idx += 1;
+    }
+
+    // If we reached the end, return count
+    if idx >= count {
+        return count;
+    }
+
+    // Skip any boundary characters to find the start of next word
+    while idx < count && is_word_boundary(graphemes[idx].1) {
+        idx += 1;
+    }
+
+    idx
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -380,6 +446,108 @@ mod tests {
         //  01234   89ABC (C=12)
         // Cursor at 0, should find end of "hello" at 5
         assert_eq!(find_next_word_end("hello...world", 0), 5);
+    }
+
+    // find_next_word_start tests
+
+    #[test]
+    fn test_find_next_word_start_simple() {
+        // "one two three"
+        //  012 456 89ABC (C=12)
+        // Cursor at 0, should find start of "two" at 4
+        assert_eq!(find_next_word_start("one two three", 0), 4);
+    }
+
+    #[test]
+    fn test_find_next_word_start_from_middle() {
+        // "one two three"
+        //  012 456 89ABC
+        // Cursor at 4 (start of "two"), should find start of "three" at 8
+        assert_eq!(find_next_word_start("one two three", 4), 8);
+    }
+
+    #[test]
+    fn test_find_next_word_start_with_punctuation() {
+        // "one-two"
+        //  012 456
+        // Cursor at 0, should skip hyphen and find start of "two" at 4
+        assert_eq!(find_next_word_start("one-two", 0), 4);
+    }
+
+    #[test]
+    fn test_find_next_word_start_multiple_spaces() {
+        // "one  two"
+        //  012  567
+        // Cursor at 0, should skip multiple spaces and find start of "two" at 5
+        assert_eq!(find_next_word_start("one  two", 0), 5);
+    }
+
+    #[test]
+    fn test_find_next_word_start_at_end() {
+        // "one"
+        //  012
+        // Cursor at 0, no next word, should return end (3)
+        assert_eq!(find_next_word_start("one", 0), 3);
+    }
+
+    #[test]
+    fn test_find_next_word_start_cursor_at_end() {
+        // Cursor already at end, should stay at end
+        let text = "one";
+        let len = text.graphemes(true).count();
+        assert_eq!(find_next_word_start(text, len), len);
+    }
+
+    #[test]
+    fn test_find_next_word_start_empty_string() {
+        assert_eq!(find_next_word_start("", 0), 0);
+    }
+
+    #[test]
+    fn test_find_next_word_start_only_spaces() {
+        let text = "   ";
+        let len = text.graphemes(true).count();
+        assert_eq!(find_next_word_start(text, 0), len);
+    }
+
+    #[test]
+    fn test_find_next_word_start_from_inside_word() {
+        // "hello world"
+        //  01234 56789A
+        // Cursor at 2 (inside "hello"), should skip to end of "hello" then find "world"
+        // at 6
+        assert_eq!(find_next_word_start("hello world", 2), 6);
+    }
+
+    #[test]
+    fn test_find_next_word_start_from_space() {
+        // "one two"
+        //  012 456
+        // Cursor at 3 (the space), should skip space and find start of "two" at 4
+        assert_eq!(find_next_word_start("one two", 3), 4);
+    }
+
+    #[test]
+    fn test_find_next_word_start_unicode() {
+        // "hello 世界"
+        // Cursor at 0, should find start of "世界" at position 6
+        let text = "hello 世界";
+        assert_eq!(find_next_word_start(text, 0), 6);
+    }
+
+    #[test]
+    fn test_find_next_word_start_emoji() {
+        // "hello 🌍"
+        let text = "hello 🌍";
+        assert_eq!(find_next_word_start(text, 0), 6);
+    }
+
+    #[test]
+    fn test_find_next_word_start_consecutive_punctuation() {
+        // "one...two"
+        //  012   567
+        // Cursor at 0, should skip "one" and "..." and find start of "two" at 6
+        assert_eq!(find_next_word_start("one...two", 0), 6);
     }
 
     // Edge case tests
