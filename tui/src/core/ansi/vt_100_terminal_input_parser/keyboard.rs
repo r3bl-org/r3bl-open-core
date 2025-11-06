@@ -6,6 +6,11 @@
 //! It provides comprehensive support for VT-100 compatible terminal input while
 //! maintaining clarity about protocol limitations and design decisions.
 //!
+//! ## Parser Dispatch Priority Pipeline
+//!
+//! This module provides multiple parser functions that are invoked in a **predefined
+//! priority order** by the [`try_parse`] backend input handler.
+//!
 //! ## Comprehensive List of Supported Keyboard Shortcuts
 //!
 //! ### Basic Keys
@@ -215,6 +220,44 @@
 //! This dual approach gives us the best of both worlds: efficiency for simple
 //! cases (Alt+letter) and expressiveness for complex cases (Ctrl+Alt+Shift+Up).
 //!
+//! ### CSI Sequences (ESC[...)
+//!
+//! When buffer starts with `ESC[`:
+//! 1. **`parse_keyboard_sequence()`** - Arrow keys, function keys, modified keys with CSI
+//!    format
+//!    - Examples: `ESC[A` (Up), `ESC[1;5A` (Ctrl+Up), `ESC[15~` (F5)
+//! 2. **`parse_mouse_sequence()`** - SGR mouse protocol for clicks, drags, scrolling
+//!    - Examples: `ESC[<0;10;20M` (left click), `ESC[<64;10;20M` (scroll up)
+//! 3. **`parse_terminal_event()`** - Window resize, focus gained/lost, paste markers
+//!    - Examples: `ESC[8;24;80t` (resize to 24x80), `ESC[I` (focus gained)
+//!
+//! ### SS3 Sequences (ESC O...)
+//!
+//! When buffer starts with `ESC O`:
+//! - **`parse_ss3_sequence()`** - Application mode keys (F1-F4, Home, End, arrows)
+//!   - Examples: `ESOP` (F1), `ESOA` (Up in app mode)
+//!
+//! ### ESC + Unknown Byte
+//!
+//! When buffer starts with `ESC +` (something other than `[` or `O`):
+//! - **`parse_alt_letter()`** - Alt+printable character combinations
+//!   - Examples: `ESCb` (Alt+B), `ESC3` (Alt+3), `ESC ` (Alt+Space)
+//!
+//! ### Non-ESC Sequences (Regular Input)
+//!
+//! When first byte is not ESC:
+//! 1. **`parse_terminal_event()`** - (Re-attempted for non-ESC input)
+//! 2. **`parse_mouse_sequence()`** - X10/RXVT mouse protocols (legacy)
+//! 3. **`parse_control_character()`** - Ctrl+A through Ctrl+Z (0x00-0x1F)
+//!    - Examples: `0x01` (Ctrl+A), `0x04` (Ctrl+D), `0x17` (Ctrl+W)
+//!    - **Must be tried before UTF-8** because control bytes are valid UTF-8
+//! 4. **`parse_utf8_text()`** - Regular text input and printable characters
+//!    - Examples: `a`, `ñ`, `日`, multi-byte UTF-8 sequences
+//!
+//! **Critical**: Control characters must be parsed before UTF-8 because bytes 0x00-0x1F
+//! are technically valid UTF-8 but represent Ctrl+letter combinations. Without this
+//! priority, Ctrl+A would be misinterpreted as incomplete UTF-8.
+//!
 //! ## Ambiguous Control Character Handling
 //!
 //! **Design Decision**: Some control characters are ambiguous at the protocol level
@@ -252,9 +295,11 @@
 //!
 //! This is a fundamental VT-100 protocol limitation, not a parser bug. Modern protocols
 //! like Kitty keyboard protocol solve this, but we maintain VT-100 compatibility.
+//!
+//! [`try_parse`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice::try_parse
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
-use crate::{ASCII_DEL,
+use crate::{ASCII_DEL, KeyState,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
                                     ANSI_SS3_O, ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
@@ -264,10 +309,14 @@ use crate::{ASCII_DEL,
                                     CONTROL_BACKSPACE, CONTROL_ENTER, CONTROL_ESC,
                                     CONTROL_LF, CONTROL_NUL, CONTROL_TAB,
                                     CTRL_CHAR_RANGE_MAX, CTRL_TO_LOWERCASE_MASK,
-                                    FUNCTION_F1_CODE, FUNCTION_F2_CODE, FUNCTION_F3_CODE,
-                                    FUNCTION_F4_CODE, FUNCTION_F5_CODE, FUNCTION_F6_CODE,
-                                    FUNCTION_F7_CODE, FUNCTION_F8_CODE, FUNCTION_F9_CODE,
-                                    FUNCTION_F10_CODE, FUNCTION_F11_CODE, FUNCTION_F12_CODE,
+                                    FUNCTION_F1_CODE, FUNCTION_F2_CODE,
+                                    FUNCTION_F3_CODE, FUNCTION_F4_CODE,
+                                    FUNCTION_F5_CODE, FUNCTION_F6_CODE,
+                                    FUNCTION_F7_CODE, FUNCTION_F8_CODE,
+                                    FUNCTION_F9_CODE, FUNCTION_F10_CODE,
+                                    FUNCTION_F11_CODE, FUNCTION_F12_CODE, MODIFIER_ALT,
+                                    MODIFIER_CTRL, MODIFIER_NONE,
+                                    MODIFIER_PARAMETER_OFFSET, MODIFIER_SHIFT,
                                     PRINTABLE_ASCII_MAX, PRINTABLE_ASCII_MIN,
                                     SPECIAL_DELETE_CODE, SPECIAL_END_ALT1_CODE,
                                     SPECIAL_END_ALT2_CODE, SPECIAL_END_FINAL,
@@ -284,6 +333,11 @@ use crate::{ASCII_DEL,
                                     SS3_NUMPAD_MULTIPLY, SS3_NUMPAD_PLUS}};
 
 /// Parse a control character (bytes 0x00-0x1F) and convert to Ctrl+key event.
+///
+/// This is the **3rd parser in the non-ESC dispatch priority**. See module docs
+/// [`Parser Dispatch Priority Pipeline`] for more information.
+/// Control characters must be parsed before UTF-8 text because bytes 0x00-0x1F are valid
+/// UTF-8 but represent Ctrl+letter combinations.
 ///
 /// Control characters are generated when Ctrl is held while typing a letter:
 /// - Ctrl+A → 0x01 (A is ASCII 0x41, 0x41 & 0x1F = 0x01)
@@ -321,6 +375,8 @@ use crate::{ASCII_DEL,
 ///
 /// `Some((event, 1))` if the first byte is a control character (0x00-0x1F),
 /// `None` otherwise (not a control character, or special case handled elsewhere).
+///
+/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length
@@ -355,9 +411,9 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
                 VT100InputEvent::Keyboard {
                     code: VT100KeyCode::Char(' '),
                     modifiers: VT100KeyModifiers {
-                        shift: false,
-                        ctrl: true,
-                        alt: false,
+                        shift: KeyState::NotPressed,
+                        ctrl: KeyState::Pressed,
+                        alt: KeyState::NotPressed,
                     },
                 },
                 1,
@@ -407,9 +463,9 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
         VT100InputEvent::Keyboard {
             code: VT100KeyCode::Char(letter),
             modifiers: VT100KeyModifiers {
-                shift: false,
-                ctrl: true,
-                alt: false,
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::NotPressed,
             },
         },
         1,
@@ -418,9 +474,10 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 
 /// Parse Alt+key combination (ESC followed by printable ASCII or DEL).
 ///
-/// Terminals send Alt+key as a two-byte sequence: ESC (0x1B) + key byte.
-/// This function recognizes this pattern and converts it to a single keyboard
-/// event with Alt modifier.
+/// This is the **only parser for ESC + unknown byte**. See module docs
+/// [`Parser Dispatch Priority Pipeline`] for more information.
+/// Terminals send Alt+key as a two-byte sequence: ESC (0x1B) + key byte. This function
+/// recognizes this pattern and converts it to a single keyboard event with Alt modifier.
 ///
 /// ## Examples
 ///
@@ -446,6 +503,8 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 ///
 /// `Some((event, 2))` if buffer starts with ESC + (printable ASCII or DEL),
 /// `None` otherwise (not Alt+key pattern, or incomplete sequence).
+///
+/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
 #[must_use]
 pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Need at least 2 bytes: ESC + key
@@ -466,9 +525,9 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Backspace,
                 modifiers: VT100KeyModifiers {
-                    shift: false,
-                    ctrl: false,
-                    alt: true,
+                    shift: KeyState::NotPressed,
+                    ctrl: KeyState::NotPressed,
+                    alt: KeyState::Pressed,
                 },
             },
             2, // Consume both ESC and DEL
@@ -488,9 +547,9 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
         VT100InputEvent::Keyboard {
             code: VT100KeyCode::Char(ch),
             modifiers: VT100KeyModifiers {
-                shift: false,
-                ctrl: false,
-                alt: true,
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::Pressed,
             },
         },
         2, // Consume both ESC and letter
@@ -498,6 +557,11 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 }
 
 /// Parse a CSI keyboard sequence and return an [`InputEvent`] with bytes consumed.
+///
+/// This is the **1st parser for CSI sequences**. See module docs
+/// [`Parser Dispatch Priority Pipeline`] for more information.
+/// When the input buffer starts with `ESC[`, this parser is tried first because keyboard
+/// sequences are more common than mouse or terminal events.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence was parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -518,6 +582,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// - `ESC [ 1 ; 3 C` - Alt+Right (base: 1, modifier: 3, final: C, 6 bytes)
 ///
 /// [`InputEvent`]: crate::core::terminal_io::InputEvent
+/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
@@ -541,9 +606,10 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 
 /// Parse an SS3 keyboard sequence and return an [`InputEvent`] with bytes consumed.
 ///
-/// SS3 sequences are used in terminal application mode (vim, less, emacs, etc.)
-/// to send arrow keys, function keys, and numpad keys. They have a simpler format than
-/// CSI.
+/// This is the **only parser for SS3 sequences** (see module docs for
+/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)).
+/// SS3 sequences are used in terminal application mode (vim, less, emacs, etc.) to send
+/// arrow keys, function keys, and numpad keys. They have a simpler format than CSI.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence was parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -683,8 +749,9 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
                 current_num.clear();
             }
         } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
-                || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
-                || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte) {
+            || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
+            || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
+        {
             // Terminal character: end of sequence
             if !current_num.is_empty() {
                 params.push(current_num.parse::<u16>().unwrap_or(0));
@@ -712,32 +779,28 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
         }),
         // Arrow keys with modifiers: CSI 1 ; m A/B/C/D
         (2, ARROW_UP_FINAL) if params[0] == 1 => {
-            #[allow(clippy::cast_possible_truncation)]
-            let modifiers = decode_modifiers(params[1] as u8);
+            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Up,
                 modifiers,
             })
         }
         (2, ARROW_DOWN_FINAL) if params[0] == 1 => {
-            #[allow(clippy::cast_possible_truncation)]
-            let modifiers = decode_modifiers(params[1] as u8);
+            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Down,
                 modifiers,
             })
         }
         (2, ARROW_RIGHT_FINAL) if params[0] == 1 => {
-            #[allow(clippy::cast_possible_truncation)]
-            let modifiers = decode_modifiers(params[1] as u8);
+            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Right,
                 modifiers,
             })
         }
         (2, ARROW_LEFT_FINAL) if params[0] == 1 => {
-            #[allow(clippy::cast_possible_truncation)]
-            let modifiers = decode_modifiers(params[1] as u8);
+            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
             Some(VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Left,
                 modifiers,
@@ -748,8 +811,7 @@ fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
             parse_function_or_special_key(params[0], VT100KeyModifiers::default())
         }
         (2, ANSI_FUNCTION_KEY_TERMINATOR) => {
-            #[allow(clippy::cast_possible_truncation)]
-            let modifiers = decode_modifiers(params[1] as u8);
+            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
             parse_function_or_special_key(params[0], modifiers)
         }
         // Other CSI sequences
@@ -802,27 +864,59 @@ fn parse_function_or_special_key(
     })
 }
 
-/// Decode modifier mask to `KeyModifiers`
+/// Extract and validate a modifier parameter from a CSI sequence parameter.
 ///
-/// Modifier encoding (from CSI 1;m format - CONFIRMED BY PHASE 1!):
+/// CSI sequences parse parameters as u16 (allowing 0-999+), but modifier parameters
+/// are only 1-8. This function semantically extracts the modifier value with proper
+/// type safety, making the intent clear and documenting why the truncation is safe.
+///
+/// # Safety
+/// Safe to cast u16→u8 because VT-100 modifier parameters are always 1-8.
+/// Values >255 are technically possible in CSI but impossible for modifiers.
+#[allow(clippy::cast_possible_truncation)]
+fn extract_modifier_parameter(param: u16) -> u8 {
+    debug_assert!(param <= 255, "Modifier parameter out of range: {}", param);
+    param as u8
+}
+
+/// Decode modifier mask to [`VT100KeyModifiers`].
+///
+/// Modifier encoding (from CSI 1;m format):
 /// Parameter value = 1 + bitfield, where bitfield = Shift(1) | Alt(2) | Ctrl(4)
 ///
 /// - 1 = no modifiers (usually omitted)
 /// - 2 = Shift (1 + 1)
 /// - 3 = Alt (1 + 2)
 /// - 4 = Shift+Alt (1 + 3)
-/// - 5 = Ctrl (1 + 4) ← Confirmed: ESC[1;5A = Ctrl+Up
+/// - 5 = Ctrl (1 + 4)
 /// - 6 = Shift+Ctrl (1 + 5)
 /// - 7 = Alt+Ctrl (1 + 6)
 /// - 8 = Shift+Alt+Ctrl (1 + 7)
 fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiers {
-    // Subtract 1 to get the bitfield
-    let bits = modifier_mask.saturating_sub(1);
+    // Subtract offset to get the bitfield (CSI parameter = 1 + bitfield)
+    let bits = modifier_mask.saturating_sub(MODIFIER_PARAMETER_OFFSET);
+
+    // Fast path: if no modifiers, return default (all NotPressed)
+    if bits == MODIFIER_NONE {
+        return VT100KeyModifiers::default();
+    }
 
     VT100KeyModifiers {
-        shift: (bits & 1) != 0,
-        alt: (bits & 2) != 0,
-        ctrl: (bits & 4) != 0,
+        shift: if (bits & MODIFIER_SHIFT) != MODIFIER_NONE {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        alt: if (bits & MODIFIER_ALT) != MODIFIER_NONE {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        ctrl: if (bits & MODIFIER_CTRL) != MODIFIER_NONE {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
     }
 }
 
@@ -859,8 +953,8 @@ mod tests {
             .expect("Failed to generate function key sequence")
     }
 
-    /// Build a special key sequence (Home, End, Insert, Delete, `PageUp`, `PageDown`) using
-    /// the generator.
+    /// Build a special key sequence (Home, End, Insert, Delete, `PageUp`, `PageDown`)
+    /// using the generator.
     fn special_key_sequence(code: VT100KeyCode, modifiers: VT100KeyModifiers) -> Vec<u8> {
         use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::generate_keyboard_sequence;
         let event = VT100InputEvent::Keyboard { code, modifiers };
@@ -1121,9 +1215,9 @@ mod tests {
         let input = arrow_key_sequence(
             VT100KeyCode::Up,
             VT100KeyModifiers {
-                shift: true,
-                alt: false,
-                ctrl: false,
+                shift: KeyState::Pressed,
+                alt: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
             },
         );
         let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
@@ -1132,9 +1226,9 @@ mod tests {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Up,
                 modifiers: VT100KeyModifiers {
-                    shift: true,
-                    alt: false,
-                    ctrl: false,
+                    shift: KeyState::Pressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::NotPressed,
                 }
             }
         );
@@ -1146,9 +1240,9 @@ mod tests {
         let input = arrow_key_sequence(
             VT100KeyCode::Right,
             VT100KeyModifiers {
-                shift: false,
-                alt: true,
-                ctrl: false,
+                shift: KeyState::NotPressed,
+                alt: KeyState::Pressed,
+                ctrl: KeyState::NotPressed,
             },
         );
         let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
@@ -1157,9 +1251,9 @@ mod tests {
                 code: VT100KeyCode::Right,
                 modifiers,
             } => {
-                assert!(!modifiers.shift);
-                assert!(modifiers.alt);
-                assert!(!modifiers.ctrl);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
             }
             _ => panic!("Expected Alt+Right"),
         }
@@ -1167,14 +1261,14 @@ mod tests {
     }
 
     #[test]
-    fn test_ctrl_up_from_phase1() {
-        // FROM PHASE 1 FINDINGS: ESC[1;5A = Ctrl+Up (verified with cat -v)
+    fn test_ctrl_up() {
+        // ESC[1;5A = Ctrl+Up (verified with real terminal output)
         let input = arrow_key_sequence(
             VT100KeyCode::Up,
             VT100KeyModifiers {
-                shift: false,
-                alt: false,
-                ctrl: true,
+                shift: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
             },
         );
         let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
@@ -1183,9 +1277,13 @@ mod tests {
                 code: VT100KeyCode::Up,
                 modifiers,
             } => {
-                assert!(!modifiers.shift);
-                assert!(!modifiers.alt);
-                assert!(modifiers.ctrl, "Ctrl+Up should have ctrl modifier set");
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(
+                    modifiers.ctrl,
+                    KeyState::Pressed,
+                    "Ctrl+Up should have ctrl modifier set"
+                );
             }
             _ => panic!("Expected Ctrl+Up"),
         }
@@ -1194,16 +1292,23 @@ mod tests {
 
     #[test]
     fn test_ctrl_down() {
-        let input = b"\x1b[1;5B"; // ESC [ 1 ; 5 B (base 1, ctrl modifier = 5)
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = arrow_key_sequence(
+            VT100KeyCode::Down,
+            VT100KeyModifiers {
+                shift: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+            },
+        );
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Down,
                 modifiers,
             } => {
-                assert!(!modifiers.shift);
-                assert!(!modifiers.alt);
-                assert!(modifiers.ctrl);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
             }
             _ => panic!("Expected Ctrl+Down"),
         }
@@ -1212,16 +1317,23 @@ mod tests {
 
     #[test]
     fn test_alt_ctrl_left() {
-        let input = b"\x1b[1;7D"; // ESC [ 1 ; 7 D → 7-1=6 = Alt(2)+Ctrl(4)
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = arrow_key_sequence(
+            VT100KeyCode::Left,
+            VT100KeyModifiers {
+                shift: KeyState::NotPressed,
+                alt: KeyState::Pressed,
+                ctrl: KeyState::Pressed,
+            },
+        );
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Left,
                 modifiers,
             } => {
-                assert!(!modifiers.shift);
-                assert!(modifiers.alt);
-                assert!(modifiers.ctrl);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
             }
             _ => panic!("Expected Alt+Ctrl+Left"),
         }
@@ -1230,16 +1342,23 @@ mod tests {
 
     #[test]
     fn test_shift_alt_ctrl_left() {
-        let input = b"\x1b[1;8D"; // ESC [ 1 ; 8 D → 8-1=7 = Shift(1)+Alt(2)+Ctrl(4)
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = arrow_key_sequence(
+            VT100KeyCode::Left,
+            VT100KeyModifiers {
+                shift: KeyState::Pressed,
+                alt: KeyState::Pressed,
+                ctrl: KeyState::Pressed,
+            },
+        );
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Left,
                 modifiers,
             } => {
-                assert!(modifiers.shift);
-                assert!(modifiers.alt);
-                assert!(modifiers.ctrl);
+                assert_eq!(modifiers.shift, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
             }
             _ => panic!("Expected Shift+Alt+Ctrl+Left"),
         }
@@ -1396,17 +1515,24 @@ mod tests {
 
     #[test]
     fn test_shift_f5() {
-        let input = b"\x1b[15;2~"; // ESC [ 15 ; 2 ~ (F5 with shift) → 2-1=1=Shift
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = function_key_sequence(
+            5,
+            VT100KeyModifiers {
+                shift: KeyState::Pressed,
+                alt: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+            },
+        );
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Function(n),
                 modifiers,
             } => {
                 assert_eq!(n, 5);
-                assert!(modifiers.shift);
-                assert!(!modifiers.alt);
-                assert!(!modifiers.ctrl);
+                assert_eq!(modifiers.shift, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
             }
             _ => panic!("Expected Shift+F5"),
         }
@@ -1415,17 +1541,24 @@ mod tests {
 
     #[test]
     fn test_ctrl_alt_f10() {
-        let input = b"\x1b[21;7~"; // ESC [ 21 ; 7 ~ (F10 with ctrl+alt) → 7-1=6=Alt(2)+Ctrl(4)
-        let (event, bytes_consumed) = parse_keyboard_sequence(input).unwrap();
+        let input = function_key_sequence(
+            10,
+            VT100KeyModifiers {
+                shift: KeyState::NotPressed,
+                alt: KeyState::Pressed,
+                ctrl: KeyState::Pressed,
+            },
+        );
+        let (event, bytes_consumed) = parse_keyboard_sequence(&input).unwrap();
         match event {
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Function(n),
                 modifiers,
             } => {
                 assert_eq!(n, 10);
-                assert!(!modifiers.shift);
-                assert!(modifiers.alt);
-                assert!(modifiers.ctrl);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
             }
             _ => panic!("Expected Ctrl+Alt+F10"),
         }
@@ -1443,9 +1576,9 @@ mod tests {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('b'));
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -1460,9 +1593,9 @@ mod tests {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('f'));
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -1477,9 +1610,9 @@ mod tests {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('B'));
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -1494,9 +1627,9 @@ mod tests {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('3'));
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -1511,9 +1644,9 @@ mod tests {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char(' '));
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -1528,9 +1661,9 @@ mod tests {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Backspace);
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Keyboard event"),
         }

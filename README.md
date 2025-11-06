@@ -300,30 +300,134 @@ edi --version
 
 ## Project Task Organization
 
-This project uses three root-level Markdown files to organize day-to-day development work:
+This project uses a two-tier task management system for organizing day-to-day development work:
+lightweight pointers with simple tasks in root-level files, and detailed task files with
+implementation plans in the `./task/` directory.
 
 ### Task Management Files
 
-- **[`todo.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/todo.md)** - Active tasks and
-  immediate priorities that need attention
+- **[`todo.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/todo.md)** - Active tasks,
+  immediate priorities, and pointers to detailed task files. Latest changes at top. Uses status
+  markers: `[ ]` (pending), `[⌛]` (in progress), `[x]` (completed)
 - **[`done.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/done.md)** - Completed tasks
-  and achievements, providing a historical record of progress
-- **[`claude.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/claude.md)** - AI assistant
-  interaction logs and collaborative planning sessions
+  and achievements, providing a historical record of progress. Links to archived task files in
+  `./task/done/`
+- **[`./task/`](https://github.com/r3bl-org/r3bl-open-core/tree/main/task)** - Directory containing
+  detailed task management files:
+  - **Active tasks**: `task_*.md` files in root of `./task/` - Complex tasks currently in progress
+  - **`pending/`**: Tasks queued for later work
+  - **`done/`**: Completed task files moved from root after all steps are marked `[COMPLETE]`
+  - **`archive/`**: Abandoned tasks retained for historical reference
+  - **`CLAUDE.md`**: Rules and format specifications for creating and maintaining task files
+
+### Task File Format
+
+Detailed task files follow a structured format defined in
+[`./task/CLAUDE.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/task/CLAUDE.md):
+
+**Structure:**
+
+```markdown
+# Task Overview
+High-level description, architecture, context, and the "why"
+
+# Implementation Plan
+
+## Step 0: Do Something [STATUS]
+Detailed instructions for this step
+
+### Step 0.0: Do Subtask [STATUS]
+Details about subtask
+
+### Step 0.1: Do Another Subtask [STATUS]
+Details about another subtask
+
+## Step 1: Do Something Else [STATUS]
+More detailed steps...
+```
+
+**Hierarchical organization:**
+- Steps are numbered (Step 0, Step 1, Step 2, etc.)
+- Substeps use decimal notation (Step 0.0, Step 0.1, etc.)
+- Table of contents automatically generated and maintained using `doctoc`
+- Formatting standardized with `prettier`
+
+**Status markers:**
+- `[COMPLETE]` - Step finished and verified
+- `[WORK_IN_PROGRESS]` - Currently working on this step
+- `[BLOCKED]` - Cannot proceed (waiting for dependency)
+- `[DEFERRED]` - Postponed to later
+
+### Task Workflow Commands
+
+The `/task` slash command (defined in
+[`.claude/commands/task.md`](https://github.com/r3bl-org/r3bl-open-core/blob/main/.claude/commands/task.md))
+manages the task lifecycle:
+
+**Create a new task:**
+
+```sh
+/task create my_feature_name
+```
+
+- Creates `./task/task_my_feature_name.md` from your detailed plan
+- Use after you have a comprehensive plan in your todo list
+- Initializes structure with steps and status markers
+
+**Update an existing task:**
+
+```sh
+/task update my_feature_name
+```
+
+- Updates progress markers in `./task/task_my_feature_name.md`
+- Moves completed task files to `./task/done/` when all steps are `[COMPLETE]`
+- Updates `todo.md` and `done.md` cross-references as needed
+
+**Resume working on a task:**
+
+```sh
+/task load my_feature_name
+```
+
+- Loads `./task/task_my_feature_name.md` for continued work
+- Resumes from the last step marked `[WORK_IN_PROGRESS]`
+- If none found, asks which incomplete step to start with
 
 ### Workflow Connection
 
-The task organization workflow connects with the documentation in `docs/` as follows:
+The task organization workflow connects strategic planning with tactical execution:
 
-- **Strategic to Tactical**: Items from `docs/` planning files (strategic goals, feature designs)
-  are broken down into actionable tasks and copied into `todo.md`
-- **Planning to Execution**: Complex features get documented in `docs/` first, then their
-  implementation steps flow into the daily task management system
-- **Documentation of Decisions**: AI-assisted development sessions and decision-making processes are
-  logged in `claude.md` for future reference
+- **Strategic Planning** (`docs/` folder): Feature roadmaps, architectural decisions, design documents
+- **Planning to Active Work**: Complex features are documented in `docs/` first, then planned into
+  `todo.md`
+- **Tactical Execution**:
+  1. Simple tasks stay in `todo.md` as checklist items
+  2. Complex tasks get detailed planning → `/task create` → `./task/task_*.md`
+  3. Work progresses through hierarchical steps with `/task update` marking progress
+  4. Completion → Task moved to `./task/done/` via `/task update`
+  5. `done.md` maintains archive links for historical reference
+- **Continuous Sync**: `todo.md` is synchronized with the GitHub project dashboard for visibility
+  across team members
 
-This dual-level approach ensures both strategic planning (in `docs/`) and tactical execution (in
-root-level `.md` files) are well-organized and connected.
+This three-level approach (docs → todo.md → ./task/) ensures strategic planning, tactical planning,
+and detailed execution are well-organized and connected.
+
+### Development Tools Integration
+
+**R3BL VSCode Extension Pack:**
+
+The [R3BL Development Pack](https://marketplace.visualstudio.com/publishers/R3BL) from the VSCode
+marketplace provides complementary tools for efficient development:
+
+- **Task Spaces**: Organize and switch between collections of editor tabs for different work
+  contexts (e.g., one space for editing features, one for writing documentation, one for debugging)
+- **R3BL Theme**: Dark theme optimized for Rust and Markdown development
+- **Auto Insert Copyright**: Automatically insert copyright headers in new files
+- **Semantic Configuration**: Enhanced syntax highlighting with additional semantic tokens
+
+The "Task Spaces" feature complements the `./task/` file management system by helping you organize
+your editor sessions, while the detailed task files in `./task/` track your implementation progress.
 
 ## Documentation and Planning
 

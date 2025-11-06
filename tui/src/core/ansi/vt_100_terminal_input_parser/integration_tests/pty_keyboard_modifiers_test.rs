@@ -4,7 +4,7 @@ use crate::{core::ansi::vt_100_terminal_input_parser::{
                 test_fixtures::generate_keyboard_sequence,
                 types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers}
             },
-            Deadline, generate_pty_test, InputEvent,
+            KeyState, Deadline, generate_pty_test, InputEvent,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -86,9 +86,9 @@ fn pty_master_entry_point(
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Up,
                 modifiers: VT100KeyModifiers {
-                    shift: true,
-                    alt: false,
-                    ctrl: false,
+                    shift: KeyState::Pressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::NotPressed,
                 },
             },
         ),
@@ -97,9 +97,9 @@ fn pty_master_entry_point(
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Up,
                 modifiers: VT100KeyModifiers {
-                    shift: false,
-                    alt: false,
-                    ctrl: true,
+                    shift: KeyState::NotPressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::Pressed,
                 },
             },
         ),
@@ -108,9 +108,9 @@ fn pty_master_entry_point(
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Down,
                 modifiers: VT100KeyModifiers {
-                    shift: false,
-                    alt: true,
-                    ctrl: false,
+                    shift: KeyState::NotPressed,
+                    alt: KeyState::Pressed,
+                    ctrl: KeyState::NotPressed,
                 },
             },
         ),
@@ -119,9 +119,9 @@ fn pty_master_entry_point(
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Left,
                 modifiers: VT100KeyModifiers {
-                    shift: true,
-                    alt: true,
-                    ctrl: false,
+                    shift: KeyState::Pressed,
+                    alt: KeyState::Pressed,
+                    ctrl: KeyState::NotPressed,
                 },
             },
         ),
@@ -130,9 +130,9 @@ fn pty_master_entry_point(
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Right,
                 modifiers: VT100KeyModifiers {
-                    shift: true,
-                    alt: false,
-                    ctrl: true,
+                    shift: KeyState::Pressed,
+                    alt: KeyState::NotPressed,
+                    ctrl: KeyState::Pressed,
                 },
             },
         ),
@@ -141,9 +141,9 @@ fn pty_master_entry_point(
             VT100InputEvent::Keyboard {
                 code: VT100KeyCode::Function(1),
                 modifiers: VT100KeyModifiers {
-                    shift: true,
-                    alt: true,
-                    ctrl: true,
+                    shift: KeyState::Pressed,
+                    alt: KeyState::Pressed,
+                    ctrl: KeyState::Pressed,
                 },
             },
         ),

@@ -10,7 +10,7 @@
 //! This ensures generator and parser are compatible and speak the same protocol.
 
 use crate::core::ansi::vt_100_terminal_input_parser::{
-    VT100InputEvent, VT100KeyCode, VT100KeyModifiers, VT100FocusState, VT100PasteMode,
+    KeyState, VT100InputEvent, VT100KeyCode, VT100KeyModifiers, VT100FocusState, VT100PasteMode,
     parse_keyboard_sequence, parse_terminal_event,
 };
 use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::*;
@@ -145,9 +145,9 @@ fn test_generate_shift_up() {
     let event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Up,
         modifiers: VT100KeyModifiers {
-            shift: true,
-            alt: false,
-            ctrl: false,
+            shift: KeyState::Pressed,
+            alt: KeyState::NotPressed,
+            ctrl: KeyState::NotPressed,
         },
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
@@ -160,9 +160,9 @@ fn test_generate_alt_right() {
     let event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Right,
         modifiers: VT100KeyModifiers {
-            shift: false,
-            alt: true,
-            ctrl: false,
+            shift: KeyState::NotPressed,
+            alt: KeyState::Pressed,
+            ctrl: KeyState::NotPressed,
         },
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
@@ -175,9 +175,9 @@ fn test_generate_ctrl_down() {
     let event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Down,
         modifiers: VT100KeyModifiers {
-            shift: false,
-            alt: false,
-            ctrl: true,
+            shift: KeyState::NotPressed,
+            alt: KeyState::NotPressed,
+            ctrl: KeyState::Pressed,
         },
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
@@ -190,9 +190,9 @@ fn test_generate_ctrl_alt_shift_left() {
     let event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Left,
         modifiers: VT100KeyModifiers {
-            shift: true,
-            alt: true,
-            ctrl: true,
+            shift: KeyState::Pressed,
+            alt: KeyState::Pressed,
+            ctrl: KeyState::Pressed,
         },
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
@@ -301,9 +301,9 @@ fn test_generate_shift_f5() {
     let event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Function(5),
         modifiers: VT100KeyModifiers {
-            shift: true,
-            alt: false,
-            ctrl: false,
+            shift: KeyState::Pressed,
+            alt: KeyState::NotPressed,
+            ctrl: KeyState::NotPressed,
         },
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
@@ -316,9 +316,9 @@ fn test_generate_ctrl_alt_f10() {
     let event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Function(10),
         modifiers: VT100KeyModifiers {
-            shift: false,
-            alt: true,
-            ctrl: true,
+            shift: KeyState::NotPressed,
+            alt: KeyState::Pressed,
+            ctrl: KeyState::Pressed,
         },
     };
     let bytes = generate_keyboard_sequence(&event).unwrap();
@@ -377,9 +377,9 @@ fn test_roundtrip_ctrl_alt_f10() {
     let original_event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Function(10),
         modifiers: VT100KeyModifiers {
-            shift: false,
-            alt: true,
-            ctrl: true,
+            shift: KeyState::NotPressed,
+            alt: KeyState::Pressed,
+            ctrl: KeyState::Pressed,
         },
     };
 
@@ -395,9 +395,9 @@ fn test_roundtrip_insert_key_with_shift() {
     let original_event = VT100InputEvent::Keyboard {
         code: VT100KeyCode::Insert,
         modifiers: VT100KeyModifiers {
-            shift: true,
-            alt: false,
-            ctrl: false,
+            shift: KeyState::Pressed,
+            alt: KeyState::NotPressed,
+            ctrl: KeyState::NotPressed,
         },
     };
 

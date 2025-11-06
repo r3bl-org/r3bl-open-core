@@ -170,6 +170,7 @@ pub mod types;
 mod types;
 
 // Re-export types for flat public API.
+pub use crate::KeyState;
 pub use keyboard::*;
 pub use mouse::*;
 pub use terminal_events::*;

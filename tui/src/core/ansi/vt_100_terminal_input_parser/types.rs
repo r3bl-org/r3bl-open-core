@@ -8,23 +8,23 @@
 //! [`InputEvent`]: crate::terminal_io::InputEvent
 //! [`terminal_io`]: mod@crate::terminal_io
 
-use crate::TermPos;
+use crate::{KeyState, TermPos};
 
 /// Keyboard modifiers for input events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VT100KeyModifiers {
-    pub shift: bool,
-    pub ctrl: bool,
-    pub alt: bool,
+    pub shift: KeyState,
+    pub ctrl: KeyState,
+    pub alt: KeyState,
 }
 
 impl VT100KeyModifiers {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
-            shift: false,
-            ctrl: false,
-            alt: false,
+            shift: KeyState::NotPressed,
+            ctrl: KeyState::NotPressed,
+            alt: KeyState::NotPressed,
         }
     }
 }

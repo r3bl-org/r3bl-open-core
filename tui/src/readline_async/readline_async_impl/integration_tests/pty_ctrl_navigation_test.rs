@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, Pair,
-            core::{ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
-                                                        VT100KeyModifiers,
+            core::{ansi::vt_100_terminal_input_parser::{KeyState, VT100InputEvent,
+                                                        VT100KeyCode, VT100KeyModifiers,
                                                         test_fixtures::generate_keyboard_sequence},
                    test_fixtures::StdoutMock},
             generate_pty_test,
@@ -22,9 +22,9 @@ fn ctrl_left() -> Vec<u8> {
     generate_keyboard_sequence(&VT100InputEvent::Keyboard {
         code: VT100KeyCode::Left,
         modifiers: VT100KeyModifiers {
-            ctrl: true,
-            shift: false,
-            alt: false,
+            ctrl: KeyState::Pressed,
+            shift: KeyState::NotPressed,
+            alt: KeyState::NotPressed,
         },
     })
     .expect("Ctrl+Left should generate valid sequence")
@@ -36,9 +36,9 @@ fn ctrl_right() -> Vec<u8> {
     generate_keyboard_sequence(&VT100InputEvent::Keyboard {
         code: VT100KeyCode::Right,
         modifiers: VT100KeyModifiers {
-            ctrl: true,
-            shift: false,
-            alt: false,
+            ctrl: KeyState::Pressed,
+            shift: KeyState::NotPressed,
+            alt: KeyState::NotPressed,
         },
     })
     .expect("Ctrl+Right should generate valid sequence")

@@ -41,7 +41,7 @@ use crate::core::ansi::{constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEP
                                     SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
                                     SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
                                     SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
-                        vt_100_terminal_input_parser::{VT100FocusState,
+                        vt_100_terminal_input_parser::{KeyState, VT100FocusState,
                                                        VT100InputEvent, VT100KeyCode,
                                                        VT100KeyModifiers,
                                                        VT100MouseAction,
@@ -144,13 +144,13 @@ pub fn generate_x10_mouse_sequence(
     }
 
     // Apply modifiers
-    if modifiers.shift {
+    if modifiers.shift == KeyState::Pressed {
         cb |= MOUSE_MODIFIER_SHIFT;
     }
-    if modifiers.alt {
+    if modifiers.alt == KeyState::Pressed {
         cb |= MOUSE_MODIFIER_ALT;
     }
-    if modifiers.ctrl {
+    if modifiers.ctrl == KeyState::Pressed {
         cb |= MOUSE_MODIFIER_CTRL;
     }
 
@@ -219,13 +219,13 @@ pub fn generate_rxvt_mouse_sequence(
     }
 
     // Apply modifiers (same encoding as X10)
-    if modifiers.shift {
+    if modifiers.shift == KeyState::Pressed {
         cb |= MOUSE_MODIFIER_SHIFT;
     }
-    if modifiers.alt {
+    if modifiers.alt == KeyState::Pressed {
         cb |= MOUSE_MODIFIER_ALT;
     }
-    if modifiers.ctrl {
+    if modifiers.ctrl == KeyState::Pressed {
         cb |= MOUSE_MODIFIER_CTRL;
     }
 
@@ -297,13 +297,13 @@ pub fn generate_mouse_sequence_bytes(
 
     // Apply modifiers: shift=4, alt=8, ctrl=16 (bits 2, 3, 4)
     // These match the encoding used by the parser in extract_modifiers()
-    if modifiers.shift {
+    if modifiers.shift == KeyState::Pressed {
         code |= MOUSE_MODIFIER_SHIFT;
     }
-    if modifiers.alt {
+    if modifiers.alt == KeyState::Pressed {
         code |= MOUSE_MODIFIER_ALT;
     }
-    if modifiers.ctrl {
+    if modifiers.ctrl == KeyState::Pressed {
         code |= MOUSE_MODIFIER_CTRL;
     }
 
@@ -326,7 +326,7 @@ fn generate_key_sequence(
     // Build the base sequence
     let mut bytes = CSI_PREFIX.to_vec();
 
-    let has_modifiers = modifiers.shift || modifiers.ctrl || modifiers.alt;
+    let has_modifiers = modifiers.shift == KeyState::Pressed || modifiers.ctrl == KeyState::Pressed || modifiers.alt == KeyState::Pressed;
 
     match code {
         // ==================== Arrow Keys ====================
@@ -446,7 +446,7 @@ fn generate_special_key_sequence(
     let code_str = code.to_string();
     bytes.extend_from_slice(code_str.as_bytes());
 
-    if modifiers.shift || modifiers.ctrl || modifiers.alt {
+    if modifiers.shift == KeyState::Pressed || modifiers.ctrl == KeyState::Pressed || modifiers.alt == KeyState::Pressed {
         bytes.push(ANSI_PARAM_SEPARATOR);
         bytes.push(encode_modifiers(modifiers));
     }
@@ -478,13 +478,13 @@ fn generate_special_key_sequence(
 /// **Confirmed by terminal observation**: `ESC[1;5A` = Ctrl+Up (parameter 5 = 1+4)
 fn encode_modifiers(modifiers: VT100KeyModifiers) -> u8 {
     let mut mask: u8 = 0;
-    if modifiers.shift {
+    if modifiers.shift == KeyState::Pressed {
         mask |= MODIFIER_SHIFT;
     }
-    if modifiers.alt {
+    if modifiers.alt == KeyState::Pressed {
         mask |= MODIFIER_ALT;
     }
-    if modifiers.ctrl {
+    if modifiers.ctrl == KeyState::Pressed {
         mask |= MODIFIER_CTRL;
     }
     // VT-100 formula: parameter = 1 + bitfield

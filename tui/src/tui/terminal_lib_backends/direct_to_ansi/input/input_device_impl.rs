@@ -327,7 +327,7 @@ impl DirectToAnsiInputDevice {
     /// `Some((event, bytes_consumed))` if successful, `None` if incomplete.
     /// Returns the protocol-level `VT100InputEvent` before conversion to canonical
     /// `InputEvent`.
-    fn try_parse(&self) -> Option<(VT100InputEvent, usize)> {
+    pub fn try_parse(&self) -> Option<(VT100InputEvent, usize)> {
         let buf = &self.buffer[self.consumed..];
 
         // Fast path: empty buffer.
@@ -464,23 +464,11 @@ fn convert_key_code_to_keypress(
         VT100KeyCode::Escape => Key::SpecialKey(SpecialKey::Esc),
     };
 
-    // Convert modifiers
+    // Convert modifiers (now using canonical KeyState directly)
     let mask = ModifierKeysMask {
-        shift_key_state: if modifiers.shift {
-            KeyState::Pressed
-        } else {
-            KeyState::NotPressed
-        },
-        ctrl_key_state: if modifiers.ctrl {
-            KeyState::Pressed
-        } else {
-            KeyState::NotPressed
-        },
-        alt_key_state: if modifiers.alt {
-            KeyState::Pressed
-        } else {
-            KeyState::NotPressed
-        },
+        shift_key_state: modifiers.shift,
+        ctrl_key_state: modifiers.ctrl,
+        alt_key_state: modifiers.alt,
     };
 
     if mask.shift_key_state == KeyState::NotPressed
@@ -526,28 +514,18 @@ fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputEvent> {
                 },
             };
 
-            let maybe_modifier_keys =
-                if modifiers.shift || modifiers.ctrl || modifiers.alt {
-                    Some(ModifierKeysMask {
-                        shift_key_state: if modifiers.shift {
-                            KeyState::Pressed
-                        } else {
-                            KeyState::NotPressed
-                        },
-                        ctrl_key_state: if modifiers.ctrl {
-                            KeyState::Pressed
-                        } else {
-                            KeyState::NotPressed
-                        },
-                        alt_key_state: if modifiers.alt {
-                            KeyState::Pressed
-                        } else {
-                            KeyState::NotPressed
-                        },
-                    })
-                } else {
-                    None
-                };
+            let maybe_modifier_keys = if modifiers.shift == KeyState::Pressed
+                || modifiers.ctrl == KeyState::Pressed
+                || modifiers.alt == KeyState::Pressed
+            {
+                Some(ModifierKeysMask {
+                    shift_key_state: modifiers.shift,
+                    ctrl_key_state: modifiers.ctrl,
+                    alt_key_state: modifiers.alt,
+                })
+            } else {
+                None
+            };
 
             // Convert TermPos to Pos (convert from 1-based to 0-based)
             // TermCol and TermRow have built-in conversion to 0-based indices

@@ -263,6 +263,9 @@ pub const MODIFIER_ALT: u8 = 2;
 /// Modifier mask for Ctrl key (bit 2)
 pub const MODIFIER_CTRL: u8 = 4;
 
+/// No modifiers set (zero bits)
+pub const MODIFIER_NONE: u8 = 0;
+
 /// Combined modifier: Alt+Shift
 pub const MODIFIER_ALT_SHIFT: u8 = MODIFIER_ALT | MODIFIER_SHIFT;
 
@@ -298,6 +301,10 @@ pub const ARROW_KEY_MODIFIER_BASE: u16 = 1;
 /// - '7' = Ctrl+Alt (1 + 6)
 /// - '8' = Ctrl+Alt+Shift (1 + 7)
 pub const MODIFIER_PARAMETER_BASE_CHAR: u8 = b'1';
+
+/// Offset applied to CSI modifier parameters: parameter = 1 + bitfield
+/// Used to decode: subtract 1 from CSI parameter to get the actual bitfield
+pub const MODIFIER_PARAMETER_OFFSET: u8 = 1;
 
 // ==================== Control Characters ====================
 //

@@ -53,7 +53,7 @@
 
 use super::types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction,
                    VT100MouseButton, VT100ScrollDirection};
-use crate::{TermPos,
+use crate::{KeyState, TermPos,
             core::ansi::constants::{CSI_PREFIX,
                                     MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
@@ -236,9 +236,21 @@ fn parse_x10_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
 
     // Extract modifiers from button byte (bits 2-4)
     let modifiers = VT100KeyModifiers {
-        shift: (cb & MOUSE_MODIFIER_SHIFT) != 0,
-        alt: (cb & MOUSE_MODIFIER_ALT) != 0,
-        ctrl: (cb & MOUSE_MODIFIER_CTRL) != 0,
+        shift: if (cb & MOUSE_MODIFIER_SHIFT) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        alt: if (cb & MOUSE_MODIFIER_ALT) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        ctrl: if (cb & MOUSE_MODIFIER_CTRL) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
     };
 
     // Check motion flag (bit 5, value 32)
@@ -378,9 +390,21 @@ fn parse_rxvt_mouse(sequence: &[u8]) -> Option<(VT100InputEvent, usize)> {
 
     // Extract modifiers from button byte (similar to X10)
     let modifiers = VT100KeyModifiers {
-        shift: (cb & MOUSE_MODIFIER_SHIFT) != 0,
-        alt: (cb & MOUSE_MODIFIER_ALT) != 0,
-        ctrl: (cb & MOUSE_MODIFIER_CTRL) != 0,
+        shift: if (cb & MOUSE_MODIFIER_SHIFT) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        alt: if (cb & MOUSE_MODIFIER_ALT) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        ctrl: if (cb & MOUSE_MODIFIER_CTRL) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
     };
 
     // Check motion flag (bit 5, value 32)
@@ -517,9 +541,21 @@ fn detect_scroll_event(cb: u16) -> Option<VT100ScrollDirection> {
 /// - Bit 4 (value 16): Ctrl
 fn extract_modifiers(cb: u16) -> VT100KeyModifiers {
     VT100KeyModifiers {
-        shift: (cb & MOUSE_MODIFIER_SHIFT) != 0,
-        alt: (cb & MOUSE_MODIFIER_ALT) != 0,
-        ctrl: (cb & MOUSE_MODIFIER_CTRL) != 0,
+        shift: if (cb & MOUSE_MODIFIER_SHIFT) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        alt: if (cb & MOUSE_MODIFIER_ALT) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
+        ctrl: if (cb & MOUSE_MODIFIER_CTRL) != 0 {
+            KeyState::Pressed
+        } else {
+            KeyState::NotPressed
+        },
     }
 }
 
@@ -614,7 +650,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(!modifiers.shift && !modifiers.ctrl && !modifiers.alt);
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -720,9 +756,9 @@ mod tests {
             1,
             VT100MouseAction::Press,
             VT100KeyModifiers {
-                shift: true,
-                ctrl: false,
-                alt: false,
+                shift: KeyState::Pressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
             },
         );
         let (event, bytes_consumed) =
@@ -731,9 +767,9 @@ mod tests {
         assert_eq!(bytes_consumed, 6);
         match event {
             VT100InputEvent::Mouse { modifiers, .. } => {
-                assert!(modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(!modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -748,9 +784,9 @@ mod tests {
             1,
             VT100MouseAction::Press,
             VT100KeyModifiers {
-                shift: false,
-                ctrl: true,
-                alt: false,
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::NotPressed,
             },
         );
         let (event, bytes_consumed) =
@@ -759,9 +795,9 @@ mod tests {
         assert_eq!(bytes_consumed, 6);
         match event {
             VT100InputEvent::Mouse { modifiers, .. } => {
-                assert!(!modifiers.shift);
-                assert!(modifiers.ctrl);
-                assert!(!modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -776,9 +812,9 @@ mod tests {
             1,
             VT100MouseAction::Press,
             VT100KeyModifiers {
-                shift: false,
-                ctrl: false,
-                alt: true,
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::Pressed,
             },
         );
         let (event, bytes_consumed) =
@@ -787,9 +823,9 @@ mod tests {
         assert_eq!(bytes_consumed, 6);
         match event {
             VT100InputEvent::Mouse { modifiers, .. } => {
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -890,7 +926,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(!modifiers.shift && !modifiers.ctrl && !modifiers.alt);
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -996,9 +1032,9 @@ mod tests {
             1,
             VT100MouseAction::Press,
             VT100KeyModifiers {
-                shift: true,
-                ctrl: false,
-                alt: false,
+                shift: KeyState::Pressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
             },
         );
         let (event, bytes_consumed) =
@@ -1007,9 +1043,9 @@ mod tests {
         assert_eq!(bytes_consumed, seq.len());
         match event {
             VT100InputEvent::Mouse { modifiers, .. } => {
-                assert!(modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(!modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::Pressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1024,9 +1060,9 @@ mod tests {
             1,
             VT100MouseAction::Press,
             VT100KeyModifiers {
-                shift: false,
-                ctrl: true,
-                alt: false,
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::Pressed,
+                alt: KeyState::NotPressed,
             },
         );
         let (event, bytes_consumed) =
@@ -1035,9 +1071,9 @@ mod tests {
         assert_eq!(bytes_consumed, seq.len());
         match event {
             VT100InputEvent::Mouse { modifiers, .. } => {
-                assert!(!modifiers.shift);
-                assert!(modifiers.ctrl);
-                assert!(!modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1052,9 +1088,9 @@ mod tests {
             1,
             VT100MouseAction::Press,
             VT100KeyModifiers {
-                shift: false,
-                ctrl: false,
-                alt: true,
+                shift: KeyState::NotPressed,
+                ctrl: KeyState::NotPressed,
+                alt: KeyState::Pressed,
             },
         );
         let (event, bytes_consumed) =
@@ -1063,9 +1099,9 @@ mod tests {
         assert_eq!(bytes_consumed, seq.len());
         match event {
             VT100InputEvent::Mouse { modifiers, .. } => {
-                assert!(!modifiers.shift);
-                assert!(!modifiers.ctrl);
-                assert!(modifiers.alt);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.ctrl, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::Pressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1185,7 +1221,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(!modifiers.shift && !modifiers.ctrl && !modifiers.alt);
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1270,9 +1306,9 @@ mod tests {
             1,
             VT100MouseAction::Press,
             VT100KeyModifiers {
-                ctrl: true,
-                shift: false,
-                alt: false,
+                ctrl: KeyState::Pressed,
+                shift: KeyState::NotPressed,
+                alt: KeyState::NotPressed,
             },
         );
         let (event, bytes_consumed) = parse_mouse_sequence(&seq).expect("Should parse");
@@ -1280,9 +1316,9 @@ mod tests {
         assert_eq!(bytes_consumed, seq.len());
         match event {
             VT100InputEvent::Mouse { modifiers, .. } => {
-                assert!(modifiers.ctrl);
-                assert!(!modifiers.shift);
-                assert!(!modifiers.alt);
+                assert_eq!(modifiers.ctrl, KeyState::Pressed);
+                assert_eq!(modifiers.shift, KeyState::NotPressed);
+                assert_eq!(modifiers.alt, KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
