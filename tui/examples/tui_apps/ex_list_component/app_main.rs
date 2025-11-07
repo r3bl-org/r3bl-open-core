@@ -11,16 +11,18 @@ use r3bl_tui::{
     RenderOpIRVec, RenderPipeline, ZOrder,
 };
 
-use super::state::{AppSignal, AppState};
+use super::state::{AppSignal, AppState, DisplayMode};
 use super::todo_item::{Priority, TodoItem};
+use super::project_item::{ProjectItem, ProjectStatus};
 
 // Constants for the component IDs
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Id {
     Container = 0,
-    List = 1,
-    Help = 2,
+    SimpleList = 1,
+    ComplexList = 2,
+    Help = 3,
 }
 
 mod id_impl {
@@ -73,20 +75,20 @@ mod app_impl {
             component_registry: &mut ComponentRegistryMap<Self::S, Self::AS>,
             has_focus: &mut HasFocus,
         ) {
-            // Create sample todo items
-            let items = vec![
-                TodoItem::new(1, "Write Rust code", Priority::High),
-                TodoItem::new(2, "Read documentation", Priority::Medium),
-                TodoItem::new(3, "Run tests", Priority::High),
-                TodoItem::new(4, "Fix bugs", Priority::Medium),
-                TodoItem::new(5, "Review PRs", Priority::Low),
-                TodoItem::new(6, "Update changelog", Priority::Low),
-                TodoItem::new(7, "Write blog post", Priority::Medium),
-                TodoItem::new(8, "Refactor code", Priority::Low),
-            ];
+            // Create SIMPLE list (Phase 1): TodoItems with single-line rendering
+            {
+                let items = vec![
+                    TodoItem::new(1, "Write Rust code", Priority::High),
+                    TodoItem::new(2, "Read documentation", Priority::Medium),
+                    TodoItem::new(3, "Run tests", Priority::High),
+                    TodoItem::new(4, "Fix bugs", Priority::Medium),
+                    TodoItem::new(5, "Review PRs", Priority::Low),
+                    TodoItem::new(6, "Update changelog", Priority::Low),
+                    TodoItem::new(7, "Write blog post", Priority::Medium),
+                    TodoItem::new(8, "Refactor code", Priority::Low),
+                ];
 
-            // Create list component
-            let mut list = ListComponent::new(Id::List.into(), items);
+                let mut list = ListComponent::new_simple(Id::SimpleList.into(), items);
 
             // Add batch action: Delete selected items
             list.add_batch_action(BatchAction::new(
@@ -130,15 +132,106 @@ mod app_impl {
                 }),
             ));
 
-            // Register list component
-            let id = FlexBoxId::from(Id::List);
-            if let ContainsResult::DoesNotContain = ComponentRegistry::contains(component_registry, id) {
-                ComponentRegistry::put(component_registry, id, Box::new(list));
+                // Register simple list component
+                let id = FlexBoxId::from(Id::SimpleList);
+                if let ContainsResult::DoesNotContain = ComponentRegistry::contains(component_registry, id) {
+                    ComponentRegistry::put(component_registry, id, Box::new(list));
+                }
             }
 
-            // Give focus to list
+            // Create COMPLEX list (Phase 3): ProjectItems with multi-line FlexBox rendering
+            {
+                let items = vec![
+                    ProjectItem::new(
+                        1,
+                        "R3BL TUI Library",
+                        "Terminal UI framework with FlexBox layouts",
+                        ProjectStatus::InProgress,
+                        75,
+                        15,
+                        12,
+                    ),
+                    ProjectItem::new(
+                        2,
+                        "List Component Phase 3",
+                        "Complex nested items with automatic ID pooling",
+                        ProjectStatus::Review,
+                        90,
+                        8,
+                        7,
+                    ),
+                    ProjectItem::new(
+                        3,
+                        "Documentation Website",
+                        "Interactive examples and API reference",
+                        ProjectStatus::Planning,
+                        30,
+                        20,
+                        6,
+                    ),
+                    ProjectItem::new(
+                        4,
+                        "Performance Benchmarks",
+                        "Measure and optimize rendering pipeline",
+                        ProjectStatus::InProgress,
+                        60,
+                        10,
+                        6,
+                    ),
+                    ProjectItem::new(
+                        5,
+                        "Release 1.0",
+                        "Stable API and comprehensive test coverage",
+                        ProjectStatus::Planning,
+                        45,
+                        25,
+                        11,
+                    ),
+                ];
+
+                // Note: Complex list needs viewport height estimate for FlexBoxId pool
+                // Each complex item takes 3 rows, so viewport_height / 3 items fit
+                // We estimate 20 rows viewport → ~7 items + buffer
+                let mut list = ListComponent::new_complex(Id::ComplexList.into(), items, 10);
+
+                // Add batch actions for complex items
+                list.add_batch_action(BatchAction::new(
+                    key_press! { @char 'd' },
+                    "Delete selected projects".to_string(),
+                    Box::new(|items, selected_indices, state| {
+                        let count = selected_indices.len();
+                        for &idx in selected_indices.iter().rev() {
+                            items.remove(idx);
+                        }
+                        state.status_message = format!("Deleted {} project(s)", count);
+                        ok!(())
+                    }),
+                ));
+
+                list.add_batch_action(BatchAction::new(
+                    key_press! { @char 'c' },
+                    "Complete selected projects".to_string(),
+                    Box::new(|items, selected_indices, state| {
+                        let count = selected_indices.len();
+                        for &idx in selected_indices {
+                            items[idx].status = ProjectStatus::Completed;
+                            items[idx].progress = 100;
+                        }
+                        state.status_message = format!("Completed {} project(s)", count);
+                        ok!(())
+                    }),
+                ));
+
+                // Register complex list component
+                let id = FlexBoxId::from(Id::ComplexList);
+                if let ContainsResult::DoesNotContain = ComponentRegistry::contains(component_registry, id) {
+                    ComponentRegistry::put(component_registry, id, Box::new(list));
+                }
+            }
+
+            // Give focus to simple list by default
             if has_focus.get_id().is_none() {
-                has_focus.set_id(id);
+                has_focus.set_id(FlexBoxId::from(Id::SimpleList));
             }
         }
 
@@ -181,7 +274,29 @@ mod app_impl {
                 return ok!(EventPropagation::ExitMainEventLoop);
             }
 
-            // Clear status message on any key
+            // Handle mode toggle ('m' key)
+            if let InputEvent::Keyboard(KeyPress::Plain {
+                key: Key::Character('m'),
+            }) = input_event
+            {
+                global_data.state.display_mode = match global_data.state.display_mode {
+                    DisplayMode::Simple => {
+                        // Switch to complex mode
+                        has_focus.set_id(FlexBoxId::from(Id::ComplexList));
+                        global_data.state.status_message = "Switched to COMPLEX mode (Phase 3 - multi-line FlexBox rendering)".to_string();
+                        DisplayMode::Complex
+                    }
+                    DisplayMode::Complex => {
+                        // Switch to simple mode
+                        has_focus.set_id(FlexBoxId::from(Id::SimpleList));
+                        global_data.state.status_message = "Switched to SIMPLE mode (Phase 1 - single-line rendering)".to_string();
+                        DisplayMode::Simple
+                    }
+                };
+                return ok!(EventPropagation::ConsumedRender);
+            }
+
+            // Clear status message on any other key
             if !global_data.state.status_message.is_empty() {
                 global_data.state.status_message.clear();
             }
@@ -226,9 +341,12 @@ fn render_layout(
             styles:                 [container_id]
         );
 
-        // List box (90% height)
+        // List box (90% height) - render appropriate list based on display mode
         {
-            let component_id = FlexBoxId::from(Id::List);
+            let component_id = match global_data.state.display_mode {
+                DisplayMode::Simple => FlexBoxId::from(Id::SimpleList),
+                DisplayMode::Complex => FlexBoxId::from(Id::ComplexList),
+            };
 
             box_start! (
                 in:                     surface,
@@ -276,7 +394,8 @@ fn create_stylesheet() -> CommonResult<r3bl_tui::TuiStylesheet> {
         use r3bl_tui::tui_stylesheet;
 
         tui_stylesheet! {
-            new_style!(id: {Id::List} bold color_fg: {tui_color!(cyan)}),
+            new_style!(id: {Id::SimpleList} bold color_fg: {tui_color!(cyan)}),
+            new_style!(id: {Id::ComplexList} bold color_fg: {tui_color!(green)}),
             new_style!(id: {Id::Help} color_fg: {tui_color!(slate_gray)})
         }
     })
@@ -291,7 +410,10 @@ fn render_help_text(
     let box_height = current_box.style_adjusted_bounds_size.row_height;
 
     // Get styles from stylesheet by ID
-    let list_style = surface.stylesheet.find_style_by_id(Id::List);
+    let list_style = match global_data.state.display_mode {
+        DisplayMode::Simple => surface.stylesheet.find_style_by_id(Id::SimpleList),
+        DisplayMode::Complex => surface.stylesheet.find_style_by_id(Id::ComplexList),
+    };
     let help_style = surface.stylesheet.find_style_by_id(Id::Help);
 
     // Status message (if any) renders first (top of help area)
@@ -306,7 +428,14 @@ fn render_help_text(
     }
 
     // Help text renders at the bottom (last line of help area)
-    let help_text = "Navigation: ↑/↓  Select: Space  Toggle: t  Priority: p  | Batch: d=delete c=complete h=high  | Quit: q";
+    let help_text = match global_data.state.display_mode {
+        DisplayMode::Simple => {
+            "SIMPLE MODE | Nav: ↑/↓  Select: Space  Toggle: t  Priority: p | Batch: d=delete c=complete h=high | Mode: m | Quit: q"
+        }
+        DisplayMode::Complex => {
+            "COMPLEX MODE | Nav: ↑/↓  Select: Space  Status: s  Progress: +/-  | Batch: d=delete c=complete | Mode: m | Quit: q"
+        }
+    };
     let mut help_ops = RenderOpIRVec::new();
     let help_row_offset = box_height.as_usize().saturating_sub(1);
     let help_pos = r3bl_tui::col(*origin.col_index) +

@@ -24,7 +24,7 @@ pub mod test_fixtures {
     };
     use crate::tui::{EventPropagation, FlexBoxId};
 
-    use super::super::{ListItem, ListItemId, ListComponent, BatchAction};
+    use super::super::{ListItem, SimpleListItem, ListItemId, ListComponent, BatchAction};
 
     /// Mock application state for testing
     #[derive(Debug, Clone, Default, PartialEq)]
@@ -58,7 +58,9 @@ pub mod test_fixtures {
         fn id(&self) -> ListItemId {
             ListItemId::new(self.id)
         }
+    }
 
+    impl SimpleListItem<TestState, TestSignal> for SimpleItem {
         fn render_line(
             &mut self,
             _state: &TestState,
@@ -145,7 +147,25 @@ pub mod test_fixtures {
 mod tests {
     use super::test_fixtures::*;
     use crate::{InputEvent, KeyPress, Key};
-    use crate::tui::list::{ListItem, ListComponent};
+    use crate::tui::list::{ListItem, SimpleListItem, ListComponent};
+
+    #[test]
+    fn test_simple_list_item_rendering() {
+        // This test verifies that SimpleListItem trait works correctly
+        use crate::ColWidth;
+
+        let mut item = SimpleItem::new(1, "Test Item");
+        let state = TestState::default();
+
+        // Call render_line() through SimpleListItem trait
+        let result = item.render_line(&state, false, false, ColWidth::new(80));
+
+        // Should succeed and return a properly formatted line
+        assert!(result.is_ok());
+        let line = result.unwrap();
+        assert!(line.contains("Test Item"));
+        assert!(line.contains("☐")); // unchecked checkbox
+    }
 
     #[test]
     fn test_list_component_creation() {

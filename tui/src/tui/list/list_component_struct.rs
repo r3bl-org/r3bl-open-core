@@ -15,12 +15,12 @@
  *   limitations under the License.
  */
 
-use std::{fmt::Debug, marker::PhantomData, collections::HashSet};
+use std::{fmt::Debug, marker::PhantomData, collections::{HashSet, HashMap}};
 
 use crate::{RowHeight, KeyPress, CommonResult, height};
 use crate::tui::FlexBoxId;
 
-use super::{ListItem, ListItemId};
+use super::{ListItem, ListItemId, FlexBoxIdPool};
 
 /// Type alias for batch action handler functions.
 ///
@@ -47,7 +47,12 @@ pub type BatchActionHandler<S, I> = Box<dyn Fn(&mut Vec<I>, &[usize], &mut S) ->
 /// - `AS`: Application signal type
 /// - `I`: Item type implementing [`ListItem<S, AS>`]
 ///
-/// # Example
+/// # Phase 3: Complex Items with FlexBox Rendering
+///
+/// For items that need nested layouts, the component manages a pool of FlexBoxIds
+/// that are dynamically assigned to visible items. See [`ComplexListItem`] for details.
+///
+/// # Example (Simple Items)
 ///
 /// ```ignore
 /// use r3bl_tui::*;
@@ -61,7 +66,13 @@ pub type BatchActionHandler<S, I> = Box<dyn Fn(&mut Vec<I>, &[usize], &mut S) ->
 /// }
 ///
 /// impl ListItem<AppState, AppSignal> for TodoItem {
-///     // ... trait implementation
+///     fn id(&self) -> ListItemId {
+///         ListItemId::new(self.id)
+///     }
+/// }
+///
+/// impl SimpleListItem<AppState, AppSignal> for TodoItem {
+///     // ... render_line and handle_event implementation
 /// }
 ///
 /// // Create the list
@@ -70,7 +81,7 @@ pub type BatchActionHandler<S, I> = Box<dyn Fn(&mut Vec<I>, &[usize], &mut S) ->
 ///     TodoItem { id: 2, title: "Write code".into(), completed: false },
 /// ];
 ///
-/// let mut list = ListComponent::new(my_flexbox_id, items);
+/// let mut list = ListComponent::new_simple(my_flexbox_id, items);
 ///
 /// // Add a batch action for deleting selected items
 /// list.add_batch_action(BatchAction {
@@ -83,13 +94,6 @@ pub type BatchActionHandler<S, I> = Box<dyn Fn(&mut Vec<I>, &[usize], &mut S) ->
 ///         Ok(())
 ///     }),
 /// });
-///
-/// // Register with component registry
-/// ComponentRegistry::put(
-///     component_registry,
-///     my_flexbox_id,
-///     Box::new(list),
-/// );
 /// ```
 #[derive(Debug)]
 pub struct ListComponent<S, AS, I>
@@ -118,6 +122,23 @@ where
 
     /// Batch actions available when 2+ items selected
     pub batch_actions: Vec<BatchAction<S, AS, I>>,
+
+    /// Pool of FlexBoxIds for complex items (Phase 3)
+    ///
+    /// Only used when items implement [`ComplexListItem`]. The pool manages
+    /// temporary rendering slots that are assigned to items as they scroll into
+    /// the viewport and recycled when they scroll out.
+    ///
+    /// For simple items, this field is `None`.
+    pub flexbox_id_pool: Option<FlexBoxIdPool>,
+
+    /// Maps ListItemId → FlexBoxId for currently visible complex items
+    ///
+    /// Tracks which items currently have an assigned rendering slot. Entries are
+    /// added when items scroll into view and removed when they scroll out.
+    ///
+    /// For simple items, this map remains empty.
+    pub visible_item_flexbox_mapping: HashMap<ListItemId, FlexBoxId>,
 
     _phantom: PhantomData<(S, AS)>,
 }
@@ -229,12 +250,15 @@ where
     AS: Debug + Default + Clone + Sync + Send,
     I: ListItem<S, AS>,
 {
-    /// Creates a new list component with the given items.
+    /// Creates a new list component with simple items (Phase 1).
+    ///
+    /// Use this constructor for items implementing [`SimpleListItem`] that render
+    /// as single lines of text.
     ///
     /// # Parameters
     ///
     /// - `id`: Unique identifier for this component (used for focus management)
-    /// - `items`: Initial list of items (must implement [`ListItem`])
+    /// - `items`: Initial list of items (must implement [`SimpleListItem`])
     ///
     /// # Initial State
     ///
@@ -242,13 +266,14 @@ where
     /// - No items selected
     /// - Viewport at top of list
     /// - No batch actions registered
+    /// - No FlexBox pool (simple items don't need it)
     ///
     /// # Panics
     ///
     /// Does not panic, but will have undefined behavior if `items` is empty.
     /// Consider checking `items.is_empty()` and handling appropriately.
     #[must_use]
-    pub fn new(id: FlexBoxId, items: Vec<I>) -> Self {
+    pub fn new_simple(id: FlexBoxId, items: Vec<I>) -> Self {
         let cursor_id = items
             .first()
             .map_or(ListItemId::new(0), ListItem::id);
@@ -261,14 +286,119 @@ where
             scroll_offset_index: 0,
             viewport_height: height(10), // Default, will be updated on render
             batch_actions: Vec::new(),
+            flexbox_id_pool: None,
+            visible_item_flexbox_mapping: HashMap::new(),
             _phantom: PhantomData,
         }
     }
 
-    /// Creates a boxed instance for storing in component registry.
+    /// Creates a new list component with complex items (Phase 3).
     ///
-    /// This is the preferred way to create components when using the TUI framework,
-    /// as the component registry requires `Box<dyn Component<S, AS>>`.
+    /// Use this constructor for items implementing [`ComplexListItem`] that need
+    /// nested FlexBox layouts.
+    ///
+    /// # Parameters
+    ///
+    /// - `id`: Unique identifier for this component (used for focus management)
+    /// - `items`: Initial list of items (must implement [`ComplexListItem`])
+    /// - `viewport_height_estimate`: Expected viewport height in rows (for pool sizing)
+    ///
+    /// # Pool Sizing
+    ///
+    /// The FlexBoxId pool is sized as `viewport_height_estimate + 5` to provide
+    /// a buffer for smooth scrolling. If the actual viewport is larger, some items
+    /// may fail to render (logged as warnings).
+    ///
+    /// # ID Allocation
+    ///
+    /// The pool allocates IDs in the range `[id+1, id+1+pool_size)`. Ensure this
+    /// range doesn't overlap with other components in your application.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the pool range would overflow `u8::MAX`.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use r3bl_tui::*;
+    ///
+    /// let list = ListComponent::new_complex(
+    ///     FlexBoxId::new(5),  // List component ID
+    ///     items,
+    ///     20,  // Expect ~20 rows viewport
+    /// );
+    /// // Pool will use IDs 6..31 (25 slots)
+    /// ```
+    #[must_use]
+    pub fn new_complex(id: FlexBoxId, items: Vec<I>, viewport_height_estimate: usize) -> Self {
+        let cursor_id = items
+            .first()
+            .map_or(ListItemId::new(0), ListItem::id);
+
+        let pool_size = viewport_height_estimate + 5;
+        let pool_base_id = id.inner + 1;
+        let pool = FlexBoxIdPool::new(pool_base_id, pool_size);
+
+        Self {
+            id,
+            items,
+            cursor_id,
+            selected_ids: HashSet::new(),
+            scroll_offset_index: 0,
+            viewport_height: height(10), // Default, will be updated on render
+            batch_actions: Vec::new(),
+            flexbox_id_pool: Some(pool),
+            visible_item_flexbox_mapping: HashMap::new(),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Creates a new list component (legacy constructor).
+    ///
+    /// This constructor is kept for backward compatibility. New code should use
+    /// [`Self::new_simple`] or [`Self::new_complex`] instead.
+    ///
+    /// Equivalent to [`Self::new_simple`].
+    #[must_use]
+    pub fn new(id: FlexBoxId, items: Vec<I>) -> Self {
+        Self::new_simple(id, items)
+    }
+
+    /// Creates a boxed instance with simple items for storing in component registry.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use r3bl_tui::*;
+    ///
+    /// let list = ListComponent::new_simple_boxed(my_id, items);
+    /// ComponentRegistry::put(component_registry, my_id, list);
+    /// ```
+    #[must_use]
+    pub fn new_simple_boxed(id: FlexBoxId, items: Vec<I>) -> Box<Self> {
+        Box::new(Self::new_simple(id, items))
+    }
+
+    /// Creates a boxed instance with complex items for storing in component registry.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use r3bl_tui::*;
+    ///
+    /// let list = ListComponent::new_complex_boxed(my_id, items, 20);
+    /// ComponentRegistry::put(component_registry, my_id, list);
+    /// ```
+    #[must_use]
+    pub fn new_complex_boxed(id: FlexBoxId, items: Vec<I>, viewport_height_estimate: usize) -> Box<Self> {
+        Box::new(Self::new_complex(id, items, viewport_height_estimate))
+    }
+
+    /// Creates a boxed instance for storing in component registry (legacy).
+    ///
+    /// This is kept for backward compatibility. New code should use
+    /// [`Self::new_simple_boxed`] or [`Self::new_complex_boxed`] instead.
     ///
     /// # Example
     ///

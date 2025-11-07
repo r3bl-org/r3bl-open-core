@@ -230,6 +230,7 @@ where
         self.selected_ids
             .retain(|id| self.items.iter().any(|item| item.id() == *id));
     }
+
 }
 
 impl<S, AS, I> Component<S, AS> for ListComponent<S, AS, I>
@@ -251,15 +252,12 @@ where
         &mut self,
         global_data: &mut GlobalData<S, AS>,
         current_box: FlexBox,
-        _surface_bounds: SurfaceBounds,
+        surface_bounds: SurfaceBounds,
         has_focus: &mut HasFocus,
     ) -> CommonResult<RenderPipeline> {
-        let state = &global_data.state;
         let mut pipeline = render_pipeline!();
 
-        let available_width = current_box.style_adjusted_bounds_size.col_width;
         let available_height = current_box.style_adjusted_bounds_size.row_height;
-
         self.viewport_height = available_height;
 
         let is_focused = has_focus.does_id_have_focus(self.id);
@@ -272,22 +270,90 @@ where
             return ok!(pipeline);
         };
 
-        for (viewport_row_index, item_index) in
-            (self.scroll_offset_index..viewport_end).enumerate()
+        // Phase 3: Recycle FlexBoxIds for items that scrolled out of viewport
+        if self.flexbox_id_pool.is_some() {
+            let visible_item_ids: std::collections::HashSet<ListItemId> = (self.scroll_offset_index..viewport_end)
+                .filter_map(|idx| self.items.get(idx).map(|item| item.id()))
+                .collect();
+
+            // Return FlexBoxIds for items that scrolled out
+            if let Some(ref mut pool) = self.flexbox_id_pool {
+                self.visible_item_flexbox_mapping.retain(|item_id, flexbox_id| {
+                    if visible_item_ids.contains(item_id) {
+                        true // Keep mapping
+                    } else {
+                        pool.return_id(*flexbox_id); // Recycle ID
+                        false // Remove mapping
+                    }
+                });
+            }
+        }
+
+        // Render each visible item
+        // Track cumulative row offset for complex items that span multiple rows
+        let mut cumulative_row_offset = 0_usize;
+
+        for item_index in self.scroll_offset_index..viewport_end
         {
             let item_id = self.items[item_index].id();
             let is_item_focused = is_focused && (item_index == cursor_index);
             let is_item_selected = self.is_selected(item_id);
 
-            let line_text = self.items[item_index].render_line(state, is_item_focused, is_item_selected, available_width)?;
+            // Phase 3: For complex items, assign FlexBoxId if needed
+            if let Some(ref mut pool) = self.flexbox_id_pool {
+                if !self.visible_item_flexbox_mapping.contains_key(&item_id) {
+                    if let Some(flexbox_id) = pool.borrow_id() {
+                        self.visible_item_flexbox_mapping.insert(item_id, flexbox_id);
+                        self.items[item_index].set_flexbox_id(flexbox_id);
+                    }
+                }
+            }
 
-            let row_pos_index = origin_pos.row_index + RowIndex::new(viewport_row_index);
-            let render_pos = Pos::new((origin_pos.col_index, row_pos_index));
+            // Create a FlexBox for this specific item with adjusted origin
+            // For complex items that span multiple rows, this uses cumulative_row_offset
+            // For simple items (1 row each), this is the same as viewport_row_index
+            let item_origin = Pos::new((
+                origin_pos.col_index,
+                origin_pos.row_index + RowIndex::new(cumulative_row_offset),
+            ));
 
-            render_pipeline! {
-                @push_into pipeline at ZOrder::Normal =>
-                    RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(render_pos)),
-                    RenderOpIR::PaintTextWithAttributes(line_text.into(), None)
+            let mut item_box = current_box;
+            item_box.style_adjusted_origin_pos = item_origin;
+
+            // Call unified render method (works for both simple and complex items)
+            let render_result = self.items[item_index].render(
+                global_data,
+                Some(item_box),
+                Some(surface_bounds),
+                is_item_focused,
+                is_item_selected,
+            )?;
+
+            if let Some(result) = render_result {
+                match result {
+                    super::ListItemRenderResult::SimpleLine(line_text) => {
+                        // Simple rendering: paint text at position
+                        let row_pos_index = origin_pos.row_index + RowIndex::new(cumulative_row_offset);
+                        let render_pos = Pos::new((origin_pos.col_index, row_pos_index));
+
+                        render_pipeline! {
+                            @push_into pipeline at ZOrder::Normal =>
+                                RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(render_pos)),
+                                RenderOpIR::PaintTextWithAttributes(line_text.into(), None)
+                        }
+
+                        // Simple items always consume 1 row
+                        cumulative_row_offset += 1;
+                    }
+                    super::ListItemRenderResult::ComplexPipeline(item_pipeline) => {
+                        // Complex rendering: merge item's pipeline into ours
+                        pipeline.join_into(item_pipeline);
+
+                        // Complex items consume 3 rows (hardcoded for now)
+                        // TODO: Make this configurable per item type
+                        cumulative_row_offset += 3;
+                    }
+                }
             }
         }
 
@@ -319,17 +385,13 @@ where
             return self.execute_batch_action(action_index, state);
         }
 
-        // Single-item actions: ONLY when exactly 1 item is selected
-        if self.selected_ids.len() == 1 {
-            let Some(cursor_index) = self.get_cursor_index() else {
-                return ok!(EventPropagation::Propagate);
-            };
+        // Single-item actions: Work on the focused item regardless of selection
+        let Some(cursor_index) = self.get_cursor_index() else {
+            return ok!(EventPropagation::Propagate);
+        };
 
-            let propagation = self.items[cursor_index].handle_event(input_event, state)?;
+        let propagation = self.items[cursor_index].handle_event_dispatch(input_event, state)?;
 
-            return ok!(propagation);
-        }
-
-        ok!(EventPropagation::Propagate)
+        ok!(propagation)
     }
 }

@@ -1,7 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use r3bl_tui::{
-    ok, ColWidth, CommonResult, InputEvent, Key, KeyPress, ListItem, ListItemId,
+    ok, ColWidth, CommonResult, InputEvent, Key, KeyPress, ListItem,
+    SimpleListItem, ListItemId,
 };
 use r3bl_tui::tui::EventPropagation;
 
@@ -39,6 +40,27 @@ impl ListItem<AppState, AppSignal> for TodoItem {
         ListItemId::new(self.id)
     }
 
+    fn render(
+        &mut self,
+        global_data: &mut r3bl_tui::tui::GlobalData<AppState, AppSignal>,
+        current_box: Option<r3bl_tui::FlexBox>,
+        surface_bounds: Option<r3bl_tui::SurfaceBounds>,
+        is_focused: bool,
+        is_selected: bool,
+    ) -> CommonResult<Option<r3bl_tui::tui::list::ListItemRenderResult>> {
+        SimpleListItem::render(self, global_data, current_box, surface_bounds, is_focused, is_selected)
+    }
+
+    fn handle_event_dispatch(
+        &mut self,
+        event: InputEvent,
+        state: &mut AppState,
+    ) -> CommonResult<r3bl_tui::tui::EventPropagation> {
+        SimpleListItem::handle_event_dispatch(self, event, state)
+    }
+}
+
+impl SimpleListItem<AppState, AppSignal> for TodoItem {
     fn render_line(
         &mut self,
         state: &AppState,

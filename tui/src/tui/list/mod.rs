@@ -62,6 +62,7 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 mod list_item_trait;
+mod flexbox_id_pool;
 mod list_component_struct;
 mod list_component_impl;
 
@@ -69,4 +70,5 @@ mod list_component_impl;
 mod test_list_component;
 
 pub use list_item_trait::*;
+pub use flexbox_id_pool::*;
 pub use list_component_struct::*;

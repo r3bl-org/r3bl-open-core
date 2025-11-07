@@ -5,3 +5,4 @@ pub mod app_main;
 pub mod launcher;
 pub mod state;
 pub mod todo_item;
+pub mod project_item;
