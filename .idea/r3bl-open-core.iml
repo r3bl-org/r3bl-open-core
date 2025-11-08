@@ -23,10 +23,12 @@
       <sourceFolder url="file://$MODULE_DIR$/log/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/script/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tui/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/r3bl-build-infra/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/cmdr/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/tui/target" />
       <excludeFolder url="file://$MODULE_DIR$/analytics_schema/target" />
+      <excludeFolder url="file://$MODULE_DIR$/r3bl-build-infra/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

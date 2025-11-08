@@ -1,0 +1,43 @@
+[package]
+name = "r3bl-build-infra"
+version = "0.0.1"
+edition = "2024"
+readme = "README.md"
+homepage = "https://r3bl.com"
+license = "Apache-2.0"
+repository = "https://github.com/r3bl-org/r3bl-open-core"
+authors = [
+    "Nazmul Idris <idris@developerlife.com>",
+    "Nadia Idris <nadia@developerlife.com>",
+]
+documentation = "https://docs.rs/r3bl-build-infra"
+description = "Build infrastructure tools for R3BL projects"
+keywords = ["build-tools", "rustdoc", "markdown", "formatting", "cargo"]
+categories = ["development-tools", "command-line-utilities"]
+
+[lints]
+workspace = true
+
+# Define binary entry points (add more [[bin]] sections for future tools)
+[[bin]]
+name = "cargo-rustdoc-fmt"
+path = "src/bin/cargo-rustdoc-fmt.rs"
+
+# Library definition
+[lib]
+name = "r3bl_build_infra"
+path = "src/lib.rs"
+
+[dependencies]
+pulldown-cmark = "0.13"
+pulldown-cmark-to-cmark = "21"
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
+regex = "1.12"
+walkdir = "2.5"
+unicode-width = "0.2"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+test-case = "3.3"
+tempfile = "3.23"
