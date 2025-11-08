@@ -13,6 +13,7 @@ mod ex_app_no_layout;
 mod ex_app_with_1col_layout;
 mod ex_app_with_2col_layout;
 mod ex_editor;
+mod ex_list_component;
 mod ex_pitch;
 mod ex_rc;
 
@@ -110,7 +111,7 @@ async fn run_user_selected_example(
     selection: String,
     readline_async: &mut ReadlineAsyncContext,
 ) -> CommonResult<()> {
-    use AutoCompleteCommand::{Commander, Editor, Exit, NoLayout, OneColLayout, Slides,
+    use AutoCompleteCommand::{Commander, Editor, Exit, ListComponent, NoLayout, OneColLayout, Slides,
                               TwoColLayout};
 
     let result_command /* Eg: Ok(Exit) */ =
@@ -122,6 +123,7 @@ async fn run_user_selected_example(
             OneColLayout => ex_app_with_1col_layout::launcher::run_app().await,
             TwoColLayout => ex_app_with_2col_layout::launcher::run_app().await,
             Editor => ex_editor::launcher::run_app().await,
+            ListComponent => ex_list_component::launcher::launch_app().await,
             Slides => ex_pitch::launcher::run_app().await,
             Commander => ex_rc::launcher::run_app().await,
             Exit => CommonError::new_error_result_with_only_msg("Exiting..."),
@@ -161,13 +163,18 @@ enum AutoCompleteCommand {
     Editor,
 
     #[strum(ascii_case_insensitive)]
-    #[strum(to_string = "Why R3BL? Why TUI?")]
+    #[strum(to_string = "ListComponent demo (TodoList with multi-select and batch actions)")]
     #[strum(serialize = "4")]
+    ListComponent,
+
+    #[strum(ascii_case_insensitive)]
+    #[strum(to_string = "Why R3BL? Why TUI?")]
+    #[strum(serialize = "5")]
     Slides,
 
     #[strum(ascii_case_insensitive)]
     #[strum(to_string = "R3BL CMDR prototype")]
-    #[strum(serialize = "5")]
+    #[strum(serialize = "6")]
     Commander,
 
     #[strum(ascii_case_insensitive)]
@@ -177,7 +184,7 @@ enum AutoCompleteCommand {
 }
 
 fn generate_help_msg() -> String {
-    use AutoCompleteCommand::{Commander, Editor, NoLayout, OneColLayout, Slides,
+    use AutoCompleteCommand::{Commander, Editor, ListComponent, NoLayout, OneColLayout, Slides,
                               TwoColLayout};
 
     let window_size = get_size().unwrap_or_default();
@@ -191,8 +198,9 @@ Type a number to run corresponding example:
   1. 📐 {OneColLayout}
   2. 📐 {TwoColLayout}
   3. 🐒 {Editor}
-  4. 🦜 {Slides}
-  5. 📔 {Commander}
+  4. ✓  {ListComponent}
+  5. 🦜 {Slides}
+  6. 📔 {Commander}
 
 or type Ctrl+C, Ctrl+D, 'request_shutdown', or 'x' to request_shutdown",
     );
