@@ -24,7 +24,7 @@
       `App -> Component -> RenderOps(IR) -> OffscreenBuffer -> RenderOps(Output) -> OutputDevice`
 
 - [x] use [`task_refactor_input_device`](task/task_refactor_input_device.md) to refactor
-  `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
+      `InputDevice` to unify `crossterm`, `direct_to_ansi`, and `mock` variants
 
 - [⌛] use [`task_remove_crossterm`](task/task_remove_crossterm.md) to remove crossterm from the
   `r3bl_open_core` codebase
@@ -32,6 +32,9 @@
 - [⌛] use [`task_readline_async_add_shortcuts.md`](task/task_readline_async_add_shortcuts.md) to
   add `readline_async` support for all the shortcuts that we don't currently support but `readline`
   does
+
+- [x] bootstrap `r3bl_build_infra` crate with first tool (binary)
+      [`task_cargo_rustdoc_fmt.md](task/done/task_cargo_rustdoc_fmt.md)
 
 - [ ] use [`task_unify_cli_and_styled_text`](task/pending/task_unify_cli_and_styled_text.md) to
       unify `CliText` and `TuiStyledText` rendering paths
