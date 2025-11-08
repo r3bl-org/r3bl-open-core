@@ -329,30 +329,37 @@ Detailed task files follow a structured format defined in
 
 ```markdown
 # Task Overview
+
 High-level description, architecture, context, and the "why"
 
 # Implementation Plan
 
 ## Step 0: Do Something [STATUS]
+
 Detailed instructions for this step
 
 ### Step 0.0: Do Subtask [STATUS]
+
 Details about subtask
 
 ### Step 0.1: Do Another Subtask [STATUS]
+
 Details about another subtask
 
 ## Step 1: Do Something Else [STATUS]
+
 More detailed steps...
 ```
 
 **Hierarchical organization:**
+
 - Steps are numbered (Step 0, Step 1, Step 2, etc.)
 - Substeps use decimal notation (Step 0.0, Step 0.1, etc.)
 - Table of contents automatically generated and maintained using `doctoc`
 - Formatting standardized with `prettier`
 
 **Status markers:**
+
 - `[COMPLETE]` - Step finished and verified
 - `[WORK_IN_PROGRESS]` - Currently working on this step
 - `[BLOCKED]` - Cannot proceed (waiting for dependency)
@@ -398,7 +405,8 @@ manages the task lifecycle:
 
 The task organization workflow connects strategic planning with tactical execution:
 
-- **Strategic Planning** (`docs/` folder): Feature roadmaps, architectural decisions, design documents
+- **Strategic Planning** (`docs/` folder): Feature roadmaps, architectural decisions, design
+  documents
 - **Planning to Active Work**: Complex features are documented in `docs/` first, then planned into
   `todo.md`
 - **Tactical Execution**:
@@ -415,19 +423,30 @@ and detailed execution are well-organized and connected.
 
 ### Development Tools Integration
 
-**R3BL VSCode Extension Pack:**
+R3BL provides IDE extensions and plugins to enhance your development workflow, regardless of your
+editor choice:
 
-The [R3BL Development Pack](https://marketplace.visualstudio.com/publishers/R3BL) from the VSCode
-marketplace provides complementary tools for efficient development:
+**For VSCode Users**
 
-- **Task Spaces**: Organize and switch between collections of editor tabs for different work
-  contexts (e.g., one space for editing features, one for writing documentation, one for debugging)
-- **R3BL Theme**: Dark theme optimized for Rust and Markdown development
-- **Auto Insert Copyright**: Automatically insert copyright headers in new files
-- **Semantic Configuration**: Enhanced syntax highlighting with additional semantic tokens
+R3BL provides custom VSCode extensions including Task Spaces (organize editor tabs by context),
+theme, and enhanced syntax highlighting. See the [R3BL VSCode Extensions](#r3bl-vscode-extensions)
+section below for installation and detailed feature descriptions.
 
-The "Task Spaces" feature complements the `./task/` file management system by helping you organize
-your editor sessions, while the detailed task files in `./task/` track your implementation progress.
+**For IntelliJ IDEA Users**
+
+R3BL provides theme and productivity plugins for IntelliJ IDEA and other JetBrains IDEs. See the
+[R3BL IntelliJ Plugins](#r3bl-intellij-plugins) section below for installation from the JetBrains
+Marketplace and detailed feature descriptions.
+
+**Workflow Integration:**
+
+Both IDE environments complement the `./task/` file management system in this project:
+
+- **VSCode**: The R3BL Task Spaces extension helps you organize editor tabs by context (e.g., one
+  space for features, one for docs, one for debugging) while the `./task/` files track your
+  implementation progress
+- **RustRover**: Use the built-in Task Management plugin alongside `./task/` files for seamless
+  workflow integration
 
 ## Documentation and Planning
 
@@ -532,14 +551,75 @@ fish run.fish install-cargo-tools
 
 ## IDE Setup and Extensions
 
+Choose the development environment that works best for you. R3BL provides extensions and plugins for
+both VSCode and IntelliJ IDEA.
+
+### R3BL IntelliJ Plugins
+
+For developers using IntelliJ IDEA, RustRover, or other JetBrains IDEs, install the R3BL plugins
+directly from the JetBrains Marketplace:
+
+**Available Plugins:**
+
+- **[R3BL Theme](https://plugins.jetbrains.com/plugin/28943-r3bl-theme/)** - Vibrant dark theme with
+  carefully chosen colors for visual clarity and reduced eye strain. Optimized for Rust, Markdown,
+  and 30+ languages.
+- **[R3BL Copy Selection Path](https://plugins.jetbrains.com/plugin/28944-r3bl-copy-selection-path-and-range/)** -
+  Copy file paths with selected line ranges in Claude Code compatible format. Press `Alt+O` to copy
+  the current file path with line numbers.
+
+**Installation from JetBrains Marketplace:**
+
+1. Open IntelliJ IDEA / RustRover
+2. Go to `Settings` → `Plugins` → `Marketplace`
+3. Search for "R3BL Theme" and "R3BL Copy Selection Path"
+4. Click `Install` on each plugin
+5. Restart the IDE
+
+**Or install from disk (for latest development builds):**
+
+```sh
+# Clone the plugins repository
+git clone https://github.com/r3bl-org/r3bl-intellij-plugins.git
+cd r3bl-intellij-plugins
+
+# Build the plugins
+./gradlew buildPlugin
+
+# In IntelliJ: Settings → Plugins → ⚙️ → Install Plugin from Disk
+# Select the .zip files from:
+# - plugins/r3bl-theme/build/distributions/r3bl-theme-*.zip
+# - plugins/r3bl-copy-selection-path/build/distributions/r3bl-copy-selection-path-*.zip
+```
+
+**Benefits for r3bl-open-core development:**
+
+- **Vibrant Color Scheme**: Enhanced syntax highlighting makes Rust code more readable
+- **Claude Code Integration**: Quickly copy file paths with line ranges using `Alt+O` to share code
+  references with Claude Code
+- **Reduced Eye Strain**: Carefully balanced colors optimized for long coding sessions
+- **Multi-Language Support**: Works great with Rust, Markdown, TOML, and all file types in this
+  project
+
+**Post-installation:**
+
+1. Restart IntelliJ IDEA / RustRover
+2. Go to `Settings` → `Appearance & Behavior` → `Appearance` → `Theme` → Select "R3BL"
+3. Use `Alt+O` to copy file paths with line ranges (great for Claude Code interactions!)
+
+**Task Workflow Integration:**
+
+IntelliJ IDEA and RustRover include a built-in Task Management plugin that works seamlessly alongside the `./task/` file management system in this project. Use it to organize your work contexts while the `./task/` files track your implementation progress.
+
 ### R3BL VSCode Extensions
 
-For an optimal development experience with r3bl-open-core, we provide a custom VSCode extension pack
-specifically designed for Rust development. This extension pack is not available on the VSCode
+For an optimal development experience with r3bl-open-core in VSCode, we provide a custom extension
+pack specifically designed for Rust development. This extension pack is not available on the VSCode
 marketplace and must be installed manually.
 
 **What's included:**
 
+- **Task Spaces** - Organize and switch between collections of editor tabs for different work contexts (e.g., one space for editing features, one for writing documentation, one for debugging). Complements the `./task/` file management system by helping you organize your editor sessions.
 - **R3BL Theme** - A carefully crafted dark theme optimized for Rust and Markdown development
 - **Auto Insert Copyright** - Automatically inserts copyright headers in new files
 - **Semantic Configuration** - Enhanced Rust syntax highlighting with additional semantic tokens
@@ -575,8 +655,8 @@ cd r3bl-vscode-extensions
 2. Select the R3BL Theme: `Ctrl+Shift+P` → "Preferences: Color Theme" → "R3BL Theme"
 3. Configure copyright settings if needed
 
-The extensions work seamlessly with the existing development tools mentioned in this guide,
-including rust-analyzer and bacon.
+Both the IntelliJ plugins and VSCode extensions work seamlessly with the existing development tools
+mentioned in this guide, including rust-analyzer, bacon, and the comprehensive development workflow.
 
 ## Build the workspace and run tests
 
