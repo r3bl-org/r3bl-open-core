@@ -261,6 +261,7 @@ pub fn try_write_file(
 mod tests {
     use super::*;
     use crate::{fs_path, try_create_temp_dir, with_saved_pwd};
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 
     fn test_try_directory_exists_not_found_error() {
@@ -277,6 +278,7 @@ mod tests {
         });
     }
 
+    #[cfg(unix)]
     fn test_try_directory_exists_permissions_errors() {
         with_saved_pwd!({
             // Create the root temp dir.
@@ -341,6 +343,7 @@ mod tests {
         });
     }
 
+    #[cfg(unix)]
     fn test_try_file_exists_permissions_errors() {
         with_saved_pwd!({
             // Create the root temp dir.
@@ -383,6 +386,7 @@ mod tests {
         });
     }
 
+    #[cfg(unix)]
     fn test_try_pwd_errors() {
         with_saved_pwd!({
             // Create the root temp dir.
@@ -474,6 +478,7 @@ mod tests {
         });
     }
 
+    #[cfg(unix)]
     fn test_try_change_directory_permissions_errors() {
         with_saved_pwd!({
             use crate::directory_change::try_cd;
@@ -597,14 +602,18 @@ mod tests {
         // Run each test in its own function with with_saved_pwd! to ensure the
         // current working directory is restored after each test.
         test_try_directory_exists_not_found_error();
+        #[cfg(unix)]
         test_try_directory_exists_permissions_errors();
         test_try_file_exists();
         test_try_file_exists_invalid_name_error();
+        #[cfg(unix)]
         test_try_file_exists_permissions_errors();
         test_try_pwd();
+        #[cfg(unix)]
         test_try_pwd_errors();
         test_try_write();
         test_try_mkdir();
+        #[cfg(unix)]
         test_try_change_directory_permissions_errors();
         test_try_change_directory_happy_path();
         test_try_change_directory_non_existent();
