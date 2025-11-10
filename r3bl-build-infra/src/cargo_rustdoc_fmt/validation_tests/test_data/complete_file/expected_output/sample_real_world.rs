@@ -14,18 +14,18 @@
 //! ## Comprehensive List of Supported Keyboard Shortcuts
 //!
 //! ### Basic Keys
-//! | Key | Sequence        | Notes                            |
+//! | Key             | Sequence        | Notes                            |
 //! | --------------- | --------------- | -------------------------------- |
-//! | **Tab** | `0x09`          | Fixed: was returning None        |
-//! | **Enter** | `0x0D`/`0x0A`   | CR or LF depending on terminal   |
-//! | **Backspace** | `0x08`/`0x7F`   | BS or DEL encoding               |
-//! | **Escape** | `0x1B`          | Modal UI support                 |
-//! | **Space** | `0x20`          | Regular space character          |
+//! | **Tab**         | `0x09`          | Fixed: was returning None        |
+//! | **Enter**       | `0x0D`/`0x0A`   | CR or LF depending on terminal   |
+//! | **Backspace**   | `0x08`/`0x7F`   | BS or DEL encoding               |
+//! | **Escape**      | `0x1B`          | Modal UI support                 |
+//! | **Space**       | `0x20`          | Regular space character          |
 //!
 //! ### Control Key Combinations (Ctrl+Letter)
 //! | Key                             | Byte            | Notes                            |
 //! | ------------------------------- | --------------- | -------------------------------- |
-//! | **Ctrl+Space** | `0x00`          | Ctrl+@, treated as Ctrl+Space    |
+//! | **Ctrl+Space**                  | `0x00`          | Ctrl+@, treated as Ctrl+Space    |
 //! | **Ctrl+A** through **Ctrl+Z**   | `0x01`-`0x1A`   | Standard control chars           |
 //! | **Ctrl+\\**                     | `0x1C`          | FS (File Separator)              |
 //! | **Ctrl+]**                      | `0x1D`          | GS (Group Separator)             |
@@ -35,7 +35,7 @@
 //! ### Alt Key Combinations (Alt+Letter)
 //! | Key                         | Sequence          | Format                |
 //! | --------------------------- | ----------------- | --------------------- |
-//! | **Alt+\[a-z\]** | `ESC` + letter    | Lowercase letters     |
+//! | **Alt+\[a-z\]**             | `ESC` + letter    | Lowercase letters     |
 //! | **Alt+\[A-Z\]**             | `ESC` + letter    | Uppercase letters     |
 //! | **Alt+\[0-9\]**             | `ESC` + digit     | Digits                |
 //! | **Alt+Space**               | `ESC` + space     | Space key             |
@@ -61,7 +61,7 @@
 //! ### Special Navigation Keys
 //! | Key             | Primary     | Alt 1       | Alt 2      | SS3         |
 //! | --------------- | ----------- | ----------- | ---------- | ----------- |
-//! | **Home**  | `ESC[H`     | `ESC[1~`    | `ESC[7~`   | `ESC O H`   |
+//! | **Home**        | `ESC[H`     | `ESC[1~`    | `ESC[7~`   | `ESC O H`   |
 //! | **End**         | `ESC[F`     | `ESC[4~`    | `ESC[8~`   | `ESC O F`   |
 //! | **Insert**      | `ESC[2~`    | -           | -          | -           |
 //! | **Delete**      | `ESC[3~`    | -           | -          | -           |
@@ -88,7 +88,7 @@
 //! | **F9**    | `ESC[20~`    | -              | CSI only          |
 //! | **F10**   | `ESC[21~`    | -              | CSI only          |
 //! | **F11**   | `ESC[23~`    | -              | Note: gap at 22   |
-//! | **F12** | `ESC[24~`    | -      | CSI only          |
+//! | **F12**   | `ESC[24~`    | -              | CSI only          |
 //!
 //! ### Function Keys with Modifiers
 //! Function keys support all modifier combinations using CSI format:
@@ -119,16 +119,16 @@
 //! **Numpad Key Mappings**:
 //! | Numpad Key   | Normal Mode   | Application Mode   | SS3 Char   |
 //! | ------------ | ------------- | ------------------ | ---------- |
-//! | **0**   | `'0'`         | `ESC O p`          | p          |
-//! | **1**   | `'1'`         | `ESC O q`          | q          |
-//! | **2**   | `'2'`         | `ESC O r`          | r          |
-//! | **3**   | `'3'`         | `ESC O s`          | s          |
-//! | **4**   | `'4'`         | `ESC O t`          | t          |
-//! | **5**   | `'5'`         | `ESC O u`          | u          |
-//! | **6**   | `'6'`         | `ESC O v`          | v          |
-//! | **7**   | `'7'`         | `ESC O w`          | w          |
-//! | **8**   | `'8'`         | `ESC O x`          | x          |
-//! | **9**   | `'9'`         | `ESC O y`          | y          |
+//! | **0**        | `'0'`         | `ESC O p`          | p          |
+//! | **1**        | `'1'`         | `ESC O q`          | q          |
+//! | **2**        | `'2'`         | `ESC O r`          | r          |
+//! | **3**        | `'3'`         | `ESC O s`          | s          |
+//! | **4**        | `'4'`         | `ESC O t`          | t          |
+//! | **5**        | `'5'`         | `ESC O u`          | u          |
+//! | **6**        | `'6'`         | `ESC O v`          | v          |
+//! | **7**        | `'7'`         | `ESC O w`          | w          |
+//! | **8**        | `'8'`         | `ESC O x`          | x          |
+//! | **9**        | `'9'`         | `ESC O y`          | y          |
 //! | **Enter**    | `CR`          | `ESC O M`          | M          |
 //! | **+**        | `'+'`         | `ESC O k`          | k          |
 //! | **-**        | `'-'`         | `ESC O m`          | m          |
@@ -346,10 +346,13 @@ use crate::{ASCII_DEL, KeyState,
 ///
 /// `Some((event, 1))` if successful, `None` otherwise.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`Control Key Combinations`](mod@self#control-key-combinations-ctrlletter)
-/// [`Ambiguous Control Character
-/// Handling`](mod@self#ambiguous-control-character-handling)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`Control Key Combinations`]
+/// [`Ambiguous Control Character Handling`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
+/// [`Ambiguous Control Character Handling`]: mod@self#ambiguous-control-character-handling
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length
@@ -461,8 +464,11 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 /// `Some((event, 2))` if buffer starts with ESC + (printable ASCII or DEL),
 /// `None` otherwise.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`Why Alt Uses ESC Prefix`](mod@self#why-alt-uses-esc-prefix-not-csi)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`Why Alt Uses ESC Prefix`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Why Alt Uses ESC Prefix`]: mod@self#why-alt-uses-esc-prefix-not-csi
 #[must_use]
 pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Need at least 2 bytes: ESC + key
@@ -527,8 +533,11 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// `Some((event, bytes_consumed))` if a complete sequence was parsed,
 /// `None` if the sequence is incomplete or invalid.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`CSI Sequences`](mod@self#csi-sequences-esc)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`CSI Sequences`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`CSI Sequences`]: mod@self#csi-sequences-esc
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
@@ -566,8 +575,11 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 /// `Some((event, 3))` if a valid SS3 sequence was parsed,
 /// `None` if the sequence is incomplete or invalid.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`SS3 Sequences`](mod@self#ss3-sequences-esc-o)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`SS3 Sequences`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`SS3 Sequences`]: mod@self#ss3-sequences-esc-o
 #[must_use]
 pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // SS3 sequences must be exactly 3 bytes: ESC O + command_char
@@ -811,7 +823,9 @@ fn extract_modifier_parameter(param: u16) -> u8 {
 /// CSI encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
 /// See module docs [`Modifier Encoding`] for full table.
 ///
-/// [`Modifier Encoding`](mod@self#why-each-modifier-uses-different-encoding)
+/// [`Modifier Encoding`]
+///
+/// [`Modifier Encoding`]: mod@self#why-each-modifier-uses-different-encoding
 fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiers {
     // Subtract offset to get the bitfield (CSI parameter = 1 + bitfield)
     let bits = modifier_mask.saturating_sub(MODIFIER_PARAMETER_OFFSET);
@@ -845,7 +859,9 @@ fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiers {
 /// Uses generator functions for round-trip testing consistency between
 /// sequence generation and parsing. See module docs [`Testing Strategy`] for details.
 ///
-/// [`Testing Strategy`](mod@super#testing-strategy)
+/// [`Testing Strategy`]
+///
+/// [`Testing Strategy`]: mod@super#testing-strategy
 #[cfg(test)]
 mod tests {
     use super::*;
