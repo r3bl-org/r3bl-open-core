@@ -343,6 +343,17 @@ function install-cargo-tools
         install_if_missing "wild" "cargo install wild-linker"
     end
 
+    # Install r3bl-build-infra tools (cargo-rustdoc-fmt)
+    echo 'Installing r3bl-build-infra tools...'
+    set original_dir $PWD
+    cd r3bl-build-infra
+    if cargo install --path . --force
+        echo '✓ cargo-rustdoc-fmt installed'
+    else
+        echo '⚠️  Failed to install r3bl-build-infra tools'
+    end
+    cd $original_dir
+
     # Generate appropriate cargo configuration after installation
     generate_cargo_config
 
