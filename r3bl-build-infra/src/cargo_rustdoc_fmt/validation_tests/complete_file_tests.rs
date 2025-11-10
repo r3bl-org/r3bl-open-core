@@ -220,4 +220,60 @@ fn main() {}";
                 || formatted_content.contains("https://example.com")
         );
     }
+
+    /// Comprehensive real-world test using keyboard.rs file.
+    ///
+    /// This test uses a real-world file (keyboard.rs) with:
+    /// - Multiple heading levels (##, ###) that must be preserved
+    /// - Markdown tables that need alignment
+    /// - Inline links that should be converted to reference style
+    ///
+    /// This verifies the complete formatting pipeline on actual production code.
+    #[test]
+    fn test_real_world_file_complete_formatting() {
+        let input = include_str!("test_data/complete_file/input/sample_real_world.rs");
+        let expected = include_str!("test_data/complete_file/expected_output/sample_real_world.rs");
+
+        // Use the actual FileProcessor to test the complete pipeline
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_real_world.rs");
+        fs::write(&test_file, input).unwrap();
+
+        // Process with default options (tables + links)
+        let options = FormatOptions::default();
+        let processor = processor::FileProcessor::new(options);
+        let result = processor.process_file(&test_file);
+
+        assert!(result.errors.is_empty(), "Processing errors: {:?}", result.errors);
+        assert!(result.modified, "File should be modified (has formatting to do)");
+
+        // Read the formatted result
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Verify heading levels are preserved
+        assert!(formatted.contains("## Parser Dispatch Priority Pipeline"),
+                "Level-2 heading should be preserved as ##, not changed to #");
+        assert!(formatted.contains("## Comprehensive List of Supported Keyboard Shortcuts"),
+                "Level-2 heading should be preserved");
+        assert!(formatted.contains("### Basic Keys"),
+                "Level-3 heading should be preserved as ###");
+
+        // Verify tables are formatted (aligned)
+        let h2_in_expected = expected.matches("## ").count();
+        let h2_in_formatted = formatted.matches("## ").count();
+        assert_eq!(h2_in_formatted, h2_in_expected,
+                  "Number of level-2 headings (##) should be preserved");
+
+        let h3_in_expected = expected.matches("### ").count();
+        let h3_in_formatted = formatted.matches("### ").count();
+        assert_eq!(h3_in_formatted, h3_in_expected,
+                  "Number of level-3 headings (###) should be preserved");
+
+        // Verify reference-style links are created
+        assert!(formatted.contains("]: mod@"), "Should have reference-style links");
+
+        // The formatted result should match expected output
+        assert_eq!(formatted, expected,
+                  "Formatted output should match expected output");
+    }
 }

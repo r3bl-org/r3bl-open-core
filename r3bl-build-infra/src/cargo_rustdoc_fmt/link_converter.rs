@@ -2,7 +2,7 @@
 
 //! Convert inline markdown links to reference-style links.
 
-use pulldown_cmark::{Event, LinkType, Parser, Tag, TagEnd};
+use pulldown_cmark::{Event, HeadingLevel, LinkType, Parser, Tag, TagEnd};
 use std::collections::HashMap;
 use std::fmt::Write as _;
 
@@ -184,11 +184,28 @@ fn rebuild_with_text_references(text: &str) -> String {
             Event::End(TagEnd::Paragraph | TagEnd::Heading(..)) => {
                 need_newline = true;
             }
-            Event::Start(Tag::Heading { .. }) => {
-                if !result.is_empty() && !result.ends_with('\n') {
-                    result.push('\n');
+            Event::Start(Tag::Heading { level, .. }) => {
+                // Ensure blank line before heading for Rust doc style
+                if !result.is_empty() {
+                    if !result.ends_with("\n\n") {
+                        if !result.ends_with('\n') {
+                            result.push('\n');
+                        }
+                        result.push('\n');
+                    }
                 }
-                result.push_str("# ");
+
+                // Output correct number of # characters based on heading level
+                let level_num = match level {
+                    HeadingLevel::H1 => 1,
+                    HeadingLevel::H2 => 2,
+                    HeadingLevel::H3 => 3,
+                    HeadingLevel::H4 => 4,
+                    HeadingLevel::H5 => 5,
+                    HeadingLevel::H6 => 6,
+                };
+                result.push_str(&"#".repeat(level_num));
+                result.push(' ');
             }
             _ => {}
         }
@@ -200,6 +217,18 @@ fn rebuild_with_text_references(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_heading_levels_preserved() {
+        let input = "# Level 1\n\n## Level 2\n\n### Level 3\n\nSome content.";
+        let output = convert_links(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        assert!(output.contains("# Level 1"), "Level-1 heading should be preserved");
+        assert!(output.contains("## Level 2"), "Level-2 heading should be preserved");
+        assert!(output.contains("### Level 3"), "Level-3 heading should be preserved");
+    }
 
     #[test]
     fn test_single_link_conversion() {
