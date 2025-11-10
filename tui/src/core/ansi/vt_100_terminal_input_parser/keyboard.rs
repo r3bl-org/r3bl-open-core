@@ -14,18 +14,18 @@
 //! ## Comprehensive List of Supported Keyboard Shortcuts
 //!
 //! ### Basic Keys
-//! | Key | Sequence        | Notes                            |
+//! | Key             | Sequence        | Notes                            |
 //! | --------------- | --------------- | -------------------------------- |
-//! | **Tab** | `0x09`          | Fixed: was returning None        |
-//! | **Enter** | `0x0D`/`0x0A`   | CR or LF depending on terminal   |
-//! | **Backspace** | `0x08`/`0x7F`   | BS or DEL encoding               |
-//! | **Escape** | `0x1B`          | Modal UI support                 |
-//! | **Space** | `0x20`          | Regular space character          |
+//! | **Tab**         | `0x09`          | Fixed: was returning None        |
+//! | **Enter**       | `0x0D`/`0x0A`   | CR or LF depending on terminal   |
+//! | **Backspace**   | `0x08`/`0x7F`   | BS or DEL encoding               |
+//! | **Escape**      | `0x1B`          | Modal UI support                 |
+//! | **Space**       | `0x20`          | Regular space character          |
 //!
 //! ### Control Key Combinations (Ctrl+Letter)
 //! | Key                             | Byte            | Notes                            |
 //! | ------------------------------- | --------------- | -------------------------------- |
-//! | **Ctrl+Space** | `0x00`          | Ctrl+@, treated as Ctrl+Space    |
+//! | **Ctrl+Space**                  | `0x00`          | Ctrl+@, treated as Ctrl+Space    |
 //! | **Ctrl+A** through **Ctrl+Z**   | `0x01`-`0x1A`   | Standard control chars           |
 //! | **Ctrl+\\**                     | `0x1C`          | FS (File Separator)              |
 //! | **Ctrl+]**                      | `0x1D`          | GS (Group Separator)             |
@@ -35,7 +35,7 @@
 //! ### Alt Key Combinations (Alt+Letter)
 //! | Key                         | Sequence          | Format                |
 //! | --------------------------- | ----------------- | --------------------- |
-//! | **Alt+\[a-z\]** | `ESC` + letter    | Lowercase letters     |
+//! | **Alt+\[a-z\]**             | `ESC` + letter    | Lowercase letters     |
 //! | **Alt+\[A-Z\]**             | `ESC` + letter    | Uppercase letters     |
 //! | **Alt+\[0-9\]**             | `ESC` + digit     | Digits                |
 //! | **Alt+Space**               | `ESC` + space     | Space key             |
@@ -61,7 +61,7 @@
 //! ### Special Navigation Keys
 //! | Key             | Primary     | Alt 1       | Alt 2      | SS3         |
 //! | --------------- | ----------- | ----------- | ---------- | ----------- |
-//! | **Home**  | `ESC[H`     | `ESC[1~`    | `ESC[7~`   | `ESC O H`   |
+//! | **Home**        | `ESC[H`     | `ESC[1~`    | `ESC[7~`   | `ESC O H`   |
 //! | **End**         | `ESC[F`     | `ESC[4~`    | `ESC[8~`   | `ESC O F`   |
 //! | **Insert**      | `ESC[2~`    | -           | -          | -           |
 //! | **Delete**      | `ESC[3~`    | -           | -          | -           |
@@ -88,7 +88,7 @@
 //! | **F9**    | `ESC[20~`    | -              | CSI only          |
 //! | **F10**   | `ESC[21~`    | -              | CSI only          |
 //! | **F11**   | `ESC[23~`    | -              | Note: gap at 22   |
-//! | **F12** | `ESC[24~`    | -      | CSI only          |
+//! | **F12**   | `ESC[24~`    | -              | CSI only          |
 //!
 //! ### Function Keys with Modifiers
 //! Function keys support all modifier combinations using CSI format:
@@ -119,16 +119,16 @@
 //! **Numpad Key Mappings**:
 //! | Numpad Key   | Normal Mode   | Application Mode   | SS3 Char   |
 //! | ------------ | ------------- | ------------------ | ---------- |
-//! | **0**   | `'0'`         | `ESC O p`          | p          |
-//! | **1**   | `'1'`         | `ESC O q`          | q          |
-//! | **2**   | `'2'`         | `ESC O r`          | r          |
-//! | **3**   | `'3'`         | `ESC O s`          | s          |
-//! | **4**   | `'4'`         | `ESC O t`          | t          |
-//! | **5**   | `'5'`         | `ESC O u`          | u          |
-//! | **6**   | `'6'`         | `ESC O v`          | v          |
-//! | **7**   | `'7'`         | `ESC O w`          | w          |
-//! | **8**   | `'8'`         | `ESC O x`          | x          |
-//! | **9**   | `'9'`         | `ESC O y`          | y          |
+//! | **0**        | `'0'`         | `ESC O p`          | p          |
+//! | **1**        | `'1'`         | `ESC O q`          | q          |
+//! | **2**        | `'2'`         | `ESC O r`          | r          |
+//! | **3**        | `'3'`         | `ESC O s`          | s          |
+//! | **4**        | `'4'`         | `ESC O t`          | t          |
+//! | **5**        | `'5'`         | `ESC O u`          | u          |
+//! | **6**        | `'6'`         | `ESC O v`          | v          |
+//! | **7**        | `'7'`         | `ESC O w`          | w          |
+//! | **8**        | `'8'`         | `ESC O x`          | x          |
+//! | **9**        | `'9'`         | `ESC O y`          | y          |
 //! | **Enter**    | `CR`          | `ESC O M`          | M          |
 //! | **+**        | `'+'`         | `ESC O k`          | k          |
 //! | **-**        | `'-'`         | `ESC O m`          | m          |
@@ -346,10 +346,13 @@ use crate::{ASCII_DEL, KeyState,
 ///
 /// `Some((event, 1))` if successful, `None` otherwise.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`Control Key Combinations`](mod@self#control-key-combinations-ctrlletter)
-/// [`Ambiguous Control Character
-/// Handling`](mod@self#ambiguous-control-character-handling)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`Control Key Combinations`]
+/// [`Ambiguous Control Character Handling`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
+/// [`Ambiguous Control Character Handling`]: mod@self#ambiguous-control-character-handling
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length
@@ -461,8 +464,11 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 /// `Some((event, 2))` if buffer starts with ESC + (printable ASCII or DEL),
 /// `None` otherwise.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`Why Alt Uses ESC Prefix`](mod@self#why-alt-uses-esc-prefix-not-csi)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`Why Alt Uses ESC Prefix`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`Why Alt Uses ESC Prefix`]: mod@self#why-alt-uses-esc-prefix-not-csi
 #[must_use]
 pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Need at least 2 bytes: ESC + key
@@ -527,8 +533,11 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// `Some((event, bytes_consumed))` if a complete sequence was parsed,
 /// `None` if the sequence is incomplete or invalid.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`CSI Sequences`](mod@self#csi-sequences-esc)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`CSI Sequences`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`CSI Sequences`]: mod@self#csi-sequences-esc
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
@@ -543,11 +552,11 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 
     // Handle simple control keys first (single character after ESC[)
     if buffer.len() == 3 {
-        return parse_csi_single_char(buffer[2]).map(|event| (event, 3));
+        return helpers::parse_csi_single_char(buffer[2]).map(|event| (event, 3));
     }
 
     // Parse parameters and final byte for multi-character sequences
-    parse_csi_parameters(buffer)
+    helpers::parse_csi_parameters(buffer)
 }
 
 /// Parse an SS3 keyboard sequence and return the parsed event with bytes consumed.
@@ -566,8 +575,11 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 /// `Some((event, 3))` if a valid SS3 sequence was parsed,
 /// `None` if the sequence is incomplete or invalid.
 ///
-/// [`Parser Dispatch Priority Pipeline`](mod@self#parser-dispatch-priority-pipeline)
-/// [`SS3 Sequences`](mod@self#ss3-sequences-esc-o)
+/// [`Parser Dispatch Priority Pipeline`]
+/// [`SS3 Sequences`]
+///
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
+/// [`SS3 Sequences`]: mod@self#ss3-sequences-esc-o
 #[must_use]
 pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // SS3 sequences must be exactly 3 bytes: ESC O + command_char
@@ -581,7 +593,7 @@ pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     }
 
     // Parse the command character
-    let code = parse_ss3_command(buffer[2])?;
+    let code = helpers::parse_ss3_command(buffer[2])?;
 
     Some((
         VT100InputEvent::Keyboard {
@@ -592,251 +604,263 @@ pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     ))
 }
 
-/// Parse SS3 command character and return the corresponding [`VT100KeyCode`].
-fn parse_ss3_command(byte: u8) -> Option<VT100KeyCode> {
-    match byte {
-        // Arrow keys
-        ARROW_UP_FINAL => Some(VT100KeyCode::Up),
-        ARROW_DOWN_FINAL => Some(VT100KeyCode::Down),
-        ARROW_RIGHT_FINAL => Some(VT100KeyCode::Right),
-        ARROW_LEFT_FINAL => Some(VT100KeyCode::Left),
-        // Home and End keys
-        SPECIAL_HOME_FINAL => Some(VT100KeyCode::Home),
-        SPECIAL_END_FINAL => Some(VT100KeyCode::End),
-        // Function keys F1-F4 (SS3 mode)
-        SS3_F1_FINAL => Some(VT100KeyCode::Function(1)),
-        SS3_F2_FINAL => Some(VT100KeyCode::Function(2)),
-        SS3_F3_FINAL => Some(VT100KeyCode::Function(3)),
-        SS3_F4_FINAL => Some(VT100KeyCode::Function(4)),
-        // Numpad keys in application mode
-        // Note: These send SS3 sequences instead of literal digits to allow
-        // applications to distinguish numpad from regular number keys
-        SS3_NUMPAD_0 => Some(VT100KeyCode::Char('0')),
-        SS3_NUMPAD_1 => Some(VT100KeyCode::Char('1')),
-        SS3_NUMPAD_2 => Some(VT100KeyCode::Char('2')),
-        SS3_NUMPAD_3 => Some(VT100KeyCode::Char('3')),
-        SS3_NUMPAD_4 => Some(VT100KeyCode::Char('4')),
-        SS3_NUMPAD_5 => Some(VT100KeyCode::Char('5')),
-        SS3_NUMPAD_6 => Some(VT100KeyCode::Char('6')),
-        SS3_NUMPAD_7 => Some(VT100KeyCode::Char('7')),
-        SS3_NUMPAD_8 => Some(VT100KeyCode::Char('8')),
-        SS3_NUMPAD_9 => Some(VT100KeyCode::Char('9')),
-        // Numpad operators and special keys
-        SS3_NUMPAD_ENTER => Some(VT100KeyCode::Enter),
-        SS3_NUMPAD_PLUS => Some(VT100KeyCode::Char('+')),
-        SS3_NUMPAD_MINUS => Some(VT100KeyCode::Char('-')),
-        SS3_NUMPAD_MULTIPLY => Some(VT100KeyCode::Char('*')),
-        SS3_NUMPAD_DIVIDE => Some(VT100KeyCode::Char('/')),
-        SS3_NUMPAD_DECIMAL => Some(VT100KeyCode::Char('.')),
-        SS3_NUMPAD_COMMA => Some(VT100KeyCode::Char(',')),
-        _ => None,
-    }
-}
+/// Private helper functions for keyboard sequence parsing.
+///
+/// This module contains internal parsing utilities that support the public API functions.
+/// Functions here handle lower-level sequence parsing and decoding tasks.
+mod helpers {
+    use super::*;
 
-/// Parse single-character CSI sequences like `CSI A` (up arrow)
-fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEvent> {
-    let code = match final_byte {
-        ARROW_UP_FINAL => VT100KeyCode::Up,
-        ARROW_DOWN_FINAL => VT100KeyCode::Down,
-        ARROW_RIGHT_FINAL => VT100KeyCode::Right,
-        ARROW_LEFT_FINAL => VT100KeyCode::Left,
-        SPECIAL_HOME_FINAL => VT100KeyCode::Home,
-        SPECIAL_END_FINAL => VT100KeyCode::End,
-        BACKTAB_FINAL => VT100KeyCode::BackTab,
-        _ => return None,
-    };
-
-    Some(VT100InputEvent::Keyboard {
-        code,
-        modifiers: VT100KeyModifiers::default(),
-    })
-}
-
-/// Parse CSI sequences with numeric parameters (e.g., `CSI 5 ~ `, `CSI 1 ; 3 C`)
-/// Returns (`InputEvent`, `bytes_consumed`) on success.
-fn parse_csi_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
-    // Extract the parameters and final byte
-    // Format: ESC [ [param;param;...] final_byte
-    let mut params = Vec::new();
-    let mut current_num = String::new();
-    let mut final_byte = 0u8;
-    let mut bytes_scanned = 0;
-
-    for (idx, &byte) in buffer[2..].iter().enumerate() {
-        bytes_scanned = idx + 1; // Track position relative to buffer[2..]
-
-        // IMPORTANT: We use if/else chains instead of match arms because Rust treats
-        // constants in match patterns as variable bindings, not value comparisons.
-        // This is a Rust language limitation documented in RFC 1445.
-        //
-        // Using named constants in match arms like:
-        //   ASCII_DIGIT_0..=ASCII_DIGIT_9 => { ... }
-        // would create new bindings named ASCII_DIGIT_0 and ASCII_DIGIT_9 instead of
-        // matching against the constant values. The if/else chain correctly compares
-        // against the constant values.
-
-        if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
-            // Digit: accumulate in current_num
-            current_num.push(byte as char);
-        } else if byte == ANSI_PARAM_SEPARATOR {
-            // Semicolon: parameter separator
-            if !current_num.is_empty() {
-                params.push(current_num.parse::<u16>().unwrap_or(0));
-                current_num.clear();
-            }
-        } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
-            || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
-            || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
-        {
-            // Terminal character: end of sequence
-            if !current_num.is_empty() {
-                params.push(current_num.parse::<u16>().unwrap_or(0));
-            }
-            final_byte = byte;
-            break;
-        } else {
-            return None; // Invalid byte in sequence
+    /// Parse SS3 command character and return the corresponding [`VT100KeyCode`].
+    pub(super) fn parse_ss3_command(byte: u8) -> Option<VT100KeyCode> {
+        match byte {
+            // Arrow keys
+            ARROW_UP_FINAL => Some(VT100KeyCode::Up),
+            ARROW_DOWN_FINAL => Some(VT100KeyCode::Down),
+            ARROW_RIGHT_FINAL => Some(VT100KeyCode::Right),
+            ARROW_LEFT_FINAL => Some(VT100KeyCode::Left),
+            // Home and End keys
+            SPECIAL_HOME_FINAL => Some(VT100KeyCode::Home),
+            SPECIAL_END_FINAL => Some(VT100KeyCode::End),
+            // Function keys F1-F4 (SS3 mode)
+            SS3_F1_FINAL => Some(VT100KeyCode::Function(1)),
+            SS3_F2_FINAL => Some(VT100KeyCode::Function(2)),
+            SS3_F3_FINAL => Some(VT100KeyCode::Function(3)),
+            SS3_F4_FINAL => Some(VT100KeyCode::Function(4)),
+            // Numpad keys in application mode
+            // Note: These send SS3 sequences instead of literal digits to allow
+            // applications to distinguish numpad from regular number keys
+            SS3_NUMPAD_0 => Some(VT100KeyCode::Char('0')),
+            SS3_NUMPAD_1 => Some(VT100KeyCode::Char('1')),
+            SS3_NUMPAD_2 => Some(VT100KeyCode::Char('2')),
+            SS3_NUMPAD_3 => Some(VT100KeyCode::Char('3')),
+            SS3_NUMPAD_4 => Some(VT100KeyCode::Char('4')),
+            SS3_NUMPAD_5 => Some(VT100KeyCode::Char('5')),
+            SS3_NUMPAD_6 => Some(VT100KeyCode::Char('6')),
+            SS3_NUMPAD_7 => Some(VT100KeyCode::Char('7')),
+            SS3_NUMPAD_8 => Some(VT100KeyCode::Char('8')),
+            SS3_NUMPAD_9 => Some(VT100KeyCode::Char('9')),
+            // Numpad operators and special keys
+            SS3_NUMPAD_ENTER => Some(VT100KeyCode::Enter),
+            SS3_NUMPAD_PLUS => Some(VT100KeyCode::Char('+')),
+            SS3_NUMPAD_MINUS => Some(VT100KeyCode::Char('-')),
+            SS3_NUMPAD_MULTIPLY => Some(VT100KeyCode::Char('*')),
+            SS3_NUMPAD_DIVIDE => Some(VT100KeyCode::Char('/')),
+            SS3_NUMPAD_DECIMAL => Some(VT100KeyCode::Char('.')),
+            SS3_NUMPAD_COMMA => Some(VT100KeyCode::Char(',')),
+            _ => None,
         }
     }
 
-    if final_byte == 0 {
-        return None; // No final byte found
-    }
+    /// Parse single-character CSI sequences like `CSI A` (up arrow)
+    pub(super) fn parse_csi_single_char(final_byte: u8) -> Option<VT100InputEvent> {
+        let code = match final_byte {
+            ARROW_UP_FINAL => VT100KeyCode::Up,
+            ARROW_DOWN_FINAL => VT100KeyCode::Down,
+            ARROW_RIGHT_FINAL => VT100KeyCode::Right,
+            ARROW_LEFT_FINAL => VT100KeyCode::Left,
+            SPECIAL_HOME_FINAL => VT100KeyCode::Home,
+            SPECIAL_END_FINAL => VT100KeyCode::End,
+            BACKTAB_FINAL => VT100KeyCode::BackTab,
+            _ => return None,
+        };
 
-    // Total bytes consumed: ESC [ (2 bytes) + scanned bytes (includes final)
-    let total_consumed = 2 + bytes_scanned;
-
-    // Parse based on parameters and final byte
-    let event = match (params.len(), final_byte) {
-        // BackTab (Shift+Tab): CSI Z
-        (0, BACKTAB_FINAL) => Some(VT100InputEvent::Keyboard {
-            code: VT100KeyCode::BackTab,
+        Some(VT100InputEvent::Keyboard {
+            code,
             modifiers: VT100KeyModifiers::default(),
-        }),
-        // Arrow keys with modifiers: CSI 1 ; m A/B/C/D
-        (2, ARROW_UP_FINAL) if params[0] == 1 => {
-            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-            Some(VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Up,
-                modifiers,
-            })
-        }
-        (2, ARROW_DOWN_FINAL) if params[0] == 1 => {
-            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-            Some(VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Down,
-                modifiers,
-            })
-        }
-        (2, ARROW_RIGHT_FINAL) if params[0] == 1 => {
-            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-            Some(VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Right,
-                modifiers,
-            })
-        }
-        (2, ARROW_LEFT_FINAL) if params[0] == 1 => {
-            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-            Some(VT100InputEvent::Keyboard {
-                code: VT100KeyCode::Left,
-                modifiers,
-            })
-        }
-        // Function keys and special keys: CSI n ~ or CSI n ; m ~
-        (1, ANSI_FUNCTION_KEY_TERMINATOR) => {
-            parse_function_or_special_key(params[0], VT100KeyModifiers::default())
-        }
-        (2, ANSI_FUNCTION_KEY_TERMINATOR) => {
-            let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
-            parse_function_or_special_key(params[0], modifiers)
-        }
-        // Other CSI sequences
-        _ => None,
-    }?;
-
-    Some((event, total_consumed))
-}
-
-/// Parse function keys (F1-F12) and special keys (Insert, Delete, Home, End, PageUp,
-/// PageDown).
-///
-/// Maps ANSI codes to VT100KeyCode. Called by CSI parameter parser.
-fn parse_function_or_special_key(
-    code: u16,
-    modifiers: VT100KeyModifiers,
-) -> Option<VT100InputEvent> {
-    let key_code = match code {
-        // Function keys: map ANSI codes to F1-F12
-        FUNCTION_F1_CODE => VT100KeyCode::Function(1),
-        FUNCTION_F2_CODE => VT100KeyCode::Function(2),
-        FUNCTION_F3_CODE => VT100KeyCode::Function(3),
-        FUNCTION_F4_CODE => VT100KeyCode::Function(4),
-        FUNCTION_F5_CODE => VT100KeyCode::Function(5),
-        FUNCTION_F6_CODE => VT100KeyCode::Function(6),
-        FUNCTION_F7_CODE => VT100KeyCode::Function(7),
-        FUNCTION_F8_CODE => VT100KeyCode::Function(8),
-        FUNCTION_F9_CODE => VT100KeyCode::Function(9),
-        FUNCTION_F10_CODE => VT100KeyCode::Function(10),
-        FUNCTION_F11_CODE => VT100KeyCode::Function(11),
-        FUNCTION_F12_CODE => VT100KeyCode::Function(12),
-        // Special keys
-        // Home: Multiple alternative codes for different terminal implementations
-        SPECIAL_HOME_ALT1_CODE | SPECIAL_HOME_ALT2_CODE => VT100KeyCode::Home,
-        SPECIAL_INSERT_CODE => VT100KeyCode::Insert,
-        SPECIAL_DELETE_CODE => VT100KeyCode::Delete,
-        // End: Multiple alternative codes for different terminal implementations
-        SPECIAL_END_ALT1_CODE | SPECIAL_END_ALT2_CODE => VT100KeyCode::End,
-        SPECIAL_PAGE_UP_CODE => VT100KeyCode::PageUp,
-        SPECIAL_PAGE_DOWN_CODE => VT100KeyCode::PageDown,
-        _ => return None,
-    };
-
-    Some(VT100InputEvent::Keyboard {
-        code: key_code,
-        modifiers,
-    })
-}
-
-/// Extract modifier parameter from CSI with type safety.
-///
-/// Safe to cast u16→u8 because VT-100 modifiers are always 1-8.
-#[allow(clippy::cast_possible_truncation)]
-fn extract_modifier_parameter(param: u16) -> u8 {
-    debug_assert!(param <= 255, "Modifier parameter out of range: {}", param);
-    param as u8
-}
-
-/// Decode CSI modifier parameter (1-8) to VT100KeyModifiers.
-///
-/// CSI encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
-/// See module docs [`Modifier Encoding`] for full table.
-///
-/// [`Modifier Encoding`](mod@self#why-each-modifier-uses-different-encoding)
-fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiers {
-    // Subtract offset to get the bitfield (CSI parameter = 1 + bitfield)
-    let bits = modifier_mask.saturating_sub(MODIFIER_PARAMETER_OFFSET);
-
-    // Fast path: if no modifiers, return default (all NotPressed)
-    if bits == MODIFIER_NONE {
-        return VT100KeyModifiers::default();
+        })
     }
 
-    VT100KeyModifiers {
-        shift: if (bits & MODIFIER_SHIFT) != MODIFIER_NONE {
-            KeyState::Pressed
-        } else {
-            KeyState::NotPressed
-        },
-        alt: if (bits & MODIFIER_ALT) != MODIFIER_NONE {
-            KeyState::Pressed
-        } else {
-            KeyState::NotPressed
-        },
-        ctrl: if (bits & MODIFIER_CTRL) != MODIFIER_NONE {
-            KeyState::Pressed
-        } else {
-            KeyState::NotPressed
-        },
+    /// Parse CSI sequences with numeric parameters (e.g., `CSI 5 ~ `, `CSI 1 ; 3 C`)
+    /// Returns (`InputEvent`, `bytes_consumed`) on success.
+    pub(super) fn parse_csi_parameters(
+        buffer: &[u8],
+    ) -> Option<(VT100InputEvent, usize)> {
+        // Extract the parameters and final byte
+        // Format: ESC [ [param;param;...] final_byte
+        let mut params = Vec::new();
+        let mut current_num = String::new();
+        let mut final_byte = 0u8;
+        let mut bytes_scanned = 0;
+
+        for (idx, &byte) in buffer[2..].iter().enumerate() {
+            bytes_scanned = idx + 1; // Track position relative to buffer[2..]
+
+            // IMPORTANT: We use if/else chains instead of match arms because Rust treats
+            // constants in match patterns as variable bindings, not value comparisons.
+            // This is a Rust language limitation documented in RFC 1445.
+            //
+            // Using named constants in match arms like:
+            //   ASCII_DIGIT_0..=ASCII_DIGIT_9 => { ... }
+            // would create new bindings named ASCII_DIGIT_0 and ASCII_DIGIT_9 instead of
+            // matching against the constant values. The if/else chain correctly compares
+            // against the constant values.
+
+            if (ASCII_DIGIT_0..=ASCII_DIGIT_9).contains(&byte) {
+                // Digit: accumulate in current_num
+                current_num.push(byte as char);
+            } else if byte == ANSI_PARAM_SEPARATOR {
+                // Semicolon: parameter separator
+                if !current_num.is_empty() {
+                    params.push(current_num.parse::<u16>().unwrap_or(0));
+                    current_num.clear();
+                }
+            } else if byte == ANSI_FUNCTION_KEY_TERMINATOR
+                || (ASCII_UPPER_A..=ASCII_UPPER_Z).contains(&byte)
+                || (ASCII_LOWER_A..=ASCII_LOWER_Z).contains(&byte)
+            {
+                // Terminal character: end of sequence
+                if !current_num.is_empty() {
+                    params.push(current_num.parse::<u16>().unwrap_or(0));
+                }
+                final_byte = byte;
+                break;
+            } else {
+                return None; // Invalid byte in sequence
+            }
+        }
+
+        if final_byte == 0 {
+            return None; // No final byte found
+        }
+
+        // Total bytes consumed: ESC [ (2 bytes) + scanned bytes (includes final)
+        let total_consumed = 2 + bytes_scanned;
+
+        // Parse based on parameters and final byte
+        let event = match (params.len(), final_byte) {
+            // BackTab (Shift+Tab): CSI Z
+            (0, BACKTAB_FINAL) => Some(VT100InputEvent::Keyboard {
+                code: VT100KeyCode::BackTab,
+                modifiers: VT100KeyModifiers::default(),
+            }),
+            // Arrow keys with modifiers: CSI 1 ; m A/B/C/D
+            (2, ARROW_UP_FINAL) if params[0] == 1 => {
+                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
+                Some(VT100InputEvent::Keyboard {
+                    code: VT100KeyCode::Up,
+                    modifiers,
+                })
+            }
+            (2, ARROW_DOWN_FINAL) if params[0] == 1 => {
+                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
+                Some(VT100InputEvent::Keyboard {
+                    code: VT100KeyCode::Down,
+                    modifiers,
+                })
+            }
+            (2, ARROW_RIGHT_FINAL) if params[0] == 1 => {
+                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
+                Some(VT100InputEvent::Keyboard {
+                    code: VT100KeyCode::Right,
+                    modifiers,
+                })
+            }
+            (2, ARROW_LEFT_FINAL) if params[0] == 1 => {
+                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
+                Some(VT100InputEvent::Keyboard {
+                    code: VT100KeyCode::Left,
+                    modifiers,
+                })
+            }
+            // Function keys and special keys: CSI n ~ or CSI n ; m ~
+            (1, ANSI_FUNCTION_KEY_TERMINATOR) => {
+                parse_function_or_special_key(params[0], VT100KeyModifiers::default())
+            }
+            (2, ANSI_FUNCTION_KEY_TERMINATOR) => {
+                let modifiers = decode_modifiers(extract_modifier_parameter(params[1]));
+                parse_function_or_special_key(params[0], modifiers)
+            }
+            // Other CSI sequences
+            _ => None,
+        }?;
+
+        Some((event, total_consumed))
+    }
+
+    /// Parse function keys (F1-F12) and special keys (Insert, Delete, Home, End, PageUp,
+    /// PageDown).
+    ///
+    /// Maps ANSI codes to VT100KeyCode. Called by CSI parameter parser.
+    fn parse_function_or_special_key(
+        code: u16,
+        modifiers: VT100KeyModifiers,
+    ) -> Option<VT100InputEvent> {
+        let key_code = match code {
+            // Function keys: map ANSI codes to F1-F12
+            FUNCTION_F1_CODE => VT100KeyCode::Function(1),
+            FUNCTION_F2_CODE => VT100KeyCode::Function(2),
+            FUNCTION_F3_CODE => VT100KeyCode::Function(3),
+            FUNCTION_F4_CODE => VT100KeyCode::Function(4),
+            FUNCTION_F5_CODE => VT100KeyCode::Function(5),
+            FUNCTION_F6_CODE => VT100KeyCode::Function(6),
+            FUNCTION_F7_CODE => VT100KeyCode::Function(7),
+            FUNCTION_F8_CODE => VT100KeyCode::Function(8),
+            FUNCTION_F9_CODE => VT100KeyCode::Function(9),
+            FUNCTION_F10_CODE => VT100KeyCode::Function(10),
+            FUNCTION_F11_CODE => VT100KeyCode::Function(11),
+            FUNCTION_F12_CODE => VT100KeyCode::Function(12),
+            // Special keys
+            // Home: Multiple alternative codes for different terminal implementations
+            SPECIAL_HOME_ALT1_CODE | SPECIAL_HOME_ALT2_CODE => VT100KeyCode::Home,
+            SPECIAL_INSERT_CODE => VT100KeyCode::Insert,
+            SPECIAL_DELETE_CODE => VT100KeyCode::Delete,
+            // End: Multiple alternative codes for different terminal implementations
+            SPECIAL_END_ALT1_CODE | SPECIAL_END_ALT2_CODE => VT100KeyCode::End,
+            SPECIAL_PAGE_UP_CODE => VT100KeyCode::PageUp,
+            SPECIAL_PAGE_DOWN_CODE => VT100KeyCode::PageDown,
+            _ => return None,
+        };
+
+        Some(VT100InputEvent::Keyboard {
+            code: key_code,
+            modifiers,
+        })
+    }
+
+    /// Extract modifier parameter from CSI with type safety.
+    ///
+    /// Safe to cast u16→u8 because VT-100 modifiers are always 1-8.
+    #[allow(clippy::cast_possible_truncation)]
+    fn extract_modifier_parameter(param: u16) -> u8 {
+        debug_assert!(param <= 255, "Modifier parameter out of range: {}", param);
+        param as u8
+    }
+
+    /// Decode CSI modifier parameter (1-8) to VT100KeyModifiers.
+    ///
+    /// CSI encoding: param = 1 + bitfield, where bitfield = Shift(1)|Alt(2)|Ctrl(4).
+    /// See module docs [`Modifier Encoding`] for full table.
+    ///
+    /// [`Modifier Encoding`]
+    ///
+    /// [`Modifier Encoding`]: mod@super#why-each-modifier-uses-different-encoding
+    fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiers {
+        // Subtract offset to get the bitfield (CSI parameter = 1 + bitfield)
+        let bits = modifier_mask.saturating_sub(MODIFIER_PARAMETER_OFFSET);
+
+        // Fast path: if no modifiers, return default (all NotPressed)
+        if bits == MODIFIER_NONE {
+            return VT100KeyModifiers::default();
+        }
+
+        VT100KeyModifiers {
+            shift: if (bits & MODIFIER_SHIFT) != MODIFIER_NONE {
+                KeyState::Pressed
+            } else {
+                KeyState::NotPressed
+            },
+            alt: if (bits & MODIFIER_ALT) != MODIFIER_NONE {
+                KeyState::Pressed
+            } else {
+                KeyState::NotPressed
+            },
+            ctrl: if (bits & MODIFIER_CTRL) != MODIFIER_NONE {
+                KeyState::Pressed
+            } else {
+                KeyState::NotPressed
+            },
+        }
     }
 }
 
@@ -845,7 +869,9 @@ fn decode_modifiers(modifier_mask: u8) -> VT100KeyModifiers {
 /// Uses generator functions for round-trip testing consistency between
 /// sequence generation and parsing. See module docs [`Testing Strategy`] for details.
 ///
-/// [`Testing Strategy`](mod@super#testing-strategy)
+/// [`Testing Strategy`]
+///
+/// [`Testing Strategy`]: mod@super#testing-strategy
 #[cfg(test)]
 mod tests {
     use super::*;

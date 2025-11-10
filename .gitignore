@@ -11,5 +11,6 @@ crash_log.txt
 **/perf.data.old
 *.log
 .serena/cache
+.serena/memories
 rustc-ice-*.txt
 rust-toolchain-script.lock*
