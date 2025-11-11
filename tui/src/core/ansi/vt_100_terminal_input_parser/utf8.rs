@@ -82,7 +82,7 @@
 //! [`terminal_events`]: mod@super::terminal_events
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
-use crate::{UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK, UTF8_2BYTE_MAX,
+use crate::{ByteOffset, byte_offset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK, UTF8_2BYTE_MAX,
             UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX, UTF8_3BYTE_MIN,
             UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
             UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
@@ -111,7 +111,7 @@ use crate::{UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK, UTF8_2BYTE_MA
 ///
 /// For display width calculation and cursor positioning, see [`mod@crate::graphemes`].
 #[must_use]
-pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Check if we have a complete UTF-8 sequence
     let bytes_consumed = is_utf8_complete(buffer)?;
 
@@ -124,7 +124,7 @@ pub fn parse_utf8_text(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
             code: VT100KeyCode::Char(ch),
             modifiers: VT100KeyModifiers::default(),
         },
-        bytes_consumed,
+        byte_offset(bytes_consumed),
     ))
 }
 
@@ -274,7 +274,7 @@ mod tests {
         let buffer = b"a";
         let (event, consumed) = parse_utf8_text(buffer).expect("Should parse ASCII");
 
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('a'));
@@ -290,7 +290,7 @@ mod tests {
 
         // Parse 'h'
         let (event, consumed) = parse_utf8_text(buffer).expect("Should parse first char");
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('h'));
@@ -301,7 +301,7 @@ mod tests {
         // Parse 'e' from remainder
         let (event, consumed) =
             parse_utf8_text(&buffer[1..]).expect("Should parse second char");
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('e'));
@@ -317,7 +317,7 @@ mod tests {
         let (event, consumed) =
             parse_utf8_text(buffer).expect("Should parse 2-byte UTF-8");
 
-        assert_eq!(consumed, 2);
+        assert_eq!(consumed, byte_offset(2));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('©'));
@@ -333,7 +333,7 @@ mod tests {
         let (event, consumed) =
             parse_utf8_text(buffer).expect("Should parse 3-byte UTF-8");
 
-        assert_eq!(consumed, 3);
+        assert_eq!(consumed, byte_offset(3));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('€'));
@@ -349,7 +349,7 @@ mod tests {
         let (event, consumed) =
             parse_utf8_text(buffer).expect("Should parse 4-byte UTF-8");
 
-        assert_eq!(consumed, 4);
+        assert_eq!(consumed, byte_offset(4));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('😀'));
@@ -431,7 +431,7 @@ mod tests {
 
         // Parse ASCII 'a'
         let (event, consumed) = parse_utf8_text(buffer).expect("Should parse ASCII");
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('a'));
@@ -442,7 +442,7 @@ mod tests {
         // Parse 2-byte '©'
         let (event, consumed) =
             parse_utf8_text(&buffer[1..]).expect("Should parse 2-byte");
-        assert_eq!(consumed, 2);
+        assert_eq!(consumed, byte_offset(2));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('©'));
@@ -453,7 +453,7 @@ mod tests {
         // Parse ASCII 'b'
         let (event, consumed) =
             parse_utf8_text(&buffer[3..]).expect("Should parse ASCII");
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, .. } => {
                 assert_eq!(code, VT100KeyCode::Char('b'));

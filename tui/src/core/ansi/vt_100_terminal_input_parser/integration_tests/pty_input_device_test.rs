@@ -44,7 +44,7 @@ generate_pty_test! {
     /// │  1. Test function detects PTY_SLAVE env var                   │
     /// │  2. CRITICAL: Enable raw mode on terminal (PTY slave)         │
     /// │  3. Create DirectToAnsiInputDevice (reads from stdin)         │
-    /// │  4. Loop: read_event() → parse ANSI → write to stdout         │
+    /// │  4. Loop: try_read_event() → parse ANSI → write to stdout     │
     /// │  5. Exit after processing test sequences                      │
     /// └───────────────────────────────────────────────────────────────┘
     /// ```
@@ -290,7 +290,7 @@ fn pty_slave_entry_point() -> ! {
         loop {
             tokio::select! {
                 // Try to read an event from the device.
-                event_result = input_device.read_event() => {
+                event_result = input_device.try_read_event() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

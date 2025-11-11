@@ -334,7 +334,7 @@
 //! [`utf8`]: mod@super::utf8
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
-use crate::{ASCII_DEL, KeyState,
+use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
                                     ANSI_SS3_O, ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
@@ -389,7 +389,7 @@ use crate::{ASCII_DEL, KeyState,
 /// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
-pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Check minimum length
     if buffer.is_empty() {
         return None;
@@ -404,7 +404,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
                 code: VT100KeyCode::Backspace,
                 modifiers: VT100KeyModifiers::default(),
             },
-            1,
+            byte_offset(1),
         ));
     }
 
@@ -427,7 +427,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
                         alt: KeyState::NotPressed,
                     },
                 },
-                1,
+                byte_offset(1),
             ));
         }
         CONTROL_TAB => {
@@ -437,7 +437,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
                     code: VT100KeyCode::Tab,
                     modifiers: VT100KeyModifiers::default(),
                 },
-                1,
+                byte_offset(1),
             ));
         }
         CONTROL_LF | CONTROL_ENTER => {
@@ -447,7 +447,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
                     code: VT100KeyCode::Enter,
                     modifiers: VT100KeyModifiers::default(),
                 },
-                1,
+                byte_offset(1),
             ));
         }
         CONTROL_BACKSPACE => {
@@ -457,7 +457,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
                     code: VT100KeyCode::Backspace,
                     modifiers: VT100KeyModifiers::default(),
                 },
-                1,
+                byte_offset(1),
             ));
         }
         CONTROL_ESC => return None, // Escape - handled in try_parse() routing
@@ -479,7 +479,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
                 alt: KeyState::NotPressed,
             },
         },
-        1,
+        byte_offset(1),
     ))
 }
 
@@ -505,7 +505,7 @@ pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`Why Alt Uses ESC Prefix`]: mod@self#why-alt-uses-esc-prefix-not-csi
 #[must_use]
-pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Need at least 2 bytes: ESC + key
     if buffer.len() < 2 {
         return None;
@@ -529,7 +529,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
                     alt: KeyState::Pressed,
                 },
             },
-            2, // Consume both ESC and DEL
+            byte_offset(2), // Consume both ESC and DEL
         ));
     }
 
@@ -551,7 +551,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
                 alt: KeyState::Pressed,
             },
         },
-        2, // Consume both ESC and letter
+        byte_offset(2), // Consume both ESC and letter
     ))
 }
 
@@ -574,7 +574,7 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// [`CSI Sequences`]: mod@self#csi-sequences-esc
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
-pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
         return None;
@@ -587,7 +587,8 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 
     // Handle simple control keys first (single character after ESC[)
     if buffer.len() == 3 {
-        return helpers::parse_csi_single_char(buffer[2]).map(|event| (event, 3));
+        return helpers::parse_csi_single_char(buffer[2])
+            .map(|event| (event, byte_offset(3)));
     }
 
     // Parse parameters and final byte for multi-character sequences
@@ -616,7 +617,7 @@ pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)
 /// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`SS3 Sequences`]: mod@self#ss3-sequences-esc-o
 #[must_use]
-pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // SS3 sequences must be exactly 3 bytes: ESC O + command_char
     if buffer.len() < 3 {
         return None;
@@ -635,7 +636,7 @@ pub fn parse_ss3_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
             code,
             modifiers: VT100KeyModifiers::default(),
         },
-        3,
+        byte_offset(3),
     ))
 }
 
@@ -710,7 +711,7 @@ mod helpers {
     /// Returns (`InputEvent`, `bytes_consumed`) on success.
     pub(super) fn parse_csi_parameters(
         buffer: &[u8],
-    ) -> Option<(VT100InputEvent, usize)> {
+    ) -> Option<(VT100InputEvent, ByteOffset)> {
         // Extract the parameters and final byte
         // Format: ESC [ [param;param;...] final_byte
         let mut params = Vec::new();
@@ -810,7 +811,7 @@ mod helpers {
             _ => None,
         }?;
 
-        Some((event, total_consumed))
+        Some((event, byte_offset(total_consumed)))
     }
 
     /// Parse function keys (F1-F12) and special keys (Insert, Delete, Home, End, PageUp,
@@ -958,7 +959,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -973,7 +974,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -988,7 +989,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1003,7 +1004,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1018,7 +1019,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1033,7 +1034,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1048,7 +1049,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1063,7 +1064,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1078,7 +1079,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1093,7 +1094,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, 3);
+        assert_eq!(bytes_consumed, byte_offset(3));
     }
 
     #[test]
@@ -1139,7 +1140,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1154,7 +1155,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1169,7 +1170,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1184,7 +1185,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     // ==================== Arrow Keys with Modifiers ====================
@@ -1212,7 +1213,7 @@ mod tests {
                 }
             }
         );
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1237,7 +1238,7 @@ mod tests {
             }
             _ => panic!("Expected Alt+Right"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1267,7 +1268,7 @@ mod tests {
             }
             _ => panic!("Expected Ctrl+Up"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1292,7 +1293,7 @@ mod tests {
             }
             _ => panic!("Expected Ctrl+Down"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1317,7 +1318,7 @@ mod tests {
             }
             _ => panic!("Expected Alt+Ctrl+Left"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1342,7 +1343,7 @@ mod tests {
             }
             _ => panic!("Expected Shift+Alt+Ctrl+Left"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     // ==================== Special Keys ====================
@@ -1360,7 +1361,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1375,7 +1376,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1391,7 +1392,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1407,7 +1408,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1423,7 +1424,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1439,7 +1440,7 @@ mod tests {
                 modifiers: _
             }
         ));
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     // ==================== Function Keys ====================
@@ -1457,7 +1458,7 @@ mod tests {
             }
             _ => panic!("Expected F1"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1473,7 +1474,7 @@ mod tests {
             }
             _ => panic!("Expected F6"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1488,7 +1489,7 @@ mod tests {
                 modifiers: VT100KeyModifiers::default()
             }
         );
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     // ==================== Function Keys with Modifiers ====================
@@ -1516,7 +1517,7 @@ mod tests {
             }
             _ => panic!("Expected Shift+F5"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     #[test]
@@ -1542,7 +1543,7 @@ mod tests {
             }
             _ => panic!("Expected Ctrl+Alt+F10"),
         }
-        assert_eq!(bytes_consumed, input.len());
+        assert_eq!(bytes_consumed.as_usize(), input.len());
     }
 
     // ==================== Alt+Key Tests (parse_alt_letter) ====================
@@ -1562,7 +1563,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
     }
 
     #[test]
@@ -1579,7 +1580,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
     }
 
     #[test]
@@ -1596,7 +1597,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
     }
 
     #[test]
@@ -1613,7 +1614,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
     }
 
     #[test]
@@ -1630,7 +1631,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
     }
 
     #[test]
@@ -1647,7 +1648,7 @@ mod tests {
             }
             _ => panic!("Expected Keyboard event"),
         }
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
     }
 
     #[test]

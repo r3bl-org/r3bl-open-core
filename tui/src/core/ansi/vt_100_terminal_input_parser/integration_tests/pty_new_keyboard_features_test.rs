@@ -227,7 +227,7 @@ fn pty_slave_entry_point() -> ! {
 
         loop {
             tokio::select! {
-                event_result = input_device.read_event() => {
+                event_result = input_device.try_read_event() => {
                     match event_result {
                         Some(event) => {
                             event_count += 1;

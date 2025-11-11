@@ -16,8 +16,7 @@
 //! │  • VT100MouseButton, VT100MouseAction (mouse)           │
 //! │  • VT100FocusState, VT100PasteMode (terminal events)    │
 //! │  • VT100ScrollDirection (scroll wheel)                  │
-//! └─────────────────────────────────────────────────────────┘
-//!                             ▲
+//! └───────────────────────────▲─────────────────────────────┘
 //!                             │ (types used by all modules)
 //!         ┌───────────────────┼───────────────────┐
 //!         │                   │                   │

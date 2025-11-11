@@ -114,6 +114,7 @@ use super::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers, parse_alt_letter,
             parse_control_character, parse_keyboard_sequence, parse_mouse_sequence,
             parse_ss3_sequence, parse_terminal_event, parse_utf8_text};
 use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
+use crate::{ByteOffset, byte_offset};
 
 /// Try to parse a complete input event from the buffer.
 ///
@@ -159,7 +160,8 @@ use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
 /// ## Returns
 ///
 /// `Some((event, bytes_consumed))` if a complete event was successfully parsed.
-/// Returns the protocol-level [`VT100InputEvent`] with the number of bytes consumed.
+/// Returns the protocol-level [`VT100InputEvent`] with the number of bytes consumed
+/// as a [`ByteOffset`].
 ///
 /// `None` if the buffer contains an incomplete sequence (more bytes needed).
 ///
@@ -169,6 +171,7 @@ use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
 /// use r3bl_tui::core::ansi::vt_100_terminal_input_parser::{try_parse_input_event,
 ///                                                           VT100InputEvent,
 ///                                                           VT100KeyCode};
+/// use r3bl_tui::byte_offset;
 ///
 /// // Parse ESC key (single byte, immediate)
 /// let buffer = &[0x1B];
@@ -176,7 +179,7 @@ use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
 ///     assert!(matches!(event, VT100InputEvent::Keyboard {
 ///         code: VT100KeyCode::Escape, ..
 ///     }));
-///     assert_eq!(consumed, 1);
+///     assert_eq!(consumed, byte_offset(1));
 /// }
 ///
 /// // Parse Up Arrow (CSI sequence)
@@ -185,7 +188,7 @@ use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
 ///     assert!(matches!(event, VT100InputEvent::Keyboard {
 ///         code: VT100KeyCode::Up, ..
 ///     }));
-///     assert_eq!(consumed, 3);
+///     assert_eq!(consumed, byte_offset(3));
 /// }
 ///
 /// // Parse regular text
@@ -194,11 +197,11 @@ use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
 ///     assert!(matches!(event, VT100InputEvent::Keyboard {
 ///         code: VT100KeyCode::Char('H'), ..
 ///     }));
-///     assert_eq!(consumed, 1);
+///     assert_eq!(consumed, byte_offset(1));
 /// }
 /// ```
 #[must_use]
-pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Fast path: empty buffer.
     if buffer.is_empty() {
         return None;
@@ -214,7 +217,7 @@ pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> 
                     code: VT100KeyCode::Escape,
                     modifiers: VT100KeyModifiers::default(),
                 };
-                return Some((esc_event, 1));
+                return Some((esc_event, byte_offset(1)));
             }
 
             // Check second byte.
@@ -241,7 +244,7 @@ pub fn try_parse_input_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> 
                             code: VT100KeyCode::Escape,
                             modifiers: VT100KeyModifiers::default(),
                         };
-                        Some((esc_event, 1))
+                        Some((esc_event, crate::byte_offset(1)))
                     })
                 }
                 None => {
@@ -287,7 +290,7 @@ mod tests {
                 ..
             }
         ));
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
     }
 
     #[test]
@@ -304,7 +307,7 @@ mod tests {
                 ..
             }
         ));
-        assert_eq!(consumed, 3);
+        assert_eq!(consumed, byte_offset(3));
     }
 
     #[test]
@@ -318,7 +321,7 @@ mod tests {
         assert!(result.is_some(), "Should parse mouse event");
         let (event, consumed) = result.unwrap();
         assert!(matches!(event, VT100InputEvent::Mouse { .. }));
-        assert_eq!(consumed, buffer.len());
+        assert_eq!(consumed.as_usize(), buffer.len());
     }
 
     #[test]
@@ -334,7 +337,7 @@ mod tests {
                 ..
             }
         ));
-        assert_eq!(consumed, 3);
+        assert_eq!(consumed, byte_offset(3));
     }
 
     #[test]
@@ -351,7 +354,7 @@ mod tests {
                 modifiers: VT100KeyModifiers { alt, .. }
             } if alt == KeyState::Pressed
         ));
-        assert_eq!(consumed, 2);
+        assert_eq!(consumed, byte_offset(2));
     }
 
     #[test]
@@ -368,7 +371,7 @@ mod tests {
                 modifiers: VT100KeyModifiers { ctrl, .. }
             } if ctrl == KeyState::Pressed
         ));
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
     }
 
     #[test]
@@ -384,7 +387,7 @@ mod tests {
                 ..
             }
         ));
-        assert_eq!(consumed, 1);
+        assert_eq!(consumed, byte_offset(1));
     }
 
     #[test]
@@ -415,6 +418,6 @@ mod tests {
                 ..
             }
         ));
-        assert_eq!(consumed, 1); // Only consume ESC, leave 0xFF for next parse
+        assert_eq!(consumed, byte_offset(1)); // Only consume ESC, leave 0xFF for next parse
     }
 }

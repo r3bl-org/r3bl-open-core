@@ -137,7 +137,7 @@
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
 
-use crate::{KeyState,
+use crate::{KeyState, byte_offset,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
                                                        VT100MouseAction,
                                                        VT100MouseButton,
@@ -675,7 +675,7 @@ mod control_character_tests {
         let (event, bytes_consumed) =
             parse_control_character(seq).expect("Should parse Ctrl+A");
 
-        assert_eq!(bytes_consumed, 1);
+        assert_eq!(bytes_consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('a'));
@@ -694,7 +694,7 @@ mod control_character_tests {
         let (event, bytes_consumed) =
             parse_control_character(seq).expect("Should parse Ctrl+D");
 
-        assert_eq!(bytes_consumed, 1);
+        assert_eq!(bytes_consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('d'));
@@ -713,7 +713,7 @@ mod control_character_tests {
         let (event, bytes_consumed) =
             parse_control_character(seq).expect("Should parse Ctrl+W");
 
-        assert_eq!(bytes_consumed, 1);
+        assert_eq!(bytes_consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('w'));
@@ -732,7 +732,7 @@ mod control_character_tests {
         let (event, bytes_consumed) =
             parse_control_character(seq).expect("Should parse Ctrl+U");
 
-        assert_eq!(bytes_consumed, 1);
+        assert_eq!(bytes_consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('u'));
@@ -751,7 +751,7 @@ mod control_character_tests {
         let (event, bytes_consumed) =
             parse_control_character(seq).expect("Should parse Ctrl+K");
 
-        assert_eq!(bytes_consumed, 1);
+        assert_eq!(bytes_consumed, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('k'));
@@ -769,7 +769,7 @@ mod control_character_tests {
         let nul = b"\x00";
         let (event, bytes) =
             parse_control_character(nul).expect("Ctrl+Space should parse");
-        assert_eq!(bytes, 1);
+        assert_eq!(bytes, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char(' '));
@@ -786,7 +786,7 @@ mod control_character_tests {
         // Tab (0x09) is parsed as Tab, not Ctrl+I
         let tab = b"\x09";
         let (event, bytes) = parse_control_character(tab).expect("Tab should parse");
-        assert_eq!(bytes, 1);
+        assert_eq!(bytes, byte_offset(1));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Tab);
@@ -839,7 +839,7 @@ mod alt_letter_tests {
         let seq = b"\x1bb";
         let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+B");
 
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('b'));
@@ -857,7 +857,7 @@ mod alt_letter_tests {
         let seq = b"\x1bf";
         let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+F");
 
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('f'));
@@ -875,7 +875,7 @@ mod alt_letter_tests {
         let seq = b"\x1bd";
         let (event, bytes_consumed) = parse_alt_letter(seq).expect("Should parse Alt+D");
 
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('d'));
@@ -903,7 +903,7 @@ mod alt_letter_tests {
         let (event, bytes_consumed) =
             parse_alt_letter(seq).expect("Should parse Alt+Shift+B");
 
-        assert_eq!(bytes_consumed, 2);
+        assert_eq!(bytes_consumed, byte_offset(2));
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Char('B'));
