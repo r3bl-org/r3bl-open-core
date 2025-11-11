@@ -16,37 +16,43 @@
 //!
 //! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
-use crate::core::ansi::{constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-                                    ARROW_DOWN_FINAL, ARROW_LEFT_FINAL,
-                                    ARROW_RIGHT_FINAL, ARROW_UP_FINAL,
-                                    ASCII_DIGIT_0, CONTROL_NUL, CSI_PREFIX,
-                                    FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL,
-                                    FUNCTION_F1_CODE, FUNCTION_F2_CODE,
-                                    MODIFIER_PARAMETER_BASE_CHAR,
-                                    FUNCTION_F3_CODE, FUNCTION_F4_CODE,
-                                    FUNCTION_F5_CODE, FUNCTION_F6_CODE,
-                                    FUNCTION_F7_CODE, FUNCTION_F8_CODE,
-                                    FUNCTION_F9_CODE, FUNCTION_F10_CODE,
-                                    FUNCTION_F11_CODE, FUNCTION_F12_CODE, MODIFIER_ALT,
-                                    MODIFIER_CTRL, MODIFIER_SHIFT, MOUSE_MODIFIER_ALT,
-                                    MOUSE_MODIFIER_CTRL, MOUSE_MODIFIER_SHIFT,
-                                    MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
-                                    MOUSE_MOTION_FLAG, MOUSE_RELEASE_BUTTON_CODE,
-                                    MOUSE_RIGHT_BUTTON_CODE, MOUSE_SCROLL_DOWN_BUTTON,
-                                    MOUSE_SCROLL_LEFT_BUTTON, MOUSE_SCROLL_RIGHT_BUTTON,
-                                    MOUSE_SCROLL_UP_BUTTON, MOUSE_SGR_PREFIX,
-                                    MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE, MOUSE_X10_MARKER,
-                                    MOUSE_X10_PREFIX, PASTE_END_GENERATE_CODE, PASTE_START_GENERATE_CODE,
-                                    RESIZE_EVENT_GENERATE_CODE, RESIZE_TERMINATOR,
-                                    SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
-                                    SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
-                                    SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
-                        vt_100_terminal_input_parser::{VT100FocusState,
-                                                       VT100InputEvent, VT100KeyCode,
-                                                       VT100KeyModifiers,
-                                                       VT100MouseAction,
-                                                       VT100MouseButton, VT100PasteMode}};
-use crate::KeyState;
+use crate::{KeyState,
+            core::ansi::{constants::{ANSI_FUNCTION_KEY_TERMINATOR,
+                                     ANSI_PARAM_SEPARATOR, ARROW_DOWN_FINAL,
+                                     ARROW_LEFT_FINAL, ARROW_RIGHT_FINAL,
+                                     ARROW_UP_FINAL, ASCII_DIGIT_0, CONTROL_NUL,
+                                     CSI_PREFIX, FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL,
+                                     FUNCTION_F1_CODE, FUNCTION_F2_CODE,
+                                     FUNCTION_F3_CODE, FUNCTION_F4_CODE,
+                                     FUNCTION_F5_CODE, FUNCTION_F6_CODE,
+                                     FUNCTION_F7_CODE, FUNCTION_F8_CODE,
+                                     FUNCTION_F9_CODE, FUNCTION_F10_CODE,
+                                     FUNCTION_F11_CODE, FUNCTION_F12_CODE,
+                                     MODIFIER_ALT, MODIFIER_CTRL,
+                                     MODIFIER_PARAMETER_BASE_CHAR, MODIFIER_SHIFT,
+                                     MOUSE_LEFT_BUTTON_CODE, MOUSE_MIDDLE_BUTTON_CODE,
+                                     MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
+                                     MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
+                                     MOUSE_RELEASE_BUTTON_CODE,
+                                     MOUSE_RIGHT_BUTTON_CODE,
+                                     MOUSE_SCROLL_DOWN_BUTTON,
+                                     MOUSE_SCROLL_LEFT_BUTTON,
+                                     MOUSE_SCROLL_RIGHT_BUTTON,
+                                     MOUSE_SCROLL_UP_BUTTON, MOUSE_SGR_PREFIX,
+                                     MOUSE_SGR_PRESS, MOUSE_SGR_RELEASE,
+                                     MOUSE_X10_MARKER, MOUSE_X10_PREFIX,
+                                     PASTE_END_GENERATE_CODE,
+                                     PASTE_START_GENERATE_CODE,
+                                     RESIZE_EVENT_GENERATE_CODE, RESIZE_TERMINATOR,
+                                     SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
+                                     SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
+                                     SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
+                         vt_100_terminal_input_parser::{VT100FocusState,
+                                                        VT100InputEvent, VT100KeyCode,
+                                                        VT100KeyModifiers,
+                                                        VT100MouseAction,
+                                                        VT100MouseButton,
+                                                        VT100PasteMode}}};
 
 /// Generate ANSI bytes for an input event.
 ///
@@ -139,9 +145,12 @@ pub fn generate_x10_mouse_sequence(
 
     // Handle action
     match action {
-        VT100MouseAction::Release => cb = MOUSE_RELEASE_BUTTON_CODE, // Release always sends button=3
-        VT100MouseAction::Motion | VT100MouseAction::Drag => cb |= MOUSE_MOTION_FLAG, // Motion and drag set motion flag (bit 5)
-        VT100MouseAction::Press | VT100MouseAction::Scroll(_) => {} // Press uses base button code; Scroll not typically used in X10
+        /* Release always sends button=3 */
+        VT100MouseAction::Release => cb = MOUSE_RELEASE_BUTTON_CODE,
+        /* Motion and drag set motion flag (bit 5) */
+        VT100MouseAction::Motion | VT100MouseAction::Drag => cb |= MOUSE_MOTION_FLAG,
+        /* Press uses base button code; Scroll not typically used in X10 */
+        VT100MouseAction::Press | VT100MouseAction::Scroll(_) => {}
     }
 
     // Apply modifiers
@@ -327,7 +336,9 @@ fn generate_key_sequence(
     // Build the base sequence
     let mut bytes = CSI_PREFIX.to_vec();
 
-    let has_modifiers = modifiers.shift == KeyState::Pressed || modifiers.ctrl == KeyState::Pressed || modifiers.alt == KeyState::Pressed;
+    let has_modifiers = modifiers.shift == KeyState::Pressed
+        || modifiers.ctrl == KeyState::Pressed
+        || modifiers.alt == KeyState::Pressed;
 
     match code {
         // ==================== Arrow Keys ====================
@@ -447,7 +458,10 @@ fn generate_special_key_sequence(
     let code_str = code.to_string();
     bytes.extend_from_slice(code_str.as_bytes());
 
-    if modifiers.shift == KeyState::Pressed || modifiers.ctrl == KeyState::Pressed || modifiers.alt == KeyState::Pressed {
+    if modifiers.shift == KeyState::Pressed
+        || modifiers.ctrl == KeyState::Pressed
+        || modifiers.alt == KeyState::Pressed
+    {
         bytes.push(ANSI_PARAM_SEPARATOR);
         bytes.push(encode_modifiers(modifiers));
     }
@@ -534,7 +548,10 @@ fn encode_modifiers(modifiers: VT100KeyModifiers) -> u8 {
 ///
 /// Panics if `value` is not in range 0-9 (debug builds only)
 fn push_ascii_number(value: u8) -> u8 {
-    debug_assert!(value <= 9, "Value must be a single digit (0-9), got {value}");
+    debug_assert!(
+        value <= 9,
+        "Value must be a single digit (0-9), got {value}"
+    );
     ASCII_DIGIT_0 + value
 }
 
@@ -543,7 +560,8 @@ fn push_ascii_number(value: u8) -> u8 {
 /// ## Purpose
 ///
 /// ANSI escape sequences represent multi-digit numbers as sequences of ASCII digits.
-/// This helper eliminates repetitive `to_string().as_bytes()` calls throughout the codebase.
+/// This helper eliminates repetitive `to_string().as_bytes()` calls throughout the
+/// codebase.
 ///
 /// ## Examples
 ///
@@ -569,9 +587,7 @@ fn push_ascii_number(value: u8) -> u8 {
 ///
 /// A `Vec<u8>` containing the ASCII byte representation of the number.
 /// For example, 123 returns vec![b'1', b'2', b'3'].
-fn push_ascii_u16(value: u16) -> Vec<u8> {
-    value.to_string().into_bytes()
-}
+fn push_ascii_u16(value: u16) -> Vec<u8> { value.to_string().into_bytes() }
 
 /// Generate a window resize sequence: `CSI 8 ; rows ; cols t`
 ///

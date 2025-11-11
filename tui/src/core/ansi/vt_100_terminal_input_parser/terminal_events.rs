@@ -29,12 +29,6 @@
 //! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100FocusState`], [`VT100PasteMode`]
 //!
-//! [`parser`]: mod@super::parser
-//! [`keyboard`]: mod@super::keyboard
-//! [`mouse`]: mod@super::mouse
-//! [`utf8`]: mod@super::utf8
-//! [`VT100FocusState`]: super::VT100FocusState
-//! [`VT100PasteMode`]: super::VT100PasteMode
 //!
 //! ## Supported events:
 //! - **Window Resize**: `CSI 8 ; rows ; cols t`
@@ -42,14 +36,24 @@
 //! - **Focus Lost**: `CSI O`
 //! - **Bracketed Paste Start**: `ESC [ 200 ~`
 //! - **Bracketed Paste End**: `ESC [ 201 ~`
+//!
+//! [`VT100FocusState`]: super::VT100FocusState
+//! [`VT100PasteMode`]: super::VT100PasteMode
+//! [`keyboard`]: mod@super::keyboard
+//! [`mouse`]: mod@super::mouse
+//! [`parser`]: mod@super::parser
+//! [`utf8`]: mod@super::utf8
 
 use super::types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
-use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_FUNCTION_KEY_TERMINATOR,
-                                   ANSI_PARAM_SEPARATOR, ASCII_DIGIT_0, ASCII_DIGIT_9,
-                                   FOCUS_GAINED_FINAL, FOCUS_LOST_FINAL, PASTE_END_PARSE_PARAM,
-                                   PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM, RESIZE_TERMINATOR};
+use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
+                                   ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
+                                   ASCII_DIGIT_0, ASCII_DIGIT_9, FOCUS_GAINED_FINAL,
+                                   FOCUS_LOST_FINAL, PASTE_END_PARSE_PARAM,
+                                   PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM,
+                                   RESIZE_TERMINATOR};
 
-/// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if recognized.
+/// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if
+/// recognized.
 ///
 /// Returns `Some((event, bytes_consumed))` if a complete sequence is parsed,
 /// or `None` if the sequence is incomplete or invalid.
@@ -75,8 +79,12 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Handle simple focus events (single character after ESC[)
     if buffer.len() == 3 {
         match buffer[2] {
-            FOCUS_GAINED_FINAL => return Some((VT100InputEvent::Focus(VT100FocusState::Gained), 3)),
-            FOCUS_LOST_FINAL => return Some((VT100InputEvent::Focus(VT100FocusState::Lost), 3)),
+            FOCUS_GAINED_FINAL => {
+                return Some((VT100InputEvent::Focus(VT100FocusState::Gained), 3));
+            }
+            FOCUS_LOST_FINAL => {
+                return Some((VT100InputEvent::Focus(VT100FocusState::Lost), 3));
+            }
             _ => {}
         }
     }
@@ -131,7 +139,10 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usiz
 
     // Parse based on parameters and final byte
     // Using if/else for consistency - avoiding all match statements when using constants
-    if params.len() == 3 && final_byte == RESIZE_TERMINATOR && params[0] == RESIZE_EVENT_PARSE_PARAM {
+    if params.len() == 3
+        && final_byte == RESIZE_TERMINATOR
+        && params[0] == RESIZE_EVENT_PARSE_PARAM
+    {
         // Window resize: CSI 8 ; rows ; cols t
         let rows = params[1];
         let cols = params[2];

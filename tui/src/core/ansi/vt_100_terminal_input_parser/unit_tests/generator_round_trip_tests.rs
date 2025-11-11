@@ -10,8 +10,9 @@
 //! This ensures generator and parser are compatible and speak the same protocol.
 
 use crate::{KeyState,
-            core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
-                                                       VT100KeyModifiers, VT100FocusState,
+            core::ansi::vt_100_terminal_input_parser::{VT100FocusState,
+                                                       VT100InputEvent, VT100KeyCode,
+                                                       VT100KeyModifiers,
                                                        VT100PasteMode,
                                                        parse_keyboard_sequence,
                                                        parse_terminal_event,
@@ -56,9 +57,13 @@ fn test_generate_paste_end() {
 
 #[test]
 fn test_roundtrip_resize_event() {
-    let original_event = VT100InputEvent::Resize { rows: 30, cols: 120 };
+    let original_event = VT100InputEvent::Resize {
+        rows: 30,
+        cols: 120,
+    };
     let bytes = generate_keyboard_sequence(&original_event).unwrap();
-    let (parsed_event, bytes_consumed) = parse_terminal_event(&bytes).expect("Should parse");
+    let (parsed_event, bytes_consumed) =
+        parse_terminal_event(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
     assert_eq!(bytes_consumed, bytes.len());
@@ -68,14 +73,16 @@ fn test_roundtrip_resize_event() {
 fn test_roundtrip_focus_events() {
     let original_gained = VT100InputEvent::Focus(VT100FocusState::Gained);
     let bytes_gained = generate_keyboard_sequence(&original_gained).unwrap();
-    let (parsed_gained, bytes_consumed) = parse_terminal_event(&bytes_gained).expect("Should parse");
+    let (parsed_gained, bytes_consumed) =
+        parse_terminal_event(&bytes_gained).expect("Should parse");
 
     assert_eq!(parsed_gained, original_gained);
     assert_eq!(bytes_consumed, bytes_gained.len());
 
     let original_lost = VT100InputEvent::Focus(VT100FocusState::Lost);
     let bytes_lost = generate_keyboard_sequence(&original_lost).unwrap();
-    let (parsed_lost, bytes_consumed) = parse_terminal_event(&bytes_lost).expect("Should parse");
+    let (parsed_lost, bytes_consumed) =
+        parse_terminal_event(&bytes_lost).expect("Should parse");
 
     assert_eq!(parsed_lost, original_lost);
     assert_eq!(bytes_consumed, bytes_lost.len());
@@ -85,14 +92,16 @@ fn test_roundtrip_focus_events() {
 fn test_roundtrip_paste_events() {
     let original_start = VT100InputEvent::Paste(VT100PasteMode::Start);
     let bytes_start = generate_keyboard_sequence(&original_start).unwrap();
-    let (parsed_start, bytes_consumed) = parse_terminal_event(&bytes_start).expect("Should parse");
+    let (parsed_start, bytes_consumed) =
+        parse_terminal_event(&bytes_start).expect("Should parse");
 
     assert_eq!(parsed_start, original_start);
     assert_eq!(bytes_consumed, bytes_start.len());
 
     let original_end = VT100InputEvent::Paste(VT100PasteMode::End);
     let bytes_end = generate_keyboard_sequence(&original_end).unwrap();
-    let (parsed_end, bytes_consumed) = parse_terminal_event(&bytes_end).expect("Should parse");
+    let (parsed_end, bytes_consumed) =
+        parse_terminal_event(&bytes_end).expect("Should parse");
 
     assert_eq!(parsed_end, original_end);
     assert_eq!(bytes_consumed, bytes_end.len());
@@ -368,7 +377,8 @@ fn test_roundtrip_arrow_up() {
     };
 
     let bytes = generate_keyboard_sequence(&original_event).unwrap();
-    let (parsed_event, bytes_consumed) = parse_keyboard_sequence(&bytes).expect("Should parse");
+    let (parsed_event, bytes_consumed) =
+        parse_keyboard_sequence(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
     assert_eq!(bytes_consumed, bytes.len());
@@ -386,7 +396,8 @@ fn test_roundtrip_ctrl_alt_f10() {
     };
 
     let bytes = generate_keyboard_sequence(&original_event).unwrap();
-    let (parsed_event, bytes_consumed) = parse_keyboard_sequence(&bytes).expect("Should parse");
+    let (parsed_event, bytes_consumed) =
+        parse_keyboard_sequence(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
     assert_eq!(bytes_consumed, bytes.len());
@@ -404,7 +415,8 @@ fn test_roundtrip_insert_key_with_shift() {
     };
 
     let bytes = generate_keyboard_sequence(&original_event).unwrap();
-    let (parsed_event, bytes_consumed) = parse_keyboard_sequence(&bytes).expect("Should parse");
+    let (parsed_event, bytes_consumed) =
+        parse_keyboard_sequence(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
     assert_eq!(bytes_consumed, bytes.len());

@@ -28,9 +28,11 @@
 //! ```
 //!
 //! **Navigate**:
-//! - ⬆️ **Up**: [`parser`], [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] - Modules using these types
+//! - ⬆️ **Up**: [`parser`], [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] -
+//!   Modules using these types
 //! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Converts VT100InputEvent to InputEvent
-//! - 📚 **Canonical Types**: [`InputEvent`], [`Key`], [`MouseInput`] - Final user-facing types
+//! - 📚 **Canonical Types**: [`InputEvent`], [`Key`], [`MouseInput`] - Final user-facing
+//!   types
 //!
 //! ## Type Conversion Flow
 //!
@@ -42,16 +44,16 @@
 //! These types are **internal protocol representations**. The backend I/O layer
 //! converts them to canonical types from [`terminal_io`] before exposing to users.
 //!
-//! [`parser`]: mod@super::parser
-//! [`keyboard`]: mod@super::keyboard
-//! [`mouse`]: mod@super::mouse
-//! [`terminal_events`]: mod@super::terminal_events
-//! [`utf8`]: mod@super::utf8
 //! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::terminal_io::InputEvent
 //! [`Key`]: crate::Key
 //! [`MouseInput`]: crate::MouseInput
+//! [`keyboard`]: mod@super::keyboard
+//! [`mouse`]: mod@super::mouse
+//! [`parser`]: mod@super::parser
+//! [`terminal_events`]: mod@super::terminal_events
 //! [`terminal_io`]: mod@crate::terminal_io
+//! [`utf8`]: mod@super::utf8
 
 use crate::{KeyState, TermPos};
 

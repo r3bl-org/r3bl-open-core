@@ -53,6 +53,6 @@
 //! [`unit_tests::generator_round_trip_tests`]: super::unit_tests::generator_round_trip_tests
 
 #[cfg(any(test, doc))]
-pub mod observe_real_interactive_terminal_input_events;
-#[cfg(any(test, doc))]
 pub mod input_parser_validation_test;
+#[cfg(any(test, doc))]
+pub mod observe_real_interactive_terminal_input_events;

@@ -11,17 +11,19 @@ following fixes:
 
 # Auto-format rustdoc comments with cargo-rustdoc-fmt
 
-Before making any other changes, run the rustdoc formatter to automatically fix markdown tables
-and convert inline links to reference-style links:
+Before making any other changes, run the rustdoc formatter to automatically fix markdown tables and
+convert inline links to reference-style links:
 
 ```bash
 cargo rustdoc-fmt
 ```
 
 This tool will:
+
 - Format markdown tables with aligned columns
 - Convert inline links `[text](url)` to reference-style `[text]` with links at bottom
-- Process only git-changed files by default (or use `--workspace` for full workspace)
+- Process only git-changed files by default, or use `--workspace` for full workspace, or pass the
+  specific files you want to format as arguments
 
 Verify the changes build correctly:
 
@@ -29,16 +31,19 @@ Verify the changes build correctly:
 cargo doc --no-deps
 ```
 
-If there are any issues with the generated documentation, fix them manually following these guidelines:
+If there are any issues with the generated documentation, fix them manually following these
+guidelines:
 
 ## Reference-style link guidelines
 
 When the tool converts links, verify they are correct:
+
 - All reference links should be at the bottom of the comment block
 - Links should use the link text as the reference identifier
 - Run `cargo doc --no-deps` to verify all links resolve correctly
 
 For example:
+
 ```
 /// The module [`char_ops`] does XYZ.
 ///

@@ -65,24 +65,41 @@ pub fn convert_links(text: &str) -> String {
         }
     }
 
-    // If no inline links found, return original text
-    if link_info.is_empty() {
-        return text.to_string();
+    // Extract existing reference definitions BEFORE parsing
+    // (pulldown_cmark strips reference definitions, so we must preserve them)
+    let (text_without_refs, existing_refs) = extract_reference_definitions(text);
+
+    // Rebuild the markdown with reference-style links (if any inline links found)
+    let mut result = if link_info.is_empty() {
+        text_without_refs
+    } else {
+        rebuild_with_text_references(&text_without_refs)
+    };
+
+    // Collect all references: both newly converted and pre-existing
+    let mut all_refs = Vec::new();
+
+    // Add newly converted inline links as references
+    for (link_text, url) in &link_info {
+        all_refs.push((link_text.clone(), format!("[{link_text}]: {url}")));
     }
 
-    // Rebuild the markdown with reference-style links
-    let mut result = rebuild_with_text_references(text);
+    // Add pre-existing references
+    all_refs.extend(existing_refs);
 
-    // Append reference definitions
-    if !link_info.is_empty() {
-        // Ensure result ends with exactly one newline before adding references
-        let result_trimmed = result.trim_end();
-        result = result_trimmed.to_string();
+    // If we have any references, aggregate and append them
+    if !all_refs.is_empty() {
+        // Sort references alphabetically by link name
+        all_refs.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
+
+        // Append references at bottom with blank line separator for visual clarity
+        // This separates content (including reference usages) from reference definitions
+        result = result.trim_end().to_string();
         result.push_str("\n\n");
-        for (link_text, url) in &link_info {
-            let _ = writeln!(result, "[{link_text}]: {url}");
+        for (_, ref_line) in &all_refs {
+            result.push_str(ref_line);
+            result.push('\n');
         }
-        // Remove trailing newline
         result = result.trim_end().to_string();
     }
 
@@ -217,6 +234,129 @@ fn rebuild_with_text_references(text: &str) -> String {
     result
 }
 
+/// Extract reference definitions from text and return (text_without_refs, references).
+///
+/// Scans for existing reference definitions (e.g., `[name]: target`), extracts them,
+/// and returns both the text without those definitions and the list of references.
+///
+/// Returns: (text without reference definitions, Vec<(link_name, full_reference_line)>)
+fn extract_reference_definitions(text: &str) -> (String, Vec<(String, String)>) {
+    if text.is_empty() {
+        return (String::new(), Vec::new());
+    }
+
+    let mut content_lines = Vec::new();
+    let mut references: Vec<(String, String)> = Vec::new();
+
+    // Process each line
+    for line in text.lines() {
+        // Check if this line is a reference definition: [name]: target
+        if let Some(link_name) = parse_reference_definition(line) {
+            references.push((link_name, line.to_string()));
+        } else {
+            content_lines.push(line);
+        }
+    }
+
+    let content = content_lines.join("\n");
+    (content, references)
+}
+
+/// Aggregate scattered reference-style link definitions to the bottom of the text.
+///
+/// Scans for existing reference definitions (e.g., `[name]: target`), extracts them,
+/// sorts them alphabetically by link name, and moves them to the bottom with a blank
+/// line separator for visual clarity.
+///
+/// # Example
+///
+/// Input:
+/// ```text
+/// Bla bla [link].
+/// [link]: crate::Link
+///
+/// Bla bla [otherlink].
+/// [otherlink]: crate::Otherlink
+/// ```
+///
+/// Output:
+/// ```text
+/// Bla bla [link].
+///
+/// Bla bla [otherlink].
+///
+/// [link]: crate::Link
+/// [otherlink]: crate::Otherlink
+/// ```
+#[must_use]
+pub fn aggregate_existing_references(text: &str) -> String {
+    if text.is_empty() {
+        return String::new();
+    }
+
+    let mut content_lines = Vec::new();
+    let mut references: Vec<(String, String)> = Vec::new(); // (link_name, full_line)
+
+    // Process each line
+    for line in text.lines() {
+        // Check if this line is a reference definition: [name]: target
+        if let Some(link_name) = parse_reference_definition(line) {
+            references.push((link_name, line.to_string()));
+        } else {
+            content_lines.push(line);
+        }
+    }
+
+    // If no references found, return original text
+    if references.is_empty() {
+        return text.to_string();
+    }
+
+    // Sort references alphabetically by link name (case-sensitive)
+    references.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
+
+    // Rebuild content
+    let mut result = content_lines.join("\n");
+
+    // Trim trailing whitespace/newlines
+    result = result.trim_end().to_string();
+
+    // Append references with blank line separator for visual clarity
+    result.push_str("\n\n");
+    for (_, ref_line) in &references {
+        result.push_str(ref_line);
+        result.push('\n');
+    }
+
+    // Remove trailing newline
+    result = result.trim_end().to_string();
+
+    result
+}
+
+/// Parse a reference definition line and return the link name if valid.
+///
+/// Matches lines in the format: `[name]: target`
+fn parse_reference_definition(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    if !trimmed.starts_with('[') {
+        return None;
+    }
+
+    // Find the closing bracket
+    let close_bracket = trimmed.find(']')?;
+
+    // Check if it's followed by a colon
+    let after_bracket = &trimmed[close_bracket + 1..];
+    if !after_bracket.trim_start().starts_with(':') {
+        return None;
+    }
+
+    // Extract the link name
+    let link_name = &trimmed[1..close_bracket];
+    Some(link_name.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -287,5 +427,82 @@ mod tests {
         let input = "This text has no links.";
         let output = convert_links(input);
         assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_aggregate_scattered_references() {
+        let input = "Bla bla [link].\n[link]: crate::Link\n\nBla bla [otherlink].\n[otherlink]: crate::Otherlink";
+        let output = aggregate_existing_references(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // Check that content is preserved
+        assert!(output.contains("Bla bla [link]."));
+        assert!(output.contains("Bla bla [otherlink]."));
+
+        // Check that references are at the bottom
+        let lines: Vec<&str> = output.lines().collect();
+        assert!(lines.len() >= 2);
+        assert!(lines[lines.len() - 2].contains("[link]: crate::Link"));
+        assert!(lines[lines.len() - 1].contains("[otherlink]: crate::Otherlink"));
+    }
+
+    #[test]
+    fn test_aggregate_alphabetical_sorting() {
+        let input = "Text [zebra] and [alpha].\n[zebra]: crate::Z\n[alpha]: crate::A";
+        let output = aggregate_existing_references(input);
+        eprintln!("Input:\n{input}");
+        eprintln!("\nOutput:\n{output}");
+
+        // References should be sorted alphabetically
+        let lines: Vec<&str> = output.lines().collect();
+        let ref_section = lines
+            .iter()
+            .skip_while(|l| !l.contains("[alpha]:"))
+            .collect::<Vec<_>>();
+        assert!(ref_section.len() >= 2);
+        assert!(ref_section[0].contains("[alpha]: crate::A"));
+        assert!(ref_section[1].contains("[zebra]: crate::Z"));
+    }
+
+    #[test]
+    fn test_aggregate_no_references() {
+        let input = "Just some text without references.";
+        let output = aggregate_existing_references(input);
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_aggregate_blank_line_before_references() {
+        let input = "Content [link].\n[link]: target";
+        let output = aggregate_existing_references(input);
+        eprintln!("Output:\n{output:?}");
+
+        // Should have blank line before references for visual separation
+        assert!(output.contains("Content [link].\n\n[link]: target"));
+    }
+
+    #[test]
+    fn test_parse_reference_definition_valid() {
+        assert_eq!(
+            parse_reference_definition("[example]: https://example.com"),
+            Some("example".to_string())
+        );
+        assert_eq!(
+            parse_reference_definition("[complex name]: target"),
+            Some("complex name".to_string())
+        );
+        assert_eq!(
+            parse_reference_definition("  [indented]: value  "),
+            Some("indented".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_reference_definition_invalid() {
+        assert_eq!(parse_reference_definition("Not a reference"), None);
+        assert_eq!(parse_reference_definition("[incomplete"), None);
+        assert_eq!(parse_reference_definition("[missing colon] value"), None);
+        assert_eq!(parse_reference_definition("regular text"), None);
     }
 }

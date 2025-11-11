@@ -26,14 +26,10 @@
 //!
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`] - Main routing entry point
-//! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`terminal_events`] - Other specialized parsers
+//! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`terminal_events`] - Other specialized
+//!   parsers
 //! - 📚 **Types**: [`VT100KeyCode::Char`]
 //!
-//! [`parser`]: mod@super::parser
-//! [`keyboard`]: mod@super::keyboard
-//! [`mouse`]: mod@super::mouse
-//! [`terminal_events`]: mod@super::terminal_events
-//! [`VT100KeyCode::Char`]: super::VT100KeyCode::Char
 //!
 //! ## Handles:
 //! - Single-byte UTF-8 characters (ASCII)
@@ -48,10 +44,10 @@
 //!
 //! ## Two Separate Concerns
 //!
-//! | Concern                              | What it measures          | Example: '😀'  |
-//! |--------------------------------------|---------------------------|----------------|
-//! | **UTF-8 byte length** (this module)  | Memory size in bytes      | 4 bytes        |
-//! | **Display width** (graphemes module) | Terminal columns occupied | 2 columns      |
+//! | Concern                                | What it measures            | Example: '😀'    |
+//! | -------------------------------------- | --------------------------- | ---------------- |
+//! | **UTF-8 byte length** (this module)    | Memory size in bytes        | 4 bytes          |
+//! | **Display width** (graphemes module)   | Terminal columns occupied   | 2 columns        |
 //!
 //! - **This module**: Returns `(InputEvent, bytes_consumed)` where `bytes_consumed` is
 //!   the number of bytes to advance in the input buffer (1-4 bytes for UTF-8).
@@ -78,15 +74,19 @@
 //! If you need to position the cursor or calculate line lengths, you need display
 //! width calculation, not byte length. See [`crate::graphemes::GCStringOwned`] for
 //! text rendering utilities.
+//!
+//! [`VT100KeyCode::Char`]: super::VT100KeyCode::Char
+//! [`keyboard`]: mod@super::keyboard
+//! [`mouse`]: mod@super::mouse
+//! [`parser`]: mod@super::parser
+//! [`terminal_events`]: mod@super::terminal_events
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
-use crate::{
-    UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK, UTF8_2BYTE_MAX,
-    UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX, UTF8_3BYTE_MIN,
-    UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
-    UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
-    UTF8_CONTINUATION_PATTERN,
-};
+use crate::{UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK, UTF8_2BYTE_MAX,
+            UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX, UTF8_3BYTE_MIN,
+            UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
+            UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
+            UTF8_CONTINUATION_PATTERN};
 
 /// Parse UTF-8 text and return a single `InputEvent` for the first complete character.
 ///

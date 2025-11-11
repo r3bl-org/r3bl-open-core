@@ -29,7 +29,8 @@
 //! ```
 //!
 //! **Navigate**:
-//! - ⬇️ **Down**: [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] - Specialized parsers
+//! - ⬇️ **Down**: [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] - Specialized
+//!   parsers
 //! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Async I/O layer that calls this
 //! - 📚 **Types**: [`VT100InputEvent`] - Output event type
 //!
@@ -47,12 +48,12 @@
 //!
 //! ### Performance Comparison
 //!
-//! | Input Type         | crossterm Latency | Our Latency | Improvement     |
-//! |--------------------|-------------------|-------------|-----------------|
-//! | **ESC key press**  | 150ms (timeout)   | 0ms         | **150ms faster**|
-//! | Arrow keys         | 0ms (immediate)   | 0ms         | Same            |
-//! | Regular text       | 0ms (immediate)   | 0ms         | Same            |
-//! | Mouse events       | 0ms (immediate)   | 0ms         | Same            |
+//! | Input Type           | crossterm Latency   | Our Latency   | Improvement       |
+//! | -------------------- | ------------------- | ------------- | ----------------- |
+//! | **ESC key press**    | 150ms (timeout)     | 0ms           | **150ms faster**  |
+//! | Arrow keys           | 0ms (immediate)     | 0ms           | Same              |
+//! | Regular text         | 0ms (immediate)     | 0ms           | Same              |
+//! | Mouse events         | 0ms (immediate)     | 0ms           | Same              |
 //!
 //! **Benefit applies to**: Vim-style modal editors, ESC-heavy workflows, dialog
 //! dismissal.
@@ -102,17 +103,16 @@
 //! - **Network delay case**: Over SSH with 200ms latency, UX is already degraded; getting
 //!   ESC instead of Up Arrow is annoying but not catastrophic
 //!
+//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
+//! [`VT100InputEvent`]: super::VT100InputEvent
 //! [`keyboard`]: mod@super::keyboard
 //! [`mouse`]: mod@super::mouse
 //! [`terminal_events`]: mod@super::terminal_events
 //! [`utf8`]: mod@super::utf8
-//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
-//! [`VT100InputEvent`]: super::VT100InputEvent
 
-use super::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers,
-            parse_alt_letter, parse_control_character, parse_keyboard_sequence,
-            parse_mouse_sequence, parse_ss3_sequence, parse_terminal_event,
-            parse_utf8_text};
+use super::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers, parse_alt_letter,
+            parse_control_character, parse_keyboard_sequence, parse_mouse_sequence,
+            parse_ss3_sequence, parse_terminal_event, parse_utf8_text};
 use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O};
 
 /// Try to parse a complete input event from the buffer.
@@ -325,8 +325,7 @@ mod tests {
     fn test_try_parse_ss3_routing() {
         // Test: SS3 sequence routes to SS3 parser
         let buffer = &[0x1B, b'O', b'P']; // ESC O P (F1 in application mode)
-        let (event, consumed) =
-            try_parse_input_event(buffer).expect("Should parse F1");
+        let (event, consumed) = try_parse_input_event(buffer).expect("Should parse F1");
 
         assert!(matches!(
             event,
@@ -376,8 +375,7 @@ mod tests {
     fn test_try_parse_utf8_fallback() {
         // Test: Regular ASCII routes to UTF-8 parser
         let buffer = b"Hello";
-        let (event, consumed) =
-            try_parse_input_event(buffer).expect("Should parse 'H'");
+        let (event, consumed) = try_parse_input_event(buffer).expect("Should parse 'H'");
 
         assert!(matches!(
             event,

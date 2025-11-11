@@ -32,20 +32,12 @@
 //! - ➡️ **Peer**: [`mouse`], [`terminal_events`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100InputEvent`], [`VT100KeyCode`], [`VT100KeyModifiers`]
 //!
-//! [`parser`]: mod@super::parser
-//! [`mouse`]: mod@super::mouse
-//! [`terminal_events`]: mod@super::terminal_events
-//! [`utf8`]: mod@super::utf8
-//! [`VT100InputEvent`]: super::VT100InputEvent
-//! [`VT100KeyCode`]: super::VT100KeyCode
-//! [`VT100KeyModifiers`]: super::VT100KeyModifiers
 //!
 //! ## Parser Dispatch Priority Pipeline
 //!
 //! This module provides multiple parser functions that are invoked in a **predefined
 //! priority order** by the [`try_parse_input_event`] main routing function.
 //!
-//! [`try_parse_input_event`]: super::try_parse_input_event
 //!
 //! ## Comprehensive List of Supported Keyboard Shortcuts
 //!
@@ -331,6 +323,15 @@
 //!
 //! This is a fundamental VT-100 protocol limitation, not a parser bug. Modern protocols
 //! like Kitty keyboard protocol solve this, but we maintain VT-100 compatibility.
+//!
+//! [`VT100InputEvent`]: super::VT100InputEvent
+//! [`VT100KeyCode`]: super::VT100KeyCode
+//! [`VT100KeyModifiers`]: super::VT100KeyModifiers
+//! [`mouse`]: mod@super::mouse
+//! [`parser`]: mod@super::parser
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`try_parse_input_event`]: super::try_parse_input_event
+//! [`utf8`]: mod@super::utf8
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 use crate::{ASCII_DEL, KeyState,
@@ -384,9 +385,9 @@ use crate::{ASCII_DEL, KeyState,
 /// [`Control Key Combinations`]
 /// [`Ambiguous Control Character Handling`]
 ///
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
-/// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
 /// [`Ambiguous Control Character Handling`]: mod@self#ambiguous-control-character-handling
+/// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length
@@ -570,8 +571,8 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// [`Parser Dispatch Priority Pipeline`]
 /// [`CSI Sequences`]
 ///
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`CSI Sequences`]: mod@self#csi-sequences-esc
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte

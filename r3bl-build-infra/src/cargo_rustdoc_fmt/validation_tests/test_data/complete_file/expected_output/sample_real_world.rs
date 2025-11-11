@@ -350,9 +350,9 @@ use crate::{ASCII_DEL, KeyState,
 /// [`Control Key Combinations`]
 /// [`Ambiguous Control Character Handling`]
 ///
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
-/// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
 /// [`Ambiguous Control Character Handling`]: mod@self#ambiguous-control-character-handling
+/// [`Control Key Combinations`]: mod@self#control-key-combinations-ctrlletter
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
 pub fn parse_control_character(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length
@@ -536,8 +536,8 @@ pub fn parse_alt_letter(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 /// [`Parser Dispatch Priority Pipeline`]
 /// [`CSI Sequences`]
 ///
-/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 /// [`CSI Sequences`]: mod@self#csi-sequences-esc
+/// [`Parser Dispatch Priority Pipeline`]: mod@self#parser-dispatch-priority-pipeline
 #[must_use]
 pub fn parse_keyboard_sequence(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     // Check minimum length: ESC [ + final byte
