@@ -51,12 +51,12 @@
 //!
 //! The input parser is intentionally designed to parallel the output architecture:
 //!
-//! | Aspect            | Output                                         | Input                                         |
-//! |-------------------|----------------------------------------------- |-----------------------------------------------|
-//! | Protocol layer    | `core/ansi/generator/`                         | `core/ansi/vt_100_terminal_input_parser/`     |
-//! | Backend layer     | `terminal_lib_backends/direct_to_ansi/output/` | `terminal_lib_backends/direct_to_ansi/input/` |
-//! | Styling/Rendering | `SgrCode`, `ansi_sequence_generator`           | `parse_keyboard_sequence`, etc.               |
-//! | I/O handling      | `paint_render_op_impl`, `pixel_char_renderer`  | `DirectToAnsiInputDevice`                     |
+//! | Aspect              | Output                                          | Input                                           |
+//! | ------------------- | ----------------------------------------------- | ----------------------------------------------- |
+//! | Protocol layer      | `core/ansi/generator/`                          | `core/ansi/vt_100_terminal_input_parser/`       |
+//! | Backend layer       | `terminal_lib_backends/direct_to_ansi/output/`  | `terminal_lib_backends/direct_to_ansi/input/`   |
+//! | Styling/Rendering   | `SgrCode`, `ansi_sequence_generator`            | `parse_keyboard_sequence`, etc.                 |
+//! | I/O handling        | `paint_render_op_impl`, `pixel_char_renderer`   | `DirectToAnsiInputDevice`                       |
 //!
 //! ## Module Responsibilities
 //!
@@ -133,16 +133,16 @@
 //! ╱────────────╲
 //! ```
 //!
-//! | Level       | Purpose                        | Sequences | Why                                     |
-//! |-------------|--------------------------------|-----------|-----------------------------------------|
-//! | Validation  | Spec compliance & Ground truth | Hardcoded | Independent reference (VT-100 protocol) |
-//! | Unit        | Component contracts            | Generated | Round-trip (generator ↔ parser)         |
-//! | Integration | System behavior                | Generated | Real-world usage pattern                |
+//! | Level         | Purpose                          | Sequences   | Why                                       |
+//! | ------------- | -------------------------------- | ----------- | ----------------------------------------- |
+//! | Validation    | Spec compliance & Ground truth   | Hardcoded   | Independent reference (VT-100 protocol)   |
+//! | Unit          | Component contracts              | Generated   | Round-trip (generator ↔ parser)           |
+//! | Integration   | System behavior                  | Generated   | Real-world usage pattern                  |
 //!
 //! The `test_fixtures` module is shared between the unit, and integration tests only.
 //!
-//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
 //! [`TermCol`]: crate::core::coordinates::vt_100_ansi_coords::TermCol
+//! [`TermRow`]: crate::core::coordinates::vt_100_ansi_coords::TermRow
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356

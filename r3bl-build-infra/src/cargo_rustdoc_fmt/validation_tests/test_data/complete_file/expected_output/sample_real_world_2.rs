@@ -1,5 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// Skip rustfmt for test fixture file.
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 //! Mouse input event [1-based coordinates] parsing from ANSI/CSI sequences.
 //!
 //! This module handles conversion of mouse-related ANSI escape sequences into mouse
@@ -68,6 +71,8 @@
 //! iTerm2, etc.) because Shift+Click is reserved for text selection by the terminal.
 //! See the test fixtures for mouse event generation details and validation tests.
 //!
+//! [parent module's testing strategy documentation]
+//!
 //! [1-based coordinates]: mod@super#one-based-mouse-input-events
 //! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
 //! [`VT100MouseAction`]: super::VT100MouseAction
@@ -81,7 +86,8 @@
 use super::types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction,
                    VT100MouseButton, VT100ScrollDirection};
 use crate::{KeyState, TermPos,
-            core::ansi::constants::{CSI_PREFIX, MOUSE_BASE_BUTTON_MASK,
+            core::ansi::constants::{CSI_PREFIX,
+                                    MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
                                     MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
                                     MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
@@ -676,11 +682,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(
-                    modifiers.shift == KeyState::NotPressed
-                        && modifiers.ctrl == KeyState::NotPressed
-                        && modifiers.alt == KeyState::NotPressed
-                );
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -956,11 +958,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(
-                    modifiers.shift == KeyState::NotPressed
-                        && modifiers.ctrl == KeyState::NotPressed
-                        && modifiers.alt == KeyState::NotPressed
-                );
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1255,11 +1253,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(
-                    modifiers.shift == KeyState::NotPressed
-                        && modifiers.ctrl == KeyState::NotPressed
-                        && modifiers.alt == KeyState::NotPressed
-                );
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }

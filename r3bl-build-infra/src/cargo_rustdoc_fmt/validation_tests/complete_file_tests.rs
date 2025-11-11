@@ -301,4 +301,144 @@ fn main() {}";
             "Formatted output should match expected output"
         );
     }
+
+    /// Comprehensive real-world test using mouse.rs file.
+    ///
+    /// This test uses a real-world file (mouse.rs) with:
+    /// - Scattered reference definitions that need aggregation
+    /// - An inline link that LOOKS like a reference: `[long text](url)`
+    /// - Reference usages that already exist and should be preserved
+    /// - The edge case: `[parent module's testing strategy
+    ///   documentation](mod@super#testing-strategy)`
+    ///
+    /// This verifies that the formatter correctly:
+    /// - Converts inline links to reference style (even long ones that look like
+    ///   references)
+    /// - Aggregates scattered references to bottom
+    /// - Alphabetically sorts all references
+    /// - Preserves existing reference usages in the content
+    #[test]
+    fn test_real_world_file_2_complete_formatting() {
+        let input = include_str!("test_data/complete_file/input/sample_real_world_2.rs");
+        let expected = include_str!(
+            "test_data/complete_file/expected_output/sample_real_world_2.rs"
+        );
+
+        // Use the actual FileProcessor to test the complete pipeline
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_real_world_2.rs");
+        fs::write(&test_file, input).unwrap();
+
+        // Process with default options (tables + links)
+        let options = FormatOptions::default();
+        let processor = processor::FileProcessor::new(options);
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Processing errors: {:?}",
+            result.errors
+        );
+        assert!(
+            result.modified,
+            "File should be modified (has formatting to do)"
+        );
+
+        // Read the formatted result
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Verify the edge case: inline link was converted to reference style
+        // Input had: [parent module's testing strategy
+        // documentation](mod@super#testing-strategy) Output should have the
+        // reference definition at bottom
+        assert!(
+            formatted.contains("[parent module's testing strategy documentation]: mod@super#testing-strategy"),
+            "Should convert inline link to reference definition (even long link text)"
+        );
+
+        // Verify reference-style links are aggregated at bottom
+        assert!(
+            formatted.contains("]: mod@"),
+            "Should have reference-style links"
+        );
+
+        // The formatted result should match expected output
+        assert_eq!(
+            formatted, expected,
+            "Formatted output should match expected output"
+        );
+    }
+
+    /// Test aggregation of scattered reference-style links.
+    ///
+    /// This test verifies that reference definitions scattered throughout doc blocks
+    /// are correctly extracted, sorted alphabetically, and moved to the bottom with
+    /// a blank line separator.
+    #[test]
+    fn test_scattered_references_aggregation() {
+        let input =
+            include_str!("test_data/complete_file/input/sample_scattered_references.rs");
+        let expected = include_str!(
+            "test_data/complete_file/expected_output/sample_scattered_references.rs"
+        );
+
+        // Use the actual FileProcessor to test the complete pipeline
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("sample_scattered_references.rs");
+        fs::write(&test_file, input).unwrap();
+
+        // Process with link conversion enabled
+        let options = FormatOptions {
+            format_tables: false,
+            convert_links: true,
+            check_only: false,
+            verbose: false,
+        };
+        let processor = processor::FileProcessor::new(options);
+        let result = processor.process_file(&test_file);
+
+        assert!(
+            result.errors.is_empty(),
+            "Processing errors: {:?}",
+            result.errors
+        );
+        assert!(
+            result.modified,
+            "File should be modified (references need aggregation)"
+        );
+
+        // Read the formatted result
+        let formatted = fs::read_to_string(&test_file).unwrap();
+
+        // Verify references are at bottom of each block
+        assert!(
+            formatted.contains("Navigate**:\n//! - ⬆️"),
+            "Content should be preserved"
+        );
+
+        // Verify alphabetical sorting in module doc block
+        let module_refs = formatted
+            .lines()
+            .skip_while(|l| !l.contains("[`VT100MouseAction`]"))
+            .take(5)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            module_refs.contains("VT100MouseAction")
+                && module_refs.contains("VT100MouseButton"),
+            "Module references should be sorted alphabetically"
+        );
+
+        // Verify blank line before references for visual clarity
+        assert!(
+            formatted.contains("\n//!\n//! [`VT100MouseAction`]:"),
+            "Should have blank line before references"
+        );
+
+        // The formatted result should match expected output
+        assert_eq!(
+            formatted, expected,
+            "Formatted output should match expected output"
+        );
+    }
 }

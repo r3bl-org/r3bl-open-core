@@ -1,11 +1,17 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+// Skip rustfmt for test fixture file.
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 //! Mouse input event [1-based coordinates] parsing from ANSI/CSI sequences.
 //!
 //! This module handles conversion of mouse-related ANSI escape sequences into mouse
 //! events, including support for multiple mouse protocols.
 //!
-//! ## Where You Are in the PipelineRaw Terminal Input (stdin)
+//! ## Where You Are in the Pipeline
+//!
+//! ```text
+//! Raw Terminal Input (stdin)
 //!    ↓
 //! DirectToAnsiInputDevice (async I/O layer)
 //!    ↓
@@ -21,19 +27,32 @@
 //! └──────────────────────────────────────────┘
 //!    ↓
 //! VT100InputEvent::Mouse { button, pos, action, modifiers }
+//! ```
+//!
 //! **Navigate**:
 //! - ⬆️ **Up**: [`parser`] - Main routing entry point
 //! - ➡️ **Peer**: [`keyboard`], [`terminal_events`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100MouseButton`], [`VT100MouseAction`], [`TermPos`]
 //!
+//! [`parser`]: mod@super::parser
+//! [`keyboard`]: mod@super::keyboard
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`utf8`]: mod@super::utf8
+//! [`VT100MouseButton`]: super::VT100MouseButton
+//! [`VT100MouseAction`]: super::VT100MouseAction
+//! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
+//!
 //! ## Supported Mouse Protocols
+//!
 //! - **SGR (Selective Graphic Rendition) Protocol**: Modern standard format
-//! - Format: `CSI < Cb ; Cx ; Cy M/m`
-//! - Button detection (left=0, middle=1, right=2)
-//! - Drag detection (button with flag 32)
-//! - Scroll events (buttons 64/65 for vertical, 66/67 for horizontal)
+//!   - Format: `CSI < Cb ; Cx ; Cy M/m`
+//!   - Button detection (left=0, middle=1, right=2)
+//!   - Drag detection (button with flag 32)
+//!   - Scroll events (buttons 64/65 for vertical, 66/67 for horizontal)
+//!
 //! - **X10/Normal Protocol**: Legacy formats
 //! - **RXVT Protocol**: Alternative legacy format
+//!
 //! - **Click Events**: Press (M) and Release (m)
 //! - **Drag Events**: Motion while button held
 //! - **Motion Events**: Movement without buttons
@@ -69,19 +88,13 @@
 //! See the test fixtures for mouse event generation details and validation tests.
 //!
 //! [1-based coordinates]: mod@super#one-based-mouse-input-events
-//! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
-//! [`VT100MouseAction`]: super::VT100MouseAction
-//! [`VT100MouseButton`]: super::VT100MouseButton
-//! [`keyboard`]: mod@super::keyboard
-//! [`parser`]: mod@super::parser
-//! [`terminal_events`]: mod@super::terminal_events
-//! [`utf8`]: mod@super::utf8
-//! [parent module's testing strategy documentation]: mod@super#testing-strategy
+//! [parent module's testing strategy documentation](mod@super#testing-strategy)
 
 use super::types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction,
                    VT100MouseButton, VT100ScrollDirection};
 use crate::{KeyState, TermPos,
-            core::ansi::constants::{CSI_PREFIX, MOUSE_BASE_BUTTON_MASK,
+            core::ansi::constants::{CSI_PREFIX,
+                                    MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,
                                     MOUSE_MODIFIER_ALT, MOUSE_MODIFIER_CTRL,
                                     MOUSE_MODIFIER_SHIFT, MOUSE_MOTION_FLAG,
@@ -676,11 +689,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(
-                    modifiers.shift == KeyState::NotPressed
-                        && modifiers.ctrl == KeyState::NotPressed
-                        && modifiers.alt == KeyState::NotPressed
-                );
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -956,11 +965,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(
-                    modifiers.shift == KeyState::NotPressed
-                        && modifiers.ctrl == KeyState::NotPressed
-                        && modifiers.alt == KeyState::NotPressed
-                );
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -1255,11 +1260,7 @@ mod tests {
                 assert_eq!(pos.col.as_u16(), 1);
                 assert_eq!(pos.row.as_u16(), 1);
                 assert_eq!(action, VT100MouseAction::Press);
-                assert!(
-                    modifiers.shift == KeyState::NotPressed
-                        && modifiers.ctrl == KeyState::NotPressed
-                        && modifiers.alt == KeyState::NotPressed
-                );
+                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
             }
             _ => panic!("Expected Mouse event"),
         }

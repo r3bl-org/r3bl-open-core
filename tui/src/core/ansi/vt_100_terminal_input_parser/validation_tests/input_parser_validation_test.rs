@@ -138,8 +138,8 @@
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
 
 use crate::{KeyState,
-            core::ansi::vt_100_terminal_input_parser::{VT100InputEvent,
-                                                       VT100KeyCode, VT100MouseAction,
+            core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
+                                                       VT100MouseAction,
                                                        VT100MouseButton,
                                                        VT100ScrollDirection,
                                                        parse_alt_letter,
@@ -173,7 +173,9 @@ mod mouse_events {
                 assert_eq!(pos.row.as_u16(), 1, "Top-left row is 1 (1-based)");
                 assert_eq!(action, VT100MouseAction::Press);
                 assert!(
-                    modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed,
+                    modifiers.shift == KeyState::NotPressed
+                        && modifiers.ctrl == KeyState::NotPressed
+                        && modifiers.alt == KeyState::NotPressed,
                     "No modifiers held"
                 );
             }
@@ -272,7 +274,11 @@ mod mouse_events {
             } => {
                 assert_eq!(button, VT100MouseButton::Left);
                 assert_eq!(modifiers.ctrl, KeyState::Pressed, "Ctrl should be set");
-                assert_eq!(modifiers.shift, KeyState::NotPressed, "Shift should not be set");
+                assert_eq!(
+                    modifiers.shift,
+                    KeyState::NotPressed,
+                    "Shift should not be set"
+                );
                 assert_eq!(modifiers.alt, KeyState::NotPressed, "Alt should not be set");
             }
             _ => panic!("Expected Mouse event"),
@@ -290,7 +296,11 @@ mod mouse_events {
             VT100InputEvent::Mouse { modifiers, .. } => {
                 assert_eq!(modifiers.shift, KeyState::Pressed, "Shift should be set");
                 assert_eq!(modifiers.alt, KeyState::Pressed, "Alt should be set");
-                assert_eq!(modifiers.ctrl, KeyState::NotPressed, "Ctrl should not be set");
+                assert_eq!(
+                    modifiers.ctrl,
+                    KeyState::NotPressed,
+                    "Ctrl should not be set"
+                );
             }
             _ => panic!("Expected Mouse event"),
         }
@@ -337,8 +347,16 @@ mod keyboard_events {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Up);
-                assert_eq!(modifiers.ctrl, KeyState::Pressed, "Ctrl modifier should be set");
-                assert_eq!(modifiers.shift, KeyState::NotPressed, "Shift should not be set");
+                assert_eq!(
+                    modifiers.ctrl,
+                    KeyState::Pressed,
+                    "Ctrl modifier should be set"
+                );
+                assert_eq!(
+                    modifiers.shift,
+                    KeyState::NotPressed,
+                    "Shift should not be set"
+                );
                 assert_eq!(modifiers.alt, KeyState::NotPressed, "Alt should not be set");
             }
             _ => panic!("Expected Keyboard event"),
@@ -354,7 +372,11 @@ mod keyboard_events {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Up);
-                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
+                assert!(
+                    modifiers.shift == KeyState::NotPressed
+                        && modifiers.ctrl == KeyState::NotPressed
+                        && modifiers.alt == KeyState::NotPressed
+                );
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -371,7 +393,10 @@ mod keyboard_events {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Up);
                 assert_eq!(modifiers.shift, KeyState::Pressed, "Shift should be set");
-                assert!(modifiers.ctrl == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
+                assert!(
+                    modifiers.ctrl == KeyState::NotPressed
+                        && modifiers.alt == KeyState::NotPressed
+                );
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -388,7 +413,10 @@ mod keyboard_events {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Up);
                 assert_eq!(modifiers.alt, KeyState::Pressed, "Alt should be set");
-                assert!(modifiers.shift == KeyState::NotPressed && modifiers.ctrl == KeyState::NotPressed);
+                assert!(
+                    modifiers.shift == KeyState::NotPressed
+                        && modifiers.ctrl == KeyState::NotPressed
+                );
             }
             _ => panic!("Expected Keyboard event"),
         }
@@ -601,11 +629,11 @@ mod modifier_encoding {
         let test_cases = vec![
             (2, Pressed, NotPressed, NotPressed), // Shift only
             (3, NotPressed, Pressed, NotPressed), // Alt only
-            (4, Pressed, Pressed, NotPressed),  // Shift + Alt
+            (4, Pressed, Pressed, NotPressed),    // Shift + Alt
             (5, NotPressed, NotPressed, Pressed), // Ctrl only (CONFIRMED by Phase 1)
-            (6, Pressed, NotPressed, Pressed),  // Shift + Ctrl
-            (7, NotPressed, Pressed, Pressed),  // Alt + Ctrl
-            (8, Pressed, Pressed, Pressed),   // All three
+            (6, Pressed, NotPressed, Pressed),    // Shift + Ctrl
+            (7, NotPressed, Pressed, Pressed),    // Alt + Ctrl
+            (8, Pressed, Pressed, Pressed),       // All three
         ];
 
         for (param, expect_shift, expect_alt, expect_ctrl) in test_cases {
@@ -739,7 +767,8 @@ mod control_character_tests {
     fn test_ctrl_space() {
         // Ctrl+Space generates NUL (0x00) and is parsed as Ctrl+Space
         let nul = b"\x00";
-        let (event, bytes) = parse_control_character(nul).expect("Ctrl+Space should parse");
+        let (event, bytes) =
+            parse_control_character(nul).expect("Ctrl+Space should parse");
         assert_eq!(bytes, 1);
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
@@ -761,7 +790,11 @@ mod control_character_tests {
         match event {
             VT100InputEvent::Keyboard { code, modifiers } => {
                 assert_eq!(code, VT100KeyCode::Tab);
-                assert!(modifiers.ctrl == KeyState::NotPressed && modifiers.shift == KeyState::NotPressed && modifiers.alt == KeyState::NotPressed);
+                assert!(
+                    modifiers.ctrl == KeyState::NotPressed
+                        && modifiers.shift == KeyState::NotPressed
+                        && modifiers.alt == KeyState::NotPressed
+                );
             }
             _ => panic!("Expected keyboard event"),
         }
@@ -769,11 +802,23 @@ mod control_character_tests {
         // Enter (0x0A and 0x0D) is parsed as Enter
         let lf = b"\x0A";
         let (event, _) = parse_control_character(lf).expect("LF should parse as Enter");
-        assert!(matches!(event, VT100InputEvent::Keyboard { code: VT100KeyCode::Enter, .. }));
+        assert!(matches!(
+            event,
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Enter,
+                ..
+            }
+        ));
 
         let cr = b"\x0D";
         let (event, _) = parse_control_character(cr).expect("CR should parse as Enter");
-        assert!(matches!(event, VT100InputEvent::Keyboard { code: VT100KeyCode::Enter, .. }));
+        assert!(matches!(
+            event,
+            VT100InputEvent::Keyboard {
+                code: VT100KeyCode::Enter,
+                ..
+            }
+        ));
 
         // ESC (0x1B) should NOT be parsed by parse_control_character
         // (handled in try_parse() routing)
