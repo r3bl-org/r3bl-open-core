@@ -6,10 +6,46 @@
 //! It provides comprehensive support for VT-100 compatible terminal input while
 //! maintaining clarity about protocol limitations and design decisions.
 //!
+//! ## Where You Are in the Pipeline
+//!
+//! ```text
+//! Raw Terminal Input (stdin)
+//!    ↓
+//! DirectToAnsiInputDevice (async I/O layer)
+//!    ↓
+//! parser.rs (routing & ESC detection)
+//!    ↓ (routes CSI/SS3 keyboard sequences here)
+//! ┌──▼───────────────────────────────────────┐
+//! │  keyboard.rs                             │  ← **YOU ARE HERE**
+//! │  • Parse CSI sequences (ESC [)           │
+//! │  • Parse SS3 sequences (ESC O)           │
+//! │  • Handle modifiers (Shift/Ctrl/Alt)     │
+//! │  • Control characters (Ctrl+A, etc)      │
+//! │  • Alt+letter combinations               │
+//! └──────────────────────────────────────────┘
+//!    ↓
+//! VT100InputEvent::Keyboard { code, modifiers }
+//! ```
+//!
+//! **Navigate**:
+//! - ⬆️ **Up**: [`parser`] - Main routing entry point
+//! - ➡️ **Peer**: [`mouse`], [`terminal_events`], [`utf8`] - Other specialized parsers
+//! - 📚 **Types**: [`VT100InputEvent`], [`VT100KeyCode`], [`VT100KeyModifiers`]
+//!
+//! [`parser`]: mod@super::parser
+//! [`mouse`]: mod@super::mouse
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`utf8`]: mod@super::utf8
+//! [`VT100InputEvent`]: super::VT100InputEvent
+//! [`VT100KeyCode`]: super::VT100KeyCode
+//! [`VT100KeyModifiers`]: super::VT100KeyModifiers
+//!
 //! ## Parser Dispatch Priority Pipeline
 //!
 //! This module provides multiple parser functions that are invoked in a **predefined
-//! priority order** by the [`try_parse`] backend input handler.
+//! priority order** by the [`try_parse_input_event`] main routing function.
+//!
+//! [`try_parse_input_event`]: super::try_parse_input_event
 //!
 //! ## Comprehensive List of Supported Keyboard Shortcuts
 //!
@@ -295,8 +331,6 @@
 //!
 //! This is a fundamental VT-100 protocol limitation, not a parser bug. Modern protocols
 //! like Kitty keyboard protocol solve this, but we maintain VT-100 compatibility.
-//!
-//! [`try_parse`]: crate::tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice::try_parse
 
 use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 use crate::{ASCII_DEL, KeyState,

@@ -5,7 +5,38 @@
 //! This module handles terminal-level events like window resize, focus changes,
 //! and bracketed paste mode notifications.
 //!
-//! Supported events:
+//! ## Where You Are in the Pipeline
+//!
+//! ```text
+//! Raw Terminal Input (stdin)
+//!    ↓
+//! DirectToAnsiInputDevice (async I/O layer)
+//!    ↓
+//! parser.rs (routing & ESC detection)
+//!    ↓ (routes terminal event sequences here)
+//! ┌──▼───────────────────────────────────────┐
+//! │  terminal_events.rs                      │  ← **YOU ARE HERE**
+//! │  • Parse window resize events            │
+//! │  • Parse focus gained/lost               │
+//! │  • Parse bracketed paste markers         │
+//! └──────────────────────────────────────────┘
+//!    ↓
+//! VT100InputEvent::{ Resize | Focus | Paste }
+//! ```
+//!
+//! **Navigate**:
+//! - ⬆️ **Up**: [`parser`] - Main routing entry point
+//! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`utf8`] - Other specialized parsers
+//! - 📚 **Types**: [`VT100FocusState`], [`VT100PasteMode`]
+//!
+//! [`parser`]: mod@super::parser
+//! [`keyboard`]: mod@super::keyboard
+//! [`mouse`]: mod@super::mouse
+//! [`utf8`]: mod@super::utf8
+//! [`VT100FocusState`]: super::VT100FocusState
+//! [`VT100PasteMode`]: super::VT100PasteMode
+//!
+//! ## Supported events:
 //! - **Window Resize**: `CSI 8 ; rows ; cols t`
 //! - **Focus Gained**: `CSI I`
 //! - **Focus Lost**: `CSI O`

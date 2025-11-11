@@ -1,11 +1,56 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! Internal protocol types for VT-100 terminal input parsing.
+//! Shared Protocol Types for VT-100 Terminal Input Parsing
 //!
-//! These types are used internally by the parser to represent protocol-level
-//! events. The parser converts these to canonical [`InputEvent`] from [`terminal_io`].
+//! This module defines the data structures that flow through the parsing pipeline.
+//! All specialized parsers (keyboard, mouse, terminal_events, utf8) produce
+//! [`VT100InputEvent`] instances built from these types.
 //!
+//! ## Where You Are in the Architecture
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────┐
+//! │  types.rs - Foundation Layer                            │  ← **YOU ARE HERE**
+//! │  • VT100InputEvent (output of all parsers)              │
+//! │  • VT100KeyCode, VT100KeyModifiers (keyboard)           │
+//! │  • VT100MouseButton, VT100MouseAction (mouse)           │
+//! │  • VT100FocusState, VT100PasteMode (terminal events)    │
+//! │  • VT100ScrollDirection (scroll wheel)                  │
+//! └─────────────────────────────────────────────────────────┘
+//!                             ▲
+//!                             │ (types used by all modules)
+//!         ┌───────────────────┼───────────────────┐
+//!         │                   │                   │
+//!     parser.rs          keyboard.rs          mouse.rs
+//!   (routing)          (CSI/SS3)        (SGR/X10/RXVT)
+//!                  terminal_events.rs     utf8.rs
+//!                   (resize/focus)       (text)
+//! ```
+//!
+//! **Navigate**:
+//! - ⬆️ **Up**: [`parser`], [`keyboard`], [`mouse`], [`terminal_events`], [`utf8`] - Modules using these types
+//! - 🔧 **Backend**: [`DirectToAnsiInputDevice`] - Converts VT100InputEvent to InputEvent
+//! - 📚 **Canonical Types**: [`InputEvent`], [`Key`], [`MouseInput`] - Final user-facing types
+//!
+//! ## Type Conversion Flow
+//!
+//! ```text
+//! Raw bytes → Parser → VT100InputEvent → DirectToAnsiInputDevice → InputEvent
+//!                      (protocol layer)   (conversion layer)        (canonical)
+//! ```
+//!
+//! These types are **internal protocol representations**. The backend I/O layer
+//! converts them to canonical types from [`terminal_io`] before exposing to users.
+//!
+//! [`parser`]: mod@super::parser
+//! [`keyboard`]: mod@super::keyboard
+//! [`mouse`]: mod@super::mouse
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`utf8`]: mod@super::utf8
+//! [`DirectToAnsiInputDevice`]: crate::DirectToAnsiInputDevice
 //! [`InputEvent`]: crate::terminal_io::InputEvent
+//! [`Key`]: crate::Key
+//! [`MouseInput`]: crate::MouseInput
 //! [`terminal_io`]: mod@crate::terminal_io
 
 use crate::{KeyState, TermPos};
