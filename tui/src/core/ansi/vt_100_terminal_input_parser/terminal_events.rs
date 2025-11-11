@@ -45,12 +45,13 @@
 //! [`utf8`]: mod@super::utf8
 
 use super::types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
+use crate::{ByteOffset, byte_offset};
 use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
-                                   ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-                                   ASCII_DIGIT_0, ASCII_DIGIT_9, FOCUS_GAINED_FINAL,
-                                   FOCUS_LOST_FINAL, PASTE_END_PARSE_PARAM,
-                                   PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM,
-                                   RESIZE_TERMINATOR};
+                                  ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
+                                  ASCII_DIGIT_0, ASCII_DIGIT_9, FOCUS_GAINED_FINAL,
+                                  FOCUS_LOST_FINAL, PASTE_END_PARSE_PARAM,
+                                  PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM,
+                                  RESIZE_TERMINATOR};
 
 /// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if
 /// recognized.
@@ -65,7 +66,7 @@ use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
 /// - `CSI O` - Terminal lost focus
 /// - `ESC[200~` - Bracketed paste start
 #[must_use]
-pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Check minimum length: ESC [ + final byte
     if buffer.len() < 3 {
         return None;
@@ -80,10 +81,10 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
     if buffer.len() == 3 {
         match buffer[2] {
             FOCUS_GAINED_FINAL => {
-                return Some((VT100InputEvent::Focus(VT100FocusState::Gained), 3));
+                return Some((VT100InputEvent::Focus(VT100FocusState::Gained), byte_offset(3)));
             }
             FOCUS_LOST_FINAL => {
-                return Some((VT100InputEvent::Focus(VT100FocusState::Lost), 3));
+                return Some((VT100InputEvent::Focus(VT100FocusState::Lost), byte_offset(3)));
             }
             _ => {}
         }
@@ -94,7 +95,7 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
 }
 
 /// Parse CSI sequences with parameters for terminal events.
-fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usize)> {
+fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffset)> {
     // Extract parameters and final byte
     // Format: ESC [ [param;param;...] final_byte
     let mut params = Vec::new();
@@ -146,16 +147,16 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, usiz
         // Window resize: CSI 8 ; rows ; cols t
         let rows = params[1];
         let cols = params[2];
-        Some((VT100InputEvent::Resize { rows, cols }, total_consumed))
+        Some((VT100InputEvent::Resize { rows, cols }, byte_offset(total_consumed)))
     } else if params.len() == 1 && final_byte == ANSI_FUNCTION_KEY_TERMINATOR {
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
         if params[0] == PASTE_START_PARSE_PARAM {
             Some((
                 VT100InputEvent::Paste(VT100PasteMode::Start),
-                total_consumed,
+                byte_offset(total_consumed),
             ))
         } else if params[0] == PASTE_END_PARSE_PARAM {
-            Some((VT100InputEvent::Paste(VT100PasteMode::End), total_consumed))
+            Some((VT100InputEvent::Paste(VT100PasteMode::End), byte_offset(total_consumed)))
         } else {
             None
         }
@@ -183,7 +184,7 @@ mod tests {
         let (parsed_event, bytes_consumed) =
             parse_terminal_event(&seq).expect("Should parse resize");
 
-        assert_eq!(bytes_consumed, seq.len());
+        assert_eq!(bytes_consumed.as_usize(), seq.len());
         assert_eq!(parsed_event, original_event);
     }
 
@@ -197,7 +198,7 @@ mod tests {
         let (parsed, bytes_consumed) =
             parse_terminal_event(&seq_gained).expect("Should parse focus gained");
 
-        assert_eq!(bytes_consumed, seq_gained.len());
+        assert_eq!(bytes_consumed.as_usize(), seq_gained.len());
         assert_eq!(parsed, original_gained);
 
         // Round-trip test: Focus lost
@@ -208,7 +209,7 @@ mod tests {
         let (parsed, bytes_consumed) =
             parse_terminal_event(&seq_lost).expect("Should parse focus lost");
 
-        assert_eq!(bytes_consumed, seq_lost.len());
+        assert_eq!(bytes_consumed.as_usize(), seq_lost.len());
         assert_eq!(parsed, original_lost);
     }
 
@@ -222,7 +223,7 @@ mod tests {
         let (parsed, bytes_consumed) =
             parse_terminal_event(&seq_start).expect("Should parse paste start");
 
-        assert_eq!(bytes_consumed, seq_start.len());
+        assert_eq!(bytes_consumed.as_usize(), seq_start.len());
         assert_eq!(parsed, original_start);
 
         // Round-trip test: Paste end
@@ -233,7 +234,7 @@ mod tests {
         let (parsed, bytes_consumed) =
             parse_terminal_event(&seq_end).expect("Should parse paste end");
 
-        assert_eq!(bytes_consumed, seq_end.len());
+        assert_eq!(bytes_consumed.as_usize(), seq_end.len());
         assert_eq!(parsed, original_end);
     }
 

@@ -278,7 +278,7 @@ fn pty_slave_entry_point() -> ! {
         loop {
             tokio::select! {
                 // -------- Branch 1: Read next input event --------
-                event_result = input_device.read_event() => {
+                event_result = input_device.try_read_event() => {
                     match event_result {
                         Some(event) => {
                             // Reset inactivity watchdog on each event

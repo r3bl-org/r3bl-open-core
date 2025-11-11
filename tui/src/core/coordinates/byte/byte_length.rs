@@ -3,7 +3,8 @@
 //! One-based byte size measurements - see [`ByteLength`] type.
 
 use crate::{ByteIndex, ChUnit, Length,
-            bounds_check::{LengthOps, NumericConversions, NumericValue}};
+            bounds_check::{LengthOps, NumericConversions, NumericValue},
+            byte_index};
 use std::ops::{Add, Deref, DerefMut};
 
 /// Represents a byte length measurement (1-based).
@@ -88,9 +89,7 @@ impl ByteLength {
     ///           convert_to_index() = 5 (0-based, last valid position)
     /// ```
     #[must_use]
-    pub fn convert_to_index(&self) -> ByteIndex {
-        ByteIndex::from(self.0.saturating_sub(1))
-    }
+    pub fn convert_to_index(&self) -> ByteIndex { byte_index(self.0.saturating_sub(1)) }
 }
 
 impl Deref for ByteLength {

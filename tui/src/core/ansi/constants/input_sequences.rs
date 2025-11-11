@@ -482,6 +482,11 @@ pub use crate::core::ansi::constants::mouse::*;
 /// Used for general CSI sequence detection and as base for mouse/focus sequences.
 pub const CSI_PREFIX: &[u8] = &[ANSI_ESC, ANSI_CSI_BRACKET];
 
+/// CSI sequence prefix length in bytes.
+///
+/// The prefix `ESC [` is 2 bytes: `\x1b` (ESC), `[`.
+pub const CSI_PREFIX_LEN: usize = 2;
+
 // ==================== Terminal Focus Events ====================
 
 /// CSI I: Terminal focus gained event final byte

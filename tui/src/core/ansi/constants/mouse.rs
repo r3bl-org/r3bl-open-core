@@ -13,6 +13,11 @@
 /// Format: `CSI < Cb ; Cx ; Cy M/m`
 pub const MOUSE_SGR_PREFIX: &[u8] = b"\x1b[<";
 
+/// SGR mouse protocol prefix length in bytes.
+///
+/// The prefix `ESC [ <` is 3 bytes: `\x1b` (ESC), `[`, `<`.
+pub const MOUSE_SGR_PREFIX_LEN: usize = 3;
+
 /// X10/Normal mouse protocol prefix: `ESC [ M`
 ///
 /// Legacy protocol with fixed 6-byte sequences.

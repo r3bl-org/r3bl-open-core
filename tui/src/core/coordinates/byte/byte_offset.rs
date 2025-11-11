@@ -3,8 +3,8 @@
 //! Relative byte displacement from a reference point - see [`ByteOffset`] type.
 
 use super::ByteIndex;
-use crate::{ChUnit, Index, Length, RowIndex};
-use std::ops::{Add, Deref, DerefMut, Sub};
+use crate::{ChUnit, Index, Length, RowIndex, byte_index};
+use std::ops::{Add, AddAssign, Deref, DerefMut, Sub};
 
 /// Represents a byte offset within a line or buffer segment.
 ///
@@ -60,6 +60,51 @@ pub struct ByteOffset(pub usize);
 impl ByteOffset {
     #[must_use]
     pub fn as_usize(&self) -> usize { self.0 }
+
+    /// Convert this offset to the index of the last consumed byte.
+    ///
+    /// When parsing sequences, `ByteOffset` represents the total bytes consumed,
+    /// which is a "one-past-the-end" position (like Rust's exclusive range ends).
+    /// This method converts to the index of the final consumed byte.
+    ///
+    /// # Semantics
+    ///
+    /// - **Input**: ByteOffset representing N bytes consumed (position N)
+    /// - **Output**: Index N-1 of the last consumed byte
+    ///
+    /// This matches the relationship between Rust's range ends and indices:
+    /// - Range `0..N` processes indices 0 through N-1
+    /// - `ByteOffset::from(N)` represents N bytes consumed at indices 0 through N-1
+    ///
+    /// # Use Cases
+    ///
+    /// ## Accessing the final byte (e.g., terminator character)
+    ///
+    /// ```ignore
+    /// // Parse SGR mouse: ESC[<0;10;20M
+    /// let bytes_consumed = ByteOffset::from(13);  // 13 bytes consumed
+    /// let terminator = sequence[bytes_consumed.as_last_byte_index()]; // Gets 'M' at index 12
+    /// ```
+    ///
+    /// ## Creating ranges that exclude the terminator
+    ///
+    /// ```ignore
+    /// // Extract content between prefix and terminator
+    /// let bytes_consumed = ByteOffset::from(13);
+    /// let content = &sequence[MOUSE_SGR_PREFIX_LEN..bytes_consumed.as_last_byte_index()];
+    /// // Gets "0;10;20" excluding the terminator
+    /// ```
+    ///
+    /// # Edge Cases
+    ///
+    /// Returns 0 when `ByteOffset` is 0 (saturating subtraction prevents underflow).
+    ///
+    /// # See Also
+    ///
+    /// - [`as_usize()`](ByteOffset::as_usize) - Get the raw offset value (one-past-end
+    ///   position)
+    #[must_use]
+    pub fn as_last_byte_index(&self) -> usize { self.0.saturating_sub(1) }
 }
 
 /// Creates a new [`ByteOffset`] from any type that can be converted into it.
@@ -120,8 +165,31 @@ impl Add<ByteOffset> for ByteIndex {
     /// This represents moving forward from an absolute position by a relative distance.
     /// Semantically: `absolute_position + offset = new_absolute_position`
     fn add(self, rhs: ByteOffset) -> Self::Output {
-        ByteIndex::from(self.as_usize() + rhs.as_usize())
+        byte_index(self.as_usize() + rhs.as_usize())
     }
+}
+
+impl AddAssign<ByteOffset> for ByteIndex {
+    /// Implement in-place addition for position += displacement.
+    ///
+    /// This enables the semantic operation: `position += displacement` → CORRECT (move
+    /// forward from position).
+    ///
+    /// This is the compound assignment version of `ByteIndex + ByteOffset`, allowing
+    /// mutable positions to be advanced by a displacement without creating a new
+    /// value.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use r3bl_tui::{ByteIndex, ByteOffset, byte_index, byte_offset};
+    ///
+    /// let mut position = byte_index(100);
+    /// let displacement = byte_offset(50);
+    /// position += displacement;  // position advances by 50 bytes
+    /// assert_eq!(position, byte_index(150));
+    /// ```
+    fn add_assign(&mut self, offset: ByteOffset) { self.0 += offset.as_usize(); }
 }
 
 impl Sub<ByteOffset> for ByteIndex {
@@ -439,5 +507,72 @@ mod tests {
         let distance: ByteOffset = end_position - start_position;
 
         assert_eq!(distance, byte_offset(50));
+    }
+
+    // Tests for as_last_byte_index() method.
+    #[test]
+    fn test_as_last_byte_index_normal_case() {
+        // When 13 bytes have been consumed (position 13, one-past-end),
+        // the last byte is at index 12.
+        let bytes_consumed = byte_offset(13);
+        assert_eq!(bytes_consumed.as_last_byte_index(), 12);
+
+        // Test other normal values
+        assert_eq!(byte_offset(5).as_last_byte_index(), 4);
+        assert_eq!(byte_offset(100).as_last_byte_index(), 99);
+        assert_eq!(byte_offset(1000).as_last_byte_index(), 999);
+    }
+
+    #[test]
+    fn test_as_last_byte_index_edge_case_zero() {
+        // Edge case: When no bytes have been consumed, saturating_sub prevents underflow.
+        let zero_consumed = byte_offset(0);
+        assert_eq!(zero_consumed.as_last_byte_index(), 0);
+    }
+
+    #[test]
+    fn test_as_last_byte_index_edge_case_one() {
+        // When 1 byte has been consumed, the last (and only) byte is at index 0.
+        let one_consumed = byte_offset(1);
+        assert_eq!(one_consumed.as_last_byte_index(), 0);
+    }
+
+    #[test]
+    fn test_as_last_byte_index_large_values() {
+        // Test with large values to ensure no overflow issues
+        let large_offset = byte_offset(usize::MAX / 2);
+        let expected = (usize::MAX / 2) - 1;
+        assert_eq!(large_offset.as_last_byte_index(), expected);
+    }
+
+    #[test]
+    fn test_as_last_byte_index_semantic_use_case() {
+        // Simulate real parser use case: Parse SGR mouse sequence ESC[<0;10;20M
+        // Total length: 13 bytes, terminator 'M' at index 12
+        let sequence = b"\x1b[<0;10;20M";
+        let bytes_consumed = byte_offset(sequence.len());
+
+        // Verify we can access the terminator using as_last_byte_index()
+        let terminator_index = bytes_consumed.as_last_byte_index();
+        assert_eq!(sequence[terminator_index], b'M');
+
+        // Verify the content range (excluding prefix and terminator)
+        let prefix_len = 3; // ESC[<
+        let content = &sequence[prefix_len..bytes_consumed.as_last_byte_index()];
+        assert_eq!(content, b"0;10;20");
+    }
+
+    #[test]
+    fn test_as_last_byte_index_matches_manual_calculation() {
+        // Verify that as_last_byte_index() produces the same result as manual calculation
+        for value in [0, 1, 2, 10, 50, 100, 1000] {
+            let offset = byte_offset(value);
+            let manual_calc = value.saturating_sub(1);
+            assert_eq!(
+                offset.as_last_byte_index(),
+                manual_calc,
+                "as_last_byte_index() should match manual saturating_sub calculation for {value}"
+            );
+        }
     }
 }

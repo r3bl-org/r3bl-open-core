@@ -97,9 +97,9 @@
 //! [`insert_text_at_byte_ofs`]: ZeroCopyGapBuffer::insert_text_at_byte_ofs
 
 use super::{LINE_PAGE_SIZE, ZeroCopyGapBuffer};
-use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, ByteOffset,
-            CursorBoundsCheck, CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps,
-            NULL_BYTE, NumericValue, RowIndex, SegIndex, len};
+use crate::{ArrayBoundsCheck, ArrayOverflowResult, ByteIndex, CursorBoundsCheck,
+            CursorPositionBoundsStatus, LINE_FEED_BYTE, LengthOps, NULL_BYTE,
+            NumericValue, RowIndex, SegIndex, byte_offset, len};
 use miette::{Result, miette};
 
 impl ZeroCopyGapBuffer {
@@ -244,8 +244,7 @@ impl ZeroCopyGapBuffer {
             )
         })?;
         let line_content_len = line_info.content_byte_len; // Keep for type-safe operations
-        let insert_pos =
-            (line_info.buffer_start + ByteOffset::from(byte_index)).as_usize();
+        let insert_pos = (line_info.buffer_start + byte_offset(byte_index)).as_usize();
 
         // Shift existing content to make room.
         if byte_index.overflows(line_content_len) == ArrayOverflowResult::Overflowed {

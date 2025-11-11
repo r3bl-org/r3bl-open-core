@@ -13,23 +13,20 @@
 //! │ Raw ANSI bytes: "\x1B[A"                                        │
 //! └────────────────────────────┬────────────────────────────────────┘
 //!                              │
-//!                              ▼
-//! ┌─────────────────────────────────────────────────────────────────┐
+//! ┌────────────────────────────▼────────────────────────────────────┐
 //! │ vt_100_terminal_input_parser/ (Protocol Layer - IR)             │
 //! │   parse_keyboard_sequence() → VT100InputEvent::Keyboard         │
 //! │   parse_mouse_sequence()    → VT100InputEvent::Mouse            │
 //! │   VT100KeyCode, VT100KeyModifiers, VT100MouseButton, etc.       │
 //! └────────────────────────────┬────────────────────────────────────┘
 //!                              │
-//!                              ▼
-//! ┌─────────────────────────────────────────────────────────────────┐
+//! ┌────────────────────────────▼────────────────────────────────────┐
 //! │ protocol_conversion.rs (THIS MODULE - IR → Public API)          │
 //! │   convert_input_event()       VT100InputEvent → InputEvent      │
 //! │   convert_key_code_to_keypress()  VT100KeyCode → KeyPress       │
 //! └────────────────────────────┬────────────────────────────────────┘
 //!                              │
-//!                              ▼
-//! ┌─────────────────────────────────────────────────────────────────┐
+//! ┌────────────────────────────▼────────────────────────────────────┐
 //! │ Public API (Application Layer)                                  │
 //! │   InputEvent::Keyboard(KeyPress)                                │
 //! │   Key, KeyPress, MouseInput, FocusEvent, etc.                   │
@@ -134,7 +131,7 @@ pub(super) fn convert_key_code_to_keypress(
 ///   - Converts coordinates: 1-based `TermPos` → 0-based `Pos`
 /// - **Resize**: `VT100InputEvent::Resize` → `InputEvent::Resize(Size)`
 /// - **Focus**: `VT100InputEvent::Focus` → `InputEvent::Focus(FocusEvent)`
-/// - **Paste**: Should never be called (handled by state machine in `read_event()`)
+/// - **Paste**: Should never be called (handled by state machine in `try_read_event()`)
 ///
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
 pub(super) fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputEvent> {
@@ -209,7 +206,7 @@ pub(super) fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputE
         }
         VT100InputEvent::Paste(_paste_mode) => {
             unreachable!(
-                "Paste events are handled by state machine in read_event() \
+                "Paste events are handled by state machine in try_read_event() \
                  and should never reach convert_input_event()"
             )
         }

@@ -66,7 +66,7 @@ fn test_roundtrip_resize_event() {
         parse_terminal_event(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
-    assert_eq!(bytes_consumed, bytes.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes.len());
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn test_roundtrip_focus_events() {
         parse_terminal_event(&bytes_gained).expect("Should parse");
 
     assert_eq!(parsed_gained, original_gained);
-    assert_eq!(bytes_consumed, bytes_gained.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes_gained.len());
 
     let original_lost = VT100InputEvent::Focus(VT100FocusState::Lost);
     let bytes_lost = generate_keyboard_sequence(&original_lost).unwrap();
@@ -85,7 +85,7 @@ fn test_roundtrip_focus_events() {
         parse_terminal_event(&bytes_lost).expect("Should parse");
 
     assert_eq!(parsed_lost, original_lost);
-    assert_eq!(bytes_consumed, bytes_lost.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes_lost.len());
 }
 
 #[test]
@@ -96,7 +96,7 @@ fn test_roundtrip_paste_events() {
         parse_terminal_event(&bytes_start).expect("Should parse");
 
     assert_eq!(parsed_start, original_start);
-    assert_eq!(bytes_consumed, bytes_start.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes_start.len());
 
     let original_end = VT100InputEvent::Paste(VT100PasteMode::End);
     let bytes_end = generate_keyboard_sequence(&original_end).unwrap();
@@ -104,7 +104,7 @@ fn test_roundtrip_paste_events() {
         parse_terminal_event(&bytes_end).expect("Should parse");
 
     assert_eq!(parsed_end, original_end);
-    assert_eq!(bytes_consumed, bytes_end.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes_end.len());
 }
 
 // ==================== Arrow Keys ====================
@@ -381,7 +381,7 @@ fn test_roundtrip_arrow_up() {
         parse_keyboard_sequence(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
-    assert_eq!(bytes_consumed, bytes.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes.len());
 }
 
 #[test]
@@ -400,7 +400,7 @@ fn test_roundtrip_ctrl_alt_f10() {
         parse_keyboard_sequence(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
-    assert_eq!(bytes_consumed, bytes.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes.len());
 }
 
 #[test]
@@ -419,5 +419,5 @@ fn test_roundtrip_insert_key_with_shift() {
         parse_keyboard_sequence(&bytes).expect("Should parse");
 
     assert_eq!(parsed_event, original_event);
-    assert_eq!(bytes_consumed, bytes.len());
+    assert_eq!(bytes_consumed.as_usize(), bytes.len());
 }

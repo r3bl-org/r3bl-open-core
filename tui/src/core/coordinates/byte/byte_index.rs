@@ -4,7 +4,7 @@
 
 use crate::{ByteLength, ByteOffset, ChUnit, Index,
             bounds_check::{IndexOps, NumericConversions, NumericValue}};
-use std::ops::{Add, Deref, DerefMut, Range};
+use std::ops::{Add, AddAssign, Deref, DerefMut, Range};
 
 /// Represents an absolute byte position within strings and buffers (0-based).
 ///
@@ -136,6 +136,12 @@ impl Add for ByteIndex {
     fn add(self, other: Self) -> Self::Output { Self(self.0 + other.0) }
 }
 
+/// Implement AddAssign trait for convenient position advancement.
+/// This allows `+=` operations to increment a byte position.
+impl AddAssign for ByteIndex {
+    fn add_assign(&mut self, other: Self) { self.0 += other.0; }
+}
+
 /// Extension trait to enable conversion from `Range<ByteIndex>` to `Range<usize>` for
 /// slice indexing.
 ///
@@ -179,7 +185,7 @@ mod tests {
     // Basic construction and conversion tests.
     #[test]
     fn test_byte_index_from_usize() {
-        let index = ByteIndex::from(42usize);
+        let index = byte_index(42usize);
         assert_eq!(index.as_usize(), 42);
     }
 
@@ -237,7 +243,7 @@ mod tests {
     fn test_byte_offset_from_byte_index_semantic() {
         // Semantic test: converting absolute position to relative offset.
         let absolute_position = byte_index(50);
-        let relative_offset = ByteOffset::from(absolute_position);
+        let relative_offset = byte_offset(absolute_position);
         assert_eq!(relative_offset, byte_offset(50));
     }
 
@@ -366,6 +372,44 @@ mod tests {
         let index2 = byte_index(20);
         let result = index1 + index2;
         assert_eq!(result, byte_index(30));
+    }
+
+    #[test]
+    fn test_byte_index_add_assign() {
+        let mut index = byte_index(10);
+        let increment = byte_index(25);
+        index += increment;
+        assert_eq!(index, byte_index(35));
+
+        // Test multiple increments
+        index += byte_index(5);
+        assert_eq!(index, byte_index(40));
+
+        // Test zero increment
+        index += byte_index(0);
+        assert_eq!(index, byte_index(40));
+    }
+
+    #[test]
+    fn test_byte_index_add_assign_byte_offset() {
+        use crate::byte_offset;
+
+        // Test basic position += displacement
+        let mut position = byte_index(100);
+        let displacement = byte_offset(50);
+        position += displacement;
+        assert_eq!(position, byte_index(150));
+
+        // Test multiple displacements
+        position += byte_offset(25);
+        assert_eq!(position, byte_index(175));
+
+        position += byte_offset(5);
+        assert_eq!(position, byte_index(180));
+
+        // Test zero displacement
+        position += byte_offset(0);
+        assert_eq!(position, byte_index(180));
     }
 
     #[test]

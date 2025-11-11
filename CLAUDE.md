@@ -234,17 +234,22 @@ For testing interactive terminal applications, use (they are both installed):
 
 ### Rust Code Quality
 
-After completing tasks, run:
+After completing significant code changes, run this checklist in order:
 
-- `cargo check` - Fast typecheck
-- `cargo build` - Compile production code
-- `cargo test --no-run` - Compile test code
-- `cargo clippy --all-targets` / `cargo clippy --fix --allow-dirty` - Discover lints
-- `cargo doc --no-deps` - Generate docs
-- `cargo test --all-targets` - Run tests (does not run doctests)
-- `cargo test --doc` - Run doctests
+**Essential Quality Checks:**
 
-Performance analysis:
+1. `cargo check` - Fast typecheck
+2. `cargo build` - Compile production code
+3. `cargo rustdoc-fmt` - Format rustdoc comments (markdown tables, section headers, code blocks)
+4. `cargo doc --no-deps` - Generate docs and verify no warnings
+5. `cargo clippy --all-targets` - Discover linting issues (use `--fix --allow-dirty` to auto-fix)
+6. `cargo test --no-run` - Compile test code
+7. `cargo test --all-targets` - Run all tests (does not run doctests)
+8. `cargo test --doc` - Run doctests
+
+**Optional Performance Analysis:**
+
+Run only when optimizing performance-critical code:
 
 - `cargo bench` - Benchmarks (mark tests with `#[bench]`)
 - `cargo flamegraph` - Profiling (requires flamegraph crate)
