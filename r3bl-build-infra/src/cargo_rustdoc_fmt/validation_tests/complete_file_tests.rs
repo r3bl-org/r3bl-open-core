@@ -7,10 +7,9 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::cargo_rustdoc_fmt::{
-        extractor, link_converter, processor, table_formatter,
-        types::{CommentType, FormatOptions},
-    };
+    use crate::cargo_rustdoc_fmt::{extractor, link_converter, processor,
+                                   table_formatter,
+                                   types::{CommentType, FormatOptions}};
     use std::fs;
     use tempfile::TempDir;
 
@@ -32,7 +31,8 @@ mod tests {
         // Convert links (should use link text as reference, not numbers)
         let with_links = link_converter::convert_links(&with_tables);
         assert!(
-            with_links.contains("[Grapheme clusters]:") || with_links.contains("[UTF-8 String]:")
+            with_links.contains("[Grapheme clusters]:")
+                || with_links.contains("[UTF-8 String]:")
         );
     }
 
@@ -81,7 +81,8 @@ mod tests {
     /// Test that mixed comment types (//! and ///) are handled correctly.
     #[test]
     fn test_mixed_comment_types() {
-        let source = include_str!("test_data/complete_file/input/sample_mixed_comments.rs");
+        let source =
+            include_str!("test_data/complete_file/input/sample_mixed_comments.rs");
         let blocks = extractor::extract_rustdoc_blocks(source);
 
         // Should have multiple blocks
@@ -110,7 +111,8 @@ mod tests {
     /// Test that files with no formatting needed are left unchanged.
     #[test]
     fn test_no_formatting_needed() {
-        let source = include_str!("test_data/complete_file/input/sample_no_formatting_needed.rs");
+        let source =
+            include_str!("test_data/complete_file/input/sample_no_formatting_needed.rs");
         let blocks = extractor::extract_rustdoc_blocks(source);
 
         for block in blocks {
@@ -232,7 +234,8 @@ fn main() {}";
     #[test]
     fn test_real_world_file_complete_formatting() {
         let input = include_str!("test_data/complete_file/input/sample_real_world.rs");
-        let expected = include_str!("test_data/complete_file/expected_output/sample_real_world.rs");
+        let expected =
+            include_str!("test_data/complete_file/expected_output/sample_real_world.rs");
 
         // Use the actual FileProcessor to test the complete pipeline
         let temp_dir = TempDir::new().unwrap();
@@ -244,36 +247,58 @@ fn main() {}";
         let processor = processor::FileProcessor::new(options);
         let result = processor.process_file(&test_file);
 
-        assert!(result.errors.is_empty(), "Processing errors: {:?}", result.errors);
-        assert!(result.modified, "File should be modified (has formatting to do)");
+        assert!(
+            result.errors.is_empty(),
+            "Processing errors: {:?}",
+            result.errors
+        );
+        assert!(
+            result.modified,
+            "File should be modified (has formatting to do)"
+        );
 
         // Read the formatted result
         let formatted = fs::read_to_string(&test_file).unwrap();
 
         // Verify heading levels are preserved
-        assert!(formatted.contains("## Parser Dispatch Priority Pipeline"),
-                "Level-2 heading should be preserved as ##, not changed to #");
-        assert!(formatted.contains("## Comprehensive List of Supported Keyboard Shortcuts"),
-                "Level-2 heading should be preserved");
-        assert!(formatted.contains("### Basic Keys"),
-                "Level-3 heading should be preserved as ###");
+        assert!(
+            formatted.contains("## Parser Dispatch Priority Pipeline"),
+            "Level-2 heading should be preserved as ##, not changed to #"
+        );
+        assert!(
+            formatted.contains("## Comprehensive List of Supported Keyboard Shortcuts"),
+            "Level-2 heading should be preserved"
+        );
+        assert!(
+            formatted.contains("### Basic Keys"),
+            "Level-3 heading should be preserved as ###"
+        );
 
         // Verify tables are formatted (aligned)
         let h2_in_expected = expected.matches("## ").count();
         let h2_in_formatted = formatted.matches("## ").count();
-        assert_eq!(h2_in_formatted, h2_in_expected,
-                  "Number of level-2 headings (##) should be preserved");
+        assert_eq!(
+            h2_in_formatted, h2_in_expected,
+            "Number of level-2 headings (##) should be preserved"
+        );
 
         let h3_in_expected = expected.matches("### ").count();
         let h3_in_formatted = formatted.matches("### ").count();
-        assert_eq!(h3_in_formatted, h3_in_expected,
-                  "Number of level-3 headings (###) should be preserved");
+        assert_eq!(
+            h3_in_formatted, h3_in_expected,
+            "Number of level-3 headings (###) should be preserved"
+        );
 
         // Verify reference-style links are created
-        assert!(formatted.contains("]: mod@"), "Should have reference-style links");
+        assert!(
+            formatted.contains("]: mod@"),
+            "Should have reference-style links"
+        );
 
         // The formatted result should match expected output
-        assert_eq!(formatted, expected,
-                  "Formatted output should match expected output");
+        assert_eq!(
+            formatted, expected,
+            "Formatted output should match expected output"
+        );
     }
 }

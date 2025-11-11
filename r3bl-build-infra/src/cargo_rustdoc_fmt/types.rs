@@ -42,7 +42,7 @@ pub struct ProcessingResult {
 
 impl ProcessingResult {
     /// Create a new processing result.
-    #[must_use] 
+    #[must_use]
     pub fn new(file_path: PathBuf) -> Self {
         Self {
             file_path,
@@ -52,14 +52,10 @@ impl ProcessingResult {
     }
 
     /// Mark this result as modified.
-    pub fn mark_modified(&mut self) {
-        self.modified = true;
-    }
+    pub fn mark_modified(&mut self) { self.modified = true; }
 
     /// Add an error to this result.
-    pub fn add_error(&mut self, error: String) {
-        self.errors.push(error);
-    }
+    pub fn add_error(&mut self, error: String) { self.errors.push(error); }
 }
 
 /// Type of rustdoc comment.
@@ -87,7 +83,7 @@ pub struct RustdocBlock {
 }
 
 /// Result type for formatter operations.
-pub type FormatterResult<T> = anyhow::Result<T>;
+pub type FormatterResult<T> = miette::Result<T>;
 
 #[cfg(test)]
 mod tests {

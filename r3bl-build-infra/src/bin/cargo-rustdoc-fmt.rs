@@ -1,10 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use clap::Parser;
-use r3bl_build_infra::{
-    cargo_rustdoc_fmt::{CLIArg, FileProcessor},
-    common::{git_utils, workspace_utils},
-};
+use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor},
+                       common::{cargo_fmt_runner, git_utils, workspace_utils}};
 use std::process;
 
 fn main() {
@@ -14,7 +12,7 @@ fn main() {
     }
 }
 
-fn run() -> anyhow::Result<()> {
+fn run() -> miette::Result<()> {
     let cli_arg = CLIArg::parse();
     let options = cli_arg.to_format_options();
 
@@ -98,6 +96,25 @@ fn run() -> anyhow::Result<()> {
         total_modified,
         total_errors
     );
+
+    // Run cargo fmt on successfully modified files (unless skipped or in check mode)
+    if !cli_arg.skip_cargo_fmt && total_modified > 0 && !cli_arg.check {
+        let modified_files: Vec<_> = results
+            .iter()
+            .filter(|r| r.modified && r.errors.is_empty())
+            .map(|r| r.file_path.clone())
+            .collect();
+
+        if !modified_files.is_empty() {
+            if cli_arg.verbose {
+                println!(
+                    "\nRunning cargo fmt on {} modified files...",
+                    modified_files.len()
+                );
+            }
+            cargo_fmt_runner::run_cargo_fmt_on_files(&modified_files, cli_arg.verbose)?;
+        }
+    }
 
     if cli_arg.check && total_modified > 0 {
         eprintln!("\nSome files need formatting. Run without --check to format them.");

@@ -42,13 +42,14 @@
 //! - **Real-world focus**: End-to-end tests use actual Rust files users will format
 //! - **Fast feedback**: Unit tests catch basic bugs, E2E tests validate integration
 //! - **No duplication**: Each component tested in isolation (units) and together (E2E)
-//! - **Clear failures**: Unit test fails → function bug; E2E test fails → integration issue
+//! - **Clear failures**: Unit test fails → function bug; E2E test fails → integration
+//!   issue
 //!
 //! # What We Don't Test
 //!
-//! - **Isolated component validation**: Components are tested via unit tests (basic)
-//!   and E2E tests (realistic). We don't need middle-layer "component-only" tests
-//!   with realistic data, as those can behave differently than real usage.
+//! - **Isolated component validation**: Components are tested via unit tests (basic) and
+//!   E2E tests (realistic). We don't need middle-layer "component-only" tests with
+//!   realistic data, as those can behave differently than real usage.
 //!
 //! [`complete_file_tests`]: complete_file_tests
 //! [`link_converter`]: crate::cargo_rustdoc_fmt::link_converter

@@ -32,7 +32,7 @@ path = "src/lib.rs"
 pulldown-cmark = "0.13"
 pulldown-cmark-to-cmark = "21"
 clap = { version = "4.5", features = ["derive"] }
-anyhow = "1.0"
+miette = { version = "7", features = ["fancy"] }
 regex = "1.12"
 walkdir = "2.5"
 unicode-width = "0.2"

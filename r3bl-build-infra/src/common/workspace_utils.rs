@@ -4,7 +4,7 @@
 //!
 //! Find workspace root and collect Rust files.
 
-use anyhow::{anyhow, Result};
+use miette::{IntoDiagnostic, Result, miette};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -19,14 +19,14 @@ use walkdir::WalkDir;
 /// - File I/O errors occur while reading Cargo.toml
 /// - No workspace or package root is found
 pub fn get_workspace_root() -> Result<PathBuf> {
-    let mut current = std::env::current_dir()?;
+    let mut current = std::env::current_dir().into_diagnostic()?;
 
     loop {
         let cargo_toml = current.join("Cargo.toml");
 
         if cargo_toml.exists() {
             // Check if this is a workspace Cargo.toml
-            let content = std::fs::read_to_string(&cargo_toml)?;
+            let content = std::fs::read_to_string(&cargo_toml).into_diagnostic()?;
             if content.contains("[workspace]") {
                 return Ok(current);
             }
@@ -37,7 +37,7 @@ pub fn get_workspace_root() -> Result<PathBuf> {
         }
 
         if !current.pop() {
-            return Err(anyhow!(
+            return Err(miette!(
                 "Could not find workspace root. \
                  Make sure you're in a Cargo workspace directory."
             ));
