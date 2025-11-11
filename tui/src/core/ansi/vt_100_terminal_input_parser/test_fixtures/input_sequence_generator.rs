@@ -41,11 +41,12 @@ use crate::core::ansi::{constants::{ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEP
                                     SPECIAL_DELETE_CODE, SPECIAL_END_FINAL,
                                     SPECIAL_HOME_FINAL, SPECIAL_INSERT_CODE,
                                     SPECIAL_PAGE_DOWN_CODE, SPECIAL_PAGE_UP_CODE},
-                        vt_100_terminal_input_parser::{KeyState, VT100FocusState,
+                        vt_100_terminal_input_parser::{VT100FocusState,
                                                        VT100InputEvent, VT100KeyCode,
                                                        VT100KeyModifiers,
                                                        VT100MouseAction,
                                                        VT100MouseButton, VT100PasteMode}};
+use crate::KeyState;
 
 /// Generate ANSI bytes for an input event.
 ///

@@ -3,7 +3,43 @@
 //! Mouse input event [1-based coordinates] parsing from ANSI/CSI sequences.
 //!
 //! This module handles conversion of mouse-related ANSI escape sequences into mouse
-//! events, including support for:
+//! events, including support for multiple mouse protocols.
+//!
+//! ## Where You Are in the Pipeline
+//!
+//! ```text
+//! Raw Terminal Input (stdin)
+//!    ↓
+//! DirectToAnsiInputDevice (async I/O layer)
+//!    ↓
+//! parser.rs (routing & ESC detection)
+//!    ↓ (routes mouse sequences here)
+//! ┌──▼───────────────────────────────────────┐
+//! │  mouse.rs                                │  ← **YOU ARE HERE**
+//! │  • Parse SGR protocol (modern)           │
+//! │  • Parse X10/Normal (legacy)             │
+//! │  • Parse RXVT protocol (legacy)          │
+//! │  • Detect clicks/drags/scroll/motion     │
+//! │  • Extract position & modifiers          │
+//! └──────────────────────────────────────────┘
+//!    ↓
+//! VT100InputEvent::Mouse { button, pos, action, modifiers }
+//! ```
+//!
+//! **Navigate**:
+//! - ⬆️ **Up**: [`parser`] - Main routing entry point
+//! - ➡️ **Peer**: [`keyboard`], [`terminal_events`], [`utf8`] - Other specialized parsers
+//! - 📚 **Types**: [`VT100MouseButton`], [`VT100MouseAction`], [`TermPos`]
+//!
+//! [`parser`]: mod@super::parser
+//! [`keyboard`]: mod@super::keyboard
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`utf8`]: mod@super::utf8
+//! [`VT100MouseButton`]: super::VT100MouseButton
+//! [`VT100MouseAction`]: super::VT100MouseAction
+//! [`TermPos`]: crate::core::coordinates::vt_100_ansi_coords::TermPos
+//!
+//! ## Supported Mouse Protocols
 //!
 //! - **SGR (Selective Graphic Rendition) Protocol**: Modern standard format
 //!   - Format: `CSI < Cb ; Cx ; Cy M/m`

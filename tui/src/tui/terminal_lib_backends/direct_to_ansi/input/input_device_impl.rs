@@ -1,30 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! `DirectToAnsi` Input Device Implementation
-//!
-//! This module implements the async input device for the `DirectToAnsi` backend.
-//! It handles non-blocking reading from stdin using tokio, manages a ring buffer (kind
-//! of, except that it is growable) for partial ANSI sequences, and delegates to the
-//! protocol layer parsers for sequence interpretation.
-
-use crate::{Button, ColWidth, FocusEvent, InputDeviceExt, InputEvent, Key, KeyPress,
-            KeyState, ModifierKeysMask, MouseInput, MouseInputKind, Pos, RowHeight,
-            SpecialKey,
-            core::ansi::{ANSI_CSI_BRACKET, ANSI_ESC, ANSI_SS3_O,
-                         vt_100_terminal_input_parser::{VT100FocusState,
-                                                        VT100InputEvent, VT100KeyCode,
-                                                        VT100KeyModifiers,
-                                                        VT100MouseAction,
-                                                        VT100MouseButton,
-                                                        VT100PasteMode,
-                                                        VT100ScrollDirection,
-                                                        parse_alt_letter,
-                                                        parse_control_character,
-                                                        parse_keyboard_sequence,
-                                                        parse_mouse_sequence,
-                                                        parse_ss3_sequence,
-                                                        parse_terminal_event,
-                                                        parse_utf8_text}}};
+use super::protocol_conversion::convert_input_event;
+use crate::{InputDeviceExt, InputEvent,
+            core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
+                                                       VT100KeyModifiers,
+                                                       VT100PasteMode,
+                                                       try_parse_input_event}};
 use tokio::io::{AsyncReadExt, Stdin};
 
 /// Buffer compaction threshold: compact when consumed bytes exceed this value. This is
@@ -37,23 +18,12 @@ const INITIAL_BUFFER_CAPACITY: usize = 4096;
 /// Temporary read buffer size for stdin reads.
 const TEMP_READ_BUFFER_SIZE: usize = 256;
 
-/// State machine for collecting bracketed paste text.
-///
-/// When the terminal sends a bracketed paste sequence, it arrives as:
-/// - `Paste(Start)` marker
-/// - Multiple `Keyboard` events (the actual pasted text)
-/// - `Paste(End)` marker
-///
-/// This state tracks whether we're currently collecting text between markers.
-#[derive(Debug)]
-enum PasteCollectionState {
-    /// Not currently in a paste operation.
-    NotPasting,
-    /// Currently collecting text for a paste operation.
-    Collecting(String),
-}
-
 /// Async input device for `DirectToAnsi` backend.
+///
+/// This is the `DirectToAnsi` async input device implementation. It handles non-blocking
+/// reading from stdin using tokio, manages a ring buffer (kind of, except that it is
+/// growable) for partial ANSI sequences, and delegates to the protocol layer parsers for
+/// sequence interpretation.
 ///
 /// Manages asynchronous reading from terminal stdin using tokio, with:
 /// - Simple `Vec<u8>` buffer for handling partial/incomplete ANSI sequences
@@ -62,19 +32,49 @@ enum PasteCollectionState {
 ///
 /// ## Architecture
 ///
-/// This device is the bridge between raw I/O and the protocol layer:
+/// This device sits in the backend executor layer, bridging raw I/O to the protocol
+/// parser, then converting protocol IR to the public API. The full pipeline:
+///
 /// ```text
-/// stdin (tokio::io::stdin)
-///   ↓
-/// [Vec<u8> Buffer: 4KB, zero-timeout parsing]
-///   ↓
-/// [Protocol Layer Parsers]
-/// ├─ keyboard::parse_keyboard_sequence()
-/// ├─ mouse::parse_mouse_sequence()
-/// ├─ terminal_events::parse_terminal_event()
-/// └─ utf8::parse_utf8_text()
-///   ↓
-/// InputEvent (to application)
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │ Raw ANSI bytes: "\x1B[A"                                        │
+/// │ stdin (tokio::io::stdin)                                        │
+/// └────────────────────────────┬────────────────────────────────────┘
+///                              │
+///                              ▼
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │ THIS DEVICE: DirectToAnsiInputDevice (Backend Executor)         │
+/// │   • Vec<u8> buffer: 4KB, zero-timeout parsing                   │
+/// │   • Async I/O: tokio::io::stdin().read()                        │
+/// │   • Paste state machine: Collecting bracketed paste text        │
+/// └────────────────────────────┬────────────────────────────────────┘
+///                              │
+///                              ▼
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │ vt_100_terminal_input_parser/ (Protocol Layer - IR)             │
+/// │   try_parse_input_event() dispatches to:                        │
+/// │   ├─ parse_keyboard_sequence() → VT100InputEvent::Keyboard      │
+/// │   ├─ parse_mouse_sequence()    → VT100InputEvent::Mouse         │
+/// │   ├─ parse_terminal_event()    → VT100InputEvent::Focus/Resize  │
+/// │   └─ parse_utf8_text()         → VT100InputEvent::Keyboard      │
+/// └────────────────────────────┬────────────────────────────────────┘
+///                              │
+///                              ▼
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │ protocol_conversion.rs (IR → Public API)                        │
+/// │   convert_input_event()       VT100InputEvent → InputEvent      │
+/// │   convert_key_code_to_keypress()  VT100KeyCode → KeyPress       │
+/// └────────────────────────────┬────────────────────────────────────┘
+///                              │
+///                              ▼
+/// ┌─────────────────────────────────────────────────────────────────┐
+/// │ Public API (Application Layer)                                  │
+/// │   InputEvent::Keyboard(KeyPress)                                │
+/// │   InputEvent::Mouse(MouseInput)                                 │
+/// │   InputEvent::Resize(Size)                                      │
+/// │   InputEvent::Focus(FocusEvent)                                 │
+/// │   InputEvent::Paste(String)                                     │
+/// └─────────────────────────────────────────────────────────────────┘
 /// ```
 ///
 /// ## Zero-Latency ESC Key Detection
@@ -163,6 +163,22 @@ pub struct DirectToAnsiInputDevice {
     paste_state: PasteCollectionState,
 }
 
+/// State machine for collecting bracketed paste text.
+///
+/// When the terminal sends a bracketed paste sequence, it arrives as:
+/// - `Paste(Start)` marker
+/// - Multiple `Keyboard` events (the actual pasted text)
+/// - `Paste(End)` marker
+///
+/// This state tracks whether we're currently collecting text between markers.
+#[derive(Debug)]
+enum PasteCollectionState {
+    /// Not currently in a paste operation.
+    NotPasting,
+    /// Currently collecting text for a paste operation.
+    Collecting(String),
+}
+
 impl DirectToAnsiInputDevice {
     /// Create a new `DirectToAnsiInputDevice`.
     ///
@@ -201,6 +217,47 @@ impl DirectToAnsiInputDevice {
     /// 2. If incomplete, read more from stdin (yields until data ready)
     /// 3. Loop back to parsing
     ///
+    /// ## Buffer Management Algorithm (Quasi-Ring Buffer)
+    ///
+    /// This implementation uses a growable buffer with lazy compaction to avoid
+    /// copying bytes on every parse while preventing unbounded memory growth:
+    ///
+    /// ```text
+    /// Initial state: buffer = [], consumed = 0
+    ///
+    /// After read #1: buffer = [0x1B, 0x5B, 0x41], consumed = 0
+    ///                         ├─────────────────┤
+    ///                         Parser tries [0..3]
+    ///                         Parses Up Arrow (3 bytes)
+    ///                         consumed = 3
+    ///
+    /// After read #2: buffer = [0x1B, 0x5B, 0x41, 0x61], consumed = 3
+    ///                         └──── parsed ────┘ ├───┤
+    ///                                            Parser tries [3..4]
+    ///                                            Parses 'a' (1 byte)
+    ///                                            consumed = 4
+    ///
+    /// After read #3: buffer = [...many bytes...], consumed = 2100
+    ///                         └── consumed > 2048 threshold! ──┘
+    ///                         Compact: drain [0..2100], consumed = 0
+    ///                         buffer now starts fresh
+    /// ```
+    ///
+    /// **Key operations:**
+    /// - `try_parse_input_event(&buffer[consumed..])` - Parse only unprocessed bytes
+    /// - `consume(n)` - Mark n bytes as processed (increments `consumed`)
+    /// - When `consumed > 2048` - Compact buffer by draining processed bytes
+    ///
+    /// **Why not a true ring buffer?**
+    /// - Variable-length ANSI sequences (1-20+ bytes) make fixed-size wrapping complex
+    /// - Growing Vec handles overflow naturally without wrap-around logic
+    /// - Lazy compaction (every 2KB) amortizes cost: O(1) per event on average
+    ///
+    /// **Memory behavior:**
+    /// - Typical: 100 events → ~500 bytes consumed, no compaction needed
+    /// - Worst case: 4KB buffer + 2KB consumed = 6KB maximum before compaction
+    /// - After compaction: resets to current unconsumed data only
+    ///
     /// See struct-level documentation for details on zero-latency ESC detection
     /// algorithm.
     pub async fn read_event(&mut self) -> Option<InputEvent> {
@@ -210,7 +267,9 @@ impl DirectToAnsiInputDevice {
 
         loop {
             // 1. Try to parse from existing buffer
-            if let Some((vt100_event, bytes_consumed)) = self.try_parse() {
+            if let Some((vt100_event, bytes_consumed)) =
+                try_parse_input_event(&self.buffer[self.consumed..])
+            {
                 self.consume(bytes_consumed);
 
                 // 2. Apply paste collection state machine
@@ -284,118 +343,7 @@ impl DirectToAnsiInputDevice {
                 }
             }
 
-            // 3. Loop back to try_parse() with new data
-        }
-    }
-
-    /// Try to parse a complete event from the buffer.
-    ///
-    /// ## Smart Lookahead Logic
-    ///
-    /// - `[0x1B]` alone → ESC key (emitted immediately)
-    /// - `[0x1B, b'[', ...]` → CSI sequence (keyboard/mouse)
-    /// - `[0x1B, b'O', ...]` → SS3 sequence (application mode keys)
-    /// - `[0x1B, other]` → ESC key (unknown escape)
-    /// - Other bytes → UTF-8 text
-    ///
-    /// Here's the algorithm visually:
-    ///
-    /// ```text
-    /// try_parse() uses smart 1-2 byte lookahead:
-    /// ┌─────────────────────────────────────────┐
-    /// │  First byte check                       │
-    /// ├─────────────────────────────────────────┤
-    /// │ 0x1B (ESC)?                             │
-    /// │  ├─ buf.len() == 1?                     │
-    /// │  │  └─ YES → Emit ESC immediately ▲     │
-    /// │  │     (zero-latency ESC key!)          │
-    /// │  └─ buf.len() > 1?                      │
-    /// │     ├─ Second byte = b'['?              │
-    /// │     │  └─ CSI → keyboard/mouse/terminal │
-    /// │     ├─ Second byte = b'O'?              │
-    /// │     │  └─ SS3 → app mode keys (F1-F4)   │
-    /// │     └─ Second byte = other?             │
-    /// │        └─ Emit ESC, leave rest in buf   │
-    /// ├─────────────────────────────────────────┤
-    /// │ Not ESC?                                │
-    /// │  └─ Try: terminal → mouse → UTF-8       │
-    /// └─────────────────────────────────────────┘
-    /// ```
-    ///
-    /// # Returns
-    ///
-    /// `Some((event, bytes_consumed))` if successful, `None` if incomplete.
-    /// Returns the protocol-level `VT100InputEvent` before conversion to canonical
-    /// `InputEvent`.
-    pub fn try_parse(&self) -> Option<(VT100InputEvent, usize)> {
-        let buf = &self.buffer[self.consumed..];
-
-        // Fast path: empty buffer.
-        if buf.is_empty() {
-            return None;
-        }
-
-        // Check first byte for routing.
-        match buf.first() {
-            Some(&ANSI_ESC) => {
-                // ESC sequence or ESC key.
-                if buf.len() == 1 {
-                    // Just ESC, emit immediately (no timeout!).
-                    let esc_event = VT100InputEvent::Keyboard {
-                        code: VT100KeyCode::Escape,
-                        modifiers: VT100KeyModifiers::default(),
-                    };
-                    return Some((esc_event, 1));
-                }
-
-                // Check second byte.
-                match buf.get(1) {
-                    Some(&ANSI_CSI_BRACKET) => {
-                        // CSI sequence - try keyboard first, then mouse, then terminal
-                        // events.
-                        parse_keyboard_sequence(buf)
-                            .or_else(|| parse_mouse_sequence(buf))
-                            .or_else(|| parse_terminal_event(buf))
-                    }
-                    Some(&ANSI_SS3_O) => {
-                        // SS3 sequence - application mode keys (F1-F4, Home, End,
-                        // arrows).
-                        parse_ss3_sequence(buf)
-                    }
-                    Some(_) => {
-                        // ESC + unknown byte - try Alt+letter before emitting standalone
-                        // ESC. This handles Alt+B (ESC+'b'),
-                        // Alt+F (ESC+'f'), etc.
-                        parse_alt_letter(buf).or_else(|| {
-                            // Not Alt+letter, emit standalone ESC
-                            let esc_event = VT100InputEvent::Keyboard {
-                                code: VT100KeyCode::Escape,
-                                modifiers: VT100KeyModifiers::default(),
-                            };
-                            Some((esc_event, 1))
-                        })
-                    }
-                    None => {
-                        // Shouldn't reach here (buf.len() > 1 but get(1) is None?).
-                        unreachable!()
-                    }
-                }
-            }
-            Some(_) => {
-                // Not ESC - try terminal events, mouse (X10/RXVT), control characters, or
-                // UTF-8 text. Control characters (0x00-0x1F like Ctrl+A,
-                // Ctrl+D, Ctrl+W) must be tried before UTF-8 because they
-                // are technically valid UTF-8 but should be parsed as Ctrl+letter
-                // instead.
-                parse_terminal_event(buf)
-                    .or_else(|| parse_mouse_sequence(buf))
-                    .or_else(|| parse_control_character(buf))
-                    .or_else(|| parse_utf8_text(buf))
-            }
-            None => {
-                // Empty buffer (shouldn't reach here due to early return).
-                unreachable!()
-            }
+            // 3. Loop back to try_parse_input_event() with new data
         }
     }
 
@@ -422,148 +370,23 @@ impl InputDeviceExt for DirectToAnsiInputDevice {
     async fn next_input_event(&mut self) -> Option<InputEvent> { self.read_event().await }
 }
 
-/// Convert protocol-level `KeyCode` and `KeyModifiers` to canonical `KeyPress`.
-fn convert_key_code_to_keypress(
-    code: VT100KeyCode,
-    modifiers: VT100KeyModifiers,
-) -> KeyPress {
-    let key = match code {
-        VT100KeyCode::Char(ch) => Key::Character(ch),
-        VT100KeyCode::Function(n) => {
-            use crate::FunctionKey;
-            match n {
-                1 => Key::FunctionKey(FunctionKey::F1),
-                2 => Key::FunctionKey(FunctionKey::F2),
-                3 => Key::FunctionKey(FunctionKey::F3),
-                4 => Key::FunctionKey(FunctionKey::F4),
-                5 => Key::FunctionKey(FunctionKey::F5),
-                6 => Key::FunctionKey(FunctionKey::F6),
-                7 => Key::FunctionKey(FunctionKey::F7),
-                8 => Key::FunctionKey(FunctionKey::F8),
-                9 => Key::FunctionKey(FunctionKey::F9),
-                10 => Key::FunctionKey(FunctionKey::F10),
-                11 => Key::FunctionKey(FunctionKey::F11),
-                12 => Key::FunctionKey(FunctionKey::F12),
-                _ => Key::Character('?'), // Fallback
-            }
-        }
-        VT100KeyCode::Up => Key::SpecialKey(SpecialKey::Up),
-        VT100KeyCode::Down => Key::SpecialKey(SpecialKey::Down),
-        VT100KeyCode::Left => Key::SpecialKey(SpecialKey::Left),
-        VT100KeyCode::Right => Key::SpecialKey(SpecialKey::Right),
-        VT100KeyCode::Home => Key::SpecialKey(SpecialKey::Home),
-        VT100KeyCode::End => Key::SpecialKey(SpecialKey::End),
-        VT100KeyCode::PageUp => Key::SpecialKey(SpecialKey::PageUp),
-        VT100KeyCode::PageDown => Key::SpecialKey(SpecialKey::PageDown),
-        VT100KeyCode::Tab => Key::SpecialKey(SpecialKey::Tab),
-        VT100KeyCode::BackTab => Key::SpecialKey(SpecialKey::BackTab),
-        VT100KeyCode::Delete => Key::SpecialKey(SpecialKey::Delete),
-        VT100KeyCode::Insert => Key::SpecialKey(SpecialKey::Insert),
-        VT100KeyCode::Enter => Key::SpecialKey(SpecialKey::Enter),
-        VT100KeyCode::Backspace => Key::SpecialKey(SpecialKey::Backspace),
-        VT100KeyCode::Escape => Key::SpecialKey(SpecialKey::Esc),
-    };
-
-    // Convert modifiers (now using canonical KeyState directly)
-    let mask = ModifierKeysMask {
-        shift_key_state: modifiers.shift,
-        ctrl_key_state: modifiers.ctrl,
-        alt_key_state: modifiers.alt,
-    };
-
-    if mask.shift_key_state == KeyState::NotPressed
-        && mask.ctrl_key_state == KeyState::NotPressed
-        && mask.alt_key_state == KeyState::NotPressed
-    {
-        KeyPress::Plain { key }
-    } else {
-        KeyPress::WithModifiers { key, mask }
-    }
-}
-
-/// Convert protocol-level `InputEvent` to canonical `InputEvent`.
-fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputEvent> {
-    match vt100_event {
-        VT100InputEvent::Keyboard { code, modifiers } => {
-            let keypress = convert_key_code_to_keypress(code, modifiers);
-            Some(InputEvent::Keyboard(keypress))
-        }
-        VT100InputEvent::Mouse {
-            button,
-            pos,
-            action,
-            modifiers,
-        } => {
-            let button_kind = match button {
-                VT100MouseButton::Left => Button::Left,
-                VT100MouseButton::Right => Button::Right,
-                VT100MouseButton::Middle => Button::Middle,
-                VT100MouseButton::Unknown => return None,
-            };
-
-            let kind = match action {
-                VT100MouseAction::Press => MouseInputKind::MouseDown(button_kind),
-                VT100MouseAction::Release => MouseInputKind::MouseUp(button_kind),
-                VT100MouseAction::Drag => MouseInputKind::MouseDrag(button_kind),
-                VT100MouseAction::Motion => MouseInputKind::MouseMove,
-                VT100MouseAction::Scroll(direction) => match direction {
-                    VT100ScrollDirection::Up => MouseInputKind::ScrollUp,
-                    VT100ScrollDirection::Down => MouseInputKind::ScrollDown,
-                    VT100ScrollDirection::Left => MouseInputKind::ScrollLeft,
-                    VT100ScrollDirection::Right => MouseInputKind::ScrollRight,
-                },
-            };
-
-            let maybe_modifier_keys = if modifiers.shift == KeyState::Pressed
-                || modifiers.ctrl == KeyState::Pressed
-                || modifiers.alt == KeyState::Pressed
-            {
-                Some(ModifierKeysMask {
-                    shift_key_state: modifiers.shift,
-                    ctrl_key_state: modifiers.ctrl,
-                    alt_key_state: modifiers.alt,
-                })
-            } else {
-                None
-            };
-
-            // Convert TermPos to Pos (convert from 1-based to 0-based)
-            // TermCol and TermRow have built-in conversion to 0-based indices
-            let canonical_pos = Pos {
-                col_index: pos.col.to_zero_based(),
-                row_index: pos.row.to_zero_based(),
-            };
-
-            let mouse_input = MouseInput {
-                pos: canonical_pos,
-                kind,
-                maybe_modifier_keys,
-            };
-            Some(InputEvent::Mouse(mouse_input))
-        }
-        VT100InputEvent::Resize { rows, cols } => Some(InputEvent::Resize(crate::Size {
-            col_width: ColWidth::from(cols),
-            row_height: RowHeight::from(rows),
-        })),
-        VT100InputEvent::Focus(focus_state) => {
-            let event = match focus_state {
-                VT100FocusState::Gained => FocusEvent::Gained,
-                VT100FocusState::Lost => FocusEvent::Lost,
-            };
-            Some(InputEvent::Focus(event))
-        }
-        VT100InputEvent::Paste(_paste_mode) => {
-            unreachable!(
-                "Paste events are handled by state machine in read_event() \
-                 and should never reach convert_input_event()"
-            )
-        }
-    }
-}
-
+/// Comprehensive testing is performed in PTY integration tests:
+/// - [`test_pty_input_device`]
+/// - [`test_pty_mouse_events`]
+/// - [`test_pty_keyboard_modifiers`]
+/// - [`test_pty_utf8_text`]
+/// - [`test_pty_terminal_events`]
+///
+/// [`test_pty_input_device`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test::test_pty_input_device
+/// [`test_pty_mouse_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events
+/// [`test_pty_keyboard_modifiers`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
+/// [`test_pty_utf8_text`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
+/// [`test_pty_terminal_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test::test_pty_terminal_events
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::ansi::vt_100_terminal_input_parser::{parse_keyboard_sequence,
+                                                          parse_utf8_text};
 
     #[test]
     fn test_device_creation() {

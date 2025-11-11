@@ -1,8 +1,9 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, Pair,
-            core::{ansi::vt_100_terminal_input_parser::{KeyState, VT100InputEvent,
-                                                        VT100KeyCode, VT100KeyModifiers,
+use crate::{AsyncDebouncedDeadline, ControlledChild, Deadline, DebouncedState, KeyState,
+            Pair,
+            core::{ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
+                                                        VT100KeyModifiers,
                                                         test_fixtures::generate_keyboard_sequence},
                    test_fixtures::StdoutMock},
             generate_pty_test,

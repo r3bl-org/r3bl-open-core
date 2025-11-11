@@ -24,16 +24,23 @@
 //! ┌──▼───────────────────────────────────────┐
 //! │  DirectToAnsiInputDevice (async I/O)     │  ← tui/src/tui/terminal_lib_backends/
 //! │  • Read from tokio::io::stdin()          │     direct_to_ansi/input/
-//! │  • Manage buffers (4KB, 150ms timeout)   │
-//! │  • Dispatch to protocol parsers          │
+//! │  • Manage buffers (4KB, zero-timeout)    │
+//! │  • Call parser entry point               │
 //! └──────────────────────────────────────────┘
-//!    │ (delegate parsing)
+//!    │ (delegate to main parser)
 //! ┌──▼───────────────────────────────────────┐
-//! │  vt_100_terminal_input_parser (pure)     │  ← tui/src/core/ansi/
-//! │  • parse_keyboard_sequence()             │     vt_100_terminal_input_parser/
-//! │  • parse_mouse_sequence()                │
-//! │  • parse_terminal_event()                │
-//! │  • parse_utf8_text()                     │
+//! │  parser.rs - Main Entry Point            │  ← tui/src/core/ansi/
+//! │  • try_parse_input_event()               │     vt_100_terminal_input_parser/
+//! │  • Smart routing & ESC detection         │
+//! │  • Zero-latency ESC key handling         │
+//! └──────────────────────────────────────────┘
+//!    │ (routes to specialized parsers)
+//! ┌──▼───────────────────────────────────────┐
+//! │  Specialized Parsers (pure)              │  ← tui/src/core/ansi/
+//! │  • keyboard.rs                           │     vt_100_terminal_input_parser/
+//! │  • mouse.rs                              │
+//! │  • terminal_events.rs                    │
+//! │  • utf8.rs                               │
 //! └──────────────────────────────────────────┘
 //!    │
 //!    ▼
@@ -141,6 +148,13 @@
 // https://stackoverflow.com/a/75910283/2085356
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
+// Main entry point module (router/dispatcher)
+// This is listed FIRST to emphasize it's the primary API surface
+#[cfg(any(test, doc))]
+pub mod parser;
+#[cfg(not(any(test, doc)))]
+mod parser;
+
 // Conditionally public modules for documentation and testing.
 // In test/doc builds: fully public (for rustdoc and test access)
 // In release builds: private (encapsulated implementation details)
@@ -170,12 +184,13 @@ pub mod types;
 mod types;
 
 // Re-export types for flat public API.
-pub use crate::KeyState;
-pub use keyboard::*;
+// parser is listed FIRST as it's the main entry point
+pub use parser::*;           // Main entry point: try_parse_input_event()
+pub use keyboard::*;          // Specialized parsers
 pub use mouse::*;
 pub use terminal_events::*;
 pub use utf8::*;
-pub use types::*;
+pub use types::*;             // Shared types
 
 // Three-tier test architecture.
 #[cfg(any(test, doc))]

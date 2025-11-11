@@ -9,11 +9,13 @@
 //!
 //! This ensures generator and parser are compatible and speak the same protocol.
 
-use crate::core::ansi::vt_100_terminal_input_parser::{
-    KeyState, VT100InputEvent, VT100KeyCode, VT100KeyModifiers, VT100FocusState, VT100PasteMode,
-    parse_keyboard_sequence, parse_terminal_event,
-};
-use crate::core::ansi::vt_100_terminal_input_parser::test_fixtures::*;
+use crate::{KeyState,
+            core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
+                                                       VT100KeyModifiers, VT100FocusState,
+                                                       VT100PasteMode,
+                                                       parse_keyboard_sequence,
+                                                       parse_terminal_event,
+                                                       test_fixtures::*}};
 
 // ==================== Terminal Events ====================
 

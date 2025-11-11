@@ -5,7 +5,37 @@
 //! This module handles conversion of raw UTF-8 bytes (received as regular text input
 //! between ANSI escape sequences) into keyboard events representing typed characters.
 //!
-//! Handles:
+//! ## Where You Are in the Pipeline
+//!
+//! ```text
+//! Raw Terminal Input (stdin)
+//!    ↓
+//! DirectToAnsiInputDevice (async I/O layer)
+//!    ↓
+//! parser.rs (routing & ESC detection)
+//!    ↓ (routes non-escape bytes here)
+//! ┌──▼───────────────────────────────────────┐
+//! │  utf8.rs                                 │  ← **YOU ARE HERE**
+//! │  • Parse UTF-8 multi-byte sequences      │
+//! │  • Generate character events             │
+//! │  • Handle incomplete sequences           │
+//! └──────────────────────────────────────────┘
+//!    ↓
+//! VT100InputEvent::Keyboard { code: Char(ch), .. }
+//! ```
+//!
+//! **Navigate**:
+//! - ⬆️ **Up**: [`parser`] - Main routing entry point
+//! - ➡️ **Peer**: [`keyboard`], [`mouse`], [`terminal_events`] - Other specialized parsers
+//! - 📚 **Types**: [`VT100KeyCode::Char`]
+//!
+//! [`parser`]: mod@super::parser
+//! [`keyboard`]: mod@super::keyboard
+//! [`mouse`]: mod@super::mouse
+//! [`terminal_events`]: mod@super::terminal_events
+//! [`VT100KeyCode::Char`]: super::VT100KeyCode::Char
+//!
+//! ## Handles:
 //! - Single-byte UTF-8 characters (ASCII)
 //! - Multi-byte UTF-8 sequences (2-4 bytes)
 //! - Incomplete UTF-8 sequences (buffering)

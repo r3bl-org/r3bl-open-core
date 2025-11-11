@@ -137,14 +137,15 @@
 //! 🔤 Escaped string: "\u{1b}[<65;59;20M"
 //! ⌨️  Parsed: Unknown (hex: 1b 5b 3c 36 35 3b 35 39 3b 32 30 4d)
 
-use crate::core::ansi::vt_100_terminal_input_parser::{KeyState, VT100InputEvent,
-                                                      VT100KeyCode, VT100MouseAction,
-                                                      VT100MouseButton,
-                                                      VT100ScrollDirection,
-                                                      parse_alt_letter,
-                                                      parse_control_character,
-                                                      parse_keyboard_sequence,
-                                                      parse_mouse_sequence};
+use crate::{KeyState,
+            core::ansi::vt_100_terminal_input_parser::{VT100InputEvent,
+                                                       VT100KeyCode, VT100MouseAction,
+                                                       VT100MouseButton,
+                                                       VT100ScrollDirection,
+                                                       parse_alt_letter,
+                                                       parse_control_character,
+                                                       parse_keyboard_sequence,
+                                                       parse_mouse_sequence}};
 
 // ================================================================================================
 // Mouse Event Tests (Real Sequences from Terminal Observation)
