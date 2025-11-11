@@ -7,7 +7,7 @@ use crate::cargo_rustdoc_fmt::types::{CommentType, RustdocBlock};
 /// Extract all rustdoc comment blocks from source code.
 ///
 /// Returns blocks for both `///` (outer) and `//!` (inner) style comments.
-#[must_use] 
+#[must_use]
 pub fn extract_rustdoc_blocks(source: &str) -> Vec<RustdocBlock> {
     let mut blocks = Vec::new();
     let lines: Vec<&str> = source.lines().collect();
@@ -39,7 +39,8 @@ fn try_extract_block(lines: &[&str], index: &mut usize) -> Option<RustdocBlock> 
         let current_line = lines[*index];
 
         // Check if this line continues the block
-        if let Some(content) = extract_comment_content(current_line, &comment_marker, &indentation)
+        if let Some(content) =
+            extract_comment_content(current_line, &comment_marker, &indentation)
         {
             block_lines.push(content.to_string());
             *index += 1;

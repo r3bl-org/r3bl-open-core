@@ -4,9 +4,8 @@
 //!
 //! Find changed files in git working tree or from recent commits.
 
-use anyhow::{Context, Result};
-use std::path::PathBuf;
-use std::process::Command;
+use miette::{IntoDiagnostic, Result, WrapErr};
+use std::{path::PathBuf, process::Command};
 
 /// Get list of changed Rust files from git.
 ///
@@ -34,7 +33,8 @@ fn get_working_tree_changes() -> Result<Vec<PathBuf>> {
     let output = Command::new("git")
         .args(["diff", "--name-only", "HEAD"])
         .output()
-        .context("Failed to run git diff")?;
+        .into_diagnostic()
+        .wrap_err("Failed to run git diff")?;
 
     if !output.status.success() {
         return Ok(Vec::new());
@@ -59,7 +59,8 @@ fn get_files_from_last_commit() -> Result<Vec<PathBuf>> {
     let output = Command::new("git")
         .args(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"])
         .output()
-        .context("Failed to run git diff-tree")?;
+        .into_diagnostic()
+        .wrap_err("Failed to run git diff-tree")?;
 
     if !output.status.success() {
         return Ok(Vec::new());
@@ -80,7 +81,7 @@ fn get_files_from_last_commit() -> Result<Vec<PathBuf>> {
 }
 
 /// Check if we're in a git repository.
-#[must_use] 
+#[must_use]
 pub fn is_git_repo() -> bool {
     Command::new("git")
         .args(["rev-parse", "--git-dir"])

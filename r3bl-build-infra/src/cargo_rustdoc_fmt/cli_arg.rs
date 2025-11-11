@@ -40,15 +40,20 @@ pub struct CLIArg {
     #[arg(long, short = 'w')]
     pub workspace: bool,
 
+    /// Skip running cargo fmt on modified files
+    #[arg(long)]
+    pub skip_cargo_fmt: bool,
+
     /// Specific files or directories to format.
-    /// If not provided, formats git-changed files (or entire workspace with --workspace).
+    /// If not provided, formats git-changed files (or entire workspace with
+    /// --workspace).
     #[arg(value_name = "PATH")]
     pub paths: Vec<PathBuf>,
 }
 
 impl CLIArg {
     /// Convert CLI arguments to `FormatOptions`.
-    #[must_use] 
+    #[must_use]
     pub fn to_format_options(&self) -> FormatOptions {
         FormatOptions {
             format_tables: !self.links_only,
@@ -71,6 +76,7 @@ mod tests {
             links_only: false,
             verbose: false,
             workspace: false,
+            skip_cargo_fmt: false,
             paths: Vec::new(),
         };
 
@@ -87,6 +93,7 @@ mod tests {
             links_only: false,
             verbose: false,
             workspace: false,
+            skip_cargo_fmt: false,
             paths: Vec::new(),
         };
 

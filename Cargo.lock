@@ -2254,8 +2254,8 @@ checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 name = "r3bl-build-infra"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "clap",
+ "miette",
  "pretty_assertions",
  "pulldown-cmark",
  "pulldown-cmark-to-cmark",

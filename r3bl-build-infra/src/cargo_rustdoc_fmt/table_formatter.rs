@@ -11,7 +11,8 @@ use unicode_width::UnicodeWidthStr;
 ///
 /// # Panics
 ///
-/// Panics if the internal regex pattern is invalid (should never happen with hardcoded pattern).
+/// Panics if the internal regex pattern is invalid (should never happen with hardcoded
+/// pattern).
 #[must_use]
 pub fn format_tables(text: &str) -> String {
     // Use regex-based approach for now as it's more reliable for formatting
@@ -118,7 +119,11 @@ fn parse_table_row(line: &str) -> Vec<String> {
 }
 
 /// Format a table row with proper padding.
-fn format_table_row(cells: &[String], col_widths: &[usize], is_separator: bool) -> String {
+fn format_table_row(
+    cells: &[String],
+    col_widths: &[usize],
+    is_separator: bool,
+) -> String {
     let formatted_cells: Vec<String> = cells
         .iter()
         .enumerate()

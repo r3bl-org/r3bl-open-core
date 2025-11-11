@@ -2,10 +2,9 @@
 
 //! Orchestrate rustdoc formatting for files.
 
-use crate::cargo_rustdoc_fmt::{
-    extractor, link_converter, table_formatter,
-    types::{CommentType, FormatOptions, ProcessingResult, RustdocBlock},
-};
+use crate::cargo_rustdoc_fmt::{extractor, link_converter, table_formatter,
+                               types::{CommentType, FormatOptions, ProcessingResult,
+                                       RustdocBlock}};
 use std::path::{Path, PathBuf};
 
 /// Processes Rust files to format their rustdoc comments.
@@ -16,13 +15,11 @@ pub struct FileProcessor {
 
 impl FileProcessor {
     /// Create a new file processor with the given options.
-    #[must_use] 
-    pub fn new(options: FormatOptions) -> Self {
-        Self { options }
-    }
+    #[must_use]
+    pub fn new(options: FormatOptions) -> Self { Self { options } }
 
     /// Process a single file.
-    #[must_use] 
+    #[must_use]
     pub fn process_file(&self, path: &Path) -> ProcessingResult {
         let mut result = ProcessingResult::new(path.to_path_buf());
 
@@ -62,7 +59,7 @@ impl FileProcessor {
     }
 
     /// Process multiple files.
-    #[must_use] 
+    #[must_use]
     pub fn process_files(&self, paths: &[PathBuf]) -> Vec<ProcessingResult> {
         paths.iter().map(|p| self.process_file(p)).collect()
     }

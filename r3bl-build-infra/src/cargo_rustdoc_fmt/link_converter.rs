@@ -3,8 +3,7 @@
 //! Convert inline markdown links to reference-style links.
 
 use pulldown_cmark::{Event, HeadingLevel, LinkType, Parser, Tag, TagEnd};
-use std::collections::HashMap;
-use std::fmt::Write as _;
+use std::{collections::HashMap, fmt::Write as _};
 
 /// Convert inline markdown links to reference-style links.
 ///
@@ -12,7 +11,7 @@ use std::fmt::Write as _;
 ///
 /// Input: `See [docs](https://example.com) here.`
 /// Output: `See [docs] here.\n\n[docs]: https://example.com`
-#[must_use] 
+#[must_use]
 pub fn convert_links(text: &str) -> String {
     if text.is_empty() {
         return String::new();
@@ -149,8 +148,12 @@ fn rebuild_with_text_references(text: &str) -> String {
             }
             Event::SoftBreak => result.push('\n'),
             Event::HardBreak => result.push_str("  \n"),
-            Event::Start(Tag::Emphasis) | Event::End(TagEnd::Emphasis) => result.push('*'),
-            Event::Start(Tag::Strong) | Event::End(TagEnd::Strong) => result.push_str("**"),
+            Event::Start(Tag::Emphasis) | Event::End(TagEnd::Emphasis) => {
+                result.push('*')
+            }
+            Event::Start(Tag::Strong) | Event::End(TagEnd::Strong) => {
+                result.push_str("**")
+            }
             Event::Start(Tag::List(_)) => {
                 if !result.is_empty() && !result.ends_with('\n') {
                     result.push('\n');
@@ -225,9 +228,18 @@ mod tests {
         eprintln!("Input:\n{input}");
         eprintln!("\nOutput:\n{output}");
 
-        assert!(output.contains("# Level 1"), "Level-1 heading should be preserved");
-        assert!(output.contains("## Level 2"), "Level-2 heading should be preserved");
-        assert!(output.contains("### Level 3"), "Level-3 heading should be preserved");
+        assert!(
+            output.contains("# Level 1"),
+            "Level-1 heading should be preserved"
+        );
+        assert!(
+            output.contains("## Level 2"),
+            "Level-2 heading should be preserved"
+        );
+        assert!(
+            output.contains("### Level 3"),
+            "Level-3 heading should be preserved"
+        );
     }
 
     #[test]
@@ -253,7 +265,8 @@ mod tests {
 
     #[test]
     fn test_duplicate_urls() {
-        let input = "See [docs](https://example.com) and [more docs](https://example.com).";
+        let input =
+            "See [docs](https://example.com) and [more docs](https://example.com).";
         let output = convert_links(input);
         // First link text becomes the reference
         assert!(output.contains("[docs]"));

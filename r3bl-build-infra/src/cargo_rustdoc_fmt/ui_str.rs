@@ -12,29 +12,23 @@ pub const CHECK_MODE_NEEDS_FORMATTING: &str =
 pub const ALL_PROPERLY_FORMATTED: &str = "All files are properly formatted!";
 
 /// Format an error message for a specific file.
-#[must_use] 
+#[must_use]
 pub fn format_error(file: &str, error: &str) -> String {
     format!("{ERROR_PREFIX} in {file}: {error}")
 }
 
 /// Format a "file modified" message.
-#[must_use] 
-pub fn format_modified(file: &str) -> String {
-    format!("{FILE_MODIFIED}: {file}")
-}
+#[must_use]
+pub fn format_modified(file: &str) -> String { format!("{FILE_MODIFIED}: {file}") }
 
 /// Format a "file unchanged" message.
-#[must_use] 
-pub fn format_unchanged(file: &str) -> String {
-    format!("{FILE_UNCHANGED}: {file}")
-}
+#[must_use]
+pub fn format_unchanged(file: &str) -> String { format!("{FILE_UNCHANGED}: {file}") }
 
 /// Format summary message.
-#[must_use] 
+#[must_use]
 pub fn format_summary(total: usize, modified: usize, errors: usize) -> String {
-    format!(
-        "Processed {total} files, {modified} modified, {errors} errors"
-    )
+    format!("Processed {total} files, {modified} modified, {errors} errors")
 }
 
 #[cfg(test)]
