@@ -44,6 +44,10 @@ pub struct CLIArg {
     #[arg(long)]
     pub skip_cargo_fmt: bool,
 
+    /// Show which files would be processed without making changes
+    #[arg(long, short = 'd')]
+    pub dry_run: bool,
+
     /// Specific files or directories to format.
     /// If not provided, formats git-changed files (or entire workspace with
     /// --workspace).
@@ -77,6 +81,7 @@ mod tests {
             verbose: false,
             workspace: false,
             skip_cargo_fmt: false,
+            dry_run: false,
             paths: Vec::new(),
         };
 
@@ -94,6 +99,7 @@ mod tests {
             verbose: false,
             workspace: false,
             skip_cargo_fmt: false,
+            dry_run: false,
             paths: Vec::new(),
         };
 

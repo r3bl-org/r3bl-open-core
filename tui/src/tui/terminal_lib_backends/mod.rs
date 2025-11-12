@@ -9,7 +9,19 @@
 //! ## Quick Pipeline Overview
 //!
 //! ```text
-//! App -> Component -> `RenderOpsIR` -> `RenderPipeline` (to `OffscreenBuffer`) -> `RenderOpsOutput` -> Terminal
+//! Application Code
+//!       ↓
+//! Component (generates RenderOpsIR)
+//!       ↓
+//! RenderPipeline (organizes by ZOrder)
+//!       ↓
+//! OffscreenBuffer (2D grid of styled pixels)
+//!       ↓
+//! RenderOpsOutput (backend-independent ops)
+//!       ↓
+//! Terminal Backend (Crossterm or DirectToAnsi)
+//!       ↓
+//! Terminal Display
 //! ```
 //!
 //! ## Visual Pipeline Flow
@@ -52,7 +64,7 @@
 //! └────────────────────────────────────┘
 //! ```
 //!
-//! ## Stage Reference: IDE Navigation Guide
+//! ## Stage Reference
 //!
 //! Use this table to navigate to specific pipeline stages. Each stage has a module
 //! with "You Are Here" breadcrumbs to help orient yourself.
@@ -61,40 +73,45 @@
 //! | ------------------------------ | -------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
 //! | **Stage 1: App/Component**     | Components generate IR operations with clipping metadata | [`RenderOpIR`], [`RenderOpIRVec`]         | [`render_op::render_op_ir`]                      |
 //! | **Stage 2: Pipeline**          | Organizes operations by Z-order into a render queue      | [`RenderPipeline`], [`ZOrder`]            | [`render_pipeline`]                              |
-//! | **Stage 3: Compositor**        | Executes IR operations, writes styled pixels to buffer   | `OffscreenBuffer`, `PixelChar`            | [`compositor_render_ops_to_ofs_buf`]             |
+//! | **Stage 3: Compositor**        | Executes IR operations, writes styled pixels to buffer   | [`OffscreenBuffer`], [`PixelChar`]        | [`compositor_render_ops_to_ofs_buf`]             |
 //! | **Stage 4: Backend Converter** | Compares buffers, generates optimized output operations  | [`RenderOpOutput`], [`RenderOpOutputVec`] | [`offscreen_buffer::paint_impl`] (shared)        |
-//! | **Stage 5: Backend Executor**  | Translates operations to terminal escape sequences       | [`RenderOpPaint`] trait                   | `crossterm_backend::paint_render_op_impl`        |
+//! | **Stage 5: Backend Executor**  | Translates operations to terminal escape sequences       | [`RenderOpPaint`] trait                   | [`mod@crossterm_backend::paint_render_op_impl`]  |
 //! | **Stage 6: Terminal**          | User-visible rendered content                            | Terminal emulator                         | (external)                                       |
 //!
-//! ## Architecture: Shared Stage 4 Across Backends
+//! ## Architecture: Shared Stages (1-4) vs Backend-Specific Stage (5)
 //!
-//! **Key Principle**: Stage 4 (Backend Converter) is **shared** between all terminal
-//! backends (Crossterm and DirectToAnsi). The code in [`offscreen_buffer::paint_impl`]
-//! implements [`OffscreenBufferPaint`] which reads the [`OffscreenBuffer`] and generates
-//! [`RenderOpOutputVec`] operations.
+//! **Key Principle**: Stages 1-4 are **shared** across all terminal backends (Crossterm
+//! and DirectToAnsi). Only Stage 5 (Backend Executor) is backend-specific.
 //!
-//! **Why is this shared?** Stage 4 is a buffer operation, not a backend-specific
-//! operation:
-//! - **Input**: [`OffscreenBuffer`] (2D grid of styled characters from Stage 3)
-//! - **Processing**: Compares consecutive frames for diff-based selective redraw
-//! - **Output**: [`RenderOpOutputVec`] (abstract rendering operations)
+//! ### Shared Stages (1-4)
+//! - **Stage 1**: Components generate [`RenderOpIR`] operations
+//! - **Stage 2**: [`RenderPipeline`] organizes operations by [`ZOrder`]
+//! - **Stage 3**: Compositor renders to [`OffscreenBuffer`] (2D grid of styled pixels)
+//! - **Stage 4**: Backend Converter transforms [`OffscreenBuffer`] →
+//!   [`RenderOpOutputVec`]
+//!   - Implementation: [`offscreen_buffer::paint_impl`]
+//!   - Compares consecutive frames for diff-based selective redraw
+//!   - Generates abstract rendering operations (backend-independent)
 //!
-//! **Stage 5 is backend-specific**:
-//! - **Crossterm**: [`RenderOpPaint`] trait implementation in [`crossterm_backend`]
-//!   translates operations to Crossterm API calls
-//! - **DirectToAnsi**: [`RenderOpPaint`] trait implementation in [`direct_to_ansi`]
-//!   generates raw ANSI escape sequences
+//! ### Backend-Specific Stage (5)
+//! **Why Stage 5 is different**: Each backend has its own [`RenderOpPaint`] trait
+//! implementation that translates abstract operations to terminal-specific commands:
 //!
-//! Both backends use the same Stage 4 converter, with the selection made at compile-time
-//! via the [`TERMINAL_LIB_BACKEND`] constant.
+//! - **Crossterm**: Implementation in [`crossterm_backend`]
+//!   - Translates operations to Crossterm API calls
+//! - **DirectToAnsi**: Implementation in [`direct_to_ansi`]
+//!   - Generates raw ANSI escape sequences
+//!
+//! The backend selection is made at compile-time via the [`TERMINAL_LIB_BACKEND`]
+//! constant, ensuring both backends use the same Stage 1-4 pipeline.
 //!
 //! ## Data Flow Across Stages
 //!
 //! - **Input → Stage 1**: User code, component state
-//! - **Stage 1 → Stage 2**: `RenderOpIRVec` (IR ops with clipping)
-//! - **Stage 2 → Stage 3**: Organized `RenderOpIRVec` by `ZOrder`
-//! - **Stage 3 → Stage 4**: Complete `OffscreenBuffer` (2D grid)
-//! - **Stage 4 → Stage 5**: `RenderOpOutputVec` (optimized ops, already clipped)
+//! - **Stage 1 → Stage 2**: [`RenderOpIRVec`] (IR ops with clipping)
+//! - **Stage 2 → Stage 3**: Organized [`RenderOpIRVec`] by [`ZOrder`]
+//! - **Stage 3 → Stage 4**: Complete [`OffscreenBuffer`] (2D grid)
+//! - **Stage 4 → Stage 5**: [`RenderOpOutputVec`] (optimized ops, already clipped)
 //! - **Stage 5 → Stage 6**: ANSI escape sequences written to terminal
 //!
 //! ## Type Safety & Semantic Boundaries
@@ -109,7 +126,9 @@
 //!
 //! ## Module Map
 //!
-//! **Each module below has a "You are here" breadcrumb showing its place in this flow.**
+//! When navigating to individual modules below, you'll find a "You are here" comment at
+//! the top showing which stage(s) the module implements. This helps you quickly
+//! understand where the module fits in the 6-stage rendering pipeline.
 //!
 //! ### Core Data Types (Cross-Stage)
 //! - [`render_op`] - `RenderOpIR`, `RenderOpOutput`, `RenderOpCommon`,
@@ -133,6 +152,18 @@
 //! - [`direct_to_ansi`] - **(Stage 5 Alternative)** Direct ANSI escape sequence
 //!   generation (Linux only)
 //!
+//! [`OffscreenBufferPaint`]: trait@offscreen_buffer::OffscreenBufferPaint
+//! [`OffscreenBuffer`]: struct@offscreen_buffer::OffscreenBuffer
+//! [`PixelChar`]: enum@offscreen_buffer::PixelChar
+//! [`RenderOpCommon`]: enum@render_op::RenderOpCommon
+//! [`RenderOpIRVec`]: struct@render_op::RenderOpIRVec
+//! [`RenderOpIR`]: enum@render_op::RenderOpIR
+//! [`RenderOpOutputVec`]: struct@render_op::RenderOpOutputVec
+//! [`RenderOpOutput`]: enum@render_op::RenderOpOutput
+//! [`RenderOpPaint`]: trait@render_op::RenderOpPaint
+//! [`RenderOpsExec`]: trait@render_op::RenderOpsExec
+//! [`RenderPipeline`]: struct@render_pipeline::RenderPipeline
+//! [`ZOrder`]: enum@z_order::ZOrder
 //! [`paint_impl`]: mod@offscreen_buffer::paint_impl
 //! [`paint_render_op_impl`]: mod@crossterm_backend::paint_render_op_impl
 
