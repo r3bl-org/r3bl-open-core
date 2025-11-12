@@ -82,8 +82,13 @@ pub fn generate_keyboard_sequence(event: &VT100InputEvent) -> Option<Vec<u8>> {
         VT100InputEvent::Keyboard { code, modifiers } => {
             generate_key_sequence(*code, *modifiers)
         }
-        VT100InputEvent::Resize { rows, cols } => {
-            Some(generate_resize_sequence(*rows, *cols))
+        VT100InputEvent::Resize {
+            col_width,
+            row_height,
+        } => {
+            let rows = u16::try_from(row_height.as_usize()).unwrap_or(u16::MAX);
+            let cols = u16::try_from(col_width.as_usize()).unwrap_or(u16::MAX);
+            Some(generate_resize_sequence(rows, cols))
         }
         VT100InputEvent::Focus(state) => Some(generate_focus_sequence(*state)),
         VT100InputEvent::Paste(mode) => Some(generate_paste_sequence(*mode)),

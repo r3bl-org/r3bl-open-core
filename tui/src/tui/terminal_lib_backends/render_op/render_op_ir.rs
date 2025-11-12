@@ -2,18 +2,29 @@
 
 //! Intermediate Representation operations for app/component layer.
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 1** (App/Component Layer)
 //!
 //! ```text
-//! [S1: App/Component] ← [S2: Pipeline] ← [S3: Compositor]
-//! ↑↑↑↑
-//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
-//!
-//! RenderOpIR is used by components and app layer
+//! [Stage 1: App/Component] ← YOU ARE HERE
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor]
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
-//! See [`crate::render_op`] module documentation for shared architectural patterns
-//! and the rendering pipeline overview.
+//! ## Navigation
+//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
+//! - **Next stage**: [`render_pipeline` mod docs] (Stage 2: Organization)
+//! - **Final stage**: [`compositor_render_ops_to_ofs_buf` mod docs] (Stage 3: Rendering)
+//!
+//! See [`render_op` mod docs] for shared architectural patterns and the rendering
+//! pipeline overview.
 //!
 //! Components produce [`RenderOpIR`] operations with built-in clipping info.
 //! These get processed by the Compositor (Stage 3) to populate the `OffscreenBuffer`.
@@ -41,6 +52,12 @@
 //! - Handling text clipping to terminal width
 //! - Managing Unicode and emoji display widths
 //! - Applying style information correctly
+//!
+//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
+//! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
+//! [`render_op` mod docs]: mod@crate::tui::terminal_lib_backends::render_op
+//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 
 use super::RenderOpCommon;
 use crate::{InlineString, InlineVec, TuiStyle, ok};

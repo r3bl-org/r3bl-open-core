@@ -44,14 +44,14 @@
 //! [`parser`]: mod@super::parser
 //! [`utf8`]: mod@super::utf8
 
-use super::types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
-use crate::{ByteOffset, byte_offset};
-use crate::core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
-                                  ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
-                                  ASCII_DIGIT_0, ASCII_DIGIT_9, FOCUS_GAINED_FINAL,
-                                  FOCUS_LOST_FINAL, PASTE_END_PARSE_PARAM,
-                                  PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM,
-                                  RESIZE_TERMINATOR};
+use super::ir_event_types::{VT100FocusState, VT100InputEvent, VT100PasteMode};
+use crate::{ByteOffset, byte_offset,
+            core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
+                                    ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,
+                                    ASCII_DIGIT_0, ASCII_DIGIT_9, FOCUS_GAINED_FINAL,
+                                    FOCUS_LOST_FINAL, PASTE_END_PARSE_PARAM,
+                                    PASTE_START_PARSE_PARAM, RESIZE_EVENT_PARSE_PARAM,
+                                    RESIZE_TERMINATOR}};
 
 /// Parse a terminal event sequence and return an `InputEvent` with bytes consumed if
 /// recognized.
@@ -81,10 +81,16 @@ pub fn parse_terminal_event(buffer: &[u8]) -> Option<(VT100InputEvent, ByteOffse
     if buffer.len() == 3 {
         match buffer[2] {
             FOCUS_GAINED_FINAL => {
-                return Some((VT100InputEvent::Focus(VT100FocusState::Gained), byte_offset(3)));
+                return Some((
+                    VT100InputEvent::Focus(VT100FocusState::Gained),
+                    byte_offset(3),
+                ));
             }
             FOCUS_LOST_FINAL => {
-                return Some((VT100InputEvent::Focus(VT100FocusState::Lost), byte_offset(3)));
+                return Some((
+                    VT100InputEvent::Focus(VT100FocusState::Lost),
+                    byte_offset(3),
+                ));
             }
             _ => {}
         }
@@ -147,7 +153,13 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, Byte
         // Window resize: CSI 8 ; rows ; cols t
         let rows = params[1];
         let cols = params[2];
-        Some((VT100InputEvent::Resize { rows, cols }, byte_offset(total_consumed)))
+        Some((
+            VT100InputEvent::Resize {
+                col_width: crate::ColWidth::from(cols),
+                row_height: crate::RowHeight::from(rows),
+            },
+            byte_offset(total_consumed),
+        ))
     } else if params.len() == 1 && final_byte == ANSI_FUNCTION_KEY_TERMINATOR {
         // Bracketed paste: CSI 200 ~ or CSI 201 ~
         if params[0] == PASTE_START_PARSE_PARAM {
@@ -156,7 +168,10 @@ fn parse_csi_terminal_parameters(buffer: &[u8]) -> Option<(VT100InputEvent, Byte
                 byte_offset(total_consumed),
             ))
         } else if params[0] == PASTE_END_PARSE_PARAM {
-            Some((VT100InputEvent::Paste(VT100PasteMode::End), byte_offset(total_consumed)))
+            Some((
+                VT100InputEvent::Paste(VT100PasteMode::End),
+                byte_offset(total_consumed),
+            ))
         } else {
             None
         }
@@ -177,7 +192,10 @@ mod tests {
     #[test]
     fn test_resize_event() {
         // Round-trip test: Generate sequence from VT100InputEvent, then parse it back
-        let original_event = VT100InputEvent::Resize { rows: 24, cols: 80 };
+        let original_event = VT100InputEvent::Resize {
+            row_height: crate::RowHeight::from(24),
+            col_width: crate::ColWidth::from(80),
+        };
         let seq = generate_keyboard_sequence(&original_event)
             .expect("Failed to generate resize sequence");
 

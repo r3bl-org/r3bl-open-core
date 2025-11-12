@@ -18,7 +18,8 @@ mod cursor_positioning_tests {
             CsiSequence::CursorPosition {
                 row: term_row(nz(6)),
                 col: term_col(nz(11))
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -30,7 +31,8 @@ mod cursor_positioning_tests {
             CsiSequence::CursorPosition {
                 row: term_row(nz(1)),
                 col: term_col(nz(1))
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -55,7 +57,8 @@ mod cursor_positioning_tests {
 
 #[cfg(test)]
 mod screen_clearing_tests {
-    use crate::{AnsiSequenceGenerator, CsiSequence, ED_ERASE_ALL, EL_ERASE_ALL, EL_ERASE_TO_END, EL_ERASE_FROM_START};
+    use crate::{AnsiSequenceGenerator, CsiSequence, ED_ERASE_ALL, EL_ERASE_ALL,
+                EL_ERASE_FROM_START, EL_ERASE_TO_END};
 
     #[test]
     fn test_clear_screen() {
@@ -183,28 +186,40 @@ mod color_tests {
         let color = tui_color!(255, 0, 0);
         let seq = AnsiSequenceGenerator::fg_color(color);
         // RGB uses 24-bit truecolor with colons: SGR 38:2:R:G:B
-        assert_eq!(seq, SgrColorSequence::SetForegroundRgb(255, 0, 0).to_string());
+        assert_eq!(
+            seq,
+            SgrColorSequence::SetForegroundRgb(255, 0, 0).to_string()
+        );
     }
 
     #[test]
     fn test_fg_rgb_pure_green() {
         let color = tui_color!(0, 255, 0);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        assert_eq!(seq, SgrColorSequence::SetForegroundRgb(0, 255, 0).to_string());
+        assert_eq!(
+            seq,
+            SgrColorSequence::SetForegroundRgb(0, 255, 0).to_string()
+        );
     }
 
     #[test]
     fn test_fg_rgb_pure_blue() {
         let color = tui_color!(0, 0, 255);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        assert_eq!(seq, SgrColorSequence::SetForegroundRgb(0, 0, 255).to_string());
+        assert_eq!(
+            seq,
+            SgrColorSequence::SetForegroundRgb(0, 0, 255).to_string()
+        );
     }
 
     #[test]
     fn test_fg_rgb_orange() {
         let color = tui_color!(255, 165, 0);
         let seq = AnsiSequenceGenerator::fg_color(color);
-        assert_eq!(seq, SgrColorSequence::SetForegroundRgb(255, 165, 0).to_string());
+        assert_eq!(
+            seq,
+            SgrColorSequence::SetForegroundRgb(255, 165, 0).to_string()
+        );
     }
 
     #[test]
@@ -212,21 +227,30 @@ mod color_tests {
         let color = tui_color!(255, 0, 0);
         let seq = AnsiSequenceGenerator::bg_color(color);
         // Background RGB uses colon-separated format: SGR 48:2:R:G:B
-        assert_eq!(seq, SgrColorSequence::SetBackgroundRgb(255, 0, 0).to_string());
+        assert_eq!(
+            seq,
+            SgrColorSequence::SetBackgroundRgb(255, 0, 0).to_string()
+        );
     }
 
     #[test]
     fn test_bg_rgb_cyan() {
         let color = tui_color!(0, 255, 255);
         let seq = AnsiSequenceGenerator::bg_color(color);
-        assert_eq!(seq, SgrColorSequence::SetBackgroundRgb(0, 255, 255).to_string());
+        assert_eq!(
+            seq,
+            SgrColorSequence::SetBackgroundRgb(0, 255, 255).to_string()
+        );
     }
 
     #[test]
     fn test_bg_rgb_dark_gray() {
         let color = tui_color!(64, 64, 64);
         let seq = AnsiSequenceGenerator::bg_color(color);
-        assert_eq!(seq, SgrColorSequence::SetBackgroundRgb(64, 64, 64).to_string());
+        assert_eq!(
+            seq,
+            SgrColorSequence::SetBackgroundRgb(64, 64, 64).to_string()
+        );
     }
 
     // Dark ANSI colors (8-15) - Extended basic colors
@@ -278,17 +302,16 @@ mod cursor_visibility_tests {
 
 #[cfg(test)]
 mod terminal_mode_tests {
-    use crate::{
-        AnsiSequenceGenerator, CsiSequence, PrivateModeType, APPLICATION_MOUSE_TRACKING,
-        SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION,
-    };
+    use crate::{APPLICATION_MOUSE_TRACKING, AnsiSequenceGenerator, CsiSequence,
+                PrivateModeType, SGR_MOUSE_MODE, URXVT_MOUSE_EXTENSION};
 
     #[test]
     fn test_enter_alternate_screen() {
         let seq = AnsiSequenceGenerator::enter_alternate_screen();
         assert_eq!(
             seq,
-            CsiSequence::EnablePrivateMode(PrivateModeType::AlternateScreenBuffer).to_string()
+            CsiSequence::EnablePrivateMode(PrivateModeType::AlternateScreenBuffer)
+                .to_string()
         );
     }
 
@@ -297,7 +320,8 @@ mod terminal_mode_tests {
         let seq = AnsiSequenceGenerator::exit_alternate_screen();
         assert_eq!(
             seq,
-            CsiSequence::DisablePrivateMode(PrivateModeType::AlternateScreenBuffer).to_string()
+            CsiSequence::DisablePrivateMode(PrivateModeType::AlternateScreenBuffer)
+                .to_string()
         );
     }
 
@@ -309,7 +333,9 @@ mod terminal_mode_tests {
         let expected = format!(
             "{}{}{}",
             CsiSequence::EnablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE)),
-            CsiSequence::EnablePrivateMode(PrivateModeType::Other(APPLICATION_MOUSE_TRACKING)),
+            CsiSequence::EnablePrivateMode(PrivateModeType::Other(
+                APPLICATION_MOUSE_TRACKING
+            )),
             CsiSequence::EnablePrivateMode(PrivateModeType::Other(URXVT_MOUSE_EXTENSION))
         );
         assert_eq!(seq, expected);
@@ -323,8 +349,12 @@ mod terminal_mode_tests {
         let expected = format!(
             "{}{}{}",
             CsiSequence::DisablePrivateMode(PrivateModeType::Other(SGR_MOUSE_MODE)),
-            CsiSequence::DisablePrivateMode(PrivateModeType::Other(APPLICATION_MOUSE_TRACKING)),
-            CsiSequence::DisablePrivateMode(PrivateModeType::Other(URXVT_MOUSE_EXTENSION))
+            CsiSequence::DisablePrivateMode(PrivateModeType::Other(
+                APPLICATION_MOUSE_TRACKING
+            )),
+            CsiSequence::DisablePrivateMode(PrivateModeType::Other(
+                URXVT_MOUSE_EXTENSION
+            ))
         );
         assert_eq!(seq, expected);
     }

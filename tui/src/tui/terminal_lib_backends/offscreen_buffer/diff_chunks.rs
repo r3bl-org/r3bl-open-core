@@ -1,5 +1,50 @@
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
+//! # Diff Chunks: Selective Redraw Optimization
+//!
+//! This module provides the [`PixelCharDiffChunks`] type, which represents the
+//! differences between two consecutive offscreen buffers. These diff chunks are used by
+//! **Stage 4: Backend Converter** ([`paint_impl`]) to determine which parts of the
+//! terminal need to be redrawn.
+//!
+//! # You Are Here: Supporting Stage 4
+//!
+//! ```text
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! DiffChunks (optimization utility) ← YOU ARE HERE
+//!   ↓ (used by)
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor]
+//!   ↓
+//! [Stage 6: Terminal]
+//! ```
+//!
+//! ## Navigation
+//!
+//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
+//! - **Stage 4 implementation**: [`paint_impl`] (Backend Converter that uses diff chunks)
+//!
+//! ## Relationship to Rendering Pipeline
+//!
+//! - **Input Source**: Two consecutive [`OffscreenBuffer`] frames
+//! - **Processing**: Identifies only the changed pixel positions (optimized redraw)
+//! - **Used by**: The `render_diff()` method in [`paint_impl`]
+//! - **Output**: [`RenderOpOutputVec`] containing only operations for changed cells
+//!
+//! This selective redraw optimization significantly improves rendering performance by
+//! avoiding unnecessary terminal updates for unchanged regions.
+//!
+//! [`OffscreenBuffer`]: crate::OffscreenBuffer
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+//! [`paint_impl`]: crate::offscreen_buffer::paint_impl
+//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
+
 use super::PixelChar;
 use crate::{List, Pos};
 use std::ops::Deref;

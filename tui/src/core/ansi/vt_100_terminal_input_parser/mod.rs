@@ -179,9 +179,9 @@ pub mod utf8;
 mod utf8;
 
 #[cfg(any(test, doc))]
-pub mod types;
+pub mod ir_event_types;
 #[cfg(not(any(test, doc)))]
-mod types;
+mod ir_event_types;
 
 // Re-export types for flat public API.
 // parser is listed FIRST as it's the main entry point
@@ -190,7 +190,7 @@ pub use keyboard::*;          // Specialized parsers
 pub use mouse::*;
 pub use terminal_events::*;
 pub use utf8::*;
-pub use types::*;             // Shared types
+pub use ir_event_types::*;             // Shared types
 
 // Three-tier test architecture.
 #[cfg(any(test, doc))]

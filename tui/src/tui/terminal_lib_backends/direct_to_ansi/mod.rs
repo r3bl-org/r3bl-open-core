@@ -4,20 +4,35 @@
 //!
 //! Pure-Rust ANSI sequence generation without crossterm dependencies.
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 5 Alternative** (Backend Executor)
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] → [S5: Backend Executor (DirectToAnsi)] ← YOU ARE HERE
-//! [S6: Terminal]
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor (DirectToAnsi)] ← YOU ARE HERE
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
 //! This module provides a complete **terminal rendering backend** that generates ANSI
 //! escape sequences directly. It's designed to work seamlessly with the rendering
 //! operation abstraction layer.
 //!
-//! > **For the complete rendering architecture**, see [`crate::render_op`] module
-//! > documentation.
+//! ## Navigation
+//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
+//! - **Previous stage**: [`offscreen_buffer::paint_impl` mod docs] (Stage 4: Backend Converter - shared
+//!   by both Crossterm and DirectToAnsi)
+//! - **Alternative Stage 5**: [`crossterm_backend::paint_render_op_impl` mod docs] (Crossterm-based executor)
+//! - **Next stage**: Terminal output (Stage 6)
+//!
+//! > **For the complete rendering architecture**, see [`terminal_lib_backends` mod docs]
+//! > module documentation (this is the authoritative source of truth).
 //!
 //! ## What This Module Does
 //!
@@ -39,17 +54,23 @@
 //! 3. [`PixelCharRenderer`]: Converts styled text to ANSI with smart attribute diffing
 //! 4. [`RenderToAnsi`]: Trait for rendering offscreen buffers to ANSI
 //!
+//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
 //! [`DirectToAnsi`]: self
+//! [`PixelCharRenderer`]: crate::PixelCharRenderer
 //! [`RenderOpCommon`]: crate::RenderOpCommon
 //! [`RenderOpIRVec`]: crate::RenderOpIRVec
-//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
-//! [`AnsiSequenceGenerator`]: crate::AnsiSequenceGenerator
-//! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
-//! [`PixelCharRenderer`]: crate::PixelCharRenderer
-//! [`RenderToAnsi`]: crate::RenderToAnsi
-//! [`RenderOpPaint`]: crate::RenderOpPaint
 //! [`RenderOpIR`]: crate::RenderOpIR
+//! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpOutput`]: crate::RenderOpOutput
+//! [`RenderOpPaintImplDirectToAnsi`]: crate::RenderOpPaintImplDirectToAnsi
+//! [`RenderOpPaint`]: crate::RenderOpPaint
+//! [`RenderToAnsi`]: crate::RenderToAnsi
+//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
+//! [`crossterm_backend::paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::paint_render_op_impl
+//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
+//! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
+//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 
 // Skip rustfmt for rest of file to preserve manual alignment.
 // https://stackoverflow.com/a/75910283/2085356

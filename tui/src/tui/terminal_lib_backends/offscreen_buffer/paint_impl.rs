@@ -1,21 +1,36 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-//! # Pipeline Stage 4: Backend Converter
+//! # Stage 4: Backend Converter (Shared)
 //!
-//! # You Are Here
+//! This module implements **Stage 4 of the rendering pipeline**: converting the
+//! [`OffscreenBuffer`] (produced by the Compositor in Stage 3) into optimized
+//! [`RenderOpOutputVec`] operations for backend execution.
+//!
+//! ## Why This Lives in `offscreen_buffer/`
+//!
+//! Stage 4 is fundamentally an **OffscreenBuffer operation**:
+//! - It reads FROM the buffer (like other buffer operations)
+//! - It uses [`diff_chunks`] (also in this module) for selective redraw optimization
+//! - It's buffer-centric, not backend-specific
+//!
+//! ## Backend Independence
+//!
+//! This converter is **shared by both Crossterm and DirectToAnsi backends**.
+//! The backends only differ in Stage 5 (Backend Executor):
+//! - Crossterm: [`crossterm_backend` mod docs]
+//! - DirectToAnsi: [`direct_to_ansi` mod docs]
+//!
+//! ## You Are Here
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] ← YOU ARE HERE
-//! [S5: Backend Executor] → [S6: Terminal]
+//! [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
+//! [Stage 4: Backend Converter] ← YOU ARE HERE
+//! [Stage 5: Backend Executor] → [Stage 6: Terminal]
 //! ```
 //!
 //! **Input**: [`OffscreenBuffer`] (rendered pixels from compositor)
 //! **Output**: [`RenderOpOutputVec`] (optimized terminal operations)
-//! **Role**: Convert [`OffscreenBuffer`] to backend-specific rendering operations
-//!
-//! > **For the complete rendering architecture**, see [`super::super`] (parent parent
-//! > module).
+//! **Role**: Convert [`OffscreenBuffer`] to backend-agnostic rendering operations
 //!
 //! ## What This Stage Does
 //!
@@ -24,15 +39,17 @@
 //! - Perform diff calculations against the previous buffer for selective redraw
 //! - Convert grid of styled characters to styled text painting operations
 //! - Optimize by grouping adjacent operations with the same styling
-//! - Handle backend-specific optimizations (e.g., state tracking via
-//!   [`RenderOpsLocalData`])
+//! - Handle state tracking via [`RenderOpsLocalData`]
 //!
 //! This stage is crucial for performance: by diffing buffers, only changed pixels are
 //! rendered in subsequent frames, eliminating unnecessary terminal updates.
 //!
+//! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 //! [`OffscreenBuffer`]: crate::OffscreenBuffer
 //! [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 //! [`RenderOpsLocalData`]: crate::RenderOpsLocalData
+//! [`crossterm_backend` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend
+//! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
 
 // Copyright (c) 2022-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::{ColIndex, DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE, FlushKind,
@@ -134,12 +151,12 @@ impl OffscreenBufferPaint for OffscreenBufferPaintImplCrossterm {
     ///     - End of line.
     ///     - When style changes.
     ///
-    /// [`RenderOpOutput`]: crate::RenderOpOutput
+    /// [`PlainText`]: PixelChar::PlainText
     /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
+    /// [`RenderOpOutput`]: crate::RenderOpOutput
+    /// [`Spacer`]: PixelChar::Spacer
     /// [`TuiStyle`]: crate::TuiStyle
     /// [`Void`]: PixelChar::Void
-    /// [`Spacer`]: PixelChar::Spacer
-    /// [`PlainText`]: PixelChar::PlainText
     fn render(&mut self, ofs_buf: &OffscreenBuffer) -> RenderOpOutputVec {
         use render_helper::Context;
 

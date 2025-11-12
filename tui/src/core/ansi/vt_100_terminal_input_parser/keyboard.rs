@@ -32,7 +32,6 @@
 //! - ➡️ **Peer**: [`mouse`], [`terminal_events`], [`utf8`] - Other specialized parsers
 //! - 📚 **Types**: [`VT100InputEvent`], [`VT100KeyCode`], [`VT100KeyModifiers`]
 //!
-//!
 //! ## Parser Dispatch Priority Pipeline
 //!
 //! This module provides multiple parser functions that are invoked in a **predefined
@@ -333,7 +332,7 @@
 //! [`try_parse_input_event`]: super::try_parse_input_event
 //! [`utf8`]: mod@super::utf8
 
-use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
+use super::ir_event_types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
 use crate::{ASCII_DEL, ByteOffset, KeyState, byte_offset,
             core::ansi::constants::{ANSI_CSI_BRACKET, ANSI_ESC,
                                     ANSI_FUNCTION_KEY_TERMINATOR, ANSI_PARAM_SEPARATOR,

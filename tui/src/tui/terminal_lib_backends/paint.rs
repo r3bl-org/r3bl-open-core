@@ -5,8 +5,8 @@
 //! # You Are Here
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+//! [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
+//! [Stage 4: Backend Converter] → [Stage 5: Backend Executor] → [Stage 6: Terminal]
 //!
 //! ↑ paint.rs coordinates all these stages ↑
 //! (Orchestration: ties everything together)
@@ -112,10 +112,10 @@ fn perform_full_paint(
 /// This will also panic if all offscreen buffers are currently taken, which
 /// indicates a bug in the buffer pool management.
 ///
+/// [`RenderOpCommon`]: crate::RenderOpCommon
 /// [`RenderOpOutputVec`]: crate::RenderOpOutputVec
 /// [`ZOrder`]: crate::ZOrder
 /// [`crate::RenderOpCommon`]: crate::RenderOpCommon
-/// [`RenderOpCommon`]: crate::RenderOpCommon
 pub fn paint<S, AS>(
     pipeline: &RenderPipeline,
     flush_kind: FlushKind,

@@ -78,8 +78,8 @@
 //! [`utf8`]: mod@super::utf8
 //! [parent module's testing strategy documentation]: mod@super#testing-strategy
 
-use super::types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction,
-                   VT100MouseButton, VT100ScrollDirection};
+use super::ir_event_types::{VT100InputEvent, VT100KeyModifiers, VT100MouseAction,
+                            VT100MouseButton, VT100ScrollDirection};
 use crate::{ByteOffset, KeyState, TermPos, byte_offset,
             core::ansi::constants::{CSI_PREFIX, CSI_PREFIX_LEN, MOUSE_BASE_BUTTON_MASK,
                                     MOUSE_BUTTON_BITS_MASK, MOUSE_BUTTON_CODE_MASK,

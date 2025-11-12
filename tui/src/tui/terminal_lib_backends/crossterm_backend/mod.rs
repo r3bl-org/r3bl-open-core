@@ -49,13 +49,6 @@
 mod debug;
 mod input_device_impl;
 
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
-#[cfg(any(test, doc))]
-pub mod offscreen_buffer_paint_impl;
-#[cfg(not(any(test, doc)))]
-mod offscreen_buffer_paint_impl;
-
 #[cfg(any(test, doc))]
 pub mod paint_render_op_impl;
 #[cfg(not(any(test, doc)))]
@@ -64,5 +57,4 @@ mod paint_render_op_impl;
 // Re-export.
 pub use debug::*;
 pub use input_device_impl::*;
-pub use offscreen_buffer_paint_impl::*;
 pub use paint_render_op_impl::*;

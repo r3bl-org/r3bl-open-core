@@ -5,6 +5,7 @@ use crate::{ByteIndex, ByteOffset, InputDeviceExt, InputEvent,
             core::ansi::vt_100_terminal_input_parser::{VT100InputEvent, VT100KeyCode,
                                                        VT100PasteMode,
                                                        try_parse_input_event}};
+use smallvec::SmallVec;
 
 /// Initial buffer capacity for efficient ANSI sequence buffering.
 ///
@@ -166,8 +167,8 @@ pub struct DirectToAnsiInputDevice {
     stdin: tokio::io::Stdin,
 
     /// Raw byte buffer for ANSI sequences and text.
-    /// Pre-allocated with `PARSE_BUFFER_SIZE` capacity, grows as needed.
-    parse_buffer: Vec<u8>,
+    /// Pre-allocated with `PARSE_BUFFER_SIZE` capacity inline, never grows.
+    parse_buffer: SmallVec<[u8; PARSE_BUFFER_SIZE]>,
 
     /// Current position in buffer marking the boundary between consumed and unconsumed
     /// bytes. Bytes before this position have been parsed; bytes from this position
@@ -191,9 +192,9 @@ pub struct DirectToAnsiInputDevice {
 #[derive(Debug)]
 enum PasteCollectionState {
     /// Not currently in a paste operation.
-    NotPasting,
+    Inactive,
     /// Currently collecting text for a paste operation.
-    Collecting(String),
+    Accumulating(String),
 }
 
 impl DirectToAnsiInputDevice {
@@ -209,9 +210,9 @@ impl DirectToAnsiInputDevice {
     pub fn new() -> Self {
         Self {
             stdin: tokio::io::stdin(),
-            parse_buffer: Vec::with_capacity(PARSE_BUFFER_SIZE),
+            parse_buffer: SmallVec::new(),
             buffer_position: ByteIndex::default(),
-            paste_state: PasteCollectionState::NotPasting,
+            paste_state: PasteCollectionState::Inactive,
         }
     }
 
@@ -353,7 +354,7 @@ impl DirectToAnsiInputDevice {
 
         // Allocate temp buffer ONCE before loop (performance optimization).
         // read() overwrites from index 0 each time, so no clearing between iterations.
-        let mut temp_buf = vec![0u8; STDIN_READ_BUFFER_SIZE];
+        let mut temp_buf = [0u8; STDIN_READ_BUFFER_SIZE];
 
         loop {
             // 1. Try to parse from existing buffer
@@ -366,16 +367,16 @@ impl DirectToAnsiInputDevice {
                 match (&mut self.paste_state, &vt100_event) {
                     // Start marker: enter collecting state, don't emit event
                     (
-                        state @ PasteCollectionState::NotPasting,
+                        state @ PasteCollectionState::Inactive,
                         VT100InputEvent::Paste(VT100PasteMode::Start),
                     ) => {
-                        *state = PasteCollectionState::Collecting(String::new());
+                        *state = PasteCollectionState::Accumulating(String::new());
                         continue; // Loop to get next event
                     }
 
                     // While collecting: accumulate keyboard characters
                     (
-                        PasteCollectionState::Collecting(buffer),
+                        PasteCollectionState::Accumulating(buffer),
                         VT100InputEvent::Keyboard {
                             code: VT100KeyCode::Char(ch),
                             ..
@@ -385,35 +386,41 @@ impl DirectToAnsiInputDevice {
                         continue; // Loop to get next event
                     }
 
+                    // XMARK: How to get variant with owned data out of mut ref.
+
                     // End marker: emit complete paste and exit collecting state
                     (
-                        state @ PasteCollectionState::Collecting(_),
+                        state @ PasteCollectionState::Accumulating(_),
                         VT100InputEvent::Paste(VT100PasteMode::End),
                     ) => {
-                        if let PasteCollectionState::Collecting(text) =
-                            std::mem::replace(state, PasteCollectionState::NotPasting)
-                        {
-                            return Some(InputEvent::BracketedPaste(text));
-                        }
-                        unreachable!()
+                        // Swap out `&mut state` to `Inactive` to get ownership of what is
+                        // currently there, then extract accumulated text.
+                        let state =
+                            std::mem::replace(state, PasteCollectionState::Inactive);
+                        let PasteCollectionState::Accumulating(text) = state else {
+                            unreachable!(
+                                "state was matched as Accumulating(String), so this can't happen"
+                            );
+                        };
+                        return Some(InputEvent::BracketedPaste(text));
                     }
 
                     // Orphaned end marker (End without Start): emit empty paste
                     (
-                        PasteCollectionState::NotPasting,
+                        PasteCollectionState::Inactive,
                         VT100InputEvent::Paste(VT100PasteMode::End),
                     ) => {
                         return Some(InputEvent::BracketedPaste(String::new()));
                     }
 
                     // Normal event processing when not pasting
-                    (PasteCollectionState::NotPasting, _) => {
+                    (PasteCollectionState::Inactive, _) => {
                         return convert_input_event(vt100_event);
                     }
 
                     // Other events while collecting paste should be ignored (or queued)
                     // For now, ignore them (they'll be lost)
-                    (PasteCollectionState::Collecting(_), _) => {
+                    (PasteCollectionState::Accumulating(_), _) => {
                         continue; // Ignore and get next event
                     }
                 }
@@ -617,20 +624,17 @@ mod tests {
         let mut device = DirectToAnsiInputDevice::new();
 
         // Verify initial state is NotPasting
-        assert!(matches!(
-            device.paste_state,
-            PasteCollectionState::NotPasting
-        ));
+        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
 
         // Simulate receiving Paste(Start) event
         let start_event = VT100InputEvent::Paste(VT100PasteMode::Start);
         // Apply state machine logic (simulating what read_event does)
         match (&mut device.paste_state, &start_event) {
             (
-                state @ PasteCollectionState::NotPasting,
+                state @ PasteCollectionState::Inactive,
                 VT100InputEvent::Paste(VT100PasteMode::Start),
             ) => {
-                *state = PasteCollectionState::Collecting(String::new());
+                *state = PasteCollectionState::Accumulating(String::new());
             }
             _ => panic!("State machine should handle Paste(Start)"),
         }
@@ -638,7 +642,7 @@ mod tests {
         // Verify we're now collecting
         assert!(matches!(
             device.paste_state,
-            PasteCollectionState::Collecting(_)
+            PasteCollectionState::Accumulating(_)
         ));
 
         // Simulate receiving keyboard events (the pasted text)
@@ -649,7 +653,7 @@ mod tests {
             };
             match (&mut device.paste_state, &keyboard_event) {
                 (
-                    PasteCollectionState::Collecting(buffer),
+                    PasteCollectionState::Accumulating(buffer),
                     VT100InputEvent::Keyboard {
                         code: VT100KeyCode::Char(ch),
                         ..
@@ -665,11 +669,11 @@ mod tests {
         let end_event = VT100InputEvent::Paste(VT100PasteMode::End);
         let collected_text = match (&mut device.paste_state, &end_event) {
             (
-                state @ PasteCollectionState::Collecting(_),
+                state @ PasteCollectionState::Accumulating(_),
                 VT100InputEvent::Paste(VT100PasteMode::End),
             ) => {
-                if let PasteCollectionState::Collecting(text) =
-                    std::mem::replace(state, PasteCollectionState::NotPasting)
+                if let PasteCollectionState::Accumulating(text) =
+                    std::mem::replace(state, PasteCollectionState::Inactive)
                 {
                     text
                 } else {
@@ -683,10 +687,7 @@ mod tests {
         assert_eq!(collected_text, "Hello");
 
         // Verify we're back to NotPasting state
-        assert!(matches!(
-            device.paste_state,
-            PasteCollectionState::NotPasting
-        ));
+        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
     }
 
     #[test]
@@ -696,27 +697,27 @@ mod tests {
 
         // Start collection
         match &mut device.paste_state {
-            state @ PasteCollectionState::NotPasting => {
-                *state = PasteCollectionState::Collecting(String::new());
+            state @ PasteCollectionState::Inactive => {
+                *state = PasteCollectionState::Accumulating(String::new());
             }
-            PasteCollectionState::Collecting(_) => panic!(),
+            PasteCollectionState::Accumulating(_) => panic!(),
         }
 
         // Accumulate "Line1\nLine2"
         for ch in "Line1\nLine2".chars() {
             match &mut device.paste_state {
-                PasteCollectionState::Collecting(buffer) => {
+                PasteCollectionState::Accumulating(buffer) => {
                     buffer.push(ch);
                 }
-                PasteCollectionState::NotPasting => panic!(),
+                PasteCollectionState::Inactive => panic!(),
             }
         }
 
         // End collection
         let text = match &mut device.paste_state {
-            state @ PasteCollectionState::Collecting(_) => {
-                if let PasteCollectionState::Collecting(t) =
-                    std::mem::replace(state, PasteCollectionState::NotPasting)
+            state @ PasteCollectionState::Accumulating(_) => {
+                if let PasteCollectionState::Accumulating(t) =
+                    std::mem::replace(state, PasteCollectionState::Inactive)
                 {
                     t
                 } else {
@@ -735,16 +736,13 @@ mod tests {
         let mut device = DirectToAnsiInputDevice::new();
 
         // Should be NotPasting initially
-        assert!(matches!(
-            device.paste_state,
-            PasteCollectionState::NotPasting
-        ));
+        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
 
         // Receive End marker without Start - should emit empty paste
         let end_event = VT100InputEvent::Paste(VT100PasteMode::End);
         let result = match (&mut device.paste_state, &end_event) {
             (
-                PasteCollectionState::NotPasting,
+                PasteCollectionState::Inactive,
                 VT100InputEvent::Paste(VT100PasteMode::End),
             ) => Some(InputEvent::BracketedPaste(String::new())),
             _ => None,
@@ -753,10 +751,7 @@ mod tests {
         assert!(matches!(result, Some(InputEvent::BracketedPaste(s)) if s.is_empty()));
 
         // Should still be NotPasting
-        assert!(matches!(
-            device.paste_state,
-            PasteCollectionState::NotPasting
-        ));
+        assert!(matches!(device.paste_state, PasteCollectionState::Inactive));
     }
 
     #[test]
@@ -766,17 +761,17 @@ mod tests {
 
         // Start
         match &mut device.paste_state {
-            state @ PasteCollectionState::NotPasting => {
-                *state = PasteCollectionState::Collecting(String::new());
+            state @ PasteCollectionState::Inactive => {
+                *state = PasteCollectionState::Accumulating(String::new());
             }
             _ => panic!(),
         }
 
         // End (without any characters in between)
         let text = match &mut device.paste_state {
-            state @ PasteCollectionState::Collecting(_) => {
-                if let PasteCollectionState::Collecting(t) =
-                    std::mem::replace(state, PasteCollectionState::NotPasting)
+            state @ PasteCollectionState::Accumulating(_) => {
+                if let PasteCollectionState::Accumulating(t) =
+                    std::mem::replace(state, PasteCollectionState::Inactive)
                 {
                     t
                 } else {

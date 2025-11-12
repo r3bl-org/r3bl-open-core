@@ -4,9 +4,17 @@
 //! # You Are Here
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] → [S5: Backend Executor] ← YOU ARE HERE
-//! [S6: Terminal]
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor] ← YOU ARE HERE
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
 //! **Input**: [`RenderOpOutputVec`] (from backend converter)

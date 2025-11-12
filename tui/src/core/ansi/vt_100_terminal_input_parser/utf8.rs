@@ -81,12 +81,12 @@
 //! [`parser`]: mod@super::parser
 //! [`terminal_events`]: mod@super::terminal_events
 
-use super::types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
-use crate::{ByteOffset, byte_offset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK, UTF8_2BYTE_MAX,
-            UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX, UTF8_3BYTE_MIN,
-            UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
+use super::ir_event_types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers};
+use crate::{ByteOffset, UTF8_1BYTE_MAX, UTF8_1BYTE_MIN, UTF8_2BYTE_FIRST_MASK,
+            UTF8_2BYTE_MAX, UTF8_2BYTE_MIN, UTF8_3BYTE_FIRST_MASK, UTF8_3BYTE_MAX,
+            UTF8_3BYTE_MIN, UTF8_4BYTE_FIRST_MASK, UTF8_4BYTE_MAX, UTF8_4BYTE_MIN,
             UTF8_CONTINUATION_DATA_MASK, UTF8_CONTINUATION_MASK,
-            UTF8_CONTINUATION_PATTERN};
+            UTF8_CONTINUATION_PATTERN, byte_offset};
 
 /// Parse UTF-8 text and return a single `InputEvent` for the first complete character.
 ///

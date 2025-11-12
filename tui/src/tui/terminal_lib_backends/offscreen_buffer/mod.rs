@@ -5,13 +5,22 @@
 //! # You Are Here
 //!
 //! ```text
-//! [STAGE 1: App/Component] → [STAGE 2: Pipeline] → [STAGE 3: Compositor] →
-//! [STAGE 4: Backend Converter] → [STAGE 5: Backend Executor] → [STAGE 6: Terminal]
-//!                                       ▲
-//!                    ┌──────────────────┴──────────────────┐
-//!                    │  OffscreenBuffer  (YOU ARE HERE)    │
-//!                    │  (Virtual terminal grid)            │
-//!                    └─────────────────────────────────────┘
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//!   ┌──────────────────────────────────────┐
+//!   │  OffscreenBuffer (YOU ARE HERE)      │
+//!   │  (Virtual terminal grid)             │
+//!   └──────────────────────────────────────┘
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor]
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
 //! **Input**: Written to by the Compositor (Stage 3)
@@ -316,40 +325,41 @@
 //! - **Zero allocation**: Methods return references to existing buffer data
 //! - **Error Prevention**: Eliminates common off-by-one errors in manual bounds checking
 //!
-//! [`validate_col_range_mut()`]: OffscreenBuffer::validate_col_range_mut
-//! [`validate_row_range_mut()`]: OffscreenBuffer::validate_row_range_mut
-//! [`RangeBoundsExt`]: crate::core::coordinates::bounds_check::RangeBoundsExt
-//! [`bounds_check`]: crate::core::coordinates::bounds_check
 //! [`IndexOps`]: crate::core::coordinates::bounds_check::IndexOps
 //! [`LengthOps`]: crate::core::coordinates::bounds_check::LengthOps
-//! [`Pos`]: crate::Pos
-//! [`set_char()`]: OffscreenBuffer::set_char
-//! [`fill_char_range()`]: OffscreenBuffer::fill_char_range
-//! [`copy_chars_within_line()`]: OffscreenBuffer::copy_chars_within_line
-//! [`clear_line()`]: OffscreenBuffer::clear_line
-//! [`shift_lines_up()`]: OffscreenBuffer::shift_lines_up
-//! [`shift_lines_down()`]: OffscreenBuffer::shift_lines_down
-//! [`insert_chars_at_cursor()`]: OffscreenBuffer::insert_chars_at_cursor
-//! [`delete_chars_at_cursor()`]: OffscreenBuffer::delete_chars_at_cursor
-//! [`Option<T>`]: std::option::Option
-//! [`get_char()`]: OffscreenBuffer::get_char
-//! [`Option<PixelChar>`]: std::option::Option
-//! [`get_line()`]: OffscreenBuffer::get_line
 //! [`Option<&PixelCharLine>`]: std::option::Option
-//! [`diff()`]: OffscreenBuffer::diff
+//! [`Option<PixelChar>`]: std::option::Option
 //! [`Option<PixelCharDiffChunks>`]: std::option::Option
-//! [`cursor_up()`]: OffscreenBuffer::cursor_up
-//! [`cursor_down()`]: OffscreenBuffer::cursor_down
-//! [`cursor_forward()`]: OffscreenBuffer::cursor_forward
-//! [`cursor_backward()`]: OffscreenBuffer::cursor_backward
-//! [`set_foreground_color()`]: OffscreenBuffer::set_foreground_color
-//! [`reset_all_style_attributes()`]: OffscreenBuffer::reset_all_style_attributes
-//! [`handle_backspace()`]: OffscreenBuffer::handle_backspace
-//! [`handle_tab()`]: OffscreenBuffer::handle_tab
-//! [`handle_line_feed()`]: OffscreenBuffer::handle_line_feed
+//! [`Option<T>`]: std::option::Option
+//! [`PixelChar::Void`]: PixelChar::Void
+//! [`Pos`]: crate::Pos
+//! [`RangeBoundsExt`]: crate::core::coordinates::bounds_check::RangeBoundsExt
 //! [`RenderPipeline::paint()`]: crate::RenderPipeline::paint
 //! [`TuiStyle`]: crate::TuiStyle
-//! [`PixelChar::Void`]: PixelChar::Void
+//! [`bounds_check`]: crate::core::coordinates::bounds_check
+//! [`clear_line()`]: crate::OffscreenBuffer::clear_line
+//! [`copy_chars_within_line()`]: crate::OffscreenBuffer::copy_chars_within_line
+//! [`cursor_backward()`]: crate::OffscreenBuffer::cursor_backward
+//! [`cursor_down()`]: crate::OffscreenBuffer::cursor_down
+//! [`cursor_forward()`]: crate::OffscreenBuffer::cursor_forward
+//! [`cursor_up()`]: crate::OffscreenBuffer::cursor_up
+//! [`delete_chars_at_cursor()`]: crate::OffscreenBuffer::delete_chars_at_cursor
+//! [`diff()`]: crate::OffscreenBuffer::diff
+//! [`fill_char_range()`]: crate::OffscreenBuffer::fill_char_range
+//! [`get_char()`]: crate::OffscreenBuffer::get_char
+//! [`get_line()`]: crate::OffscreenBuffer::get_line
+//! [`handle_backspace()`]: crate::OffscreenBuffer::handle_backspace
+//! [`handle_line_feed()`]: crate::OffscreenBuffer::handle_line_feed
+//! [`handle_tab()`]: crate::OffscreenBuffer::handle_tab
+//! [`insert_chars_at_cursor()`]: crate::OffscreenBuffer::insert_chars_at_cursor
+//! [`ofs_buf_range_validation`]:
+//! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
+//! [`set_char()`]: crate::OffscreenBuffer::set_char
+//! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
+//! [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
+//! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
+//! [`validate_col_range_mut()`]: crate::OffscreenBuffer::validate_col_range_mut
+//! [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
 
 // Attach.
 pub mod diff_chunks;
@@ -358,6 +368,7 @@ pub mod ofs_buf_char_ops;
 pub mod ofs_buf_core;
 pub mod ofs_buf_line_level_ops;
 pub mod ofs_buf_range_validation;
+pub mod paint_impl;
 pub mod pixel_char;
 pub mod pixel_char_line;
 pub mod pixel_char_lines;
@@ -366,6 +377,7 @@ pub mod vt_100_ansi_impl;
 // Re-export all implementations.
 pub use diff_chunks::*;
 pub use ofs_buf_core::*;
+pub use paint_impl::*;
 pub use pixel_char::*;
 pub use pixel_char_line::*;
 pub use pixel_char_lines::*;

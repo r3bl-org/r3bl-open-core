@@ -8,8 +8,11 @@
 //!
 //! ## Key Subsystems
 //!
-//! - **Parser**: Convert incoming PTY output (ANSI sequences) → terminal state (via
+//! - **Output Parser** (VTE-based): Convert incoming PTY output (ANSI sequences from
+//!   child processes) → terminal state (via [`vt_100_pty_output_parser`] and
 //!   [`AnsiToOfsBufPerformer`])
+//! - **Input Parser** (custom): Convert terminal input events (keyboard/mouse) →
+//!   structured events (via [`vt_100_terminal_input_parser`])
 //! - **Generator**: Convert app styling → outgoing ANSI sequences (via [`SgrCode`],
 //!   [`CliTextInline`])
 //! - **Color**: Color type definitions and conversions (RGB ↔ ANSI256)
@@ -18,17 +21,24 @@
 //! ## Architecture Overview
 //!
 //! ```text
-//!   PTY Input                             App Output
-//!      ↓                                     ↓
-//! ┌─────────────┐                     ┌──────────────┐
-//! │   Parser    │ ◀─── Constants ───▶ │  Generator   │
-//! └─────────────┘    (ANSI specs)     └──────────────┘
-//!    ↓                     │                 ↑
-//! Terminal State           │            Styled Text
-//!                  ┌───────▼────────┐        │
-//!                  │ Color types &  │────────┘
-//!                  │ Conversion     │
-//!                  └────────────────┘
+//!   PTY Output (child process)              User Input (keyboard/mouse)
+//!      ↓                                            ↓
+//! ┌──────────────────────┐              ┌──────────────────────────┐
+//! │  VTE Output Parser   │              │  Custom Input Parser     │
+//! │ (vt_100_pty_output_  │              │ (vt_100_terminal_input_  │
+//! │  output_parser)      │              │  parser)                 │
+//! └──────────┬───────────┘              └──────────┬───────────────┘
+//!            │                                     │
+//!            ▼                                     ▼
+//!    Terminal State                      VT100InputEvent
+//!    Updates                             (keyboard/mouse/terminal)
+//!            │                                     │
+//!            └──────────┬──────────────────────────┘
+//!                       │
+//!            ┌──────────▼───────────┐
+//!            │  Constants & Color   │ ◀─┐ Generator:
+//!            │  (ANSI specs)        │   │ App Styling → Sequences
+//!            └──────────────────────┘ ──┘
 //! ```
 //!
 //! ## Terminal Input Modes: Raw vs Cooked
@@ -52,7 +62,8 @@
 //!
 //! ### Raw Mode (Interactive TUI)
 //!
-//! Interactive applications (vim, less, this TUI) need **character-by-character input**:
+//! Interactive applications (vim, less, this R3BL TUI crate) need
+//! **character-by-character input**:
 //!
 //! ```text
 //! You press:       [individual keystroke]
@@ -71,8 +82,8 @@
 //!
 //! ### Escape Sequences in Raw Mode
 //!
-//! When a user presses a special key in raw mode, the terminal sends an **escape sequence**.
-//! For example:
+//! When a user presses a special key in raw mode, the terminal sends an **escape
+//! sequence**. For example:
 //!
 //! ```text
 //! User presses:    Up arrow
@@ -99,9 +110,70 @@
 //! - `^[[3~` = Delete key
 //! - `^[OP` = F1 key
 //!
-//! This module's parser ([`vt_100_pty_output_parser`])
-//! converts these escape sequence bytes into structured events the application can handle.
+//! ## Two Separate Parsers: Why?
 //!
+//! This module contains **two distinct parsers** that handle different data streams:
+//!
+//! ### Output Parser: VTE-based ([`vt_100_pty_output_parser`])
+//!
+//! **What it does**: Parses ANSI escape sequences sent TO the terminal by child
+//! processes (via the PTY master).
+//!
+//! **Architecture**: Uses the [VTE crate] - a battle-tested state machine from the
+//! Alacritty terminal emulator project.
+//!
+//! **Why stateful parsing?** PTY output is **non-atomic**. Child processes can write
+//! partial sequences that span multiple buffer reads:
+//! ```text
+//! PTY Read 1: [0x1B, 0x5B, 0x31]        // ESC [ 1
+//! PTY Read 2: [0x3B, 0x35, 0x41]        // ; 5 A
+//! Complete:   ESC[1;5A (Ctrl+Up Arrow)
+//! ```
+//!
+//! VTE handles this by maintaining parse state across `advance()` calls, buffering
+//! incomplete parameters until the final sequence byte arrives.
+//!
+//! **Benefits**:
+//! - ✅ Robust state machine for split sequences and edge cases
+//! - ✅ Battle-tested in production (Alacritty uses it)
+//! - ✅ Proper ANSI/VT-100 spec compliance
+//! - ✅ Low maintenance (bug fixes come from upstream)
+//!
+//! ### Input Parser: Custom Implementation ([`vt_100_terminal_input_parser`])
+//!
+//! **What it does**: Parses terminal input events (keyboard, mouse, terminal
+//! resize/focus) sent FROM the user TO the application.
+//!
+//! **Architecture**: Custom Rust implementation using stateless pattern matching.
+//!
+//! **Why NOT use VTE?** Terminal input has fundamentally different characteristics:
+//!
+//! 1. **Atomic sequences**: Terminal emulators send input sequences **complete** in
+//!    single writes:
+//!    ```text
+//!    User presses:   Up Arrow
+//!    Terminal sends: "\x1B[A" (3 bytes in one syscall)
+//!    stdin read():   [0x1B, 0x5B, 0x41] (always complete)
+//!    ```
+//!
+//! 2. **Different event types**: VTE cannot parse keyboard/mouse events - it's
+//!    designed for output sequences only. Input events require custom parsing logic:
+//!    - `ESC[A` = User pressed Up Arrow (not "move cursor up")
+//!    - `ESC[<0;10;20M` = Mouse click at (10,20)
+//!    - `ESC[?1049h` = Terminal entered alternate buffer mode
+//!
+//! 3. **Simpler logic**: Input patterns are predictable - no need for full state
+//!    machine overhead
+//!
+//! **Benefits**:
+//! - ✅ Zero-latency ESC key detection (instant emit when buffer = `[0x1B]`)
+//! - ✅ Optimal for atomic sequences (no buffering overhead)
+//! - ✅ Full control over parsing logic
+//! - ✅ Can optimize for specific terminal features (SGR mouse, Kitty etc.)
+//!
+//! **Key insight**: The architectural split (VTE for output, custom for input) is
+//! **not a limitation** - it's the correct design because output and input are
+//! fundamentally different problems requiring different solutions.
 //!
 //! ## Key Types and Public API
 //!
@@ -113,16 +185,22 @@
 //! - [`SgrCode`] - SGR (Select Graphic Rendition) styling codes
 //! - [`CliTextInline`] - Styled inline text for output
 //!
-//! **ANSI Parsing:**
-//! - [`AnsiToOfsBufPerformer`] - Main ANSI parser implementation
+//! **Output Parsing** (PTY escape sequences):
+//! - [`AnsiToOfsBufPerformer`] - VTE Perform trait implementation for PTY parsing
 //! - [`CsiSequence`] - CSI escape sequence types
+//!
+//! **Input Parsing** (keyboard/mouse events):
+//! - `VT100InputEvent` - Keyboard, mouse, and terminal events (see [`vt_100_terminal_input_parser`])
+//! - `VT100KeyCode` - Keyboard event key codes
 //!
 //! **Terminal I/O:**
 //! - Color detection and support queries
 //!
+//! [VTE crate]: https://docs.rs/vte/latest/vte/
 //! [`vt_100_pty_output_parser`]: mod@crate::core::ansi::vt_100_pty_output_parser
+//! [`vt_100_terminal_input_parser`]: mod@crate::core::ansi::vt_100_terminal_input_parser
 
-// XMARK: Snippet to stop rustfmt from reformatting entire file.
+// XMARK: rustfmt prevent from reformatting entire file.
 
 // Skip rustfmt for rest of file.
 // https://stackoverflow.com/a/75910283/2085356

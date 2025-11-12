@@ -6,8 +6,8 @@
 //! # You Are Here
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+//! [Stage 1: App/Component] → [Stage 2: Pipeline] → [Stage 3: Compositor] →
+//! [Stage 4: Backend Converter] → [Stage 5: Backend Executor] → [Stage 6: Terminal]
 //!
 //! See [`crate::render_op`] module documentation for shared architectural patterns,
 //! type safety guarantees, and the rendering pipeline overview.

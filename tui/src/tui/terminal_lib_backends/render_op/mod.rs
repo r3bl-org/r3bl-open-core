@@ -8,13 +8,22 @@
 //! rendering pipeline. These types are the "lingua franca" that all stages speak.
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
-//!                ▲
-//!     ┌──────────┴─────────────────┐
-//!     │ YOU ARE HERE: Defines      │
-//!     │ RenderOpIR, RenderOpOutput │
-//!     └────────────────────────────┘
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//!   ┌─────────────────────────────┐
+//!   │ YOU ARE HERE: Defines      │
+//!   │ RenderOpIR, RenderOpOutput │
+//!   └─────────────────────────────┘
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor]
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
 //! **Input**: Component code produces [`RenderOpIR`] operations
@@ -83,16 +92,26 @@
 //! `RenderOpIR::Common(RenderOpCommon::MoveCursorPositionAbs(pos))` in favor of
 //! `RenderOpIR::move_cursor(pos)`.
 
+// Skip rustfmt for rest of file.
+// https://stackoverflow.com/a/75910283/2085356
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 // Private modules - implementation details.
 mod render_op_common;
 mod render_op_common_ext;
 mod render_op_debug_format;
 mod render_op_flush;
-mod render_op_ir;
 mod render_op_output;
 mod render_op_paint;
 mod render_ops_exec;
 mod render_ops_local_data;
+
+// Module is public only when building documentation or tests.
+// This allows rustdoc links to work while keeping it private in release builds.
+#[cfg(any(test, doc))]
+pub mod render_op_ir;
+#[cfg(not(any(test, doc)))]
+mod render_op_ir;
 
 // Public re-exports - stable API surface.
 pub use render_op_common::*;

@@ -4,8 +4,8 @@
 //! byte arrays containing ANSI escape sequences using intelligent style diffing to
 //! minimize redundant codes.
 
-use crate::{FastStringify, PixelChar, SgrCode, TuiColor, TuiStyle, degrade_color,
-            global_color_support, SGR_RESET_BYTES};
+use crate::{FastStringify, PixelChar, SGR_RESET_BYTES, SgrCode, TuiColor, TuiStyle,
+            degrade_color, global_color_support};
 
 /// # Unified ANSI Generator for [`PixelChar`] Rendering
 ///

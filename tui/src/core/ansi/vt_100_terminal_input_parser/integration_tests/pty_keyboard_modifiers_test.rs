@@ -1,10 +1,11 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{core::ansi::vt_100_terminal_input_parser::{
-                test_fixtures::generate_keyboard_sequence,
-                types::{VT100InputEvent, VT100KeyCode, VT100KeyModifiers}
-            },
-            KeyState, Deadline, generate_pty_test, InputEvent,
+use crate::{Deadline, InputEvent, KeyState,
+            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100InputEvent,
+                                                                        VT100KeyCode,
+                                                                        VT100KeyModifiers},
+                                                       test_fixtures::generate_keyboard_sequence},
+            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -52,7 +53,10 @@ fn pty_master_entry_point(
     let deadline = Deadline::default();
 
     loop {
-        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
+        assert!(
+            deadline.has_time_remaining(),
+            "Timeout: slave did not start within 5 seconds"
+        );
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
@@ -77,7 +81,10 @@ fn pty_master_entry_point(
         }
     }
 
-    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
+    assert!(
+        test_running_seen,
+        "Slave test never started running (no TEST_RUNNING output)"
+    );
 
     // Build test sequences with various modifier combinations
     let modifier_combos = vec![
