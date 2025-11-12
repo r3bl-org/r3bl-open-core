@@ -77,6 +77,7 @@ fn process_rustdoc_block(block: &mut RustdocBlock, options: &FormatOptions) -> b
 
     if options.convert_links {
         modified = link_converter::convert_links(&modified);
+        modified = link_converter::aggregate_existing_references(&modified);
     }
 
     if modified == original {

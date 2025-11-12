@@ -234,32 +234,56 @@ impl DirectToAnsiInputDevice {
     /// program's event loop. Typical usage pattern:
     ///
     /// ```rust,no_run
-    /// // Create device once at startup, reuse until program exit
-    /// let mut input_device = DirectToAnsiInputDevice::new();
+    /// # use r3bl_tui::{DirectToAnsiInputDevice, InputEvent, InputDeviceExt};
+    /// # use tokio::signal;
     ///
-    /// // Main event loop - calls this method repeatedly until stdin closes
-    /// loop {
-    ///     match input_device.next_input_event().await {
-    ///         Some(InputEvent::Keyboard(key_press)) => {
-    ///             // Handle keyboard input
-    ///         }
-    ///         Some(InputEvent::Mouse(mouse_input)) => {
-    ///             // Handle mouse input
-    ///         }
-    ///         Some(InputEvent::Resize(size)) => {
-    ///             // Handle terminal resize
-    ///         }
-    ///         Some(InputEvent::Paste(text)) => {
-    ///             // Handle bracketed paste
-    ///         }
-    ///         Some(InputEvent::Focus(_)) => {
-    ///             // Handle focus events
-    ///         }
-    ///         None => {
-    ///             // stdin closed (EOF) - signal program to exit
-    ///             break;
+    /// #[tokio::main]
+    /// async fn main() -> miette::Result<()> {
+    ///     // Create device once at startup, reuse until program exit
+    ///     let mut input_device = DirectToAnsiInputDevice::new();
+    /// #   let mut sigint = signal::unix::signal(signal::unix::SignalKind::interrupt())
+    /// #       .map_err(|e| miette::miette!("Failed to setup signal handler: {}", e))?;
+    ///
+    ///     // Main event loop - handle multiple concurrent event sources with tokio::select!
+    ///     loop {
+    ///         tokio::select! {
+    ///             // Handle terminal input events
+    ///             input_event = input_device.next_input_event() => {
+    ///                 match input_event {
+    ///                     Some(InputEvent::Keyboard(key_press)) => {
+    ///                         // Handle keyboard input
+    ///                     }
+    ///                     Some(InputEvent::Mouse(mouse_input)) => {
+    ///                         // Handle mouse input
+    ///                     }
+    ///                     Some(InputEvent::Resize(size)) => {
+    ///                         // Handle terminal resize
+    ///                     }
+    ///                     Some(InputEvent::BracketedPaste(text)) => {
+    ///                         // Handle bracketed paste
+    ///                     }
+    ///                     Some(InputEvent::Focus(_)) => {
+    ///                         // Handle focus events
+    ///                     }
+    ///                     Some(_) => {
+    ///                         // Handle future/unknown event types
+    ///                     }
+    ///                     None => {
+    ///                         // stdin closed (EOF) - signal program to exit
+    ///                         break;
+    ///                     }
+    ///                 }
+    ///             }
+    ///             // Handle system signals (e.g., Ctrl+C)
+    ///             _ = sigint.recv() => {
+    /// #               eprintln!("Received SIGINT, shutting down...");
+    /// #               break;
+    ///             }
+    ///             // Handle other concurrent tasks as needed
+    ///             // _ = some_background_task => { ... }
     ///         }
     ///     }
+    /// #   Ok(())
     /// }
     /// ```
     ///
@@ -270,8 +294,6 @@ impl DirectToAnsiInputDevice {
     /// - **Buffer state is preserved** across calls: the internal `parse_buffer` and
     ///   `buffer_position` accumulate partial ANSI sequences between calls
     /// - Returns `None` when stdin is closed (program should exit)
-    ///
-    /// [`InputDeviceExt`]: crate::InputDeviceExt
     ///
     /// # Implementation
     ///
@@ -324,6 +346,8 @@ impl DirectToAnsiInputDevice {
     ///
     /// See struct-level documentation for details on zero-latency ESC detection
     /// algorithm.
+    ///
+    /// [`InputDeviceExt`]: crate::InputDeviceExt
     pub async fn try_read_event(&mut self) -> Option<InputEvent> {
         use tokio::io::AsyncReadExt as _;
 
@@ -451,10 +475,10 @@ impl InputDeviceExt for DirectToAnsiInputDevice {
 /// - [`test_pty_terminal_events`]
 ///
 /// [`test_pty_input_device`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_input_device_test::test_pty_input_device
-/// [`test_pty_mouse_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events
 /// [`test_pty_keyboard_modifiers`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_keyboard_modifiers_test::test_pty_keyboard_modifiers
-/// [`test_pty_utf8_text`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
+/// [`test_pty_mouse_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_mouse_events_test::test_pty_mouse_events
 /// [`test_pty_terminal_events`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_terminal_events_test::test_pty_terminal_events
+/// [`test_pty_utf8_text`]: crate::core::ansi::vt_100_terminal_input_parser::integration_tests::pty_utf8_text_test::test_pty_utf8_text
 #[cfg(test)]
 mod tests {
     use super::*;
