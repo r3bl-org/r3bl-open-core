@@ -518,7 +518,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'g' => {
                 // TBC (Tab Clear) - Clear tab stops (0=current, 3=all)
                 // Not needed: Tab stops are application-specific, TUI apps manage their
-                // own. See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
+                // own. See [mod-level docs](crate::vt_100_pty_output_parser) for
+                // rationale
                 tracing::warn!("CSI g: Tab Clear not implemented");
             }
             'a' => {
@@ -584,7 +585,8 @@ impl Perform for AnsiToOfsBufPerformer<'_> {
             'c' => {
                 // DA (Device Attributes) - Request terminal type/capabilities
                 // Not needed: Multiplexer doesn't respond to queries, parent terminal
-                // does. See [mod-level docs](crate::vt_100_pty_output_parser) for rationale
+                // does. See [mod-level docs](crate::vt_100_pty_output_parser) for
+                // rationale
                 tracing::warn!(
                     "CSI c: Device Attributes query not supported in multiplexer"
                 );

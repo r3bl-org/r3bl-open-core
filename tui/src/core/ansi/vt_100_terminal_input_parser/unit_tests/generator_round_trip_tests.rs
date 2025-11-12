@@ -22,7 +22,10 @@ use crate::{KeyState,
 
 #[test]
 fn test_generate_resize_event() {
-    let event = VT100InputEvent::Resize { rows: 24, cols: 80 };
+    let event = VT100InputEvent::Resize {
+        row_height: crate::RowHeight::from(24),
+        col_width: crate::ColWidth::from(80),
+    };
     let bytes = generate_keyboard_sequence(&event).unwrap();
     assert_eq!(bytes, b"\x1b[8;24;80t");
 }
@@ -58,8 +61,8 @@ fn test_generate_paste_end() {
 #[test]
 fn test_roundtrip_resize_event() {
     let original_event = VT100InputEvent::Resize {
-        rows: 30,
-        cols: 120,
+        row_height: crate::RowHeight::from(30),
+        col_width: crate::ColWidth::from(120),
     };
     let bytes = generate_keyboard_sequence(&original_event).unwrap();
     let (parsed_event, bytes_consumed) =

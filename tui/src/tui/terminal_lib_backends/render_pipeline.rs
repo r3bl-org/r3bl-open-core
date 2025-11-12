@@ -2,18 +2,31 @@
 
 //! # Pipeline Stage 2: Collection & Organization
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 2** (Organization Layer)
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] ← YOU ARE HERE
-//! [S3: Compositor] → [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline] ← YOU ARE HERE
+//!   ↓
+//! [Stage 3: Compositor]
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor]
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
 //! **Input**: [`RenderOpIRVec`] operations from components
 //! **Output**: Organized operations sorted by [`ZOrder`] (layer depth)
 //! **Role**: Aggregate and organize rendering operations before compositor processing
 //!
-//! > **For the complete rendering architecture**, see [`super`] (parent module).
+//! ## Navigation
+//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
+//! - **Previous stage**: [`render_op_ir` mod docs] (Stage 1: IR Generation)
+//! - **Next stage**: [`compositor_render_ops_to_ofs_buf` mod docs] (Stage 3: Rendering to
+//!   Buffer)
 //!
 //! ## What This Stage Does
 //!
@@ -30,6 +43,10 @@
 //! ### No Rendering Yet
 //! This stage is purely organizational. No actual rendering to the terminal (or even to
 //! the offscreen buffer) happens here. That's the compositor's job.
+//!
+//! [`compositor_render_ops_to_ofs_buf` mod docs]: mod@crate::tui::terminal_lib_backends::compositor_render_ops_to_ofs_buf
+//! [`render_op_ir` mod docs]: mod@crate::tui::terminal_lib_backends::render_op::render_op_ir
+//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 
 use super::{ZOrder, paint::paint};
 use crate::{FlushKind, GlobalData, InlineVec, LockedOutputDevice, RenderOpIRVec, ok,
@@ -80,11 +97,11 @@ use std::{collections::{HashMap, hash_map::Entry},
 /// Decl macro docs:
 /// - <https://veykril.github.io/tlborm/decl-macros/macros-methodical.html#repetitions>
 ///
+/// [`RenderOpIRVec`]: crate::RenderOpIRVec
 /// [`RenderOpIR`]: crate::RenderOpIR
 /// [`RenderPipeline`]: crate::RenderPipeline
-/// [`ZOrder`]: crate::ZOrder
-/// [`RenderOpIRVec`]: crate::RenderOpIRVec
 /// [`ZOrder::get_render_order`]: crate::ZOrder::get_render_order
+/// [`ZOrder`]: crate::ZOrder
 #[macro_export]
 macro_rules! render_pipeline {
     // No args. Returns a new default pipeline.

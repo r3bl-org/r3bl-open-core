@@ -157,7 +157,7 @@
 //!   - `table_formatter.rs` - Format markdown tables
 //!   - `link_converter.rs` - Convert inline to reference-style links
 //!   - `processor.rs` - Orchestrate file processing
-//!   - `types.rs` - Type definitions
+//!   - `ir_event_types` - Type definitions
 //!   - `ui_str.rs` - User-facing messages
 //! - `src/common/` - Shared utilities
 //!   - `git_utils.rs` - Git integration

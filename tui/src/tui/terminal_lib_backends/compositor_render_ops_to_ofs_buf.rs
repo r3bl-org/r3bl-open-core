@@ -2,18 +2,35 @@
 
 //! # Pipeline Stage 3: Compositor
 //!
-//! # You Are Here
+//! # You Are Here: **Stage 3** (Rendering to Buffer)
 //!
 //! ```text
-//! [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] ← YOU ARE HERE
-//! [S4: Backend Converter] → [S5: Backend Executor] → [S6: Terminal]
+//! [Stage 1: App/Component]
+//!   ↓
+//! [Stage 2: Pipeline]
+//!   ↓
+//! [Stage 3: Compositor] ← YOU ARE HERE
+//!   ↓
+//! [Stage 4: Backend Converter]
+//!   ↓
+//! [Stage 5: Backend Executor]
+//!   ↓
+//! [Stage 6: Terminal]
 //! ```
 //!
 //! **Input**: [`RenderPipeline`] organized by Z-order
 //! **Output**: [`OffscreenBuffer`] (virtual 2D terminal grid with styled pixels)
 //! **Role**: Execute rendering operations to create a frame-sized virtual terminal buffer
 //!
-//! > **For the complete rendering architecture**, see [`super`] (parent module).
+//! ## Navigation
+//! - **See complete architecture**: [`terminal_lib_backends` mod docs] (source of truth)
+//! - **Previous stage**: [`render_pipeline` mod docs] (Stage 2: Organization)
+//! - **Next stage (Stage 4: Shared)**: [`offscreen_buffer::paint_impl` mod docs] (Backend
+//!   Converter - shared by both Crossterm and DirectToAnsi)
+//! - **Stage 5 options**:
+//!   - [`crossterm_backend::paint_render_op_impl` mod docs] (Crossterm executor)
+//!   - [`direct_to_ansi` mod docs] (DirectToAnsi executor - generates ANSI escape
+//!     sequences)
 //!
 //! ## What This Stage Does
 //!
@@ -38,6 +55,12 @@
 //! ### Diff Optimization
 //! The buffer can be compared with the previous frame to determine what changed,
 //! enabling selective redraw in the next stage.
+//!
+//! [`crossterm_backend::paint_render_op_impl` mod docs]: mod@crate::tui::terminal_lib_backends::crossterm_backend::paint_render_op_impl
+//! [`direct_to_ansi` mod docs]: mod@crate::tui::terminal_lib_backends::direct_to_ansi
+//! [`offscreen_buffer::paint_impl` mod docs]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::paint_impl
+//! [`render_pipeline` mod docs]: mod@crate::tui::terminal_lib_backends::render_pipeline
+//! [`terminal_lib_backends` mod docs]: mod@crate::tui::terminal_lib_backends
 
 use super::{AlternateScreenState, BracketedPasteState, MouseTrackingState,
             OffscreenBuffer, RawModeState, RenderOpCommon, RenderOpIR, RenderPipeline,

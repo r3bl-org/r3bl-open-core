@@ -157,7 +157,7 @@ impl LengthOps for ByteLength {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{byte_index, ch};
+    use crate::ch;
 
     // Basic construction and conversion tests.
     #[test]

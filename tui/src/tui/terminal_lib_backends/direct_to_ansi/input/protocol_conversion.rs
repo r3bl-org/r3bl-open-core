@@ -43,8 +43,8 @@
 //!   domain-appropriate names
 //! - **Evolution**: Protocol can change without breaking application code
 
-use crate::{Button, ColWidth, FocusEvent, InputEvent, Key, KeyPress, KeyState,
-            ModifierKeysMask, MouseInput, MouseInputKind, Pos, RowHeight, SpecialKey,
+use crate::{Button, FocusEvent, InputEvent, Key, KeyPress, KeyState, ModifierKeysMask,
+            MouseInput, MouseInputKind, Pos, SpecialKey,
             core::ansi::vt_100_terminal_input_parser::{VT100FocusState,
                                                        VT100InputEvent, VT100KeyCode,
                                                        VT100KeyModifiers,
@@ -52,17 +52,18 @@ use crate::{Button, ColWidth, FocusEvent, InputEvent, Key, KeyPress, KeyState,
                                                        VT100MouseButton,
                                                        VT100ScrollDirection}};
 
-/// Convert protocol-level `VT100KeyCode` and `VT100KeyModifiers` to canonical `KeyPress`.
+/// Convert protocol-level [`VT100KeyCode`] and [`VT100KeyModifiers`] to canonical
+/// [`KeyPress`].
 ///
-/// Maps VT-100 IR key codes to the public API `Key` enum, handling:
-/// - Character keys: `VT100KeyCode::Char` → `Key::Character`
-/// - Function keys: `VT100KeyCode::Function(n)` → `Key::FunctionKey(Fn)`
-/// - Special keys: `VT100KeyCode::Up` → `Key::SpecialKey(SpecialKey::Up)`
+/// Maps VT-100 IR key codes to the public API [`Key`] enum, handling:
+/// - Character keys: [`VT100KeyCode::Char`] → [`Key::Character`]
+/// - Function keys: [`VT100KeyCode::Function`] → [`Key::FunctionKey`]
+/// - Special keys: [`VT100KeyCode::Up`] → [`Key::SpecialKey`]
 /// - Modifiers: Shift, Ctrl, Alt masks
 ///
 /// Returns:
-/// - `KeyPress::Plain` if no modifiers are active
-/// - `KeyPress::WithModifiers` if any modifiers (Shift/Ctrl/Alt) are pressed
+/// - [`KeyPress::Plain`] if no modifiers are active
+/// - [`KeyPress::WithModifiers`] if any modifiers (Shift/Ctrl/Alt) are pressed
 pub(super) fn convert_key_code_to_keypress(
     code: VT100KeyCode,
     modifiers: VT100KeyModifiers,
@@ -121,16 +122,16 @@ pub(super) fn convert_key_code_to_keypress(
     }
 }
 
-/// Convert protocol-level `VT100InputEvent` to canonical `InputEvent`.
+/// Convert protocol-level [`VT100InputEvent`] to canonical [`InputEvent`].
 ///
 /// Converts all VT-100 IR event types to public API types:
-/// - **Keyboard**: `VT100InputEvent::Keyboard` → `InputEvent::Keyboard(KeyPress)`
-/// - **Mouse**: `VT100InputEvent::Mouse` → `InputEvent::Mouse(MouseInput)`
-///   - Converts button types: `VT100MouseButton::Left` → `Button::Left`
-///   - Converts actions: `VT100MouseAction::Press` → `MouseInputKind::MouseDown`
-///   - Converts coordinates: 1-based `TermPos` → 0-based `Pos`
-/// - **Resize**: `VT100InputEvent::Resize` → `InputEvent::Resize(Size)`
-/// - **Focus**: `VT100InputEvent::Focus` → `InputEvent::Focus(FocusEvent)`
+/// - **Keyboard**: [`VT100InputEvent::Keyboard`] → [`InputEvent::Keyboard`]
+/// - **Mouse**: [`VT100InputEvent::Mouse`] → [`InputEvent::Mouse`]
+///   - Converts button types: [`VT100MouseButton::Left`] → [`Button::Left`]
+///   - Converts actions: [`VT100MouseAction::Press`] → [`MouseInputKind::MouseDown`]
+///   - Converts coordinates: 1-based [`TermPos`] → 0-based [`Pos`]
+/// - **Resize**: [`VT100InputEvent::Resize`] → [`InputEvent::Resize`]
+/// - **Focus**: [`VT100InputEvent::Focus`] → [`InputEvent::Focus`]
 /// - **Paste**: Should never be called (handled by state machine in `try_read_event()`)
 ///
 /// Returns `None` if the event cannot be converted (e.g., unknown mouse button).
@@ -193,9 +194,12 @@ pub(super) fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputE
             };
             Some(InputEvent::Mouse(mouse_input))
         }
-        VT100InputEvent::Resize { rows, cols } => Some(InputEvent::Resize(crate::Size {
-            col_width: ColWidth::from(cols),
-            row_height: RowHeight::from(rows),
+        VT100InputEvent::Resize {
+            col_width,
+            row_height,
+        } => Some(InputEvent::Resize(crate::Size {
+            col_width,
+            row_height,
         })),
         VT100InputEvent::Focus(focus_state) => {
             let event = match focus_state {
@@ -216,7 +220,7 @@ pub(super) fn convert_input_event(vt100_event: VT100InputEvent) -> Option<InputE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FunctionKey, TermPos, col, row};
+    use crate::{ColWidth, FunctionKey, RowHeight, TermPos, col, row};
 
     // MARK: Keyboard conversion tests
 
@@ -729,7 +733,10 @@ mod tests {
         let test_cases = vec![(80, 24), (120, 40), (1, 1), (200, 60)];
 
         for (cols, rows) in test_cases {
-            let vt100_event = VT100InputEvent::Resize { rows, cols };
+            let vt100_event = VT100InputEvent::Resize {
+                col_width: ColWidth::from(cols),
+                row_height: RowHeight::from(rows),
+            };
 
             match convert_input_event(vt100_event) {
                 Some(InputEvent::Resize(size)) => {

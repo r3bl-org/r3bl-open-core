@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{core::ansi::vt_100_terminal_input_parser::{
-                test_fixtures::generate_keyboard_sequence,
-                types::{VT100FocusState, VT100InputEvent}
-            },
-            Deadline, generate_pty_test, InputEvent,
+use crate::{Deadline, InputEvent,
+            core::ansi::vt_100_terminal_input_parser::{ir_event_types::{VT100FocusState,
+                                                                        VT100InputEvent},
+                                                       test_fixtures::generate_keyboard_sequence},
+            generate_pty_test,
             tui::terminal_lib_backends::direct_to_ansi::DirectToAnsiInputDevice};
 use std::{io::{BufRead, BufReader, Write},
           time::Duration};
@@ -51,7 +51,10 @@ fn pty_master_entry_point(
     let deadline = Deadline::default();
 
     loop {
-        assert!(deadline.has_time_remaining(), "Timeout: slave did not start within 5 seconds");
+        assert!(
+            deadline.has_time_remaining(),
+            "Timeout: slave did not start within 5 seconds"
+        );
 
         let mut line = String::new();
         match buf_reader_non_blocking.read_line(&mut line) {
@@ -76,14 +79,26 @@ fn pty_master_entry_point(
         }
     }
 
-    assert!(test_running_seen, "Slave test never started running (no TEST_RUNNING output)");
+    assert!(
+        test_running_seen,
+        "Slave test never started running (no TEST_RUNNING output)"
+    );
 
     // Generate and send terminal events
     // Note: Paste events are tested separately in pty_bracketed_paste_test.rs
     // because they require special handling (Start + text + End = single event)
     let events = vec![
-        ("Window Resize", VT100InputEvent::Resize { rows: 24, cols: 80 }),
-        ("Focus Gained", VT100InputEvent::Focus(VT100FocusState::Gained)),
+        (
+            "Window Resize",
+            VT100InputEvent::Resize {
+                row_height: crate::RowHeight::from(24),
+                col_width: crate::ColWidth::from(80),
+            },
+        ),
+        (
+            "Focus Gained",
+            VT100InputEvent::Focus(VT100FocusState::Gained),
+        ),
         ("Focus Lost", VT100InputEvent::Focus(VT100FocusState::Lost)),
     ];
 

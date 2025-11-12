@@ -12,9 +12,17 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// # You Are Here
 ///
 /// ```text
-/// [S1: App/Component] → [S2: Pipeline] → [S3: Compositor] →
-/// [S4: Backend Converter] → [S5: Backend Executor] ← YOU ARE HERE
-/// [S6: Terminal]
+/// [Stage 1: App/Component]
+///   ↓
+/// [Stage 2: Pipeline]
+///   ↓
+/// [Stage 3: Compositor]
+///   ↓
+/// [Stage 4: Backend Converter]
+///   ↓
+/// [Stage 5: Backend Executor] ← YOU ARE HERE
+///   ↓
+/// [Stage 6: Terminal]
 /// ```
 ///
 /// - **Input**: [`RenderOpOutput`] operations (from backend converter)
@@ -114,16 +122,16 @@ use crate::{LockedOutputDevice, RenderOpOutput, Size};
 /// - [`DirectAnsi`]: May use `is_mock` to skip operations (not yet implemented)
 /// - `termion`: (future) May or may not use `is_mock` depending on architecture
 ///
-/// [`OutputDevice::is_mock`]: crate::OutputDevice
 ///
 /// # Implementations
 ///
 /// - `PaintRenderOpImplCrossterm` - Crossterm backend
 /// - `RenderOpPaintImplDirectToAnsi` - `DirectAnsi` backend
 ///
+/// [`DirectAnsi`]: crate::terminal_lib_backends::direct_to_ansi
+/// [`OutputDevice::is_mock`]: crate::OutputDevice
 /// [`RenderOpOutput`]: crate::RenderOpOutput
 /// [`RenderOpsLocalData`]: crate::RenderOpsLocalData
-/// [`DirectAnsi`]: crate::terminal_lib_backends::direct_to_ansi
 pub trait RenderOpPaint {
     /// Execute a single render operation on the terminal.
     ///

@@ -47,10 +47,7 @@ fn get_terminal_fd() -> io::Result<TerminalFd> {
     if termios::isatty(&stdin) {
         Ok(TerminalFd::Stdin(stdin))
     } else {
-        let file = File::options()
-            .read(true)
-            .write(true)
-            .open("/dev/tty")?;
+        let file = File::options().read(true).write(true).open("/dev/tty")?;
         Ok(TerminalFd::DevTty(file))
     }
 }
@@ -96,9 +93,10 @@ pub fn enable_raw_mode() -> miette::Result<()> {
         }
     }
 
-    // Use rustix's built-in make_raw() method which correctly implements cfmakeraw behavior.
-    // This is the same approach crossterm uses (see crossterm-0.29.0/src/terminal/sys/unix.rs:135).
-    // make_raw() handles all the necessary terminal attribute changes including:
+    // Use rustix's built-in make_raw() method which correctly implements cfmakeraw
+    // behavior. This is the same approach crossterm uses (see
+    // crossterm-0.29.0/src/terminal/sys/unix.rs:135). make_raw() handles all the
+    // necessary terminal attribute changes including:
     // - Disabling canonical mode (ICANON)
     // - Disabling signal generation (ISIG)
     // - Disabling echo (ECHO, ECHONL)
@@ -132,8 +130,9 @@ pub fn disable_raw_mode() -> miette::Result<()> {
         .map_err(|e| miette!("terminal settings lock poisoned: {e}"))?;
 
     if let Some(ref termios) = *original {
-        let fd = get_terminal_fd()
-            .map_err(|e| miette::miette!("failed to get terminal file descriptor: {e}"))?;
+        let fd = get_terminal_fd().map_err(|e| {
+            miette::miette!("failed to get terminal file descriptor: {e}")
+        })?;
 
         termios::tcsetattr(&fd, OptionalActions::Now, termios)
             .map_err(|e| miette::miette!("failed to set terminal attributes: {e}"))?;

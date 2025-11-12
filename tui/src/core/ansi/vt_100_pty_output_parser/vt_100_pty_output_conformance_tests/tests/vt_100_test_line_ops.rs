@@ -19,7 +19,7 @@
 use super::super::test_fixtures_vt_100_ansi_conformance::*;
 use crate::{col,
             core::ansi::vt_100_pty_output_parser::{CsiSequence,
-                                             ansi_parser_public_api::AnsiToOfsBufPerformer},
+                                                   ansi_parser_public_api::AnsiToOfsBufPerformer},
             row, term_col, term_row};
 
 /// Tests for Insert Line (IL) operations.
