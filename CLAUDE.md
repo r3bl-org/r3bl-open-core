@@ -3,6 +3,17 @@
 Ask for clarification immediately on important choices or ambiguities. Take your time with
 changes—slow, steady, and careful work beats fast and careless.
 
+## Crate-Specific Instructions
+
+Some crates have additional instructions in their own `CLAUDE.md` files:
+
+- **r3bl-build-infra/**: Provides CLI tools (binaries). **After making code changes, you MUST run
+  `cargo install --path r3bl-build-infra --force`** to update the installed binaries in
+  `~/.cargo/bin`. See `r3bl-build-infra/CLAUDE.md` for details.
+
+When working on a specific crate, always check for a local `CLAUDE.md` file in that crate's
+directory for additional workflow requirements.
+
 ## Rust Code Guidelines
 
 ### MCP Tools to understand and change Rust code
