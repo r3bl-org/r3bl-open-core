@@ -13,21 +13,38 @@ fn main() {
 }
 
 fn run() -> miette::Result<()> {
-    let cli_arg = CLIArg::parse();
+    // Parse args, skipping the subcommand name if invoked via cargo
+    let args: Vec<String> = std::env::args().collect();
+    let cli_arg = if args.len() > 1 && args[1] == "rustdoc-fmt" {
+        // Invoked as "cargo rustdoc-fmt" - skip the subcommand name
+        CLIArg::parse_from(args.iter().enumerate().filter_map(|(i, arg)| {
+            if i == 1 {
+                None // Skip "rustdoc-fmt"
+            } else {
+                Some(arg.as_str())
+            }
+        }))
+    } else {
+        // Invoked directly as "cargo-rustdoc-fmt"
+        CLIArg::parse()
+    };
     let options = cli_arg.to_format_options();
 
     // Get files to process
     let files = if !cli_arg.paths.is_empty() {
         // Specific paths provided - highest priority
         if cli_arg.verbose {
-            println!("Formatting specific paths...");
+            println!(
+                "File discovery: Using {} specific path(s) provided as arguments",
+                cli_arg.paths.len()
+            );
         }
         workspace_utils::find_rust_files_in_paths(&cli_arg.paths)?
     } else if cli_arg.workspace {
         // --workspace flag: format entire workspace
         let workspace_root = workspace_utils::get_workspace_root()?;
         if cli_arg.verbose {
-            println!("Formatting entire workspace...");
+            println!("File discovery: Using --workspace flag (entire workspace)");
         }
         workspace_utils::find_rust_files(&workspace_root)?
     } else {
@@ -38,12 +55,17 @@ fn run() -> miette::Result<()> {
                 // No git changes, format entire workspace as fallback
                 let workspace_root = workspace_utils::get_workspace_root()?;
                 if cli_arg.verbose {
-                    println!("No git changes found. Formatting entire workspace...");
+                    println!(
+                        "File discovery: No git changes found, using entire workspace"
+                    );
                 }
                 workspace_utils::find_rust_files(&workspace_root)?
             } else {
                 if cli_arg.verbose {
-                    println!("Formatting {} files from git changes...", git_files.len());
+                    println!(
+                        "File discovery: Found {} changed file(s) from git",
+                        git_files.len()
+                    );
                 }
                 git_files
             }
@@ -51,7 +73,7 @@ fn run() -> miette::Result<()> {
             // Not a git repo, format entire workspace as fallback
             let workspace_root = workspace_utils::get_workspace_root()?;
             if cli_arg.verbose {
-                println!("Not a git repository. Formatting entire workspace...");
+                println!("File discovery: Not a git repository, using entire workspace");
             }
             workspace_utils::find_rust_files(&workspace_root)?
         }
@@ -59,6 +81,15 @@ fn run() -> miette::Result<()> {
 
     if files.is_empty() {
         println!("No Rust files found to format.");
+        return Ok(());
+    }
+
+    // Dry-run mode: show files and exit
+    if cli_arg.dry_run {
+        println!("Dry-run mode: {} files would be processed:", files.len());
+        for file in &files {
+            println!("  - {}", file.display());
+        }
         return Ok(());
     }
 
