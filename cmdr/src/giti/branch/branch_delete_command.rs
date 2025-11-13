@@ -1,15 +1,17 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
+
 use crate::{AnalyticsAction, common,
             common::ui_templates::{prefix_multi_select_instruction_header,
                                    prefix_single_select_instruction_header},
             giti::{BranchDeleteDetails, CommandRunDetails,
-                   git::{self},
-                   local_branch_ops::BranchExists,
                    ui_str::{self}},
             report_analytics};
 use r3bl_tui::{CliTextInline, CommandRunResult, CommonResult, DefaultIoDevices,
                InlineString, InlineVec, ItemsOwned, choose, cli_text_inline,
-               cli_text_line, height, inline_vec,
+               cli_text_line,
+               git::{self},
+               height, inline_vec,
+               local_branch_ops::BranchExists,
                readline_async::{HowToChoose, StyleSheet}};
 use smallvec::smallvec;
 

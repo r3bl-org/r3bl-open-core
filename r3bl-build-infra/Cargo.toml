@@ -29,6 +29,8 @@ name = "r3bl_build_infra"
 path = "src/lib.rs"
 
 [dependencies]
+r3bl_tui = { path = "../tui", version = "0.7.6" }
+tokio = { version = "1.45", features = ["full"] }
 pulldown-cmark = "0.13"
 pulldown-cmark-to-cmark = "21"
 clap = { version = "4.5", features = ["derive"] }

@@ -2,17 +2,19 @@
 
 use clap::Parser;
 use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor},
-                       common::{cargo_fmt_runner, git_utils, workspace_utils}};
+                       common::{cargo_fmt_runner, workspace_utils}};
+use r3bl_tui::core::script::git::{try_get_changed_files_by_ext, try_is_git_repo};
 use std::process;
 
-fn main() {
-    if let Err(e) = run() {
+#[tokio::main]
+async fn main() {
+    if let Err(e) = run().await {
         eprintln!("Error: {e:?}");
         process::exit(1);
     }
 }
 
-fn run() -> miette::Result<()> {
+async fn run() -> miette::Result<()> {
     // Parse args, skipping the subcommand name if invoked via cargo
     let args: Vec<String> = std::env::args().collect();
     let cli_arg = if args.len() > 1 && args[1] == "rustdoc-fmt" {
@@ -49,8 +51,11 @@ fn run() -> miette::Result<()> {
         workspace_utils::find_rust_files(&workspace_root)?
     } else {
         // Default: use git to find changed files
-        if git_utils::is_git_repo() {
-            let git_files = git_utils::get_changed_rust_files()?;
+        let (is_git_repo_result, _) = try_is_git_repo().await;
+        let is_git_repo = is_git_repo_result.map_err(|e| miette::miette!("{:?}", e))?;
+        if is_git_repo {
+            let (git_files_result, _) = try_get_changed_files_by_ext(&["rs"]).await;
+            let git_files = git_files_result.map_err(|e| miette::miette!("{:?}", e))?;
             if git_files.is_empty() {
                 // No git changes, format entire workspace as fallback
                 let workspace_root = workspace_utils::get_workspace_root()?;
