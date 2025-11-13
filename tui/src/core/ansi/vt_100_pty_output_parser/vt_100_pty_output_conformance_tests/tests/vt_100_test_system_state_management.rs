@@ -183,7 +183,7 @@ pub mod character_set_state_management {
 
         // Verify DEC Graphics mode is active
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::DECGraphics);
+                  crate::CharacterSet::DECGraphics);
 
         // Perform cursor save/restore operations
         let cursor_ops = format!(
@@ -199,7 +199,7 @@ pub mod character_set_state_management {
 
         // Character set should persist
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::DECGraphics);
+                  crate::CharacterSet::DECGraphics);
 
         // Print a character that gets translated in DEC Graphics mode
         let _result = ofs_buf.apply_ansi_bytes("q"); // Should become horizontal line
@@ -219,7 +219,7 @@ pub mod character_set_state_management {
 
         // Start in ASCII mode (default)
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::Ascii);
+                  crate::CharacterSet::Ascii);
 
         // Switch to DEC Graphics and disable auto-wrap
         let combined_sequence = format!(
@@ -231,7 +231,7 @@ pub mod character_set_state_management {
 
         // Both states should be active
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::DECGraphics);
+                  crate::CharacterSet::DECGraphics);
         assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
 
         // Change modes but keep character set
@@ -244,14 +244,14 @@ pub mod character_set_state_management {
         // Auto-wrap should change but character set should persist
         assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::DECGraphics);
+                  crate::CharacterSet::DECGraphics);
 
         // Switch back to ASCII
         let ascii_mode = b"\x1b(B";
         let _result = ofs_buf.apply_ansi_bytes(ascii_mode);
 
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::Ascii);
+                  crate::CharacterSet::Ascii);
     }
 }
 
@@ -437,7 +437,7 @@ pub mod complex_state_combinations {
             Some(term_row(nz(1)))
         );
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::Ascii);
+                  crate::CharacterSet::Ascii);
         assert!(ofs_buf.ansi_parser_support.auto_wrap_mode);
     }
 
@@ -470,7 +470,7 @@ pub mod complex_state_combinations {
 
         // States should persist through buffer operations
         assert_eq!(ofs_buf.ansi_parser_support.character_set,
-                  crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet::DECGraphics);
+                  crate::CharacterSet::DECGraphics);
         assert!(!ofs_buf.ansi_parser_support.auto_wrap_mode);
 
         // Current style should still have bold

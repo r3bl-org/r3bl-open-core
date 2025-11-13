@@ -169,15 +169,13 @@ automatically reformatting your carefully structured code. Use this directive at
 
 #### Special Case - Conditionally public modules for documentation and testing
 
-This is what to do when you want a module to be private in normal builds, but public when building
-documentation or tests. This allows rustdoc links to work while keeping it private in release
-builds.
+When you want a module to be private in normal builds, but public when building documentation or
+tests, use conditional compilation. This allows rustdoc links to work while keeping it private in
+release builds.
 
 ```rust
 // mod.rs - Conditional visibility for documentation and testing
 
-// Module is public only when building documentation or tests.
-// This allows rustdoc links to work while keeping it private in release builds.
 #[cfg(any(test, doc))]
 pub mod vt_100_ansi_parser;
 #[cfg(not(any(test, doc)))]
@@ -187,18 +185,48 @@ mod vt_100_ansi_parser;
 pub use vt_100_ansi_parser::*;
 ```
 
-Reference in rustdoc using `mod@` links:
+**Transitive Visibility:** If a conditionally public module links to another module in its
+documentation, that target module must also be conditionally public:
 
 ```rust
-/// [`vt_100_ansi_parser`]: mod@crate::core::ansi::vt_100_ansi_parser
+#[cfg(any(test, doc))]
+pub mod paint_impl;  // Links to diff_chunks in docs
+
+#[cfg(any(test, doc))]
+pub mod diff_chunks;  // Must also be conditionally public!
+#[cfg(not(any(test, doc)))]
+mod diff_chunks;
+```
+
+#### Rustdoc Intra-doc Links Best Practices
+
+When writing rustdoc links in modules with private submodules and public re-exports:
+
+**Method References:**
+
+- Always include parentheses `()` in both inline mentions and reference-style link definitions
+- Use `crate::` paths pointing to the public struct, not the submodule implementation
+
+```rust
+//! This calls [`reset_style()`] to clear attributes.
+//!
+//! [`reset_style()`]: crate::OffscreenBuffer::reset_style
+```
+
+**Module References:**
+
+- Use the `mod@` prefix with full module path
+
+```rust
+//! See [`diff_chunks`] for implementation details.
+//!
+//! [`diff_chunks`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::diff_chunks
 ```
 
 ### Use strong type safety in the codebase for bounds checking, index (0-based), and length (1-based) handling
 
 Use the type-safe bounds checking utilities from `tui/src/core/units/bounds_check/` which provide
-comprehensive protection against off-by-one errors. See
-[`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs) for detailed documentation, quick
-start guide, and examples.
+comprehensive protection against off-by-one errors.
 
 #### Core Principles
 
@@ -236,7 +264,7 @@ use r3bl_tui::{
 See [`bounds_check/mod.rs`](tui/src/core/units/bounds_check/mod.rs) for detailed documentation,
 decision trees, and examples.
 
-# Testing interactive terminal applications
+### Testing Interactive Terminal Applications
 
 For testing interactive terminal applications, use (they are both installed):
 

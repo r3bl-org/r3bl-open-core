@@ -127,19 +127,69 @@
 /// This is a widely-adopted standard across most terminal emulators.
 pub const TAB_STOP_WIDTH: usize = 8;
 
-// Attach modules.
+// Attach modules - conditionally public for documentation and testing.
+// These modules contain impl blocks for OffscreenBuffer and are accessed by
+// the parser shim layer. Making them conditionally public allows rustdoc links
+// to work while keeping them private in release builds.
+#[cfg(any(test, doc))]
 pub mod vt_100_impl_ansi_scroll_helper;
-pub mod vt_100_impl_char_ops;
-pub mod vt_100_impl_control_ops;
-pub mod vt_100_impl_cursor_ops;
-pub mod vt_100_impl_dsr_ops;
-pub mod vt_100_impl_line_ops;
-pub mod vt_100_impl_margin_ops;
-pub mod vt_100_impl_mode_ops;
-pub mod vt_100_impl_osc_ops;
-pub mod vt_100_impl_scroll_ops;
-pub mod vt_100_impl_sgr_ops;
-pub mod vt_100_impl_terminal_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_ansi_scroll_helper;
 
-// Note: Individual modules are typically accessed directly by their respective
-// vt_100_pty_output_parser operation files. No re-exports needed here.
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_char_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_char_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_control_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_control_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_cursor_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_cursor_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_dsr_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_dsr_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_line_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_line_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_margin_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_margin_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_mode_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_mode_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_osc_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_osc_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_scroll_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_scroll_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_sgr_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_sgr_ops;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_impl_terminal_ops;
+#[cfg(not(any(test, doc)))]
+pub(super) mod vt_100_impl_terminal_ops;
+
+// Note: Individual modules are accessed by the parser shim layer (vt_100_pty_output_parser).
+// No re-exports needed here since the impl blocks extend OffscreenBuffer directly.

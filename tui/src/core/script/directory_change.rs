@@ -15,12 +15,12 @@ use std::{env, io::ErrorKind, path::Path};
 /// in [`mod@super::fs_path`] as an example of how to do this.
 ///
 /// Supports both sync and async blocks:
-/// ```rust,no_run
+/// ```rust,ignore
 /// // Sync usage:
-/// with_saved_pwd!({ /* sync code */ })
+/// with_saved_pwd!({ /* sync code */ });
 ///
 /// // Async usage:
-/// with_saved_pwd!(async { /* async code */ })
+/// with_saved_pwd!(async { /* async code */ });
 /// ```
 #[macro_export]
 macro_rules! with_saved_pwd {

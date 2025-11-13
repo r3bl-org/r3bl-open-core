@@ -145,9 +145,8 @@ use std::{cmp::max, num::NonZeroU16};
 /// let mut parser = Parser::new();
 /// let mut performer = TestPerform { result: None };
 ///
-/// for byte in b"\x1b[38:5:196m" {
-///     parser.advance(&mut performer, *byte);
-/// }
+/// // Pass the entire byte slice to advance
+/// parser.advance(&mut performer, b"\x1b[38:5:196m");
 ///
 /// // extract_nth_many_raw returns the complete sub-parameter slice
 /// assert_eq!(performer.result, Some(vec![38, 5, 196]));
