@@ -13,8 +13,28 @@ use std::{env, io::ErrorKind, path::Path};
 ///
 /// You might need to run tests that use this function in an isolated process. See tests
 /// in [`mod@super::fs_path`] as an example of how to do this.
+///
+/// Supports both sync and async blocks:
+/// ```rust,no_run
+/// // Sync usage:
+/// with_saved_pwd!({ /* sync code */ })
+///
+/// // Async usage:
+/// with_saved_pwd!(async { /* async code */ })
+/// ```
 #[macro_export]
 macro_rules! with_saved_pwd {
+    // Async block variant
+    (async $block:block) => {{
+        let og_pwd_res = std::env::current_dir();
+        let result = async { $block }.await;
+        if let Ok(it) = og_pwd_res {
+            // We don't care about the result of this operation.
+            std::env::set_current_dir(it).ok();
+        }
+        result
+    }};
+    // Sync block variant
     ($block:block) => {{
         let og_pwd_res = std::env::current_dir();
         let result = { $block };

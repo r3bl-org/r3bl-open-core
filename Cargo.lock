@@ -2259,9 +2259,11 @@ dependencies = [
  "pretty_assertions",
  "pulldown-cmark",
  "pulldown-cmark-to-cmark",
+ "r3bl_tui",
  "regex",
  "tempfile",
  "test-case",
+ "tokio",
  "unicode-width 0.2.2",
  "walkdir",
 ]

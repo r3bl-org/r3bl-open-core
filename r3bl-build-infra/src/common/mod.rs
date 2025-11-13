@@ -3,9 +3,7 @@
 //! Shared utilities across all build tools.
 
 pub mod cargo_fmt_runner;
-pub mod git_utils;
 pub mod workspace_utils;
 
 pub use cargo_fmt_runner::*;
-pub use git_utils::*;
 pub use workspace_utils::*;

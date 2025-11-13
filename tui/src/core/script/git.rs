@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use super::CURRENT_BRANCH_PREFIX;
-use r3bl_tui::{CommonResult, InlineString, ItemsOwned, Run, command};
+use crate::{CommonResult, InlineString, ItemsOwned, Run, command};
+use std::path::PathBuf;
 use tokio::process::Command;
 
 /// This is a type alias for the result of a git command. The tuple contains:
@@ -134,7 +134,7 @@ pub mod local_branch_ops {
     /// Get all the local branches as a tuple.
     ///
     /// 1. The first item in the tuple contains the current branch is prefixed with
-    ///    [`CURRENT_BRANCH_PREFIX`].
+    ///    `CURRENT_BRANCH_PREFIX`.
     ///
     ///   ```text
     ///   [
@@ -189,6 +189,7 @@ pub mod local_branch_ops {
         #[must_use]
         pub fn mark_branch_current(branch_name: &str) -> InlineString {
             use std::fmt::Write;
+            const CURRENT_BRANCH_PREFIX: &str = "(◕‿◕)";
             let mut acc = InlineString::new();
             // We don't care about the result of this operation.
             write!(acc, "{CURRENT_BRANCH_PREFIX} {branch_name}").ok();
@@ -206,6 +207,7 @@ pub mod local_branch_ops {
         /// ```
         #[must_use]
         pub fn trim_current_prefix_from_branch(branch: &str) -> &str {
+            const CURRENT_BRANCH_PREFIX: &str = "(◕‿◕)";
             branch.trim_start_matches(CURRENT_BRANCH_PREFIX).trim()
         }
     }
@@ -265,25 +267,156 @@ pub mod local_branch_ops {
     }
 }
 
-/// These tests are all run in an isolated process to prevent flakiness when tests are run
-/// in parallel. The issue is that when these tests are run by cargo test (in parallel in
-/// the SAME process), it leads to undefined behavior and flaky test failures, since the
-/// current working directory is changed per process, and all the tests are running in
-/// parallel in the same process.
+// ╔═══════════════════════════════════════════════════════════════════════════╗
+// ║ Git file utilities (converted from r3bl-build-infra/src/common/git_utils.rs)
+// ╚═══════════════════════════════════════════════════════════════════════════╝
+
+/// Get list of changed files matching any of the provided extensions.
 ///
-/// By running all these tests in an isolated process, we ensure that any changes to
-/// the current working directory are completely isolated and cannot affect other tests.
+/// Priority:
+/// 1. If there are staged or unstaged changes, return those files
+/// 2. If working tree is clean, return files from most recent commit
+///
+/// # Arguments
+///
+/// * `extensions` - File extensions to filter by. If empty, returns all changed files.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use r3bl_tui::core::script::git::try_get_changed_files_by_ext;
+///
+/// # async fn example() {
+/// // Get ALL changed files (no filtering)
+/// let (files, _cmd) = try_get_changed_files_by_ext(&[]).await;
+///
+/// // Get changed Rust files only
+/// let (files, _cmd) = try_get_changed_files_by_ext(&["rs"]).await;
+///
+/// // Get changed Rust and TOML files
+/// let (files, _cmd) = try_get_changed_files_by_ext(&["rs", "toml"]).await;
+/// # }
+/// ```
+pub async fn try_get_changed_files_by_ext(
+    extensions: &[&str],
+) -> ResultAndCommand<Vec<PathBuf>> {
+    // First check for staged and unstaged files
+    let (res_changed_files, cmd) = get_working_tree_changes(extensions).await;
+    let Ok(changed_files) = res_changed_files else {
+        let report = res_changed_files.unwrap_err();
+        return (Err(report), cmd);
+    };
+
+    if !changed_files.is_empty() {
+        return (Ok(changed_files), cmd);
+    }
+
+    // Working tree is clean, check most recent commit
+    get_files_from_last_commit(extensions).await
+}
+
+/// Get files with staged or unstaged changes matching the extensions.
+async fn get_working_tree_changes(
+    extensions: &[&str],
+) -> ResultAndCommand<Vec<PathBuf>> {
+    let mut cmd = command!(
+        program => "git",
+        args => "diff", "--name-only", "HEAD"
+    );
+
+    let res_output = cmd.run().await;
+    let Ok(output) = res_output else {
+        let report = res_output.unwrap_err();
+        return (Err(report), cmd);
+    };
+
+    let files: Vec<PathBuf> = String::from_utf8_lossy(&output)
+        .lines()
+        .filter(|line| {
+            // If extensions is empty, include all files
+            if extensions.is_empty() {
+                return true;
+            }
+
+            // Otherwise, filter by extension
+            std::path::Path::new(line)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| {
+                    extensions.iter().any(|&e| ext.eq_ignore_ascii_case(e))
+                })
+        })
+        .map(PathBuf::from)
+        .collect();
+
+    (Ok(files), cmd)
+}
+
+/// Get files from the most recent commit matching the extensions.
+async fn get_files_from_last_commit(
+    extensions: &[&str],
+) -> ResultAndCommand<Vec<PathBuf>> {
+    let mut cmd = command!(
+        program => "git",
+        args => "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"
+    );
+
+    let res_output = cmd.run().await;
+    let Ok(output) = res_output else {
+        let report = res_output.unwrap_err();
+        return (Err(report), cmd);
+    };
+
+    let files: Vec<PathBuf> = String::from_utf8_lossy(&output)
+        .lines()
+        .filter(|line| {
+            // If extensions is empty, include all files
+            if extensions.is_empty() {
+                return true;
+            }
+
+            // Otherwise, filter by extension
+            std::path::Path::new(line)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| {
+                    extensions.iter().any(|&e| ext.eq_ignore_ascii_case(e))
+                })
+        })
+        .map(PathBuf::from)
+        .collect();
+
+    (Ok(files), cmd)
+}
+
+/// Check if we're in a git repository.
+pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
+    let mut cmd = command!(
+        program => "git",
+        args => "rev-parse", "--git-dir"
+    );
+
+    let res_output = cmd.run().await;
+    let is_repo = res_output
+        .map(|_output| true)
+        .unwrap_or(false);
+
+    (Ok(is_repo), cmd)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use r3bl_tui::{TempDir, inline_string, inline_vec, ok, try_create_temp_dir_and_cd,
-                   try_write_file, with_saved_pwd};
+    use crate::{
+        TempDir, inline_string, inline_vec, ok, try_create_temp_dir_and_cd, try_write_file,
+        with_saved_pwd,
+    };
 
     /// Helper function to setup a basic git repository with an initial commit Returns a
     /// tuple of (`temp_dir_root`, `git_folder_path`, `initial_branch_name`). When the
     /// `temp_dir_root` is dropped it will clean remove that folder.
     ///
-    /// This function also uses [`r3bl_tui::try_cd()`] so make sure to wrap all tests that
+    /// This function also uses [`crate::try_cd()`] so make sure to wrap all tests that
     /// call this function with [`serial_test`].
     async fn helper_setup_git_repo_with_commit() -> miette::Result<(
         /* temp_dir_root: don't drop this immediately using `_` */ TempDir,
@@ -335,7 +468,7 @@ mod tests {
     // detects clean and dirty repository states. Does not use
     // [helper_setup_git_repo_with_commit()] helper function.
     async fn test_try_is_working_directory_clean() -> miette::Result<()> {
-        with_saved_pwd!({
+        with_saved_pwd!(async {
             let (_temp_dir_root, git_folder) =
                 try_create_temp_dir_and_cd!("test_git_folder");
 
@@ -390,14 +523,14 @@ mod tests {
             // Assert that the working directory is clean after committing.
             assert_eq!(try_is_working_directory_clean().await.0?, RepoStatus::Clean);
 
-            ok!()
+            ok!(())
         })
     }
 
     // Tests [super::try_get_current_branch_name()] function to verify it correctly
     // retrieves the current branch name.
     async fn test_try_get_current_branch_name() -> miette::Result<()> {
-        with_saved_pwd!({
+        with_saved_pwd!(async {
             // Create an empty temp dir to verify that running the command fails.
             {
                 // Create a temp dir and cd to it.
@@ -431,14 +564,14 @@ mod tests {
                 assert_ne!(new_feature_branch, initial_branch_name);
             } // Drop _temp_dir_root here (which cleans up that folder).
 
-            ok!()
+            ok!(())
         })
     }
 
     // Tests [super::try_checkout_existing_local_branch()] function to verify it
     // correctly switches to an existing branch.
     async fn test_try_checkout_existing_local_branch() -> miette::Result<()> {
-        with_saved_pwd!({
+        with_saved_pwd!(async {
             let (
                 /* don't drop this immediately using `_` */ _temp_dir_root,
                 initial_branch,
@@ -467,7 +600,7 @@ mod tests {
                 .0;
             assert!(res.is_err());
 
-            ok!()
+            ok!(())
         })
     }
 
@@ -475,7 +608,7 @@ mod tests {
     // [super::local_branch_ops::try_get_local_branches] function to verify it correctly
     // creates a new branch and switches to it.
     async fn test_try_create_and_switch_to_branch() -> miette::Result<()> {
-        with_saved_pwd!({
+        with_saved_pwd!(async {
             let (
                 /* don't drop this immediately using `_` */ _temp_dir_root,
                 initial_branch,
@@ -499,7 +632,7 @@ mod tests {
                 local_branch_ops::BranchExists::Yes
             );
 
-            ok!()
+            ok!(())
         })
     }
 
@@ -507,7 +640,7 @@ mod tests {
     // [super::local_branch_ops::try_get_local_branches()] functions to verify it
     // correctly deletes branches.
     async fn test_try_delete_branches() -> miette::Result<()> {
-        with_saved_pwd!({
+        with_saved_pwd!(async {
             let (
                 /* don't drop this immediately using `_` */ _temp_dir_root,
                 initial_branch,
@@ -571,14 +704,14 @@ mod tests {
                 local_branch_ops::BranchExists::Yes
             );
 
-            ok!()
+            ok!(())
         })
     }
 
     // Tests [super::local_branch_ops::try_get_local_branches()] function to verify it
     // correctly lists branches and distinguishes the current branch.
     async fn test_try_get_local_branches() -> miette::Result<()> {
-        with_saved_pwd!({
+        with_saved_pwd!(async {
             let (
                 /* don't drop this immediately using `_` */ _temp_dir_root,
                 initial_branch,
@@ -601,8 +734,9 @@ mod tests {
                 assert_eq!(branch_info.current_branch, initial_branch);
 
                 // Verify current branch is `(◕‿◕) main` and is in `items_owned`.
+                let current_branch_prefix = "(◕‿◕)";
                 assert!(items_owned.contains(&inline_string!(
-                    "{CURRENT_BRANCH_PREFIX} {initial_branch}"
+                    "{current_branch_prefix} {initial_branch}"
                 )));
 
                 // Verify other branches are in the list.
@@ -638,9 +772,10 @@ mod tests {
                 assert_eq!(branch_info.current_branch.as_str(), "branch1");
 
                 // Verify the marked current branch in items_owned contains "branch1".
+                let current_branch_prefix = "(◕‿◕)";
                 assert!(
                     items_owned
-                        .contains(&inline_string!("{CURRENT_BRANCH_PREFIX} branch1"))
+                        .contains(&inline_string!("{current_branch_prefix} branch1"))
                 );
 
                 // Verify other branches are in the list.
@@ -648,14 +783,14 @@ mod tests {
                 assert!(items_owned.iter().any(|branch| branch == "branch2"));
             }
 
-            ok!()
+            ok!(())
         })
     }
 
     // Tests [local_branch_ops::LocalBranchInfo] methods including `exists_locally()`,
     // `mark_branch_current()`, and `trim_current_prefix_from_branch()`.
-    fn test_local_branch_info_methods() -> miette::Result<()> {
-        with_saved_pwd!({
+    async fn test_local_branch_info_methods() -> miette::Result<()> {
+        with_saved_pwd!(async {
             // Test exists_locally method.
             let branch_info = local_branch_ops::LocalBranchInfo {
                 current_branch: "main".into(),
@@ -680,11 +815,12 @@ mod tests {
             );
 
             // Test mark_branch_current method.
+            let current_branch_prefix = "(◕‿◕)";
             let marked = local_branch_ops::LocalBranchInfo::mark_branch_current("main");
-            assert_eq!(marked, inline_string!("{CURRENT_BRANCH_PREFIX} main"));
+            assert_eq!(marked, inline_string!("{current_branch_prefix} main"));
 
             // Test trim_current_prefix_from_branch method.
-            let formatted = inline_string!("{CURRENT_BRANCH_PREFIX} main");
+            let formatted = inline_string!("{current_branch_prefix} main");
             let trimmed =
                 local_branch_ops::LocalBranchInfo::trim_current_prefix_from_branch(
                     &formatted,
@@ -698,14 +834,14 @@ mod tests {
                 );
             assert_eq!(unchanged, "develop");
 
-            ok!()
+            ok!(())
         })
     }
 
     // Tests [super::local_branch_ops::try_execute_git_command_to_get_branches()]
     // function to verify it correctly lists all branches from the git repository.
     async fn test_try_execute_git_command_to_get_branches() -> miette::Result<()> {
-        with_saved_pwd!({
+        with_saved_pwd!(async {
             let (
                 /* don't drop this immediately using `_` */ _temp_dir_root,
                 initial_branch,
@@ -731,7 +867,107 @@ mod tests {
             assert!(branches.iter().any(|b| b == "branch2"));
             assert_eq!(branches.len(), 3); // initial + 2 created branches
 
-            ok!()
+            ok!(())
+        })
+    }
+
+    // Tests [super::try_get_changed_files_by_ext()] with various extensions.
+    async fn test_try_get_changed_files_by_ext() -> miette::Result<()> {
+        with_saved_pwd!(async {
+            let (
+                /* don't drop this immediately using `_` */ _temp_dir_root,
+                _git_folder,
+            ) = try_create_temp_dir_and_cd!("test_git_changed_files");
+
+            // Setup git repo.
+            command!(program => "git", args => "init").run().await?;
+            command!(program => "git", args => "config", "user.email", "test@example.com")
+                .run()
+                .await?;
+            command!(program => "git", args => "config", "user.name", "Test User")
+                .run()
+                .await?;
+            command!(program => "git", args => "config", "commit.gpgsign", "false")
+                .run()
+                .await?;
+
+            // Create initial commit.
+            try_write_file(&_git_folder, "initial.txt", "initial")?;
+            command!(program => "git", args => "add", "initial.txt")
+                .run()
+                .await?;
+            command!(program => "git", args => "commit", "-m", "Initial commit")
+                .run()
+                .await?;
+
+            // Create some test files.
+            try_write_file(&_git_folder, "test.rs", "fn main() {}")?;
+            try_write_file(&_git_folder, "config.toml", "[package]")?;
+            try_write_file(&_git_folder, "README.md", "# Test")?;
+            try_write_file(&_git_folder, "data.json", "{}")?;
+
+            // Stage the test files so they show up in git diff --name-only HEAD.
+            command!(program => "git", args => "add", "test.rs")
+                .run()
+                .await?;
+            command!(program => "git", args => "add", "config.toml")
+                .run()
+                .await?;
+            command!(program => "git", args => "add", "README.md")
+                .run()
+                .await?;
+            command!(program => "git", args => "add", "data.json")
+                .run()
+                .await?;
+
+            // Test: Get all changed files (empty extensions array).
+            let (all_files, _) = try_get_changed_files_by_ext(&[]).await;
+            let all_files = all_files?;
+            assert_eq!(all_files.len(), 4);
+
+            // Test: Get only .rs files.
+            let (rs_files, _) = try_get_changed_files_by_ext(&["rs"]).await;
+            let rs_files = rs_files?;
+            assert_eq!(rs_files.len(), 1);
+            assert!(rs_files[0].to_string_lossy().contains("test.rs"));
+
+            // Test: Get .rs and .toml files.
+            let (config_files, _) = try_get_changed_files_by_ext(&["rs", "toml"]).await;
+            let config_files = config_files?;
+            assert_eq!(config_files.len(), 2);
+
+            // Test: Get .md files.
+            let (md_files, _) = try_get_changed_files_by_ext(&["md"]).await;
+            let md_files = md_files?;
+            assert_eq!(md_files.len(), 1);
+            assert!(md_files[0].to_string_lossy().contains("README.md"));
+
+            ok!(())
+        })
+    }
+
+    // Tests [super::try_is_git_repo()] function.
+    async fn test_try_is_git_repo() -> miette::Result<()> {
+        with_saved_pwd!(async {
+            // Test in a git repo.
+            {
+                let (
+                    /* don't drop this immediately using `_` */ _temp_dir_root,
+                    _initial_branch,
+                ) = helper_setup_git_repo_with_commit().await?;
+
+                let (is_repo, _) = try_is_git_repo().await;
+                assert!(is_repo?);
+            }
+
+            // Test in a non-git directory.
+            {
+                let _temp_dir_root = try_create_temp_dir_and_cd!();
+                let (is_repo, _) = try_is_git_repo().await;
+                assert!(!is_repo?);
+            }
+
+            ok!(())
         })
     }
 
@@ -752,10 +988,12 @@ mod tests {
         test_try_create_and_switch_to_branch().await?;
         test_try_delete_branches().await?;
         test_try_get_local_branches().await?;
-        test_local_branch_info_methods()?;
+        test_local_branch_info_methods().await?;
         test_try_execute_git_command_to_get_branches().await?;
+        test_try_get_changed_files_by_ext().await?;
+        test_try_is_git_repo().await?;
 
-        ok!()
+        ok!(())
     }
 
     /// This test function runs all the tests that change the current working directory

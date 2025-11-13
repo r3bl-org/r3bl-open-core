@@ -1,7 +1,8 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::giti::{BranchNewDetails, CommandRunDetails, git, local_branch_ops, ui_str};
-use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext, ReadlineEvent};
+use crate::giti::{BranchNewDetails, CommandRunDetails, ui_str};
+use r3bl_tui::{CommandRunResult, CommonResult, ReadlineAsyncContext, ReadlineEvent, git,
+               local_branch_ops};
 
 /// The main function for `giti branch new` command.
 ///
