@@ -14,20 +14,43 @@ use std::{env, io::ErrorKind, path::Path};
 /// You might need to run tests that use this function in an isolated process. See tests
 /// in [`mod@super::fs_path`] as an example of how to do this.
 ///
-/// Supports both sync and async blocks:
-/// ```rust,ignore
-/// // Sync usage:
-/// with_saved_pwd!({ /* sync code */ });
+/// # Examples
 ///
-/// // Async usage:
-/// with_saved_pwd!(async { /* async code */ });
+/// ## Sync usage - temporarily changes directory and restores it
+///
+/// ```no_run
+/// # use std::env;
+/// # use r3bl_tui::with_saved_pwd;
+/// let result = with_saved_pwd!({
+///     let _ = env::set_current_dir("/tmp");
+///     // Operations here see /tmp as current directory
+///     42 // Return value from the block
+/// });
+/// assert_eq!(result, 42);
+/// // Original directory is restored here
+/// ```
+///
+/// ## Async usage - works with async code
+///
+/// ```no_run
+/// # use r3bl_tui::with_saved_pwd;
+/// # async fn async_example() {
+/// let result = with_saved_pwd!(async {
+///     let _ = std::env::set_current_dir("/tmp");
+///     // Operations here see /tmp as current directory
+///     // Can use .await and async operations here
+///     // Directory is restored when block completes
+///     "done" // Return value from the block
+/// });
+/// assert_eq!(result, "done");
+/// # }
 /// ```
 #[macro_export]
 macro_rules! with_saved_pwd {
     // Async block variant
     (async $block:block) => {{
         let og_pwd_res = std::env::current_dir();
-        let result = async { $block }.await;
+        let result = async { $block }.await; // <- This line is different
         if let Ok(it) = og_pwd_res {
             // We don't care about the result of this operation.
             std::env::set_current_dir(it).ok();
@@ -37,7 +60,7 @@ macro_rules! with_saved_pwd {
     // Sync block variant
     ($block:block) => {{
         let og_pwd_res = std::env::current_dir();
-        let result = { $block };
+        let result = { $block }; // <- This line is different
         if let Ok(it) = og_pwd_res {
             // We don't care about the result of this operation.
             std::env::set_current_dir(it).ok();

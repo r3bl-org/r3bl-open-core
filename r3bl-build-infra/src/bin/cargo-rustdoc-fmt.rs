@@ -8,28 +8,61 @@ use std::process;
 
 #[tokio::main]
 async fn main() {
-    if let Err(e) = run().await {
-        eprintln!("Error: {e:?}");
-        process::exit(1);
+    match run().await {
+        Err(e) => {
+            eprintln!("Error: {e:?}");
+            process::exit(1);
+        }
+        Ok(_) => (),
     }
 }
 
+/// Prepares command-line arguments, accounting for Cargo's plugin invocation convention.
+///
+/// Here are the two ways in which this program can be invoked from the command line:
+///
+/// | Method    | Command                                   | `args[0]`              | `args[1]`       | `args[2..]`                     |
+/// | --------- | ----------------------------------------- | ---------------------- | --------------- | ------------------------------- |
+/// | Direct    | `cargo-rustdoc-fmt --verbose --workspace` | `"cargo-rustdoc-fmt"`  | `"--verbose"`   | `["--workspace"]`               |
+/// | Via Cargo | `cargo rustdoc-fmt --verbose --workspace` | `"cargo-rustdoc-fmt"`  | `"rustdoc-fmt"` | `["--verbose", "--workspace"]`* |
+///
+/// When run via Cargo, notice the extra `rustdoc-fmt` string at `args[1]`!
+/// Cargo automatically injects the "subcommand name" there.
+///
+/// # Cargo Plugin Convention
+///
+/// When a Cargo plugin is invoked via the `cargo` binary, Cargo injects the the
+/// "subcommand name" as the first argument after the program name (which is `cargo`).
+/// This is a Cargo convention to help plugins identify how they were invoked.
+///
+/// ## Why We Skip `args[1]` When Invoked Via Cargo
+///
+/// `clap` doesn't know about Cargo's plugin convention, so it would interpret
+/// "rustdoc-fmt" as a command line argument passed in by the user. We manually remove it
+/// when detected so `clap` only sees the actual user-provided arguments.
+fn strip_cargo_subcommand_injection() -> Vec<String> {
+    // Dynamically extract subcommand name from binary name, so we don't have to hardcode
+    // the binary name here.
+    // - "cargo-rustdoc-fmt" -> "rustdoc-fmt"
+    // - `CARGO_BIN_NAME` is set by Cargo at compile time.
+    let injected_subcommand_name = env!("CARGO_BIN_NAME")
+        .strip_prefix("cargo-")
+        .expect("This binary name must start with 'cargo-'");
+
+    // Skip the injected subcommand name if invoked via Cargo
+    let mut args: Vec<_> = std::env::args().collect();
+    let is_cargo_invocation = args.len() >= 2 && args[1] == injected_subcommand_name;
+    if is_cargo_invocation {
+        args.remove(1);
+    }
+    args
+}
+
 async fn run() -> miette::Result<()> {
-    // Parse args, skipping the subcommand name if invoked via cargo
-    let args: Vec<String> = std::env::args().collect();
-    let cli_arg = if args.len() > 1 && args[1] == "rustdoc-fmt" {
-        // Invoked as "cargo rustdoc-fmt" - skip the subcommand name
-        CLIArg::parse_from(args.iter().enumerate().filter_map(|(i, arg)| {
-            if i == 1 {
-                None // Skip "rustdoc-fmt"
-            } else {
-                Some(arg.as_str())
-            }
-        }))
-    } else {
-        // Invoked directly as "cargo-rustdoc-fmt"
-        CLIArg::parse()
-    };
+    let args = strip_cargo_subcommand_injection();
+
+    // Parse args
+    let cli_arg = CLIArg::parse_from(&args);
     let options = cli_arg.to_format_options();
 
     // Get files to process

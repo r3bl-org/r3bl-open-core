@@ -316,9 +316,7 @@ pub async fn try_get_changed_files_by_ext(
 }
 
 /// Get files with staged or unstaged changes matching the extensions.
-async fn get_working_tree_changes(
-    extensions: &[&str],
-) -> ResultAndCommand<Vec<PathBuf>> {
+async fn get_working_tree_changes(extensions: &[&str]) -> ResultAndCommand<Vec<PathBuf>> {
     let mut cmd = command!(
         program => "git",
         args => "diff", "--name-only", "HEAD"
@@ -397,9 +395,7 @@ pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
     );
 
     let res_output = cmd.run().await;
-    let is_repo = res_output
-        .map(|_output| true)
-        .unwrap_or(false);
+    let is_repo = res_output.map(|_output| true).unwrap_or(false);
 
     (Ok(is_repo), cmd)
 }
@@ -407,10 +403,8 @@ pub async fn try_is_git_repo() -> ResultAndCommand<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        TempDir, inline_string, inline_vec, ok, try_create_temp_dir_and_cd, try_write_file,
-        with_saved_pwd,
-    };
+    use crate::{TempDir, inline_string, inline_vec, ok, try_create_temp_dir_and_cd,
+                try_write_file, with_saved_pwd};
 
     /// Helper function to setup a basic git repository with an initial commit Returns a
     /// tuple of (`temp_dir_root`, `git_folder_path`, `initial_branch_name`). When the

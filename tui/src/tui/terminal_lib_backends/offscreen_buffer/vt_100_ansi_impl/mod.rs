@@ -191,5 +191,6 @@ pub mod vt_100_impl_terminal_ops;
 #[cfg(not(any(test, doc)))]
 pub(super) mod vt_100_impl_terminal_ops;
 
-// Note: Individual modules are accessed by the parser shim layer (vt_100_pty_output_parser).
-// No re-exports needed here since the impl blocks extend OffscreenBuffer directly.
+// Note: Individual modules are accessed by the parser shim layer
+// (vt_100_pty_output_parser). No re-exports needed here since the impl blocks extend
+// OffscreenBuffer directly.
