@@ -26,8 +26,8 @@
 use super::{FlushKind, RenderOpsLocalData, RenderPipeline};
 use crate::{DEBUG_TUI_COMPOSITOR, DEBUG_TUI_SHOW_PIPELINE_EXPANDED, GlobalData,
             LengthOps, LockedOutputDevice, OffscreenBuffer, OffscreenBufferPaint,
-            OffscreenBufferPaintImplCrossterm, Pos, Size, TERMINAL_LIB_BACKEND,
-            TerminalLibBackend, diff_chunks::PixelCharDiffChunks};
+            OffscreenBufferPaintImplCrossterm, PixelCharDiffChunks, Pos, Size,
+            TERMINAL_LIB_BACKEND, TerminalLibBackend};
 use std::fmt::Debug;
 
 fn perform_diff_paint(

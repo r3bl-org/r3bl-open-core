@@ -5,9 +5,9 @@
 //! This module implements line-level operations that correspond to ANSI line
 //! sequences. These include:
 //!
-//! - **IL** (Insert Lines) - [`shift_lines_down`]
-//! - **DL** (Delete Lines) - [`shift_lines_up`]
-//! - **EL** (Erase Line) - [`clear_line`]
+//! - **IL** (Insert Lines) - [`shift_lines_down()`]
+//! - **DL** (Delete Lines) - [`shift_lines_up()`]
+//! - **EL** (Erase Line) - [`clear_line()`]
 //!
 //! All operations maintain VT100 compliance and handle proper line manipulation
 //! within scroll regions as specified in VT100 documentation.
@@ -52,9 +52,9 @@
 //! Operations only affect lines within the scroll region. If the cursor is outside
 //! the scroll region, the operation is skipped entirely.
 //!
-//! [`shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
-//! [`shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
-//! [`clear_line`]: crate::OffscreenBuffer::clear_line
+//! [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
+//! [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
+//! [`clear_line()`]: crate::OffscreenBuffer::clear_line
 //! [Interval Notation]: crate::core::coordinates::bounds_check#interval-notation
 
 use crate::{Length, OffscreenBuffer, PixelChar, RowHeight, RowIndex,

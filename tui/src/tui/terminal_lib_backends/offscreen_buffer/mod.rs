@@ -109,14 +109,14 @@
 //! mapping:
 //!
 //! ```text
-//! vt_100_pty_output_parser/operations/             offscreen_buffer/vt_100_ansi_impl/
-//! ├── vt_100_shim_char_ops         →         ├── vt_100_impl_char_ops    (print_char, ICH, DCH, ECH)
-//! ├── vt_100_shim_control_ops      →         ├── vt_100_impl_control_ops (BS, TAB, LF, CR)
-//! ├── vt_100_shim_cursor_ops       →         ├── vt_100_impl_cursor_ops  (movement, positioning)
-//! ├── vt_100_shim_line_ops         →         ├── vt_100_impl_line_ops    (insert/delete lines)
-//! ├── vt_100_shim_scroll_ops       →         ├── vt_100_impl_scroll_ops  (scrolling, regions)
-//! ├── vt_100_shim_terminal_ops     →         ├── vt_100_impl_terminal_ops(reset, clear, charset)
-//! └── bounds_check.rs              →         └── vt_100_impl_ansi_scroll_helper (scroll region utilities)
+//! vt_100_pty_output_parser/operations/    offscreen_buffer/vt_100_ansi_impl/
+//! ├── vt_100_shim_char_ops         →      ├── vt_100_impl_char_ops    (print_char, ICH, DCH, ECH)
+//! ├── vt_100_shim_control_ops      →      ├── vt_100_impl_control_ops (BS, TAB, LF, CR)
+//! ├── vt_100_shim_cursor_ops       →      ├── vt_100_impl_cursor_ops  (movement, positioning)
+//! ├── vt_100_shim_line_ops         →      ├── vt_100_impl_line_ops    (insert/delete lines)
+//! ├── vt_100_shim_scroll_ops       →      ├── vt_100_impl_scroll_ops  (scrolling, regions)
+//! ├── vt_100_shim_terminal_ops     →      ├── vt_100_impl_terminal_ops(reset, clear, charset)
+//! └── bounds_check.rs              →      └── vt_100_impl_ansi_scroll_helper (scroll region utilities)
 //! ```
 //!
 //! This 1:1 mapping provides:
@@ -250,65 +250,16 @@
 //! ### Validation Helpers - Preferred Pattern
 //!
 //! All buffer operations **should use** the standardized validation helper methods from
-//! [`ofs_buf_range_validation`]:
+//! [`ofs_buf_range_validation`] rather than performing manual bounds checking. These
+//! helpers provide consistent, type-safe validation that prevents off-by-one errors and
+//! ensures correct handling of ranges and positions.
 //!
-//! #### For Column Range Operations
-//! ```text
-//! // ✅ Preferred: Use validation helpers
-//! pub fn my_column_operation(&mut self, row: RowIndex, col_range: Range<ColIndex>) -> bool {
-//!     let Some((start_col, end_col, line)) =
-//!         self.validate_col_range_mut(row, col_range) else {
-//!         return false;
-//!     };
-//!
-//!     // Safe to use start_col..end_col on line
-//!     line[start_col..end_col].fill(PixelChar::Spacer);
-//!     true
-//! }
-//!
-//! // ❌ Avoid: Manual bounds checking
-//! pub fn avoid_this_pattern(&mut self, row: RowIndex, col: ColIndex) -> bool {
-//!     if row.as_usize() >= self.buffer.len() { return false; }
-//!     if col.as_usize() >= self.buffer[row.as_usize()].len() { return false; }
-//!     // Manual validation is error-prone and inconsistent
-//!     true
-//! }
-//! ```
-//!
-//! #### For Row Range Operations
-//! ```text
-//! // ✅ Preferred: Use validation helpers
-//! pub fn my_row_operation(&mut self, row_range: Range<RowIndex>) -> bool {
-//!     let Some((start_row, end_row, lines)) =
-//!         self.validate_row_range_mut(row_range) else {
-//!         return false;
-//!     };
-//!
-//!     // Safe to use start_row..end_row indices with lines slice
-//!     for line in lines.iter_mut() {
-//!         line.fill(PixelChar::Spacer);
-//!     }
-//!     true
-//! }
-//! ```
-//!
-//! #### For Single Position Operations
-//! ```text
-//! // ✅ Preferred: Use single-row validation for consistency
-//! pub fn my_position_operation(&mut self, pos: Pos) -> bool {
-//!     let row_range = pos.row_index..row(pos.row_index.as_usize() + 1);
-//!     let Some((_, _, lines)) = self.validate_row_range_mut(row_range) else {
-//!         return false;
-//!     };
-//!
-//!     if pos.col_index.as_usize() >= lines[0].len() {
-//!         return false;
-//!     }
-//!
-//!     lines[0][pos.col_index.as_usize()] = PixelChar::Spacer;
-//!     true
-//! }
-//! ```
+//! The module exports three core validation methods (see below) that handle the
+//! complexity of range validation and return structured data ready for safe array access.
+//! See actual implementations in the codebase for usage patterns:
+//! - [`fill_char_range()`] (column range operation)
+//! - [`copy_chars_within_line()`] (column range operation)
+//! - Tests in [`mod@ofs_buf_range_validation`] (comprehensive examples)
 //!
 //! #### Core Validation Methods
 //! - [`validate_col_range_mut()`] for column range validation
@@ -352,7 +303,7 @@
 //! [`handle_line_feed()`]: crate::OffscreenBuffer::handle_line_feed
 //! [`handle_tab()`]: crate::OffscreenBuffer::handle_tab
 //! [`insert_chars_at_cursor()`]: crate::OffscreenBuffer::insert_chars_at_cursor
-//! [`ofs_buf_range_validation`]:
+//! [`ofs_buf_range_validation`]: mod@crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_range_validation
 //! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
 //! [`set_char()`]: crate::OffscreenBuffer::set_char
 //! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
@@ -361,20 +312,43 @@
 //! [`validate_col_range_mut()`]: crate::OffscreenBuffer::validate_col_range_mut
 //! [`validate_row_range_mut()`]: crate::OffscreenBuffer::validate_row_range_mut
 
-// Attach.
+// Attach private modules (hide internal structure).
+// Some modules are conditionally public for documentation to allow rustdoc links.
+#[cfg(any(test, doc))]
 pub mod diff_chunks;
-pub mod ofs_buf_bulk_ops;
-pub mod ofs_buf_char_ops;
-pub mod ofs_buf_core;
-pub mod ofs_buf_line_level_ops;
-pub mod ofs_buf_range_validation;
-pub mod paint_impl;
-pub mod pixel_char;
-pub mod pixel_char_line;
-pub mod pixel_char_lines;
-pub mod vt_100_ansi_impl;
+#[cfg(not(any(test, doc)))]
+mod diff_chunks;
 
-// Re-export all implementations.
+mod ofs_buf_bulk_ops;
+
+#[cfg(any(test, doc))]
+pub mod ofs_buf_char_ops;
+#[cfg(not(any(test, doc)))]
+mod ofs_buf_char_ops;
+
+mod ofs_buf_core;
+mod ofs_buf_line_level_ops;
+
+#[cfg(any(test, doc))]
+pub mod ofs_buf_range_validation;
+#[cfg(not(any(test, doc)))]
+mod ofs_buf_range_validation;
+
+#[cfg(any(test, doc))]
+pub mod paint_impl;
+#[cfg(not(any(test, doc)))]
+mod paint_impl;
+
+mod pixel_char;
+mod pixel_char_line;
+mod pixel_char_lines;
+
+#[cfg(any(test, doc))]
+pub mod vt_100_ansi_impl;
+#[cfg(not(any(test, doc)))]
+mod vt_100_ansi_impl;
+
+// Re-export public API (flat, ergonomic surface).
 pub use diff_chunks::*;
 pub use ofs_buf_core::*;
 pub use paint_impl::*;

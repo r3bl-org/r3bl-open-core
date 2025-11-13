@@ -6,19 +6,19 @@
 //! sequences handled by the `vt_100_pty_output_parser::operations::sgr_ops` module. These
 //! include:
 //!
-//! - **SGR 0** (Reset) - [`reset_all_style_attributes`]
-//! - **SGR 1** (Bold) - [`apply_style_attribute`]
-//! - **SGR 2** (Dim) - [`apply_style_attribute`]
-//! - **SGR 3** (Italic) - [`apply_style_attribute`]
-//! - **SGR 4** (Underline) - [`apply_style_attribute`]
-//! - **SGR 5/6** (Blink) - [`apply_style_attribute`]
-//! - **SGR 7** (Reverse) - [`apply_style_attribute`]
-//! - **SGR 8** (Hidden) - [`apply_style_attribute`]
-//! - **SGR 9** (Strikethrough) - [`apply_style_attribute`]
-//! - **SGR 30-37** (Foreground colors) - [`set_foreground_color`]
-//! - **SGR 40-47** (Background colors) - [`set_background_color`]
-//! - **SGR 90-97** (Bright foreground) - [`set_foreground_color`]
-//! - **SGR 100-107** (Bright background) - [`set_background_color`]
+//! - **SGR 0** (Reset) - [`reset_all_style_attributes()`]
+//! - **SGR 1** (Bold) - [`apply_style_attribute()`]
+//! - **SGR 2** (Dim) - [`apply_style_attribute()`]
+//! - **SGR 3** (Italic) - [`apply_style_attribute()`]
+//! - **SGR 4** (Underline) - [`apply_style_attribute()`]
+//! - **SGR 5/6** (Blink) - [`apply_style_attribute()`]
+//! - **SGR 7** (Reverse) - [`apply_style_attribute()`]
+//! - **SGR 8** (Hidden) - [`apply_style_attribute()`]
+//! - **SGR 9** (Strikethrough) - [`apply_style_attribute()`]
+//! - **SGR 30-37** (Foreground colors) - [`set_foreground_color()`]
+//! - **SGR 40-47** (Background colors) - [`set_background_color()`]
+//! - **SGR 90-97** (Bright foreground) - [`set_foreground_color()`]
+//! - **SGR 100-107** (Bright background) - [`set_background_color()`]
 //!
 //! All operations maintain VT100 compliance and handle proper style state
 //! management for terminal text rendering.
@@ -30,10 +30,10 @@
 //!
 //! **Related Files:**
 //!
-//! [`reset_all_style_attributes`]: crate::OffscreenBuffer::reset_all_style_attributes
-//! [`apply_style_attribute`]: crate::OffscreenBuffer::apply_style_attribute
-//! [`set_foreground_color`]: crate::OffscreenBuffer::set_foreground_color
-//! [`set_background_color`]: crate::OffscreenBuffer::set_background_color
+//! [`reset_all_style_attributes()`]: crate::OffscreenBuffer::reset_all_style_attributes
+//! [`apply_style_attribute()`]: crate::OffscreenBuffer::apply_style_attribute
+//! [`set_foreground_color()`]: crate::OffscreenBuffer::set_foreground_color
+//! [`set_background_color()`]: crate::OffscreenBuffer::set_background_color
 
 use crate::{AnsiValue, ColorTarget, OffscreenBuffer, RgbValue, SgrColorSequence,
             TuiColor, TuiStyle, TuiStyleAttribs};

@@ -135,9 +135,9 @@ impl OffscreenBuffer {
     /// Scroll buffer content up by one line (for ESC D at bottom).
     /// The top line is lost, and a new empty line appears at bottom.
     /// Respects DECSTBM scroll region margins.
-    /// See [`shift_lines_up`] for detailed behavior and examples.
+    /// See [`shift_lines_up()`] for detailed behavior and examples.
     ///
-    /// [`shift_lines_up`]: crate::OffscreenBuffer::shift_lines_up
+    /// [`shift_lines_up()`]: crate::OffscreenBuffer::shift_lines_up
     ///
     /// # Errors
     ///
@@ -154,10 +154,10 @@ impl OffscreenBuffer {
     /// Scroll buffer content down by one line (for ESC M at top).
     /// The bottom line is lost, and a new empty line appears at top.
     /// Respects DECSTBM scroll region margins.
-    /// See [`shift_lines_down`] for detailed behavior and
+    /// See [`shift_lines_down()`] for detailed behavior and
     /// examples.
     ///
-    /// [`shift_lines_down`]: crate::OffscreenBuffer::shift_lines_down
+    /// [`shift_lines_down()`]: crate::OffscreenBuffer::shift_lines_down
     ///
     /// # Errors
     ///

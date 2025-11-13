@@ -557,7 +557,7 @@ pub mod parser_resilience {
 /// [performer module docs]: super::super::super::performer#malformed-sequences-and-the-ignore-parameter
 pub mod vte_parser_limit_exceeded {
     use super::*;
-    use crate::tui::terminal_lib_backends::offscreen_buffer::ofs_buf_core::CharacterSet;
+    use crate::CharacterSet;
 
     #[test]
     fn test_csi_excessive_parameters_ignored() {

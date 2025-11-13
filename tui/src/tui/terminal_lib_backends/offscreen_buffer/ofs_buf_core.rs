@@ -373,9 +373,8 @@ impl GetMemSize for OffscreenBuffer {
     fn get_mem_size(&self) -> usize { self.memory_size.size().unwrap_or(0) }
 }
 
-// Forward declarations for types defined in their own modules.
-pub use super::{pixel_char::PixelChar, pixel_char_line::PixelCharLine,
-                pixel_char_lines::PixelCharLines};
+// Forward declarations for types defined in their own modules, just for this file.
+use super::{pixel_char::PixelChar, pixel_char_lines::PixelCharLines};
 
 /// Trait for painting offscreen buffer content to terminal output.
 ///
