@@ -19,7 +19,7 @@ use miette::IntoDiagnostic;
 /// # Example
 ///
 /// ```no_run
-/// use r3bl_tui::script::apt_install::check_if_package_is_installed;
+/// use r3bl_tui::check_if_package_is_installed;
 ///
 /// async fn check() {
 ///     let package_name = "bash";
@@ -29,7 +29,7 @@ use miette::IntoDiagnostic;
 /// ```
 ///
 /// ```no_run
-/// use r3bl_tui::script::apt_install::install_package;
+/// use r3bl_tui::install_package;
 ///
 /// async fn install() {
 ///     let package_name = "does_not_exist";

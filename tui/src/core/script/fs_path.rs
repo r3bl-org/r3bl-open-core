@@ -2,7 +2,9 @@
 
 //! Note that [`PathBuf`] is owned and [Path] is a slice into it.
 //! - So replace `&`[`PathBuf`] with a `&`[Path].
-//! - More details [here](https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg).
+//! - More details [here].
+//!
+//! [here]: https://rust-lang.github.io/rust-clippy/master/index.html#ptr_arg
 
 use crate::ok;
 use miette::Diagnostic;
@@ -260,7 +262,7 @@ pub fn try_write_file(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fs_path, try_create_temp_dir, with_saved_pwd};
+    use crate::{try_create_temp_dir, with_saved_pwd};
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 
@@ -272,7 +274,7 @@ mod tests {
             let new_dir = root.join("test_dir_exists_not_found_error");
 
             // Try to check if the directory exists. It should return an error.
-            let result = fs_path::try_directory_exists(&new_dir);
+            let result = try_directory_exists(&new_dir);
             assert!(result.is_err());
             assert!(matches!(result, Err(FsOpError::DirectoryDoesNotExist(_))));
         });
@@ -295,7 +297,7 @@ mod tests {
 
             // Try to check if the directory exists with insufficient permissions. It
             // should work!
-            let result = fs_path::try_directory_exists(&no_permissions_dir);
+            let result = try_directory_exists(&no_permissions_dir);
             assert!(result.is_ok());
 
             // Change the permissions back, so that it can be cleaned up!
@@ -317,14 +319,14 @@ mod tests {
             let new_file = new_dir.join("test_file_exists_file.txt");
             fs::write(&new_file, "test").unwrap();
 
-            assert!(fs_path::try_file_exists(&new_file).unwrap());
-            assert!(!fs_path::try_file_exists(&new_dir).unwrap());
+            assert!(try_file_exists(&new_file).unwrap());
+            assert!(!try_file_exists(&new_dir).unwrap());
 
             fs::remove_dir_all(&new_dir).unwrap();
 
             // Ensure that an invalid path returns an error.
-            assert!(fs_path::try_file_exists(&new_file).is_err()); // This file does not exist.
-            assert!(fs_path::try_file_exists(&new_dir).is_err()); // This directory does
+            assert!(try_file_exists(&new_file).is_err()); // This file does not exist.
+            assert!(try_file_exists(&new_dir).is_err()); // This directory does
             // not exist.
         });
     }
@@ -337,7 +339,7 @@ mod tests {
             let new_dir = root.join("test_file_exists_invalid_name_error\0");
 
             // Try to check if the file exists. It should return an error.
-            let result = fs_path::try_file_exists(&new_dir);
+            let result = try_file_exists(&new_dir);
             assert!(result.is_err());
             assert!(matches!(result, Err(FsOpError::InvalidName(_))));
         });
@@ -360,7 +362,7 @@ mod tests {
 
             // Try to check if the file exists with insufficient permissions. It should
             // work!
-            let result = fs_path::try_file_exists(&no_permissions_dir);
+            let result = try_file_exists(&no_permissions_dir);
             assert!(result.is_ok());
 
             // Change the permissions back, so that it can be cleaned up!
@@ -443,7 +445,7 @@ mod tests {
 
     fn test_try_mkdir() {
         with_saved_pwd!({
-            use crate::directory_create::{MkdirOptions::*, try_mkdir};
+            use crate::{MkdirOptions::*, try_mkdir};
 
             // Create the root temp dir.
             let root = try_create_temp_dir().unwrap();
@@ -481,7 +483,7 @@ mod tests {
     #[cfg(unix)]
     fn test_try_change_directory_permissions_errors() {
         with_saved_pwd!({
-            use crate::directory_change::try_cd;
+            use crate::try_cd;
 
             // Create the root temp dir.
             let root = try_create_temp_dir().unwrap();
@@ -516,7 +518,7 @@ mod tests {
 
     fn test_try_change_directory_happy_path() {
         with_saved_pwd!({
-            use crate::directory_change::try_cd;
+            use crate::try_cd;
 
             // Create the root temp dir.
             let root = try_create_temp_dir().unwrap();
@@ -538,7 +540,7 @@ mod tests {
 
     fn test_try_change_directory_non_existent() {
         with_saved_pwd!({
-            use crate::directory_change::try_cd;
+            use crate::try_cd;
 
             // Create the root temp dir.
             let root = try_create_temp_dir().unwrap();
@@ -564,7 +566,7 @@ mod tests {
 
     fn test_try_change_directory_invalid_name() {
         with_saved_pwd!({
-            use crate::directory_change::try_cd;
+            use crate::try_cd;
 
             // Create the root temp dir.
             let root = try_create_temp_dir().unwrap();

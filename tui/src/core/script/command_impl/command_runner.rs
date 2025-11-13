@@ -46,13 +46,11 @@ pub type TokioCommand = tokio::process::Command;
 /// # Example of command, env, and args
 ///
 /// ```
-/// # use r3bl_tui::command;
-/// # use r3bl_tui::environment::{self, EnvKeys};
-/// # use r3bl_tui::command_runner::TokioCommand;
+/// # use r3bl_tui::{command, TokioCommand, gen_path_env_vars};
 ///
 /// async fn run_command() {
 ///     let my_path = "/usr/bin";
-///     let env_vars = environment::gen_path_env_vars(my_path);
+///     let env_vars = gen_path_env_vars(my_path);
 ///     let mut command = command!(
 ///         program => "printenv",
 ///         envs => env_vars,

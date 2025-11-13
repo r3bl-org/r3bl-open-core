@@ -24,7 +24,7 @@ pub type EnvVarsSlice<'a> = &'a [(String, String)];
 /// # Example
 ///
 /// ```
-/// use r3bl_tui::environment::{gen_path_env_vars, EnvKeys};
+/// use r3bl_tui::{gen_path_env_vars, EnvKeys};
 ///
 /// let path_envs = gen_path_env_vars("/usr/bin");
 /// let expected = vec![
@@ -38,7 +38,7 @@ pub type EnvVarsSlice<'a> = &'a [(String, String)];
 /// The returned value can also be passed around as a `&[(String, String)]`.
 ///
 /// ```
-/// use r3bl_tui::environment::{gen_path_env_vars, EnvVars, EnvVarsSlice, EnvKeys};
+/// use r3bl_tui::{gen_path_env_vars, EnvVars, EnvVarsSlice, EnvKeys};
 ///
 /// let path_envs: EnvVars = gen_path_env_vars("/usr/bin");
 /// let path_envs_ref: EnvVarsSlice = &path_envs;
@@ -86,37 +86,36 @@ pub fn try_get_path_prefixed(
 #[cfg(test)]
 mod tests_environment {
     use super::*;
-    use crate::environment;
 
     #[test]
     fn test_try_get_path_from_env() {
-        let path = environment::try_get(EnvKeys::Path).unwrap();
+        let path = try_get(EnvKeys::Path).unwrap();
         assert!(!path.is_empty());
     }
 
     #[test]
     fn test_try_get() {
-        let path = environment::try_get(EnvKeys::Path).unwrap();
+        let path = try_get(EnvKeys::Path).unwrap();
         assert!(!path.is_empty());
     }
 
     #[test]
     fn test_get_path_envs() {
-        let path_envs = environment::gen_path_env_vars("/usr/bin");
+        let path_envs = gen_path_env_vars("/usr/bin");
         let expected = vec![("PATH".to_string(), "/usr/bin".to_string())];
         assert_eq!(path_envs, expected);
     }
 
     #[test]
     fn test_get_path() {
-        let path = environment::try_get(EnvKeys::Path).unwrap();
+        let path = try_get(EnvKeys::Path).unwrap();
         assert!(!path.is_empty());
     }
 
     #[test]
     fn test_get_path_prefixed() {
         let prefix_path = "/usr/bin";
-        let path = environment::try_get_path_prefixed(prefix_path).unwrap();
+        let path = try_get_path_prefixed(prefix_path).unwrap();
         assert!(!path.is_empty());
         assert!(path.starts_with(prefix_path));
     }

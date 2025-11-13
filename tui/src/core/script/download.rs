@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{http_client::create_client_with_user_agent, ok};
+use crate::ok;
+use crate::script::http_client::create_client_with_user_agent;
 use miette::IntoDiagnostic;
 use std::{fs, io::Write, path::Path};
 

@@ -3,7 +3,7 @@
 use clap::Parser;
 use r3bl_build_infra::{cargo_rustdoc_fmt::{CLIArg, FileProcessor},
                        common::{cargo_fmt_runner, workspace_utils}};
-use r3bl_tui::core::script::git::{try_get_changed_files_by_ext, try_is_git_repo};
+use r3bl_tui::core::script::{try_get_changed_files_by_ext, try_is_git_repo};
 use std::process;
 
 #[tokio::main]
