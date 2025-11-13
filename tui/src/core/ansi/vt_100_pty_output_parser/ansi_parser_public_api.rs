@@ -155,7 +155,7 @@ impl<'a> AnsiToOfsBufPerformer<'a> {
         let mut parser = vte::Parser::new();
         let performer = self;
         for &byte in bytes.as_ref() {
-            parser.advance(performer, byte);
+            parser.advance(performer, &[byte]);
         }
     }
 }

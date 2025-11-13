@@ -30,14 +30,14 @@ path = "src/lib.rs"
 
 [dependencies]
 # Time
-chrono = "0.4.41"
+chrono = "0.4.42"
 
 # Crossterm & EventStream support.
 crossterm = { version = "0.29.0", features = ["event-stream"] }
 futures-util = "0.3.31"
 
 # Terminal raw mode support with safe Rust APIs.
-rustix = { version = "0.38", features = ["termios", "std"] }
+rustix = { version = "1.1.2", features = ["termios", "std"] }
 
 # strum.
 strum = "0.27.1"
@@ -58,14 +58,14 @@ copypasta-ext = "0.4.4"
 # Tokio / Tracing / Logging.
 # https://tokio.rs/tokio/topics/tracing
 # https://tokio.rs/tokio/topics/tracing-next-steps
-tokio = { version = "1.45.0", features = ["full", "tracing"] }
+tokio = { version = "1.48.0", features = ["full", "tracing"] }
 tracing = "0.1.41"
 tracing-core = "0.1.33"
-tracing-subscriber = "0.3.19"
+tracing-subscriber = "0.3.20"
 tracing-appender = "0.2.3"
 
 # Error handling.
-thiserror = "2.0.12"
+thiserror = "2.0.17"
 miette = { version = "7.6.0", features = ["fancy"] }
 pretty_assertions = "1.4.1"
 
@@ -79,7 +79,7 @@ smallvec = { version = "1.15.0", features = [
 
 # Clap.
 # More info: https://stackoverflow.com/a/76131914/2085356
-clap = { version = "4.5.37", features = ["derive", "wrap_help", "help"] }
+clap = { version = "4.5.51", features = ["derive", "wrap_help", "help"] }
 
 # MISSING
 
@@ -91,7 +91,7 @@ unicode-segmentation = "1.12.0"
 textwrap = { version = "0.16.2", features = ["unicode-linebreak"] }
 
 # Allow const strings to be formatted with format!.
-const_format = "0.2.34"
+const_format = "0.2.35"
 
 # Misc.
 rand = "0.9.1"
@@ -100,10 +100,10 @@ strip-ansi = "0.1.0"
 strip-ansi-escapes = "0.2.1"
 
 # Color gradients.
-colorgrad = "0.7.1"
+colorgrad = "0.8.0"
 
 # ANSI/VT sequence parsing for PTY multiplexer.
-vte = "0.13"
+vte = "0.15.0"
 
 # Fast non-cryptographic hash for ColorWheel cache
 rustc-hash = "2.1.0"
@@ -117,14 +117,14 @@ futures-core = "0.3.31"
 async-stream = "0.3.6"
 
 # For SharedWriter ids.
-uuid = { version = "1.16.0", features = ["v4"] }
+uuid = { version = "1.18.1", features = ["v4"] }
 
 # For testing in CI CD environments where terminal is not interactive.
 is_ci = "1.2.0"
 
 # HTTP client library (for r3bl_script).
 # Reqwest (HTTP client). Use `rustls` instead of `openssl` for TLS support.
-reqwest = { version = "0.12.15", default-features = false, features = [
+reqwest = { version = "0.12.24", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
@@ -135,11 +135,11 @@ reqwest = { version = "0.12.15", default-features = false, features = [
 bincode = { version = "2.0.1", features = ["serde"] }
 
 # Compression for the protocol.
-flate2 = "1.1.1"
+flate2 = "1.1.5"
 
 # https://github.com/serde-rs/serde.
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
 
 # `mimalloc` is a replacement for the default global allocator. It's optimized for
 # multi-threaded use cases where lots of small objects are created and destroyed.
@@ -153,7 +153,7 @@ serde_json = "1.0.140"
 # - https://www.svix.com/blog/heap-fragmentation-in-rust-applications/
 # - https://news.ycombinator.com/item?id=35473271
 # - https://crates.io/crates/jemallocator
-mimalloc = "0.1.46"
+mimalloc = "0.1.48"
 
 # For PTY support
 portable-pty = "0.9.0"

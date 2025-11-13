@@ -30,16 +30,16 @@ path = "src/lib.rs"
 
 [dependencies]
 r3bl_tui = { path = "../tui", version = "0.7.6" }
-tokio = { version = "1.45", features = ["full"] }
+tokio = { version = "1.48.0", features = ["full"] }
 pulldown-cmark = "0.13"
-pulldown-cmark-to-cmark = "21"
-clap = { version = "4.5", features = ["derive"] }
-miette = { version = "7", features = ["fancy"] }
+pulldown-cmark-to-cmark = "21.1.0"
+clap = { version = "4.5.51", features = ["derive"] }
+miette = { version = "7.6.0", features = ["fancy"] }
 regex = "1.12"
 walkdir = "2.5"
 unicode-width = "0.2"
 
 [dev-dependencies]
-pretty_assertions = "1.4"
-test-case = "3.3"
+pretty_assertions = "1.4.1"
+test-case = "3.3.1"
 tempfile = "3.23"

@@ -414,7 +414,7 @@ mod test_fixtures {
         let mut performer = TestPerformerAdapter::new(test_fn);
 
         for byte in sequence.bytes() {
-            parser.advance(&mut performer, byte);
+            parser.advance(&mut performer, &[byte]);
         }
     }
 
